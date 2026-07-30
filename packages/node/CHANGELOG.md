@@ -1,5 +1,66 @@
 # @vercel/node
 
+## 5.9.3
+
+### Patch Changes
+
+- Updated dependencies [a69c714]
+- Updated dependencies [654e898]
+  - @vercel/build-utils@13.36.3
+
+## 5.9.2
+
+### Patch Changes
+
+- Updated dependencies [2c75803]
+  - @vercel/build-utils@13.36.2
+
+## 5.9.1
+
+### Patch Changes
+
+- Updated dependencies [17ee736]
+  - @vercel/build-utils@13.36.1
+
+## 5.9.0
+
+### Minor Changes
+
+- 4502520: Support Node.js Routing Middleware entrypoints through `proxy.entrypoint`, with optional path matching through `proxy.matcher`. The matcher may be configured in the entrypoint source or `vercel.json`, but not both.
+
+### Patch Changes
+
+- Updated dependencies [4502520]
+  - @vercel/build-utils@13.36.0
+
+## 5.8.27
+
+### Patch Changes
+
+- Updated dependencies [7dd4301]
+  - @vercel/build-utils@13.35.0
+
+## 5.8.26
+
+### Patch Changes
+
+- Updated dependencies [238543c]
+  - @vercel/build-utils@13.34.0
+
+## 5.8.25
+
+### Patch Changes
+
+- Updated dependencies [def07fc]
+  - @vercel/build-utils@13.33.1
+
+## 5.8.24
+
+### Patch Changes
+
+- Updated dependencies [607f0ef]
+  - @vercel/build-utils@13.33.0
+
 ## 5.8.23
 
 ### Patch Changes

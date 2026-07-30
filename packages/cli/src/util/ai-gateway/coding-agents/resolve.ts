@@ -56,13 +56,9 @@ export async function resolveAgents(args: {
     return { selected: DEFAULT_AGENTS, guidance, unsupported };
   }
 
-  if (!canPrompt) {
-    return { selected: DEFAULT_AGENTS, guidance, unsupported };
-  }
-
   const detected = await Promise.all(DEFAULT_AGENTS.map(a => a.detect(home)));
 
-  if (yes) {
+  if (!canPrompt || yes) {
     const selected = DEFAULT_AGENTS.filter((_, i) => detected[i]);
     if (selected.length === 0) {
       return {
@@ -80,10 +76,10 @@ export async function resolveAgents(args: {
     checked: detected[i],
   }));
   const picked = await client.input.checkbox<string>({
-    message: `Which coding agents should use the AI Gateway? ${chalk.dim(
-      'Detected agents are pre-selected'
-    )}`,
-    instructions: CHECKBOX_INSTRUCTIONS,
+    message: `Which coding agents should use the AI Gateway?\n${chalk.dim(
+      '  Detected agents are pre-selected ·'
+    )}${CHECKBOX_INSTRUCTIONS}`,
+    instructions: false,
     choices,
   });
   const selected = picked

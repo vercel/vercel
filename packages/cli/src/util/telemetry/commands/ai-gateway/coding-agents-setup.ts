@@ -65,6 +65,52 @@ export class AiGatewayCodingAgentsSetupTelemetryClient
     }
   }
 
+  trackCliFlagDryRun(dryRun: boolean | undefined) {
+    if (dryRun) {
+      this.trackCliFlag('dry-run');
+    }
+  }
+
+  trackCliFlagNoBackup(noBackup: boolean | undefined) {
+    if (noBackup) {
+      this.trackCliFlag('no-backup');
+    }
+  }
+
+  trackCliFlagNoKeychain(noKeychain: boolean | undefined) {
+    if (noKeychain) {
+      this.trackCliFlag('no-keychain');
+    }
+  }
+
+  trackCliOptionAgentConfig(agentConfig: string[] | undefined) {
+    if (agentConfig && agentConfig.length) {
+      // Local paths may be sensitive; record only that the option was used.
+      this.trackCliOption({
+        option: 'agent-config',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionShellRc(shellRc: string | undefined) {
+    if (shellRc) {
+      this.trackCliOption({ option: 'shell-rc', value: this.redactedValue });
+    }
+  }
+
+  trackCliOptionApply(apply: string | undefined) {
+    if (apply) {
+      this.trackCliOption({ option: 'apply', value: apply });
+    }
+  }
+
+  trackCliOptionBaseUrl(baseUrl: string | undefined) {
+    if (baseUrl) {
+      this.trackCliOption({ option: 'base-url', value: this.redactedValue });
+    }
+  }
+
   trackCliFlagYes(yes: boolean | undefined) {
     if (yes) {
       this.trackCliFlag('yes');

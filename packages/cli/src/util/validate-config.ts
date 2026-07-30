@@ -1,4 +1,3 @@
-import Ajv from 'ajv';
 import {
   routesSchema,
   cleanUrlsSchema,
@@ -11,12 +10,13 @@ import type { VercelConfig } from './dev/types';
 import {
   getFunctionsSchema,
   buildsSchema,
-  getMaxDurationLimit,
   getMaxDurationSchema,
   NowBuildError,
   getPrettyError,
 } from '@vercel/build-utils';
 import { fileNameSymbol } from '@vercel/client';
+import { validateProxyConfig } from '@vercel/fs-detectors';
+import { getConfigValidator } from './config-validator';
 
 const imagesSchema = {
   type: 'object',
@@ -504,9 +504,13 @@ const servicesServiceNamePattern = '^[a-z]([a-z_-]*[a-z])?$';
 const servicesBindingSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['type', 'service', 'format', 'env'],
+  required: ['service', 'format', 'env'],
   properties: {
-    type: { const: 'service' },
+    type: {
+      description:
+        'Optional binding type marker. Currently the only supported type is `service`. When present this must be `service`.',
+      const: 'service',
+    },
     service: {
       type: 'string',
       minLength: 1,
@@ -572,7 +576,35 @@ const getServicesSchema = () => ({
   additionalProperties: getServicesServiceConfigSchema(),
 });
 
-function buildVercelConfigSchema() {
+const proxySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['entrypoint'],
+  properties: {
+    entrypoint: {
+      type: 'string',
+      minLength: 1,
+    },
+    matcher: {
+      oneOf: [
+        {
+          type: 'string',
+          minLength: 1,
+        },
+        {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'string',
+            minLength: 1,
+          },
+        },
+      ],
+    },
+  },
+};
+
+export function buildVercelConfigSchema() {
   return {
     type: 'object',
     // These are not all possibilities because `vc dev`
@@ -590,6 +622,7 @@ function buildVercelConfigSchema() {
       images: imagesSchema,
       crons: cronsSchema,
       bunVersion: { type: 'string' },
+      proxy: proxySchema,
       experimentalServices: getExperimentalServicesSchema(),
       experimentalServiceGroups: experimentalServiceGroupsSchema,
       services: getServicesSchema(),
@@ -598,38 +631,8 @@ function buildVercelConfigSchema() {
   };
 }
 
-const ajv = new Ajv();
-
-/**
- * The `maxDuration` upper bound is gated behind
- * `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT` (see `getMaxDurationSchema`), which may be
- * set after this module is imported. Compiling the validator once at module load
- * would bake in whatever limit was active at import time and ignore the variable,
- * so instead we build and compile lazily, caching one validator per resolved
- * limit (bounded vs. skipped).
- *
- * TODO: This machinery exists only to honor the runtime
- * `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT` toggle. Once the flag is fully rolled out
- * and the client-side bound is dropped (see `max-duration.ts` in
- * `@vercel/build-utils`), revert to a single statically compiled validator.
- */
-const validatorCacheByLimit = new Map<
-  number | 'skipped',
-  ReturnType<typeof ajv.compile>
->();
-
-function getConfigValidator() {
-  const cacheKey = getMaxDurationLimit() ?? 'skipped';
-  let validate = validatorCacheByLimit.get(cacheKey);
-  if (!validate) {
-    validate = ajv.compile(buildVercelConfigSchema());
-    validatorCacheByLimit.set(cacheKey, validate);
-  }
-  return validate;
-}
-
 export function validateConfig(config: VercelConfig): NowBuildError | null {
-  const validate = getConfigValidator();
+  const validate = getConfigValidator(buildVercelConfigSchema);
   if (!validate(config)) {
     if (validate.errors && validate.errors[0]) {
       const error = validate.errors[0];
@@ -640,12 +643,30 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
     }
   }
 
+  if (config.proxy) {
+    const proxyError = validateProxyConfig(config.proxy);
+    if (proxyError) {
+      return new NowBuildError({
+        code: proxyError.code.toUpperCase(),
+        message: proxyError.message,
+      });
+    }
+  }
+
   if (config.functions && config.builds) {
     return new NowBuildError({
       code: 'FUNCTIONS_AND_BUILDS',
       message:
         'The `functions` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
       link: 'https://vercel.link/functions-and-builds',
+    });
+  }
+
+  if (config.proxy && config.builds) {
+    return new NowBuildError({
+      code: 'PROXY_AND_BUILDS',
+      message:
+        'The `proxy` property cannot be used with the `builds` property. Remove `builds` to use an explicit proxy entrypoint.',
     });
   }
 

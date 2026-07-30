@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import login from '../../../../src/commands/login';
+import { performDeviceCodeFlow } from '../../../../src/commands/login/future';
 import { client } from '../../../mocks/client';
 import { vi } from 'vitest';
 import _fetch, { Headers, type Response } from '../../../../src/util/fetch';
 import * as oauth from '../../../../src/util/oauth';
 import { randomUUID } from 'node:crypto';
+import * as open from 'open';
 
 const fetch = vi.mocked(_fetch);
 vi.mock('../../../../src/util/fetch', async () => ({
@@ -26,6 +28,19 @@ function mockResponse(data: unknown, ok = true): Response {
   } as unknown as Response;
 }
 
+/** A JSON API response that survives `client.fetch` (headers + content-type). */
+function mockJsonResponse(data: unknown): Response {
+  return {
+    ok: true,
+    status: 200,
+    headers: new Headers({
+      'content-type': 'application/json; charset=utf-8',
+    }),
+    clone: () => ({ text: async () => 'mock json response' }),
+    json: async () => data,
+  } as unknown as Response;
+}
+
 function simulateTokenPolling(pollCount: number, finalResponse: Response) {
   for (let i = 0; i < pollCount; i++) {
     fetch.mockResolvedValueOnce(
@@ -38,6 +53,8 @@ function simulateTokenPolling(pollCount: number, finalResponse: Response) {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  // `open` is mocked to resolve a process-like object so `.on('error')` is safe.
+  vi.mocked(open.default).mockResolvedValue({ on: vi.fn() } as never);
 });
 
 describe('login', () => {
@@ -165,6 +182,145 @@ describe('login', () => {
     );
   });
 
+  it.each([
+    ['invalid_grant', 'Refresh token is invalid.'],
+    [
+      'invalid_scope',
+      'The "offline_access" scope is required for step-up authorization.',
+    ],
+  ])('starts a full device login when step-up returns %s', async (error, errorDescription) => {
+    // Login skips `open()` when `CI` is set (GHA always sets it). These tests
+    // assert the browser-open path, so clear CI for the duration of the case.
+    const previousCi = process.env.CI;
+    delete process.env.CI;
+
+    try {
+      const authorizationResult = {
+        device_code: randomUUID(),
+        user_code: 'ABCD-EFGH',
+        verification_uri: 'https://vercel.com/device',
+        verification_uri_complete:
+          'https://vercel.com/oauth/device?user_code=ABCD-EFGH',
+        expires_in: 30,
+        interval: 0.005,
+      };
+
+      const tokenResult = {
+        access_token: 'vca_recovered',
+        token_type: 'Bearer' as const,
+        expires_in: 3600,
+        refresh_token: 'vcr_recovered',
+        scope: 'openid offline_access',
+      };
+
+      fetch.mockImplementation(async (_url, init) => {
+        if (!init?.body) {
+          return mockResponse({
+            issuer: 'https://vercel.com',
+            device_authorization_endpoint: 'https://vercel.com',
+            token_endpoint: 'https://vercel.com',
+            revocation_endpoint: 'https://vercel.com',
+            jwks_uri: 'https://vercel.com',
+            introspection_endpoint: 'https://vercel.com',
+          });
+        }
+
+        const body = init?.body?.toString();
+        if (body?.includes('refresh_token=vcr_stale')) {
+          return mockResponse(
+            {
+              error,
+              error_description: errorDescription,
+            },
+            false
+          );
+        }
+        if (
+          body?.includes(
+            'grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code'
+          )
+        ) {
+          return mockResponse(tokenResult);
+        }
+        return mockResponse(authorizationResult);
+      });
+
+      const result = await performDeviceCodeFlow(client, {
+        refreshToken: 'vcr_stale',
+        acrValues: 'urn:vercel:loa:sudo',
+        fallbackToLoginOnStepUpFailure: true,
+      });
+
+      expect(result).toEqual({
+        access_token: tokenResult.access_token,
+        expires_in: tokenResult.expires_in,
+        refresh_token: tokenResult.refresh_token,
+      });
+      const requestBodies = fetch.mock.calls.map(([, init]) =>
+        init?.body?.toString()
+      );
+      expect(requestBodies).toContain(
+        new URLSearchParams({
+          client_id: oauth.VERCEL_CLI_CLIENT_ID,
+          refresh_token: 'vcr_stale',
+          acr_values: 'urn:vercel:loa:sudo',
+        }).toString()
+      );
+      expect(requestBodies).toContain(
+        new URLSearchParams({
+          client_id: oauth.VERCEL_CLI_CLIENT_ID,
+          scope: 'openid offline_access',
+        }).toString()
+      );
+      expect(open.default).toHaveBeenCalledWith(
+        authorizationResult.verification_uri_complete
+      );
+      expect(client.getFullOutput()).toContain(
+        "Couldn't refresh the saved login. Starting a new login."
+      );
+      expect(client.getFullOutput()).not.toContain(
+        'Device authorization request failed'
+      );
+    } finally {
+      if (previousCi === undefined) {
+        delete process.env.CI;
+      } else {
+        process.env.CI = previousCi;
+      }
+    }
+  });
+
+  it('prints the OAuth error description when device authorization cannot recover', async () => {
+    fetch.mockImplementation(async (_url, init) => {
+      if (!init?.body) {
+        return mockResponse({
+          issuer: 'https://vercel.com',
+          device_authorization_endpoint: 'https://vercel.com',
+          token_endpoint: 'https://vercel.com',
+          revocation_endpoint: 'https://vercel.com',
+          jwks_uri: 'https://vercel.com',
+          introspection_endpoint: 'https://vercel.com',
+        });
+      }
+
+      return mockResponse(
+        {
+          error: 'invalid_client',
+          error_description: 'Vercel App not found.',
+        },
+        false
+      );
+    });
+
+    await expect(performDeviceCodeFlow(client)).resolves.toBeNull();
+    expect(client.getFullOutput()).toContain(
+      'invalid_client: Vercel App not found.'
+    );
+    expect(client.getFullOutput()).not.toContain(
+      'Device authorization request failed'
+    );
+  });
+
   it('clears stale cached userId on re-login', async () => {
     vi.resetModules();
     const freshOauth = await import('../../../../src/util/oauth');
@@ -212,5 +368,137 @@ describe('login', () => {
 
     expect(exitCode).toBe(0);
     expect(client.authConfig.userId).toBeUndefined();
+  });
+
+  describe('currentTeam preservation on re-login', () => {
+    const discoveryResponse = {
+      issuer: 'https://vercel.com',
+      device_authorization_endpoint: 'https://vercel.com',
+      token_endpoint: 'https://vercel.com',
+      revocation_endpoint: 'https://vercel.com',
+      jwks_uri: 'https://vercel.com',
+      introspection_endpoint: 'https://vercel.com',
+    };
+
+    async function setupDeviceCodeFlow() {
+      vi.resetModules();
+      // `resetModules` loads a fresh output-manager singleton; re-bind it to the
+      // mock stderr so assertions can see login warnings/success messages.
+      const freshOutput = await import('../../../../src/output-manager');
+      freshOutput.default.initialize({
+        stream: client.stderr,
+        supportsHyperlink: false,
+      });
+      const freshOauth = await import('../../../../src/util/oauth');
+      const { default: freshLogin } = await import(
+        '../../../../src/commands/login'
+      );
+
+      fetch.mockResolvedValueOnce(mockResponse(discoveryResponse));
+      await freshOauth.as();
+
+      fetch.mockResolvedValueOnce(
+        mockResponse({
+          device_code: randomUUID(),
+          user_code: randomUUID(),
+          verification_uri: 'https://vercel.com/device',
+          verification_uri_complete: `https://vercel.com/device?code=${randomUUID()}`,
+          expires_in: 30,
+          interval: 0.005,
+        })
+      );
+
+      await simulateTokenPolling(
+        1,
+        mockResponse({
+          access_token: randomUUID(),
+          token_type: 'Bearer',
+          expires_in: 60,
+          scope: 'openid offline_access',
+        })
+      );
+
+      return freshLogin;
+    }
+
+    it('preserves the selected team when the user is still a member', async () => {
+      const freshLogin = await setupDeviceCodeFlow();
+
+      // Membership validation: the previously selected team is still listed
+      fetch.mockResolvedValueOnce(
+        mockJsonResponse({
+          teams: [{ id: 'team_prev', slug: 'prev-team', name: 'Prev Team' }],
+        })
+      );
+
+      client.setArgv('login');
+      // Simulate the expired-session state: auth was emptied after a failed
+      // token refresh, but the selected team survived in the global config.
+      delete client.authConfig.token;
+      client.config.currentTeam = 'team_prev';
+
+      const exitCode = await freshLogin(client, { shouldParseArgs: true });
+
+      expect(exitCode).toBe(0);
+      expect(client.config.currentTeam).toBe('team_prev');
+
+      client.config.currentTeam = undefined;
+    });
+
+    it('falls back to the default team when no longer a member', async () => {
+      const freshLogin = await setupDeviceCodeFlow();
+
+      // Membership validation: the previously selected team is gone
+      fetch.mockResolvedValueOnce(
+        mockJsonResponse({
+          teams: [{ id: 'team_other', slug: 'other-team', name: 'Other' }],
+        })
+      );
+      // `updateCurrentTeamAfterLogin` fetches the user to resolve the default
+      fetch.mockResolvedValueOnce(
+        mockJsonResponse({
+          user: {
+            id: 'user_1',
+            username: 'me',
+            email: 'me@example.com',
+            version: 'northstar',
+            defaultTeamId: 'team_default',
+          },
+        })
+      );
+
+      client.setArgv('login');
+      delete client.authConfig.token;
+      client.config.currentTeam = 'team_gone';
+
+      const exitCode = await freshLogin(client, { shouldParseArgs: true });
+
+      expect(exitCode).toBe(0);
+      expect(client.config.currentTeam).toBe('team_default');
+      // Prefer getFullOutput: login already finished, so toOutput can miss
+      // bytes that were already flushed before the waiter started.
+      expect(client.getFullOutput()).toContain(
+        'Your previously selected team is no longer accessible'
+      );
+
+      client.config.currentTeam = undefined;
+    });
+
+    it('keeps the selected team when membership validation fails', async () => {
+      const freshLogin = await setupDeviceCodeFlow();
+
+      // No teams response queued: the validation request fails. Keep the
+      // selection rather than silently switching scope.
+      client.setArgv('login');
+      delete client.authConfig.token;
+      client.config.currentTeam = 'team_prev';
+
+      const exitCode = await freshLogin(client, { shouldParseArgs: true });
+
+      expect(exitCode).toBe(0);
+      expect(client.config.currentTeam).toBe('team_prev');
+
+      client.config.currentTeam = undefined;
+    });
   });
 });

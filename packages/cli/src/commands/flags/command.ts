@@ -1,6 +1,7 @@
 import { projectOption, yesOption } from '../../util/arg-common';
 import { formatFlagConditionComparatorList } from '../../util/flags/comparators';
 import { packageName } from '../../util/pkg-name';
+import { FLAG_EVALUATIONS_GRANULARITIES } from './evaluations-config';
 
 const segmentRuleOperatorDescription = `Valid operators: ${formatFlagConditionComparatorList()}`;
 
@@ -114,6 +115,191 @@ export const inspectSubcommand = {
     {
       name: 'Show details of a feature flag',
       value: `${packageName} flags inspect my-feature-flag`,
+    },
+  ],
+} as const;
+
+export const versionsListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  default: true,
+  description: 'List version history for a feature flag',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description: 'Filter versions by changed environment',
+      argument: 'ENV',
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Return at most NUMBER versions (1-100)',
+      argument: 'NUMBER',
+    },
+    {
+      name: 'cursor',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Pagination cursor from a previous versions response',
+      argument: 'CURSOR',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'List version history for a feature flag',
+      value: `${packageName} flags versions my-feature-flag`,
+    },
+    {
+      name: 'List version history using the explicit list subcommand',
+      value: `${packageName} flags versions list my-feature-flag`,
+    },
+    {
+      name: 'List production version history',
+      value: `${packageName} flags versions my-feature-flag --environment production`,
+    },
+    {
+      name: 'List the next page of version history',
+      value: `${packageName} flags versions my-feature-flag --limit 10 --cursor <cursor>`,
+    },
+    {
+      name: 'List version history as JSON',
+      value: `${packageName} flags versions my-feature-flag --json`,
+    },
+  ],
+} as const;
+
+export const versionsDiffSubcommand = {
+  name: 'diff',
+  aliases: [],
+  description: 'Show changes introduced by a feature flag version',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'revision',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Revision number to compare with the previous revision',
+      argument: 'NUMBER',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output the diff in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'Show what changed in a revision',
+      value: `${packageName} flags versions diff my-feature-flag --revision 4`,
+    },
+    {
+      name: 'Show the revision diff as JSON',
+      value: `${packageName} flags versions diff my-feature-flag --revision 4 --json`,
+    },
+  ],
+} as const;
+
+export const versionsSubcommand = {
+  name: 'versions',
+  aliases: [],
+  description: 'List and compare version history for a feature flag',
+  arguments: [],
+  subcommands: [versionsListSubcommand, versionsDiffSubcommand],
+  options: [],
+  examples: [
+    {
+      name: 'List version history for a feature flag',
+      value: `${packageName} flags versions my-feature-flag`,
+    },
+    {
+      name: 'Show what changed in a revision',
+      value: `${packageName} flags versions diff my-feature-flag --revision 4`,
+    },
+  ],
+} as const;
+
+export const evaluationsSubcommand = {
+  name: 'evaluations',
+  aliases: [],
+  description: 'Display evaluation metrics for a feature flag',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'since',
+      shorthand: 's',
+      type: String,
+      deprecated: false,
+      description:
+        'Start time: relative (1h, 30m, 2d) or ISO date (default: 1h)',
+      argument: 'TIME',
+    },
+    {
+      name: 'until',
+      shorthand: 'u',
+      type: String,
+      deprecated: false,
+      description: 'End time (default: now)',
+      argument: 'TIME',
+    },
+    {
+      name: 'granularity',
+      shorthand: 'g',
+      type: String,
+      deprecated: false,
+      description: `Time bucket size: ${FLAG_EVALUATIONS_GRANULARITIES.join(', ')} (default: auto)`,
+      argument: 'SIZE',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'Show evaluations by variant for the last hour',
+      value: `${packageName} flags evaluations my-feature`,
+    },
+    {
+      name: 'Show evaluation metrics as JSON',
+      value: `${packageName} flags evaluations my-feature --since 24h --json`,
     },
   ],
 } as const;
@@ -237,12 +423,33 @@ export const updateSubcommand = {
       argument: 'LABEL',
     },
     {
+      name: 'add-variant',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description:
+        'Add a variant as VALUE[=LABEL] (repeatable for string, number, and json flags)',
+      argument: 'VALUE[=LABEL]',
+    },
+    {
+      name: 'remove-variant',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description: 'Remove a variant by ID or value (repeatable)',
+      argument: 'VARIANT',
+    },
+    {
       name: 'message',
       shorthand: null,
       type: String,
       deprecated: false,
       description: 'Optional revision message for the update',
       argument: 'TEXT',
+    },
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when removing a variant',
     },
   ],
   examples: [
@@ -257,6 +464,14 @@ export const updateSubcommand = {
     {
       name: 'Rename a boolean variant label',
       value: `${packageName} flags update my-feature --variant false --label "Disabled"`,
+    },
+    {
+      name: 'Add a new variant',
+      value: `${packageName} flags update my-feature --add-variant treatment="New onboarding"`,
+    },
+    {
+      name: 'Remove variants by value or ID',
+      value: `${packageName} flags update my-feature --remove-variant control --remove-variant var_123 --yes`,
     },
   ],
 } as const;
@@ -584,6 +799,7 @@ export const rulesListSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -624,6 +840,7 @@ export const rulesAddSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -683,6 +900,7 @@ export const rulesUpdateSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -730,6 +948,7 @@ export const rulesRemoveSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -764,6 +983,7 @@ export const rulesMoveSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -1408,6 +1628,8 @@ export const flagsCommand = {
   subcommands: [
     listSubcommand,
     inspectSubcommand,
+    versionsSubcommand,
+    evaluationsSubcommand,
     createSubcommand,
     openSubcommand,
     updateSubcommand,

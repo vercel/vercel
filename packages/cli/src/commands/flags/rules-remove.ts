@@ -14,7 +14,11 @@ import {
 import output from '../../output-manager';
 import { FlagsRulesCommandTelemetryClient } from '../../util/telemetry/commands/flags/rules';
 import { rulesRemoveSubcommand } from './command';
-import { isExitCodeResult, resolveRulesCommandContext } from './rules-common';
+import {
+  isExitCodeResult,
+  resolveRulesCommandContext,
+  warnIfRuleChangesAreBypassed,
+} from './rules-common';
 
 export default async function rulesRemove(
   client: Client,
@@ -48,6 +52,7 @@ export default async function rulesRemove(
   telemetryClient.trackCliArgumentRule(ruleId);
   telemetryClient.trackCliOptionEnvironment(environment);
   telemetryClient.trackCliOptionMessage(message);
+  telemetryClient.trackCliOptionProject(flags['--project']);
 
   if (!flagArg || !ruleId) {
     output.error('Please provide a flag slug or ID and rule ID to remove');
@@ -59,6 +64,7 @@ export default async function rulesRemove(
 
   try {
     const context = await resolveRulesCommandContext(client, {
+      projectName: parsedArgs.flags['--project'],
       flagArg,
       environment,
       promptMessage: 'Select an environment containing the rule:',
@@ -80,7 +86,7 @@ export default async function rulesRemove(
     );
 
     output.spinner(`Removing rule from ${context.environment}...`);
-    await updateFlag(client, context.projectId, flagArg, {
+    const updatedFlag = await updateFlag(client, context.projectId, flagArg, {
       environments: {
         [context.environment]: nextEnvConfig,
       },
@@ -91,6 +97,7 @@ export default async function rulesRemove(
     output.success(
       `Rule ${chalk.bold(ruleId)} removed from ${chalk.bold(context.flag.slug)} in ${chalk.bold(context.environment)}`
     );
+    warnIfRuleChangesAreBypassed(updatedFlag, context.environment);
   } catch (err) {
     output.stopSpinner();
     printError(err);

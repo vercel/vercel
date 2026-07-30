@@ -11,7 +11,6 @@ import type { Rewrite } from '@vercel/routing-utils';
 import type { Services } from '@vercel/build-utils';
 import type { VercelConfig } from '../dev/types';
 import { compileVercelConfig } from '../compile-vercel-config';
-import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
 import { CantParseJSONFile } from '../errors-ts';
 import readJSONFile from '../read-json-file';
 import { validateConfig } from '../validate-config';
@@ -79,7 +78,7 @@ export async function tryDetectServices(
 
   // No services configured
   const hasNoServicesError = result.errors.some(
-    e => e.code === 'NO_EXPERIMENTAL_SERVICES_CONFIGURED'
+    e => e.code === 'NO_SERVICES_CONFIGURED'
   );
   if (hasNoServicesError) {
     return null;
@@ -114,10 +113,18 @@ function toProjectServicesConfigPatch(
 ): Pick<VercelConfig, 'services' | 'rewrites'> {
   const services: Services = {};
   for (const [name, svc] of Object.entries(config)) {
+    // Combine preDeployCommand into buildCommand since V2 ServiceConfig
+    // doesn't have a separate preDeployCommand field.
+    const buildCommand =
+      svc.preDeployCommand && svc.buildCommand
+        ? `${svc.buildCommand} && ${svc.preDeployCommand}`
+        : svc.preDeployCommand || svc.buildCommand;
+
     services[name] = {
       root: svc.root,
       ...(svc.framework ? { framework: svc.framework } : {}),
       ...(svc.entrypoint ? { entrypoint: svc.entrypoint } : {}),
+      ...(buildCommand ? { buildCommand } : {}),
     };
   }
   // Top-level rewrites route public traffic into web services by mountPath.
@@ -159,7 +166,7 @@ async function prepareServicesConfigWrite(
   const compileResult = await compileVercelConfig(cwd);
   const configPath = join(cwd, 'vercel.json');
 
-  if (isVercelTomlEnabled() && compileResult.sourceFile === 'vercel.toml') {
+  if (compileResult.sourceFile === 'vercel.toml') {
     return prepareTomlServicesConfigWrite(join(cwd, 'vercel.toml'), config);
   }
 

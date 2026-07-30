@@ -1,5 +1,17 @@
 # @vercel/passport
 
+## 1.0.0
+
+### Major Changes
+
+- 96e1bb1: Promote `@vercel/passport` to a stable 1.0.0 release.
+
+## 0.1.3
+
+### Patch Changes
+
+- 86d88dd: Add a `verifyIdentity` helper for verifying forwarded Passport identity tokens.
+
 ## 0.1.2
 
 ### Patch Changes

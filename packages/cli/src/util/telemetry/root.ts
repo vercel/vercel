@@ -103,6 +103,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandComments(actual: string) {
+    this.trackCliCommand({
+      command: 'comments',
+      value: actual,
+    });
+  }
+
   trackCliCommandConnex(actual: string) {
     this.trackCliCommand({
       command: 'connex',
@@ -166,13 +173,6 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
-  trackCliCommandEdgeConfig(actual: string) {
-    this.trackCliCommand({
-      command: 'edge-config',
-      value: actual,
-    });
-  }
-
   trackCliCommandEnv(actual: string) {
     this.trackCliCommand({
       command: 'env',
@@ -197,6 +197,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandGit(actual: string) {
     this.trackCliCommand({
       command: 'git',
+      value: actual,
+    });
+  }
+
+  trackCliCommandGlobalConfig(actual: string) {
+    this.trackCliCommand({
+      command: 'global-config',
       value: actual,
     });
   }

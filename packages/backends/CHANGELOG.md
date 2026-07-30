@@ -1,5 +1,63 @@
 # @vercel/backends
 
+## 0.8.30
+
+### Patch Changes
+
+- Updated dependencies [a69c714]
+- Updated dependencies [654e898]
+  - @vercel/build-utils@13.36.3
+
+## 0.8.29
+
+### Patch Changes
+
+- 57dec92: Fix output directory discovery after the build command: the `dist`/`build`/`output` fallback was unreachable dead code, and `outputDirectory` was only read from `config.outputDirectory`, missing `config.projectSettings.outputDirectory` (the key wrapper builders use).
+- Updated dependencies [2c75803]
+  - @vercel/build-utils@13.36.2
+
+## 0.8.28
+
+### Patch Changes
+
+- Updated dependencies [17ee736]
+  - @vercel/build-utils@13.36.1
+
+## 0.8.27
+
+### Patch Changes
+
+- Updated dependencies [4502520]
+  - @vercel/build-utils@13.36.0
+
+## 0.8.26
+
+### Patch Changes
+
+- Updated dependencies [7dd4301]
+  - @vercel/build-utils@13.35.0
+
+## 0.8.25
+
+### Patch Changes
+
+- Updated dependencies [238543c]
+  - @vercel/build-utils@13.34.0
+
+## 0.8.24
+
+### Patch Changes
+
+- Updated dependencies [def07fc]
+  - @vercel/build-utils@13.33.1
+
+## 0.8.23
+
+### Patch Changes
+
+- Updated dependencies [607f0ef]
+  - @vercel/build-utils@13.33.0
+
 ## 0.8.22
 
 ### Patch Changes

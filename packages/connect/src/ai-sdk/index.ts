@@ -61,6 +61,7 @@ export {
   NoValidTokenError,
   UserAuthorizationRequiredError,
   type ConnectErrorOptions,
+  type ConnectTokenExchangeSubject,
   type ConnectTokenParams,
   type ConnectTokenSubject,
   type ConnectVendorErrorPayload,

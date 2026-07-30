@@ -127,9 +127,9 @@ const EMPTY_CLIENT_METADATA: OAuthClientMetadata = {
  * @param connector Vercel Connect connector UID (e.g. `oauth/linear`)
  *   or opaque connector id.
  * @param params Token request parameters — always specify a
- *   `subject`; the three subject types
- *   (`'app'` / `'user'` / `'jwt-bearer'`) have distinct security
- *   semantics.
+ *   `subject`; the supported subject types
+ *   (`'app'` / `'user'` / `'jwt-bearer'` / `'token'`) have distinct
+ *   security semantics.
  * @param options Optional adapter behavior overrides.
  */
 export function connectAuthProvider(

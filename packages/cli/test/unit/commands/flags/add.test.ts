@@ -311,7 +311,7 @@ describe('flags create', () => {
 
     expect(exitCode).toEqual(1);
     expect(client.stderr.getFullOutput()).toContain(
-      'JSON variants must be valid JSON'
+      'JSON variant values must be valid JSON'
     );
   });
 

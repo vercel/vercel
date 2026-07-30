@@ -301,7 +301,7 @@ export default async function setupAndLink(
     return { status: 'error', exitCode: 1, reason: 'PATH_IS_FILE' };
   }
   if (!link) {
-    link = await getLinkedProject(client, path);
+    link = await getLinkedProject(client, { cwd: path });
   }
   const isTTY = client.stdin.isTTY;
   let rootDirectory: string | null = null;
@@ -317,7 +317,7 @@ export default async function setupAndLink(
   // without requiring `--yes`). The env link itself is what makes commands
   // work here, so leave local link files untouched.
   if (getPlatformEnv('ORG_ID') && getPlatformEnv('PROJECT_ID')) {
-    const envLink = await getLinkedProject(client, path);
+    const envLink = await getLinkedProject(client, { cwd: path });
     if (envLink.status === 'error') {
       return envLink;
     }
@@ -628,14 +628,8 @@ export default async function setupAndLink(
       }
     }
 
-    // Support for changing additional, less frequently used project settings.
-    let changeAdditionalSettings = false;
-    if (!autoConfirm) {
-      changeAdditionalSettings = await client.input.confirm(
-        'Customize advanced settings?',
-        false
-      );
-    }
+    // Keep the advanced settings wiring available without prompting for it.
+    const changeAdditionalSettings = false;
 
     let vercelAuthSetting: VercelAuthSetting = DEFAULT_VERCEL_AUTH_SETTING;
     if (changeAdditionalSettings) {

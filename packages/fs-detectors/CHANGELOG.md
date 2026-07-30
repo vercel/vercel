@@ -1,5 +1,74 @@
 # @vercel/fs-detectors
 
+## 6.14.3
+
+### Patch Changes
+
+- Updated dependencies [a69c714]
+- Updated dependencies [654e898]
+  - @vercel/build-utils@13.36.3
+
+## 6.14.2
+
+### Patch Changes
+
+- Updated dependencies [2c75803]
+  - @vercel/build-utils@13.36.2
+
+## 6.14.1
+
+### Patch Changes
+
+- Updated dependencies [17ee736]
+  - @vercel/build-utils@13.36.1
+
+## 6.14.0
+
+### Minor Changes
+
+- 4502520: Support Node.js Routing Middleware entrypoints through `proxy.entrypoint`, with optional path matching through `proxy.matcher`. The matcher may be configured in the entrypoint source or `vercel.json`, but not both.
+- 506487b: Removed the `VERCEL_TOML_CONFIG_ENABLED` feature flag. `vercel.toml` configuration file support is now always enabled.
+
+### Patch Changes
+
+- Updated dependencies [4502520]
+  - @vercel/build-utils@13.36.0
+
+## 6.13.3
+
+### Patch Changes
+
+- Updated dependencies [7dd4301]
+  - @vercel/build-utils@13.35.0
+
+## 6.13.2
+
+### Patch Changes
+
+- a55e7df: Replace user-facing `experimentalServices` references with `services` in error/warning messages and rename error codes (`NO_EXPERIMENTAL_SERVICES_CONFIGURED` → `NO_SERVICES_CONFIGURED`, `MISSING_EXPERIMENTAL_SERVICES` → `MISSING_SERVICES`). The deprecated v1 config key should no longer appear in guidance shown to users.
+- Updated dependencies [238543c]
+  - @vercel/build-utils@13.34.0
+
+## 6.13.1
+
+### Patch Changes
+
+- Updated dependencies [def07fc]
+- Updated dependencies [fa14ee9]
+  - @vercel/build-utils@13.33.1
+  - @vercel/frameworks@3.30.7
+
+## 6.13.0
+
+### Minor Changes
+
+- 7bbfd48: Support `"entrypoint": "pyproject.toml"` for services. A service may now set `entrypoint: "pyproject.toml"` to build exactly what that file declares: the web app from `tool.vercel.entrypoint` (when present) and queue subscribers from `[[tool.vercel.subscribers]]`. Filename-based entrypoint auto-detection never runs in this mode, and subscribers-only services (no web function) are supported.
+
+### Patch Changes
+
+- Updated dependencies [607f0ef]
+  - @vercel/build-utils@13.33.0
+
 ## 6.12.1
 
 ### Patch Changes

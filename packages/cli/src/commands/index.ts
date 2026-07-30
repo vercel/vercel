@@ -10,6 +10,7 @@ import { buildCommand } from './build/command';
 import { buyCommand } from './buy/command';
 import { cacheCommand } from './cache/command';
 import { certsCommand } from './certs/command';
+import { commentsCommand } from './comments/command';
 import { connexCommand } from './connex/command';
 import { contractCommand } from './contract/command';
 import { cronsCommand } from './crons/command';
@@ -19,11 +20,11 @@ import { deployHooksCommand } from './deploy-hooks/command';
 import { devCommand } from './dev/command';
 import { dnsCommand } from './dns/command';
 import { domainsCommand } from './domains/command';
-import { edgeConfigCommand } from './edge-config/command';
 import { envCommand } from './env/command';
 import { firewallCommand } from './firewall/command';
 import { flagsCommand } from './flags/command';
 import { gitCommand } from './git/command';
+import { globalConfigCommand } from './global-config/command';
 import { guidanceCommand } from './guidance/command';
 import { httpstatCommand } from './httpstat/command';
 import { initCommand } from './init/command';
@@ -79,6 +80,7 @@ const commandsStructs = [
   buyCommand,
   cacheCommand,
   certsCommand,
+  commentsCommand,
   contractCommand,
   cronsCommand,
   curlCommand,
@@ -87,11 +89,11 @@ const commandsStructs = [
   devCommand,
   dnsCommand,
   domainsCommand,
-  edgeConfigCommand,
   envCommand,
   firewallCommand,
   flagsCommand,
   gitCommand,
+  globalConfigCommand,
   httpstatCommand,
   initCommand,
   inspectCommand,

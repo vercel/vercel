@@ -5,8 +5,10 @@ import {
   backupFile,
   writeConfigFile,
   upsertManagedBlock,
+  isSymlink,
 } from './config-files';
 import { KEY_PLACEHOLDER } from './gateway';
+import { keychainLookup } from './keychain';
 
 export type ChangeStatus = 'create' | 'update' | 'unchanged' | 'error';
 
@@ -20,6 +22,7 @@ export interface PlannedChange {
   status: ChangeStatus;
   error?: string;
   mode?: number;
+  symlink?: boolean;
 }
 
 export interface AgentNotes {
@@ -31,6 +34,7 @@ export interface AgentNotes {
 export interface SetupPlan {
   changes: PlannedChange[];
   notes: AgentNotes[];
+  envExports: EnvExport[];
   shellRcPath?: string;
 }
 
@@ -65,16 +69,26 @@ function fishQuote(value: string): string {
   return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 }
 
-function envBlockBody(exports: EnvExport[], fish: boolean): string {
+function envBlockBody(
+  exports: EnvExport[],
+  useKeychain: boolean | undefined,
+  fish: boolean
+): string {
   const lines = [
     '# Managed by `vercel ai-gateway coding-agents setup` — safe to remove this block.',
   ];
   for (const e of exports) {
-    lines.push(
-      fish
-        ? `set -gx ${e.name} ${fishQuote(e.value)}`
-        : `export ${e.name}=${shellQuote(e.value)}`
-    );
+    if (fish) {
+      lines.push(
+        useKeychain
+          ? `set -gx ${e.name} ${keychainLookup({ fish: true })}`
+          : `set -gx ${e.name} ${fishQuote(e.value)}`
+      );
+    } else if (useKeychain) {
+      lines.push(`export ${e.name}="${keychainLookup()}"`);
+    } else {
+      lines.push(`export ${e.name}=${shellQuote(e.value)}`);
+    }
   }
   return lines.join('\n');
 }
@@ -135,9 +149,28 @@ export async function buildSetupPlan(
   }
 
   let shellRcPath: string | undefined;
-  if (envExports.length) {
+  if (
+    envExports.length &&
+    process.platform === 'win32' &&
+    !ctx.shellRcOverride
+  ) {
+    // There is no shell rc to manage on Windows; tell the user what to set.
+    notes.push({
+      id: 'environment',
+      displayName: 'Environment',
+      notes: [
+        `Automatic shell setup is not supported on Windows. Set ${envExports
+          .map(e => e.name)
+          .join(', ')} to your API key in your environment.`,
+      ],
+    });
+  } else if (envExports.length) {
     shellRcPath = detectShellRc(ctx.home, ctx.shellRcOverride);
-    const body = envBlockBody(envExports, shellRcPath.endsWith('.fish'));
+    const body = envBlockBody(
+      envExports,
+      ctx.useKeychain,
+      shellRcPath.endsWith('.fish')
+    );
     pending.push({
       path: shellRcPath,
       label: 'Shell environment',
@@ -173,6 +206,7 @@ export async function buildSetupPlan(
   const changes: PlannedChange[] = [];
   for (const [path, entry] of byPath) {
     const current = await readFileOrNull(path);
+    const symlink = await isSymlink(path);
     let next: string | null = null;
     let status: ChangeStatus;
     let error: string | undefined;
@@ -208,10 +242,11 @@ export async function buildSetupPlan(
       next,
       status,
       error,
+      symlink,
     });
   }
 
-  return { changes, notes, shellRcPath };
+  return { changes, notes, envExports, shellRcPath };
 }
 
 export interface ApplyResult {

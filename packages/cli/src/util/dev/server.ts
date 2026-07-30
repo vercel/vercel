@@ -53,6 +53,7 @@ import {
   detectBuilders,
   detectApiDirectory,
   detectApiExtensions,
+  getProxyBuilder,
   isOfficialRuntime,
   isExperimentalService,
   isExperimentalServiceV2,
@@ -123,10 +124,6 @@ import isURL from './is-url';
 import { pickOverrides } from '../projects/project-settings';
 import { replaceLocalhost } from './parse-listen';
 
-const frontendRuntimeSet = new Set(
-  frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
-);
-
 const DEV_SERVER_PORT_BIND_TIMEOUT = ms('5m');
 const DEV_QUEUES_DEFAULT_VISIBILITY_TIMEOUT_SECONDS = 60;
 
@@ -138,6 +135,15 @@ interface FSEvent {
 type WithFileNameSymbol<T> = T & {
   [fileNameSymbol]: string;
 };
+
+const frameworkRuntimeSet = new Set(
+  frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
+);
+
+function isApiDirBuild(build: Builder): boolean {
+  const src = build.src?.replace(/^\.\//, '');
+  return typeof src === 'string' && src.startsWith('api/');
+}
 
 function sortBuilders(buildA: Builder, buildB: Builder) {
   if (buildA && buildA.use && isOfficialRuntime('static-build', buildA.use)) {
@@ -237,6 +243,8 @@ export default class DevServer {
       VERCEL_HAS_WORKER_SERVICES: '1',
       VERCEL_QUEUE_BASE_URL: `${this.address.origin}/_svc/_queues`,
       VERCEL_QUEUE_TOKEN: 'vc-dev-token',
+      VERCEL_REGION: 'dev1',
+      VERCEL_DEPLOYMENT_ID: 'dpl_dev',
     };
   }
 
@@ -275,6 +283,11 @@ export default class DevServer {
       proxyOrigin: this.address.origin,
       useImplicitEnvInjection: false,
       preferServiceBuilder: true,
+      onQueueSubscriptions: (serviceName, subscriptions) =>
+        this.queueBroker?.updateServiceSubscriptions(
+          serviceName,
+          subscriptions
+        ),
     });
 
     const queueBroker = new QueueBroker(services, name =>
@@ -301,6 +314,19 @@ export default class DevServer {
       )}`
     );
   }
+
+  private shouldBuildInDev = (build: Builder): boolean => {
+    // `api/` builds are standalone serverless functions, never the frontend
+    // build owned by the framework dev command. In services mode, the
+    // orchestrator owns every service build, including services with `api/`
+    // entrypoints.
+    if (!this.shouldUseServicesOrchestrator() && isApiDirBuild(build)) {
+      return true;
+    }
+
+    const { name } = npa(build.use);
+    return !frameworkRuntimeSet.has(name || '');
+  };
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
@@ -744,6 +770,7 @@ export default class DevServer {
       await this.exit();
     }
     vercelConfig.routes = maybeRoutes || [];
+    const hasServices = (this.services?.length ?? 0) > 0;
 
     // no builds -> zero config
     //
@@ -772,6 +799,7 @@ export default class DevServer {
         featHandleMiss,
         cleanUrls,
         trailingSlash,
+        proxy: vercelConfig.proxy,
         workPath: this.cwd,
       });
       const {
@@ -845,20 +873,36 @@ export default class DevServer {
       });
       routes.push(...(defaultRoutes || []));
       vercelConfig.routes = routes;
+    } else if (hasResolvedServices && vercelConfig.proxy) {
+      // Service builds are owned by the orchestrator; only the top-level
+      // proxy participates in the dev server's build pipeline.
+      const { entrypoint } = vercelConfig.proxy;
+      if (!(await fs.pathExists(join(this.cwd, entrypoint)))) {
+        output.error(
+          `The proxy entrypoint \`${entrypoint}\` does not exist. Set \`proxy.entrypoint\` to an existing \`.js\` or \`.ts\` file.`
+        );
+        await this.exit();
+      }
+      vercelConfig.builds = vercelConfig.builds || [];
+      vercelConfig.builds.push(
+        getProxyBuilder(vercelConfig.proxy, 'latest', vercelConfig.functions)
+      );
     }
 
     if (this.sidecars === undefined) {
-      this.sidecars = this.shouldUseServicesOrchestrator()
-        ? []
-        : await collectBuilderDevSidecars({
-            builds: vercelConfig.builds ?? [],
-            workPath: this.cwd,
-          });
+      const services = (this.services ?? []).filter(isExperimentalServiceV2);
+      this.sidecars = await collectBuilderDevSidecars({
+        builds: this.shouldUseServicesOrchestrator()
+          ? services.map(service => service.builder)
+          : (vercelConfig.builds ?? []),
+        workPath: this.cwd,
+        services,
+      });
     }
 
     if (Array.isArray(vercelConfig.builds)) {
-      if (this.devCommand || (this.services && this.services.length > 0)) {
-        vercelConfig.builds = vercelConfig.builds.filter(filterFrontendBuilds);
+      if (this.devCommand || hasServices) {
+        vercelConfig.builds = vercelConfig.builds.filter(this.shouldBuildInDev);
       }
 
       // `@vercel/static-build` needs to be the last builder
@@ -1150,20 +1194,29 @@ export default class DevServer {
     };
 
     if (this.shouldUseServicesOrchestrator()) {
+      const orchestratorServices = [
+        ...(this.services || []),
+        ...(this.sidecars || []).map(toOrchestratorService),
+      ];
       this.orchestrator = new ServicesOrchestrator({
-        services: this.services || [],
+        services: orchestratorServices,
         cwd: this.cwd,
         repoRoot: this.repoRoot,
         env: this.envConfigs.allEnv,
         proxyOrigin: this.address.origin,
         useImplicitEnvInjection: this.useImplicitServicesEnvInjection,
+        onQueueSubscriptions: (serviceName, subscriptions) =>
+          this.queueBroker?.updateServiceSubscriptions(
+            serviceName,
+            subscriptions
+          ),
       });
       devCommandPromise = this.orchestrator.startAll();
       this.devProcessOrigin = undefined;
 
       // Instantiate the dev queue broker if any queue-backed services exist.
       // Queue-backed services are `experimentalServices` feature only.
-      const queueServices = (this.services || [])
+      const queueServices = orchestratorServices
         .filter(isExperimentalService)
         .filter(isQueueBackedService);
       if (queueServices.length > 0) {
@@ -1724,9 +1777,13 @@ export default class DevServer {
     ];
     let responseTransformsToApply = responseTransforms;
 
+    const lookupUrl = `${lookupPath}${parsed.search || ''}`;
+    let rewrittenUrl: string | undefined;
+    let externalDestUrl: string | undefined;
+
     if (serviceRoutes.length > 0) {
       const serviceResult = await devRouter(
-        `${lookupPath}${parsed.search || ''}`,
+        lookupUrl,
         req.method,
         serviceRoutes,
         this,
@@ -1765,6 +1822,27 @@ export default class DevServer {
           res.setHeader(name, value);
         }
       }
+
+      if (serviceResult.dest) {
+        // Mix the service route table's dest query params into the dest path
+        const destParsed = url.parse(serviceResult.dest);
+        const destQuery = parseQueryString(destParsed.search);
+        Object.assign(destQuery, serviceResult.query);
+        destParsed.search = formatQueryString(destQuery);
+        const resolvedDest = url.format(destParsed);
+        if (serviceResult.isDestUrl) {
+          externalDestUrl = resolvedDest;
+        } else if (resolvedDest !== lookupUrl) {
+          rewrittenUrl = resolvedDest;
+        }
+      }
+    }
+
+    // Apply the rewritten path so service-level rewrites reach the service.
+    // This happens before request transforms so that `request.path` transforms
+    // operate on the rewritten path.
+    if (rewrittenUrl !== undefined) {
+      req.url = rewrittenUrl;
     }
 
     for (const [name, value] of Object.entries(proxyHeaders)) {
@@ -1779,7 +1857,15 @@ export default class DevServer {
     );
 
     this.setResponseHeaders(res, requestId);
-    debug(`Delegating to service "${serviceName}": ${origin}`);
+
+    if (externalDestUrl) {
+      debug(
+        `Service "${serviceName}" rewrite to external URL: ${externalDestUrl}`
+      );
+      return proxyPass(req, res, externalDestUrl, this, requestId);
+    }
+
+    debug(`Delegating to service "${serviceName}": ${origin}${req.url}`);
     return proxyPass(req, res, origin, this, requestId, false);
   }
 
@@ -3567,11 +3653,6 @@ function fileRemoved(
 function needsBlockingBuild(buildMatch: BuildMatch): boolean {
   const { builder } = buildMatch.builderWithPkg;
   return typeof builder.shouldServe !== 'function';
-}
-
-function filterFrontendBuilds(build: Builder) {
-  const { name } = npa(build.use);
-  return !frontendRuntimeSet.has(name || '');
 }
 
 function hasNewRoutingProperties(vercelConfig: VercelConfig) {

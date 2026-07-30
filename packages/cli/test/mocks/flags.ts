@@ -4,10 +4,24 @@ import type {
   SdkKey,
   CreatedSdkKey,
   FlagSettings,
+  FlagVersion,
   Segment,
   SegmentMembershipOperation,
   UpdateFlagRequest,
 } from '../../src/util/flags/types';
+
+type FlagWithMockEtag = Flag & {
+  etag?: string;
+  ifMatch?: string;
+};
+
+function getFlagEtag(flag: FlagWithMockEtag): string {
+  return flag.etag ?? `"${flag.id}-${flag.revision}"`;
+}
+
+function getExpectedIfMatch(flag: FlagWithMockEtag): string {
+  return flag.ifMatch ?? getFlagEtag(flag);
+}
 
 export const defaultFlagSettings: FlagSettings = {
   typeName: 'settings',
@@ -167,6 +181,97 @@ export const defaultSdkKeys: SdkKey[] = [
   },
 ];
 
+export const defaultFlagVersions: FlagVersion[] = [
+  {
+    id: 'flag_version_3',
+    flagId: 'flag_abc123',
+    revision: 3,
+    createdAt: Date.now() - 3600000,
+    createdBy: 'user_456',
+    message: 'Enabled production rollout',
+    changedEnvironments: ['production'],
+    metadata: {
+      creator: {
+        id: 'user_456',
+        name: 'Ada Lovelace',
+      },
+    },
+    data: {
+      description: defaultFlags[0].description,
+      variants: defaultFlags[0].variants,
+      environments: defaultFlags[0].environments,
+      seed: defaultFlags[0].seed,
+      state: defaultFlags[0].state,
+    },
+  },
+  {
+    id: 'flag_version_2',
+    flagId: 'flag_abc123',
+    revision: 2,
+    createdAt: Date.now() - 7200000,
+    createdBy: 'user_123',
+    message: 'Updated preview defaults',
+    changedEnvironments: ['preview'],
+    metadata: {
+      creator: {
+        id: 'user_123',
+        name: 'Grace Hopper',
+      },
+    },
+    data: {
+      description: defaultFlags[0].description,
+      variants: defaultFlags[0].variants,
+      environments: defaultFlags[0].environments,
+      seed: defaultFlags[0].seed,
+      state: defaultFlags[0].state,
+    },
+  },
+  {
+    id: 'flag_version_1',
+    flagId: 'flag_abc123',
+    revision: 1,
+    createdAt: Date.now() - 86400000,
+    createdBy: 'user_123',
+    message: 'Created flag',
+    changedEnvironments: ['production', 'preview', 'development'],
+    metadata: {
+      creator: {
+        id: 'user_123',
+        name: 'Grace Hopper',
+      },
+    },
+    data: {
+      description: defaultFlags[0].description,
+      variants: defaultFlags[0].variants,
+      environments: defaultFlags[0].environments,
+      seed: defaultFlags[0].seed,
+      state: defaultFlags[0].state,
+    },
+  },
+  {
+    id: 'flag_version_4',
+    flagId: 'flag_def456',
+    revision: 2,
+    createdAt: Date.now() - 7200000,
+    createdBy: 'user_123',
+    message: 'Created string flag',
+    changedEnvironments: ['production', 'preview', 'development'],
+    metadata: {
+      creator: {
+        id: 'user_123',
+        name: 'Grace Hopper',
+      },
+    },
+    data: {
+      description: defaultFlags[1].description,
+      variants: defaultFlags[1].variants,
+      environments: defaultFlags[1].environments,
+      seed: defaultFlags[1].seed,
+      state: defaultFlags[1].state,
+    },
+  },
+];
+
 export const defaultSegments: Segment[] = [
   {
     id: 'seg_beta123',
@@ -233,7 +338,8 @@ export function useFlags(
   settings: FlagSettings = defaultFlagSettings,
   segmentsList: Segment[] = defaultSegments,
   onUpdateFlag?: (request: UpdateFlagRequest) => void,
-  onGetSettings?: () => void
+  onGetSettings?: () => void,
+  versionsList: FlagVersion[] = defaultFlagVersions
 ) {
   // Get flag settings
   client.scenario.get(
@@ -282,6 +388,46 @@ export function useFlags(
     }
   );
 
+  // List flag versions
+  client.scenario.get(
+    '/v1/projects/:projectId/feature-flags/flags/:flagIdOrSlug/versions',
+    (req, res) => {
+      const { flagIdOrSlug } = req.params;
+      const flag = flagsList.find(
+        f => f.id === flagIdOrSlug || f.slug === flagIdOrSlug
+      );
+      if (!flag) {
+        res.status(404).json({ error: { message: 'Flag not found' } });
+        return;
+      }
+
+      const environment = req.query.environment as string | undefined;
+      let filteredVersions = versionsList.filter(
+        version => version.flagId === flag.id
+      );
+      if (environment) {
+        filteredVersions = filteredVersions.filter(version =>
+          version.changedEnvironments.includes(environment)
+        );
+      }
+
+      const limit = req.query.limit ? Number(req.query.limit) : 20;
+      const offset = req.query.cursor ? Number(req.query.cursor) : 0;
+      const page = filteredVersions.slice(offset, offset + limit);
+      const nextOffset = offset + limit;
+      const next =
+        nextOffset < filteredVersions.length ? String(nextOffset) : null;
+
+      res.json({
+        versions: page,
+        pagination: {
+          cursor: next,
+          hasNext: next !== null,
+        },
+      });
+    }
+  );
+
   // Get single flag
   client.scenario.get(
     '/v1/projects/:projectId/feature-flags/flags/:flagIdOrSlug',
@@ -291,7 +437,18 @@ export function useFlags(
         f => f.id === flagIdOrSlug || f.slug === flagIdOrSlug
       );
       if (flag) {
-        res.json(flag);
+        const etag = getFlagEtag(flag as FlagWithMockEtag);
+        if (etag) {
+          res.setHeader('ETag', etag);
+          res.json(flag);
+        } else {
+          // Express auto-generates a weak ETag inside res.json() whenever the
+          // header is unset, so write the body directly to simulate a server
+          // that omits the ETag header (a flag with `etag: ''` opts in).
+          res.status(200);
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(flag));
+        }
       } else {
         res.status(404).json({ error: { message: 'Flag not found' } });
       }
@@ -338,6 +495,21 @@ export function useFlags(
       if (flagIndex !== -1) {
         onUpdateFlag?.(req.body as UpdateFlagRequest);
         const flag = flagsList[flagIndex];
+        const ifMatch = req.headers['if-match'];
+        const expectedIfMatch = getExpectedIfMatch(flag as FlagWithMockEtag);
+
+        if (
+          ifMatch &&
+          (Array.isArray(ifMatch) ? ifMatch[0] : ifMatch) !== expectedIfMatch
+        ) {
+          res.status(412).json({
+            error: {
+              message: 'Precondition Failed',
+            },
+          });
+          return;
+        }
+
         const updatedFlag = {
           ...flag,
           ...req.body,
@@ -361,6 +533,7 @@ export function useFlags(
           }
         }
         flagsList[flagIndex] = updatedFlag;
+        res.setHeader('ETag', getFlagEtag(updatedFlag as FlagWithMockEtag));
         res.json(updatedFlag);
       } else {
         res.status(404).json({ error: { message: 'Flag not found' } });

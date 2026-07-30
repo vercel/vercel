@@ -16,8 +16,6 @@ permissions:
 env:
   VERCEL_TELEMETRY_DISABLED: '1'
   TURBO_REMOTE_ONLY: 'true'
-  TURBO_TEAM: 'zero-conf-vtest314'
-  TURBO_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -27,6 +25,10 @@ jobs:
   setup:
     name: Find Changes
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      statuses: write
     outputs:
       unitTests: ${{ steps['set-tests'].outputs['unitTests'] }}
       e2eTests: ${{ steps['set-tests'].outputs['e2eTests'] }}
@@ -73,6 +75,10 @@ jobs:
           fetch-depth: 0
           ref: ${{ steps.pr-context.outputs.headSha }}
           token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup Turborepo Remote Cache
+        uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
+        with:
+          team: ${{ vars.TURBO_TEAM }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -252,6 +258,9 @@ jobs:
     timeout-minutes: 120
     runs-on: ${{ matrix.runner }}
     name: Unit / ${{ matrix.label }}
+    permissions:
+      contents: read
+      id-token: write
     if: ${{ needs.setup.outputs['unitTests'] != '[]' }}
     needs:
       - setup
@@ -265,12 +274,16 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ needs.setup.outputs.headSha }}
+      - name: Setup Turborepo Remote Cache
+        uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
+        with:
+          team: ${{ vars.TURBO_TEAM }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
 
       - name: Setup Go toolchain
-        if: ${{ matrix.packageName == '@vercel-internals/ipc-proxy' }}
+        if: ${{ matrix.needsGo == true }}
         uses: actions/setup-go@v6
         with:
           go-version: '1.23.12'
@@ -278,8 +291,9 @@ jobs:
 
       - name: Setup Rust toolchain
         if: ${{ matrix.needsRust == true }}
-        uses: dtolnay/rust-toolchain@a75363d06101555fc97c6c7e1e65670b99104d98 # 1.96.1
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
         with:
+          toolchain: '1.96.1'
           targets: wasm32-wasip2
 
       # yarn 1.22.21 introduced a Corepack bug when running tests.
@@ -331,6 +345,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Test ${{matrix.packageName}}
+        timeout-minutes: 25
         run: |
           attempt=1
           max_attempts=2
@@ -383,6 +398,11 @@ jobs:
     timeout-minutes: 120
     runs-on: ${{ matrix.runner }}
     name: E2E / ${{ matrix.label }}
+    permissions:
+      contents: read
+      deployments: read
+      id-token: write
+      statuses: read
     if: ${{ needs.setup.outputs['e2eTests'] != '[]' }}
     needs:
       - setup
@@ -396,9 +416,27 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ needs.setup.outputs.headSha }}
+      - name: Setup Turborepo Remote Cache
+        uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
+        with:
+          team: ${{ vars.TURBO_TEAM }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
+
+      - name: Setup Go toolchain
+        if: ${{ matrix.needsGo == true }}
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.23.12'
+          cache: false
+
+      - name: Setup Rust toolchain
+        if: ${{ matrix.needsRust == true }}
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+        with:
+          toolchain: '1.96.1'
+          targets: wasm32-wasip2
 
       # yarn 1.22.21 introduced a Corepack bug when running tests.
       # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
@@ -501,6 +539,7 @@ jobs:
             echo "$env_var=$package_name @ $DEPLOYMENT_URL/tarballs/$wheel_name" >> "$GITHUB_ENV"
           done
       - name: Test ${{matrix.packageName}}
+        timeout-minutes: 35
         run: |
           attempt=1
           max_attempts=2

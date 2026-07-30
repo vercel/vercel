@@ -7,14 +7,78 @@ on:
 
 env:
   TURBO_REMOTE_ONLY: 'true'
-  TURBO_TEAM: 'zero-conf-vtest314'
-  TURBO_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
+  determine:
+    name: Determine vercel publish
+    runs-on: ubuntu-latest
+    outputs:
+      # 'true' when changesets/action will run the publish script on this push
+      # (i.e. no pending changesets remain, which is what a "Version Packages"
+      # merge looks like).
+      will-publish: ${{ steps.check.outputs.will-publish }}
+      # 'true' when that publish includes `vercel`, which means the native
+      # @vercel/vc-native-* packages must be on npm first. Pushes that only
+      # open/update the Version Packages PR skip the binary build.
+      should-release-binary: ${{ steps.check.outputs.should-release-binary }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: install pnpm@10.29.3
+        run: npm i -g pnpm@10.29.3
+
+      # The detection reuses @changesets/read and @changesets/pre (deps of
+      # @changesets/cli) so it cannot drift from changesets/action's own logic.
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Determine whether this push publishes vercel
+        id: check
+        run: node utils/determine-release.mjs
+
+  binary:
+    name: Binary release
+    needs: determine
+    # Temporarily disabled: skip binary publishing for now.
+    # To re-enable, restore the original condition:
+    # if: needs.determine.outputs.should-release-binary == 'true'
+    if: false
+    # Reusable workflow permissions are capped by the calling job, so
+    # id-token: write must be granted here for npm trusted publishing
+    # (OIDC) in the publish-npm job of release-binary.yml to work.
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/release-binary.yml
+    with:
+      ref: ${{ github.sha }}
+    secrets:
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      APPLE_CERT_DATA: ${{ secrets.APPLE_CERT_DATA }}
+      APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+      APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+
   release:
     name: Release
+    needs:
+      - determine
+      - binary
+    # Run once the natives are published (binary success), or when this run does
+    # not publish vercel (binary skipped). Never run if the binary build was
+    # attempted and failed, so vercel is not published without its natives.
+    if: |
+      always() &&
+      needs.determine.result == 'success' &&
+      (needs.binary.result == 'success' || needs.binary.result == 'skipped')
     runs-on: ubuntu-latest
     environment: release # Must be kept for trusted publishing on PyPI
     permissions:
@@ -34,14 +98,20 @@ jobs:
       - name: Fetch git tags
         run: git fetch origin 'refs/tags/*:refs/tags/*'
 
+      - name: Setup Turborepo Remote Cache
+        uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
+        with:
+          team: ${{ vars.TURBO_TEAM }}
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 24
 
       - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@a75363d06101555fc97c6c7e1e65670b99104d98 # 1.96.1
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
         with:
+          toolchain: '1.96.1'
           targets: wasm32-wasip2
 
       - name: Setup Python
@@ -79,27 +149,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-
-      - name: Trigger binary release
-        if: steps.changesets.outputs.published == 'true' && contains(fromJSON(steps.changesets.outputs.publishedPackages).*.name, 'vercel')
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-
-            const pkg = JSON.parse(
-              fs.readFileSync('packages/cli/package.json', 'utf8')
-            );
-            const tag = `vercel@${pkg.version}`;
-
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'release-binary.yml',
-              ref: 'main',
-              inputs: { tag },
-            });
+          # While the binary job is disabled, publish `vercel` without native
+          # optionalDependencies instead of failing the missing-natives guard
+          # in utils/inject-native-optional-deps.mjs. Remove this when the
+          # binary job is re-enabled.
+          VERCEL_SKIP_NATIVE_DEPS: ${{ needs.binary.result == 'skipped' && '1' || '' }}
 
       # TODO: re-enable with a new bot token or GitHub App
       # - name: Trigger Update (if a Publish Happened)
@@ -124,8 +178,29 @@ jobs:
     name: Summary (release)
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    if: always()
     needs:
+      - determine
+      - binary
       - release
     steps:
       - name: Check All
-        run: echo OK
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "determine: ${{ needs.determine.result }}"
+          echo "binary:    ${{ needs.binary.result }}"
+          echo "release:   ${{ needs.release.result }}"
+          if [[ "${{ needs.determine.result }}" != "success" ]]; then
+            echo "::error::determine job did not succeed"
+            exit 1
+          fi
+          if [[ "${{ needs.binary.result }}" != "success" && "${{ needs.binary.result }}" != "skipped" ]]; then
+            echo "::error::binary job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.release.result }}" != "success" ]]; then
+            echo "::error::release job did not succeed"
+            exit 1
+          fi
+          echo OK

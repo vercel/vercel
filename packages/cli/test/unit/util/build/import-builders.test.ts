@@ -3,7 +3,10 @@ import { join } from 'path';
 import { ensureDir, remove, outputJSON, writeFile } from 'fs-extra';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import { client } from '../../../mocks/client';
-import { importBuilders } from '../../../../src/util/build/import-builders';
+import {
+  formatResolvedBuilders,
+  importBuilders,
+} from '../../../../src/util/build/import-builders';
 import * as installBuildersModule from '../../../../src/util/build/install-builders';
 import vercelNextPkg from '@vercel/next/package.json';
 
@@ -17,6 +20,21 @@ vi.mock('../../../../src/util/build/install-builders', async importOriginal => {
       (...args: Parameters<typeof actual.installBuilders>) =>
         actual.installBuilders(...args)
     ),
+  };
+});
+
+vi.mock('../../../../src/util/pkg', async importOriginal => {
+  const actual = await (
+    importOriginal as () => Promise<{ default: Record<string, unknown> }>
+  )();
+  return {
+    default: {
+      ...actual.default,
+      builders: {
+        ...(actual.default.builders as Record<string, string>),
+        'fake-pinned-builder': '2.0.0',
+      },
+    },
   };
 });
 import vercelNodePkg from '@vercel/node/package.json';
@@ -320,5 +338,127 @@ describe('importBuilders()', () => {
     } finally {
       await remove(cwd);
     }
+  });
+
+  const pkgName = 'fake-pinned-builder';
+
+  function mockInstallWritingVersion(version: string) {
+    vi.mocked(installBuildersModule.installBuilders).mockImplementationOnce(
+      async dir => {
+        await outputJSON(join(dir, 'node_modules', pkgName, 'package.json'), {
+          name: pkgName,
+          version,
+          main: 'index.js',
+        });
+        await writeFile(
+          join(dir, 'node_modules', pkgName, 'index.js'),
+          `exports.version = 3; exports.build = async function() { return { output: {} }; };`
+        );
+        return new Map();
+      }
+    );
+  }
+
+  it('should install the peer-declared version for bare specs', async () => {
+    const spec = pkgName;
+    const cwd = await getWriteableDirectory();
+    const buildersDir = join(cwd, '.vercel', 'builders');
+
+    mockInstallWritingVersion('2.0.0');
+    try {
+      const builders = await importBuilders(new Set([spec]), cwd);
+      expect(installBuildersModule.installBuilders).toHaveBeenCalledWith(
+        buildersDir,
+        new Set(['fake-pinned-builder@2.0.0']),
+        undefined,
+        new Map([[spec, 'not-installed']])
+      );
+      expect(builders.get(spec)?.pkg.version).toBe('2.0.0');
+    } finally {
+      await remove(cwd);
+    }
+  });
+
+  it('should install the explicit pin when it differs from the peer-declared version', async () => {
+    const spec = 'fake-pinned-builder@1.0.0';
+    const cwd = await getWriteableDirectory();
+    const buildersDir = join(cwd, '.vercel', 'builders');
+
+    mockInstallWritingVersion('1.0.0');
+    try {
+      const builders = await importBuilders(new Set([spec]), cwd);
+      expect(installBuildersModule.installBuilders).toHaveBeenCalledWith(
+        buildersDir,
+        new Set(['fake-pinned-builder@1.0.0']),
+        undefined,
+        new Map([[spec, 'not-installed']])
+      );
+      expect(builders.get(spec)?.pkg.version).toBe('1.0.0');
+    } finally {
+      await remove(cwd);
+    }
+  });
+
+  it('should reinstall a cached bare-spec Builder that no longer matches the peer-declared version', async () => {
+    const spec = pkgName;
+    const cwd = await getWriteableDirectory();
+    const buildersDir = join(cwd, '.vercel', 'builders');
+    const builderModuleDir = join(buildersDir, 'node_modules', pkgName);
+
+    await outputJSON(join(builderModuleDir, 'package.json'), {
+      name: pkgName,
+      version: '1.5.0',
+      main: 'index.js',
+    });
+
+    mockInstallWritingVersion('2.0.0');
+    try {
+      const builders = await importBuilders(new Set([spec]), cwd);
+      expect(installBuildersModule.installBuilders).toHaveBeenCalledWith(
+        buildersDir,
+        new Set(['fake-pinned-builder@2.0.0']),
+        undefined,
+        new Map([[spec, 'peer-version-mismatch']])
+      );
+      expect(builders.get(spec)?.pkg.version).toBe('2.0.0');
+    } finally {
+      await remove(cwd);
+    }
+  });
+
+  it('should throw a descriptive error when the installed version still does not resolve', async () => {
+    const spec = 'fake-pinned-builder@3.0.0';
+    const cwd = await getWriteableDirectory();
+
+    // Install "succeeds" but yields a different version than the pin
+    mockInstallWritingVersion('2.0.0');
+    let err: Error | undefined;
+    try {
+      await importBuilders(new Set([spec]), cwd);
+    } catch (_err: unknown) {
+      err = _err as Error;
+    } finally {
+      await remove(cwd);
+    }
+
+    if (!err) {
+      throw new Error('Expected `err` to be defined');
+    }
+    expect(err.message).toContain(
+      'Failed to load Builders after installing them: fake-pinned-builder@3.0.0 (version-mismatch)'
+    );
+    expect((err as any).link).toEqual(
+      'https://vercel.link/builder-dependencies-install-failed'
+    );
+  });
+
+  it('should format resolved Builders with their source directory', async () => {
+    const specs = new Set(['@vercel/node', '@vercel/static']);
+    const builders = await importBuilders(specs, process.cwd());
+    const resolved = formatResolvedBuilders(builders);
+    expect(resolved).toContain(
+      `@vercel/node@${vercelNodePkg.version}=${join(repoRoot, 'packages/node')}`
+    );
+    expect(resolved).toContain('@vercel/static=built-in');
   });
 });

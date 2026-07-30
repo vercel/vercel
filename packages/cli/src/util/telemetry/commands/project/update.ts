@@ -61,4 +61,10 @@ export class ProjectUpdateTelemetryClient
       });
     }
   }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
+    }
+  }
 }

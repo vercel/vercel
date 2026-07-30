@@ -1,37 +1,40 @@
-import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import stripAnsi from 'strip-ansi';
 import env from '../../../../src/commands/env';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { defaultProject, envs, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
 describe('env add', () => {
+  let testProject: NonNullable<Parameters<typeof useProject>[0]>;
+
   beforeEach(() => {
     useUser();
     useTeams('team_dummy');
-    useProject(
+    testProject = {
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+    };
+    useProject(testProject, [
+      ...envs,
       {
-        ...defaultProject,
-        id: 'vercel-env-pull',
-        name: 'vercel-env-pull',
+        type: 'encrypted',
+        id: '781dt89g8r2h789g',
+        key: 'REDIS_CONNECTION_STRING',
+        value: 'redis://abc123@redis.example.dev:6379',
+        target: ['development'],
+        gitBranch: undefined,
+        configurationId: null,
+        updatedAt: 1557241361455,
+        createdAt: 1557241361455,
       },
-      [
-        ...envs,
-        {
-          type: 'encrypted',
-          id: '781dt89g8r2h789g',
-          key: 'REDIS_CONNECTION_STRING',
-          value: 'redis://abc123@redis.example.dev:6379',
-          target: ['development'],
-          gitBranch: undefined,
-          configurationId: null,
-          updatedAt: 1557241361455,
-          createdAt: 1557241361455,
-        },
-      ]
-    );
+    ]);
     const cwd = setupUnitFixture('vercel-env-pull');
     client.cwd = cwd;
   });
@@ -52,6 +55,48 @@ describe('env add', () => {
         },
       ]);
     });
+  });
+
+  it('adds a variable to the project selected by --project', async () => {
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject({
+      ...testProject,
+      id: 'explicit-env-add',
+      name: 'explicit-env-add',
+      accountId: 'team_dummy',
+    });
+    client.setArgv(
+      'env',
+      'add',
+      'EXPLICIT_PROJECT_VAR',
+      'development',
+      '--value',
+      'value',
+      '--yes',
+      '--project',
+      'explicit-env-add'
+    );
+
+    await expect(env(client)).resolves.toEqual(0);
+    await expect(client.stderr).toOutput('EXPLICIT_PROJECT_VAR');
+  });
+
+  it('continues to use the linked project when --project is omitted', async () => {
+    client.setArgv(
+      'env',
+      'add',
+      'LINKED_PROJECT_VAR',
+      'development',
+      '--value',
+      'value',
+      '--yes'
+    );
+
+    await expect(env(client)).resolves.toEqual(0);
+    expect(stripAnsi(client.stderr.getFullOutput())).toMatch(
+      /Project\s+\S+\/vercel-env-pull/
+    );
   });
 
   describe('[name]', () => {
@@ -394,6 +439,219 @@ describe('env add', () => {
           await expect(exitCodePromise).resolves.toBe(1);
         } finally {
           teamSpy.mockRestore();
+        }
+      });
+    });
+
+    describe('VERCEL_ENV_VAR_CONFIG_SECRET_UI', () => {
+      const originalFlag = process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
+
+      beforeEach(() => {
+        process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI = '1';
+      });
+
+      afterEach(() => {
+        if (originalFlag === undefined) {
+          delete process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
+        } else {
+          process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI = originalFlag;
+        }
+      });
+
+      it('allows --no-sensitive on Production when team policy is on', async () => {
+        const teamModule = await import(
+          '../../../../src/util/teams/get-team-by-id'
+        );
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+
+        const teamSpy = vi.spyOn(teamModule, 'default').mockResolvedValue({
+          sensitiveEnvironmentVariablePolicy: 'on',
+        } as any);
+        const addSpy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        try {
+          client.setArgv(
+            'env',
+            'add',
+            'API_FLAG',
+            'production',
+            '--value',
+            'foo',
+            '--no-sensitive',
+            '--yes'
+          );
+          const exitCodePromise = env(client);
+          await expect(exitCodePromise).resolves.toBe(0);
+
+          expect(addSpy).toHaveBeenCalled();
+          const [, , , type, , , , , visibility] = addSpy.mock
+            .calls[0] as unknown as [
+            unknown,
+            unknown,
+            unknown,
+            string,
+            unknown,
+            unknown,
+            unknown,
+            unknown,
+            string,
+          ];
+          expect(type).toBe('encrypted');
+          expect(visibility).toBe('config');
+        } finally {
+          teamSpy.mockRestore();
+          addSpy.mockRestore();
+        }
+      });
+
+      it('prints visibility in the result when the flag is enabled', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const addSpy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        try {
+          client.setArgv(
+            'env',
+            'add',
+            'API_FLAG',
+            'production',
+            '--value',
+            'foo',
+            '--no-sensitive',
+            '--yes'
+          );
+          const exitCodePromise = env(client);
+          await expect(client.stderr).toOutput('Visibility      Config');
+          await expect(exitCodePromise).resolves.toBe(0);
+        } finally {
+          addSpy.mockRestore();
+        }
+      });
+
+      it('rejects --sensitive on Development', async () => {
+        client.setArgv(
+          'env',
+          'add',
+          'DEV_SECRET',
+          'development',
+          '--sensitive',
+          '--value',
+          'foo',
+          '--yes'
+        );
+        const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput(
+          'not allowed with the Development Environment'
+        );
+        await expect(exitCodePromise).resolves.toBe(1);
+      });
+
+      it('omits visibility for public-prefixed keys on Production when team policy is on', async () => {
+        const teamModule = await import(
+          '../../../../src/util/teams/get-team-by-id'
+        );
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+
+        const teamSpy = vi.spyOn(teamModule, 'default').mockResolvedValue({
+          sensitiveEnvironmentVariablePolicy: 'on',
+        } as any);
+        const addSpy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        try {
+          client.setArgv(
+            'env',
+            'add',
+            'NEXT_PUBLIC_API_URL',
+            'production',
+            '--value',
+            'https://example.com',
+            '--no-sensitive',
+            '--yes'
+          );
+          const exitCodePromise = env(client);
+          await expect(exitCodePromise).resolves.toBe(0);
+
+          expect(addSpy).toHaveBeenCalled();
+          const call = addSpy.mock.calls[0] as unknown[];
+          expect(call[8]).toBeUndefined();
+        } finally {
+          teamSpy.mockRestore();
+          addSpy.mockRestore();
+        }
+      });
+
+      it('rejects --sensitive on public-prefixed production keys', async () => {
+        client.setArgv(
+          'env',
+          'add',
+          'NEXT_PUBLIC_API_KEY',
+          'production',
+          '--sensitive',
+          '--value',
+          'my-secret',
+          '--yes'
+        );
+        const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput('cannot use secret visibility');
+        await expect(exitCodePromise).resolves.toBe(1);
+      });
+
+      it('rejects secret visibility on public-prefixed production keys', async () => {
+        client.setArgv(
+          'env',
+          'add',
+          'NEXT_PUBLIC_API_URL',
+          'production',
+          '--visibility',
+          'secret',
+          '--value',
+          'https://example.com',
+          '--yes'
+        );
+        const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput('cannot use secret visibility');
+        await expect(exitCodePromise).resolves.toBe(1);
+      });
+
+      it('uses explicit --visibility when provided', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const addSpy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        try {
+          client.setArgv(
+            'env',
+            'add',
+            'API_KEY',
+            'production',
+            '--visibility',
+            'config',
+            '--no-sensitive',
+            '--value',
+            'foo',
+            '--yes'
+          );
+          const exitCodePromise = env(client);
+          await expect(exitCodePromise).resolves.toBe(0);
+
+          const call = addSpy.mock.calls[0] as unknown[];
+          expect(call[8]).toBe('config');
+        } finally {
+          addSpy.mockRestore();
         }
       });
     });
@@ -858,28 +1116,66 @@ describe('env add', () => {
 
     describe('[environment]', () => {
       it('should redact custom [environment] values', async () => {
+        testProject.customEnvironments = [
+          {
+            id: 'env_1234abcd5678efgh',
+            slug: 'custom-env-name',
+            createdAt: 1717176548879,
+            updatedAt: 1717176548879,
+            type: 'preview',
+            description: '',
+            branchMatcher: {
+              type: 'endsWith',
+              pattern: 'custom',
+            },
+          },
+        ];
+        const envName = 'environment-variable';
+        try {
+          client.setArgv('env', 'add', envName, 'custom-env-name');
+          const exitCodePromise = env(client);
+          await expect(client.stderr).toOutput('Store as sensitive?');
+          client.stdin.write('n\n');
+          await expect(client.stderr).toOutput('Value?');
+          client.stdin.write('testvalue\n');
+          await expect(exitCodePromise).resolves.toEqual(0);
+
+          const savedEnv = envs.find(currentEnv => currentEnv.key === envName);
+          expect(savedEnv?.customEnvironmentIds).toEqual([
+            'env_1234abcd5678efgh',
+          ]);
+
+          expect(client.telemetryEventStore).toHaveTelemetryEvents([
+            {
+              key: `subcommand:add`,
+              value: 'add',
+            },
+            {
+              key: `argument:name`,
+              value: '[REDACTED]',
+            },
+            {
+              key: `argument:environment`,
+              value: '[REDACTED]',
+            },
+          ]);
+        } finally {
+          const savedEnvIndex = envs.findIndex(
+            currentEnv => currentEnv.key === envName
+          );
+          if (savedEnvIndex !== -1) {
+            envs.splice(savedEnvIndex, 1);
+          }
+        }
+      });
+
+      it('errors on an unknown environment name', async () => {
         client.setArgv('env', 'add', 'environment-variable', 'custom-env-name');
         const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput('Store as sensitive?');
-        client.stdin.write('n\n');
-        await expect(client.stderr).toOutput('Value?');
-        client.stdin.write('testvalue\n');
-        await expect(exitCodePromise).resolves.toEqual(0);
-
-        expect(client.telemetryEventStore).toHaveTelemetryEvents([
-          {
-            key: `subcommand:add`,
-            value: 'add',
-          },
-          {
-            key: `argument:name`,
-            value: '[REDACTED]',
-          },
-          {
-            key: `argument:environment`,
-            value: '[REDACTED]',
-          },
-        ]);
+        await expect(client.stderr).toOutput(
+          'Invalid environment: custom-env-name'
+        );
+        await expect(exitCodePromise).resolves.toEqual(1);
       });
 
       describe('[gitBranch]', () => {
@@ -1356,6 +1652,322 @@ describe('env add', () => {
         });
 
         vi.restoreAllMocks();
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
+    });
+
+    describe('multi-target environments', () => {
+      it('adds one entry spanning comma-separated environments', async () => {
+        const envName = 'MULTI_TARGET_VAR';
+        try {
+          client.setArgv(
+            'env',
+            'add',
+            envName,
+            'production,preview,development',
+            '--value',
+            'multi-value',
+            '--no-sensitive',
+            '--yes'
+          );
+          const exitCodePromise = env(client);
+          await expect(exitCodePromise).resolves.toBe(0);
+
+          const savedEnv = envs.find(currentEnv => currentEnv.key === envName);
+          expect(savedEnv?.target).toEqual([
+            'production',
+            'preview',
+            'development',
+          ]);
+          expect(savedEnv?.type).toBe('encrypted');
+
+          const fullOutput = stripAnsi(client.stderr.getFullOutput());
+          expect(fullOutput).toContain('Production, Preview, Development');
+
+          expect(client.telemetryEventStore).toHaveTelemetryEvents([
+            { key: 'subcommand:add', value: 'add' },
+            { key: 'argument:name', value: '[REDACTED]' },
+            {
+              key: 'argument:environment',
+              value: 'production,preview,development',
+            },
+            { key: 'option:value', value: '[REDACTED]' },
+            { key: 'flag:no-sensitive', value: 'TRUE' },
+            { key: 'flag:yes', value: 'TRUE' },
+          ]);
+        } finally {
+          const savedEnvIndex = envs.findIndex(
+            currentEnv => currentEnv.key === envName
+          );
+          if (savedEnvIndex !== -1) {
+            envs.splice(savedEnvIndex, 1);
+          }
+        }
+      });
+
+      it('dedupes repeated targets and trims whitespace', async () => {
+        const envName = 'MULTI_DEDUPE_VAR';
+        try {
+          client.setArgv(
+            'env',
+            'add',
+            envName,
+            'production, preview,production',
+            '--value',
+            'v',
+            '--no-sensitive',
+            '--yes'
+          );
+          await expect(env(client)).resolves.toBe(0);
+
+          const savedEnv = envs.find(currentEnv => currentEnv.key === envName);
+          expect(savedEnv?.target).toEqual(['production', 'preview']);
+        } finally {
+          const savedEnvIndex = envs.findIndex(
+            currentEnv => currentEnv.key === envName
+          );
+          if (savedEnvIndex !== -1) {
+            envs.splice(savedEnvIndex, 1);
+          }
+        }
+      });
+
+      it('errors with invalid_environment for an unknown target (non-interactive)', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          'BAD_TARGET_VAR',
+          'production,staging',
+          '--value',
+          'v',
+          '--yes'
+        );
+        await expect(env(client)).rejects.toThrow('exit');
+
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload).toMatchObject({
+          status: 'error',
+          reason: 'invalid_environment',
+          message: expect.stringContaining('staging'),
+        });
+        expect(payload.message).toContain('production, preview, development');
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
+
+      it('errors when a Git branch is combined with multiple environments (non-interactive)', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          'BRANCH_MULTI_VAR',
+          'production,preview',
+          'my-branch',
+          '--value',
+          'v',
+          '--yes'
+        );
+        await expect(env(client)).rejects.toThrow('exit');
+
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload).toMatchObject({
+          status: 'error',
+          reason: 'branch_requires_preview_only',
+        });
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
+
+      it('suggests --no-sensitive retry when default sensitivity conflicts with Development (non-interactive)', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          'SENSITIVE_DEV_VAR',
+          'production,preview,development',
+          '--value',
+          'v',
+          '--yes'
+        );
+        await expect(env(client)).rejects.toThrow('exit');
+
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload).toMatchObject({
+          status: 'error',
+          reason: 'sensitive_not_allowed_on_development',
+          next: expect.any(Array),
+        });
+        const commands = payload.next.map(
+          (n: { command: string }) => n.command
+        );
+        expect(
+          commands.some(
+            (c: string) =>
+              c.includes('production,preview,development') &&
+              c.includes('--no-sensitive')
+          )
+        ).toBe(true);
+        expect(
+          commands.some(
+            (c: string) =>
+              c.includes('production,preview') && !c.includes('development')
+          )
+        ).toBe(true);
+        for (const c of commands) {
+          expect(c).toContain('--value "<value>"');
+          expect(c).not.toContain(' v ');
+        }
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
+
+      it('keeps explicit --sensitive and drops Development from the multi-target suggestion', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          'SENSITIVE_MISSING_ENV',
+          '--value',
+          'v',
+          '--sensitive',
+          '--yes'
+        );
+        await expect(env(client)).rejects.toThrow('exit');
+
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload.missing).toContain('missing_environment');
+        const commands = payload.next.map(
+          (n: { command: string }) => n.command
+        );
+        const multi = commands.find((c: string) =>
+          c.includes('production,preview')
+        );
+        expect(multi).toBeDefined();
+        expect(multi).not.toContain('development');
+        expect(multi).not.toContain('--no-sensitive');
+        expect(multi).toContain('--sensitive');
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
+
+      it('excludes Development from the multi-target suggestion when --sensitive is set and flag is enabled', async () => {
+        const originalFlag = process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
+        process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI = '1';
+
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        try {
+          client.nonInteractive = true;
+          client.setArgv(
+            'env',
+            'add',
+            'SENSITIVE_MISSING_ENV',
+            '--value',
+            'v',
+            '--sensitive',
+            '--yes'
+          );
+          await expect(env(client)).rejects.toThrow('exit');
+
+          const payload = JSON.parse(
+            logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+          );
+          expect(payload.missing).toContain('missing_environment');
+          const commands = payload.next.map(
+            (n: { command: string }) => n.command
+          );
+          expect(
+            commands.some(
+              (c: string) =>
+                c.includes('production,preview') &&
+                c.includes('--sensitive') &&
+                !c.includes('development')
+            )
+          ).toBe(true);
+        } finally {
+          if (originalFlag === undefined) {
+            delete process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
+          } else {
+            process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI = originalFlag;
+          }
+          exitSpy.mockRestore();
+          logSpy.mockRestore();
+        }
+      });
+
+      it('includes a comma-separated suggestion when environment is missing (non-interactive)', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          'MISSING_ENV_VAR',
+          '--value',
+          'v',
+          '--yes'
+        );
+        await expect(env(client)).rejects.toThrow('exit');
+
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload).toMatchObject({
+          status: 'action_required',
+          reason: 'missing_requirements',
+          missing: expect.arrayContaining(['missing_environment']),
+        });
+        const commands = payload.next.map(
+          (n: { command: string }) => n.command
+        );
+        expect(
+          commands.some(
+            (c: string) =>
+              c.includes('production,preview,development') &&
+              c.includes('--no-sensitive')
+          )
+        ).toBe(true);
+
         exitSpy.mockRestore();
         logSpy.mockRestore();
       });

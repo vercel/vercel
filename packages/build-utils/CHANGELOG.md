@@ -1,5 +1,68 @@
 # @vercel/build-utils
 
+## 13.36.3
+
+### Patch Changes
+
+- a69c714: Propagate per-function `maxConcurrency` configuration into build outputs and keep every configured Next.js route in its own Lambda group, including routes with the same limit.
+- 654e898: Type shared function settings in container image build outputs.
+
+## 13.36.2
+
+### Patch Changes
+
+- 2c75803: Preserve 4-byte UTF-8 characters when streaming string `FileBlob` contents (fixes Edge Function corruption during `vercel build`).
+
+## 13.36.1
+
+### Patch Changes
+
+- 17ee736: Replace the vercel-workers integration for Python queue subscribers and workflows with the new vercel-queue SDK:
+
+  - `[[tool.vercel.subscribers]]` entrypoints are introspected at build time via `vercel.queue.get_subscriptions()` and served through generated `vercel.queue.asgi_app()` handler modules, with `queue/v2beta` triggers carrying the SDK-registered consumer groups and per-subscription tuning.
+  - Celery and Dramatiq projects get the matching `vercel-celery`/`vercel-dramatiq` integration package injected automatically (bundled variant unless `vercel-queue` is an explicit dependency), in builds and in `vercel dev`.
+  - `[[tool.vercel.workflows]]` entrypoints follow the SDK generation: projects on `vercel` >= 0.8.0 are served through vercel-queue like subscribers; older or undeterminable versions keep the legacy vercel-workers serving (worker env markers, injected pinned `vercel-workers`).
+  - Projects that depend on `vercel-workers` directly keep the legacy integration wholesale: legacy subscriber schema, direct entrypoint serving, worker env markers.
+  - `vercel dev` serves queue sidecars through `vercel.queue.asgi_app()` for new-SDK projects, and its queue broker delivers with the SDK-registered consumer groups introspected at sidecar startup (matching production trigger behavior); legacy projects keep the vercel-workers bootstrap.
+  - The CLI no longer injects `config.hasWorkerServices`; the Python builder makes all queue-serving decisions from project metadata.
+
+## 13.36.0
+
+### Minor Changes
+
+- 4502520: Support Node.js Routing Middleware entrypoints through `proxy.entrypoint`, with optional path matching through `proxy.matcher`. The matcher may be configured in the entrypoint source or `vercel.json`, but not both.
+
+### Patch Changes
+
+- Updated dependencies [6aa29e5]
+  - @vercel/python-analysis@0.12.0
+
+## 13.35.0
+
+### Minor Changes
+
+- 7dd4301: Make service bindings type optional.
+
+## 13.34.0
+
+### Minor Changes
+
+- 238543c: Support Python services that declare their web app and development workflow sidecars through a `pyproject.toml` entrypoint in `vercel dev`.
+
+## 13.33.1
+
+### Patch Changes
+
+- def07fc: Migrate `@vercel/client` and `@vercel/build-utils` from `node-fetch` to native `fetch`. This removes the last `url.parse()` usage from the CLI bundle, which triggered a `DEP0169` DeprecationWarning on Node 24 (visible in the standalone binary during `vercel deploy`).
+
+  BREAKING CHANGE (`@vercel/client`): the `agent?: http.Agent` option was replaced with `dispatcher?: FetchDispatcher` (an undici dispatcher, e.g. `undici.ProxyAgent`), since native `fetch` does not support Node.js HTTP agents. The CLI now threads its proxy-aware dispatcher through automatically, so `HTTP_PROXY`/`HTTPS_PROXY` behavior is unchanged for CLI users.
+
+## 13.33.0
+
+### Minor Changes
+
+- 607f0ef: Add service information to deploy-manifest.
+
 ## 13.32.3
 
 ### Patch Changes

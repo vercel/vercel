@@ -183,39 +183,23 @@ describe('teams switch', () => {
       client.config.currentTeam = undefined;
     });
 
-    it('outputs current_team_invalid with teams list and login in next when currentTeam is stale', async () => {
+    it('switches away from a stale currentTeam instead of failing', async () => {
       useUser();
       const team = useTeam();
+      // Stale currentTeam (e.g. deleted team or revoked membership) must not
+      // block switching away — this command is the recovery path.
       client.config.currentTeam = 'stale-team-id-not-in-list';
       client.nonInteractive = true;
-      const logSpy = vi
-        .spyOn(console, 'log')
-        .mockImplementation(() => undefined as unknown as void);
-      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
-        throw new Error('exit');
-      }) as () => never);
 
       client.setArgv('teams', 'switch', team.slug, '--non-interactive');
-      await expect(teams(client)).rejects.toThrow('exit');
+      const exitCode = await teams(client);
 
-      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
-      expect(payload.status).toBe('error');
-      expect(payload.reason).toBe('current_team_invalid');
-      const listNext = payload.next.find((n: { command: string }) =>
-        n.command.includes('teams list')
+      expect(exitCode).toBe(0);
+      await expect(client.stderr).toOutput(
+        'You are no longer a member of the previously selected team'
       );
-      expect(listNext).toBeDefined();
-      expect(listNext.command).toContain('--non-interactive');
-      const loginNext = payload.next.find(
-        (n: { command: string }) =>
-          n.command.includes('login') && !n.command.includes('teams')
-      );
-      expect(loginNext).toBeDefined();
-      expect(loginNext.command).toContain('login');
-      expect(loginNext.command).toContain('--non-interactive');
+      expect(client.config.currentTeam).toBe(team.id);
 
-      logSpy.mockRestore();
-      exitSpy.mockRestore();
       client.nonInteractive = false;
       client.config.currentTeam = undefined;
     });
@@ -281,6 +265,30 @@ describe('teams switch', () => {
       logSpy.mockRestore();
       exitSpy.mockRestore();
       client.nonInteractive = false;
+    });
+  });
+
+  describe('stale current team', () => {
+    it('shows the team picker with a warning instead of failing', async () => {
+      useUser();
+      const team = useTeam();
+      client.config.currentTeam = 'stale-team-id-not-in-list';
+
+      client.setArgv('teams', 'switch');
+      const exitCodePromise = teams(client);
+      await expect(client.stderr).toOutput(
+        'You are no longer a member of the previously selected team'
+      );
+      await expect(client.stderr).toOutput('Switch to:');
+      client.stdin.write('\x1B[B'); // Down arrow past the personal account
+      client.stdin.write('\r'); // Return key
+      await expect(exitCodePromise).resolves.toEqual(0);
+      await expect(client.stderr).toOutput(
+        `The team ${team.name} (${team.slug}) is now active!`
+      );
+      expect(client.config.currentTeam).toBe(team.id);
+
+      client.config.currentTeam = undefined;
     });
   });
 

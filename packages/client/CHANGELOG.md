@@ -1,5 +1,88 @@
 # @vercel/client
 
+## 18.2.3
+
+### Patch Changes
+
+- 682bf8b: Fix `vercel deploy --prebuilt` re-adding `.vercelignore`d files through `filePathMap`. Source paths referenced by `.vc-config.json` `filePathMap` entries are now re-checked against the project's `.vercelignore`/`.nowignore` rules and rejected when they resolve outside the deployment root, so a tampered or lower-trust build artifact can no longer reintroduce ignored files (e.g. `.env`) into the deployment upload set.
+- Updated dependencies [a69c714]
+- Updated dependencies [654e898]
+  - @vercel/build-utils@13.36.3
+
+## 18.2.2
+
+### Patch Changes
+
+- Updated dependencies [2c75803]
+  - @vercel/build-utils@13.36.2
+
+## 18.2.1
+
+### Patch Changes
+
+- Updated dependencies [17ee736]
+  - @vercel/build-utils@13.36.1
+
+## 18.2.0
+
+### Minor Changes
+
+- 4502520: Support Node.js Routing Middleware entrypoints through `proxy.entrypoint`, with optional path matching through `proxy.matcher`. The matcher may be configured in the entrypoint source or `vercel.json`, but not both.
+
+### Patch Changes
+
+- Updated dependencies [4502520]
+  - @vercel/build-utils@13.36.0
+
+## 18.1.1
+
+### Patch Changes
+
+- Updated dependencies [7dd4301]
+  - @vercel/build-utils@13.35.0
+
+## 18.1.0
+
+### Minor Changes
+
+- e4866e9: Skip the Rust `target/` directory by default for Rust projects.
+
+  Rust projects produce a `target/` directory of build artifacts that can be
+  hundreds of MB. It's rebuilt on Vercel during the deployment (and cached
+  server-side), so uploading it only slows deployments down. When a root
+  `Cargo.toml` is detected, `target/` is now ignored by default during
+  `vercel deploy` and `vercel dev`. Users can opt back in with `!/target` in
+  their `.vercelignore`.
+
+  Also hardened the local file scanner used by `vercel dev` so that a directory
+  removed mid-scan (a common race with `cargo build` churning `target/`) is
+  skipped instead of crashing the process.
+
+### Patch Changes
+
+- Updated dependencies [238543c]
+  - @vercel/build-utils@13.34.0
+
+## 18.0.0
+
+### Major Changes
+
+- def07fc: Migrate `@vercel/client` and `@vercel/build-utils` from `node-fetch` to native `fetch`. This removes the last `url.parse()` usage from the CLI bundle, which triggered a `DEP0169` DeprecationWarning on Node 24 (visible in the standalone binary during `vercel deploy`).
+
+  BREAKING CHANGE (`@vercel/client`): the `agent?: http.Agent` option was replaced with `dispatcher?: FetchDispatcher` (an undici dispatcher, e.g. `undici.ProxyAgent`), since native `fetch` does not support Node.js HTTP agents. The CLI now threads its proxy-aware dispatcher through automatically, so `HTTP_PROXY`/`HTTPS_PROXY` behavior is unchanged for CLI users.
+
+### Patch Changes
+
+- Updated dependencies [def07fc]
+  - @vercel/build-utils@13.33.1
+
+## 17.6.5
+
+### Patch Changes
+
+- Updated dependencies [607f0ef]
+  - @vercel/build-utils@13.33.0
+
 ## 17.6.4
 
 ### Patch Changes

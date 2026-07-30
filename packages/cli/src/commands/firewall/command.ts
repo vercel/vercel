@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { yesOption } from '../../util/arg-common';
+import { projectOption, yesOption } from '../../util/arg-common';
 
 export const overviewSubcommand = {
   name: 'overview',
@@ -8,6 +8,7 @@ export const overviewSubcommand = {
     "Show a summary of your project's firewall configuration, including active rules, IP blocks, bypasses, and any unpublished draft changes",
   arguments: [],
   options: [
+    projectOption,
     {
       name: 'json',
       shorthand: null,
@@ -31,6 +32,7 @@ export const diffSubcommand = {
     'Show draft changes that have been made but are not yet published to production',
   arguments: [],
   options: [
+    projectOption,
     {
       name: 'json',
       shorthand: null,
@@ -53,7 +55,7 @@ export const publishSubcommand = {
   description:
     'Publish all draft firewall changes to production, making them live immediately',
   arguments: [],
-  options: [yesOption],
+  options: [projectOption, yesOption],
   examples: [
     {
       name: 'Publish draft changes',
@@ -72,7 +74,7 @@ export const discardSubcommand = {
   description:
     'Permanently discard all unpublished draft changes, reverting to the current production configuration',
   arguments: [],
-  options: [yesOption],
+  options: [projectOption, yesOption],
   examples: [
     {
       name: 'Discard draft changes',
@@ -93,6 +95,7 @@ export const systemBypassListSubcommand = {
     'List all system bypass rules that allow specific IPs to skip firewall checks',
   arguments: [],
   options: [
+    projectOption,
     {
       name: 'json',
       shorthand: null,
@@ -116,6 +119,7 @@ export const systemBypassAddSubcommand = {
     'Add a system bypass rule to allow a specific IP address to skip firewall checks. Takes effect immediately (no publish required)',
   arguments: [{ name: 'ip', required: true }],
   options: [
+    projectOption,
     {
       name: 'domain',
       shorthand: null,
@@ -151,6 +155,7 @@ export const systemBypassRemoveSubcommand = {
     'Remove a system bypass rule so the IP is no longer exempt from firewall checks. Takes effect immediately (no publish required)',
   arguments: [{ name: 'ip', required: true }],
   options: [
+    projectOption,
     {
       name: 'domain',
       shorthand: null,
@@ -204,6 +209,7 @@ export const ipBlocksListSubcommand = {
     'List all IP blocking rules, including any unpublished draft changes',
   arguments: [],
   options: [
+    projectOption,
     {
       name: 'json',
       shorthand: null,
@@ -227,6 +233,7 @@ export const ipBlocksBlockSubcommand = {
     'Block an IP address or CIDR range from accessing your project. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'ip', required: true }],
   options: [
+    projectOption,
     {
       name: 'hostname',
       shorthand: null,
@@ -267,6 +274,7 @@ export const ipBlocksUnblockSubcommand = {
     'Remove an IP blocking rule to allow the address to access your project again. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'id-or-ip', required: true }],
   options: [
+    projectOption,
     {
       name: 'hostname',
       shorthand: null,
@@ -331,6 +339,7 @@ export const rulesListSubcommand = {
     'List all custom firewall rules, including any unpublished draft changes',
   arguments: [],
   options: [
+    projectOption,
     {
       name: 'expand',
       shorthand: 'e',
@@ -365,6 +374,7 @@ export const rulesInspectSubcommand = {
     'Show the full configuration of a custom firewall rule, including conditions, action, and rate limit settings',
   arguments: [{ name: 'name-or-id', required: true }],
   options: [
+    projectOption,
     {
       name: 'json',
       shorthand: null,
@@ -392,6 +402,7 @@ export const rulesAddSubcommand = {
     'Create a new custom firewall rule using AI, an interactive builder, JSON, or command-line flags. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name', required: false }],
   options: [
+    projectOption,
     {
       name: 'ai',
       shorthand: null,
@@ -537,6 +548,7 @@ export const rulesEditSubcommand = {
     'Edit an existing custom firewall rule using AI, an interactive editor, JSON, or command-line flags. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
   options: [
+    projectOption,
     {
       name: 'ai',
       shorthand: null,
@@ -691,7 +703,7 @@ export const rulesEnableSubcommand = {
   description:
     'Enable a disabled custom firewall rule. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
-  options: [yesOption],
+  options: [projectOption, yesOption],
   examples: [
     {
       name: 'Enable a rule',
@@ -706,7 +718,7 @@ export const rulesDisableSubcommand = {
   description:
     'Disable a custom firewall rule without removing it. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
-  options: [yesOption],
+  options: [projectOption, yesOption],
   examples: [
     {
       name: 'Disable a rule',
@@ -721,7 +733,7 @@ export const rulesRemoveSubcommand = {
   description:
     'Remove a custom firewall rule. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
-  options: [yesOption],
+  options: [projectOption, yesOption],
   examples: [
     {
       name: 'Remove a rule',
@@ -737,6 +749,7 @@ export const rulesReorderSubcommand = {
     'Change the priority order of a custom firewall rule. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
   options: [
+    projectOption,
     {
       name: 'position',
       shorthand: null,
@@ -816,6 +829,7 @@ export const attackModeEnableSubcommand = {
     'Enable attack mode — all visitors will be shown a verification challenge before accessing your site. Takes effect immediately (no publish required)',
   arguments: [],
   options: [
+    projectOption,
     {
       name: 'duration',
       shorthand: null,
@@ -843,7 +857,7 @@ export const attackModeDisableSubcommand = {
   description:
     'Disable attack mode — visitors will no longer be challenged. Takes effect immediately (no publish required)',
   arguments: [],
-  options: [yesOption],
+  options: [projectOption, yesOption],
   examples: [
     {
       name: 'Disable attack mode',
@@ -879,7 +893,7 @@ export const systemMitigationsPauseSubcommand = {
   description:
     'Pause automatic DDoS protection and system-level traffic filtering for 24 hours. Takes effect immediately (no publish required)',
   arguments: [],
-  options: [yesOption],
+  options: [projectOption, yesOption],
   examples: [
     {
       name: 'Pause system mitigations',
@@ -894,7 +908,7 @@ export const systemMitigationsResumeSubcommand = {
   description:
     'Resume automatic DDoS protection and system-level traffic filtering. Takes effect immediately (no publish required)',
   arguments: [],
-  options: [yesOption],
+  options: [projectOption, yesOption],
   examples: [
     {
       name: 'Resume system mitigations',

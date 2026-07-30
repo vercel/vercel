@@ -2,6 +2,116 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { validateConfig } from '../../../../src/util/validate-config';
 
 describe('validateConfig', () => {
+  describe('proxy', () => {
+    it.each([
+      'proxy.js',
+      'src/proxy.ts',
+    ])('accepts the supported entrypoint %s', entrypoint => {
+      expect(validateConfig({ proxy: { entrypoint } })).toBeNull();
+    });
+
+    it.each([
+      '/api/:func*',
+      ['/api/:func*', '/dashboard/:path*'],
+    ])('accepts the matcher %j', matcher => {
+      expect(
+        validateConfig({ proxy: { entrypoint: 'proxy.ts', matcher } })
+      ).toBeNull();
+    });
+
+    it('accepts functions configuration for the proxy', () => {
+      expect(
+        validateConfig({
+          proxy: { entrypoint: 'proxy.ts' },
+          functions: {
+            'proxy.ts': {
+              maxDuration: 10,
+              memory: 1024,
+            },
+          },
+        })
+      ).toBeNull();
+    });
+
+    it.each([
+      'proxy.ts',
+      '**/*.ts',
+    ])('accepts a functions runtime targeting the proxy through %s', pattern => {
+      expect(
+        validateConfig({
+          proxy: { entrypoint: 'proxy.ts' },
+          functions: {
+            [pattern]: {
+              runtime: 'some-runtime@1.0.0',
+            },
+          },
+        })
+      ).toBeNull();
+    });
+
+    it('requires an entrypoint', () => {
+      const error = validateConfig({
+        // @ts-expect-error - testing invalid configuration
+        proxy: {},
+      });
+
+      expect(error?.message).toBe(
+        'Invalid vercel.json - `proxy` missing required property `entrypoint`.'
+      );
+    });
+
+    it('rejects unsupported entrypoint extensions', () => {
+      const error = validateConfig({
+        proxy: { entrypoint: 'proxy.mjs' },
+      });
+
+      expect(error?.code).toBe('INVALID_PROXY_ENTRYPOINT');
+      expect(error?.message).toBe(
+        'The `proxy.entrypoint` path must end in `.js` or `.ts` and reference an executable file.'
+      );
+    });
+
+    it('rejects proxy together with builds', () => {
+      const error = validateConfig({
+        proxy: { entrypoint: 'proxy.ts' },
+        builds: [{ src: 'api/index.ts', use: '@vercel/node' }],
+      });
+
+      expect(error?.code).toBe('PROXY_AND_BUILDS');
+      expect(error?.message).toBe(
+        'The `proxy` property cannot be used with the `builds` property. Remove `builds` to use an explicit proxy entrypoint.'
+      );
+    });
+
+    it.each([
+      '/proxy.ts',
+      '../proxy.ts',
+      'src\\proxy.ts',
+      'proxy.ts?x=1',
+    ])('rejects the unsafe entrypoint %s', entrypoint => {
+      const error = validateConfig({ proxy: { entrypoint } });
+
+      expect(error?.code).toBe('INVALID_PROXY_ENTRYPOINT');
+      expect(error?.message).toBe(
+        'The `proxy.entrypoint` path must be relative to the project root and cannot contain traversal, query, fragment, or control characters.'
+      );
+    });
+
+    it.each([
+      'api/:func*',
+      ['/api/:func*', 'dashboard/:path*'],
+    ])('rejects the invalid matcher %j', matcher => {
+      const error = validateConfig({
+        proxy: { entrypoint: 'proxy.ts', matcher },
+      });
+
+      expect(error?.code).toBe('INVALID_PROXY_MATCHER');
+      expect(error?.message).toBe(
+        'The `proxy.matcher` value must be a path matcher starting with `/`, or an array of path matchers starting with `/`.'
+      );
+    });
+  });
+
   describe('services', () => {
     it('should not error with a valid canonical config', () => {
       const error = validateConfig({
@@ -187,6 +297,19 @@ describe('validateConfig', () => {
       );
     });
 
+    it('should accept a binding with `type` omitted', () => {
+      const error = validateConfig({
+        services: {
+          web: { root: '.' },
+          api: {
+            root: 'api/',
+            bindings: [{ service: 'web', format: 'url', env: 'WEB_URL' }],
+          },
+        },
+      } as any);
+      expect(error).toBeNull();
+    });
+
     it('should reject a binding missing a required field', () => {
       const error = validateConfig({
         experimentalServicesV2: {
@@ -281,7 +404,9 @@ describe('validateConfig', () => {
       rewrites: [{ source: '/help', destination: '/support' }],
       redirects: [{ source: '/kb', destination: 'https://example.com' }],
       trailingSlash: false,
-      functions: { 'api/user.go': { memory: 128, maxDuration: 5 } },
+      functions: {
+        'api/user.go': { memory: 128, maxDuration: 5, maxConcurrency: 8 },
+      },
     };
     const error = validateConfig(config);
     expect(error).toBeNull();
@@ -296,6 +421,16 @@ describe('validateConfig', () => {
     } as unknown as Parameters<typeof validateConfig>[0];
     const error = validateConfig(config);
     expect(error).toBeNull();
+  });
+
+  it.each([
+    0, -1, 1.5,
+  ])('should reject maxConcurrency set to %s', maxConcurrency => {
+    const error = validateConfig({
+      functions: { 'api/user.go': { maxConcurrency } },
+    } as Parameters<typeof validateConfig>[0]);
+    expect(error).not.toBeNull();
+    expect(error?.message).toContain('maxConcurrency');
   });
 
   // Regression test for honoring the env var when it is set *after* this module
@@ -324,6 +459,7 @@ describe('validateConfig', () => {
     it('allows maxDuration above 1800s when set to "1" (defers to the server)', () => {
       process.env[ENV] = '1';
       expect(validateConfig(configWith(1800))).toBeNull();
+      expect(validateConfig(configWith(1900))).toBeNull();
     });
 
     it('still enforces the lower bound and integer check when skipped', () => {

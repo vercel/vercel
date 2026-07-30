@@ -1,5 +1,54 @@
 # @vercel/static-build
 
+## 2.11.13
+
+### Patch Changes
+
+- a69c714: Propagate per-function `maxConcurrency` configuration into build outputs and keep every configured Next.js route in its own Lambda group, including routes with the same limit.
+  - @vercel/gatsby-plugin-vercel-builder@2.2.33
+
+## 2.11.12
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.32
+
+## 2.11.11
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.31
+
+## 2.11.10
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.30
+
+## 2.11.9
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.29
+
+## 2.11.8
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.28
+
+## 2.11.7
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.27
+
+## 2.11.6
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.26
+
 ## 2.11.5
 
 ### Patch Changes

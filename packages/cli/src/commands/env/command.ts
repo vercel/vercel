@@ -1,6 +1,12 @@
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
-import { forceOption, formatOption, yesOption } from '../../util/arg-common';
+import {
+  forceOption,
+  formatOption,
+  jsonOption,
+  projectOption,
+  yesOption,
+} from '../../util/arg-common';
 
 const targetPlaceholder = getEnvTargetPlaceholder();
 
@@ -20,6 +26,8 @@ export const listSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
+    projectOption,
     {
       name: 'guidance',
       description: 'Receive command suggestions once command is complete',
@@ -50,6 +58,7 @@ export const addSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'sensitive',
       description: 'Store the value as sensitive for Production or Preview',
@@ -62,6 +71,15 @@ export const addSubcommand = {
       description: 'Store the value as non-sensitive when policy allows',
       shorthand: null,
       type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'visibility',
+      description:
+        'Set config/secret visibility (`config` or `secret`). Inferred from type when omitted and VERCEL_ENV_VAR_CONFIG_SECRET_UI is set',
+      shorthand: null,
+      type: String,
+      argument: 'VISIBILITY',
       deprecated: false,
     },
     {
@@ -93,7 +111,7 @@ export const addSubcommand = {
   ],
   examples: [
     {
-      name: 'Add a new variable to all Environments',
+      name: 'Add a new variable (prompts for value and Environments)',
       value: [
         `${packageName} env add <name>`,
         `${packageName} env add API_TOKEN`,
@@ -104,6 +122,13 @@ export const addSubcommand = {
       value: [
         `${packageName} env add <name> ${targetPlaceholder}`,
         `${packageName} env add DB_PASS production`,
+      ],
+    },
+    {
+      name: 'Add one variable to multiple Environments (comma-separated)',
+      value: [
+        `${packageName} env add <name> <environment>[,<environment>]`,
+        `${packageName} env add API_URL production,preview,development`,
       ],
     },
     {
@@ -151,6 +176,7 @@ export const removeSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description:
@@ -194,6 +220,7 @@ export const pullSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       description: 'Set the Environment when pulling Environment Variables',
@@ -254,6 +281,7 @@ export const runSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       description:
@@ -301,11 +329,21 @@ export const updateSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'sensitive',
       description: 'Update to a sensitive Environment Variable',
       shorthand: null,
       type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'visibility',
+      description:
+        'Set config/secret visibility (`config` or `secret`). Inferred from type when omitted and VERCEL_ENV_VAR_CONFIG_SECRET_UI is set',
+      shorthand: null,
+      type: String,
+      argument: 'VISIBILITY',
       deprecated: false,
     },
     {
@@ -374,6 +412,10 @@ export const envCommand = {
     {
       name: 'Run a command with Environment Variables from the linked Project',
       value: `${packageName} env run -- <command>`,
+    },
+    {
+      name: 'Add one variable to multiple Environments',
+      value: `${packageName} env add API_URL production,preview,development`,
     },
   ],
 } as const;

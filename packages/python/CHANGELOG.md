@@ -1,5 +1,75 @@
 # @vercel/python
 
+## 6.54.1
+
+### Patch Changes
+
+- 5858c35: Validate every configured Python queue subscriber topic against build-time introspected subscriptions. The `topics` field remains optional and, when omitted, all introspected subscriptions are used.
+
+## 6.54.0
+
+### Minor Changes
+
+- 17ee736: Replace the vercel-workers integration for Python queue subscribers and workflows with the new vercel-queue SDK:
+
+  - `[[tool.vercel.subscribers]]` entrypoints are introspected at build time via `vercel.queue.get_subscriptions()` and served through generated `vercel.queue.asgi_app()` handler modules, with `queue/v2beta` triggers carrying the SDK-registered consumer groups and per-subscription tuning.
+  - Celery and Dramatiq projects get the matching `vercel-celery`/`vercel-dramatiq` integration package injected automatically (bundled variant unless `vercel-queue` is an explicit dependency), in builds and in `vercel dev`.
+  - `[[tool.vercel.workflows]]` entrypoints follow the SDK generation: projects on `vercel` >= 0.8.0 are served through vercel-queue like subscribers; older or undeterminable versions keep the legacy vercel-workers serving (worker env markers, injected pinned `vercel-workers`).
+  - Projects that depend on `vercel-workers` directly keep the legacy integration wholesale: legacy subscriber schema, direct entrypoint serving, worker env markers.
+  - `vercel dev` serves queue sidecars through `vercel.queue.asgi_app()` for new-SDK projects, and its queue broker delivers with the SDK-registered consumer groups introspected at sidecar startup (matching production trigger behavior); legacy projects keep the vercel-workers bootstrap.
+  - The CLI no longer injects `config.hasWorkerServices`; the Python builder makes all queue-serving decisions from project metadata.
+
+## 6.53.0
+
+### Minor Changes
+
+- 6aa29e5: Add [tool.vercel.fastapi.static] cdn opt-out flag.
+
+### Patch Changes
+
+- Updated dependencies [6aa29e5]
+  - @vercel/python-analysis@0.12.0
+
+## 6.52.0
+
+### Minor Changes
+
+- bfa1873: Reduce Python bytecode compilation work by compiling bundled application and dependency sources in a single subprocess.
+- 9a4f1e7: Collect fastapi static files to serve via CDN.
+- ae12b01: Expose the resolved rewrite destination as the request path observed by Python framework applications, and warn affected Python projects about the behavior change.
+
+## 6.51.1
+
+### Patch Changes
+
+- 393645b: Refactor installed Python distribution handling into a dedicated component and simplify dependency externalizer configuration.
+- 41a3f2f: fix 70-workflow-pyproject integration test
+
+## 6.51.0
+
+### Minor Changes
+
+- c555d3a: Make vc dev support pyproject.toml entrypoints
+- 238543c: Support Python services that declare their web app and development workflow sidecars through a `pyproject.toml` entrypoint in `vercel dev`.
+
+### Patch Changes
+
+- b0ed8e5: Always run bytecode precompilation when `VERCEL_PYTHON_COMPILEALL` is enabled, removing the coverage-ratio heuristic that skipped compiles when the estimated bytecode would not sufficiently fit the remaining zip capacity.
+- f97e2e0: Report the final bundle size (including compiled bytecode and runtime-install tooling) and the packing mode (`standard` | `runtime-install` | `hive`) on the `vc.builder.python.bundle` trace span. The source-only size is still recorded before size-limit enforcement so oversized builds that fail remain tagged.
+
+## 6.50.0
+
+### Minor Changes
+
+- 7bbfd48: Support `"entrypoint": "pyproject.toml"` for services. A service may now set `entrypoint: "pyproject.toml"` to build exactly what that file declares: the web app from `tool.vercel.entrypoint` (when present) and queue subscribers from `[[tool.vercel.subscribers]]`. Filename-based entrypoint auto-detection never runs in this mode, and subscribers-only services (no web function) are supported.
+- f11c4c4: Bytecode-first packing for runtime-dependency-install builds (>225 MB) when `VERCEL_PYTHON_COMPILEALL` is enabled.
+
+  The zip bundles only the mandatory packages plus a `sys.pycache_prefix` bytecode tree covering the app and all dependencies including those installed into `/tmp` at cold start, and defers every other public package to the cold-start `uv sync`. Falls back to knapsack packing (now with a slack-capacity bytecode fill) when the externalized set would not fit Lambda ephemeral storage.
+
+### Patch Changes
+
+- 9637ae6: Add support for declaring the workflow entrypoint via `tool.vercel.workflows` in `pyproject.toml`.
+
 ## 6.49.0
 
 ### Minor Changes

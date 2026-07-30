@@ -370,6 +370,12 @@ export async function executeBuild(
       );
     }
 
+    if (output.maxConcurrency) {
+      throw new Error(
+        'The result of "builder.build()" must not contain `maxConcurrency`'
+      );
+    }
+
     if (output.memory) {
       throw new Error(
         'The result of "builder.build()" must not contain `memory`'
@@ -380,6 +386,10 @@ export async function executeBuild(
       if (src === entrypoint || minimatch(entrypoint, src)) {
         if (func.maxDuration) {
           output.maxDuration = func.maxDuration;
+        }
+
+        if (func.maxConcurrency) {
+          output.maxConcurrency = func.maxConcurrency;
         }
 
         if (func.memory) {

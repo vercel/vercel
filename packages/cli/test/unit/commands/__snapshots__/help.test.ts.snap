@@ -185,6 +185,7 @@ exports[`help command > alias help output snapshots > alias list subcommand > al
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
        --limit <NUMBER>   Number of results to return per page (default: 20, max: 100)                                  
   -N,  --next <MS>        Show next page of results                                                                     
 
@@ -759,17 +760,20 @@ exports[`help command > connex help output snapshots > connex attach subcommand 
 
   Options:
 
-  -e,  --environment <ENV>        Environments to enable. Repeatable and comma-separated (e.g. -e production -e preview, or
-                                  -e production,preview). Defaults to all environments.                                    
-  -F,  --format <FORMAT>          Specify the output format (json)                                                         
-  -p,  --project <NAME_OR_ID>     Project name or ID (default: current linked project)                                     
-       --trigger-branch <BRANCH>  Target a specific git branch for the trigger destination (default: production). Only     
-                                  valid with --triggers.                                                                   
-       --trigger-path <PATH>      Path on the destination project that receives the forwarded webhook (default:            
-                                  /{service}). Only valid with --triggers.                                                 
-       --triggers                 Also register this project as a trigger destination so the connector forwards verified   
-                                  webhooks to it (max 3 destinations per connector)                                        
-  -y,  --yes                      Skip the confirmation prompt                                                             
+  -e,  --environment <ENV>          Environments to enable by system name, custom slug, or custom ID. Repeatable and         
+                                    comma-separated. Defaults to production, preview, and development.                       
+  -F,  --format <FORMAT>            Specify the output format (json)                                                         
+       --json                       Output as JSON                                                                           
+  -p,  --project <NAME_OR_ID>       Project name or ID (default: current linked project)                                     
+       --trigger-branch <BRANCH>    Target a specific git branch for the trigger destination (default: production). Only     
+                                    valid with --triggers.                                                                   
+       --trigger-environment <ENV>  Target a custom environment by slug or stable ID. Mutually exclusive with                
+                                    --trigger-branch and only valid with --triggers.                                         
+       --trigger-path <PATH>        Path on the destination project that receives the forwarded webhook (default:            
+                                    /{service}). Only valid with --triggers.                                                 
+       --triggers                   Also register this project as a trigger destination so the connector forwards verified   
+                                    webhooks to it (max 3 destinations per connector)                                        
+  -y,  --yes                        Skip the confirmation prompt                                                             
 
 
   Global Options:
@@ -788,13 +792,21 @@ exports[`help command > connex help output snapshots > connex attach subcommand 
 
   Examples:
 
-  - Attach the current project to a connector for all environments
+  - Attach the current project for all system environments
 
     $ vercel connect attach scl_abc123
 
   - Restrict to specific environments
 
     $ vercel connect attach scl_abc123 -e production -e preview
+
+  - Attach to a custom environment by slug
+
+    $ vercel connect attach scl_abc123 -e qa
+
+  - Attach to a custom environment by stable ID
+
+    $ vercel connect attach scl_abc123 -e env_qa123
 
   - Attach a different project by name
 
@@ -808,9 +820,13 @@ exports[`help command > connex help output snapshots > connex attach subcommand 
 
     $ vercel connect attach scl_abc123 --triggers --trigger-branch staging --trigger-path /slack
 
+  - Attach and register a custom-environment trigger destination
+
+    $ vercel connect attach scl_abc123 --triggers --trigger-environment qa --trigger-path /slack
+
   - Non-interactive output as JSON
 
-    $ vercel connect attach scl_abc123 --yes --format=json
+    $ vercel connect attach scl_abc123 --yes --json
 
 "
 `;
@@ -831,6 +847,7 @@ exports[`help command > connex help output snapshots > connex create subcommand 
                                  secrets (e.g. client secrets), which leak into shell history when passed inline.            
   -F,  --format <FORMAT>         Specify the output format (json)                                                            
        --icon <PATH>             Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)               
+       --json                    Output as JSON                                                                              
   -n,  --name <NAME>             Name of the connector                                                                       
        --triggers                Enable webhook triggers for this connector                                                  
 
@@ -881,7 +898,7 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 
   - Output as JSON
 
-    $ vercel connect create slack --format=json
+    $ vercel connect create slack --json
 
 "
 `;
@@ -895,6 +912,7 @@ exports[`help command > connex help output snapshots > connex detach subcommand 
   Options:
 
   -F,  --format <FORMAT>       Specify the output format (json)                                                         
+       --json                  Output as JSON                                                                           
   -p,  --project <NAME_OR_ID>  Project name or ID (default: current linked project)                                     
   -y,  --yes                   Skip the confirmation prompt                                                             
 
@@ -925,7 +943,7 @@ exports[`help command > connex help output snapshots > connex detach subcommand 
 
   - Non-interactive output as JSON
 
-    $ vercel connect detach scl_abc123 --yes --format=json
+    $ vercel connect detach scl_abc123 --yes --json
 
 "
 `;
@@ -1009,6 +1027,7 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
 
        --all-projects     List every connector in the team, regardless of project link                                  
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
        --limit <COUNT>    Number of connectors to return per page                                                       
        --next <CURSOR>    Cursor for the next page of results                                                           
        --search <TEXT>    Search connectors by name or UID                                                              
@@ -1070,7 +1089,7 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
 
   - Output as JSON
 
-    $ vercel connect list --format=json
+    $ vercel connect list --json
 
 "
 `;
@@ -1084,6 +1103,7 @@ exports[`help command > connex help output snapshots > connex open subcommand > 
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
 
 
   Global Options:
@@ -1112,7 +1132,7 @@ exports[`help command > connex help output snapshots > connex open subcommand > 
 
   - Print the dashboard URL as JSON
 
-    $ vercel connect open scl_abc123 --format=json
+    $ vercel connect open scl_abc123 --json
 
 "
 `;
@@ -1128,6 +1148,7 @@ exports[`help command > connex help output snapshots > connex token subcommand >
   -F,  --format <FORMAT>       Specify the output format (json)                                                              
        --installation-id <ID>  Target a specific installation (only useful with --subject app; defaults to the connector's   
                                default installation)                                                                         
+       --json                  Output as JSON                                                                                
        --scopes <SCOPES>       Scopes (comma- or space-separated)                                                            
   -s,  --subject <TYPE>        Subject type: "user" (default, acts on behalf of you) or "app" (uses the connector's default  
                                installation)                                                                                 
@@ -1172,7 +1193,7 @@ exports[`help command > connex help output snapshots > connex token subcommand >
 
   - Output as JSON (includes expiresAt, installationId, etc.)
 
-    $ vercel connect token scl_abc123 --format=json
+    $ vercel connect token scl_abc123 --json
 
 "
 `;
@@ -1259,6 +1280,8 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 deploym…
                                 is      
                                 complete
+       --json                   Output  
+                                as JSON 
   -l,  --logs                   Print   
                                 the     
                                 build   
@@ -1419,7 +1442,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
   - Get every deployment file as JSON
 
-    $ vercel deploy --dry --format=json
+    $ vercel deploy --dry --json
 
   - Write Deployment URL to a file
 
@@ -1454,6 +1477,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
   -F,  --format <FORMAT>        Specify the output format (json)                
        --guidance               Receive command suggestions once deployment is  
                                 complete                                        
+       --json                   Output as JSON                                  
   -l,  --logs                   Print the build logs                            
   -m,  --meta <KEY=VALUE>       Specify metadata for the deployment (e.g. \`-m   
                                 KEY1=value1 -m KEY2=value2\`)                    
@@ -1515,7 +1539,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
   - Get every deployment file as JSON
 
-    $ vercel deploy --dry --format=json
+    $ vercel deploy --dry --json
 
   - Write Deployment URL to a file
 
@@ -1542,6 +1566,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
   -f,  --force                  Force a new deployment even if nothing has changed                                      
   -F,  --format <FORMAT>        Specify the output format (json)                                                        
        --guidance               Receive command suggestions once deployment is complete                                 
+       --json                   Output as JSON                                                                          
   -l,  --logs                   Print the build logs                                                                    
   -m,  --meta <KEY=VALUE>       Specify metadata for the deployment (e.g. \`-m KEY1=value1 -m KEY2=value2\`)              
        --no-wait                Don't wait for the deployment to finish                                                 
@@ -1595,7 +1620,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
   - Get every deployment file as JSON
 
-    $ vercel deploy --dry --format=json
+    $ vercel deploy --dry --json
 
   - Write Deployment URL to a file
 
@@ -2093,6 +2118,7 @@ exports[`help command > domains help output snapshots > domains check help outpu
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
 
 
   Global Options:
@@ -2121,7 +2147,7 @@ exports[`help command > domains help output snapshots > domains check help outpu
 
   - JSON output
 
-    $ vercel domains check example.com --format json
+    $ vercel domains check example.com --json
 
 "
 `;
@@ -2396,6 +2422,7 @@ exports[`help command > domains help output snapshots > domains list help output
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
        --limit <NUMBER>   Number of results to return per page (default: 20, max: 100)                                  
   -N,  --next <MS>        Show next page of results                                                                     
 
@@ -2460,6 +2487,7 @@ exports[`help command > domains help output snapshots > domains price help outpu
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
 
 
   Global Options:
@@ -2488,7 +2516,7 @@ exports[`help command > domains help output snapshots > domains price help outpu
 
   - JSON output
 
-    $ vercel domains price example.com --format json
+    $ vercel domains price example.com --json
 
 "
 `;
@@ -2531,6 +2559,7 @@ exports[`help command > domains help output snapshots > domains search help outp
 
        --available        Show only candidates available to register                                                    
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
        --limit <NUMBER>   Number of candidates to check per page (default: 20, max: 200)                                
        --next <CURSOR>    Show the next page of candidates                                                              
        --order <ORDER>    Order candidates by relevance, alphabetical order, or length (default: relevance)             
@@ -2571,7 +2600,7 @@ exports[`help command > domains help output snapshots > domains search help outp
 
   - JSON output
 
-    $ vercel domains search acme --format=json
+    $ vercel domains search acme --json
 
 "
 `;
@@ -2608,6 +2637,7 @@ exports[`help command > domains help output snapshots > domains verify help outp
   Options:
 
   -F,  --format <FORMAT>       Specify the output format (json)                                                              
+       --json                  Output as JSON                                                                                
        --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
        --strict                Check DNS for the exact domain only, without falling back to the parent zone configuration    
 
@@ -2638,7 +2668,7 @@ exports[`help command > domains help output snapshots > domains verify help outp
 
   - JSON output (the exit code is non-zero when the domain is misconfigured or unverified)
 
-    $ vercel domains verify example.com --format json
+    $ vercel domains verify example.com --json
 
   - Agent-friendly output with status, reason, and suggested next commands
 
@@ -2655,12 +2685,15 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
   Options:
 
-       --force          Overwrite an existing variable for the same target                                                   
-       --guidance       Show command suggestions after completion                                                            
-       --no-sensitive   Store the value as non-sensitive when policy allows                                                  
-       --sensitive      Store the value as sensitive for Production or Preview                                               
-       --value <VALUE>  Set the variable value for non-interactive use; otherwise use stdin or the prompt                    
-  -y,  --yes            Skip the confirmation prompt when adding an Environment Variable                                     
+       --force                    Overwrite an existing variable for the same target                                         
+       --guidance                 Show command suggestions after completion                                                  
+       --no-sensitive             Store the value as non-sensitive when policy allows                                        
+       --project <NAME_OR_ID>     Project name or ID (defaults to the linked project)                                        
+       --sensitive                Store the value as sensitive for Production or Preview                                     
+       --value <VALUE>            Set the variable value for non-interactive use; otherwise use stdin or the prompt          
+       --visibility <VISIBILITY>  Set config/secret visibility (\`config\` or \`secret\`). Inferred from type when omitted and   
+                                  VERCEL_ENV_VAR_CONFIG_SECRET_UI is set                                                     
+  -y,  --yes                      Skip the confirmation prompt when adding an Environment Variable                           
 
 
   Global Options:
@@ -2679,7 +2712,7 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
   Examples:
 
-  - Add a new variable to all Environments
+  - Add a new variable (prompts for value and Environments)
 
     $ vercel env add <name>
     $ vercel env add API_TOKEN
@@ -2688,6 +2721,11 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
     $ vercel env add <name> <production | preview | development>
     $ vercel env add DB_PASS production
+
+  - Add one variable to multiple Environments (comma-separated)
+
+    $ vercel env add <name> <environment>[,<environment>]
+    $ vercel env add API_URL production,preview,development
 
   - Override an existing Environment Variable of same target (production, preview, deployment)
 
@@ -2834,6 +2872,10 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
 
     $ vercel env run -- <command>
 
+  - Add one variable to multiple Environments
+
+    $ vercel env add API_URL production,preview,development
+
 "
 `;
 
@@ -2883,6 +2925,10 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
 
     $ vercel env run -- <command>
 
+  - Add one variable to multiple Environments
+
+    $ vercel env add API_URL production,preview,development
+
 "
 `;
 
@@ -2924,6 +2970,10 @@ exports[`help command > env help output snapshots > env help column width 120 1`
 
     $ vercel env run -- <command>
 
+  - Add one variable to multiple Environments
+
+    $ vercel env add API_URL production,preview,development
+
 "
 `;
 
@@ -2935,8 +2985,10 @@ exports[`help command > env help output snapshots > env list help output snapsho
 
   Options:
 
-  -F,  --format <FORMAT>  Specify the output format (json)                                                              
-       --guidance         Receive command suggestions once command is complete                                          
+  -F,  --format <FORMAT>       Specify the output format (json)                                                              
+       --guidance              Receive command suggestions once command is complete                                          
+       --json                  Output as JSON                                                                                
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
 
 
   Global Options:
@@ -2967,6 +3019,7 @@ exports[`help command > env help output snapshots > env pull help output snapsho
        --environment <TARGET>  Set the Environment when pulling Environment Variables                                        
        --git-branch <NAME>     Specify the Git branch to pull specific Environment Variables for                             
        --id <ID>               Pull environment variables for a specific deployment (e.g. dpl_xxx)                           
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
   -y,  --yes                   Skip the confirmation prompt when removing an environment variable                            
 
 
@@ -3006,7 +3059,8 @@ exports[`help command > env help output snapshots > env remove help output snaps
 
   Options:
 
-  -y,  --yes  Skip the confirmation prompt when removing an Environment Variable                                        
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
+  -y,  --yes                   Skip the confirmation prompt when removing an Environment Variable                            
 
 
   Global Options:
@@ -3051,7 +3105,8 @@ exports[`help command > git help output snapshots > git connect help output snap
 
   Options:
 
-  -y,  --yes  Accept default value for all prompts                                                                      
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
+  -y,  --yes                   Accept default value for all prompts                                                          
 
 
   Global Options:
@@ -3089,7 +3144,8 @@ exports[`help command > git help output snapshots > git disconnect help output s
 
   Options:
 
-  -y,  --yes  Accept default value for all prompts                                                                      
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
+  -y,  --yes                   Accept default value for all prompts                                                          
 
 
   Global Options:
@@ -3444,6 +3500,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
   -F,  --format <FORMAT>  Specify the   
                           output format 
                           (json)        
+       --json             Output as JSON
   -l,  --logs             Prints the    
                           build logs    
                           instead of the
@@ -3530,7 +3587,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
   - Get deployment information as JSON
 
-    $ vercel inspect my-deployment.vercel.app --format=json
+    $ vercel inspect my-deployment.vercel.app --json
 
 "
 `;
@@ -3544,6 +3601,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                      
+       --json             Output as JSON                                        
   -l,  --logs             Prints the build logs instead of the deployment       
                           summary                                               
        --timeout <TIME>   Time to wait for deployment completion [3m]           
@@ -3590,7 +3648,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
   - Get deployment information as JSON
 
-    $ vercel inspect my-deployment.vercel.app --format=json
+    $ vercel inspect my-deployment.vercel.app --json
 
 "
 `;
@@ -3604,6 +3662,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
   -l,  --logs             Prints the build logs instead of the deployment summary                                       
        --timeout <TIME>   Time to wait for deployment completion [3m]                                                   
        --wait             Blocks until deployment completes                                                             
@@ -3647,7 +3706,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
   - Get deployment information as JSON
 
-    $ vercel inspect my-deployment.vercel.app --format=json
+    $ vercel inspect my-deployment.vercel.app --json
 
 "
 `;
@@ -3663,6 +3722,7 @@ exports[`help command > integration help output snapshots > integration accept-t
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
 
 
   Global Options:
@@ -3688,7 +3748,7 @@ exports[`help command > integration help output snapshots > integration accept-t
 
   - Output result as JSON
 
-    $ vercel integration accept-terms neon --format=json
+    $ vercel integration accept-terms neon --json
 
 "
 `;
@@ -3702,6 +3762,7 @@ exports[`help command > integration help output snapshots > integration balance 
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
 
 
   Global Options:
@@ -3727,7 +3788,7 @@ exports[`help command > integration help output snapshots > integration balance 
 
   - Output as JSON
 
-    $ vercel integration balance acme --format=json
+    $ vercel integration balance acme --json
 
 "
 `;
@@ -3741,6 +3802,7 @@ exports[`help command > integration help output snapshots > integration categori
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
 
 
   Global Options:
@@ -3765,7 +3827,7 @@ exports[`help command > integration help output snapshots > integration categori
 
   - List categories as JSON
 
-    $ vercel integration categories --format=json
+    $ vercel integration categories --json
 
   - Use a category slug to filter discover results
 
@@ -3785,6 +3847,7 @@ exports[`help command > integration help output snapshots > integration discover
   -c,  --category <CATEGORY>  Filter integrations by category (can be repeated; e.g., -c storage -c authentication). Run
                               \`vercel integration categories\` for valid slugs.                                          
   -F,  --format <FORMAT>      Specify the output format (json)                                                          
+       --json                 Output as JSON                                                                            
 
 
   Global Options:
@@ -3828,7 +3891,7 @@ exports[`help command > integration help output snapshots > integration discover
 
   - Discover marketplace integrations as JSON
 
-    $ vercel integration discover --format=json
+    $ vercel integration discover --json
 
 "
 `;
@@ -4329,6 +4392,7 @@ exports[`help command > integration help output snapshots > integration installa
 
   -F,  --format <FORMAT>           Specify the output format (json)                                                     
   -i,  --integration <SLUG_OR_ID>  Limit to installations of this integration (slug or id)                              
+       --json                      Output as JSON                                                                       
 
 
   Global Options:
@@ -4357,7 +4421,7 @@ exports[`help command > integration help output snapshots > integration installa
 
   - JSON output
 
-    $ vercel integration installations --format json
+    $ vercel integration installations --json
 
 "
 `;
@@ -4373,6 +4437,7 @@ exports[`help command > integration help output snapshots > integration list sub
   -a,  --all                 Lists all resources regardless of project                                                  
   -F,  --format <FORMAT>     Specify the output format (json)                                                           
   -i,  --integration <NAME>  Limits the resources listed to a designated integration                                    
+       --json                Output as JSON                                                                             
 
 
   Global Options:
@@ -4408,7 +4473,7 @@ exports[`help command > integration help output snapshots > integration list sub
 
   - List resources as JSON
 
-    $ vercel integration list --format=json
+    $ vercel integration list --json
 
 "
 `;
@@ -4422,6 +4487,7 @@ exports[`help command > integration help output snapshots > integration remove s
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
   -y,  --yes              Skip the confirmation prompt when uninstalling an integration                                 
 
 
@@ -4452,7 +4518,7 @@ exports[`help command > integration help output snapshots > integration remove s
 
   - Output as JSON
 
-    $ vercel integration remove acme --format=json --yes
+    $ vercel integration remove acme --json --yes
 
 "
 `;
@@ -4473,6 +4539,7 @@ exports[`help command > integration help output snapshots > integration update s
        --authorization-id <ID>  Billing authorization ID when the platform requires it for plan changes                      
   -F,  --format <FORMAT>        Specify the output format (json)                                                             
        --installation-id <ID>   Configuration ID when multiple marketplace installations exist for this integration          
+       --json                   Output as JSON                                                                               
   -p,  --plan <PLAN_ID>         Billing plan ID for integrations that support installation-level billing plans               
        --projects <PROJECT>     Project ID allowed to use this installation, or "all" for all projects (repeatable)          
 
@@ -4512,7 +4579,7 @@ exports[`help command > integration help output snapshots > integration update s
 
   - Output result as JSON
 
-    $ vercel integration update neon --projects all --format=json
+    $ vercel integration update neon --projects all --json
 
   - Non-interactive (JSON success and errors on stdout)
 
@@ -4567,6 +4634,7 @@ exports[`help command > integration-resource help output snapshots > integration
 
   -a,  --all              Disconnects all projects from the specified resource                                          
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
   -y,  --yes              Skip the confirmation prompt when disconnecting a resource                                    
 
 
@@ -4604,7 +4672,7 @@ exports[`help command > integration-resource help output snapshots > integration
 
   - Output as JSON
 
-    $ vercel integration-resource disconnect my-acme-resource --format=json --yes
+    $ vercel integration-resource disconnect my-acme-resource --json --yes
 
 "
 `;
@@ -4837,6 +4905,7 @@ exports[`help command > integration-resource help output snapshots > integration
 
   -a,  --disconnect-all   Disconnects all projects from the specified resource before deletion                          
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
   -y,  --yes              Skip the confirmation prompt when deleting a resource                                         
 
 
@@ -4869,7 +4938,7 @@ exports[`help command > integration-resource help output snapshots > integration
 
   - Output as JSON
 
-    $ vercel integration-resource remove my-acme-resource --format=json --yes
+    $ vercel integration-resource remove my-acme-resource --json --yes
 
 "
 `;
@@ -5151,6 +5220,8 @@ exports[`help command > list help output snapshots > list help column width 40 1
                                output     
                                format     
                                (json)     
+       --json                  Output as  
+                               JSON       
        --limit <NUMBER>        Number of  
                                results to 
                                return per 
@@ -5289,6 +5360,7 @@ exports[`help command > list help output snapshots > list help column width 80 1
   -a,  --all                   List resources across all projects                 
        --environment <TARGET>                                                     
   -F,  --format <FORMAT>       Specify the output format (json)                   
+       --json                  Output as JSON                                     
        --limit <NUMBER>        Number of results to return per page (default: 20, 
                                max: 100)                                          
   -m,  --meta <KEY=VALUE>      Filter deployments by metadata (e.g.: \`-m          
@@ -5363,6 +5435,7 @@ exports[`help command > list help output snapshots > list help column width 120 
   -a,  --all                   List resources across all projects                                                         
        --environment <TARGET>                                                                                             
   -F,  --format <FORMAT>       Specify the output format (json)                                                           
+       --json                  Output as JSON                                                                             
        --limit <NUMBER>        Number of results to return per page (default: 20, max: 100)                               
   -m,  --meta <KEY=VALUE>      Filter deployments by metadata (e.g.: \`-m KEY=value\`). Can appear many times.              
   -N,  --next <MS>             Show next page of results                                                                  
@@ -5870,6 +5943,7 @@ exports[`help command > project help output snapshots > project list help output
 
   -f,  --filter <NAME>    Filter projects by name (substring match)                                                     
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
        --limit <NUMBER>   Number of results to return per page (default: 20, max: 100)                                  
   -N,  --next <MS>        Show next page of results                                                                     
        --update-required  A list of projects affected by an upcoming deprecation                                        
@@ -5897,7 +5971,7 @@ exports[`help command > project help output snapshots > project list help output
 
   - List projects using a deprecated Node.js version in JSON format
 
-    $ vercel project ls --update-required --format=json
+    $ vercel project ls --update-required --json
 
   - Filter projects by name
 
@@ -7041,8 +7115,10 @@ exports[`help command > target help output snapshots > target list help output s
 
   Options:
 
-  -F,  --format <FORMAT>  Specify the output format (json)                                                              
-  -y,  --yes              Skip confirmation when linking is required (e.g. in non-interactive mode)                     
+  -F,  --format <FORMAT>       Specify the output format (json)                                                              
+       --json                  Output as JSON                                                                                
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
+  -y,  --yes                   Skip confirmation when linking is required (e.g. in non-interactive mode)                     
 
 
   Global Options:
@@ -7314,6 +7390,7 @@ exports[`help command > teams help output snapshots > teams list help output sna
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
        --limit <NUMBER>   Number of results to return per page (default: 20, max: 100)                                  
   -N,  --next <MS>        Show next page of results                                                                     
 
@@ -7582,6 +7659,7 @@ exports[`help command > whoami help output snapshots > whoami help column width 
   -F,  --format <FORMAT>  Specify the   
                           output format 
                           (json)        
+       --json             Output as JSON
 
 
   Global Options:
@@ -7650,6 +7728,7 @@ exports[`help command > whoami help output snapshots > whoami help column width 
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                      
+       --json             Output as JSON                                        
 
 
   Global Options:
@@ -7686,6 +7765,7 @@ exports[`help command > whoami help output snapshots > whoami help column width 
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
 
 
   Global Options:

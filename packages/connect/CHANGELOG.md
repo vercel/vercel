@@ -1,5 +1,50 @@
 # @vercel/connect
 
+## 0.6.0
+
+### Minor Changes
+
+- 8bd3687: Add `connectDiscordCredentials` to the eve integration, resolving Discord bot tokens and application IDs from app-scoped Connect credentials while verifying forwarded interactions with Vercel OIDC.
+
+## 0.5.0
+
+### Minor Changes
+
+- 72d6d55: Add `connectPhotonCredentials` for resolving app-scoped Photon project credentials from a Vercel Connect connector.
+- 9ac74f0: Adding `getConnectorMetadata()` to `@vercel/connect` SDK
+
+## 0.4.3
+
+### Patch Changes
+
+- f999343: Add token exchange subjects to `ConnectTokenParams`.
+- 726c7b4: Add `experimental_startInstallation` for creating Vercel Connect installation requests.
+  - @vercel/oidc@3.8.1
+
+## 0.4.2
+
+### Patch Changes
+
+- 0be0e28: Adding support for authorization mode override via env var.
+
+## 0.4.1
+
+### Patch Changes
+
+- dad41da: Test Connect against a recent stable Eve and AI SDK 7 release.
+
+## 0.4.0
+
+### Minor Changes
+
+- c636d67: Add optional `claims` field to `ConnectTokenResponse` for allow-listed upstream OAuth token claims
+
+## 0.3.3
+
+### Patch Changes
+
+- 0cc0e8d: Expose and document the per-issuance `tokenId` on `ConnectTokenResponse` (returned by `getToken`/`getTokenResponse`). It's a stable identifier for the issued token — new on each issuance/refresh — for correlating a token with its usage in Vercel observability/billing data.
+
 ## 0.3.2
 
 ### Patch Changes
