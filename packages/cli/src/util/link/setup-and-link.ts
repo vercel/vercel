@@ -1,6 +1,5 @@
 import { remove } from 'fs-extra';
 import { join, basename, relative } from 'path';
-import chalk from 'chalk';
 import { getPlatformEnv, normalizePath } from '@vercel/build-utils';
 import { LocalFileSystemDetector, getWorkspaces } from '@vercel/fs-detectors';
 import type {
@@ -688,6 +687,13 @@ export default async function setupAndLink(
       'Created'
     );
 
+    // Report the derived Root Directory alongside the `Created` row rather
+    // than before the connect prompt: at this point it is a fact about the
+    // project, not a prediction that declining would have falsified.
+    if (settings.rootDirectory) {
+      printAlignedLabel('Root Directory', settings.rootDirectory);
+    }
+
     await applyGitConnectIntent(
       client,
       gitConnectIntent,
@@ -771,15 +777,6 @@ export async function resolveGitConnectIntent(
     const rootDirectory = relativeRoot ? normalizePath(relativeRoot) : null;
 
     const skipPrompts = autoConfirm || client.nonInteractive;
-
-    // Disclose the root directory before the answer, so accepting is not a
-    // silent project-settings change. Phrased conditionally: declining leaves
-    // the setting untouched and falls back to asking for a root directory.
-    if (!skipPrompts && rootDirectory) {
-      output.log(
-        `Connecting will set the Root Directory to ${chalk.cyan(rootDirectory)} to match the directory you are linking.`
-      );
-    }
 
     const shouldConnect =
       skipPrompts ||

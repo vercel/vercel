@@ -272,12 +272,13 @@ describe('connectGitRepository()', () => {
     expect(intent?.rootDirectory).toBeNull();
   });
 
-  it('should disclose the derived root directory before asking', async () => {
+  it('should not announce the root directory before the connect prompt', async () => {
     const { resolveGitConnectIntent } = await import(
       '../../../../src/util/link/setup-and-link'
     );
     const output = (await import('../../../../src/output-manager')).default;
     const logSpy = vi.spyOn(output, 'log').mockImplementation(() => {});
+    const printSpy = vi.spyOn(output, 'print').mockImplementation(() => {});
 
     vi.mocked(findRepoRoot).mockResolvedValue('/repo');
     vi.mocked(parseGitConfig).mockResolvedValue({
@@ -293,26 +294,19 @@ describe('connectGitRepository()', () => {
       repo: 'repo',
     });
 
-    const confirm = vi.fn().mockResolvedValue(true);
-    client.input.confirm = confirm;
+    client.input.confirm = vi.fn().mockResolvedValue(true);
 
     await resolveGitConnectIntent(client, '/repo/apps/web', false);
 
-    // The disclosure has to precede the question, not follow it.
-    const disclosure = logSpy.mock.calls.find(call =>
-      String(call[0]).includes('Root Directory')
+    // Predicting the setting before the answer was wrong on the decline path;
+    // it is now reported once from the post-creation summary instead.
+    const announced = [...logSpy.mock.calls, ...printSpy.mock.calls].some(
+      call => String(call[0]).includes('Root Directory')
     );
-    expect(disclosure).toBeDefined();
-    expect(String(disclosure?.[0])).toContain('apps/web');
-    expect(logSpy.mock.invocationCallOrder[0]).toBeLessThan(
-      confirm.mock.invocationCallOrder[0]
-    );
-
-    // The disclosure precedes the answer, so it must be conditional: declining
-    // leaves the Root Directory unset. Asserting no unconditional "will be set".
-    expect(String(disclosure?.[0])).not.toMatch(/Root Directory will be set/);
+    expect(announced).toBe(false);
 
     logSpy.mockRestore();
+    printSpy.mockRestore();
   });
 
   it('should not apply the root directory when the connection is declined', async () => {
