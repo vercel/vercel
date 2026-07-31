@@ -9,45 +9,14 @@ import type {
 } from 'typescript';
 import type { TypescriptOptions } from './cervel/types.js';
 
-/**
- * Typecheck via the TypeScript compiler API (`createProgram`, `getPreEmitDiagnostics`),
- * not by spawning the `tsc` binary.
- *
- * We only want to validate the deployment entrypoint and its import graph, not every
- * file matched by `tsconfig` `include`. The CLI cannot combine `--project` with explicit
- * root files (TS5042), so expressing 'project options + entry-only roots' in one `tsc`
- * call requires a generated tsconfig on disk. Writing beside the user's config is
- * invasive; a temp config elsewhere often breaks `node_modules` / `@types` resolution
- * relative to the real project. The API lets us reuse `parseJsonConfigFileContent` (same
- * options as `-p`) with explicit `rootNames`, no files written, and a compiler host whose
- * current directory stays `workPath`.
- *
- * The behavior here intentionally mirrors the `@vercel/node` builder
- * (`packages/node/src/typescript.ts`, a ts-node fork) so that projects moving from the
- * framework wrapper builders (`@vercel/express` et al.) to `@vercel/backends` see the
- * same typecheck results — including historically shipped leniencies:
- *
- * - tsconfig.json is discovered walking up from the *entrypoint*, not `workPath`.
- * - Emit-oriented options (`outFile`, `composite`, `incremental`, ...) are dropped.
- * - When `module` is not set, `NodeNext` resolution is used and `strict` is forced off.
- * - When `target` is not set, it defaults based on the Node.js major version.
- * - `esModuleInterop` defaults to true only when unset (never overrides the user).
- * - Diagnostics 6059/18002/18003 are ignored.
- * - tsconfig option errors are fatal only when `noEmitOnError` is set (parse/syntax
- *   errors in the file itself are always fatal).
- * - The user's `typescript` install is preferred; the bundled one is a fallback.
- */
-
 const require_ = createRequire(import.meta.url);
 
 type TypeScriptModule = typeof import('typescript');
 
-/**
- * Diagnostic codes that `@vercel/node` has always ignored:
- * 6059: "'rootDir' is expected to contain all source files."
- * 18002: "The 'files' list in config file is empty."
- * 18003: "No inputs were found in config file."
- */
+// Diagnostic codes that `@vercel/node` ignores:
+// 6059: "'rootDir' is expected to contain all source files."
+// 18002: "The 'files' list in config file is empty."
+// 18003: "No inputs were found in config file."
 const IGNORED_DIAGNOSTIC_CODES = new Set([6059, 18002, 18003]);
 
 export const typescript = (args: TypescriptOptions) => {
@@ -85,8 +54,6 @@ async function doTypeCheck(
   ts: TypeScriptModule
 ): Promise<void> {
   const entryAbsolute = resolve(args.workPath, args.entrypoint);
-  // Match `@vercel/node`: discover the tsconfig starting from the entrypoint
-  // file, walking up with no boundary at `workPath`.
   const tsconfig = findNearestTsconfig(dirname(entryAbsolute));
 
   const formatDiagnostics = process.stdout.isTTY
@@ -115,7 +82,6 @@ async function doTypeCheck(
   if (tsconfig) {
     const configRead = ts.readConfigFile(tsconfig, ts.sys.readFile);
     if (configRead.error) {
-      // A malformed tsconfig.json is always fatal (matches `@vercel/node`).
       fail([configRead.error]);
     }
     const config = configRead.config ?? {};
@@ -134,9 +100,6 @@ async function doTypeCheck(
       d => d.category === ts.DiagnosticCategory.Error
     );
     if (parseErrors.length > 0) {
-      // `@vercel/node` only fails the build for config diagnostics when the
-      // user opted into `noEmitOnError`; otherwise they are printed and the
-      // build continues.
       if (parsed.options.noEmitOnError) {
         fail(parseErrors);
       } else {
@@ -149,9 +112,8 @@ async function doTypeCheck(
       skipLibCheck: true,
       allowJs: true,
     };
-    // Ambient declaration files matched by the tsconfig (`include`/`files`)
-    // contribute global types even when never imported. `@vercel/node` keeps
-    // them via `files: true`; include them as extra program roots here.
+    // Ambient declaration files matched by the tsconfig contribute global
+    // types even when never imported; include them as extra program roots.
     for (const fileName of parsed.fileNames) {
       if (/\.d\.(ts|mts|cts)$/.test(fileName) && fileName !== entryAbsolute) {
         rootNames.push(fileName);
@@ -187,15 +149,11 @@ async function doTypeCheck(
   fail(errors);
 }
 
-/**
- * Mirror of `fixConfig` in `packages/node/src/typescript.ts`. Mutates and
- * returns the raw (pre-parse) compilerOptions object.
- */
+// Mirror of `fixConfig` in `packages/node/src/typescript.ts`.
 export function fixConfig(
   compilerOptions: Record<string, unknown>,
   nodeVersionMajor = 16
 ): Record<string, unknown> {
-  // Delete options that *should not* be passed through.
   delete compilerOptions.out;
   delete compilerOptions.outFile;
   delete compilerOptions.composite;
@@ -205,9 +163,7 @@ export function fixConfig(
   delete compilerOptions.tsBuildInfoFile;
   delete compilerOptions.incremental;
 
-  // This will prevent TS from polyfill/downlevel emit.
   if (compilerOptions.target === undefined) {
-    // See https://github.com/tsconfig/bases/tree/main/bases
     let target: string;
     if (nodeVersionMajor >= 16) {
       target = 'ES2021';
@@ -219,14 +175,10 @@ export function fixConfig(
     compilerOptions.target = target;
   }
 
-  // When mixing TS with JS, its best to enable this flag.
-  // This is useful when no `tsconfig.json` is supplied.
   if (compilerOptions.esModuleInterop === undefined) {
     compilerOptions.esModuleInterop = true;
   }
 
-  // nodenext will defer to the package.json#type field
-  // but still respect .mts and .cts files
   if (compilerOptions.module === undefined) {
     compilerOptions.module = 'NodeNext';
     compilerOptions.moduleResolution = 'NodeNext';
@@ -246,11 +198,6 @@ function defaultScriptTarget(
 }
 
 function resolveTypeScriptModule(startDir: string): TypeScriptModule | null {
-  // Use the user's TypeScript install, resolved from the entrypoint
-  // directory upward. Unlike `@vercel/node` there is no bundled-compiler
-  // fallback: typecheck errors are always fatal in this builder, so
-  // typechecking a project that never installed TypeScript would fail
-  // builds that previously succeeded. Skipping is the permissive choice.
   try {
     const id = require_.resolve('typescript', { paths: [startDir] });
     const ts = require_(id) as TypeScriptModule;
