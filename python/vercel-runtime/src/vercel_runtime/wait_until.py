@@ -9,6 +9,8 @@ import threading
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from vercel_runtime.invocation_hooks import schedule_invocation_hooks
+
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
@@ -87,6 +89,7 @@ class WaitUntilCollector:
 def begin_wait_until() -> WaitUntilCollector:
     collector = WaitUntilCollector()
     _set_public_wait_until(collector.wait_until)
+    schedule_invocation_hooks(collector.wait_until)
     return collector
 
 
