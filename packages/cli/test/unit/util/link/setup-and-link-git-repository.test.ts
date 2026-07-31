@@ -15,6 +15,11 @@ vi.mock('../../../../src/util/git/connect-git-provider', () => ({
   checkExistsAndConnect: vi.fn(),
 }));
 
+vi.mock('../../../../src/util/link/repo', () => ({
+  findRepoRoot: vi.fn(),
+  linkRepoProject: vi.fn(),
+}));
+
 describe('connectGitRepository()', () => {
   let parseGitConfig: any;
   let pluckRemoteUrls: any;
@@ -22,6 +27,7 @@ describe('connectGitRepository()', () => {
   let selectAndParseRemoteUrl: any;
   let parseRepoUrl: any;
   let checkExistsAndConnect: any;
+  let findRepoRoot: any;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -31,6 +37,7 @@ describe('connectGitRepository()', () => {
     const gitProvider = await import(
       '../../../../src/util/git/connect-git-provider'
     );
+    const repo = await import('../../../../src/util/link/repo');
 
     parseGitConfig = gitMeta.parseGitConfig;
     pluckRemoteUrls = gitMeta.pluckRemoteUrls;
@@ -38,9 +45,12 @@ describe('connectGitRepository()', () => {
     selectAndParseRemoteUrl = gitProvider.selectAndParseRemoteUrl;
     parseRepoUrl = gitProvider.parseRepoUrl;
     checkExistsAndConnect = gitProvider.checkExistsAndConnect;
+    findRepoRoot = repo.findRepoRoot;
 
     // Setup basic mocks
     vi.mocked(formatProvider).mockReturnValue('GitHub');
+    // By default the linked path *is* the repo root.
+    vi.mocked(findRepoRoot).mockResolvedValue('/test-project');
     vi.mocked(checkExistsAndConnect).mockResolvedValue(undefined);
     // `autoConfirm` resolves the remote without prompting, so it goes through
     // `parseRepoUrl` rather than the interactive `selectAndParseRemoteUrl`.
@@ -215,6 +225,101 @@ describe('connectGitRepository()', () => {
     expect(vi.mocked(checkExistsAndConnect)).toHaveBeenCalledWith(
       expect.objectContaining({ gitOrg: 'user', repoPath: 'user/repo' })
     );
+  });
+
+  it('should detect the repo from a subdirectory and derive the root directory', async () => {
+    const { resolveGitConnectIntent } = await import(
+      '../../../../src/util/link/setup-and-link'
+    );
+
+    // Linking from `apps/web` inside a repo rooted at `/repo`.
+    vi.mocked(findRepoRoot).mockResolvedValue('/repo');
+    vi.mocked(parseGitConfig).mockResolvedValue({
+      remote: { origin: { url: 'https://github.com/user/repo.git' } },
+    });
+    vi.mocked(pluckRemoteUrls).mockReturnValue({
+      origin: 'https://github.com/user/repo.git',
+    });
+
+    const intent = await resolveGitConnectIntent(
+      client,
+      '/repo/apps/web',
+      true
+    );
+
+    // Previously this returned null: there is no `.git` in `apps/web`, so the
+    // user was never offered a connection at all.
+    expect(intent).not.toBeNull();
+    expect(intent?.rootDirectory).toEqual('apps/web');
+    expect(vi.mocked(parseGitConfig)).toHaveBeenCalledWith('/repo/.git/config');
+  });
+
+  it('should leave the root directory unset when linking from the repo root', async () => {
+    const { resolveGitConnectIntent } = await import(
+      '../../../../src/util/link/setup-and-link'
+    );
+
+    vi.mocked(findRepoRoot).mockResolvedValue('/repo');
+    vi.mocked(parseGitConfig).mockResolvedValue({
+      remote: { origin: { url: 'https://github.com/user/repo.git' } },
+    });
+    vi.mocked(pluckRemoteUrls).mockReturnValue({
+      origin: 'https://github.com/user/repo.git',
+    });
+
+    const intent = await resolveGitConnectIntent(client, '/repo', true);
+
+    expect(intent?.rootDirectory).toBeNull();
+  });
+
+  it('should disclose the derived root directory before asking', async () => {
+    const { resolveGitConnectIntent } = await import(
+      '../../../../src/util/link/setup-and-link'
+    );
+    const output = (await import('../../../../src/output-manager')).default;
+    const logSpy = vi.spyOn(output, 'log').mockImplementation(() => {});
+
+    vi.mocked(findRepoRoot).mockResolvedValue('/repo');
+    vi.mocked(parseGitConfig).mockResolvedValue({
+      remote: { origin: { url: 'https://github.com/user/repo.git' } },
+    });
+    vi.mocked(pluckRemoteUrls).mockReturnValue({
+      origin: 'https://github.com/user/repo.git',
+    });
+    vi.mocked(selectAndParseRemoteUrl).mockResolvedValue({
+      url: 'https://github.com/user/repo.git',
+      provider: 'github',
+      org: 'user',
+      repo: 'repo',
+    });
+
+    const confirm = vi.fn().mockResolvedValue(true);
+    client.input.confirm = confirm;
+
+    await resolveGitConnectIntent(client, '/repo/apps/web', false);
+
+    // The disclosure has to precede the question, not follow it.
+    const disclosure = logSpy.mock.calls.find(call =>
+      String(call[0]).includes('Root Directory')
+    );
+    expect(disclosure).toBeDefined();
+    expect(String(disclosure?.[0])).toContain('apps/web');
+    expect(logSpy.mock.invocationCallOrder[0]).toBeLessThan(
+      confirm.mock.invocationCallOrder[0]
+    );
+
+    logSpy.mockRestore();
+  });
+
+  it('should return early when the path is not in a git repository', async () => {
+    vi.mocked(findRepoRoot).mockResolvedValue(undefined);
+
+    const project = { id: 'test-project-id' };
+    const org = { id: 'org-id', slug: 'org-slug', type: 'team' as const };
+
+    await connectGitRepository(client, '/not-a-repo', project, true, org);
+
+    expect(vi.mocked(checkExistsAndConnect)).not.toHaveBeenCalled();
   });
 
   it('should return early when no remotes are found', async () => {

@@ -1,6 +1,7 @@
 import { remove } from 'fs-extra';
-import { join, basename } from 'path';
-import { getPlatformEnv } from '@vercel/build-utils';
+import { join, basename, relative } from 'path';
+import chalk from 'chalk';
+import { getPlatformEnv, normalizePath } from '@vercel/build-utils';
 import { LocalFileSystemDetector, getWorkspaces } from '@vercel/fs-detectors';
 import type {
   ProjectLinkResult,
@@ -14,7 +15,7 @@ import {
   VERCEL_DIR_README,
   VERCEL_DIR_PROJECT,
 } from '../projects/link';
-import { linkRepoProject } from './repo';
+import { linkRepoProject, findRepoRoot } from './repo';
 import createProject from '../projects/create-project';
 import type Client from '../client';
 import { printError } from '../error';
@@ -535,10 +536,14 @@ export default async function setupAndLink(
         // framework is detected at the root (nested monolith layouts like
         // `repo/app/package.json`). For single-app projects with a framework
         // at the root we skip the prompt entirely.
-        const shouldPromptRoot = await shouldPromptForRootDirectory({
-          path,
-          servicesChoice: rootInferredServicesChoice,
-        });
+        // Connecting a Git repo from a subdirectory already tells us which
+        // directory this Project is for, so don't ask again.
+        const shouldPromptRoot =
+          !gitConnectIntent?.rootDirectory &&
+          (await shouldPromptForRootDirectory({
+            path,
+            servicesChoice: rootInferredServicesChoice,
+          }));
         if (shouldPromptRoot) {
           rootDirectory = await inputRootDirectory(client, path, autoConfirm);
           if (
@@ -648,8 +653,17 @@ export default async function setupAndLink(
       });
     }
 
-    if (rootDirectory) {
-      settings.rootDirectory = rootDirectory;
+    // The Project's root directory is relative to the repo root, while
+    // `rootDirectory` above is relative to `path` (it drives local framework
+    // detection). When linking from a subdirectory those differ, so combine
+    // both segments rather than sending either one alone.
+    const projectRootDirectory =
+      normalizePath(
+        join(gitConnectIntent?.rootDirectory ?? '', rootDirectory ?? '')
+      ) || null;
+
+    if (projectRootDirectory && projectRootDirectory !== '.') {
+      settings.rootDirectory = projectRootDirectory;
     }
 
     const project = await createProject(client, {
@@ -703,14 +717,30 @@ export default async function setupAndLink(
   }
 }
 
-/** A remote the user agreed to connect, resolved before the project exists. */
-type GitConnectIntent = { repoInfo: RepoInfo } | null;
+/**
+ * A remote the user agreed to connect, resolved before the project exists.
+ *
+ * `rootDirectory` is the linked directory expressed relative to the *repo
+ * root* — the value the Project needs so that Git-triggered builds run in the
+ * same directory the user linked from. It is `null` when linking from the repo
+ * root itself, where the Project's root directory should stay unset.
+ */
+type GitConnectIntent = {
+  repoInfo: RepoInfo;
+  rootDirectory: string | null;
+} | null;
 
 /**
  * Asks whether to connect a detected Git remote. Runs before `createProject`
  * so the question never follows the `✓ Created` row; `applyGitConnectIntent`
  * does the connecting once a project id exists. Never prompts under `--yes`
  * or non-interactive mode.
+ *
+ * Detection walks up to the repo root rather than only checking `path`, so
+ * linking from a subdirectory (`apps/web`) still finds the repository. That
+ * subdirectory is then what `rootDirectory` records: connecting a repo while
+ * leaving the root directory unset would point every Git-triggered build at
+ * the repo root instead of the directory the user linked.
  */
 export async function resolveGitConnectIntent(
   client: Client,
@@ -718,7 +748,14 @@ export async function resolveGitConnectIntent(
   autoConfirm: boolean
 ): Promise<GitConnectIntent> {
   try {
-    const gitConfig = await parseGitConfig(join(path, '.git/config'));
+    // `findRepoRoot` resolves worktrees and submodules correctly, which a
+    // plain `.git` lookup in `path` does not.
+    const repoRoot = await findRepoRoot(path);
+    if (!repoRoot) {
+      return null;
+    }
+
+    const gitConfig = await parseGitConfig(join(repoRoot, '.git/config'));
 
     if (!gitConfig) {
       return null;
@@ -729,7 +766,19 @@ export async function resolveGitConnectIntent(
       return null;
     }
 
+    // Relative to the repo root, so `join(repoRoot, rootDirectory) === path`.
+    const relativeRoot = relative(repoRoot, path);
+    const rootDirectory = relativeRoot ? normalizePath(relativeRoot) : null;
+
     const skipPrompts = autoConfirm || client.nonInteractive;
+
+    // Disclose the root directory before the answer, so accepting is not a
+    // silent project-settings change.
+    if (!skipPrompts && rootDirectory) {
+      output.log(
+        `Root Directory will be set to ${chalk.cyan(rootDirectory)} to match the directory you are linking.`
+      );
+    }
 
     const shouldConnect =
       skipPrompts ||
@@ -748,7 +797,7 @@ export async function resolveGitConnectIntent(
       return null;
     }
 
-    return { repoInfo };
+    return { repoInfo, rootDirectory };
   } catch (error) {
     if (isPromptCanceledError(error)) {
       throw error;
