@@ -96,7 +96,7 @@ export async function ensureAnonymousLink(
   let state = await readAnonymousState(cwd);
   if (state && state.expiresAt <= Date.now()) {
     output.prettyError({
-      message: `Your anonymous deployment has expired. Create an account to keep deploying this app by running ${getCommandName('login')}.`,
+      message: `Your temporary deployment has expired. Run ${getCommandName('login')} to create an account and keep deploying this app.`,
     });
     return 'failed';
   }

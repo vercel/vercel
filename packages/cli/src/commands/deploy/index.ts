@@ -1694,7 +1694,7 @@ async function handleDefaultDeploy(
     ) {
       await clearAnonymousState(cwd);
       prettyError({
-        message: `Your anonymous deployment has expired. Create an account to keep deploying this app by running ${getCommandName('login')}.`,
+        message: `Your temporary deployment has expired. Run ${getCommandName('login')} to create an account and keep deploying this app.`,
       });
       return 1;
     }

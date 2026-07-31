@@ -295,7 +295,7 @@ describe('deploy [anonymous]', () => {
     expect(exitCode).toEqual(1);
     expect(getBootstrapCalls()).toEqual(0);
     expect(client.stderr.getFullOutput()).toContain(
-      'Your anonymous deployment has expired'
+      'Your temporary deployment has expired'
     );
     expect(await fs.pathExists(join(cwd, ANONYMOUS_FILE))).toEqual(true);
   });
