@@ -1,8 +1,9 @@
 import fs from 'fs';
-import { join } from 'path';
+import { join, relative } from 'path';
 import execa from 'execa';
 import { debug } from '@vercel/build-utils';
 import { getVenvPythonBin } from './utils';
+import { entrypointToModule } from './entrypoint';
 
 const scriptPath = join(__dirname, '..', 'templates', 'vc_fastapi_static.py');
 
@@ -71,13 +72,25 @@ export async function getFastAPIStaticDiscovery(
     'python',
     'vc_fastapi_static_output.json'
   );
+  // Import the entrypoint the way the deployed function does: as its real
+  // dotted module (relative to the project root, which becomes importable), so
+  // an app that uses relative or first-party absolute imports still has its
+  // mounts discovered. See templates/vc_fastapi_static.py.
+  const moduleName = entrypointToModule(relative(workPath, entrypointAbs));
   await fs.promises.mkdir(join(workPath, '.vercel', 'python'), {
     recursive: true,
   });
   try {
     const { stderr } = await execa(
       pythonPath,
-      [scriptPath, entrypointAbs, variableName, outputPath],
+      [
+        scriptPath,
+        entrypointAbs,
+        variableName,
+        outputPath,
+        workPath,
+        moduleName,
+      ],
       { env, cwd: workPath }
     );
     if (stderr) {

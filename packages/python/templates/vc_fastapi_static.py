@@ -23,7 +23,9 @@ Writes a JSON object to the output file:
     * app.mount():   routes declared BEFORE the mount win (evaluated in order).
     * app.frontend(): all normal routes win (the build is low-priority).
 
-Usage: python <this_script> <entrypoint_abs_path> <variable_name> <output_path>
+Usage:
+    python <this_script> <entrypoint_abs> <variable_name> <output_path> \
+        <project_root> <module_name>
 """
 
 from __future__ import annotations
@@ -320,13 +322,26 @@ def main() -> None:
     entrypoint_abs = sys.argv[1]
     variable_name = sys.argv[2]
     output_path = sys.argv[3]
+    project_root = sys.argv[4]
+    module_name = sys.argv[5]
 
-    spec = importlib.util.spec_from_file_location("__vc_app", entrypoint_abs)
+    # Import the entrypoint the way the deployed function does: as its real
+    # dotted module, with the project root on sys.path and registered in
+    # sys.modules. Loading it under a synthetic top-level name with no project
+    # root importable would break both relative imports (`from .settings import
+    # ...`) and first-party absolute imports (`import settings`), silently
+    # yielding zero mounts so the frontend is served by the Lambda, not the CDN.
+    # Mirrors vercel_runtime.resolver.import_module.
+    if project_root and project_root not in sys.path:
+        sys.path.insert(0, project_root)
+
+    spec = importlib.util.spec_from_file_location(module_name, entrypoint_abs)
     if spec is None or spec.loader is None:
         write_output(output_path, Output())
         return
 
     mod = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = mod
     try:
         spec.loader.exec_module(mod)  # type: ignore[union-attr]
     except Exception as exc:
