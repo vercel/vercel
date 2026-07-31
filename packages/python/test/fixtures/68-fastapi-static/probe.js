@@ -34,5 +34,20 @@ module.exports = async ({ deploymentUrl, fetch }) => {
     failures.push(`post: expected 405 (StaticFiles), CDN returned ${post.status} ${JSON.stringify(postBody)}`);
   }
 
+  // The mount root must match FastAPI's StaticFiles. `/static` (no trailing
+  // slash) redirects to `/static/`. The bare `/static/` is a 404. html is
+  // disabled by default, so the directory index is not served.
+  const rootNoSlash = await fetch(`https://${deploymentUrl}/static`, {
+    redirect: 'manual',
+  });
+  if (rootNoSlash.status !== 307) {
+    failures.push(`mount root: expected 307 to /static/, got ${rootNoSlash.status}`);
+  }
+  const rootSlash = await fetch(`https://${deploymentUrl}/static/`);
+  if (rootSlash.status !== 404) {
+    const body = await rootSlash.text();
+    failures.push(`mount root /static/: expected 404, got ${rootSlash.status} ${JSON.stringify(body)}`);
+  }
+
   if (failures.length > 0) throw new Error(failures.join('\n'));
 };
