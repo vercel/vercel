@@ -254,6 +254,42 @@ describe('connectGitRepository()', () => {
     expect(vi.mocked(parseGitConfig)).toHaveBeenCalledWith('/repo/.git/config');
   });
 
+  it('should record the remote name for repo.json', async () => {
+    const { resolveGitConnectIntent } = await import(
+      '../../../../src/util/link/setup-and-link'
+    );
+
+    vi.mocked(findRepoRoot).mockResolvedValue('/repo');
+    vi.mocked(parseGitConfig).mockResolvedValue({
+      remote: {
+        origin: { url: 'https://github.com/user/repo.git' },
+        upstream: { url: 'https://github.com/other/repo.git' },
+      },
+    });
+    vi.mocked(pluckRemoteUrls).mockReturnValue({
+      origin: 'https://github.com/user/repo.git',
+      upstream: 'https://github.com/other/repo.git',
+    });
+    vi.mocked(selectAndParseRemoteUrl).mockResolvedValue({
+      url: 'https://github.com/other/repo.git',
+      provider: 'github',
+      org: 'other',
+      repo: 'repo',
+    });
+    client.input.confirm = vi.fn().mockResolvedValue(true);
+
+    const intent = await resolveGitConnectIntent(
+      client,
+      '/repo/apps/web',
+      false
+    );
+
+    // repo.json needs the remote *name*, but the picker returns parsed repo
+    // info — so the name is recovered by matching the URL, not assumed to be
+    // `origin`.
+    expect(intent?.remoteName).toEqual('upstream');
+  });
+
   it('should leave the root directory unset when linking from the repo root', async () => {
     const { resolveGitConnectIntent } = await import(
       '../../../../src/util/link/setup-and-link'

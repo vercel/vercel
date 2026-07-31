@@ -484,14 +484,6 @@ export default async function setupAndLink(
     let pathWithRootDirectory = path;
     let rootInferredServicesChoice: InferredServicesChoice | null = null;
 
-    // Ask before printing any results, so the transcript reads as all
-    // questions then all results.
-    const gitConnectIntent = await resolveGitConnectIntent(
-      client,
-      path,
-      autoConfirm
-    );
-
     if (!rootServicesSetup.hasConfiguredServices) {
       rootInferredServicesChoice = await promptForInferredServicesSetup({
         client,
@@ -535,14 +527,10 @@ export default async function setupAndLink(
         // framework is detected at the root (nested monolith layouts like
         // `repo/app/package.json`). For single-app projects with a framework
         // at the root we skip the prompt entirely.
-        // Connecting a Git repo from a subdirectory already tells us which
-        // directory this Project is for, so don't ask again.
-        const shouldPromptRoot =
-          !gitConnectIntent?.rootDirectory &&
-          (await shouldPromptForRootDirectory({
-            path,
-            servicesChoice: rootInferredServicesChoice,
-          }));
+        const shouldPromptRoot = await shouldPromptForRootDirectory({
+          path,
+          servicesChoice: rootInferredServicesChoice,
+        });
         if (shouldPromptRoot) {
           rootDirectory = await inputRootDirectory(client, path, autoConfirm);
           if (
@@ -652,14 +640,33 @@ export default async function setupAndLink(
       });
     }
 
-    // The Project's root directory is relative to the repo root, while
-    // `rootDirectory` above is relative to `path` (it drives local framework
-    // detection). When linking from a subdirectory those differ, so combine
-    // both segments rather than sending either one alone.
-    const projectRootDirectory =
-      normalizePath(
-        join(gitConnectIntent?.rootDirectory ?? '', rootDirectory ?? '')
-      ) || null;
+    // Asked after the code directory question so the answer to that question
+    // is available here: connecting rebases the Project's root directory onto
+    // the repo root, which is only knowable once the code directory is known.
+    const gitConnectIntent = await resolveGitConnectIntent(
+      client,
+      path,
+      autoConfirm
+    );
+
+    // `rootDirectory` is relative to `path` (it drives local framework
+    // detection), but the base the Project's setting is read against depends
+    // on the link file that gets written:
+    //
+    //   per-directory link (`.vercel/project.json` at `path`) — `vc deploy`
+    //     leaves cwd at `path`, so the setting stays relative to `path`.
+    //   repo link (`.vercel/repo.json` at the repo root) — `vc deploy` rebases
+    //     cwd to the repo root, so the setting must include the path from the
+    //     repo root down to `path`.
+    //
+    // Connecting Git always writes a repo link (below), so the two branches
+    // here line up with the two bases. Storing the wrong one resolves to a
+    // doubled path like `apps/apps/web` and fails validation.
+    const projectRootDirectory = gitConnectIntent
+      ? normalizePath(
+          join(gitConnectIntent.rootDirectory ?? '', rootDirectory ?? '')
+        ) || null
+      : rootDirectory;
 
     if (projectRootDirectory && projectRootDirectory !== '.') {
       settings.rootDirectory = projectRootDirectory;
@@ -672,20 +679,38 @@ export default async function setupAndLink(
       v0,
     });
 
-    await linkFolderToProject(
-      client,
-      path,
-      {
-        projectId: project.id,
+    // Connecting Git means the Project is addressed from the repo root, so the
+    // link has to live there too: `vc deploy` only rebases cwd to the repo root
+    // when it finds `repo.json`, which is what makes the repo-root-relative
+    // Root Directory above resolve correctly from any directory.
+    const gitRepoRoot = gitConnectIntent
+      ? await findRepoRoot(path).catch(() => undefined)
+      : undefined;
+
+    if (gitConnectIntent && gitRepoRoot) {
+      await linkRepoProject(client, gitRepoRoot, {
+        project: { ...project, rootDirectory: settings.rootDirectory ?? null },
         orgId: org.id,
-      },
-      project.name,
-      org.slug,
-      successEmoji,
-      autoConfirm,
-      false, // don't prompt to pull env for newly created projects
-      'Created'
-    );
+        orgSlug: org.slug,
+        remoteName: gitConnectIntent.remoteName,
+        successEmoji,
+      });
+    } else {
+      await linkFolderToProject(
+        client,
+        path,
+        {
+          projectId: project.id,
+          orgId: org.id,
+        },
+        project.name,
+        org.slug,
+        successEmoji,
+        autoConfirm,
+        false, // don't prompt to pull env for newly created projects
+        'Created'
+      );
+    }
 
     // Report the derived Root Directory alongside the `Created` row rather
     // than before the connect prompt: at this point it is a fact about the
@@ -734,6 +759,8 @@ export default async function setupAndLink(
 type GitConnectIntent = {
   repoInfo: RepoInfo;
   rootDirectory: string | null;
+  /** Remote the URL came from, recorded in `repo.json` as `remoteName`. */
+  remoteName: string;
 } | null;
 
 /**
@@ -795,7 +822,14 @@ export async function resolveGitConnectIntent(
       return null;
     }
 
-    return { repoInfo, rootDirectory };
+    // `repo.json` records which remote the link came from. Recover it by
+    // matching the resolved URL back to the remote map, since the picker
+    // returns parsed repo info rather than the remote name.
+    const remoteName =
+      Object.keys(remoteUrls).find(name => remoteUrls[name] === repoInfo.url) ??
+      (remoteUrls.origin ? 'origin' : Object.keys(remoteUrls)[0]);
+
+    return { repoInfo, rootDirectory, remoteName };
   } catch (error) {
     if (isPromptCanceledError(error)) {
       throw error;
