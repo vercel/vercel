@@ -36,6 +36,7 @@ export async function create(
     '--format'?: string;
     '--json'?: boolean;
     '--triggers'?: boolean;
+    '--trigger-event'?: string[];
     '--icon'?: string;
     '--background-color'?: string;
     '--accent-color'?: string;
@@ -171,6 +172,9 @@ export async function create(
     body.projectId = link.projectId;
   }
   body.triggers = { enabled: flags['--triggers'] === true };
+  if (flags['--trigger-event'] !== undefined) {
+    body.events = flags['--trigger-event'];
+  }
   if (iconSha) {
     body.icon = iconSha;
   }

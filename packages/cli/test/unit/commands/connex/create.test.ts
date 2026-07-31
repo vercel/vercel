@@ -116,6 +116,37 @@ describe('connex create', () => {
     await expect(client.stderr).toOutput('scl_direct1 (UID uid_direct1)');
   });
 
+  it('forwards selected trigger events to managed connector creation', async () => {
+    let postBody: any;
+    client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
+      postBody = req.body;
+      res.json(fakeConnexClient({ type: 'linear', name: 'linear' }));
+    });
+
+    client.setArgv(
+      'connect',
+      'create',
+      'linear',
+      '--name',
+      'linear',
+      '--triggers',
+      '--trigger-event',
+      'Issue',
+      '--trigger-event',
+      'Comment',
+      '--trigger-event',
+      'Project'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(postBody).toMatchObject({
+      triggers: { enabled: true },
+      events: ['Issue', 'Comment', 'Project'],
+    });
+  });
+
   it('should pass any type to the server without validation', async () => {
     let postBody: any;
     client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
