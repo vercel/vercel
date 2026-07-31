@@ -1,7 +1,6 @@
 {
   "build": {
     "env": {
-      "SECRET_KEY_BASE": "ruby-buildpack-e2e-build-secret",
       "BPE_RACK_ENV": "fixture-override",
       "VERCEL_RUBY_EXPERIMENTAL_BUILDPACK": "1"
     }
