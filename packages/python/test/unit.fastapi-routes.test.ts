@@ -35,7 +35,7 @@ describe('fastapiShadowingRoutes', () => {
       )
     ).toEqual([
       {
-        src: '^/(static/example\\.txt|items/(?:[0-9]+))$',
+        src: '^/((?:static/example\\.txt|items/(?:[0-9]+))/?)$',
         dest: '/api/index',
         transforms: [{ type: 'request.path', op: 'set', args: '/$1' }],
       },
@@ -67,7 +67,8 @@ describe('fastapiFallbackRoutes', () => {
           {
             type: 'header',
             key: 'accept',
-            value: '.*(?:text/html|application/xhtml\\+xml).*',
+            value:
+              '.*(?:text/html|application/xhtml\\+xml)(?![^,]*;\\s*q=0(?:\\.0+)?(?:[,;\\s]|$)).*',
           },
         ],
       },

@@ -186,11 +186,15 @@ function escapeRegex(text: string): string {
 
 /**
  * Routes that send paths a higher-priority FastAPI route owns to the Lambda.
- * Emitted before `handle: 'filesystem'`, so the app wins over a colliding CDN
- * file — preserving FastAPI's declaration-order precedence. Each shadow body is
- * a ready-made pattern (path minus its leading slash, inner groups already
- * non-capturing), OR'd into one capturing group whose match is copied back into
- * `request.path` via `$1`. Empty when nothing is shadowed.
+ * They are emitted before `handle: 'filesystem'`, so the app wins over a
+ * colliding CDN file. This preserves FastAPI's declaration-order precedence.
+ *
+ * Each shadow body is a ready-made pattern: the path minus its leading slash,
+ * with inner groups already non-capturing. The bodies are OR'd into one
+ * capturing group whose match is copied back into `request.path` via `$1`. The
+ * group allows an optional trailing slash so redirect_slashes still works. A
+ * request to `/foo/` reaches the Lambda, which redirects it to `/foo`. Returns
+ * an empty list when nothing is shadowed.
  */
 export function fastapiShadowingRoutes(
   discovery: FastAPICollectStaticResult,
@@ -199,7 +203,7 @@ export function fastapiShadowingRoutes(
   if (discovery.shadowRoutes.length === 0) return [];
   return [
     {
-      src: `^/(${discovery.shadowRoutes.join('|')})$`,
+      src: `^/((?:${discovery.shadowRoutes.join('|')})/?)$`,
       dest: `/${lambdaPath}`,
       transforms: [
         { type: 'request.path' as const, op: 'set' as const, args: '/$1' },
@@ -219,20 +223,20 @@ export function fastapiShadowingRoutes(
  * fallback is different: the runtime serves it only for navigation requests, so
  * the route has to match the runtime's `_is_frontend_navigation_request`.
  *
- * That check is not the same across versions:
- *   - fastapi 0.139.0: it is a navigation request when the final path segment
- *     has no file extension and `Accept` includes text/html or
- *     application/xhtml+xml (q != 0). A wildcard `Accept` (q != 0) also counts,
- *     unless html was explicitly rejected with q = 0.
- *   - fastapi 0.140.0: it is a navigation request when `Accept` includes
- *     text/html or application/xhtml+xml (q != 0). The extension and wildcard
- *     rules were removed.
+ * That check is not the same across versions. On fastapi 0.139.0 it is a
+ * navigation request when the final path segment has no file extension and
+ * `Accept` includes text/html or application/xhtml+xml with a non-zero quality.
+ * A wildcard `Accept` also counts, unless html is explicitly rejected with q=0.
+ * On fastapi 0.140.0 it is a navigation request when `Accept` includes text/html
+ * or application/xhtml+xml with a non-zero quality. The extension and wildcard
+ * rules were removed.
  *
  * We build the route ahead of time and don't know which version is installed,
- * so we gate on what every version agrees is navigation: an explicit text/html
- * (or xhtml) `Accept` header, plus a final segment with no file extension (so
- * `/spa/app.js` is excluded). The router anchors the `has` value with `^…$`,
- * which is why it is wrapped in `.*`.
+ * so we gate on what every version agrees is navigation. The `Accept` header
+ * must include text/html or xhtml with a non-zero quality. A `q=0` is rejected
+ * by a negative lookahead. The final path segment must have no file extension,
+ * so `/spa/app.js` is excluded. The router anchors the `has` value with `^…$`,
+ * so it is wrapped in `.*`.
  *
  * This is the strict reading, so the CDN never serves index.html when the app
  * would return 404. Anything the gate rejects falls through to the Lambda,
@@ -261,7 +265,8 @@ export function fastapiFallbackRoutes(discovery: FastAPICollectStaticResult) {
             {
               type: 'header' as const,
               key: 'accept',
-              value: '.*(?:text/html|application/xhtml\\+xml).*',
+              value:
+                '.*(?:text/html|application/xhtml\\+xml)(?![^,]*;\\s*q=0(?:\\.0+)?(?:[,;\\s]|$)).*',
             },
           ],
         }
