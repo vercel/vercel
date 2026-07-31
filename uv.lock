@@ -2,6 +2,10 @@ version = 1
 revision = 3
 requires-python = ">=3.12"
 
+[options]
+exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for backwards compatibility when using relative exclude-newer values.
+exclude-newer-span = "P2D"
+
 [manifest]
 members = [
     "vercel-runtime",
@@ -1227,6 +1231,7 @@ test = [
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
+    { name = "vercel" },
 ]
 
 [package.metadata]
@@ -1239,6 +1244,7 @@ test = [
     { name = "pytest", specifier = "~=9.0.2" },
     { name = "pytest-cov", specifier = "~=7.0.0" },
     { name = "ruff", specifier = "~=0.15.1" },
+    { name = "vercel", specifier = "~=0.5" },
 ]
 
 [[package]]

@@ -18,6 +18,12 @@ from vercel_runtime.routing import (
     apply_service_route_prefix_to_asgi_scope,
     strip_service_route_prefix,
 )
+from vercel_runtime.wait_until import (
+    WaitUntilCollector,
+    begin_wait_until,
+    finish_wait_until,
+    finish_wait_until_async,
+)
 from vercel_runtime.workers import (
     bootstrap_queue_service_app,
     install_queue_integrations,
@@ -28,7 +34,7 @@ from vercel_runtime.workers import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import Awaitable, Callable, Iterable, Iterator
     from wsgiref.types import WSGIApplication
 
     from vercel_runtime.asgi import ASGI
@@ -304,7 +310,33 @@ async def asgi_app(
             pass
 
     assert _asgi_user_app is not None
-    await _asgi_user_app(effective_scope, receive, send)
+    if (
+        effective_scope.get("type") == "http"
+        and effective_scope.get("path") == "/_vercel/ping"
+    ):
+        await _asgi_user_app(effective_scope, receive, send)
+        return
+
+    wait_until = begin_wait_until()
+    try:
+        await _asgi_user_app(effective_scope, receive, send)
+    finally:
+        await finish_wait_until_async(wait_until)
+
+
+def _wait_until_wsgi_result(
+    result: Iterable[bytes],
+    wait_until: WaitUntilCollector,
+) -> Iterator[bytes]:
+    try:
+        yield from result
+    finally:
+        try:
+            close = getattr(result, "close", None)
+            if callable(close):
+                close()
+        finally:
+            finish_wait_until(wait_until)
 
 
 def wsgi_app(
@@ -353,7 +385,16 @@ def wsgi_app(
 
     # Otherwise, delegate to user's WSGI app
     assert _wsgi_user_app is not None
-    return _wsgi_user_app(environ, start_response)
+    if environ.get("PATH_INFO") == "/_vercel/ping":
+        return _wsgi_user_app(environ, start_response)
+
+    wait_until = begin_wait_until()
+    try:
+        user_result = _wsgi_user_app(environ, start_response)
+    except BaseException:
+        finish_wait_until(wait_until)
+        raise
+    return _wait_until_wsgi_result(user_result, wait_until)
 
 
 def _start_wsgi(host: str, port: int) -> None:

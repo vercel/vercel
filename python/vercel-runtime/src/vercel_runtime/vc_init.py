@@ -53,6 +53,13 @@ from vercel_runtime.routing import (
     split_request_target,
 )
 from vercel_runtime.utils import read_wsgi_request_body
+from vercel_runtime.wait_until import (
+    WaitUntilCollector,
+    begin_wait_until,
+    clear_wait_until_context,
+    finish_wait_until,
+    finish_wait_until_async,
+)
 from vercel_runtime.workers import (
     install_queue_integrations,
     is_worker_service,
@@ -650,29 +657,33 @@ class ASGIMiddleware:
         )
         set_vercel_headers_from_asgi_pairs(new_headers)
         set_runtime_cache_from_asgi_pairs(sc_pairs)
+        wait_until = begin_wait_until()
 
         request_finished = False
 
-        def finish_request() -> None:
+        async def finish_request() -> None:
             nonlocal request_finished
             if request_finished:
                 return
 
             request_finished = True
-            clear_runtime_cache_context()
-            clear_vercel_headers_context()
-            storage.reset(token)
-            send_message(
-                {
-                    "type": "end",
-                    "payload": {
-                        "context": {
-                            "invocationId": invocation_id,
-                            "requestId": request_id,
-                        }
-                    },
-                }
-            )
+            try:
+                await finish_wait_until_async(wait_until)
+            finally:
+                clear_runtime_cache_context()
+                clear_vercel_headers_context()
+                storage.reset(token)
+                send_message(
+                    {
+                        "type": "end",
+                        "payload": {
+                            "context": {
+                                "invocationId": invocation_id,
+                                "requestId": request_id,
+                            }
+                        },
+                    }
+                )
 
         async def send_wrapper(message: dict[str, Any]) -> None:
             await send(message)
@@ -684,23 +695,23 @@ class ASGIMiddleware:
             if message_type == "websocket.accept":
                 # End the request lifecycle once the 101 is sent so the
                 # platform can begin bidirectional WebSocket streaming.
-                finish_request()
+                await finish_request()
                 return
 
             if message_type == "websocket.close":
-                finish_request()
+                await finish_request()
                 return
 
             if (
                 message_type == "websocket.http.response.body"
                 and not message.get("more_body")
             ):
-                finish_request()
+                await finish_request()
 
         try:
             await self.app(new_scope, receive, send_wrapper)
         finally:
-            finish_request()
+            await finish_request()
 
 
 if "VERCEL_IPC_PATH" in os.environ:
@@ -783,30 +794,36 @@ if "VERCEL_IPC_PATH" in os.environ:
             if getattr(self, "_vc_end_sent", False):
                 return
             self._vc_end_sent = True
-            clear_runtime_cache_context()
-            clear_vercel_headers_context()
-            token = getattr(self, "_vc_end_token", None)
-            if token is not None:
-                storage.reset(token)
-            send_message(
-                {
-                    "type": "end",
-                    "payload": {
-                        "context": {
-                            "invocationId": getattr(
-                                self, "_vc_invocation_id", "0"
-                            ),
-                            "requestId": getattr(self, "_vc_request_id", 0),
-                        }
-                    },
-                }
-            )
+            try:
+                wait_until = getattr(self, "_vc_wait_until", None)
+                if isinstance(wait_until, WaitUntilCollector):
+                    finish_wait_until(wait_until)
+            finally:
+                clear_runtime_cache_context()
+                clear_vercel_headers_context()
+                token = getattr(self, "_vc_end_token", None)
+                if token is not None:
+                    storage.reset(token)
+                send_message(
+                    {
+                        "type": "end",
+                        "payload": {
+                            "context": {
+                                "invocationId": getattr(
+                                    self, "_vc_invocation_id", "0"
+                                ),
+                                "requestId": getattr(self, "_vc_request_id", 0),
+                            }
+                        },
+                    }
+                )
 
         # Re-implementation of handle_one_request to send
         # the end message after the response is fully sent.
         def handle_one_request(self) -> None:
             self._vc_end_sent = False
             self._vc_end_token = None
+            self._vc_wait_until = None
             self.raw_requestline = self.rfile.readline(65537)
             if not self.raw_requestline:
                 self.close_connection = True
@@ -887,6 +904,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                 }
             )
             set_vercel_headers_from_http_headers(self.headers)
+            self._vc_wait_until = begin_wait_until()
 
             try:
                 self.handle_request()  # type: ignore[attr-defined]
@@ -1115,42 +1133,51 @@ if (
         if sc_no_header_leak:
             for sc_header in SC_HEADERS_STRIP_ON_NO_LEAK:
                 headers.pop(sc_header, None)
-
-        # `_thread.start_new_thread` does not propagate contextvars
-        captured_ctx = contextvars.copy_context()
-        _thread.start_new_thread(
-            captured_ctx.run,
-            (server.handle_request,),  # type: ignore[attr-defined]
-        )
-        clear_runtime_cache_context()
-
-        if (body is not None and len(body) > 0) and (
-            encoding is not None and encoding == "base64"
-        ):
-            body = base64.b64decode(body)
-
-        request_body = body.encode("utf-8") if isinstance(body, str) else body
-        conn = http.client.HTTPConnection("127.0.0.1", port)
+        set_vercel_headers_from_http_headers(headers)
+        wait_until = begin_wait_until()
         try:
-            conn.request(method, path, headers=headers, body=request_body)
-        except (OSError, http.client.HTTPException) as ex:
-            _stderr(f"Request Error: {ex}")
-        res = conn.getresponse()
+            # `_thread.start_new_thread` does not propagate contextvars
+            captured_ctx = contextvars.copy_context()
+            _thread.start_new_thread(
+                captured_ctx.run,
+                (server.handle_request,),  # type: ignore[attr-defined]
+            )
 
-        return_dict: dict[str, Any] = {
-            "statusCode": res.status,
-            "headers": format_headers(res.headers),
-        }
+            if (body is not None and len(body) > 0) and (
+                encoding is not None and encoding == "base64"
+            ):
+                body = base64.b64decode(body)
 
-        data = res.read()
+            request_body = (
+                body.encode("utf-8") if isinstance(body, str) else body
+            )
+            conn = http.client.HTTPConnection("127.0.0.1", port)
+            try:
+                conn.request(method, path, headers=headers, body=request_body)
+            except (OSError, http.client.HTTPException) as ex:
+                _stderr(f"Request Error: {ex}")
+            res = conn.getresponse()
 
-        try:
-            return_dict["body"] = data.decode("utf-8")
-        except UnicodeDecodeError:
-            return_dict["body"] = base64.b64encode(data).decode("utf-8")
-            return_dict["encoding"] = "base64"
+            return_dict: dict[str, Any] = {
+                "statusCode": res.status,
+                "headers": format_headers(res.headers),
+            }
 
-        return return_dict
+            data = res.read()
+
+            try:
+                return_dict["body"] = data.decode("utf-8")
+            except UnicodeDecodeError:
+                return_dict["body"] = base64.b64encode(data).decode("utf-8")
+                return_dict["encoding"] = "base64"
+
+            return return_dict
+        finally:
+            try:
+                finish_wait_until(wait_until)
+            finally:
+                clear_runtime_cache_context()
+                clear_vercel_headers_context()
 
 else:
     try:
@@ -1257,11 +1284,15 @@ else:
                     environ[env_key] = value
 
             set_vercel_headers_from_http_headers(raw_headers)
+            wait_until = begin_wait_until()
             try:
                 response = Response.from_app(wsgi_user_app, environ)
             finally:
-                clear_runtime_cache_context()
-                clear_vercel_headers_context()
+                try:
+                    finish_wait_until(wait_until)
+                finally:
+                    clear_runtime_cache_context()
+                    clear_vercel_headers_context()
 
             return_dict: dict[str, Any] = {
                 "statusCode": response.status_code,
@@ -1408,7 +1439,10 @@ else:
                 )
 
                 asgi_instance = app(self.scope, self.receive, self.send)
-                _asgi_runner.run(asgi_instance)
+                _asgi_runner.run(
+                    asgi_instance,
+                    context=contextvars.copy_context(),
+                )
                 return self.response
 
             def put_message(self, message: dict[str, Any]) -> None:
@@ -1554,10 +1588,15 @@ else:
             }
 
             set_vercel_headers_from_http_headers(headers)
+            wait_until = begin_wait_until()
             try:
                 asgi_cycle = ASGICycle(scope)
                 response = asgi_cycle(asgi_user_app, body)
                 return response
             finally:
-                clear_runtime_cache_context()
-                clear_vercel_headers_context()
+                try:
+                    _asgi_runner.run(finish_wait_until_async(wait_until))
+                finally:
+                    clear_wait_until_context()
+                    clear_runtime_cache_context()
+                    clear_vercel_headers_context()
