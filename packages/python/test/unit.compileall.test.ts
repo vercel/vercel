@@ -149,12 +149,13 @@ describe('runCompileAll', () => {
         sourceFiles: ['/work/app.py', '/work/pkg/mod.py', '/work/app.py'],
         env,
       })
-    ).resolves.toBe(true);
+    ).resolves.toEqual({ success: true, timings: undefined });
 
     const args = mockedExeca.mock.calls[0][1];
     expect(args).toEqual([
       expect.stringMatching(/templates[/\\\\]vc_compileall\.py$/),
       listPath,
+      expect.stringMatching(/timings\.json$/),
     ]);
     expect(mockedExeca).toHaveBeenCalledWith(
       '/work/.vercel/python/.venv/bin/python',
@@ -169,7 +170,7 @@ describe('runCompileAll', () => {
   it('does not invoke the coordinator when there are no source files', async () => {
     await expect(
       runCompileAll({ pythonBin: 'python3', sourceFiles: [] })
-    ).resolves.toBe(false);
+    ).resolves.toEqual({ success: false });
 
     expect(mockedExeca).not.toHaveBeenCalled();
   });
@@ -191,7 +192,7 @@ describe('runCompileAll', () => {
         pythonBin: 'python3',
         sourceFiles: ['/work/app.py'],
       })
-    ).resolves.toBe(false);
+    ).resolves.toEqual({ success: false });
 
     expect(fs.existsSync(listPath)).toBe(false);
     expect(fs.existsSync(path.dirname(listPath))).toBe(false);
@@ -211,10 +212,33 @@ describe('runCompileAll', () => {
         pythonBin: 'python3',
         sourceFiles: ['/work/app.py'],
       })
-    ).resolves.toBe(false);
+    ).resolves.toEqual({ success: false });
 
     expect(fs.existsSync(listPath)).toBe(false);
     expect(fs.existsSync(path.dirname(listPath))).toBe(false);
+  });
+
+  it('parses the per-file timings table when the coordinator writes one', async () => {
+    mockedExeca.mockImplementation(((_file, args: string[]) => {
+      fs.writeFileSync(
+        args[2],
+        JSON.stringify({ '/work/app.py': 0.012, '/work/pkg/mod.py': 0.004 })
+      );
+      return Promise.resolve({});
+    }) as any);
+
+    await expect(
+      runCompileAll({
+        pythonBin: 'python3',
+        sourceFiles: ['/work/app.py', '/work/pkg/mod.py'],
+      })
+    ).resolves.toEqual({
+      success: true,
+      timings: new Map([
+        ['/work/app.py', 0.012],
+        ['/work/pkg/mod.py', 0.004],
+      ]),
+    });
   });
 
   it('sets PYTHONPYCACHEPREFIX on the subprocess when provided', async () => {
@@ -232,6 +256,7 @@ describe('runCompileAll', () => {
       [
         expect.stringMatching(/templates[/\\\\]vc_compileall\.py$/),
         expect.stringMatching(/pysources\.json$/),
+        expect.stringMatching(/timings\.json$/),
       ],
       {
         env: { ...env, PYTHONPYCACHEPREFIX: '/work/.vercel/python/pycache' },

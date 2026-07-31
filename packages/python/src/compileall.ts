@@ -57,6 +57,16 @@ export function shouldCompileAll({
   return isCompileAllFlagEnabled();
 }
 
+export interface CompileAllResult {
+  success: boolean;
+  /**
+   * Per-file compile seconds keyed by the exact source paths passed in.
+   * Undefined when the coordinator did not emit a table (old template,
+   * mocked subprocess, write failure) — callers fall back to size ranking.
+   */
+  timings?: Map<string, number>;
+}
+
 /**
  * Runs the Python compile coordinator to precompile `.py` files into `.pyc`
  * bytecode.
@@ -77,10 +87,10 @@ export async function runCompileAll({
   sourceFiles: string[];
   env?: NodeJS.ProcessEnv;
   pycachePrefix?: string;
-}): Promise<boolean> {
+}): Promise<CompileAllResult> {
   const uniqueSourceFiles = [...new Set(sourceFiles)];
   if (uniqueSourceFiles.length === 0) {
-    return false;
+    return { success: false };
   }
 
   let tempDir: string | undefined;
@@ -91,6 +101,7 @@ export async function runCompileAll({
     );
     const listPath = join(tempDir, 'pysources.json');
     await fs.promises.writeFile(listPath, JSON.stringify(uniqueSourceFiles));
+    const timingsPath = join(tempDir, 'timings.json');
     const scriptPath = join(__dirname, '..', 'templates', 'vc_compileall.py');
 
     const baseEnv = env || process.env;
@@ -98,14 +109,22 @@ export async function runCompileAll({
       ? { ...baseEnv, PYTHONPYCACHEPREFIX: pycachePrefix }
       : baseEnv;
 
-    await execa(pythonBin, [scriptPath, listPath], {
+    await execa(pythonBin, [scriptPath, listPath, timingsPath], {
       env: subprocessEnv,
       timeout: COMPILEALL_TIMEOUT_MS,
     });
-    return true;
+
+    let timings: Map<string, number> | undefined;
+    try {
+      const raw = await fs.promises.readFile(timingsPath, 'utf8');
+      timings = new Map(Object.entries(JSON.parse(raw)));
+    } catch (err) {
+      debug(`compileall timings unavailable: ${String(err)}`);
+    }
+    return { success: true, timings };
   } catch (err) {
     debug(`compileall error details: ${JSON.stringify(err)}`);
-    return false;
+    return { success: false };
   } finally {
     if (tempDir) {
       try {
@@ -210,6 +229,26 @@ export function derivePrefixPycBundlePath(
   return `${PYCACHE_PREFIX_DIR}/${rel}`;
 }
 
+/**
+ * A single `.pyc` candidate for bytecode packing, at per-file granularity.
+ */
+export interface BytecodeItem {
+  /** Bundle-relative path of the `.pyc` file. */
+  bundlePath: string;
+  file: FileFsRef;
+  /** Uncompressed `.pyc` size in bytes (the knapsack weight). */
+  size: number;
+  /**
+   * Bundle identity of the source module: the workPath-relative path for
+   * app files, the site-packages-relative path for vendor files (forward
+   * slashes). An import-closure set membership test answers "is this
+   * module imported at startup?".
+   */
+  moduleKey: string;
+  /** Absolute fs path of the `.py` source (join key for compile timings). */
+  sourceAbsPath: string;
+}
+
 export interface BytecodeCollectionResult {
   /** FileFsRef entries for .pyc files, keyed by bundle-relative path. */
   files: Files;
@@ -217,6 +256,8 @@ export interface BytecodeCollectionResult {
   totalSize: number;
   /** Per-item bytecode sizes for knapsack packing (keyed by package name or bundle path). */
   perItemSizes: Map<string, number>;
+  /** Per-file candidates for import-aware, value-ranked packing. */
+  items: BytecodeItem[];
 }
 
 /**
@@ -239,14 +280,20 @@ export async function collectAppPrefixBytecodeFiles({
   pythonMajor: number;
   pythonMinor: number;
 }): Promise<BytecodeCollectionResult> {
-  const pending: { bundlePath: string; srcFsPath: string }[] = [];
+  const pending: {
+    bundlePath: string;
+    srcFsPath: string;
+    moduleKey: string;
+    sourceAbsPath: string;
+  }[] = [];
 
   for (const bundlePath of Object.keys(appFiles)) {
     if (!bundlePath.endsWith('.py')) continue;
 
+    const sourceAbsPath = join(workPath, bundlePath.replaceAll('/', sep));
     const stagedFsPath = deriveStagedPycFsPath(
       stagingDir,
-      join(workPath, bundlePath.replaceAll('/', sep)),
+      sourceAbsPath,
       pythonMajor,
       pythonMinor
     );
@@ -257,14 +304,25 @@ export async function collectAppPrefixBytecodeFiles({
     );
     if (!stagedFsPath || !pycBundlePath) continue;
 
-    pending.push({ bundlePath: pycBundlePath, srcFsPath: stagedFsPath });
+    pending.push({
+      bundlePath: pycBundlePath,
+      srcFsPath: stagedFsPath,
+      moduleKey: bundlePath,
+      sourceAbsPath,
+    });
   }
 
   const results = await Promise.all(
-    pending.map(async ({ bundlePath, srcFsPath }) => {
+    pending.map(async ({ bundlePath, srcFsPath, moduleKey, sourceAbsPath }) => {
       try {
         const stats = await fs.promises.stat(srcFsPath);
-        return { bundlePath, srcFsPath, size: stats.size };
+        return {
+          bundlePath,
+          srcFsPath,
+          moduleKey,
+          sourceAbsPath,
+          size: stats.size,
+        };
       } catch {
         return null;
       }
@@ -273,19 +331,28 @@ export async function collectAppPrefixBytecodeFiles({
 
   const files: Files = {};
   const perItemSizes = new Map<string, number>();
+  const items: BytecodeItem[] = [];
   let totalSize = 0;
 
   for (const result of results) {
     if (!result) continue;
-    files[result.bundlePath] = new FileFsRef({
+    const file = new FileFsRef({
       fsPath: result.srcFsPath,
       size: result.size,
     });
+    files[result.bundlePath] = file;
     perItemSizes.set(result.bundlePath, result.size);
+    items.push({
+      bundlePath: result.bundlePath,
+      file,
+      size: result.size,
+      moduleKey: result.moduleKey,
+      sourceAbsPath: result.sourceAbsPath,
+    });
     totalSize += result.size;
   }
 
-  return { files, totalSize, perItemSizes };
+  return { files, totalSize, perItemSizes, items };
 }
 
 export async function collectAppBytecodeFiles({
@@ -299,7 +366,12 @@ export async function collectAppBytecodeFiles({
   pythonMajor: number;
   pythonMinor: number;
 }): Promise<BytecodeCollectionResult> {
-  const pending: { bundlePath: string; srcFsPath: string }[] = [];
+  const pending: {
+    bundlePath: string;
+    srcFsPath: string;
+    moduleKey: string;
+    sourceAbsPath: string;
+  }[] = [];
 
   for (const bundlePath of Object.keys(appFiles)) {
     const pycRel = derivePycPath(bundlePath, pythonMajor, pythonMinor);
@@ -308,14 +380,22 @@ export async function collectAppBytecodeFiles({
     pending.push({
       bundlePath: pycRel,
       srcFsPath: join(workPath, pycRel.replaceAll('/', sep)),
+      moduleKey: bundlePath,
+      sourceAbsPath: join(workPath, bundlePath.replaceAll('/', sep)),
     });
   }
 
   const results = await Promise.all(
-    pending.map(async ({ bundlePath, srcFsPath }) => {
+    pending.map(async ({ bundlePath, srcFsPath, moduleKey, sourceAbsPath }) => {
       try {
         const stats = await fs.promises.stat(srcFsPath);
-        return { bundlePath, srcFsPath, size: stats.size };
+        return {
+          bundlePath,
+          srcFsPath,
+          moduleKey,
+          sourceAbsPath,
+          size: stats.size,
+        };
       } catch {
         return null;
       }
@@ -324,17 +404,26 @@ export async function collectAppBytecodeFiles({
 
   const files: Files = {};
   const perItemSizes = new Map<string, number>();
+  const items: BytecodeItem[] = [];
   let totalSize = 0;
 
   for (const result of results) {
     if (!result) continue;
-    files[result.bundlePath] = new FileFsRef({
+    const file = new FileFsRef({
       fsPath: result.srcFsPath,
       size: result.size,
     });
+    files[result.bundlePath] = file;
     perItemSizes.set(result.bundlePath, result.size);
+    items.push({
+      bundlePath: result.bundlePath,
+      file,
+      size: result.size,
+      moduleKey: result.moduleKey,
+      sourceAbsPath: result.sourceAbsPath,
+    });
     totalSize += result.size;
   }
 
-  return { files, totalSize, perItemSizes };
+  return { files, totalSize, perItemSizes, items };
 }
