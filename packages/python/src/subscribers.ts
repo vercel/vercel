@@ -788,4 +788,3 @@ function subscriberError(message: string): NowBuildError {
     message,
   });
 }
-
