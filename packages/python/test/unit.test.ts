@@ -3082,6 +3082,12 @@ describe('pyproject subscribers', () => {
         lambda.environment.VERCEL_APSCHEDULER_PREVIEW_IDLE_TIMEOUT_SECONDS
       ).toBe('1800');
     }
+    expect(
+      output.flask.environment.VERCEL_PYTHON_SUBSCRIBER_ID
+    ).toBeUndefined();
+    expect(scheduler.environment.VERCEL_PYTHON_SUBSCRIBER_ID).toBe(
+      'scheduler_scheduler'
+    );
 
     const introspectionScripts = mockedExeca.mock.calls
       .map(([, args]) => (Array.isArray(args) ? args[args.length - 1] : ''))

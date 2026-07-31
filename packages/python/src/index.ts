@@ -1926,7 +1926,12 @@ export const build: BuildVX = async ({
       handler: `${handlerPyFilename}.vc_handler`,
       runtime: pythonVersion.runtime,
       architecture: target.architecture,
-      environment: lambdaEnv,
+      environment: {
+        ...lambdaEnv,
+        // The runtime activates publish-side integrations before importing the
+        // generated subscriber module, so the identity must already be present.
+        VERCEL_PYTHON_SUBSCRIBER_ID: subscriber.name,
+      },
       experimentalTriggers,
       supportsResponseStreaming: true,
     });
