@@ -126,6 +126,35 @@ class TestWaitUntilCollector(unittest.IsolatedAsyncioTestCase):
         await collector.drain()
         self.assertEqual(sorted(calls), list(range(10)))
 
+    async def test_registration_during_drain_joins_the_same_drain(self) -> None:
+        collector = WaitUntilCollector()
+        calls: list[str] = []
+        registered = threading.Event()
+
+        async def late_work() -> None:
+            await asyncio.sleep(0)
+            calls.append("late")
+
+        def register_from_thread() -> None:
+            # A WSGI worker thread registering while the invoking thread is
+            # already draining must land in that same drain.
+            collector.wait_until(late_work())
+            registered.set()
+
+        async def blocking_work() -> None:
+            thread = threading.Thread(target=register_from_thread)
+            thread.start()
+            await asyncio.to_thread(registered.wait, 5)
+            thread.join(timeout=5)
+            calls.append("blocking")
+
+        collector.wait_until(blocking_work())
+        await collector.drain()
+
+        self.assertEqual(sorted(calls), ["blocking", "late"])
+        with self.assertRaisesRegex(RuntimeError, "invocation ended"):
+            collector.wait_until(late_work())
+
 
 class TestWaitUntilContext(unittest.TestCase):
     def test_sync_finish_clears_calling_context(self) -> None:
