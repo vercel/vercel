@@ -149,6 +149,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          # While the binary job is disabled, publish `vercel` without native
+          # optionalDependencies instead of failing the missing-natives guard
+          # in utils/inject-native-optional-deps.mjs. Remove this when the
+          # binary job is re-enabled.
+          VERCEL_SKIP_NATIVE_DEPS: ${{ needs.binary.result == 'skipped' && '1' || '' }}
 
       # TODO: re-enable with a new bot token or GitHub App
       # - name: Trigger Update (if a Publish Happened)

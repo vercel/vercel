@@ -1,5 +1,18 @@
 # vercel
 
+## 58.4.4
+
+### Patch Changes
+
+- dcadcad: Trigger a new release to publish versions that were skipped by the failed release run.
+
+## 58.4.3
+
+### Patch Changes
+
+- 5f49021: Add `--protection-password` to `vercel project protection enable` so deployment protection passwords can be set from the CLI when used with `--password`.
+- 230fe53: Made non-interactive project inspection fail instead of linking when project context is unresolved, and corrected Vercel CLI skill guidance for project resolution, pull outputs, and browser authentication flows.
+
 ## 58.4.2
 
 ### Patch Changes
