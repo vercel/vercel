@@ -18,9 +18,7 @@ module.exports = function setupTests(groupIndex) {
     ],
   ]);
   const allFixtures = fs.readdirSync(fixturesPath);
-  // The workflow server returns `maxEvents`, which the Python SDK's strict
-  // EventResult schema does not yet accept.
-  const skipFixtures = ['70-workflow-pyproject'];
+  const skipFixtures = [];
   const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
 
   beforeAll(() => {

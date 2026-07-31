@@ -49,12 +49,11 @@ describe('validateBuildResult()', () => {
     });
   });
 
-  it('matches the AL2023 allowlist used by existing callers', async () => {
+  it('accepts every runtime on the AL2023 allowlist', async () => {
     await expect(
       validateBuildResult({
         buildConfig: {},
         buildResponse: createBuildResponse('python3.13'),
-        osRelease: { VERSION: '2023' },
       })
     ).resolves.toMatchObject({
       buildOutputMap: expect.any(Object),
@@ -65,7 +64,6 @@ describe('validateBuildResult()', () => {
       validateBuildResult({
         buildConfig: {},
         buildResponse: createBuildResponse('python3.14'),
-        osRelease: { VERSION: '2023' },
       })
     ).resolves.toMatchObject({
       buildOutputMap: expect.any(Object),
@@ -76,7 +74,6 @@ describe('validateBuildResult()', () => {
       validateBuildResult({
         buildConfig: {},
         buildResponse: createBuildResponse('executable'),
-        osRelease: { VERSION: '2023' },
       })
     ).resolves.toMatchObject({
       buildOutputMap: expect.any(Object),
@@ -84,29 +81,15 @@ describe('validateBuildResult()', () => {
     });
   });
 
-  it('throws for invalid runtimes on AL2023', async () => {
+  it('throws for runtimes that are not on the AL2023 allowlist', async () => {
     await expect(
       validateBuildResult({
         buildConfig: {},
         buildResponse: createBuildResponse('python3.11'),
-        osRelease: { VERSION: '2023' },
       })
     ).rejects.toMatchObject({
       code: 'NOW_SANDBOX_WORKER_INVALID_RUNTIME',
       message: expect.stringContaining('api/hello (python3.11)'),
-    });
-  });
-
-  it('skips AL2023 runtime validation outside AL2023', async () => {
-    await expect(
-      validateBuildResult({
-        buildConfig: {},
-        buildResponse: createBuildResponse('python3.11'),
-        osRelease: { VERSION: '2' },
-      })
-    ).resolves.toMatchObject({
-      buildOutputMap: expect.any(Object),
-      customFunctionConfiguration: undefined,
     });
   });
 
@@ -116,7 +99,6 @@ describe('validateBuildResult()', () => {
         allowInvalidRuntime: true,
         buildConfig: {},
         buildResponse: createBuildResponse('python3.11'),
-        osRelease: { VERSION: '2023' },
       })
     ).resolves.toMatchObject({
       buildOutputMap: expect.any(Object),
@@ -137,7 +119,6 @@ describe('validateBuildResult()', () => {
         },
       },
       buildResponse: createBuildResponse(),
-      osRelease: { VERSION: '2023' },
     });
 
     expect(result.customFunctionConfiguration).toEqual({ memory: 512 });
@@ -153,7 +134,6 @@ describe('validateBuildResult()', () => {
         },
       },
       buildResponse: createBuildResponse(),
-      osRelease: { VERSION: '2023' },
     });
 
     expect(result.customFunctionConfiguration).toEqual({ memory: 256 });
@@ -169,7 +149,6 @@ describe('validateBuildResult()', () => {
           },
         },
         buildResponse: createBuildResponse(),
-        osRelease: { VERSION: '2023' },
       });
     } catch (err) {
       error = err;
@@ -187,24 +166,11 @@ describe('validateBuildResult()', () => {
       validateBuildResult({
         buildConfig: {},
         buildResponse: createBuildResponse('python3.11'),
-        osRelease: { VERSION: '2023' },
         vercelBaseUrl: 'https://vercel.example.com',
       })
     ).rejects.toMatchObject({
       code: 'NOW_SANDBOX_WORKER_INVALID_RUNTIME',
       link: 'https://vercel.example.com/docs/functions/runtimes#official-runtimes',
-    });
-  });
-
-  it('skips AL2023 runtime validation when osRelease is not provided', async () => {
-    await expect(
-      validateBuildResult({
-        buildConfig: {},
-        buildResponse: createBuildResponse('python3.11'),
-      })
-    ).resolves.toMatchObject({
-      buildOutputMap: expect.any(Object),
-      customFunctionConfiguration: undefined,
     });
   });
 });

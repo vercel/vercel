@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, projectOption } from '../../util/arg-common';
+import { formatOption, jsonOption, projectOption } from '../../util/arg-common';
 
 export const addSubcommand = {
   name: 'add',
@@ -42,7 +42,7 @@ export const listSubcommand = {
   description: 'List all cron jobs for a project',
   default: true,
   arguments: [],
-  options: [formatOption, projectOption],
+  options: [formatOption, jsonOption, projectOption],
   examples: [
     {
       name: 'List all cron jobs',
@@ -50,7 +50,7 @@ export const listSubcommand = {
     },
     {
       name: 'List all cron jobs as JSON',
-      value: `${packageName} crons ls --format json`,
+      value: `${packageName} crons ls --json`,
     },
   ],
 } as const;

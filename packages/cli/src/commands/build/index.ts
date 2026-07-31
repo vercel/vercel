@@ -54,6 +54,7 @@ import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
 import { frameworkList, type Framework } from '@vercel/frameworks';
 import {
+  builderToFrameworks,
   detectBuilders,
   detectFrameworkRecord,
   detectFrameworkVersion,
@@ -79,7 +80,10 @@ import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
-import { importBuilders } from '../../util/build/import-builders';
+import {
+  formatResolvedBuilders,
+  importBuilders,
+} from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
 import {
   detectFirstDeploymentFramework,
@@ -88,6 +92,10 @@ import {
   warnIfFrameworkMismatch,
   type DetectedFramework,
 } from '../../util/build/framework-detection';
+import {
+  BACKEND_REWRITE_BEHAVIOR_WARNING,
+  hasBackendRewriteBehaviorChange,
+} from '../../util/build/backend-rewrite-warning';
 import {
   validateBuildOutput,
   reportBuildOutputProblems,
@@ -813,14 +821,10 @@ async function doBuild(
     ...pickOverrides(localConfig),
   };
 
-  // On a project's first deployment, detect the framework when none is
-  // configured. Mutates `projectSettings` in place so the `detectBuilders`
-  // call below sees the detected framework; must therefore run before it.
-  // The result is always recorded in `builds.json`, including when detection
-  // was skipped or found nothing.
+  // Must run before `detectBuilders` below, which reads the mutated
+  // `projectSettings`.
   buildsJson.detectedFramework = await span
     .child('vc.detectFirstDeploymentFramework', {
-      enabled: String(isFrameworkDetectionEnabled()),
       firstDeployment: String(process.env.VERCEL_FIRST_DEPLOYMENT === '1'),
       configuredFramework: projectSettings.framework ?? undefined,
     })
@@ -874,8 +878,8 @@ async function doBuild(
     return result;
   });
 
-  // Framework detection for the end-of-build cross-check, started here so it
-  // runs concurrently with the builders instead of adding latency.
+  // Started here to run concurrently with the builders (used in the
+  // end-of-build cross-check).
   const detectedFrameworksPromise = span
     .child('vc.detectAllFrameworks', {
       enabled: String(isFrameworkDetectionEnabled()),
@@ -1076,11 +1080,24 @@ async function doBuild(
     }
   }
 
+  if (
+    hasBackendRewriteBehaviorChange({
+      projectRewrites: localConfig.rewrites,
+      builders: builds,
+    })
+  ) {
+    output.warn(BACKEND_REWRITE_BEHAVIOR_WARNING);
+  }
+
   const builderSpecs = new Set(builds.map(b => b.use));
 
   let buildersWithPkgs = await span
     .child('vc.importBuilders')
-    .trace(() => importBuilders(builderSpecs, cwd, span));
+    .trace(async s => {
+      const builders = await importBuilders(builderSpecs, cwd, span);
+      s.setAttributes({ resolved: formatResolvedBuilders(builders) });
+      return builders;
+    });
 
   // Populate Files -> FileFsRef mapping
   const filesMap: Files = await span
@@ -1115,7 +1132,11 @@ async function doBuild(
 
     const importedBuilders = await span
       .child('vc.importBuilders')
-      .trace(() => importBuilders(missingBuilderSpecs, cwd, span));
+      .trace(async s => {
+        const builders = await importBuilders(missingBuilderSpecs, cwd, span);
+        s.setAttributes({ resolved: formatResolvedBuilders(builders) });
+        return builders;
+      });
     buildersWithPkgs = new Map([
       ...buildersWithPkgs.entries(),
       ...importedBuilders.entries(),
@@ -1169,11 +1190,10 @@ async function doBuild(
     builderUse: string;
   }> = [];
 
+  const apiDirFrameworkDetector = createApiDirFrameworkDetector();
   const getHasDetectedServices = () =>
     detectedResolvedServices !== undefined &&
     detectedResolvedServices.length > 0;
-  const getHasQueueServices = () =>
-    detectedServices?.some(isQueueBackedService);
   const synthesizedServiceCrons: Cron[] = [];
   const serviceByBuilder = new Map<Builder, Service>();
   const serviceFileOverrides = new Map<Builder, Record<string, PathOverride>>();
@@ -1288,6 +1308,14 @@ async function doBuild(
         // the project-level framework is 'services'.
         const builderFramework =
           build.config?.framework ?? projectSettings.framework;
+        // Backend framework detected for api/ dir builds.
+        const apiDirFramework: string | undefined =
+          isZeroConfig && !service && !isFrontendBuilder
+            ? await apiDirFrameworkDetector.detect(
+                build.use ?? '',
+                buildWorkPath
+              )
+            : undefined;
 
         let buildConfig: Config;
 
@@ -1297,9 +1325,6 @@ async function doBuild(
             // build.config already contains framework, routePrefix, memory, etc.
             buildConfig = {
               ...build.config,
-              ...(getHasQueueServices()
-                ? { hasWorkerServices: true }
-                : undefined),
               // `service.functions` isn't on `build.config`, so builders that
               // read `config.functions` (e.g. Next.js) would otherwise miss it;
               // `serviceName` scopes the derived v2beta consumer.
@@ -1331,7 +1356,9 @@ async function doBuild(
               installCommand: projectSettings.installCommand ?? undefined,
               devCommand: projectSettings.devCommand ?? undefined,
               buildCommand: projectSettings.buildCommand ?? undefined,
-              framework: projectSettings.framework,
+              framework: isFrontendBuilder
+                ? projectSettings.framework
+                : undefined,
               nodeVersion: projectSettings.nodeVersion,
               bunVersion: localConfig.bunVersion ?? undefined,
             };
@@ -1510,14 +1537,27 @@ async function doBuild(
                         service && serviceWorkspace && serviceWorkspace !== '.'
                           ? serviceWorkspace
                           : '.';
-                      packageManifests.push({
-                        workspace,
-                        key: fullKey,
-                        buildConfig: buildConfig,
-                        manifest: packageManifest,
-                        service,
-                        builderUse: builderPkg.name,
-                      });
+                      // Only keep one manifest per builder+workspace — multiple
+                      // api/dir files for the same builder share a manifest slot.
+                      const alreadyPushed = packageManifests.some(
+                        m =>
+                          m.builderUse === builderPkg.name &&
+                          m.workspace === workspace
+                      );
+                      if (!alreadyPushed) {
+                        packageManifests.push({
+                          workspace,
+                          key: fullKey,
+                          buildConfig: buildConfig,
+                          manifest: {
+                            ...packageManifest,
+                            framework:
+                              packageManifest.framework ?? apiDirFramework,
+                          },
+                          service,
+                          builderUse: builderPkg.name,
+                        });
+                      }
                     }
                   } catch (e) {
                     output.debug(
@@ -1980,7 +2020,6 @@ async function doBuild(
           appendExperimentalServicesV1Routes(detectedServices);
         }
       }
-
       if (
         detectedServices &&
         detectedServices.length > 0 &&
@@ -2970,6 +3009,54 @@ async function writeFlagsJSON(
   if (hasFlags) {
     await fs.writeJSON(flagsFilePath, flags, { spaces: 2 });
   }
+}
+
+interface ApiDirFrameworkDetector {
+  detect(builderUse: string, workPath: string): Promise<string | undefined>;
+}
+
+/**
+ * Creates a memoised api/dir framework detector, scoped to one build, so N
+ * api/dir files sharing a builder+workPath share one filesystem scan instead
+ * of running one per file.
+ */
+function createApiDirFrameworkDetector(): ApiDirFrameworkDetector {
+  const cache = new Map<string, Promise<string | undefined>>();
+  return {
+    detect(builderUse, workPath) {
+      const cacheKey = `${builderUse}:${workPath}`;
+      let cached = cache.get(cacheKey);
+      if (!cached) {
+        cached = detectApiDirFramework(builderUse, workPath);
+        cache.set(cacheKey, cached);
+      }
+      return cached;
+    },
+  };
+}
+
+/**
+ * Detects the framework used by an api/dir builder.
+ *
+ * Runs a narrow scan scoped to the builder's own frameworks; builders with
+ * no framework mappings (e.g. `@vercel/node`) return without touching the
+ * filesystem.
+ */
+async function detectApiDirFramework(
+  builderUse: string,
+  workPath: string
+): Promise<string | undefined> {
+  const runtimeFrameworks = builderToFrameworks.get(builderUse) ?? [];
+  if (runtimeFrameworks.length === 0) return undefined;
+
+  const detectedSlugs = await detectAllFrameworks(
+    workPath,
+    runtimeFrameworks
+  ).catch(() => []);
+  // Return the framework only when exactly one is detected. Zero means none
+  // found; more than one means ambiguous (e.g. fastapi + flask), so return
+  // undefined rather than picking arbitrarily.
+  return detectedSlugs.length === 1 ? detectedSlugs[0] : undefined;
 }
 
 async function writeBuildJson(buildsJson: BuildsManifest, outputDir: string) {

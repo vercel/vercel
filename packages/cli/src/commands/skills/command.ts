@@ -20,7 +20,6 @@ export const skillsCommand = {
       type: String,
       argument: 'FORMAT',
       deprecated: false,
-      description: 'Specify output format (json)',
     },
     yesOption,
   ],

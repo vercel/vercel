@@ -43,17 +43,16 @@ type ResolveBuildersResult =
 // Get a real `require()` reference that esbuild won't mutate
 const require_ = createRequire(__filename);
 
-// Builder versions this CLI release was published with, from its
-// `peerDependencies` (`workspace:*` in the monorepo, so a no-op in dev)
+// Builder versions this CLI release was published with, from its `builders`
+// manifest (`workspace:*` in the monorepo, so a no-op in dev)
 let builderPins: Map<string, string> | undefined;
 
 function getBuilderPins(): Map<string, string> {
   if (!builderPins) {
     builderPins = new Map();
-    const peerDependencies: Record<string, string> =
-      (cliPkg as { peerDependencies?: Record<string, string> })
-        .peerDependencies ?? {};
-    for (const [name, version] of Object.entries(peerDependencies)) {
+    const pins: Record<string, string> =
+      (cliPkg as { builders?: Record<string, string> }).builders ?? {};
+    for (const [name, version] of Object.entries(pins)) {
       if (validRange(version)) {
         builderPins.set(name, version);
       }
@@ -64,6 +63,20 @@ function getBuilderPins(): Map<string, string> {
 
 function isBareSpec(parsed: ReturnType<typeof npa>): boolean {
   return parsed.type === 'tag' && parsed.rawSpec === '';
+}
+
+/**
+ * Formats resolved Builders as `name@version=<dir>` pairs for trace
+ * attributes, so we can tell which installation each Builder loaded from.
+ */
+export function formatResolvedBuilders(
+  builders: Map<string, BuilderWithPkg>
+): string {
+  return Array.from(builders.values(), b =>
+    b.pkgPath
+      ? `${b.pkg.name}@${b.pkg.version}=${dirname(b.pkgPath)}`
+      : `${b.pkg.name}=built-in`
+  ).join(',');
 }
 
 function pinBuilderSpecs(specs: Set<string>): Map<string, string> {

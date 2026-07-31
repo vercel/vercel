@@ -6,6 +6,15 @@ import {
   VERCEL_WORKERS_VERSION,
 } from './package-versions';
 import {
+  getConditionalInjectedPackages,
+  getQueueIntegrations,
+} from './conditional-vendoring';
+import {
+  isLegacyWorkersProject,
+  resolveWorkflowServingMode,
+  type WorkflowServingMode,
+} from './sdk-detection';
+import {
   download,
   getReportedServiceType,
   glob,
@@ -39,7 +48,6 @@ import {
 import {
   discoverPackage,
   ensureUvProject,
-  getVenvSitePackagesDirs,
   resolveVendorDir,
   installRequirementsFile,
   installRequirement,
@@ -80,11 +88,17 @@ import {
   runDjangoCollectStatic,
   type DjangoCollectStaticResult,
 } from './django';
-import { containsTopLevelCallable } from '@vercel/python-analysis';
+import {
+  runFastAPICollectStatic,
+  type FastAPICollectStaticResult,
+} from './fastapi';
+import {
+  containsTopLevelCallable,
+  type PyProjectToml,
+} from '@vercel/python-analysis';
 import {
   collectAppBytecodeFiles,
   collectAppPrefixBytecodeFiles,
-  getCompileAllAppExcludeRegex,
   runCompileAll,
   RUNTIME_PYCACHE_PREFIX,
   shouldCompileAll,
@@ -92,10 +106,15 @@ import {
 } from './compileall';
 import { InstalledPythonDistributions } from './installed-distributions';
 import {
+  createQueueHandlerModule,
+  generatedPythonPathToModule,
+  getGeneratedQueueHandlerPath,
   getPyprojectSubscribers,
   getSubscriberConsumerName,
   getSubscriberOutputPath,
+  resolveQueueSubscribers,
   type Subscriber,
+  type SubscriberDeclaration,
 } from './subscribers';
 import {
   getPyprojectWorkflows,
@@ -121,13 +140,19 @@ export { detectEntrypoint } from './entrypoint';
 
 export const version = -1;
 
-function getDevSubscriberTopics(subscriber: Subscriber): ServiceQueueTopic[] {
-  const { retryAfterSeconds, initialDelaySeconds } = subscriber.triggerDefaults;
-  return subscriber.topics.map(topic => ({
-    topic,
-    ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
-    ...(initialDelaySeconds === undefined ? {} : { initialDelaySeconds }),
-  }));
+function getDevSubscriberTopics(
+  subscriber: SubscriberDeclaration
+): ServiceQueueTopic[] {
+  if (subscriber.legacy) {
+    const { retryAfterSeconds, initialDelaySeconds } =
+      subscriber.legacy.triggerDefaults;
+    return subscriber.legacy.topics.map(topic => ({
+      topic,
+      ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
+      ...(initialDelaySeconds === undefined ? {} : { initialDelaySeconds }),
+    }));
+  }
+  return (subscriber.topicPatterns ?? ['*']).map(topic => ({ topic }));
 }
 
 export async function getDevSidecars({
@@ -150,7 +175,10 @@ export async function getDevSidecars({
     return [];
   }
 
-  const subscribers = await getPyprojectSubscribers(workPath);
+  const legacyWorkers = await isLegacyWorkersProject(workPath);
+  const subscribers = await getPyprojectSubscribers(workPath, {
+    legacySchema: legacyWorkers,
+  });
   const workflows = await getPyprojectWorkflows(workPath);
   return [
     ...subscribers.map(
@@ -166,6 +194,7 @@ export async function getDevSidecars({
           src: subscriber.entrypoint,
           config: {
             handlerFunction: subscriber.variableName,
+            pythonQueueSidecar: 'subscriber',
           },
         },
         topics: getDevSubscriberTopics(subscriber),
@@ -184,6 +213,7 @@ export async function getDevSidecars({
           src: workflow.entrypoint,
           config: {
             handlerFunction: workflow.variableName,
+            pythonQueueSidecar: 'workflow',
           },
         },
         topics: [{ topic: WORKFLOW_TOPIC_PATTERN }],
@@ -334,6 +364,7 @@ interface FrameworkHookContext {
   venvPath?: string;
   entrypoint: string | undefined;
   detected: DetectedPythonEntrypoint | undefined;
+  pyprojectData?: PyProjectToml;
 }
 
 interface FrameworkHookResult {
@@ -343,6 +374,10 @@ interface FrameworkHookResult {
 
 interface DjangoFrameworkHookResult extends FrameworkHookResult {
   djangoStatic: DjangoCollectStaticResult | null;
+}
+
+interface FastAPIFrameworkHookResult extends FrameworkHookResult {
+  fastapiStatic: FastAPICollectStaticResult;
 }
 
 type FrameworkHook = (
@@ -438,6 +473,55 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
       djangoStatic,
       extraPythonPath: baseDir ? join(workPath, baseDir) : undefined,
     };
+  },
+  fastapi: async ({
+    pythonEnv,
+    detected,
+    workPath,
+    venvPath,
+    pyprojectData,
+  }): Promise<FastAPIFrameworkHookResult | void> => {
+    if (!detected?.entrypoint || !workPath || !venvPath) {
+      debug(
+        `FastAPI hook: skipping — detected.entrypoint=${JSON.stringify(detected?.entrypoint)}, workPath=${workPath}, venvPath=${venvPath}`
+      );
+      return;
+    }
+
+    const { entrypoint: entrypointRel, variableName } = detected.entrypoint;
+    debug(
+      `FastAPI hook: entrypoint=${entrypointRel}, variableName=${variableName}`
+    );
+    const entrypointAbs = join(workPath, entrypointRel);
+    const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
+
+    const cdnEnv = process.env.VERCEL_FASTAPI_STATIC_CDN?.toLowerCase();
+    if (cdnEnv !== '1' && cdnEnv !== 'true') {
+      debug(
+        'FastAPI: VERCEL_FASTAPI_STATIC_CDN not set, skipping static CDN collection'
+      );
+      return;
+    }
+
+    const staticCdn = pyprojectData?.tool?.vercel?.fastapi?.static?.cdn;
+    if (staticCdn === false) {
+      debug(
+        'FastAPI: static.cdn = false in pyproject.toml, skipping CDN collection'
+      );
+      return;
+    }
+
+    const fastapiStatic = await runFastAPICollectStatic(
+      venvPath,
+      workPath,
+      pythonEnv,
+      outputStaticDir,
+      entrypointAbs,
+      variableName
+    );
+    if (!fastapiStatic) return;
+
+    return { fastapiStatic };
   },
 };
 
@@ -605,30 +689,34 @@ async function getPythonLambdaOptions({
 
 /**
  * Install a Vercel-owned Python package into the build venv, resolving the
- * source in this order: env override → in-repo source (if present) → pinned
- * PyPI version. The in-repo branch lets monorepo `vercel build` runs (e.g. CI
- * on a Version Packages PR) avoid PyPI for a version that does not exist yet.
+ * source in this order: env override → in-repo source (if present) → PyPI
+ * requirement. The in-repo branch lets monorepo `vercel build` runs (e.g. CI
+ * on a Version Packages PR) avoid PyPI for runtime/worker versions that do
+ * not exist yet.
  */
 async function installInjectedPackage({
   name,
-  pinned,
+  requirement,
   envOverride,
+  allowLocalSource,
   uv,
   venvPath,
   projectDir,
   pipPlatformArgs,
 }: {
-  name: 'vercel-runtime' | 'vercel-workers';
-  pinned: string;
+  name: string;
+  requirement: string;
   envOverride: string | undefined;
+  allowLocalSource: boolean;
   uv: UvRunner;
   venvPath: string;
   projectDir: string;
   pipPlatformArgs: string[];
 }): Promise<void> {
   const localDir = join(__dirname, '..', '..', '..', 'python', name);
-  const isLocalDev = fs.existsSync(join(localDir, 'pyproject.toml'));
-  const dep = envOverride || (isLocalDev ? localDir : pinned);
+  const isLocalDev =
+    allowLocalSource && fs.existsSync(join(localDir, 'pyproject.toml'));
+  const dep = envOverride || (isLocalDev ? localDir : requirement);
   // override exclude-newer, since we want vercel-runtime updates to
   // take effect immediately after release
   const noExclude = ['--exclude-newer-package', `${name}=false`];
@@ -679,9 +767,15 @@ export const build: BuildVX = async ({
 
   const builderSpan = parentSpan ?? new Span({ name: 'vc.builder' });
   const framework = config?.framework;
-  let shouldInstallVercelWorkers = config?.hasWorkerServices === true;
+  let subscriberDeclarations: SubscriberDeclaration[] = [];
   let subscribers: Subscriber[] = [];
   let workflows: PyprojectWorkflow[] = [];
+  // Projects that directly depend on the legacy `vercel-workers` SDK keep
+  // the pre-vercel-queue integration (legacy subscriber schema, worker env
+  // markers, injected vercel-workers).
+  let legacyWorkersProject = false;
+  // How `tool.vercel.workflows` entrypoints are served (see sdk-detection).
+  let workflowMode: WorkflowServingMode = 'workers';
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
@@ -709,11 +803,12 @@ export const build: BuildVX = async ({
   // its workers into every service build would duplicate queue consumers. Bare
   // `api/**` functions are excluded for the same reason: they build once per
   // file sharing this workPath, so emitting workers there would duplicate them.
+  legacyWorkersProject = await isLegacyWorkersProject(workPath);
   if (isPyprojectEntrypoint || (!service && isPythonFramework(framework))) {
-    subscribers = await getPyprojectSubscribers(workPath);
+    subscriberDeclarations = await getPyprojectSubscribers(workPath, {
+      legacySchema: legacyWorkersProject,
+    });
     workflows = await getPyprojectWorkflows(workPath);
-    shouldInstallVercelWorkers ||=
-      subscribers.length > 0 || workflows.length > 0;
   }
 
   try {
@@ -750,7 +845,7 @@ export const build: BuildVX = async ({
     const declared = await getVercelToolsEntrypoint(workPath, repoRootPath);
     if (declared) {
       detected = { entrypoint: declared };
-    } else if (subscribers.length === 0 && workflows.length === 0) {
+    } else if (subscriberDeclarations.length === 0 && workflows.length === 0) {
       throw new NowBuildError({
         code: 'PYTHON_PYPROJECT_NOTHING_TO_BUILD',
         message:
@@ -915,6 +1010,7 @@ export const build: BuildVX = async ({
   let uvLockPath: string | null = null;
   let uvProjectDir: string | null = null;
   let projectName: string | undefined;
+  let usedUvManagedInstall = false;
 
   await builderSpan
     .child(BUILDER_INSTALLER_STEP, {
@@ -1001,6 +1097,7 @@ export const build: BuildVX = async ({
           locked: !lockFileProvidedByUser,
           pythonPlatform: target.uvPlatform,
         });
+        usedUvManagedInstall = true;
 
         // Stash the lock file into the cache dir so prepareCache
         // preserves it and the next build can skip full resolution.
@@ -1045,6 +1142,7 @@ export const build: BuildVX = async ({
     venvPath,
     entrypoint,
     detected,
+    pyprojectData: pythonPackage.manifest?.data,
   });
 
   // Collect the resolved entrypoint from detection or hook, preferring the
@@ -1062,7 +1160,7 @@ export const build: BuildVX = async ({
   const isWorkersOnly =
     !entrypoint &&
     isPyprojectEntrypoint &&
-    (subscribers.length > 0 || workflows.length > 0);
+    (subscriberDeclarations.length > 0 || workflows.length > 0);
   if (!entrypoint && !isWorkersOnly) {
     throw new NowBuildError({
       code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
@@ -1073,29 +1171,74 @@ export const build: BuildVX = async ({
 
   const djangoStatic: DjangoCollectStaticResult | null =
     (hookResult as DjangoFrameworkHookResult | undefined)?.djangoStatic ?? null;
+  const fastapiStatic: FastAPICollectStaticResult | null =
+    (hookResult as FastAPIFrameworkHookResult | undefined)?.fastapiStatic ??
+    null;
+  const cdnOutputDir =
+    djangoStatic?.cdnOutputDir ?? fastapiStatic?.cdnOutputDir ?? null;
 
   const pipPlatformArgs = target.uvPlatform
     ? ['--python-platform', target.uvPlatform]
     : [];
 
-  // We intentionally do not inject vercel-runtime / vercel-workers into the
+  // We intentionally do not inject vercel-runtime into the
   // manifest — that would surprise users running `vercel build` locally —
   // and we cannot re-run `uv sync` after this, since sync would remove them.
   await installInjectedPackage({
     name: 'vercel-runtime',
-    pinned: `vercel-runtime==${VERCEL_RUNTIME_VERSION}`,
+    requirement: `vercel-runtime==${VERCEL_RUNTIME_VERSION}`,
     envOverride: baseEnv.VERCEL_RUNTIME_PYTHON,
+    allowLocalSource: true,
     uv,
     venvPath,
     projectDir: join(workPath, entryDirectory),
     pipPlatformArgs,
   });
 
+  // Legacy vercel-workers projects bring their own adapter integration
+  // through the vercel-workers runtime; injecting or activating the
+  // vercel-queue adapters there would install two competing transports.
+  const conditionalInjectedPackages =
+    usedUvManagedInstall && !legacyWorkersProject
+      ? await getConditionalInjectedPackages({
+          pythonPackage,
+          env: baseEnv,
+        })
+      : [];
+
+  for (const injectedPackage of conditionalInjectedPackages) {
+    await installInjectedPackage({
+      ...injectedPackage,
+      uv,
+      venvPath,
+      projectDir: join(workPath, entryDirectory),
+      pipPlatformArgs,
+    });
+  }
+
+  if (workflows.length > 0) {
+    workflowMode = await resolveWorkflowServingMode({
+      pythonPackage,
+      uv,
+      venvPath,
+      projectDir: join(workPath, entryDirectory),
+      uvLockPath,
+    });
+  }
+
+  // The legacy vercel-workers integration needs the vercel-workers package
+  // in the bundle: for legacy projects it backs the worker bootstrap, and
+  // for pre-vercel-queue `vercel` SDKs it backs `vercel.workflow` serving.
+  const shouldInstallVercelWorkers =
+    legacyWorkersProject ||
+    (workflows.length > 0 && workflowMode === 'workers');
+
   if (shouldInstallVercelWorkers) {
     await installInjectedPackage({
       name: 'vercel-workers',
-      pinned: `vercel-workers==${VERCEL_WORKERS_VERSION}`,
+      requirement: `vercel-workers==${VERCEL_WORKERS_VERSION}`,
       envOverride: baseEnv.VERCEL_WORKERS_PYTHON,
+      allowLocalSource: true,
       uv,
       venvPath,
       projectDir: join(workPath, entryDirectory),
@@ -1110,6 +1253,91 @@ export const build: BuildVX = async ({
   // Apply build-time env vars from quirks so subsequent build steps can use them
   if (quirksResult.buildEnv) {
     Object.assign(pythonEnv, quirksResult.buildEnv);
+  }
+
+  // Queue adapter integrations the project's dependencies require; both
+  // introspection and the generated handler modules activate them right
+  // after importing the subscriber module (each installer retroactively
+  // registers apps the import created) and fail hard when activation
+  // fails. Legacy vercel-workers projects use the legacy integration
+  // instead (see the conditional injection gate above).
+  const queueIntegrations = legacyWorkersProject
+    ? []
+    : await getQueueIntegrations({ pythonPackage });
+
+  const writeGeneratedQueueHandler = async (
+    outputPath: string,
+    declaration: SubscriberDeclaration
+  ) => {
+    const generatedPath = getGeneratedQueueHandlerPath(outputPath);
+    await fs.promises.mkdir(dirname(join(workPath, generatedPath)), {
+      recursive: true,
+    });
+    await fs.promises.writeFile(
+      join(workPath, generatedPath),
+      createQueueHandlerModule(declaration, queueIntegrations)
+    );
+  };
+
+  if (subscriberDeclarations.length > 0 && !legacyWorkersProject) {
+    subscribers = await resolveQueueSubscribers({
+      declarations: subscriberDeclarations,
+      uv,
+      venvPath,
+      projectDir: join(workPath, entryDirectory),
+      integrations: queueIntegrations,
+    });
+
+    if (workflowMode === 'queue') {
+      // Workflow subscriptions register on `__wkf_*` topics in the same
+      // import graph; keep them out of topic-less subscriber lambdas so
+      // workflow traffic is consumed only by the workflow Lambda.
+      for (const subscriber of subscribers) {
+        if (!subscriber.topicPatterns) {
+          subscriber.subscriptions = subscriber.subscriptions.filter(
+            subscription => !subscription.topic.startsWith('__wkf_')
+          );
+        }
+      }
+    }
+
+    for (const subscriber of subscribers) {
+      await writeGeneratedQueueHandler(
+        getSubscriberOutputPath(subscriber.name),
+        subscriber
+      );
+    }
+  }
+
+  // For SDKs ported to vercel-queue, workflow entrypoints are served exactly
+  // like subscribers: introspect the registered `__wkf_*` subscriptions and
+  // serve them through a generated `vercel.queue.asgi_app()` module.
+  const workflowQueueSubscriptions = new Map<
+    string,
+    Subscriber['subscriptions']
+  >();
+  if (workflows.length > 0 && workflowMode === 'queue') {
+    const resolved = await resolveQueueSubscribers({
+      declarations: workflows.map(workflow => ({
+        name: workflow.name,
+        entrypoint: workflow.entrypoint,
+        moduleName: workflow.moduleName,
+        variableName: workflow.variableName,
+        topicPatterns: [WORKFLOW_TOPIC_PATTERN],
+      })),
+      uv,
+      venvPath,
+      projectDir: join(workPath, entryDirectory),
+      kind: 'workflow',
+      integrations: queueIntegrations,
+    });
+    for (const workflow of resolved) {
+      workflowQueueSubscriptions.set(workflow.name, workflow.subscriptions);
+      await writeGeneratedQueueHandler(
+        getWorkflowOutputPath(workflow.name),
+        workflow
+      );
+    }
   }
 
   // Register a pre-deploy command that will be fired in the end of the
@@ -1232,6 +1460,18 @@ export const build: BuildVX = async ({
   if (shouldInstallVercelWorkers) {
     lambdaEnv.VERCEL_HAS_WORKER_SERVICES = '1';
   }
+  if (queueIntegrations.length > 0) {
+    // Every function of the project may publish through the adapter's
+    // transport (not just subscriber lambdas), so the runtime activates
+    // the required integrations at startup in all of them.
+    lambdaEnv.VERCEL_QUEUE_INTEGRATIONS = queueIntegrations
+      .map(
+        ({ module, installer, servingActivator }) =>
+          `${module}:${installer}` +
+          (servingActivator ? `:${servingActivator}` : '')
+      )
+      .join(',');
+  }
 
   const globOptions: GlobOptions = {
     cwd: workPath,
@@ -1242,6 +1482,10 @@ export const build: BuildVX = async ({
   };
 
   const files: Files = await glob('**', globOptions);
+  const appPythonSourceFiles = Object.keys(files)
+    .filter(file => file.endsWith('.py'))
+    .map(file => join(workPath, file))
+    .sort();
 
   // Re-inject staticfiles.json into the Lambda bundle if a manifest storage
   // backend is in use. The CDN serves static assets; only the manifest is
@@ -1311,6 +1555,47 @@ export const build: BuildVX = async ({
         },
       });
 
+      const compileAllOptions = compileAllEnabled
+        ? {
+            pythonBin: getVenvPythonBin(venvPath),
+            env: pythonEnv,
+          }
+        : null;
+
+      const compileSources = async ({
+        includePackages,
+        pycachePrefix,
+      }: {
+        includePackages?: string[];
+        pycachePrefix?: string;
+      }) => {
+        if (!compileAllOptions) return;
+
+        const vendorSourceFiles =
+          installedDistributions.getPythonSourceFiles(includePackages);
+
+        await builderSpan
+          .child('vc.builder.python.compileall')
+          .trace(async compileSpan => {
+            console.log('Compiling Python bytecode...');
+            await runCompileAll({
+              ...compileAllOptions,
+              sourceFiles: [...appPythonSourceFiles, ...vendorSourceFiles],
+              pycachePrefix,
+            });
+
+            compileSpan.setAttributes({
+              'python.compileall.enabled': 'true',
+              'python.compileall.appSourceFileCount': String(
+                appPythonSourceFiles.length
+              ),
+              'python.compileall.vendorSourceFileCount': String(
+                vendorSourceFiles.length
+              ),
+            });
+          });
+      };
+
       // Precompile bytecode and fill remaining capacity up to capacityBytes.
       // Only .pyc for .py files already in the bundle are collected, so
       // excluded source can't re-enter as .pyc. Bytecode is a pure
@@ -1322,35 +1607,9 @@ export const build: BuildVX = async ({
         vendorPackageTiers?: string[][]
       ) => {
         try {
-          await builderSpan
-            .child('vc.builder.python.compileall')
-            .trace(async compileSpan => {
-              const sitePackageDirs = (
-                await getVenvSitePackagesDirs(venvPath)
-              ).filter(d => fs.existsSync(d));
-              const pythonBin = getVenvPythonBin(venvPath);
-
-              console.log('Compiling Python bytecode...');
-              await runCompileAll({
-                pythonBin,
-                filesOrDirectories: [workPath],
-                env: pythonEnv,
-                excludeRegex: getCompileAllAppExcludeRegex(workPath),
-              });
-
-              await runCompileAll({
-                pythonBin,
-                filesOrDirectories: sitePackageDirs,
-                env: pythonEnv,
-              });
-
-              compileSpan.setAttributes({
-                'python.compileall.enabled': 'true',
-                'python.compileall.sitePackageDirectoryCount': String(
-                  sitePackageDirs.length
-                ),
-              });
-            });
+          await compileSources({
+            includePackages: vendorPackageTiers?.flat(),
+          });
 
           const currentSize = await calculateBundleSize(files);
           let remainingCapacity = capacityBytes - currentSize;
@@ -1412,38 +1671,14 @@ export const build: BuildVX = async ({
           await fs.promises.rm(stagingDir, { recursive: true, force: true });
           await fs.promises.mkdir(stagingDir, { recursive: true });
 
-          await builderSpan
-            .child('vc.builder.python.compileall')
-            .trace(async compileSpan => {
-              const sitePackageDirs = (
-                await getVenvSitePackagesDirs(venvPath)
-              ).filter(d => fs.existsSync(d));
-              const pythonBin = getVenvPythonBin(venvPath);
-
-              console.log('Compiling Python bytecode...');
-              await runCompileAll({
-                pythonBin,
-                filesOrDirectories: [workPath],
-                env: pythonEnv,
-                excludeRegex: getCompileAllAppExcludeRegex(workPath),
-                pycachePrefix: stagingDir,
-              });
-
-              await runCompileAll({
-                pythonBin,
-                filesOrDirectories: sitePackageDirs,
-                env: pythonEnv,
-                pycachePrefix: stagingDir,
-              });
-
-              compileSpan.setAttributes({
-                'python.compileall.enabled': 'true',
-                'python.compileall.mode': 'pycache-prefix',
-                'python.compileall.sitePackageDirectoryCount': String(
-                  sitePackageDirs.length
-                ),
-              });
-            });
+          await compileSources({
+            includePackages: [
+              ...(bundleResult.alwaysBundledPackages ?? []),
+              ...(bundleResult.bundledPublicPackages ?? []),
+              ...(bundleResult.externalizedPublicPackages ?? []),
+            ],
+            pycachePrefix: stagingDir,
+          });
 
           const beforeCount = Object.keys(files).length;
 
@@ -1624,16 +1859,27 @@ export const build: BuildVX = async ({
   }
 
   const subscriberLambdas: Record<string, Lambda> = {};
+  // Output paths of queue-served lambdas that must be HTTP-routable so the
+  // queue service can push deliveries to them. Legacy vercel-workers lambdas
+  // are reached through their triggers only and get no route.
+  const queueRoutePaths: string[] = [];
+  // Env for lambdas served through the legacy vercel-workers bootstrap.
+  const legacyWorkerEnv = {
+    ...lambdaEnv,
+    VERCEL_HAS_WORKER_SERVICES: '1',
+    // Compatibility marker consumed by the current Python runtime.
+    VERCEL_SERVICE_TYPE: 'worker',
+  };
 
   for (const subscriber of subscribers) {
     const outputPath = getSubscriberOutputPath(subscriber.name);
-    const consumer = getSubscriberConsumerName(subscriber.name);
-    const experimentalTriggers: TriggerEvent[] = subscriber.topics.map(
-      topic => ({
+    const generatedHandlerPath = getGeneratedQueueHandlerPath(outputPath);
+    const experimentalTriggers: TriggerEvent[] = subscriber.subscriptions.map(
+      subscription => ({
         type: 'queue/v2beta',
-        topic,
-        consumer,
-        ...subscriber.triggerDefaults,
+        topic: subscription.topic,
+        consumer: subscription.consumer,
+        ...subscription.triggerDefaults,
       })
     );
 
@@ -1642,31 +1888,104 @@ export const build: BuildVX = async ({
         ...files,
         [`${handlerPyFilename}.py`]: new FileBlob({
           data: createRuntimeTrampoline({
-            moduleName: subscriber.moduleName,
-            entrypoint: subscriber.entrypoint,
+            moduleName: generatedPythonPathToModule(generatedHandlerPath),
+            entrypoint: generatedHandlerPath,
             vendorDir,
-            variableName: subscriber.variableName,
+            variableName: 'app',
           }),
         }),
       },
       handler: `${handlerPyFilename}.vc_handler`,
       runtime: pythonVersion.runtime,
       architecture: target.architecture,
-      environment: {
-        ...lambdaEnv,
-        VERCEL_HAS_WORKER_SERVICES: '1',
-        // Compatibility marker consumed by the current Python runtime.
-        VERCEL_SERVICE_TYPE: 'worker',
-      },
+      environment: lambdaEnv,
       experimentalTriggers,
       supportsResponseStreaming: true,
     });
+    queueRoutePaths.push(outputPath);
+  }
+
+  if (legacyWorkersProject) {
+    // Legacy vercel-workers path: serve the user's entrypoint object
+    // directly; topics and trigger tuning come from pyproject.toml rather
+    // than runtime introspection.
+    for (const declaration of subscriberDeclarations) {
+      const outputPath = getSubscriberOutputPath(declaration.name);
+      const consumer = getSubscriberConsumerName(declaration.name);
+      const legacy = declaration.legacy;
+      assert(legacy, 'legacy subscriber declarations must carry legacy config');
+      const experimentalTriggers: TriggerEvent[] = legacy.topics.map(topic => ({
+        type: 'queue/v2beta',
+        topic,
+        consumer,
+        ...legacy.triggerDefaults,
+      }));
+
+      subscriberLambdas[outputPath] = new Lambda({
+        files: {
+          ...files,
+          [`${handlerPyFilename}.py`]: new FileBlob({
+            data: createRuntimeTrampoline({
+              moduleName: declaration.moduleName,
+              entrypoint: declaration.entrypoint,
+              vendorDir,
+              variableName: declaration.variableName,
+            }),
+          }),
+        },
+        handler: `${handlerPyFilename}.vc_handler`,
+        runtime: pythonVersion.runtime,
+        architecture: target.architecture,
+        environment: legacyWorkerEnv,
+        experimentalTriggers,
+        supportsResponseStreaming: true,
+      });
+    }
   }
 
   const workflowLambdas: Record<string, Lambda> = {};
 
   for (const workflow of workflows) {
     const outputPath = getWorkflowOutputPath(workflow.name);
+
+    if (workflowMode === 'queue') {
+      const subscriptions = workflowQueueSubscriptions.get(workflow.name);
+      assert(subscriptions, 'workflow queue subscriptions must be resolved');
+      const generatedHandlerPath = getGeneratedQueueHandlerPath(outputPath);
+      const experimentalTriggers: TriggerEvent[] = subscriptions.map(
+        subscription => ({
+          type: 'queue/v2beta',
+          topic: subscription.topic,
+          consumer: subscription.consumer,
+          ...subscription.triggerDefaults,
+        })
+      );
+
+      workflowLambdas[outputPath] = new Lambda({
+        files: {
+          ...files,
+          [`${handlerPyFilename}.py`]: new FileBlob({
+            data: createRuntimeTrampoline({
+              moduleName: generatedPythonPathToModule(generatedHandlerPath),
+              entrypoint: generatedHandlerPath,
+              vendorDir,
+              variableName: 'app',
+            }),
+          }),
+        },
+        handler: `${handlerPyFilename}.vc_handler`,
+        runtime: pythonVersion.runtime,
+        architecture: target.architecture,
+        environment: lambdaEnv,
+        experimentalTriggers,
+        supportsResponseStreaming: true,
+      });
+      queueRoutePaths.push(outputPath);
+      continue;
+    }
+
+    // Legacy vercel-workers path: serve the Workflows registry object
+    // directly; the runtime bootstraps it via the worker env markers.
     const experimentalTriggers: TriggerEvent[] = [
       {
         type: 'queue/v2beta',
@@ -1690,12 +2009,7 @@ export const build: BuildVX = async ({
       handler: `${handlerPyFilename}.vc_handler`,
       runtime: pythonVersion.runtime,
       architecture: target.architecture,
-      environment: {
-        ...lambdaEnv,
-        VERCEL_HAS_WORKER_SERVICES: '1',
-        // Compatibility marker consumed by the current Python runtime.
-        VERCEL_SERVICE_TYPE: 'worker',
-      },
+      environment: legacyWorkerEnv,
       experimentalTriggers,
       supportsResponseStreaming: true,
     });
@@ -1733,13 +2047,18 @@ export const build: BuildVX = async ({
     return { resultVersion: 3, result: { output } };
   }
 
-  // V2 services omit `type` and have isolated build outputs, so their Lambda
-  // can use the natural `index` path. V1 services still share one output and
-  // need the internal service namespace to avoid collisions.
+  // Keep framework Lambdas away from `index`: the filesystem treats that
+  // output as a match for `/`, which can finish a rewrite before the catch-all
+  // below copies the resolved destination into the runtime request path.
+  // V1 services still share one output and need their legacy namespace.
+  const frameworkLambdaName = framework ?? 'python';
+
   const lambdaPath =
-    service?.name && service.type ? `_svc/${service.name}/index` : 'index';
-  const staticFiles = djangoStatic?.cdnOutputDir
-    ? await glob('**', { cwd: djangoStatic.cdnOutputDir })
+    service?.name && service.type
+      ? `_svc/${service.name}/index`
+      : frameworkLambdaName;
+  const staticFiles = cdnOutputDir
+    ? await glob('**', { cwd: cdnOutputDir })
     : {};
 
   // Non-web V1 services (cron, worker, job) must not emit a catch-all route
@@ -1750,12 +2069,32 @@ export const build: BuildVX = async ({
   // point at a nonexistent function.
   const isNonWebService =
     service?.name && service.type && service.type !== 'web';
+  const queueRoutes = queueRoutePaths.map(outputPath => ({
+    src: `/${outputPath}`,
+    dest: `/${outputPath}`,
+  }));
   const routes =
     isNonWebService || !output
-      ? undefined
+      ? queueRoutes.length > 0
+        ? queueRoutes
+        : undefined
       : [
           { handle: 'filesystem' as const },
-          { src: '/(.*)', dest: `/${lambdaPath}` },
+          ...queueRoutes,
+          // This route matches the resolved destination after rewrites. Copy
+          // that path into the runtime request before dispatching the shared
+          // framework Lambda so application routing observes the rewrite.
+          {
+            src: '/(.*)',
+            dest: `/${lambdaPath}`,
+            transforms: [
+              {
+                type: 'request.path' as const,
+                op: 'set' as const,
+                args: '/$1',
+              },
+            ],
+          },
         ];
 
   return {
