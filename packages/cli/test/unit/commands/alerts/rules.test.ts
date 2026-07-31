@@ -168,6 +168,10 @@ describe('alerts rules', () => {
     expect(output).toContain('vercel metrics schema <metric-or-prefix>');
     expect(output).toContain('vercel.function_invocation.count');
     expect(output).toContain('event: "serverlessFunctionInvocation"');
+    expect(output).toContain('vercel.external_api_request.count');
+    expect(output).toContain('event: "outgoingRequest"');
+    expect(output).toContain('vercel.sandbox.cpu_total_time_ms');
+    expect(output).toContain('event: "sandboxUsage"');
   });
 
   it('prints alert rule schema as JSON', async () => {
@@ -668,16 +672,67 @@ describe('alerts rules', () => {
     );
   });
 
-  it('adds linked project targeting to a custom alert', async () => {
+  it('preserves formula rollup keys', async () => {
+    client.scenario.post('/alerts/v2/alert-rules', (req, res) => {
+      const customAlert = req.body.customAlert as {
+        formula: unknown;
+        queryJsonString: string;
+      };
+      const query = JSON.parse(customAlert.queryJsonString);
+      expect(query.rollups).toEqual({
+        errors: { measure: 'count', aggregation: 'sum' },
+        requests: { measure: 'count', aggregation: 'sum' },
+      });
+      expect(customAlert.formula).toEqual({
+        operator: 'divide',
+        left: 'errors',
+        right: 'requests',
+      });
+      res.status(201).json({ id: 'ar_ratio', name: 'ratio-rule' });
+    });
+
+    writeFileSync(
+      join(tmpDir, 'ratio-rule.json'),
+      JSON.stringify({
+        name: 'ratio-rule',
+        projectId: 'prj_alerts',
+        alertTypes: [{ type: 'custom_alert' }],
+        customAlert: {
+          queryJsonString: JSON.stringify({
+            event: 'incomingRequest',
+            rollups: {
+              errors: { measure: 'count', aggregation: 'sum' },
+              requests: { measure: 'count', aggregation: 'sum' },
+            },
+          }),
+          triggerType: 'threshold',
+          triggerOperator: 'gt',
+          triggerThreshold: 0.05,
+          formula: {
+            operator: 'divide',
+            left: 'errors',
+            right: 'requests',
+          },
+        },
+      })
+    );
+    client.setArgv('alerts', 'rules', 'add', '--body', 'ratio-rule.json');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+  });
+
+  it('preserves a custom alert rollup and adds dashboard project metadata', async () => {
     const queryJsonString = JSON.stringify({
-      event: 'incomingRequest',
+      event: 'aiGatewayRequest',
       rollups: {
-        requests: {
-          measure: 'count',
+        cost: {
+          measure: 'cost',
           aggregation: 'sum',
         },
       },
-      granularity: { minutes: 5 },
+      granularity: { hours: 1 },
     });
 
     client.scenario.post('/alerts/v2/alert-rules', (req, res) => {
@@ -687,18 +742,20 @@ describe('alerts rules', () => {
         alertTypes: [{ type: 'custom_alert' }],
         customAlert: {
           queryJsonString: JSON.stringify({
-            event: 'incomingRequest',
+            event: 'aiGatewayRequest',
             rollups: {
-              requests: {
-                measure: 'count',
+              cost: {
+                measure: 'cost',
                 aggregation: 'sum',
               },
             },
-            granularity: { minutes: 5 },
+            granularity: { hours: 1 },
             scope: {
               type: 'project',
               ownerId: 'team_dummy',
               projectIds: ['prj_alerts'],
+              projectId: 'prj_alerts',
+              projectName: 'alerts-project',
             },
           }),
           triggerType: 'anomaly',
@@ -727,6 +784,120 @@ describe('alerts rules', () => {
       })
     );
     client.setArgv('alerts', 'rules', 'add', '--body', 'custom-rule.json');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+  });
+
+  it('resolves an explicitly provided custom alert project name', async () => {
+    mockedGetProject.mockResolvedValue({
+      id: 'prj_explicit',
+      name: 'explicit-project',
+    } as any);
+    client.scenario.post('/alerts/v2/alert-rules', (req, res) => {
+      const customAlert = req.body.customAlert as {
+        queryJsonString: string;
+      };
+      expect(JSON.parse(customAlert.queryJsonString).scope).toEqual({
+        type: 'project',
+        ownerId: 'team_dummy',
+        projectIds: ['prj_explicit'],
+        projectId: 'prj_explicit',
+        projectName: 'explicit-project',
+      });
+      res.status(201).json({ id: 'ar_custom', name: 'custom-rule' });
+    });
+
+    writeFileSync(
+      join(tmpDir, 'explicit-custom-rule.json'),
+      JSON.stringify({
+        name: 'custom-rule',
+        projectId: 'prj_explicit',
+        alertTypes: [{ type: 'custom_alert' }],
+        customAlert: {
+          queryJsonString: JSON.stringify({
+            event: 'incomingRequest',
+            rollups: {
+              requests: { measure: 'count', aggregation: 'sum' },
+            },
+            granularity: { minutes: 5 },
+          }),
+          triggerType: 'threshold',
+          triggerOperator: 'gt',
+          triggerThreshold: 100,
+        },
+      })
+    );
+    client.setArgv(
+      'alerts',
+      'rules',
+      'add',
+      '--body',
+      'explicit-custom-rule.json'
+    );
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    expect(mockedGetProject).toHaveBeenCalledWith(
+      client,
+      'prj_explicit',
+      'team_dummy'
+    );
+  });
+
+  it('adds dashboard project metadata to an existing custom alert scope', async () => {
+    mockedGetProject.mockResolvedValue({
+      id: 'prj_explicit',
+      name: 'explicit-project',
+    } as any);
+    client.scenario.post('/alerts/v2/alert-rules', (req, res) => {
+      const customAlert = req.body.customAlert as {
+        queryJsonString: string;
+      };
+      expect(JSON.parse(customAlert.queryJsonString).scope).toEqual({
+        type: 'project',
+        ownerId: 'team_dummy',
+        projectIds: ['prj_explicit'],
+        projectId: 'prj_explicit',
+        projectName: 'explicit-project',
+      });
+      res.status(201).json({ id: 'ar_custom', name: 'custom-rule' });
+    });
+
+    writeFileSync(
+      join(tmpDir, 'scoped-custom-rule.json'),
+      JSON.stringify({
+        name: 'custom-rule',
+        projectId: 'prj_explicit',
+        alertTypes: [{ type: 'custom_alert' }],
+        customAlert: {
+          queryJsonString: JSON.stringify({
+            event: 'incomingRequest',
+            rollups: {
+              requests: { measure: 'count', aggregation: 'sum' },
+            },
+            granularity: { minutes: 5 },
+            scope: {
+              type: 'project',
+              ownerId: 'team_dummy',
+              projectIds: ['prj_explicit'],
+            },
+          }),
+          triggerType: 'threshold',
+          triggerOperator: 'gt',
+          triggerThreshold: 100,
+        },
+      })
+    );
+    client.setArgv(
+      'alerts',
+      'rules',
+      'add',
+      '--body',
+      'scoped-custom-rule.json'
+    );
 
     const exitCode = await alerts(client);
 
@@ -825,12 +996,16 @@ describe('alerts rules', () => {
     expect(method).toBe('PATCH');
   });
 
-  it('inherits the stored project scope when updating a custom alert query', async () => {
+  it('preserves a rollup and inherits project metadata when updating a custom alert query', async () => {
+    mockedGetProject.mockResolvedValue({
+      id: 'prj_rule',
+      name: 'rule-project',
+    } as any);
     const queryJsonString = JSON.stringify({
-      event: 'incomingRequest',
+      event: 'aiGatewayRequest',
       rollups: {
-        requests: {
-          measure: 'count',
+        cost: {
+          measure: 'cost',
           aggregation: 'sum',
         },
       },
@@ -850,10 +1025,10 @@ describe('alerts rules', () => {
       expect(req.body).toEqual({
         customAlert: {
           queryJsonString: JSON.stringify({
-            event: 'incomingRequest',
+            event: 'aiGatewayRequest',
             rollups: {
-              requests: {
-                measure: 'count',
+              cost: {
+                measure: 'cost',
                 aggregation: 'sum',
               },
             },
@@ -862,6 +1037,8 @@ describe('alerts rules', () => {
               type: 'project',
               ownerId: 'team_dummy',
               projectIds: ['prj_rule'],
+              projectId: 'prj_rule',
+              projectName: 'rule-project',
             },
           }),
         },

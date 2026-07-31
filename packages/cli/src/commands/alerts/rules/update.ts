@@ -18,6 +18,7 @@ import type { AlertRule } from '../types';
 import { rulesUpdateSubcommand } from './command';
 import {
   parseCustomAlertQueryBody,
+  resolveCustomAlertProjectName,
   setMissingCustomAlertProjectScope,
 } from './custom-alert-query';
 import { parseRulesFlagsAndScope } from './parse-scope';
@@ -179,10 +180,16 @@ export default async function update(
         projectId = rule.projectId;
       }
       if (projectId) {
+        const projectName = await resolveCustomAlertProjectName(
+          client,
+          scope,
+          projectId
+        );
         setMissingCustomAlertProjectScope(
           parsedCustomAlertQuery,
           scope.teamId,
-          projectId
+          projectId,
+          projectName
         );
       }
     }

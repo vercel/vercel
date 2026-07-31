@@ -17,6 +17,7 @@ import { packageName } from '../../../util/pkg-name';
 import { rulesAddSubcommand } from './command';
 import {
   parseCustomAlertQueryBody,
+  resolveCustomAlertProjectName,
   setMissingCustomAlertProjectScope,
 } from './custom-alert-query';
 import { parseRulesFlagsAndScope } from './parse-scope';
@@ -144,10 +145,16 @@ export default async function add(
     typeof body.projectId === 'string' ? body.projectId : scope.projectId;
   if (parsedCustomAlertQuery && customAlertProjectId) {
     body.projectId ??= customAlertProjectId;
+    const projectName = await resolveCustomAlertProjectName(
+      client,
+      scope,
+      customAlertProjectId
+    );
     setMissingCustomAlertProjectScope(
       parsedCustomAlertQuery,
       scope.teamId,
-      customAlertProjectId
+      customAlertProjectId,
+      projectName
     );
   }
 

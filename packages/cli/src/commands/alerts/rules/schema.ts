@@ -225,7 +225,12 @@ const SCHEMAS: Record<RuleType, RuleTypeSchema> = {
         'number',
         'Minimum observed value'
       ),
-      field('customAlert.formula', 'no', 'object', 'Ratio formula'),
+      field(
+        'customAlert.formula',
+        'no',
+        'object',
+        'Ratio formula; left and right reference rollup keys'
+      ),
     ],
     queryJsonFields: [
       field('scope', 'no', 'object', 'Project scope'),
