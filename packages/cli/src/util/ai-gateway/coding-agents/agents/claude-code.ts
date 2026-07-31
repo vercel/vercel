@@ -73,12 +73,18 @@ export const claudeCode: CodingAgent = {
         },
       ],
       envExports,
-      notes: ctx.useKeychain
-        ? [
-            'The Anthropic auth token is read from your shell environment (Keychain-backed).',
-            'Open a new terminal so ANTHROPIC_AUTH_TOKEN is loaded, then restart Claude Code.',
-          ]
-        : ['Restart Claude Code to pick up the new settings.'],
+      notes: [
+        ...(ctx.useKeychain
+          ? [
+              'The Anthropic auth token is read from your shell environment (Keychain-backed).',
+              'Open a new terminal so ANTHROPIC_AUTH_TOKEN is loaded, then restart Claude Code.',
+            ]
+          : ['Restart Claude Code to pick up the new settings.']),
+        // The desktop app's provider switch cannot be automated (its gateway
+        // credentials live in an app-encrypted store), so guide the two-step:
+        // switch in-app, then re-run to copy the now-orphaned sessions.
+        'The Claude Desktop app switches providers in its own settings (Developer → Configure Third-Party Inference…). After its first gateway launch, re-run this command to copy your existing desktop sessions over.',
+      ],
     };
   },
 };
