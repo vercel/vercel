@@ -86,6 +86,7 @@ import {
   createQueueHandlerModule,
   filterQueueSubscriptions,
   generatedPythonPathToModule,
+  getApschedulerPreviewConfig,
   getGeneratedQueueHandlerPath,
   getSubscriberOutputPath,
   queueTopicPatternsOverlap,
@@ -3063,6 +3064,10 @@ describe('pyproject subscribers', () => {
           'version = "0.0.1"',
           'dependencies = ["APScheduler>=3.10.4,<4", "vercel-apscheduler", "redis>=5,<7"]',
           '',
+          '[tool.vercel.apscheduler.previews]',
+          'enabled = true',
+          'idle_timeout = "30m"',
+          '',
           '[[tool.vercel.subscribers]]',
           'entrypoint = "scheduler:scheduler"',
           '',
@@ -3088,6 +3093,9 @@ describe('pyproject subscribers', () => {
       expect(lambda.environment.VERCEL_QUEUE_INTEGRATIONS).toBe(
         'vercel.integrations.apscheduler:install_vercel_apscheduler_integration'
       );
+      expect(
+        lambda.environment.VERCEL_APSCHEDULER_PREVIEW_IDLE_TIMEOUT_SECONDS
+      ).toBe('1800');
     }
     expect(
       output.flask.environment.VERCEL_PYTHON_SUBSCRIBER_ID
@@ -3107,6 +3115,36 @@ describe('pyproject subscribers', () => {
       expect(script).not.toContain('VERCEL_APSCHEDULER_SUBSCRIBERS');
       expect(script).toContain('VERCEL_APSCHEDULER_DISCOVERY');
     }
+  });
+
+  it('does not enable APScheduler previews by default', async () => {
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[tool.vercel.apscheduler.previews]',
+        'enabled = false',
+        'idle_timeout = "30m"',
+      ].join('\n')
+    );
+
+    await expect(
+      getApschedulerPreviewConfig(mockWorkPath)
+    ).resolves.toBeUndefined();
+  });
+
+  it('validates APScheduler preview idle_timeout', async () => {
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[tool.vercel.apscheduler.previews]',
+        'enabled = true',
+        'idle_timeout = "five minutes"',
+      ].join('\n')
+    );
+
+    await expect(getApschedulerPreviewConfig(mockWorkPath)).rejects.toThrow(
+      /positive duration/
+    );
   });
 
   it('injects only discovered APScheduler subscriber identities', async () => {
