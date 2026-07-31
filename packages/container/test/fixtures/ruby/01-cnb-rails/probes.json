@@ -9,7 +9,7 @@
     {
       "path": "/",
       "status": 200,
-      "bodyMustBe": "{\"message\":\"hello from Rails buildpacks\",\"rails_env\":\"production\",\"rack_env\":\"fixture-override\",\"log_to_stdout\":\"enabled\",\"serve_static_files\":\"enabled\"}",
+      "bodyMustBe": "{\"message\":\"hello from Rails buildpacks\",\"rails_env\":\"production\",\"rack_env\":\"fixture-override\",\"log_to_stdout\":\"true\",\"serve_static_files\":\"true\"}",
       "responseHeaders": {
         "content-type": "application/json; charset=utf-8"
       }

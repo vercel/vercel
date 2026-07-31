@@ -28,10 +28,13 @@ come from `Gemfile` or `BP_MRI_VERSION` (delivered via the CNB platform
 dir). On deploy the app is copied into the build container owned by the
 builder's build user (as `pack` does), so buildpacks can write to the
 workspace (bundler lockfile self-healing, asset compilation). Ruby builds
-bake overridable Heroku-style production defaults into the image
+bake Heroku-style production defaults into the image
 (`RAILS_ENV`/`RACK_ENV=production`, `RAILS_LOG_TO_STDOUT`/
-`RAILS_SERVE_STATIC_FILES=enabled`) — project env vars always win, and each
-applied default is logged. A `command`
+`RAILS_SERVE_STATIC_FILES=enabled` — Paketo's rails-assets buildpack shadows
+the latter two with `=true` for Rails apps) — each applied default is
+logged, and project build env wins (a plain `BPE_RACK_ENV` overrides the
+`BPE_DEFAULT_RACK_ENV` default at launch). Deployment-level runtime env vars
+are not yet injected into container-image functions. A `command`
 override is baked into the image as its default `web` process via a Procfile
 copied on top of the app — the source tree is never mutated — so production
 (which launches the image's OCI config) and `vercel dev` (which execs via

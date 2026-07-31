@@ -97,9 +97,15 @@ export const BUILDPACKS: readonly BuildpackDescriptor[] = [
     // The composite includes rackup/puma/etc process detection and the
     // optional procfile buildpack in every group.
     buildpackGroup: [{ id: 'paketo-buildpacks/ruby', version: '2.0.1' }],
-    // Heroku-style production defaults: overridable at run time by project
-    // env vars, harmless for non-Rails apps. (Paketo's MRI buildpack already
-    // defaults MALLOC_ARENA_MAX=2.)
+    // Heroku-style production defaults, baked into the image at build time
+    // and overridable by project build env (plain `BPE_*` entries beat these
+    // `BPE_DEFAULT_*` defaults); harmless for non-Rails apps. (Paketo's MRI
+    // buildpack already defaults MALLOC_ARENA_MAX=2.) For Rails apps the two
+    // RAILS_LOG_TO_STDOUT/RAILS_SERVE_STATIC_FILES defaults are shadowed by
+    // Paketo's rails-assets buildpack, which contributes `=true` earlier in
+    // the composite and launch-env defaults are first-set-wins.
+    // Deployment-level (runtime) env vars are not yet injected into
+    // container-image functions, so they cannot override baked values.
     //
     // TODO: when Rails is detected and neither SECRET_KEY_BASE nor
     // RAILS_MASTER_KEY is configured, generate a per-deployment
