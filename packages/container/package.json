@@ -16,7 +16,7 @@
     "test-e2e": "vitest run --config ../../vitest.config.mts test/e2e.test.ts",
     "test-integration-buildpack": "RUN_BUILDPACK_INTEGRATION=1 vitest run --config ../../vitest.config.mts test/integration-buildpack.test.ts",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/*.test.ts'",
+    "vitest-unit": "glob --absolute 'test/unit.test.ts' 'test/diagnostics.test.ts'",
     "vitest-e2e": "glob --absolute 'test/e2e.test.ts'"
   },
   "files": [

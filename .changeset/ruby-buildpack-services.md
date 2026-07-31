@@ -34,7 +34,9 @@ bake Heroku-style production defaults into the image
 the latter two with `=true` for Rails apps) — each applied default is
 logged, and project build env wins (a plain `BPE_RACK_ENV` overrides the
 `BPE_DEFAULT_RACK_ENV` default at launch). Deployment-level runtime env vars
-are not yet injected into container-image functions. A `command`
+are injected into container-image functions and override baked values,
+except where the app server reassigns them at boot (puma rewrites
+`ENV['RACK_ENV']` from its `environment` directive). A `command`
 override is baked into the image as its default `web` process via a Procfile
 copied on top of the app — the source tree is never mutated — so production
 (which launches the image's OCI config) and `vercel dev` (which execs via

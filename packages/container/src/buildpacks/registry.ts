@@ -104,8 +104,10 @@ export const BUILDPACKS: readonly BuildpackDescriptor[] = [
     // RAILS_LOG_TO_STDOUT/RAILS_SERVE_STATIC_FILES defaults are shadowed by
     // Paketo's rails-assets buildpack, which contributes `=true` earlier in
     // the composite and launch-env defaults are first-set-wins.
-    // Deployment-level (runtime) env vars are not yet injected into
-    // container-image functions, so they cannot override baked values.
+    // Deployment-level (runtime) env vars are injected into container-image
+    // functions and override baked values — except vars the app server
+    // reassigns at boot (puma's launcher rewrites `ENV['RACK_ENV']` from its
+    // `environment` directive).
     //
     // TODO: when Rails is detected and neither SECRET_KEY_BASE nor
     // RAILS_MASTER_KEY is configured, generate a per-deployment
