@@ -1,7 +1,7 @@
 {
   "build": {
     "env": {
-      "BPE_RACK_ENV": "fixture-override",
+      "RACK_ENV": "fixture-override",
       "VERCEL_RUBY_EXPERIMENTAL_BUILDPACK": "1"
     }
   },

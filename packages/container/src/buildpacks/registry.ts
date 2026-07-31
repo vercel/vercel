@@ -67,9 +67,9 @@ export interface BuildpackDescriptor {
    * Build env applied beneath the user's build env (user keys win). Use
    * Paketo's environment-variables buildpack `BPE_DEFAULT_<KEY>` form to
    * bake overridable launch-env defaults into the image: the CNB launcher
-   * only applies them when the variable is unset at run time, so env vars
-   * configured on the project always take precedence. Each applied default
-   * is logged during the build.
+   * only applies them when the variable is unset at run time. A matching
+   * project `<KEY>` is copied to `BPE_<KEY>` so it overrides the default in
+   * the built image. Each applied default is logged during the build.
    */
   defaultBuildEnv?: Readonly<Record<string, string>>;
 }
@@ -98,12 +98,12 @@ export const BUILDPACKS: readonly BuildpackDescriptor[] = [
     // optional procfile buildpack in every group.
     buildpackGroup: [{ id: 'paketo-buildpacks/ruby', version: '2.0.1' }],
     // Heroku-style production defaults, baked into the image at build time
-    // and overridable by project build env (plain `BPE_*` entries beat these
-    // `BPE_DEFAULT_*` defaults); harmless for non-Rails apps. (Paketo's MRI
-    // buildpack already defaults MALLOC_ARENA_MAX=2.) For Rails apps the two
-    // RAILS_LOG_TO_STDOUT/RAILS_SERVE_STATIC_FILES defaults are shadowed by
-    // Paketo's rails-assets buildpack, which contributes `=true` earlier in
-    // the composite and launch-env defaults are first-set-wins.
+    // and overridable by project build env (a plain key is copied to the
+    // corresponding `BPE_*` launch override); harmless for non-Rails apps.
+    // (Paketo's MRI buildpack already defaults MALLOC_ARENA_MAX=2.) For Rails
+    // apps the RAILS_LOG_TO_STDOUT/RAILS_SERVE_STATIC_FILES defaults are
+    // shadowed by Paketo's rails-assets buildpack, which contributes `=true`
+    // earlier in the composite and launch-env defaults are first-set-wins.
     // Deployment-level (runtime) env vars are injected into container-image
     // functions and override baked values — except vars the app server
     // reassigns at boot (puma's launcher rewrites `ENV['RACK_ENV']` from its

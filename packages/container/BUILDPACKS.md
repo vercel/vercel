@@ -77,9 +77,10 @@ No lifecycle, image-source, or resolver code should need to change.
   defaults (Ruby: `RAILS_ENV=production`, `RACK_ENV=production`,
   `RAILS_LOG_TO_STDOUT=enabled`, `RAILS_SERVE_STATIC_FILES=enabled`) baked
   as launch-env defaults via Paketo's environment-variables buildpack
-  (`BPE_DEFAULT_<KEY>`). Env vars configured on the project always win (the
-  CNB launcher only applies defaults to unset variables), user build env
-  suppresses them at build time, and every applied default is logged.
+  (`BPE_DEFAULT_<KEY>`). A matching project env var is also copied to
+  `BPE_<KEY>` so it overrides the default in the built image without requiring
+  users to know Paketo's prefix. Unrelated build env remains build-only, and
+  every applied default is logged.
   `SECRET_KEY_BASE` is deliberately not defaulted yet — see the TODO in the
   registry (per-deployment fallback plus a CLI prompt persisting a project
   env var, rather than hiding the secret in the build cache like Heroku).

@@ -1409,20 +1409,46 @@ describe('@vercel/container', () => {
         'Defaulting RAILS_ENV=production'
       );
 
-      // A user-provided value suppresses the default, whether set as the
-      // launch variable itself or the BPE_DEFAULT_* form.
+      // A plain user value becomes both build and embedded launch env, while
+      // an explicit BPE_DEFAULT_* value remains a launch default.
       const overridden = mergeDefaultBuildEnv(ruby, {
         RAILS_ENV: 'staging',
-        BPE_DEFAULT_RACK_ENV: 'staging',
+        RACK_ENV: 'fixture-override',
+        BPE_DEFAULT_RAILS_LOG_TO_STDOUT: 'custom-default',
       });
       expect(overridden.buildEnv).not.toHaveProperty('BPE_DEFAULT_RAILS_ENV');
+      expect(overridden.buildEnv).not.toHaveProperty('BPE_DEFAULT_RACK_ENV');
       expect(overridden.buildEnv).toMatchObject({
         RAILS_ENV: 'staging',
-        BPE_DEFAULT_RACK_ENV: 'staging',
-        BPE_DEFAULT_RAILS_LOG_TO_STDOUT: 'enabled',
+        BPE_RAILS_ENV: 'staging',
+        RACK_ENV: 'fixture-override',
+        BPE_RACK_ENV: 'fixture-override',
+        BPE_DEFAULT_RAILS_LOG_TO_STDOUT: 'custom-default',
       });
       expect(overridden.applied.join('\n')).not.toContain('RAILS_ENV');
       expect(overridden.applied.join('\n')).not.toContain('RACK_ENV=');
+
+      // Explicit embedded overrides win, and unrelated build env is not
+      // copied into the image.
+      const explicitlyOverridden = mergeDefaultBuildEnv(ruby, {
+        RACK_ENV: 'plain-value',
+        BPE_RACK_ENV: 'embedded-value',
+        SECRET_KEY_BASE: 'build-only',
+      });
+      expect(explicitlyOverridden.buildEnv).toMatchObject({
+        RACK_ENV: 'plain-value',
+        BPE_RACK_ENV: 'embedded-value',
+        SECRET_KEY_BASE: 'build-only',
+      });
+      expect(explicitlyOverridden.buildEnv).not.toHaveProperty(
+        'BPE_DEFAULT_RACK_ENV'
+      );
+      expect(explicitlyOverridden.buildEnv).not.toHaveProperty(
+        'BPE_SECRET_KEY_BASE'
+      );
+      expect(explicitlyOverridden.applied.join('\n')).not.toContain(
+        'RACK_ENV='
+      );
 
       // Descriptors without defaults pass the env through untouched.
       const none = mergeDefaultBuildEnv(

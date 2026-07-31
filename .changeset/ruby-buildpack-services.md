@@ -32,8 +32,8 @@ bake Heroku-style production defaults into the image
 (`RAILS_ENV`/`RACK_ENV=production`, `RAILS_LOG_TO_STDOUT`/
 `RAILS_SERVE_STATIC_FILES=enabled` — Paketo's rails-assets buildpack shadows
 the latter two with `=true` for Rails apps) — each applied default is
-logged, and project build env wins (a plain `BPE_RACK_ENV` overrides the
-`BPE_DEFAULT_RACK_ENV` default at launch). Deployment-level runtime env vars
+logged, and project build env wins (`RACK_ENV` is automatically embedded as
+the `BPE_RACK_ENV` launch override). Deployment-level runtime env vars
 are injected into container-image functions and override baked values,
 except where the app server reassigns them at boot (puma rewrites
 `ENV['RACK_ENV']` from its `environment` directive). A `command`

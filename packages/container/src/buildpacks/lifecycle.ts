@@ -183,10 +183,10 @@ function writePlatformEnvDir(
 
 /**
  * Merge the descriptor's {@link BuildpackDescriptor.defaultBuildEnv} beneath
- * the user's build env. A default is skipped when the user already set the
- * same key, or — for `BPE_DEFAULT_<KEY>` launch defaults — the unprefixed
- * `<KEY>` itself. Returns the merged env plus a log line per applied
- * default so builds are never silently reconfigured.
+ * the user's build env. For a `BPE_DEFAULT_<KEY>` launch default, an
+ * unprefixed user value is also copied to `BPE_<KEY>` so it is embedded in
+ * the image as a launch override. Returns the merged env plus a log line per
+ * applied default so builds are never silently reconfigured.
  */
 export function mergeDefaultBuildEnv(
   bp: BuildpackDescriptor,
@@ -199,10 +199,18 @@ export function mergeDefaultBuildEnv(
   const merged = { ...(buildEnv ?? {}) };
   const applied: string[] = [];
   for (const [key, value] of defaults) {
-    const launchKey = key.startsWith('BPE_DEFAULT_')
-      ? key.slice('BPE_DEFAULT_'.length)
-      : key;
-    if (key in merged || launchKey in merged) continue;
+    const isLaunchDefault = key.startsWith('BPE_DEFAULT_');
+    const launchKey = isLaunchDefault ? key.slice('BPE_DEFAULT_'.length) : key;
+    if (isLaunchDefault) {
+      const embeddedKey = `BPE_${launchKey}`;
+      const overrideKey = `BPE_OVERRIDE_${launchKey}`;
+      if (embeddedKey in merged || overrideKey in merged) continue;
+      if (launchKey in merged) {
+        merged[embeddedKey] = merged[launchKey];
+        continue;
+      }
+    }
+    if (key in merged) continue;
     merged[key] = value;
     applied.push(
       `Defaulting ${launchKey}=${value} (set the ${launchKey} environment variable to override)`
