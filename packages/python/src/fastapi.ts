@@ -22,6 +22,8 @@ export interface FastAPIStaticMount {
   directory: string;
   /** Frontend fallback for this mount, or null for a plain StaticFiles mount. */
   fallback: FastAPIStaticFallback | null;
+  /** True for a low-priority app.frontend() build (vs a plain StaticFiles mount). */
+  frontend: boolean;
 }
 
 /** The shim's parsed JSON output (mirrors the Python `Output` dataclass). */
@@ -136,12 +138,22 @@ export async function runFastAPICollectStatic(
     `Found ${mounts.length} FastAPI static mount(s): ${mounts.map(m => m.urlPath).join(', ')}`
   );
 
-  for (const mount of mounts) {
+  // Runtime routing is first-match-wins, and app.frontend() builds are always
+  // low-priority. So copy non-frontend mounts first (in declaration order), then
+  // frontends, and never overwrite (force: false).
+  const ordered = [
+    ...mounts.filter(m => !m.frontend),
+    ...mounts.filter(m => m.frontend),
+  ];
+  for (const mount of ordered) {
     const urlSubPath = mount.urlPath.replace(/^\/|\/$/g, '');
     const dest = join(outputStaticDir, urlSubPath);
     try {
       await fs.promises.mkdir(dest, { recursive: true });
-      await fs.promises.cp(mount.directory, dest, { recursive: true });
+      await fs.promises.cp(mount.directory, dest, {
+        recursive: true,
+        force: false,
+      });
     } catch (err) {
       debug(
         `FastAPI: copy ${mount.directory} -> ${dest} failed (${err}), skipping CDN`

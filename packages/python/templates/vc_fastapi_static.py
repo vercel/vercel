@@ -55,9 +55,12 @@ class StaticMount:
     urlPath: str
     directory: str
     fallback: Fallback | None = None
+    frontend: bool = False
 
     @classmethod
-    def from_route(cls, route: Mount, prefix: str = "") -> StaticMount | None:
+    def from_route(
+        cls, route: Mount, prefix: str = "", *, frontend: bool
+    ) -> StaticMount | None:
         static_app = route.app
         if not isinstance(static_app, StaticFiles):
             return None
@@ -68,6 +71,7 @@ class StaticMount:
             urlPath=prefix + route.path,
             directory=os.path.abspath(str(directory)),
             fallback=_resolve_fallback(static_app),
+            frontend=frontend,
         )
 
 
@@ -255,7 +259,7 @@ def collect(
         if isinstance(route, Mount):
             url_prefix = prefix + route.path
             if not prior.eclipses(url_prefix):
-                if m := StaticMount.from_route(route, prefix):
+                if m := StaticMount.from_route(route, prefix, frontend=False):
                     mounts.append(m)
                     shadow_routes |= prior.shadow_bodies(m)
                 # app.mount(Router | sub-app): recurse into the sub-router so
@@ -292,14 +296,16 @@ def collect(
         # app.include_router() with a frontend build (low-priority).
         for ctx in get_effective_low_priority_routes(route):
             for r in ctx.original_route.routes:
-                if m := StaticMount.from_route(r, prefix + ctx.frontend_prefix):
+                if m := StaticMount.from_route(
+                    r, prefix + ctx.frontend_prefix, frontend=True
+                ):
                     mounts.append(m)
                     frontends.append(m)
 
     # app.frontend(): a low-priority build.
     for group in get_low_priority_routes(router):
         for route in group.routes:
-            if m := StaticMount.from_route(route, prefix):
+            if m := StaticMount.from_route(route, prefix, frontend=True):
                 mounts.append(m)
                 frontends.append(m)
 
