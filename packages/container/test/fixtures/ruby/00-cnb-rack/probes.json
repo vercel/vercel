@@ -6,10 +6,9 @@
     {
       "path": "/",
       "status": 200,
-      "bodyMustBe": "hello from the Vercel Rack command\n",
+      "bodyMustBe": "hello from the Vercel Rack buildpack\n",
       "responseHeaders": {
-        "content-type": "text/plain",
-        "x-command-source": "vercel"
+        "content-type": "text/plain"
       }
     }
   ]

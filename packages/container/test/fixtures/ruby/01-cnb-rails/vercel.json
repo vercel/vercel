@@ -8,5 +8,8 @@
   "env": {
     "RACK_ENV": "fixture-override",
     "SECRET_KEY_BASE": "ruby-buildpack-e2e-runtime-secret"
+  },
+  "projectSettings": {
+    "framework": "ruby"
   }
 }

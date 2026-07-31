@@ -1,8 +1,12 @@
 {
+  "uploadNowJson": true,
   "build": {
     "env": {
       "VERCEL_RUBY_EXPERIMENTAL_BUILDPACK": "1"
     }
+  },
+  "projectSettings": {
+    "framework": "services"
   },
   "rewrites": [
     {
