@@ -216,6 +216,81 @@ describe('detectServices', () => {
         });
       });
 
+      it('should preserve an explicit builder for a Ruby runtime service', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              api: {
+                builder: '@acme/ruby-builder',
+                runtime: 'ruby',
+                entrypoint: 'app.rb',
+                mount: '/api',
+              },
+            },
+          }),
+          'app.rb': 'puts "hello"\n',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toEqual([]);
+        expect(result.warnings).toEqual([]);
+        expect(result.services[0]).toMatchObject({
+          name: 'api',
+          runtime: 'ruby',
+          entrypoint: 'app.rb',
+          builder: {
+            src: 'app.rb',
+            use: '@acme/ruby-builder',
+          },
+        });
+        expect(result.services[0].builder.config).not.toHaveProperty(
+          'buildpack'
+        );
+      });
+
+      it('should require an entrypoint for an explicit Ruby builder', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              api: {
+                builder: '@acme/ruby-builder',
+                runtime: 'ruby',
+                mount: '/api',
+              },
+            },
+          }),
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.services).toEqual([]);
+        expect(result.errors).toMatchObject([
+          { code: 'MISSING_ENTRYPOINT', serviceName: 'api' },
+        ]);
+      });
+
+      it('should reject a command for an explicit Ruby builder', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              api: {
+                builder: '@acme/ruby-builder',
+                runtime: 'ruby',
+                entrypoint: 'app.rb',
+                command: 'bundle exec puma',
+                mount: '/api',
+              },
+            },
+          }),
+          'app.rb': 'puts "hello"\n',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.services).toEqual([]);
+        expect(result.errors).toMatchObject([
+          { code: 'INVALID_COMMAND', serviceName: 'api' },
+        ]);
+      });
+
       it('should ignore a Ruby service entrypoint with a warning', async () => {
         const fs = new VirtualFilesystem({
           'vercel.json': JSON.stringify({

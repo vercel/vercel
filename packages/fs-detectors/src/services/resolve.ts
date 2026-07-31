@@ -153,6 +153,9 @@ function getEntrypointRequiredRuntime(
 function getBuildpackRuntime(
   config: ConfiguredServiceConfig
 ): ServiceRuntime | undefined {
+  if (config.builder) {
+    return undefined;
+  }
   return toBuildpackRuntime(getEntrypointRequiredRuntime(config));
 }
 
@@ -842,7 +845,9 @@ export async function resolveConfiguredService(
     ...config,
     entrypoint: entrypointIsDirectory ? undefined : normalizedEntrypoint,
   });
-  const buildpackRuntime = toBuildpackRuntime(inferredRuntime);
+  const buildpackRuntime = config.builder
+    ? undefined
+    : toBuildpackRuntime(inferredRuntime);
   let workspace = '.';
   let resolvedEntrypointFile =
     entrypointIsDirectory || !normalizedEntrypoint
