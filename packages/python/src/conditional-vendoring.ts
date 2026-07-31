@@ -59,6 +59,12 @@ export interface QueueIntegration {
   /** Name of the integration's install function within {@link module}. */
   installer: string;
   /**
+   * Install before importing the subscriber module. Frameworks whose
+   * declarations are created during import use this to observe construction
+   * rather than trying to reconstruct it afterward.
+   */
+  installBeforeImport?: boolean;
+  /**
    * Optional function within {@link module} that queue-serving processes
    * call after {@link installer} to activate consumption (register push
    * callbacks, start the adapter's embedded worker). Never called from
@@ -91,13 +97,6 @@ export async function getQueueIntegrations({
   return integrations;
 }
 
-const INJECTED_PACKAGE_NAMES = new Set<InjectedPackageName>([
-  'vercel-celery',
-  'vercel-celery-bundle',
-  'vercel-dramatiq',
-  'vercel-dramatiq-bundle',
-]);
-
 export interface ConditionalInjectedPackage {
   name: InjectedPackageName;
   requirement: string;
@@ -118,7 +117,10 @@ export async function getConditionalInjectedPackages({
   const injectedPackages: ConditionalInjectedPackage[] = [];
   for (const [upstream, adapter] of UPSTREAM_DEPENDENCY_ADAPTERS) {
     if (!dependencies.has(upstream)) continue;
-    if (hasDirectInjectedPackage(dependencies)) {
+    if (
+      dependencies.has(adapter.bundled) ||
+      dependencies.has(adapter.unbundled)
+    ) {
       continue;
     }
 
@@ -153,11 +155,4 @@ async function getDirectDependencyNames(
       .map(dependency => normalizePackageName(dependency.name))
   );
   return dependencyNames;
-}
-
-function hasDirectInjectedPackage(dependencies: Set<string>): boolean {
-  for (const packageName of INJECTED_PACKAGE_NAMES) {
-    if (dependencies.has(packageName)) return true;
-  }
-  return false;
 }
