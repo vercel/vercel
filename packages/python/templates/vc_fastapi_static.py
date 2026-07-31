@@ -275,17 +275,24 @@ def collect(
                 prior.add_mount(url_prefix)
 
         # app.include_router(): its routes aren't in this table, so harvest their
-        # effective paths (able to shadow a later sibling mount).
+        # effective paths, prefixed with this router's prefix so a route inside a
+        # mounted sub-app shadows the right subtree. An APIRoute carries its path
+        # on ctx.path; a plain Starlette route on its compiled starlette_route.
         for ctx in get_effective_route_contexts(route):
-            if isinstance(ctx.original_route, Route):
-                prior.add_route(
-                    PriorRoute(ctx.path, ctx.param_convertors)
-                )
+            if not isinstance(ctx.original_route, Route):
+                continue
+            if ctx.starlette_route is not None:
+                path = ctx.starlette_route.path_format
+                convertors = ctx.starlette_route.param_convertors
+            else:
+                path = ctx.path
+                convertors = ctx.param_convertors
+            prior.add_route(PriorRoute(prefix + path, convertors))
 
         # app.include_router() with a frontend build (low-priority).
         for ctx in get_effective_low_priority_routes(route):
             for r in ctx.original_route.routes:
-                if m := StaticMount.from_route(r, ctx.frontend_prefix):
+                if m := StaticMount.from_route(r, prefix + ctx.frontend_prefix):
                     mounts.append(m)
                     frontends.append(m)
 
