@@ -15,6 +15,7 @@ import {
   VERCEL_DIR_PROJECT,
 } from '../projects/link';
 import { linkRepoProject, findRepoRoot } from './repo';
+import { getGitConfigPath } from '../git-helpers';
 import createProject from '../projects/create-project';
 import type Client from '../client';
 import { printError } from '../error';
@@ -640,28 +641,17 @@ export default async function setupAndLink(
       });
     }
 
-    // Asked after the code directory question so the answer to that question
-    // is available here: connecting rebases the Project's root directory onto
-    // the repo root, which is only knowable once the code directory is known.
+    // Asked after the code directory question, whose answer feeds the root
+    // directory computed below.
     const gitConnectIntent = await resolveGitConnectIntent(
       client,
       path,
       autoConfirm
     );
 
-    // `rootDirectory` is relative to `path` (it drives local framework
-    // detection), but the base the Project's setting is read against depends
-    // on the link file that gets written:
-    //
-    //   per-directory link (`.vercel/project.json` at `path`) — `vc deploy`
-    //     leaves cwd at `path`, so the setting stays relative to `path`.
-    //   repo link (`.vercel/repo.json` at the repo root) — `vc deploy` rebases
-    //     cwd to the repo root, so the setting must include the path from the
-    //     repo root down to `path`.
-    //
-    // Connecting Git always writes a repo link (below), so the two branches
-    // here line up with the two bases. Storing the wrong one resolves to a
-    // doubled path like `apps/apps/web` and fails validation.
+    // `rootDirectory` is relative to `path`. `vc deploy` reads the Project
+    // setting relative to the repo root for repo links and to `path` for
+    // per-directory links, so the base has to match the link written below.
     const projectRootDirectory = gitConnectIntent
       ? normalizePath(
           join(gitConnectIntent.rootDirectory ?? '', rootDirectory ?? '')
@@ -679,10 +669,8 @@ export default async function setupAndLink(
       v0,
     });
 
-    // Connecting Git means the Project is addressed from the repo root, so the
-    // link has to live there too: `vc deploy` only rebases cwd to the repo root
-    // when it finds `repo.json`, which is what makes the repo-root-relative
-    // Root Directory above resolve correctly from any directory.
+    // Connecting Git always links from the repo root, which is what lets
+    // `vc deploy` resolve the repo-root-relative Root Directory above.
     const gitRepoRoot = gitConnectIntent
       ? await findRepoRoot(path).catch(() => undefined)
       : undefined;
@@ -712,9 +700,6 @@ export default async function setupAndLink(
       );
     }
 
-    // Report the derived Root Directory alongside the `Created` row rather
-    // than before the connect prompt: at this point it is a fact about the
-    // project, not a prediction that declining would have falsified.
     if (settings.rootDirectory) {
       printAlignedLabel('Root Directory', settings.rootDirectory);
     }
@@ -748,16 +733,10 @@ export default async function setupAndLink(
   }
 }
 
-/**
- * A remote the user agreed to connect, resolved before the project exists.
- *
- * `rootDirectory` is the linked directory expressed relative to the *repo
- * root* — the value the Project needs so that Git-triggered builds run in the
- * same directory the user linked from. It is `null` when linking from the repo
- * root itself, where the Project's root directory should stay unset.
- */
+/** A remote the user agreed to connect, resolved before the project exists. */
 type GitConnectIntent = {
   repoInfo: RepoInfo;
+  /** Linked directory relative to the repo root; `null` at the repo root. */
   rootDirectory: string | null;
   /** Remote the URL came from, recorded in `repo.json` as `remoteName`. */
   remoteName: string;
@@ -768,12 +747,6 @@ type GitConnectIntent = {
  * so the question never follows the `✓ Created` row; `applyGitConnectIntent`
  * does the connecting once a project id exists. Never prompts under `--yes`
  * or non-interactive mode.
- *
- * Detection walks up to the repo root rather than only checking `path`, so
- * linking from a subdirectory (`apps/web`) still finds the repository. That
- * subdirectory is then what `rootDirectory` records: connecting a repo while
- * leaving the root directory unset would point every Git-triggered build at
- * the repo root instead of the directory the user linked.
  */
 export async function resolveGitConnectIntent(
   client: Client,
@@ -781,14 +754,16 @@ export async function resolveGitConnectIntent(
   autoConfirm: boolean
 ): Promise<GitConnectIntent> {
   try {
-    // `findRepoRoot` resolves worktrees and submodules correctly, which a
-    // plain `.git` lookup in `path` does not.
     const repoRoot = await findRepoRoot(path);
     if (!repoRoot) {
       return null;
     }
 
-    const gitConfig = await parseGitConfig(join(repoRoot, '.git/config'));
+    // In worktrees and submodules `.git` is a file, not a directory, so the
+    // config lives elsewhere. Same resolution `getRepoLink` uses.
+    const gitConfigPath =
+      getGitConfigPath({ cwd: repoRoot }) ?? join(repoRoot, '.git/config');
+    const gitConfig = await parseGitConfig(gitConfigPath);
 
     if (!gitConfig) {
       return null;
@@ -822,9 +797,8 @@ export async function resolveGitConnectIntent(
       return null;
     }
 
-    // `repo.json` records which remote the link came from. Recover it by
-    // matching the resolved URL back to the remote map, since the picker
-    // returns parsed repo info rather than the remote name.
+    // The picker returns parsed repo info, so recover the remote name that
+    // `repo.json` records by matching the URL back to the remote map.
     const remoteName =
       Object.keys(remoteUrls).find(name => remoteUrls[name] === repoInfo.url) ??
       (remoteUrls.origin ? 'origin' : Object.keys(remoteUrls)[0]);
