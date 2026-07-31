@@ -139,8 +139,15 @@ export async function runFastAPICollectStatic(
   for (const mount of mounts) {
     const urlSubPath = mount.urlPath.replace(/^\/|\/$/g, '');
     const dest = join(outputStaticDir, urlSubPath);
-    await fs.promises.mkdir(dest, { recursive: true });
-    await fs.promises.cp(mount.directory, dest, { recursive: true });
+    try {
+      await fs.promises.mkdir(dest, { recursive: true });
+      await fs.promises.cp(mount.directory, dest, { recursive: true });
+    } catch (err) {
+      debug(
+        `FastAPI: copy ${mount.directory} -> ${dest} failed (${err}), skipping CDN`
+      );
+      return null;
+    }
     debug(`copied ${mount.directory} -> ${dest}`);
   }
 
