@@ -386,7 +386,12 @@ async function handleInitDeployment(
 
   const meta = Object.assign({}, parseMeta(localConfig.meta), cliMeta);
 
-  const gitMetadata = await createGitMeta(cwd, project);
+  // Observational path of the project dir relative to the git root — not the
+  // project `rootDirectory` setting (though they often resolve to the same path).
+  const gitMetadata = await createGitMeta(
+    join(cwd, project.rootDirectory || ''),
+    project
+  );
 
   const deploymentEnv = Object.assign(
     {},
@@ -1328,7 +1333,12 @@ async function handleDefaultDeploy(
   // #region Meta
   const meta = Object.assign({}, parseMeta(localConfig.meta), cliMeta);
 
-  const gitMetadata = await createGitMeta(cwd, project);
+  // Observational path of the project dir relative to the git root — not the
+  // project `rootDirectory` setting (though they often resolve to the same path).
+  const gitMetadata = await createGitMeta(
+    join(cwd, project.rootDirectory || ''),
+    project
+  );
   // #endregion
 
   // #region Env vars validation
