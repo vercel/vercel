@@ -72,4 +72,25 @@ describe('createStandaloneLambda', () => {
       fs.rmSync(userServerPath, { force: true });
     }
   });
+
+  it('includes the runtime control marker when enabled', async () => {
+    const userServerPath = path.join(
+      os.tmpdir(),
+      `ipc-proxy-user-server-${Date.now()}`
+    );
+    fs.writeFileSync(userServerPath, 'fake-user-server-binary');
+
+    try {
+      const lambda = await createStandaloneLambda({
+        userServerPath,
+        architecture: 'x86_64',
+        runtimeLanguage: 'go',
+        enableRuntimeControl: true,
+      });
+
+      expect(lambda.files?.['.vercel-runtime-control-v1']).toBeDefined();
+    } finally {
+      fs.rmSync(userServerPath, { force: true });
+    }
+  });
 });

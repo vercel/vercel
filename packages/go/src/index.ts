@@ -28,15 +28,15 @@ import {
   StartDevServerResult,
   glob,
   download,
-  Lambda,
   getWriteableDirectory,
   shouldServe as defaultShouldServe,
   debug,
   cloneEnv,
-  getProvidedRuntime,
+  getLambdaOptionsFromFunction,
   execCommand,
   getReportedServiceType,
 } from '@vercel/build-utils';
+import { createStandaloneLambda } from '@vercel-internals/ipc-proxy';
 
 const TMP = tmpdir();
 
@@ -75,7 +75,8 @@ export const shouldServe: ShouldServe = opts => {
 // we need our `main.go` to be called something else
 const MAIN_GO_FILENAME = 'main__vc__go__.go';
 
-const HANDLER_FILENAME = `bootstrap${OUT_EXTENSION}`;
+const USER_SERVER_FILENAME = `user-server${OUT_EXTENSION}`;
+const GO_RUNTIME_MODULE = 'github.com/vercel/go-runtime';
 
 interface PortInfo {
   port: number;
@@ -159,7 +160,6 @@ export async function build(options: BuildOptions) {
   };
 
   const env = cloneEnv(process.env, meta.env, {
-    GOARCH: 'amd64',
     GOOS: 'linux',
   });
 
@@ -172,11 +172,8 @@ export async function build(options: BuildOptions) {
     if (env.GO111MODULE) {
       console.log(`\nManually assigning 'GO111MODULE' is not recommended.
 
-  By default:
-    - 'GO111MODULE=on' If entrypoint package name is not 'main'
-    - 'GO111MODULE=off' If entrypoint package name is 'main'
-
-  We highly recommend you leverage Go Modules in your project.
+  The Go builder manages module behavior automatically. We highly recommend
+  that you leverage Go Modules in your project.
   Learn more: https://github.com/golang/go/wiki/Modules
   `);
     }
@@ -195,6 +192,13 @@ export async function build(options: BuildOptions) {
         entrypoint: resolvedEntrypoint,
       });
     }
+
+    const lambdaOptions = await getLambdaOptionsFromFunction({
+      sourceFile: entrypoint,
+      config,
+    });
+    const architecture = lambdaOptions.architecture || 'x86_64';
+    env.GOARCH = architecture === 'arm64' ? 'arm64' : 'amd64';
 
     const originalEntrypointAbsolute = join(workPath, entrypoint);
     const renamedEntrypoint = getRenamedEntrypoint(entrypoint);
@@ -262,6 +266,7 @@ export async function build(options: BuildOptions) {
       }
     }
 
+    env.GO111MODULE = 'on';
     const modulePath = goModPath ? dirname(goModPath) : undefined;
     const go = await createGo({
       modulePath,
@@ -272,8 +277,7 @@ export async function build(options: BuildOptions) {
       workPath,
     });
 
-    // Emit the manifest after resolving the Go version but before building the handler
-    // injects the @vercel/go-bridge.
+    // Emit the manifest after resolving the Go version but before building the handler.
     const goModJson = goModPath ? await go.modEditJson(goModPath) : null;
     await generateProjectManifest({
       workPath,
@@ -299,19 +303,19 @@ export async function build(options: BuildOptions) {
     };
 
     if (packageName === 'main') {
-      await buildHandlerAsPackageMain(buildOptions);
+      await buildHandlerInMainPackage(buildOptions);
     } else {
       await buildHandlerWithGoMod(buildOptions);
     }
 
-    const runtime = await getProvidedRuntime();
-    const lambda = new Lambda({
-      files: { ...(await glob('**', outDir)), ...includedFiles },
-      handler: HANDLER_FILENAME,
-      runtime,
+    const lambda = await createStandaloneLambda({
+      userServerPath: join(outDir, USER_SERVER_FILENAME),
+      architecture,
+      lambdaOptions,
+      includedFiles,
       runtimeLanguage: 'go',
-      supportsWrapper: true,
-      environment: {},
+      supportsResponseStreaming: true,
+      enableRuntimeControl: true,
     });
 
     const preDeployCommand = config?.preDeployCommand;
@@ -532,7 +536,7 @@ async function buildHandlerWithGoMod({
   }
 
   debug('Running `go build`...');
-  const destPath = join(outDir, HANDLER_FILENAME);
+  const destPath = join(outDir, USER_SERVER_FILENAME);
 
   try {
     const src = [join(baseGoModPath, MAIN_GO_FILENAME)];
@@ -545,11 +549,11 @@ async function buildHandlerWithGoMod({
 }
 
 /**
- * Builds the wrapped Go function using the legacy mode where package name is
- * `"main"` and we need `main.go` in the same dir as the entrypoint, otherwise
- * `go build` will refuse to build.
+ * Builds a module-less Go function whose package name is `"main"`. The
+ * generated server must be in the same directory as the entrypoint because
+ * `go build` refuses to combine files from different directories.
  */
-async function buildHandlerAsPackageMain({
+async function buildHandlerInMainPackage({
   entrypointAbsolute,
   entrypointDirname,
   go,
@@ -557,36 +561,38 @@ async function buildHandlerAsPackageMain({
   outDir,
   undo,
 }: BuildHandlerOptions): Promise<void> {
-  debug('Building Go handler as package "main" (legacy)');
+  debug('Building Go handler as package "main" (without go.mod)');
 
-  await writeEntrypoint(
-    join(entrypointDirname, MAIN_GO_FILENAME),
-    '',
-    handlerFunctionName
+  const mainGoPath = join(entrypointDirname, MAIN_GO_FILENAME);
+  const goModPath = join(entrypointDirname, 'go.mod');
+  const goSumPath = join(entrypointDirname, 'go.sum');
+
+  await Promise.all([
+    writeEntrypoint(mainGoPath, '', handlerFunctionName),
+    writeGoMod({
+      destDir: entrypointDirname,
+      packageName: 'main',
+    }),
+  ]);
+
+  undo.fileActions.push(
+    { to: undefined, from: mainGoPath },
+    { to: undefined, from: goModPath },
+    { to: undefined, from: goSumPath }
   );
 
-  undo.fileActions.push({
-    to: undefined, // delete
-    from: join(entrypointDirname, MAIN_GO_FILENAME),
-  });
-
-  // `go get` will look at `*.go` (note we set `cwd`), parse the `import`s
-  // and download any packages that aren't part of the stdlib
-  debug('Running `go get`...');
+  debug('Tidy temporary `go.mod` file...');
   try {
-    await go.get();
+    await go.mod();
   } catch (err) {
-    console.error('Failed to `go get`');
+    console.error('failed to `go mod tidy`');
     throw err;
   }
 
   debug('Running `go build`...');
-  const destPath = join(outDir, HANDLER_FILENAME);
+  const destPath = join(outDir, USER_SERVER_FILENAME);
   try {
-    const src = [
-      join(entrypointDirname, MAIN_GO_FILENAME),
-      entrypointAbsolute,
-    ].map(file => normalize(file));
+    const src = [mainGoPath, entrypointAbsolute].map(file => normalize(file));
     await go.build(src, destPath);
   } catch (err) {
     console.error('failed to `go build`');
@@ -744,7 +750,10 @@ async function writeEntrypoint(
     'utf8'
   );
   const mainModGoContents = modMainGoContents
-    .replace('__VC_HANDLER_PACKAGE_NAME', goPackageName)
+    .replace(
+      '\t"__VC_HANDLER_PACKAGE_NAME"\n',
+      goPackageName ? `\t"${goPackageName}"\n` : ''
+    )
     .replace('__VC_HANDLER_FUNC_NAME', goFuncName);
   await writeFile(dest, mainModGoContents, 'utf-8');
 }
@@ -817,6 +826,27 @@ async function writeGoMod({
       }
     }
   }
+
+  const runtimeDir = join(__dirname, '../runtime');
+  const runtimePath = runtimeDir.replace(/\\/g, '/');
+
+  const escapedGoRuntimeModule = GO_RUNTIME_MODULE.replace(/\./g, '\\.');
+  const runtimeRequireRE = new RegExp(
+    `(?:^|\\s)${escapedGoRuntimeModule}\\s+v\\S+`,
+    'm'
+  );
+  if (!runtimeRequireRE.test(contents)) {
+    contents += `\nrequire ${GO_RUNTIME_MODULE} v0.0.0\n`;
+  }
+
+  const runtimeReplaceRE = new RegExp(
+    `^replace\\s+${escapedGoRuntimeModule}\\s+=>\\s+.+$`,
+    'm'
+  );
+  const runtimeReplace = `replace ${GO_RUNTIME_MODULE} => ${runtimePath}`;
+  contents = runtimeReplaceRE.test(contents)
+    ? contents.replace(runtimeReplaceRE, runtimeReplace)
+    : `${contents}\n${runtimeReplace}\n`;
 
   const destGoModPath = join(destDir, 'go.mod');
   debug(`Writing ${destGoModPath}`);

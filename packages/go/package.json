@@ -11,7 +11,8 @@
   },
   "scripts": {
     "build": "node build.mjs",
-    "test": "vitest run --config ../../vitest.config.mts",
+    "test": "pnpm test-runtime && vitest run --config ../../vitest.config.mts",
+    "test-runtime": "go -C runtime test ./...",
     "test-e2e": "pnpm test test/integration-*",
     "type-check": "tsc --noEmit",
     "vitest-run": "vitest -c ../../vitest.config.mts",
@@ -21,7 +22,8 @@
     "dist",
     "*.go",
     "bin",
-    "bootstrap"
+    "bootstrap",
+    "runtime"
   ],
   "devDependencies": {
     "@tootallnate/once": "1.1.2",

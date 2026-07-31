@@ -42,6 +42,8 @@ export interface CreateStandaloneLambdaOptions {
   runtimeLanguage: LambdaExecutableRuntimeLanguages;
   /** Defaults to `true`. */
   supportsResponseStreaming?: boolean;
+  /** Enables the private Go child runtime control protocol. */
+  enableRuntimeControl?: boolean;
 }
 
 // Assembles a Lambda that ships the shared IPC proxy as `executable` plus the
@@ -56,6 +58,7 @@ export async function createStandaloneLambda(
     includedFiles,
     runtimeLanguage,
     supportsResponseStreaming = true,
+    enableRuntimeControl = false,
   } = options;
 
   const proxyPath = getProxyBinaryPath(architecture);
@@ -69,6 +72,9 @@ export async function createStandaloneLambda(
     ...lambdaOptions,
     files: {
       ...includedFiles,
+      ...(enableRuntimeControl
+        ? { '.vercel-runtime-control-v1': new FileBlob({ data: '' }) }
+        : {}),
       executable: new FileBlob({ mode: 0o755, data: proxyData }),
       'user-server': new FileBlob({ mode: 0o755, data: userServerData }),
     },

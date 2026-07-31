@@ -24,9 +24,12 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"syscall"
 	"time"
 )
 
@@ -266,12 +269,36 @@ func main() {
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, userBinary)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("PORT=%d", userPort))
+	childEnv := withoutEnv(os.Environ(), "VERCEL_IPC_PATH")
+	childEnv = withEnv(childEnv, "PORT", strconv.Itoa(userPort))
+
+	var control *runtimeControl
+	var controlReader, controlWriter *os.File
+	if _, err := os.Stat(runtimeControlMarker); err == nil {
+		controlReader, controlWriter, err = os.Pipe()
+		if err != nil {
+			fatal(1, fmt.Sprintf("Failed to create runtime control pipe: %v", err))
+		}
+		control = newRuntimeControl(controlReader)
+		cmd.ExtraFiles = []*os.File{controlWriter}
+		childEnv = withEnv(childEnv, "VERCEL_RUNTIME_CONTROL_FD", "3")
+	}
+
+	cmd.Env = childEnv
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Start(); err != nil {
+		if controlReader != nil {
+			_ = controlReader.Close()
+			_ = controlWriter.Close()
+		}
 		fatal(1, fmt.Sprintf("Failed to start user server: %v", err))
+	}
+	if control != nil {
+		_ = controlWriter.Close()
+		go control.run()
+		defer controlReader.Close()
 	}
 
 	// Race server readiness against early child death.
@@ -299,8 +326,12 @@ func main() {
 	// exits after startup, report an unrecoverable error so the platform
 	// recycles this instance instead of leaving the proxy serving 502s
 	// while the health check still reports OK.
+	var shuttingDown atomic.Bool
 	go func() {
 		waitErr := <-childDone
+		if shuttingDown.Load() {
+			return
+		}
 		fatal(
 			childExitCode(waitErr),
 			childExitMessage(waitErr, "exited unexpectedly"),
@@ -339,6 +370,7 @@ func main() {
 			invocationID := r.Header.Get("X-Vercel-Internal-Invocation-Id")
 			requestIDStr := r.Header.Get("X-Vercel-Internal-Request-Id")
 			requestID, _ := strconv.ParseUint(requestIDStr, 10, 64)
+			runtimeRequestKey := ""
 
 			// A successful protocol upgrade detaches the connection from the
 			// request lifecycle. End the invocation at that boundary while the
@@ -359,13 +391,24 @@ func main() {
 					}
 					sendIPCMessage(endMsg)
 				}
+				if control != nil {
+					control.endRequest(runtimeRequestKey)
+				}
 			}
 
 			// Remove internal headers before forwarding
 			for key := range r.Header {
-				if strings.HasPrefix(strings.ToLower(key), "x-vercel-internal-") {
+				normalizedKey := strings.ToLower(key)
+				if strings.HasPrefix(normalizedKey, "x-vercel-internal-") ||
+					strings.HasPrefix(normalizedKey, "x-vercel-runtime-") {
 					r.Header.Del(key)
 				}
+			}
+			if control != nil {
+				runtimeRequestKey = control.registerRequest(invocationID, requestID)
+				r.Header.Set(runtimeRequestKeyHeader, runtimeRequestKey)
+				r.Header.Set(runtimeInvocationIDHeader, invocationID)
+				r.Header.Set(runtimeRequestIDHeader, requestIDStr)
 			}
 
 			if r.URL != nil {
@@ -397,6 +440,18 @@ func main() {
 	} else {
 		ipcReady = true
 	}
+
+	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(signalChannel)
+	go func() {
+		<-signalChannel
+		shuttingDown.Store(true)
+		_ = cmd.Process.Signal(syscall.SIGTERM)
+		shutdownContext, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer shutdownCancel()
+		_ = server.Shutdown(shutdownContext)
+	}()
 
 	// If no IPC, print the port for local development
 	if ipcConn == nil {

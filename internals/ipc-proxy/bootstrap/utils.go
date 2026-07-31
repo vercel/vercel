@@ -61,6 +61,21 @@ func waitForServer(port int, timeout time.Duration) error {
 	return fmt.Errorf("server did not start listening on %s within %v", addr, timeout)
 }
 
+func withoutEnv(env []string, key string) []string {
+	prefix := key + "="
+	filtered := make([]string, 0, len(env))
+	for _, value := range env {
+		if !strings.HasPrefix(value, prefix) {
+			filtered = append(filtered, value)
+		}
+	}
+	return filtered
+}
+
+func withEnv(env []string, key, value string) []string {
+	return append(withoutEnv(env, key), key+"="+value)
+}
+
 func normalizeServiceRoutePrefix(rawPrefix string) string {
 	if rawPrefix == "" {
 		return ""

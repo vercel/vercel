@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'child_process';
 import { createConnection } from 'net';
 import { dirname, join } from 'path';
-import { pathExists } from 'fs-extra';
+import { pathExists, readFile } from 'fs-extra';
 import {
   BuildOptions,
   type BuildResultV3,
@@ -172,6 +172,9 @@ export async function buildStandaloneServer({
     includedFiles,
     runtimeLanguage: 'go',
     supportsResponseStreaming: true,
+    enableRuntimeControl:
+      !!goModPath &&
+      /github\.com\/vercel\/go-runtime/.test(await readFile(goModPath, 'utf8')),
   });
 
   const preDeployCommand = config?.preDeployCommand;

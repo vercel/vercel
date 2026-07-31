@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+
+	vercel "github.com/vercel/go-runtime"
 )
 
 func main() {
 	// create a new handler
-	handler := http.HandlerFunc(__HANDLER_FUNC_NAME)
+	handler := vercel.Handler(http.HandlerFunc(__HANDLER_FUNC_NAME))
 
 	addr := "127.0.0.1:0"
 	if devPort := os.Getenv("VERCEL_DEV_PORT"); devPort != "" {
