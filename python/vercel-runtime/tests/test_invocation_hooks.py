@@ -7,8 +7,8 @@ from unittest.mock import patch
 
 from vercel_runtime.invocation_hooks import (
     _reset_invocation_hooks,
-    register_invocation_hook,
-    schedule_invocation_hooks,
+    attach_due_hooks,
+    run_on_next_invocation,
 )
 from vercel_runtime.wait_until import WaitUntilCollector
 
@@ -26,12 +26,12 @@ class TestInvocationHooks(unittest.IsolatedAsyncioTestCase):
         def callback() -> None:
             calls.append("called")
 
-        register_invocation_hook("activate", callback)
+        run_on_next_invocation("activate", callback)
         first = WaitUntilCollector()
-        schedule_invocation_hooks(first.wait_until)
+        attach_due_hooks(first.wait_until)
         await first.drain()
         second = WaitUntilCollector()
-        schedule_invocation_hooks(second.wait_until)
+        attach_due_hooks(second.wait_until)
         await second.drain()
 
         self.assertEqual(calls, ["called"])
@@ -40,8 +40,8 @@ class TestInvocationHooks(unittest.IsolatedAsyncioTestCase):
         def callback() -> None:
             return
 
-        register_invocation_hook("activate", callback)
-        register_invocation_hook("activate", callback)
+        run_on_next_invocation("activate", callback)
+        run_on_next_invocation("activate", callback)
 
     async def test_conflicting_registration_is_rejected(self) -> None:
         def first() -> None:
@@ -50,9 +50,9 @@ class TestInvocationHooks(unittest.IsolatedAsyncioTestCase):
         def second() -> None:
             return
 
-        register_invocation_hook("activate", first)
+        run_on_next_invocation("activate", first)
         with self.assertRaisesRegex(ValueError, "differently"):
-            register_invocation_hook("activate", second)
+            run_on_next_invocation("activate", second)
 
     async def test_interval_hook_only_runs_when_due(self) -> None:
         calls: list[str] = []
@@ -64,14 +64,14 @@ class TestInvocationHooks(unittest.IsolatedAsyncioTestCase):
             "vercel_runtime.invocation_hooks.monotonic",
             side_effect=[100.0, 100.0, 100.0, 159.0, 160.0, 160.0],
         ):
-            register_invocation_hook(
+            run_on_next_invocation(
                 "activity",
                 callback,
-                min_interval_seconds=60,
+                repeat_after_seconds=60,
             )
             for _ in range(4):
                 collector = WaitUntilCollector()
-                schedule_invocation_hooks(collector.wait_until)
+                attach_due_hooks(collector.wait_until)
                 await collector.drain()
 
         self.assertEqual(calls, ["called", "called"])
@@ -87,14 +87,14 @@ class TestInvocationHooks(unittest.IsolatedAsyncioTestCase):
             entered.set()
             release.wait(timeout=5)
 
-        register_invocation_hook("activate", callback)
+        run_on_next_invocation("activate", callback)
         first = WaitUntilCollector()
-        schedule_invocation_hooks(first.wait_until)
+        attach_due_hooks(first.wait_until)
         first_drain = asyncio.create_task(first.drain())
         self.assertTrue(await asyncio.to_thread(entered.wait, 1))
 
         second = WaitUntilCollector()
-        schedule_invocation_hooks(second.wait_until)
+        attach_due_hooks(second.wait_until)
         await second.drain()
         release.set()
         await first_drain
@@ -115,9 +115,9 @@ class TestInvocationHooks(unittest.IsolatedAsyncioTestCase):
             "vercel_runtime.invocation_hooks.monotonic",
             side_effect=[100.0, 100.0, 101.0],
         ):
-            register_invocation_hook("retry", callback)
+            run_on_next_invocation("retry", callback)
             first = WaitUntilCollector()
-            schedule_invocation_hooks(first.wait_until)
+            attach_due_hooks(first.wait_until)
             with self.assertLogs(
                 "vercel_runtime.invocation_hooks",
                 level="ERROR",
@@ -125,7 +125,7 @@ class TestInvocationHooks(unittest.IsolatedAsyncioTestCase):
                 await first.drain()
 
             second = WaitUntilCollector()
-            schedule_invocation_hooks(second.wait_until)
+            attach_due_hooks(second.wait_until)
             await second.drain()
 
         self.assertEqual(attempts, 2)

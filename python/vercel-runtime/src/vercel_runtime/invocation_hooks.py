@@ -21,7 +21,7 @@ type _WaitUntil = Callable[[Awaitable[object]], None]
 @dataclass(slots=True)
 class _InvocationHook:
     callback: _HookCallback
-    min_interval_seconds: float | None
+    repeat_after_seconds: float | None
     next_run_at: float = 0
     running: bool = False
     completed: bool = False
@@ -33,18 +33,26 @@ _hooks_lock = threading.Lock()
 _MAX_FAILURE_BACKOFF_SECONDS = 60.0
 
 
-def register_invocation_hook(
+def run_on_next_invocation(
     name: str,
     callback: _HookCallback,
     *,
-    min_interval_seconds: float | None = None,
+    repeat_after_seconds: float | None = None,
 ) -> None:
-    """Register a private integration hook to attach to a later invocation."""
+    """Run callback once, on an upcoming invocation, off the response path.
+
+    The callback executes in a thread after that invocation's response is
+    sent, with the request's context (headers, OIDC) ambient. Failures are
+    logged and retried on later invocations with capped backoff. After the
+    first success the hook is done — unless repeat_after_seconds is set, in
+    which case it becomes eligible again that long after each success,
+    still running only when a request arrives. Never a timer.
+    """
     if not name:
         msg = "invocation hook name must not be empty"
         raise ValueError(msg)
-    if min_interval_seconds is not None and min_interval_seconds <= 0:
-        msg = "min_interval_seconds must be greater than zero"
+    if repeat_after_seconds is not None and repeat_after_seconds <= 0:
+        msg = "repeat_after_seconds must be greater than zero"
         raise ValueError(msg)
 
     with _hooks_lock:
@@ -52,18 +60,19 @@ def register_invocation_hook(
         if existing is None:
             _hooks[name] = _InvocationHook(
                 callback=callback,
-                min_interval_seconds=min_interval_seconds,
+                repeat_after_seconds=repeat_after_seconds,
             )
             return
         if (
             existing.callback is not callback
-            or existing.min_interval_seconds != min_interval_seconds
+            or existing.repeat_after_seconds != repeat_after_seconds
         ):
             msg = f"invocation hook {name!r} is already registered differently"
             raise ValueError(msg)
 
 
-def schedule_invocation_hooks(wait_until: _WaitUntil) -> None:
+def attach_due_hooks(wait_until: _WaitUntil) -> None:
+    """Attach whatever hooks are due to the current invocation's drain."""
     now = monotonic()
     due: list[tuple[str, _InvocationHook]] = []
     with _hooks_lock:
@@ -91,11 +100,11 @@ async def _run_hook(name: str, hook: _InvocationHook) -> None:
                 hook.running = False
                 if succeeded:
                     hook.failures = 0
-                    if hook.min_interval_seconds is None:
+                    if hook.repeat_after_seconds is None:
                         hook.completed = True
                     else:
                         hook.next_run_at = (
-                            monotonic() + hook.min_interval_seconds
+                            monotonic() + hook.repeat_after_seconds
                         )
                 else:
                     hook.failures += 1
