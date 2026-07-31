@@ -73,6 +73,25 @@ const slugToFramework = new Map<string | null, Framework>(
   frameworkList.map(f => [f.slug, f])
 );
 
+/**
+ * Maps each builder name to the frameworks it handles.
+ */
+export const builderToFrameworks: ReadonlyMap<string, readonly Framework[]> =
+  (() => {
+    const map = new Map<string, Framework[]>();
+    for (const f of frameworkList) {
+      if (!f.useRuntime?.use) continue;
+      const builder = f.useRuntime.use;
+      const entry = map.get(builder);
+      if (entry) {
+        entry.push(f);
+      } else {
+        map.set(builder, [f]);
+      }
+    }
+    return map;
+  })();
+
 export interface ErrorResponse {
   code: string;
   message: string;

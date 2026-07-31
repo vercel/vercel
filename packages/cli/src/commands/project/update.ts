@@ -50,6 +50,12 @@ const buildSettingDefinitions = [
     autoDetect: 'output-directory',
     label: 'Output Directory',
   },
+  {
+    key: 'rootDirectory',
+    flag: '--root-directory',
+    autoDetect: 'root-directory',
+    label: 'Root Directory',
+  },
 ] as const;
 
 type BuildSettingDefinition = (typeof buildSettingDefinitions)[number];
@@ -63,6 +69,7 @@ interface ProjectSettingsUpdate {
   devCommand?: string | null;
   installCommand?: string | null;
   outputDirectory?: string | null;
+  rootDirectory?: string | null;
 }
 
 const settingOrder: readonly ProjectSettingKey[] = [
@@ -78,6 +85,7 @@ const settingLabels: Record<ProjectSettingKey, string> = {
   devCommand: 'Dev Command',
   installCommand: 'Install Command',
   outputDirectory: 'Output Directory',
+  rootDirectory: 'Root Directory',
 };
 
 function resolveFramework(input: string): Framework | undefined {
@@ -258,6 +266,7 @@ export default async function update(
   telemetry.trackCliOptionDevCommand(flags['--dev-command']);
   telemetry.trackCliOptionInstallCommand(flags['--install-command']);
   telemetry.trackCliOptionOutputDirectory(flags['--output-directory']);
+  telemetry.trackCliOptionRootDirectory(flags['--root-directory']);
   telemetry.trackCliOptionAutoDetect(
     flags['--auto-detect'] as [string] | undefined
   );
@@ -355,7 +364,7 @@ export default async function update(
   if (settingOrder.every(key => !hasSetting(requestedSettings, key))) {
     return printUsageError(
       client,
-      'Provide at least one setting option: --framework, --build-command, --dev-command, --install-command, --output-directory, or --auto-detect.',
+      'Provide at least one setting option: --framework, --build-command, --dev-command, --install-command, --output-directory, --root-directory, or --auto-detect.',
       2,
       'missing_arguments'
     );
