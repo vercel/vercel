@@ -67,7 +67,7 @@ function ruleMatchesTypes(rule: AlertRule, types: string[]): boolean {
 }
 
 function getRuleScope(rule: AlertRule): string {
-  return formatRuleScope(rule.projectId, {
+  return formatRuleScope(rule, {
     projectIdMaxLength: 24,
     filterMaxLength: 24,
   });

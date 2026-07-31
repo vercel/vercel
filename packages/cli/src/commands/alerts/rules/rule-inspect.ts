@@ -123,7 +123,7 @@ function printRule(rule: AlertRule, ruleId: string) {
   const summaryRows = [
     ['Name', rule.name || '-'],
     ...(rule.action === 'exclude' ? [['Action', rule.action]] : []),
-    ['Scope', formatRuleScope(rule.projectId)],
+    ['Scope', formatRuleScope(rule)],
     ...getAlertTypeRows(rule),
     ...(rule.isDefault !== undefined
       ? [['Default', formatBoolean(rule.isDefault)]]

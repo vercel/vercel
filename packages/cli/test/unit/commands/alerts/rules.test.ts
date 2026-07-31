@@ -148,34 +148,8 @@ describe('alerts rules', () => {
     );
   });
 
-  it('prints custom alert schema with metrics schema details', async () => {
-    client.scenario.get(
-      '/v2/observability/schema/vercel.request',
-      (_req, res) => {
-        res.json([
-          {
-            id: 'vercel.request.count',
-            description: 'Request count',
-            dimensions: [
-              { name: 'route', label: 'Route' },
-              { name: 'requestHostname', label: 'Request Hostname' },
-            ],
-            unit: 'count',
-            aggregations: ['sum', 'persecond'],
-            defaultAggregation: 'sum',
-          },
-        ]);
-      }
-    );
-
-    client.setArgv(
-      'alerts',
-      'rules',
-      'schema',
-      '--type',
-      'custom_alert',
-      'vercel.request'
-    );
+  it('prints reference-first schema for custom alert rules', async () => {
+    client.setArgv('alerts', 'rules', 'schema', '--type', 'custom_alert');
 
     const exitCode = await alerts(client);
 
@@ -187,18 +161,13 @@ describe('alerts rules', () => {
     expect(output).toContain(
       'Alert query event name, for example incomingRequest'
     );
-    expect(output).toContain(
-      'Selected project on add; stored rule project on update'
-    );
+    expect(output).toContain('scope');
+    expect(output).toContain('Project scope');
     expect(output).toContain('customAlert.queryJsonString before escaping');
     expect(output).toContain('Custom alert metric discovery');
-    expect(output).toContain('vercel metrics schema');
+    expect(output).toContain('vercel metrics schema <metric-or-prefix>');
     expect(output).toContain('vercel.function_invocation.count');
     expect(output).toContain('event: "serverlessFunctionInvocation"');
-    expect(output).toContain('Metric schema: vercel.request');
-    expect(output).toContain('vercel.request.count');
-    expect(output).toContain('sum (default), persecond');
-    expect(output).toContain('route, requestHostname');
   });
 
   it('prints alert rule schema as JSON', async () => {
@@ -304,8 +273,7 @@ describe('alerts rules', () => {
     expect(exitCode).toBe(0);
     const output = client.stderr.getFullOutput();
     expect(output).toContain('Very long custom alert rule name that wou...');
-    expect(output).toContain('project: Qmc52npNy86...BCQytkcgf2');
-    expect(output).not.toContain("projectId eq '");
+    expect(output).toContain("projectId e...CQytkcgf2'");
   });
 
   it('filters listed rules by alert type', async () => {
@@ -404,7 +372,7 @@ describe('alerts rules', () => {
     expect(output).toContain('Vercel Site');
     expect(output).toContain('ar_builtin');
     expect(output).toContain(
-      'project: Qmc52npNy86S8VV4Mt8a8dP1LEkRNbgosW3pBCQytkcgf2'
+      "projectId eq 'Qmc52npNy86S8VV4Mt8a8dP1LEkRNbgosW3pBCQytkcgf2'"
     );
     expect(output).toContain('Notifications');
     expect(output).toContain('Auto-subscribe owners');
@@ -517,6 +485,7 @@ describe('alerts rules', () => {
     expect(exitCode).toBe(0);
     const output = client.stderr.getFullOutput();
     expect(output).toContain('Checkout request volume');
+    expect(output).toContain('project: prj_alerts');
     expect(output).toContain('custom alert');
     expect(output).toContain('Custom Alert');
     expect(output).toContain('incoming request sum count by request hostname');
@@ -829,12 +798,25 @@ describe('alerts rules', () => {
     client.scenario.patch('/alerts/v2/alert-rules/:ruleId', (req, res) => {
       method = req.method;
       expect(req.params.ruleId).toBe('ar_x');
+      expect(req.body).toEqual({
+        name: 'patched',
+        projectId: null,
+        customAlert: {
+          minThreshold: null,
+        },
+      });
       res.json({ id: 'ar_x', name: 'patched' });
     });
 
     writeFileSync(
       join(tmpDir, 'patch.json'),
-      JSON.stringify({ name: 'patched' })
+      JSON.stringify({
+        name: 'patched',
+        projectId: null,
+        customAlert: {
+          minThreshold: null,
+        },
+      })
     );
     client.setArgv('alerts', 'rules', 'update', 'ar_x', '--body', 'patch.json');
 

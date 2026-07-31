@@ -66,7 +66,7 @@ export const rulesSchemaSubcommand = {
   name: 'schema',
   aliases: [],
   description: 'Show alert rule body schema and examples by alert type',
-  arguments: [{ name: 'metric-or-prefix', required: false }],
+  arguments: [],
   options: [
     {
       name: 'type',
@@ -91,10 +91,6 @@ export const rulesSchemaSubcommand = {
     {
       name: 'Show custom alert rule schema',
       value: `${packageName} alerts rules schema --type custom_alert`,
-    },
-    {
-      name: 'Show custom alert schema with metric details',
-      value: `${packageName} alerts rules schema --type custom_alert vercel.request`,
     },
     {
       name: 'Schema as JSON',
@@ -179,8 +175,7 @@ export const rulesRmSubcommand = {
 export const rulesUpdateSubcommand = {
   name: 'update',
   aliases: ['patch'],
-  description:
-    'Patch an alert rule from a JSON body file; custom queries retain the stored project scope when omitted',
+  description: 'Patch an alert rule from a JSON body file',
   arguments: [
     {
       name: 'ruleId',
@@ -197,7 +192,8 @@ export const rulesUpdateSubcommand = {
       type: String,
       argument: 'PATH',
       deprecated: false,
-      description: 'Path to JSON with fields to update (partial document).',
+      description:
+        'Path to partial JSON. Omitted fields remain unchanged; null clears supported optional fields.',
     },
   ],
   examples: [

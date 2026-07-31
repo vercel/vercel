@@ -4,13 +4,9 @@ import { parseArguments } from '../../../util/get-args';
 import { getFlagsSpecification } from '../../../util/get-flags-specification';
 import { printError } from '../../../util/error';
 import { validateJsonOutput } from '../../../util/output-format';
+import { outputError } from '../../../util/command-validation';
 import formatTable from '../../../util/format-table';
 import indent from '../../../util/output/indent';
-import getScope from '../../../util/get-scope';
-import { fetchMetricDetailOrExit } from '../../metrics/schema-api';
-import { formatErrorJson } from '../../metrics/output';
-import { formatMetricsTable } from '../../metrics/schema-format';
-import type { MetricDetail } from '../../metrics/types';
 import { rulesSchemaSubcommand } from './command';
 import { CUSTOM_ALERT_EVENT_HELP } from './schema-help';
 
@@ -38,7 +34,6 @@ type RuleTypeSchema = {
   queryJsonBeforeEscaping?: unknown;
   help?: string[];
   examples: SchemaExample[];
-  next?: string;
 };
 
 const RULE_TYPES: Array<{ type: RuleType; description: string }> = [
@@ -57,29 +52,39 @@ const RULE_TYPES: Array<{ type: RuleType; description: string }> = [
 ];
 
 const BUILT_IN_COMMON_FIELDS: SchemaField[] = [
-  ['name', 'yes', 'string', 'Rule name'],
-  ['alertTypes', 'yes', 'array', 'One or more alert type configs'],
-  ['projectId', 'no', 'string', 'OData project filter; omit for team-wide'],
-  ['autosubscribeOwnersInKnock', 'no', 'boolean', 'Subscribe project owners'],
-].map(([field, required, type, notes]) => ({
-  field,
-  required: required as 'yes' | 'no',
-  type,
-  notes,
-}));
+  field('name', 'yes', 'string', 'Rule name'),
+  field('alertTypes', 'yes', 'array', 'One or more alert type configs'),
+  field(
+    'projectId',
+    'no',
+    'string',
+    'OData project filter; omit for team-wide'
+  ),
+  field(
+    'autosubscribeOwnersInKnock',
+    'no',
+    'boolean',
+    'Subscribe project owners'
+  ),
+];
 
 const CUSTOM_ALERT_COMMON_FIELDS: SchemaField[] = [
-  ['name', 'yes', 'string', 'Rule name'],
-  ['projectId', 'no', 'string', 'Defaults to --project or the linked project'],
-  ['alertTypes', 'yes', 'array', 'One or more alert type configs'],
-  ['customAlert', 'yes', 'object', 'Custom alert definition'],
-  ['autosubscribeOwnersInKnock', 'no', 'boolean', 'Subscribe project owners'],
-].map(([field, required, type, notes]) => ({
-  field,
-  required: required as 'yes' | 'no',
-  type,
-  notes,
-}));
+  field('name', 'yes', 'string', 'Rule name'),
+  field(
+    'projectId',
+    'no',
+    'string',
+    'Defaults to --project or the linked project'
+  ),
+  field('alertTypes', 'yes', 'array', 'One or more alert type configs'),
+  field('customAlert', 'yes', 'object', 'Custom alert definition'),
+  field(
+    'autosubscribeOwnersInKnock',
+    'no',
+    'boolean',
+    'Subscribe project owners'
+  ),
+];
 
 const USAGE_METRICS = [
   'fluid_cpu_duration',
@@ -223,12 +228,7 @@ const SCHEMAS: Record<RuleType, RuleTypeSchema> = {
       field('customAlert.formula', 'no', 'object', 'Ratio formula'),
     ],
     queryJsonFields: [
-      field(
-        'scope',
-        'no',
-        'object',
-        'Selected project on add; stored rule project on update'
-      ),
+      field('scope', 'no', 'object', 'Project scope'),
       field(
         'event',
         'yes',
@@ -279,7 +279,6 @@ const SCHEMAS: Record<RuleType, RuleTypeSchema> = {
         },
       },
     ],
-    next: 'Run `vercel alerts rules schema --type custom_alert <metric-or-prefix>` to show allowed aggregations and dimensions from the metrics schema.',
   },
 };
 
@@ -306,13 +305,13 @@ export default async function schema(
 
   const jsonOutput = formatResult.jsonOutput;
   const ruleType = normalizeRuleType(parsedArgs.flags['--type']);
-  const metricOrPrefix = parsedArgs.args[0];
 
   if (!ruleType) {
     if (parsedArgs.flags['--type']) {
-      return printSchemaError(
+      return outputError(
         client,
         jsonOutput,
+        'INVALID_ARGUMENTS',
         `Invalid alert rule type "${String(parsedArgs.flags['--type'])}". Use usage_anomaly, error_anomaly, or custom_alert.`
       );
     }
@@ -333,33 +332,7 @@ export default async function schema(
     return 0;
   }
 
-  if (metricOrPrefix && ruleType !== 'custom_alert') {
-    return printSchemaError(
-      client,
-      jsonOutput,
-      'Metric or prefix arguments are only supported with --type custom_alert.'
-    );
-  }
-
-  const ruleSchema = SCHEMAS[ruleType];
-  if (!metricOrPrefix) {
-    printRuleSchema(client, ruleSchema, jsonOutput);
-    return 0;
-  }
-
-  const metricDetails = await fetchCustomAlertMetricDetails(
-    client,
-    metricOrPrefix,
-    jsonOutput
-  );
-  if (typeof metricDetails === 'number') {
-    return metricDetails;
-  }
-
-  printRuleSchema(client, ruleSchema, jsonOutput, {
-    metricOrPrefix,
-    metricDetails,
-  });
+  printRuleSchema(client, SCHEMAS[ruleType], jsonOutput);
   return 0;
 }
 
@@ -385,56 +358,13 @@ function normalizeRuleType(value: unknown): RuleType | undefined {
     : undefined;
 }
 
-async function fetchCustomAlertMetricDetails(
-  client: Client,
-  metricOrPrefix: string,
-  jsonOutput: boolean
-) {
-  const { team } = await getScope(client);
-  if (!team) {
-    const message =
-      'The metrics schema API request was not authorized. Run `vercel login` to authenticate and `vercel switch` to select a team, then try again.';
-    if (jsonOutput) {
-      client.stdout.write(formatErrorJson('SCHEMA_UNAUTHORIZED', message));
-    } else {
-      output.error(message);
-    }
-    return 1;
-  }
-
-  return fetchMetricDetailOrExit(client, team.id, metricOrPrefix, jsonOutput);
-}
-
-function printSchemaError(
-  client: Client,
-  jsonOutput: boolean,
-  message: string
-): number {
-  if (jsonOutput) {
-    client.stdout.write(formatErrorJson('INVALID_ARGUMENTS', message));
-  } else {
-    output.error(message);
-  }
-  return 1;
-}
-
 function printRuleSchema(
   client: Client,
   schema: RuleTypeSchema,
-  jsonOutput: boolean,
-  metricSchema?: { metricOrPrefix: string; metricDetails: MetricDetail[] }
+  jsonOutput: boolean
 ): void {
   if (jsonOutput) {
-    client.stdout.write(
-      `${JSON.stringify(
-        {
-          schema,
-          ...(metricSchema ? { metricSchema } : {}),
-        },
-        null,
-        2
-      )}\n`
-    );
+    client.stdout.write(`${JSON.stringify({ schema }, null, 2)}\n`);
     return;
   }
 
@@ -443,10 +373,12 @@ function printRuleSchema(
   printFieldSection('Fields', schema.fields);
 
   if (schema.alertTypeFilterValues) {
-    printSimpleSection(
-      'alertTypes[].filter values',
-      ['Field', 'Allowed values / examples'],
-      schema.alertTypeFilterValues
+    output.print('alertTypes[].filter values\n\n');
+    output.print(
+      `${formatRows(
+        ['Field', 'Allowed values / examples'],
+        schema.alertTypeFilterValues
+      )}\n\n`
     );
   }
 
@@ -469,25 +401,14 @@ function printRuleSchema(
   }
 
   if (schema.help) {
-    printParagraphSection('Custom alert metric discovery', schema.help);
-  }
-
-  if (metricSchema?.metricDetails) {
-    output.print(`Metric schema: ${metricSchema.metricOrPrefix}\n`);
-    const table = formatMetricsTable(metricSchema.metricDetails);
-    if (table) {
-      output.print(`${table}\n\n`);
-    }
+    output.print('Custom alert metric discovery\n\n');
+    output.print(`${indent(schema.help.join('\n'), 2)}\n\n`);
   }
 
   output.print('Body examples\n\n');
   for (const example of schema.examples) {
     output.print(`  ${example.name}\n\n`);
     output.print(`${indent(JSON.stringify(example.body, null, 2), 4)}\n\n`);
-  }
-
-  if (schema.next) {
-    output.print(`${schema.next}\n`);
   }
 }
 
@@ -504,20 +425,6 @@ function printFieldSection(title: string, fields: SchemaField[]): void {
       ])
     )}\n\n`
   );
-}
-
-function printSimpleSection(
-  title: string,
-  headers: string[],
-  rows: string[][]
-): void {
-  output.print(`${title}\n\n`);
-  output.print(`${formatRows(headers, rows)}\n\n`);
-}
-
-function printParagraphSection(title: string, lines: string[]): void {
-  output.print(`${title}\n\n`);
-  output.print(`${indent(lines.join('\n'), 2)}\n\n`);
 }
 
 function formatRows(headers: string[], rows: string[][]): string {
