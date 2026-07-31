@@ -401,8 +401,12 @@ export default async function processDeployment({
         ) {
           const primaryDomain = event.payload.alias[0];
           const prodUrl = `https://${primaryDomain}`;
+          if (anonymous) {
+            // Separates the URL from whatever the local build just printed.
+            output.print('\n');
+          }
           printAlignedLabel(
-            anonymous ? 'Production' : 'Aliased',
+            anonymous ? 'Temporary' : 'Aliased',
             chalk.cyan(prodUrl),
             {
               gutter: '▲',

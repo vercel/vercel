@@ -19,6 +19,7 @@ import chalk from 'chalk';
 import fs from 'fs-extra';
 import ms from 'ms';
 import { join, resolve } from 'path';
+import type * as tty from 'tty';
 import Now, { type CreateOptions } from '../../util';
 import type Client from '../../util/client';
 import { readLocalConfig } from '../../util/config/files';
@@ -1990,19 +1991,21 @@ async function handleDefaultDeploy(
   const { isAgent } = await determineAgent();
   const guidanceMode =
     (parsedArguments.flags['--guidance'] ?? isAgent) && !anonymousLink;
-  const exitCode = await printDeploymentStatus(
+  if (anonymousLink) {
+    output.print('\n');
+    log(
+      `This deployment expires in ${ms(anonymousLink.expiresAt - Date.now(), {
+        long: true,
+      })}. Claim it to keep it live: ${chalk.cyan(anonymousLink.claimUrl)}`
+    );
+  }
+  return await printDeploymentStatus(
     client,
     deployment,
     deployStamp,
     noWait,
     guidanceMode
   );
-  if (anonymousLink) {
-    log(
-      `You have ${ms(anonymousLink.expiresAt - Date.now(), { long: true })} to claim this deployment: ${chalk.cyan(anonymousLink.claimUrl)}`
-    );
-  }
-  return exitCode;
 }
 
 async function runImplicitBuild(client: Client, cwd: string): Promise<number> {
@@ -2013,21 +2016,33 @@ async function runImplicitBuild(client: Client, cwd: string): Promise<number> {
     await fs.outputJSON(projectJsonPath, { settings: {} }, { spaces: 2 });
   }
 
-  output.log(
-    `No prebuilt output found. Running ${getCommandName('build')} first…`
-  );
+  // Without a `package.json` the build only copies static files, so it is
+  // fast enough that announcing it is noise.
+  if (await fs.pathExists(join(cwd, 'package.json'))) {
+    output.log('Building your project locally…');
+  }
 
   const originalArgv = client.argv;
   const originalCwd = client.cwd;
+  const originalStdout = client.stdout;
+
   client.cwd = cwd;
   client.setArgv([...originalArgv.slice(0, 2), 'build', '--prod', '--yes']);
+  // The build's agent JSON payload would emit a second document on a stdout
+  // that must hold only the deploy's.
+  client.stdout = createSinkStream();
   try {
     const build = (await import('../build')).default;
     return await build(client);
   } finally {
     client.setArgv(originalArgv);
     client.cwd = originalCwd;
+    client.stdout = originalStdout;
   }
+}
+
+function createSinkStream(): tty.WriteStream {
+  return { isTTY: false, write: () => true } as unknown as tty.WriteStream;
 }
 
 function handleCreateDeployError(error: Error, localConfig: VercelConfig) {

@@ -100,7 +100,10 @@ describe('deploy [anonymous]', () => {
     expect(stderr).toContain('https://anon-app.vercel.app');
     expect(stderr).not.toContain('anon-app-abc.vercel.app');
     expect(stderr).not.toContain('Inspect');
-    expect(stderr).toMatch(/You have .* to claim this deployment/);
+    expect(stderr).toMatch(/Temporary\s+https:\/\/anon-app\.vercel\.app/);
+    expect(stderr).toMatch(
+      /This deployment expires in .*\. Claim it to keep it live: /
+    );
     expect(stderr).toContain(
       'https://vercel.com/claim-deployment?code=claim_dummy'
     );
@@ -267,7 +270,7 @@ describe('deploy [anonymous]', () => {
     expect(getBootstrapCalls()).toEqual(0);
     expect(requests[0].authorization).toEqual('Bearer vcn_sticky');
     expect(client.stderr.getFullOutput()).toMatch(
-      /You have .* to claim this deployment/
+      /This deployment expires in .*\. Claim it to keep it live: /
     );
   });
 
@@ -386,6 +389,7 @@ describe('deploy [anonymous]', () => {
     });
     const requests = mockDeploymentEndpoints();
     buildMock.mockImplementation(async () => {
+      client.stdout.write('{"status":"ok","message":"Build completed."}\n');
       const output = join(cwd, '.vercel/output');
       await fs.outputJSON(join(output, 'builds.json'), {
         target: 'production',
@@ -404,6 +408,9 @@ describe('deploy [anonymous]', () => {
 
     expect(exitCode).toEqual(0);
     expect(buildMock).toHaveBeenCalledTimes(1);
+    // The build's own agent payload must never reach the deploy's stdout: an
+    // agent reading it would find two JSON documents.
+    expect(client.stdout.getFullOutput()).not.toContain('Build completed.');
     expect(requests.length).toBeGreaterThan(0);
     expect(await fs.readJSON(join(cwd, '.vercel/project.json'))).toEqual({
       settings: {},

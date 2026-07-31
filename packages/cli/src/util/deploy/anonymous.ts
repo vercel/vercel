@@ -111,7 +111,7 @@ export async function ensureAnonymousLink(
       return 'refused';
     }
     await writeAnonymousState(cwd, state);
-    output.log('Deploying anonymously.');
+    output.log('Not authenticated. Deploying anonymously.');
   }
   client.authConfig = { token: state.token, skipWrite: true };
   // The anonymous token is the sole authority; a stray VERCEL_TEAM_ID would be
