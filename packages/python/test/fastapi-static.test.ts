@@ -433,4 +433,165 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     );
     expect(fs.existsSync(path.join(outputDir, 'assets', 'app.js'))).toBe(true);
   });
+
+  it('shadows an included route under a mounted sub-app prefix', async () => {
+    const appDir = path.join(testDir, 'bug-subapp-route');
+    fs.mkdirSync(path.join(appDir, 'data'), { recursive: true });
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import APIRouter, FastAPI',
+        'from fastapi.staticfiles import StaticFiles',
+        'router = APIRouter()',
+        '@router.get("/report")',
+        'def report():',
+        '    return "api"',
+        'sub = FastAPI()',
+        'sub.include_router(router, prefix="/data")',
+        'sub.mount("/data", StaticFiles(directory="data"), name="d")',
+        'app = FastAPI()',
+        'app.mount("/sub", sub)',
+      ].join('\n')
+    );
+
+    const { shadowRoutes } = await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    expect(shadowRoutes).toContain('sub/data/report');
+  });
+
+  it('uses the full prefix for a frontend inside a mounted sub-app', async () => {
+    const appDir = path.join(testDir, 'bug-subapp-frontend');
+    fs.mkdirSync(path.join(appDir, 'ui_dist'), { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'ui_dist', 'asset.txt'), 'ui');
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import APIRouter, FastAPI',
+        'fe = APIRouter()',
+        'fe.frontend("/ui", directory="ui_dist")',
+        'sub = FastAPI()',
+        'sub.include_router(fe, prefix="/inner")',
+        'app = FastAPI()',
+        'app.mount("/sub", sub)',
+      ].join('\n')
+    );
+
+    const { mounts } = await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    expect(mounts.map(m => m.urlPath)).toContain('/sub/inner/ui');
+  });
+
+  it('shadows a plain Starlette route inside an included APIRouter', async () => {
+    const appDir = path.join(testDir, 'bug-plain-route');
+    fs.mkdirSync(path.join(appDir, 'assets'), { recursive: true });
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import APIRouter, FastAPI',
+        'from fastapi.responses import PlainTextResponse',
+        'from fastapi.staticfiles import StaticFiles',
+        'from starlette.routing import Route',
+        'async def collision(request):',
+        '    return PlainTextResponse("route")',
+        'plain = APIRouter(routes=[Route("/assets/collision.txt", collision)])',
+        'app = FastAPI()',
+        'app.include_router(plain)',
+        'app.mount("/assets", StaticFiles(directory="assets"), name="a")',
+      ].join('\n')
+    );
+
+    const { shadowRoutes } = await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    expect(shadowRoutes).toContain('assets/collision\\.txt');
+  });
+
+  it('lets a StaticFiles mount win over a colliding frontend file', async () => {
+    const appDir = path.join(testDir, 'bug-copy-order');
+    const outDir = path.join(appDir, 'out');
+    fs.mkdirSync(path.join(appDir, 'static_dir'), { recursive: true });
+    fs.mkdirSync(path.join(appDir, 'frontend', 'static'), {
+      recursive: true,
+    });
+    fs.writeFileSync(path.join(appDir, 'static_dir', 'collision.txt'), 'MOUNT');
+    fs.writeFileSync(
+      path.join(appDir, 'frontend', 'static', 'collision.txt'),
+      'FRONTEND'
+    );
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'from fastapi.staticfiles import StaticFiles',
+        'app = FastAPI()',
+        'app.mount("/static", StaticFiles(directory="static_dir"), name="s")',
+        'app.frontend("/", directory="frontend")',
+      ].join('\n')
+    );
+
+    await runFastAPICollectStatic(
+      venvPath,
+      appDir,
+      pythonEnv,
+      outDir,
+      entrypointAbs,
+      'app'
+    );
+
+    const served = fs.readFileSync(
+      path.join(outDir, 'static', 'collision.txt'),
+      'utf8'
+    );
+    expect(served).toBe('MOUNT');
+  });
+
+  it('does not copy a frontend file into a mounted sub-app subtree', async () => {
+    const appDir = path.join(testDir, 'bug-frontend-hijack');
+    const outDir = path.join(appDir, 'out');
+    fs.mkdirSync(path.join(appDir, 'frontend', 'api'), { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'frontend', 'api', 'hijack.txt'), 'x');
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'sub = FastAPI()',
+        'app = FastAPI()',
+        'app.mount("/api", sub)',
+        'app.frontend("/", directory="frontend")',
+      ].join('\n')
+    );
+
+    await runFastAPICollectStatic(
+      venvPath,
+      appDir,
+      pythonEnv,
+      outDir,
+      entrypointAbs,
+      'app'
+    );
+
+    expect(fs.existsSync(path.join(outDir, 'api', 'hijack.txt'))).toBe(false);
+  });
 });

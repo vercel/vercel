@@ -142,3 +142,31 @@ describe('fastapiFallbackRoutes', () => {
     expect(route.src).toBe('^/app/(?!(?:a\\.b)(?:/|$)).*$');
   });
 });
+
+it('shadow route covers a route path with a trailing slash', () => {
+  const [route] = fastapiShadowingRoutes(
+    discovery({ shadowRoutes: ['foo'] }),
+    'api/index'
+  );
+  expect(new RegExp(route.src).test('/foo/')).toBe(true);
+});
+
+it('root fallback excludes a mounted sub-app subtree', () => {
+  const [route] = fastapiFallbackRoutes(
+    discovery({
+      collectedMounts: ['/static'],
+      fallbacks: [{ urlPath: '/', file: 'index.html', status: 200 }],
+    })
+  );
+  expect(new RegExp(route.src).test('/api/missing')).toBe(false);
+});
+
+it('navigation Accept gate rejects an explicit q=0', () => {
+  const [route] = fastapiFallbackRoutes(
+    discovery({
+      fallbacks: [{ urlPath: '/', file: 'index.html', status: 200 }],
+    })
+  );
+  const accept = (route as { has?: { value: string }[] }).has?.[0]?.value ?? '';
+  expect(new RegExp(accept).test('text/html;q=0')).toBe(false);
+});
