@@ -1996,7 +1996,9 @@ async function handleDefaultDeploy(
     log(
       `This deployment expires in ${ms(anonymousLink.expiresAt - Date.now(), {
         long: true,
-      })}. Claim it to keep it live: ${chalk.cyan(anonymousLink.claimUrl)}`
+      })}. Claim it to keep it live (don't share this link): ${chalk.cyan(
+        anonymousLink.claimUrl
+      )}`
     );
   }
   return await printDeploymentStatus(

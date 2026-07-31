@@ -102,7 +102,7 @@ describe('deploy [anonymous]', () => {
     expect(stderr).not.toContain('Inspect');
     expect(stderr).toMatch(/Temporary\s+https:\/\/anon-app\.vercel\.app/);
     expect(stderr).toMatch(
-      /This deployment expires in .*\. Claim it to keep it live: /
+      /This deployment expires in .*\. Claim it to keep it live \(don't share this link\): /
     );
     expect(stderr).toContain(
       'https://vercel.com/claim-deployment?code=claim_dummy'
@@ -270,7 +270,7 @@ describe('deploy [anonymous]', () => {
     expect(getBootstrapCalls()).toEqual(0);
     expect(requests[0].authorization).toEqual('Bearer vcn_sticky');
     expect(client.stderr.getFullOutput()).toMatch(
-      /This deployment expires in .*\. Claim it to keep it live: /
+      /This deployment expires in .*\. Claim it to keep it live \(don't share this link\): /
     );
   });
 
