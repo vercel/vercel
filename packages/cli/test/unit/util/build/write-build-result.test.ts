@@ -6,6 +6,7 @@ import {
   FileFsRef,
   getWriteableDirectory,
   Lambda,
+  Prerender,
   type BuilderV2,
   type BuilderV3,
 } from '@vercel/build-utils';
@@ -154,6 +155,81 @@ describe('writeBuildResult()', () => {
         maxConcurrency: 8,
         regions: ['iad1'],
       });
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
+
+  it('writes prerenderClassification to .prerender-config.json', async () => {
+    const workPath = await getWriteableDirectory();
+    const outputDir = join(workPath, '.vercel', 'output');
+    const build = {
+      src: 'index.js',
+      use: '@vercel/node',
+      config: { zeroConfig: true },
+    };
+    const runtimeBuilder: BuilderV2 = {
+      version: 2,
+      build: async () => {
+        throw new Error('not used by writeBuildResult');
+      },
+    };
+    const lambda = new Lambda({
+      files: {
+        'index.js': new FileBlob({ data: 'module.exports = {}' }),
+      },
+      handler: 'index.handler',
+      runtime: 'nodejs22.x',
+    });
+    const prerenderClassification = {
+      routeType: 'shell',
+      response: 'initial',
+      compute: 'resuming',
+      htmlSize: 5491,
+    } as const;
+
+    try {
+      await writeBuildResult({
+        repoRootPath: workPath,
+        outputDir,
+        buildResult: {
+          output: {
+            classified: new Prerender({
+              expiration: 1,
+              fallback: null,
+              lambda,
+              bypassToken: 'some-long-bypass-token-to-make-it-work',
+              prerenderClassification,
+            }),
+            // A route Next.js declined to classify (`notFoundRoutes`, Pages
+            // Router `fallback: false`) must not gain an empty group.
+            unclassified: new Prerender({
+              expiration: 1,
+              fallback: null,
+              lambda,
+              bypassToken: 'some-long-bypass-token-to-make-it-work',
+            }),
+          },
+        },
+        build,
+        builder: runtimeBuilder,
+        builderPkg: { name: '@vercel/node' },
+        vercelConfig: null,
+        standalone: false,
+        workPath,
+      });
+
+      const classified = await fs.readJSON(
+        join(outputDir, 'functions/classified.prerender-config.json')
+      );
+      expect(classified.prerenderClassification).toEqual(
+        prerenderClassification
+      );
+
+      const unclassified = await fs.readJSON(
+        join(outputDir, 'functions/unclassified.prerender-config.json')
+      );
+      expect(unclassified).not.toHaveProperty('prerenderClassification');
     } finally {
       await fs.remove(workPath);
     }
