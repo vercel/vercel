@@ -773,10 +773,11 @@ export async function resolveGitConnectIntent(
     const skipPrompts = autoConfirm || client.nonInteractive;
 
     // Disclose the root directory before the answer, so accepting is not a
-    // silent project-settings change.
+    // silent project-settings change. Phrased conditionally: declining leaves
+    // the setting untouched and falls back to asking for a root directory.
     if (!skipPrompts && rootDirectory) {
       output.log(
-        `Root Directory will be set to ${chalk.cyan(rootDirectory)} to match the directory you are linking.`
+        `Connecting will set the Root Directory to ${chalk.cyan(rootDirectory)} to match the directory you are linking.`
       );
     }
 

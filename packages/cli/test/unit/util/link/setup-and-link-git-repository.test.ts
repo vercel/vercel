@@ -308,7 +308,38 @@ describe('connectGitRepository()', () => {
       confirm.mock.invocationCallOrder[0]
     );
 
+    // The disclosure precedes the answer, so it must be conditional: declining
+    // leaves the Root Directory unset. Asserting no unconditional "will be set".
+    expect(String(disclosure?.[0])).not.toMatch(/Root Directory will be set/);
+
     logSpy.mockRestore();
+  });
+
+  it('should not apply the root directory when the connection is declined', async () => {
+    const { resolveGitConnectIntent } = await import(
+      '../../../../src/util/link/setup-and-link'
+    );
+
+    vi.mocked(findRepoRoot).mockResolvedValue('/repo');
+    vi.mocked(parseGitConfig).mockResolvedValue({
+      remote: { origin: { url: 'https://github.com/user/repo.git' } },
+    });
+    vi.mocked(pluckRemoteUrls).mockReturnValue({
+      origin: 'https://github.com/user/repo.git',
+    });
+
+    client.input.confirm = vi.fn().mockResolvedValue(false);
+
+    const intent = await resolveGitConnectIntent(
+      client,
+      '/repo/apps/web',
+      false
+    );
+
+    // A null intent means the caller neither connects the repo nor sets
+    // `settings.rootDirectory`, and the root-directory prompt stays enabled.
+    expect(intent).toBeNull();
+    expect(vi.mocked(checkExistsAndConnect)).not.toHaveBeenCalled();
   });
 
   it('should return early when the path is not in a git repository', async () => {
