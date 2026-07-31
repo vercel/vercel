@@ -2,6 +2,8 @@ import { normalizePackageName, parsePep508 } from '@vercel/python-analysis';
 import type { PythonPackage } from '@vercel/python-analysis';
 
 type InjectedPackageName =
+  | 'vercel-apscheduler'
+  | 'vercel-apscheduler-bundle'
   | 'vercel-celery'
   | 'vercel-celery-bundle'
   | 'vercel-dramatiq'
@@ -17,6 +19,22 @@ const UPSTREAM_DEPENDENCY_ADAPTERS = new Map<
     integration: QueueIntegration;
   }
 >([
+  [
+    'apscheduler',
+    {
+      bundled: 'vercel-apscheduler-bundle',
+      unbundled: 'vercel-apscheduler',
+      envOverride: 'VERCEL_PYTHON_APSCHEDULER_DEPENDENCY',
+      preferUnbundledWhenPresent: ['vercel-queue'],
+      integration: {
+        module: 'vercel.integrations.apscheduler',
+        installer: 'install_vercel_apscheduler_integration',
+        // APScheduler jobs are declared while the subscriber module imports.
+        // Install first so the adapter can capture those definitions.
+        installBeforeImport: true,
+      },
+    },
+  ],
   [
     'celery',
     {
@@ -75,8 +93,8 @@ export interface QueueIntegration {
 
 /**
  * Queue adapter integrations required by the project's direct
- * dependencies. Activation is keyed on the upstream dependency (celery,
- * dramatiq, …) being declared by the project — the integration package
+ * dependencies. Activation is keyed on the upstream dependency (APScheduler,
+ * Celery, Dramatiq, …) being declared by the project — the integration package
  * itself may be conditionally injected or declared directly. Failing to
  * import or install a required integration is a hard error for the
  * callers emitting activation code.

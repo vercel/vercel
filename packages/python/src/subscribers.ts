@@ -23,6 +23,7 @@ import type { QueueIntegration } from './conditional-vendoring';
 // producing the same `_py_subscribers/...`-based names to retain their
 // queue consumer-group positions.
 const SUBSCRIBER_OUTPUT_DIR = '_py_subscribers';
+const SUBSCRIBER_ID_ENV = 'VERCEL_PYTHON_SUBSCRIBER_ID';
 
 type SubscriberTriggerDefaults = Omit<
   TriggerEvent,
@@ -364,8 +365,10 @@ export function createQueueHandlerModule(
 ): string {
   return [
     'import importlib',
+    'import os',
     'import vercel.queue',
     '',
+    `os.environ[${JSON.stringify(SUBSCRIBER_ID_ENV)}] = ${JSON.stringify(declaration.name)}`,
     ...createIntegrationInstallLines(integrations, {
       serving: true,
       beforeImport: true,
@@ -543,16 +546,18 @@ function parseTopicPatterns(
  * explicitly. None values are dropped rather than emitted as JSON null.
  */
 function createQueueIntrospectionScript(
-  moduleName: string,
+  declaration: Pick<SubscriberDeclaration, 'moduleName' | 'name'>,
   integrations: QueueIntegration[]
 ): string {
   return [
-    'import importlib, json, sys',
+    'import importlib, json, os, sys',
+    `os.environ[${JSON.stringify(SUBSCRIBER_ID_ENV)}] = ${JSON.stringify(declaration.name)}`,
+    'os.environ["VERCEL_APSCHEDULER_DISCOVERY"] = "1"',
     ...createIntegrationInstallLines(integrations, {
       serving: false,
       beforeImport: true,
     }),
-    `importlib.import_module(${JSON.stringify(moduleName)})`,
+    `importlib.import_module(${JSON.stringify(declaration.moduleName)})`,
     ...createIntegrationInstallLines(integrations, {
       serving: false,
       beforeImport: false,
@@ -588,10 +593,7 @@ async function introspectQueueSubscriptions({
   kind: 'subscriber' | 'workflow';
   integrations: QueueIntegration[];
 }): Promise<SubscriberSubscription[]> {
-  const script = createQueueIntrospectionScript(
-    declaration.moduleName,
-    integrations
-  );
+  const script = createQueueIntrospectionScript(declaration, integrations);
 
   try {
     const { stdout } = await uv.run({
@@ -632,12 +634,14 @@ async function introspectQueueSubscriptions({
  */
 export async function introspectDevQueueSubscriptions({
   moduleName,
+  subscriberName,
   pythonBin,
   cwd,
   env,
   integrations,
 }: {
   moduleName: string;
+  subscriberName: string;
   pythonBin: string;
   cwd: string;
   env: NodeJS.ProcessEnv;
@@ -646,7 +650,13 @@ export async function introspectDevQueueSubscriptions({
   try {
     const { stdout } = await execa(
       pythonBin,
-      ['-c', createQueueIntrospectionScript(moduleName, integrations)],
+      [
+        '-c',
+        createQueueIntrospectionScript(
+          { moduleName, name: subscriberName },
+          integrations
+        ),
+      ],
       // Match the deployed-function environment (see
       // introspectQueueSubscriptions): SDKs may need VERCEL=1,
       // VERCEL_REGION, and VERCEL_DEPLOYMENT_ID to register subscriptions.
@@ -778,3 +788,4 @@ function subscriberError(message: string): NowBuildError {
     message,
   });
 }
+

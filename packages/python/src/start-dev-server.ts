@@ -55,14 +55,28 @@ import {
   getQueueIntegrations,
   type QueueIntegration,
 } from './conditional-vendoring';
-import { introspectDevQueueSubscriptions } from './subscribers';
+import {
+  getPyprojectSubscribers,
+  introspectDevQueueSubscriptions,
+} from './subscribers';
 import {
   isLegacyWorkersProject,
   isQueueWorkflowSdkVersion,
   queryPythonVercelSdkVersion,
 } from './sdk-detection';
+import { getModuleEntrypointName } from './module-entrypoint';
 
 const DEV_SERVER_STARTUP_TIMEOUT = 5 * 60_000; // 5 minutes
+
+function serializeQueueIntegrations(integrations: QueueIntegration[]): string {
+  return integrations
+    .map(
+      ({ module, installer, servingActivator }) =>
+        `${module}:${installer}` +
+        (servingActivator ? `:${servingActivator}` : '')
+    )
+    .join(',');
+}
 
 // Silence all Node.js warnings during the dev server lifecycle to avoid noise and only show the python logs.
 // Specifically, this is implemented to silence the [DEP0060] DeprecationWarning warning from the http-proxy library.
@@ -911,9 +925,9 @@ export const startDevServer: StartDevServer = async opts => {
       devOpts
     );
 
-    // Mirror the build-time conditional adapter injection (celery/dramatiq →
-    // vercel-celery(-bundle)/vercel-dramatiq(-bundle)) so modules importing
-    // `vercel.integrations.*` resolve in dev too. Legacy vercel-workers
+    // Mirror build-time conditional adapter injection for APScheduler, Celery,
+    // and Dramatiq so modules importing `vercel.integrations.*` resolve in dev
+    // too. Legacy vercel-workers
     // projects use the legacy integration instead — injecting or activating
     // the vercel-queue adapters there would install competing transports.
     const legacyProject = await isLegacyWorkersProject(workPath);
@@ -926,17 +940,11 @@ export const startDevServer: StartDevServer = async opts => {
       queueIntegrations = legacyProject
         ? []
         : await getQueueIntegrations({ pythonPackage });
-      // Any function of the project may publish through an adapter's
-      // transport, so the runtime activates the required integrations at
-      // startup in every dev process; activation failures are hard errors.
+      // Activate every detected adapter through the same runtime path. Queue
+      // registration remains disabled outside queue-serving sidecars.
       if (queueIntegrations.length > 0) {
-        env.VERCEL_QUEUE_INTEGRATIONS = queueIntegrations
-          .map(
-            ({ module, installer, servingActivator }) =>
-              `${module}:${installer}` +
-              (servingActivator ? `:${servingActivator}` : '')
-          )
-          .join(',');
+        env.VERCEL_QUEUE_INTEGRATIONS =
+          serializeQueueIntegrations(queueIntegrations);
       } else {
         delete env.VERCEL_QUEUE_INTEGRATIONS;
       }
@@ -962,6 +970,51 @@ export const startDevServer: StartDevServer = async opts => {
           err instanceof Error ? err.message : String(err)
         }`
       );
+    }
+
+    const apschedulerSubscribers: {
+      id: string;
+      entrypoint: string;
+    }[] = [];
+    if (!legacyProject) {
+      const runtimeDir = join(workPath, '.vercel', 'python');
+      const declaredSubscribers = await getPyprojectSubscribers(workPath);
+      const introspectionEnv: NodeJS.ProcessEnv = {
+        ...env,
+        PYTHONPATH: [runtimeDir, env.PYTHONPATH]
+          .filter(Boolean)
+          .join(delimiter),
+      };
+      delete introspectionEnv.VERCEL_APSCHEDULER_SUBSCRIBERS;
+      for (const declaration of declaredSubscribers) {
+        const discovered = await introspectDevQueueSubscriptions({
+          moduleName: declaration.moduleName,
+          subscriberName: declaration.name,
+          pythonBin: spawnCommand,
+          cwd: workPath,
+          env: introspectionEnv,
+          integrations: queueIntegrations,
+        });
+        const topics = new Set(
+          (discovered ?? []).map(subscription => subscription.topic)
+        );
+        if (
+          topics.has(`__aps_${declaration.name}_start`) &&
+          topics.has(`__aps_${declaration.name}_wakeup`)
+        ) {
+          apschedulerSubscribers.push({
+            id: declaration.name,
+            entrypoint: `${declaration.moduleName}:${declaration.variableName}`,
+          });
+        }
+      }
+    }
+    if (apschedulerSubscribers.length > 0) {
+      env.VERCEL_APSCHEDULER_SUBSCRIBERS = JSON.stringify(
+        apschedulerSubscribers
+      );
+    } else {
+      delete env.VERCEL_APSCHEDULER_SUBSCRIBERS;
     }
 
     // Legacy vercel-workers projects run every dev process on the injected
@@ -1010,26 +1063,37 @@ export const startDevServer: StartDevServer = async opts => {
 
       if (useQueueServing) {
         env.VERCEL_DEV_QUEUE_SERVING = '1';
+        env.VERCEL_QUEUE_INTEGRATIONS =
+          serializeQueueIntegrations(queueIntegrations);
+        const subscriberName = getModuleEntrypointName({
+          moduleName: modulePath,
+          variableName: variableName || 'app',
+        });
+        env.VERCEL_PYTHON_SUBSCRIBER_ID = subscriberName;
         // The vercel-queue SDK dispatches deliveries by the registered
         // (consumer group, topic) pair, so the dev queue broker must
         // deliver with the SDK-registered consumer groups. Introspect them
         // the same way the build does. Conditional adapters live in
         // .vercel/python, so put it on the interpreter's path.
         const runtimeDir = join(workPath, '.vercel', 'python');
+        const introspectionEnv: NodeJS.ProcessEnv = {
+          ...env,
+          PYTHONPATH: [runtimeDir, env.PYTHONPATH]
+            .filter(Boolean)
+            .join(delimiter),
+        };
+        delete introspectionEnv.VERCEL_APSCHEDULER_SUBSCRIBERS;
         queueSubscriptions = await introspectDevQueueSubscriptions({
           moduleName: modulePath,
+          subscriberName,
           pythonBin: spawnCommand,
           cwd: workPath,
-          env: {
-            ...env,
-            PYTHONPATH: [runtimeDir, env.PYTHONPATH]
-              .filter(Boolean)
-              .join(delimiter),
-          },
+          env: introspectionEnv,
           integrations: queueIntegrations,
         });
       } else {
         delete env.VERCEL_DEV_QUEUE_SERVING;
+        delete env.VERCEL_PYTHON_SUBSCRIBER_ID;
         await installInjectedDevPackage(
           {
             name: 'vercel-workers',
