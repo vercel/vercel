@@ -69,7 +69,9 @@ afterAll(() => {
 });
 
 function rel(paths: Set<string>): string[] {
-  return [...paths].map(p => path.relative(tmpDir, p)).sort();
+  return [...paths]
+    .map(p => path.relative(tmpDir, p).split(path.sep).join('/'))
+    .sort();
 }
 
 describe('extractImports', () => {
@@ -131,6 +133,35 @@ describe('collectImportClosure', () => {
       'venv/site-packages/vendor_pkg/deep/__init__.py',
       'venv/site-packages/vendor_pkg/deep/mod.py',
       'venv/site-packages/vendor_pkg/thing.py',
+    ]);
+  });
+
+  it('resolves the longest importable prefix of object-path seeds', async () => {
+    write('app/myapp/__init__.py', '');
+    write('app/myapp/apps.py', '');
+
+    const { files } = await collectImportClosure({
+      seeds: ['myapp.apps.MyAppConfig'],
+      searchRoots: [appRoot, sitePackages],
+    });
+
+    expect(rel(files)).toEqual(['app/myapp/__init__.py', 'app/myapp/apps.py']);
+  });
+
+  it('prefers a package over a same-named module file', async () => {
+    write('app/collision.py', 'import module_winner\n');
+    write('app/collision/__init__.py', 'import package_winner\n');
+    write('app/module_winner.py', '');
+    write('app/package_winner.py', '');
+
+    const { files } = await collectImportClosure({
+      seeds: ['collision'],
+      searchRoots: [appRoot],
+    });
+
+    expect(rel(files)).toEqual([
+      'app/collision/__init__.py',
+      'app/package_winner.py',
     ]);
   });
 

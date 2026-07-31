@@ -8,7 +8,7 @@
  * compiled extensions) still ship from the residual capacity tier.
  *
  * Resolution semantics mirror CPython:
- * - dotted name -> `a/b.py` | `a/b/__init__.py` | PEP 420 namespace dir
+ * - dotted name -> `a/b/__init__.py` | `a/b.py` | PEP 420 namespace dir
  * - importing `a.b.c` executes every parent `__init__.py` (emitted + recursed)
  * - `from a import b` probes `b` as a submodule of `a`
  * - relative imports resolve against the importer's package by dot level
@@ -54,8 +54,8 @@ export async function extractImports(source: string): Promise<ImportStmt[]> {
 export interface ImportClosureOptions {
   /**
    * Entry points of the closure: absolute `.py` file paths and/or dotted
-   * module names (e.g. Django's ROOT_URLCONF / INSTALLED_APPS strings),
-   * resolved against searchRoots.
+   * module or object names (e.g. Django's ROOT_URLCONF / INSTALLED_APPS
+   * strings), resolved to their longest importable prefix against searchRoots.
    */
   seeds: string[];
   /**
@@ -113,14 +113,14 @@ async function resolveNameParts(
   for (const root of searchDirs) {
     let target: string | null = null;
     let targetKind: FsKind = null;
-    const candidateModule = join(root, `${rel}.py`);
-    if ((await statKind(candidateModule)) === 'file') {
-      target = candidateModule;
+    const candidateInit = join(root, rel, '__init__.py');
+    if ((await statKind(candidateInit)) === 'file') {
+      target = candidateInit;
       targetKind = 'file';
     } else {
-      const candidateInit = join(root, rel, '__init__.py');
-      if ((await statKind(candidateInit)) === 'file') {
-        target = candidateInit;
+      const candidateModule = join(root, `${rel}.py`);
+      if ((await statKind(candidateModule)) === 'file') {
+        target = candidateModule;
         targetKind = 'file';
       } else if ((await statKind(join(root, rel))) === 'dir') {
         target = join(root, rel);
@@ -139,6 +139,18 @@ async function resolveNameParts(
       }
       return { target, targetKind, parentChain };
     }
+  }
+  return null;
+}
+
+/** Resolve a seed that may end in an object name rather than a module. */
+async function resolveSeedName(
+  parts: string[],
+  searchDirs: string[]
+): Promise<ResolvedName | null> {
+  for (let length = parts.length; length > 0; length--) {
+    const resolved = await resolveNameParts(parts.slice(0, length), searchDirs);
+    if (resolved) return resolved;
   }
   return null;
 }
@@ -236,7 +248,7 @@ export async function collectImportClosure({
 
   for (const seed of seeds) {
     if (isModuleNameSeed(seed)) {
-      const name = await resolveNameParts(seed.split('.'), roots);
+      const name = await resolveSeedName(seed.split('.'), roots);
       if (name) {
         if (name.targetKind === 'file') frontier.push(name.target);
         frontier.push(...name.parentChain);

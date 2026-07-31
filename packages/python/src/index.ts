@@ -137,6 +137,7 @@ import {
   WORKFLOW_TOPIC_PATTERN,
   type PyprojectWorkflow,
 } from './workflows';
+import { getImportClosureOptions } from './import-closure';
 
 const writeFile = fs.promises.writeFile;
 const PYTHON_ENTRYPOINT_DOCS_URL =
@@ -1540,15 +1541,20 @@ export const build: BuildVX = async ({
       const getImportClosureKeys = (): Promise<Set<string> | undefined> => {
         importClosurePromise ??= (async () => {
           try {
-            const seeds = [
-              ...(entrypoint ? [join(workPath, entrypoint)] : []),
-              ...importSeeds,
-            ];
             const sitePackageDirs = installedDistributions.getSitePackageDirs();
-            const closure = await collectImportClosure({
-              seeds,
-              searchRoots: [workPath, ...sitePackageDirs],
-            });
+            const closure = await collectImportClosure(
+              getImportClosureOptions({
+                workPath,
+                entrypoint,
+                frameworkSeeds: importSeeds,
+                extraPythonPath: hookResult?.extraPythonPath,
+                subscriberDeclarations,
+                subscribers,
+                workflows,
+                workflowMode,
+                sitePackageDirs,
+              })
+            );
             const keys = moduleKeysForClosurePaths(
               closure.files,
               workPath,
