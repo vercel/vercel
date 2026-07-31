@@ -682,6 +682,20 @@ describe('[vercel dev] Multi-service with experimentalServicesV2', () => {
       const withPathJson = await withPath.json();
       expect(withPathJson).toHaveProperty('received_path', '/svc/echo');
 
+      // per-service rewrites are applied to the proxied path
+      const stripped = await nodeFetch(
+        `http://localhost:${port}/api/strip/echo?foo=bar`
+      );
+      validateResponseHeaders(stripped);
+      expect(stripped.status).toBe(200);
+      expect(stripped.headers.get('x-backend-service')).toBe('backend');
+      const strippedJson = await stripped.json();
+      expect(strippedJson).toMatchObject({
+        service: 'backend',
+        received_path: '/echo',
+        received_query: 'foo=bar',
+      });
+
       // top-level + per-service rewrites redirect
       const redirect = await nodeFetch(`http://localhost:${port}/api/old`, {
         redirect: 'manual',

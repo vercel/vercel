@@ -10,6 +10,19 @@ import type {
   UpdateFlagRequest,
 } from '../../src/util/flags/types';
 
+type FlagWithMockEtag = Flag & {
+  etag?: string;
+  ifMatch?: string;
+};
+
+function getFlagEtag(flag: FlagWithMockEtag): string {
+  return flag.etag ?? `"${flag.id}-${flag.revision}"`;
+}
+
+function getExpectedIfMatch(flag: FlagWithMockEtag): string {
+  return flag.ifMatch ?? getFlagEtag(flag);
+}
+
 export const defaultFlagSettings: FlagSettings = {
   typeName: 'settings',
   projectId: 'vercel-flags-test',
@@ -424,7 +437,18 @@ export function useFlags(
         f => f.id === flagIdOrSlug || f.slug === flagIdOrSlug
       );
       if (flag) {
-        res.json(flag);
+        const etag = getFlagEtag(flag as FlagWithMockEtag);
+        if (etag) {
+          res.setHeader('ETag', etag);
+          res.json(flag);
+        } else {
+          // Express auto-generates a weak ETag inside res.json() whenever the
+          // header is unset, so write the body directly to simulate a server
+          // that omits the ETag header (a flag with `etag: ''` opts in).
+          res.status(200);
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(flag));
+        }
       } else {
         res.status(404).json({ error: { message: 'Flag not found' } });
       }
@@ -471,6 +495,21 @@ export function useFlags(
       if (flagIndex !== -1) {
         onUpdateFlag?.(req.body as UpdateFlagRequest);
         const flag = flagsList[flagIndex];
+        const ifMatch = req.headers['if-match'];
+        const expectedIfMatch = getExpectedIfMatch(flag as FlagWithMockEtag);
+
+        if (
+          ifMatch &&
+          (Array.isArray(ifMatch) ? ifMatch[0] : ifMatch) !== expectedIfMatch
+        ) {
+          res.status(412).json({
+            error: {
+              message: 'Precondition Failed',
+            },
+          });
+          return;
+        }
+
         const updatedFlag = {
           ...flag,
           ...req.body,
@@ -494,6 +533,7 @@ export function useFlags(
           }
         }
         flagsList[flagIndex] = updatedFlag;
+        res.setHeader('ETag', getFlagEtag(updatedFlag as FlagWithMockEtag));
         res.json(updatedFlag);
       } else {
         res.status(404).json({ error: { message: 'Flag not found' } });

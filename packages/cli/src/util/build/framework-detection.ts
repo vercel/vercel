@@ -3,7 +3,7 @@ import {
   detectFrameworkRecord,
   detectFrameworks,
 } from '@vercel/fs-detectors';
-import { frameworkList } from '@vercel/frameworks';
+import { frameworkList, type Framework } from '@vercel/frameworks';
 import { debug as builderDebug } from '@vercel/build-utils';
 import output from '../../output-manager';
 
@@ -107,11 +107,14 @@ export async function detectFirstDeploymentFramework(options: {
 }
 
 /** Detect all frameworks matching the source at `workPath`, returning slugs. */
-export async function detectAllFrameworks(workPath: string): Promise<string[]> {
+export async function detectAllFrameworks(
+  workPath: string,
+  customFrameworkList?: readonly Framework[]
+): Promise<string[]> {
   logDebug(`Framework cross-check: detecting frameworks at "${workPath}"`);
   const frameworks = await detectFrameworks({
     fs: new LocalFileSystemDetector(workPath),
-    frameworkList,
+    frameworkList: customFrameworkList ?? frameworkList,
   });
   const slugs = frameworks
     .map(f => f.slug)

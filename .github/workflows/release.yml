@@ -48,7 +48,10 @@ jobs:
   binary:
     name: Binary release
     needs: determine
-    if: needs.determine.outputs.should-release-binary == 'true'
+    # Temporarily disabled: skip binary publishing for now.
+    # To re-enable, restore the original condition:
+    # if: needs.determine.outputs.should-release-binary == 'true'
+    if: false
     # Reusable workflow permissions are capped by the calling job, so
     # id-token: write must be granted here for npm trusted publishing
     # (OIDC) in the publish-npm job of release-binary.yml to work.
@@ -146,6 +149,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          # While the binary job is disabled, publish `vercel` without native
+          # optionalDependencies instead of failing the missing-natives guard
+          # in utils/inject-native-optional-deps.mjs. Remove this when the
+          # binary job is re-enabled.
+          VERCEL_SKIP_NATIVE_DEPS: ${{ needs.binary.result == 'skipped' && '1' || '' }}
 
       # TODO: re-enable with a new bot token or GitHub App
       # - name: Trigger Update (if a Publish Happened)
