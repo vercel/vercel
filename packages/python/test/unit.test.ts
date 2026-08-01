@@ -95,10 +95,12 @@ import {
 import { getWorkflowOutputPath } from '../src/workflows';
 import {
   FileBlob,
+  FileFsRef,
   Span,
   download,
   sanitizeConsumerName,
 } from '@vercel/build-utils';
+import { derivePycPath } from '../src/compileall';
 import { getServiceCrons } from '../src/crons';
 import {
   entrypointToModule,
@@ -1605,6 +1607,148 @@ describe('file exclusions', () => {
       } else {
         process.env.VERCEL_PYTHON_COMPILEALL = originalCompileAllEnv;
       }
+    }
+  });
+});
+
+describe('bundle optimization telemetry', () => {
+  const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
+  const MB = 1024 * 1024;
+
+  afterEach(() => {
+    vi.mocked(execa).mockReset();
+    if (originalCompileAllEnv === undefined) {
+      delete process.env.VERCEL_PYTHON_COMPILEALL;
+    } else {
+      process.env.VERCEL_PYTHON_COMPILEALL = originalCompileAllEnv;
+    }
+  });
+
+  async function buildWithBytecode({
+    payloadSize,
+    pycSize,
+  }: {
+    payloadSize: number;
+    pycSize: number;
+  }) {
+    const workPath = path.join(
+      tmpdir(),
+      `python-bundle-optimize-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const handlerPath = path.join(workPath, 'handler.py');
+    const secondaryPath = path.join(workPath, 'secondary.py');
+    const payloadPath = path.join(workPath, 'payload.bin');
+    fs.writeFileSync(handlerPath, 'def app(environ, start_response): pass\n');
+    fs.writeFileSync(secondaryPath, 'SECONDARY = True\n');
+    const payloadFd = fs.openSync(payloadPath, 'w');
+    fs.ftruncateSync(payloadFd, payloadSize);
+    fs.closeSync(payloadFd);
+
+    const events: any[] = [];
+    const span = new Span({
+      name: 'vc.builder',
+      reporter: { report: event => events.push(event) },
+    });
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    makeMockPython('3.9');
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+    vi.mocked(execa).mockImplementation((async (_file, args: string[]) => {
+      if (args[0]?.endsWith('vc_compileall.py')) {
+        const sourceFiles = JSON.parse(
+          fs.readFileSync(args[1], 'utf8')
+        ) as string[];
+        for (const sourceFile of sourceFiles) {
+          const sourceRelPath = path
+            .relative(workPath, sourceFile)
+            .split(path.sep)
+            .join('/');
+          const pycRelPath = derivePycPath(sourceRelPath, 3, 9);
+          if (!pycRelPath) continue;
+          const pycPath = path.join(workPath, pycRelPath);
+          fs.mkdirSync(path.dirname(pycPath), { recursive: true });
+          const pycFd = fs.openSync(pycPath, 'w');
+          fs.ftruncateSync(pycFd, pycSize);
+          fs.closeSync(pycFd);
+        }
+        fs.writeFileSync(
+          args[2],
+          JSON.stringify(
+            Object.fromEntries(sourceFiles.map(sourceFile => [sourceFile, 0.1]))
+          )
+        );
+      }
+      return { stdout: '', stderr: '' } as any;
+    }) as any);
+
+    try {
+      await build({
+        workPath,
+        files: {
+          'handler.py': new FileFsRef({ fsPath: handlerPath }),
+          'secondary.py': new FileFsRef({ fsPath: secondaryPath }),
+          'payload.bin': new FileFsRef({ fsPath: payloadPath }),
+        },
+        entrypoint: 'handler.py',
+        meta: { isDev: false, skipDownload: true },
+        config: {},
+        repoRootPath: workPath,
+        span,
+      });
+      return { events, logSpy };
+    } catch (error) {
+      logSpy.mockRestore();
+      throw error;
+    } finally {
+      fs.removeSync(workPath);
+    }
+  }
+
+  it('reports bytecode coverage on overflow', async () => {
+    const { events, logSpy } = await buildWithBytecode({
+      payloadSize: 218.5 * MB,
+      pycSize: MB,
+    });
+
+    try {
+      expect(logSpy).toHaveBeenCalledWith('Optimizing Python bundle...');
+      expect(
+        logSpy.mock.calls.filter(
+          ([message]) => message === 'Optimizing Python bundle...'
+        )
+      ).toHaveLength(1);
+
+      const optimizeSpans = events.filter(
+        event => event.name === 'vc.builder.python.bundle.optimize'
+      );
+      expect(optimizeSpans).toHaveLength(1);
+      const bundleSpan = events.find(
+        event => event.name === 'vc.builder.python.bundle'
+      );
+      expect(optimizeSpans[0].parentId).toBe(bundleSpan.id);
+      expect(optimizeSpans[0].tags).toEqual({
+        'python.bundle.optimize.bytecodeCoveragePercent': '50.00',
+      });
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it('does not report or trace optimization when bytecode fits', async () => {
+    const { events, logSpy } = await buildWithBytecode({
+      payloadSize: 0,
+      pycSize: MB,
+    });
+
+    try {
+      expect(logSpy).not.toHaveBeenCalledWith('Optimizing Python bundle...');
+      expect(
+        events.some(event => event.name === 'vc.builder.python.bundle.optimize')
+      ).toBe(false);
+    } finally {
+      logSpy.mockRestore();
     }
   });
 });

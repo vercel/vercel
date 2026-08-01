@@ -1601,11 +1601,27 @@ export const build: BuildVX = async ({
           return totalSize;
         }
 
-        const importedModules = await getImportClosureKeys();
-        const ranked = rankBytecodeItems(
-          annotateBytecodeItems(items, importedModules, timings)
-        );
-        return capacity - fillBytecodeWithinCapacity(files, ranked, capacity);
+        return bundleSpan
+          .child('vc.builder.python.bundle.optimize')
+          .trace(async optimizeSpan => {
+            console.log('Optimizing Python bundle...');
+
+            const importedModules = await getImportClosureKeys();
+            const ranked = rankBytecodeItems(
+              annotateBytecodeItems(items, importedModules, timings)
+            );
+            const selectedSize =
+              capacity - fillBytecodeWithinCapacity(files, ranked, capacity);
+
+            optimizeSpan.setAttributes({
+              'python.bundle.optimize.bytecodeCoveragePercent': (
+                (selectedSize / totalSize) *
+                100
+              ).toFixed(2),
+            });
+
+            return selectedSize;
+          });
       };
 
       // Precompile bytecode and fill remaining capacity up to capacityBytes
