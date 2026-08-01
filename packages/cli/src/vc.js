@@ -19,6 +19,32 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// The current Linux native artifact embeds a Node runtime built on Ubuntu 24
+// and requires glibc 2.38. Keep opted-in users on the JS CLI when the binary
+// cannot run on their host, including Amazon Linux 2023 and musl-based distros.
+const NATIVE_LINUX_MIN_GLIBC = [2, 38];
+
+function isNativeBinaryRuntimeSupported() {
+  if (process.platform !== 'linux') return true;
+
+  try {
+    const version = process.report?.getReport()?.header?.glibcVersionRuntime;
+    if (typeof version !== 'string') return false;
+
+    const [major, minor] = version
+      .split('.', NATIVE_LINUX_MIN_GLIBC.length)
+      .map(Number);
+    if (!Number.isInteger(major) || !Number.isInteger(minor)) return false;
+
+    const [minimumMajor, minimumMinor] = NATIVE_LINUX_MIN_GLIBC;
+    return (
+      major > minimumMajor || (major === minimumMajor && minor >= minimumMinor)
+    );
+  } catch {
+    return false;
+  }
+}
+
 function resolveNative() {
   // Already running inside the native binary — never trampoline again.
   if (process.env.VERCEL_VC_NATIVE === '1') return null;
@@ -79,7 +105,11 @@ async function isNativeBinaryOptedIn() {
 
 const bin = resolveNative();
 
-if (bin && (await isNativeBinaryOptedIn())) {
+if (
+  bin &&
+  (await isNativeBinaryOptedIn()) &&
+  isNativeBinaryRuntimeSupported()
+) {
   process.env.VERCEL_VC_NATIVE = '1';
   const r = spawnSync(bin, process.argv.slice(2), {
     stdio: 'inherit',
