@@ -1,8 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import fs from 'fs';
+import path from 'path';
+import { tmpdir } from 'os';
 import {
   fastapiShadowingRoutes,
   fastapiFallbackRoutes,
+  copyFastAPIStaticMounts,
   type FastAPICollectStaticResult,
+  type FastAPIStaticMount,
 } from '../src/fastapi';
 
 // A discovery result carrying only the fields the route helpers read.
@@ -236,4 +241,91 @@ it('navigation Accept gate rejects an explicit q=0', () => {
   );
   const accept = (route as { has?: { value: string }[] }).has?.[0]?.value ?? '';
   expect(new RegExp(accept).test('text/html;q=0')).toBe(false);
+});
+
+// The copy step flattens every mount and frontend into one CDN tree. At runtime
+// a Mount full-matches its whole subtree before any lower-priority source is
+// consulted, so a path a higher-priority source owns must hold that source's
+// file (or nothing), never a file that leaked in from a lower-priority source.
+describe('copyFastAPIStaticMounts', () => {
+  let root: string;
+  let out: string;
+
+  beforeEach(() => {
+    root = fs.mkdtempSync(path.join(tmpdir(), 'fastapi-copy-'));
+    out = path.join(root, 'out');
+  });
+  afterEach(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  const source = (name: string, files: Record<string, string>): string => {
+    const dir = path.join(root, name);
+    for (const [rel, content] of Object.entries(files)) {
+      const file = path.join(dir, rel);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, content);
+    }
+    return dir;
+  };
+  const mount = (
+    urlPath: string,
+    directory: string,
+    frontend: boolean
+  ): FastAPIStaticMount => ({ urlPath, directory, fallback: null, frontend });
+  const exists = (rel: string): boolean => fs.existsSync(path.join(out, rel));
+  const read = (rel: string): string =>
+    fs.readFileSync(path.join(out, rel), 'utf8');
+
+  it('does not serve a frontend file from inside a plain mount namespace', async () => {
+    // The /static mount owns its whole subtree, so a frontend file that lands
+    // at /static/extra.txt (absent from the mount) 404s at runtime and must
+    // not be on the CDN.
+    const appMount = source('static', { 'a.txt': 'MOUNT_FILE' });
+    const frontend = source('frontend', {
+      'index.html': '<h1>app</h1>',
+      'static/extra.txt': 'FRONTEND_EXTRA',
+    });
+    await copyFastAPIStaticMounts(
+      [mount('/static', appMount, false), mount('/', frontend, true)],
+      out
+    );
+    expect(exists('static/a.txt')).toBe(true);
+    expect(exists('static/extra.txt')).toBe(false);
+  });
+
+  it('does not serve a later mount file from inside an earlier mount namespace', async () => {
+    // The mount declared first owns /inner/*, so a file the later root mount
+    // has at /inner/only_root.txt 404s at runtime and must not be on the CDN.
+    const inner = source('inner', { 'a.txt': 'INNER_FILE' });
+    const rootMount = source('rootdir', {
+      'root.txt': 'ROOT_FILE',
+      'inner/only_root.txt': 'ROOT_ONLY',
+    });
+    await copyFastAPIStaticMounts(
+      [mount('/inner', inner, false), mount('/', rootMount, false)],
+      out
+    );
+    expect(exists('inner/a.txt')).toBe(true);
+    expect(exists('root.txt')).toBe(true);
+    expect(exists('inner/only_root.txt')).toBe(false);
+  });
+
+  it('resolves a frontend collision by prefix specificity, not declaration order', async () => {
+    // A frontend at /app is more specific than one at /, so it wins for
+    // /app/x.txt at runtime even though it is declared second.
+    const rootFe = source('root-fe', {
+      'index.html': '<h1>root</h1>',
+      'app/x.txt': 'FROM_ROOT',
+    });
+    const appFe = source('app-fe', {
+      'index.html': '<h1>app</h1>',
+      'x.txt': 'FROM_APP',
+    });
+    await copyFastAPIStaticMounts(
+      [mount('/', rootFe, true), mount('/app', appFe, true)],
+      out
+    );
+    expect(read('app/x.txt')).toBe('FROM_APP');
+  });
 });
