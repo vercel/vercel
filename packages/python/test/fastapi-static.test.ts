@@ -591,4 +591,33 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     // The sub-app owns /api/*, so its whole subtree is shadowed to the Lambda.
     expect(shadowRoutes).toContain('api/.*');
   });
+
+  it('shadows a StaticFiles mount root only when html is disabled', async () => {
+    const appDir = path.join(testDir, 'app-mount-root-html');
+    fs.mkdirSync(path.join(appDir, 'files'), { recursive: true });
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'from fastapi.staticfiles import StaticFiles',
+        'app = FastAPI()',
+        'app.mount("/assets", StaticFiles(directory="files"))',
+        'app.mount("/site", StaticFiles(directory="files", html=True))',
+      ].join('\n')
+    );
+
+    const { shadowRoutes } = await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    // html=False: the root 404s and /assets redirects, so it is shadowed.
+    expect(shadowRoutes).toContain('assets');
+    // html=True: the CDN serves the directory index, matching the app.
+    expect(shadowRoutes).not.toContain('site');
+  });
 });

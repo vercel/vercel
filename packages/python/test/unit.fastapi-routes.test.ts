@@ -184,6 +184,22 @@ it('shadows a colliding route under a sub-app but not its nested static sibling'
   expect(matches.test('/sub/hello')).toBe(true);
 });
 
+it('shadows a mount root but not the files under it', () => {
+  // The shim emits the bare prefix for a StaticFiles(html=False) mount so the
+  // root reaches the Lambda (307 for /static, 404 for /static/).
+  const [route] = fastapiShadowingRoutes(
+    discovery({ shadowRoutes: ['static'] }),
+    'app'
+  );
+  const matches = new RegExp(route.src);
+  expect(matches.test('/static')).toBe(true);
+  expect(matches.test('/static/')).toBe(true);
+  // Files under the mount stay on the CDN.
+  expect(matches.test('/static/index.html')).toBe(false);
+  // A sibling path with the same prefix is not caught.
+  expect(matches.test('/statics')).toBe(false);
+});
+
 it('navigation Accept gate rejects an explicit q=0', () => {
   const [route] = fastapiFallbackRoutes(
     discovery({
