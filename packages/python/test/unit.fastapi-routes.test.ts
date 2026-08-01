@@ -144,23 +144,30 @@ describe('fastapiFallbackRoutes', () => {
   });
 });
 
-it('shadow route covers a route path with a trailing slash', () => {
+it('shadows both slash forms of a route declared with a trailing slash', () => {
+  // The shim strips the trailing slash from "/items/" to the body "items", and
+  // redirect_slashes 307s "/items" to "/items/", so both forms must reach the
+  // Lambda while a deeper path stays on the CDN.
   const [route] = fastapiShadowingRoutes(
-    discovery({ shadowRoutes: ['foo'] }),
+    discovery({ shadowRoutes: ['items'] }),
     'api/index'
   );
-  expect(new RegExp(route.src).test('/foo/')).toBe(true);
+  const matches = new RegExp(route.src);
+  expect(matches.test('/items')).toBe(true);
+  expect(matches.test('/items/')).toBe(true);
+  expect(matches.test('/items/5')).toBe(false);
 });
 
 it('shadows a sub-app subtree but not its nested CDN mounts', () => {
   // The shim emits this body for a sub-app at /api with a nested /api/static.
   const [route] = fastapiShadowingRoutes(
-    discovery({ shadowRoutes: ['api/(?!(?:static)(?:/|$)).*'] }),
+    discovery({ shadowRoutes: ['api(?:/(?!(?:static)(?:/|$)).*)?'] }),
     'api/index'
   );
   const matches = new RegExp(route.src);
-  // The sub-app owns /api/*, so its routes and any hijacking frontend files go
-  // to the Lambda.
+  // The bare mount root (which the Mount 307s), the sub-app's routes, and any
+  // hijacking frontend files all go to the Lambda.
+  expect(matches.test('/api')).toBe(true);
   expect(matches.test('/api/hello')).toBe(true);
   expect(matches.test('/api/hijack.txt')).toBe(true);
   // A nested StaticFiles mount stays on the CDN, so it is excluded.
@@ -172,10 +179,14 @@ it('shadows a colliding route under a sub-app but not its nested static sibling'
   // that wins at /sub/foo/bar. The shim emits a subtree body and a route body,
   // and the two compose in one group.
   const [route] = fastapiShadowingRoutes(
-    discovery({ shadowRoutes: ['sub/(?!(?:foo)(?:/|$)).*', 'sub/foo/bar'] }),
+    discovery({
+      shadowRoutes: ['sub(?:/(?!(?:foo)(?:/|$)).*)?', 'sub/foo/bar'],
+    }),
     'app'
   );
   const matches = new RegExp(route.src);
+  // The bare mount root reaches the Lambda.
+  expect(matches.test('/sub')).toBe(true);
   // The winning route reaches the Lambda even though it sits under the mount.
   expect(matches.test('/sub/foo/bar')).toBe(true);
   // Other files in the nested mount stay on the CDN.
@@ -198,6 +209,23 @@ it('shadows a mount root but not the files under it', () => {
   expect(matches.test('/static/index.html')).toBe(false);
   // A sibling path with the same prefix is not caught.
   expect(matches.test('/statics')).toBe(false);
+});
+
+it('shadows a root-mounted sub-app subtree but not its nested CDN mounts', () => {
+  // The shim emits this body for a sub-app mounted at "/" with a nested
+  // /static. There is no prefix, so the builder supplies the leading slash and
+  // the body matches the whole path space.
+  const [route] = fastapiShadowingRoutes(
+    discovery({ shadowRoutes: ['(?!(?:static)(?:/|$)).*'] }),
+    'app'
+  );
+  const matches = new RegExp(route.src);
+  // The bare root and every path under it reach the Lambda.
+  expect(matches.test('/')).toBe(true);
+  expect(matches.test('/foo')).toBe(true);
+  expect(matches.test('/foo/bar')).toBe(true);
+  // The nested StaticFiles mount stays on the CDN.
+  expect(matches.test('/static/logo.png')).toBe(false);
 });
 
 it('navigation Accept gate rejects an explicit q=0', () => {

@@ -588,8 +588,9 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
       appDir
     );
 
-    // The sub-app owns /api/*, so its whole subtree is shadowed to the Lambda.
-    expect(shadowRoutes).toContain('api/.*');
+    // The sub-app owns /api/*, so its whole subtree (including the bare /api
+    // root, which the Mount 307s) is shadowed to the Lambda.
+    expect(shadowRoutes).toContain('api(?:/.*)?');
   });
 
   it('shadows a StaticFiles mount root only when html is disabled', async () => {
@@ -619,5 +620,66 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     expect(shadowRoutes).toContain('assets');
     // html=True: the CDN serves the directory index, matching the app.
     expect(shadowRoutes).not.toContain('site');
+  });
+
+  it('drops a trailing slash from a route shadow body', async () => {
+    const appDir = path.join(testDir, 'app-trailing-slash-route');
+    fs.mkdirSync(path.join(appDir, 'dist'), { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'dist', 'index.html'), 'spa');
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'app = FastAPI()',
+        '@app.get("/items/")',
+        'def items():',
+        '    return "ok"',
+        'app.frontend("/", directory="dist")',
+      ].join('\n')
+    );
+
+    const { shadowRoutes } = await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    // redirect_slashes 307s /items to /items/ before the frontend runs, so the
+    // body drops the trailing slash and the builder's /? covers both forms.
+    expect(shadowRoutes).toContain('items');
+    expect(shadowRoutes).not.toContain('items/');
+  });
+
+  it('shadows a root-mounted sub-app subtree without a leading slash', async () => {
+    const appDir = path.join(testDir, 'app-root-mount-subtree');
+    fs.mkdirSync(path.join(appDir, 'assets'), { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'assets', 'logo.png'), 'PNG');
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'from fastapi.staticfiles import StaticFiles',
+        'sub = FastAPI()',
+        'sub.mount("/static", StaticFiles(directory="assets"))',
+        'app = FastAPI()',
+        'app.mount("/", sub)',
+      ].join('\n')
+    );
+
+    const { shadowRoutes } = await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    // The root mount owns everything; the builder adds the leading slash, so
+    // the subtree body has none and excludes the nested /static mount.
+    expect(shadowRoutes).toContain('(?!(?:static)(?:/|$)).*');
   });
 });
