@@ -116,6 +116,16 @@ def _to_non_capturing(regex: str) -> str:
     return re.sub(r"\((?!\?)", "(?:", regex)
 
 
+def _escape_path(path: str) -> str:
+    """A literal URL path as a shadow body, with boundary slashes removed.
+
+    The builder wraps every body as `^/(<body>)/?$` (see `fastapiShadowingRoutes`),
+    so it owns the leading slash and an optional trailing one. Bodies therefore
+    carry only the inner segments.
+    """
+    return _escape(path.strip("/"))
+
+
 def _subtree_shadow(prefix: str, mounts: list[StaticMount]) -> str:
     """A shadow body routing a mounted sub-app's whole subtree to the Lambda.
 
@@ -130,7 +140,7 @@ def _subtree_shadow(prefix: str, mounts: list[StaticMount]) -> str:
     if nested:
         alternatives = "|".join(_escape(n) for n in nested)
         guard = f"(?!(?:{alternatives})(?:/|$))"
-    base = _escape(prefix.strip("/"))
+    base = _escape_path(prefix)
     if base == "":
         # Root mount ("/"): the builder adds the leading slash, so the body is
         # the guarded rest of the path.
@@ -201,31 +211,25 @@ class PriorRoute:
         return True
 
     def shadow_body(self) -> str:
-        """This route's path as a `shadowRoutes` regex body (outer slashes dropped).
+        """This route's path as a `shadowRoutes` regex body.
 
         Literal text is escaped and each `{name}` placeholder becomes its Starlette
         convertor regex (str -> `[^/]+`, int -> `[0-9]+`, …), so the route shadows
         exactly the paths it matches. Inner groups are made non-capturing so the
-        builder can wrap the whole body in one capture group.
+        builder can wrap the whole body in one capture group. Boundary slashes are
+        stripped upfront because the builder's wrap owns them (see `_escape_path`).
         """
+        path = self.path_format.strip("/")
         parts: list[str] = []
         last = 0
-        for m in _PARAM_RE.finditer(self.path_format):
-            parts.append(_escape(self.path_format[last : m.start()]))
+        for m in _PARAM_RE.finditer(path):
+            parts.append(_escape(path[last : m.start()]))
             convertor = self.convertors.get(m.group(1)) if self.convertors else None
             regex = getattr(convertor, "regex", None) or "[^/]+"
             parts.append("(?:" + _to_non_capturing(regex) + ")")
             last = m.end()
-        parts.append(_escape(self.path_format[last:]))
-        body = "".join(parts)
-        if body.startswith("/"):
-            body = body[1:]
-        # Drop a literal trailing slash. Route "/items/" 307s "/items" via
-        # redirect_slashes before the frontend runs. The builder's "/?" matches
-        # both forms.
-        if body.endswith("/"):
-            body = body[:-1]
-        return body
+        parts.append(_escape(path[last:]))
+        return "".join(parts)
 
 
 @dataclass
@@ -297,7 +301,7 @@ def collect(
                     # /prefix to /prefix/. Shadow the root so the CDN does not
                     # serve a directory index there instead.
                     if not route.app.html:
-                        shadow_routes.add(_escape(url_prefix.strip("/")))
+                        shadow_routes.add(_escape_path(url_prefix))
                 # app.mount(Router | sub-app): recurse into the sub-router so
                 # its own StaticFiles mounts are found too. A Starlette/FastAPI
                 # sub-application isn't a Router but exposes one as `.router`.
