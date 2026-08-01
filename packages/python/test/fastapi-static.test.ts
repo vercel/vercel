@@ -566,11 +566,9 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     expect(served).toBe('MOUNT');
   });
 
-  it('does not copy a frontend file into a mounted sub-app subtree', async () => {
-    const appDir = path.join(testDir, 'bug-frontend-hijack');
-    const outDir = path.join(appDir, 'out');
-    fs.mkdirSync(path.join(appDir, 'frontend', 'api'), { recursive: true });
-    fs.writeFileSync(path.join(appDir, 'frontend', 'api', 'hijack.txt'), 'x');
+  it('shadows a mounted sub-app subtree', async () => {
+    const appDir = path.join(testDir, 'app-subapp-shadow');
+    fs.mkdirSync(appDir, { recursive: true });
     const entrypointAbs = path.join(appDir, 'main.py');
     fs.writeFileSync(
       entrypointAbs,
@@ -579,19 +577,18 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
         'sub = FastAPI()',
         'app = FastAPI()',
         'app.mount("/api", sub)',
-        'app.frontend("/", directory="frontend")',
       ].join('\n')
     );
 
-    await runFastAPICollectStatic(
+    const { shadowRoutes } = await getFastAPIStaticDiscovery(
       venvPath,
-      appDir,
-      pythonEnv,
-      outDir,
       entrypointAbs,
-      'app'
+      'app',
+      pythonEnv,
+      appDir
     );
 
-    expect(fs.existsSync(path.join(outDir, 'api', 'hijack.txt'))).toBe(false);
+    // The sub-app owns /api/*, so its whole subtree is shadowed to the Lambda.
+    expect(shadowRoutes).toContain('api/.*');
   });
 });
