@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -196,5 +196,69 @@ describe('collectImportClosure', () => {
       searchRoots: [appRoot, sitePackages],
     });
     expect(rel(files)).toEqual(['app/cycle_a.py', 'app/cycle_b.py']);
+  });
+
+  it('shares filesystem probes for repeated imports and misses', async () => {
+    write('app/cache_seed.py', 'import cache_first\nimport cache_second\n');
+    write('app/cache_first.py', 'import cache_shared\nimport cache_missing\n');
+    write('app/cache_second.py', 'import cache_shared\nimport cache_missing\n');
+    write('app/cache_shared.py', '');
+
+    const statSpy = vi.spyOn(fs.promises, 'stat');
+    try {
+      const { files } = await collectImportClosure({
+        seeds: [path.join(appRoot, 'cache_seed.py')],
+        searchRoots: [appRoot, sitePackages],
+      });
+
+      expect(rel(files)).toEqual([
+        'app/cache_first.py',
+        'app/cache_second.py',
+        'app/cache_seed.py',
+        'app/cache_shared.py',
+      ]);
+
+      const statCounts = new Map<string, number>();
+      for (const [candidate] of statSpy.mock.calls) {
+        const candidatePath = String(candidate);
+        statCounts.set(candidatePath, (statCounts.get(candidatePath) ?? 0) + 1);
+      }
+
+      const sharedCandidates = [
+        path.join(appRoot, 'cache_shared', '__init__.py'),
+        path.join(appRoot, 'cache_shared.py'),
+      ];
+      const missingCandidates = [appRoot, sitePackages].flatMap(root => [
+        path.join(root, 'cache_missing', '__init__.py'),
+        path.join(root, 'cache_missing.py'),
+        path.join(root, 'cache_missing'),
+      ]);
+
+      for (const candidate of [...sharedCandidates, ...missingCandidates]) {
+        expect(statCounts.get(candidate)).toBe(1);
+      }
+    } finally {
+      statSpy.mockRestore();
+    }
+  });
+
+  it('does not retain resolution misses between closure runs', async () => {
+    write('app/cache_scope_seed.py', 'import cache_scope_late\n');
+
+    const first = await collectImportClosure({
+      seeds: [path.join(appRoot, 'cache_scope_seed.py')],
+      searchRoots: [appRoot],
+    });
+    expect(rel(first.files)).toEqual(['app/cache_scope_seed.py']);
+
+    write('app/cache_scope_late.py', '');
+    const second = await collectImportClosure({
+      seeds: [path.join(appRoot, 'cache_scope_seed.py')],
+      searchRoots: [appRoot],
+    });
+    expect(rel(second.files)).toEqual([
+      'app/cache_scope_late.py',
+      'app/cache_scope_seed.py',
+    ]);
   });
 });

@@ -81,7 +81,12 @@ const DEFAULT_MAX_FILES = 30000;
 
 type FsKind = 'file' | 'dir' | null;
 
-async function statKind(path: string): Promise<FsKind> {
+interface ResolutionCache {
+  statKinds: Map<string, Promise<FsKind>>;
+  names: Map<string, Promise<ResolvedName | null>>;
+}
+
+async function readStatKind(path: string): Promise<FsKind> {
   try {
     const stats = await fs.promises.stat(path);
     if (stats.isFile()) return 'file';
@@ -90,6 +95,15 @@ async function statKind(path: string): Promise<FsKind> {
     // unreadable / missing
   }
   return null;
+}
+
+function statKind(path: string, cache: ResolutionCache): Promise<FsKind> {
+  const cached = cache.statKinds.get(path);
+  if (cached) return cached;
+
+  const pending = readStatKind(path);
+  cache.statKinds.set(path, pending);
+  return pending;
 }
 
 interface ResolvedName {
@@ -104,25 +118,25 @@ interface ResolvedName {
  * Resolve dotted parts under each search dir. Importing `a.b.c` executes the
  * `__init__.py` of `a` and `a.b`, so the parent chain is emitted alongside.
  */
-async function resolveNameParts(
+async function resolveNamePartsUncached(
   parts: string[],
-  searchDirs: string[]
+  searchDirs: string[],
+  cache: ResolutionCache
 ): Promise<ResolvedName | null> {
-  if (parts.length === 0) return null;
   const rel = join(...parts);
   for (const root of searchDirs) {
     let target: string | null = null;
     let targetKind: FsKind = null;
     const candidateInit = join(root, rel, '__init__.py');
-    if ((await statKind(candidateInit)) === 'file') {
+    if ((await statKind(candidateInit, cache)) === 'file') {
       target = candidateInit;
       targetKind = 'file';
     } else {
       const candidateModule = join(root, `${rel}.py`);
-      if ((await statKind(candidateModule)) === 'file') {
+      if ((await statKind(candidateModule, cache)) === 'file') {
         target = candidateModule;
         targetKind = 'file';
-      } else if ((await statKind(join(root, rel))) === 'dir') {
+      } else if ((await statKind(join(root, rel), cache)) === 'dir') {
         target = join(root, rel);
         targetKind = 'dir'; // PEP 420 namespace package
       }
@@ -133,7 +147,7 @@ async function resolveNameParts(
       for (const part of parts.slice(0, -1)) {
         acc = join(acc, part);
         const init = join(acc, '__init__.py');
-        if ((await statKind(init)) === 'file') {
+        if ((await statKind(init, cache)) === 'file') {
           parentChain.push(init);
         }
       }
@@ -143,13 +157,34 @@ async function resolveNameParts(
   return null;
 }
 
+function resolveNameParts(
+  parts: string[],
+  searchDirs: string[],
+  cache: ResolutionCache
+): Promise<ResolvedName | null> {
+  if (parts.length === 0) return Promise.resolve(null);
+
+  const key = JSON.stringify([searchDirs, parts]);
+  const cached = cache.names.get(key);
+  if (cached) return cached;
+
+  const pending = resolveNamePartsUncached(parts, searchDirs, cache);
+  cache.names.set(key, pending);
+  return pending;
+}
+
 /** Resolve a seed that may end in an object name rather than a module. */
 async function resolveSeedName(
   parts: string[],
-  searchDirs: string[]
+  searchDirs: string[],
+  cache: ResolutionCache
 ): Promise<ResolvedName | null> {
   for (let length = parts.length; length > 0; length--) {
-    const resolved = await resolveNameParts(parts.slice(0, length), searchDirs);
+    const resolved = await resolveNameParts(
+      parts.slice(0, length),
+      searchDirs,
+      cache
+    );
     if (resolved) return resolved;
   }
   return null;
@@ -172,7 +207,8 @@ function submoduleDir(target: string, targetKind: FsKind): string | null {
 async function resolveImport(
   stmt: ImportStmt,
   importerPath: string,
-  roots: string[]
+  roots: string[],
+  cache: ResolutionCache
 ): Promise<string[]> {
   const resolved = new Set<string>();
 
@@ -190,7 +226,7 @@ async function resolveImport(
   let target: string;
   let targetKind: FsKind;
   if (parts.length > 0) {
-    const name = await resolveNameParts(parts, search);
+    const name = await resolveNameParts(parts, search, cache);
     if (!name) return [];
     target = name.target;
     targetKind = name.targetKind;
@@ -211,7 +247,7 @@ async function resolveImport(
   if (subDir) {
     for (const name of stmt.names) {
       if (name === '*') continue;
-      const sub = await resolveNameParts([name], [subDir]);
+      const sub = await resolveNameParts([name], [subDir], cache);
       if (sub) {
         if (sub.targetKind === 'file') resolved.add(sub.target);
         for (const init of sub.parentChain) {
@@ -242,19 +278,26 @@ export async function collectImportClosure({
   maxFiles = DEFAULT_MAX_FILES,
 }: ImportClosureOptions): Promise<ImportClosureResult> {
   const roots = searchRoots.map(r => resolve(r));
+  const cache: ResolutionCache = {
+    statKinds: new Map(),
+    names: new Map(),
+  };
   const visited = new Set<string>();
   let frontier: string[] = [];
   let truncated = false;
 
   for (const seed of seeds) {
     if (isModuleNameSeed(seed)) {
-      const name = await resolveSeedName(seed.split('.'), roots);
+      const name = await resolveSeedName(seed.split('.'), roots, cache);
       if (name) {
         if (name.targetKind === 'file') frontier.push(name.target);
         frontier.push(...name.parentChain);
       }
-    } else if ((await statKind(seed)) === 'file') {
-      frontier.push(resolve(seed));
+    } else {
+      const seedPath = resolve(seed);
+      if ((await statKind(seedPath, cache)) === 'file') {
+        frontier.push(seedPath);
+      }
     }
   }
 
@@ -283,7 +326,7 @@ export async function collectImportClosure({
         const files = await Promise.all(
           stmts
             .filter(s => s.isModuleLevel && !s.inTypeChecking)
-            .map(s => resolveImport(s, importerPath, roots))
+            .map(s => resolveImport(s, importerPath, roots, cache))
         );
         return files.flat();
       })
