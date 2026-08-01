@@ -53,7 +53,10 @@ export async function renderResource<T>(
       output.error(err.message);
       return 1;
     }
-    throw err;
+    output.error(
+      err instanceof Error ? err.message : 'An unexpected error occurred.'
+    );
+    return 1;
   }
 
   output.stopSpinner();

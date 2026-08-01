@@ -14,12 +14,14 @@ const sampleModel = {
 
 function useListModels(
   models: unknown[] = [{ ...sampleModel, available: true }],
-  availabilityStatus: 'complete' | 'degraded' = 'complete',
+  availabilityStatus: 'complete' | 'partial' = 'complete',
   accountAvailability: {
-    available: boolean;
+    available?: boolean;
+    availability_unknown_reason?: string;
     unavailable_reason?: string;
   } = { available: true },
-  expectedTeamId?: string
+  expectedTeamId?: string,
+  catalogStatus: 'complete' | 'partial' = 'complete'
 ) {
   client.scenario.get('/v1/models', (req, res) => {
     expect(req.query.include_availability).toBe('');
@@ -30,6 +32,7 @@ function useListModels(
       object: 'list',
       data: models,
       availability_status: availabilityStatus,
+      catalog_status: catalogStatus,
       ...(accountAvailability && {
         account_availability: accountAvailability,
       }),
@@ -116,6 +119,7 @@ describe('ai-gateway models list', () => {
     expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
       models: [blockedModel],
       availability_status: 'complete',
+      catalog_status: 'complete',
       account_availability: {
         available: false,
         unavailable_reason: 'payment_method_required',
@@ -177,13 +181,24 @@ describe('ai-gateway models list', () => {
 
   it('warns when availability could not be determined', async () => {
     useUser();
-    useListModels([sampleModel], 'degraded');
+    useListModels(
+      [
+        {
+          ...sampleModel,
+          availability_unknown_reason: 'billing_state_unresolved',
+        },
+      ],
+      'partial',
+      { availability_unknown_reason: 'billing_state_unresolved' }
+    );
     client.setArgv('ai-gateway', 'models', 'list');
 
     const exitCodePromise = aiGateway(client);
 
-    await expect(client.stderr).toOutput(
-      'Model availability could not be determined'
+    await expect(client.stderr).toOutput('Model availability is partial');
+    await expect(client.stdout).toOutput('unknown (billing_state_unresolved)');
+    expect(client.stderr.getFullOutput()).not.toContain(
+      "This account can't run AI Gateway models."
     );
     expect(await exitCodePromise).toBe(0);
   });
@@ -197,9 +212,7 @@ describe('ai-gateway models list', () => {
 
     const exitCodePromise = aiGateway(client);
 
-    await expect(client.stderr).toOutput(
-      'Model availability could not be determined'
-    );
+    await expect(client.stderr).toOutput('Model availability is partial');
     expect(await exitCodePromise).toBe(0);
   });
 
@@ -217,9 +230,39 @@ describe('ai-gateway models list', () => {
 
     const exitCodePromise = aiGateway(client);
 
-    await expect(client.stderr).toOutput(
-      'Model availability could not be determined'
-    );
+    await expect(client.stderr).toOutput('Model availability is partial');
     expect(await exitCodePromise).toBe(0);
+  });
+
+  it('warns when the team-visible catalog is partial', async () => {
+    useUser();
+    useListModels(
+      [{ ...sampleModel, available: true }],
+      'complete',
+      { available: true },
+      undefined,
+      'partial'
+    );
+    client.setArgv('ai-gateway', 'models', 'list');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput('The model catalog is partial');
+    expect(await exitCodePromise).toBe(0);
+  });
+
+  it('rejects a successful response that is not a Gateway model catalog', async () => {
+    useUser();
+    client.scenario.get('/v1/models', (_req, res) => {
+      res.json({ models: [] });
+    });
+    client.setArgv('ai-gateway', 'models', 'list');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput(
+      'AI Gateway returned an invalid model catalog response.'
+    );
+    expect(await exitCodePromise).toBe(1);
   });
 });

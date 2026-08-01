@@ -48,17 +48,26 @@ export default async function list(client: Client, argv: string[]) {
     spinnerText: 'Fetching models',
     fetch: async () => {
       const result = await listModels(client);
-      const { accountAvailability, availabilityStatus } = result;
+      const { accountAvailability, availabilityStatus, catalogStatus } = result;
       const availabilityComplete =
         availabilityStatus === 'complete' &&
         accountAvailability !== undefined &&
         result.models.every(model => typeof model.available === 'boolean');
       if (!availabilityComplete) {
         output.warn(
-          'Model availability could not be determined. Retry before treating unannotated models as available.'
+          'Model availability is partial. Unknown models must not be treated as available.'
         );
       }
-      if (accountAvailability && !accountAvailability.available) {
+      if (catalogStatus === 'partial') {
+        output.warn(
+          'The model catalog is partial because some team-visible models could not be loaded.'
+        );
+      }
+      if (
+        accountAvailability &&
+        'available' in accountAvailability &&
+        !accountAvailability.available
+      ) {
         output.warn(accountAvailabilityMessage(accountAvailability));
       }
       return result;
@@ -71,6 +80,9 @@ export default async function list(client: Client, argv: string[]) {
       ...(result.accountAvailability && {
         account_availability: result.accountAvailability,
       }),
+      ...(result.catalogStatus && {
+        catalog_status: result.catalogStatus,
+      }),
     }),
     isEmpty: result => result.models.length === 0,
     emptyMessage: 'No models found.',
@@ -81,6 +93,9 @@ export default async function list(client: Client, argv: string[]) {
 }
 
 function accountAvailabilityMessage(account: AccountAvailability): string {
+  if (!('available' in account)) {
+    return 'Account availability could not be determined.';
+  }
   switch (account.unavailable_reason) {
     case 'payment_method_required':
       return 'Add a payment method before running models for this team.';
@@ -102,16 +117,24 @@ function printModelsTable(
   accountAvailability?: AccountAvailability
 ) {
   // The CLI explicitly requests availability. Keep this defensive check for a
-  // degraded Gateway response, where annotations are intentionally omitted
-  // rather than presented as optimistic `available: true` verdicts.
-  const showAvailability = models.some(m => m.available !== undefined);
+  // partial Gateway response, where unknown verdicts remain explicit rather
+  // than being presented as optimistic `available: true` verdicts.
+  const showAvailability = models.some(
+    model =>
+      model.available !== undefined ||
+      model.availability_unknown_reason !== undefined
+  );
 
   const availabilityCell = (model: Model): string => {
-    if (model.available === undefined) return chalk.gray('–');
+    if (model.availability_unknown_reason) {
+      return chalk.gray(`unknown (${model.availability_unknown_reason})`);
+    }
+    if (model.available === undefined) return chalk.gray('unknown');
     if (model.available) return chalk.green('yes');
     if (
       model.unavailable_reason === 'account_unavailable' &&
       accountAvailability &&
+      'available' in accountAvailability &&
       !accountAvailability.available
     ) {
       return chalk.red('no');
