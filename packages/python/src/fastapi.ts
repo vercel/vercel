@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { join } from 'path';
+import { join, relative, sep } from 'path';
 import execa from 'execa';
 import { debug } from '@vercel/build-utils';
 import { getVenvPythonBin } from './utils';
@@ -113,22 +113,43 @@ export async function getFastAPIStaticDiscovery(
  *
  * Returns null when no StaticFiles mounts are found.
  */
+/** True when `urlPath` is `prefix` or under it. "/" covers all. */
+function mountCovers(prefix: string, urlPath: string): boolean {
+  const base = prefix.replace(/\/+$/, '');
+  if (base === '') return true;
+  return urlPath === base || urlPath.startsWith(base + '/');
+}
+
+/** The CDN URL path a copied file lands at, e.g. "/static/logo.png". */
+function cdnUrlPath(outputStaticDir: string, destPath: string): string {
+  const rel = relative(outputStaticDir, destPath);
+  return rel === '' ? '/' : '/' + rel.split(sep).join('/');
+}
+
 /**
- * Copy each mount's directory into the CDN output tree at its URL prefix.
+ * Copy each mount's directory into the CDN tree at its URL prefix.
+ *
+ * A path is filled only by the highest-priority source whose prefix covers it,
+ * so a lower-priority source never leaks a file that would 404 at runtime.
+ * Priority is plain mounts (declaration order), then frontends (longest prefix
+ * first). The per-file filter enforces this.
+ *
  * Returns false if any copy fails, so the caller can skip CDN offload.
  */
 export async function copyFastAPIStaticMounts(
   mounts: FastAPIStaticMount[],
   outputStaticDir: string
 ): Promise<boolean> {
-  // Runtime routing is first-match-wins, and app.frontend() builds are always
-  // low-priority. So copy non-frontend mounts first (in declaration order), then
-  // frontends, and never overwrite (force: false).
   const ordered = [
     ...mounts.filter(m => !m.frontend),
-    ...mounts.filter(m => m.frontend),
+    ...mounts
+      .filter(m => m.frontend)
+      .sort((a, b) => b.urlPath.length - a.urlPath.length),
   ];
-  for (const mount of ordered) {
+
+  for (let i = 0; i < ordered.length; i++) {
+    const mount = ordered[i];
+    const higherPriority = ordered.slice(0, i).map(m => m.urlPath);
     const urlSubPath = mount.urlPath.replace(/^\/|\/$/g, '');
     const dest = join(outputStaticDir, urlSubPath);
     try {
@@ -136,6 +157,10 @@ export async function copyFastAPIStaticMounts(
       await fs.promises.cp(mount.directory, dest, {
         recursive: true,
         force: false,
+        filter: (_src, destPath) => {
+          const urlPath = cdnUrlPath(outputStaticDir, destPath);
+          return !higherPriority.some(prefix => mountCovers(prefix, urlPath));
+        },
       });
     } catch (err) {
       debug(
