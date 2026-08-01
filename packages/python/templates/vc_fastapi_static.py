@@ -120,8 +120,9 @@ def _subtree_shadow(prefix: str, mounts: list[StaticMount]) -> str:
     """A shadow body routing a mounted sub-app's whole subtree to the Lambda.
 
     The app owns `prefix` (e.g. "/sub") at runtime, so everything under it is
-    shadowed, except the nested StaticFiles `mounts` discovered inside it, which
-    stay on the CDN and are excluded via a negative lookahead.
+    shadowed, including the bare mount root ("/sub" itself, which the app 307s
+    to "/sub/"), except the nested StaticFiles `mounts` discovered inside it,
+    which stay on the CDN and are excluded via a negative lookahead.
     """
     start = len(prefix) + 1
     nested = [m.urlPath[start:] for m in mounts]
@@ -129,7 +130,14 @@ def _subtree_shadow(prefix: str, mounts: list[StaticMount]) -> str:
     if nested:
         alternatives = "|".join(_escape(n) for n in nested)
         guard = f"(?!(?:{alternatives})(?:/|$))"
-    return f"{_escape(prefix.strip('/'))}/{guard}.*"
+    base = _escape(prefix.strip("/"))
+    if base == "":
+        # Root mount ("/"): the builder adds the leading slash, so the body is
+        # the guarded rest of the path.
+        return f"{guard}.*"
+    # The tail is optional so the bare mount root ("/sub") is shadowed too, not
+    # only paths under it ("/sub/...").
+    return f"{base}(?:/{guard}.*)?"
 
 
 def get_low_priority_routes(router: Router) -> list[_FrontendRouteGroup]:
@@ -193,7 +201,7 @@ class PriorRoute:
         return True
 
     def shadow_body(self) -> str:
-        """This route's path as a `shadowRoutes` regex body (leading slash dropped).
+        """This route's path as a `shadowRoutes` regex body (outer slashes dropped).
 
         Literal text is escaped and each `{name}` placeholder becomes its Starlette
         convertor regex (str -> `[^/]+`, int -> `[0-9]+`, …), so the route shadows
@@ -210,7 +218,14 @@ class PriorRoute:
             last = m.end()
         parts.append(_escape(self.path_format[last:]))
         body = "".join(parts)
-        return body[1:] if body.startswith("/") else body
+        if body.startswith("/"):
+            body = body[1:]
+        # Drop a literal trailing slash. Route "/items/" 307s "/items" via
+        # redirect_slashes before the frontend runs. The builder's "/?" matches
+        # both forms.
+        if body.endswith("/"):
+            body = body[:-1]
+        return body
 
 
 @dataclass
