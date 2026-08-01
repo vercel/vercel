@@ -1,4 +1,12 @@
-import { describe, expect, it, beforeAll, afterAll } from 'vitest';
+import {
+  describe,
+  expect,
+  it,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  vi,
+} from 'vitest';
 import { execSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -29,6 +37,12 @@ function initRepo(dir: string, remoteUrl: string) {
 // the bug being guarded against is that `.git` is a *file* in worktrees and
 // submodules, which a mock would hide.
 describe('resolveGitConnectIntent() with a linked `.git` file', () => {
+  beforeEach(() => {
+    // Interactive cases below would otherwise block on real stdin. Accepting
+    // is what exercises the config-path resolution under test.
+    client.input.confirm = vi.fn().mockResolvedValue(true);
+  });
+
   describe('in a git worktree', () => {
     let mainRepoDir: string;
     let worktreeDir: string;
@@ -60,7 +74,7 @@ describe('resolveGitConnectIntent() with a linked `.git` file', () => {
     });
 
     it('should find the remote even though `.git` is a file', async () => {
-      const intent = await resolveGitConnectIntent(client, worktreeDir, true);
+      const intent = await resolveGitConnectIntent(client, worktreeDir, false);
 
       // Previously null: `<worktree>/.git/config` does not exist, so the
       // connect prompt was skipped without explanation.
@@ -74,9 +88,15 @@ describe('resolveGitConnectIntent() with a linked `.git` file', () => {
       const appDir = join(worktreeDir, 'apps', 'web');
       mkdirSync(appDir, { recursive: true });
 
-      const intent = await resolveGitConnectIntent(client, appDir, true);
+      const intent = await resolveGitConnectIntent(client, appDir, false);
 
       expect(intent?.rootDirectory).toEqual('apps/web');
+    });
+
+    it('should not connect under --yes even when a remote is found', async () => {
+      const intent = await resolveGitConnectIntent(client, worktreeDir, true);
+
+      expect(intent).toBeNull();
     });
   });
 
@@ -117,7 +137,11 @@ describe('resolveGitConnectIntent() with a linked `.git` file', () => {
     });
 
     it('should resolve the submodule’s own remote, not the parent’s', async () => {
-      const intent = await resolveGitConnectIntent(client, submodulePath, true);
+      const intent = await resolveGitConnectIntent(
+        client,
+        submodulePath,
+        false
+      );
 
       expect(intent).not.toBeNull();
       // The submodule is its own repo root, so the Project links to the

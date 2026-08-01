@@ -1,4 +1,5 @@
 import { remove } from 'fs-extra';
+import chalk from 'chalk';
 import { join, basename, relative } from 'path';
 import { getPlatformEnv, normalizePath } from '@vercel/build-utils';
 import { LocalFileSystemDetector, getWorkspaces } from '@vercel/fs-detectors';
@@ -27,6 +28,10 @@ import {
   checkExistsAndConnect,
   type RepoInfo,
 } from '../git/connect-git-provider';
+import {
+  fetchRepoLinkPreflight,
+  type RepoLinkPreflight,
+} from '../git/repo-link-preflight';
 
 import toHumanPath from '../humanize-path';
 import { isDirectory } from '../fs';
@@ -51,6 +56,8 @@ import {
   DEFAULT_VERCEL_AUTH_SETTING,
 } from '../input/vercel-auth';
 import { printAlignedLabel } from '../output/print-aligned-label';
+import { getCommandName } from '../pkg-name';
+import link from '../output/link';
 import {
   displayConfiguredServicesSetup,
   getServicesSetupState,
@@ -476,6 +483,25 @@ export default async function setupAndLink(
   }
 
   config.currentTeam = org.type === 'team' ? org.id : undefined;
+
+  // Asked before any settings work: this is a question about the repository,
+  // which is already known from `path`, so there is nothing to learn from
+  // framework detection or the root-directory prompt first. Asking here also
+  // keeps it away from the wall of detected-settings output, and lets the
+  // GitHub App flow resolve while the user is still answering questions.
+  //
+  // The "how to connect later" tip is held back to the end of the flow: it is
+  // a closing next step, and printing it here would bury it between prompts.
+  let gitConnectTip: string | undefined;
+  const gitConnectIntent = await resolveGitConnectIntent(
+    client,
+    path,
+    autoConfirm,
+    tip => {
+      gitConnectTip = tip;
+    }
+  );
+
   const rootServicesSetup = await getServicesSetupState(path);
   const configFileName =
     (await findSourceVercelConfigFile(path)) ?? 'vercel.json';
@@ -641,14 +667,6 @@ export default async function setupAndLink(
       });
     }
 
-    // Asked after the code directory question, whose answer feeds the root
-    // directory computed below.
-    const gitConnectIntent = await resolveGitConnectIntent(
-      client,
-      path,
-      autoConfirm
-    );
-
     // `rootDirectory` is relative to `path`. `vc deploy` reads the Project
     // setting relative to the repo root for repo links and to `path` for
     // per-directory links, so the base has to match the link written below.
@@ -712,6 +730,12 @@ export default async function setupAndLink(
       org
     );
 
+    // Last line of the flow: the repo was detected but left unconnected, so
+    // this is the next step the user can take once the project exists.
+    if (gitConnectTip) {
+      output.log(gitConnectTip);
+    }
+
     return { status: 'linked', org, project };
   } catch (err) {
     if (isPromptCanceledError(err)) {
@@ -742,17 +766,88 @@ type GitConnectIntent = {
   remoteName: string;
 } | null;
 
+const GITHUB_APP_URL = 'https://github.com/apps/vercel';
+/** Opens the App's "which repositories?" screen for an existing install. */
+const GITHUB_APP_CONFIGURE_URL =
+  'https://github.com/apps/vercel/installations/select_target';
+
 /**
- * Asks whether to connect a detected Git remote. Runs before `createProject`
- * so the question never follows the `✓ Created` row; `applyGitConnectIntent`
- * does the connecting once a project id exists. Never prompts under `--yes`
- * or non-interactive mode.
+ * Builds what to do next when a repo was detected but not connected. The
+ * useful advice differs by *why* it is not connectable, so it keys off the
+ * preflight rather than always suggesting the same command.
+ *
+ * Returns the text rather than printing it: the tip is a closing next step, so
+ * callers defer it to the end of the flow instead of dropping it between two
+ * prompts where it reads as an error.
+ */
+function getGitConnectTip(
+  preflight: RepoLinkPreflight | null,
+  repoPath: string
+): string {
+  const connect = getCommandName('git connect');
+  const prefix = `To deploy ${chalk.bold(repoPath)} on push`;
+
+  // No Login Connection: the App is not the blocker. The fix lives in account
+  // settings rather than in the CLI, so name it and stop — the docs URL is
+  // long enough to wrap, and the next step is findable without it.
+  if (preflight?.reason === 'login_connection_missing') {
+    return `${prefix}, add a GitHub Login Connection to your account, then run ${connect}.`;
+  }
+
+  // Write access is the one blocker the user cannot clear themselves, so say
+  // so instead of pointing at a command that would 400.
+  if (preflight?.viewerCanWrite === false) {
+    return `${prefix}, you need write access to ${chalk.bold(repoPath)}. Ask an admin, then run ${connect}.`;
+  }
+
+  if (preflight?.hasVercelAppInstalled === false) {
+    return `${prefix}, install the Vercel GitHub App (${link(preflight.action?.link ?? GITHUB_APP_URL)}), then run ${connect}.`;
+  }
+
+  // Has the App, but it does not reach this repo. `installations/select_target`
+  // opens the "configure repository access" screen directly.
+  if (preflight?.reason === 'app_not_installed') {
+    return `${prefix}, grant the Vercel GitHub App access to ${chalk.bold(repoPath)} (${link(GITHUB_APP_CONFIGURE_URL)}), then run ${connect}.`;
+  }
+
+  // Includes `repo_not_found`, which is deliberately ambiguous between "no
+  // such repo" and "you cannot see it" — neither has better advice than this.
+  return `${prefix}, run ${connect}.`;
+}
+
+/**
+ * Asks whether to connect a detected Git remote. Runs before the project
+ * settings prompts — the answer depends only on `path`, so there is nothing to
+ * gain by asking later, and asking first keeps it clear of the detected
+ * settings output. `applyGitConnectIntent` does the connecting once a project
+ * id exists.
+ *
+ * Returns `null` under `--yes` and non-interactive mode. Connecting mutates
+ * the Project on Vercel — every future push deploys — so an unattended run
+ * declines rather than assuming consent, and prints a tip instead.
+ *
+ * The prompt is also skipped when the API says the repo cannot be connected,
+ * since "yes" could not be honored either way.
+ *
+ * Pass `deferTip` to collect the "what to do next" line instead of printing it
+ * inline; callers with more output to come print it last, so it reads as a
+ * closing step rather than an error between prompts.
  */
 export async function resolveGitConnectIntent(
   client: Client,
   path: string,
-  autoConfirm: boolean
+  autoConfirm: boolean,
+  deferTip?: (tip: string) => void
 ): Promise<GitConnectIntent> {
+  const emitTip = (preflight: RepoLinkPreflight | null, repoPath: string) => {
+    const tip = getGitConnectTip(preflight, repoPath);
+    if (deferTip) {
+      deferTip(tip);
+    } else {
+      output.log(tip);
+    }
+  };
+
   try {
     const repoRoot = await findRepoRoot(path);
     if (!repoRoot) {
@@ -778,21 +873,50 @@ export async function resolveGitConnectIntent(
     const relativeRoot = relative(repoRoot, path);
     const rootDirectory = relativeRoot ? normalizePath(relativeRoot) : null;
 
-    const skipPrompts = autoConfirm || client.nonInteractive;
+    // The remote picker only runs once the user says yes, but the default for
+    // that question depends on the repo. Preflight the remote that would be
+    // chosen by default — `origin`, else the only/first one.
+    const defaultRemoteUrl = remoteUrls.origin ?? Object.values(remoteUrls)[0];
+    const defaultRepoInfo = parseRepoUrl(defaultRemoteUrl);
 
-    const shouldConnect =
-      skipPrompts ||
-      (await client.input.confirm(`Connect detected Git repository?`, true));
+    const preflight = defaultRepoInfo
+      ? await fetchRepoLinkPreflight(client, {
+          provider: defaultRepoInfo.provider,
+          org: defaultRepoInfo.org,
+          repo: defaultRepoInfo.repo,
+        })
+      : null;
 
-    if (!shouldConnect) {
+    const repoPath = defaultRepoInfo
+      ? `${defaultRepoInfo.org}/${defaultRepoInfo.repo}`
+      : 'this repository';
+
+    // Connecting mutates the Project on Vercel, so never assume consent when
+    // nobody is there to give it. The tip still uses the preflight, so an
+    // agentic run learns whether it needs to install the App or just connect.
+    if (autoConfirm || client.nonInteractive) {
+      output.debug('Skipping Git connection: requires confirmation.');
+      emitTip(preflight, repoPath);
       return null;
     }
 
-    // Multiple remotes would otherwise prompt, so prefer `origin`.
-    const repoInfo = skipPrompts
-      ? parseRepoUrl(remoteUrls.origin ?? Object.values(remoteUrls)[0])
-      : await selectAndParseRemoteUrl(client, remoteUrls);
+    // The connect endpoint's own precondition is `canLink`, so a known-false
+    // preflight means connecting would fail. Nothing here can fix that, so say
+    // what to do next instead of asking a question we cannot honor. An unknown
+    // preflight (older API, outage, non-GitHub remote) is not a blocker and
+    // still gets asked.
+    if (preflight && !preflight.canLink) {
+      emitTip(preflight, repoPath);
+      return null;
+    }
 
+    if (
+      !(await client.input.confirm(`Connect detected Git repository?`, true))
+    ) {
+      return null;
+    }
+
+    const repoInfo = await selectAndParseRemoteUrl(client, remoteUrls);
     if (!repoInfo) {
       return null;
     }

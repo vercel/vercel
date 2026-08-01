@@ -86,11 +86,13 @@ describe('connectGitRepository()', () => {
     const project = { id: 'test-project-id' };
     const org = { id: 'org-id', slug: 'org-slug', type: 'team' as const };
 
-    await connectGitRepository(client, testPath, project, true, org);
+    client.input.confirm = vi.fn().mockResolvedValue(true);
+
+    await connectGitRepository(client, testPath, project, false, org);
 
     expect(vi.mocked(checkExistsAndConnect)).toHaveBeenCalledWith({
       client,
-      confirm: true,
+      confirm: false,
       gitProviderLink: undefined,
       org,
       gitOrg: 'user',
@@ -145,12 +147,11 @@ describe('connectGitRepository()', () => {
     });
   });
 
-  it('should pick `origin` without prompting when autoConfirm is set', async () => {
+  it('should not connect when autoConfirm is set', async () => {
     const testPath = '/test-project';
     const project = { id: 'test-project-id' };
     const org = { id: 'org-id', slug: 'org-slug', type: 'team' as const };
 
-    // A fork: `upstream` is listed first to prove `origin` wins on name, not order.
     vi.mocked(parseGitConfig).mockResolvedValue({
       remote: {
         upstream: { url: 'https://github.com/vercel/repo.git' },
@@ -166,39 +167,15 @@ describe('connectGitRepository()', () => {
 
     await connectGitRepository(client, testPath, project, true, org);
 
-    // `--yes` must never hang on the remote picker or the confirm.
-    expect(vi.mocked(selectAndParseRemoteUrl)).not.toHaveBeenCalled();
+    // Connecting mutates the Project on Vercel and can fail later for reasons
+    // we cannot check up front (GitHub App missing, private repo). `--yes`
+    // declines instead of assuming the default answer.
     expect(client.input.confirm).not.toHaveBeenCalled();
-    expect(vi.mocked(checkExistsAndConnect)).toHaveBeenCalledWith(
-      expect.objectContaining({ gitOrg: 'user', repoPath: 'user/repo' })
-    );
-  });
-
-  it('should fall back to the first remote when there is no `origin`', async () => {
-    const testPath = '/test-project';
-    const project = { id: 'test-project-id' };
-    const org = { id: 'org-id', slug: 'org-slug', type: 'team' as const };
-
-    vi.mocked(parseGitConfig).mockResolvedValue({
-      remote: {
-        upstream: { url: 'https://github.com/vercel/repo.git' },
-        fork: { url: 'https://github.com/other/repo.git' },
-      },
-    });
-    vi.mocked(pluckRemoteUrls).mockReturnValue({
-      upstream: 'https://github.com/vercel/repo.git',
-      fork: 'https://github.com/other/repo.git',
-    });
-
-    await connectGitRepository(client, testPath, project, true, org);
-
     expect(vi.mocked(selectAndParseRemoteUrl)).not.toHaveBeenCalled();
-    expect(vi.mocked(checkExistsAndConnect)).toHaveBeenCalledWith(
-      expect.objectContaining({ gitOrg: 'vercel', repoPath: 'vercel/repo' })
-    );
+    expect(vi.mocked(checkExistsAndConnect)).not.toHaveBeenCalled();
   });
 
-  it('should not prompt in non-interactive mode', async () => {
+  it('should not connect in non-interactive mode', async () => {
     const testPath = '/test-project';
     const project = { id: 'test-project-id' };
     const org = { id: 'org-id', slug: 'org-slug', type: 'team' as const };
@@ -217,14 +194,12 @@ describe('connectGitRepository()', () => {
     client.nonInteractive = true;
     client.input.confirm = vi.fn();
 
-    // `autoConfirm` is false here: `nonInteractive` alone must suppress prompts.
+    // `autoConfirm` is false here: `nonInteractive` alone must suppress it.
     await connectGitRepository(client, testPath, project, false, org);
 
     expect(client.input.confirm).not.toHaveBeenCalled();
     expect(vi.mocked(selectAndParseRemoteUrl)).not.toHaveBeenCalled();
-    expect(vi.mocked(checkExistsAndConnect)).toHaveBeenCalledWith(
-      expect.objectContaining({ gitOrg: 'user', repoPath: 'user/repo' })
-    );
+    expect(vi.mocked(checkExistsAndConnect)).not.toHaveBeenCalled();
   });
 
   it('should detect the repo from a subdirectory and derive the root directory', async () => {
@@ -240,11 +215,18 @@ describe('connectGitRepository()', () => {
     vi.mocked(pluckRemoteUrls).mockReturnValue({
       origin: 'https://github.com/user/repo.git',
     });
+    vi.mocked(selectAndParseRemoteUrl).mockResolvedValue({
+      url: 'https://github.com/user/repo.git',
+      provider: 'github',
+      org: 'user',
+      repo: 'repo',
+    });
+    client.input.confirm = vi.fn().mockResolvedValue(true);
 
     const intent = await resolveGitConnectIntent(
       client,
       '/repo/apps/web',
-      true
+      false
     );
 
     // Previously this returned null: there is no `.git` in `apps/web`, so the
@@ -302,8 +284,15 @@ describe('connectGitRepository()', () => {
     vi.mocked(pluckRemoteUrls).mockReturnValue({
       origin: 'https://github.com/user/repo.git',
     });
+    vi.mocked(selectAndParseRemoteUrl).mockResolvedValue({
+      url: 'https://github.com/user/repo.git',
+      provider: 'github',
+      org: 'user',
+      repo: 'repo',
+    });
+    client.input.confirm = vi.fn().mockResolvedValue(true);
 
-    const intent = await resolveGitConnectIntent(client, '/repo', true);
+    const intent = await resolveGitConnectIntent(client, '/repo', false);
 
     expect(intent?.rootDirectory).toBeNull();
   });
