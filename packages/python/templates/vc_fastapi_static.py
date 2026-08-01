@@ -278,6 +278,11 @@ def collect(
                 if m := StaticMount.from_route(route, prefix, frontend=False):
                     mounts.append(m)
                     shadow_routes |= prior.shadow_bodies(m)
+                    # StaticFiles(html=False) 404s the mount root and redirects
+                    # /prefix to /prefix/. Shadow the root so the CDN does not
+                    # serve a directory index there instead.
+                    if not route.app.html:
+                        shadow_routes.add(_escape(url_prefix.strip("/")))
                 # app.mount(Router | sub-app): recurse into the sub-router so
                 # its own StaticFiles mounts are found too. A Starlette/FastAPI
                 # sub-application isn't a Router but exposes one as `.router`.
