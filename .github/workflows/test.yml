@@ -84,7 +84,8 @@ jobs:
           node-version: 22
       - name: install turbo@2.5.0
         run: npm i -g turbo@2.5.0
-      - id: affected-packages
+      - name: Detect affected packages and test strategy
+        id: affected-packages
         run: |
           # Set base SHA for affected package detection
           export TURBO_BASE_SHA="${{ steps.pr-context.outputs.baseSha }}"
@@ -122,7 +123,8 @@ jobs:
           echo "count=$PACKAGE_COUNT" >> $GITHUB_OUTPUT
           echo "total=$TOTAL_COUNT" >> $GITHUB_OUTPUT
           echo "allPackages=$ALL_PACKAGES" >> $GITHUB_OUTPUT
-      - id: set-tests
+      - name: Chunk unit and e2e test matrices
+        id: set-tests
         run: |
           UNIT_TESTS_ARRAY=$(TEST_TYPE=unit node utils/chunk-tests.js)
           E2E_TESTS_ARRAY=$(TEST_TYPE=e2e node utils/chunk-tests.js)
