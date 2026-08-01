@@ -116,6 +116,22 @@ def _to_non_capturing(regex: str) -> str:
     return re.sub(r"\((?!\?)", "(?:", regex)
 
 
+def _subtree_shadow(prefix: str, mounts: list[StaticMount]) -> str:
+    """A shadow body routing a mounted sub-app's whole subtree to the Lambda.
+
+    The app owns `prefix` (e.g. "/sub") at runtime, so everything under it is
+    shadowed, except the nested StaticFiles `mounts` discovered inside it, which
+    stay on the CDN and are excluded via a negative lookahead.
+    """
+    start = len(prefix) + 1
+    nested = [m.urlPath[start:] for m in mounts]
+    guard = ""
+    if nested:
+        alternatives = "|".join(_escape(n) for n in nested)
+        guard = f"(?!(?:{alternatives})(?:/|$))"
+    return f"{_escape(prefix.strip('/'))}/{guard}.*"
+
+
 def get_low_priority_routes(router: Router) -> list[_FrontendRouteGroup]:
     return getattr(router, "_low_priority_routes", [])
 
@@ -275,6 +291,8 @@ def collect(
                     sub_mounts, sub_shadow = collect(sub_router, sub_prefix, prior)
                     mounts.extend(sub_mounts)
                     shadow_routes |= sub_shadow
+                    shadow_routes.add(_subtree_shadow(sub_prefix, sub_mounts))
+
                 # Now owns its subtree, eclipsing later mounts nested under it.
                 prior.add_mount(url_prefix)
 

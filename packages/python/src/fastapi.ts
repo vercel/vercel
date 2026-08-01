@@ -185,16 +185,17 @@ function escapeRegex(text: string): string {
 }
 
 /**
- * Routes that send paths a higher-priority FastAPI route owns to the Lambda.
- * They are emitted before `handle: 'filesystem'`, so the app wins over a
- * colliding CDN file. This preserves FastAPI's declaration-order precedence.
+ * Routes that send paths the app owns to the Lambda, emitted before
+ * `handle: 'filesystem'` so the app wins over a colliding CDN file. This
+ * preserves FastAPI's declaration-order precedence.
  *
- * Each shadow body is a ready-made pattern: the path minus its leading slash,
- * with inner groups already non-capturing. The bodies are OR'd into one
- * capturing group whose match is copied back into `request.path` via `$1`. The
- * group allows an optional trailing slash so redirect_slashes still works. A
- * request to `/foo/` reaches the Lambda, which redirects it to `/foo`. Returns
- * an empty list when nothing is shadowed.
+ * Each shadow body is a ready-made pattern from the shim: a higher-priority
+ * route's path, or a mounted sub-app's subtree, minus its leading slash and with
+ * inner groups already non-capturing. The bodies are OR'd into one capturing
+ * group whose match is copied back into `request.path` via `$1`. The group
+ * allows an optional trailing slash so redirect_slashes still works. A request
+ * to `/foo/` reaches the Lambda, which redirects it to `/foo`. Returns an empty
+ * list when nothing is shadowed.
  */
 export function fastapiShadowingRoutes(
   discovery: FastAPICollectStaticResult,
