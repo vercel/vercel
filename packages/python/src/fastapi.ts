@@ -113,6 +113,41 @@ export async function getFastAPIStaticDiscovery(
  *
  * Returns null when no StaticFiles mounts are found.
  */
+/**
+ * Copy each mount's directory into the CDN output tree at its URL prefix.
+ * Returns false if any copy fails, so the caller can skip CDN offload.
+ */
+export async function copyFastAPIStaticMounts(
+  mounts: FastAPIStaticMount[],
+  outputStaticDir: string
+): Promise<boolean> {
+  // Runtime routing is first-match-wins, and app.frontend() builds are always
+  // low-priority. So copy non-frontend mounts first (in declaration order), then
+  // frontends, and never overwrite (force: false).
+  const ordered = [
+    ...mounts.filter(m => !m.frontend),
+    ...mounts.filter(m => m.frontend),
+  ];
+  for (const mount of ordered) {
+    const urlSubPath = mount.urlPath.replace(/^\/|\/$/g, '');
+    const dest = join(outputStaticDir, urlSubPath);
+    try {
+      await fs.promises.mkdir(dest, { recursive: true });
+      await fs.promises.cp(mount.directory, dest, {
+        recursive: true,
+        force: false,
+      });
+    } catch (err) {
+      debug(
+        `FastAPI: copy ${mount.directory} -> ${dest} failed (${err}), skipping CDN`
+      );
+      return false;
+    }
+    debug(`copied ${mount.directory} -> ${dest}`);
+  }
+  return true;
+}
+
 export async function runFastAPICollectStatic(
   venvPath: string,
   workPath: string,
@@ -138,29 +173,8 @@ export async function runFastAPICollectStatic(
     `Found ${mounts.length} FastAPI static mount(s): ${mounts.map(m => m.urlPath).join(', ')}`
   );
 
-  // Runtime routing is first-match-wins, and app.frontend() builds are always
-  // low-priority. So copy non-frontend mounts first (in declaration order), then
-  // frontends, and never overwrite (force: false).
-  const ordered = [
-    ...mounts.filter(m => !m.frontend),
-    ...mounts.filter(m => m.frontend),
-  ];
-  for (const mount of ordered) {
-    const urlSubPath = mount.urlPath.replace(/^\/|\/$/g, '');
-    const dest = join(outputStaticDir, urlSubPath);
-    try {
-      await fs.promises.mkdir(dest, { recursive: true });
-      await fs.promises.cp(mount.directory, dest, {
-        recursive: true,
-        force: false,
-      });
-    } catch (err) {
-      debug(
-        `FastAPI: copy ${mount.directory} -> ${dest} failed (${err}), skipping CDN`
-      );
-      return null;
-    }
-    debug(`copied ${mount.directory} -> ${dest}`);
+  if (!(await copyFastAPIStaticMounts(mounts, outputStaticDir))) {
+    return null;
   }
 
   const fallbacks = mounts.flatMap(m =>
