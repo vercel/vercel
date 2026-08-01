@@ -243,10 +243,9 @@ it('navigation Accept gate rejects an explicit q=0', () => {
   expect(new RegExp(accept).test('text/html;q=0')).toBe(false);
 });
 
-// The copy step flattens every mount and frontend into one CDN tree. At runtime
-// a Mount full-matches its whole subtree before any lower-priority source is
-// consulted, so a path a higher-priority source owns must hold that source's
-// file (or nothing), never a file that leaked in from a lower-priority source.
+// Every source is flattened into one CDN tree, so each path must hold only what
+// its highest-priority owner serves, never a file that leaked across a mount
+// boundary from a lower-priority source.
 describe('copyFastAPIStaticMounts', () => {
   let root: string;
   let out: string;
@@ -278,9 +277,8 @@ describe('copyFastAPIStaticMounts', () => {
     fs.readFileSync(path.join(out, rel), 'utf8');
 
   it('does not serve a frontend file from inside a plain mount namespace', async () => {
-    // The /static mount owns its whole subtree, so a frontend file that lands
-    // at /static/extra.txt (absent from the mount) 404s at runtime and must
-    // not be on the CDN.
+    // The /static mount owns its subtree, so the frontend's /static/extra.txt
+    // (which the mount lacks) must not reach the CDN.
     const appMount = source('static', { 'a.txt': 'MOUNT_FILE' });
     const frontend = source('frontend', {
       'index.html': '<h1>app</h1>',
@@ -295,8 +293,8 @@ describe('copyFastAPIStaticMounts', () => {
   });
 
   it('does not serve a later mount file from inside an earlier mount namespace', async () => {
-    // The mount declared first owns /inner/*, so a file the later root mount
-    // has at /inner/only_root.txt 404s at runtime and must not be on the CDN.
+    // The mount declared first owns /inner, so the later root mount's
+    // /inner/only_root.txt must not reach the CDN.
     const inner = source('inner', { 'a.txt': 'INNER_FILE' });
     const rootMount = source('rootdir', {
       'root.txt': 'ROOT_FILE',
@@ -312,8 +310,8 @@ describe('copyFastAPIStaticMounts', () => {
   });
 
   it('resolves a frontend collision by prefix specificity, not declaration order', async () => {
-    // A frontend at /app is more specific than one at /, so it wins for
-    // /app/x.txt at runtime even though it is declared second.
+    // The /app frontend is more specific than the / frontend, so it wins
+    // /app/x.txt even though it is declared second.
     const rootFe = source('root-fe', {
       'index.html': '<h1>root</h1>',
       'app/x.txt': 'FROM_ROOT',
@@ -327,5 +325,21 @@ describe('copyFastAPIStaticMounts', () => {
       out
     );
     expect(read('app/x.txt')).toBe('FROM_APP');
+  });
+
+  it('does not serve any frontend file once a plain root mount owns the tree', async () => {
+    // A plain mount at / owns every path, so the lower-priority frontend is
+    // never served and must not reach the CDN.
+    const rootMount = source('rootdir', { 'shared.txt': 'FROM_MOUNT' });
+    const frontend = source('frontend', {
+      'index.html': '<h1>app</h1>',
+      'shared.txt': 'FROM_FRONTEND',
+    });
+    await copyFastAPIStaticMounts(
+      [mount('/', rootMount, false), mount('/', frontend, true)],
+      out
+    );
+    expect(read('shared.txt')).toBe('FROM_MOUNT');
+    expect(exists('index.html')).toBe(false);
   });
 });
