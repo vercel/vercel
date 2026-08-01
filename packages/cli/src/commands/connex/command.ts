@@ -38,7 +38,8 @@ export const createSubcommand = {
       type: [String],
       argument: 'EVENT',
       deprecated: false,
-      description: 'Webhook event to receive. Repeatable.',
+      description:
+        "Webhook event to receive. Repeatable. Requires --triggers and replaces the provider's default events.",
     },
     {
       name: 'data',

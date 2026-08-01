@@ -57,6 +57,11 @@ export async function create(
     return 1;
   }
 
+  if (flags['--trigger-event'] && !flags['--triggers']) {
+    output.error('The --trigger-event flag requires --triggers.');
+    return 1;
+  }
+
   const dataFlag = flags['--data'];
   const connectorType = flags['--connector-type'];
   if (connectorType && dataFlag === undefined) {
