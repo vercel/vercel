@@ -657,6 +657,38 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     expect(shadowRoutes).toContain('api(?:/.*)?');
   });
 
+  it('shadows a raw ASGI mount subtree so a leaked frontend file cannot win', async () => {
+    const appDir = path.join(testDir, 'app-raw-asgi-mount');
+    fs.mkdirSync(path.join(appDir, 'fe', 'x'), { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'fe', 'index.html'), 'FE');
+    fs.writeFileSync(path.join(appDir, 'fe', 'x', 'data.txt'), 'LEAK');
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'async def raw_asgi(scope, receive, send):',
+        "    await send({'type': 'http.response.start', 'status': 200, 'headers': []})",
+        "    await send({'type': 'http.response.body', 'body': b'RAW'})",
+        'app = FastAPI()',
+        'app.mount("/x", raw_asgi)',
+        'app.frontend("/", directory="fe")',
+      ].join('\n')
+    );
+
+    const { shadowRoutes } = await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    // A raw ASGI mount owns /x/* at runtime, so its whole subtree is shadowed to
+    // the Lambda, keeping the frontend's colliding x/data.txt copy off the CDN.
+    expect(shadowRoutes).toContain('x(?:/.*)?');
+  });
+
   it('shadows a StaticFiles mount root only when html is disabled', async () => {
     const appDir = path.join(testDir, 'app-mount-root-html');
     fs.mkdirSync(path.join(appDir, 'files'), { recursive: true });
