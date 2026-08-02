@@ -566,6 +566,70 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     expect(served).toBe('MOUNT');
   });
 
+  it('drops a frontend eclipsed by a StaticFiles mount at the same prefix', async () => {
+    const appDir = path.join(testDir, 'frontend-eclipsed');
+    fs.mkdirSync(path.join(appDir, 'site'), { recursive: true });
+    fs.mkdirSync(path.join(appDir, 'fe'), { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'site', 'index.html'), 'SITE');
+    fs.writeFileSync(path.join(appDir, 'fe', 'index.html'), 'FE');
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'from fastapi.staticfiles import StaticFiles',
+        'app = FastAPI()',
+        'app.mount("/", StaticFiles(directory="site"), name="site")',
+        'app.frontend("/", directory="fe")',
+      ].join('\n')
+    );
+
+    const { mounts } = await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    // The mount at / owns the whole tree, so the low-priority frontend is never
+    // reached at runtime and must not be discovered as a mount or a fallback.
+    expect(mounts.some(m => m.frontend)).toBe(false);
+    expect(mounts.every(m => m.fallback === null)).toBe(true);
+    expect(mounts.some(m => !m.frontend)).toBe(true);
+  });
+
+  it('keeps a frontend when a mount owns only a sibling prefix', async () => {
+    const appDir = path.join(testDir, 'frontend-sibling-mount');
+    fs.mkdirSync(path.join(appDir, 'assets'), { recursive: true });
+    fs.mkdirSync(path.join(appDir, 'fe'), { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'assets', 'logo.txt'), 'LOGO');
+    fs.writeFileSync(path.join(appDir, 'fe', 'index.html'), 'FE');
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'from fastapi.staticfiles import StaticFiles',
+        'app = FastAPI()',
+        'app.mount("/static", StaticFiles(directory="assets"), name="assets")',
+        'app.frontend("/", directory="fe")',
+      ].join('\n')
+    );
+
+    const { mounts } = await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    // The mount owns only /static, so the frontend at / still serves other
+    // paths at runtime and must be kept.
+    expect(mounts.some(m => m.frontend)).toBe(true);
+  });
+
   it('shadows a mounted sub-app subtree', async () => {
     const appDir = path.join(testDir, 'app-subapp-shadow');
     fs.mkdirSync(appDir, { recursive: true });
