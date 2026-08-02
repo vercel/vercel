@@ -718,6 +718,66 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     expect(shadowRoutes).not.toContain('site');
   });
 
+  it('shadows html=False subdirectories that hold a directory index', async () => {
+    const appDir = path.join(testDir, 'app-mount-subdir-index');
+    fs.mkdirSync(path.join(appDir, 'static', 'docs'), { recursive: true });
+    fs.mkdirSync(path.join(appDir, 'static', 'empty'), { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'static', 'index.html'), 'ROOT');
+    fs.writeFileSync(path.join(appDir, 'static', 'docs', 'index.html'), 'DOCS');
+    fs.writeFileSync(path.join(appDir, 'static', 'style.css'), 'CSS');
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'from fastapi.staticfiles import StaticFiles',
+        'app = FastAPI()',
+        'app.mount("/static", StaticFiles(directory="static"), name="s")',
+      ].join('\n')
+    );
+
+    const { shadowRoutes } = await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    // html=False 404s /static/docs and /static/docs/, but the CDN resolves
+    // static/docs/index.html as an index, so the subdir is shadowed.
+    expect(shadowRoutes).toContain('static/docs');
+    // A subdir without an index 404s on both sides, so it stays on the CDN.
+    expect(shadowRoutes).not.toContain('static/empty');
+  });
+
+  it('does not shadow subdirectories when html is enabled', async () => {
+    const appDir = path.join(testDir, 'app-mount-subdir-index-html');
+    fs.mkdirSync(path.join(appDir, 'static', 'docs'), { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'static', 'docs', 'index.html'), 'DOCS');
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'from fastapi.staticfiles import StaticFiles',
+        'app = FastAPI()',
+        'app.mount("/static", StaticFiles(directory="static", html=True))',
+      ].join('\n')
+    );
+
+    const { shadowRoutes } = await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    // html=True serves the directory index at runtime, matching the CDN.
+    expect(shadowRoutes).not.toContain('static/docs');
+  });
+
   it('drops a trailing slash from a route shadow body', async () => {
     const appDir = path.join(testDir, 'app-trailing-slash-route');
     fs.mkdirSync(path.join(appDir, 'dist'), { recursive: true });
