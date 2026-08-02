@@ -46,6 +46,32 @@ describe('fastapiShadowingRoutes', () => {
       },
     ]);
   });
+
+  it('splits bodies across routes when one src would exceed the 4096 cap', () => {
+    // A root frontend shadows every route; enough of them overflow one src.
+    const bodies = Array.from(
+      { length: 300 },
+      (_, i) => `api/v1/resource${i}/(?:[^/]+)`
+    );
+    const routes = fastapiShadowingRoutes(
+      discovery({ shadowRoutes: bodies }),
+      'api/index'
+    );
+
+    expect(routes.length).toBeGreaterThan(1);
+    for (const r of routes) {
+      expect(r.src.length).toBeLessThanOrEqual(4096);
+      expect(r.src.startsWith('^/((?:')).toBe(true);
+      expect(r.src.endsWith(')/?)$')).toBe(true);
+      expect(r.dest).toBe('/api/index');
+      expect(r.transforms).toEqual([
+        { type: 'request.path', op: 'set', args: '/$1' },
+      ]);
+    }
+    // Every body appears once, in order, across the chunks (none lost or split).
+    const recovered = routes.flatMap(r => r.src.slice(6, -5).split('|'));
+    expect(recovered).toEqual(bodies);
+  });
 });
 
 describe('fastapiFallbackRoutes', () => {
