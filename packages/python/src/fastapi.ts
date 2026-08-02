@@ -223,6 +223,13 @@ function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// routing-utils caps a route `src` at 4096 chars (routesSchema in schemas.ts).
+const MAX_SHADOW_SRC_LENGTH = 4096;
+
+function shadowSrc(bodies: string[]): string {
+  return `^/((?:${bodies.join('|')})/?)$`;
+}
+
 /**
  * Routes that send paths the app owns to the Lambda, emitted before
  * `handle: 'filesystem'` so the app wins over a colliding CDN file. This
@@ -233,23 +240,39 @@ function escapeRegex(text: string): string {
  * inner groups already non-capturing. The bodies are OR'd into one capturing
  * group whose match is copied back into `request.path` via `$1`. The group
  * allows an optional trailing slash so redirect_slashes still works. A request
- * to `/foo/` reaches the Lambda, which redirects it to `/foo`. Returns an empty
- * list when nothing is shadowed.
+ * to `/foo/` reaches the Lambda, which redirects it to `/foo`.
+ *
+ * A root frontend shadows every route, so one OR'd `src` can exceed the routing
+ * config's 4096-char cap. The bodies are packed into as many routes as needed to
+ * stay under it. The routes are identical apart from their bodies and all send
+ * the match to the Lambda, so the split is order-independent.
+ *
+ * Returns an empty list when nothing is shadowed.
  */
 export function fastapiShadowingRoutes(
   discovery: FastAPICollectStaticResult,
   lambdaPath: string
 ) {
   if (discovery.shadowRoutes.length === 0) return [];
-  return [
-    {
-      src: `^/((?:${discovery.shadowRoutes.join('|')})/?)$`,
-      dest: `/${lambdaPath}`,
-      transforms: [
-        { type: 'request.path' as const, op: 'set' as const, args: '/$1' },
-      ],
-    },
-  ];
+  const chunks: string[][] = [];
+  for (const body of discovery.shadowRoutes) {
+    const current = chunks[chunks.length - 1];
+    if (
+      current &&
+      shadowSrc([...current, body]).length <= MAX_SHADOW_SRC_LENGTH
+    ) {
+      current.push(body);
+    } else {
+      chunks.push([body]);
+    }
+  }
+  return chunks.map(bodies => ({
+    src: shadowSrc(bodies),
+    dest: `/${lambdaPath}`,
+    transforms: [
+      { type: 'request.path' as const, op: 'set' as const, args: '/$1' },
+    ],
+  }));
 }
 
 /**
