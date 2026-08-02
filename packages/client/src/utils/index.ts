@@ -451,15 +451,54 @@ export interface PreparedFile {
   sha?: string;
   size?: number;
   mode: number;
+  data?: string;
+  encoding?: 'base64';
 }
 
 const isWin = process.platform.includes('win');
+
+const INLINE_STATIC_EXTENSIONS = ['.html', '.htm', '.md'];
+const MAX_INLINE_FILES = 10;
+const MAX_INLINE_TOTAL_BYTES = 5 * 1024 * 1024; // 5MB
+const S_IFREG = 0o100000;
+const S_IFMT = 0o170000;
+
+/**
+ * Small all-static file sets are sent inline in the deployment creation
+ * request instead of as SHA references. This lets the API take its instant
+ * static fast path (deployment is READY in the create response, no build) —
+ * eligibility is decided entirely server-side, and ineligible deployments
+ * fall back to the regular build flow with no behavior change.
+ */
+export function shouldInlineStaticFiles(files: FilesMap): boolean {
+  let count = 0;
+  let totalBytes = 0;
+  for (const file of files.values()) {
+    if ((file.mode & S_IFMT) !== S_IFREG) return false;
+    // Large files are streamed from disk and have no in-memory data
+    if (!file.data) return false;
+    for (const name of file.names) {
+      const lower = name.toLowerCase();
+      if (!INLINE_STATIC_EXTENSIONS.some(ext => lower.endsWith(ext))) {
+        return false;
+      }
+      count += 1;
+      totalBytes += file.data.byteLength;
+    }
+  }
+  return (
+    count > 0 &&
+    count <= MAX_INLINE_FILES &&
+    totalBytes <= MAX_INLINE_TOTAL_BYTES
+  );
+}
 
 export const prepareFiles = (
   files: FilesMap,
   clientOptions: VercelClientOptions
 ): PreparedFile[] => {
   const preparedFiles: PreparedFile[] = [];
+  const inlineStaticFiles = shouldInlineStaticFiles(files);
   for (const [sha, file] of files) {
     for (const name of file.names) {
       let fileName: string;
@@ -476,8 +515,21 @@ export const prepareFiles = (
         fileName = segments[segments.length - 1];
       }
 
+      const normalizedName = isWin ? fileName.replace(/\\/g, '/') : fileName;
+
+      if (inlineStaticFiles && file.data) {
+        // The InlinedFile API schema rejects `sha` and `size`
+        preparedFiles.push({
+          file: normalizedName,
+          data: file.data.toString('base64'),
+          encoding: 'base64',
+          mode: file.mode,
+        });
+        continue;
+      }
+
       preparedFiles.push({
-        file: isWin ? fileName.replace(/\\/g, '/') : fileName,
+        file: normalizedName,
         size: file.data?.byteLength ?? file.size,
         mode: file.mode,
         sha: sha || undefined,
