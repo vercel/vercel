@@ -289,8 +289,9 @@ def collect(
                 PriorRoute(prefix + route.path_format, route.param_convertors)
             )
 
-        # app.mount(StaticFiles): serve from the CDN, minus shadowed paths; drop
-        # if an earlier mount eclipses it.
+        # app.mount(): a StaticFiles serves from the CDN, a Router/sub-app
+        # recurses, and a raw ASGI app owns its subtree opaquely. Skip any that
+        # an earlier mount already eclipses.
         if isinstance(route, Mount):
             url_prefix = prefix + route.path
             if not prior.eclipses(url_prefix):
@@ -302,20 +303,27 @@ def collect(
                     # serve a directory index there instead.
                     if not route.app.html:
                         shadow_routes.add(_escape_path(url_prefix))
-                # app.mount(Router | sub-app): recurse into the sub-router so
-                # its own StaticFiles mounts are found too. A Starlette/FastAPI
-                # sub-application isn't a Router but exposes one as `.router`.
+                # A Starlette/FastAPI sub-app isn't a Router but exposes one as
+                # `.router`; a StaticFiles or raw ASGI app exposes neither.
                 sub_router = (
                     route.app
                     if isinstance(route.app, Router)
                     else getattr(route.app, "router", None)
                 )
                 if isinstance(sub_router, Router):
+                    # Recurse for the sub-app's own StaticFiles mounts, then
+                    # shadow the rest of its subtree to the Lambda.
                     sub_prefix = prefix + route.path.rstrip("/")
                     sub_mounts, sub_shadow = collect(sub_router, sub_prefix, prior)
                     mounts.extend(sub_mounts)
                     shadow_routes |= sub_shadow
                     shadow_routes.add(_subtree_shadow(sub_prefix, sub_mounts))
+                elif m is None:
+                    # Neither StaticFiles nor a sub-app: a raw ASGI app (e.g.
+                    # WSGIMiddleware) owns its subtree with nothing on the CDN.
+                    # Shadow it so a lower-priority source's leaked copy there
+                    # routes to the Lambda instead.
+                    shadow_routes.add(_subtree_shadow(url_prefix, []))
 
                 # Now owns its subtree, eclipsing later mounts nested under it.
                 prior.add_mount(url_prefix)
