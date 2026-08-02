@@ -341,18 +341,22 @@ def collect(
                 if m := StaticMount.from_route(
                     r, prefix + ctx.frontend_prefix, frontend=True
                 ):
-                    mounts.append(m)
                     frontends.append(m)
 
     # app.frontend(): a low-priority build.
     for group in get_low_priority_routes(router):
         for route in group.routes:
             if m := StaticMount.from_route(route, prefix, frontend=True):
-                mounts.append(m)
                 frontends.append(m)
 
-    # A frontend is outranked by every route, so shadow it against the full list.
+    # A frontend is low-priority: every route outranks it, and it is unreachable
+    # when a mount already owns its prefix (Starlette dispatches to that mount
+    # and never consults the low-priority build). Drop eclipsed frontends
+    # entirely (mount, fallback, and shadow); shadow the rest against all routes.
     for m in frontends:
+        if prior.eclipses(m.urlPath):
+            continue
+        mounts.append(m)
         shadow_routes |= prior.shadow_bodies(m)
 
     return mounts, shadow_routes
