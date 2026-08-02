@@ -150,6 +150,25 @@ def _subtree_shadow(prefix: str, mounts: list[StaticMount]) -> str:
     return f"{base}(?:/{guard}.*)?"
 
 
+def _index_subdir_shadows(url_prefix: str, directory: str) -> set[str]:
+    """Shadow bodies for subdirectories a StaticFiles(html=False) mount 404s.
+
+    The CDN resolves `<dir>/index.html` as a directory index at every level, but
+    StaticFiles(html=False) 404s the directory itself. Shadow each subdirectory
+    holding an index so its bare path routes to the Lambda instead; the files
+    below it stay on the CDN. The mount root is shadowed by the caller.
+    """
+    shadows: set[str] = set()
+    for dirpath, _dirnames, filenames in os.walk(directory):
+        if "index.html" not in filenames:
+            continue
+        rel = os.path.relpath(dirpath, directory)
+        if rel == ".":
+            continue
+        shadows.add(_escape_path(url_prefix + "/" + rel.replace(os.sep, "/")))
+    return shadows
+
+
 def get_low_priority_routes(router: Router) -> list[_FrontendRouteGroup]:
     return getattr(router, "_low_priority_routes", [])
 
@@ -303,6 +322,11 @@ def collect(
                     # serve a directory index there instead.
                     if not route.app.html:
                         shadow_routes.add(_escape_path(url_prefix))
+                        # Subdirectories 404 the same way; shadow those the CDN
+                        # would resolve to an index.
+                        shadow_routes |= _index_subdir_shadows(
+                            url_prefix, m.directory
+                        )
                 # A Starlette/FastAPI sub-app isn't a Router but exposes one as
                 # `.router`; a StaticFiles or raw ASGI app exposes neither.
                 sub_router = (
