@@ -87,7 +87,7 @@ function isNativeLoaderFailure(result) {
       result.error.code === 'ENOEXEC'
     );
   }
-  const text = `${result.stderr || ''}`;
+  const text = `${result.stderr || ''}${result.stdout || ''}`;
   return (
     /version [`']GLIBC_[\d.]+[`'] not found/i.test(text) ||
     /GLIBC_[\d.]+[`'] not found/i.test(text) ||
@@ -95,35 +95,51 @@ function isNativeLoaderFailure(result) {
   );
 }
 
+// Probe with a short --version spawn (piped, bounded output) so we can detect
+// glibc/loader failures without piping stderr for the real command — that
+// would hit Node's default 1 MiB maxBuffer on verbose/long-running CLIs.
+function canRunNativeBinary(binPath) {
+  const probe = spawnSync(binPath, ['--version'], {
+    encoding: 'utf8',
+    timeout: 30_000,
+    maxBuffer: 1024 * 1024,
+    windowsHide: true,
+  });
+  return !isNativeLoaderFailure(probe);
+}
+
 const bin = resolveNative();
 
 if (bin && (await isNativeBinaryOptedIn())) {
   process.env.VERCEL_VC_NATIVE = '1';
-  // Pipe stderr so we can detect loader/glibc failures and fall back to JS
-  // without surfacing the dynamic-linker noise. Stdin/stdout stay inherited
-  // so interactive and long-running commands still stream.
-  const r = spawnSync(bin, process.argv.slice(2), {
-    encoding: 'utf8',
-    stdio: ['inherit', 'inherit', 'pipe'],
-    windowsHide: true,
-  });
-  if (isNativeLoaderFailure(r)) {
+  if (!canRunNativeBinary(bin)) {
     delete process.env.VERCEL_VC_NATIVE;
     // fall through to JS
   } else {
-    if (r.stderr) {
-      process.stderr.write(r.stderr);
+    const r = spawnSync(bin, process.argv.slice(2), {
+      stdio: 'inherit',
+      windowsHide: true,
+    });
+    if (
+      r.error &&
+      (r.error.code === 'ENOENT' ||
+        r.error.code === 'EACCES' ||
+        r.error.code === 'ENOEXEC')
+    ) {
+      delete process.env.VERCEL_VC_NATIVE;
+      // fall through to JS
+    } else {
+      if (r.error) {
+        console.error(r.error.message);
+        process.exit(1);
+      }
+      if (r.signal) {
+        try {
+          process.kill(process.pid, r.signal);
+        } catch {}
+      }
+      process.exit(r.status ?? 1);
     }
-    if (r.error) {
-      console.error(r.error.message);
-      process.exit(1);
-    }
-    if (r.signal) {
-      try {
-        process.kill(process.pid, r.signal);
-      } catch {}
-    }
-    process.exit(r.status ?? 1);
   }
 }
 

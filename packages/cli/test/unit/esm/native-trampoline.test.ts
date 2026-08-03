@@ -222,6 +222,7 @@ describe('dist/vc.js native resolution', () => {
       const { vcJs } = buildInstall({
         platform: process.platform,
         arch: process.arch,
+        // Probe runs `native --version`; linker-style stderr must trigger fallback.
         body:
           '#!/bin/sh\n' +
           'echo "version \'GLIBC_2.38\' not found (required by native)" >&2\n' +
