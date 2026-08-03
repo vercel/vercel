@@ -1,3 +1,3 @@
 module github.com/vercel/go-runtime
 
-go 1.20
+go 1.13

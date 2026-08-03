@@ -39,10 +39,12 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if pathname == "" {
 		pathname = "/"
 	}
+	// time.Time.UnixMilli was added in Go 1.17, but the runtime supports Go 1.13.
+	startMillis := started.UnixNano() / int64(time.Millisecond)
 	sendFrame("fetch-metric", requestKey(req.Context()), map[string]interface{}{
 		"pathname":   pathname,
 		"search":     req.URL.RawQuery,
-		"start":      started.UnixMilli(),
+		"start":      startMillis,
 		"duration":   duration.Milliseconds(),
 		"host":       req.URL.Host,
 		"statusCode": statusCode,

@@ -19,7 +19,7 @@ describe('Go handler build', () => {
     await Promise.all([
       writeFile(
         join(workPath, 'go.mod'),
-        'module example.com/handler\n\ngo 1.26\n'
+        'module example.com/handler\n\ngo 1.15\n'
       ),
       writeFile(
         join(workPath, 'index.go'),
