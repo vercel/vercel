@@ -27,6 +27,9 @@ export interface RequestLogEntry {
   traceId?: string;
   messageTruncated?: boolean;
   logs: RequestLogMessage[];
+  eventsCount: number;
+  /** Present when the request has settled (incomplete live rows omit this). */
+  requestDurationMs?: number;
 }
 
 export interface RequestLogsResponse {
@@ -47,6 +50,15 @@ export interface FetchRequestLogsOptions {
   source?: string[];
   since?: string;
   until?: string;
+  /** Absolute start time in ms. Takes precedence over `since`. */
+  startDate?: number;
+  /** Absolute end time in ms. Takes precedence over `until`. */
+  endDate?: number;
+  /**
+   * When true, omit `endDate` so the request-logs API runs in live mode
+   * (includes in-progress requests). Takes precedence over `endDate`/`until`.
+   */
+  live?: boolean;
   limit?: number;
   search?: string;
   requestId?: string;
@@ -119,6 +131,9 @@ export async function fetchRequestLogs(
     source,
     since,
     until,
+    startDate,
+    endDate,
+    live,
     search,
     requestId,
     branch,
@@ -134,9 +149,17 @@ export async function fetchRequestLogs(
   query.set('page', String(page));
   query.set(
     'startDate',
-    String(since ? parseRelativeTime(since) : defaultStartDate)
+    String(
+      startDate ?? (since ? parseRelativeTime(since) : defaultStartDate)
+    )
   );
-  query.set('endDate', String(until ? parseRelativeTime(until) : now));
+  // Omit endDate for live mode so the API includes in-progress requests.
+  if (!live) {
+    query.set(
+      'endDate',
+      String(endDate ?? (until ? parseRelativeTime(until) : now))
+    );
+  }
 
   if (deploymentId) {
     query.set('deploymentId', deploymentId);
@@ -192,6 +215,7 @@ export async function fetchRequestLogs(
     cacheReason?: string;
     pprState?: string;
     traceId?: string;
+    requestDurationMs?: number;
     logs?: Array<{
       level?: string;
       message?: string;
@@ -214,6 +238,7 @@ export async function fetchRequestLogs(
     }));
     const displayLog = getDisplayLog(requestLogs, options.level);
     const firstEvent = row.events?.[0];
+    const statusCode = row.statusCode ?? 0;
     return {
       id: row.requestId || '',
       timestamp: row.timestamp ? new Date(row.timestamp).getTime() : Date.now(),
@@ -226,7 +251,7 @@ export async function fetchRequestLogs(
       domain: row.domain || '',
       requestMethod: row.requestMethod || '',
       requestPath: row.requestPath || '',
-      responseStatusCode: row.statusCode || 0,
+      responseStatusCode: statusCode,
       environment:
         (row.environment as RequestLogEntry['environment']) || 'production',
       branch: row.branch,
@@ -235,6 +260,11 @@ export async function fetchRequestLogs(
       pprState: row.pprState,
       traceId: row.traceId,
       logs: requestLogs,
+      eventsCount: row.events?.length ?? 0,
+      requestDurationMs:
+        typeof row.requestDurationMs === 'number' && row.requestDurationMs >= 0
+          ? row.requestDurationMs
+          : undefined,
     };
   });
 

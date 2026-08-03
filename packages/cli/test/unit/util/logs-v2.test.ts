@@ -20,6 +20,7 @@ interface ApiLogEntry {
   cache?: string;
   cacheReason?: string;
   pprState?: string;
+  requestDurationMs?: number;
   logs?: Array<{
     level?: string;
     message?: string;
@@ -101,6 +102,61 @@ describe('logs-v2 utility', () => {
         ownerId: 'team_test',
         deploymentId: 'dpl_specific',
       });
+    });
+
+    it('should prefer absolute startDate/endDate over since/until', async () => {
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        expect(req.query.startDate).toEqual('1000');
+        expect(req.query.endDate).toEqual('2000');
+        res.json({ rows: [], hasMoreRows: false });
+      });
+
+      await fetchRequestLogs(client, {
+        projectId: 'prj_test',
+        ownerId: 'team_test',
+        since: '1h',
+        until: 'now',
+        startDate: 1000,
+        endDate: 2000,
+      });
+    });
+
+    it('should omit endDate in live mode', async () => {
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        expect(req.query.startDate).toEqual('1000');
+        expect(req.query.endDate).toBeUndefined();
+        res.json({ rows: [], hasMoreRows: false });
+      });
+
+      await fetchRequestLogs(client, {
+        projectId: 'prj_test',
+        ownerId: 'team_test',
+        startDate: 1000,
+        endDate: 2000,
+        live: true,
+      });
+    });
+
+    it('should map eventsCount and requestDurationMs', async () => {
+      client.scenario.get('/api/logs/request-logs', (_req, res) => {
+        res.json({
+          rows: [
+            createMockApiLog({
+              events: [{ source: 'serverless' }, { source: 'static' }],
+              requestDurationMs: 42,
+            }),
+          ],
+          hasMoreRows: false,
+        });
+      });
+
+      const result = await fetchRequestLogs(client, {
+        projectId: 'prj_test',
+        ownerId: 'team_test',
+      });
+
+      expect(result.logs[0].eventsCount).toEqual(2);
+      expect(result.logs[0].requestDurationMs).toEqual(42);
     });
 
     it('should include environment filter in query', async () => {

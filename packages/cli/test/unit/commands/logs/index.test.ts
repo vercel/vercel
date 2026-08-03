@@ -3,9 +3,30 @@ import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeam, useTeams } from '../../../mocks/team';
 import { defaultProject, useProject } from '../../../mocks/project';
-import { useDeployment, useRuntimeLogs } from '../../../mocks/deployment';
+import { useDeployment } from '../../../mocks/deployment';
 import logs from '../../../../src/commands/logs';
 import { join } from 'path';
+import * as logsFollow from '../../../../src/util/logs-follow';
+
+vi.mock('../../../../src/util/logs-follow', async importOriginal => {
+  const actual =
+    await importOriginal<typeof import('../../../../src/util/logs-follow')>();
+  return {
+    ...actual,
+    followRequestLogs: vi.fn(
+      (
+        followClient: Parameters<typeof actual.followRequestLogs>[0],
+        opts: Parameters<typeof actual.followRequestLogs>[1]
+      ) =>
+        actual.followRequestLogs(followClient, {
+          ...opts,
+          maxPolls: 1,
+          pollIntervalMs: 0,
+          sleep: async () => {},
+        })
+    ),
+  };
+});
 
 const logsFixturesDir = join(__dirname, '../../../fixtures/unit/commands/logs');
 
@@ -50,6 +71,7 @@ interface ApiLogEntry {
   statusCode?: number;
   environment?: string;
   domain?: string;
+  requestDurationMs?: number;
   logs?: Array<{
     level?: string;
     message?: string;
@@ -67,6 +89,7 @@ function createMockLog(
     environment?: string;
     deploymentId?: string;
     responseStatusCode?: number;
+    requestDurationMs?: number;
   } = {}
 ): ApiLogEntry {
   return {
@@ -78,6 +101,7 @@ function createMockLog(
     statusCode: overrides.responseStatusCode ?? 200,
     environment: overrides.environment ?? 'production',
     domain: 'test.vercel.app',
+    requestDurationMs: overrides.requestDurationMs,
     logs: [
       {
         level: overrides.level ?? 'info',
@@ -311,82 +335,33 @@ describe('logs', () => {
       expect(receivedBranch).toEqual('feature-branch');
     });
 
-    it('should follow your latest deployment for an explicit project', async () => {
-      let requestedProjectId: string | undefined;
-      let requestedLimit: string | undefined;
-      let requestedState: string | undefined;
-      let requestedUsers: string | undefined;
-      let latestDeployment: ReturnType<typeof useDeployment>;
-
-      client.scenario.get('/v6/deployments', (req, res) => {
-        requestedProjectId = req.query.projectId as string | undefined;
-        requestedLimit = req.query.limit as string | undefined;
-        requestedState = req.query.state as string | undefined;
-        requestedUsers = req.query.users as string | undefined;
-        res.json({
-          deployments: [
-            {
-              uid: latestDeployment.id,
-              url: latestDeployment.url,
-            },
-          ],
-        });
-      });
-
-      latestDeployment = useDeployment({
-        creator: user,
-        project: {
-          ...defaultProject,
-          id: 'prj_explicit',
-          name: 'explicit-project',
-        },
-      });
-      useRuntimeLogs({
-        deployment: latestDeployment,
-        logProducer: async function* () {},
+    it('should follow request logs for an explicit project without resolving a deployment', async () => {
+      let receivedProjectId: string | undefined;
+      let receivedOwnerId: string | undefined;
+      let receivedDeploymentId: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedProjectId = req.query.projectId as string;
+        receivedOwnerId = req.query.ownerId as string;
+        receivedDeploymentId = req.query.deploymentId as string | undefined;
+        res.json({ rows: [], hasMoreRows: false });
       });
 
       client.setArgv('logs', '--project', 'explicit-project', '--follow');
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(0);
-      expect(requestedProjectId).toEqual('prj_explicit');
-      expect(requestedLimit).toEqual('1');
-      expect(requestedState).toEqual('READY');
-      expect(requestedUsers).toEqual(user.id);
-      await expect(client.stderr).toOutput(
-        `Streaming logs for your latest deployment ${latestDeployment.id}`
-      );
+      expect(receivedProjectId).toEqual('prj_explicit');
+      expect(receivedOwnerId).toEqual(defaultProject.accountId);
+      expect(receivedDeploymentId).toBeUndefined();
+      expect(logsFollow.followRequestLogs).toHaveBeenCalled();
+      expect(client.getFullOutput()).toContain('Streaming request logs for');
     });
 
-    it('should follow the latest production deployment with --environment production', async () => {
-      const deploymentQueries: Array<Record<string, unknown>> = [];
-      let productionDeployment: ReturnType<typeof useDeployment>;
-
-      client.scenario.get('/v6/deployments', (req, res) => {
-        deploymentQueries.push({ ...req.query });
-        res.json({
-          deployments: [
-            {
-              uid: productionDeployment.id,
-              url: productionDeployment.url,
-            },
-          ],
-        });
-      });
-
-      productionDeployment = useDeployment({
-        creator: user,
-        project: {
-          ...defaultProject,
-          id: 'prj_explicit',
-          name: 'explicit-project',
-        },
-        target: 'production',
-      });
-      useRuntimeLogs({
-        deployment: productionDeployment,
-        logProducer: async function* () {},
+    it('should pass --environment production through to request-logs while following', async () => {
+      let receivedEnvironment: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedEnvironment = req.query.environment as string;
+        res.json({ rows: [], hasMoreRows: false });
       });
 
       client.setArgv(
@@ -400,13 +375,8 @@ describe('logs', () => {
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(0);
-      expect(deploymentQueries).toHaveLength(1);
-      expect(deploymentQueries[0].target).toEqual('production');
-      expect(deploymentQueries[0].users).toBeUndefined();
-      expect(deploymentQueries[0].branch).toBeUndefined();
-      await expect(client.stderr).toOutput(
-        `Streaming logs for latest production deployment ${productionDeployment.id}`
-      );
+      expect(receivedEnvironment).toEqual('production');
+      expect(client.getFullOutput()).toContain('Streaming request logs for');
     });
 
     it('should track telemetry for --project option', async () => {
@@ -997,23 +967,33 @@ describe('logs', () => {
       expect(receivedDeploymentId).toEqual(deployment.id);
     });
 
-    it('should stream logs when --follow is specified for a deployment ID', async () => {
+    it('should stream request logs when --follow is specified for a deployment ID', async () => {
       const user = useUser();
       const deployment = useLogsDeployment(user);
 
-      client.scenario.get(
-        `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
-        (_req, res) => {
-          res.status(200);
-          res.end();
-        }
-      );
+      let receivedDeploymentId: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedDeploymentId = req.query.deploymentId as string;
+        res.json({
+          rows: [
+            createMockLog({
+              deploymentId: deployment.id,
+              requestDurationMs: 5,
+            }),
+          ],
+          hasMoreRows: false,
+        });
+      });
 
       client.cwd = fixture('linked-project');
       client.setArgv('logs', deployment.id, '--follow');
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(0);
+      expect(receivedDeploymentId).toEqual(deployment.id);
+      const output = client.getFullOutput();
+      expect(output).toContain('Streaming request logs for');
+      expect(output).toContain(`deployment ${deployment.id}`);
     });
 
     it('should show deployment error and skip runtime logs for errored deployment', async () => {
@@ -1171,19 +1151,31 @@ describe('logs', () => {
       expect(receivedDeploymentId).toEqual(deployment.id);
     });
 
-    it('should stream logs for a deployment URL without a linked project', async () => {
+    it('should stream request logs for a deployment URL without a linked project', async () => {
       const user = useUser();
       const deployment = useLogsDeployment(user);
 
-      let receivedTeamId: string | undefined;
-      client.scenario.get(
-        `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
-        (req, res) => {
-          receivedTeamId = req.query.teamId as string;
-          res.status(200);
-          res.end();
-        }
-      );
+      let receivedQuery:
+        | {
+            deploymentId?: string;
+            teamId?: string;
+          }
+        | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedQuery = {
+          deploymentId: req.query.deploymentId as string,
+          teamId: req.query.teamId as string,
+        };
+        res.json({
+          rows: [
+            createMockLog({
+              deploymentId: deployment.id,
+              requestDurationMs: 8,
+            }),
+          ],
+          hasMoreRows: false,
+        });
+      });
 
       client.config.currentTeam = logsTeam.id;
       client.cwd = logsFixturesDir;
@@ -1191,7 +1183,13 @@ describe('logs', () => {
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(0);
-      expect(receivedTeamId).toEqual(logsProject.accountId);
+      expect(receivedQuery).toEqual({
+        deploymentId: deployment.id,
+        teamId: logsProject.accountId,
+      });
+      const output = client.getFullOutput();
+      expect(output).toContain('Streaming request logs for');
+      expect(output).toContain(`deployment ${deployment.id}`);
     });
 
     it('should fetch historical logs for a deployment URL without a linked project', async () => {
@@ -1374,12 +1372,8 @@ describe('logs', () => {
   });
 
   describe('--follow option', () => {
-    // The scenario router serves the first-registered `/v2/user` handler, so
-    // tests that assert on the current user's id must reuse this user instead
-    // of calling useUser() again.
-    let user: ReturnType<typeof useUser>;
     beforeEach(() => {
-      user = useUser();
+      useUser();
       useTeams('team_dummy');
       useProject({
         ...defaultProject,
@@ -1388,87 +1382,77 @@ describe('logs', () => {
       });
     });
 
-    it('should fall back to the latest production deployment when no deployments match the branch', async () => {
-      const user = useUser();
-
-      // Register before useLogsDeployment(), whose catch-all
-      // `/:version/deployments` route would otherwise handle this path
-      let productionDeployment: ReturnType<typeof useLogsDeployment>;
-      const deploymentQueries: Array<Record<string, unknown>> = [];
-      client.scenario.get('/v6/deployments', (req, res) => {
-        deploymentQueries.push({ ...req.query });
-        if (req.query.target === 'production') {
-          res.json({
-            deployments: [
-              { uid: productionDeployment.id, url: productionDeployment.url },
-            ],
-          });
-          return;
-        }
-        res.json({ deployments: [] });
-      });
-
-      productionDeployment = useLogsDeployment(user);
-
-      client.scenario.get(
-        `/v1/projects/prj_logstest/deployments/${productionDeployment.id}/runtime-logs`,
-        (_req, res) => {
-          res.status(200);
-          res.end();
-        }
-      );
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--follow', '--branch', 'main');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(deploymentQueries.some(q => q.branch === 'main')).toEqual(true);
-      expect(deploymentQueries.some(q => q.users !== undefined)).toEqual(true);
-      expect(deploymentQueries.some(q => q.target === 'production')).toEqual(
-        true
-      );
-      await expect(client.stderr).toOutput(
-        `Streaming logs for latest production deployment ${productionDeployment.id}`
-      );
-    });
-
-    it('should stream your latest deployment with --no-branch', async () => {
-      // Register before useLogsDeployment(), whose catch-all
-      // `/:version/deployments` route would otherwise handle this path
-      let latestDeployment: ReturnType<typeof useLogsDeployment>;
-      let requestedUsers: string | undefined;
-      let requestedBranch: string | undefined;
-      client.scenario.get('/v6/deployments', (req, res) => {
-        requestedUsers = req.query.users as string | undefined;
-        requestedBranch = req.query.branch as string | undefined;
+    it('should stream request logs for the linked project without resolving a deployment', async () => {
+      let receivedDeploymentId: string | undefined;
+      let receivedEndDate: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedDeploymentId = req.query.deploymentId as string | undefined;
+        receivedEndDate = req.query.endDate as string | undefined;
         res.json({
-          deployments: [
-            { uid: latestDeployment.id, url: latestDeployment.url },
+          rows: [
+            createMockLog({
+              id: 'follow-req-1',
+              message: 'hello from follow',
+              requestDurationMs: 12,
+            }),
           ],
+          hasMoreRows: false,
         });
       });
-
-      latestDeployment = useLogsDeployment(user);
-
-      client.scenario.get(
-        `/v1/projects/prj_logstest/deployments/${latestDeployment.id}/runtime-logs`,
-        (_req, res) => {
-          res.status(200);
-          res.end();
-        }
-      );
 
       client.cwd = fixture('linked-project');
       client.setArgv('logs', '--follow', '--no-branch');
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(0);
-      expect(requestedUsers).toEqual(user.id);
-      expect(requestedBranch).toBeUndefined();
-      await expect(client.stderr).toOutput(
-        `Streaming logs for your latest deployment ${latestDeployment.id}`
+      expect(receivedDeploymentId).toBeUndefined();
+      expect(receivedEndDate).toBeUndefined();
+      const output = client.getFullOutput();
+      expect(output).toContain('Streaming request logs for');
+      expect(output).toContain('all branches');
+      expect(output).toContain('Request started');
+      expect(output).toContain('hello from follow');
+      expect(output).toContain('Request finished');
+    });
+
+    it('should pass --environment through to request-logs while following', async () => {
+      let receivedEnvironment: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedEnvironment = req.query.environment as string;
+        res.json({ rows: [], hasMoreRows: false });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv(
+        'logs',
+        '--follow',
+        '--no-branch',
+        '--environment',
+        'preview'
       );
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedEnvironment).toEqual('preview');
+      const output = client.getFullOutput();
+      expect(output).toContain('Streaming request logs for');
+      expect(output).toContain('preview');
+    });
+
+    it('should pass an explicit --branch through to request-logs while following', async () => {
+      let receivedBranch: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedBranch = req.query.branch as string;
+        res.json({ rows: [], hasMoreRows: false });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--follow', '--branch', 'feature-x');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedBranch).toEqual('feature-x');
+      expect(client.getFullOutput()).toContain('branch feature-x');
     });
 
     it('should error when --follow is used with --level', async () => {
@@ -1538,31 +1522,9 @@ describe('logs', () => {
     });
 
     it('should track telemetry for --follow flag', async () => {
-      const user = useUser();
-
-      // Register before useLogsDeployment(), whose catch-all
-      // `/:version/deployments` route would otherwise handle this path
-      let productionDeployment: ReturnType<typeof useLogsDeployment>;
-      client.scenario.get('/v6/deployments', (_req, res) => {
-        res.json({
-          deployments: [
-            { uid: productionDeployment.id, url: productionDeployment.url },
-          ],
-        });
-      });
-
-      productionDeployment = useLogsDeployment(user);
-
-      client.scenario.get(
-        `/v1/projects/prj_logstest/deployments/${productionDeployment.id}/runtime-logs`,
-        (_req, res) => {
-          res.status(200);
-          res.end();
-        }
-      );
+      useRequestLogs([]);
 
       client.cwd = fixture('linked-project');
-      // Use --no-branch to avoid branch detection and deployment lookup
       client.setArgv('logs', '--follow', '--no-branch');
       await logs(client);
 
