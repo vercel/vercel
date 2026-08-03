@@ -23,6 +23,15 @@ const scopeOptions = [
   },
 ] as const;
 
+const addScopeOptions = [
+  {
+    ...scopeOptions[0],
+    description:
+      'Target project when the body omits projectId; built-in rules otherwise remain team-wide.',
+  },
+  scopeOptions[1],
+] as const;
+
 export const rulesLsSubcommand = {
   name: 'ls',
   aliases: ['list'],
@@ -105,7 +114,7 @@ export const rulesAddSubcommand = {
   description: 'Create an alert rule from a JSON body file',
   arguments: [],
   options: [
-    ...scopeOptions,
+    ...addScopeOptions,
     formatOption,
     jsonOption,
     {

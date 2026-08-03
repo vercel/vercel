@@ -111,6 +111,7 @@ describe('alerts rules', () => {
     expect(output).toContain('vercel.function_invocation.count');
     expect(output).toContain('event: "serverlessFunctionInvocation"');
     expect(output).toContain('vercel alerts rules schema --type <type>');
+    expect(output).toContain('built-in rules otherwise remain team-wide');
   });
 
   it('prints alert rule schema type choices', async () => {
@@ -904,7 +905,7 @@ describe('alerts rules', () => {
     expect(exitCode).toBe(0);
   });
 
-  it('uses explicit project scope without rewriting the body', async () => {
+  it('uses an explicit project as the built-in rule target', async () => {
     mockedGetProject.mockResolvedValue({ id: 'prj_explicit' } as any);
     client.scenario.post('/alerts/v2/alert-rules', (req, res) => {
       expect(req.query.teamId).toBe('team_dummy');
@@ -912,6 +913,7 @@ describe('alerts rules', () => {
       expect(req.body).toEqual({
         name: 'project-rule',
         alertTypes: [{ type: 'error_anomaly' }],
+        projectId: "projectId eq 'prj_explicit'",
       });
       res.status(201).json({
         id: 'ar_project',
@@ -945,6 +947,33 @@ describe('alerts rules', () => {
       'team_dummy'
     );
     expect(mockedGetLinkedProject).not.toHaveBeenCalled();
+  });
+
+  it('keeps a built-in rule team-wide when only a linked project is available', async () => {
+    client.scenario.post('/alerts/v2/alert-rules', (req, res) => {
+      expect(req.body).toEqual({
+        name: 'team-rule',
+        alertTypes: [{ type: 'usage_anomaly' }],
+      });
+      res.status(201).json({
+        id: 'ar_team',
+        name: 'team-rule',
+        teamId: 'team_dummy',
+      });
+    });
+
+    writeFileSync(
+      join(tmpDir, 'team-rule.json'),
+      JSON.stringify({
+        name: 'team-rule',
+        alertTypes: [{ type: 'usage_anomaly' }],
+      })
+    );
+    client.setArgv('alerts', 'rules', 'add', '--body', 'team-rule.json');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
   });
 
   it('deletes a rule with --yes', async () => {

@@ -14,6 +14,8 @@ import {
 } from '../../../util/agent-output';
 import { AGENT_REASON } from '../../../util/agent-output-constants';
 import { packageName } from '../../../util/pkg-name';
+import { isCustomAlertRule } from '../format';
+import type { AlertRule } from '../types';
 import { rulesAddSubcommand } from './command';
 import {
   parseCustomAlertQueryBody,
@@ -139,6 +141,16 @@ export default async function add(
   const parsedCustomAlertQuery = parseCustomAlertQueryBody(client, body);
   if (typeof parsedCustomAlertQuery === 'number') {
     return parsedCustomAlertQuery;
+  }
+
+  const customAlertRule = isCustomAlertRule(body as AlertRule);
+  if (
+    !customAlertRule &&
+    parsedArgs.flags['--project'] &&
+    scope.projectId &&
+    body.projectId === undefined
+  ) {
+    body.projectId = `projectId eq '${scope.projectId}'`;
   }
 
   const customAlertProjectId =
