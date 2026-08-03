@@ -90,6 +90,13 @@ export class FlagsTelemetryClient
     });
   }
 
+  trackCliSubcommandUnarchive(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'unarchive',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandDisable(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'disable',

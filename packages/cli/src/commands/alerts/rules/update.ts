@@ -14,7 +14,13 @@ import {
 } from '../../../util/agent-output';
 import { AGENT_REASON } from '../../../util/agent-output-constants';
 import { packageName } from '../../../util/pkg-name';
+import type { AlertRule } from '../types';
 import { rulesUpdateSubcommand } from './command';
+import {
+  parseCustomAlertQueryBody,
+  resolveCustomAlertProjectName,
+  setMissingCustomAlertProjectScope,
+} from './custom-alert-query';
 import { parseRulesFlagsAndScope } from './parse-scope';
 import {
   emitRulesArgParseError,
@@ -152,12 +158,42 @@ export default async function update(
     return 1;
   }
 
+  const parsedCustomAlertQuery = parseCustomAlertQueryBody(client, body);
+  if (typeof parsedCustomAlertQuery === 'number') {
+    return parsedCustomAlertQuery;
+  }
+
   delete body.id;
   delete body.teamId;
 
   const path = rulesItemPath(scope, ruleId);
   output.spinner('Updating alert rule...');
   try {
+    if (
+      parsedCustomAlertQuery &&
+      !Object.hasOwn(parsedCustomAlertQuery.query, 'scope')
+    ) {
+      let projectId =
+        typeof body.projectId === 'string' ? body.projectId : undefined;
+      if (!projectId) {
+        const rule = await client.fetch<AlertRule>(path);
+        projectId = rule.projectId;
+      }
+      if (projectId) {
+        const projectName = await resolveCustomAlertProjectName(
+          client,
+          scope,
+          projectId
+        );
+        setMissingCustomAlertProjectScope(
+          parsedCustomAlertQuery,
+          scope.teamId,
+          projectId,
+          projectName
+        );
+      }
+    }
+
     const updated = await client.fetch<JSONObject>(path, {
       method: 'PATCH',
       body,

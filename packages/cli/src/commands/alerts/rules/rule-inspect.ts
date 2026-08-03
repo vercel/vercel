@@ -68,12 +68,6 @@ function getNotificationRows(rule: AlertRule): string[][] {
       formatBoolean(rule.autosubscribeOwnersInKnock),
     ]);
   }
-  if (rule.autosubscribeProjectAdminsInKnock !== undefined) {
-    rows.push([
-      'Auto-subscribe project admins',
-      formatBoolean(rule.autosubscribeProjectAdminsInKnock),
-    ]);
-  }
 
   const slackChannels = new Set<string>();
   const webhooks = new Set<string>();
@@ -129,11 +123,8 @@ function printRule(rule: AlertRule, ruleId: string) {
   const summaryRows = [
     ['Name', rule.name || '-'],
     ...(rule.action === 'exclude' ? [['Action', rule.action]] : []),
-    ['Scope', formatRuleScope(rule.projectId)],
+    ['Scope', formatRuleScope(rule)],
     ...getAlertTypeRows(rule),
-    ...(rule.sensitivityLevel !== undefined
-      ? [['Sensitivity', String(rule.sensitivityLevel)]]
-      : []),
     ...(rule.isDefault !== undefined
       ? [['Default', formatBoolean(rule.isDefault)]]
       : []),
