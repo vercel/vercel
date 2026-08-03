@@ -220,6 +220,65 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     expect(shadowRoutes).toEqual([expected]);
   });
 
+  it('preserves escaped parens and collapses named groups in a custom convertor', async () => {
+    // A convertor regex may hold escaped parens (a literal paren the route
+    // matches) and named groups. Escaped parens must survive so the shadow still
+    // matches the served path, and named groups must collapse to (?:) so two
+    // such bodies can be OR'd into one valid src.
+    const appDir = path.join(testDir, 'app-conv-custom');
+    fs.mkdirSync(path.join(appDir, 'fe'), { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'fe', 'index.html'), 'FE');
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from starlette.convertors import Convertor, register_url_convertor',
+        'class Parens(Convertor):',
+        '    regex = r"\\((x|y)\\)"',
+        '    def convert(self, value):',
+        '        return value',
+        '    def to_string(self, value):',
+        '        return value',
+        'class Named(Convertor):',
+        '    regex = r"(?P<val>[0-9]+)"',
+        '    def convert(self, value):',
+        '        return value',
+        '    def to_string(self, value):',
+        '        return value',
+        'register_url_convertor("parens", Parens())',
+        'register_url_convertor("named", Named())',
+        'from fastapi import FastAPI',
+        'app = FastAPI()',
+        '@app.get("/paren/{code:parens}")',
+        'def p(code):',
+        '    return code',
+        '@app.get("/a/{x:named}")',
+        'def a(x):',
+        '    return x',
+        '@app.get("/b/{y:named}")',
+        'def b(y):',
+        '    return y',
+        'app.frontend("/", directory="fe")',
+      ].join('\n')
+    );
+
+    const { shadowRoutes } = await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    // Escaped parens survive, so the shadow still matches the served /paren/(x).
+    const parenBody = 'paren/(?:\\((?:x|y)\\))';
+    expect(shadowRoutes).toContain(parenBody);
+    expect(new RegExp(`^/((?:${parenBody})/?)$`).test('/paren/(x)')).toBe(true);
+    // Named groups collapse to (?:), so two of them OR together validly.
+    expect(shadowRoutes).toContain('a/(?:(?:[0-9]+))');
+    expect(shadowRoutes).toContain('b/(?:(?:[0-9]+))');
+  });
+
   it('shadows a mount from a catch-all {path} route declared before it', async () => {
     const appDir = path.join(testDir, 'app-shadow-catchall');
     fs.mkdirSync(path.join(appDir, 'static'), { recursive: true });
