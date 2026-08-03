@@ -198,6 +198,21 @@ export async function runFastAPICollectStatic(
     `Found ${mounts.length} FastAPI static mount(s): ${mounts.map(m => m.urlPath).join(', ')}`
   );
 
+  // Drop any body whose src overflows the cap alone (a custom convertor with a
+  // very long regex), keeping the rest. That path stays unshadowed, so a
+  // colliding CDN file there would win over the app.
+  const shadowable: string[] = [];
+  const dropped: string[] = [];
+  for (const body of shadowRoutes) {
+    (shadowBodyFitsCap(body) ? shadowable : dropped).push(body);
+  }
+  if (dropped.length > 0) {
+    debug(
+      `FastAPI: ${dropped.length} shadow route(s) over the ` +
+        `${MAX_SHADOW_SRC_LENGTH} char cap left unshadowed`
+    );
+  }
+
   if (!(await copyFastAPIStaticMounts(mounts, outputStaticDir))) {
     return null;
   }
@@ -209,7 +224,7 @@ export async function runFastAPICollectStatic(
   return {
     collectedMounts: mounts.map(m => m.urlPath),
     cdnOutputDir: outputStaticDir,
-    shadowRoutes,
+    shadowRoutes: shadowable,
     fallbacks,
   };
 }
@@ -230,6 +245,14 @@ function shadowSrc(bodies: string[]): string {
   return `^/((?:${bodies.join('|')})/?)$`;
 }
 
+// Length shadowSrc adds around the bodies, so a chunk's src len = this + join.
+const SHADOW_SRC_WRAPPER_LENGTH = shadowSrc([]).length;
+
+/** Whether a single shadow body's `src` fits within the route cap. */
+export function shadowBodyFitsCap(body: string): boolean {
+  return SHADOW_SRC_WRAPPER_LENGTH + body.length <= MAX_SHADOW_SRC_LENGTH;
+}
+
 /**
  * Routes that send paths the app owns to the Lambda, emitted before
  * `handle: 'filesystem'` so the app wins over a colliding CDN file. This
@@ -242,10 +265,9 @@ function shadowSrc(bodies: string[]): string {
  * allows an optional trailing slash so redirect_slashes still works. A request
  * to `/foo/` reaches the Lambda, which redirects it to `/foo`.
  *
- * A root frontend shadows every route, so one OR'd `src` can exceed the routing
- * config's 4096-char cap. The bodies are packed into as many routes as needed to
- * stay under it. The routes are identical apart from their bodies and all send
- * the match to the Lambda, so the split is order-independent.
+ * A root frontend shadows every route, so one OR'd `src` can exceed the 4096
+ * char route cap. Bodies are split across as many routes as fit; all route to
+ * the Lambda, so the split is order-independent.
  *
  * Returns an empty list when nothing is shadowed.
  */
@@ -255,15 +277,16 @@ export function fastapiShadowingRoutes(
 ) {
   if (discovery.shadowRoutes.length === 0) return [];
   const chunks: string[][] = [];
+  let currentLen = 0; // src length of the last chunk
   for (const body of discovery.shadowRoutes) {
     const current = chunks[chunks.length - 1];
-    if (
-      current &&
-      shadowSrc([...current, body]).length <= MAX_SHADOW_SRC_LENGTH
-    ) {
+    // src len = wrapper + bodies + separators; track it, don't rebuild.
+    if (current && currentLen + 1 + body.length <= MAX_SHADOW_SRC_LENGTH) {
       current.push(body);
+      currentLen += 1 + body.length;
     } else {
       chunks.push([body]);
+      currentLen = SHADOW_SRC_WRAPPER_LENGTH + body.length;
     }
   }
   return chunks.map(bodies => ({
