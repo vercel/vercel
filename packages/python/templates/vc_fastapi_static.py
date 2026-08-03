@@ -112,8 +112,16 @@ def _escape(text: str) -> str:
 
 
 def _to_non_capturing(regex: str) -> str:
-    """Make a convertor regex safe to embed: turn `(` groups into `(?:`."""
-    return re.sub(r"\((?!\?)", "(?:", regex)
+    """Make a convertor regex safe to embed: turn capturing and named groups
+    into `(?:`. Escaped parens and other `(?...)` groups are left alone; named
+    groups are normalized because duplicate names across OR'd bodies are invalid.
+    """
+
+    def repl(m: re.Match[str]) -> str:
+        # Escaped char stays as-is; a bare or named group open becomes (?:.
+        return m.group(0) if m.group(0).startswith("\\") else "(?:"
+
+    return re.sub(r"\\.|\(\?P<[^>]+>|\((?!\?)", repl, regex)
 
 
 def _escape_path(path: str) -> str:
