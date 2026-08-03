@@ -303,21 +303,12 @@ jobs:
           node-version: ${{ matrix.nodeVersion }}
       - name: install turbo@2.10.8
         run: npm i -g turbo@2.10.8
-      - name: Configure unit-test filters
-        run: |
-          if [[ "$RUNNER_OS" != 'Linux' ]]; then
-            printf '%s\n' 'TURBO_CONTAINER_FILTER=--filter=!@vercel/container' >> "$GITHUB_ENV"
-          fi
       - name: Check for affected unit tests
         id: affected
         run: |
           set -euo pipefail
           node utils/gen.js
-          filters=('--filter=!vercel')
-          if [[ -n "${TURBO_CONTAINER_FILTER:-}" ]]; then
-            filters+=("$TURBO_CONTAINER_FILTER")
-          fi
-          count=$(turbo run vitest-unit --affected "${filters[@]}" --dry=json | jq '[.tasks[] | select(.task == "vitest-unit" and .command != "<NONEXISTENT>")] | length')
+          count=$(turbo run vitest-unit --affected --filter=!vercel --dry=json | jq '[.tasks[] | select(.task == "vitest-unit" and .command != "<NONEXISTENT>")] | length')
           if [ "$count" -gt 0 ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
@@ -374,14 +365,10 @@ jobs:
         run: |
           attempt=1
           max_attempts=2
-          filters=('--filter=!vercel')
-          if [[ -n "${TURBO_CONTAINER_FILTER:-}" ]]; then
-            filters+=("$TURBO_CONTAINER_FILTER")
-          fi
           export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
 
           while [ "$attempt" -le "$max_attempts" ]; do
-            if pnpm turbo run vitest-unit --affected "${filters[@]}" --summarize --cache-dir='.turbo' --log-order=stream --continue=always --concurrency=${{ matrix.concurrency }}; then
+            if pnpm turbo run vitest-unit --affected --filter=!vercel --summarize --cache-dir='.turbo' --log-order=stream --continue=always --concurrency=${{ matrix.concurrency }}; then
               exit 0
             fi
 
