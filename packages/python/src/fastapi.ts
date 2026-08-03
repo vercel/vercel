@@ -40,8 +40,11 @@ export interface FastAPIStaticDiscovery {
 
 /** Outcome of copying mounts to the CDN, for the builder to wire into routes. */
 export interface FastAPICollectStaticResult {
-  /** URL paths of the StaticFiles mounts copied to the CDN. */
-  collectedMounts: string[];
+  /**
+   * Every mount's URL path (copied or not) so the fallback nested guard carves
+   * out each nested subtree, sending its misses to the Lambda not the parent.
+   */
+  mountPrefixes: string[];
   /** Absolute path of the build-output static directory the files were written to. */
   cdnOutputDir: string;
   /**
@@ -131,13 +134,13 @@ function cdnUrlPath(outputStaticDir: string, destPath: string): string {
  * first). The per-file filter enforces this.
  *
  * A failed mount is skipped (the Lambda still serves it), but it keeps its
- * namespace so lower-priority sources cannot fill it. Returns false only when
- * every mount fails, so nothing is offloaded.
+ * namespace so lower-priority sources cannot fill it. Returns the mounts that
+ * were copied, so a failed mount gets no fallback route (empty when all fail).
  */
 export async function copyFastAPIStaticMounts(
   mounts: FastAPIStaticMount[],
   outputStaticDir: string
-): Promise<boolean> {
+): Promise<FastAPIStaticMount[]> {
   const ordered = [
     ...mounts.filter(m => !m.frontend),
     ...mounts
@@ -146,7 +149,7 @@ export async function copyFastAPIStaticMounts(
   ];
 
   const higherPriority: string[] = [];
-  let copied = 0;
+  const copied: FastAPIStaticMount[] = [];
   for (const mount of ordered) {
     const dest = join(outputStaticDir, mount.urlPath.replace(/^\/|\/$/g, ''));
     try {
@@ -159,14 +162,14 @@ export async function copyFastAPIStaticMounts(
           return !higherPriority.some(prefix => mountCovers(prefix, urlPath));
         },
       });
-      copied++;
+      copied.push(mount);
       debug(`copied ${mount.directory} -> ${dest}`);
     } catch (err) {
       debug(`FastAPI: skipping ${mount.urlPath}: copy failed (${err})`);
     }
     higherPriority.push(mount.urlPath);
   }
-  return copied > 0;
+  return copied;
 }
 
 // routing-utils caps a route `src` at 4096 chars (routesSchema in schemas.ts).
@@ -217,9 +220,11 @@ export async function runFastAPICollectStatic(
     `Found ${mounts.length} FastAPI static mount(s): ${mounts.map(m => m.urlPath).join(', ')}`
   );
 
-  if (!(await copyFastAPIStaticMounts(mounts, outputStaticDir))) {
+  const copiedMounts = await copyFastAPIStaticMounts(mounts, outputStaticDir);
+  if (copiedMounts.length === 0) {
     return null;
   }
+  const copiedSet = new Set(copiedMounts);
 
   // Drop any body whose src overflows the cap alone (a custom convertor with a
   // very long regex), keeping the rest. That path stays unshadowed, so a
@@ -233,11 +238,16 @@ export async function runFastAPICollectStatic(
   }
 
   return {
-    collectedMounts: mounts.map(m => m.urlPath),
+    // All mounts (not just copied) so the guard carves out every subtree.
+    mountPrefixes: mounts.map(m => m.urlPath),
     cdnOutputDir: outputStaticDir,
     shadowRoutes: shadowable,
+    // Only copied mounts get a fallback: a check:true dest that is missing makes
+    // the proxy exit with the status instead of reaching the Lambda.
     fallbacks: mounts.flatMap(m =>
-      m.fallback ? [{ urlPath: m.urlPath, ...m.fallback }] : []
+      copiedSet.has(m) && m.fallback
+        ? [{ urlPath: m.urlPath, ...m.fallback }]
+        : []
     ),
   };
 }
@@ -324,7 +334,7 @@ export function fastapiFallbackRoutes(discovery: FastAPICollectStaticResult) {
   return discovery.fallbacks.map(fb => {
     const prefix = fb.urlPath.replace(/\/+$/, ''); // '' for a root ("/") mount
     // Nested mounts own their own subtrees; exclude them from the fallback.
-    const nested = discovery.collectedMounts
+    const nested = discovery.mountPrefixes
       .map(urlPath => urlPath.replace(/\/+$/, ''))
       .filter(urlPath => urlPath.startsWith(`${prefix}/`))
       .map(urlPath => urlPath.slice(prefix.length + 1));
