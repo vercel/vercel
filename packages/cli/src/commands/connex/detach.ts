@@ -188,7 +188,7 @@ export async function detach(
     const status = (err as { status?: number }).status;
     if (status === 403) {
       output.error(
-        `You don't have permission to detach projects on this team. Owner or Member role required.`
+        `You don't have permission to detach projects on this team. Ask a team owner to grant Connector Manager access.`
       );
       return 1;
     }

@@ -420,7 +420,7 @@ export const revokeTokensSubcommand = {
       type: Boolean,
       deprecated: false,
       description:
-        'Revoke every token for all users and installations. Requires team owner or member permissions.',
+        'Revoke every token for all users and installations. Requires the team Owner or Member role, or Connector Manager permission',
     },
     {
       ...yesOption,

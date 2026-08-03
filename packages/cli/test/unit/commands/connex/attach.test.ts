@@ -631,9 +631,11 @@ describe('connex attach', () => {
     const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain(
-      "don't have permission to attach"
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain(
+      "You don't have permission to attach projects on this team. Ask a team owner to grant Connector Manager access."
     );
+    expect(stderr).not.toContain('Owner or Member role required');
   });
 
   describe('--triggers', () => {
@@ -1083,6 +1085,48 @@ describe('connex attach', () => {
         { projectId: 'prj_existing' },
         { projectId: PROJECT_ID },
       ]);
+    });
+
+    it('explains how to get access when updating trigger destinations is forbidden', async () => {
+      await setupLinkedProject(team);
+
+      client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+        res.json({
+          id: 'scl_abc123',
+          uid: 'slack/my-bot',
+          supportsTriggers: true,
+          triggers: { enabled: true },
+          triggerDestinations: [],
+        });
+      });
+      client.scenario.get(
+        '/v1/connect/connectors/:clientId/projects/:projectId',
+        (_req, res) => {
+          res.json({
+            clientId: 'scl_abc123',
+            projectId: PROJECT_ID,
+            environments: ['production'],
+          });
+        }
+      );
+      client.scenario.patch(
+        '/v1/connect/connectors/:clientId/trigger-destinations',
+        (_req, res) => {
+          res.statusCode = 403;
+          res.json({ error: { code: 'forbidden', message: 'Forbidden' } });
+        }
+      );
+
+      client.setArgv('connect', 'attach', 'scl_abc123', '--triggers', '--yes');
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(1);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain(
+        "You don't have permission to update trigger destinations on this team. Ask a team owner to grant Connector Manager access."
+      );
+      expect(stderr).not.toContain('Owner or Member role required');
     });
 
     it('warns but proceeds when triggers.enabled is false on the connector', async () => {
