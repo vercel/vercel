@@ -10,7 +10,7 @@ export const logsCommand = {
   aliases: ['log'],
   description:
     'Display request logs for a project.\n\n' +
-    'With --follow, stream live runtime logs from a deployment. When no deployment is specified, resolves in order: latest deployment on the current git branch, then your latest deployment, then the latest production deployment. Use --environment production to always stream the latest production deployment.\n\n' +
+    'Use --follow to stream live runtime logs from a deployment. By default, --follow prefers the active production deployment and falls back to your latest READY deployment.\n\n' +
     'Source types: λ = serverless, ε = edge/middleware, ◇ = static/external',
   arguments: [
     {
@@ -34,7 +34,7 @@ export const logsCommand = {
       type: String,
       deprecated: false,
       description:
-        'Filter by environment: production or preview. With --follow, selects which environment to stream (production always streams the latest production deployment)',
+        'Filter by environment: production or preview; with --follow, select the active production deployment or your latest preview deployment',
     },
     {
       name: 'level',
@@ -91,8 +91,7 @@ export const logsCommand = {
       shorthand: 'f',
       type: Boolean,
       deprecated: false,
-      description:
-        'Stream live runtime logs. Without a deployment, follows the latest deployment on the current git branch, then your latest deployment, then the latest production deployment',
+      description: 'Stream live runtime logs from a deployment',
     },
     {
       name: 'no-follow',
@@ -139,80 +138,68 @@ export const logsCommand = {
       type: String,
       deprecated: false,
       description:
-        'Filter by git branch (defaults to current branch for a linked project)',
+        'Filter by Git branch; with --follow, require a matching READY deployment',
     },
     {
       name: 'no-branch',
       shorthand: null,
       type: Boolean,
-      deprecated: false,
-      description: 'Disable auto-detection of git branch',
+      deprecated: true,
+      description: 'Deprecated no-op; use --branch to filter by branch',
     },
   ],
   examples: [
     {
-      name: 'Stream live logs for your most recent deployment',
-      value: `${packageName} logs --follow`,
-    },
-    {
-      name: 'Stream live logs for the latest production deployment',
-      value: `${packageName} logs --follow --environment production`,
-    },
-    {
-      name: 'Stream live logs for a deployment URL',
-      value: `${packageName} logs https://my-app-xxxxx.vercel.app --follow`,
-    },
-    {
-      name: 'Stream live logs for a deployment ID',
-      value: `${packageName} logs dpl_xxxxx --follow`,
-    },
-    {
-      name: 'Stream logs for a specific project',
-      value: `${packageName} logs --project my-app --follow`,
-    },
-    {
-      name: 'Display recent logs for the linked project',
+      name: 'Display recent request logs for the linked project',
       value: `${packageName} logs`,
     },
     {
-      name: 'Display error logs from the last hour',
+      name: 'Display request logs for a specific project',
+      value: `${packageName} logs --project my-app`,
+    },
+    {
+      name: 'Display request error logs from the last hour',
       value: `${packageName} logs --level error --since 1h`,
     },
     {
-      name: 'Display logs for a specific deployment (historical)',
+      name: 'Display request logs for a specific deployment',
       value: `${packageName} logs dpl_xxxxx`,
     },
     {
-      name: 'Filter logs by status code and output as JSON',
+      name: 'Filter request logs by status code and output as JSON',
       value: `${packageName} logs --status-code 500 --json`,
     },
     {
-      name: 'Search logs and pipe to jq',
-      value: `${packageName} logs --query "timeout" --json | jq '.message'`,
-    },
-    {
-      name: 'Use advanced search query with filters',
+      name: 'Search request logs by status and message',
       value: `${packageName} logs --query 'status:500 error' --json | jq '.message'`,
     },
     {
-      name: 'Display production logs only',
+      name: 'Display request logs from production',
       value: `${packageName} logs --environment production`,
     },
     {
-      name: 'Display logs for a specific request',
+      name: 'Display request logs for a specific request',
       value: `${packageName} logs --request-id req_xxxxx`,
     },
     {
-      name: 'Display logs with full message details',
+      name: 'Display request logs with full message details',
       value: `${packageName} logs --expand`,
     },
     {
-      name: 'Display logs for a specific branch',
+      name: 'Display request logs for a specific branch',
       value: `${packageName} logs --branch feature-x`,
     },
     {
-      name: 'Display logs for all branches (disable auto-detection)',
-      value: `${packageName} logs --no-branch`,
+      name: 'Stream runtime logs for the active production deployment',
+      value: `${packageName} logs --follow`,
+    },
+    {
+      name: 'Stream runtime logs for your latest preview deployment',
+      value: `${packageName} logs --follow --environment preview`,
+    },
+    {
+      name: 'Stream runtime logs for a specific deployment',
+      value: `${packageName} logs dpl_xxxxx --follow`,
     },
   ],
 } as const;

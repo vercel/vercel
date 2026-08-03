@@ -289,6 +289,23 @@ describe('autoInstallVercelPlugin', () => {
     }
   });
 
+  it('does not prompt when the command is non-interactive', async () => {
+    const configDir = await mkdtemp(join(tmpdir(), 'vercel-cli-agent-prefs-'));
+
+    try {
+      client.setArgv('--global-config', configDir, '--non-interactive');
+      client.agentName = KNOWN_AGENTS.CLAUDE;
+      client.nonInteractive = true;
+      const confirmSpy = vi.spyOn(client.input, 'confirm');
+
+      await autoInstallVercelPlugin(client);
+
+      expect(confirmSpy).not.toHaveBeenCalled();
+    } finally {
+      await rm(configDir, { recursive: true, force: true });
+    }
+  });
+
   it('enables automatic plugin updates after accepting the plugin prompt', async () => {
     const configDir = await mkdtemp(join(tmpdir(), 'vercel-cli-agent-prefs-'));
 

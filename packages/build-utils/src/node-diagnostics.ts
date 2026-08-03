@@ -435,6 +435,7 @@ export async function generateProjectManifest({
   lockfileVersion,
   framework,
   serviceType,
+  outputRuntime = 'node',
 }: {
   workPath: string;
   nodeVersion: NodeVersion;
@@ -443,6 +444,7 @@ export async function generateProjectManifest({
   lockfileVersion: number | undefined;
   framework?: string;
   serviceType?: string;
+  outputRuntime?: string;
 }): Promise<void> {
   try {
     const pkgJson = await readPackageJson(workPath);
@@ -525,7 +527,7 @@ export async function generateProjectManifest({
       ],
     };
 
-    await writeProjectManifest(manifest, workPath, 'node');
+    await writeProjectManifest(manifest, workPath, outputRuntime);
   } catch (err) {
     debug(
       `generateProjectManifest: ${err instanceof Error ? err.message : String(err)}`

@@ -1777,9 +1777,13 @@ export default class DevServer {
     ];
     let responseTransformsToApply = responseTransforms;
 
+    const lookupUrl = `${lookupPath}${parsed.search || ''}`;
+    let rewrittenUrl: string | undefined;
+    let externalDestUrl: string | undefined;
+
     if (serviceRoutes.length > 0) {
       const serviceResult = await devRouter(
-        `${lookupPath}${parsed.search || ''}`,
+        lookupUrl,
         req.method,
         serviceRoutes,
         this,
@@ -1818,6 +1822,27 @@ export default class DevServer {
           res.setHeader(name, value);
         }
       }
+
+      if (serviceResult.dest) {
+        // Mix the service route table's dest query params into the dest path
+        const destParsed = url.parse(serviceResult.dest);
+        const destQuery = parseQueryString(destParsed.search);
+        Object.assign(destQuery, serviceResult.query);
+        destParsed.search = formatQueryString(destQuery);
+        const resolvedDest = url.format(destParsed);
+        if (serviceResult.isDestUrl) {
+          externalDestUrl = resolvedDest;
+        } else if (resolvedDest !== lookupUrl) {
+          rewrittenUrl = resolvedDest;
+        }
+      }
+    }
+
+    // Apply the rewritten path so service-level rewrites reach the service.
+    // This happens before request transforms so that `request.path` transforms
+    // operate on the rewritten path.
+    if (rewrittenUrl !== undefined) {
+      req.url = rewrittenUrl;
     }
 
     for (const [name, value] of Object.entries(proxyHeaders)) {
@@ -1832,7 +1857,15 @@ export default class DevServer {
     );
 
     this.setResponseHeaders(res, requestId);
-    debug(`Delegating to service "${serviceName}": ${origin}`);
+
+    if (externalDestUrl) {
+      debug(
+        `Service "${serviceName}" rewrite to external URL: ${externalDestUrl}`
+      );
+      return proxyPass(req, res, externalDestUrl, this, requestId);
+    }
+
+    debug(`Delegating to service "${serviceName}": ${origin}${req.url}`);
     return proxyPass(req, res, origin, this, requestId, false);
   }
 

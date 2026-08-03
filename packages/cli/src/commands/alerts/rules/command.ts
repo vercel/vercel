@@ -23,6 +23,15 @@ const scopeOptions = [
   },
 ] as const;
 
+const addScopeOptions = [
+  {
+    ...scopeOptions[0],
+    description:
+      'Target project when the body omits projectId; built-in rules otherwise remain team-wide.',
+  },
+  scopeOptions[1],
+] as const;
+
 export const rulesLsSubcommand = {
   name: 'ls',
   aliases: ['list'],
@@ -62,13 +71,50 @@ export const rulesLsSubcommand = {
   ],
 } as const;
 
+export const rulesSchemaSubcommand = {
+  name: 'schema',
+  aliases: [],
+  description: 'Show alert rule body schema and examples by alert type',
+  arguments: [],
+  options: [
+    {
+      name: 'type',
+      shorthand: null,
+      type: String,
+      argument: 'TYPE',
+      deprecated: false,
+      description:
+        'Alert rule type to describe: usage_anomaly, error_anomaly, or custom_alert.',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'List supported rule types',
+      value: `${packageName} alerts rules schema`,
+    },
+    {
+      name: 'Show error anomaly rule schema',
+      value: `${packageName} alerts rules schema --type error_anomaly`,
+    },
+    {
+      name: 'Show custom alert rule schema',
+      value: `${packageName} alerts rules schema --type custom_alert`,
+    },
+    {
+      name: 'Schema as JSON',
+      value: `${packageName} alerts rules schema --type custom_alert --format json`,
+    },
+  ],
+} as const;
+
 export const rulesAddSubcommand = {
   name: 'add',
   aliases: ['create'],
   description: 'Create an alert rule from a JSON body file',
   arguments: [],
   options: [
-    ...scopeOptions,
+    ...addScopeOptions,
     formatOption,
     jsonOption,
     {
@@ -155,7 +201,8 @@ export const rulesUpdateSubcommand = {
       type: String,
       argument: 'PATH',
       deprecated: false,
-      description: 'Path to JSON with fields to update (partial document).',
+      description:
+        'Path to partial JSON. Omitted fields remain unchanged; null clears supported optional fields.',
     },
   ],
   examples: [
@@ -174,6 +221,7 @@ export const rulesAggregateCommand = {
   arguments: [],
   subcommands: [
     rulesLsSubcommand,
+    rulesSchemaSubcommand,
     rulesAddSubcommand,
     rulesInspectSubcommand,
     rulesRmSubcommand,
@@ -186,8 +234,28 @@ export const rulesAggregateCommand = {
       value: `${packageName} alerts rules ls`,
     },
     {
+      name: 'List custom alert rules',
+      value: `${packageName} alerts rules ls --type custom_alert`,
+    },
+    {
+      name: 'Show schema for a rule type',
+      value: `${packageName} alerts rules schema --type custom_alert`,
+    },
+    {
       name: 'Add a rule',
       value: `${packageName} alerts rules add --body ./rule.json`,
+    },
+    {
+      name: 'Inspect a rule',
+      value: `${packageName} alerts rules inspect ar_abc123`,
+    },
+    {
+      name: 'Update a rule',
+      value: `${packageName} alerts rules update ar_abc123 --body ./patch.json`,
+    },
+    {
+      name: 'Delete a rule',
+      value: `${packageName} alerts rules rm ar_abc123`,
     },
   ],
 } as const;

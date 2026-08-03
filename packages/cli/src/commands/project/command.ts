@@ -285,12 +285,20 @@ export const updateSubcommand = {
       deprecated: false,
     },
     {
+      name: 'root-directory',
+      shorthand: null,
+      type: String,
+      argument: 'DIR',
+      description: 'Set the project root directory',
+      deprecated: false,
+    },
+    {
       name: 'auto-detect',
       shorthand: null,
       type: [String],
       argument: 'SETTING',
       description:
-        'Reset a setting to automatic detection; repeat for build-command, dev-command, install-command, or output-directory',
+        'Reset a setting to automatic detection; repeat for build-command, dev-command, install-command, output-directory, or root-directory',
       deprecated: false,
     },
     formatOption,

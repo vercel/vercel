@@ -8,7 +8,7 @@ import {
   sanitizeConsumerName,
 } from './lambda';
 import { NodejsLambda, type NodejsLambdaOptions } from './nodejs-lambda';
-import { Prerender } from './prerender';
+import { Prerender, type PrerenderClassification } from './prerender';
 import download, {
   downloadFile,
   DownloadedFiles,
@@ -69,7 +69,7 @@ import { cloneEnv } from './clone-env';
 import { hardLinkDir } from './hard-link-dir';
 import { validateNpmrc } from './validate-npmrc';
 
-export type { NodejsLambdaOptions };
+export type { NodejsLambdaOptions, PrerenderClassification };
 
 export {
   FileBlob,
@@ -142,7 +142,7 @@ export { ContainerImage } from './container-image';
 export type { ContainerImageConfig } from './container-image';
 export { readConfigFile, getPackageJson } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
-export { getOsRelease, getProvidedRuntime } from './os';
+export { getProvidedRuntime } from './provided-runtime';
 
 export * from './should-serve';
 export * from './schemas';

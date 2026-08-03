@@ -54,6 +54,7 @@ import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
 import { frameworkList, type Framework } from '@vercel/frameworks';
 import {
+  builderToFrameworks,
   detectBuilders,
   detectFrameworkRecord,
   detectFrameworkVersion,
@@ -1189,6 +1190,7 @@ async function doBuild(
     builderUse: string;
   }> = [];
 
+  const apiDirFrameworkDetector = createApiDirFrameworkDetector();
   const getHasDetectedServices = () =>
     detectedResolvedServices !== undefined &&
     detectedResolvedServices.length > 0;
@@ -1306,6 +1308,14 @@ async function doBuild(
         // the project-level framework is 'services'.
         const builderFramework =
           build.config?.framework ?? projectSettings.framework;
+        // Backend framework detected for api/ dir builds.
+        const apiDirFramework: string | undefined =
+          isZeroConfig && !service && !isFrontendBuilder
+            ? await apiDirFrameworkDetector.detect(
+                build.use ?? '',
+                buildWorkPath
+              )
+            : undefined;
 
         let buildConfig: Config;
 
@@ -1346,7 +1356,9 @@ async function doBuild(
               installCommand: projectSettings.installCommand ?? undefined,
               devCommand: projectSettings.devCommand ?? undefined,
               buildCommand: projectSettings.buildCommand ?? undefined,
-              framework: projectSettings.framework,
+              framework: isFrontendBuilder
+                ? projectSettings.framework
+                : undefined,
               nodeVersion: projectSettings.nodeVersion,
               bunVersion: localConfig.bunVersion ?? undefined,
             };
@@ -1525,14 +1537,27 @@ async function doBuild(
                         service && serviceWorkspace && serviceWorkspace !== '.'
                           ? serviceWorkspace
                           : '.';
-                      packageManifests.push({
-                        workspace,
-                        key: fullKey,
-                        buildConfig: buildConfig,
-                        manifest: packageManifest,
-                        service,
-                        builderUse: builderPkg.name,
-                      });
+                      // Only keep one manifest per builder+workspace — multiple
+                      // api/dir files for the same builder share a manifest slot.
+                      const alreadyPushed = packageManifests.some(
+                        m =>
+                          m.builderUse === builderPkg.name &&
+                          m.workspace === workspace
+                      );
+                      if (!alreadyPushed) {
+                        packageManifests.push({
+                          workspace,
+                          key: fullKey,
+                          buildConfig: buildConfig,
+                          manifest: {
+                            ...packageManifest,
+                            framework:
+                              packageManifest.framework ?? apiDirFramework,
+                          },
+                          service,
+                          builderUse: builderPkg.name,
+                        });
+                      }
                     }
                   } catch (e) {
                     output.debug(
@@ -2984,6 +3009,54 @@ async function writeFlagsJSON(
   if (hasFlags) {
     await fs.writeJSON(flagsFilePath, flags, { spaces: 2 });
   }
+}
+
+interface ApiDirFrameworkDetector {
+  detect(builderUse: string, workPath: string): Promise<string | undefined>;
+}
+
+/**
+ * Creates a memoised api/dir framework detector, scoped to one build, so N
+ * api/dir files sharing a builder+workPath share one filesystem scan instead
+ * of running one per file.
+ */
+function createApiDirFrameworkDetector(): ApiDirFrameworkDetector {
+  const cache = new Map<string, Promise<string | undefined>>();
+  return {
+    detect(builderUse, workPath) {
+      const cacheKey = `${builderUse}:${workPath}`;
+      let cached = cache.get(cacheKey);
+      if (!cached) {
+        cached = detectApiDirFramework(builderUse, workPath);
+        cache.set(cacheKey, cached);
+      }
+      return cached;
+    },
+  };
+}
+
+/**
+ * Detects the framework used by an api/dir builder.
+ *
+ * Runs a narrow scan scoped to the builder's own frameworks; builders with
+ * no framework mappings (e.g. `@vercel/node`) return without touching the
+ * filesystem.
+ */
+async function detectApiDirFramework(
+  builderUse: string,
+  workPath: string
+): Promise<string | undefined> {
+  const runtimeFrameworks = builderToFrameworks.get(builderUse) ?? [];
+  if (runtimeFrameworks.length === 0) return undefined;
+
+  const detectedSlugs = await detectAllFrameworks(
+    workPath,
+    runtimeFrameworks
+  ).catch(() => []);
+  // Return the framework only when exactly one is detected. Zero means none
+  // found; more than one means ambiguous (e.g. fastapi + flask), so return
+  // undefined rather than picking arbitrarily.
+  return detectedSlugs.length === 1 ? detectedSlugs[0] : undefined;
 }
 
 async function writeBuildJson(buildsJson: BuildsManifest, outputDir: string) {
