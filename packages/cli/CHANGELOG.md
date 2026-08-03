@@ -1,5 +1,35 @@
 # vercel
 
+## 58.5.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/backends@0.8.32
+  - @vercel/build-utils@14.0.1
+  - @vercel/cli-auth@0.3.2
+  - @vercel/cli-config@0.2.2
+  - @vercel/container@0.1.1
+  - @vercel/detect-agent@1.2.4
+  - @vercel/elysia@0.1.109
+  - @vercel/express@0.1.123
+  - @vercel/fastify@0.1.112
+  - @vercel/go@3.10.4
+  - @vercel/h3@0.1.118
+  - @vercel/hono@0.2.112
+  - @vercel/hydrogen@1.4.1
+  - @vercel/koa@0.1.92
+  - @vercel/nestjs@0.2.113
+  - @vercel/next@4.21.1
+  - @vercel/node@5.9.5
+  - @vercel/python@6.55.1
+  - @vercel/redwood@2.5.1
+  - @vercel/remix-builder@5.9.2
+  - @vercel/ruby@2.5.2
+  - @vercel/rust@1.4.1
+  - @vercel/static-build@2.12.1
+
 ## 58.5.0
 
 ### Minor Changes

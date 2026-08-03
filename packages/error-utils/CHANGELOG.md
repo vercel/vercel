@@ -1,5 +1,11 @@
 # @vercel/error-utils
 
+## 2.2.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
 ## 2.2.0
 
 ### Minor Changes

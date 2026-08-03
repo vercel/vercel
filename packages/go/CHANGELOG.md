@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.10.4
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
 ## 3.10.3
 
 ### Patch Changes

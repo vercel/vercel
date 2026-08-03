@@ -1,5 +1,13 @@
 # @vercel/router-sdk
 
+## 0.5.6
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/routing-utils@6.4.1
+
 ## 0.5.5
 
 ### Patch Changes

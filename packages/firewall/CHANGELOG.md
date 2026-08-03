@@ -1,5 +1,11 @@
 # @vercel/firewall
 
+## 1.2.3
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
 ## 1.2.2
 
 ### Patch Changes

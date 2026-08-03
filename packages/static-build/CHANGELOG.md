@@ -1,5 +1,15 @@
 # @vercel/static-build
 
+## 2.12.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/gatsby-plugin-vercel-analytics@1.0.12
+  - @vercel/gatsby-plugin-vercel-builder@2.2.35
+  - @vercel/static-config@3.4.1
+
 ## 2.12.0
 
 ### Minor Changes

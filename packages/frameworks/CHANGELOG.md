@@ -1,5 +1,13 @@
 # @vercel/frameworks
 
+## 3.30.8
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/error-utils@2.2.1
+
 ## 3.30.7
 
 ### Patch Changes

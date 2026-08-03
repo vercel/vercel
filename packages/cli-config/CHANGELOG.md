@@ -1,5 +1,11 @@
 # @vercel/cli-config
 
+## 0.2.2
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
 ## 0.2.1
 
 ### Patch Changes

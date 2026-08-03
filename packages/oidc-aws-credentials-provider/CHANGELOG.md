@@ -1,5 +1,13 @@
 # @vercel/oidc
 
+## 3.3.2
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/oidc@3.8.2
+
 ## 3.3.1
 
 ### Patch Changes

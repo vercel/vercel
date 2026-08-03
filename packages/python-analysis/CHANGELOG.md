@@ -1,5 +1,11 @@
 # @vercel/python-analysis
 
+## 0.13.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
 ## 0.13.0
 
 ### Minor Changes

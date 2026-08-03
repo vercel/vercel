@@ -1,5 +1,11 @@
 # @vercel/mcp-adapter
 
+## 0.3.3
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
 ## 0.3.2
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @vercel/fastify
 
+## 0.1.112
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/node@5.9.5
+  - @vercel/static-config@3.4.1
+
 ## 0.1.111
 
 ### Patch Changes

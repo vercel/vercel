@@ -1,5 +1,13 @@
 # @vercel/functions
 
+## 3.7.7
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/oidc@3.8.2
+
 ## 3.7.6
 
 ### Patch Changes

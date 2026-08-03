@@ -1,5 +1,15 @@
 # @vercel/node
 
+## 5.9.5
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/build-utils@14.0.1
+  - @vercel/error-utils@2.2.1
+  - @vercel/static-config@3.4.1
+
 ## 5.9.4
 
 ### Patch Changes

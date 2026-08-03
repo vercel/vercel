@@ -1,5 +1,16 @@
 # @vercel/fs-detectors
 
+## 6.15.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/build-utils@14.0.1
+  - @vercel/error-utils@2.2.1
+  - @vercel/frameworks@3.30.8
+  - @vercel/routing-utils@6.4.1
+
 ## 6.15.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # @vercel/ruby
 
+## 2.5.2
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
 ## 2.5.1
 
 ### Patch Changes
