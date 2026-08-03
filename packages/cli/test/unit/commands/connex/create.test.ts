@@ -173,6 +173,36 @@ describe('connex create', () => {
     });
   });
 
+  it('forwards GitHub webhook events to managed connector creation', async () => {
+    let postBody: any;
+    client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
+      postBody = req.body;
+      res.json(fakeConnexClient({ type: 'github', name: 'github' }));
+    });
+
+    client.setArgv(
+      'connect',
+      'create',
+      'github',
+      '--name',
+      'github',
+      '--triggers',
+      '--trigger-event',
+      'issue_comment',
+      '--trigger-event',
+      'pull_request_review_comment'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(postBody).toMatchObject({
+      service: 'github',
+      triggers: { enabled: true },
+      events: ['issue_comment', 'pull_request_review_comment'],
+    });
+  });
+
   it('should pass any type to the server without validation', async () => {
     let postBody: any;
     client.scenario.post('/v1/connect/connectors/managed', (req, res) => {

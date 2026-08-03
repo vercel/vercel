@@ -105,6 +105,10 @@ export const createSubcommand = {
       value: `${packageName} connect create linear --name linear --triggers --trigger-event Issue --trigger-event Comment --trigger-event Project`,
     },
     {
+      name: 'Create a GitHub connector with selected webhook events',
+      value: `${packageName} connect create github --name github --triggers --trigger-event issue_comment --trigger-event pull_request_review_comment`,
+    },
+    {
       name: 'Create with branding (icon and colors)',
       value: `${packageName} connect create slack --name my-bot --icon ./logo.png --background-color '#1A2B3C' --accent-color '#FF0066'`,
     },
