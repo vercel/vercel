@@ -17,7 +17,6 @@
 /crates                                  @vercel/ci-cd @vercel/compute @ecklf
 /Cargo.*                                 @vercel/ci-cd @vercel/compute @ecklf
 /packages/firewall                       @vercel/ci-cd @cramforce @sueplex @quuu @ctgowrie
-/packages/mcp-adapter                    @vercel/ci-cd @cramforce @quuu
 /examples/create-react-app               @vercel/ci-cd @Timer
 /examples/nextjs                         @vercel/ci-cd @ijjk @ztanner @huozhi
 /packages/node                           @vercel/ci-cd
