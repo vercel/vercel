@@ -50,7 +50,7 @@ async function hasSystemGo() {
 // onto `process.env`. Unix-only: the `.tar.gz` archive isn't the Windows format.
 //
 // NOTE: CI should never reach here because test workflows install Go for every
-// test lane before Turbo builds this package or one of its dependents.
+// test lane before Turborepo builds this package or one of its dependents.
 // This fallback is for local dev / non-CI environments. It must not hang
 // indefinitely: CI-level hang seen in 29276172195 was an unbounded fetch to
 // dl.google.com stalling on macOS runners without system Go.

@@ -1,7 +1,7 @@
 # Affected Testing Strategy
 
 The pull request workflow uses Turborepo's native affected-package detection.
-Package test scripts are executable Turbo tasks; workflows do not generate
+Package test scripts are executable Turborepo tasks; workflows do not generate
 package or test-file manifests.
 
 ## Pull Requests
@@ -18,7 +18,7 @@ turbo run vitest-unit --affected
 turbo run vitest-e2e --affected
 ```
 
-Turbo runs the task in directly changed packages and affected dependents. The
+Turborepo runs the task in directly changed packages and affected dependents. The
 complete task is executed in every affected package; Vitest does not perform a
 second changed-file reduction.
 
@@ -40,7 +40,7 @@ configuration. Changes to them invalidate tasks across the workspace.
 - `test-next-local`: Local Next.js integration coverage on Node.js 22.
 - `test-dev`: CLI development coverage on Linux and macOS with Node.js 22.
 
-The workflow uses a globally installed Turbo for a dry run before installing
+The workflow uses a globally installed `turbo` CLI for a dry run before installing
 workspace dependencies. Lanes with no affected task skip dependency,
 toolchain, and deployment setup.
 
