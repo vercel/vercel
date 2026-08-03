@@ -89,13 +89,13 @@ describe('detectServices (services)', () => {
     expect(worker.builder.src).toBe('svc/main.py');
   });
 
-  describe('buildpack runtimes (VERCEL_RUBY_EXPERIMENTAL_BUILDPACK=1)', () => {
+  describe('buildpack runtimes (VERCEL_EXPERIMENTAL_BUILDPACK_RUBY=1)', () => {
     beforeAll(() => {
-      process.env.VERCEL_RUBY_EXPERIMENTAL_BUILDPACK = '1';
+      process.env.VERCEL_EXPERIMENTAL_BUILDPACK_RUBY = '1';
     });
 
     afterAll(() => {
-      delete process.env.VERCEL_RUBY_EXPERIMENTAL_BUILDPACK;
+      delete process.env.VERCEL_EXPERIMENTAL_BUILDPACK_RUBY;
     });
 
     it('resolves a Ruby runtime without an entrypoint to the buildpack container builder', async () => {

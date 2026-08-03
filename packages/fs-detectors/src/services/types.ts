@@ -20,7 +20,7 @@ import type {
   Service,
   Builder,
 } from '@vercel/build-utils';
-import { isRubyBuildpacksEnabled } from '@vercel/build-utils/dist/framework-helpers';
+import { isBuildpackRuntimeEnabled } from '@vercel/build-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 
 export type {
@@ -201,22 +201,27 @@ export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
  * `@vercel/container`).
  *
  * Adding a language here requires a matching descriptor in
- * `@vercel/container`'s buildpack registry (`src/buildpacks/registry.ts`).
+ * `@vercel/container`'s buildpack registry (`src/buildpacks/registry.ts`);
+ * a parity test in that package keeps the two in sync.
  */
-const BUILDPACK_RUNTIMES: ReadonlySet<ServiceRuntime> = new Set(['ruby']);
+export const BUILDPACK_RUNTIMES: ReadonlySet<ServiceRuntime> = new Set([
+  'ruby',
+]);
 
 /**
  * The buildpack runtime for `runtime`, or `undefined` when the runtime is
- * not buildpack-backed or buildpacks are not enabled
- * (`VERCEL_RUBY_EXPERIMENTAL_BUILDPACK=1`). While disabled, buildpack-backed
- * runtimes keep their legacy {@link RUNTIME_BUILDERS} behavior.
+ * not buildpack-backed or its experiment flag
+ * (`VERCEL_EXPERIMENTAL_BUILDPACK_<RUNTIME>=1`, e.g.
+ * `VERCEL_EXPERIMENTAL_BUILDPACK_RUBY=1`) is not enabled. While disabled,
+ * buildpack-backed runtimes keep their legacy {@link RUNTIME_BUILDERS}
+ * behavior.
  */
 export function toBuildpackRuntime(
   runtime: ServiceRuntime | undefined
 ): ServiceRuntime | undefined {
   return runtime !== undefined &&
-    isRubyBuildpacksEnabled() &&
-    BUILDPACK_RUNTIMES.has(runtime)
+    BUILDPACK_RUNTIMES.has(runtime) &&
+    isBuildpackRuntimeEnabled(runtime)
     ? runtime
     : undefined;
 }

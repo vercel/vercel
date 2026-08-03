@@ -181,7 +181,7 @@ export {
   isBackendFramework,
   isNodeBackendFramework,
   isBackendBuilder,
-  isRubyBuildpacksEnabled,
+  isBuildpackRuntimeEnabled,
   isExperimentalBackendsEnabled,
   isExperimentalBackendsWithoutIntrospectionEnabled,
   shouldUseExperimentalBackends,

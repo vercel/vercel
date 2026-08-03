@@ -87,11 +87,19 @@ export function isExperimentalBackendsEnabled(): boolean {
 }
 
 /**
- * Gates the migration of Ruby from the `@vercel/ruby` Lambda builder to
+ * Gates the migration of a language runtime from its legacy Lambda builder to
  * Cloud Native Buildpack container builds via `@vercel/container`.
+ *
+ * Each buildpack-backed runtime has its own experiment flag,
+ * `VERCEL_EXPERIMENTAL_BUILDPACK_<RUNTIME>` (e.g.
+ * `VERCEL_EXPERIMENTAL_BUILDPACK_RUBY=1`), so languages graduate
+ * independently.
  */
-export function isRubyBuildpacksEnabled(): boolean {
-  return process.env.VERCEL_RUBY_EXPERIMENTAL_BUILDPACK === '1';
+export function isBuildpackRuntimeEnabled(runtime: string): boolean {
+  return (
+    process.env[`VERCEL_EXPERIMENTAL_BUILDPACK_${runtime.toUpperCase()}`] ===
+    '1'
+  );
 }
 
 export function isBackendBuilder(builder: Builder | null | undefined): boolean {

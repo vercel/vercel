@@ -1,7 +1,7 @@
 {
   "build": {
     "env": {
-      "VERCEL_RUBY_EXPERIMENTAL_BUILDPACK": "1"
+      "VERCEL_EXPERIMENTAL_BUILDPACK_RUBY": "1"
     }
   },
   "projectSettings": {
