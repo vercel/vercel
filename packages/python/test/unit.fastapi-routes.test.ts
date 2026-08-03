@@ -386,4 +386,29 @@ describe('copyFastAPIStaticMounts', () => {
     expect(read('shared.txt')).toBe('FROM_MOUNT');
     expect(exists('index.html')).toBe(false);
   });
+
+  it('keeps copying the remaining mounts after one fails', async () => {
+    // A missing source dir makes fs.cp throw on the first mount; the second
+    // still lands on the CDN and the offload proceeds.
+    const good = source('good', { 'a.txt': 'GOOD' });
+    const missing = path.join(root, 'does-not-exist');
+    const ok = await copyFastAPIStaticMounts(
+      [mount('/missing', missing, false), mount('/good', good, false)],
+      out
+    );
+    expect(ok).toBe(true);
+    expect(read('good/a.txt')).toBe('GOOD');
+    expect(exists('missing/a.txt')).toBe(false);
+  });
+
+  it('reports failure only when every mount fails', async () => {
+    const ok = await copyFastAPIStaticMounts(
+      [
+        mount('/a', path.join(root, 'no-a'), false),
+        mount('/b', path.join(root, 'no-b'), false),
+      ],
+      out
+    );
+    expect(ok).toBe(false);
+  });
 });
