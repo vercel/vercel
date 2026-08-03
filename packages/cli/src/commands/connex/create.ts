@@ -37,6 +37,7 @@ export async function create(
     '--json'?: boolean;
     '--triggers'?: boolean;
     '--trigger-event'?: string[];
+    '--events'?: string;
     '--icon'?: string;
     '--background-color'?: string;
     '--accent-color'?: string;
@@ -57,8 +58,21 @@ export async function create(
     return 1;
   }
 
-  if (flags['--trigger-event'] && !flags['--triggers']) {
-    output.error('The --trigger-event flag requires --triggers.');
+  if (flags['--trigger-event'] && flags['--events']) {
+    output.error('Use either --trigger-event or --events, not both.');
+    return 1;
+  }
+  if (flags['--events'] && serviceType !== 'github') {
+    output.error('The --events flag is only supported for GitHub connectors.');
+    return 1;
+  }
+  if ((flags['--trigger-event'] || flags['--events']) && !flags['--triggers']) {
+    output.error('The --trigger-event and --events flags require --triggers.');
+    return 1;
+  }
+  const events = flags['--events']?.trim();
+  if (flags['--events'] !== undefined && !events) {
+    output.error('The --events flag requires at least one event.');
     return 1;
   }
 
@@ -179,6 +193,8 @@ export async function create(
   body.triggers = { enabled: flags['--triggers'] === true };
   if (flags['--trigger-event'] !== undefined) {
     body.events = flags['--trigger-event'];
+  } else if (events !== undefined) {
+    body.events = events;
   }
   if (iconSha) {
     body.icon = iconSha;

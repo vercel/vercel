@@ -42,6 +42,15 @@ export const createSubcommand = {
         "Webhook event to receive. Repeatable. Requires --triggers and replaces the provider's default events.",
     },
     {
+      name: 'events',
+      shorthand: null,
+      type: String,
+      argument: 'EVENTS',
+      deprecated: false,
+      description:
+        'Comma-separated GitHub webhook events to receive. Requires --triggers and replaces GitHub defaults.',
+    },
+    {
       name: 'data',
       shorthand: null,
       type: String,
@@ -106,7 +115,7 @@ export const createSubcommand = {
     },
     {
       name: 'Create a GitHub connector with selected webhook events',
-      value: `${packageName} connect create github --name github --triggers --trigger-event issue_comment --trigger-event pull_request_review_comment`,
+      value: `${packageName} connect create github --name github --triggers --events issue_comment,pull_request_review_comment`,
     },
     {
       name: 'Create with branding (icon and colors)',

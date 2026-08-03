@@ -187,10 +187,8 @@ describe('connex create', () => {
       '--name',
       'github',
       '--triggers',
-      '--trigger-event',
-      'issue_comment',
-      '--trigger-event',
-      'pull_request_review_comment'
+      '--events',
+      'issue_comment,pull_request_review_comment'
     );
 
     const exitCode = await connect(client);
@@ -199,8 +197,35 @@ describe('connex create', () => {
     expect(postBody).toMatchObject({
       service: 'github',
       triggers: { enabled: true },
-      events: ['issue_comment', 'pull_request_review_comment'],
+      events: 'issue_comment,pull_request_review_comment',
     });
+  });
+
+  it('rejects --events for non-GitHub connectors', async () => {
+    let requestMade = false;
+    client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
+      requestMade = true;
+      res.json(fakeConnexClient());
+    });
+
+    client.setArgv(
+      'connect',
+      'create',
+      'linear',
+      '--name',
+      'linear',
+      '--triggers',
+      '--events',
+      'Issue'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(1);
+    expect(requestMade).toBe(false);
+    await expect(client.stderr).toOutput(
+      'The --events flag is only supported for GitHub connectors.'
+    );
   });
 
   it('should pass any type to the server without validation', async () => {
