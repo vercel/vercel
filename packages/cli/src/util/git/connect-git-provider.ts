@@ -53,10 +53,17 @@ export async function connectGitProvider(
       apiError &&
       (err.action === 'Install GitHub App' || err.code === 'repo_not_found')
     ) {
+      // The API attaches the page that fixes this (App install / repo access
+      // settings). Surface it — without it the user is told to check for typos
+      // when the real cause is usually missing App access.
+      const fixLink = typeof err.link === 'string' ? err.link : undefined;
       output.error(
         `Failed to connect ${chalk.cyan(
           repo
-        )} to project. Make sure there aren't any typos and that you have access to the repository if it's private.`
+        )} to project. Make sure there aren't any typos and that you have access to the repository if it's private.` +
+          (fixLink
+            ? `\n${err.action ?? 'More information'}: ${link(fixLink)}`
+            : '')
       );
     } else if (apiError && err.code === 'repo_links_exceeded_limit') {
       // The error meta carries a plan-appropriate call to action (newer
