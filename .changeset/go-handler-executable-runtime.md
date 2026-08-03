@@ -1,5 +1,5 @@
 ---
-'@vercel/go': patch
+'@vercel/go': minor
 '@vercel/fs-detectors': patch
 ---
 
