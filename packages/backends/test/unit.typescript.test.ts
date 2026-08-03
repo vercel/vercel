@@ -69,6 +69,19 @@ describe('typescript typecheck leniencies (parity with @vercel/node)', () => {
     await expect(typecheck(dir, 'index.ts')).resolves.toBeUndefined();
   });
 
+  it('does not override an explicit "moduleResolution" (e.g. bundler)', async () => {
+    const dir = await createFixture({
+      'tsconfig.json': JSON.stringify({
+        compilerOptions: { moduleResolution: 'bundler', module: 'ESNext' },
+      }),
+      // Extensionless relative import: fails under forced NodeNext
+      // resolution, passes under the user's bundler resolution.
+      'lib.ts': 'export const value: number = 1;\n',
+      'index.ts': "export { value } from './lib';\n",
+    });
+    await expect(typecheck(dir, 'index.ts')).resolves.toBeUndefined();
+  });
+
   it('discovers tsconfig from the entrypoint directory, not workPath', async () => {
     const dir = await createFixture({
       // Malformed tsconfig at the workPath root: fatal if read.

@@ -85,10 +85,6 @@ async function doTypeCheck(
       fail([configRead.error]);
     }
     const config = configRead.config ?? {};
-    config.compilerOptions = fixConfig(
-      { ...config.compilerOptions },
-      args.nodeVersionMajor
-    );
     const parsed = ts.parseJsonConfigFileContent(
       config,
       ts.sys,
@@ -112,6 +108,32 @@ async function doTypeCheck(
       skipLibCheck: true,
       allowJs: true,
     };
+    // Emit-oriented options don't apply to a noEmit typecheck.
+    delete options.out;
+    delete options.outFile;
+    delete options.composite;
+    delete options.declarationDir;
+    delete options.declarationMap;
+    delete options.emitDeclarationOnly;
+    delete options.tsBuildInfoFile;
+    delete options.incremental;
+    if (options.target === undefined) {
+      options.target = defaultScriptTarget(ts, args.nodeVersionMajor);
+    }
+    if (options.esModuleInterop === undefined) {
+      options.esModuleInterop = true;
+    }
+    // Mirror `@vercel/node` fixConfig leniency, but only when the resolved
+    // config (post-`extends`) sets neither `module` nor `moduleResolution`,
+    // so explicit user resolution strategies are never overridden.
+    if (
+      options.module === undefined &&
+      options.moduleResolution === undefined
+    ) {
+      options.module = ts.ModuleKind.NodeNext;
+      options.moduleResolution = ts.ModuleResolutionKind.NodeNext;
+      options.strict = false;
+    }
     // Ambient declaration files matched by the tsconfig contribute global
     // types even when never imported; include them as extra program roots.
     for (const fileName of parsed.fileNames) {
@@ -147,45 +169,6 @@ async function doTypeCheck(
   }
 
   fail(errors);
-}
-
-// Mirror of `fixConfig` in `packages/node/src/typescript.ts`.
-export function fixConfig(
-  compilerOptions: Record<string, unknown>,
-  nodeVersionMajor = 16
-): Record<string, unknown> {
-  delete compilerOptions.out;
-  delete compilerOptions.outFile;
-  delete compilerOptions.composite;
-  delete compilerOptions.declarationDir;
-  delete compilerOptions.declarationMap;
-  delete compilerOptions.emitDeclarationOnly;
-  delete compilerOptions.tsBuildInfoFile;
-  delete compilerOptions.incremental;
-
-  if (compilerOptions.target === undefined) {
-    let target: string;
-    if (nodeVersionMajor >= 16) {
-      target = 'ES2021';
-    } else if (nodeVersionMajor >= 14) {
-      target = 'ES2020';
-    } else {
-      target = 'ES2019';
-    }
-    compilerOptions.target = target;
-  }
-
-  if (compilerOptions.esModuleInterop === undefined) {
-    compilerOptions.esModuleInterop = true;
-  }
-
-  if (compilerOptions.module === undefined) {
-    compilerOptions.module = 'NodeNext';
-    compilerOptions.moduleResolution = 'NodeNext';
-    compilerOptions.strict = false;
-  }
-
-  return compilerOptions;
 }
 
 function defaultScriptTarget(
