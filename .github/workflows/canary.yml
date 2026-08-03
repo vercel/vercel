@@ -67,5 +67,5 @@ jobs:
 
       - name: Publish Canary Snapshots to npm
         run: pnpm ci:publish:canary
-        env:
-          NPM_CONFIG_PROVENANCE: 'true'
+        # No NPM_CONFIG_PROVENANCE: provenance requires a public source repo;
+        # publishes now come from vercel/vercel-internal (private).

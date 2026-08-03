@@ -147,7 +147,6 @@ jobs:
           commitMode: 'github-api' # allows release commits and tags to be signed using $GITHUB_TOKEN
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_CONFIG_PROVENANCE: 'true'
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           # While the binary job is disabled, publish `vercel` without native
           # optionalDependencies instead of failing the missing-natives guard

@@ -315,8 +315,6 @@ jobs:
 
       - name: Publish native npm packages
         shell: bash
-        env:
-          NPM_CONFIG_PROVENANCE: 'true'
         run: node packages/vc-native/scripts/publish-packages.mjs
 
       - name: Verify @vercel/vc-native global install
