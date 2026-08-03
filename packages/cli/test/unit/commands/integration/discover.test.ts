@@ -67,6 +67,13 @@ describe('integration', () => {
             description: 'The Acme B product',
             tags: ['Storage', 'Queue'],
           },
+          {
+            name: 'Turso Cloud',
+            slug: 'tursocloud',
+            provider: 'Turso Cloud',
+            description: 'Serverless SQLite database',
+            tags: ['Storage'],
+          },
         ],
       });
     });
@@ -136,6 +143,13 @@ describe('integration', () => {
             provider: 'Acme Integration Two Products',
             description: 'The Acme B product',
             tags: ['databases', 'Queue'],
+          },
+          {
+            name: 'Turso Cloud',
+            slug: 'tursocloud',
+            provider: 'Turso Cloud',
+            description: 'Serverless SQLite database',
+            tags: ['databases'],
           },
         ],
       });
@@ -236,7 +250,7 @@ describe('integration', () => {
         expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
 
         const output = JSON.parse(client.stdout.getFullOutput());
-        expect(output.products).toHaveLength(5);
+        expect(output.products).toHaveLength(6);
       });
     });
 
