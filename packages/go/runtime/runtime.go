@@ -215,11 +215,14 @@ var stderrMu sync.Mutex
 
 // Log emits a structured runtime log.
 func Log(ctx context.Context, level, message string) {
-	if sendFrame("log", requestKey(ctx), map[string]interface{}{
-		"level":   level,
-		"message": message,
-	}) {
-		return
+	key := requestKey(ctx)
+	if key != "" {
+		if sendFrame("log", key, map[string]interface{}{
+			"level":   level,
+			"message": message,
+		}) {
+			return
+		}
 	}
 	stderrMu.Lock()
 	_, _ = os.Stderr.WriteString("[" + level + "] " + message + "\n")

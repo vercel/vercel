@@ -116,10 +116,10 @@ func TestWaitUntilLifecycleAndPanicRecovery(t *testing.T) {
 
 func TestLoggingProtocolAndStderrFallback(t *testing.T) {
 	reader, cleanup := useControlPipe(t)
+	defer cleanup()
 	ctx := context.WithValue(context.Background(), requestKeyContextKey, "log-key")
 	Warn(ctx, "problem 7")
 	frame := readControlFrame(t, reader)
-	cleanup()
 
 	if frame.Type != "log" || frame.RequestKey != "log-key" {
 		t.Fatalf("unexpected log frame: %+v", frame)
@@ -129,7 +129,6 @@ func TestLoggingProtocolAndStderrFallback(t *testing.T) {
 		t.Fatalf("unexpected log payload: %#v", payload)
 	}
 
-	t.Setenv(controlFDEnv, "")
 	oldStderr := os.Stderr
 	stderrReader, stderrWriter, err := os.Pipe()
 	if err != nil {
