@@ -6,7 +6,7 @@ import {
   type RenderToPipeableStreamOptions,
 } from 'react-dom/server';
 import { ServerRouter } from 'react-router';
-import type { AppLoadContext, EntryContext } from 'react-router';
+import type { EntryContext } from 'react-router';
 
 export type RenderOptions = {
   [K in keyof RenderToReadableStreamOptions &
@@ -22,7 +22,7 @@ export async function handleRequest(
   responseStatusCode: number,
   responseHeaders: Headers,
   routerContext: EntryContext,
-  _loadContext?: AppLoadContext,
+  _loadContext?: unknown,
   options?: RenderOptions
 ): Promise<Response> {
   const body = await renderToReadableStream(
