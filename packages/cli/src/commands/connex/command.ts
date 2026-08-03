@@ -33,6 +33,15 @@ export const createSubcommand = {
       description: 'Enable webhook triggers for this connector',
     },
     {
+      name: 'trigger-event',
+      shorthand: null,
+      type: [String],
+      argument: 'EVENT',
+      deprecated: false,
+      description:
+        "Webhook event to receive. Repeatable. Requires --triggers and replaces the provider's default events.",
+    },
+    {
       name: 'data',
       shorthand: null,
       type: String,
@@ -90,6 +99,10 @@ export const createSubcommand = {
     {
       name: 'Create with webhook triggers enabled',
       value: `${packageName} connect create slack --name my-bot --triggers`,
+    },
+    {
+      name: 'Create with selected webhook events',
+      value: `${packageName} connect create linear --name linear --triggers --trigger-event Issue --trigger-event Comment --trigger-event Project`,
     },
     {
       name: 'Create with branding (icon and colors)',

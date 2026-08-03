@@ -31,7 +31,7 @@
     "syncpack": "13.0.4",
     "tmp-promise": "1.0.3",
     "ts-eager": "2.0.2",
-    "turbo": "2.5.0",
+    "turbo": "2.10.8",
     "typescript": "5.9.3",
     "vite": "5.1.8",
     "vitest": "2.0.3",

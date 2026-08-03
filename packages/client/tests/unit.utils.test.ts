@@ -1,6 +1,11 @@
 import { join, resolve } from 'path';
 import fs from 'fs-extra';
-import { buildFileTree } from '../src/utils';
+import {
+  buildFileTree,
+  prepareFiles,
+  shouldInlineStaticFiles,
+} from '../src/utils';
+import type { FilesMap } from '../src/utils/hashes';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const fixture = (name: string) => resolve(__dirname, 'fixtures', name);
@@ -15,6 +20,55 @@ const normalizeWindowsPaths = (files: string[]) => {
 
 const toAbsolutePaths = (cwd: string, files: string[]) =>
   files.map(p => join(cwd, p));
+
+describe('instant static file preparation', () => {
+  const createFiles = (mode: number): FilesMap => {
+    const data = Buffer.from('<html></html>');
+    return new Map([
+      [
+        'abc123',
+        {
+          names: ['/project/index.html'],
+          data,
+          mode,
+          size: data.byteLength,
+        },
+      ],
+    ]);
+  };
+
+  it('inlines regular static files and preserves their mode', () => {
+    const files = createFiles(0o100644);
+
+    expect(shouldInlineStaticFiles(files)).toBe(true);
+    expect(
+      prepareFiles(files, { isDirectory: true, path: '/project' })
+    ).toEqual([
+      {
+        file: 'index.html',
+        data: Buffer.from('<html></html>').toString('base64'),
+        encoding: 'base64',
+        mode: 0o100644,
+      },
+    ]);
+  });
+
+  it('keeps symlinks on the SHA upload path', () => {
+    const files = createFiles(0o120777);
+
+    expect(shouldInlineStaticFiles(files)).toBe(false);
+    expect(
+      prepareFiles(files, { isDirectory: true, path: '/project' })
+    ).toEqual([
+      {
+        file: 'index.html',
+        sha: 'abc123',
+        size: Buffer.byteLength('<html></html>'),
+        mode: 0o120777,
+      },
+    ]);
+  });
+});
 
 describe('buildFileTree()', () => {
   it('should exclude files using `.nowignore` blocklist', async () => {

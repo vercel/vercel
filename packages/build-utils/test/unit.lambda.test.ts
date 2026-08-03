@@ -560,7 +560,7 @@ describe('Lambda', () => {
       const lambda = new Lambda({
         files,
         handler: 'index.handler',
-        runtime: 'provided.al2',
+        runtime: 'provided.al2023',
         runtimeLanguage: 'rust',
       });
 
@@ -572,7 +572,7 @@ describe('Lambda', () => {
       const lambda = new Lambda({
         files,
         handler: 'index.handler',
-        runtime: 'provided.al2',
+        runtime: 'provided.al2023',
         runtimeLanguage: 'go',
       });
 
@@ -597,7 +597,7 @@ describe('Lambda', () => {
           new Lambda({
             files,
             handler: 'index.handler',
-            runtime: 'provided.al2',
+            runtime: 'provided.al2023',
             runtimeLanguage: 'python' as any,
           })
       ).toThrow('"runtimeLanguage" is invalid. Valid options: "rust", "go"');
@@ -610,7 +610,7 @@ describe('Lambda', () => {
           new Lambda({
             files,
             handler: 'index.handler',
-            runtime: 'provided.al2',
+            runtime: 'provided.al2023',
             runtimeLanguage: 123 as any,
           })
       ).toThrow('"runtimeLanguage" is invalid. Valid options: "rust", "go"');
@@ -623,7 +623,7 @@ describe('Lambda', () => {
           new Lambda({
             files,
             handler: 'index.handler',
-            runtime: 'provided.al2',
+            runtime: 'provided.al2023',
             runtimeLanguage: '' as any,
           })
       ).toThrow('"runtimeLanguage" is invalid. Valid options: "rust", "go"');
