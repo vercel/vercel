@@ -42,6 +42,7 @@
     },
     "test-e2e-node-all-versions": {
       "dependsOn": ["build"],
+      "env": ["TURBO_TEST_PLATFORM"],
       "outputLogs": "new-only"
     },
     "test-unit": {
@@ -50,6 +51,7 @@
     },
     "test-dev": {
       "dependsOn": ["build"],
+      "env": ["TURBO_TEST_PLATFORM"],
       "outputLogs": "new-only"
     },
     "test-cli": {

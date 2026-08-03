@@ -18,7 +18,7 @@
     "test": "vitest run --config ../../vitest.config.mts",
     "vitest-run": "vitest -c ./vitest.config.mts",
     "vitest-unit": "pnpm vitest-run --run tests/unit.",
-    "vitest-e2e": "glob --absolute 'tests/integration-*.test.ts'",
+    "vitest-e2e": "pnpm vitest-run --run tests/integration-",
     "type-check": "tsc --noEmit"
   },
   "engines": {

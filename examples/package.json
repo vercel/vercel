@@ -8,7 +8,7 @@
     "test": "vitest run --config ../vitest.config.mts",
     "vitest-run": "vitest -c ../vitest.config.mts",
     "vitest-unit": "pnpm test __tests__/unit/",
-    "vitest-e2e": "glob --absolute '__tests__/integration/'"
+    "vitest-e2e": "pnpm test __tests__/integration/"
   },
   "devDependencies": {
     "@vercel/build-utils": "workspace:*",

@@ -15,7 +15,7 @@
     "test": "vitest run --config ./vitest.config.mts",
     "vitest-run": "node scripts/vitest-run.mjs",
     "vitest-unit": "pnpm vitest-run --run test/unit/",
-    "vitest-e2e": "glob --absolute 'test/e2e-*.test.ts'",
+    "vitest-e2e": "pnpm vitest-run --run test/e2e-",
     "test-e2e-node-all-versions": "rimraf test/fixtures/integration && pnpm test test/integration-1.test.ts test/integration-2.test.ts test/integration-3.test.ts test/integration-link-env-pull.test.ts",
     "test-dev": "pnpm test test/dev/",
     "coverage": "codecov",
