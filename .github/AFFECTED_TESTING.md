@@ -2,7 +2,19 @@
 
 This repository implements an affected testing strategy, which runs tests only on packages that have been changed or are affected by changes.
 
-## How It Works
+Unit tests use Turborepo's native `--affected` package selection. The CLI unit
+suite runs in seven Vitest shards on Linux and macOS with Node.js 20 and 22, and
+on Windows with Node.js 22. E2E tests continue to use the legacy planner
+described below.
+
+To inspect the affected unit tasks locally, run:
+
+```bash
+TURBO_SCM_BASE=<base-sha> TURBO_SCM_HEAD=<head-sha> \
+  pnpm turbo run vitest-unit --affected --dry=json
+```
+
+## How E2E Selection Works
 
 1. **Git Change Detection**: Uses turborepos's GraphQL query API to detect which packages have been modified since a base commit
 2. **Affected Package Resolution**: Finds packages that:
