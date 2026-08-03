@@ -6,6 +6,7 @@ import {
   fastapiShadowingRoutes,
   fastapiFallbackRoutes,
   copyFastAPIStaticMounts,
+  shadowBodyFitsCap,
   type FastAPICollectStaticResult,
   type FastAPIStaticMount,
 } from '../src/fastapi';
@@ -71,6 +72,23 @@ describe('fastapiShadowingRoutes', () => {
     // Every body appears once, in order, across the chunks (none lost or split).
     const recovered = routes.flatMap(r => r.src.slice(6, -5).split('|'));
     expect(recovered).toEqual(bodies);
+  });
+});
+
+describe('shadowBodyFitsCap', () => {
+  it('accepts a body whose src stays within the cap', () => {
+    expect(shadowBodyFitsCap('items/(?:[0-9]+)')).toBe(true);
+  });
+
+  it('rejects a body whose own src would exceed the cap', () => {
+    expect(shadowBodyFitsCap('x'.repeat(5000))).toBe(false);
+  });
+
+  it('accounts for the src wrapper at the boundary', () => {
+    // src is `^/((?:` + body + `)/?)$`, i.e. body length + 11; the cap is 4096,
+    // so a 4085-char body just fits and a 4086-char one does not.
+    expect(shadowBodyFitsCap('a'.repeat(4085))).toBe(true);
+    expect(shadowBodyFitsCap('a'.repeat(4086))).toBe(false);
   });
 });
 
