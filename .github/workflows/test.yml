@@ -956,6 +956,14 @@ jobs:
         run: |
           set -euo pipefail
 
+          # E2E needs the CLI and Python wheel tarballs produced by the Vercel
+          # preview deployment, but the workflow now starts on pull_request so
+          # tests can begin before the deployment-ready repository_dispatch.
+          # Vercel already reports successful deployments back to GitHub via
+          # deployment statuses and commit statuses. We poll those GitHub-owned
+          # records for candidate public URLs, then trust a URL only after the
+          # actual tarball endpoint responds. That final HTTP check is the
+          # readiness gate, so stale/unrelated status URLs are harmless.
           validate_deployment_url() {
             local url="${1%/}"
             if [ -z "$url" ]; then
@@ -972,25 +980,26 @@ jobs:
             return 1
           }
 
-          for _ in $(seq 1 90); do
-            while IFS= read -r url; do
-              if validate_deployment_url "$url"; then
+          get_candidate_urls() {
+            gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${HEAD_SHA}&per_page=20" \
+              --jq '.[].id' | while IFS= read -r deployment_id; do
+                gh api "repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses" \
+                  --jq '.[] | select(.state == "success" and .environment_url != null and .environment_url != "") | .environment_url'
+              done
+
+            gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/status" \
+              --jq '.statuses[] | select(.state == "success" and .target_url != null and .target_url != "") | .target_url'
+          }
+
+          for attempt in {1..120}; do
+            while IFS= read -r candidate_url; do
+              if validate_deployment_url "$candidate_url"; then
                 exit 0
               fi
-            done < <(
-              gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${HEAD_SHA}&per_page=100" \
-                --jq '.[].id' |
-                while IFS= read -r deployment_id; do
-                  gh api "repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses?per_page=100" \
-                    --jq '.[].environment_url // empty'
-                done
+            done < <(get_candidate_urls | sort -u)
 
-              gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/statuses?per_page=100" \
-                --jq '.[] | select(.state == "success") | .target_url // empty'
-            )
-
-            echo "Deployment tarball is not ready; retrying in 20 seconds."
-            sleep 20
+            echo "Deployment tarball is not ready yet (attempt $attempt/120)."
+            sleep 10
           done
 
           echo "Timed out waiting for deployment tarball."
