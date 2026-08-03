@@ -402,6 +402,39 @@ describe('ai-gateway coding-agents setup', () => {
       expect(config.lastUsedProvider).toBe('vercel-ai-gateway');
     });
 
+    it('explains why command-code is unsupported instead of erroring as unknown', async () => {
+      useUser();
+      client.nonInteractive = true;
+      // The mock throws to simulate process.exit terminating; assert on the
+      // spy and the emitted payload rather than the return value.
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((
+        _code?: number
+      ) => {
+        throw new Error('exit');
+      }) as () => never);
+      try {
+        client.setArgv(
+          'ai-gateway',
+          'coding-agents',
+          'setup',
+          '--key',
+          'vck_DummyKey0002',
+          '--agent',
+          'command-code'
+        );
+        await aiGateway(client).catch(() => {});
+
+        expect(exitSpy).toHaveBeenCalledWith(1);
+        const out = JSON.parse(client.stdout.getFullOutput());
+        expect(out.status).toBe('error');
+        // Unsupported (with the why) — not treated as a typo of a known agent.
+        expect(out.message).toContain('ProviderModule mod');
+        expect(out.message).not.toContain('Unknown agent');
+      } finally {
+        exitSpy.mockRestore();
+      }
+    });
+
     it('writes a --base-url override verbatim into the Codex config', async () => {
       useUser();
       client.nonInteractive = true;

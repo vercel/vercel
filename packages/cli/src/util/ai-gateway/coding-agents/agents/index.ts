@@ -25,4 +25,7 @@ export function getAgentById(id: string): CodingAgent | undefined {
 
 // Agents we deliberately do not support, with the reason shown to users.
 // (Cursor graduated to an experimental guided setup — see agents/cursor.ts.)
-export const UNSUPPORTED_AGENTS: Record<string, string> = {};
+export const UNSUPPORTED_AGENTS: Record<string, string> = {
+  'command-code':
+    "Command Code routes inference through its own subscription API and has no external-provider override (no base-URL env vars and no declarative provider config — verified against the shipped CLI bundle). Custom providers require a ProviderModule mod through its plugin seam; until there's a vercel-ai-gateway mod, it can't use the AI Gateway.",
+};

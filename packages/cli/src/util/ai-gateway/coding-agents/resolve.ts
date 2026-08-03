@@ -44,8 +44,11 @@ export async function resolveAgents(args: {
       };
     }
     if (selected.length === 0) {
+      // When everything the user named is unsupported, the reasons are the
+      // only actionable output — surface them instead of a bare error.
+      const why = guidance.length > 0 ? ` ${guidance.join(' ')}` : '';
       return {
-        error: 'No configurable agents selected.',
+        error: `No configurable agents selected.${why}`,
         reason: AGENT_REASON.INVALID_ARGUMENTS,
       };
     }
