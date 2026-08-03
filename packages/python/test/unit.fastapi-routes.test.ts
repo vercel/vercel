@@ -16,7 +16,7 @@ function discovery(
   over: Partial<FastAPICollectStaticResult>
 ): FastAPICollectStaticResult {
   return {
-    collectedMounts: [],
+    mountPrefixes: [],
     cdnOutputDir: '/out',
     shadowRoutes: [],
     fallbacks: [],
@@ -101,7 +101,7 @@ describe('fastapiFallbackRoutes', () => {
     expect(
       fastapiFallbackRoutes(
         discovery({
-          collectedMounts: ['/spa'],
+          mountPrefixes: ['/spa'],
           fallbacks: [{ urlPath: '/spa', file: 'index.html', status: 200 }],
         })
       )
@@ -127,7 +127,7 @@ describe('fastapiFallbackRoutes', () => {
   it('excludes a final segment with a file extension from the 200 fallback', () => {
     const [route] = fastapiFallbackRoutes(
       discovery({
-        collectedMounts: ['/spa'],
+        mountPrefixes: ['/spa'],
         fallbacks: [{ urlPath: '/spa', file: 'index.html', status: 200 }],
       })
     );
@@ -144,7 +144,7 @@ describe('fastapiFallbackRoutes', () => {
   it('serves a 404 (404.html) fallback for every miss (no Accept gate)', () => {
     const [route] = fastapiFallbackRoutes(
       discovery({
-        collectedMounts: ['/both'],
+        mountPrefixes: ['/both'],
         fallbacks: [{ urlPath: '/both', file: '404.html', status: 404 }],
       })
     );
@@ -161,7 +161,7 @@ describe('fastapiFallbackRoutes', () => {
   it('excludes nested sibling mounts via a negative lookahead (root mount)', () => {
     const [route] = fastapiFallbackRoutes(
       discovery({
-        collectedMounts: ['/', '/assets', '/api/docs'],
+        mountPrefixes: ['/', '/assets', '/api/docs'],
         fallbacks: [{ urlPath: '/', file: 'index.html', status: 200 }],
       })
     );
@@ -174,7 +174,7 @@ describe('fastapiFallbackRoutes', () => {
   it('escapes regex metacharacters in the mount prefix (src only, not dest)', () => {
     const [route] = fastapiFallbackRoutes(
       discovery({
-        collectedMounts: ['/v1.0'],
+        mountPrefixes: ['/v1.0'],
         fallbacks: [{ urlPath: '/v1.0', file: '404.html', status: 404 }],
       })
     );
@@ -185,7 +185,7 @@ describe('fastapiFallbackRoutes', () => {
   it('escapes regex metacharacters in nested sibling sub-paths (guard)', () => {
     const [route] = fastapiFallbackRoutes(
       discovery({
-        collectedMounts: ['/app', '/app/a.b'],
+        mountPrefixes: ['/app', '/app/a.b'],
         fallbacks: [{ urlPath: '/app', file: '404.html', status: 404 }],
       })
     );
@@ -387,28 +387,28 @@ describe('copyFastAPIStaticMounts', () => {
     expect(exists('index.html')).toBe(false);
   });
 
-  it('keeps copying the remaining mounts after one fails', async () => {
+  it('returns only the copied mounts when one fails', async () => {
     // A missing source dir makes fs.cp throw on the first mount; the second
-    // still lands on the CDN and the offload proceeds.
+    // still lands on the CDN and is the only mount returned.
     const good = source('good', { 'a.txt': 'GOOD' });
     const missing = path.join(root, 'does-not-exist');
-    const ok = await copyFastAPIStaticMounts(
+    const copied = await copyFastAPIStaticMounts(
       [mount('/missing', missing, false), mount('/good', good, false)],
       out
     );
-    expect(ok).toBe(true);
+    expect(copied.map(m => m.urlPath)).toEqual(['/good']);
     expect(read('good/a.txt')).toBe('GOOD');
     expect(exists('missing/a.txt')).toBe(false);
   });
 
-  it('reports failure only when every mount fails', async () => {
-    const ok = await copyFastAPIStaticMounts(
+  it('returns an empty set when every mount fails', async () => {
+    const copied = await copyFastAPIStaticMounts(
       [
         mount('/a', path.join(root, 'no-a'), false),
         mount('/b', path.join(root, 'no-b'), false),
       ],
       out
     );
-    expect(ok).toBe(false);
+    expect(copied).toEqual([]);
   });
 });

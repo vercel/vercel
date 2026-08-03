@@ -450,7 +450,7 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     );
 
     expect(result).not.toBeNull();
-    expect(result!.collectedMounts).toContain('/static');
+    expect(result!.mountPrefixes).toContain('/static');
     expect(result!.shadowRoutes).toEqual([]);
     expect(result!.fallbacks).toEqual([]);
     expect(fs.existsSync(path.join(outputDir, 'static', 'style.css'))).toBe(
@@ -486,7 +486,7 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
       'app'
     );
 
-    expect(result!.collectedMounts).toEqual(['/static', '/assets']);
+    expect(result!.mountPrefixes).toEqual(['/static', '/assets']);
     expect(fs.existsSync(path.join(outputDir, 'static', 'style.css'))).toBe(
       true
     );
