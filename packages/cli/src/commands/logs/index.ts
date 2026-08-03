@@ -3,7 +3,6 @@ import type { Deployment } from '@vercel-internals/types';
 import chalk from 'chalk';
 import format from 'date-fns/format';
 import type Client from '../../util/client';
-import { createGitMeta } from '../../util/create-git-meta';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -91,42 +90,6 @@ async function getLatestDeployment(
   };
 }
 
-interface ResolveBranchFilterOptions {
-  client: Client;
-  explicitBranch?: string;
-  logsTarget: LogsTarget;
-  noBranch?: boolean;
-}
-
-async function resolveBranchFilter({
-  client,
-  explicitBranch,
-  logsTarget,
-  noBranch,
-}: ResolveBranchFilterOptions): Promise<string | undefined> {
-  if (explicitBranch) {
-    return explicitBranch;
-  }
-
-  if (
-    noBranch ||
-    logsTarget.deployment ||
-    logsTarget.targetSource !== 'linked-project'
-  ) {
-    return;
-  }
-
-  try {
-    const gitMeta = await createGitMeta(client.cwd);
-    if (gitMeta?.commitRef) {
-      output.debug(`Detected git branch: ${gitMeta.commitRef}`);
-      return gitMeta.commitRef;
-    }
-  } catch {
-    // Not in a git repo or git not available, continue without branch filter
-  }
-}
-
 interface ResolveFollowDeploymentOptions {
   branch?: string;
   client: Client;
@@ -146,10 +109,41 @@ async function resolveFollowDeployment({
 }: ResolveFollowDeploymentOptions): Promise<ResolveFollowDeploymentResult> {
   const { deployment, orgSlug, projectId, projectSlug } = logsTarget;
 
+  // 1. Explicit --deployment / positional
   if (deployment?.id) {
     return { deploymentId: deployment.id, label: 'deployment' };
   }
 
+  // 2. Explicit --branch → latest matching READY deployment, else error
+  if (branch) {
+    output.spinner(`Finding latest deployment for branch "${branch}"`, 1000);
+    const branchDeployment = await getLatestDeployment(client, projectId, {
+      branch,
+      target: environment,
+    });
+    output.stopSpinner();
+
+    if (branchDeployment) {
+      output.debug(
+        `Found deployment ${branchDeployment.id} for branch ${branch}`
+      );
+      return {
+        deploymentId: branchDeployment.id,
+        label: `latest deployment on branch "${branch}"`,
+      };
+    }
+
+    const environmentLabel = environment ? ` ${environment}` : '';
+    const deployHint = environment
+      ? `Deploy that branch to ${environment} first`
+      : 'Deploy that branch first';
+    output.error(
+      `No READY${environmentLabel} deployments found for branch "${branch}" in ${formatProject(orgSlug, projectSlug)}. ${deployHint} or specify a deployment with ${chalk.bold('--deployment')}.`
+    );
+    return { exitCode: 1 };
+  }
+
+  // 3. --environment production → latest READY production, else error
   if (environment === 'production') {
     output.spinner('Finding latest production deployment', 1000);
     const productionDeployment = await getLatestDeployment(client, projectId, {
@@ -173,34 +167,54 @@ async function resolveFollowDeployment({
     };
   }
 
-  const target = environment;
-
-  if (branch) {
-    output.spinner(`Finding latest deployment for branch "${branch}"`, 1000);
-    const branchDeployment = await getLatestDeployment(client, projectId, {
-      branch,
-      target,
+  // 4. --environment preview → your latest READY preview, else error
+  if (environment === 'preview') {
+    const user = await getUser(client);
+    output.spinner('Finding your latest deployment', 1000);
+    const userDeployment = await getLatestDeployment(client, projectId, {
+      userId: user.id,
+      target: 'preview',
     });
     output.stopSpinner();
 
-    if (branchDeployment) {
+    if (userDeployment) {
       output.debug(
-        `Found deployment ${branchDeployment.id} for branch ${branch}`
+        `Found latest deployment ${userDeployment.id} (${userDeployment.url}) created by current user`
       );
       return {
-        deploymentId: branchDeployment.id,
-        label: `latest deployment on branch "${branch}"`,
+        deploymentId: userDeployment.id,
+        label: 'your latest deployment',
       };
     }
 
-    output.debug(`No deployments found for branch "${branch}"`);
+    output.error(
+      `No READY preview deployments found for ${formatProject(orgSlug, projectSlug)}. Deploy a preview first or specify a deployment with ${chalk.bold('--deployment')}.`
+    );
+    return { exitCode: 1 };
   }
 
+  // 5. No environment specified → latest READY production, if found
+  output.spinner('Finding latest production deployment', 1000);
+  const productionDeployment = await getLatestDeployment(client, projectId, {
+    target: 'production',
+  });
+  output.stopSpinner();
+
+  if (productionDeployment) {
+    output.debug(
+      `Found latest production deployment ${productionDeployment.id} (${productionDeployment.url})`
+    );
+    return {
+      deploymentId: productionDeployment.id,
+      label: 'latest production deployment',
+    };
+  }
+
+  // 6. No production exists → your latest READY deployment, if found
   const user = await getUser(client);
   output.spinner('Finding your latest deployment', 1000);
   const userDeployment = await getLatestDeployment(client, projectId, {
     userId: user.id,
-    target,
   });
   output.stopSpinner();
 
@@ -214,33 +228,11 @@ async function resolveFollowDeployment({
     };
   }
 
-  if (environment === 'preview') {
-    output.error(
-      `No READY preview deployments found for ${formatProject(orgSlug, projectSlug)}. Deploy a preview first or specify a deployment with ${chalk.bold('--deployment')}.`
-    );
-    return { exitCode: 1 };
-  }
-
-  output.spinner('Finding latest production deployment', 1000);
-  const productionDeployment = await getLatestDeployment(client, projectId, {
-    target: 'production',
-  });
-  output.stopSpinner();
-
-  if (!productionDeployment) {
-    output.error(
-      `No READY deployments found for ${formatProject(orgSlug, projectSlug)}. Deploy first or specify a deployment with ${chalk.bold('--deployment')}.`
-    );
-    return { exitCode: 1 };
-  }
-
-  output.debug(
-    `Found latest production deployment ${productionDeployment.id} (${productionDeployment.url})`
+  // 7. Otherwise → error
+  output.error(
+    `No READY deployments found for ${formatProject(orgSlug, projectSlug)}. Deploy first or specify a deployment with ${chalk.bold('--deployment')}.`
   );
-  return {
-    deploymentId: productionDeployment.id,
-    label: 'latest production deployment',
-  };
+  return { exitCode: 1 };
 }
 
 const TIME_ONLY_FORMAT = 'HH:mm:ss.SS';
@@ -585,6 +577,7 @@ export default async function logs(client: Client) {
   const requestIdOption = parsedArguments.flags['--request-id'];
   const expandOption = parsedArguments.flags['--expand'];
   const branchFlagValue = parsedArguments.flags['--branch'];
+  const noBranchFlagValue = parsedArguments.flags['--no-branch'];
 
   const noFollowFlagValue = parsedArguments.flags['--no-follow'];
   const followOption = parsedArguments.flags['--follow'];
@@ -607,6 +600,7 @@ export default async function logs(client: Client) {
   telemetry.trackCliOptionRequestId(requestIdOption);
   telemetry.trackCliFlagExpand(expandOption);
   telemetry.trackCliOptionBranch(branchFlagValue);
+  telemetry.trackCliFlagNoBranch(noBranchFlagValue);
 
   if (followOption) {
     const incompatibleFlags = [
@@ -681,18 +675,8 @@ export default async function logs(client: Client) {
     return 1;
   }
 
-  // Determine branch filter:
-  // - If --branch is explicitly set (string), use it
-  // - If --no-branch is set, don't filter by branch
-  // - Otherwise, auto-detect the current git branch only for a linked project
-  const noBranchFlagValue = parsedArguments.flags['--no-branch'];
-  const branchOption = await resolveBranchFilter({
-    client,
-    explicitBranch:
-      typeof branchFlagValue === 'string' ? branchFlagValue : undefined,
-    logsTarget,
-    noBranch: noBranchFlagValue,
-  });
+  const branchOption =
+    typeof branchFlagValue === 'string' ? branchFlagValue : undefined;
 
   if (
     environmentOption &&
