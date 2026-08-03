@@ -49,8 +49,8 @@ async function hasSystemGo() {
 // Fallback for environments without Go on PATH. Returns env overrides merged
 // onto `process.env`. Unix-only: the `.tar.gz` archive isn't the Windows format.
 //
-// NOTE: CI should never reach here — utils/chunk-tests.js marks CLI and other
-// dependents with needsGo so actions/setup-go installs Go before pnpm install.
+// NOTE: CI should never reach here because test workflows install Go for every
+// test lane before Turbo builds this package or one of its dependents.
 // This fallback is for local dev / non-CI environments. It must not hang
 // indefinitely: CI-level hang seen in 29276172195 was an unbounded fetch to
 // dl.google.com stalling on macOS runners without system Go.
@@ -64,8 +64,8 @@ async function downloadGo() {
 
   // Hard guard for GitHub Actions: prefer explicit failure over implicit
   // download that can hang and burn 60-120m of runner time. GitHub Actions jobs
-  // should have Go preinstalled via actions/setup-go when needsGo is true (see
-  // test.yml + chunk-tests.js). This is scoped to GITHUB_ACTIONS specifically
+  // should have Go preinstalled via actions/setup-go (see the test workflows).
+  // This is scoped to GITHUB_ACTIONS specifically
   // (not the broader CI flag) so other CI environments — e.g. the Vercel
   // deployment build, which sets CI but has no needsGo matrix and no
   // preinstalled Go — can still use the timeout/retry-protected download
@@ -73,7 +73,7 @@ async function downloadGo() {
   if (process.env.GITHUB_ACTIONS) {
     throw new Error(
       `Go >= ${GO_VERSION} is required to build @vercel-internals/ipc-proxy but was not found on PATH. ` +
-        'In GitHub Actions this indicates needsGo was not set for this job — add the package to GO_BUILD_ROOTS or fix transitive needsGo propagation in utils/chunk-tests.js. ' +
+        'In GitHub Actions this indicates the test lane did not install its required toolchains. ' +
         'In the Vercel deployment preview build this should not happen; if it does, ensure Go is cached or preinstalled in that build environment.'
     );
   }

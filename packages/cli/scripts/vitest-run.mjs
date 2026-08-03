@@ -1,6 +1,3 @@
-// Wrapper around vitest that accepts test file paths via VITEST_TEST_FILES env var
-// instead of CLI arguments. This bypasses the Windows cmd.exe ~8191 char arg limit
-// that turbo hits when passing many test paths through package.json scripts.
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -19,21 +16,16 @@ const vitestBin = fileURLToPath(
   )
 );
 
-// Paths come from VITEST_TEST_FILES (CI, space-separated) or direct CLI args (local dev)
-const envFiles = (process.env.VITEST_TEST_FILES ?? '')
-  .split(' ')
-  .filter(Boolean);
-const files = envFiles.length > 0 ? envFiles : process.argv.slice(2);
+const files = process.argv.slice(2);
 
 // CI hardening: if vitest's fork pool hangs (leaked handles, server not closed),
 // spawnSync with inherited stdio would block forever and the job would run until
 // the workflow-level timeout (120m). Use async spawn + watchdog timers so we
 // surface a actionable error and fail fast instead of burning runner minutes.
 //
-// Timeouts are generous: tests themselves have a 12m per-test/hook timeout in
-// vitest.config.mts, chunks should finish well under 10m even on slow runners;
-// the watchdog is just a safety net for runaway forks.
-const CHUNK_TIMEOUT_MS = 20 * 60 * 1000; // total wall clock for the chunk
+// Tests themselves have a 12m per-test/hook timeout in vitest.config.mts. The
+// watchdog is a safety net for runaway forks, not a normal suite timeout.
+const CHUNK_TIMEOUT_MS = 30 * 60 * 1000;
 const GRACE_MS = 15_000; // after SIGTERM -> SIGKILL
 
 const child = spawn(

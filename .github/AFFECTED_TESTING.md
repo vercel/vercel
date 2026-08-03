@@ -1,10 +1,8 @@
 # Affected Testing Strategy
 
-The pull request workflow uses Turborepo's native affected-package detection. Package
-test scripts are executable Turbo tasks; the workflow does not generate package
-or test-file manifests.
-
-The temporary no-cache nightly workflow still uses the legacy test-file planner.
+The pull request workflow uses Turborepo's native affected-package detection.
+Package test scripts are executable Turbo tasks; workflows do not generate
+package or test-file manifests.
 
 ## Pull Requests
 
