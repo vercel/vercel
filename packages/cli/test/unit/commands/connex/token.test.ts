@@ -2,6 +2,7 @@ import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import connect from '../../../../src/commands/connex';
 
 vi.mock('open', () => ({ default: vi.fn(() => Promise.resolve()) }));
@@ -11,6 +12,7 @@ describe('connex token', () => {
 
   beforeEach(() => {
     client.reset();
+    client.cwd = setupTmpDir();
     const user = useUser();
     team = useTeam();
     client.config.currentTeam = team.id;
