@@ -657,7 +657,7 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     expect(shadowRoutes).toContain('api(?:/.*)?');
   });
 
-  it('shadows a raw ASGI mount subtree so a leaked frontend file cannot win', async () => {
+  it('shadows a non-Router sub-app mount subtree so a leaked frontend file cannot win', async () => {
     const appDir = path.join(testDir, 'app-raw-asgi-mount');
     fs.mkdirSync(path.join(appDir, 'fe', 'x'), { recursive: true });
     fs.writeFileSync(path.join(appDir, 'fe', 'index.html'), 'FE');
@@ -670,8 +670,13 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
         'async def raw_asgi(scope, receive, send):',
         "    await send({'type': 'http.response.start', 'status': 200, 'headers': []})",
         "    await send({'type': 'http.response.body', 'body': b'RAW'})",
+        'class Wrapper:',
+        '    async def __call__(self, scope, receive, send):',
+        "        await send({'type': 'http.response.start', 'status': 200, 'headers': []})",
+        "        await send({'type': 'http.response.body', 'body': b'WRAP'})",
         'app = FastAPI()',
         'app.mount("/x", raw_asgi)',
+        'app.mount("/wrapped", Wrapper())',
         'app.frontend("/", directory="fe")',
       ].join('\n')
     );
@@ -684,9 +689,12 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
       appDir
     );
 
-    // A raw ASGI mount owns /x/* at runtime, so its whole subtree is shadowed to
-    // the Lambda, keeping the frontend's colliding x/data.txt copy off the CDN.
+    // A mounted non-Router sub-app (a bare ASGI callable, or a middleware wrapper
+    // instance like WSGIMiddleware) owns its subtree at runtime, so the whole
+    // subtree is shadowed to the Lambda. That keeps the root frontend fallback
+    // from serving index.html for misses under the mount.
     expect(shadowRoutes).toContain('x(?:/.*)?');
+    expect(shadowRoutes).toContain('wrapped(?:/.*)?');
   });
 
   it('shadows a StaticFiles mount root only when html is disabled', async () => {
