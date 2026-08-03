@@ -21,6 +21,7 @@
     },
     "vitest-unit": {
       "dependsOn": ["build"],
+      "env": ["TURBO_TEST_PLATFORM"],
       "outputLogs": "new-only"
     },
     "vitest-e2e": {

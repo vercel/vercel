@@ -32,6 +32,7 @@ configuration. Changes to them invalidate tasks across the workspace.
 ## Test Lanes
 
 - `vitest-unit`: Linux and macOS on Node.js 20 and 22, plus Windows on Node.js 22.
+  The CLI unit suite runs separately in seven Vitest shards on each platform.
 - `vitest-e2e`: Primary E2E coverage on Linux and Node.js 22.
 - `vitest-e2e-node-20`: Firewall E2E coverage on Linux and Node.js 20.
 - `test-e2e-node-all-versions`: CLI integration coverage on Node.js 20, 22,

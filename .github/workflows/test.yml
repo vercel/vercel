@@ -89,6 +89,7 @@ jobs:
     env:
       TURBO_SCM_BASE: ${{ needs.setup.outputs.baseSha }}
       TURBO_SCM_HEAD: ${{ needs.setup.outputs.headSha }}
+      TURBO_TEST_PLATFORM: ${{ matrix.runner }}-node${{ matrix.nodeVersion }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -97,14 +98,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
-      - name: install turbo@2.5.0
-        run: npm i -g turbo@2.5.0
+      - name: install turbo@2.10.8
+        run: npm i -g turbo@2.10.8
       - name: Check for affected unit tests
         id: affected
         run: |
           set -euo pipefail
           node utils/gen.js
-          count=$(turbo run vitest-unit --affected --dry=json | jq '[.tasks[] | select(.task == "vitest-unit" and .command != "<NONEXISTENT>")] | length')
+          count=$(turbo run vitest-unit --affected --filter=!vercel --dry=json | jq '[.tasks[] | select(.task == "vitest-unit" and .command != "<NONEXISTENT>")] | length')
           if [ "$count" -gt 0 ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
@@ -163,7 +164,120 @@ jobs:
           export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
 
           while [ "$attempt" -le "$max_attempts" ]; do
-            if pnpm turbo run vitest-unit --affected --summarize --cache-dir='.turbo' --log-order=stream --continue=always --concurrency=${{ matrix.concurrency }}; then
+            if pnpm turbo run vitest-unit --affected --filter=!vercel --summarize --cache-dir='.turbo' --log-order=stream --continue=always --concurrency=${{ matrix.concurrency }}; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq "$max_attempts" ]; then
+              echo "Tests failed after $max_attempts attempts."
+              exit 1
+            fi
+
+            echo "Tests failed; retrying once."
+            attempt=$((attempt + 1))
+          done
+
+  cli-unit-test:
+    name: CLI Unit / ${{ matrix.runner }}/node${{ matrix.nodeVersion }} / ${{ matrix.shard }}/7
+    needs: setup
+    timeout-minutes: 120
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, macos-14, windows-latest]
+        nodeVersion: [20, 22]
+        shard: [1, 2, 3, 4, 5, 6, 7]
+        exclude:
+          - runner: windows-latest
+            nodeVersion: 20
+    env:
+      TURBO_SCM_BASE: ${{ needs.setup.outputs.baseSha }}
+      TURBO_SCM_HEAD: ${{ needs.setup.outputs.headSha }}
+      TURBO_TEST_PLATFORM: ${{ matrix.runner }}-node${{ matrix.nodeVersion }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.setup.outputs.headSha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.nodeVersion }}
+      - name: install turbo@2.10.8
+        run: npm i -g turbo@2.10.8
+      - name: Check for affected CLI unit tests
+        id: affected
+        run: |
+          set -euo pipefail
+          node utils/gen.js
+          count=$(turbo run vitest-unit --affected --filter=vercel --dry=json | jq '[.tasks[] | select(.task == "vitest-unit" and .command != "<NONEXISTENT>")] | length')
+          if [ "$count" -gt 0 ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No affected CLI unit-test task."
+          fi
+      - name: Setup Turborepo Remote Cache
+        if: steps.affected.outputs.run == 'true'
+        uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
+        with:
+          team: ${{ vars.TURBO_TEAM }}
+      - name: Setup Go toolchain
+        if: steps.affected.outputs.run == 'true'
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.23.12'
+          cache: false
+      - name: Setup Rust toolchain
+        if: steps.affected.outputs.run == 'true'
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+        with:
+          toolchain: '1.96.1'
+          targets: wasm32-wasip2
+      - name: install yarn@1.22.19
+        if: steps.affected.outputs.run == 'true'
+        run: npm i -g yarn@1.22.19
+      - name: install pnpm@10.29.3
+        if: steps.affected.outputs.run == 'true'
+        run: npm i -g pnpm@10.29.3
+      - name: install uv@0.10.11
+        if: steps.affected.outputs.run == 'true'
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          version: '0.10.11'
+      - run: pnpm install
+        if: steps.affected.outputs.run == 'true'
+      - name: Build affected CLI
+        if: steps.affected.outputs.run == 'true'
+        run: pnpm turbo run build --affected --filter=vercel --summarize --cache-dir='.turbo' --log-order=stream --continue=always
+      - name: Run affected CLI unit tests
+        if: steps.affected.outputs.run == 'true'
+        timeout-minutes: 65
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          CARGO_NET_GIT_FETCH_WITH_CLI: 'true'
+          FORCE_COLOR: '1'
+          DD_CIVISIBILITY_AGENTLESS_ENABLED: 'true'
+          DD_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
+          DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
+          DD_ENV: ci
+          DD_SERVICE: vercel-cli
+          DD_PROFILING_ENABLED: 'false'
+          DD_NATIVE_METRICS: 'false'
+        run: |
+          attempt=1
+          max_attempts=2
+          export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
+
+          while [ "$attempt" -le "$max_attempts" ]; do
+            if pnpm turbo run vitest-unit --affected --filter=vercel --only --summarize --cache-dir='.turbo' --log-order=stream --continue=always -- --shard=${{ matrix.shard }}/7; then
               exit 0
             fi
 
@@ -252,8 +366,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
-      - name: install turbo@2.5.0
-        run: npm i -g turbo@2.5.0
+      - name: install turbo@2.10.8
+        run: npm i -g turbo@2.10.8
       - name: Check for affected E2E tests
         id: affected
         run: |
@@ -405,6 +519,7 @@ jobs:
     needs:
       - setup
       - unit-test
+      - cli-unit-test
       - e2e-test
     permissions:
       statuses: write

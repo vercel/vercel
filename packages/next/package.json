@@ -14,7 +14,8 @@
     "test-e2e": "rm -f test/builder-info.json; pnpm test test/fixtures/**/*.test.js",
     "type-check": "tsc --noEmit",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "pnpm test test/unit/"
+    "vitest-unit": "pnpm test test/unit/",
+    "vitest-e2e": "pnpm test-e2e"
   },
   "repository": {
     "type": "git",
