@@ -1,0 +1,51 @@
+---
+'@vercel/aws': patch
+'@vercel/backends': patch
+'@vercel/build-utils': patch
+'@vercel/cervel': patch
+'@vercel/cli-auth': patch
+'@vercel/cli-config': patch
+'@vercel/cli-exec': patch
+'@vercel/client': patch
+'@vercel/config': patch
+'@vercel/connect': patch
+'@vercel/container': patch
+'@vercel/detect-agent': patch
+'@vercel/edge': patch
+'@vercel/elysia': patch
+'@vercel/error-utils': patch
+'@vercel/express': patch
+'@vercel/fastify': patch
+'@vercel/firewall': patch
+'@vercel/frameworks': patch
+'@vercel/fs-detectors': patch
+'@vercel/functions': patch
+'@vercel/gatsby-plugin-vercel-analytics': patch
+'@vercel/gatsby-plugin-vercel-builder': patch
+'@vercel/go': patch
+'@vercel/h3': patch
+'@vercel/hono': patch
+'@vercel/hydrogen': patch
+'@vercel/koa': patch
+'@vercel/mcp-adapter': patch
+'@vercel/nestjs': patch
+'@vercel/next': patch
+'@vercel/node': patch
+'@vercel/oidc': patch
+'@vercel/oidc-aws-credentials-provider': patch
+'@vercel/passport': patch
+'@vercel/python': patch
+'@vercel/python-analysis': patch
+'@vercel/react-router': patch
+'@vercel/redwood': patch
+'@vercel/related-projects': patch
+'@vercel/remix-builder': patch
+'@vercel/routing-utils': patch
+'@vercel/ruby': patch
+'@vercel/rust': patch
+'@vercel/static-build': patch
+'@vercel/static-config': patch
+'vercel': patch
+---
+
+Bump all workspace packages to trigger a full publish from vercel-internal.
