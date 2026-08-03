@@ -24,6 +24,9 @@ const envFiles = (process.env.VITEST_TEST_FILES ?? '')
   .split(' ')
   .filter(Boolean);
 const files = envFiles.length > 0 ? envFiles : process.argv.slice(2);
+if (process.env.VITEST_SHARD) {
+  files.push(`--shard=${process.env.VITEST_SHARD}`);
+}
 
 // CI hardening: if vitest's fork pool hangs (leaked handles, server not closed),
 // spawnSync with inherited stdio would block forever and the job would run until
