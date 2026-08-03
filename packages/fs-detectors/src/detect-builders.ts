@@ -659,7 +659,15 @@ async function maybeGetApiBuilder(
 
   const { fnPattern, func } = getFunction(fileName, options);
 
-  const use = func?.runtime || match?.use;
+  const configuredGoRuntime =
+    options.projectSettings?.framework === 'go' &&
+    func &&
+    fileName.endsWith('.go') &&
+    !fileName.endsWith('_test.go')
+      ? `@vercel/go${options.tag ? `@${options.tag}` : ''}`
+      : undefined;
+
+  const use = func?.runtime || match?.use || configuredGoRuntime;
 
   if (!use) {
     return null;

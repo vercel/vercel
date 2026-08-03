@@ -569,6 +569,93 @@ describe('Test `detectBuilders`', () => {
     expect(builders.some(b => b.src!.endsWith('_test.go'))).toBe(false);
   });
 
+  it('splits explicitly configured Go framework handlers', async () => {
+    const functions = {
+      'api/fetch.go': { maxDuration: 60 },
+      'api/hello.go': { maxDuration: 30 },
+    };
+    const files = [
+      'go.mod',
+      'cmd/server/main.go',
+      'api/fetch.go',
+      'api/hello.go',
+      'api/unconfigured.go',
+    ];
+
+    const { builders } = await invokeDetectBuildersAndThrow(files, undefined, {
+      functions,
+      projectSettings: { framework: 'go' },
+    });
+
+    expect(builders).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          src: 'api/fetch.go',
+          use: '@vercel/go',
+          config: expect.objectContaining({
+            functions: {
+              'api/fetch.go': { maxDuration: 60 },
+            },
+          }),
+        }),
+        expect.objectContaining({
+          src: 'api/hello.go',
+          use: '@vercel/go',
+          config: expect.objectContaining({
+            functions: {
+              'api/hello.go': { maxDuration: 30 },
+            },
+          }),
+        }),
+        expect.objectContaining({
+          src: 'index.go',
+          use: '@vercel/go',
+          config: expect.objectContaining({ framework: 'go' }),
+        }),
+      ])
+    );
+    expect(
+      builders.some(builder => builder.src === 'api/unconfigured.go')
+    ).toBe(false);
+  });
+
+  it('supports function globs for Go framework handlers', async () => {
+    const functionConfig = { maxDuration: 45 };
+    const { builders } = await invokeDetectBuildersAndThrow(
+      [
+        'go.mod',
+        'cmd/server/main.go',
+        'api/fetch.go',
+        'api/nested/hello.go',
+        'api/nested/hello_test.go',
+      ],
+      undefined,
+      {
+        functions: { 'api/**/*.go': functionConfig },
+        projectSettings: { framework: 'go' },
+      }
+    );
+
+    const apiBuilders = builders.filter(builder =>
+      builder.src?.startsWith('api/')
+    );
+    expect(apiBuilders).toHaveLength(2);
+    expect(apiBuilders).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ src: 'api/fetch.go', use: '@vercel/go' }),
+        expect.objectContaining({
+          src: 'api/nested/hello.go',
+          use: '@vercel/go',
+        }),
+      ])
+    );
+    for (const builder of apiBuilders) {
+      expect(builder.config?.functions).toEqual({
+        'api/**/*.go': functionConfig,
+      });
+    }
+  });
+
   it('just public', async () => {
     const files = ['public/index.html', 'public/favicon.ico', 'README.md'];
 
