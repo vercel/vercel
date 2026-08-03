@@ -521,6 +521,11 @@ export interface GitMetadata {
   commitSha?: string | undefined;
   dirty?: boolean | undefined;
   remoteUrl?: string;
+  /**
+   * Path of the deployed directory relative to the detected git repository
+   * root. Empty string when deploying from the repository root.
+   */
+  rootDirectory?: string;
 }
 
 /**
