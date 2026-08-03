@@ -1,5 +1,46 @@
 # @vercel/build-utils
 
+## 14.0.0
+
+### Major Changes
+
+- 5c33351: Remove `getOsRelease()`, and stop deriving the provided runtime from the build host.
+
+  `getProvidedRuntime()` is retained and now always resolves to `'provided.al2023'`. It previously read `/etc/os-release` and returned `'provided.al2'` on Amazon Linux 2 hosts, so the emitted runtime depended on where the build ran — a `vercel build` on an AL2 machine produced output that is rejected at deploy time, because `provided.al2` is no longer an accepted Lambda runtime. Custom runtimes calling `getProvidedRuntime()` need no changes and are fixed by this release.
+
+  `getOsRelease()` is removed with no replacement.
+
+  `validateBuildResult()` no longer accepts an `osRelease` option. Its runtime allowlist check was previously skipped unless the caller passed `osRelease.VERSION === '2023'`; it now always runs.
+
+### Minor Changes
+
+- b747ab4: Replace the inferred PPR fields on `Prerender` with the Next.js prerender taxonomy.
+
+  `hasPostponed`, `hasFallback`, `isDynamicRoute` and `htmlSize` were derived by
+  `@vercel/next` from build artifacts (the `.meta` postponed state, which manifest
+  section a route came from, and a `statSync` of the `.html` shell). Next.js
+  `>= 16.3.0-canary.96` publishes its own classification in the prerender
+  manifest, so those four fields are removed in favour of a single optional
+  `prerenderClassification` on `Prerender` / `PrerenderOptions`:
+
+  - `routeType` — `'route' | 'page' | 'shell' | 'fallback'`
+  - `response` — `'empty' | 'initial' | 'complete'`
+  - `compute` — `'blocking' | 'resuming' | 'static'`
+  - `htmlSize` — byte size of the prerendered HTML shell, when the entry has one
+
+  The values are carried through unvalidated so a taxonomy value added by a future
+  Next.js release cannot hard-fail a deploy. `@vercel/next` sets the field only
+  when Next.js supplied the complete group — absence is legitimate for
+  `notFoundRoutes` and Pages Router `fallback: false` templates — and only on the
+  primary output of each prerender group, so a route is classified exactly once.
+
+- 5619873: Fix api dir builds receiving incorrect framework or runtime.
+
+### Patch Changes
+
+- Updated dependencies [08a2618]
+  - @vercel/python-analysis@0.13.0
+
 ## 13.36.3
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # @vercel/client
 
+## 18.2.4
+
+### Patch Changes
+
+- 4584bbd: Send eligible small static deployments inline so the API can use the instant static deployment path.
+- 17d9eba: Include the deploy path relative to the detected git repository root in `gitMetadata.rootDirectory`.
+- Updated dependencies [b747ab4]
+- Updated dependencies [5c33351]
+- Updated dependencies [5619873]
+  - @vercel/build-utils@14.0.0
+
 ## 18.2.3
 
 ### Patch Changes
