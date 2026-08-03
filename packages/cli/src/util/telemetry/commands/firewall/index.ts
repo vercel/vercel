@@ -6,6 +6,12 @@ export class FirewallTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof firewallCommand>
 {
+  trackCliFlagTeamLevel(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('team-level');
+    }
+  }
+
   trackCliSubcommandOverview(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'overview',

@@ -5,6 +5,7 @@ import output from '../../output-manager';
 import { overviewSubcommand } from './command';
 import { parseSubcommandArgs, outputJson, withGlobalFlags } from './shared';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
+import { projectScope } from '../../util/firewall/scope';
 import getBypass from '../../util/firewall/get-bypass';
 import {
   formatStatusOutput,
@@ -31,7 +32,7 @@ export default async function overview(client: Client, argv: string[]) {
 
   try {
     const [configList, bypassList, freshProject] = await Promise.all([
-      listFirewallConfigs(client, project.id, { teamId }),
+      listFirewallConfigs(client, projectScope(project, teamId)),
       getBypass(client, project.id, { teamId }),
       client.fetch<ProjectSecurityResponse>(
         `/v9/projects/${encodeURIComponent(project.id)}`,

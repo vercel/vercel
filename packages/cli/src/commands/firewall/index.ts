@@ -86,6 +86,7 @@ export default async function main(client: Client) {
 
   if (subcommand && !needHelp) {
     telemetry.trackCliOptionProject(getProjectOptionFromArgs(args));
+    telemetry.trackCliFlagTeamLevel(args.includes('--team-level'));
   }
 
   switch (subcommand) {

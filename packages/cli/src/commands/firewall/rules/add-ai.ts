@@ -9,6 +9,7 @@ import {
 } from '../shared';
 import { outputAgentError } from '../../../util/agent-output';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
+import { projectScope } from '../../../util/firewall/scope';
 import generateFirewallRule from '../../../util/firewall/generate-firewall-rule';
 import { formatRuleExpanded } from '../../../util/firewall/format';
 import type { FirewallRule } from '../../../util/firewall/types';
@@ -339,37 +340,29 @@ async function createFromGenerated(
   const createStamp = stamp();
   output.spinner('Staging rule');
 
-  try {
-    const hadExistingDraft = await detectExistingDraft(
-      client,
-      project.id,
-      teamId
-    );
+  const scope = projectScope(project, teamId);
 
-    await patchFirewallDraft(
-      client,
-      project.id,
-      {
-        action: 'rules.insert',
-        id: null,
-        value: {
-          name: rule.name,
-          description: rule.description,
-          active: rule.active !== false,
-          conditionGroup: rule.conditionGroup,
-          action: rule.action,
-        },
+  try {
+    const hadExistingDraft = await detectExistingDraft(client, scope);
+
+    await patchFirewallDraft(client, scope, {
+      action: 'rules.insert',
+      id: null,
+      value: {
+        name: rule.name,
+        description: rule.description,
+        active: rule.active !== false,
+        conditionGroup: rule.conditionGroup,
+        action: rule.action,
       },
-      { teamId }
-    );
+    });
 
     output.log(
       `${chalk.cyan('Success!')} Rule "${chalk.bold(rule.name)}" staged ${chalk.gray(createStamp())}`
     );
     printActionImpactWarning(rule.action);
 
-    await offerAutoPublish(client, project.id, hadExistingDraft, {
-      teamId,
+    await offerAutoPublish(client, scope, hadExistingDraft, {
       skipPrompts: opts.skipPrompts,
     });
 
