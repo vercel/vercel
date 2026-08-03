@@ -77,18 +77,43 @@ async function isNativeBinaryOptedIn() {
   }
 }
 
+// Dynamic-linker / missing-binary failures should fall through to JS instead of
+// hard-failing (e.g. a linux binary built against a newer glibc than the host).
+function isNativeLoaderFailure(result) {
+  if (result.error) {
+    return (
+      result.error.code === 'ENOENT' ||
+      result.error.code === 'EACCES' ||
+      result.error.code === 'ENOEXEC'
+    );
+  }
+  const text = `${result.stderr || ''}`;
+  return (
+    /version [`']GLIBC_[\d.]+[`'] not found/i.test(text) ||
+    /GLIBC_[\d.]+[`'] not found/i.test(text) ||
+    /error while loading shared libraries/i.test(text)
+  );
+}
+
 const bin = resolveNative();
 
 if (bin && (await isNativeBinaryOptedIn())) {
   process.env.VERCEL_VC_NATIVE = '1';
+  // Pipe stderr so we can detect loader/glibc failures and fall back to JS
+  // without surfacing the dynamic-linker noise. Stdin/stdout stay inherited
+  // so interactive and long-running commands still stream.
   const r = spawnSync(bin, process.argv.slice(2), {
-    stdio: 'inherit',
+    encoding: 'utf8',
+    stdio: ['inherit', 'inherit', 'pipe'],
     windowsHide: true,
   });
-  if (r.error && (r.error.code === 'ENOENT' || r.error.code === 'EACCES')) {
+  if (isNativeLoaderFailure(r)) {
     delete process.env.VERCEL_VC_NATIVE;
     // fall through to JS
   } else {
+    if (r.stderr) {
+      process.stderr.write(r.stderr);
+    }
     if (r.error) {
       console.error(r.error.message);
       process.exit(1);

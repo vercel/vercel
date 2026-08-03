@@ -215,4 +215,26 @@ describe('dist/vc.js native resolution', () => {
       expect(r.stderr).not.toContain('(native)');
     }
   );
+
+  it.runIf(process.platform !== 'win32')(
+    'falls through to JS when the native binary fails with a glibc loader error',
+    () => {
+      const { vcJs } = buildInstall({
+        platform: process.platform,
+        arch: process.arch,
+        body:
+          '#!/bin/sh\n' +
+          'echo "version \'GLIBC_2.38\' not found (required by native)" >&2\n' +
+          'exit 127\n',
+      });
+      const r = spawnSync(process.execPath, [vcJs, '--version'], {
+        encoding: 'utf8',
+        env: optInEnv(),
+      });
+      expect(r.status).toBe(0);
+      expect(r.stdout.trim()).toBe(cliVersion);
+      expect(r.stderr).not.toContain('(native)');
+      expect(r.stderr).not.toContain('GLIBC_2.38');
+    }
+  );
 });
