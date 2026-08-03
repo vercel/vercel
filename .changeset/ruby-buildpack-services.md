@@ -7,7 +7,7 @@
 ---
 
 Add generic Cloud Native Buildpack container builds, with Ruby as the first
-supported language, gated behind `VERCEL_RUBY_EXPERIMENTAL_BUILDPACK=1`.
+supported language, gated behind `VERCEL_EXPERIMENTAL_BUILDPACK_RUBY=1`.
 
 `@vercel/container` gains a language-agnostic CNB lifecycle driven by a
 per-language descriptor registry (`src/buildpacks/registry.ts`). Adding a
@@ -30,8 +30,8 @@ builder's build user (as `pack` does), so buildpacks can write to the
 workspace (bundler lockfile self-healing, asset compilation). Ruby builds
 bake Heroku-style production defaults into the image
 (`RAILS_ENV`/`RACK_ENV=production`, `RAILS_LOG_TO_STDOUT`/
-`RAILS_SERVE_STATIC_FILES=enabled` — Paketo's rails-assets buildpack shadows
-the latter two with `=true` for Rails apps) — each applied default is
+`RAILS_SERVE_STATIC_FILES=true`, matching the values Paketo's rails-assets
+buildpack contributes for Rails apps) — each applied default is
 logged, and project build env wins (`RACK_ENV` is automatically embedded as
 the `BPE_RACK_ENV` launch override). Deployment-level runtime env vars
 are injected into container-image functions and override baked values,

@@ -42,6 +42,13 @@ export interface BuildpackDescriptor {
    * the lifecycle. Pinned by digest: deployments run this image on Vercel
    * build infrastructure, so a mutable tag would make builds unreproducible
    * and track upstream pushes we haven't vetted. Bump deliberately.
+   *
+   * TODO: the pinned Paketo `jammy-base` builder is amd64-only, so `vercel
+   * dev` pins the whole image chain to `linux/amd64` (see the platform
+   * pinning in `lifecycle.ts` `buildWithLifecycle`) and Apple Silicon builds
+   * and serves the app under emulation. Evaluate a multi-arch builder (e.g.
+   * Paketo's ubuntu-noble builders) or dual-stack digest pinning so dev runs
+   * natively on arm64.
    */
   builder: string;
   /**
@@ -98,10 +105,12 @@ export const BUILDPACKS: readonly BuildpackDescriptor[] = [
     buildpackGroup: [{ id: 'paketo-buildpacks/ruby', version: '2.0.1' }],
     // Heroku-style production defaults, baked into the image at build time
     // and overridable by project build env; harmless for non-Rails apps.
-    // (Paketo's MRI buildpack already defaults MALLOC_ARENA_MAX=2.) For Rails
-    // apps the RAILS_LOG_TO_STDOUT/RAILS_SERVE_STATIC_FILES defaults are
-    // shadowed by Paketo's rails-assets buildpack, which contributes `=true`
-    // earlier in the composite and launch-env defaults are first-set-wins.
+    // (Paketo's MRI buildpack already defaults MALLOC_ARENA_MAX=2.) The
+    // RAILS_LOG_TO_STDOUT/RAILS_SERVE_STATIC_FILES values deliberately match
+    // the `=true` Paketo's rails-assets buildpack contributes for Rails apps
+    // (its defaults come earlier in the composite and launch-env defaults
+    // are first-set-wins), so the observed value is identical for Rails and
+    // non-Rails apps. Rails itself only checks presence.
     // Deployment-level (runtime) env vars are injected into container-image
     // functions and override baked values — except vars the app server
     // reassigns at boot (puma's launcher rewrites `ENV['RACK_ENV']` from its
@@ -117,8 +126,8 @@ export const BUILDPACKS: readonly BuildpackDescriptor[] = [
     launchEnvDefaults: {
       RAILS_ENV: 'production',
       RACK_ENV: 'production',
-      RAILS_LOG_TO_STDOUT: 'enabled',
-      RAILS_SERVE_STATIC_FILES: 'enabled',
+      RAILS_LOG_TO_STDOUT: 'true',
+      RAILS_SERVE_STATIC_FILES: 'true',
     },
   },
 ];
@@ -145,13 +154,15 @@ export function requestedBuildpack(
 /**
  * Per-language image override, e.g. `VERCEL_BUILDPACK_RUBY_BUILDER`.
  *
- * The pinned digests in the registry can only change with a builder release,
- * so this is the escape hatch for everything that can't wait for one:
- * canarying a new digest against a real project before bumping it, unbreaking
- * builds when a pinned upstream image turns out bad, and pointing dev at a
- * custom or mirrored builder. Overrides are per language on purpose — a
- * single generic variable would silently force one stack's builder onto
- * every buildpack service in a mixed-language project.
+ * Honored only by the `vercel dev` build path: it exists to make testing a
+ * new builder or run image cheap before bumping the pinned digests (local
+ * dev, integration tests). Production deploys always use the pinned
+ * registry digests — shipping a digest change goes through a normal
+ * `@vercel/container` release/canary, never an env var (which would
+ * otherwise be reachable through user-supplied build env). Overrides are
+ * per language on purpose — a single generic variable would silently force
+ * one stack's builder onto every buildpack service in a mixed-language
+ * project.
  */
 function envOverride(
   bp: BuildpackDescriptor,
@@ -165,21 +176,25 @@ function envOverride(
 }
 
 /**
- * The builder image to run the lifecycle in: the language override
- * (`VERCEL_BUILDPACK_<RUNTIME>_BUILDER`) or the descriptor's pinned default.
- * Overrides may use a tag or an immutable digest reference.
+ * The builder image `vercel dev` runs the lifecycle in: the language
+ * override (`VERCEL_BUILDPACK_<RUNTIME>_BUILDER`) or the descriptor's pinned
+ * default. Overrides may use a tag or an immutable digest reference.
+ * Dev-only — the deploy path uses the pinned {@link BuildpackDescriptor.builder}
+ * directly.
  */
-export function builderImageRef(bp: BuildpackDescriptor): string {
+export function devBuilderImageRef(bp: BuildpackDescriptor): string {
   return envOverride(bp, 'BUILDER') ?? bp.builder;
 }
 
 /**
- * The run image to export against, or `undefined` to let the builder's own
- * metadata decide. The pinned default only applies with the default builder:
- * an overridden builder may target a different stack, and forcing our run
- * image onto it would produce a broken pairing.
+ * The run image `vercel dev` exports against, or `undefined` to let the
+ * builder's own metadata decide. The pinned default only applies with the
+ * default builder: an overridden builder may target a different stack, and
+ * forcing our run image onto it would produce a broken pairing. Dev-only —
+ * the deploy path uses the pinned {@link BuildpackDescriptor.runImage}
+ * directly.
  */
-export function runImageRef(bp: BuildpackDescriptor): string | undefined {
+export function devRunImageRef(bp: BuildpackDescriptor): string | undefined {
   const override = envOverride(bp, 'RUN_IMAGE');
   if (override) return override;
   return envOverride(bp, 'BUILDER') ? undefined : bp.runImage;

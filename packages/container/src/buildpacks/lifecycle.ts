@@ -26,7 +26,7 @@ import {
   write,
 } from '../util';
 import type { BuildpackDescriptor } from './registry';
-import { builderImageRef, runImageRef } from './registry';
+import { devBuilderImageRef, devRunImageRef } from './registry';
 
 export interface LifecycleBuildParams {
   workPath: string;
@@ -345,7 +345,7 @@ async function resolveDevRunImage(
   bp: BuildpackDescriptor,
   builder: string
 ): Promise<string> {
-  const pinned = runImageRef(bp);
+  const pinned = devRunImageRef(bp);
   if (pinned) return pinned;
   try {
     const { stdout } = await run(
@@ -412,7 +412,7 @@ export async function buildWithLifecycle(
     'container.buildpack.lifecycle_build',
     { 'buildpack.runtime': bp.runtime, 'image.tag': params.tag },
     async s => {
-      const builder = params.builder ?? builderImageRef(bp);
+      const builder = params.builder ?? devBuilderImageRef(bp);
       s?.setAttributes({ 'buildpack.builder': builder });
 
       emit(out, `  → Pulling ${bp.runtime} buildpack builder ${builder}`);
@@ -597,8 +597,13 @@ export async function buildAndPushWithLifecycle(
     'container.buildpack.lifecycle_registry_build',
     { 'buildpack.runtime': bp.runtime, 'image.ref': params.imageRef },
     async s => {
-      const builder = params.builder ?? builderImageRef(bp);
-      const runImage = runImageRef(bp);
+      // Deploys always run the descriptor's pinned, digest-reviewed images.
+      // The `VERCEL_BUILDPACK_*` env overrides are a dev/testing tool only —
+      // in production they would be reachable through user-supplied build
+      // env — so a digest change ships through a normal `@vercel/container`
+      // release instead.
+      const builder = params.builder ?? bp.builder;
+      const runImage = bp.runImage;
       const containerName = `vercel-cnb-${bp.runtime}-${process.pid}-${Date.now().toString(36)}`;
       // The exporter runs as the builder's unprivileged user; the report dir
       // must be writable across the container UID mapping.

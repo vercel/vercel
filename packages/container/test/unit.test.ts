@@ -1328,18 +1328,20 @@ describe('@vercel/container', () => {
     });
 
     it('keeps Ruby launch defaults in the Ruby descriptor using user-facing names', () => {
+      // The `true` values match what Paketo's rails-assets buildpack
+      // contributes for Rails apps (first-set-wins), so the observed value
+      // is identical for Rails and non-Rails apps.
       expect(ruby.launchEnvDefaults).toEqual({
         RAILS_ENV: 'production',
         RACK_ENV: 'production',
-        RAILS_LOG_TO_STDOUT: 'enabled',
-        RAILS_SERVE_STATIC_FILES: 'enabled',
+        RAILS_LOG_TO_STDOUT: 'true',
+        RAILS_SERVE_STATIC_FILES: 'true',
       });
     });
 
-    it('resolves images per descriptor without language-specific branches', async () => {
-      const { builderImageRef, runImageRef, hasProjectMarkers } = await import(
-        '../src/buildpacks/registry'
-      );
+    it('resolves dev images per descriptor without language-specific branches', async () => {
+      const { devBuilderImageRef, devRunImageRef, hasProjectMarkers } =
+        await import('../src/buildpacks/registry');
       const synthetic = {
         runtime: 'elixir',
         projectMarkers: ['mix.exs'],
@@ -1348,17 +1350,17 @@ describe('@vercel/container', () => {
         buildpackGroup: [{ id: 'example/elixir', version: '1.2.3' }],
       };
 
-      expect(builderImageRef(synthetic)).toBe(synthetic.builder);
-      expect(runImageRef(synthetic)).toBe(synthetic.runImage);
+      expect(devBuilderImageRef(synthetic)).toBe(synthetic.builder);
+      expect(devRunImageRef(synthetic)).toBe(synthetic.runImage);
 
       process.env.VERCEL_BUILDPACK_ELIXIR_BUILDER = 'example/custom:tag';
       try {
-        expect(builderImageRef(synthetic)).toBe('example/custom:tag');
+        expect(devBuilderImageRef(synthetic)).toBe('example/custom:tag');
         // A custom builder may target a different stack; never pair it with
         // the pinned default run image.
-        expect(runImageRef(synthetic)).toBeUndefined();
+        expect(devRunImageRef(synthetic)).toBeUndefined();
         process.env.VERCEL_BUILDPACK_ELIXIR_RUN_IMAGE = 'example/run:tag';
-        expect(runImageRef(synthetic)).toBe('example/run:tag');
+        expect(devRunImageRef(synthetic)).toBe('example/run:tag');
       } finally {
         delete process.env.VERCEL_BUILDPACK_ELIXIR_BUILDER;
         delete process.env.VERCEL_BUILDPACK_ELIXIR_RUN_IMAGE;
@@ -1651,6 +1653,74 @@ describe('@vercel/container', () => {
       expect((builderFromCall?.[1] as string[]).join(' ')).toContain(
         ruby.builder
       );
+    });
+
+    it('ignores VERCEL_BUILDPACK_* image overrides on deploys', async () => {
+      // The env overrides are a dev/testing tool. In production they would
+      // be reachable through user-supplied build env, so deploys must always
+      // run the pinned, digest-reviewed builder and run images.
+      process.env.VERCEL_BUILD_IMAGE = 'al2023';
+      process.env.VERCEL_OIDC_TOKEN = fakeOidcToken();
+      process.env.VERCEL_BUILDPACK_RUBY_BUILDER = 'example/evil-builder:tag';
+      process.env.VERCEL_BUILDPACK_RUBY_RUN_IMAGE = 'example/evil-run:tag';
+      const fetchMock = vi.fn();
+      stubRegistryFetch(fetchMock);
+      vi.stubGlobal('fetch', fetchMock);
+      const digest = `sha256:${'c'.repeat(64)}`;
+      existsSyncMock.mockImplementation((p: string) => p === '/Gemfile');
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'buildah' && args.includes('info')) {
+          return fakeChild(
+            JSON.stringify({
+              store: {
+                GraphRoot: '/vercel/.containers/storage',
+                RunRoot: '/run/containers/storage',
+                GraphDriverName: 'overlay',
+                GraphStatus: { 'Backing Filesystem': 'xfs' },
+              },
+            })
+          );
+        }
+        if (cmd === 'buildah' && args.includes('/cnb/lifecycle/creator')) {
+          const reportMount = args
+            .filter((_arg, index) => args[index - 1] === '--volume')
+            .find(arg => arg.endsWith(':/platform-output'));
+          expect(reportMount).toBeDefined();
+          writeFileSync(
+            `${reportMount!.slice(0, -':/platform-output'.length)}/report.toml`,
+            `[image]\ndigest = "${digest}"\n`
+          );
+        }
+        return fakeChild('');
+      });
+
+      try {
+        await build({
+          ...createBuildOptions({ buildpack: 'ruby' }),
+          entrypoint: '<detect>',
+          service: { name: 'api' },
+        });
+      } finally {
+        delete process.env.VERCEL_BUILDPACK_RUBY_BUILDER;
+        delete process.env.VERCEL_BUILDPACK_RUBY_RUN_IMAGE;
+      }
+
+      const builderFromCall = spawnMock.mock.calls.find(
+        ([cmd, args]) =>
+          cmd === 'buildah' && (args as string[]).includes('from')
+      );
+      const fromArgs = (builderFromCall?.[1] as string[]).join(' ');
+      expect(fromArgs).toContain(ruby.builder);
+      expect(fromArgs).not.toContain('example/evil-builder:tag');
+
+      const creatorCall = spawnMock.mock.calls.find(
+        ([cmd, args]) =>
+          cmd === 'buildah' &&
+          (args as string[]).includes('/cnb/lifecycle/creator')
+      );
+      const creatorArgs = creatorCall?.[1] as string[];
+      expect(creatorArgs).toContain(`-run-image=${ruby.runImage}`);
+      expect(creatorArgs).not.toContain('-run-image=example/evil-run:tag');
     });
 
     it('cleans up the Buildah working container when export fails', async () => {

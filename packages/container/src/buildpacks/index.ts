@@ -1,9 +1,9 @@
 export {
   BUILDPACKS,
-  builderImageRef,
+  devBuilderImageRef,
+  devRunImageRef,
   hasProjectMarkers,
   requestedBuildpack,
-  runImageRef,
   type BuildpackDescriptor,
   type BuildpackGroupEntry,
 } from './registry';

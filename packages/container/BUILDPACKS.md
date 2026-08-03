@@ -5,7 +5,7 @@ built as OCI images with Cloud Native Buildpacks (Paketo). The CNB lifecycle
 is language-agnostic; everything language-specific lives in one descriptor in
 [`src/buildpacks/registry.ts`](src/buildpacks/registry.ts).
 
-Buildpack builds are gated behind `VERCEL_RUBY_EXPERIMENTAL_BUILDPACK=1` while
+Buildpack builds are gated behind `VERCEL_EXPERIMENTAL_BUILDPACK_RUBY=1` while
 the migration off per-language Lambda builders is in progress. With the flag
 unset, Ruby services and the Ruby framework preset keep their legacy
 `@vercel/ruby` behavior.
@@ -28,7 +28,11 @@ not services.
    `BUILDPACK_RUNTIMES`, `RUNTIME_BUILDERS` (the legacy builder while the
    flag is off — buildpack runtimes are rerouted to `@vercel/container` when
    it is on; no new builder package is created), and `RUNTIME_MANIFESTS`
-   (auto-detection markers, e.g. `pom.xml` for Java).
+   (auto-detection markers, e.g. `pom.xml` for Java). The language gets its
+   own experiment flag, `VERCEL_EXPERIMENTAL_BUILDPACK_<RUNTIME>`, derived
+   from the runtime slug. fs-detectors'
+   `test/unit.buildpack-registry-sync.test.ts` fails until the registry and
+   `BUILDPACK_RUNTIMES` agree.
 3. Optionally add a framework preset in `@vercel/frameworks`; builds-and-
    routes detection reroutes buildpack-backed presets to `@vercel/container`
    when the flag is on.
@@ -73,11 +77,13 @@ No lifecycle, image-source, or resolver code should need to change.
 - Language versions come from the language's own manifests (e.g. `Gemfile`)
   or `BP_*` build env vars, delivered through the CNB platform dir
   (`/platform/env`).
-- Descriptors may declare `launchEnvDefaults` using user-facing names. 
+- Descriptors may declare `launchEnvDefaults` using user-facing names.
   Production defaults (Ruby: `RAILS_ENV=production`,
   `RACK_ENV=production`,
-  `RAILS_LOG_TO_STDOUT=enabled`, `RAILS_SERVE_STATIC_FILES=enabled`) are baked
-  as launch-env defaults via Paketo's environment-variables buildpack
+  `RAILS_LOG_TO_STDOUT=true`, `RAILS_SERVE_STATIC_FILES=true` — the `true`
+  values match what Paketo's rails-assets buildpack contributes for Rails
+  apps, so the observed value is the same for Rails and non-Rails apps) are
+  baked as launch-env defaults via Paketo's environment-variables buildpack
   (`BPE_DEFAULT_<KEY>`). A matching project env var is also copied to
   `BPE_<KEY>` so it overrides the default in the built image without requiring
   users to know Paketo's prefix. Unrelated build env remains build-only, and
@@ -94,14 +100,22 @@ builds unreproducible and track unvetted upstream pushes. Bump digests
 deliberately.
 
 `VERCEL_BUILDPACK_<RUNTIME>_BUILDER` / `VERCEL_BUILDPACK_<RUNTIME>_RUN_IMAGE`
-(tag or digest) override the pinned defaults — an internal escape hatch for
-canarying a digest bump, unbreaking builds on a bad upstream image, or
-pointing dev at a custom builder. Overrides are per language on purpose: a
-generic variable would force one stack's builder onto every buildpack service
-in a mixed-language project. When only the builder is overridden, the run
-image comes from the builder's metadata; if it cannot be resolved, the build
-fails rather than pairing the custom builder with the pinned default run
-image.
+(tag or digest) override the pinned defaults **in `vercel dev` only** — a
+testing tool for trying a new builder or run image before bumping the pinned
+digests. Deploys always use the pinned digests (the env vars would otherwise
+be reachable through user-supplied build env); shipping a digest change goes
+through a normal `@vercel/container` release. Overrides are per language on
+purpose: a generic variable would force one stack's builder onto every
+buildpack service in a mixed-language project. When only the builder is
+overridden, the run image comes from the builder's metadata; if it cannot be
+resolved, the build fails rather than pairing the custom builder with the
+pinned default run image.
+
+The pinned Paketo `jammy-base` builder is amd64-only, so dev pins the image
+chain to `linux/amd64` and Apple Silicon builds and serves under emulation.
+TODO: evaluate a multi-arch builder (e.g. Paketo's ubuntu-noble builders) or
+dual-stack digest pinning (see the TODO on `builder` in
+`src/buildpacks/registry.ts`).
 
 ## Local development
 
