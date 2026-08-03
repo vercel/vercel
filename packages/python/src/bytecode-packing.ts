@@ -1,19 +1,12 @@
 /**
- * Value-ranked bytecode packing.
+ * Value-ranked bytecode packing: select `.pyc` files to maximise compile
+ * time avoided at cold start.
  *
- * Replaces size-descending selection for `.pyc` files with a ranking that
- * maximises compile time avoided at cold start:
+ * Modules imported at startup (static import closure) rank first, then
+ * everything else, both ordered by compile seconds per byte.
  *
- * 1. Tier 1 — modules the application actually imports at startup (from the
- *    static import closure), ranked by compile seconds per `.pyc` byte.
- * 2. Tier 2 — everything else, same ranking, using whatever capacity remains.
- *
- * Fallbacks (no configuration is worse than the old size ordering):
- * - no closure / empty closure -> all files by compile density
- * - no compile timings        -> imported-first, then per-file size desc
- * - neither                   -> per-file size desc (>= the old per-package
- *                                knapsack, which could strand capacity a
- *                                large package didn't fit into)
+ * Fallbacks: no closure -> compile density only; no timings -> size desc.
+ * Every fallback is at least as good as the old per-package size knapsack.
  */
 
 import type { Files } from '@vercel/build-utils';

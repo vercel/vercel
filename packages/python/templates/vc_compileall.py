@@ -29,9 +29,8 @@ def main():
     if not source_files:
         return 0
 
-    # Optional argv[2]: write per-file compile timings (seconds) as JSON.
-    # Bytecode packing ranks files by compile cost avoided per byte; the
-    # timings replace size as the value proxy.
+    # Optional argv[2]: write per-file compile timings (seconds) as JSON,
+    # used by bytecode packing to rank files by compile cost per byte.
     timings_path = sys.argv[2] if len(sys.argv) > 2 else None
 
     try:

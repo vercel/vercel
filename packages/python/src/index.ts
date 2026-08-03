@@ -289,8 +289,7 @@ interface DjangoFrameworkHookResult extends FrameworkHookResult {
   djangoStatic: DjangoCollectStaticResult | null;
   /**
    * Dotted module names Django loads via settings strings (settings module,
-   * ROOT_URLCONF, INSTALLED_APPS, MIDDLEWARE). Seed the import closure —
-   * the ASGI/WSGI entrypoint alone is a thin string-driven shell.
+   * ROOT_URLCONF, INSTALLED_APPS, MIDDLEWARE); seeds the import closure.
    */
   importSeeds?: string[];
 }
@@ -388,10 +387,9 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
       );
     }
 
-    // Django wires its app together through settings strings, not import
-    // statements; seed the import closure with every module named there.
-    // Values may point at a class (e.g. MIDDLEWARE entries); seed resolution
-    // trims trailing components until a module resolves.
+    // Django wires apps together via settings strings rather than imports.
+    // Entries may name a class (e.g. MIDDLEWARE); seed resolution trims
+    // trailing components until a module resolves.
     const importSeeds = [
       settingsModule,
       djangoSettings['ROOT_URLCONF'],
@@ -1533,10 +1531,9 @@ export const build: BuildVX = async ({
         return timings;
       };
 
-      // Import closure, computed at most once per build and only when a
-      // bytecode fill overflows (see fillBytecodeWithValueRanking). Static:
-      // no user code runs at build time. Undefined on any failure, which
-      // degrades ranking to compile-density only.
+      // Static import closure (no user code runs), computed at most once per
+      // build and only when a bytecode fill overflows. Undefined on failure,
+      // degrading ranking to compile density only.
       let importClosurePromise: Promise<Set<string> | undefined> | undefined;
       const getImportClosureKeys = (): Promise<Set<string> | undefined> => {
         importClosurePromise ??= (async () => {
@@ -1576,11 +1573,10 @@ export const build: BuildVX = async ({
         return importClosurePromise;
       };
 
-      // Value-ranked bytecode fill, shared by every packing path. When every
-      // `.pyc` fits the zip's slack, ship them all — no analysis runs. On
-      // overflow, select per file: bytecode for modules the import closure
-      // marks as loaded at startup first, ranked by compile seconds per
-      // byte, then everything else by the same ranking. Returns bytes added.
+      // Value-ranked bytecode fill shared by every packing path. When all
+      // `.pyc` fit, ship them all with no analysis. On overflow, prefer
+      // modules in the import closure, ranked by compile seconds per byte.
+      // Returns bytes added.
       const fillBytecodeWithValueRanking = async ({
         items,
         totalSize,
@@ -1711,10 +1707,10 @@ export const build: BuildVX = async ({
             pycachePrefix: stagingDir,
           });
 
-          // Candidates: app source (imported from /var/task), bundled vendor
-          // (/var/task/_vendor), and externalized packages (installed into
-          // /tmp at cold start). All carry site-packages-relative module
-          // keys, so one closure ranks the union.
+          // Candidates: app source, bundled vendor (/var/task/_vendor), and
+          // externalized packages (installed into /tmp at cold start). All
+          // carry module keys the closure can match, so one ranking covers
+          // the union.
           const appInfo = await collectAppPrefixBytecodeFiles({
             stagingDir,
             workPath,

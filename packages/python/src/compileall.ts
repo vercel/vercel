@@ -239,10 +239,8 @@ export interface BytecodeItem {
   /** Uncompressed `.pyc` size in bytes (the knapsack weight). */
   size: number;
   /**
-   * Bundle identity of the source module: the workPath-relative path for
-   * app files, the site-packages-relative path for vendor files (forward
-   * slashes). An import-closure set membership test answers "is this
-   * module imported at startup?".
+   * Module identity for import-closure membership: workPath-relative for
+   * app files, site-packages-relative for vendor files (forward slashes).
    */
   moduleKey: string;
   /** Absolute fs path of the `.py` source (join key for compile timings). */
