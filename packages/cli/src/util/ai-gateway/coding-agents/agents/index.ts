@@ -1,5 +1,6 @@
 import type { CodingAgent } from '../types';
 import { claudeCode } from './claude-code';
+import { cline } from './cline';
 import { codex } from './codex';
 import { cursor } from './cursor';
 import { kilo } from './kilo';
@@ -8,6 +9,7 @@ import { pi } from './pi';
 
 export const CODING_AGENTS: CodingAgent[] = [
   claudeCode,
+  cline,
   codex,
   cursor,
   kilo,
