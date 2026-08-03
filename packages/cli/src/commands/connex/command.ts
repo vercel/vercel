@@ -101,7 +101,7 @@ export const createSubcommand = {
       value: `${packageName} connect create slack --name my-bot --triggers`,
     },
     {
-      name: 'Create a Linear connector with selected webhook events',
+      name: 'Create with selected webhook events',
       value: `${packageName} connect create linear --name linear --triggers --trigger-event Issue --trigger-event Comment --trigger-event Project`,
     },
     {
