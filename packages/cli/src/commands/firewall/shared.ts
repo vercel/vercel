@@ -121,9 +121,9 @@ export function mapFirewallApiError(
   const err = e as { status?: number; code?: string; message?: string };
   if (scope.type === 'team' && err.status === 403) {
     if (err.code === 'plan_not_supported') {
-      return 'Team-level firewall requires an Enterprise plan.';
+      return `Team-level firewall requires an Enterprise plan (current team: "${scope.displayName}"). Pass --scope <team> or run \`vercel switch\` to target a different team.`;
     }
-    return `You need to be a team owner to manage the team-level firewall.${err.message ? ` (${err.message})` : ''}`;
+    return `You need to be a team owner to manage the team-level firewall for "${scope.displayName}".${err.message ? ` (${err.message})` : ''}`;
   }
   return err.message || fallback;
 }

@@ -233,7 +233,7 @@ describe('firewall --team-level', () => {
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(1);
     await expect(client.stderr).toOutput(
-      'Team-level firewall requires an Enterprise plan.'
+      'Team-level firewall requires an Enterprise plan (current team:'
     );
   });
 
@@ -244,7 +244,7 @@ describe('firewall --team-level', () => {
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(1);
     await expect(client.stderr).toOutput(
-      'You need to be a team owner to manage the team-level firewall.'
+      'You need to be a team owner to manage the team-level firewall for'
     );
   });
 
