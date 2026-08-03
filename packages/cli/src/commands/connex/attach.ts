@@ -441,7 +441,7 @@ export async function attach(
       const status = (err as { status?: number }).status;
       if (status === 403) {
         output.error(
-          `You don't have permission to attach projects on this team. Ask a team owner to grant Connector Manager access.`
+          `You don't have permission to attach projects on this team. Owner or Member role, or Connector Manager permission required.`
         );
         return 1;
       }
@@ -471,7 +471,7 @@ export async function attach(
       const status = (err as { status?: number }).status;
       if (status === 403) {
         output.error(
-          `You don't have permission to update trigger destinations on this team. Ask a team owner to grant Connector Manager access.`
+          `You don't have permission to update trigger destinations on this team. Owner or Member role, or Connector Manager permission required.`
         );
         return 1;
       }

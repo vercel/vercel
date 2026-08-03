@@ -360,7 +360,7 @@ describe('connex detach', () => {
     expect(exitCode).toBe(1);
     const stderr = client.stderr.getFullOutput();
     expect(stderr).toContain(
-      "You don't have permission to detach projects on this team. Ask a team owner to grant Connector Manager access."
+      "You don't have permission to detach projects on this team. Owner or Member role, or Connector Manager permission required."
     );
     expect(stderr).not.toContain('Owner or Member role required');
   });
