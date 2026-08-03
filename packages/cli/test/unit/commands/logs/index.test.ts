@@ -97,6 +97,27 @@ function useRequestLogs(logs: ApiLogEntry[] = []) {
   });
 }
 
+function useActiveProductionDeployment(
+  projectId: string,
+  deployment: { id: string; url: string } | null
+) {
+  client.scenario.get(
+    `/projects/${projectId}/production-deployment`,
+    (_req, res) => {
+      if (!deployment) {
+        res.status(404).json({
+          error: {
+            code: 'not_found',
+            message: 'Production deployment not found',
+          },
+        });
+        return;
+      }
+      res.json({ deployment });
+    }
+  );
+}
+
 describe('logs', () => {
   describe('--help', () => {
     it('should display help and track telemetry', async () => {
@@ -124,6 +145,7 @@ describe('logs', () => {
       expect(normalizedOutput).toContain(
         'falls back to your latest READY deployment'
       );
+      expect(normalizedOutput).toContain('active production deployment');
       expect(normalizedOutput).toContain(
         'with --follow, require a matching READY deployment'
       );
@@ -424,31 +446,22 @@ describe('logs', () => {
       expect(receivedBranch).toEqual('feature-branch');
     });
 
-    it('should follow the latest production deployment for an explicit project', async () => {
-      let requestedProjectId: string | undefined;
-      let requestedLimit: string | undefined;
-      let requestedState: string | undefined;
-      let requestedUsers: string | undefined;
-      let requestedTarget: string | undefined;
-      let productionDeployment: ReturnType<typeof useDeployment>;
-
+    it('should follow the active production deployment for an explicit project', async () => {
+      const deploymentQueries: Array<Record<string, unknown>> = [];
+      let newerProductionDeployment: ReturnType<typeof useDeployment>;
       client.scenario.get('/v6/deployments', (req, res) => {
-        requestedProjectId = req.query.projectId as string | undefined;
-        requestedLimit = req.query.limit as string | undefined;
-        requestedState = req.query.state as string | undefined;
-        requestedUsers = req.query.users as string | undefined;
-        requestedTarget = req.query.target as string | undefined;
+        deploymentQueries.push({ ...req.query });
         res.json({
           deployments: [
             {
-              uid: productionDeployment.id,
-              url: productionDeployment.url,
+              uid: newerProductionDeployment.id,
+              url: newerProductionDeployment.url,
             },
           ],
         });
       });
 
-      productionDeployment = useDeployment({
+      const activeProductionDeployment = useDeployment({
         creator: user,
         project: {
           ...defaultProject,
@@ -457,8 +470,18 @@ describe('logs', () => {
         },
         target: 'production',
       });
+      newerProductionDeployment = useDeployment({
+        creator: user,
+        project: {
+          ...defaultProject,
+          id: 'prj_explicit',
+          name: 'explicit-project',
+        },
+        target: 'production',
+      });
+      useActiveProductionDeployment('prj_explicit', activeProductionDeployment);
       useRuntimeLogs({
-        deployment: productionDeployment,
+        deployment: activeProductionDeployment,
         logProducer: async function* () {},
       });
 
@@ -466,28 +489,18 @@ describe('logs', () => {
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(0);
-      expect(requestedProjectId).toEqual('prj_explicit');
-      expect(requestedLimit).toEqual('1');
-      expect(requestedState).toEqual('READY');
-      expect(requestedTarget).toEqual('production');
-      expect(requestedUsers).toBeUndefined();
+      expect(deploymentQueries).toHaveLength(0);
       await expect(client.stderr).toOutput(
-        `Streaming logs for latest production deployment ${productionDeployment.id}`
+        `Streaming logs for production deployment ${activeProductionDeployment.id}`
       );
     });
 
-    it('should follow your latest deployment when no production deployment exists', async () => {
-      let requestedUsers: string | undefined;
+    it('should follow your latest deployment when no active production deployment exists', async () => {
       let userDeployment: ReturnType<typeof useDeployment>;
       const deploymentQueries: Array<Record<string, unknown>> = [];
 
       client.scenario.get('/v6/deployments', (req, res) => {
         deploymentQueries.push({ ...req.query });
-        if (req.query.target === 'production') {
-          res.json({ deployments: [] });
-          return;
-        }
-        requestedUsers = req.query.users as string | undefined;
         res.json({
           deployments: [
             {
@@ -506,6 +519,7 @@ describe('logs', () => {
           name: 'explicit-project',
         },
       });
+      useActiveProductionDeployment('prj_explicit', null);
       useRuntimeLogs({
         deployment: userDeployment,
         logProducer: async function* () {},
@@ -515,32 +529,27 @@ describe('logs', () => {
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(0);
-      expect(deploymentQueries.some(q => q.target === 'production')).toEqual(
-        true
-      );
-      expect(requestedUsers).toEqual(user.id);
+      expect(deploymentQueries).toEqual([
+        expect.objectContaining({
+          projectId: 'prj_explicit',
+          state: 'READY',
+          users: user.id,
+        }),
+      ]);
       await expect(client.stderr).toOutput(
         `Streaming logs for your latest deployment ${userDeployment.id}`
       );
     });
 
-    it('should follow the latest production deployment with --environment production', async () => {
+    it('should follow the active production deployment with --environment production', async () => {
       const deploymentQueries: Array<Record<string, unknown>> = [];
-      let productionDeployment: ReturnType<typeof useDeployment>;
 
       client.scenario.get('/v6/deployments', (req, res) => {
         deploymentQueries.push({ ...req.query });
-        res.json({
-          deployments: [
-            {
-              uid: productionDeployment.id,
-              url: productionDeployment.url,
-            },
-          ],
-        });
+        res.json({ deployments: [] });
       });
 
-      productionDeployment = useDeployment({
+      const productionDeployment = useDeployment({
         creator: user,
         project: {
           ...defaultProject,
@@ -549,6 +558,7 @@ describe('logs', () => {
         },
         target: 'production',
       });
+      useActiveProductionDeployment('prj_explicit', productionDeployment);
       useRuntimeLogs({
         deployment: productionDeployment,
         logProducer: async function* () {},
@@ -565,12 +575,28 @@ describe('logs', () => {
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(0);
-      expect(deploymentQueries).toHaveLength(1);
-      expect(deploymentQueries[0].target).toEqual('production');
-      expect(deploymentQueries[0].users).toBeUndefined();
-      expect(deploymentQueries[0].branch).toBeUndefined();
+      expect(deploymentQueries).toHaveLength(0);
       await expect(client.stderr).toOutput(
-        `Streaming logs for latest production deployment ${productionDeployment.id}`
+        `Streaming logs for production deployment ${productionDeployment.id}`
+      );
+    });
+
+    it('should error when --environment production has no active deployment', async () => {
+      useActiveProductionDeployment('prj_explicit', null);
+
+      client.setArgv(
+        'logs',
+        '--project',
+        'explicit-project',
+        '--follow',
+        '--environment',
+        'production'
+      );
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'No active production deployment found'
       );
     });
 
@@ -1624,25 +1650,15 @@ describe('logs', () => {
       );
     });
 
-    it('should stream the latest production deployment with --follow', async () => {
-      // Register before useLogsDeployment(), whose catch-all
-      // `/:version/deployments` route would otherwise handle this path
-      let productionDeployment: ReturnType<typeof useLogsDeployment>;
-      let requestedUsers: string | undefined;
-      let requestedBranch: string | undefined;
-      let requestedTarget: string | undefined;
+    it('should stream the active production deployment with --follow', async () => {
+      const deploymentQueries: Array<Record<string, unknown>> = [];
       client.scenario.get('/v6/deployments', (req, res) => {
-        requestedUsers = req.query.users as string | undefined;
-        requestedBranch = req.query.branch as string | undefined;
-        requestedTarget = req.query.target as string | undefined;
-        res.json({
-          deployments: [
-            { uid: productionDeployment.id, url: productionDeployment.url },
-          ],
-        });
+        deploymentQueries.push({ ...req.query });
+        res.json({ deployments: [] });
       });
 
-      productionDeployment = useLogsDeployment(user);
+      const productionDeployment = useLogsDeployment(user);
+      useActiveProductionDeployment('prj_logstest', productionDeployment);
 
       client.scenario.get(
         `/v1/projects/prj_logstest/deployments/${productionDeployment.id}/runtime-logs`,
@@ -1657,29 +1673,24 @@ describe('logs', () => {
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(0);
-      expect(requestedTarget).toEqual('production');
-      expect(requestedUsers).toBeUndefined();
-      expect(requestedBranch).toBeUndefined();
+      expect(deploymentQueries).toHaveLength(0);
       await expect(client.stderr).toOutput(
-        `Streaming logs for latest production deployment ${productionDeployment.id}`
+        `Streaming logs for production deployment ${productionDeployment.id}`
       );
     });
 
-    it('should fall back to your latest deployment when no production deployment exists', async () => {
+    it('should fall back to your latest deployment when no active production deployment exists', async () => {
       let userDeployment: ReturnType<typeof useLogsDeployment>;
       const deploymentQueries: Array<Record<string, unknown>> = [];
       client.scenario.get('/v6/deployments', (req, res) => {
         deploymentQueries.push({ ...req.query });
-        if (req.query.target === 'production') {
-          res.json({ deployments: [] });
-          return;
-        }
         res.json({
           deployments: [{ uid: userDeployment.id, url: userDeployment.url }],
         });
       });
 
       userDeployment = useLogsDeployment(user);
+      useActiveProductionDeployment('prj_logstest', null);
 
       client.scenario.get(
         `/v1/projects/prj_logstest/deployments/${userDeployment.id}/runtime-logs`,
@@ -1694,10 +1705,13 @@ describe('logs', () => {
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(0);
-      expect(deploymentQueries.some(q => q.target === 'production')).toEqual(
-        true
-      );
-      expect(deploymentQueries.some(q => q.users === user.id)).toEqual(true);
+      expect(deploymentQueries).toEqual([
+        expect.objectContaining({
+          projectId: 'prj_logstest',
+          state: 'READY',
+          users: user.id,
+        }),
+      ]);
       await expect(client.stderr).toOutput(
         `Streaming logs for your latest deployment ${userDeployment.id}`
       );
@@ -1744,21 +1758,9 @@ describe('logs', () => {
 
     it('should follow your latest preview deployment with --environment preview', async () => {
       let previewDeployment: ReturnType<typeof useLogsDeployment>;
-      let productionDeployment: ReturnType<typeof useLogsDeployment>;
       const deploymentQueries: Array<Record<string, unknown>> = [];
       client.scenario.get('/v6/deployments', (req, res) => {
         deploymentQueries.push({ ...req.query });
-        if (req.query.target === 'production') {
-          res.json({
-            deployments: [
-              {
-                uid: productionDeployment.id,
-                url: productionDeployment.url,
-              },
-            ],
-          });
-          return;
-        }
         if (req.query.target === 'preview' && req.query.users) {
           res.json({
             deployments: [
@@ -1771,7 +1773,6 @@ describe('logs', () => {
       });
 
       previewDeployment = useLogsDeployment(user);
-      productionDeployment = useLogsDeployment(user);
 
       client.scenario.get(
         `/v1/projects/prj_logstest/deployments/${previewDeployment.id}/runtime-logs`,
@@ -1863,18 +1864,8 @@ describe('logs', () => {
     it('should track telemetry for --follow flag', async () => {
       const user = useUser();
 
-      // Register before useLogsDeployment(), whose catch-all
-      // `/:version/deployments` route would otherwise handle this path
-      let productionDeployment: ReturnType<typeof useLogsDeployment>;
-      client.scenario.get('/v6/deployments', (_req, res) => {
-        res.json({
-          deployments: [
-            { uid: productionDeployment.id, url: productionDeployment.url },
-          ],
-        });
-      });
-
-      productionDeployment = useLogsDeployment(user);
+      const productionDeployment = useLogsDeployment(user);
+      useActiveProductionDeployment('prj_logstest', productionDeployment);
 
       client.scenario.get(
         `/v1/projects/prj_logstest/deployments/${productionDeployment.id}/runtime-logs`,

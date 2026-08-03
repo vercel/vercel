@@ -14,6 +14,7 @@ import {
   DeploymentNotFound,
   InvalidDeploymentId,
   ProjectNotFound,
+  isAPIError,
 } from '../../util/errors-ts';
 import { displayRuntimeLogs } from '../../util/logs';
 import {
@@ -29,13 +30,17 @@ import { help } from '../help';
 import { logsCommand } from './command';
 import output from '../../output-manager';
 
-interface LatestDeployment {
+interface DeploymentSummary {
   id: string;
   url: string;
 }
 
 interface DeploymentResponse {
   deployments: Array<{ uid: string; url: string }>;
+}
+
+interface ProductionDeploymentResponse {
+  deployment: DeploymentSummary;
 }
 
 type LogsTargetSource = 'deployment' | 'explicit-project' | 'linked-project';
@@ -61,7 +66,7 @@ async function getLatestDeployment(
   client: Client,
   projectId: string,
   filters: { branch?: string; userId?: string; target?: string } = {}
-): Promise<LatestDeployment | null> {
+): Promise<DeploymentSummary | null> {
   const query = new URLSearchParams();
   query.set('projectId', projectId);
   query.set('limit', '1');
@@ -88,6 +93,23 @@ async function getLatestDeployment(
     id: deployments[0].uid,
     url: deployments[0].url,
   };
+}
+
+async function getActiveProductionDeployment(
+  client: Client,
+  projectId: string
+): Promise<DeploymentSummary | null> {
+  try {
+    const { deployment } = await client.fetch<ProductionDeploymentResponse>(
+      `/projects/${encodeURIComponent(projectId)}/production-deployment`
+    );
+    return deployment;
+  } catch (err: unknown) {
+    if (isAPIError(err) && err.status === 404) {
+      return null;
+    }
+    throw err;
+  }
 }
 
 interface ResolveFollowDeploymentOptions {
@@ -143,27 +165,28 @@ async function resolveFollowDeployment({
     return { exitCode: 1 };
   }
 
-  // 3. --environment production → latest READY production, else error
+  // 3. --environment production → active production deployment, else error
   if (environment === 'production') {
-    output.spinner('Finding latest production deployment', 1000);
-    const productionDeployment = await getLatestDeployment(client, projectId, {
-      target: 'production',
-    });
+    output.spinner('Finding production deployment', 1000);
+    const productionDeployment = await getActiveProductionDeployment(
+      client,
+      projectId
+    );
     output.stopSpinner();
 
     if (!productionDeployment) {
       output.error(
-        `No READY production deployments found for ${formatProject(orgSlug, projectSlug)}. Deploy to production first or specify a deployment with ${chalk.bold('--deployment')}.`
+        `No active production deployment found for ${formatProject(orgSlug, projectSlug)}. Deploy or promote to production first, or specify a deployment with ${chalk.bold('--deployment')}.`
       );
       return { exitCode: 1 };
     }
 
     output.debug(
-      `Found latest production deployment ${productionDeployment.id} (${productionDeployment.url})`
+      `Found production deployment ${productionDeployment.id} (${productionDeployment.url})`
     );
     return {
       deploymentId: productionDeployment.id,
-      label: 'latest production deployment',
+      label: 'production deployment',
     };
   }
 
@@ -193,24 +216,25 @@ async function resolveFollowDeployment({
     return { exitCode: 1 };
   }
 
-  // 5. No environment specified → latest READY production, if found
-  output.spinner('Finding latest production deployment', 1000);
-  const productionDeployment = await getLatestDeployment(client, projectId, {
-    target: 'production',
-  });
+  // 5. No environment specified → active production deployment, if found
+  output.spinner('Finding production deployment', 1000);
+  const productionDeployment = await getActiveProductionDeployment(
+    client,
+    projectId
+  );
   output.stopSpinner();
 
   if (productionDeployment) {
     output.debug(
-      `Found latest production deployment ${productionDeployment.id} (${productionDeployment.url})`
+      `Found production deployment ${productionDeployment.id} (${productionDeployment.url})`
     );
     return {
       deploymentId: productionDeployment.id,
-      label: 'latest production deployment',
+      label: 'production deployment',
     };
   }
 
-  // 6. No production exists → your latest READY deployment, if found
+  // 6. No active production exists → your latest READY deployment, if found
   const user = await getUser(client);
   output.spinner('Finding your latest deployment', 1000);
   const userDeployment = await getLatestDeployment(client, projectId, {
