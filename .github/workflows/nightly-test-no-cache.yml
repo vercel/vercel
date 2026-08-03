@@ -39,8 +39,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: install turbo@2.5.0
-        run: npm i -g turbo@2.5.0
+      - name: install turbo@2.10.8
+        run: npm i -g turbo@2.10.8
       - id: set-tests
         # No TURBO_BASE_SHA here on purpose: chunk-tests.js falls back to
         # the "test-all" strategy, which is exactly what we want nightly.
