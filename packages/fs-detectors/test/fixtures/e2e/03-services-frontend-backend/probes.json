@@ -28,7 +28,8 @@
     {
       "path": "/backend-from-env",
       "status": 200,
-      "mustContain": "service-url:https://"
+      "mustContain": "service-url:https://",
+      "skipDev": true
     },
     {
       "path": "/backend-from-env",
