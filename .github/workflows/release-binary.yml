@@ -412,7 +412,6 @@ jobs:
 
       - name: Publish native npm packages
         shell: bash
-        env:
         run: |
           if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
             node packages/vc-native/scripts/publish-packages.mjs
