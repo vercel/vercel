@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { intoChunks } = require('../../../../utils/into-chunks');
+const { intoChunks } = require('../../../../utils/chunk-tests');
 
 const {
   testDeployment,
