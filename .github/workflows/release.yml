@@ -82,9 +82,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          # Temporarily skip native optionalDependencies: binary release is
+          # disabled below. Remove when binary publishing is re-enabled.
+          VERCEL_SKIP_NATIVE_DEPS: '1'
 
       - name: Trigger binary release
-        if: steps.changesets.outputs.published == 'true' && contains(fromJSON(steps.changesets.outputs.publishedPackages).*.name, 'vercel')
+        # Temporarily disabled: skip binary publishing for now.
+        # To re-enable, restore the original condition:
+        # if: steps.changesets.outputs.published == 'true' && contains(fromJSON(steps.changesets.outputs.publishedPackages).*.name, 'vercel')
+        if: false
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
