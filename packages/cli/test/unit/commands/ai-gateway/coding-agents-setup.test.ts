@@ -252,6 +252,48 @@ describe('ai-gateway coding-agents setup', () => {
       }
     );
 
+    // Cursor keeps BYOK settings in its own store, so setup is guidance-only:
+    // provision the key into the shell environment and emit manual steps.
+    it.skipIf(process.platform === 'win32')(
+      'configures Cursor with a shell export and manual-steps notes only',
+      async () => {
+        useUser();
+        client.nonInteractive = true;
+        mkdirSync(join(home, '.cursor'), { recursive: true });
+        client.setArgv(
+          'ai-gateway',
+          'coding-agents',
+          'setup',
+          '--key',
+          'vck_DummyKey0002',
+          '--agent',
+          'cursor'
+        );
+
+        const exitCode = await aiGateway(client);
+        expect(exitCode).toBe(0);
+
+        const bashrc = readFileSync(bashrcPath(), 'utf8');
+        expect(bashrc).toContain(
+          "export AI_GATEWAY_API_KEY='vck_DummyKey0002'"
+        );
+        // Guidance-only: nothing is written into Cursor's own directory.
+        expect(readdirSync(join(home, '.cursor'))).toEqual([]);
+
+        const out = JSON.parse(client.stdout.getFullOutput());
+        expect(out.status).toBe('ok');
+        const notes: string[] = out.notes ?? [];
+        expect(notes.some(n => n.includes('Override OpenAI Base URL'))).toBe(
+          true
+        );
+        expect(
+          notes.some(n => n.includes('ai-gateway.vercel.sh/v1/cursor'))
+        ).toBe(true);
+        // The key itself must never appear in notes.
+        expect(notes.every(n => !n.includes('vck_DummyKey0002'))).toBe(true);
+      }
+    );
+
     it('writes a --base-url override verbatim into the Codex config', async () => {
       useUser();
       client.nonInteractive = true;
