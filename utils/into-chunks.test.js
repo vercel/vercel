@@ -1,4 +1,4 @@
-const { intoChunks } = require('./chunk-tests');
+const { intoChunks } = require('./into-chunks');
 
 describe('it should create chunks correctly', () => {
   it('should split chunks correctly less chunks than items', () => {
