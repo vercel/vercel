@@ -106,13 +106,6 @@ export async function getFastAPIStaticDiscovery(
   }
 }
 
-/**
- * Copy each StaticFiles mount directory into the Vercel Build Output static
- * directory so the CDN serves the files. The original entrypoint is unchanged;
- * the Lambda retains its StaticFiles mounts but CDN routing preempts it.
- *
- * Returns null when no StaticFiles mounts are found.
- */
 /** True when `urlPath` is `prefix` or under it. "/" covers all. */
 function mountCovers(prefix: string, urlPath: string): boolean {
   const base = prefix.replace(/\/+$/, '');
@@ -175,6 +168,13 @@ export async function copyFastAPIStaticMounts(
   return copied > 0;
 }
 
+/**
+ * Copy each StaticFiles mount directory into the Vercel Build Output static
+ * directory so the CDN serves the files. The original entrypoint is unchanged;
+ * the Lambda retains its StaticFiles mounts but CDN routing preempts it.
+ *
+ * Returns null when no StaticFiles mounts are found.
+ */
 export async function runFastAPICollectStatic(
   venvPath: string,
   workPath: string,
