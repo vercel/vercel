@@ -1327,6 +1327,15 @@ describe('@vercel/container', () => {
       }
     });
 
+    it('keeps Ruby launch defaults in the Ruby descriptor using user-facing names', () => {
+      expect(ruby.launchEnvDefaults).toEqual({
+        RAILS_ENV: 'production',
+        RACK_ENV: 'production',
+        RAILS_LOG_TO_STDOUT: 'enabled',
+        RAILS_SERVE_STATIC_FILES: 'enabled',
+      });
+    });
+
     it('resolves images per descriptor without language-specific branches', async () => {
       const { builderImageRef, runImageRef, hasProjectMarkers } = await import(
         '../src/buildpacks/registry'
@@ -1397,65 +1406,87 @@ describe('@vercel/container', () => {
         '../src/buildpacks/lifecycle'
       );
 
-      const defaulted = mergeDefaultBuildEnv(ruby, { BP_MRI_VERSION: '3.3' });
+      const synthetic = {
+        runtime: 'elixir',
+        projectMarkers: ['mix.exs'],
+        builder: 'example/builder-elixir@sha256:deadbeef',
+        runImage: 'example/run-elixir@sha256:deadbeef',
+        buildpackGroup: [{ id: 'example/elixir', version: '1.2.3' }],
+        launchEnvDefaults: {
+          APP_ENV: 'production',
+          LOG_TO_STDOUT: 'enabled',
+        },
+      };
+
+      const defaulted = mergeDefaultBuildEnv(synthetic, {
+        BP_LANGUAGE_VERSION: '1.17',
+      });
       expect(defaulted.buildEnv).toMatchObject({
-        BP_MRI_VERSION: '3.3',
-        BPE_DEFAULT_RAILS_ENV: 'production',
-        BPE_DEFAULT_RACK_ENV: 'production',
-        BPE_DEFAULT_RAILS_LOG_TO_STDOUT: 'enabled',
-        BPE_DEFAULT_RAILS_SERVE_STATIC_FILES: 'enabled',
+        BP_LANGUAGE_VERSION: '1.17',
+        BPE_DEFAULT_APP_ENV: 'production',
+        BPE_DEFAULT_LOG_TO_STDOUT: 'enabled',
       });
       expect(defaulted.applied.join('\n')).toContain(
-        'Defaulting RAILS_ENV=production'
+        'Defaulting APP_ENV=production'
       );
 
       // A plain user value becomes both build and embedded launch env, while
       // an explicit BPE_DEFAULT_* value remains a launch default.
-      const overridden = mergeDefaultBuildEnv(ruby, {
-        RAILS_ENV: 'staging',
-        RACK_ENV: 'fixture-override',
-        BPE_DEFAULT_RAILS_LOG_TO_STDOUT: 'custom-default',
+      const overridden = mergeDefaultBuildEnv(synthetic, {
+        APP_ENV: 'staging',
+        BPE_DEFAULT_LOG_TO_STDOUT: 'custom-default',
       });
-      expect(overridden.buildEnv).not.toHaveProperty('BPE_DEFAULT_RAILS_ENV');
-      expect(overridden.buildEnv).not.toHaveProperty('BPE_DEFAULT_RACK_ENV');
+      expect(overridden.buildEnv).not.toHaveProperty('BPE_DEFAULT_APP_ENV');
       expect(overridden.buildEnv).toMatchObject({
-        RAILS_ENV: 'staging',
-        BPE_RAILS_ENV: 'staging',
-        RACK_ENV: 'fixture-override',
-        BPE_RACK_ENV: 'fixture-override',
-        BPE_DEFAULT_RAILS_LOG_TO_STDOUT: 'custom-default',
+        APP_ENV: 'staging',
+        BPE_APP_ENV: 'staging',
+        BPE_DEFAULT_LOG_TO_STDOUT: 'custom-default',
       });
-      expect(overridden.applied.join('\n')).not.toContain('RAILS_ENV');
-      expect(overridden.applied.join('\n')).not.toContain('RACK_ENV=');
+      expect(overridden.applied.join('\n')).not.toContain('APP_ENV');
 
       // Explicit embedded overrides win, and unrelated build env is not
       // copied into the image.
-      const explicitlyOverridden = mergeDefaultBuildEnv(ruby, {
-        RACK_ENV: 'plain-value',
-        BPE_RACK_ENV: 'embedded-value',
-        SECRET_KEY_BASE: 'build-only',
+      const explicitlyOverridden = mergeDefaultBuildEnv(synthetic, {
+        APP_ENV: 'plain-value',
+        BPE_APP_ENV: 'embedded-value',
+        SECRET: 'build-only',
       });
       expect(explicitlyOverridden.buildEnv).toMatchObject({
-        RACK_ENV: 'plain-value',
-        BPE_RACK_ENV: 'embedded-value',
-        SECRET_KEY_BASE: 'build-only',
+        APP_ENV: 'plain-value',
+        BPE_APP_ENV: 'embedded-value',
+        SECRET: 'build-only',
       });
       expect(explicitlyOverridden.buildEnv).not.toHaveProperty(
-        'BPE_DEFAULT_RACK_ENV'
+        'BPE_DEFAULT_APP_ENV'
       );
-      expect(explicitlyOverridden.buildEnv).not.toHaveProperty(
-        'BPE_SECRET_KEY_BASE'
-      );
-      expect(explicitlyOverridden.applied.join('\n')).not.toContain(
-        'RACK_ENV='
-      );
+      expect(explicitlyOverridden.buildEnv).not.toHaveProperty('BPE_SECRET');
+      expect(explicitlyOverridden.applied.join('\n')).not.toContain('APP_ENV=');
 
       // Descriptors without defaults pass the env through untouched.
       const none = mergeDefaultBuildEnv(
-        { ...ruby, defaultBuildEnv: undefined },
+        { ...synthetic, launchEnvDefaults: undefined },
         undefined
       );
       expect(none).toEqual({ buildEnv: undefined, applied: [] });
+    });
+
+    it('merges declared launch overrides from process env without forwarding ambient env', async () => {
+      const { mergeDefaultBuildEnv } = await import(
+        '../src/buildpacks/lifecycle'
+      );
+
+      const merged = mergeDefaultBuildEnv(ruby, undefined, {
+        RACK_ENV: 'fixture-override',
+        VERCEL_OIDC_TOKEN: 'must-not-be-forwarded',
+      });
+
+      expect(merged.buildEnv).toMatchObject({
+        RACK_ENV: 'fixture-override',
+        BPE_RACK_ENV: 'fixture-override',
+      });
+      expect(merged.buildEnv).not.toHaveProperty('BPE_DEFAULT_RACK_ENV');
+      expect(merged.buildEnv).not.toHaveProperty('VERCEL_OIDC_TOKEN');
+      expect(merged.applied.join('\n')).not.toContain('RACK_ENV=');
     });
 
     it('describes CNB lifecycle creator exit codes by phase', async () => {
@@ -1839,6 +1870,7 @@ describe('@vercel/container', () => {
     it('bakes a deploy command override into the image via a Procfile web process', async () => {
       process.env.VERCEL_BUILD_IMAGE = 'al2023';
       process.env.VERCEL_OIDC_TOKEN = fakeOidcToken();
+      const originalRackEnv = process.env.RACK_ENV;
       const fetchMock = vi.fn();
       stubRegistryFetch(fetchMock);
       vi.stubGlobal('fetch', fetchMock);
@@ -1854,6 +1886,7 @@ describe('@vercel/container', () => {
       let stagedProcfile: string | undefined;
       let stagedOrder: string | undefined;
       let stagedDefaultRailsEnv: string | undefined;
+      let stagedRackEnv: string | undefined;
       const copyCalls: string[][] = [];
       spawnMock.mockImplementation((cmd: string, args: string[]) => {
         if (cmd === 'buildah' && args.includes('info')) {
@@ -1910,10 +1943,21 @@ describe('@vercel/container', () => {
             `${envMount!.slice(0, -':/platform/env'.length)}/BPE_DEFAULT_RAILS_ENV`,
             'utf8'
           );
+          stagedRackEnv = readFileSync(
+            `${envMount!.slice(0, -':/platform/env'.length)}/BPE_RACK_ENV`,
+            'utf8'
+          );
+          expect(() =>
+            readFileSync(
+              `${envMount!.slice(0, -':/platform/env'.length)}/VERCEL_OIDC_TOKEN`,
+              'utf8'
+            )
+          ).toThrow();
         }
         return fakeChild('');
       });
 
+      process.env.RACK_ENV = 'fixture-override';
       try {
         await build({
           ...createBuildOptions({
@@ -1960,7 +2004,8 @@ describe('@vercel/container', () => {
           callKinds.indexOf('creator')
         );
 
-        // The build env travels via the CNB platform dir, not process env.
+        // Selected build env travels via the CNB platform dir, not the
+        // creator process environment.
         const creatorArgs = spawnMock.mock.calls.find(
           ([cmd, args]) =>
             cmd === 'buildah' &&
@@ -1973,6 +2018,7 @@ describe('@vercel/container', () => {
         expect(creatorArgs).toContain('-order=/platform/order/order.toml');
         // Overridable production defaults ride along with the user's env.
         expect(stagedDefaultRailsEnv).toBe('production');
+        expect(stagedRackEnv).toBe('fixture-override');
 
         await build({
           ...createBuildOptions({
@@ -2000,6 +2046,11 @@ describe('@vercel/container', () => {
           } as any)
         ).rejects.toThrow(/single command string/);
       } finally {
+        if (originalRackEnv === undefined) {
+          delete process.env.RACK_ENV;
+        } else {
+          process.env.RACK_ENV = originalRackEnv;
+        }
         rmSync(workPath, { recursive: true, force: true });
       }
     });

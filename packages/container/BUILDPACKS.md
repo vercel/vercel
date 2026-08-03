@@ -73,17 +73,15 @@ No lifecycle, image-source, or resolver code should need to change.
 - Language versions come from the language's own manifests (e.g. `Gemfile`)
   or `BP_*` build env vars, delivered through the CNB platform dir
   (`/platform/env`).
-- Descriptors may declare `defaultBuildEnv` — Heroku-style production
-  defaults (Ruby: `RAILS_ENV=production`, `RACK_ENV=production`,
-  `RAILS_LOG_TO_STDOUT=enabled`, `RAILS_SERVE_STATIC_FILES=enabled`) baked
+- Descriptors may declare `launchEnvDefaults` using user-facing names. 
+  Production defaults (Ruby: `RAILS_ENV=production`,
+  `RACK_ENV=production`,
+  `RAILS_LOG_TO_STDOUT=enabled`, `RAILS_SERVE_STATIC_FILES=enabled`) are baked
   as launch-env defaults via Paketo's environment-variables buildpack
   (`BPE_DEFAULT_<KEY>`). A matching project env var is also copied to
   `BPE_<KEY>` so it overrides the default in the built image without requiring
   users to know Paketo's prefix. Unrelated build env remains build-only, and
   every applied default is logged.
-  `SECRET_KEY_BASE` is deliberately not defaulted yet — see the TODO in the
-  registry (per-deployment fallback plus a CLI prompt persisting a project
-  env var, rather than hiding the secret in the build cache like Heroku).
 - CNB `project.toml` semantics (env, include/exclude, custom groups) are
   currently ignored; custom builders and lifecycle extensions are
   unsupported.

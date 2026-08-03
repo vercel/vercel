@@ -64,14 +64,13 @@ export interface BuildpackDescriptor {
    */
   buildpackGroup: readonly BuildpackGroupEntry[];
   /**
-   * Build env applied beneath the user's build env (user keys win). Use
-   * Paketo's environment-variables buildpack `BPE_DEFAULT_<KEY>` form to
-   * bake overridable launch-env defaults into the image: the CNB launcher
-   * only applies them when the variable is unset at run time. A matching
-   * project `<KEY>` is copied to `BPE_<KEY>` so it overrides the default in
-   * the built image. Each applied default is logged during the build.
+   * User-facing launch-env defaults applied beneath the user's build env.
+   * The lifecycle writes these in Paketo's `BPE_DEFAULT_<KEY>` form so the
+   * CNB launcher uses them only when the variable is unset at run time. A
+   * matching project `<KEY>` is copied to `BPE_<KEY>` so it overrides the
+   * default in the built image. Each applied default is logged.
    */
-  defaultBuildEnv?: Readonly<Record<string, string>>;
+  launchEnvDefaults?: Readonly<Record<string, string>>;
 }
 
 export interface BuildpackGroupEntry {
@@ -98,8 +97,7 @@ export const BUILDPACKS: readonly BuildpackDescriptor[] = [
     // optional procfile buildpack in every group.
     buildpackGroup: [{ id: 'paketo-buildpacks/ruby', version: '2.0.1' }],
     // Heroku-style production defaults, baked into the image at build time
-    // and overridable by project build env (a plain key is copied to the
-    // corresponding `BPE_*` launch override); harmless for non-Rails apps.
+    // and overridable by project build env; harmless for non-Rails apps.
     // (Paketo's MRI buildpack already defaults MALLOC_ARENA_MAX=2.) For Rails
     // apps the RAILS_LOG_TO_STDOUT/RAILS_SERVE_STATIC_FILES defaults are
     // shadowed by Paketo's rails-assets buildpack, which contributes `=true`
@@ -116,11 +114,11 @@ export const BUILDPACKS: readonly BuildpackDescriptor[] = [
     // deploy), and add a CLI prompt that persists a generated value as a
     // project env var — the durable store — instead of hiding the secret in
     // the build cache the way Heroku does.
-    defaultBuildEnv: {
-      BPE_DEFAULT_RAILS_ENV: 'production',
-      BPE_DEFAULT_RACK_ENV: 'production',
-      BPE_DEFAULT_RAILS_LOG_TO_STDOUT: 'enabled',
-      BPE_DEFAULT_RAILS_SERVE_STATIC_FILES: 'enabled',
+    launchEnvDefaults: {
+      RAILS_ENV: 'production',
+      RACK_ENV: 'production',
+      RAILS_LOG_TO_STDOUT: 'enabled',
+      RAILS_SERVE_STATIC_FILES: 'enabled',
     },
   },
 ];

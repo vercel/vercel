@@ -182,36 +182,41 @@ function writePlatformEnvDir(
 }
 
 /**
- * Merge the descriptor's {@link BuildpackDescriptor.defaultBuildEnv} beneath
- * the user's build env. For a `BPE_DEFAULT_<KEY>` launch default, an
- * unprefixed user value is also copied to `BPE_<KEY>` so it is embedded in
- * the image as a launch override. Returns the merged env plus a log line per
- * applied default so builds are never silently reconfigured.
+ * Merge the descriptor's launch defaults beneath the user's build env.
+ * Defaults are encoded as `BPE_DEFAULT_<KEY>`, while an unprefixed user value
+ * is copied to `BPE_<KEY>` so it is embedded in the image as a launch
+ * override. The deploy path may also provide its process env as a fallback
+ * for these declared keys when the platform omits them from `meta.buildEnv`.
+ * Returns the merged env plus a log line per applied default.
  */
 export function mergeDefaultBuildEnv(
   bp: BuildpackDescriptor,
-  buildEnv: Record<string, string> | undefined
+  buildEnv: Record<string, string> | undefined,
+  processEnv?: NodeJS.ProcessEnv
 ): { buildEnv: Record<string, string> | undefined; applied: string[] } {
-  const defaults = Object.entries(bp.defaultBuildEnv ?? {});
+  const defaults = Object.entries(bp.launchEnvDefaults ?? {});
   if (defaults.length === 0) {
     return { buildEnv, applied: [] };
   }
   const merged = { ...(buildEnv ?? {}) };
   const applied: string[] = [];
-  for (const [key, value] of defaults) {
-    const isLaunchDefault = key.startsWith('BPE_DEFAULT_');
-    const launchKey = isLaunchDefault ? key.slice('BPE_DEFAULT_'.length) : key;
-    if (isLaunchDefault) {
-      const embeddedKey = `BPE_${launchKey}`;
-      const overrideKey = `BPE_OVERRIDE_${launchKey}`;
-      if (embeddedKey in merged || overrideKey in merged) continue;
-      if (launchKey in merged) {
-        merged[embeddedKey] = merged[launchKey];
-        continue;
-      }
+  for (const [launchKey, value] of defaults) {
+    const defaultKey = `BPE_DEFAULT_${launchKey}`;
+    const embeddedKey = `BPE_${launchKey}`;
+    const overrideKey = `BPE_OVERRIDE_${launchKey}`;
+    if (embeddedKey in merged || overrideKey in merged) continue;
+    if (launchKey in merged) {
+      merged[embeddedKey] = merged[launchKey];
+      continue;
     }
-    if (key in merged) continue;
-    merged[key] = value;
+    if (defaultKey in merged) continue;
+    const processValue = processEnv?.[launchKey];
+    if (typeof processValue === 'string') {
+      merged[launchKey] = processValue;
+      merged[embeddedKey] = processValue;
+      continue;
+    }
+    merged[defaultKey] = value;
     applied.push(
       `Defaulting ${launchKey}=${value} (set the ${launchKey} environment variable to override)`
     );
@@ -600,7 +605,11 @@ export async function buildAndPushWithLifecycle(
       const reportDir = mkdtempSync(join(tmpdir(), 'vercel-cnb-report-'));
       const reportPath = join(reportDir, 'report.toml');
       chmodSync(reportDir, 0o777);
-      const defaultedEnv = mergeDefaultBuildEnv(bp, params.buildEnv);
+      const defaultedEnv = mergeDefaultBuildEnv(
+        bp,
+        params.buildEnv,
+        process.env
+      );
       for (const line of defaultedEnv.applied) {
         write(`  ${line}`);
       }
