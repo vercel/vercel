@@ -44,7 +44,10 @@ export interface FastAPICollectStaticResult {
   collectedMounts: string[];
   /** Absolute path of the build-output static directory the files were written to. */
   cdnOutputDir: string;
-  /** Passed through from discovery; see {@link FastAPIStaticDiscovery.shadowRoutes}. */
+  /**
+   * From discovery, minus any body too long for a route `src`; see
+   * {@link FastAPIStaticDiscovery.shadowRoutes}.
+   */
   shadowRoutes: string[];
   /** Frontend fallbacks to serve from the CDN, each paired with its mount prefix. */
   fallbacks: (FastAPIStaticFallback & { urlPath: string })[];
@@ -127,8 +130,9 @@ function cdnUrlPath(outputStaticDir: string, destPath: string): string {
  * Priority is plain mounts (declaration order), then frontends (longest prefix
  * first). The per-file filter enforces this.
  *
- * A failed mount is skipped; the Lambda still serves it. Returns false only
- * when every mount fails, so nothing is offloaded.
+ * A failed mount is skipped (the Lambda still serves it), but it keeps its
+ * namespace so lower-priority sources cannot fill it. Returns false only when
+ * every mount fails, so nothing is offloaded.
  */
 export async function copyFastAPIStaticMounts(
   mounts: FastAPIStaticMount[],
@@ -141,12 +145,10 @@ export async function copyFastAPIStaticMounts(
       .sort((a, b) => b.urlPath.length - a.urlPath.length),
   ];
 
+  const higherPriority: string[] = [];
   let copied = 0;
-  for (let i = 0; i < ordered.length; i++) {
-    const mount = ordered[i];
-    const higherPriority = ordered.slice(0, i).map(m => m.urlPath);
-    const urlSubPath = mount.urlPath.replace(/^\/|\/$/g, '');
-    const dest = join(outputStaticDir, urlSubPath);
+  for (const mount of ordered) {
+    const dest = join(outputStaticDir, mount.urlPath.replace(/^\/|\/$/g, ''));
     try {
       await fs.promises.mkdir(dest, { recursive: true });
       await fs.promises.cp(mount.directory, dest, {
@@ -157,15 +159,30 @@ export async function copyFastAPIStaticMounts(
           return !higherPriority.some(prefix => mountCovers(prefix, urlPath));
         },
       });
+      copied++;
+      debug(`copied ${mount.directory} -> ${dest}`);
     } catch (err) {
-      // Skip a failed mount (the Lambda still serves it) and keep the rest.
       debug(`FastAPI: skipping ${mount.urlPath}: copy failed (${err})`);
-      continue;
     }
-    copied++;
-    debug(`copied ${mount.directory} -> ${dest}`);
+    higherPriority.push(mount.urlPath);
   }
   return copied > 0;
+}
+
+// routing-utils caps a route `src` at 4096 chars (routesSchema in schemas.ts).
+const MAX_SHADOW_SRC_LENGTH = 4096;
+
+/** One shadowing route `src`: the bodies OR'd into a single capture group. */
+function shadowSrc(bodies: string[]): string {
+  return `^/((?:${bodies.join('|')})/?)$`;
+}
+
+// Length shadowSrc adds around the bodies, so a chunk's src len = this + join.
+const SHADOW_SRC_WRAPPER_LENGTH = shadowSrc([]).length;
+
+/** Whether a single shadow body's `src` fits within the route cap. */
+export function shadowBodyFitsCap(body: string): boolean {
+  return SHADOW_SRC_WRAPPER_LENGTH + body.length <= MAX_SHADOW_SRC_LENGTH;
 }
 
 /**
@@ -173,7 +190,7 @@ export async function copyFastAPIStaticMounts(
  * directory so the CDN serves the files. The original entrypoint is unchanged;
  * the Lambda retains its StaticFiles mounts but CDN routing preempts it.
  *
- * Returns null when no StaticFiles mounts are found.
+ * Returns null when no StaticFiles mounts are found, or none could be copied.
  */
 export async function runFastAPICollectStatic(
   venvPath: string,
@@ -200,59 +217,29 @@ export async function runFastAPICollectStatic(
     `Found ${mounts.length} FastAPI static mount(s): ${mounts.map(m => m.urlPath).join(', ')}`
   );
 
-  // Drop any body whose src overflows the cap alone (a custom convertor with a
-  // very long regex), keeping the rest. That path stays unshadowed, so a
-  // colliding CDN file there would win over the app.
-  const shadowable: string[] = [];
-  const dropped: string[] = [];
-  for (const body of shadowRoutes) {
-    (shadowBodyFitsCap(body) ? shadowable : dropped).push(body);
-  }
-  if (dropped.length > 0) {
-    debug(
-      `FastAPI: ${dropped.length} shadow route(s) over the ` +
-        `${MAX_SHADOW_SRC_LENGTH} char cap left unshadowed`
-    );
-  }
-
   if (!(await copyFastAPIStaticMounts(mounts, outputStaticDir))) {
     return null;
   }
 
-  const fallbacks = mounts.flatMap(m =>
-    m.fallback ? [{ urlPath: m.urlPath, ...m.fallback }] : []
-  );
+  // Drop any body whose src overflows the cap alone (a custom convertor with a
+  // very long regex), keeping the rest. That path stays unshadowed, so a
+  // colliding CDN file there would win over the app.
+  const shadowable = shadowRoutes.filter(shadowBodyFitsCap);
+  if (shadowable.length < shadowRoutes.length) {
+    debug(
+      `FastAPI: ${shadowRoutes.length - shadowable.length} shadow route(s) ` +
+        `over the ${MAX_SHADOW_SRC_LENGTH} char cap left unshadowed`
+    );
+  }
 
   return {
     collectedMounts: mounts.map(m => m.urlPath),
     cdnOutputDir: outputStaticDir,
     shadowRoutes: shadowable,
-    fallbacks,
+    fallbacks: mounts.flatMap(m =>
+      m.fallback ? [{ urlPath: m.urlPath, ...m.fallback }] : []
+    ),
   };
-}
-
-/**
- * Escape regex metacharacters in a literal path segment before it goes into a
- * route `src`. Mirrors the shim's `_escape`: shadow bodies are escaped
- * Python-side, but mount prefixes are raw URL paths and must be escaped here.
- */
-function escapeRegex(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-// routing-utils caps a route `src` at 4096 chars (routesSchema in schemas.ts).
-const MAX_SHADOW_SRC_LENGTH = 4096;
-
-function shadowSrc(bodies: string[]): string {
-  return `^/((?:${bodies.join('|')})/?)$`;
-}
-
-// Length shadowSrc adds around the bodies, so a chunk's src len = this + join.
-const SHADOW_SRC_WRAPPER_LENGTH = shadowSrc([]).length;
-
-/** Whether a single shadow body's `src` fits within the route cap. */
-export function shadowBodyFitsCap(body: string): boolean {
-  return SHADOW_SRC_WRAPPER_LENGTH + body.length <= MAX_SHADOW_SRC_LENGTH;
 }
 
 /**
@@ -269,26 +256,25 @@ export function shadowBodyFitsCap(body: string): boolean {
  *
  * A root frontend shadows every route, so one OR'd `src` can exceed the 4096
  * char route cap. Bodies are split across as many routes as fit; all route to
- * the Lambda, so the split is order-independent.
- *
- * Returns an empty list when nothing is shadowed.
+ * the Lambda, so the split is order-independent. Returns an empty list when
+ * nothing is shadowed.
  */
 export function fastapiShadowingRoutes(
   discovery: FastAPICollectStaticResult,
   lambdaPath: string
 ) {
-  if (discovery.shadowRoutes.length === 0) return [];
   const chunks: string[][] = [];
-  let currentLen = 0; // src length of the last chunk
+  // Track each chunk's src length (wrapper + bodies + `|` separators) as it
+  // grows rather than rebuilding the src to measure it.
+  let srcLen = 0;
   for (const body of discovery.shadowRoutes) {
     const current = chunks[chunks.length - 1];
-    // src len = wrapper + bodies + separators; track it, don't rebuild.
-    if (current && currentLen + 1 + body.length <= MAX_SHADOW_SRC_LENGTH) {
+    if (current && srcLen + 1 + body.length <= MAX_SHADOW_SRC_LENGTH) {
       current.push(body);
-      currentLen += 1 + body.length;
+      srcLen += 1 + body.length;
     } else {
       chunks.push([body]);
-      currentLen = SHADOW_SRC_WRAPPER_LENGTH + body.length;
+      srcLen = SHADOW_SRC_WRAPPER_LENGTH + body.length;
     }
   }
   return chunks.map(bodies => ({
@@ -301,44 +287,46 @@ export function fastapiShadowingRoutes(
 }
 
 /**
+ * Escape regex metacharacters in a literal path segment before it goes into a
+ * route `src`. Mirrors the shim's `_escape`: shadow bodies are escaped
+ * Python-side, but mount prefixes are raw URL paths and must be escaped here.
+ */
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
  * Post-filesystem CDN routes that serve each frontend's fallback file for a
  * miss under its mount. `check: true` re-resolves the rewrite to the copied
  * file so it stays a CDN hit, and it sorts the route ahead of the catch-all
- * Lambda. Sibling mounts are excluded. Each route is GET/HEAD only, since the
- * frontend only falls back for those methods.
+ * Lambda. Nested sibling mounts are excluded, and the routes are GET/HEAD only,
+ * since the frontend only falls back for those methods.
  *
  * A 404 ("404.html") fallback is served for every miss. A 200 ("index.html")
- * fallback is different: the runtime serves it only for navigation requests, so
- * the route has to match the runtime's `_is_frontend_navigation_request`.
+ * fallback is served only for navigation requests, mirroring the runtime's
+ * `_is_frontend_navigation_request` — whose definition varies by version. On
+ * fastapi 0.139.0 a navigation request needs an extension-less final path
+ * segment and an `Accept` including text/html or application/xhtml+xml with
+ * non-zero quality (a wildcard `Accept` also counts unless html is rejected
+ * with q=0). 0.140.0 keeps only the Accept requirement and drops the extension
+ * and wildcard rules.
  *
- * That check is not the same across versions. On fastapi 0.139.0 it is a
- * navigation request when the final path segment has no file extension and
- * `Accept` includes text/html or application/xhtml+xml with a non-zero quality.
- * A wildcard `Accept` also counts, unless html is explicitly rejected with q=0.
- * On fastapi 0.140.0 it is a navigation request when `Accept` includes text/html
- * or application/xhtml+xml with a non-zero quality. The extension and wildcard
- * rules were removed.
- *
- * We build the route ahead of time and don't know which version is installed,
- * so we gate on what every version agrees is navigation. The `Accept` header
- * must include text/html or xhtml with a non-zero quality. A `q=0` is rejected
- * by a negative lookahead. The final path segment must have no file extension,
- * so `/spa/app.js` is excluded. The router anchors the `has` value with `^…$`,
- * so it is wrapped in `.*`.
- *
- * This is the strict reading, so the CDN never serves index.html when the app
- * would return 404. Anything the gate rejects falls through to the Lambda,
- * which runs the real check for the installed version. The response is still
- * correct. It just isn't a CDN hit. We leave the wildcard `Accept` out for the
- * same reason: 0.140.0 does not treat it as navigation, so matching it would
- * make the CDN serve index.html where that version would not.
+ * The route is built without knowing the installed version, so it gates on the
+ * intersection every version treats as navigation: an html/xhtml `Accept` whose
+ * q=0 is rejected by a negative lookahead (wildcards excluded), plus an
+ * extension-less final segment (so `/spa/app.js` falls through). The router
+ * anchors `has` values with `^…$`, hence the `.*` wrapping. This strict gate
+ * means the CDN never serves index.html where the app would 404; anything it
+ * rejects falls through to the Lambda, which runs the real check for the
+ * installed version — still a correct response, just not a CDN hit.
  */
 export function fastapiFallbackRoutes(discovery: FastAPICollectStaticResult) {
   return discovery.fallbacks.map(fb => {
     const prefix = fb.urlPath.replace(/\/+$/, ''); // '' for a root ("/") mount
+    // Nested mounts own their own subtrees; exclude them from the fallback.
     const nested = discovery.collectedMounts
       .map(urlPath => urlPath.replace(/\/+$/, ''))
-      .filter(urlPath => urlPath !== prefix && urlPath.startsWith(`${prefix}/`))
+      .filter(urlPath => urlPath.startsWith(`${prefix}/`))
       .map(urlPath => urlPath.slice(prefix.length + 1));
     const guard = nested.length
       ? `(?!(?:${nested.map(escapeRegex).join('|')})(?:/|$))`

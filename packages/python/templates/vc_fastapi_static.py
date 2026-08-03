@@ -7,12 +7,14 @@ Writes a JSON object to the output file:
     {
       "mounts": [
         {"urlPath": str, "directory": str,
-         "fallback": {"file": str, "status": int} | null}
+         "fallback": {"file": str, "status": int} | null,
+         "frontend": bool}
       ],
       "shadowRoutes": [str, ...]
     }
 
-- "mounts" are StaticFiles / frontend directories to copy to the CDN.
+- "mounts" are StaticFiles / frontend directories to copy to the CDN;
+  "frontend" marks a low-priority app.frontend() build.
 - "mounts[].fallback" is the resolved frontend fallback file to serve for
   unmatched paths under that mount ("index.html"/"404.html"), or null for a
   plain `app.mount(StaticFiles(...))`.
@@ -52,6 +54,8 @@ class Fallback:
 
 @dataclass(frozen=True)
 class StaticMount:
+    """One mount for the "mounts" JSON array; field names are the JSON keys."""
+
     urlPath: str
     directory: str
     fallback: Fallback | None = None
@@ -84,14 +88,12 @@ def _resolve_fallback(static_app: StaticFiles) -> Fallback | None:
     index.html, mirroring the runtime behavior.
     """
     fallback = getattr(static_app, "fallback", None)
-    if not fallback:
+    if not fallback or static_app.directory is None:
         return None
-    directory = static_app.directory
+    directory = str(static_app.directory)
 
     def exists(name: str) -> bool:
-        return directory is not None and os.path.isfile(
-            os.path.join(str(directory), name)
-        )
+        return os.path.isfile(os.path.join(directory, name))
 
     if fallback == "404.html" or (fallback == "auto" and exists("404.html")):
         return Fallback(file="404.html", status=404)
@@ -215,9 +217,9 @@ class PriorRoute:
         literal route segment must equal the mount's, a `{param}` covers one
         segment, and a `{param:path}` covers this segment and everything after.
         So a param in or above the prefix (`/{full:path}`, `/{x}/items`) still
-        shadows — a plain `str.startswith` on the path missed those. Matching
-        broader than the route's exact runtime matches only over-shadows (routes
-        extra paths to the Lambda, which serves the same content), never under.
+        shadows. Matching broader than the route's exact runtime matches only
+        over-shadows (routes extra paths to the Lambda, which serves the same
+        content), never under.
         """
         base = mount.urlPath.rstrip("/")
         if base == "":
@@ -251,7 +253,7 @@ class PriorRoute:
         last = 0
         for m in _PARAM_RE.finditer(path):
             parts.append(_escape(path[last : m.start()]))
-            convertor = self.convertors.get(m.group(1)) if self.convertors else None
+            convertor = (self.convertors or {}).get(m.group(1))
             regex = getattr(convertor, "regex", None) or "[^/]+"
             parts.append("(?:" + _to_non_capturing(regex) + ")")
             last = m.end()
@@ -296,11 +298,63 @@ class Precedence:
         return any(p == q or p.startswith(q + "/") for q in self.mount_prefixes)
 
 
+def _collect_mount(
+    route: Mount, prefix: str, prior: Precedence
+) -> tuple[list[StaticMount], set[str]]:
+    """Discover one app.mount(): a StaticFiles mount serves from the CDN, a
+    Router/sub-app recurses, and a raw ASGI app owns its subtree opaquely.
+    """
+    url_prefix = prefix + route.path
+    if prior.eclipses(url_prefix):
+        # An earlier mount owns this prefix, so this mount is unreachable.
+        return [], set()
+
+    mounts: list[StaticMount] = []
+    shadow_routes: set[str] = set()
+
+    static = StaticMount.from_route(route, prefix, frontend=False)
+    if static:
+        mounts.append(static)
+        shadow_routes |= prior.shadow_bodies(static)
+        # StaticFiles(html=False) 404s the mount root (redirecting /prefix to
+        # /prefix/) and every bare subdirectory, while the CDN would serve a
+        # directory index there. Shadow those paths to the Lambda.
+        if not route.app.html:
+            shadow_routes.add(_escape_path(url_prefix))
+            shadow_routes |= _index_subdir_shadows(url_prefix, static.directory)
+
+    # A Starlette/FastAPI sub-app isn't a Router but exposes one as `.router`;
+    # a StaticFiles or raw ASGI app exposes neither.
+    sub_router = (
+        route.app
+        if isinstance(route.app, Router)
+        else getattr(route.app, "router", None)
+    )
+    if isinstance(sub_router, Router):
+        # Recurse for the sub-app's own StaticFiles mounts, then shadow the
+        # rest of its subtree to the Lambda.
+        sub_prefix = prefix + route.path.rstrip("/")
+        sub_mounts, sub_shadow = collect(sub_router, sub_prefix, prior)
+        mounts.extend(sub_mounts)
+        shadow_routes |= sub_shadow
+        shadow_routes.add(_subtree_shadow(sub_prefix, sub_mounts))
+    elif static is None:
+        # Neither StaticFiles nor a sub-app: a raw ASGI app (e.g.
+        # WSGIMiddleware) owns its subtree with nothing on the CDN. Shadow it
+        # so a lower-priority source's leaked copy there routes to the Lambda.
+        shadow_routes.add(_subtree_shadow(url_prefix, []))
+
+    # The mount now owns its subtree, eclipsing later mounts nested under it.
+    prior.add_mount(url_prefix)
+    return mounts, shadow_routes
+
+
 def collect(
     router: Router,
     prefix: str = "",
     prior: Precedence | None = None,
 ) -> tuple[list[StaticMount], set[str]]:
+    """Walk the route table for (static mounts to copy, shadow-route bodies)."""
     # A private copy so our additions don't leak back to an ancestor.
     prior = prior.child() if prior else Precedence()
 
@@ -316,49 +370,10 @@ def collect(
                 PriorRoute(prefix + route.path_format, route.param_convertors)
             )
 
-        # app.mount(): a StaticFiles serves from the CDN, a Router/sub-app
-        # recurses, and a raw ASGI app owns its subtree opaquely. Skip any that
-        # an earlier mount already eclipses.
         if isinstance(route, Mount):
-            url_prefix = prefix + route.path
-            if not prior.eclipses(url_prefix):
-                if m := StaticMount.from_route(route, prefix, frontend=False):
-                    mounts.append(m)
-                    shadow_routes |= prior.shadow_bodies(m)
-                    # StaticFiles(html=False) 404s the mount root and redirects
-                    # /prefix to /prefix/. Shadow the root so the CDN does not
-                    # serve a directory index there instead.
-                    if not route.app.html:
-                        shadow_routes.add(_escape_path(url_prefix))
-                        # Subdirectories 404 the same way; shadow those the CDN
-                        # would resolve to an index.
-                        shadow_routes |= _index_subdir_shadows(
-                            url_prefix, m.directory
-                        )
-                # A Starlette/FastAPI sub-app isn't a Router but exposes one as
-                # `.router`; a StaticFiles or raw ASGI app exposes neither.
-                sub_router = (
-                    route.app
-                    if isinstance(route.app, Router)
-                    else getattr(route.app, "router", None)
-                )
-                if isinstance(sub_router, Router):
-                    # Recurse for the sub-app's own StaticFiles mounts, then
-                    # shadow the rest of its subtree to the Lambda.
-                    sub_prefix = prefix + route.path.rstrip("/")
-                    sub_mounts, sub_shadow = collect(sub_router, sub_prefix, prior)
-                    mounts.extend(sub_mounts)
-                    shadow_routes |= sub_shadow
-                    shadow_routes.add(_subtree_shadow(sub_prefix, sub_mounts))
-                elif m is None:
-                    # Neither StaticFiles nor a sub-app: a raw ASGI app (e.g.
-                    # WSGIMiddleware) owns its subtree with nothing on the CDN.
-                    # Shadow it so a lower-priority source's leaked copy there
-                    # routes to the Lambda instead.
-                    shadow_routes.add(_subtree_shadow(url_prefix, []))
-
-                # Now owns its subtree, eclipsing later mounts nested under it.
-                prior.add_mount(url_prefix)
+            sub_mounts, sub_shadow = _collect_mount(route, prefix, prior)
+            mounts.extend(sub_mounts)
+            shadow_routes |= sub_shadow
 
         # app.include_router(): its routes aren't in this table, so harvest their
         # effective paths, prefixed with this router's prefix so a route inside a
@@ -415,35 +430,31 @@ def write_output(output_path: str, discovery: Output) -> None:
         json.dump(asdict(discovery), f)
 
 
-def main() -> None:
-    entrypoint_abs = sys.argv[1]
-    variable_name = sys.argv[2]
-    output_path = sys.argv[3]
-
+def discover(entrypoint_abs: str, variable_name: str) -> Output:
+    """Import the entrypoint and walk its app's router; empty on any failure."""
     spec = importlib.util.spec_from_file_location("__vc_app", entrypoint_abs)
     if spec is None or spec.loader is None:
-        write_output(output_path, Output())
-        return
+        return Output()
 
     mod = importlib.util.module_from_spec(spec)
     try:
         spec.loader.exec_module(mod)  # type: ignore[union-attr]
     except Exception as exc:
         print(f"vc_fastapi_static: exec_module failed: {exc}", file=sys.stderr)
-        write_output(output_path, Output())
-        return
+        return Output()
 
     app = getattr(mod, variable_name, None)
-    if app is None:
-        write_output(output_path, Output())
-        return
+    router = getattr(app, "router", None)
+    if router is None:
+        return Output()
 
-    discovery = Output()
-    if router := getattr(app, "router", None):
-        mounts, shadow_routes = collect(router)
-        discovery = Output(mounts=mounts, shadowRoutes=sorted(shadow_routes))
+    mounts, shadow_routes = collect(router)
+    return Output(mounts=mounts, shadowRoutes=sorted(shadow_routes))
 
-    write_output(output_path, discovery)
+
+def main() -> None:
+    entrypoint_abs, variable_name, output_path = sys.argv[1:4]
+    write_output(output_path, discover(entrypoint_abs, variable_name))
 
 
 main()
