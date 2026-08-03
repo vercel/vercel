@@ -1,4 +1,4 @@
 ---
 ---
 
-Run unit-test lane scripts as executable Turbo tasks with native affected-package selection.
+Run unit-test lane scripts as executable Turborepo tasks with native affected-package selection.
