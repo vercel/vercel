@@ -15,7 +15,7 @@
     "type-check": "tsc --noEmit",
     "vitest-run": "vitest -c ../../vitest.config.mts",
     "vitest-unit": "pnpm test test/unit/",
-    "vitest-e2e": "glob --absolute 'test/fixtures/**/*.test.js'"
+    "vitest-e2e": "pnpm test-e2e"
   },
   "repository": {
     "type": "git",

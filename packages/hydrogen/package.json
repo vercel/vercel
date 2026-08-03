@@ -15,7 +15,7 @@
     "test": "vitest run --config ../../vitest.config.mts",
     "type-check": "tsc --noEmit",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-e2e": "glob --absolute 'test/test.js'"
+    "vitest-e2e": "pnpm test test/test.js"
   },
   "files": [
     "dist",

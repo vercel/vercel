@@ -21,7 +21,7 @@
     "test-e2e": "pnpm test test/integration-*",
     "vitest-run": "vitest -c ../../vitest.config.mts",
     "vitest-unit": "pnpm test test/unit",
-    "vitest-e2e": "glob --absolute 'test/integration-*'"
+    "vitest-e2e": "pnpm test test/integration-"
   },
   "dependencies": {
     "@vercel/python-analysis": "workspace:*"
