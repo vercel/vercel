@@ -2,10 +2,9 @@
  * Static import-graph analysis: compute the transitive closure of modules a
  * Python application imports at startup, without executing any user code.
  *
- * The closure feeds bytecode packing: `.pyc` for modules that load at cold
- * start is valuable; everything else is a capacity cost. Both error
- * directions are safe — modules missed here (plugin loaders, imports made by
- * compiled extensions) still ship from the residual capacity tier.
+ * The closure feeds bytecode packing. Both error directions are safe:
+ * over-included modules waste capacity, and missed modules (plugin loaders,
+ * imports made by compiled extensions) still ship from residual capacity.
  *
  * Resolution semantics mirror CPython:
  * - dotted name -> `a/b/__init__.py` | `a/b.py` | PEP 420 namespace dir
@@ -17,8 +16,7 @@
  * Startup heuristics (applied on top of the raw WASM extraction):
  * - imports inside function bodies are lazy and excluded
  * - `if TYPE_CHECKING:` blocks never run at runtime and are excluded
- * - both branches of module-level `if` / `try` are included: over-
- *   approximation costs capacity, never correctness
+ * - both branches of module-level `if` / `try` are included
  */
 
 import fs from 'fs';
@@ -64,9 +62,9 @@ export interface ImportClosureOptions {
    */
   searchRoots: string[];
   /**
-   * Safety bound on parsed files. On overflow the partial closure is
-   * returned with `truncated: true` (remaining modules fall to the
-   * residual bytecode tier).
+   * Approximate safety bound on parsed files, checked per frontier batch.
+   * On overflow the partial closure is returned with `truncated: true`
+   * (remaining modules fall to the residual bytecode tier).
    */
   maxFiles?: number;
 }
@@ -157,14 +155,19 @@ async function resolveNamePartsUncached(
   return null;
 }
 
+/**
+ * `searchKey` must uniquely identify `searchDirs` (precomputed once per
+ * dir set — building keys per call dominated resolution on large apps).
+ */
 function resolveNameParts(
   parts: string[],
   searchDirs: string[],
+  searchKey: string,
   cache: ResolutionCache
 ): Promise<ResolvedName | null> {
   if (parts.length === 0) return Promise.resolve(null);
 
-  const key = JSON.stringify([searchDirs, parts]);
+  const key = `${searchKey}\0${parts.join('.')}`;
   const cached = cache.names.get(key);
   if (cached) return cached;
 
@@ -177,12 +180,14 @@ function resolveNameParts(
 async function resolveSeedName(
   parts: string[],
   searchDirs: string[],
+  searchKey: string,
   cache: ResolutionCache
 ): Promise<ResolvedName | null> {
   for (let length = parts.length; length > 0; length--) {
     const resolved = await resolveNameParts(
       parts.slice(0, length),
       searchDirs,
+      searchKey,
       cache
     );
     if (resolved) return resolved;
@@ -208,11 +213,13 @@ async function resolveImport(
   stmt: ImportStmt,
   importerPath: string,
   roots: string[],
+  rootsKey: string,
   cache: ResolutionCache
 ): Promise<string[]> {
   const resolved = new Set<string>();
 
   let search = roots;
+  let searchKey = rootsKey;
   if (stmt.level > 0) {
     // level=1 -> the importer's own package directory.
     let base = dirname(importerPath);
@@ -220,13 +227,14 @@ async function resolveImport(
       base = dirname(base);
     }
     search = [base];
+    searchKey = base;
   }
 
   const parts = stmt.module ? stmt.module.split('.') : [];
   let target: string;
   let targetKind: FsKind;
   if (parts.length > 0) {
-    const name = await resolveNameParts(parts, search, cache);
+    const name = await resolveNameParts(parts, search, searchKey, cache);
     if (!name) return [];
     target = name.target;
     targetKind = name.targetKind;
@@ -247,7 +255,7 @@ async function resolveImport(
   if (subDir) {
     for (const name of stmt.names) {
       if (name === '*') continue;
-      const sub = await resolveNameParts([name], [subDir], cache);
+      const sub = await resolveNameParts([name], [subDir], subDir, cache);
       if (sub) {
         if (sub.targetKind === 'file') resolved.add(sub.target);
         for (const init of sub.parentChain) {
@@ -278,6 +286,7 @@ export async function collectImportClosure({
   maxFiles = DEFAULT_MAX_FILES,
 }: ImportClosureOptions): Promise<ImportClosureResult> {
   const roots = searchRoots.map(r => resolve(r));
+  const rootsKey = roots.join('\0');
   const cache: ResolutionCache = {
     statKinds: new Map(),
     names: new Map(),
@@ -288,7 +297,12 @@ export async function collectImportClosure({
 
   for (const seed of seeds) {
     if (isModuleNameSeed(seed)) {
-      const name = await resolveSeedName(seed.split('.'), roots, cache);
+      const name = await resolveSeedName(
+        seed.split('.'),
+        roots,
+        rootsKey,
+        cache
+      );
       if (name) {
         if (name.targetKind === 'file') frontier.push(name.target);
         frontier.push(...name.parentChain);
@@ -309,6 +323,9 @@ export async function collectImportClosure({
     for (const path of batch) {
       visited.add(path);
     }
+    // Checked per batch: visited may overshoot maxFiles by one frontier,
+    // and the final batch joins the closure unparsed. Both are safe —
+    // truncation only shrinks the ranking input.
     if (visited.size > maxFiles) {
       truncated = true;
       break;
@@ -326,7 +343,7 @@ export async function collectImportClosure({
         const files = await Promise.all(
           stmts
             .filter(s => s.isModuleLevel && !s.inTypeChecking)
-            .map(s => resolveImport(s, importerPath, roots, cache))
+            .map(s => resolveImport(s, importerPath, roots, rootsKey, cache))
         );
         return files.flat();
       })
