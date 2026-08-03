@@ -1,98 +1,64 @@
 # Affected Testing Strategy
 
-This repository implements an affected testing strategy, which runs tests only on packages that have been changed or are affected by changes.
+The pull request workflow uses Turborepo's native affected-package detection. Package
+test scripts are executable Turbo tasks; the workflow does not generate package
+or test-file manifests.
 
-Unit tests use Turborepo's native `--affected` package selection. The CLI unit
-suite runs in seven Vitest shards on Linux and macOS with Node.js 20 and 22, and
-on Windows with Node.js 22. E2E lanes also use native `--affected` selection.
-The legacy planner remains temporarily for transition reporting and is
-described below.
+The temporary no-cache nightly workflow still uses the legacy test-file planner.
 
-To inspect the affected unit tasks locally, run:
+## Pull Requests
 
-```bash
-TURBO_SCM_BASE=<base-sha> TURBO_SCM_HEAD=<head-sha> \
-  pnpm turbo run vitest-unit --affected --dry=json
-```
+Each test lane checks out the pull request head with full Git history and sets:
 
-## Legacy Transition Reporting
+- `TURBO_SCM_BASE` to the pull request base commit.
+- `TURBO_SCM_HEAD` to the pull request head commit.
 
-1. **Git Change Detection**: Uses turborepos's GraphQL query API to detect which packages have been modified since a base commit
-2. **Affected Package Resolution**: Finds packages that:
-   - Have direct file changes
-   - Depend on packages that have changed
-   - Have test-related tasks (test, vitest, type-check)
-3. **E2E Tests**: Analyzes changed files to determine when to run all e2e tests:
-   - Infrastructure changes (CI workflows, turbo.json, root package.json) trigger all e2e tests
-   - Build utility changes trigger all e2e tests
-   - Package-specific changes only trigger affected package e2e tests
-4. **Selective Testing**: Only runs tests for affected packages using turbo's `--filter` functionality
-
-## Key Files
-
-- `utils/affected-query.gql` - GraphQL query for turbo to find affected packages
-- `utils/get-affected-packages.js` - Script that queries turbo and filters affected packages
-- `utils/chunk-tests.js` - Updated to use affected package detection
-- `utils/test-affected.js` - Local testing script to preview affected packages
-- `.github/workflows/test.yml` - Updated CI workflow
-
-## Local Testing
-
-To test the affected package detection locally:
+The lane then runs its task with `--affected`, for example:
 
 ```bash
-# Test against a specific commit
-node utils/test-affected.js main
-
-# Test against current environment
-TURBO_BASE_SHA=main node utils/test-affected.js
+turbo run vitest-unit --affected
+turbo run vitest-e2e --affected
 ```
 
-## CI Behavior
+Turbo runs the task in directly changed packages and affected dependents. The
+complete task is executed in every affected package; Vitest does not perform a
+second changed-file reduction.
 
-### Pull Requests
+## Global Changes
 
-- Compares against the PR base branch to find affected packages
-- Only runs tests for packages that have been modified or depend on modified packages
-- Significantly reduces CI time for targeted changes
+Repository-wide inputs are declared in `turbo.json` under `globalDependencies`.
+These include workflows, the lockfile, root package and cache-key metadata,
+shared test helpers, test and build utilities, CLI startup code, and root Vitest
+configuration. Changes to them invalidate tasks across the workspace.
 
-### Main Branch / Full Runs
+## Test Lanes
 
-- When no base SHA is available, falls back to testing all packages
-- Ensures comprehensive testing when needed
+- `vitest-unit`: Linux and macOS on Node.js 20 and 22, plus Windows on Node.js 22.
+  The CLI unit suite runs separately in seven Vitest shards on each platform.
+- `vitest-e2e`: Primary E2E coverage on Linux and Node.js 22.
+- `vitest-e2e-node-20`: Firewall E2E coverage on Linux and Node.js 20.
+- `test-e2e-node-all-versions`: CLI integration coverage on Node.js 20, 22,
+  and 24.
+- `test-next-local`: Local Next.js integration coverage on Node.js 22.
+- `test-dev`: CLI development coverage on Linux and macOS with Node.js 22.
 
-## Environment Variables
+The workflow uses a globally installed Turbo for a dry run before installing
+workspace dependencies. Lanes with no affected task skip dependency,
+toolchain, and deployment setup.
 
-- `TURBO_BASE_SHA`: Base commit SHA to compare changes against
-- `GITHUB_BASE_REF`: Fallback for GitHub Actions environment
+## Local Reproduction
 
-## E2E Test Handling
+The comparison commits and full Git history must be available locally:
 
-The system has special logic for e2e tests since they often test cross-package integration:
+```bash
+TURBO_SCM_BASE=<base-sha> \
+TURBO_SCM_HEAD=<head-sha> \
+pnpm turbo run vitest-unit --affected --dry=json
+```
 
-### Infrastructure Files That Trigger All E2E Tests
+Remove `--dry=json` to execute the affected unit tests. Replacing `vitest-unit`
+with an E2E lane task reproduces affected-task selection; executing E2E tests
+also requires the deployment artifacts and environment configured by CI.
 
-- `.github/workflows/` - CI workflow changes
-- `turbo.json` - Turbo configuration changes
-- `package.json` - Root dependency changes
-- `pnpm-lock.yaml` - Lock file changes
-- `utils/*.js` - Build/test utility changes
-- `test/lib/` - Shared test utilities
-- `packages/cli/scripts/start.js` - CLI entry point
-- `packages/build-utils/src/` - Build utilities affecting all builders
-
-## Implementation Details
-
-The affected testing works by:
-
-1. Using turbo's GraphQL API to query for packages affected by changes since the base commit
-2. Filtering packages that have test-related tasks
-3. Analyzing changed files for infrastructure changes that affect e2e tests globally
-4. Generating turbo filters like `--filter=package-name...` (the `...` includes dependents)
-5. Passing these filters to turbo commands to limit scope
-
-This approach ensures that:
-
-- If package A changes, package A and packages that depend on A are tested
-- If infrastructure changes, all e2e tests run to catch integration issues
-- Unit tests still only run for directly affected packages
+Packages participate in a lane by defining a script with the lane's exact task
+name. The same task must be configured in the root `turbo.json`.
