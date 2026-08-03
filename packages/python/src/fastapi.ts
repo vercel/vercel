@@ -134,7 +134,8 @@ function cdnUrlPath(outputStaticDir: string, destPath: string): string {
  * Priority is plain mounts (declaration order), then frontends (longest prefix
  * first). The per-file filter enforces this.
  *
- * Returns false if any copy fails, so the caller can skip CDN offload.
+ * A failed mount is skipped; the Lambda still serves it. Returns false only
+ * when every mount fails, so nothing is offloaded.
  */
 export async function copyFastAPIStaticMounts(
   mounts: FastAPIStaticMount[],
@@ -147,6 +148,7 @@ export async function copyFastAPIStaticMounts(
       .sort((a, b) => b.urlPath.length - a.urlPath.length),
   ];
 
+  let copied = 0;
   for (let i = 0; i < ordered.length; i++) {
     const mount = ordered[i];
     const higherPriority = ordered.slice(0, i).map(m => m.urlPath);
@@ -163,14 +165,14 @@ export async function copyFastAPIStaticMounts(
         },
       });
     } catch (err) {
-      debug(
-        `FastAPI: copy ${mount.directory} -> ${dest} failed (${err}), skipping CDN`
-      );
-      return false;
+      // Skip a failed mount (the Lambda still serves it) and keep the rest.
+      debug(`FastAPI: skipping ${mount.urlPath}: copy failed (${err})`);
+      continue;
     }
+    copied++;
     debug(`copied ${mount.directory} -> ${dest}`);
   }
-  return true;
+  return copied > 0;
 }
 
 export async function runFastAPICollectStatic(
