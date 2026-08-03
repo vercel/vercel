@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import path from 'path';
-import { getImportClosureOptions } from '../src/import-closure';
+import { getImportClosureOptions, withTimeout } from '../src/import-closure';
 
 describe('getImportClosureOptions', () => {
   it('includes runtime, framework, and worker startup modules', () => {
@@ -64,5 +64,24 @@ describe('getImportClosureOptions', () => {
 
     expect(options.seeds).toEqual(['vercel_runtime.vc_init', 'worker']);
     expect(options.searchRoots).toEqual([workPath]);
+  });
+});
+
+describe('withTimeout', () => {
+  it('resolves the value when the promise settles in time', async () => {
+    await expect(withTimeout(Promise.resolve(42), 1000, 'test')).resolves.toBe(
+      42
+    );
+  });
+
+  it('resolves undefined when the promise exceeds the timeout', async () => {
+    const never = new Promise<number>(() => {});
+    await expect(withTimeout(never, 10, 'test')).resolves.toBeUndefined();
+  });
+
+  it('rejects when the promise rejects in time', async () => {
+    await expect(
+      withTimeout(Promise.reject(new Error('boom')), 1000, 'test')
+    ).rejects.toThrow('boom');
   });
 });

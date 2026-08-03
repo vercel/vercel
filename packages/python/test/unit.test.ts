@@ -54,6 +54,17 @@ vi.mock('execa', () => ({
   default: vi.fn(),
 }));
 
+// Pass-through wrapper so tests can assert whether the import closure ran.
+vi.mock('@vercel/python-analysis', async () => {
+  const real = await vi.importActual<typeof import('@vercel/python-analysis')>(
+    '@vercel/python-analysis'
+  );
+  return {
+    ...real,
+    collectImportClosure: vi.fn(real.collectImportClosure),
+  };
+});
+
 // Imports after mocks are set up (vitest hoists vi.mock calls)
 import {
   resolvePythonVersion,
@@ -62,6 +73,7 @@ import {
   getInstalledPythonsFromFilesystem,
 } from '../src/version';
 import type { PythonConstraint, PythonPackage } from '@vercel/python-analysis';
+import { collectImportClosure } from '@vercel/python-analysis';
 import { build, getDevSidecars, prepareCache } from '../src/index';
 import type { BuildResultV3, BuildResultV2 } from '@vercel/build-utils';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
@@ -1613,14 +1625,23 @@ describe('file exclusions', () => {
 
 describe('bundle optimization telemetry', () => {
   const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
+  const originalDisableAnalysisEnv =
+    process.env.VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS;
   const MB = 1024 * 1024;
 
   afterEach(() => {
     vi.mocked(execa).mockReset();
+    vi.mocked(collectImportClosure).mockClear();
     if (originalCompileAllEnv === undefined) {
       delete process.env.VERCEL_PYTHON_COMPILEALL;
     } else {
       process.env.VERCEL_PYTHON_COMPILEALL = originalCompileAllEnv;
+    }
+    if (originalDisableAnalysisEnv === undefined) {
+      delete process.env.VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS;
+    } else {
+      process.env.VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS =
+        originalDisableAnalysisEnv;
     }
   });
 
@@ -1747,9 +1768,39 @@ describe('bundle optimization telemetry', () => {
       expect(
         events.some(event => event.name === 'vc.builder.python.bundle.optimize')
       ).toBe(false);
+      expect(collectImportClosure).not.toHaveBeenCalled();
     } finally {
       logSpy.mockRestore();
     }
+  });
+
+  it('runs the import closure on overflow by default', async () => {
+    const { logSpy } = await buildWithBytecode({
+      payloadSize: 218.5 * MB,
+      pycSize: MB,
+    });
+    logSpy.mockRestore();
+
+    expect(collectImportClosure).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips the import closure when VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS is set', async () => {
+    process.env.VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS = '1';
+    const { events, logSpy } = await buildWithBytecode({
+      payloadSize: 218.5 * MB,
+      pycSize: MB,
+    });
+    logSpy.mockRestore();
+
+    expect(collectImportClosure).not.toHaveBeenCalled();
+    // Bytecode still ships, selected by size only.
+    const optimizeSpans = events.filter(
+      event => event.name === 'vc.builder.python.bundle.optimize'
+    );
+    expect(optimizeSpans).toHaveLength(1);
+    expect(optimizeSpans[0].tags).toEqual({
+      'python.bundle.optimize.bytecodeCoveragePercent': '50.00',
+    });
   });
 });
 

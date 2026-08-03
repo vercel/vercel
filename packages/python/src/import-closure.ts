@@ -1,4 +1,5 @@
 import { join } from 'path';
+import { debug } from '@vercel/build-utils';
 import type { ImportClosureOptions } from '@vercel/python-analysis';
 import {
   generatedPythonPathToModule,
@@ -11,6 +12,29 @@ import { getWorkflowOutputPath, type PyprojectWorkflow } from './workflows';
 import type { WorkflowServingMode } from './sdk-detection';
 
 const RUNTIME_BOOTSTRAP_MODULE = 'vercel_runtime.vc_init';
+
+/** Converts a stalled import closure into a skipped ranking input. */
+export const IMPORT_CLOSURE_TIMEOUT_MS = 30_000;
+
+/** Resolve to undefined when `promise` exceeds `ms`. Never rejects on time. */
+export async function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  label: string
+): Promise<T | undefined> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<undefined>(resolvePromise => {
+    timer = setTimeout(() => {
+      debug(`${label} timed out after ${ms}ms`);
+      resolvePromise(undefined);
+    }, ms);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export function getImportClosureOptions({
   workPath,

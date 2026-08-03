@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { FileBlob, type Files } from '@vercel/build-utils';
 import {
   annotateBytecodeItems,
   fillBytecodeWithinCapacity,
+  isBytecodeAnalysisDisabled,
   rankBytecodeItems,
 } from '../src/bytecode-packing';
 import { moduleKeysForClosurePaths } from '../src/index';
@@ -25,6 +26,33 @@ function makeItem(
     sourceAbsPath: sourceAbsPath ?? `/src/${moduleKey ?? bundlePath}`,
   };
 }
+
+describe('isBytecodeAnalysisDisabled', () => {
+  const original = process.env.VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS;
+
+  afterEach(() => {
+    if (original === undefined) {
+      delete process.env.VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS;
+    } else {
+      process.env.VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS = original;
+    }
+  });
+
+  it.each(['1', 'true', 'TRUE', 'True'])('is disabled for %j', value => {
+    process.env.VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS = value;
+    expect(isBytecodeAnalysisDisabled()).toBe(true);
+  });
+
+  it.each(['', '0', 'false', 'no'])('is enabled for %j', value => {
+    process.env.VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS = value;
+    expect(isBytecodeAnalysisDisabled()).toBe(false);
+  });
+
+  it('is enabled when unset', () => {
+    delete process.env.VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS;
+    expect(isBytecodeAnalysisDisabled()).toBe(false);
+  });
+});
 
 describe('rankBytecodeItems', () => {
   it('ranks imported modules ahead of unimported ones', () => {

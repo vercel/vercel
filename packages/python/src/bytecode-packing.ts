@@ -12,6 +12,19 @@
 import type { Files } from '@vercel/build-utils';
 import type { BytecodeItem } from './compileall';
 
+/**
+ * Kill switch for the import closure and timing-based ranking, set to
+ * `1`/`true`. Selection falls back to per-file size ordering; bytecode
+ * still ships.
+ */
+export function isBytecodeAnalysisDisabled(): boolean {
+  const val = process.env.VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS;
+  if (val === undefined || val === '') return false;
+
+  const lower = val.toLowerCase();
+  return lower === '1' || lower === 'true';
+}
+
 export interface RankedBytecodeItem extends BytecodeItem {
   imported: boolean;
   /** Compile seconds for the source file; undefined when timings are missing. */

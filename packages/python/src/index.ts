@@ -108,6 +108,7 @@ import {
 import {
   annotateBytecodeItems,
   fillBytecodeWithinCapacity,
+  isBytecodeAnalysisDisabled,
   rankBytecodeItems,
 } from './bytecode-packing';
 import {
@@ -137,7 +138,11 @@ import {
   WORKFLOW_TOPIC_PATTERN,
   type PyprojectWorkflow,
 } from './workflows';
-import { getImportClosureOptions } from './import-closure';
+import {
+  getImportClosureOptions,
+  IMPORT_CLOSURE_TIMEOUT_MS,
+  withTimeout,
+} from './import-closure';
 
 const writeFile = fs.promises.writeFile;
 const PYTHON_ENTRYPOINT_DOCS_URL =
@@ -1532,26 +1537,31 @@ export const build: BuildVX = async ({
       };
 
       // Static import closure (no user code runs), computed at most once per
-      // build and only when a bytecode fill overflows. Undefined on failure,
-      // degrading ranking to compile density only.
+      // build and only when a bytecode fill overflows. Undefined on failure
+      // or timeout, degrading ranking to compile density only.
       let importClosurePromise: Promise<Set<string> | undefined> | undefined;
       const getImportClosureKeys = (): Promise<Set<string> | undefined> => {
         importClosurePromise ??= (async () => {
           try {
             const sitePackageDirs = installedDistributions.getSitePackageDirs();
-            const closure = await collectImportClosure(
-              getImportClosureOptions({
-                workPath,
-                entrypoint,
-                frameworkSeeds: importSeeds,
-                extraPythonPath: hookResult?.extraPythonPath,
-                subscriberDeclarations,
-                subscribers,
-                workflows,
-                workflowMode,
-                sitePackageDirs,
-              })
+            const closure = await withTimeout(
+              collectImportClosure(
+                getImportClosureOptions({
+                  workPath,
+                  entrypoint,
+                  frameworkSeeds: importSeeds,
+                  extraPythonPath: hookResult?.extraPythonPath,
+                  subscriberDeclarations,
+                  subscribers,
+                  workflows,
+                  workflowMode,
+                  sitePackageDirs,
+                })
+              ),
+              IMPORT_CLOSURE_TIMEOUT_MS,
+              'import closure'
             );
+            if (!closure) return undefined;
             const keys = moduleKeysForClosurePaths(
               closure.files,
               workPath,
@@ -1602,9 +1612,23 @@ export const build: BuildVX = async ({
           .trace(async optimizeSpan => {
             console.log('Optimizing Python bundle...');
 
-            const importedModules = await getImportClosureKeys();
+            // Kill switch: revert to per-file size ordering.
+            const analysisDisabled = isBytecodeAnalysisDisabled();
+            if (analysisDisabled) {
+              debug(
+                'bytecode analysis disabled via ' +
+                  'VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS; ranking by size'
+              );
+            }
+            const importedModules = analysisDisabled
+              ? undefined
+              : await getImportClosureKeys();
             const ranked = rankBytecodeItems(
-              annotateBytecodeItems(items, importedModules, timings)
+              annotateBytecodeItems(
+                items,
+                importedModules,
+                analysisDisabled ? undefined : timings
+              )
             );
             const selectedSize =
               capacity - fillBytecodeWithinCapacity(files, ranked, capacity);
