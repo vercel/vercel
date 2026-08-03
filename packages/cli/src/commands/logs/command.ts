@@ -10,7 +10,7 @@ export const logsCommand = {
   aliases: ['log'],
   description:
     'Display request logs for a project.\n\n' +
-    'Use --follow to stream live runtime logs from a deployment. By default, --follow prefers the latest READY production deployment and falls back to your latest READY deployment.\n\n' +
+    'Use --follow to stream live runtime logs from a deployment. By default, --follow prefers the active production deployment and falls back to your latest READY deployment.\n\n' +
     'Source types: λ = serverless, ε = edge/middleware, ◇ = static/external',
   arguments: [
     {
@@ -34,7 +34,7 @@ export const logsCommand = {
       type: String,
       deprecated: false,
       description:
-        'Filter by environment: production or preview; with --follow, select the latest production deployment or your latest preview deployment',
+        'Filter by environment: production or preview; with --follow, select the active production deployment or your latest preview deployment',
     },
     {
       name: 'level',
@@ -190,7 +190,7 @@ export const logsCommand = {
       value: `${packageName} logs --branch feature-x`,
     },
     {
-      name: 'Stream runtime logs for the latest production deployment',
+      name: 'Stream runtime logs for the active production deployment',
       value: `${packageName} logs --follow`,
     },
     {
