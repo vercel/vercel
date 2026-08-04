@@ -54,6 +54,7 @@ import highlight from './util/output/highlight';
 import { parseArguments } from './util/get-args';
 import getUser from './util/get-user';
 import getTeams from './util/teams/get-teams';
+import getTeamByIdOrSlug from './util/teams/get-team-by-id-or-slug';
 import Client from './util/client';
 import { setFetchDispatcher } from './util/fetch';
 import { printError } from './util/error';
@@ -869,8 +870,22 @@ const main = async () => {
     // name, since the personal-account check below would reject it. So resolve
     // teams first and only fall back to personal-account handling when no team
     // matches the scope.
-    const related =
+    let related =
       teams && teams.find(team => team.id === scope || team.slug === scope);
+
+    // The `/teams` list only contains teams where the user is a direct
+    // member. The user can also hold a "virtual membership" to a team. In
+    // that case the list does not contain the team, but `GET /teams/:id`
+    // still returns it. Look up the scope directly before we reject it.
+    if (!related && !scopeMatchesUserIdentity) {
+      try {
+        related = await getTeamByIdOrSlug(client, scope);
+      } catch (err: unknown) {
+        output.debug(
+          `Direct team lookup for scope "${scope}" failed: ${errorToString(err)}`
+        );
+      }
+    }
 
     if (related) {
       client.config.currentTeam = related.id;
