@@ -1,5 +1,18 @@
 # vercel-runtime
 
+## 0.18.0
+
+### Minor Changes
+
+- a029198: Add private invocation hooks: Vercel-owned integrations can call
+  `run_on_next_invocation()` to run work once on an upcoming request, off the
+  response path and with that request's context. Failures retry with backoff on
+  later requests, and `repeat_after_seconds` re-arms a hook after each success.
+- 8f1364b: Add invocation-scoped `wait_until` to the Python runtime. Awaitables attached
+  during a request are drained after the response is sent, bounded by the
+  Function's maximum duration, and exposed to the SDK's
+  `vercel.functions.wait_until()` through the invocation context.
+
 ## 0.17.0
 
 ### Minor Changes

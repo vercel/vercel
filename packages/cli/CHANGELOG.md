@@ -1,5 +1,44 @@
 # vercel
 
+## 58.6.0
+
+### Minor Changes
+
+- cf8672c: Add `--zdr-exempt` to `vercel ai-gateway api-keys create`. When passed, the key is created with the `zdr` metadata fact exempting it from the team's ZDR-only model restriction; the API only accepts it from team owners. Adds telemetry tracking for the new flag.
+- f10dac6: Teach `vercel connect create` the connection methods a service publishes.
+
+  When a service describes how it can be connected to, the command asks which product to connect to and how, shows the provider's setup steps, prompts for the credentials that method needs, and lets the server resolve the endpoints and connector type.
+
+  Adds `--connection-method`, `--target`, `--param KEY=VALUE`, and `--yes` for scripted use, and adds `service`, `connectionMethod`, and `target` to `--json` output. The positional argument is now documented as `<service>`; it was called `type`, which read as a synonym for the unrelated `--connector-type` flag.
+
+  Services that publish no connection methods, and `--data` on its own, keep their existing behavior.
+
+- 360ea93: Describe a service's connection methods in `vercel connect create <service> --help`.
+
+  Help for a specific service now lists the products it exposes, each connection method with the credentials and template params it needs, and a runnable example per method. The generic flag reference stays on `vercel connect create --help`, which the service-specific output points to.
+
+  Falls back to static help when the service is unknown or the API is unreachable, so `--help` never depends on a working connection.
+
+- fff07a8: Stop setting VERCEL_DEPLOYMENT_ID=dpl_dev when running vc dev. Workflows interpreted that as running on a real deployment.
+
+### Patch Changes
+
+- f5d7860: Allow secrets in Development when `VERCEL_ENV_VAR_CONFIG_SECRET_UI` is enabled.
+- 7fa6f6a: Show readable non-sensitive values and sensitivity types in `vercel env ls`, and support `--git-branch` in `vercel env add`.
+- 58d84ee: Keep builders out of the native binary SEA snapshot and load them exclusively through `importBuilders`:
+
+  - detect-entrypoint loads builder `detectEntrypoint` helpers via `importBuilders` instead of static builder imports, and the binary build refuses to stage any `package.json#builders` package.
+  - Treat SEA `ENOENT` like `MODULE_NOT_FOUND` when resolving builders so the install fallback runs for VFS ghost paths.
+  - Enforce exact `builders` manifest pins for bare builder specs (exact-version pins only — range-shaped pins cannot force reinstalls), reinstalling into `.vercel/builders` on mismatch, including CLI-local resolves.
+  - `utils/pack.ts` rewrites `builders` entries to preview tarball URLs; `importBuilders` installs bare specs from those URL pins and revalidates cached URL-pinned builders against the CLI's preview pack suffix (`-${sha}`), reinstalling when the cache came from a different preview deployment.
+  - Tag `vc.installBuilders` spans with `pinned` / `pinnedPackages` when installs use pinned versions.
+
+  Also fixes affected unit-test CI steps to invoke global turbo@2.10.8 instead of workspace pnpm turbo 2.5.0, which rejects combining `--affected` with `--filter`.
+
+- 75db948: Build the linux native CLI Node runtime on manylinux_2_28 so the published binary stays at glibc ≤ 2.28 (runs on Amazon Linux 2023 / Vercel Sandboxes).
+- Updated dependencies [c446421]
+  - @vercel/python@6.55.2
+
 ## 58.5.1
 
 ### Patch Changes

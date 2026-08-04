@@ -1,5 +1,12 @@
 # @vercel/python
 
+## 6.55.2
+
+### Patch Changes
+
+- c446421: Generalize queue adapter injection to per-adapter dependency checks and
+  support installing an integration before the subscriber module imports.
+
 ## 6.55.1
 
 ### Patch Changes
