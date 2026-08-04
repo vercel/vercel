@@ -20,7 +20,7 @@
     "test-unit": "vitest run --config ../../vitest.config.mts test/unit",
     "test-e2e": "pnpm test test/integration-*",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/unit.*test.ts'",
+    "vitest-unit": "pnpm test test/unit",
     "vitest-e2e": "glob --absolute 'test/integration-*'"
   },
   "dependencies": {

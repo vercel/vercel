@@ -2,7 +2,7 @@ import type { BuildResultV2Typical } from '@vercel/build-utils';
 import { sanitizeConsumerName } from '@vercel/build-utils';
 import { EventEmitter } from 'node:events';
 import { readFileSync, statSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { basename, dirname } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { build, prepareCache, startDevServer } from '../src';
 import { __resetStorageDriverCache } from '../src/storage-driver';
@@ -344,7 +344,11 @@ describe('@vercel/container', () => {
     // Everything exists (Dockerfile, store dir, …) except the registry auth
     // file, which is only present when the build container provisioned it.
     existsSyncMock.mockImplementation((p: unknown) => {
-      if (typeof p === 'string' && p.includes('containers/auth.json')) {
+      if (
+        typeof p === 'string' &&
+        basename(p) === 'auth.json' &&
+        basename(dirname(p)) === 'containers'
+      ) {
         return Boolean(options?.authFilePresent);
       }
       return true;
@@ -822,7 +826,11 @@ describe('@vercel/container', () => {
     // No provisioned auth file here, so the builder performs an explicit
     // login (the docker/local path) which we simulate rejecting.
     existsSyncMock.mockImplementation((p: unknown) => {
-      if (typeof p === 'string' && p.includes('containers/auth.json')) {
+      if (
+        typeof p === 'string' &&
+        basename(p) === 'auth.json' &&
+        basename(dirname(p)) === 'containers'
+      ) {
         return false;
       }
       return true;

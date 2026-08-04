@@ -16,7 +16,7 @@
     "build": "node ../../utils/build.mjs",
     "test": "vitest run --config ../../vitest.config.mts --coverage",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/*.test.ts'",
+    "vitest-unit": "pnpm vitest-run --run",
     "type-check": "tsc --noEmit"
   },
   "license": "Apache-2.0",

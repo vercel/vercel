@@ -18,7 +18,7 @@
     "test-unit": "pnpm test",
     "type-check": "tsc --noEmit",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/**/*.test.js' 'test/**/*.test.ts' 'test/**/*.test.mjs' 'test/**/*.test.mts' 'tests/**/*.test.js' 'tests/**/*.test.ts'"
+    "vitest-unit": "pnpm test"
   },
   "dependencies": {
     "smol-toml": "1.5.2",

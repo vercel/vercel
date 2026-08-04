@@ -12,7 +12,7 @@
     "test": "vitest run --config ../../vitest.config.mts",
     "test-unit": "pnpm test tests/unit",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'tests/unit'"
+    "vitest-unit": "pnpm test tests/unit/"
   },
   "devDependencies": {
     "@types/node": "20.11.0",

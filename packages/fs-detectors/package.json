@@ -20,7 +20,7 @@
     "test-e2e": "pnpm test test/integration.test.ts",
     "type-check": "tsc --noEmit",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/unit.*test.*'",
+    "vitest-unit": "pnpm test test/unit.",
     "vitest-e2e": "glob --absolute 'test/integration.test.ts'"
   },
   "dependencies": {

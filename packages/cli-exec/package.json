@@ -28,7 +28,7 @@
     "build": "node ../../utils/build.mjs",
     "test": "vitest run -c ../../vitest.config.mts",
     "vitest-run": "vitest run -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'tests/*.test.ts'",
+    "vitest-unit": "pnpm vitest-run --run",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
