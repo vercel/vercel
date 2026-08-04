@@ -332,26 +332,30 @@ export function queueTopicPatternsOverlap(
 /**
  * Python lines that activate the queue adapter integrations required by
  * the project's dependencies. The adapter packages have no import-time
- * side effects, so nothing else activates them. Activation runs after
- * the subscriber module is imported: each installer retroactively
- * registers subscriptions for apps the import created. And because the
- * project demonstrably depends on the upstream package, a failed import
- * or install is a hard error rather than something to skip.
+ * side effects, so nothing else activates them. Most adapters install after
+ * import and retroactively register framework objects; adapters that must
+ * observe declarations during import opt into the earlier phase. Because the
+ * project demonstrably depends on the upstream package, a failed import or
+ * install is a hard error rather than something to skip.
  */
 function createIntegrationInstallLines(
   integrations: QueueIntegration[],
-  { serving }: { serving: boolean }
+  { serving, beforeImport }: { serving: boolean; beforeImport: boolean }
 ): string[] {
-  return integrations.flatMap(({ module, installer, servingActivator }) => [
-    `from ${module} import ${installer}`,
-    `${installer}()`,
-    // Queue-serving processes must also activate consumption (register
-    // push callbacks, start the adapter's embedded worker); introspection
-    // and publish-only processes must not.
-    ...(serving && servingActivator
-      ? [`from ${module} import ${servingActivator}`, `${servingActivator}()`]
-      : []),
-  ]);
+  return integrations
+    .filter(
+      integration => Boolean(integration.installBeforeImport) === beforeImport
+    )
+    .flatMap(({ module, installer, servingActivator }) => [
+      `from ${module} import ${installer}`,
+      `${installer}()`,
+      // Queue-serving processes must also activate consumption (register
+      // push callbacks, start the adapter's embedded worker); introspection
+      // and publish-only processes must not.
+      ...(serving && servingActivator
+        ? [`from ${module} import ${servingActivator}`, `${servingActivator}()`]
+        : []),
+    ]);
 }
 
 export function createQueueHandlerModule(
@@ -362,8 +366,15 @@ export function createQueueHandlerModule(
     'import importlib',
     'import vercel.queue',
     '',
+    ...createIntegrationInstallLines(integrations, {
+      serving: true,
+      beforeImport: true,
+    }),
     `importlib.import_module(${JSON.stringify(declaration.moduleName)})`,
-    ...createIntegrationInstallLines(integrations, { serving: true }),
+    ...createIntegrationInstallLines(integrations, {
+      serving: true,
+      beforeImport: false,
+    }),
     'app = vercel.queue.asgi_app()',
     '',
   ].join('\n');
@@ -537,8 +548,15 @@ function createQueueIntrospectionScript(
 ): string {
   return [
     'import importlib, json, sys',
+    ...createIntegrationInstallLines(integrations, {
+      serving: false,
+      beforeImport: true,
+    }),
     `importlib.import_module(${JSON.stringify(moduleName)})`,
-    ...createIntegrationInstallLines(integrations, { serving: false }),
+    ...createIntegrationInstallLines(integrations, {
+      serving: false,
+      beforeImport: false,
+    }),
     'from vercel.queue import get_subscriptions',
     'subs = [',
     '    {k: v for k, v in {',

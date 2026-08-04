@@ -333,6 +333,21 @@ describe('conditional Python adapter vendoring', () => {
     ).resolves.toEqual([]);
   });
 
+  it('keeps injecting other adapters when one is declared directly', async () => {
+    await expect(
+      getConditionalInjectedPackages({
+        pythonPackage: makePackageWithDependencies([
+          'celery>=5.3',
+          'dramatiq>=1.17',
+          'vercel-celery',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({ name: 'vercel-dramatiq-bundle' }),
+    ]);
+  });
+
   it('does not inject when vercel-celery is declared', async () => {
     await expect(
       getConditionalInjectedPackages({
