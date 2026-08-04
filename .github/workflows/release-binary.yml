@@ -1,9 +1,25 @@
 name: Release Binary
 
 on:
-  push:
-    tags:
-      - 'vercel@*'
+  # Called from Release before vercel is published so natives exist on npm
+  # for optionalDependencies injection.
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref (SHA) to checkout and build
+        required: false
+        type: string
+        default: ''
+    secrets:
+      SENTRY_DSN:
+        required: false
+      APPLE_CERT_DATA:
+        required: false
+      APPLE_API_KEY:
+        required: false
+      APPLE_CERT_PASSWORD:
+        required: false
+  # Manual rebuilds / republishes of an existing version.
   workflow_dispatch:
     inputs:
       tag:
@@ -18,7 +34,7 @@ env:
   TURBO_REMOTE_ONLY: 'true'
 
 concurrency:
-  group: release-binary-${{ inputs.tag || github.ref }}
+  group: release-binary-${{ inputs.ref || inputs.tag || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -88,7 +104,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ inputs.ref || inputs.tag || github.ref }}
 
       - name: Setup Turborepo Remote Cache
         uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
@@ -437,7 +453,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ inputs.ref || inputs.tag || github.ref }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -457,12 +473,13 @@ jobs:
           path: packages/cli/dist-bin
           merge-multiple: true
 
+      # workflow_call (from Release): always publish so vercel can inject
+      # optionalDependencies. workflow_dispatch: publish latest as usual, or a
+      # rebuild-* dist-tag for non-latest manual rebuilds.
       - name: Publish native npm packages
         shell: bash
         run: |
-          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
-            node packages/vc-native/scripts/publish-packages.mjs
-          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             version="$(node -p "require('./packages/cli/package.json').version")"
             latest="$(npm view vercel version)"
             if [[ "$version" == "$latest" ]]; then
@@ -471,11 +488,10 @@ jobs:
               node packages/vc-native/scripts/publish-packages.mjs --tag "rebuild-$version"
             fi
           else
-            node packages/vc-native/scripts/publish-packages.mjs --dry-run
+            node packages/vc-native/scripts/publish-packages.mjs
           fi
 
       - name: Verify @vercel/vc-native global install
-        if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
         shell: bash
         run: |
           set -euo pipefail
