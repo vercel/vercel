@@ -41,6 +41,13 @@ export class AiGatewayTelemetryClient
     });
   }
 
+  trackCliSubcommandLogs(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'logs',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandLeaderboard(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'leaderboard',

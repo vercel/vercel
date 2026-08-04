@@ -7,6 +7,7 @@ import budgets from './budgets';
 import rules from './rules';
 import codingAgents from './coding-agents';
 import models from './models';
+import logs from './logs';
 import leaderboard from './leaderboard';
 import {
   aiGatewayCommand,
@@ -15,6 +16,7 @@ import {
   rulesSubcommand,
   codingAgentsSubcommand,
   modelsSubcommand,
+  logsSubcommand,
   leaderboardSubcommand,
 } from './command';
 import { help } from '../help';
@@ -29,6 +31,7 @@ const COMMAND_CONFIG = {
   rules: getCommandAliases(rulesSubcommand),
   'coding-agents': getCommandAliases(codingAgentsSubcommand),
   models: getCommandAliases(modelsSubcommand),
+  logs: getCommandAliases(logsSubcommand),
   leaderboard: getCommandAliases(leaderboardSubcommand),
 };
 
@@ -79,6 +82,9 @@ export default async function main(client: Client) {
     case 'models':
       telemetry.trackCliSubcommandModels(subcommandOriginal);
       return models(client);
+    case 'logs':
+      telemetry.trackCliSubcommandLogs(subcommandOriginal);
+      return logs(client);
     case 'leaderboard':
       telemetry.trackCliSubcommandLeaderboard(subcommandOriginal);
       return leaderboard(client);

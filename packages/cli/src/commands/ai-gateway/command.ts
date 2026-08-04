@@ -517,6 +517,129 @@ export const modelsSubcommand = {
   examples: [],
 } as const;
 
+const logsProjectOption = {
+  name: 'project',
+  shorthand: null,
+  type: String,
+  argument: 'NAME|ID',
+  deprecated: false,
+  description: 'Filter requests by project name or ID',
+} as const;
+
+const logsSinceOption = {
+  name: 'since',
+  shorthand: null,
+  type: String,
+  argument: 'TIME',
+  deprecated: false,
+  description:
+    'Include requests after this time (ISO 8601 or relative: 1h, 30m, 7d; default: 1h)',
+} as const;
+
+const logsUntilOption = {
+  name: 'until',
+  shorthand: null,
+  type: String,
+  argument: 'TIME',
+  deprecated: false,
+  description: 'Include requests before this time (ISO 8601 or relative)',
+} as const;
+
+export const logsListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List AI Gateway requests',
+  arguments: [],
+  options: [
+    logsProjectOption,
+    logsSinceOption,
+    logsUntilOption,
+    {
+      name: 'provider',
+      shorthand: null,
+      type: String,
+      argument: 'PROVIDER',
+      deprecated: false,
+      description: 'Filter requests by provider',
+    },
+    {
+      name: 'model',
+      shorthand: null,
+      type: String,
+      argument: 'MODEL',
+      deprecated: false,
+      description: 'Filter requests by model',
+    },
+    {
+      name: 'status',
+      shorthand: null,
+      type: String,
+      argument: 'CODE|CLASS',
+      deprecated: false,
+      description: 'Filter requests by HTTP status (for example: 200 or 5xx)',
+    },
+    {
+      name: 'page',
+      shorthand: null,
+      type: Number,
+      argument: 'NUMBER',
+      deprecated: false,
+      description: 'Select the 1-based page (default: 1)',
+    },
+    {
+      name: 'limit',
+      shorthand: 'n',
+      type: Number,
+      argument: 'NUMBER',
+      deprecated: false,
+      description: 'Set requests per page (default: 20, max: 100)',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'List recent AI Gateway requests',
+      value: `${packageName} ai-gateway logs list`,
+    },
+    {
+      name: 'List failed requests for a project from the last day',
+      value: `${packageName} ai-gateway logs list --project my-app --status 5xx --since 1d`,
+    },
+    {
+      name: 'Print requests as JSON',
+      value: `${packageName} ai-gateway logs list --format json`,
+    },
+  ],
+} as const;
+
+export const logsInspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description: 'Inspect an AI Gateway request and its provider attempts',
+  arguments: [{ name: 'generationId', required: true }],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Inspect a request',
+      value: `${packageName} ai-gateway logs inspect gen_01K00000000000000000000000`,
+    },
+    {
+      name: 'Print request details as JSON',
+      value: `${packageName} ai-gateway logs inspect gen_01K00000000000000000000000 --format json`,
+    },
+  ],
+} as const;
+
+export const logsSubcommand = {
+  name: 'logs',
+  aliases: [],
+  description: 'Inspect AI Gateway request logs',
+  arguments: [],
+  subcommands: [logsListSubcommand, logsInspectSubcommand],
+  options: [],
+  examples: [],
+} as const;
+
 export const budgetsSetSubcommand = {
   name: 'set',
   aliases: [],
@@ -846,6 +969,7 @@ export const aiGatewayCommand = {
     rulesSubcommand,
     codingAgentsSubcommand,
     modelsSubcommand,
+    logsSubcommand,
     leaderboardSubcommand,
   ],
   options: [],
