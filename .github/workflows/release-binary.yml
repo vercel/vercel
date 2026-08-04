@@ -26,9 +26,9 @@ on:
         description: Existing tag to build (e.g. vercel@53.3.1)
         required: true
 
-# contents: read so Release can call this via workflow_call (caller caps
-# reusable-workflow permissions). Build job elevates to write when uploading
-# GitHub Release assets on workflow_dispatch.
+# Default read; build job elevates to write for GitHub Release uploads on
+# workflow_dispatch. The Release caller must grant contents: write so that
+# job-level elevation is allowed under workflow_call permission capping.
 permissions:
   contents: read
   id-token: write
