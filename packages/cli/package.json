@@ -71,6 +71,7 @@
     "@vercel/remix-builder": "workspace:*",
     "@vercel/ruby": "workspace:*",
     "@vercel/rust": "workspace:*",
+    "@vercel/sandbox": "2.5.0",
     "@vercel/static-build": "workspace:*",
     "chokidar": "4.0.0",
     "esbuild": "0.27.0",

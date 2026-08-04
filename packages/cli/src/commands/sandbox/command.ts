@@ -5,6 +5,7 @@ export const sandboxCommand = {
   aliases: [],
   description: 'Interact with Vercel Sandbox',
   arguments: [],
+  subcommands: [],
   options: [],
   examples: [
     {
