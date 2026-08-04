@@ -128,6 +128,9 @@ await esbuild({
   outdir: distDir,
   external: getDependencies(),
   banner,
+  // Agent instruction files live as `.md` in source so they can be reviewed as
+  // prose and diffed in pull requests, and are inlined as strings at build time.
+  loader: { '.md': 'text' },
   plugins: [jsoncParserPlugin, await createConfigValidatorPlugin()],
 });
 

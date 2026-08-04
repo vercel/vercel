@@ -1,0 +1,401 @@
+import chalk from 'chalk';
+import output from '../../output-manager';
+import {
+  type ActivityIndicator,
+  formatElapsed,
+  THINKING_PHRASES,
+  WORKING_PHRASES,
+} from './activity';
+import { isTableRow, MarkdownStyler, renderTable } from './markdown';
+
+/** Longest tool-input summary shown on a progress line. */
+const MAX_SUMMARY_LENGTH = 72;
+
+/**
+ * Input fields worth showing, most specific first. A tool call is far more
+ * useful as `read(vercel.json)` than as a bare `read`, and these cover the
+ * filesystem, shell and search tools that dominate a session.
+ */
+const SUMMARY_FIELDS = [
+  'command',
+  'file_path',
+  'filePath',
+  'path',
+  'pattern',
+  'query',
+  'url',
+  'prompt',
+  'description',
+] as const;
+
+/** Gutter marking reasoning output, so it never reads as the final answer. */
+const THINKING_GUTTER = chalk.dim('│ ');
+
+/** Below this, a completed tool is not worth a line of its own. */
+const SLOW_TOOL_MS = 3000;
+
+/** Tail lines shown when a tool fails. */
+const ERROR_TAIL_LINES = 6;
+
+/**
+ * Renders harness stream events as live progress.
+ *
+ * Three concerns drive the design:
+ *
+ * 1. A session spends most of its time in tool calls, so tool activity is shown
+ *    rather than hidden behind `--debug`; without it the CLI looks hung.
+ * 2. Agent prose is markdown, so it is styled a line at a time — see
+ *    `MarkdownStyler` for why line-at-a-time rather than a real parser.
+ * 3. Reasoning and answer are visually separated, because a wall of undelimited
+ *    thinking is indistinguishable from conclusions the user is meant to act on.
+ *
+ * Everything goes to stderr, leaving stdout free for machine-readable output.
+ */
+export class StreamRenderer {
+  private readonly markdown = new MarkdownStyler();
+  private readonly activity: ActivityIndicator | undefined;
+
+  /** When the current thinking block began, for the closing summary. */
+  private thinkingStartedAt = 0;
+  /** Consecutive table rows held until the block ends and widths are known. */
+  private tableRows: string[] = [];
+  /** Tool calls issued but not yet resolved, keyed by call id. */
+  private readonly inFlight = new Map<
+    string,
+    { label: string; startedAt: number }
+  >();
+
+  constructor(activity?: ActivityIndicator) {
+    this.activity = activity;
+  }
+
+  /** Text received but not yet terminated by a newline. */
+  private textBuffer = '';
+  /** Reasoning received but not yet terminated by a newline. */
+  private thinkingBuffer = '';
+  /** Whether a thinking block is currently open. */
+  private thinking = false;
+  /** True once anything has been written, so callers can clear a spinner. */
+  private started = false;
+
+  get hasOutput(): boolean {
+    return this.started;
+  }
+
+  render(part: { type: string; [key: string]: unknown }): void {
+    switch (part.type) {
+      case 'text-delta':
+        this.closeThinking();
+        this.textBuffer = this.drainText(this.textBuffer + asString(part.text));
+        break;
+
+      case 'reasoning-delta':
+        // Swap the phrasing while the model reasons, so the animated line
+        // reflects what is actually happening.
+        this.activity?.setPhrases(THINKING_PHRASES);
+        this.openThinking();
+        this.thinkingBuffer = this.drain(
+          this.thinkingBuffer + asString(part.text),
+          line => this.thinkingLine(line)
+        );
+        break;
+
+      case 'reasoning-end':
+        this.closeThinking();
+        break;
+
+      case 'tool-call':
+        this.flush();
+        this.writeToolCall(part);
+        break;
+
+      case 'tool-result':
+        // The AI SDK marks incremental tool output with `preliminary`. The
+        // claude-code adapter does not emit it today, so long commands report
+        // only on completion; handling it here means live command output starts
+        // showing the moment an adapter does, instead of being mistaken for the
+        // call finishing.
+        if (part.preliminary === true) {
+          this.showToolProgress(part);
+        } else {
+          this.settleTool(part, false);
+        }
+        break;
+
+      case 'tool-error':
+        this.flush();
+        this.settleTool(part, true);
+        break;
+
+      case 'abort':
+        this.flush();
+        this.writeLine(chalk.yellow('  Session aborted.'));
+        break;
+
+      case 'error':
+        this.flush();
+        output.error(errorMessage(part.error));
+        this.started = true;
+        break;
+
+      default:
+        output.debug(`harness stream part: ${part.type}`);
+    }
+  }
+
+  /**
+   * Emit any partial line and close an open thinking block. Call before handing
+   * the terminal to something else, such as a prompt.
+   */
+  flush(): void {
+    if (this.textBuffer) {
+      this.styleTextLine(this.textBuffer);
+      this.textBuffer = '';
+    }
+    this.flushTable();
+    this.closeThinking();
+  }
+
+  /** Reset per-turn state so a multi-turn session starts each turn clean. */
+  endTurn(): void {
+    this.flush();
+    this.markdown.reset();
+  }
+
+  /**
+   * Emit every complete line in `buffer`, returning the unterminated remainder.
+   * Holding the remainder is what lets markdown be styled per line while still
+   * streaming.
+   */
+  private drain(buffer: string, style: (line: string) => string): string {
+    const segments = buffer.split('\n');
+    const remainder = segments.pop() ?? '';
+    for (const line of segments) {
+      this.writeLine(style(line));
+    }
+    return remainder;
+  }
+
+  /** As `drain`, but routes table rows into the pending-table buffer. */
+  private drainText(buffer: string): string {
+    const segments = buffer.split('\n');
+    const remainder = segments.pop() ?? '';
+    for (const line of segments) {
+      this.styleTextLine(line);
+    }
+    return remainder;
+  }
+
+  private styleTextLine(line: string): void {
+    if (isTableRow(line)) {
+      this.tableRows.push(line);
+      return;
+    }
+    this.flushTable();
+    this.writeLine(this.markdown.line(line));
+  }
+
+  /** Render and emit any accumulated table. */
+  private flushTable(): void {
+    if (this.tableRows.length === 0) return;
+    const rows = this.tableRows;
+    this.tableRows = [];
+    for (const line of renderTable(rows)) {
+      this.writeLine(line);
+    }
+  }
+
+  private openThinking(): void {
+    if (this.thinking) return;
+    if (this.textBuffer) {
+      this.styleTextLine(this.textBuffer);
+      this.textBuffer = '';
+    }
+    this.flushTable();
+    this.thinkingStartedAt = Date.now();
+    this.writeLine(chalk.dim('  ✻ Thinking'));
+    this.thinking = true;
+  }
+
+  private closeThinking(): void {
+    if (!this.thinking) return;
+    if (this.thinkingBuffer) {
+      this.writeLine(this.thinkingLine(this.thinkingBuffer));
+      this.thinkingBuffer = '';
+    }
+
+    // Close with how long it took. Reasoning that just stops reads as
+    // interrupted; a duration reads as finished.
+    const seconds = Math.round((Date.now() - this.thinkingStartedAt) / 1000);
+    if (seconds >= 2) {
+      this.writeLine(chalk.dim(`  ✻ Thought for ${formatElapsed(seconds)}`));
+    }
+
+    this.writeLine('');
+    this.thinking = false;
+    this.activity?.setPhrases(WORKING_PHRASES);
+  }
+
+  /**
+   * Reasoning is dimmed wholesale rather than markdown-styled: bold and dim
+   * share ANSI reset 22, so any nested emphasis would silently cancel the dim
+   * for the rest of the line.
+   */
+  private thinkingLine(line: string): string {
+    return line ? THINKING_GUTTER + chalk.dim(line) : '';
+  }
+
+  /**
+   * Clear the animated line, write, then let it come back. `output.spinner()`
+   * only draws after a delay, so consecutive writes never redraw it while an
+   * idle gap does — no flicker, and no silent stretches.
+   */
+  private writeLine(line: string): void {
+    this.activity?.pause();
+    output.print(`${line}\n`);
+    this.started = true;
+    this.activity?.resume();
+  }
+
+  private writeToolCall(part: { [key: string]: unknown }): void {
+    const name = asString(part.toolName) || 'tool';
+    const summary = summarizeToolInput(part.input ?? part.args);
+    const label = summary ? `${name}  ${summary}` : name;
+
+    this.writeLine(
+      chalk.cyan(`  › ${name}`) + (summary ? chalk.dim(`  ${summary}`) : '')
+    );
+
+    const id = asString(part.toolCallId);
+    if (id) {
+      this.inFlight.set(id, { label, startedAt: Date.now() });
+    }
+
+    // The harness streams no incremental tool output, so a slow command would
+    // otherwise sit behind a generic "working" line. Naming the running command
+    // is the difference between "is this stuck?" and "the build is still going".
+    this.activity?.setPhrases([label]);
+  }
+
+  /**
+   * Surface partial output from a still-running tool on the activity line, so a
+   * long command reports progress without flooding the transcript.
+   */
+  private showToolProgress(part: { [key: string]: unknown }): void {
+    const id = asString(part.toolCallId);
+    const tracked = id ? this.inFlight.get(id) : undefined;
+    const [latest] = tailLines(part.output).slice(-1);
+    if (!latest) return;
+
+    this.activity?.setPhrases([
+      tracked ? `${tracked.label} → ${latest}` : latest,
+    ]);
+  }
+
+  /**
+   * Close out a tool call.
+   *
+   * Fast calls print nothing — the call line already said what happened, and one
+   * status line per call would drown the transcript. Slow and failed calls do
+   * print, because those are the ones a user wants accounted for.
+   */
+  private settleTool(part: { [key: string]: unknown }, failed: boolean): void {
+    const id = asString(part.toolCallId);
+    const tracked = id ? this.inFlight.get(id) : undefined;
+    if (id) this.inFlight.delete(id);
+
+    if (this.inFlight.size === 0) {
+      this.activity?.setPhrases(WORKING_PHRASES);
+    }
+
+    const name = asString(part.toolName) || tracked?.label || 'tool';
+    const elapsed = tracked ? Date.now() - tracked.startedAt : 0;
+
+    if (failed) {
+      this.writeLine(chalk.yellow(`  ! ${name} failed`));
+      for (const line of tailLines(part.error ?? part.output)) {
+        this.writeLine(chalk.dim(`    ${line}`));
+      }
+      return;
+    }
+
+    if (elapsed >= SLOW_TOOL_MS) {
+      this.writeLine(
+        chalk.dim(`    took ${formatElapsed(Math.round(elapsed / 1000))}`)
+      );
+    }
+  }
+}
+
+function summarizeToolInput(input: unknown): string {
+  if (!input || typeof input !== 'object') return '';
+
+  const record = input as Record<string, unknown>;
+  for (const field of SUMMARY_FIELDS) {
+    const value = record[field];
+    if (typeof value === 'string' && value.trim()) {
+      return truncate(value.trim().replace(/\s+/g, ' '));
+    }
+  }
+  return '';
+}
+
+function truncate(value: string): string {
+  return value.length > MAX_SUMMARY_LENGTH
+    ? `${value.slice(0, MAX_SUMMARY_LENGTH - 1)}…`
+    : value;
+}
+
+function asString(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  return 'unknown harness error';
+}
+
+/**
+ * Extract the last few lines of a tool failure.
+ *
+ * Tool outputs arrive in several shapes depending on the adapter — a plain
+ * string, `{ stdout, stderr }`, or a content-part array — so this reduces
+ * whatever it is to text rather than assuming one of them.
+ */
+function tailLines(value: unknown): string[] {
+  const text = toText(value).trim();
+  if (!text) return [];
+  const lines = text.split('\n').filter(line => line.trim() !== '');
+  return lines.slice(-ERROR_TAIL_LINES).map(line => truncate(line.trim()));
+}
+
+function toText(value: unknown): string {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (value instanceof Error) return value.message;
+
+  if (Array.isArray(value)) {
+    return value.map(toText).filter(Boolean).join('\n');
+  }
+
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    for (const key of [
+      'text',
+      'message',
+      'stderr',
+      'stdout',
+      'output',
+      'content',
+    ]) {
+      if (key in record) {
+        const nested = toText(record[key]);
+        if (nested) return nested;
+      }
+    }
+    return '';
+  }
+
+  return String(value);
+}

@@ -75,6 +75,7 @@ describe('index', () => {
         ['routes', 'routes'],
         ['rr', 'rolling-release'],
         ['sandbox', 'sandbox'],
+        ['ship', 'ship'],
         ['skills', 'skills'],
         ['switch', 'teams'],
         ['target', 'target'],
