@@ -1695,6 +1695,31 @@ importers:
         specifier: 2.0.3
         version: 2.0.3(@edge-runtime/vm@3.2.0)(@types/node@20.11.0)(terser@5.48.0)
 
+  packages/kms:
+    dependencies:
+      '@vercel/oidc':
+        specifier: workspace:*
+        version: link:../oidc
+    devDependencies:
+      prettier:
+        specifier: 3.8.3
+        version: 3.8.3
+      tinyspawn:
+        specifier: 1.3.1
+        version: 1.3.1
+      typedoc:
+        specifier: 0.28.19
+        version: 0.28.19(typescript@5.9.3)
+      typedoc-plugin-markdown:
+        specifier: 4.11.0
+        version: 4.11.0(typedoc@0.28.19(typescript@5.9.3))
+      typedoc-plugin-mdn-links:
+        specifier: 5.1.1
+        version: 5.1.1(typedoc@0.28.19(typescript@5.9.3))
+      vitest:
+        specifier: 2.0.1
+        version: 2.0.1(@edge-runtime/vm@3.2.0)(@types/node@24.12.4)(terser@5.48.0)
+
   packages/koa:
     dependencies:
       '@vercel/node':
