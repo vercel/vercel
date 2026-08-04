@@ -187,7 +187,7 @@ rg -n "Link to existing project\\?|Link to different existing project\\?|Link to
 5. Sensitivity: explicit `--sensitive`/`--no-sensitive`, Development restrictions, team sensitive-variable policy, otherwise `Store as sensitive?`.
 6. Value: stdin, `--value`, or `Value?`. Mask sensitive values; leave non-sensitive typed values visible; never repeat the value after entry.
 7. Environment targets: positional target (single or comma-separated list, e.g. `production,preview,development`; standard targets and custom Environment slugs/ids) or `Environments?` multiselect.
-8. Preview branch: optional third arg, or `Git branch?` when adding only to Preview.
+8. Preview branch: `--git-branch`, the legacy third positional argument, or `Git branch?` when adding only to Preview interactively without `--yes`.
 9. Mutation: save variable, optional force overwrite.
 10. Result: aligned receipt rows with variable, project, environments, branch, and type.
 
@@ -198,6 +198,7 @@ Rules:
 - Never repeat the Environment Variable value after entry in human output, JSON, debug logs, telemetry, warnings, errors, or suggested commands. Sensitive values must not be visible at all.
 - Do not include actual `--value` contents in agent `next` commands. Use quoted `"<value>"` placeholders in shell commands, even if the user provided a value.
 - The environment positional accepts a comma-separated list producing one multi-target entry. Unknown tokens fail locally with `error: invalid_environment` naming valid targets; custom Environment slugs normalize to ids. A Git branch is only allowed when Preview is the only target (`error: branch_requires_preview_only` otherwise). `missing_environment` and `missing_requirements` payloads must include a comma-separated multi-target `next` suggestion (with `--no-sensitive` when Development is included and sensitivity was not explicit).
+- Prefer `--git-branch <name>` for branch-specific Preview variables. Keep the third positional argument as a compatibility input, reject invocations that provide both forms, and do not advertise the positional form in help or suggestions. When `--yes` or non-interactive mode is active, omitting the branch applies to all Preview branches without prompting.
 - Use masked input for sensitive interactive `Value?` prompts. Use visible text input for non-sensitive `Value?` prompts so users can catch typos before saving.
 - Use `Name?`, `Store as sensitive?`, `Value?`, `Environments?`, and `Git branch?`.
 - Use `Variable name?` for public-prefix warning choices; use `Value?` for value-warning choices.
@@ -222,7 +223,7 @@ Env add prompt map:
 | Missing value                | `Value?`; masked when sensitive, visible when non-sensitive                              | require stdin or `--value`                           |
 | Value warning                | warning, then `Value?` with keep/re-enter/trim choices                                   | warning only, no post-prompt value echo              |
 | Missing environment target   | `Environments?` checkbox                                                                 | `action_required: missing_environment`               |
-| Preview branch unresolved    | `Git branch?` with empty meaning all Preview branches                                    | omit branch for all Preview branches                 |
+| Preview branch unresolved    | `Git branch?` with empty meaning all Preview branches unless `--yes` accepts the default | omit branch for all Preview branches                 |
 | Save succeeds                | aligned `✓ Added`/`✓ Overrode`, `Project`, `Environments`, optional `Branch`, and `Type` | exit 0, no post-prompt value echo                    |
 
 Env add acceptance matrix:
@@ -236,7 +237,7 @@ Env add acceptance matrix:
 - mixed target selection
 - comma-separated multi-target positional (dedupe, trim, invalid token, branch with multiple targets)
 - custom Environment target
-- Preview with a branch and all Preview branches
+- Preview with `--git-branch`, the legacy positional branch, conflicting branch inputs, and all Preview branches
 - team sensitive-variable policy on/off
 - public-prefix name warnings with keep, rename, and re-enter
 - value warnings with keep, re-enter, and trim
