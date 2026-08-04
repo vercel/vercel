@@ -181,7 +181,7 @@ export default async function deleteGroup(client: Client): Promise<number> {
 
   try {
     await client.fetch(
-      `/v2/teams/${team.id}/microfrontends/${selectedGroup.group.id}?teamId=${team.id}`,
+      `/v1/teams/${team.id}/microfrontends/${selectedGroup.group.id}?teamId=${team.id}`,
       {
         method: 'DELETE',
       }
