@@ -207,6 +207,7 @@ interface ServicesOrchestratorOptions {
   cwd: string;
   repoRoot: string;
   env: NodeJS.ProcessEnv;
+  buildEnv?: NodeJS.ProcessEnv;
   proxyOrigin: string;
   useImplicitEnvInjection: boolean;
   preferServiceBuilder?: boolean;
@@ -309,6 +310,7 @@ export class ServicesOrchestrator {
   private cwd: string;
   private repoRoot: string;
   private envFilesValues: NodeJS.ProcessEnv;
+  private buildEnv: NodeJS.ProcessEnv;
   private maxNameLength: number;
   private proxyOrigin: string;
   private pythonServiceCount: number;
@@ -327,6 +329,7 @@ export class ServicesOrchestrator {
     this.maxNameLength = Math.max(...options.services.map(s => s.name.length));
     this.proxyOrigin = options.proxyOrigin;
     this.envFilesValues = options.env;
+    this.buildEnv = options.buildEnv ?? {};
     this.useImplicitEnvInjection = options.useImplicitEnvInjection;
     this.preferServiceBuilder = options.preferServiceBuilder ?? false;
     this.onQueueSubscriptions = options.onQueueSubscriptions;
@@ -849,6 +852,7 @@ export class ServicesOrchestrator {
         meta: {
           isDev: true,
           env: spec.env,
+          buildEnv: this.buildEnv,
           port,
           serviceCount: this.services.length,
           pythonServiceCount: this.pythonServiceCount,

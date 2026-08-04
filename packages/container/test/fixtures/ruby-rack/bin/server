@@ -1,0 +1,2 @@
+#!/bin/sh
+exec bundle exec rackup --env production -p "${PORT:-9292}"

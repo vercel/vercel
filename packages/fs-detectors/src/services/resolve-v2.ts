@@ -6,9 +6,10 @@ import type {
   ExperimentalServiceV2Config,
   ExperimentalServicesV2,
   ServiceDetectionError,
+  ServiceDetectionWarning,
   ServiceRuntime,
 } from './types';
-import { RUNTIME_BUILDERS, STATIC_BUILDERS } from './types';
+import { RUNTIME_BUILDERS, STATIC_BUILDERS, toBuildpackRuntime } from './types';
 import {
   getServiceFs,
   resolveEntrypointPath,
@@ -16,6 +17,7 @@ import {
   parsePyModuleAttrEntrypoint,
 } from './resolve';
 import {
+  buildpackEntrypointWarning,
   getBuilderForRuntime,
   inferRuntimeFromFramework,
   inferServiceRuntime,
@@ -87,7 +89,7 @@ async function detectContainerEntrypoint(
   return undefined;
 }
 
-function normalizeContainerCommand(
+function normalizeCommand(
   command: string | string[] | undefined
 ): string[] | undefined {
   if (command === undefined) {
@@ -151,7 +153,7 @@ async function resolveContainerServiceV2(
   if (!isRoot) {
     builderConfig.workspace = normalizedRoot;
   }
-  const command = normalizeContainerCommand(config.command);
+  const command = normalizeCommand(config.command);
   if (command) {
     builderConfig.command = command;
   }
@@ -358,7 +360,19 @@ export async function resolveConfiguredServiceV2(
   }
 
   const frameworkRuntime = inferRuntimeFromFramework(framework);
-  if (detectedFramework && frameworkRuntime && !entrypointFile) {
+  // Buildpack runtimes build the entire service root into a container image
+  // with Cloud Native Buildpacks: there is no entrypoint file to resolve or
+  // require, and the builder is always `@vercel/container` with the
+  // `<detect>` sentinel as its source.
+  const buildpackRuntime = toBuildpackRuntime(
+    inferredRuntime as ServiceRuntime | undefined
+  );
+  if (
+    detectedFramework &&
+    frameworkRuntime &&
+    !entrypointFile &&
+    !buildpackRuntime
+  ) {
     return {
       error: {
         code: 'MISSING_SERVICE_CONFIG',
@@ -373,7 +387,10 @@ export async function resolveConfiguredServiceV2(
     : undefined;
   let builderUse: string;
   let builderSrc: string;
-  if (framework) {
+  if (buildpackRuntime) {
+    builderUse = '@vercel/container';
+    builderSrc = '<detect>';
+  } else if (framework) {
     builderUse = isNodeBackendFramework(framework)
       ? '@vercel/backends'
       : frameworkDefinition?.useRuntime?.use || '@vercel/static-build';
@@ -428,6 +445,18 @@ export async function resolveConfiguredServiceV2(
   if (framework) {
     builderConfig.framework = framework;
   }
+  const command = buildpackRuntime
+    ? normalizeCommand(config.command)
+    : undefined;
+  if (buildpackRuntime) {
+    builderConfig.buildpack = buildpackRuntime;
+    if (command) {
+      builderConfig.command = command;
+      if (typeof config.command === 'string') {
+        builderConfig.commandShell = true;
+      }
+    }
+  }
   if (config.outputDirectory) {
     builderConfig.outputDirectory = config.outputDirectory;
   }
@@ -448,6 +477,7 @@ export async function resolveConfiguredServiceV2(
       framework,
       runtime,
       entrypoint: entrypointFile,
+      command,
       builder: {
         src: projectRelativeSrc,
         use: builderUse,
@@ -476,9 +506,11 @@ export async function resolveAllConfiguredServicesV2(
 ): Promise<{
   services: ExperimentalServiceV2[];
   errors: ServiceDetectionError[];
+  warnings: ServiceDetectionWarning[];
 }> {
   const resolved: ExperimentalServiceV2[] = [];
   const errors: ServiceDetectionError[] = [];
+  const warnings: ServiceDetectionWarning[] = [];
 
   for (const name of Object.keys(services)) {
     const config = services[name];
@@ -499,6 +531,14 @@ export async function resolveAllConfiguredServicesV2(
       continue;
     }
     if (service) {
+      const entrypointWarning = buildpackEntrypointWarning(
+        name,
+        config.entrypoint,
+        service.builder
+      );
+      if (entrypointWarning) {
+        warnings.push(entrypointWarning);
+      }
       resolved.push(service);
     }
   }
@@ -525,5 +565,5 @@ export async function resolveAllConfiguredServicesV2(
     }
   }
 
-  return { services: resolved, errors };
+  return { services: resolved, errors, warnings };
 }

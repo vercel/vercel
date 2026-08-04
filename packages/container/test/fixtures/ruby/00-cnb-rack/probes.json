@@ -1,0 +1,15 @@
+{
+  "probes": [
+    {
+      "logMustContain": "via ruby buildpacks"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "bodyMustBe": "hello from the Vercel Rack buildpack\n",
+      "responseHeaders": {
+        "content-type": "text/plain"
+      }
+    }
+  ]
+}

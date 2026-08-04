@@ -20,6 +20,7 @@ import type {
   Service,
   Builder,
 } from '@vercel/build-utils';
+import { isBuildpackRuntimeEnabled } from '@vercel/build-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 
 export type {
@@ -171,6 +172,17 @@ export interface ServiceDetectionError {
   serviceName?: string;
 }
 
+/**
+ * Builder per runtime in services mode. The map doubles as the set of valid
+ * `runtime` values (`config.runtime in RUNTIME_BUILDERS`). It is consulted
+ * only by services detection — framework-null `api/**` functions resolve
+ * their Lambda builders (e.g. `@vercel/ruby`) through builds-and-routes
+ * detection instead and are unaffected by these entries.
+ *
+ * Runtimes in {@link toBuildpackRuntime}'s set are rerouted to
+ * `@vercel/container` when buildpacks are enabled, before these entries are
+ * consulted.
+ */
 export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
   node: '@vercel/backends',
   python: '@vercel/python',
@@ -179,6 +191,40 @@ export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
   ruby: '@vercel/ruby',
   container: '@vercel/container',
 };
+
+/**
+ * Runtimes whose services build the whole service root into a container
+ * image with Cloud Native Buildpacks via `@vercel/container` (builder src is
+ * the `<detect>` sentinel; no entrypoint file is required or resolved).
+ * There is no Lambda services path for them and no per-language builder
+ * package should be created (a future `java` entry would also build with
+ * `@vercel/container`).
+ *
+ * Adding a language here requires a matching descriptor in
+ * `@vercel/container`'s buildpack registry (`src/buildpacks/registry.ts`);
+ * a parity test in that package keeps the two in sync.
+ */
+export const BUILDPACK_RUNTIMES: ReadonlySet<ServiceRuntime> = new Set([
+  'ruby',
+]);
+
+/**
+ * The buildpack runtime for `runtime`, or `undefined` when the runtime is
+ * not buildpack-backed or its experiment flag
+ * (`VERCEL_EXPERIMENTAL_BUILDPACK_<RUNTIME>=1`, e.g.
+ * `VERCEL_EXPERIMENTAL_BUILDPACK_RUBY=1`) is not enabled. While disabled,
+ * buildpack-backed runtimes keep their legacy {@link RUNTIME_BUILDERS}
+ * behavior.
+ */
+export function toBuildpackRuntime(
+  runtime: ServiceRuntime | undefined
+): ServiceRuntime | undefined {
+  return runtime !== undefined &&
+    BUILDPACK_RUNTIMES.has(runtime) &&
+    isBuildpackRuntimeEnabled(runtime)
+    ? runtime
+    : undefined;
+}
 
 export const RUNTIME_MANIFESTS: Partial<Record<ServiceRuntime, string[]>> = {
   node: ['package.json'],

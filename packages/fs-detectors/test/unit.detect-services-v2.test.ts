@@ -89,6 +89,180 @@ describe('detectServices (services)', () => {
     expect(worker.builder.src).toBe('svc/main.py');
   });
 
+  describe('buildpack runtimes (VERCEL_EXPERIMENTAL_BUILDPACK_RUBY=1)', () => {
+    beforeAll(() => {
+      process.env.VERCEL_EXPERIMENTAL_BUILDPACK_RUBY = '1';
+    });
+
+    afterAll(() => {
+      delete process.env.VERCEL_EXPERIMENTAL_BUILDPACK_RUBY;
+    });
+
+    it('resolves a Ruby runtime without an entrypoint to the buildpack container builder', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          services: {
+            api: {
+              root: 'api',
+              runtime: 'ruby',
+              command: ['bundle', 'exec', 'puma'],
+            },
+          },
+        }),
+        'api/Gemfile': 'source "https://rubygems.org"\ngem "puma"\n',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const [api] = servicesV2(result.services);
+      expect(api).toMatchObject({
+        schema: 'experimentalServicesV2',
+        name: 'api',
+        root: 'api',
+        runtime: 'ruby',
+        command: ['bundle', 'exec', 'puma'],
+        entrypoint: undefined,
+      });
+      expect(api.builder).toEqual({
+        src: 'api/<detect>',
+        use: '@vercel/container',
+        config: {
+          zeroConfig: true,
+          buildpack: 'ruby',
+          command: ['bundle', 'exec', 'puma'],
+          workspace: 'api',
+        },
+      });
+    });
+
+    it('preserves a Ruby shell command through normalized builder config', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          services: {
+            api: {
+              root: 'api',
+              runtime: 'ruby',
+              command: 'bundle exec puma -p $PORT',
+            },
+          },
+        }),
+        'api/Gemfile': 'source "https://rubygems.org"\ngem "puma"\n',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const [api] = servicesV2(result.services);
+      expect(api.command).toEqual(['bundle exec puma -p $PORT']);
+      expect(api.builder.config).toMatchObject({
+        command: ['bundle exec puma -p $PORT'],
+        commandShell: true,
+      });
+    });
+
+    it('resolves an explicit Ruby framework without an entrypoint to buildpacks', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          services: {
+            api: { root: 'api', framework: 'ruby' },
+          },
+        }),
+        'api/Gemfile': 'source "https://rubygems.org"\n',
+        'api/config.ru': 'run ->(_env) { [200, {}, ["ok"]] }\n',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const [api] = servicesV2(result.services);
+      expect(api).toMatchObject({
+        framework: 'ruby',
+        runtime: 'ruby',
+        entrypoint: undefined,
+      });
+      expect(api.builder).toEqual({
+        src: 'api/<detect>',
+        use: '@vercel/container',
+        config: {
+          zeroConfig: true,
+          framework: 'ruby',
+          buildpack: 'ruby',
+          workspace: 'api',
+        },
+      });
+    });
+
+    it('warns that a Ruby service entrypoint is ignored', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          services: {
+            api: { root: 'api', runtime: 'ruby', entrypoint: 'app.rb' },
+          },
+        }),
+        'api/Gemfile': 'source "https://rubygems.org"\n',
+        'api/app.rb': 'puts "hello"\n',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const [api] = servicesV2(result.services);
+      expect(api.builder).toMatchObject({
+        src: 'api/<detect>',
+        use: '@vercel/container',
+        config: { buildpack: 'ruby' },
+      });
+      expect(result.warnings).toMatchObject([
+        { code: 'BUILDPACK_ENTRYPOINT_IGNORED', serviceName: 'api' },
+      ]);
+    });
+
+    it('auto-detects a Ruby service without requiring an entrypoint', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          services: {
+            api: { root: 'api' },
+          },
+        }),
+        'api/Gemfile': 'source "https://rubygems.org"\ngem "rack"\n',
+        'api/config.ru': 'run ->(_env) { [200, {}, ["ok"]] }\n',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const [api] = servicesV2(result.services);
+      expect(api).toMatchObject({
+        framework: 'ruby',
+        runtime: 'ruby',
+        entrypoint: undefined,
+      });
+      expect(api.builder).toMatchObject({
+        src: 'api/<detect>',
+        use: '@vercel/container',
+        config: { buildpack: 'ruby' },
+      });
+    });
+  });
+
+  it('requires an entrypoint for a Ruby runtime service when buildpacks are disabled', async () => {
+    const fs = new VirtualFilesystem({
+      'vercel.json': vercelJson({
+        services: {
+          api: { root: 'api', runtime: 'ruby' },
+        },
+      }),
+      'api/Gemfile': 'source "https://rubygems.org"\n',
+    });
+
+    const result = await detectServices({ fs });
+
+    expect(result.errors).toMatchObject([
+      { code: 'MISSING_SERVICE_CONFIG', serviceName: 'api' },
+    ]);
+  });
+
   it('resolves a pyproject.toml entrypoint to the python builder', async () => {
     const fs = new VirtualFilesystem({
       'vercel.json': vercelJson({

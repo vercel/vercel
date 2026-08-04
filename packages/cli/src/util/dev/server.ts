@@ -280,6 +280,7 @@ export default class DevServer {
       cwd: this.cwd,
       repoRoot: this.repoRoot,
       env: this.envConfigs.allEnv,
+      buildEnv: this.envConfigs.buildEnv,
       proxyOrigin: this.address.origin,
       useImplicitEnvInjection: false,
       preferServiceBuilder: true,
@@ -1203,6 +1204,7 @@ export default class DevServer {
         cwd: this.cwd,
         repoRoot: this.repoRoot,
         env: this.envConfigs.allEnv,
+        buildEnv: this.envConfigs.buildEnv,
         proxyOrigin: this.address.origin,
         useImplicitEnvInjection: this.useImplicitServicesEnvInjection,
         onQueueSubscriptions: (serviceName, subscriptions) =>
