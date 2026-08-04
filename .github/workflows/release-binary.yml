@@ -26,8 +26,11 @@ on:
         description: Existing tag to build (e.g. vercel@53.3.1)
         required: true
 
+# contents: read so Release can call this via workflow_call (caller caps
+# reusable-workflow permissions). Build job elevates to write when uploading
+# GitHub Release assets on workflow_dispatch.
 permissions:
-  contents: write
+  contents: read
   id-token: write
 
 env:
@@ -40,6 +43,9 @@ concurrency:
 jobs:
   build:
     name: ${{ matrix.asset }}
+    permissions:
+      contents: write
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
