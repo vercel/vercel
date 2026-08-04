@@ -97,6 +97,10 @@ function printApiKeyDetails(apiKey: ApiKey) {
     ['created by', apiKey.createdBy || dim('–')],
   ];
 
+  if (apiKey.metadata?.zdr?.enableNonZdrModels) {
+    rows.push(['zdr exempt', 'yes']);
+  }
+
   const quota = apiKey.quota;
   if (quota) {
     rows.push(

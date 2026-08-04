@@ -118,6 +118,59 @@ describe('ai-gateway api-keys create', () => {
     });
   });
 
+  describe('success with --zdr-exempt', () => {
+    it('sends the zdr metadata fact and tracks the flag', async () => {
+      const team = useTeam();
+      useUser();
+      let body: unknown;
+      client.scenario.post('/v1/api-keys', (req, res) => {
+        body = req.body;
+        res.json(mockApiKeyResponse);
+      });
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'api-keys',
+        'create',
+        '--name',
+        'escape-hatch',
+        '--zdr-exempt'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stdout).toOutput(mockApiKeyResponse.apiKeyString);
+      expect(await exitCodePromise).toBe(0);
+      expect(body).toMatchObject({
+        metadata: { zdr: { enableNonZdrModels: true } },
+      });
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:api-keys', value: 'api-keys' },
+        { key: 'subcommand:create', value: 'create' },
+        { key: 'option:name', value: '[REDACTED]' },
+        { key: 'flag:zdr-exempt', value: 'TRUE' },
+      ]);
+    });
+
+    it('omits metadata when the flag is not passed', async () => {
+      const team = useTeam();
+      useUser();
+      let body: unknown;
+      client.scenario.post('/v1/api-keys', (req, res) => {
+        body = req.body;
+        res.json(mockApiKeyResponse);
+      });
+      client.config.currentTeam = team.id;
+      client.setArgv('ai-gateway', 'api-keys', 'create');
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stdout).toOutput(mockApiKeyResponse.apiKeyString);
+      expect(await exitCodePromise).toBe(0);
+      expect(body).not.toHaveProperty('metadata');
+    });
+  });
+
   describe('validation', () => {
     it('fails with invalid --alert-thresholds', async () => {
       useUser();

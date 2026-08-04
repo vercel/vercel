@@ -29,6 +29,7 @@ export type ApiKey = {
   leakedUrl: string | null;
   createdByAppId: string | null;
   quota?: ApiKeyQuota;
+  metadata?: ApiKeyMetadata;
 };
 
 type ListApiKeysResponse = {
@@ -80,6 +81,15 @@ type CreateApiKeyRequest = {
   name?: string;
   aiGatewayQuota?: AiGatewayQuota;
   expiresAt?: number;
+  metadata?: ApiKeyMetadata;
+};
+
+/**
+ * Per-purpose key metadata. The `zdr` fact exempts the key from the team's
+ * ZDR-only model restriction; the API only accepts it from team owners.
+ */
+export type ApiKeyMetadata = {
+  zdr?: { enableNonZdrModels: true };
 };
 
 type CreateApiKeyApiKey = {
@@ -102,6 +112,7 @@ export async function createApiKey(
     name?: string;
     aiGatewayQuota?: AiGatewayQuota;
     expiresAt?: number;
+    metadata?: ApiKeyMetadata;
   }
 ): Promise<CreateApiKeyResponse> {
   return await client.fetch<CreateApiKeyResponse>('/v1/api-keys', {
