@@ -116,6 +116,12 @@ export default async function connex(client: Client): Promise<number> {
         telemetry.trackCliOptionTriggerEvent(
           createParsedArgs.flags['--trigger-event']
         );
+        telemetry.trackCliOptionConnectionMethod(
+          createParsedArgs.flags['--connection-method']
+        );
+        telemetry.trackCliOptionTarget(createParsedArgs.flags['--target']);
+        telemetry.trackCliOptionParam(createParsedArgs.flags['--param']);
+        telemetry.trackCliFlagYes(createParsedArgs.flags['--yes']);
         return await create(
           client,
           createParsedArgs.args,

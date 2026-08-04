@@ -137,6 +137,38 @@ export class ConnexTelemetryClient
     }
   }
 
+  trackCliOptionConnectionMethod(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'connection-method',
+        // Registry slugs are a finite, non-sensitive set.
+        value: v,
+      });
+    }
+  }
+
+  trackCliOptionTarget(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'target',
+        // Registry target slugs are a finite, non-sensitive set.
+        value: v,
+      });
+    }
+  }
+
+  trackCliOptionParam(v: string[] | undefined) {
+    if (!v || v.length === 0) {
+      return;
+    }
+    // Template values can embed tenant hostnames, so record how many were
+    // passed rather than the keys or values.
+    this.trackCliOption({
+      option: 'param',
+      value: String(v.length),
+    });
+  }
+
   trackCliFlagYes(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('yes');

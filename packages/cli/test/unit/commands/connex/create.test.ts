@@ -9,6 +9,10 @@ import { useTeam } from '../../../mocks/team';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import connect from '../../../../src/commands/connex';
 import * as configFilesUtil from '../../../../src/util/config/files';
+import {
+  fakeConnexClient,
+  useConnexServiceNotFound,
+} from '../../../mocks/connex';
 
 // PNG magic header.
 const PNG_BYTES = Buffer.from([
@@ -26,23 +30,6 @@ async function writeTmpFile(name: string, bytes: Buffer): Promise<string> {
 vi.mock('open', () => ({ default: vi.fn(() => Promise.resolve()) }));
 vi.setConfig({ testTimeout: 15000 });
 
-function fakeConnexClient(overrides: Record<string, unknown> = {}) {
-  return {
-    id: 'scl_test123',
-    ownerId: 'team_abc',
-    createdAt: 0,
-    updatedAt: 0,
-    uid: 'uid_abc',
-    type: 'slack',
-    name: 'my-bot',
-    data: {},
-    typeName: 'Slack',
-    supportedSubjectTypes: ['user'],
-    supportsInstallation: false,
-    ...overrides,
-  };
-}
-
 describe('connex create', () => {
   let team: { id: string; slug: string };
   const writeConfigSpy = vi.spyOn(configFilesUtil, 'writeToConfigFile');
@@ -56,12 +43,12 @@ describe('connex create', () => {
     client.config.currentTeam = team.id;
   });
 
-  it('should error when no type argument is provided', async () => {
+  it('should error when no service argument is provided', async () => {
     client.setArgv('connect', 'create');
 
     const exitCode = await connect(client);
 
-    await expect(client.stderr).toOutput('Missing service type');
+    await expect(client.stderr).toOutput('Missing service.');
     expect(exitCode).toBe(1);
   });
 
@@ -76,6 +63,7 @@ describe('connex create', () => {
   });
 
   it('should show friendly error when connect feature flag is off (404)', async () => {
+    useConnexServiceNotFound(client);
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.statusCode = 404;
       res.json({ error: { code: 'not_found', message: 'Not Found' } });
@@ -90,6 +78,7 @@ describe('connex create', () => {
   });
 
   it('should create client directly when POST succeeds (no browser)', async () => {
+    useConnexServiceNotFound(client);
     let postBody: any;
     let pollHit = false;
     client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
@@ -174,6 +163,7 @@ describe('connex create', () => {
   });
 
   it('should pass any type to the server without validation', async () => {
+    useConnexServiceNotFound(client);
     let postBody: any;
     client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
       postBody = req.body;
@@ -826,6 +816,7 @@ describe('connex create', () => {
   });
 
   it('should output JSON when --format=json is used', async () => {
+    useConnexServiceNotFound(client);
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.json(
         fakeConnexClient({
@@ -880,6 +871,7 @@ describe('connex create', () => {
   });
 
   it('should include branding fields in --format=json output', async () => {
+    useConnexServiceNotFound(client);
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.json(
         fakeConnexClient({
@@ -912,6 +904,7 @@ describe('connex create', () => {
   });
 
   it('should emit null branding fields in --format=json when API omits them', async () => {
+    useConnexServiceNotFound(client);
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.json(
         fakeConnexClient({
@@ -941,6 +934,7 @@ describe('connex create', () => {
   });
 
   it('should open browser and poll when POST returns 422 with registerUrl', async () => {
+    useConnexServiceNotFound(client);
     let postHits = 0;
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       postHits++;
@@ -984,6 +978,7 @@ describe('connex create', () => {
   });
 
   it('should keep polling through partial status until success', async () => {
+    useConnexServiceNotFound(client);
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.statusCode = 422;
       res.json({
@@ -1036,6 +1031,7 @@ describe('connex create', () => {
   });
 
   it('should handle error status from polling after 422', async () => {
+    useConnexServiceNotFound(client);
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.statusCode = 422;
       res.json({
@@ -1062,6 +1058,7 @@ describe('connex create', () => {
   });
 
   it('should persist team to config after interactive selection', async () => {
+    useConnexServiceNotFound(client);
     delete client.config.currentTeam;
 
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
@@ -1086,6 +1083,7 @@ describe('connex create', () => {
 
   it('should use team from .vercel/project.json without prompting', async () => {
     client.reset();
+    useConnexServiceNotFound(client);
     useUser();
     team = useTeam('team_linked');
     delete client.config.currentTeam;
@@ -1129,6 +1127,7 @@ describe('connex create', () => {
   });
 
   it('should not rewrite config when team is already set', async () => {
+    useConnexServiceNotFound(client);
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.json(fakeConnexClient({ id: 'scl_noop', uid: 'uid_noop' }));
     });
@@ -1142,6 +1141,7 @@ describe('connex create', () => {
 
   describe('--triggers flag', () => {
     it('should send triggers: { enabled: true } when --triggers is passed', async () => {
+      useConnexServiceNotFound(client);
       let postBody: any;
       client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
         postBody = req.body;
@@ -1170,6 +1170,7 @@ describe('connex create', () => {
     });
 
     it('should send triggers: { enabled: false } when --triggers is not passed', async () => {
+      useConnexServiceNotFound(client);
       let postBody: any;
       client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
         postBody = req.body;
@@ -1187,6 +1188,7 @@ describe('connex create', () => {
 
   describe('branding flags', () => {
     it('should upload icon and send branding in direct-path POST body', async () => {
+      useConnexServiceNotFound(client);
       let uploadHeaders: Record<string, unknown> | undefined;
       let uploadHit = false;
       let postBody: any;
@@ -1244,6 +1246,7 @@ describe('connex create', () => {
     });
 
     it('should send colors only when --icon is not provided', async () => {
+      useConnexServiceNotFound(client);
       let uploadHit = false;
       let postBody: any;
       client.scenario.post('/v2/files', (_req, res) => {
@@ -1279,6 +1282,7 @@ describe('connex create', () => {
     });
 
     it('should follow up with PATCH when browser flow runs', async () => {
+      useConnexServiceNotFound(client);
       let postBody: any;
       let patchBody: any;
       let patchedId: string | undefined;
@@ -1369,6 +1373,7 @@ describe('connex create', () => {
     });
 
     it('should append branding query params to registerUrl when 422 triggers browser flow', async () => {
+      useConnexServiceNotFound(client);
       client.scenario.post('/v2/files', (_req, res) => {
         res.json({});
       });
@@ -1455,6 +1460,7 @@ describe('connex create', () => {
     });
 
     it('should warn and exit non-zero when browser-flow branding PATCH fails', async () => {
+      useConnexServiceNotFound(client);
       let patchHit = false;
       client.scenario.post('/v2/files', (_req, res) => {
         res.json({});
@@ -1644,6 +1650,7 @@ describe('connex create', () => {
     });
 
     it('should surface server upload error and not create connector', async () => {
+      useConnexServiceNotFound(client);
       let postHit = false;
       client.scenario.post('/v2/files', (_req, res) => {
         res.statusCode = 413;
@@ -1742,6 +1749,7 @@ describe('connex create', () => {
   });
 
   it('should tolerate early 404s during polling after 422', async () => {
+    useConnexServiceNotFound(client);
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.statusCode = 422;
       res.json({

@@ -833,25 +833,35 @@ exports[`help command > connex help output snapshots > connex attach subcommand 
 
 exports[`help command > connex help output snapshots > connex create subcommand > connex create subcommand help column width 120 1`] = `
 "
-  ▲ vercel connect create type [options]
+  ▲ vercel connect create service [options]
 
   Create a new connector                                                                                                
+  Accepts a known service (slack, notion, okta) or the URL of an OAuth or MCP server (mcp.notion.com/mcp). Run \`create  
+  <service> --help\` to see how a specific service can be connected to.                                                  
 
   Options:
 
-       --accent-color <HEX>      Accent color for the connector icon (e.g. #1A2B3C)                                          
-       --background-color <HEX>  Background color for the connector icon (e.g. #1A2B3C)                                      
-       --connector-type <TYPE>   Connector type for non-managed creation. By default, the type is resolved from the service. 
-       --data <JSON>             JSON object for non-managed connector creation. When set, posts directly to the connector   
-                                 create API. Pass \`@<path>\` to read from a file or \`@-\` to read from stdin — recommended for 
-                                 secrets (e.g. client secrets), which leak into shell history when passed inline.            
-  -F,  --format <FORMAT>         Specify the output format (json)                                                            
-       --icon <PATH>             Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)               
-       --json                    Output as JSON                                                                              
-  -n,  --name <NAME>             Name of the connector                                                                       
-       --trigger-event <EVENT>   Webhook event to receive. Repeatable. Requires --triggers and replaces the provider's       
-                                  default events.                                                                             
-       --triggers                Enable webhook triggers for this connector                                                  
+       --accent-color <HEX>          Accent color for the connector icon (e.g. #1A2B3C)                                      
+       --background-color <HEX>      Background color for the connector icon (e.g. #1A2B3C)                                  
+       --connection-method <METHOD>  How to connect to the service (e.g. oauth, mcp, api-key). Run without it to choose      
+                                     interactively; the error lists the valid values for a service.                          
+       --connector-type <TYPE>       Connector type for non-managed creation. By default, the type is resolved from the      
+                                     service.                                                                                
+       --data <JSON>                 JSON object for non-managed connector creation. When set, posts directly to the         
+                                     connector create API. Pass \`@<path>\` to read from a file or \`@-\` to read from stdin —   
+                                     recommended for secrets (e.g. client secrets), which leak into shell history when passed
+                                     inline.                                                                                 
+  -F,  --format <FORMAT>             Specify the output format (json)                                                        
+       --icon <PATH>                 Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)           
+       --json                        Output as JSON                                                                          
+  -n,  --name <NAME>                 Name of the connector                                                                   
+       --param <KEY=VALUE>           Value for a connection method template field (e.g. domain=acme.okta.com). Repeatable.   
+       --target <TARGET>             Which of the service's products to connect to (e.g. api, mcp). Only needed when a       
+                                     service exposes more than one.                                                          
+       --trigger-event <EVENT>       Webhook event to receive. Repeatable. Requires --triggers and replaces the provider's   
+                                     default events.                                                                         
+       --triggers                    Enable webhook triggers for this connector                                              
+  -y,  --yes                         Skip the single-connection-method confirmation prompt                                   
 
 
   Global Options:
@@ -889,6 +899,22 @@ exports[`help command > connex help output snapshots > connex create subcommand 
   - Create with branding (icon and colors)
 
     $ vercel connect create slack --name my-bot --icon ./logo.png --background-color '#1A2B3C' --accent-color '#FF0066'
+
+  - Create with a specific connection method
+
+    $ vercel connect create notion --connection-method mcp --name notion-mcp
+
+  - Create with an API key, reading it from a file
+
+    $ vercel connect create notion --connection-method api-key --name notion --data @key.json
+
+  - Create from a connection method that needs template values
+
+    $ vercel connect create okta --connection-method custom-server --param domain=acme.okta.com --param auth_server_id=default --name okta --data @creds.json
+
+  - Target a specific product of a service
+
+    $ vercel connect create notion --target api --connection-method oauth --name notion --data @creds.json
 
   - Create a non-managed connector from explicit data
 
@@ -964,7 +990,12 @@ exports[`help command > connex help output snapshots > connex help column width 
 
   Commands:
 
-  create         type       Create a new connector                      
+  create         service    Create a new connector                      
+                            Accepts a known service (slack, notion,     
+                            okta) or the URL of an OAuth or MCP server  
+                            (mcp.notion.com/mcp). Run \`create <service> 
+                            --help\` to see how a specific service can be
+                            connected to.                               
   update         id         Update connector branding (icon and colors) 
   list                      List connectors linked to the current       
                             project (falls back to every connector in   
