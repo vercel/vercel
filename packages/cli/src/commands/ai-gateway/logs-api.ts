@@ -5,6 +5,7 @@ import getTeamById from '../../util/teams/get-team-by-id';
 const REQUESTS_API_URL = 'https://vercel.com/api/ai/gateway-inference-requests';
 const METRICS_API_URL = 'https://vercel.com/api/observability/metrics';
 const COST_SEMANTICS_CUTOVER_MS = Date.UTC(2026, 4, 16, 1, 0, 0);
+const HOUR_MS = 60 * 60 * 1000;
 const GENERATION_ID_PATTERN = /^gen_[0-9A-HJKMNP-TV-Z]{26}$/i;
 const ULID_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
@@ -163,7 +164,7 @@ export async function fetchProviderAttempts(
       summaryOnly: true,
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
-      granularity: '1h',
+      granularity: { hours: 1 },
       reason: 'ai_gateway_chart',
       groupBy: [
         'aiProvider',
@@ -209,8 +210,8 @@ function getGenerationWindow(generationId: string): {
 } {
   const timestamp = decodeGenerationTimestamp(generationId) ?? Date.now();
   return {
-    startTime: new Date(timestamp - 60 * 60 * 1000),
-    endTime: new Date(timestamp + 60 * 60 * 1000),
+    startTime: new Date(Math.floor((timestamp - HOUR_MS) / HOUR_MS) * HOUR_MS),
+    endTime: new Date(Math.ceil((timestamp + HOUR_MS) / HOUR_MS) * HOUR_MS),
   };
 }
 

@@ -65,9 +65,12 @@ function useAttempts(rows: unknown[] = attempts) {
     expect(req.body).toMatchObject({
       event: 'aiGatewayProviderAttempt',
       scope: { type: 'team-with-slug', teamSlug: 'acme' },
+      granularity: { hours: 1 },
       filter: `generationId eq '${generationId}'`,
       limit: 50,
     });
+    expect(Date.parse(String(req.body.startTime)) % (60 * 60 * 1000)).toBe(0);
+    expect(Date.parse(String(req.body.endTime)) % (60 * 60 * 1000)).toBe(0);
     res.json({ summary: rows });
   });
 }
