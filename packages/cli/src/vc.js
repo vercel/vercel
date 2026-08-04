@@ -81,25 +81,22 @@ const bin = resolveNative();
 
 if (bin && (await isNativeBinaryOptedIn())) {
   process.env.VERCEL_VC_NATIVE = '1';
+  // Do not fall through to JS on spawn/loader failures — surface them so
+  // native binary issues (e.g. glibc mismatch) are visible.
   const r = spawnSync(bin, process.argv.slice(2), {
     stdio: 'inherit',
     windowsHide: true,
   });
-  if (r.error && (r.error.code === 'ENOENT' || r.error.code === 'EACCES')) {
-    delete process.env.VERCEL_VC_NATIVE;
-    // fall through to JS
-  } else {
-    if (r.error) {
-      console.error(r.error.message);
-      process.exit(1);
-    }
-    if (r.signal) {
-      try {
-        process.kill(process.pid, r.signal);
-      } catch {}
-    }
-    process.exit(r.status ?? 1);
+  if (r.error) {
+    console.error(r.error.message);
+    process.exit(1);
   }
+  if (r.signal) {
+    try {
+      process.kill(process.pid, r.signal);
+    } catch {}
+  }
+  process.exit(r.status ?? 1);
 }
 
 // Fast path for --version to avoid loading the entire CLI
