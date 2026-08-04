@@ -1,10 +1,10 @@
 //
 // Unified Lambda handler for bundled vanilla API routes.
-// All bundleable lambdas share this handler (same handler digest).
+// All bundleable lambdas share this exact file (same handler digest).
 // It reads x-matched-path to determine which entrypoint to invoke.
 //
-// At build time the builder replaces the VERCEL_ENTRYPOINT_PREFIX env lookup
-// with the actual prefix string. The x-matched-path header is set by
+// IMPORTANT: This file must remain entrypoint-agnostic. Do not embed
+// any path-specific constants. The x-matched-path header is set by
 // route rules injected by the builder.
 //
 // This runs at Lambda runtime where the handler is invoked with (req, res).
@@ -19,7 +19,7 @@
 
 const http = require('http');
 const { existsSync } = require('fs');
-const { resolve } = require('path');
+const { resolve, sep } = require('path');
 const { pathToFileURL } = require('url');
 const { Readable } = require('stream');
 
@@ -35,25 +35,16 @@ const HTTP_METHODS = [
 
 const handlerCache = Object.create(null);
 
-// At build time the builder replaces the token below with the actual prefix.
-const entrypointPrefix = process.env.VERCEL_ENTRYPOINT_PREFIX;
-
-function getEntrypointCandidates(entrypoint) {
-  const candidates = [entrypoint];
-
-  if (typeof entrypointPrefix === 'string' && entrypointPrefix) {
-    candidates.push(entrypointPrefix + '/' + entrypoint);
-  }
-
-  return candidates;
-}
-
 /**
  * Resolve an extensionless entrypoint to an actual file path.
  * Tries common JS extensions in order, returning the first match.
  */
 function resolveEntrypoint(name) {
   const base = resolve('./' + name);
+  const root = resolve('.');
+  if (!base.startsWith(root + sep)) {
+    throw new Error('Invalid entrypoint path');
+  }
   for (const ext of ['.js', '.cjs', '.mjs']) {
     const p = base + ext;
     if (existsSync(p)) return p;
@@ -253,14 +244,7 @@ module.exports = async (req, res) => {
   const entrypoint = matchedPath.replace(/^\//, '') || 'index';
 
   if (!handlerCache[entrypoint]) {
-    let filePath = null;
-    for (const candidate of getEntrypointCandidates(entrypoint)) {
-      filePath = resolveEntrypoint(candidate);
-      if (filePath) {
-        break;
-      }
-    }
-
+    const filePath = resolveEntrypoint(entrypoint);
     if (!filePath) {
       res.statusCode = 404;
       res.end('No handler found for ' + entrypoint);
