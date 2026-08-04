@@ -137,6 +137,7 @@ async def _invoke_lambda(
     module_name: str,
     event: dict[str, Any],
     variable_name: str = "app",
+    extra_env: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Run vc_init.py in legacy mode and call vc_handler.
 
@@ -151,6 +152,8 @@ async def _invoke_lambda(
         "__VC_HANDLER_VARIABLE_NAME": variable_name,
     }
     env.pop("VERCEL_IPC_PATH", None)
+    if extra_env:
+        env.update(extra_env)
 
     result_r, result_w = os.pipe()
     env["_RESULT_FD"] = str(result_w)
@@ -677,6 +680,50 @@ class TestWSGIApp(_RuntimeTestCase):
                 "GET /search?q=test",
             )
 
+    async def test_wait_until_runs_after_response_with_request_oidc(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wait_until_wsgi.py",
+            self.tmp_path,
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage,
+                timeout=10.0,
+            )
+            port = ss.payload.http_port
+
+            first = await _http_get(
+                port,
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "first-request-token",
+                },
+            )
+            self.assertEqual(
+                json.loads(first.read()),
+                [],
+            )
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+
+            second = await _http_get(
+                port,
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "second-request-token",
+                },
+            )
+            self.assertEqual(
+                json.loads(second.read()),
+                ["first-request-token"],
+            )
+
     async def test_wsgi_chunked_post_without_content_length(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint(
             "wsgi_echo_app.py", self.tmp_path
@@ -944,6 +991,47 @@ class TestASGIApp(_RuntimeTestCase):
             conn.request("GET", "/_vercel/ping")
             resp = conn.getresponse()
             self.assertEqual(resp.status, 200)
+
+    async def test_wait_until_runs_after_response_with_request_oidc(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wait_until_asgi.py",
+            self.tmp_path,
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage,
+                timeout=10.0,
+            )
+            port = ss.payload.http_port
+
+            first = await _http_get(
+                port,
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "first-request-token",
+                },
+            )
+            self.assertEqual(json.loads(first.read()), [])
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+
+            second = await _http_get(
+                port,
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "second-request-token",
+                },
+            )
+            self.assertEqual(
+                json.loads(second.read()),
+                ["first-request-token"],
+            )
 
     async def test_invalid_utf8_header(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
@@ -1763,6 +1851,32 @@ class TestLambdaWSGI(_LambdaTestCase):
         body = base64.b64decode(result["body"]).decode()
         self.assertEqual(body, "GET /hello")
 
+    async def test_wait_until_drains_with_request_oidc(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wait_until_wsgi.py",
+            self.tmp_path,
+        )
+        output_path = self.tmp_path / "wait-until-output.txt"
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event(
+                "GET",
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "request-token",
+                },
+            ),
+            extra_env={"WAIT_UNTIL_OUTPUT": str(output_path)},
+        )
+        self.assertEqual(result["statusCode"], 200)
+        body = base64.b64decode(result["body"]).decode()
+        self.assertEqual(json.loads(body), [])
+        self.assertEqual(output_path.read_text(), "request-token\n")
+
     async def test_query_string(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)
         result = await _invoke_lambda(
@@ -1805,6 +1919,30 @@ class TestLambdaASGI(_LambdaTestCase):
         self.assertEqual(result["statusCode"], 200)
         body = base64.b64decode(result["body"]).decode()
         self.assertEqual(body, "GET /hello")
+
+    async def test_wait_until_drains_with_request_oidc(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wait_until_asgi.py",
+            self.tmp_path,
+        )
+        output_path = self.tmp_path / "wait-until-output.txt"
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event(
+                "GET",
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "request-token",
+                },
+            ),
+            extra_env={"WAIT_UNTIL_OUTPUT": str(output_path)},
+        )
+        self.assertEqual(result["statusCode"], 200)
+        body = base64.b64decode(result["body"]).decode()
+        self.assertEqual(json.loads(body), [])
+        self.assertEqual(output_path.read_text(), "request-token\n")
 
     async def test_base64_body(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)

@@ -27,6 +27,7 @@ build-backend = "uv_build"
 [dependency-groups]
 test = [
     "attrs~=25.3.0",
+    "vercel~=0.5",
     "basedpyright~=1.37.0",
     "mypy~=1.19.0",
     "pytest~=9.0.2",
