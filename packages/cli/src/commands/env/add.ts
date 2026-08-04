@@ -66,9 +66,10 @@ function filterEnvChoicesForSensitivity(
   opts: {
     isSensitive: boolean;
     policyOn: boolean;
+    configSecretUiEnabled: boolean;
   }
 ): EnvChoice[] {
-  if (opts.isSensitive) {
+  if (opts.isSensitive && !opts.configSecretUiEnabled) {
     return choices.filter(c => c.value !== 'development');
   }
   if (opts.policyOn) {
@@ -80,12 +81,13 @@ function filterEnvChoicesForSensitivity(
 function getTargetCompatibilityError(
   envTargets: string[],
   isSensitive: boolean,
-  policyOn: boolean
+  policyOn: boolean,
+  configSecretUiEnabled: boolean
 ): string | null {
   const hasDevelopment = envTargets.includes('development');
   const hasSensitiveCapable = envTargets.some(t => t !== 'development');
 
-  if (isSensitive && hasDevelopment) {
+  if (isSensitive && hasDevelopment && !configSecretUiEnabled) {
     return `Sensitive Environment Variables are not supported on the Development Environment. Add --no-sensitive to store a non-sensitive value for all selected Environments, or run ${getCommandName(
       'env add'
     )} separately for Development.`;
@@ -107,10 +109,11 @@ function resolveFinalType(
     forceSensitive: boolean;
     forceEncrypted: boolean;
     policyOn: boolean;
+    configSecretUiEnabled: boolean;
   }
 ): EnvType {
   const hasDevelopment = envTargets.includes('development');
-  if (hasDevelopment) {
+  if (hasDevelopment && !(opts.configSecretUiEnabled && isSensitive)) {
     return 'encrypted';
   }
   if (opts.forceEncrypted && !opts.policyOn) {
@@ -887,7 +890,11 @@ export default async function add(client: Client, argv: string[]) {
     );
   }
 
-  if (forceSensitive && envTargets.includes('development')) {
+  if (
+    forceSensitive &&
+    envTargets.includes('development') &&
+    !configSecretUiEnabled
+  ) {
     const msg = `--sensitive is not allowed with the Development Environment. Sensitive Environment Variables are only supported on Production and Preview.`;
     if (client.nonInteractive) {
       const nonDev = envTargets.filter(t => t !== 'development');
@@ -922,7 +929,8 @@ export default async function add(client: Client, argv: string[]) {
     const compatibilityError = getTargetCompatibilityError(
       envTargets,
       isSensitive,
-      policyOn
+      policyOn,
+      configSecretUiEnabled
     );
     if (compatibilityError) {
       if (client.nonInteractive) {
@@ -973,6 +981,7 @@ export default async function add(client: Client, argv: string[]) {
   const envChoices = filterEnvChoicesForSensitivity(choices, {
     isSensitive,
     policyOn,
+    configSecretUiEnabled,
   });
 
   if (policyOn && isSensitive) {
@@ -1101,7 +1110,8 @@ export default async function add(client: Client, argv: string[]) {
   const postSelectionError = getTargetCompatibilityError(
     envTargets,
     isSensitive,
-    policyOn
+    policyOn,
+    configSecretUiEnabled
   );
   if (postSelectionError) {
     output.error(postSelectionError);
@@ -1156,6 +1166,7 @@ export default async function add(client: Client, argv: string[]) {
     forceSensitive,
     forceEncrypted,
     policyOn,
+    configSecretUiEnabled,
   });
 
   if (policyOn && !hasDevelopment) {

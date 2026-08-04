@@ -535,22 +535,46 @@ describe('env add', () => {
         }
       });
 
-      it('rejects --sensitive on Development', async () => {
-        client.setArgv(
-          'env',
-          'add',
-          'DEV_SECRET',
-          'development',
-          '--sensitive',
-          '--value',
-          'foo',
-          '--yes'
+      it('allows --sensitive on Development', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
         );
-        const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput(
-          'not allowed with the Development Environment'
-        );
-        await expect(exitCodePromise).resolves.toBe(1);
+        const addSpy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        try {
+          client.setArgv(
+            'env',
+            'add',
+            'DEV_SECRET',
+            'development',
+            '--sensitive',
+            '--value',
+            'foo',
+            '--yes'
+          );
+          const exitCodePromise = env(client);
+          await expect(exitCodePromise).resolves.toBe(0);
+
+          expect(addSpy).toHaveBeenCalled();
+          const [, , , type, , , , , visibility] = addSpy.mock
+            .calls[0] as unknown as [
+            unknown,
+            unknown,
+            unknown,
+            string,
+            unknown,
+            unknown,
+            unknown,
+            unknown,
+            string,
+          ];
+          expect(type).toBe('sensitive');
+          expect(visibility).toBe('secret');
+        } finally {
+          addSpy.mockRestore();
+        }
       });
 
       it('omits visibility for public-prefixed keys on Production when team policy is on', async () => {
