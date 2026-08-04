@@ -2500,8 +2500,6 @@ export const onPrerenderRouteInitial = (
   }
 
   if (
-    // App paths must be Prerenders to ensure Vary header is
-    // correctly added
     !isAppPathRoute &&
     initialRevalidate === false &&
     (!canUsePreviewMode || (hasPages404 && routeNoLocale === '/404')) &&
@@ -2512,7 +2510,6 @@ export const onPrerenderRouteInitial = (
       routesManifest?.i18n &&
       Object.keys(prerenderManifest.staticRoutes).some(route => {
         const staticRoute = prerenderManifest.staticRoutes[route];
-
         return (
           staticRoute.srcRoute === srcRoute &&
           staticRoute.initialRevalidate !== false
@@ -2527,7 +2524,11 @@ export const onPrerenderRouteInitial = (
       };
     }
 
-    nonLambdaSsgPages.add(route === '/' ? '/index' : route);
+    // 🔥 CRITICAL FIX: Do not exclude static pages from Lambda when Preview Mode is enabled
+    // In Draft Mode, we need the Lambda to handle cookies(), headers(), and searchParams
+    if (!canUsePreviewMode) {
+      nonLambdaSsgPages.add(route === '/' ? '/index' : route);
+    }
   }
 
   return {
@@ -2663,21 +2664,45 @@ export const onPrerenderRoute =
           : localePathResult.pathname;
     }
 
+    const isStaticRoute = prerenderManifest.staticRoutes[routeKey];
+
     const nonDynamicSsg =
       !isFallback &&
       !isBlocking &&
       !isOmitted &&
-      !prerenderManifest.staticRoutes[routeKey].srcRoute;
+      isStaticRoute &&
+      !isStaticRoute.srcRoute;
 
     // if there isn't a srcRoute then it's a non-dynamic SSG page
     if ((nonDynamicSsg && !isLocalePrefixed) || isFallback || isOmitted) {
       routeFileNoExt = addLocaleOrDefault(
-        // root index files are located without folder/index.html
         routeFileNoExt,
         routesManifest,
         locale
       );
     }
+
+    // ============================================
+    // FIX: Determine if we should keep lambda for this page
+    // When canUsePreviewMode is true, we must keep the lambda for generateStaticParams pages
+    // because they need to be able to render dynamically when Draft Mode is enabled.
+    // ============================================
+
+    // A page needs a lambda during preview mode if:
+    // 1. It has fallback behavior (fallbackRoutes)
+    // 2. It's omitted (omittedRoutes) - generateStaticParams with fallback: false
+    // 3. It's a static route that originates from a dynamic source (srcRoute != null)
+    //    This captures generateStaticParams with static paths and dynamic routes.
+    const shouldKeepLambdaForPreview =
+      canUsePreviewMode &&
+      (prerenderManifest.fallbackRoutes[routeKey] !== undefined ||
+        prerenderManifest.omittedRoutes[routeKey] !== undefined ||
+        prerenderManifest.staticRoutes[routeKey]?.srcRoute !== undefined);
+
+    // Debug log (remove before final PR if desired)
+    console.log(
+      `[Draft Mode Fix] route=${routeKey}, previewMode=${canUsePreviewMode}, keepLambda=${shouldKeepLambdaForPreview}, reasons: fallback=${prerenderManifest.fallbackRoutes[routeKey] !== undefined}, omitted=${prerenderManifest.omittedRoutes[routeKey] !== undefined}, hasSrcRoute=${prerenderManifest.staticRoutes[routeKey]?.srcRoute !== undefined}`
+    );
 
     const isNotFound = prerenderManifest.notFoundRoutes.includes(routeKey);
 
@@ -3029,35 +3054,33 @@ export const onPrerenderRoute =
       lambda = lambdas[outputSrcPathPage];
     }
 
-    if (!isAppPathRoute && !isNotFound && initialRevalidate === false) {
+    // In App Router with generateStaticParams, initialRevalidate may be undefined, not false
+    // We need to catch both cases to prevent static prerender creation
+    // 🔥 FINAL FIX: Completely disable static prerender for all routes when Draft Mode is enabled
+    const forceSkipPrerender = canUsePreviewMode;
+
+    if (forceSkipPrerender && !isAppPathRoute && !isNotFound) {
+      console.log(
+        `[Draft Mode Fix] Skipping ALL static prerender for route ${routeKey}`
+      );
+    } else if (
+      !isAppPathRoute &&
+      !isNotFound &&
+      (initialRevalidate === false || initialRevalidate === undefined)
+    ) {
       if (htmlFallbackFsRef == null || dataFallbackFsRef == null) {
         throw new NowBuildError({
           code: 'NEXT_HTMLFSREF_JSONFSREF',
           message: `invariant: htmlFsRef != null && jsonFsRef != null ${routeFileNoExt}`,
         });
       }
-
-      // if preview mode/On-Demand ISR can't be leveraged
-      // we can output pure static outputs instead of prerenders
-      if (
-        !canUsePreviewMode ||
-        (routeKey === '/404' && !lambdas[outputPathPage])
-      ) {
-        htmlFallbackFsRef.contentType = htmlContentType;
-        prerenders[outputPathPage] = htmlFallbackFsRef;
-
-        if (outputPathPrefetchData) {
-          prerenders[outputPathPrefetchData] = dataFallbackFsRef;
-        }
-
-        // If experimental ppr is not enabled for this route, then add the data
-        // route as a target for the prerender as well.
-        if (
-          outputPathData &&
-          renderingMode !== RenderingMode.PARTIALLY_STATIC
-        ) {
-          prerenders[outputPathData] = dataFallbackFsRef;
-        }
+      htmlFallbackFsRef.contentType = htmlContentType;
+      prerenders[outputPathPage] = htmlFallbackFsRef;
+      if (outputPathPrefetchData) {
+        prerenders[outputPathPrefetchData] = dataFallbackFsRef;
+      }
+      if (outputPathData && renderingMode !== RenderingMode.PARTIALLY_STATIC) {
+        prerenders[outputPathData] = dataFallbackFsRef;
       }
     }
     const isNotFoundPreview =
