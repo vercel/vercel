@@ -1116,6 +1116,8 @@ if (
             for sc_header in SC_HEADERS_STRIP_ON_NO_LEAK:
                 headers.pop(sc_header, None)
 
+        set_vercel_headers_from_http_headers(headers)
+
         # `_thread.start_new_thread` does not propagate contextvars
         captured_ctx = contextvars.copy_context()
         _thread.start_new_thread(
@@ -1123,6 +1125,7 @@ if (
             (server.handle_request,),  # type: ignore[attr-defined]
         )
         clear_runtime_cache_context()
+        clear_vercel_headers_context()
 
         if (body is not None and len(body) > 0) and (
             encoding is not None and encoding == "base64"
@@ -1408,7 +1411,12 @@ else:
                 )
 
                 asgi_instance = app(self.scope, self.receive, self.send)
-                _asgi_runner.run(asgi_instance)
+                # asyncio.Runner reuses the context from its first run
+                # (lifespan startup), so pass the current context to deliver
+                # this request's contextvars (OIDC headers, cache) to the app.
+                _asgi_runner.run(
+                    asgi_instance, context=contextvars.copy_context()
+                )
                 return self.response
 
             def put_message(self, message: dict[str, Any]) -> None:
