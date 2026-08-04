@@ -3,6 +3,7 @@ import stripAnsi from 'strip-ansi';
 import output from '../../../../src/output-manager';
 import {
   buildMethodGuidance,
+  connexMarkdownToPlainText,
   ConnexMethodError,
   CONNEX_REDIRECT_URI,
   createPathBadge,
@@ -155,6 +156,18 @@ describe('connex connection-method helpers', () => {
     it('passes everything else through verbatim', () => {
       expect(renderConnexMarkdown('Use `--data` for extras.')).toBe(
         'Use `--data` for extras.'
+      );
+    });
+  });
+
+  describe('connexMarkdownToPlainText', () => {
+    it('drops styling so the result can be word-wrapped', () => {
+      expect(
+        connexMarkdownToPlainText(
+          'Create a **public** app at [example.com/apps](https://example.com/apps) or see [the docs](https://example.com/d).'
+        )
+      ).toBe(
+        'Create a public app at https://example.com/apps or see the docs (https://example.com/d).'
       );
     });
   });

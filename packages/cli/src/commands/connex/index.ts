@@ -20,6 +20,7 @@ import {
   connexCommand,
 } from './command';
 import { create } from './create';
+import { printCreateDynamicHelp } from './create-help';
 import { update } from './update';
 import { list } from './list';
 import { token } from './token';
@@ -92,7 +93,20 @@ export default async function connex(client: Client): Promise<number> {
       case 'create': {
         if (needHelp) {
           telemetry.trackCliFlagHelp('connex', subcommandOriginal);
-          printHelp(createSubcommand);
+
+          // `create <service> --help` describes that service's connection
+          // methods. Falls back to static help when the service is unknown or
+          // the API is unreachable, so `--help` never depends on the network.
+          const printed = await printCreateDynamicHelp(
+            client,
+            findHelpServiceArg(subArgs),
+            createSubcommand,
+            cmd => printHelp(cmd)
+          );
+
+          if (!printed) {
+            printHelp(createSubcommand);
+          }
           return 0;
         }
         telemetry.trackCliSubcommandCreate(subcommandOriginal);
@@ -346,6 +360,26 @@ export default async function connex(client: Client): Promise<number> {
   } catch (err) {
     printError(err);
     return 1;
+  }
+}
+
+/**
+ * The service positional in a `create … --help` invocation. Parses
+ * permissively so `--help` and any typo'd flag stay harmless, and so a flag
+ * value (`--name my-bot`) is never mistaken for the service. Returns
+ * undefined when there is no positional, which prints static help.
+ */
+function findHelpServiceArg(subArgs: string[]): string | undefined {
+  try {
+    const { args } = parseArguments(
+      normalizeCreateDataArgs(subArgs),
+      getFlagsSpecification(createSubcommand.options),
+      { permissive: true }
+    );
+    return args.find(arg => !arg.startsWith('-'));
+    /* c8 ignore next 4 -- permissive parsing has no known throwing input */
+  } catch {
+    return undefined;
   }
 }
 

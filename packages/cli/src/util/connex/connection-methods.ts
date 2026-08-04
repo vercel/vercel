@@ -215,6 +215,19 @@ export function renderConnexMarkdown(markdown: string): string {
     .replace(/\*\*([^*]+)\*\*/g, (_match, text: string) => chalk.bold(text));
 }
 
+/**
+ * The same markdown as plain text
+ */
+export function connexMarkdownToPlainText(markdown: string): string {
+  return markdown
+    .replace(
+      /\[([^\]]+)\]\(([^)\s]+)\)/g,
+      (_match, text: string, url: string) =>
+        linksToSameTarget(text, url) ? url : `${text} (${url})`
+    )
+    .replace(/\*\*([^*]+)\*\*/g, '$1');
+}
+
 /** Whether a link's text is just its own URL written without the scheme. */
 function linksToSameTarget(text: string, url: string): boolean {
   const normalize = (value: string) =>
