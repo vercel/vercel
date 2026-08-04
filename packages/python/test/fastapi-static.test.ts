@@ -144,6 +144,85 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     );
   });
 
+  it('preserves route order for files that collide with API routes', async () => {
+    const appDir = path.join(testDir, 'app-route-order');
+    const outputDir = path.join(testDir, 'output-route-order');
+    fs.mkdirSync(path.join(appDir, 'static'), { recursive: true });
+    fs.writeFileSync(
+      path.join(appDir, 'static', 'api-first.txt'),
+      'STATIC_API_FIRST'
+    );
+    fs.writeFileSync(
+      path.join(appDir, 'static', 'mount-first.txt'),
+      'STATIC_MOUNT_FIRST'
+    );
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'from fastapi.staticfiles import StaticFiles',
+        'app = FastAPI()',
+        '@app.get("/static/api-first.txt")',
+        'def api_first(): return "API_FIRST"',
+        'app.mount("/static", StaticFiles(directory="static"), name="static")',
+        '@app.get("/static/mount-first.txt")',
+        'def mount_first(): return "MOUNT_FIRST"',
+      ].join('\n')
+    );
+
+    const result = await runFastAPICollectStatic(
+      venvPath,
+      appDir,
+      pythonEnv,
+      outputDir,
+      entrypointAbs,
+      'app'
+    );
+
+    expect(result).not.toBeNull();
+    expect(fs.existsSync(path.join(outputDir, 'static', 'api-first.txt'))).toBe(
+      false
+    );
+    expect(
+      fs.readFileSync(path.join(outputDir, 'static', 'mount-first.txt'), 'utf8')
+    ).toBe('STATIC_MOUNT_FIRST');
+  });
+
+  it('uses the first matching static mount for overlapping files', async () => {
+    const appDir = path.join(testDir, 'app-overlapping-mounts');
+    const outputDir = path.join(testDir, 'output-overlapping-mounts');
+    fs.mkdirSync(path.join(appDir, 'first'), { recursive: true });
+    fs.mkdirSync(path.join(appDir, 'second'), { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'first', 'shared.txt'), 'FIRST');
+    fs.writeFileSync(path.join(appDir, 'second', 'shared.txt'), 'SECOND');
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'from fastapi.staticfiles import StaticFiles',
+        'app = FastAPI()',
+        'app.mount("/static", StaticFiles(directory="first"), name="first")',
+        'app.mount("/static", StaticFiles(directory="second"), name="second")',
+      ].join('\n')
+    );
+
+    const result = await runFastAPICollectStatic(
+      venvPath,
+      appDir,
+      pythonEnv,
+      outputDir,
+      entrypointAbs,
+      'app'
+    );
+
+    expect(result).not.toBeNull();
+    expect(
+      fs.readFileSync(path.join(outputDir, 'static', 'shared.txt'), 'utf8')
+    ).toBe('FIRST');
+  });
+
   it('handles multiple mounts', async () => {
     const appDir = path.join(testDir, 'app-multi');
     const outputDir = path.join(testDir, 'output-multi');
