@@ -7,6 +7,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.4.4",
     "@changesets/cli": "2.27.8",
+    "@neondatabase/serverless": "1.1.0",
     "@svitejs/changesets-changelog-github-compact": "1.1.0",
     "@types/node": "20.11.0",
     "@vercel/build-utils": "workspace:*",

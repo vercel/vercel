@@ -14,6 +14,9 @@ importers:
       '@changesets/cli':
         specifier: 2.27.8
         version: 2.27.8
+      '@neondatabase/serverless':
+        specifier: 1.1.0
+        version: 1.1.0
       '@svitejs/changesets-changelog-github-compact':
         specifier: 1.1.0
         version: 1.1.0
@@ -4580,6 +4583,10 @@ packages:
     peerDependencies:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
+
+  '@neondatabase/serverless@1.1.0':
+    resolution: {integrity: sha512-r3ZZhRjEcfEdKIZnoB1RusNgvHuaBRqfCzV4Gi+5A9yUX0S4HTws/ASWqt13wL4y4I+0rqsWGdA2w7EQXHi3+Q==}
+    engines: {node: '>=19.0.0'}
 
   '@next-community/adapter-vercel@0.0.1-beta.24':
     resolution: {integrity: sha512-6c3DfRgVcDocIB2CTpp+7txplXMdrK69/CwyLJMDmcB2mvdjpXjKBOOJwjwa13E8zBPzhvRKnmkBxj+U40UUvw==}
@@ -15145,6 +15152,8 @@ snapshots:
       '@emnapi/runtime': 1.11.3
       '@tybys/wasm-util': 0.10.2
     optional: true
+
+  '@neondatabase/serverless@1.1.0': {}
 
   '@next-community/adapter-vercel@0.0.1-beta.24': {}
 

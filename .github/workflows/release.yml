@@ -110,6 +110,12 @@ jobs:
               inputs: { tag },
             });
 
+      - name: Publish CLI release notes
+        if: steps.changesets.outputs.published == 'true' && contains(fromJSON(steps.changesets.outputs.publishedPackages).*.name, 'vercel')
+        run: node utils/publish-cli-release-notes.mjs
+        env:
+          CLI_RELEASE_NOTES_DATABASE_URL: ${{ secrets.CLI_RELEASE_NOTES_DATABASE_URL }}
+
       # TODO: re-enable with a new bot token or GitHub App
       # - name: Trigger Update (if a Publish Happened)
       #   if: steps.changesets.outputs.published == 'true'
