@@ -988,6 +988,10 @@ const main = async () => {
           telemetry.trackCliCommandApi(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).api;
           break;
+        case 'ask':
+          telemetry.trackCliCommandAsk(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).ask;
+          break;
         case 'bisect':
           telemetry.trackCliCommandBisect(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).bisect;
