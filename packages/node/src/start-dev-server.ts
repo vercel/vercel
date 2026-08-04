@@ -193,12 +193,22 @@ export const startDevServer: StartDevServer = async opts => {
 
     const requireTypescript = (p: string): TypescriptModule => require_(p);
 
+    const isCompilerApi = (mod: TypescriptModule): boolean =>
+      typeof (mod as { createLanguageService?: unknown })
+        .createLanguageService === 'function' &&
+      typeof (mod as { sys?: unknown }).sys === 'object';
+
     let ts: TypescriptModule | null = null;
 
-    // Use the project's version of Typescript if available and supports `target`
+    // Use the project's version of Typescript if available and still exposes
+    // the classic Compiler API (TypeScript ≤ 6). TypeScript 7+ only ships a
+    // native `tsc` binary + unstable API, so fall back to the built-in copy.
     let compiler = resolveTypescript(process.cwd());
     if (compiler) {
-      ts = requireTypescript(compiler);
+      const candidate = requireTypescript(compiler);
+      if (isCompilerApi(candidate)) {
+        ts = candidate;
+      }
     }
 
     // Otherwise fall back to using the copy that `@vercel/node` uses
@@ -209,7 +219,14 @@ export const startDevServer: StartDevServer = async opts => {
 
     if (pathToTsConfig) {
       try {
-        tsConfig = ts.readConfigFile(pathToTsConfig, ts.sys.readFile).config;
+        if (ts && isCompilerApi(ts)) {
+          tsConfig = ts.readConfigFile(pathToTsConfig, ts.sys.readFile).config;
+        } else {
+          // TS7+ / missing Compiler API: parse JSON directly. Dev serving uses
+          // `tsx`, so we only need compilerOptions for the child env.
+          const raw = await fsp.readFile(pathToTsConfig, 'utf8');
+          tsConfig = JSON.parse(raw);
+        }
       } catch (error: unknown) {
         if (isErrnoException(error) && error.code !== 'ENOENT') {
           console.error(`Error while parsing "${pathToTsConfig}"`);
