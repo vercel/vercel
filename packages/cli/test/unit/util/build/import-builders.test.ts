@@ -8,6 +8,7 @@ import {
   importBuilders,
 } from '../../../../src/util/build/import-builders';
 import * as installBuildersModule from '../../../../src/util/build/install-builders';
+import mockedCliPkg from '../../../../src/util/pkg';
 import vercelNextPkg from '@vercel/next/package.json';
 
 vi.mock('../../../../src/util/build/install-builders', async importOriginal => {
@@ -33,6 +34,12 @@ vi.mock('../../../../src/util/pkg', async importOriginal => {
       builders: {
         ...(actual.default.builders as Record<string, string>),
         'fake-pinned-builder': '2.0.0',
+        'fake-url-pinned-builder':
+          'https://example.com/tarballs/fake-url-pinned-builder.tgz',
+        // pin-builders enforces exact versions, so a range-shaped pin should
+        // never exist in a published CLI — but if one slips in, it must not
+        // trigger a reinstall on every run.
+        'fake-range-pinned-builder': '^2.0.0',
       },
     },
   };
@@ -244,7 +251,8 @@ describe('importBuilders()', () => {
       buildersDir,
       new Set([spec]),
       undefined,
-      new Map([[spec, 'not-installed']])
+      new Map([[spec, 'not-installed']]),
+      new Map()
     );
     if (!err) {
       throw new Error('Expected `err` to be defined');
@@ -292,7 +300,8 @@ describe('importBuilders()', () => {
         undefined,
         new Map([
           [spec, 'entrypoint-load-failed:some-package-that-does-not-exist'],
-        ])
+        ]),
+        new Map()
       );
       expect(builders.get(spec)?.pkg.version).toBe('1.0.0');
       expect(builders.get(spec)?.dynamicallyInstalled).toBe(true);
@@ -341,17 +350,20 @@ describe('importBuilders()', () => {
   });
 
   const pkgName = 'fake-pinned-builder';
+  const urlPinnedPkgName = 'fake-url-pinned-builder';
+  const urlPinnedTarball =
+    'https://example.com/tarballs/fake-url-pinned-builder.tgz';
 
-  function mockInstallWritingVersion(version: string) {
+  function mockInstallWritingVersion(version: string, name: string = pkgName) {
     vi.mocked(installBuildersModule.installBuilders).mockImplementationOnce(
       async dir => {
-        await outputJSON(join(dir, 'node_modules', pkgName, 'package.json'), {
-          name: pkgName,
+        await outputJSON(join(dir, 'node_modules', name, 'package.json'), {
+          name,
           version,
           main: 'index.js',
         });
         await writeFile(
-          join(dir, 'node_modules', pkgName, 'index.js'),
+          join(dir, 'node_modules', name, 'index.js'),
           `exports.version = 3; exports.build = async function() { return { output: {} }; };`
         );
         return new Map();
@@ -371,9 +383,62 @@ describe('importBuilders()', () => {
         buildersDir,
         new Set(['fake-pinned-builder@2.0.0']),
         undefined,
-        new Map([[spec, 'not-installed']])
+        new Map([[spec, 'not-installed']]),
+        new Map([[spec, 'fake-pinned-builder@2.0.0']])
       );
       expect(builders.get(spec)?.pkg.version).toBe('2.0.0');
+    } finally {
+      await remove(cwd);
+    }
+  });
+
+  it('should install the tarball URL pin for bare specs', async () => {
+    const spec = urlPinnedPkgName;
+    const cwd = await getWriteableDirectory();
+    const buildersDir = join(cwd, '.vercel', 'builders');
+
+    mockInstallWritingVersion('9.9.9-preview', urlPinnedPkgName);
+    try {
+      const builders = await importBuilders(new Set([spec]), cwd);
+      expect(installBuildersModule.installBuilders).toHaveBeenCalledWith(
+        buildersDir,
+        new Set([urlPinnedTarball]),
+        undefined,
+        new Map([[spec, 'not-installed']]),
+        new Map([[spec, urlPinnedTarball]])
+      );
+      expect(builders.get(spec)?.pkg.version).toBe('9.9.9-preview');
+    } finally {
+      await remove(cwd);
+    }
+  });
+
+  it('should not reinstall a resolved builder when the pin is a tarball URL', async () => {
+    // URL pins cannot equal package.json#version; they are install targets only.
+    const spec = urlPinnedPkgName;
+    const cwd = await getWriteableDirectory();
+    const buildersDir = join(cwd, '.vercel', 'builders');
+    const builderModuleDir = join(
+      buildersDir,
+      'node_modules',
+      urlPinnedPkgName
+    );
+
+    await outputJSON(join(builderModuleDir, 'package.json'), {
+      name: urlPinnedPkgName,
+      version: '9.9.9-preview',
+      main: 'index.js',
+    });
+    await writeFile(
+      join(builderModuleDir, 'index.js'),
+      `exports.version = 3; exports.build = async function() { return { output: {} }; };`
+    );
+
+    vi.mocked(installBuildersModule.installBuilders).mockClear();
+    try {
+      const builders = await importBuilders(new Set([spec]), cwd);
+      expect(installBuildersModule.installBuilders).not.toHaveBeenCalled();
+      expect(builders.get(spec)?.pkg.version).toBe('9.9.9-preview');
     } finally {
       await remove(cwd);
     }
@@ -391,7 +456,8 @@ describe('importBuilders()', () => {
         buildersDir,
         new Set(['fake-pinned-builder@1.0.0']),
         undefined,
-        new Map([[spec, 'not-installed']])
+        new Map([[spec, 'not-installed']]),
+        new Map()
       );
       expect(builders.get(spec)?.pkg.version).toBe('1.0.0');
     } finally {
@@ -399,7 +465,7 @@ describe('importBuilders()', () => {
     }
   });
 
-  it('should reinstall a cached bare-spec Builder that no longer matches the peer-declared version', async () => {
+  it('should reinstall a cached bare-spec Builder that no longer matches the pinned version', async () => {
     const spec = pkgName;
     const cwd = await getWriteableDirectory();
     const buildersDir = join(cwd, '.vercel', 'builders');
@@ -418,9 +484,203 @@ describe('importBuilders()', () => {
         buildersDir,
         new Set(['fake-pinned-builder@2.0.0']),
         undefined,
-        new Map([[spec, 'peer-version-mismatch']])
+        new Map([[spec, 'pin-version-mismatch']]),
+        new Map([[spec, 'fake-pinned-builder@2.0.0']])
       );
       expect(builders.get(spec)?.pkg.version).toBe('2.0.0');
+    } finally {
+      await remove(cwd);
+    }
+  });
+
+  it('should reinstall when a bare-spec Builder matches a pin range but not the exact pin', async () => {
+    // Pins are exact published versions; a cached 2.0.1 must not satisfy pin 2.0.0
+    // via semver satisfies — only exact equality counts.
+    const spec = pkgName;
+    const cwd = await getWriteableDirectory();
+    const buildersDir = join(cwd, '.vercel', 'builders');
+    const builderModuleDir = join(buildersDir, 'node_modules', pkgName);
+
+    await outputJSON(join(builderModuleDir, 'package.json'), {
+      name: pkgName,
+      version: '2.0.1',
+      main: 'index.js',
+    });
+    await writeFile(
+      join(builderModuleDir, 'index.js'),
+      `exports.version = 3; exports.build = async function() { return { output: {} }; };`
+    );
+
+    mockInstallWritingVersion('2.0.0');
+    try {
+      const builders = await importBuilders(new Set([spec]), cwd);
+      expect(installBuildersModule.installBuilders).toHaveBeenCalledWith(
+        buildersDir,
+        new Set(['fake-pinned-builder@2.0.0']),
+        undefined,
+        new Map([[spec, 'pin-version-mismatch']]),
+        new Map([[spec, 'fake-pinned-builder@2.0.0']])
+      );
+      expect(builders.get(spec)?.pkg.version).toBe('2.0.0');
+    } finally {
+      await remove(cwd);
+    }
+  });
+
+  it('should reinstall a URL-pinned builder cached from a different preview pack', async () => {
+    // Preview packs stamp `-${sha}` on the CLI and every builder tarball.
+    // A cached builder carrying a different suffix came from another preview.
+    const spec = urlPinnedPkgName;
+    const cwd = await getWriteableDirectory();
+    const buildersDir = join(cwd, '.vercel', 'builders');
+    const builderModuleDir = join(
+      buildersDir,
+      'node_modules',
+      urlPinnedPkgName
+    );
+    const originalVersion = mockedCliPkg.version;
+    (mockedCliPkg as { version?: string }).version = '58.0.0-cafebabe';
+
+    await outputJSON(join(builderModuleDir, 'package.json'), {
+      name: urlPinnedPkgName,
+      version: '9.9.9-deadbeef',
+      main: 'index.js',
+    });
+    await writeFile(
+      join(builderModuleDir, 'index.js'),
+      `exports.version = 3; exports.build = async function() { return { output: {} }; };`
+    );
+
+    mockInstallWritingVersion('9.9.9-cafebabe', urlPinnedPkgName);
+    try {
+      const builders = await importBuilders(new Set([spec]), cwd);
+      expect(installBuildersModule.installBuilders).toHaveBeenCalledWith(
+        buildersDir,
+        new Set([urlPinnedTarball]),
+        undefined,
+        new Map([[spec, 'preview-pack-mismatch']]),
+        new Map([[spec, urlPinnedTarball]])
+      );
+      expect(builders.get(spec)?.pkg.version).toBe('9.9.9-cafebabe');
+    } finally {
+      (mockedCliPkg as { version?: string }).version = originalVersion;
+      await remove(cwd);
+    }
+  });
+
+  it('should keep a URL-pinned builder cached from the same preview pack', async () => {
+    const spec = urlPinnedPkgName;
+    const cwd = await getWriteableDirectory();
+    const buildersDir = join(cwd, '.vercel', 'builders');
+    const builderModuleDir = join(
+      buildersDir,
+      'node_modules',
+      urlPinnedPkgName
+    );
+    const originalVersion = mockedCliPkg.version;
+    (mockedCliPkg as { version?: string }).version = '58.0.0-cafebabe';
+
+    await outputJSON(join(builderModuleDir, 'package.json'), {
+      name: urlPinnedPkgName,
+      version: '9.9.9-cafebabe',
+      main: 'index.js',
+    });
+    await writeFile(
+      join(builderModuleDir, 'index.js'),
+      `exports.version = 3; exports.build = async function() { return { output: {} }; };`
+    );
+
+    vi.mocked(installBuildersModule.installBuilders).mockClear();
+    try {
+      const builders = await importBuilders(new Set([spec]), cwd);
+      expect(installBuildersModule.installBuilders).not.toHaveBeenCalled();
+      expect(builders.get(spec)?.pkg.version).toBe('9.9.9-cafebabe');
+    } finally {
+      (mockedCliPkg as { version?: string }).version = originalVersion;
+      await remove(cwd);
+    }
+  });
+
+  it('should not reinstall a resolved builder when the pin is range-shaped', async () => {
+    // pin-builders enforces exact versions at pack time, but a range-shaped
+    // pin must not force `pin-version-mismatch` reinstalls on every run
+    // (equality against a range string would never hold).
+    const rangePinnedPkgName = 'fake-range-pinned-builder';
+    const spec = rangePinnedPkgName;
+    const cwd = await getWriteableDirectory();
+    const buildersDir = join(cwd, '.vercel', 'builders');
+    const builderModuleDir = join(
+      buildersDir,
+      'node_modules',
+      rangePinnedPkgName
+    );
+
+    await outputJSON(join(builderModuleDir, 'package.json'), {
+      name: rangePinnedPkgName,
+      version: '2.5.0',
+      main: 'index.js',
+    });
+    await writeFile(
+      join(builderModuleDir, 'index.js'),
+      `exports.version = 3; exports.build = async function() { return { output: {} }; };`
+    );
+
+    vi.mocked(installBuildersModule.installBuilders).mockClear();
+    try {
+      const builders = await importBuilders(new Set([spec]), cwd);
+      expect(installBuildersModule.installBuilders).not.toHaveBeenCalled();
+      expect(builders.get(spec)?.pkg.version).toBe('2.5.0');
+    } finally {
+      await remove(cwd);
+    }
+  });
+
+  it('should fall back to install when the entrypoint load throws ENOENT', async () => {
+    // Native SEA builds can surface ENOENT (instead of MODULE_NOT_FOUND) when
+    // a builder's entrypoint reads a ghost path from the SEA VFS. The first
+    // resolve pass must treat that like a missing module and install.
+    const enoentPkgName = 'fake-enoent-builder';
+    const spec = enoentPkgName;
+    const cwd = await getWriteableDirectory();
+    const buildersDir = join(cwd, '.vercel', 'builders');
+    const builderModuleDir = join(buildersDir, 'node_modules', enoentPkgName);
+
+    await outputJSON(join(builderModuleDir, 'package.json'), {
+      name: enoentPkgName,
+      version: '1.0.0',
+      main: 'index.js',
+    });
+    // Simulates an eager `readFileSync` in the builder's top-level code
+    // failing with ENOENT (e.g. a path that exists only outside the SEA VFS).
+    await writeFile(
+      join(builderModuleDir, 'index.js'),
+      `const err = new Error("ENOENT: no such file or directory, open '/snapshot/ghost'");
+       err.code = 'ENOENT';
+       throw err;`
+    );
+
+    vi.mocked(installBuildersModule.installBuilders).mockImplementationOnce(
+      async () => {
+        // Reinstalling repairs the broken entrypoint
+        await writeFile(
+          join(builderModuleDir, 'index.js'),
+          `exports.version = 3; exports.build = async function() { return { output: {} }; };`
+        );
+        return new Map();
+      }
+    );
+
+    try {
+      const builders = await importBuilders(new Set([spec]), cwd);
+      expect(installBuildersModule.installBuilders).toHaveBeenCalledWith(
+        buildersDir,
+        new Set([spec]),
+        undefined,
+        new Map([[spec, 'entrypoint-load-failed']]),
+        new Map()
+      );
+      expect(builders.get(spec)?.pkg.version).toBe('1.0.0');
+      expect(builders.get(spec)?.dynamicallyInstalled).toBe(true);
     } finally {
       await remove(cwd);
     }

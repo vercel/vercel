@@ -1,5 +1,5 @@
 import npa from 'npm-package-arg';
-import { satisfies, validRange } from 'semver';
+import { satisfies, valid, validRange } from 'semver';
 import { dirname, join } from 'path';
 import { createRequire } from 'module';
 import { readJSON } from 'fs-extra';
@@ -44,18 +44,19 @@ type ResolveBuildersResult =
 const require_ = createRequire(__filename);
 
 // Builder versions this CLI release was published with, from its `builders`
-// manifest (`workspace:*` in the monorepo, so a no-op in dev)
-let builderPins: Map<string, string> | undefined;
+// manifest (`workspace:*` in the monorepo, so a no-op in dev). Preview
+// tarball packs may pin builders to https://…/tarballs/….tgz URLs instead.
+function isRemoteBuilderPin(pin: string): boolean {
+  return /^https?:\/\//i.test(pin);
+}
 
 function getBuilderPins(): Map<string, string> {
-  if (!builderPins) {
-    builderPins = new Map();
-    const pins: Record<string, string> =
-      (cliPkg as { builders?: Record<string, string> }).builders ?? {};
-    for (const [name, version] of Object.entries(pins)) {
-      if (validRange(version)) {
-        builderPins.set(name, version);
-      }
+  const builderPins = new Map<string, string>();
+  const pins: Record<string, string> =
+    (cliPkg as { builders?: Record<string, string> }).builders ?? {};
+  for (const [name, version] of Object.entries(pins)) {
+    if (validRange(version) || isRemoteBuilderPin(version)) {
+      builderPins.set(name, version);
     }
   }
   return builderPins;
@@ -63,6 +64,26 @@ function getBuilderPins(): Map<string, string> {
 
 function isBareSpec(parsed: ReturnType<typeof npa>): boolean {
   return parsed.type === 'tag' && parsed.rawSpec === '';
+}
+
+/**
+ * Preview packs (`utils/pack.ts`) append `-${sha}` to every package version
+ * — the CLI and its URL-pinned builders alike, from the same commit. The
+ * CLI's own version suffix therefore identifies which preview a cached
+ * builder must come from. Returns `undefined` outside preview packs
+ * (stable versions carry no pack suffix, and URL pins only exist in packs).
+ */
+function previewPackSuffix(): string | undefined {
+  const version = (cliPkg as { version?: string }).version;
+  if (typeof version !== 'string') {
+    return undefined;
+  }
+  const idx = version.lastIndexOf('-');
+  if (idx === -1) {
+    return undefined;
+  }
+  const suffix = version.slice(idx + 1);
+  return suffix.length > 0 ? suffix : undefined;
 }
 
 /**
@@ -87,7 +108,11 @@ function pinBuilderSpecs(specs: Set<string>): Map<string, string> {
     if (parsed.name && isBareSpec(parsed)) {
       const version = pins.get(parsed.name);
       if (version) {
-        pinnedSpecs.set(spec, `${parsed.name}@${version}`);
+        // Remote pins install as the URL; version pins as name@version.
+        pinnedSpecs.set(
+          spec,
+          isRemoteBuilderPin(version) ? version : `${parsed.name}@${version}`
+        );
       }
     }
   }
@@ -114,7 +139,8 @@ export async function importBuilders(
       buildersDir,
       new Set(Array.from(buildersToAdd, spec => pinnedSpecs.get(spec) ?? spec)),
       span,
-      installReasons
+      installReasons,
+      pinnedSpecs
     );
 
     importResult = await resolveBuilders(
@@ -238,17 +264,41 @@ async function resolveBuilders(
       }
 
       const peerVersion = getBuilderPins().get(name);
+      // Only exact-version pins enforce equality. Remote (tarball URL) pins
+      // are install targets only — the resolved package version cannot equal
+      // a URL. Range-shaped pins (never produced by pin-builders, which
+      // requires exact versions) must not force a reinstall on every run.
       if (
         isBareSpec(parsed) &&
         peerVersion &&
-        pkgPath.startsWith(buildersDir) &&
-        !satisfies(builderPkg.version, peerVersion)
+        valid(peerVersion) &&
+        builderPkg.version !== peerVersion
       ) {
         output.debug(
-          `Cached "${name}@${builderPkg.version}" does not satisfy "${peerVersion}"`
+          `Resolved "${name}@${builderPkg.version}" does not match pin "${peerVersion}"`
         );
         buildersToAdd.add(spec);
-        installReasons.set(spec, 'peer-version-mismatch');
+        installReasons.set(spec, 'pin-version-mismatch');
+        continue;
+      }
+
+      // URL pins can't be equality-checked against a version, but preview
+      // packs stamp the same `-${sha}` suffix on the CLI and every builder
+      // tarball. A cached builder without this CLI's suffix came from a
+      // different preview (or npm) — reinstall from the pinned URL.
+      const packSuffix = previewPackSuffix();
+      if (
+        isBareSpec(parsed) &&
+        peerVersion &&
+        isRemoteBuilderPin(peerVersion) &&
+        packSuffix &&
+        !builderPkg.version.endsWith(`-${packSuffix}`)
+      ) {
+        output.debug(
+          `Resolved "${name}@${builderPkg.version}" does not carry preview pack suffix "-${packSuffix}"`
+        );
+        buildersToAdd.add(spec);
+        installReasons.set(spec, 'preview-pack-mismatch');
         continue;
       }
 
@@ -305,10 +355,13 @@ async function resolveBuilders(
       });
       output.debug(`Imported Builder "${name}" from "${dirname(pkgPath)}"`);
     } catch (err: any) {
-      // `resolvedSpecs` is only passed into this function on the 2nd run,
-      // so if MODULE_NOT_FOUND happens in that case then we don't want to
-      // try to install again. Instead just pass through the error to the user
-      if (err.code === 'MODULE_NOT_FOUND' && !resolvedSpecs) {
+      // On the 2nd pass (`resolvedSpecs` set), don't retry install — surface
+      // the error. Treat ENOENT like MODULE_NOT_FOUND for native SEA VFS
+      // ghost paths that would otherwise skip the install fallback.
+      if (
+        (err.code === 'MODULE_NOT_FOUND' || err.code === 'ENOENT') &&
+        !resolvedSpecs
+      ) {
         output.debug(`Failed to import "${name}": ${err}`);
         buildersToAdd.add(spec);
         if (entrypointLoadFailed) {

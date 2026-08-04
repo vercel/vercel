@@ -137,7 +137,13 @@ export async function installBuilders(
   buildersDir: string,
   buildersToAdd: Set<string>,
   span?: Span,
-  installReasons?: Map<string, string>
+  installReasons?: Map<string, string>,
+  /**
+   * Bare specs rewritten to `name@pin` from `package.json#builders`.
+   * When present, the install span is tagged so we can track dynamic installs
+   * of builders we intend to preinstall.
+   */
+  pinnedSpecs?: Map<string, string>
 ): Promise<Map<string, string>> {
   if (!span) {
     return untracedInstallBuilders(buildersDir, buildersToAdd);
@@ -149,6 +155,10 @@ export async function installBuilders(
     attributes.reasons = Array.from(installReasons)
       .map(([spec, reason]) => `${spec}=${reason}`)
       .join(',');
+  }
+  if (pinnedSpecs && pinnedSpecs.size > 0) {
+    attributes.pinned = 'true';
+    attributes.pinnedPackages = Array.from(pinnedSpecs.values()).join(',');
   }
   const installSpan = span.child('vc.installBuilders', attributes);
   return installSpan.trace(async s => {

@@ -368,7 +368,9 @@ jobs:
           export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
 
           while [ "$attempt" -le "$max_attempts" ]; do
-            if pnpm turbo run vitest-unit --affected --filter=!vercel --summarize --cache-dir='.turbo' --log-order=stream --continue=always --concurrency=${{ matrix.concurrency }}; then
+            # Use global turbo@2.10.8 (installed above). Workspace `pnpm turbo`
+            # is 2.5.0 and rejects combining --affected with --filter.
+            if turbo run vitest-unit --affected --filter=!vercel --summarize --cache-dir='.turbo' --log-order=stream --continue=always --concurrency=${{ matrix.concurrency }}; then
               exit 0
             fi
 
@@ -479,7 +481,9 @@ jobs:
           export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
 
           while [ "$attempt" -le "$max_attempts" ]; do
-            if pnpm turbo run vitest-unit --affected --filter=vercel; then
+            # Use global turbo@2.10.8 (installed above). Workspace `pnpm turbo`
+            # is 2.5.0 and rejects combining --affected with --filter.
+            if turbo run vitest-unit --affected --filter=vercel; then
               exit 0
             fi
 

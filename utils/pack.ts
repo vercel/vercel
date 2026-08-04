@@ -54,6 +54,12 @@ async function main() {
         if (packageObj.devDependencies && name in packageObj.devDependencies) {
           packageObj.devDependencies[name] = tarballUrl;
         }
+        // Preview tarballs also pin `builders` to the same URLs so
+        // importBuilders installs the PR build instead of the npm version.
+        // pin-builders prepack leaves non-workspace entries alone.
+        if (packageObj.builders && name in packageObj.builders) {
+          packageObj.builders[name] = tarballUrl;
+        }
       }
     }
     await fs.writeJson(packageJsonPath, packageObj, { spaces: 2 });
