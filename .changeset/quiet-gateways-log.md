@@ -2,4 +2,4 @@
 'vercel': minor
 ---
 
-Add `vercel ai-gateway logs` commands for listing requests and inspecting provider fallback attempts.
+Add agent-ready `vercel ai-gateway logs` commands for searching requests and inspecting provider fallback attempts.

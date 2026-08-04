@@ -63,14 +63,43 @@ describe('ai-gateway logs list', () => {
     expect(help).toContain('inspect');
   });
 
+  it('shows logs help without treating no arguments as an error', async () => {
+    client.setArgv('ai-gateway', 'logs');
+
+    expect(await aiGateway(client)).toBe(2);
+    const help = client.stderr.getFullOutput();
+    expect(help).toContain('list');
+    expect(help).toContain('inspect');
+    expect(help).not.toContain('Invalid subcommand');
+  });
+
+  it('returns agent-traversable subcommands when no action is provided', async () => {
+    client.nonInteractive = true;
+    client.isAgent = true;
+    client.setArgv('ai-gateway', 'logs');
+
+    expect(await aiGateway(client)).toBe(1);
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      status: 'action_required',
+      reason: 'missing_arguments',
+      next: [
+        { command: expect.stringContaining('logs list') },
+        { command: expect.stringContaining('logs inspect') },
+      ],
+    });
+    expect(client.stderr.getFullOutput()).toBe('');
+  });
+
   it('shows list help with filters and JSON output', async () => {
     client.setArgv('ai-gateway', 'logs', 'list', '--help');
 
     expect(await logs(client)).toBe(2);
     const help = client.stderr.getFullOutput();
     expect(help).toContain('--provider');
+    expect(help).toContain('--search');
     expect(help).toContain('--status');
     expect(help).toContain('--format');
+    expect(help).toContain('--json');
   });
 
   it('lists request fields in a table', async () => {
@@ -87,36 +116,70 @@ describe('ai-gateway logs list', () => {
 
   it('outputs a normalized, bounded JSON contract', async () => {
     useLogs();
-    client.setArgv(
-      'ai-gateway',
-      'logs',
-      'list',
-      '--limit',
-      '1',
-      '--format',
-      'json'
-    );
+    client.setArgv('ai-gateway', 'logs', 'list', '--limit', '1', '--json');
 
     expect(await logs(client)).toBe(0);
     const result = JSON.parse(client.stdout.getFullOutput());
     expect(result).toMatchObject({
-      requests: [
-        {
-          generationId,
-          cost: { total: 0.0013, inference: 0.0012, currency: 'USD' },
-          tokens: {
-            input: 1000,
-            cachedInput: 100,
-            cacheCreationInput: 20,
-            output: 200,
-            reasoning: 50,
-            total: 1250,
+      status: 'success',
+      reason: 'ai_gateway_logs_listed',
+      data: {
+        requests: [
+          {
+            generationId,
+            cost: { total: 0.0013, inference: 0.0012, currency: 'USD' },
+            tokens: {
+              input: 1000,
+              cachedInput: 100,
+              cacheCreationInput: 20,
+              output: 200,
+              reasoning: 50,
+              total: 1250,
+            },
           },
+        ],
+        pagination: {
+          page: 1,
+          limit: 1,
+          returned: 1,
+          hasMore: true,
+          nextPage: 2,
         },
-      ],
-      pagination: { page: 1, limit: 1, returned: 1, hasMore: true },
+      },
     });
     expect(client.stdout.getFullOutput()).not.toContain('private prompt data');
+    expect(client.stderr.getFullOutput()).toBe('');
+  });
+
+  it('defaults to structured JSON when an agent is detected', async () => {
+    useLogs();
+    client.nonInteractive = true;
+    client.isAgent = true;
+    client.setArgv('ai-gateway', 'logs', 'list');
+
+    expect(await logs(client)).toBe(0);
+    const result = JSON.parse(client.stdout.getFullOutput());
+    expect(result).toMatchObject({
+      status: 'success',
+      reason: 'ai_gateway_logs_listed',
+      data: { team: { id: 'team_123', slug: 'acme' } },
+    });
+    expect(client.stderr.getFullOutput()).toBe('');
+  });
+
+  it('returns a structured empty result in JSON mode', async () => {
+    useLogs([]);
+    client.setArgv('ai-gateway', 'logs', 'list', '--json');
+
+    expect(await logs(client)).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      status: 'success',
+      data: {
+        requests: [],
+        pagination: { returned: 0, hasMore: false, nextPage: null },
+      },
+    });
+    expect(client.stderr.getFullOutput()).toBe('');
   });
 
   it('resolves a project and sends filters', async () => {
@@ -126,6 +189,8 @@ describe('ai-gateway logs list', () => {
     client.scenario.get('/api/ai/gateway-inference-requests', (req, res) => {
       expect(req.query).toMatchObject({
         projectId: 'prj_123',
+        q: generationId,
+        environment: 'production',
         aiProvider: 'anthropic',
         aiModel: 'anthropic/claude-sonnet-4.5',
         status: '5xx',
@@ -140,6 +205,10 @@ describe('ai-gateway logs list', () => {
       'list',
       '--project',
       'my-app',
+      '--search',
+      generationId,
+      '--environment',
+      'production',
       '--provider',
       'anthropic',
       '--model',
@@ -165,5 +234,35 @@ describe('ai-gateway logs list', () => {
     expect(client.stderr.getFullOutput()).toContain(
       'Status must be an HTTP code or class'
     );
+  });
+
+  it('returns action-required JSON when an agent has no team', async () => {
+    client.config.currentTeam = undefined;
+    client.nonInteractive = true;
+    client.setArgv('ai-gateway', 'logs', 'list');
+
+    expect(await logs(client)).toBe(1);
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      status: 'action_required',
+      reason: 'missing_scope',
+      next: [{ command: expect.stringContaining('--scope <team-slug>') }],
+    });
+    expect(client.stderr.getFullOutput()).toBe('');
+  });
+
+  it('returns structured API errors for agents', async () => {
+    client.nonInteractive = true;
+    client.scenario.get('/api/ai/gateway-inference-requests', (_req, res) => {
+      res.status(403).json({ error: { message: 'forbidden' } });
+    });
+    client.setArgv('ai-gateway', 'logs', 'list');
+
+    expect(await logs(client)).toBe(1);
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      status: 'error',
+      reason: 'permission_denied',
+      next: expect.any(Array),
+    });
+    expect(client.stderr.getFullOutput()).toBe('');
   });
 });

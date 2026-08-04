@@ -15,6 +15,12 @@ import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import { AiGatewayLogsTelemetryClient } from '../../util/telemetry/commands/ai-gateway/logs';
 import { printError } from '../../util/error';
+import {
+  outputLogsError,
+  outputMissingLogsSubcommand,
+  shouldUseLogsJson,
+} from './logs-output';
+import { AGENT_REASON } from '../../util/agent-output-constants';
 
 const COMMAND_CONFIG = {
   inspect: getCommandAliases(logsInspectSubcommand),
@@ -32,6 +38,16 @@ export default async function logs(client: Client) {
       permissive: true,
     });
   } catch (error) {
+    if (shouldUseLogsJson(client, false)) {
+      return outputLogsError(
+        client,
+        {
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: error instanceof Error ? error.message : String(error),
+        },
+        true
+      );
+    }
     printError(error);
     return 1;
   }
@@ -42,7 +58,10 @@ export default async function logs(client: Client) {
   );
   const needHelp = parsedArgs.flags['--help'];
 
-  if (!subcommand && needHelp) {
+  if (!subcommand && (needHelp || parsedArgs.args.slice(2).length === 0)) {
+    if (!needHelp && shouldUseLogsJson(client, false)) {
+      return outputMissingLogsSubcommand(client);
+    }
     telemetry.trackCliFlagHelp('ai-gateway logs', subcommandOriginal);
     output.print(help(logsSubcommand, { columns: client.stderr.columns }));
     return 2;
@@ -72,6 +91,22 @@ export default async function logs(client: Client) {
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return list(client, args);
     default:
+      if (shouldUseLogsJson(client, false)) {
+        return outputLogsError(
+          client,
+          {
+            reason: AGENT_REASON.INVALID_ARGUMENTS,
+            message: 'Unknown AI Gateway logs subcommand.',
+            next: [
+              {
+                command: 'vercel ai-gateway logs --help',
+                when: 'List available logs subcommands',
+              },
+            ],
+          },
+          true
+        );
+      }
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(logsSubcommand, { columns: client.stderr.columns }));
       return 2;

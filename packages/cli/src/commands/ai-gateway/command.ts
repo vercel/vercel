@@ -555,6 +555,22 @@ export const logsListSubcommand = {
     logsSinceOption,
     logsUntilOption,
     {
+      name: 'search',
+      shorthand: null,
+      type: String,
+      argument: 'QUERY',
+      deprecated: false,
+      description: 'Search by Generation ID, provider, or model',
+    },
+    {
+      name: 'environment',
+      shorthand: null,
+      type: String,
+      argument: 'ENVIRONMENT',
+      deprecated: false,
+      description: 'Filter requests by environment',
+    },
+    {
       name: 'provider',
       shorthand: null,
       type: String,
@@ -595,6 +611,7 @@ export const logsListSubcommand = {
       description: 'Set requests per page (default: 20, max: 100)',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -607,7 +624,7 @@ export const logsListSubcommand = {
     },
     {
       name: 'Print requests as JSON',
-      value: `${packageName} ai-gateway logs list --format json`,
+      value: `${packageName} ai-gateway logs list --json`,
     },
   ],
 } as const;
@@ -617,7 +634,7 @@ export const logsInspectSubcommand = {
   aliases: [],
   description: 'Inspect an AI Gateway request and its provider attempts',
   arguments: [{ name: 'generationId', required: true }],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Inspect a request',
@@ -625,7 +642,7 @@ export const logsInspectSubcommand = {
     },
     {
       name: 'Print request details as JSON',
-      value: `${packageName} ai-gateway logs inspect gen_01K00000000000000000000000 --format json`,
+      value: `${packageName} ai-gateway logs inspect gen_01K00000000000000000000000 --json`,
     },
   ],
 } as const;

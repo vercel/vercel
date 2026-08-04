@@ -18,6 +18,14 @@ export class AiGatewayLogsListTelemetryClient
     if (value)
       this.trackCliOption({ option: 'until', value: this.redactedValue });
   }
+  trackCliOptionSearch(value?: string) {
+    if (value)
+      this.trackCliOption({ option: 'search', value: this.redactedValue });
+  }
+  trackCliOptionEnvironment(value?: string) {
+    if (value)
+      this.trackCliOption({ option: 'environment', value: this.redactedValue });
+  }
   trackCliOptionProvider(value?: string) {
     if (value)
       this.trackCliOption({ option: 'provider', value: this.redactedValue });
@@ -39,5 +47,8 @@ export class AiGatewayLogsListTelemetryClient
   }
   trackCliOptionFormat(value?: string) {
     if (value) this.trackCliOption({ option: 'format', value });
+  }
+  trackCliFlagJson(value?: boolean) {
+    if (value) this.trackCliFlag('json');
   }
 }

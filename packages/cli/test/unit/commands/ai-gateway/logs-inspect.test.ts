@@ -91,6 +91,7 @@ describe('ai-gateway logs inspect', () => {
     const help = client.stderr.getFullOutput();
     expect(help).toContain('generationId');
     expect(help).toContain('--format');
+    expect(help).toContain('--json');
   });
 
   it('shows the request and failures before successful attempts', async () => {
@@ -109,29 +110,51 @@ describe('ai-gateway logs inspect', () => {
   it('outputs normalized JSON with the ordered fallback path', async () => {
     useRequest();
     useAttempts();
-    client.setArgv(
-      'ai-gateway',
-      'logs',
-      'inspect',
-      generationId,
-      '--format',
-      'json'
-    );
+    client.setArgv('ai-gateway', 'logs', 'inspect', generationId, '--json');
 
     expect(await logs(client)).toBe(0);
     const result = JSON.parse(client.stdout.getFullOutput());
-    expect(result.request).toMatchObject({ generationId, region: 'sfo1' });
-    expect(result.attempts).toHaveLength(2);
-    expect(result.attempts[0]).toMatchObject({
+    expect(result).toMatchObject({
+      status: 'success',
+      reason: 'ai_gateway_log_inspected',
+    });
+    expect(result.data.request).toMatchObject({
+      generationId,
+      region: 'sfo1',
+    });
+    expect(result.data.attempts).toHaveLength(2);
+    expect(result.data.attempts[0]).toMatchObject({
       provider: 'bedrock',
       success: false,
       statusCode: 429,
     });
-    expect(result.attempts[1]).toMatchObject({
+    expect(result.data.attempts[1]).toMatchObject({
       provider: 'anthropic',
       success: true,
       statusCode: 200,
     });
+    expect(client.stderr.getFullOutput()).toBe('');
+  });
+
+  it('defaults to structured JSON when an agent is detected', async () => {
+    useRequest();
+    useAttempts();
+    client.nonInteractive = true;
+    client.isAgent = true;
+    client.setArgv('ai-gateway', 'logs', 'inspect', generationId);
+
+    expect(await logs(client)).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      status: 'success',
+      data: {
+        request: { generationId },
+        attempts: [
+          { success: false, statusCode: 429 },
+          { success: true, statusCode: 200 },
+        ],
+      },
+    });
+    expect(client.stderr.getFullOutput()).toBe('');
   });
 
   it('rejects malformed Generation IDs before fetching', async () => {
@@ -152,5 +175,20 @@ describe('ai-gateway logs inspect', () => {
     expect(client.stderr.getFullOutput()).toContain(
       'It may be outside retention or belong to another team.'
     );
+  });
+
+  it('returns structured not-found errors for agents', async () => {
+    useRequest(null);
+    useAttempts([]);
+    client.nonInteractive = true;
+    client.setArgv('ai-gateway', 'logs', 'inspect', generationId);
+
+    expect(await logs(client)).toBe(1);
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      status: 'error',
+      reason: 'not_found',
+      next: [{ command: expect.stringContaining('logs list') }],
+    });
+    expect(client.stderr.getFullOutput()).toBe('');
   });
 });

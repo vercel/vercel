@@ -7,11 +7,19 @@ import { printError } from '../../util/error';
 import { validateJsonOutput } from '../../util/output-format';
 import { resolveTimeRange } from '../../util/time-utils';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
-import { isAPIError, ProjectNotFound } from '../../util/errors-ts';
+import { ProjectNotFound } from '../../util/errors-ts';
 import { logsListSubcommand } from './command';
 import { fetchLogsList, resolveLogsContext } from './logs-api';
 import { renderLogsTable } from './logs-format';
+import {
+  argvRequestsLogsJson,
+  outputLogsApiError,
+  outputLogsError,
+  outputMissingLogsTeam,
+  shouldUseLogsJson,
+} from './logs-output';
 import { AiGatewayLogsListTelemetryClient } from '../../util/telemetry/commands/ai-gateway/logs-list';
+import { AGENT_REASON } from '../../util/agent-output-constants';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -25,6 +33,16 @@ export default async function list(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
+    if (shouldUseLogsJson(client, argvRequestsLogsJson(argv))) {
+      return outputLogsError(
+        client,
+        {
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: error instanceof Error ? error.message : String(error),
+        },
+        true
+      );
+    }
     printError(error);
     return 1;
   }
@@ -32,6 +50,8 @@ export default async function list(client: Client, argv: string[]) {
   const project = opts['--project'];
   const since = opts['--since'];
   const until = opts['--until'];
+  const search = opts['--search'];
+  const environment = opts['--environment'];
   const provider = opts['--provider'];
   const model = opts['--model'];
   const status = opts['--status'];
@@ -41,52 +61,99 @@ export default async function list(client: Client, argv: string[]) {
   telemetry.trackCliOptionProject(project);
   telemetry.trackCliOptionSince(since);
   telemetry.trackCliOptionUntil(until);
+  telemetry.trackCliOptionSearch(search);
+  telemetry.trackCliOptionEnvironment(environment);
   telemetry.trackCliOptionProvider(provider);
   telemetry.trackCliOptionModel(model);
   telemetry.trackCliOptionStatus(status);
   telemetry.trackCliOptionPage(opts['--page']);
   telemetry.trackCliOptionLimit(opts['--limit']);
   telemetry.trackCliOptionFormat(opts['--format']);
+  telemetry.trackCliFlagJson(opts['--json']);
 
   const formatResult = validateJsonOutput(opts);
+  const requestedJson =
+    opts['--json'] === true || opts['--format']?.toLowerCase() === 'json';
+  const jsonOutput = shouldUseLogsJson(client, requestedJson);
   if (!formatResult.valid) {
-    output.error(formatResult.error);
-    return 1;
+    return outputLogsError(
+      client,
+      {
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: formatResult.error,
+      },
+      jsonOutput
+    );
   }
   if (!Number.isInteger(page) || page < 1) {
-    output.error('Page must be an integer greater than 0.');
-    return 1;
+    return outputLogsError(
+      client,
+      {
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: 'Page must be an integer greater than 0.',
+      },
+      jsonOutput
+    );
   }
   if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) {
-    output.error(`Limit must be an integer from 1 to ${MAX_LIMIT}.`);
-    return 1;
+    return outputLogsError(
+      client,
+      {
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: `Limit must be an integer from 1 to ${MAX_LIMIT}.`,
+      },
+      jsonOutput
+    );
   }
   if (status && !/^(?:[1-5]xx|\d{3})$/.test(status)) {
-    output.error('Status must be an HTTP code or class, such as 200 or 5xx.');
-    return 1;
+    return outputLogsError(
+      client,
+      {
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: 'Status must be an HTTP code or class, such as 200 or 5xx.',
+      },
+      jsonOutput
+    );
   }
 
   let timeRange;
   try {
     timeRange = resolveTimeRange(since || '1h', until);
   } catch (error) {
-    output.error(error instanceof Error ? error.message : String(error));
-    return 1;
+    return outputLogsError(
+      client,
+      {
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: error instanceof Error ? error.message : String(error),
+      },
+      jsonOutput
+    );
   }
   if (timeRange.startTime >= timeRange.endTime) {
-    output.error('The --since time must be before --until.');
-    return 1;
+    return outputLogsError(
+      client,
+      {
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: 'The --since time must be before --until.',
+      },
+      jsonOutput
+    );
+  }
+
+  if (!client.config.currentTeam && jsonOutput) {
+    return outputMissingLogsTeam(client, 'list');
   }
 
   let context;
   try {
     context = await resolveLogsContext(client);
   } catch (error) {
-    if (isAPIError(error)) {
-      output.error(error.message);
-      return 1;
-    }
-    throw error;
+    return outputLogsApiError(
+      client,
+      error,
+      jsonOutput,
+      'vercel ai-gateway logs list --scope <team-slug> --json'
+    );
   }
   if (!context) return 1;
 
@@ -97,20 +164,27 @@ export default async function list(client: Client, argv: string[]) {
     try {
       const resolved = await getProjectByNameOrId(client, project);
       if (resolved instanceof ProjectNotFound) {
-        output.error(`Project not found: ${project}`);
-        return 1;
+        return outputLogsError(
+          client,
+          {
+            reason: AGENT_REASON.PROJECT_NOT_FOUND,
+            message: 'The project was not found in the selected team.',
+          },
+          jsonOutput
+        );
       }
       projectId = resolved.id;
     } catch (error) {
-      if (isAPIError(error)) {
-        output.error(error.message);
-        return 1;
-      }
-      throw error;
+      return outputLogsApiError(
+        client,
+        error,
+        jsonOutput,
+        'vercel ai-gateway logs list --scope <team-slug> --json'
+      );
     }
   }
 
-  output.spinner('Fetching AI Gateway logs…');
+  if (!jsonOutput) output.spinner('Fetching AI Gateway logs…');
   let result;
   try {
     result = await fetchLogsList(client, {
@@ -121,32 +195,83 @@ export default async function list(client: Client, argv: string[]) {
       provider,
       model,
       status,
+      search,
+      environment,
       page,
       limit,
     });
   } catch (error) {
-    output.stopSpinner();
-    if (isAPIError(error)) {
-      output.error(error.message);
-      return 1;
-    }
-    throw error;
+    if (!jsonOutput) output.stopSpinner();
+    return outputLogsApiError(
+      client,
+      error,
+      jsonOutput,
+      'vercel ai-gateway logs list --scope <team-slug> --json'
+    );
   }
-  output.stopSpinner();
+  if (!jsonOutput) output.stopSpinner();
 
   const hasMore = result.returned === limit;
   const response = {
-    requests: result.logs,
-    pagination: { page, limit, returned: result.returned, hasMore },
+    status: 'success',
+    reason: 'ai_gateway_logs_listed',
+    message:
+      result.logs.length === 0
+        ? 'No AI Gateway requests matched the query.'
+        : `Found ${result.logs.length} AI Gateway ${result.logs.length === 1 ? 'request' : 'requests'}.`,
+    data: {
+      team: { id: context.teamId, slug: context.teamSlug },
+      filters: {
+        projectId: projectId ?? null,
+        startTime: timeRange.startTime.toISOString(),
+        endTime: timeRange.endTime.toISOString(),
+        search: search ?? null,
+        environment: environment ?? null,
+        provider: provider ?? null,
+        model: model ?? null,
+        status: status ?? null,
+      },
+      requests: result.logs,
+      pagination: {
+        page,
+        limit,
+        returned: result.returned,
+        hasMore,
+        nextPage: hasMore ? page + 1 : null,
+      },
+    },
+    next:
+      result.logs.length === 0
+        ? [
+            {
+              command:
+                'vercel ai-gateway logs list --scope <team-slug> --since 24h --json',
+              when: 'Search a broader time range',
+            },
+          ]
+        : [
+            {
+              command:
+                'vercel ai-gateway logs inspect <generationId> --scope <team-slug> --json',
+              when: 'Inspect a request from data.requests',
+            },
+          ],
   };
-  if (formatResult.jsonOutput) {
+  if (jsonOutput) {
     client.stdout.write(`${JSON.stringify(response, null, 2)}\n`);
     return 0;
   }
 
   if (result.logs.length === 0) {
     const filtered = Boolean(
-      project || provider || model || status || since || until
+      project ||
+        provider ||
+        model ||
+        status ||
+        since ||
+        until ||
+        search ||
+        environment
     );
     output.log(
       filtered

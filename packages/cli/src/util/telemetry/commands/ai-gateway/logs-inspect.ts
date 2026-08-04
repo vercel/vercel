@@ -15,4 +15,8 @@ export class AiGatewayLogsInspectTelemetryClient
   trackCliOptionFormat(value?: string) {
     if (value) this.trackCliOption({ option: 'format', value });
   }
+
+  trackCliFlagJson(value?: boolean) {
+    if (value) this.trackCliFlag('json');
+  }
 }

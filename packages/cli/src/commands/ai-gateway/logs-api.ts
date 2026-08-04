@@ -61,6 +61,8 @@ export interface LogsListQuery {
   provider?: string;
   model?: string;
   status?: string;
+  search?: string;
+  environment?: string;
   page: number;
   limit: number;
 }
@@ -97,6 +99,8 @@ export function buildLogsListUrl(query: LogsListQuery): string {
   url.searchParams.set('sortBy', 'timestamp');
   url.searchParams.set('sortDir', 'DESC');
   if (query.projectId) url.searchParams.set('projectId', query.projectId);
+  if (query.search) url.searchParams.set('q', query.search);
+  if (query.environment) url.searchParams.set('environment', query.environment);
   if (query.provider) url.searchParams.set('aiProvider', query.provider);
   if (query.model) url.searchParams.set('aiModel', query.model);
   if (query.status) url.searchParams.set('status', query.status);
