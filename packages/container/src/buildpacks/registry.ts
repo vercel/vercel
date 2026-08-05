@@ -1,6 +1,8 @@
 import type { Config } from '@vercel/build-utils';
+import type { TriggerEventInput } from '@vercel/build-utils';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { LARAVEL_INTEGRATION } from './integrations/laravel';
 
 /**
  * A language supported by Cloud Native Buildpack container builds.
@@ -85,6 +87,27 @@ export interface BuildpackDescriptor {
    * default in the built image. Each applied default is logged.
    */
   launchEnvDefaults?: Readonly<Record<string, string>>;
+  /** Framework-only additions resolved beneath the language descriptor. */
+  frameworkIntegrations?: Readonly<
+    Record<string, FrameworkBuildpackIntegration>
+  >;
+  /** Bundled buildpacks materialized by the generic lifecycle. */
+  bundledBuildpacks?: readonly BundledBuildpack[];
+  /** Framework defaults added to the generated function when none are set. */
+  defaultTriggers?: readonly TriggerEventInput[];
+}
+
+export interface FrameworkBuildpackIntegration {
+  buildpack?: BundledBuildpack;
+  buildEnvDefaults?: Readonly<Record<string, string>>;
+  launchEnvDefaults?: Readonly<Record<string, string>>;
+  defaultTriggers?: readonly TriggerEventInput[];
+}
+
+export interface BundledBuildpack {
+  id: string;
+  version: string;
+  files: Readonly<Record<string, string>>;
 }
 
 export interface BuildpackGroupEntry {
@@ -166,6 +189,9 @@ export const BUILDPACKS: readonly BuildpackDescriptor[] = [
       SESSION_DRIVER: 'cookie',
       CACHE_STORE: 'array',
     },
+    frameworkIntegrations: {
+      laravel: LARAVEL_INTEGRATION,
+    },
   },
 ];
 
@@ -178,14 +204,41 @@ export function requestedBuildpack(
   config: Config | null | undefined
 ): BuildpackDescriptor | undefined {
   if (!config) return undefined;
-  return (
+  const descriptor =
     BUILDPACKS.find(bp => config.buildpack === bp.runtime) ??
     BUILDPACKS.find(
       bp =>
         typeof config.framework === 'string' &&
         (bp.frameworkSlugs ?? [bp.runtime]).includes(config.framework)
-    )
-  );
+    );
+  if (!descriptor || typeof config.framework !== 'string') return descriptor;
+
+  const integration = descriptor.frameworkIntegrations?.[config.framework];
+  if (!integration) return descriptor;
+  return {
+    ...descriptor,
+    buildpackGroup: integration.buildpack
+      ? [
+          ...descriptor.buildpackGroup,
+          {
+            id: integration.buildpack.id,
+            version: integration.buildpack.version,
+          },
+        ]
+      : descriptor.buildpackGroup,
+    buildEnvDefaults: {
+      ...descriptor.buildEnvDefaults,
+      ...integration.buildEnvDefaults,
+    },
+    launchEnvDefaults: {
+      ...descriptor.launchEnvDefaults,
+      ...integration.launchEnvDefaults,
+    },
+    bundledBuildpacks: integration.buildpack
+      ? [...(descriptor.bundledBuildpacks ?? []), integration.buildpack]
+      : descriptor.bundledBuildpacks,
+    defaultTriggers: integration.defaultTriggers,
+  };
 }
 
 /**

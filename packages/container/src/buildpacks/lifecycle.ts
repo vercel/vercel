@@ -4,6 +4,7 @@ import {
   cpSync,
   existsSync,
   lstatSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -265,6 +266,43 @@ export function describeCreatorExitCode(
 const ORDER_MOUNT_DIR = '/platform/order';
 const ORDER_FILE = `${ORDER_MOUNT_DIR}/order.toml`;
 
+interface PreparedBundledBuildpacks {
+  root: string;
+  entries: Array<{ hostPath: string; containerPath: string }>;
+}
+
+function buildpackContainerPath(id: string, version: string): string {
+  return `/cnb/buildpacks/${id.replaceAll('/', '_')}/${version}`;
+}
+
+/** Materialize descriptor-owned buildpacks without teaching the lifecycle a framework. */
+function writeBundledBuildpacks(
+  bp: BuildpackDescriptor
+): PreparedBundledBuildpacks | undefined {
+  if (!bp.bundledBuildpacks?.length) return undefined;
+
+  const root = mkdtempSync(join(tmpdir(), 'vercel-cnb-buildpacks-'));
+  const entries = bp.bundledBuildpacks.map(buildpack => {
+    const hostPath = join(
+      root,
+      buildpack.id.replaceAll('/', '_'),
+      buildpack.version
+    );
+    mkdirSync(hostPath, { recursive: true });
+    for (const [relativePath, contents] of Object.entries(buildpack.files)) {
+      const filePath = join(hostPath, relativePath);
+      mkdirSync(dirname(filePath), { recursive: true });
+      writeFileSync(filePath, contents);
+      chmodSync(filePath, relativePath.startsWith('bin/') ? 0o755 : 0o644);
+    }
+    return {
+      hostPath,
+      containerPath: buildpackContainerPath(buildpack.id, buildpack.version),
+    };
+  });
+  return { root, entries };
+}
+
 /**
  * Write the descriptor's buildpack group as an explicit `order.toml` for the
  * creator, replacing the builder's full default order. Without it, detection
@@ -455,6 +493,12 @@ export async function buildWithLifecycle(
         ? ['-v', `${platformEnvDir}:/platform/env:ro`]
         : [];
       const orderDir = writeOrderDir(bp);
+      const bundledBuildpacks = writeBundledBuildpacks(bp);
+      const bundledBuildpackMounts =
+        bundledBuildpacks?.entries.flatMap(entry => [
+          '-v',
+          `${entry.hostPath}:${entry.containerPath}:ro`,
+        ]) ?? [];
 
       const dockerSocket = await resolveDockerSocket();
       const socketMount = dockerSocket
@@ -474,6 +518,7 @@ export async function buildWithLifecycle(
         `${appDirectory.workPath}:/workspace`,
         '-v',
         `${orderDir}:${ORDER_MOUNT_DIR}:ro`,
+        ...bundledBuildpackMounts,
         ...platformEnvMount,
         ...socketMount,
         builder,
@@ -532,6 +577,9 @@ export async function buildWithLifecycle(
           rmSync(platformEnvDir, { recursive: true, force: true });
         }
         rmSync(orderDir, { recursive: true, force: true });
+        if (bundledBuildpacks) {
+          rmSync(bundledBuildpacks.root, { recursive: true, force: true });
+        }
         appDirectory.cleanup?.();
       }
 
@@ -628,6 +676,7 @@ export async function buildAndPushWithLifecycle(
       }
       const platformEnvDir = writePlatformEnvDir(defaultedEnv.buildEnv);
       const orderDir = writeOrderDir(bp);
+      const bundledBuildpacks = writeBundledBuildpacks(bp);
 
       let procfileDir: string | undefined;
       if (params.command?.length) {
@@ -661,6 +710,16 @@ export async function buildAndPushWithLifecycle(
         // during the build and exports the app layer with build-user
         // ownership instead of the host uid's.
         const buildUser = await resolveBuildUser(containerName);
+        for (const entry of bundledBuildpacks?.entries ?? []) {
+          await runBuildah([
+            'copy',
+            '--chown',
+            buildUser,
+            containerName,
+            entry.hostPath,
+            entry.containerPath,
+          ]);
+        }
         await runBuildah([
           'copy',
           '--chown',
@@ -773,6 +832,9 @@ export async function buildAndPushWithLifecycle(
           rmSync(platformEnvDir, { recursive: true, force: true });
         }
         rmSync(orderDir, { recursive: true, force: true });
+        if (bundledBuildpacks) {
+          rmSync(bundledBuildpacks.root, { recursive: true, force: true });
+        }
         if (procfileDir) {
           rmSync(procfileDir, { recursive: true, force: true });
         }
