@@ -1,7 +1,10 @@
 /**
- * Dispatch release-binary.yml as a top-level workflow_dispatch (so npm
- * trusted publishing sees workflow filename `release-binary.yml`) and wait
+ * Dispatch realease-binary.yml as a top-level workflow_dispatch (so npm
+ * trusted publishing sees workflow filename `realease-binary.yml`) and wait
  * until that run finishes successfully.
+ *
+ * Filename typo (`realease`) is intentional: npm trusted publishers for
+ * @vercel/vc-native* were registered with that spelling.
  *
  * Used from Release before publishing vercel, so @vercel/vc-native* packages
  * exist on npm for optionalDependencies injection.
@@ -9,7 +12,7 @@
 module.exports = async ({ github, context, core }) => {
   const owner = context.repo.owner;
   const repo = context.repo.repo;
-  const workflowId = 'release-binary.yml';
+  const workflowId = 'realease-binary.yml';
   const sha = context.sha;
   // createWorkflowDispatch only accepts a branch or tag name — not a SHA.
   const branch =

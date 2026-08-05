@@ -49,10 +49,10 @@ jobs:
     name: Binary release
     needs: determine
     if: needs.determine.outputs.should-release-binary == 'true'
-    # Dispatch release-binary.yml as a top-level workflow_dispatch (do not use
+    # Dispatch realease-binary.yml as a top-level workflow_dispatch (do not use
     # workflow_call). npm trusted publishing for @vercel/vc-native* is configured
-    # for release-binary.yml; reusable workflow_call presents release.yml and
-    # fails with ENEEDAUTH.
+    # for realease-binary.yml (intentional typo matching npm registry config);
+    # reusable workflow_call presents release.yml and fails with ENEEDAUTH.
     runs-on: ubuntu-latest
     timeout-minutes: 180
     permissions:

@@ -1,4 +1,6 @@
 name: Release Binary
+# Filename `realease-binary.yml` (typo) is intentional: npm trusted publishers
+# for @vercel/vc-native* were registered against this spelling.
 
 on:
   # Called from Release before vercel is published so natives exist on npm

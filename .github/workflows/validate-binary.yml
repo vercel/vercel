@@ -9,7 +9,7 @@ on:
       - 'packages/cli/scripts/build-binary.mjs'
       - 'packages/vc-native/**'
       - '.github/workflows/validate-binary.yml'
-      - '.github/workflows/release-binary.yml'
+      - '.github/workflows/realease-binary.yml'
   workflow_dispatch:
 
 concurrency:

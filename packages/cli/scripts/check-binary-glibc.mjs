@@ -1,5 +1,5 @@
 // Fail if a linux ELF requires a newer glibc than the supported ceiling.
-// Used in release-binary.yml so we never publish a native CLI that cannot run
+// Used in realease-binary.yml so we never publish a native CLI that cannot run
 // on Vercel Sandboxes (Amazon Linux 2023 / glibc 2.34) or other older hosts.
 //
 // Usage: node scripts/check-binary-glibc.mjs <binary> [maxGlibc]

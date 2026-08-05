@@ -4,7 +4,7 @@
   "tasks": {
     "//#build-binary-node": {
       "inputs": [
-        ".github/workflows/release-binary.yml",
+        ".github/workflows/realease-binary.yml",
         "turbo.node-runtime.json",
         "packages/cli/scripts/build-binary-node.mjs",
         "packages/cli/scripts/check-binary-glibc.mjs",
