@@ -139,6 +139,18 @@ jobs:
           go-version: '1.23.12'
           cache: false
 
+      # windows-2022 release runners have flaked with turbo children not seeing
+      # the setup-go PATH entry (ipc-proxy build: "Go >= 1.23 ... not found").
+      # Persist GOROOT so build.mjs can resolve an absolute go binary.
+      - name: Persist Go toolchain env
+        shell: bash
+        run: |
+          set -euo pipefail
+          go version
+          goroot="$(go env GOROOT)"
+          echo "GOROOT=${goroot}" >> "$GITHUB_ENV"
+          echo "${goroot}/bin" >> "$GITHUB_PATH"
+
       - name: Setup Python
         uses: actions/setup-python@v6
         with:

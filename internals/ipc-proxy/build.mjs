@@ -30,9 +30,28 @@ const TARGETS = [
   { goarch: 'arm64', output: 'proxy-linux-arm64' },
 ];
 
-async function hasSystemGo() {
+function goBinaryFromGoroot() {
+  if (!process.env.GOROOT) return null;
+  const named = process.platform === 'win32' ? 'go.exe' : 'go';
+  return join(process.env.GOROOT, 'bin', named);
+}
+
+/**
+ * Prefer an absolute toolchain path when GOROOT is set (actions/setup-go
+ * persists this via GITHUB_ENV). Falling back to bare `go` relies on PATH,
+ * which turbo task children have failed to inherit on some Windows runners.
+ */
+async function resolveGoBinary() {
+  const fromGoroot = goBinaryFromGoroot();
+  if (fromGoroot && (await pathExists(fromGoroot))) {
+    return fromGoroot;
+  }
+  return 'go';
+}
+
+async function hasSystemGo(goBin) {
   try {
-    const { stdout } = await execa('go', ['version'], { timeout: 10_000 });
+    const { stdout } = await execa(goBin, ['version'], { timeout: 10_000 });
     const versionMatch = stdout.match(/go(\d+)\.(\d+)/);
     if (!versionMatch?.[1] || !versionMatch[2]) return false;
 
@@ -57,8 +76,9 @@ async function hasSystemGo() {
 async function downloadGo() {
   if (process.platform === 'win32') {
     throw new Error(
-      'Go >= 1.23 is required to build the IPC proxy but was not found on PATH. ' +
-        'Please install Go: https://go.dev/dl/'
+      'Go >= 1.23 is required to build the IPC proxy but was not found on PATH' +
+        (process.env.GOROOT ? ` (GOROOT=${process.env.GOROOT})` : '') +
+        '. Install Go (https://go.dev/dl/) or ensure actions/setup-go persisted GOROOT.'
     );
   }
 
@@ -155,8 +175,18 @@ async function downloadGo() {
   return overrides();
 }
 
-async function resolveGoEnvOverrides() {
-  if (await hasSystemGo()) return {};
+async function resolveGoEnvOverrides(goBin) {
+  if (await hasSystemGo(goBin)) {
+    // When we resolved via GOROOT, ensure PATH still has that bin dir for any
+    // go tool subprocesses the toolchain may spawn.
+    if (goBin !== 'go') {
+      return {
+        PATH: `${dirname(goBin)}${delimiter}${process.env.PATH || ''}`,
+        GOROOT: process.env.GOROOT || dirname(dirname(goBin)),
+      };
+    }
+    return {};
+  }
   return downloadGo();
 }
 
@@ -165,7 +195,8 @@ async function compileProxyBinaries() {
   const binDir = join(__dirname, 'bin');
   await mkdirp(binDir);
 
-  const goEnvOverrides = await resolveGoEnvOverrides();
+  const goBin = await resolveGoBinary();
+  const goEnvOverrides = await resolveGoEnvOverrides(goBin);
 
   for (const { goarch, output } of TARGETS) {
     const outputPath = join(binDir, output);
@@ -173,7 +204,7 @@ async function compileProxyBinaries() {
     // Inherit the full env so the Go toolchain can locate its cache/home on
     // every OS; only override the cross-compile settings.
     await execa(
-      'go',
+      goBin,
       ['build', '-trimpath', '-ldflags=-s -w', '-o', outputPath, '.'],
       {
         cwd: bootstrapDir,
