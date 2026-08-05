@@ -1302,9 +1302,10 @@ describe('@vercel/container', () => {
     });
   });
 
-  describe('buildpacks (Ruby)', () => {
+  describe('buildpacks', () => {
     let BUILDPACKS: typeof import('../src/buildpacks/registry').BUILDPACKS;
     let ruby: import('../src/buildpacks/registry').BuildpackDescriptor;
+    let php: import('../src/buildpacks/registry').BuildpackDescriptor;
     let requestedBuildpack: typeof import('../src/buildpacks/registry').requestedBuildpack;
     let resolveImageSource: typeof import('../src/image-source').resolveImageSource;
 
@@ -1313,6 +1314,7 @@ describe('@vercel/container', () => {
       BUILDPACKS = registry.BUILDPACKS;
       requestedBuildpack = registry.requestedBuildpack;
       ruby = registry.BUILDPACKS.find(bp => bp.runtime === 'ruby')!;
+      php = registry.BUILDPACKS.find(bp => bp.runtime === 'php')!;
       resolveImageSource = (await import('../src/image-source'))
         .resolveImageSource;
     });
@@ -1336,6 +1338,34 @@ describe('@vercel/container', () => {
         RACK_ENV: 'production',
         RAILS_LOG_TO_STDOUT: 'true',
         RAILS_SERVE_STATIC_FILES: 'true',
+      });
+    });
+
+    it('describes PHP and Laravel without language-specific lifecycle code', () => {
+      expect(php.frameworkSlugs).toContain('laravel');
+      expect(php.projectMarkers).toContain('composer.json');
+      expect(php.buildpackGroup).toEqual([
+        {
+          id: 'paketo-buildpacks/nodejs',
+          version: '10.7.0',
+          optional: true,
+        },
+        { id: 'paketo-buildpacks/php', version: '2.19.9' },
+      ]);
+      expect(php.buildEnvDefaults).toMatchObject({
+        BP_NODE_RUN_SCRIPTS: 'build',
+        BP_PHP_SERVER: 'nginx',
+        BP_PHP_WEB_DIR: 'public',
+        BP_PHP_ENABLE_HTTPS_REDIRECT: 'false',
+        BP_COMPOSER_INSTALL_OPTIONS:
+          '--no-dev --no-interaction --no-progress --prefer-dist --optimize-autoloader',
+      });
+      expect(php.launchEnvDefaults).toMatchObject({
+        APP_ENV: 'production',
+        APP_DEBUG: 'false',
+        LOG_CHANNEL: 'stderr',
+        SESSION_DRIVER: 'cookie',
+        CACHE_STORE: 'array',
       });
     });
 
@@ -1414,6 +1444,9 @@ describe('@vercel/container', () => {
         builder: 'example/builder-elixir@sha256:deadbeef',
         runImage: 'example/run-elixir@sha256:deadbeef',
         buildpackGroup: [{ id: 'example/elixir', version: '1.2.3' }],
+        buildEnvDefaults: {
+          BP_SERVER: 'web',
+        },
         launchEnvDefaults: {
           APP_ENV: 'production',
           LOG_TO_STDOUT: 'enabled',
@@ -1425,6 +1458,7 @@ describe('@vercel/container', () => {
       });
       expect(defaulted.buildEnv).toMatchObject({
         BP_LANGUAGE_VERSION: '1.17',
+        BP_SERVER: 'web',
         BPE_DEFAULT_APP_ENV: 'production',
         BPE_DEFAULT_LOG_TO_STDOUT: 'enabled',
       });
@@ -1436,11 +1470,13 @@ describe('@vercel/container', () => {
       // an explicit BPE_DEFAULT_* value remains a launch default.
       const overridden = mergeDefaultBuildEnv(synthetic, {
         APP_ENV: 'staging',
+        BP_SERVER: 'worker',
         BPE_DEFAULT_LOG_TO_STDOUT: 'custom-default',
       });
       expect(overridden.buildEnv).not.toHaveProperty('BPE_DEFAULT_APP_ENV');
       expect(overridden.buildEnv).toMatchObject({
         APP_ENV: 'staging',
+        BP_SERVER: 'worker',
         BPE_APP_ENV: 'staging',
         BPE_DEFAULT_LOG_TO_STDOUT: 'custom-default',
       });
@@ -1466,7 +1502,11 @@ describe('@vercel/container', () => {
 
       // Descriptors without defaults pass the env through untouched.
       const none = mergeDefaultBuildEnv(
-        { ...synthetic, launchEnvDefaults: undefined },
+        {
+          ...synthetic,
+          buildEnvDefaults: undefined,
+          launchEnvDefaults: undefined,
+        },
         undefined
       );
       expect(none).toEqual({ buildEnv: undefined, applied: [] });
@@ -1510,6 +1550,8 @@ describe('@vercel/container', () => {
     it('resolves the buildpack from either config channel and honors marker precedence', () => {
       expect(requestedBuildpack({ buildpack: 'ruby' })).toBe(ruby);
       expect(requestedBuildpack({ framework: 'ruby' })).toBe(ruby);
+      expect(requestedBuildpack({ buildpack: 'php' })).toBe(php);
+      expect(requestedBuildpack({ framework: 'laravel' })).toBe(php);
       expect(requestedBuildpack({ runtime: 'container' })).toBeUndefined();
 
       const options = (config: Record<string, unknown>) => ({

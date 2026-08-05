@@ -1,5 +1,6 @@
 import {
   isBackendFramework,
+  isPhpFramework,
   isPythonFramework,
 } from '@vercel/build-utils/dist/framework-helpers';
 import {
@@ -164,6 +165,9 @@ export function inferRuntimeFromFramework(
 
   if (isPythonFramework(framework)) {
     return 'python';
+  }
+  if (isPhpFramework(framework)) {
+    return 'php';
   }
   if (isBackendFramework(framework)) {
     return 'node';

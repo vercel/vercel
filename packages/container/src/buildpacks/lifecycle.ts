@@ -194,13 +194,21 @@ export function mergeDefaultBuildEnv(
   buildEnv: Record<string, string> | undefined,
   processEnv?: NodeJS.ProcessEnv
 ): { buildEnv: Record<string, string> | undefined; applied: string[] } {
-  const defaults = Object.entries(bp.launchEnvDefaults ?? {});
-  if (defaults.length === 0) {
+  const buildDefaults = Object.entries(bp.buildEnvDefaults ?? {});
+  const launchDefaults = Object.entries(bp.launchEnvDefaults ?? {});
+  if (buildDefaults.length === 0 && launchDefaults.length === 0) {
     return { buildEnv, applied: [] };
   }
   const merged = { ...(buildEnv ?? {}) };
   const applied: string[] = [];
-  for (const [launchKey, value] of defaults) {
+  for (const [buildKey, value] of buildDefaults) {
+    if (buildKey in merged) continue;
+    merged[buildKey] = value;
+    applied.push(
+      `Defaulting ${buildKey}=${value} (set the ${buildKey} environment variable to override)`
+    );
+  }
+  for (const [launchKey, value] of launchDefaults) {
     const defaultKey = `BPE_DEFAULT_${launchKey}`;
     const embeddedKey = `BPE_${launchKey}`;
     const overrideKey = `BPE_OVERRIDE_${launchKey}`;

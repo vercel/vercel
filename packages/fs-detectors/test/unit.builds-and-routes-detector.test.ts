@@ -830,6 +830,30 @@ describe('Test `detectBuilders`', () => {
     }
   });
 
+  it('routes Laravel through the PHP container buildpack when buildpacks are enabled', async () => {
+    process.env.VERCEL_EXPERIMENTAL_BUILDPACK_PHP = '1';
+    try {
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['artisan', 'composer.json', 'package.json'],
+        null,
+        {
+          projectSettings: { framework: 'laravel' },
+        }
+      );
+
+      expect(builders).toContainEqual({
+        src: '<detect>',
+        use: '@vercel/container',
+        config: {
+          zeroConfig: true,
+          framework: 'laravel',
+        },
+      });
+    } finally {
+      delete process.env.VERCEL_EXPERIMENTAL_BUILDPACK_PHP;
+    }
+  });
+
   it('keeps the Ruby framework on the legacy Ruby builder when buildpacks are disabled', async () => {
     const { builders } = await invokeDetectBuildersAndThrow(
       ['Gemfile', 'config.ru'],
