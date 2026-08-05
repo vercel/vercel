@@ -11,18 +11,22 @@ module.exports = async ({ github, context, core }) => {
   const repo = context.repo.repo;
   const workflowId = 'release-binary.yml';
   const sha = context.sha;
+  // createWorkflowDispatch only accepts a branch or tag name — not a SHA.
+  const branch =
+    context.ref?.replace(/^refs\/heads\//, '') ||
+    context.payload?.ref?.replace(/^refs\/heads\//, '') ||
+    'main';
   const dispatchedAt = Date.now();
 
   core.info(
-    `Dispatching ${workflowId} at ref ${sha} (inputs.ref=${sha}) for natives-first publish`
+    `Dispatching ${workflowId} on branch ${branch} (inputs.ref=${sha}) for natives-first publish`
   );
 
   await github.rest.actions.createWorkflowDispatch({
     owner,
     repo,
     workflow_id: workflowId,
-    // Run the workflow files from this commit.
-    ref: sha,
+    ref: branch,
     inputs: {
       // Checkout / build this SHA (versioned package.json, no tag yet).
       ref: sha,
@@ -40,6 +44,7 @@ module.exports = async ({ github, context, core }) => {
       repo,
       workflow_id: workflowId,
       event: 'workflow_dispatch',
+      branch,
       per_page: 20,
     });
 
@@ -63,7 +68,7 @@ module.exports = async ({ github, context, core }) => {
     return;
   }
 
-  // Binary builds (especially Windows custom Node) can take >90 minutes.
+  // Darwin/linux binary builds can take a while; keep headroom.
   const maxPollAttempts = 150; // 150 * 60s = 2.5h
   for (let attempt = 1; attempt <= maxPollAttempts; attempt += 1) {
     const { data: current } = await github.rest.actions.getWorkflowRun({
