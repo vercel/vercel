@@ -189,6 +189,7 @@ export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
   go: '@vercel/go',
   rust: '@vercel/rust',
   ruby: '@vercel/ruby',
+  php: '@vercel/container',
   container: '@vercel/container',
 };
 
@@ -206,6 +207,7 @@ export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
  */
 export const BUILDPACK_RUNTIMES: ReadonlySet<ServiceRuntime> = new Set([
   'ruby',
+  'php',
 ]);
 
 /**
@@ -238,6 +240,7 @@ export const RUNTIME_MANIFESTS: Partial<Record<ServiceRuntime, string[]>> = {
   ],
   go: ['go.mod'],
   ruby: ['Gemfile'],
+  php: ['composer.json'],
   rust: ['Cargo.toml'],
 };
 
@@ -252,6 +255,7 @@ export const ENTRYPOINT_EXTENSIONS: Record<string, ServiceRuntime> = {
   '.rs': 'rust',
   '.rb': 'ruby',
   '.ru': 'ruby',
+  '.php': 'php',
 };
 
 /**

@@ -1,6 +1,8 @@
 import type { Config } from '@vercel/build-utils';
+import type { TriggerEventInput } from '@vercel/build-utils';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { LARAVEL_INTEGRATION } from './integrations/laravel';
 
 /**
  * A language supported by Cloud Native Buildpack container builds.
@@ -71,6 +73,13 @@ export interface BuildpackDescriptor {
    */
   buildpackGroup: readonly BuildpackGroupEntry[];
   /**
+   * Build-time defaults passed to the buildpack detect/build phases. Plain
+   * user build env values override these defaults. Use this for buildpack
+   * configuration such as the web server or document root; launch-time app
+   * configuration belongs in {@link launchEnvDefaults} instead.
+   */
+  buildEnvDefaults?: Readonly<Record<string, string>>;
+  /**
    * User-facing launch-env defaults applied beneath the user's build env.
    * The lifecycle writes these in Paketo's `BPE_DEFAULT_<KEY>` form so the
    * CNB launcher uses them only when the variable is unset at run time. A
@@ -78,6 +87,27 @@ export interface BuildpackDescriptor {
    * default in the built image. Each applied default is logged.
    */
   launchEnvDefaults?: Readonly<Record<string, string>>;
+  /** Framework-only additions resolved beneath the language descriptor. */
+  frameworkIntegrations?: Readonly<
+    Record<string, FrameworkBuildpackIntegration>
+  >;
+  /** Bundled buildpacks materialized by the generic lifecycle. */
+  bundledBuildpacks?: readonly BundledBuildpack[];
+  /** Framework defaults added to the generated function when none are set. */
+  defaultTriggers?: readonly TriggerEventInput[];
+}
+
+export interface FrameworkBuildpackIntegration {
+  buildpack?: BundledBuildpack;
+  buildEnvDefaults?: Readonly<Record<string, string>>;
+  launchEnvDefaults?: Readonly<Record<string, string>>;
+  defaultTriggers?: readonly TriggerEventInput[];
+}
+
+export interface BundledBuildpack {
+  id: string;
+  version: string;
+  files: Readonly<Record<string, string>>;
 }
 
 export interface BuildpackGroupEntry {
@@ -130,6 +160,39 @@ export const BUILDPACKS: readonly BuildpackDescriptor[] = [
       RAILS_SERVE_STATIC_FILES: 'true',
     },
   },
+  {
+    runtime: 'php',
+    frameworkSlugs: ['laravel'],
+    projectMarkers: ['composer.json'],
+    builder:
+      'paketobuildpacks/builder-jammy-full@sha256:ff93606b6c4f9ff9ee2dd623f5d3f57c9ebe87f3e6911e15df8380a0ddfc4d54',
+    runImage:
+      'index.docker.io/paketobuildpacks/run-jammy-full@sha256:3aa2505f36156a28c9f6eb74229f9dd39827de26ed94c426463902c091fb85a6',
+    buildpackGroup: [
+      // Modern Laravel applications conventionally use Vite. Keep Node
+      // optional so composer-only PHP projects still detect and build.
+      { id: 'paketo-buildpacks/nodejs', version: '10.7.0', optional: true },
+      { id: 'paketo-buildpacks/php', version: '2.19.9' },
+    ],
+    buildEnvDefaults: {
+      BP_NODE_RUN_SCRIPTS: 'build',
+      BP_PHP_SERVER: 'nginx',
+      BP_PHP_WEB_DIR: 'public',
+      BP_PHP_ENABLE_HTTPS_REDIRECT: 'false',
+      BP_COMPOSER_INSTALL_OPTIONS:
+        '--no-dev --no-interaction --no-progress --prefer-dist --optimize-autoloader',
+    },
+    launchEnvDefaults: {
+      APP_ENV: 'production',
+      APP_DEBUG: 'false',
+      LOG_CHANNEL: 'stderr',
+      SESSION_DRIVER: 'cookie',
+      CACHE_STORE: 'array',
+    },
+    frameworkIntegrations: {
+      laravel: LARAVEL_INTEGRATION,
+    },
+  },
 ];
 
 /**
@@ -141,14 +204,41 @@ export function requestedBuildpack(
   config: Config | null | undefined
 ): BuildpackDescriptor | undefined {
   if (!config) return undefined;
-  return (
+  const descriptor =
     BUILDPACKS.find(bp => config.buildpack === bp.runtime) ??
     BUILDPACKS.find(
       bp =>
         typeof config.framework === 'string' &&
         (bp.frameworkSlugs ?? [bp.runtime]).includes(config.framework)
-    )
-  );
+    );
+  if (!descriptor || typeof config.framework !== 'string') return descriptor;
+
+  const integration = descriptor.frameworkIntegrations?.[config.framework];
+  if (!integration) return descriptor;
+  return {
+    ...descriptor,
+    buildpackGroup: integration.buildpack
+      ? [
+          ...descriptor.buildpackGroup,
+          {
+            id: integration.buildpack.id,
+            version: integration.buildpack.version,
+          },
+        ]
+      : descriptor.buildpackGroup,
+    buildEnvDefaults: {
+      ...descriptor.buildEnvDefaults,
+      ...integration.buildEnvDefaults,
+    },
+    launchEnvDefaults: {
+      ...descriptor.launchEnvDefaults,
+      ...integration.launchEnvDefaults,
+    },
+    bundledBuildpacks: integration.buildpack
+      ? [...(descriptor.bundledBuildpacks ?? []), integration.buildpack]
+      : descriptor.bundledBuildpacks,
+    defaultTriggers: integration.defaultTriggers,
+  };
 }
 
 /**

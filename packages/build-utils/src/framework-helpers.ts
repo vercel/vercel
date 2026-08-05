@@ -21,6 +21,8 @@ export const PYTHON_FRAMEWORKS = [
   'fasthtml',
 ] as const;
 
+export const PHP_FRAMEWORKS = ['laravel'] as const;
+
 export const RUNTIME_FRAMEWORKS = ['python'] as const;
 
 /**
@@ -44,6 +46,7 @@ export const UNIFIED_BACKEND_BUILDER = '@vercel/backends' as const;
 
 export type BackendFramework = (typeof BACKEND_FRAMEWORKS)[number];
 export type PythonFramework = (typeof PYTHON_FRAMEWORKS)[number];
+export type PhpFramework = (typeof PHP_FRAMEWORKS)[number];
 
 /**
  * Checks if the given framework is a backend framework
@@ -69,6 +72,13 @@ export function isPythonFramework(
 ): framework is (typeof PYTHON_FRAMEWORKS)[number] {
   if (!framework) return false;
   return PYTHON_FRAMEWORKS.includes(framework as PythonFramework);
+}
+
+export function isPhpFramework(
+  framework: string | null | undefined
+): framework is PhpFramework {
+  if (!framework) return false;
+  return PHP_FRAMEWORKS.includes(framework as PhpFramework);
 }
 
 // Opt builds into experimental builder, but don't introspect the app

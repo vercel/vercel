@@ -246,6 +246,71 @@ describe('detectServices (services)', () => {
     });
   });
 
+  describe('PHP buildpack runtime', () => {
+    beforeAll(() => {
+      process.env.VERCEL_EXPERIMENTAL_BUILDPACK_PHP = '1';
+    });
+
+    afterAll(() => {
+      delete process.env.VERCEL_EXPERIMENTAL_BUILDPACK_PHP;
+    });
+
+    it('resolves a Laravel service without an entrypoint to the PHP buildpack', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          services: {
+            web: { root: 'app', framework: 'laravel' },
+          },
+        }),
+        'app/artisan': '#!/usr/bin/env php\n',
+        'app/composer.json': JSON.stringify({
+          require: { 'laravel/framework': '^13.0' },
+        }),
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const [web] = servicesV2(result.services);
+      expect(web).toMatchObject({
+        framework: 'laravel',
+        runtime: 'php',
+        entrypoint: undefined,
+      });
+      expect(web.builder).toEqual({
+        src: 'app/<detect>',
+        use: '@vercel/container',
+        config: {
+          zeroConfig: true,
+          framework: 'laravel',
+          buildpack: 'php',
+          workspace: 'app',
+        },
+      });
+    });
+
+    it('resolves an explicit PHP runtime without an entrypoint', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          services: {
+            web: { root: 'app', runtime: 'php' },
+          },
+        }),
+        'app/composer.json': JSON.stringify({ require: {} }),
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const [web] = servicesV2(result.services);
+      expect(web.builder).toMatchObject({
+        src: 'app/<detect>',
+        use: '@vercel/container',
+        config: { buildpack: 'php' },
+      });
+    });
+  });
+
   it('requires an entrypoint for a Ruby runtime service when buildpacks are disabled', async () => {
     const fs = new VirtualFilesystem({
       'vercel.json': vercelJson({

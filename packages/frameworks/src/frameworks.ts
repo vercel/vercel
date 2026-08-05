@@ -63,6 +63,47 @@ export const frameworks = [
     getOutputDirName: async () => 'public',
   },
   {
+    name: 'Laravel',
+    slug: 'laravel',
+    experimental: true,
+    runtimeFramework: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/laravel.svg',
+    tagline: 'The PHP framework for web artisans.',
+    description:
+      'A full-stack Laravel application deployed as a Vercel Container.',
+    website: 'https://laravel.com',
+    envPrefix: 'VITE_',
+    supersedes: ['vite'],
+    useRuntime: { src: '<detect>', use: '@vercel/container' },
+    detectors: {
+      every: [
+        { path: 'artisan' },
+        {
+          path: 'composer.json',
+          matchContent: '"laravel/framework"\\s*:',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`composer install`',
+        value: null,
+      },
+      buildCommand: {
+        placeholder: 'Detected from Composer and package.json',
+        value: null,
+      },
+      devCommand: {
+        placeholder: '`php artisan serve`',
+        value: null,
+      },
+      outputDirectory: {
+        placeholder: 'Container',
+      },
+    },
+    getOutputDirName: async () => 'public',
+  },
+  {
     name: 'Blitz.js (Legacy)',
     slug: 'blitzjs',
     demo: 'https://blitz-template.vercel.app',

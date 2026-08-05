@@ -5,10 +5,11 @@ built as OCI images with Cloud Native Buildpacks (Paketo). The CNB lifecycle
 is language-agnostic; everything language-specific lives in one descriptor in
 [`src/buildpacks/registry.ts`](src/buildpacks/registry.ts).
 
-Buildpack builds are gated behind `VERCEL_EXPERIMENTAL_BUILDPACK_RUBY=1` while
-the migration off per-language Lambda builders is in progress. With the flag
-unset, Ruby services and the Ruby framework preset keep their legacy
-`@vercel/ruby` behavior.
+Buildpack builds are gated per runtime behind
+`VERCEL_EXPERIMENTAL_BUILDPACK_<RUNTIME>=1` while the migration off
+per-language Lambda builders is in progress. With the Ruby flag unset, Ruby
+services and the Ruby framework preset keep their legacy `@vercel/ruby`
+behavior. PHP and Laravel are selected only while the PHP flag is enabled.
 
 Ruby is the first registry entry. There is no Lambda path for buildpack
 services; only framework-null `api/**/*.rb` functions continue to use
@@ -39,6 +40,21 @@ not services.
 4. Add fixtures and tests.
 
 No lifecycle, image-source, or resolver code should need to change.
+
+## Framework integrations
+
+A language descriptor may declare `frameworkIntegrations` when a framework
+needs platform adapters in addition to its upstream language buildpack. An
+integration can append a small bundled CNB buildpack, launch defaults, and
+default function triggers. The lifecycle only materializes the declared files
+under `/cnb/buildpacks`; it does not contain framework or package-manager
+branches.
+
+The Laravel integration runs after Paketo PHP makes Composer available. It
+installs the pinned `vercel/laravel` adapter into the lifecycle's staged
+`/workspace` copy, selects Vercel Blob and Queues as overridable defaults, and
+adds a conventional `queue/v2beta` trigger. Generated Composer changes are
+exported in the image but never written to the repository checkout.
 
 ## Selection and DX
 

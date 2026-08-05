@@ -417,6 +417,51 @@ describe('detectFramework()', () => {
     }
   });
 
+  it('detects Laravel with only VERCEL_EXPERIMENTAL_BUILDPACK_PHP set', async () => {
+    const fs = new VirtualFilesystem({
+      artisan: '#!/usr/bin/env php',
+      'composer.json': JSON.stringify({
+        require: { 'laravel/framework': '^13.0' },
+      }),
+      'package.json': JSON.stringify({
+        devDependencies: { vite: '^7.0.0' },
+      }),
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('vite');
+
+    process.env.VERCEL_EXPERIMENTAL_BUILDPACK_PHP = '1';
+    try {
+      expect(await detectFramework({ fs, frameworkList })).toBe('laravel');
+    } finally {
+      delete process.env.VERCEL_EXPERIMENTAL_BUILDPACK_PHP;
+    }
+  });
+
+  it('requires both artisan and laravel/framework to detect Laravel', async () => {
+    process.env.VERCEL_EXPERIMENTAL_BUILDPACK_PHP = '1';
+    try {
+      const withoutArtisan = new VirtualFilesystem({
+        'composer.json': JSON.stringify({
+          require: { 'laravel/framework': '^13.0' },
+        }),
+      });
+      const withoutFramework = new VirtualFilesystem({
+        artisan: '#!/usr/bin/env php',
+        'composer.json': JSON.stringify({ require: {} }),
+      });
+
+      expect(
+        await detectFramework({ fs: withoutArtisan, frameworkList })
+      ).toBeNull();
+      expect(
+        await detectFramework({ fs: withoutFramework, frameworkList })
+      ).toBeNull();
+    } finally {
+      delete process.env.VERCEL_EXPERIMENTAL_BUILDPACK_PHP;
+    }
+  });
+
   it('Detect Ruby with only VERCEL_USE_EXPERIMENTAL_FRAMEWORKS set', async () => {
     const fs = new VirtualFilesystem({
       Gemfile: 'source "https://rubygems.org"\n',

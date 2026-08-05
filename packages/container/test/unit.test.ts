@@ -257,6 +257,43 @@ describe('@vercel/container', () => {
     });
   });
 
+  it('adds the Laravel queue trigger by convention and preserves an explicit trigger', async () => {
+    const automatic = expectTypicalBuildResult(
+      await build({
+        ...createBuildOptions({ framework: 'laravel' }),
+        entrypoint: 'docker.io/library/nginx:1.27',
+      })
+    );
+    expect((automatic.output.index as any).experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: 'laravel',
+        consumer: sanitizeConsumerName('docker.io/library/nginx:1.27'),
+      },
+    ]);
+
+    const explicit = expectTypicalBuildResult(
+      await build({
+        ...createBuildOptions({
+          framework: 'laravel',
+          functions: {
+            'docker.io/library/nginx:*': {
+              experimentalTriggers: [{ type: 'queue/v2beta', topic: 'custom' }],
+            },
+          },
+        }),
+        entrypoint: 'docker.io/library/nginx:1.27',
+      })
+    );
+    expect((explicit.output.index as any).experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: 'custom',
+        consumer: sanitizeConsumerName('docker.io/library/nginx:*'),
+      },
+    ]);
+  });
+
   it('does not rewrite image references without registry', async () => {
     const result = expectTypicalBuildResult(
       await build({
@@ -1302,9 +1339,10 @@ describe('@vercel/container', () => {
     });
   });
 
-  describe('buildpacks (Ruby)', () => {
+  describe('buildpacks', () => {
     let BUILDPACKS: typeof import('../src/buildpacks/registry').BUILDPACKS;
     let ruby: import('../src/buildpacks/registry').BuildpackDescriptor;
+    let php: import('../src/buildpacks/registry').BuildpackDescriptor;
     let requestedBuildpack: typeof import('../src/buildpacks/registry').requestedBuildpack;
     let resolveImageSource: typeof import('../src/image-source').resolveImageSource;
 
@@ -1313,6 +1351,7 @@ describe('@vercel/container', () => {
       BUILDPACKS = registry.BUILDPACKS;
       requestedBuildpack = registry.requestedBuildpack;
       ruby = registry.BUILDPACKS.find(bp => bp.runtime === 'ruby')!;
+      php = registry.BUILDPACKS.find(bp => bp.runtime === 'php')!;
       resolveImageSource = (await import('../src/image-source'))
         .resolveImageSource;
     });
@@ -1336,6 +1375,34 @@ describe('@vercel/container', () => {
         RACK_ENV: 'production',
         RAILS_LOG_TO_STDOUT: 'true',
         RAILS_SERVE_STATIC_FILES: 'true',
+      });
+    });
+
+    it('describes PHP and Laravel without language-specific lifecycle code', () => {
+      expect(php.frameworkSlugs).toContain('laravel');
+      expect(php.projectMarkers).toContain('composer.json');
+      expect(php.buildpackGroup).toEqual([
+        {
+          id: 'paketo-buildpacks/nodejs',
+          version: '10.7.0',
+          optional: true,
+        },
+        { id: 'paketo-buildpacks/php', version: '2.19.9' },
+      ]);
+      expect(php.buildEnvDefaults).toMatchObject({
+        BP_NODE_RUN_SCRIPTS: 'build',
+        BP_PHP_SERVER: 'nginx',
+        BP_PHP_WEB_DIR: 'public',
+        BP_PHP_ENABLE_HTTPS_REDIRECT: 'false',
+        BP_COMPOSER_INSTALL_OPTIONS:
+          '--no-dev --no-interaction --no-progress --prefer-dist --optimize-autoloader',
+      });
+      expect(php.launchEnvDefaults).toMatchObject({
+        APP_ENV: 'production',
+        APP_DEBUG: 'false',
+        LOG_CHANNEL: 'stderr',
+        SESSION_DRIVER: 'cookie',
+        CACHE_STORE: 'array',
       });
     });
 
@@ -1414,6 +1481,9 @@ describe('@vercel/container', () => {
         builder: 'example/builder-elixir@sha256:deadbeef',
         runImage: 'example/run-elixir@sha256:deadbeef',
         buildpackGroup: [{ id: 'example/elixir', version: '1.2.3' }],
+        buildEnvDefaults: {
+          BP_SERVER: 'web',
+        },
         launchEnvDefaults: {
           APP_ENV: 'production',
           LOG_TO_STDOUT: 'enabled',
@@ -1425,6 +1495,7 @@ describe('@vercel/container', () => {
       });
       expect(defaulted.buildEnv).toMatchObject({
         BP_LANGUAGE_VERSION: '1.17',
+        BP_SERVER: 'web',
         BPE_DEFAULT_APP_ENV: 'production',
         BPE_DEFAULT_LOG_TO_STDOUT: 'enabled',
       });
@@ -1436,11 +1507,13 @@ describe('@vercel/container', () => {
       // an explicit BPE_DEFAULT_* value remains a launch default.
       const overridden = mergeDefaultBuildEnv(synthetic, {
         APP_ENV: 'staging',
+        BP_SERVER: 'worker',
         BPE_DEFAULT_LOG_TO_STDOUT: 'custom-default',
       });
       expect(overridden.buildEnv).not.toHaveProperty('BPE_DEFAULT_APP_ENV');
       expect(overridden.buildEnv).toMatchObject({
         APP_ENV: 'staging',
+        BP_SERVER: 'worker',
         BPE_APP_ENV: 'staging',
         BPE_DEFAULT_LOG_TO_STDOUT: 'custom-default',
       });
@@ -1466,7 +1539,11 @@ describe('@vercel/container', () => {
 
       // Descriptors without defaults pass the env through untouched.
       const none = mergeDefaultBuildEnv(
-        { ...synthetic, launchEnvDefaults: undefined },
+        {
+          ...synthetic,
+          buildEnvDefaults: undefined,
+          launchEnvDefaults: undefined,
+        },
         undefined
       );
       expect(none).toEqual({ buildEnv: undefined, applied: [] });
@@ -1510,6 +1587,25 @@ describe('@vercel/container', () => {
     it('resolves the buildpack from either config channel and honors marker precedence', () => {
       expect(requestedBuildpack({ buildpack: 'ruby' })).toBe(ruby);
       expect(requestedBuildpack({ framework: 'ruby' })).toBe(ruby);
+      expect(requestedBuildpack({ buildpack: 'php' })).toBe(php);
+      const laravel = requestedBuildpack({ framework: 'laravel' });
+      expect(laravel).not.toBe(php);
+      expect(laravel).toMatchObject({
+        runtime: 'php',
+        launchEnvDefaults: {
+          FILESYSTEM_DISK: 'vercel',
+          QUEUE_CONNECTION: 'vercel',
+          VERCEL_QUEUE_TOPIC: 'laravel',
+        },
+        defaultTriggers: [{ type: 'queue/v2beta', topic: 'laravel' }],
+      });
+      expect(laravel?.buildpackGroup.at(-1)).toEqual({
+        id: 'vercel/laravel',
+        version: '0.1.0',
+      });
+      expect(laravel?.bundledBuildpacks?.[0].files['bin/build']).toContain(
+        'composer update vercel/laravel'
+      );
       expect(requestedBuildpack({ runtime: 'container' })).toBeUndefined();
 
       const options = (config: Record<string, unknown>) => ({
@@ -1653,6 +1749,85 @@ describe('@vercel/container', () => {
       expect((builderFromCall?.[1] as string[]).join(' ')).toContain(
         ruby.builder
       );
+    });
+
+    it('copies the Laravel integration buildpack into the Buildah builder', async () => {
+      process.env.VERCEL_BUILD_IMAGE = 'al2023';
+      process.env.VERCEL_OIDC_TOKEN = fakeOidcToken();
+      const fetchMock = vi.fn();
+      stubRegistryFetch(fetchMock);
+      vi.stubGlobal('fetch', fetchMock);
+      const digest = `sha256:${'f'.repeat(64)}`;
+      existsSyncMock.mockImplementation((p: string) => p === '/composer.json');
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'buildah' && args.includes('info')) {
+          return fakeChild(
+            JSON.stringify({
+              store: {
+                GraphRoot: '/vercel/.containers/storage',
+                RunRoot: '/run/containers/storage',
+                GraphDriverName: 'overlay',
+                GraphStatus: { 'Backing Filesystem': 'xfs' },
+              },
+            })
+          );
+        }
+        if (
+          cmd === 'buildah' &&
+          args.includes('copy') &&
+          args.includes('/cnb/buildpacks/vercel_laravel/0.1.0')
+        ) {
+          const source = args.at(-2)!;
+          expect(
+            readFileSync(join(source, 'buildpack.toml'), 'utf8')
+          ).toContain('id = "vercel/laravel"');
+        }
+        if (cmd === 'buildah' && args.includes('/cnb/lifecycle/creator')) {
+          const orderMount = args
+            .filter((_arg, index) => args[index - 1] === '--volume')
+            .find(arg => arg.endsWith(':/platform/order'));
+          expect(
+            readFileSync(
+              `${orderMount!.slice(0, -':/platform/order'.length)}/order.toml`,
+              'utf8'
+            )
+          ).toContain('id = "vercel/laravel"');
+          const reportMount = args
+            .filter((_arg, index) => args[index - 1] === '--volume')
+            .find(arg => arg.endsWith(':/platform-output'));
+          writeFileSync(
+            `${reportMount!.slice(0, -':/platform-output'.length)}/report.toml`,
+            `[image]\ndigest = "${digest}"\n`
+          );
+        }
+        return fakeChild('');
+      });
+
+      const result = expectTypicalBuildResult(
+        await build({
+          ...createBuildOptions({ framework: 'laravel' }),
+          entrypoint: '<detect>',
+          service: { name: 'web' },
+        })
+      );
+      expect(result.output.index).toMatchObject({
+        runtime: 'container',
+        handler: `vcr.vercel.com/acme/my-app/web@${digest}`,
+        experimentalTriggers: [
+          {
+            type: 'queue/v2beta',
+            topic: 'laravel',
+            consumer: sanitizeConsumerName('<detect>'),
+          },
+        ],
+      });
+      expect(
+        spawnMock.mock.calls.some(
+          ([cmd, args]) =>
+            cmd === 'buildah' &&
+            (args as string[]).includes('/cnb/buildpacks/vercel_laravel/0.1.0')
+        )
+      ).toBe(true);
     });
 
     it('ignores VERCEL_BUILDPACK_* image overrides on deploys', async () => {
@@ -1855,6 +2030,66 @@ describe('@vercel/container', () => {
             command.includes('vercel-dev/ruby-api:dev')
         )
       ).toBe(true);
+      await result!.shutdown!();
+    });
+
+    it('mounts the Laravel integration buildpack without modifying the app tree', async () => {
+      existsSyncMock.mockImplementation((p: string) => p === '/composer.json');
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'docker' && args[0] === 'image' && args[1] === 'inspect') {
+          return fakeChild('linux/amd64\n');
+        }
+        if (
+          cmd === 'docker' &&
+          args[0] === 'run' &&
+          args.includes('/cnb/lifecycle/creator')
+        ) {
+          const integrationMount = args
+            .filter((_arg, index) => args[index - 1] === '-v')
+            .find(arg =>
+              arg.endsWith(':/cnb/buildpacks/vercel_laravel/0.1.0:ro')
+            );
+          expect(integrationMount).toBeDefined();
+          const buildpackDir = integrationMount!.slice(
+            0,
+            -':/cnb/buildpacks/vercel_laravel/0.1.0:ro'.length
+          );
+          expect(
+            readFileSync(join(buildpackDir, 'bin/detect'), 'utf8')
+          ).toContain('laravel/framework');
+          expect(
+            statSync(join(buildpackDir, 'bin/build')).mode & 0o111
+          ).not.toBe(0);
+          const orderMount = args
+            .filter((_arg, index) => args[index - 1] === '-v')
+            .find(arg => arg.endsWith(':/platform/order:ro'));
+          expect(
+            readFileSync(
+              `${orderMount!.slice(0, -':/platform/order:ro'.length)}/order.toml`,
+              'utf8'
+            )
+          ).toContain('id = "vercel/laravel"');
+          return fakeChild('');
+        }
+        if (cmd === 'docker' && args[0] === 'run') {
+          return fakeRunningChild(4344);
+        }
+        if (cmd === 'docker' && args.includes('inspect')) {
+          return fakeChild('{"8080/tcp":{}}');
+        }
+        if (cmd === 'docker' && args[0] === 'port') {
+          return fakeChild('127.0.0.1:54323\n');
+        }
+        return fakeChild('');
+      });
+
+      const result = await startDevServer({
+        ...createBuildOptions({ framework: 'laravel' }),
+        entrypoint: '<detect>',
+        service: { name: 'laravel-web' },
+        meta: { isDev: true },
+      } as any);
+      expect(result).toMatchObject({ port: 54323, pid: 4344 });
       await result!.shutdown!();
     });
 

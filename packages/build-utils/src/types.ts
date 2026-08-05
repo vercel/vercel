@@ -1020,6 +1020,7 @@ export type ServiceRuntime =
   | 'go'
   | 'rust'
   | 'ruby'
+  | 'php'
   | 'container';
 
 export type ServiceType = 'web' | 'cron' | 'worker' | 'job';

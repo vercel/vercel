@@ -1,0 +1,6 @@
+{
+  "name": "vercel/php-buildpack-fixture",
+  "require": {
+    "php": "^8.3"
+  }
+}

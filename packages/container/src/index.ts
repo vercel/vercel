@@ -2,6 +2,7 @@ import type { BuildOptions, BuildResultV2, Span } from '@vercel/build-utils';
 import {
   getLambdaOptionsFromFunction,
   getReportedServiceType,
+  sanitizeConsumerName,
 } from '@vercel/build-utils';
 import { generateProjectManifest } from './diagnostics';
 import { existsSync } from 'node:fs';
@@ -14,6 +15,7 @@ import {
 import type { BuildPushParams, ContainerEngine } from './engines/types';
 import { buildAndPushWithLifecycle } from './buildpacks/lifecycle';
 import type { BuildpackDescriptor } from './buildpacks/registry';
+import { requestedBuildpack } from './buildpacks/registry';
 import { resolveImageSource } from './image-source';
 import { resolveOidcTokenForBuild } from './oidc';
 import { ensureRepository } from './registry';
@@ -507,10 +509,27 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
     span => resolveImageHandler(options, span)
   );
 
-  const lambdaOptions = await getLambdaOptionsFromFunction({
+  const buildpack = requestedBuildpack(options.config);
+  let lambdaOptions = await getLambdaOptionsFromFunction({
     sourceFile: resolveFunctionSourceFile(options),
     config: options.config,
   });
+  if (
+    lambdaOptions.experimentalTriggers === undefined &&
+    buildpack?.defaultTriggers?.length
+  ) {
+    const sourceFile = resolveFunctionSourceFile(options);
+    const serviceName = readString(options.config.serviceName);
+    const consumer = sanitizeConsumerName(
+      serviceName ? `${serviceName}~${sourceFile}` : sourceFile
+    );
+    lambdaOptions.experimentalTriggers = buildpack.defaultTriggers.map(
+      trigger =>
+        trigger.type === 'queue/v2beta'
+          ? { ...trigger, consumer }
+          : { ...trigger }
+    );
+  }
 
   const command = normalizeCommand(options.config.command);
 
