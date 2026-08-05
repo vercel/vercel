@@ -12,12 +12,17 @@ const INSPECT_URL =
 /**
  * Commands that create a deployment.
  *
- * `vercel` with no subcommand deploys, which is why a bare invocation counts.
- * Matching the command rather than scanning every tool result is what keeps a
- * URL the agent merely listed or read from documentation out of the summary.
+ * `vercel` with no subcommand deploys, which is why a bare invocation — alone,
+ * followed by flags, or followed by a shell operator — counts. The token must
+ * end there: `--scope vercel-internal-playground` and `cat vercel.json` both
+ * contain the word `vercel` and deploy nothing, and because agents pin
+ * `--scope` on every command, matching into the next character would classify
+ * the whole session as deploys. Matching the command rather than scanning
+ * every tool result is what keeps a URL the agent merely listed or read from
+ * documentation out of the summary.
  */
 const DEPLOY_COMMAND =
-  /(^|[\s;&|(])(vercel|vc)(\s+deploy\b|\s+redeploy\b|(?!\s+[a-z]).*)/i;
+  /(^|[\s;&|(])(vercel|vc)(\s+deploy\b|\s+redeploy\b|\s+-|\s*(?:$|[;&|()<>]))/i;
 
 /** Flags that mean the deployment is the production one. */
 const PRODUCTION_FLAG = /\s(--prod\b|--target[= ]production\b)/i;

@@ -64,6 +64,34 @@ describe('ship deployment tracking', () => {
     expect(tracker.list()).toEqual([]);
   });
 
+  it('does not treat the word vercel inside an argument as a bare deploy', () => {
+    const tracker = new DeploymentTracker();
+    // Observed in a real session: the mission pins `--scope` on every command,
+    // so `vercel` appears mid-argument in commands that deploy nothing, and a
+    // `vercel curl` usage dump contains the docs example URL.
+    tracker.observe(
+      'vercel curl /api/health --scope vercel-internal-playground',
+      'Options:\n  --deployment <ID|URL>\n  vercel curl https://your-project-abc123.vercel.app/api/hello'
+    );
+    tracker.observe('cat vercel.json', DEPLOY_OUTPUT);
+    tracker.observe(
+      'vercel logs https://x.vercel.app --scope vercel-internal-playground',
+      DEPLOY_OUTPUT
+    );
+
+    expect(tracker.list()).toEqual([]);
+  });
+
+  it('still counts a bare deploy whose output is redirected through operators', () => {
+    const tracker = new DeploymentTracker();
+    tracker.observe(
+      'vercel > /tmp/deploy.txt; cat /tmp/deploy.txt',
+      DEPLOY_OUTPUT
+    );
+
+    expect(tracker.list()).toHaveLength(1);
+  });
+
   it('ignores a deploy that produced no URL', () => {
     const tracker = new DeploymentTracker();
     tracker.observe('vercel deploy', 'Error: no project linked');
