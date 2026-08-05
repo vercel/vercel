@@ -232,6 +232,7 @@ async function driveSession(
           activity,
           client,
           profile,
+          agentName: agentLabel(harness.id),
         });
       } finally {
         endTurn({ toolCalls: renderer.toolCallCount });
@@ -367,6 +368,8 @@ async function runTurn(options: {
   activity: ActivityIndicator;
   client: Client;
   profile: ShipProfile;
+  /** Label for the harness, so a question is attributed like its prose. */
+  agentName: string;
 }): Promise<number> {
   const { agent, session, prompt, renderer, activity, client, profile } =
     options;
@@ -402,7 +405,7 @@ async function runTurn(options: {
       for (const call of pending) {
         toolResultContinuations.push({
           toolCallId: call.toolCallId,
-          output: await answerAskUser(client, call.input),
+          output: await answerAskUser(client, call.input, options.agentName),
         });
       }
       endAsk();
