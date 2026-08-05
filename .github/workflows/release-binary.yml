@@ -98,11 +98,11 @@ jobs:
           # Node 24.14.1 does not build with Clang 22 on the VS 2026 image.
           # windows-latest migrated to VS 2026 in June 2026, so use the
           # stable VS 2022/LLVM 20 toolchain until the embedded Node source
-          # supports Clang 22. Prefer a 2022 larger runner (not
-          # windows-latest-8-core / *-oss) so we keep that toolchain and
-          # regain the 8 cores lost when pinning to standard windows-2022.
-          # Label matches front/api paid naming (N-core), pinned to 2022.
-          - runs-on: windows-2022-8-core
+          # supports Clang 22.
+          # Standard windows-2022 (not windows-latest-8-core / *-oss): the org
+          # has no Windows Server 2022 larger runner shared with this private
+          # repo; invented labels like windows-2022-8-core queue forever.
+          - runs-on: windows-2022
             target: node24.14.1-win-x64
             asset: vercel-windows-x64
             ext: '.exe'
