@@ -6,7 +6,9 @@ import {
   detectExistingDraft,
   offerAutoPublish,
   printActionImpactWarning,
+  mapFirewallApiError,
 } from '../shared';
+import type { FirewallScope } from '../../../util/firewall/scope';
 import {
   fetchPlanInfo,
   getAvailableConditionTypes,
@@ -42,8 +44,7 @@ interface AddInteractiveOptions {
 
 export async function addInteractive(
   client: Client,
-  project: { id: string; name: string },
-  teamId: string | undefined,
+  scope: FirewallScope,
   opts: AddInteractiveOptions = {}
 ): Promise<number> {
   const pre = opts.prePopulated;
@@ -109,43 +110,32 @@ export async function addInteractive(
   output.spinner('Staging rule');
 
   try {
-    const hadExistingDraft = await detectExistingDraft(
-      client,
-      project.id,
-      teamId
-    );
+    const hadExistingDraft = await detectExistingDraft(client, scope);
 
-    await patchFirewallDraft(
-      client,
-      project.id,
-      {
-        action: 'rules.insert',
-        id: null,
-        value: {
-          name,
-          description: description || undefined,
-          active,
-          conditionGroup: conditionGroups,
-          action,
-        },
+    await patchFirewallDraft(client, scope, {
+      action: 'rules.insert',
+      id: null,
+      value: {
+        name,
+        description: description || undefined,
+        active,
+        conditionGroup: conditionGroups,
+        action,
       },
-      { teamId }
-    );
+    });
 
     output.log(
       `${chalk.cyan('Success!')} Rule "${chalk.bold(name)}" staged ${chalk.gray(createStamp())}`
     );
     printActionImpactWarning(action);
 
-    await offerAutoPublish(client, project.id, hadExistingDraft, {
-      teamId,
+    await offerAutoPublish(client, scope, hadExistingDraft, {
       skipPrompts: opts.skipPrompts,
     });
 
     return 0;
   } catch (e: unknown) {
-    const error = e as { message?: string };
-    output.error(error.message || 'Failed to stage rule');
+    output.error(mapFirewallApiError(e, scope, 'Failed to stage rule'));
     return 1;
   }
 }

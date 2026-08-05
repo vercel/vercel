@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import type Client from '../../../util/client';
-import { requireProjectContext } from '../../../util/projects/require-project-context';
 import output from '../../../output-manager';
 import { rulesRemoveSubcommand } from '../command';
 import {
@@ -10,6 +9,8 @@ import {
   confirmAction,
   detectExistingDraft,
   offerAutoPublish,
+  resolveFirewallScope,
+  mapFirewallApiError,
 } from '../shared';
 import { formatActionDisplay } from '../../../util/firewall/format';
 import { outputAgentError } from '../../../util/agent-output';
@@ -26,22 +27,14 @@ export default async function remove(client: Client, argv: string[]) {
   );
   if (typeof parsed === 'number') return parsed;
 
-  const link = await requireProjectContext(
-    client,
-    'firewall',
-    parsed.flags['--project']
-  );
-  if (typeof link === 'number') return link;
+  const scope = await resolveFirewallScope(client, parsed.flags);
+  if (typeof scope === 'number') return scope;
 
-  const { project, org } = link;
-  const teamId = org.type === 'team' ? org.id : undefined;
   let identifier = parsed.args[0] as string | undefined;
 
-  output.spinner(`Fetching rules for ${chalk.bold(project.name)}`);
+  output.spinner(`Fetching rules for ${chalk.bold(scope.displayName)}`);
 
-  const { active, draft } = await listFirewallConfigs(client, project.id, {
-    teamId,
-  });
+  const { active, draft } = await listFirewallConfigs(client, scope);
   const currentRules = draft?.rules || active?.rules || [];
 
   if (currentRules.length === 0) {
@@ -72,7 +65,7 @@ export default async function remove(client: Client, argv: string[]) {
                 when: 'replace <name-or-id>',
               },
               {
-                command: withGlobalFlags(client, 'firewall rules list'),
+                command: withGlobalFlags(client, 'firewall rules list', scope),
                 when: 'list rules',
               },
             ],
@@ -81,7 +74,7 @@ export default async function remove(client: Client, argv: string[]) {
         );
       }
       output.error(
-        `Rule name or ID is required. Usage: ${withGlobalFlags(client, 'firewall rules remove <name-or-id> --yes')}`
+        `Rule name or ID is required. Usage: ${withGlobalFlags(client, 'firewall rules remove <name-or-id> --yes', scope)}`
       );
       return 1;
     }
@@ -107,7 +100,7 @@ export default async function remove(client: Client, argv: string[]) {
   if (matches.length === 0) {
     output.stopSpinner();
     output.error(
-      `No rule found for "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'firewall rules list'))} to view all rules.`
+      `No rule found for "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'firewall rules list', scope))} to view all rules.`
     );
     return 1;
   }
@@ -125,7 +118,8 @@ export default async function remove(client: Client, argv: string[]) {
           next: matches.map(r => ({
             command: withGlobalFlags(
               client,
-              `firewall rules remove "${r.id}" --yes`
+              `firewall rules remove "${r.id}" --yes`,
+              scope
             ),
             when: `remove "${r.name}"`,
           })),
@@ -180,36 +174,25 @@ export default async function remove(client: Client, argv: string[]) {
   output.spinner('Staging removal');
 
   try {
-    const hadExistingDraft = await detectExistingDraft(
-      client,
-      project.id,
-      teamId
-    );
+    const hadExistingDraft = await detectExistingDraft(client, scope);
 
-    await patchFirewallDraft(
-      client,
-      project.id,
-      {
-        action: 'rules.remove',
-        id: rule.id,
-        value: null,
-      },
-      { teamId }
-    );
+    await patchFirewallDraft(client, scope, {
+      action: 'rules.remove',
+      id: rule.id,
+      value: null,
+    });
 
     output.log(
       `${chalk.cyan('Removed')} rule "${chalk.bold(rule.name)}" ${chalk.gray(removeStamp())}`
     );
 
-    await offerAutoPublish(client, project.id, hadExistingDraft, {
-      teamId,
+    await offerAutoPublish(client, scope, hadExistingDraft, {
       skipPrompts: parsed.flags['--yes'] as boolean,
     });
 
     return 0;
   } catch (e: unknown) {
-    const error = e as { message?: string };
-    output.error(error.message || 'Failed to remove rule');
+    output.error(mapFirewallApiError(e, scope, 'Failed to remove rule'));
     return 1;
   }
 }
