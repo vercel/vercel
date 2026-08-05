@@ -147,7 +147,12 @@ async function runShip(client: Client, options: ShipOptions): Promise<number> {
   // works on a machine with no coding agent installed at all.
   const endPreflight = profile.start('preflight');
   const preflight = await collectPreflight(client, workspace);
-  endPreflight({ linked: preflight.linked });
+  endPreflight({
+    linked: preflight.linked,
+    frameworksDetected: preflight.intelligence?.frameworks.length ?? 0,
+    servicesDetected: preflight.intelligence?.services.length ?? 0,
+    intentFiles: preflight.intelligence?.intentFiles.length ?? 0,
+  });
   const context = {
     workspace,
     vercelContext: formatPreflight(preflight),

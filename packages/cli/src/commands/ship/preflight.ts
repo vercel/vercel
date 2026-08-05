@@ -3,9 +3,15 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type Client from '../../util/client';
 import getUser from '../../util/get-user';
+import getTeams from '../../util/teams/get-teams';
 import { getLinkedProject } from '../../util/projects/link';
 import output from '../../output-manager';
 import pkg from '../../util/pkg';
+import {
+  collectProjectIntelligence,
+  formatProjectIntelligence,
+  type ProjectIntelligence,
+} from './project-intelligence';
 
 /** Skill id looked up in the agent skill directories. */
 const VERCEL_SKILL_ID = 'vercel-cli';
@@ -16,11 +22,15 @@ export interface Preflight {
   username?: string;
   /** Team slug or id in scope, when one is set. */
   team?: string;
+  /** Team slugs the user can act in — the values `--scope` accepts. */
+  teams?: string[];
   /** Whether the workspace already resolves to a linked project. */
   linked: boolean;
   linkedProjectName?: string;
   /** Whether the `vercel-cli` agent skill is installed locally. */
   skillInstalled: boolean;
+  /** Deterministic static analysis of the workspace. */
+  intelligence?: ProjectIntelligence;
 }
 
 /**
@@ -40,37 +50,69 @@ export async function collectPreflight(
     skillInstalled: await isSkillInstalled(cwd),
   };
 
-  try {
-    const user = await getUser(client);
-    preflight.username = user.username;
-  } catch (error) {
-    output.debug(
-      `ship preflight: could not resolve user: ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
-  }
+  // Independent lookups run concurrently; each is best-effort on its own.
+  await Promise.all([
+    (async () => {
+      try {
+        const user = await getUser(client);
+        preflight.username = user.username;
+      } catch (error) {
+        debug('could not resolve user', error);
+      }
+    })(),
+
+    (async () => {
+      try {
+        const teams = await getTeams(client);
+        preflight.teams = teams
+          .map(team => team.slug)
+          .filter((slug): slug is string => Boolean(slug));
+        const current = teams.find(
+          team => team.id === client.config.currentTeam
+        );
+        if (current?.slug) {
+          preflight.team = current.slug;
+        }
+      } catch (error) {
+        debug('could not list teams', error);
+      }
+    })(),
+
+    (async () => {
+      try {
+        const link = await getLinkedProject(client, { cwd });
+        if (link.status === 'linked') {
+          preflight.linked = true;
+          preflight.linkedProjectName = link.project.name;
+        }
+      } catch (error) {
+        debug('could not resolve project link', error);
+      }
+    })(),
+
+    (async () => {
+      try {
+        preflight.intelligence = await collectProjectIntelligence(cwd);
+      } catch (error) {
+        debug('could not analyze the workspace', error);
+      }
+    })(),
+  ]);
 
   const { currentTeam } = client.config;
-  if (currentTeam) {
+  if (!preflight.team && currentTeam) {
     preflight.team = currentTeam;
   }
 
-  try {
-    const link = await getLinkedProject(client, { cwd });
-    if (link.status === 'linked') {
-      preflight.linked = true;
-      preflight.linkedProjectName = link.project.name;
-    }
-  } catch (error) {
-    output.debug(
-      `ship preflight: could not resolve project link: ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
-  }
-
   return preflight;
+}
+
+function debug(what: string, error: unknown): void {
+  output.debug(
+    `ship preflight: ${what}: ${
+      error instanceof Error ? error.message : String(error)
+    }`
+  );
 }
 
 /**
@@ -88,6 +130,12 @@ export function formatPreflight(preflight: Preflight): string {
     lines.push(`- Team in scope: ${preflight.team}`);
   }
 
+  if (preflight.teams && preflight.teams.length > 0) {
+    lines.push(
+      `- Teams available (values \`--scope\` accepts): ${preflight.teams.join(', ')}`
+    );
+  }
+
   lines.push(
     preflight.linked
       ? `- This directory is already linked to project "${preflight.linkedProjectName}". Do not re-link it.`
@@ -97,8 +145,15 @@ export function formatPreflight(preflight: Preflight): string {
   lines.push(
     preflight.skillInstalled
       ? '- The `vercel-cli` agent skill is installed. Use it as your reference for CLI behavior.'
-      : '- The `vercel-cli` agent skill is not installed. Rely on `vercel <command> --help`.'
+      : '- The `vercel-cli` agent skill is not installed. Use the Command reference below; run `vercel <command> --help` only for what it does not cover.'
   );
+
+  const intelligence = preflight.intelligence
+    ? formatProjectIntelligence(preflight.intelligence)
+    : undefined;
+  if (intelligence) {
+    lines.push(intelligence);
+  }
 
   return lines.join('\n');
 }
