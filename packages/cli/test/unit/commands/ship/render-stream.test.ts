@@ -246,3 +246,124 @@ describe('ship StreamRenderer', () => {
     });
   });
 });
+
+describe('ship StreamRenderer durations', () => {
+  let written: string[];
+
+  beforeEach(() => {
+    written = [];
+    vi.spyOn(output, 'print').mockImplementation((str: string) => {
+      written.push(str);
+    });
+    vi.spyOn(output, 'debug').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  const out = () => stripAnsi(written.join(''));
+
+  /** Start a call, advance the clock, then settle it. */
+  function call(
+    renderer: StreamRenderer,
+    id: string,
+    command: string,
+    settle?: boolean
+  ) {
+    renderer.render({
+      type: 'tool-call',
+      toolCallId: id,
+      toolName: 'bash',
+      input: { command },
+    });
+    if (settle) {
+      renderer.render({
+        type: 'tool-result',
+        toolCallId: id,
+        toolName: 'bash',
+      });
+    }
+  }
+
+  it('reports a lone slow call under the line it belongs to', () => {
+    vi.useFakeTimers({ toFake: ['performance'] });
+    const renderer = new StreamRenderer();
+    call(renderer, 'a', 'vercel build');
+    vi.advanceTimersByTime(4000);
+    renderer.render({ type: 'tool-result', toolCallId: 'a', toolName: 'bash' });
+
+    // Nothing was printed in between, so the bare duration is unambiguous.
+    expect(out()).toContain('    took  4s\n');
+  });
+
+  it('reports one duration for a batch of parallel calls', () => {
+    vi.useFakeTimers({ toFake: ['performance'] });
+    const renderer = new StreamRenderer();
+    call(renderer, 'a', 'vercel curl https://app.example.com/api/todos');
+    call(renderer, 'b', 'vercel curl https://app.example.com/api/docs');
+    call(renderer, 'c', 'vercel curl https://app.example.com/api/health');
+    vi.advanceTimersByTime(3000);
+    renderer.render({ type: 'tool-result', toolCallId: 'a', toolName: 'bash' });
+    vi.advanceTimersByTime(2000);
+    renderer.render({ type: 'tool-result', toolCallId: 'b', toolName: 'bash' });
+    vi.advanceTimersByTime(1000);
+    renderer.render({ type: 'tool-result', toolCallId: 'c', toolName: 'bash' });
+
+    // One line, once, measuring what was actually waited for.
+    expect(out()).toContain('    took  6s for 3 calls\n');
+    expect(out().match(/took/g)).toHaveLength(1);
+  });
+
+  it('counts a call that joined a batch already running', () => {
+    vi.useFakeTimers({ toFake: ['performance'] });
+    const renderer = new StreamRenderer();
+    call(renderer, 'a', 'vercel build');
+    vi.advanceTimersByTime(1000);
+    call(renderer, 'b', 'vercel whoami', true);
+    vi.advanceTimersByTime(4000);
+    renderer.render({ type: 'tool-result', toolCallId: 'a', toolName: 'bash' });
+
+    expect(out()).toContain('took  5s for 2 calls');
+  });
+
+  it('starts a new batch after the previous one settles', () => {
+    vi.useFakeTimers({ toFake: ['performance'] });
+    const renderer = new StreamRenderer();
+    call(renderer, 'a', 'vercel build');
+    vi.advanceTimersByTime(4000);
+    renderer.render({ type: 'tool-result', toolCallId: 'a', toolName: 'bash' });
+    call(renderer, 'b', 'vercel deploy');
+    vi.advanceTimersByTime(5000);
+    renderer.render({ type: 'tool-result', toolCallId: 'b', toolName: 'bash' });
+
+    // Two separate batches, not one nine-second batch of two calls.
+    expect(out()).toContain('took  4s\n');
+    expect(out()).toContain('took  5s\n');
+    expect(out()).not.toContain('calls');
+  });
+
+  it('says nothing about a batch that was quick', () => {
+    const renderer = new StreamRenderer();
+    call(renderer, 'a', 'ls', true);
+
+    expect(out()).not.toContain('took');
+  });
+
+  it('still accounts for a batch whose last call failed', () => {
+    vi.useFakeTimers({ toFake: ['performance'] });
+    const renderer = new StreamRenderer();
+    call(renderer, 'a', 'vercel build');
+    vi.advanceTimersByTime(4000);
+    renderer.render({
+      type: 'tool-error',
+      toolCallId: 'a',
+      toolName: 'bash',
+      error: 'boom',
+    });
+
+    expect(out()).toContain('failed');
+    expect(out()).toContain('took  4s');
+  });
+});

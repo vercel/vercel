@@ -20,8 +20,8 @@ import {
 } from './voice';
 import { textWidth, truncateAnsi, wrapAnsi } from './wrap';
 
-/** Longest tool-input summary shown on a progress line. */
-const MAX_SUMMARY_LENGTH = 72;
+/** Longest line of failure output echoed under a failed call. */
+const MAX_ERROR_LINE_LENGTH = 100;
 
 /**
  * Input fields worth showing, most specific first. A tool call is far more
@@ -77,8 +77,24 @@ export class StreamRenderer {
   /** Tool calls issued but not yet resolved, keyed by call id. */
   private readonly inFlight = new Map<
     string,
-    { label: string; startedAt: number; command?: string }
+    {
+      label: string;
+      summary: string;
+      startedAt: number;
+      command?: string;
+    }
   >();
+
+  /**
+   * The run of tool calls currently open, and when the first of them started.
+   *
+   * Parallel calls settle one after another, and a duration printed for each
+   * says only that something was slow, not which thing. Their individual
+   * durations overlap anyway; what the wall time of the batch measures is the
+   * thing the user waited for. Per-call timings stay in the written profile.
+   */
+  private groupStartedAt = 0;
+  private groupCount = 0;
 
   private readonly profile: ShipProfile | undefined;
 
@@ -413,10 +429,19 @@ export class StreamRenderer {
 
     const id = asString(part.toolCallId);
     if (id) {
+      // A duration reported on its own is only unambiguous when one call was
+      // running. Overlap is marked on both the existing calls and the new one,
+      // so each can name itself when it finishes.
+      if (this.inFlight.size === 0 && this.groupCount === 0) {
+        this.groupStartedAt = performance.now();
+      }
+      this.groupCount += 1;
+
       // Monotonic, so a clock adjustment mid-call cannot report a negative
       // duration to the user or into the profile.
       this.inFlight.set(id, {
         label,
+        summary,
         startedAt: performance.now(),
         command: shellCommand(part.input),
       });
@@ -426,6 +451,31 @@ export class StreamRenderer {
     // otherwise sit behind a generic "working" line. Naming the running command
     // is the difference between "is this stuck?" and "the build is still going".
     this.activity?.setActivity([label]);
+  }
+
+  /**
+   * Account for a run of calls that took long enough to be worth accounting for.
+   *
+   * One line once they have all settled, measuring the wall time the user
+   * actually waited, rather than one line per call. A column of durations
+   * following four parallel calls cannot be matched to the calls that produced
+   * them, and overlapping durations do not add up to anything meaningful.
+   */
+  private reportGroupDuration(): void {
+    const elapsed = performance.now() - this.groupStartedAt;
+    const count = this.groupCount;
+    this.groupCount = 0;
+    this.groupStartedAt = 0;
+
+    if (elapsed < SLOW_TOOL_MS || count === 0) {
+      return;
+    }
+
+    const duration = formatElapsed(Math.round(elapsed / 1000));
+    const text = count === 1 ? duration : `${duration} for ${count} calls`;
+
+    this.labelled = false;
+    this.say('action', 'took', chalk.dim(text), { wrap: false });
   }
 
   /**
@@ -455,7 +505,8 @@ export class StreamRenderer {
     const tracked = id ? this.inFlight.get(id) : undefined;
     if (id) this.inFlight.delete(id);
 
-    if (this.inFlight.size === 0) {
+    const groupFinished = this.inFlight.size === 0;
+    if (groupFinished) {
       this.activity?.setActivity(WORKING_PHRASES);
     }
 
@@ -484,14 +535,10 @@ export class StreamRenderer {
       for (const line of tailLines(part.error ?? part.output)) {
         this.writeLine(blankGutter() + chalk.dim(line));
       }
-      return;
     }
 
-    if (elapsed >= SLOW_TOOL_MS) {
-      this.writeLine(
-        blankGutter() +
-          chalk.dim(`took ${formatElapsed(Math.round(elapsed / 1000))}`)
-      );
+    if (groupFinished) {
+      this.reportGroupDuration();
     }
   }
 }
@@ -503,7 +550,7 @@ function summarizeToolInput(input: unknown): string {
   for (const field of SUMMARY_FIELDS) {
     const value = record[field];
     if (typeof value === 'string' && value.trim()) {
-      return truncate(value.trim().replace(/\s+/g, ' '));
+      return value.trim().replace(/\s+/g, ' ');
     }
   }
   return '';
@@ -522,8 +569,8 @@ function shellCommand(input: unknown): string | undefined {
 }
 
 function truncate(value: string): string {
-  return value.length > MAX_SUMMARY_LENGTH
-    ? `${value.slice(0, MAX_SUMMARY_LENGTH - 1)}…`
+  return value.length > MAX_ERROR_LINE_LENGTH
+    ? `${value.slice(0, MAX_ERROR_LINE_LENGTH - 1)}…`
     : value;
 }
 
