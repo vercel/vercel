@@ -30,7 +30,10 @@ import { getDeploymentCheckRuns } from '../../util/deploy/get-deployment-check-r
 import { getDeploymentCheckRunLogs } from '../../util/deploy/get-deployment-check-run-logs';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
-import { recordSessionEvent } from '../../util/ship-session';
+import {
+  confirmGatedOperation,
+  recordSessionEvent,
+} from '../../util/ship-session';
 import { isValidArchive } from '../../util/deploy/validate-archive-format';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import { emoji, prependEmoji } from '../../util/emoji';
@@ -254,6 +257,17 @@ async function handleInitDeployment(
     flags: parsedArguments.flags,
   });
   telemetryClient.trackTargetEnvironment(target);
+
+  if (
+    target === 'production' &&
+    !(await confirmGatedOperation({
+      command: 'deploy',
+      gate: 'production',
+      description: 'deploys to production',
+    }))
+  ) {
+    return 1;
+  }
 
   const parsedArchive = parsedArguments.flags['--archive'];
   if (
@@ -1102,6 +1116,17 @@ async function handleDefaultDeploy(
     flags: parsedArguments.flags,
   });
   telemetryClient.trackTargetEnvironment(target);
+
+  if (
+    target === 'production' &&
+    !(await confirmGatedOperation({
+      command: 'deploy',
+      gate: 'production',
+      description: 'deploys to production',
+    }))
+  ) {
+    return 1;
+  }
 
   // Validate that --skip-domain is only used with production deployments
   const skipDomain = parsedArguments.flags['--skip-domain'];

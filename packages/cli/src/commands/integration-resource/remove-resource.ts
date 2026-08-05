@@ -1,6 +1,9 @@
 import chalk from 'chalk';
 import output from '../../output-manager';
-import { recordSessionEvent } from '../../util/ship-session';
+import {
+  confirmGatedOperation,
+  recordSessionEvent,
+} from '../../util/ship-session';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -197,6 +200,16 @@ async function handleDeleteResource(
     output.error(
       'Confirmation required. Use `--yes` to skip the confirmation prompt.'
     );
+    return 1;
+  }
+
+  if (
+    !(await confirmGatedOperation({
+      command: 'integration-resource remove',
+      gate: 'remote-delete',
+      description: `permanently deletes the resource "${resource.name}" and its data`,
+    }))
+  ) {
     return 1;
   }
 

@@ -6,11 +6,12 @@
  * both deliberately built from plain files so they can be inspected with `cat`
  * and tested with `fs`:
  *
- * - **The approval gate** (`approvals/`): commands classified as spending
- *   money, touching production, or deleting remote resources pause and ask the
- *   supervising ship process for the user's decision before executing. The
- *   gate is deterministic — prose in the mission asks the agent to behave; the
- *   gate does not depend on it complying.
+ * - **The approval gate** (`approvals/`): commands that spend money, touch
+ *   production, or delete remote resources pause and ask the supervising ship
+ *   process for the user's decision before executing. The gate is called from
+ *   inside each command handler after its own argument parsing — never from
+ *   shell-command classification — so it is deterministic on what is actually
+ *   about to happen, and does not depend on the agent complying with prose.
  *
  * - **The ledger** (`ledger.ndjson`): the CLI journals its own effects from
  *   typed data at the moment it performs them — deployments with their real
@@ -25,8 +26,8 @@
 export { SHIP_SESSION_DIR_ENV, getShipSessionDir } from './session-dir';
 export { recordSessionEvent, readLedger, LEDGER_FILENAME } from './ledger';
 export type { LedgerEvent } from './ledger';
-export { classifyGatedOperation } from './classify';
-export type { GateClass, GatedOperation } from './classify';
+export { confirmGatedOperation } from './gate';
+export type { GateOperation } from './gate';
 export {
   requestApproval,
   ApprovalWatcher,
@@ -37,4 +38,5 @@ export type {
   ApprovalRequest,
   ApprovalResult,
   ApprovalVerdict,
+  GateClass,
 } from './approval';

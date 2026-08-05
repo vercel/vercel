@@ -8,7 +8,13 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { GateClass } from './classify';
+
+/**
+ * Why an operation is gated. Deliberately three classes only: every gate is
+ * an interruption, and a gate that fires on routine commands trains the user
+ * to approve without reading.
+ */
+export type GateClass = 'spend' | 'production' | 'remote-delete';
 
 export const APPROVALS_DIRNAME = 'approvals';
 

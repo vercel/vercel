@@ -1,6 +1,7 @@
 import type { Team } from '@vercel-internals/types';
 import chalk from 'chalk';
 import output from '../../output-manager';
+import { confirmGatedOperation } from '../../util/ship-session';
 import type Client from '../../util/client';
 import { isAPIError } from '../../util/errors-ts';
 import { parseArguments } from '../../util/get-args';
@@ -52,6 +53,16 @@ export async function remove(client: Client, argv: string[]) {
 
   if (asJson && !skipConfirmation) {
     output.error('--json requires --yes to skip confirmation prompts');
+    return 1;
+  }
+
+  if (
+    !(await confirmGatedOperation({
+      command: 'integration remove',
+      gate: 'remote-delete',
+      description: 'uninstalls an integration from the account',
+    }))
+  ) {
     return 1;
   }
 
