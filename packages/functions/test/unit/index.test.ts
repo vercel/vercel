@@ -15,6 +15,7 @@ describe('@vercel/functions', () => {
     'experimental_upgradeWebSocket',
     'geolocation',
     'getCache',
+    'getDeadline',
     'getEnv',
     'invalidateBySrcImage',
     'invalidateByTag',

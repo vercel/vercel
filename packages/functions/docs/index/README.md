@@ -33,6 +33,7 @@
 - [experimental_upgradeWebSocket](functions/experimental_upgradeWebSocket.md)
 - [geolocation](functions/geolocation.md)
 - [getCache](functions/getCache.md)
+- [getDeadline](functions/getDeadline.md)
 - [getEnv](functions/getEnv.md)
 - [invalidateBySrcImage](functions/invalidateBySrcImage.md)
 - [invalidateByTag](functions/invalidateByTag.md)
