@@ -89,7 +89,12 @@ export class HandoffKeyListener {
     }
   }
 
-  /** Read-and-clear, called at the turn boundary where the hand-off can run. */
+  /** Whether a hand-off has been requested, without clearing it. */
+  get hasPending(): boolean {
+    return this.pending;
+  }
+
+  /** Read-and-clear, called at the boundary where the hand-off can run. */
   consumePending(): boolean {
     const pending = this.pending;
     this.pending = false;

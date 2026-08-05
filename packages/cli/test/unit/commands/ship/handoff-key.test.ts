@@ -57,7 +57,11 @@ describe('HandoffKeyListener', () => {
     stdin.press(CTRL_T);
     expect(onRequest).toHaveBeenCalledTimes(1);
 
+    // Peeking does not clear; consuming does.
+    expect(keys.hasPending).toBe(true);
+    expect(keys.hasPending).toBe(true);
     expect(keys.consumePending()).toBe(true);
+    expect(keys.hasPending).toBe(false);
     expect(keys.consumePending()).toBe(false);
   });
 

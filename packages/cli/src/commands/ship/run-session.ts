@@ -282,7 +282,7 @@ async function driveSession(
       activity.pause();
       vercelSays(
         chalk.dim(
-          `Got it — you'll drop into ${harness.label} when this turn ends.`
+          `Got it — pausing ${harness.label} at its next stopping point.`
         )
       );
       activity.resume();
@@ -332,8 +332,8 @@ async function driveSession(
     if (handoffAvailable) {
       vercelSays(
         chalk.dim(
-          `Press ctrl+t while the agent works to continue in ` +
-            `${harness.label} directly when the current turn ends.`
+          `Press ctrl+t at any time to pause the agent and continue in ` +
+            `${harness.label} directly.`
         )
       );
     }
@@ -811,9 +811,39 @@ async function runTurn(options: {
   // invisible while output is flowing.
   activity.start(WORKING_PHRASES);
 
+  // ctrl+t interrupts the turn at the next step boundary — the end of the
+  // current model response and its tool batch, when nothing is mid-flight —
+  // by aborting the in-flight turn, which the adapter propagates to the agent
+  // exactly like its own interrupt key. Deliberately not a stop condition:
+  // for a bridge-backed harness those suspend the host's consumption while
+  // the agent keeps working, and a hand-off needs the agent actually paused.
+  const abort = new AbortController();
+  const handoff: HandoffInterrupt | undefined = keys && {
+    aborted: false,
+    onPart(type: string): void {
+      if (this.aborted || !keys.hasPending || type !== 'finish-step') {
+        return;
+      }
+      this.aborted = true;
+      activity.pause();
+      vercelSays(
+        chalk.dim(`Pausing ${options.agentName} — the terminal is yours.`)
+      );
+      abort.abort();
+    },
+  };
+
   try {
-    let result = await agent.stream({ session, prompt });
-    await drain(result, renderer);
+    let result = await agent.stream({
+      session,
+      prompt,
+      abortSignal: abort.signal,
+    });
+    await drain(result, renderer, handoff);
+    if (handoff?.aborted) {
+      swallow(result);
+      return 0;
+    }
 
     // A turn that called `askUser` is left unfinished, waiting for a result.
     // Answer it and continue the same turn, repeating in case the agent asks
@@ -825,6 +855,23 @@ async function runTurn(options: {
       if (pending.length === 0) {
         output.debug('ship: turn unfinished for a reason other than askUser');
         break;
+      }
+
+      // The user pressed ctrl+t and the agent stopped to ask something: the
+      // question will be answered in the agent's own interface, not here.
+      // Ending the turn through the ordinary tool-result machinery keeps the
+      // session clean — no abort semantics while the turn waits on a tool.
+      if (keys?.hasPending) {
+        result = await agent.continueStream({
+          session,
+          toolResultContinuations: pending.map(call => ({
+            toolCallId: call.toolCallId,
+            output: { answer: HANDOFF_ASK_USER_ANSWER },
+          })),
+          abortSignal: abort.signal,
+        });
+        await drain(result, renderer, handoff);
+        continue;
       }
 
       activity.pause();
@@ -852,14 +899,31 @@ async function runTurn(options: {
       result = await agent.continueStream({
         session,
         toolResultContinuations,
+        abortSignal: abort.signal,
       });
-      await drain(result, renderer);
+      await drain(result, renderer, handoff);
+      if (handoff?.aborted) {
+        swallow(result);
+        return 0;
+      }
     }
 
     const finishReason = await result.finishReason;
     output.debug(`harness finish reason: ${finishReason}`);
 
     return finishReason === 'error' ? 1 : 0;
+  } catch (err) {
+    // The interrupt was ours; the stream ending abruptly is the expected
+    // shape of it, not a failure.
+    if (handoff?.aborted) {
+      output.debug(
+        `ship: turn aborted for hand-off: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
+      return 0;
+    }
+    throw err;
   } finally {
     const elapsed = activity.stop();
     renderer.endTurn();
@@ -920,13 +984,43 @@ does not apply. Ask in prose instead, put the question at the very end of your
 turn, and stop there. The user's typed reply arrives as your next turn.
 `;
 
+/**
+ * Interrupt state for a ctrl+t hand-off: watches the stream for a step
+ * boundary and remembers that the abort that follows was deliberate.
+ */
+interface HandoffInterrupt {
+  aborted: boolean;
+  onPart(type: string): void;
+}
+
+/** Sent as the `askUser` result when the user is taking over in the TUI. */
+const HANDOFF_ASK_USER_ANSWER =
+  'The user is switching to your own interactive interface to continue ' +
+  'there. End your turn immediately — no further actions, no summary. ' +
+  'They saw your question and will answer it in your interface.';
+
 async function drain(
   result: HarnessStreamResult,
-  renderer: StreamRenderer
+  renderer: StreamRenderer,
+  handoff?: HandoffInterrupt
 ): Promise<void> {
   for await (const part of result.fullStream) {
+    // Our own interrupt must not render as a failure.
+    if (handoff?.aborted && (part.type === 'abort' || part.type === 'error')) {
+      continue;
+    }
     renderer.render(part);
+    handoff?.onPart(part.type);
   }
+}
+
+/**
+ * Detach an aborted result's promises so their rejections are not treated as
+ * unhandled once the turn has been deliberately cut short.
+ */
+function swallow(result: HarnessStreamResult): void {
+  void Promise.resolve(result.finishReason).catch(() => undefined);
+  void Promise.resolve(result.toolCalls).catch(() => undefined);
 }
 
 interface HarnessSession {
@@ -1058,10 +1152,12 @@ interface HarnessRuntime {
     stream: (options: {
       session: HarnessSession;
       prompt: string;
+      abortSignal?: AbortSignal;
     }) => Promise<HarnessStreamResult>;
     continueStream: (options: {
       session: HarnessSession;
       toolResultContinuations: HarnessToolResultContinuation[];
+      abortSignal?: AbortSignal;
     }) => Promise<HarnessStreamResult>;
   };
   createHarness: () => unknown;
