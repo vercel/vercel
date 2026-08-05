@@ -1,7 +1,5 @@
 import chalk from 'chalk';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import type Client from '../../util/client';
 import {
   ApprovalWatcher,
@@ -21,6 +19,7 @@ import {
 } from './install-harness-packages';
 import { HARNESS_SOURCE_ENV_VAR } from './local-harness-source';
 import { installCliShim } from './cli-shim';
+import { createSessionDir, finalizeSessionDir } from './session-storage';
 import { FOLLOW_UPS } from './follow-ups';
 import { ActivityIndicator, WORKING_PHRASES } from './activity';
 import { answerAskUser, createAskUserTool, isAskUserTool } from './ask-user';
@@ -201,8 +200,11 @@ async function driveSession(
   // so it is measured on its own rather than folded into the session.
   // The one environment variable every process in the session inherits. The
   // approval gate and the ledger both live under the directory it names, so it
-  // must be exported before the harness spawns anything.
-  const sessionDir = await mkdtemp(join(tmpdir(), 'vercel-ship-'));
+  // must be exported before the harness spawns anything. It sits next to the
+  // harness's own run data in `.agent-runs/`, and the ledger stays after the
+  // session ends — it is the record of what the session did.
+  const storage = await createSessionDir(workspace);
+  const sessionDir = storage.dir;
   const previousSessionDir = process.env[SHIP_SESSION_DIR_ENV];
   process.env[SHIP_SESSION_DIR_ENV] = sessionDir;
 
@@ -228,9 +230,7 @@ async function driveSession(
         process.env.PATH = previousPath;
       }
     }
-    await rm(sessionDir, { recursive: true, force: true }).catch(
-      () => undefined
-    );
+    await finalizeSessionDir(storage);
   };
 
   const endCreate = profile.start('start agent session', {
@@ -364,6 +364,16 @@ async function driveSession(
     // turn, a non-interactive run): the result still goes at the end, where it
     // is read. Deduplicated, so a normally ended session prints nothing twice.
     await reportOutcome();
+
+    // Where the record lives, so a profile can be tied back to its ledger and
+    // the user knows what survived the session.
+    if (storage.persistent && (await readLedger(sessionDir)).length > 0) {
+      const ledgerPath = join(sessionDir, 'ledger.ndjson');
+      profile.set('ledger', ledgerPath);
+      vercelSays(
+        chalk.dim(`Session record: ${relative(workspace, ledgerPath)}`)
+      );
+    }
     await cleanupSessionDir();
 
     // Printed on every exit path, including a thrown turn. The conversation
