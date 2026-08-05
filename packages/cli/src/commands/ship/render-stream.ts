@@ -161,7 +161,7 @@ export class StreamRenderer {
       case 'reasoning-delta':
         // Swap the phrasing while the model reasons, so the animated line
         // reflects what is actually happening.
-        this.activity?.setPhrases(THINKING_PHRASES);
+        this.activity?.setActivity(THINKING_PHRASES);
         this.openThinking();
         if (this.verbose) {
           this.thinkingBuffer = this.drain(
@@ -374,7 +374,7 @@ export class StreamRenderer {
 
     this.labelled = false;
     this.thinking = false;
-    this.activity?.setPhrases(WORKING_PHRASES);
+    this.activity?.setActivity(WORKING_PHRASES);
   }
 
   /**
@@ -425,7 +425,7 @@ export class StreamRenderer {
     // The harness streams no incremental tool output, so a slow command would
     // otherwise sit behind a generic "working" line. Naming the running command
     // is the difference between "is this stuck?" and "the build is still going".
-    this.activity?.setPhrases([label]);
+    this.activity?.setActivity([label]);
   }
 
   /**
@@ -456,7 +456,7 @@ export class StreamRenderer {
     if (id) this.inFlight.delete(id);
 
     if (this.inFlight.size === 0) {
-      this.activity?.setPhrases(WORKING_PHRASES);
+      this.activity?.setActivity(WORKING_PHRASES);
     }
 
     const name = asString(part.toolName) || tracked?.label || 'tool';

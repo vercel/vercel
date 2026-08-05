@@ -171,6 +171,10 @@ async function driveSession(
   }
 
   const preparing = new ActivityIndicator();
+  preparing.describe({
+    actor: agentLabel(harness.id),
+    sessionStartedAt: profile.startedAtMs,
+  });
   preparing.start([
     bootstrapped
       ? `Preparing ${harness.label}`
@@ -198,9 +202,11 @@ async function driveSession(
   }
 
   const activity = new ActivityIndicator();
+  // The total is the whole command, so it matches the total reported when the
+  // run ends rather than starting again from where the session happened to.
   activity.describe({
     actor: agentLabel(harness.id),
-    sessionStartedAt: Date.now(),
+    sessionStartedAt: profile.startedAtMs,
   });
 
   const renderer = new StreamRenderer(activity, profile);

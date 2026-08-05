@@ -41,6 +41,12 @@ export class ShipProfile {
   /** Open spans, innermost last. Completed spans attach to the innermost. */
   private readonly open: ProfileSpan[];
   private readonly originMs = performance.now();
+
+  /**
+   * Wall-clock start of the run, for anything that has to compare against
+   * `Date.now()`. The monotonic origin is the one durations are measured from.
+   */
+  readonly startedAtMs = Date.now();
   private readonly meta: Record<string, unknown> = {};
 
   constructor(name = 'vercel ship') {

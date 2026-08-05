@@ -69,6 +69,19 @@ export class ActivityIndicator {
   private sessionStartedAt = 0;
 
   /**
+   * Whether the total is worth printing beside the activity clock.
+   *
+   * Suppressed while the two would show the same number, which is every run
+   * until the first activity finishes, and reads as a rendering fault.
+   */
+  private get showsTotal(): boolean {
+    return (
+      this.sessionStartedAt > 0 &&
+      this.startedAt - this.sessionStartedAt >= 1000
+    );
+  }
+
+  /**
    * Animation is skipped when stderr is not a terminal. `output.spinner()` falls
    * back to printing its message as a line, which on a one-second timer would
    * mean hundreds of lines in a log or CI job.
@@ -101,7 +114,26 @@ export class ActivityIndicator {
     return this.timer !== undefined;
   }
 
-  /** Swap the phrase set without resetting the clock. */
+  /**
+   * Move to a new activity, restarting the clock beside it.
+   *
+   * The clock counts the current activity, not the turn: a turn is the whole
+   * run in a single-turn session, which would make this timer a second copy of
+   * the total. What is worth knowing is how long the thing happening right now
+   * has been happening, because that is what answers "is this stuck".
+   */
+  setActivity(phrases: readonly string[]): void {
+    if (!this.running) return;
+    this.startedAt = Date.now();
+    this.setPhrases(phrases);
+  }
+
+  /**
+   * Swap the phrase set without resetting the clock.
+   *
+   * For new detail about the same activity, such as the latest line of output
+   * from a command that is still running.
+   */
   setPhrases(phrases: readonly string[]): void {
     if (!this.running) return;
     this.phrases = phrases;
@@ -164,7 +196,7 @@ export class ActivityIndicator {
       chalk.dim(formatElapsed(this.elapsedSeconds())),
     ].filter(Boolean);
 
-    if (this.sessionStartedAt > 0) {
+    if (this.showsTotal) {
       const total = Math.round((Date.now() - this.sessionStartedAt) / 1000);
       parts.push(chalk.dim(`| total ${formatElapsed(total)}`));
     }
