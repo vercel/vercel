@@ -4,6 +4,7 @@ import type Client from '../../util/client';
 import {
   ApprovalWatcher,
   readLedger,
+  recordSessionEvent,
   SHIP_SESSION_DIR_ENV,
   type ApprovalDecision,
   type ApprovalRequest,
@@ -29,7 +30,8 @@ import {
 } from './prepare-bootstrap';
 import { StreamRenderer } from './render-stream';
 import { DeploymentTracker } from './deployments';
-import { printContinuation } from './session-continuation';
+import { NativeTuiSession, nativeTuiSupported } from './native-handoff';
+import { printContinuation, resolveSessionId } from './session-continuation';
 import { agentLabel, blankGutter, gutter, GUTTER_WIDTH } from './voice';
 import { textWidth, wrapAnsi } from './wrap';
 import type { ShipProfile } from './profile';
@@ -266,8 +268,14 @@ async function driveSession(
   // Gated commands (money, production, remote deletes) pause inside the CLI
   // and wait for the user's decision through this watcher. The gate is what
   // makes the mission's spending rules deterministic rather than advisory.
+  // When the user has handed the terminal to the agent's own interface, the
+  // wrapper freezes it around the prompt — the gate itself is identical in
+  // both views.
+  const nativeTui = new NativeTuiSession();
   const approvals = new ApprovalWatcher(sessionDir, request =>
-    promptApproval({ client, request, activity, profile })
+    nativeTui.withTerminal(() =>
+      promptApproval({ client, request, activity, profile })
+    )
   );
   approvals.start();
 
@@ -295,46 +303,76 @@ async function driveSession(
       : prompt + NO_ASK_USER_SUFFIX;
     let turnNumber = 0;
 
-    while (turnPrompt !== undefined) {
-      turnNumber += 1;
-      const endTurn = profile.start(`turn ${turnNumber}`);
-      let exitCode: number;
-      try {
-        exitCode = await runTurn({
-          agent,
-          session,
-          prompt: turnPrompt,
-          renderer,
-          activity,
-          client,
-          profile,
-          agentName: agentLabel(harness.id),
-        });
-      } finally {
-        endTurn({ toolCalls: renderer.toolCallCount });
-      }
-      if (exitCode !== 0) {
-        return exitCode;
-      }
+    // Offered in the follow-up menu when the hand-off can keep its promises
+    // (shim installed, POSIX, a TTY to hand over, a supported harness).
+    const handoffAvailable = nativeTuiSupported(harness, {
+      shimInstalled: Boolean(shimDir),
+      isTTY: Boolean(client.stdin.isTTY),
+    });
 
-      // The outcome first, then the question: what the session produced is
-      // what the user is deciding about.
-      await reportOutcome();
+    while (true) {
+      if (turnPrompt !== undefined) {
+        turnNumber += 1;
+        const endTurn = profile.start(`turn ${turnNumber}`);
+        let exitCode: number;
+        try {
+          exitCode = await runTurn({
+            agent,
+            session,
+            prompt: turnPrompt,
+            renderer,
+            activity,
+            client,
+            profile,
+            agentName: agentLabel(harness.id),
+          });
+        } finally {
+          endTurn({ toolCalls: renderer.toolCallCount });
+        }
+        if (exitCode !== 0) {
+          return exitCode;
+        }
+
+        // The outcome first, then the question: what the session produced is
+        // what the user is deciding about.
+        await reportOutcome();
+      }
+      turnPrompt = undefined;
 
       const endReply = profile.start('waiting for your reply');
       const followUp = await chooseFollowUp({
         client,
         harnessLabel: harness.label,
         sessionDir,
+        ...(handoffAvailable
+          ? { nativeTuiLabel: `Continue in ${harness.label} directly` }
+          : {}),
       });
       endReply({
         continued: followUp !== undefined,
         ...(followUp ? { followUp: followUp.id } : {}),
       });
-      turnPrompt = followUp?.prompt;
-    }
 
-    return 0;
+      if (followUp === undefined) {
+        return 0;
+      }
+
+      if (followUp.id === NATIVE_TUI_FOLLOW_UP) {
+        await runNativeTui({
+          harness,
+          nativeTui,
+          workspace,
+          startedAt,
+          profile,
+        });
+        // The ledger delta is the record of the TUI stint; print it before
+        // asking what to do next, same as after an orchestrated turn.
+        await reportOutcome();
+        continue;
+      }
+
+      turnPrompt = followUp.prompt;
+    }
   } catch (err) {
     activity.stop();
     renderer.flush();
@@ -580,20 +618,26 @@ function printSessionOutcome(
   return key;
 }
 
+/** Menu id for handing the terminal to the agent's own interface. */
+const NATIVE_TUI_FOLLOW_UP = 'native-tui';
+
 /**
  * Ask what to do next, offering the follow-ups the ledger supports.
  *
  * `undefined` ends the session. A follow-up returns its prompt, which runs as
  * the next turn of the same session — the agent keeps its context, and the
- * ledger it may need is still live. "Something else" falls through to the
- * free-text reply this menu replaced.
+ * ledger it may need is still live. The native hand-off returns no prompt:
+ * it is a host-side action, not a turn. "Something else" falls through to
+ * the free-text reply this menu replaced.
  */
 async function chooseFollowUp(options: {
   client: Client;
   harnessLabel: string;
   sessionDir: string;
-}): Promise<{ id: string; prompt: string } | undefined> {
-  const { client, harnessLabel, sessionDir } = options;
+  /** When set, offer to continue in the agent's own interface. */
+  nativeTuiLabel?: string;
+}): Promise<{ id: string; prompt?: string } | undefined> {
+  const { client, harnessLabel, sessionDir, nativeTuiLabel } = options;
 
   if (!client.stdin.isTTY) {
     output.log(
@@ -611,6 +655,9 @@ async function chooseFollowUp(options: {
     message: 'What next?',
     choices: [
       { name: 'Done — end the session', value: 'done' },
+      ...(nativeTuiLabel
+        ? [{ name: nativeTuiLabel, value: NATIVE_TUI_FOLLOW_UP }]
+        : []),
       ...available.map(followUp => ({
         name: followUp.label,
         value: followUp.id,
@@ -618,6 +665,10 @@ async function chooseFollowUp(options: {
       { name: 'Give the agent another instruction', value: 'custom' },
     ],
   });
+
+  if (choice === NATIVE_TUI_FOLLOW_UP) {
+    return { id: NATIVE_TUI_FOLLOW_UP };
+  }
 
   if (choice === 'custom') {
     const reply = await readReply(client, harnessLabel);
@@ -631,6 +682,60 @@ async function chooseFollowUp(options: {
 
   output.print('\n');
   return { id: followUp.id, prompt: followUp.prompt(ledger) };
+}
+
+/**
+ * Run the agent's own interface in the foreground until the user exits it.
+ *
+ * The stint is part of the same session in every sense that matters: the
+ * TUI reopens the same conversation (resume by id when it can be resolved,
+ * most-recent-in-cwd otherwise), inherits the session environment — so gates
+ * and the ledger stay active — and the next orchestrated turn picks up
+ * whatever the user and agent did natively. Entry and exit are journaled so
+ * the record shows which effects happened under which interface.
+ */
+async function runNativeTui(options: {
+  harness: DetectedHarness;
+  nativeTui: NativeTuiSession;
+  workspace: string;
+  startedAt: number;
+  profile: ShipProfile;
+}): Promise<void> {
+  const { harness, nativeTui, workspace, startedAt, profile } = options;
+
+  const agentSessionId = await resolveSessionId({
+    harnessId: harness.id,
+    workspace,
+    startedAt,
+  });
+
+  output.print('\n');
+  vercelSays(
+    `Handing the terminal to ${chalk.bold(harness.label)}. Exit it to come ` +
+      `back here — approval gates and the session record stay active.`
+  );
+  output.print('\n');
+
+  recordSessionEvent({
+    type: 'handoff',
+    direction: 'enter',
+    interface: harness.id,
+    ...(agentSessionId ? { agentSessionId } : {}),
+  });
+
+  const endHandoff = profile.start(`in ${harness.label} directly`, {
+    ...(agentSessionId ? { agentSessionId } : {}),
+  });
+  let exitCode = 1;
+  try {
+    exitCode = await nativeTui.run(harness, agentSessionId);
+  } finally {
+    endHandoff({ exitCode });
+    recordSessionEvent({ type: 'handoff', direction: 'exit', exitCode });
+  }
+
+  output.print('\n');
+  vercelSays(`Back from ${harness.label}.`);
 }
 
 /**

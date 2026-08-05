@@ -82,8 +82,11 @@ export async function printContinuation(options: {
  * working directory is the only available signal. It is checked against both the
  * recorded `cwd` and the session start time so a stale or unrelated session is
  * never offered.
+ *
+ * Exported for the native hand-off, which reopens exactly this session in the
+ * agent's own interface.
  */
-async function resolveSessionId(options: {
+export async function resolveSessionId(options: {
   harnessId: HarnessId;
   workspace: string;
   startedAt: number;
