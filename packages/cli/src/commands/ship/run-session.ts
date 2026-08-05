@@ -30,6 +30,7 @@ import {
 } from './prepare-bootstrap';
 import { StreamRenderer } from './render-stream';
 import { DeploymentTracker } from './deployments';
+import { HandoffKeyListener } from './handoff-key';
 import { NativeTuiSession, nativeTuiSupported } from './native-handoff';
 import { printContinuation, resolveSessionId } from './session-continuation';
 import { agentLabel, blankGutter, gutter, GUTTER_WIDTH } from './voice';
@@ -265,16 +266,41 @@ async function driveSession(
   renderer.trackDeployments(deployments);
   const startedAt = Date.now();
 
+  // Whether the hand-off to the agent's own interface can keep its promises
+  // (shim installed, POSIX, a TTY to hand over, a supported harness).
+  const handoffAvailable = nativeTuiSupported(harness, {
+    shimInstalled: Boolean(shimDir),
+    isTTY: Boolean(client.stdin.isTTY),
+  });
+
+  // ctrl+t during a turn queues the hand-off for the turn's end. Armed only
+  // while a turn streams; every prompt that needs the terminal suspends it.
+  const nativeTui = new NativeTuiSession();
+  const handoffKeys = new HandoffKeyListener({
+    stdin: client.stdin,
+    onRequest: () => {
+      activity.pause();
+      vercelSays(
+        chalk.dim(
+          `Got it — you'll drop into ${harness.label} when this turn ends.`
+        )
+      );
+      activity.resume();
+    },
+  });
+
   // Gated commands (money, production, remote deletes) pause inside the CLI
   // and wait for the user's decision through this watcher. The gate is what
   // makes the mission's spending rules deterministic rather than advisory.
   // When the user has handed the terminal to the agent's own interface, the
   // wrapper freezes it around the prompt — the gate itself is identical in
-  // both views.
-  const nativeTui = new NativeTuiSession();
+  // both views. The key listener yields the terminal for the prompt either
+  // way.
   const approvals = new ApprovalWatcher(sessionDir, request =>
     nativeTui.withTerminal(() =>
-      promptApproval({ client, request, activity, profile })
+      handoffKeys.suspendDuring(() =>
+        promptApproval({ client, request, activity, profile })
+      )
     )
   );
   approvals.start();
@@ -303,18 +329,23 @@ async function driveSession(
       : prompt + NO_ASK_USER_SUFFIX;
     let turnNumber = 0;
 
-    // Offered in the follow-up menu when the hand-off can keep its promises
-    // (shim installed, POSIX, a TTY to hand over, a supported harness).
-    const handoffAvailable = nativeTuiSupported(harness, {
-      shimInstalled: Boolean(shimDir),
-      isTTY: Boolean(client.stdin.isTTY),
-    });
+    if (handoffAvailable) {
+      vercelSays(
+        chalk.dim(
+          `Press ctrl+t while the agent works to continue in ` +
+            `${harness.label} directly when the current turn ends.`
+        )
+      );
+    }
 
     while (true) {
       if (turnPrompt !== undefined) {
         turnNumber += 1;
         const endTurn = profile.start(`turn ${turnNumber}`);
         let exitCode: number;
+        if (handoffAvailable) {
+          handoffKeys.arm();
+        }
         try {
           exitCode = await runTurn({
             agent,
@@ -325,8 +356,10 @@ async function driveSession(
             client,
             profile,
             agentName: agentLabel(harness.id),
+            keys: handoffKeys,
           });
         } finally {
+          handoffKeys.disarm();
           endTurn({ toolCalls: renderer.toolCallCount });
         }
         if (exitCode !== 0) {
@@ -336,6 +369,18 @@ async function driveSession(
         // The outcome first, then the question: what the session produced is
         // what the user is deciding about.
         await reportOutcome();
+
+        // A ctrl+t during the turn skips the menu: the user already chose.
+        if (handoffKeys.consumePending()) {
+          await runNativeTui({
+            harness,
+            nativeTui,
+            workspace,
+            startedAt,
+            profile,
+          });
+          await reportOutcome();
+        }
       }
       turnPrompt = undefined;
 
@@ -383,6 +428,8 @@ async function driveSession(
     );
     return 1;
   } finally {
+    // A thrown turn must not leave the terminal in raw mode.
+    handoffKeys.disarm();
     approvals.stop();
 
     const endDestroy = profile.start('stop agent session');
@@ -751,8 +798,10 @@ async function runTurn(options: {
   profile: ShipProfile;
   /** Label for the harness, so a question is attributed like its prose. */
   agentName: string;
+  /** Owns raw mode during the turn; prompts borrow the terminal through it. */
+  keys?: HandoffKeyListener;
 }): Promise<number> {
-  const { agent, session, prompt, renderer, activity, client, profile } =
+  const { agent, session, prompt, renderer, activity, client, profile, keys } =
     options;
 
   renderer.beginTurn();
@@ -783,11 +832,19 @@ async function runTurn(options: {
         questions: pending.length,
       });
       const toolResultContinuations: HarnessToolResultContinuation[] = [];
-      for (const call of pending) {
-        toolResultContinuations.push({
-          toolCallId: call.toolCallId,
-          output: await answerAskUser(client, call.input, options.agentName),
-        });
+      const collectAnswers = async (): Promise<void> => {
+        for (const call of pending) {
+          toolResultContinuations.push({
+            toolCallId: call.toolCallId,
+            output: await answerAskUser(client, call.input, options.agentName),
+          });
+        }
+      };
+      // The question needs the terminal; the hand-off key must let go of it.
+      if (keys) {
+        await keys.suspendDuring(collectAnswers);
+      } else {
+        await collectAnswers();
       }
       endAsk();
       activity.resume();
