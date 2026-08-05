@@ -4,6 +4,8 @@ import {
   getOutputFormat,
   isJsonOutput,
   validateJsonOutput,
+  shouldPrintVersionBanner,
+  wantsMachineReadableOutput,
   OUTPUT_FORMATS,
 } from '../../../src/util/output-format';
 import { formatOption, jsonOption } from '../../../src/util/arg-common';
@@ -129,6 +131,109 @@ describe('output-format', () => {
       if (result.valid) {
         expect(result.jsonOutput).toBe(true);
       }
+    });
+  });
+
+  describe('wantsMachineReadableOutput / shouldPrintVersionBanner', () => {
+    it('treats vercel api as machine-readable (JSON stdout by default)', () => {
+      expect(
+        wantsMachineReadableOutput('api', ['node', 'vercel', 'api', '/v2/user'])
+      ).toBe(true);
+      expect(
+        shouldPrintVersionBanner('api', ['node', 'vercel', 'api', '/v2/user'])
+      ).toBe(false);
+    });
+
+    it('keeps human chrome for api --help', () => {
+      expect(
+        wantsMachineReadableOutput('api', ['node', 'vercel', 'api', '--help'])
+      ).toBe(false);
+      expect(
+        shouldPrintVersionBanner('api', ['node', 'vercel', 'api', '--help'])
+      ).toBe(true);
+      expect(
+        shouldPrintVersionBanner('api', ['node', 'vercel', 'api', '-h'])
+      ).toBe(true);
+    });
+
+    it('treats --json as machine-readable', () => {
+      expect(
+        wantsMachineReadableOutput('webhooks', [
+          'node',
+          'vercel',
+          'webhooks',
+          'ls',
+          '--json',
+        ])
+      ).toBe(true);
+      expect(
+        shouldPrintVersionBanner('webhooks', [
+          'node',
+          'vercel',
+          'webhooks',
+          'ls',
+          '--json',
+        ])
+      ).toBe(false);
+    });
+
+    it('treats --format=json / --format json as machine-readable', () => {
+      expect(
+        wantsMachineReadableOutput('crons', [
+          'node',
+          'vercel',
+          'crons',
+          'ls',
+          '--format=json',
+        ])
+      ).toBe(true);
+      expect(
+        wantsMachineReadableOutput('crons', [
+          'node',
+          'vercel',
+          'crons',
+          'ls',
+          '--format=JSON',
+        ])
+      ).toBe(true);
+      expect(
+        wantsMachineReadableOutput('crons', [
+          'node',
+          'vercel',
+          'crons',
+          'ls',
+          '--format',
+          'json',
+        ])
+      ).toBe(true);
+      expect(
+        shouldPrintVersionBanner('crons', [
+          'node',
+          'vercel',
+          'crons',
+          'ls',
+          '--format',
+          'JSON',
+        ])
+      ).toBe(false);
+    });
+
+    it('keeps human chrome for normal commands', () => {
+      expect(wantsMachineReadableOutput('deploy', ['node', 'vercel'])).toBe(
+        false
+      );
+      expect(shouldPrintVersionBanner('deploy', ['node', 'vercel'])).toBe(true);
+      expect(
+        wantsMachineReadableOutput('list', ['node', 'vercel', 'list'])
+      ).toBe(false);
+      expect(
+        shouldPrintVersionBanner('curl', [
+          'node',
+          'vercel',
+          'curl',
+          'https://x',
+        ])
+      ).toBe(true);
     });
   });
 

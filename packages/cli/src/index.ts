@@ -88,6 +88,10 @@ import { readVercelPluginActiveSessionMarker } from './util/telemetry/vercel-plu
 import { help } from './args';
 import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
+import {
+  shouldPrintVersionBanner,
+  wantsMachineReadableOutput,
+} from './util/output-format';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
 import { getLinkFromDir, getVercelDirectory } from './util/projects/link';
@@ -266,7 +270,9 @@ const main = async () => {
   const msg = betaCommands.includes(targetOrSubcommand)
     ? `${versionBanner} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
     : versionBanner;
-  output.print(`${chalk.dim(msg)}\n`);
+  if (shouldPrintVersionBanner(targetOrSubcommand, process.argv)) {
+    output.print(`${chalk.dim(msg)}\n`);
+  }
 
   // Handle `--version` directly
   if (!targetOrSubcommand && parsedArgs.flags['--version']) {
@@ -590,7 +596,8 @@ const main = async () => {
       targetPathExists &&
       subcommandExists &&
       !parsedArgs.flags['--cwd'] &&
-      !process.env.NOW_BUILDER
+      !process.env.NOW_BUILDER &&
+      !wantsMachineReadableOutput(targetOrSubcommand, process.argv)
     ) {
       output.warn(
         `Did you mean to deploy the subdirectory "${targetOrSubcommand}"? ` +
