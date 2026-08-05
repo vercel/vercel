@@ -139,17 +139,30 @@ jobs:
           go-version: '1.23.12'
           cache: false
 
-      # windows-2022 release runners have flaked with turbo children not seeing
-      # the setup-go PATH entry (ipc-proxy build: "Go >= 1.23 ... not found").
-      # Persist GOROOT so build.mjs can resolve an absolute go binary.
+      # windows-2022: turbo children lose setup-go PATH, and spawning go.exe via
+      # the C:\hostedtoolcache junction has also failed. Resolve the real path
+      # (often D:\...) and persist GO_BIN for ipc-proxy/build.mjs.
       - name: Persist Go toolchain env
-        shell: bash
+        shell: pwsh
         run: |
-          set -euo pipefail
+          $ErrorActionPreference = 'Stop'
           go version
-          goroot="$(go env GOROOT)"
-          echo "GOROOT=${goroot}" >> "$GITHUB_ENV"
-          echo "${goroot}/bin" >> "$GITHUB_PATH"
+          $goCmd = Get-Command go
+          $goBin = $goCmd.Source
+          try {
+            $item = Get-Item -LiteralPath $goBin -Force
+            if ($item.LinkType -and $item.Target) {
+              $target = @($item.Target)[0]
+              if ($target) { $goBin = $target }
+            }
+          } catch {}
+          $goroot = (go env GOROOT).Trim()
+          Add-Content -Path $env:GITHUB_ENV -Value "GOROOT=$goroot"
+          Add-Content -Path $env:GITHUB_ENV -Value "GO_BIN=$goBin"
+          Add-Content -Path $env:GITHUB_PATH -Value (Split-Path -Parent $goBin)
+          Write-Host "GOROOT=$goroot"
+          Write-Host "GO_BIN=$goBin"
+          & $goBin version
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -168,7 +181,17 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build workspace packages
-        run: pnpm build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:GO_BIN) {
+            Write-Host "Using GO_BIN=$env:GO_BIN"
+            & $env:GO_BIN version
+            $env:PATH = "$(Split-Path -Parent $env:GO_BIN);$env:PATH"
+          } else {
+            go version
+          }
+          pnpm build
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
