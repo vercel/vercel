@@ -849,8 +849,14 @@ exports[`help command > connex help output snapshots > connex create subcommand 
        --icon <PATH>             Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)               
        --json                    Output as JSON                                                                              
   -n,  --name <NAME>             Name of the connector                                                                       
-       --trigger-event <EVENT>   Webhook event to receive. Repeatable.                                                       
-       --triggers                Enable webhook triggers for this connector                                                  
+       --trigger-branch <BRANCH>    Target a specific git branch for the trigger destination. Requires --triggers.            
+       --trigger-environment <ENV>  Target a custom environment by slug or stable ID. Mutually exclusive with                
+                                    --trigger-branch and requires --triggers.                                                 
+       --trigger-event <EVENT>      Webhook event to receive. Repeatable.                                                     
+       --trigger-path <PATH>        Set the path on the destination project that receives forwarded webhooks. Requires        
+                                    --triggers.                                                                              
+       --trigger-project <PROJECT>  Target a project by name or ID instead of the linked project. Requires --triggers.        
+       --triggers                   Enable webhook triggers for this connector                                                
 
 
   Global Options:
@@ -884,6 +890,18 @@ exports[`help command > connex help output snapshots > connex create subcommand 
   - Create with selected webhook events
 
     $ vercel connect create linear --name linear --triggers --trigger-event Issue --trigger-event Comment --trigger-event Project
+
+  - Create with a custom trigger path
+
+    $ vercel connect create github --name github --triggers --trigger-path /eve/v1/github
+
+  - Create with branch-specific trigger routing
+
+    $ vercel connect create github --name github --triggers --trigger-path /api/webhooks --trigger-branch main
+
+  - Create with trigger routing on another project
+
+    $ vercel connect create github --name github --triggers --trigger-project my-api --trigger-path /api/webhooks
 
   - Create with branding (icon and colors)
 
