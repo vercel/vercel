@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 3.8.0
+
+### Minor Changes
+
+- 8fb6c4f: Adds getDeadline
+
 ## 3.7.7
 
 ### Patch Changes
