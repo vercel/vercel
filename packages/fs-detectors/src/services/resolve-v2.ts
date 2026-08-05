@@ -96,11 +96,18 @@ function normalizeContainerCommand(
   return Array.isArray(command) ? command : [command];
 }
 
+function isPrebuiltOciImageReference(value: string): boolean {
+  return /^[a-z0-9.-]+(?::[0-9]+)?\/[a-z0-9._/-]+(?::[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}|@sha256:[a-f0-9]{64})$/.test(
+    value
+  );
+}
+
 /**
  * Resolve a container (`runtime: "container"`) service. Containers don't go
- * through framework/entrypoint-extension detection: the entrypoint is a
- * Dockerfile/Containerfile to build & push. When no entrypoint is supplied we
- * probe the service root for a blessed Dockerfile candidate.
+ * through framework/entrypoint-extension detection: the entrypoint is either
+ * a Dockerfile/Containerfile to build and push, or a prebuilt OCI image.
+ * When no entrypoint is supplied we probe the service root for a blessed
+ * Dockerfile candidate.
  */
 async function resolveContainerServiceV2(
   name: string,
@@ -112,19 +119,21 @@ async function resolveContainerServiceV2(
 
   const entrypoint = config.entrypoint;
   let dockerfile: string | undefined;
+  let image: string | undefined;
   if (typeof entrypoint === 'string') {
-    // An explicit entrypoint must name a Dockerfile/Containerfile; there is no
-    // longer any prebuilt-image-reference entrypoint.
-    if (!isDockerfileEntrypoint(entrypoint)) {
+    if (isDockerfileEntrypoint(entrypoint)) {
+      dockerfile = posixPath.normalize(entrypoint);
+    } else if (isPrebuiltOciImageReference(entrypoint)) {
+      image = entrypoint;
+    } else {
       return {
         error: {
           code: 'INVALID_SERVICE_CONFIG',
-          message: `Container service "${name}" has invalid "entrypoint" "${entrypoint}". It must name a Dockerfile or Containerfile.`,
+          message: `Container service "${name}" has invalid "entrypoint" "${entrypoint}". It must name a Dockerfile, Containerfile, or prebuilt OCI image.`,
           serviceName: name,
         },
       };
     }
-    dockerfile = posixPath.normalize(entrypoint);
   } else {
     // No entrypoint: auto-detect one of the blessed Dockerfile candidates in
     // the service root.
@@ -143,13 +152,17 @@ async function resolveContainerServiceV2(
   }
 
   // builder.src is project-root-relative.
+  const localSrc = (dockerfile ?? image) as string;
   const builderSrc = isRoot
-    ? dockerfile
-    : posixPath.join(normalizedRoot, dockerfile);
+    ? localSrc
+    : posixPath.join(normalizedRoot, localSrc);
 
   const builderConfig: Record<string, unknown> = { zeroConfig: true };
   if (!isRoot) {
     builderConfig.workspace = normalizedRoot;
+  }
+  if (image) {
+    builderConfig.handler = image;
   }
   const command = normalizeContainerCommand(config.command);
   if (command) {
@@ -162,7 +175,7 @@ async function resolveContainerServiceV2(
       name,
       root: normalizedRoot,
       runtime: 'container',
-      entrypoint: dockerfile,
+      entrypoint: image ?? dockerfile,
       command,
       builder: {
         src: builderSrc,
@@ -438,7 +451,22 @@ export async function resolveConfiguredServiceV2(
     builderConfig.handlerFunction = moduleAttr.attrName;
   }
 
-  const runtime = STATIC_BUILDERS.has(builderUse) ? undefined : inferredRuntime;
+  // Some framework builders produce containers without asking the application
+  // to commit a Dockerfile. Preserve Services command overrides for those
+  // first-party adapters just as we do for an explicit container service.
+  const isContainerBackedFramework = builderUse === '@vercel/laravel';
+  const command = isContainerBackedFramework
+    ? normalizeContainerCommand(config.command)
+    : undefined;
+  if (command) {
+    builderConfig.command = command;
+  }
+
+  const runtime = STATIC_BUILDERS.has(builderUse)
+    ? undefined
+    : isContainerBackedFramework
+      ? 'container'
+      : inferredRuntime;
 
   return {
     service: {
@@ -448,6 +476,7 @@ export async function resolveConfiguredServiceV2(
       framework,
       runtime,
       entrypoint: entrypointFile,
+      command,
       builder: {
         src: projectRelativeSrc,
         use: builderUse,

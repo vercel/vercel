@@ -658,6 +658,18 @@ export async function getBuildMatches(
         mapToEntrypoint.set(src, originalSrc);
       }
     }
+    // Laravel also uses `<detect>` because @vercel/laravel generates its
+    // container recipe at build time. Match the real `artisan` file so dev
+    // creates a BuildMatch while preserving the sentinel for the builder.
+    if (
+      buildConfig.config?.framework === 'laravel' &&
+      !fileList.includes(src) &&
+      fileList.includes('artisan')
+    ) {
+      const originalSrc = src;
+      src = 'artisan';
+      mapToEntrypoint.set(src, originalSrc);
+    }
     const extensionless = devServer.getExtensionlessFile(src);
     if (extensionless) {
       mapToEntrypoint.set(extensionless, src);

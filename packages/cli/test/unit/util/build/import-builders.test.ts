@@ -9,6 +9,7 @@ import {
 } from '../../../../src/util/build/import-builders';
 import * as installBuildersModule from '../../../../src/util/build/install-builders';
 import vercelNextPkg from '@vercel/next/package.json';
+import vercelLaravelPkg from '@vercel/laravel/package.json';
 
 vi.mock('../../../../src/util/build/install-builders', async importOriginal => {
   const actual = await (
@@ -48,21 +49,30 @@ const repoRoot = join(__dirname, '../../../../../..');
 
 describe('importBuilders()', () => {
   it('should import built-in Builders', async () => {
-    const specs = new Set(['@vercel/node', '@vercel/next']);
+    const specs = new Set(['@vercel/node', '@vercel/next', '@vercel/laravel']);
     const builders = await importBuilders(specs, process.cwd());
-    expect(builders.size).toEqual(2);
+    expect(builders.size).toEqual(3);
     expect(builders.get('@vercel/node')?.pkg).toMatchObject(vercelNodePkg);
     expect(builders.get('@vercel/next')?.pkg).toMatchObject(vercelNextPkg);
+    expect(builders.get('@vercel/laravel')?.pkg).toMatchObject(
+      vercelLaravelPkg
+    );
     expect(builders.get('@vercel/node')?.pkgPath).toEqual(
       join(repoRoot, 'packages/node/package.json')
     );
     expect(builders.get('@vercel/next')?.pkgPath).toEqual(
       join(repoRoot, 'packages/next/package.json')
     );
+    expect(builders.get('@vercel/laravel')?.pkgPath).toEqual(
+      join(repoRoot, 'packages/laravel/package.json')
+    );
     expect(typeof builders.get('@vercel/node')?.builder.build).toEqual(
       'function'
     );
     expect(typeof builders.get('@vercel/next')?.builder.build).toEqual(
+      'function'
+    );
+    expect(typeof builders.get('@vercel/laravel')?.builder.build).toEqual(
       'function'
     );
   });

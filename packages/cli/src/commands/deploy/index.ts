@@ -94,6 +94,7 @@ import { isOwnerLookupUnavailableLink } from '../../util/projects/link';
 import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
 import { displayBuildLogsUntilFinalError } from '../../util/logs';
 import { determineAgent } from '@vercel/detect-agent';
+import { ensureLaravelZeroConfigStorage } from '../../util/laravel/ensure-zero-config-storage';
 import { validateJsonOutput } from '../../util/output-format';
 
 const COMMAND_CONFIG = {
@@ -1292,6 +1293,19 @@ async function handleDefaultDeploy(
         emoji('warning')
       )}\n`
     );
+  }
+
+  try {
+    await ensureLaravelZeroConfigStorage(
+      client,
+      join(cwd, rootDirectory ?? ''),
+      project,
+      org
+    );
+  } catch (err: unknown) {
+    output.stopSpinner();
+    printError(err);
+    return 1;
   }
 
   // #region Build deployment

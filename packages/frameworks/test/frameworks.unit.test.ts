@@ -2,7 +2,6 @@ import Ajv from 'ajv';
 import assert from 'assert';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { isString } from 'util';
 import nodeFetch from 'node-fetch';
 import { URL } from 'url';
 import frameworkList from '../src/frameworks';
@@ -262,7 +261,7 @@ describe('frameworks', () => {
       .filter(f => !f.experimental) // Skip experimental frameworks
       .filter(f => !f.runtimeFramework) // Skip runtime frameworks (e.g. Python, Go)
       .map(f => f.slug)
-      .filter(isString)
+      .filter((slug): slug is string => typeof slug === 'string')
       .filter(slug => !skipExamples.includes(slug))
       .filter(f => existsSync(getExample(f)) === false);
 
