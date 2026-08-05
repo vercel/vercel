@@ -1269,6 +1269,62 @@ describe('env add', () => {
         }
       });
 
+      it('stores piped stdin value for production target when team sensitive policy is on (regression #16934)', async () => {
+        // Regression: when the team enforces sensitive env vars, the
+        // production flow previously showed a sensitive-type confirmation
+        // prompt that consumed the piped stdin bytes, leaving the value
+        // prompt to read EOF and store an empty string.
+        const teamModule = await import(
+          '../../../../src/util/teams/get-team-by-id'
+        );
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+
+        const teamSpy = vi.spyOn(teamModule, 'default').mockResolvedValue({
+          sensitiveEnvironmentVariablePolicy: 'on',
+        } as any);
+        const addSpy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        try {
+          client.stdin.isTTY = false;
+          client.setArgv('env', 'add', 'PIPED_PROD_POLICY', 'production');
+          const exitCodePromise = env(client);
+          // Emit piped value followed by EOF (stream end) to mimic
+          // `printf '%s' "my-db-url" | vercel env add KEY production`
+          setImmediate(() => {
+            client.stdin.emit('data', 'my-db-url');
+            client.stdin.emit('end');
+          });
+
+          await expect(exitCodePromise).resolves.toBe(0);
+
+          expect(addSpy).toHaveBeenCalled();
+          // addEnvRecord(client, projectId, upsert, type, key, value, targets, gitBranch)
+          const [, , , type, , envValue] = addSpy.mock.calls[0] as unknown as [
+            unknown,
+            unknown,
+            unknown,
+            string,
+            string,
+            string,
+          ];
+          // Value must not be empty – the piped bytes must reach the value
+          // parameter, not be consumed by the sensitive-type prompt.
+          expect(envValue).toBe('my-db-url');
+          expect(type).toBe('sensitive');
+          // The sensitive-type prompt must NOT have been shown
+          expect(client.stderr.getFullOutput()).not.toContain(
+            'Store as sensitive?'
+          );
+        } finally {
+          teamSpy.mockRestore();
+          addSpy.mockRestore();
+        }
+      });
+
       it('outputs action_required when name is missing', async () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');
