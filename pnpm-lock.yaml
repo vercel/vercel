@@ -831,6 +831,9 @@ importers:
       fs-extra:
         specifier: 10.0.0
         version: 10.0.0
+      get-east-asian-width:
+        specifier: 1.6.0
+        version: 1.6.0
       get-port:
         specifier: 5.1.1
         version: 5.1.1
