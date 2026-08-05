@@ -30,6 +30,7 @@ import { getDeploymentCheckRuns } from '../../util/deploy/get-deployment-check-r
 import { getDeploymentCheckRunLogs } from '../../util/deploy/get-deployment-check-run-logs';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
+import { recordSessionEvent } from '../../util/ship-session';
 import { isValidArchive } from '../../util/deploy/validate-archive-format';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import { emoji, prependEmoji } from '../../util/emoji';
@@ -708,6 +709,11 @@ async function handleInitDeployment(
           }
         : deploymentJson;
       client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+      recordSessionEvent({
+        type: 'deployment',
+        url: `https://${deployment.url}`,
+        target: deployment.target ?? 'preview',
+      });
       return 0;
     }
 

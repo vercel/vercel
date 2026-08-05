@@ -1237,9 +1237,66 @@ const main = async () => {
       }
 
       resolvedCommandForUpdate = targetCommand;
+
+      // Inside a `vercel ship` session, gated operations pause for the user's
+      // approval and every command journals itself into the session ledger.
+      // Dormant otherwise: the env variable is only set by ship.
+      const shipSessionDir = process.env.VERCEL_SHIP_SESSION_DIR;
+      let shipSession: typeof import('./util/ship-session') | undefined;
+      if (shipSessionDir) {
+        shipSession = await import('./util/ship-session');
+        const gated = shipSession.classifyGatedOperation(
+          targetCommand,
+          client.argv.slice(2)
+        );
+        if (gated) {
+          output.print(
+            'This operation needs the user’s approval. Waiting for their answer in the vercel ship session…\n'
+          );
+          const { verdict, instruction } = await shipSession.requestApproval(
+            shipSessionDir,
+            {
+              command: targetCommand,
+              argv: client.argv.slice(2),
+              cwd: client.cwd,
+              ...gated,
+            }
+          );
+          shipSession.recordSessionEvent({
+            type: 'approval',
+            command: targetCommand,
+            argv: client.argv.slice(2),
+            gate: gated.gate,
+            verdict,
+            ...(instruction ? { instruction } : {}),
+          });
+          if (verdict !== 'approved') {
+            output.error(
+              verdict === 'timeout'
+                ? 'No approval decision arrived in time, so the command did not run. Ask the user how to proceed.'
+                : instruction
+                  ? `The user declined this command and said: ${JSON.stringify(
+                      instruction
+                    )}. Follow that instead — do not retry this command.`
+                  : 'The user declined this command. That is an answer, not a transient failure: do not retry it — adjust the plan, or ask the user what they would like instead.'
+            );
+            return 1;
+          }
+        }
+      }
+
+      const commandStartedAt = Date.now();
       exitCode = await rootSpan
         .child('vc.cli.command', { command: subcommand || 'deploy' })
         .trace(() => func(client));
+      shipSession?.recordSessionEvent({
+        type: 'command',
+        command: targetCommand,
+        argv: client.argv.slice(2),
+        cwd: client.cwd,
+        exitCode,
+        durationMs: Date.now() - commandStartedAt,
+      });
     }
   } catch (err: unknown) {
     trackAgenticErrorTelemetry(err);

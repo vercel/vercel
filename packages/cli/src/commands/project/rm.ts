@@ -6,6 +6,7 @@ import { isAPIError } from '../../util/errors-ts';
 import { getCommandName } from '../../util/pkg-name';
 import { ProjectRmTelemetryClient } from '../../util/telemetry/commands/project/rm';
 import output from '../../output-manager';
+import { recordSessionEvent } from '../../util/ship-session';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
@@ -65,6 +66,7 @@ export default async function rm(client: Client, argv: string[]) {
       return 1;
     }
   }
+  recordSessionEvent({ type: 'project-removed', project: name });
   const elapsed = ms(Date.now() - start);
   output.log(
     `${chalk.cyan('Success!')} Project ${chalk.bold(name)} removed ${chalk.gray(

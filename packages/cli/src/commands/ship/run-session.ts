@@ -1,5 +1,16 @@
 import chalk from 'chalk';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type Client from '../../util/client';
+import {
+  ApprovalWatcher,
+  readLedger,
+  SHIP_SESSION_DIR_ENV,
+  type ApprovalDecision,
+  type ApprovalRequest,
+  type LedgerEvent,
+} from '../../util/ship-session';
 import cmd from '../../util/output/cmd';
 import output from '../../output-manager';
 import type { DetectedHarness } from './detect-harnesses';
@@ -9,6 +20,8 @@ import {
   type HarnessLoader,
 } from './install-harness-packages';
 import { HARNESS_SOURCE_ENV_VAR } from './local-harness-source';
+import { installCliShim } from './cli-shim';
+import { FOLLOW_UPS } from './follow-ups';
 import { ActivityIndicator, WORKING_PHRASES } from './activity';
 import { answerAskUser, createAskUserTool, isAskUserTool } from './ask-user';
 import {
@@ -186,6 +199,40 @@ async function driveSession(
   // and any adapter bridge process leak.
   // The single largest phase of a first run, and the one users read as a hang,
   // so it is measured on its own rather than folded into the session.
+  // The one environment variable every process in the session inherits. The
+  // approval gate and the ledger both live under the directory it names, so it
+  // must be exported before the harness spawns anything.
+  const sessionDir = await mkdtemp(join(tmpdir(), 'vercel-ship-'));
+  const previousSessionDir = process.env[SHIP_SESSION_DIR_ENV];
+  process.env[SHIP_SESSION_DIR_ENV] = sessionDir;
+
+  // The agent's `vercel` must be this very CLI, or the gate and the ledger
+  // silently do not exist (a stale global install shadows the build running
+  // ship). The shim execs this process's own entrypoint.
+  const previousPath = process.env.PATH;
+  const shimDir = await installCliShim(sessionDir);
+  if (shimDir) {
+    process.env.PATH = previousPath ? `${shimDir}:${previousPath}` : shimDir;
+  }
+
+  const cleanupSessionDir = async (): Promise<void> => {
+    if (previousSessionDir === undefined) {
+      delete process.env[SHIP_SESSION_DIR_ENV];
+    } else {
+      process.env[SHIP_SESSION_DIR_ENV] = previousSessionDir;
+    }
+    if (shimDir) {
+      if (previousPath === undefined) {
+        delete process.env.PATH;
+      } else {
+        process.env.PATH = previousPath;
+      }
+    }
+    await rm(sessionDir, { recursive: true, force: true }).catch(
+      () => undefined
+    );
+  };
+
   const endCreate = profile.start('start agent session', {
     bridgeInstalled: bootstrapped,
   });
@@ -195,6 +242,7 @@ async function driveSession(
   } catch (err) {
     preparing.stop();
     reportSessionStartFailure(err, harness);
+    await cleanupSessionDir();
     return 1;
   } finally {
     endCreate();
@@ -214,6 +262,28 @@ async function driveSession(
   const deployments = new DeploymentTracker();
   renderer.trackDeployments(deployments);
   const startedAt = Date.now();
+
+  // Gated commands (money, production, remote deletes) pause inside the CLI
+  // and wait for the user's decision through this watcher. The gate is what
+  // makes the mission's spending rules deterministic rather than advisory.
+  const approvals = new ApprovalWatcher(sessionDir, request =>
+    promptApproval({ client, request, activity, profile })
+  );
+  approvals.start();
+
+  // Printed after each turn and again on teardown, deduplicated by content:
+  // the user decides what to do next from the outcome, not from scrollback,
+  // and an unchanged outcome is not repeated.
+  let outcomePrinted = '';
+  const reportOutcome = async (): Promise<void> => {
+    const ledger = await readLedger(sessionDir);
+    outcomePrinted = printSessionOutcome(
+      ledger,
+      deployments,
+      profile,
+      outcomePrinted
+    );
+  };
 
   try {
     // The agent routinely ends a turn by asking something — which team to use,
@@ -247,9 +317,21 @@ async function driveSession(
         return exitCode;
       }
 
+      // The outcome first, then the question: what the session produced is
+      // what the user is deciding about.
+      await reportOutcome();
+
       const endReply = profile.start('waiting for your reply');
-      turnPrompt = await readReply(client, harness.label);
-      endReply({ continued: turnPrompt !== undefined });
+      const followUp = await chooseFollowUp({
+        client,
+        harnessLabel: harness.label,
+        sessionDir,
+      });
+      endReply({
+        continued: followUp !== undefined,
+        ...(followUp ? { followUp: followUp.id } : {}),
+      });
+      turnPrompt = followUp?.prompt;
     }
 
     return 0;
@@ -263,6 +345,8 @@ async function driveSession(
     );
     return 1;
   } finally {
+    approvals.stop();
+
     const endDestroy = profile.start('stop agent session');
     try {
       await session.destroy();
@@ -276,9 +360,11 @@ async function driveSession(
       endDestroy();
     }
 
-    // Before the continuation, and before the timing: a URL the session
-    // produced is the result, and the result goes at the end where it is read.
-    printDeployments(deployments, profile);
+    // Covers the exit paths that never reached a follow-up menu (a thrown
+    // turn, a non-interactive run): the result still goes at the end, where it
+    // is read. Deduplicated, so a normally ended session prints nothing twice.
+    await reportOutcome();
+    await cleanupSessionDir();
 
     // Printed on every exit path, including a thrown turn. The conversation
     // holds the project inventory and any agreed plan, so the user must always
@@ -331,36 +417,210 @@ function printOpeningFrame(harness: DetectedHarness, workspace: string): void {
 }
 
 /**
- * Report what the session deployed.
+ * Ask the user to approve a gated operation a `vercel` command is holding.
  *
- * The agent runs `vercel deploy` inside a tool call, so without this the URL
- * scrolls past in the transcript and the run ends by telling the user how to
- * resume rather than what it produced. Recorded into the profile too, so a
- * finished run can be tied to its deployment afterwards.
+ * The command shown is the exact invocation waiting inside the gate, not the
+ * agent's paraphrase of it — what is approved is what runs. Enter approves:
+ * the agent announced this step and the user is watching, so the common case
+ * is one keystroke. A denial offers a steering line, relayed to the agent
+ * verbatim, so "no" can be "no — use the existing database" instead of a dead
+ * stop.
  */
-function printDeployments(
+async function promptApproval(options: {
+  client: Client;
+  request: ApprovalRequest;
+  activity: ActivityIndicator;
+  profile: ShipProfile;
+}): Promise<ApprovalDecision> {
+  const { client, request, activity, profile } = options;
+  activity.pause();
+  const endApproval = profile.start('waiting for your approval', {
+    command: request.command,
+    gate: request.gate,
+  });
+  try {
+    output.print('\n');
+    vercelSays(`${chalk.yellow('Approval needed')} — the agent wants to run:`);
+    vercelSays(chalk.cyan(`vercel ${request.argv.join(' ')}`), true);
+    vercelSays(chalk.dim(`This ${request.description}.`), true);
+
+    if (!client.stdin.isTTY) {
+      vercelSays(
+        chalk.dim('No interactive terminal to ask on — denying.'),
+        true
+      );
+      return { approved: false };
+    }
+
+    if (await client.input.confirm('Approve?', true)) {
+      return { approved: true };
+    }
+
+    const instruction = (
+      await client.input.text({
+        message: 'Tell the agent what to do instead (optional):',
+      })
+    ).trim();
+    return { approved: false, ...(instruction ? { instruction } : {}) };
+  } catch {
+    // A failed or interrupted prompt is a denial, never an open gate.
+    return { approved: false };
+  } finally {
+    endApproval();
+    activity.resume();
+  }
+}
+
+/**
+ * Report what the session actually did: deployments, and anything provisioned
+ * that may be billed.
+ *
+ * Two sources, in order of trust. The ledger is written by the CLI itself at
+ * the moment it performs an effect, from typed data. The output scraper reads
+ * the transcript and can be fooled by URLs that were merely printed — so when
+ * a ledger exists, a scraper-only URL is reported as unverified, and when it
+ * does not (an older CLI on the agent's PATH), the scraper is all there is.
+ */
+function printSessionOutcome(
+  ledger: LedgerEvent[],
   deployments: DeploymentTracker,
-  profile: ShipProfile
-): void {
-  const found = deployments.list();
-  if (found.length === 0) {
-    return;
+  profile: ShipProfile,
+  previouslyPrinted: string
+): string {
+  interface Outcome {
+    url: string;
+    production: boolean;
+    verified: boolean;
+    inspectUrl?: string;
   }
 
-  profile.set(
-    'deployments',
-    found.map(deployment => deployment.url)
-  );
-
-  output.print('\n');
-  vercelSays(found.length === 1 ? 'Deployed:' : 'Deployed:');
-  for (const deployment of found) {
-    const label = deployment.production ? chalk.yellow(' production') : '';
-    vercelSays(chalk.cyan(deployment.url) + chalk.dim(label), true);
-    if (deployment.inspectUrl) {
-      vercelSays(chalk.dim(deployment.inspectUrl), true);
+  const outcomes = new Map<string, Outcome>();
+  for (const event of ledger) {
+    if (event.type === 'deployment' && typeof event.url === 'string') {
+      outcomes.set(event.url, {
+        url: event.url,
+        production: event.target === 'production',
+        verified: true,
+      });
     }
   }
+
+  const ledgerAware = ledger.length > 0;
+  for (const observed of deployments.list()) {
+    const existing = outcomes.get(observed.url);
+    if (existing) {
+      existing.inspectUrl ??= observed.inspectUrl;
+      continue;
+    }
+    outcomes.set(observed.url, {
+      url: observed.url,
+      production: observed.production,
+      inspectUrl: observed.inspectUrl,
+      verified: !ledgerAware,
+    });
+  }
+
+  const provisioned = ledger.filter(
+    event => event.type === 'resource-provisioned'
+  );
+
+  // Nothing to report, or nothing new since the last print.
+  const key = JSON.stringify([[...outcomes.values()], provisioned]);
+  if (
+    (outcomes.size === 0 && provisioned.length === 0) ||
+    key === previouslyPrinted
+  ) {
+    return previouslyPrinted;
+  }
+
+  if (outcomes.size > 0) {
+    profile.set('deployments', [...outcomes.keys()]);
+
+    output.print('\n');
+    vercelSays('Deployed:');
+    for (const outcome of outcomes.values()) {
+      const labels = [
+        outcome.production ? chalk.yellow(' production') : '',
+        outcome.verified ? '' : chalk.dim(' (unverified)'),
+      ].join('');
+      vercelSays(chalk.cyan(outcome.url) + labels, true);
+      if (outcome.inspectUrl) {
+        vercelSays(chalk.dim(outcome.inspectUrl), true);
+      }
+    }
+  }
+
+  if (provisioned.length > 0) {
+    profile.set(
+      'resourcesProvisioned',
+      provisioned.map(event => `${event.integration}/${event.resource}`)
+    );
+
+    output.print('\n');
+    vercelSays('Provisioned (may be billable):');
+    for (const event of provisioned) {
+      vercelSays(
+        chalk.cyan(String(event.resource)) +
+          chalk.dim(` — ${event.integration}`),
+        true
+      );
+    }
+  }
+
+  return key;
+}
+
+/**
+ * Ask what to do next, offering the follow-ups the ledger supports.
+ *
+ * `undefined` ends the session. A follow-up returns its prompt, which runs as
+ * the next turn of the same session — the agent keeps its context, and the
+ * ledger it may need is still live. "Something else" falls through to the
+ * free-text reply this menu replaced.
+ */
+async function chooseFollowUp(options: {
+  client: Client;
+  harnessLabel: string;
+  sessionDir: string;
+}): Promise<{ id: string; prompt: string } | undefined> {
+  const { client, harnessLabel, sessionDir } = options;
+
+  if (!client.stdin.isTTY) {
+    output.log(
+      `${harnessLabel} finished its turn. Run ${cmd(
+        'vercel ship'
+      )} in an interactive terminal to continue the conversation here.`
+    );
+    return undefined;
+  }
+
+  const ledger = await readLedger(sessionDir);
+  const available = FOLLOW_UPS.filter(followUp => followUp.available(ledger));
+
+  const choice = await client.input.select<string>({
+    message: 'What next?',
+    choices: [
+      { name: 'Done — end the session', value: 'done' },
+      ...available.map(followUp => ({
+        name: followUp.label,
+        value: followUp.id,
+      })),
+      { name: 'Give the agent another instruction', value: 'custom' },
+    ],
+  });
+
+  if (choice === 'custom') {
+    const reply = await readReply(client, harnessLabel);
+    return reply === undefined ? undefined : { id: 'custom', prompt: reply };
+  }
+
+  const followUp = available.find(candidate => candidate.id === choice);
+  if (!followUp) {
+    return undefined; // 'done', or anything unrecognized, ends the session.
+  }
+
+  output.print('\n');
+  return { id: followUp.id, prompt: followUp.prompt(ledger) };
 }
 
 /**
@@ -619,7 +879,9 @@ function quietSandboxWarning(): void {
 }
 
 interface HarnessRuntime {
-  HarnessAgent: new (config: unknown) => {
+  HarnessAgent: new (
+    config: unknown
+  ) => {
     createSession: () => Promise<HarnessSession>;
     stream: (options: {
       session: HarnessSession;

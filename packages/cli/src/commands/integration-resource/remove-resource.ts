@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import output from '../../output-manager';
+import { recordSessionEvent } from '../../util/ship-session';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -210,6 +211,7 @@ async function handleDeleteResource(
   try {
     output.spinner('Deleting resource…', 500);
     await _deleteResource(client, resource);
+    recordSessionEvent({ type: 'resource-removed', resource: resource.name });
   } catch (error) {
     output.error(
       `A problem occurred when attempting to delete ${chalk.bold(resource.name)}: ${(error as Error).message}`

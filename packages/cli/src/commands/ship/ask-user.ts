@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import type Client from '../../util/client';
 import output from '../../output-manager';
 import type { HarnessLoader } from './install-harness-packages';
+import { inline, plainInline } from './markdown';
 import { blankGutter, gutter, GUTTER_WIDTH } from './voice';
 import { textWidth, wrapAnsi } from './wrap';
 
@@ -143,8 +144,8 @@ export async function answerAskUser(
   const choices = [
     ...input.options.map(option => ({
       name: option.description
-        ? `${CHOICE_INDENT}${option.label} ${chalk.dim(`(${option.description})`)}`
-        : CHOICE_INDENT + option.label,
+        ? `${CHOICE_INDENT}${inline(option.label)} ${chalk.dim(`(${plainInline(option.description)})`)}`
+        : CHOICE_INDENT + inline(option.label),
       value: option.label,
     })),
     { name: CHOICE_INDENT + chalk.dim(FREEFORM_LABEL), value: FREEFORM_LABEL },
@@ -211,8 +212,11 @@ function promptTheme(agent: string) {
  * full and a short stand-in is returned.
  */
 function fitQuestion(agent: string, question: string): string {
-  if (question.length <= textWidth(GUTTER_WIDTH)) {
-    return question;
+  // The prompt line is stripped rather than styled: the prompt styles its own
+  // message, and nesting emphasis inside that styling breaks the ANSI resets.
+  const plain = plainInline(question);
+  if (plain.length <= textWidth(GUTTER_WIDTH)) {
+    return plain;
   }
 
   printAttributed(agent, question);
@@ -221,7 +225,7 @@ function fitQuestion(agent: string, question: string): string {
 
 /** Write text in the agent's voice, wrapped into the text column. */
 function printAttributed(agent: string, text: string): void {
-  const lines = wrapAnsi(text, textWidth(GUTTER_WIDTH));
+  const lines = wrapAnsi(inline(text), textWidth(GUTTER_WIDTH));
   output.print(gutter('agent', agent) + lines[0] + '\n');
   for (const line of lines.slice(1)) {
     output.print(blankGutter() + line + '\n');

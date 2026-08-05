@@ -148,6 +148,36 @@ export function inline(text: string): string {
     .join('');
 }
 
+/**
+ * Inline markdown reduced to plain text — markers removed, nothing styled.
+ *
+ * For text that lands inside an already-styled span (a `chalk.dim` option
+ * description, a prompt message the prompt styles itself): nesting bold inside
+ * dim breaks, because bold and dim share ANSI reset 22, so the markers are
+ * stripped instead of translated.
+ */
+export function plainInline(text: string): string {
+  return text
+    .split(/(`+[^`]+`+)/g)
+    .map(part => {
+      const code = part.match(/^(`+)([^`]+)\1$/);
+      if (code) return code[2];
+      return part
+        .replace(
+          /\[([^\]]*)\]\(([^)\s]+)[^)]*\)/g,
+          (_, label: string, url: string) => label || url
+        )
+        .replace(/\*\*\*([^*]+)\*\*\*/g, '$1')
+        .replace(/___([^_]+)___/g, '$1')
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/__([^_]+)__/g, '$1')
+        .replace(/(^|[\s([{])\*([^*\s][^*]*)\*(?=$|[\s)\]}.,;:!?])/g, '$1$2')
+        .replace(/(^|[\s([{])_([^_\s][^_]*)_(?=$|[\s)\]}.,;:!?])/g, '$1$2')
+        .replace(/~~([^~]+)~~/g, '$1');
+    })
+    .join('');
+}
+
 function emphasis(text: string): string {
   return (
     text
