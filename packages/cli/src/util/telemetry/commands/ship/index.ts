@@ -56,6 +56,12 @@ export class ShipTelemetryClient
     }
   }
 
+  trackCliFlagVerbose(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('verbose');
+    }
+  }
+
   trackCliFlagJson(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('json');

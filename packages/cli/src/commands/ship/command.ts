@@ -45,6 +45,14 @@ export const shipCommand = {
       description: 'Use instructions from FILE instead of the built-in ones',
     },
     {
+      name: 'verbose',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        "Print the agent's reasoning in full instead of collapsing it",
+    },
+    {
       name: 'dry-run',
       shorthand: null,
       type: Boolean,

@@ -56,6 +56,18 @@ export class ActivityIndicator {
   private phrases: readonly string[] = WORKING_PHRASES;
   private running = false;
 
+  /** Who is working, shown so the line never reads as Vercel doing the work. */
+  private actor = '';
+
+  /**
+   * When the session began, for the running total.
+   *
+   * The per-activity timer answers "is this stuck". Only the total answers "how
+   * long have I been at this", which is the question after the first minute,
+   * and it is the one number that should never leave the screen.
+   */
+  private sessionStartedAt = 0;
+
   /**
    * Animation is skipped when stderr is not a terminal. `output.spinner()` falls
    * back to printing its message as a line, which on a one-second timer would
@@ -63,6 +75,17 @@ export class ActivityIndicator {
    */
   private get enabled(): boolean {
     return Boolean(process.stderr.isTTY);
+  }
+
+  /**
+   * Name the actor and the moment the session began.
+   *
+   * Separate from `start()` because the actor outlives any single activity: the
+   * indicator is started and stopped once per turn, per install, per bootstrap.
+   */
+  describe(options: { actor: string; sessionStartedAt: number }): void {
+    this.actor = options.actor;
+    this.sessionStartedAt = options.sessionStartedAt;
   }
 
   /** Begin animating. Elapsed time runs from here until `stop()`. */
@@ -128,13 +151,25 @@ export class ActivityIndicator {
 
   private draw(): void {
     if (!this.enabled) return;
-    const seconds = this.elapsedSeconds();
+
     const phrase =
       this.phrases[
         Math.floor((Date.now() - this.startedAt) / PHRASE_MS) %
           this.phrases.length
       ];
-    output.spinner(`${phrase} ${chalk.dim(formatElapsed(seconds))}`, 300);
+
+    const parts = [
+      this.actor ? chalk.cyan(this.actor) : '',
+      phrase,
+      chalk.dim(formatElapsed(this.elapsedSeconds())),
+    ].filter(Boolean);
+
+    if (this.sessionStartedAt > 0) {
+      const total = Math.round((Date.now() - this.sessionStartedAt) / 1000);
+      parts.push(chalk.dim(`| total ${formatElapsed(total)}`));
+    }
+
+    output.spinner(parts.join('  '), 300);
   }
 }
 

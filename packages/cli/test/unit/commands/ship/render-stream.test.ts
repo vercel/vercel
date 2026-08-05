@@ -1,6 +1,7 @@
 import { describe, beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { StreamRenderer } from '../../../../src/commands/ship/render-stream';
 import output from '../../../../src/output-manager';
+import stripAnsi from 'strip-ansi';
 
 describe('ship StreamRenderer', () => {
   let written: string[];
@@ -16,9 +17,12 @@ describe('ship StreamRenderer', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    // The reasoning tests advance the clock; leaving it advanced would leak.
+    vi.useRealTimers();
   });
 
   const all = () => written.join('');
+  const strip = (value: string) => stripAnsi(value);
 
   it('joins deltas and emits them once the line completes', () => {
     const renderer = new StreamRenderer();
@@ -132,33 +136,113 @@ describe('ship StreamRenderer', () => {
     expect(all()).toBe('');
 
     renderer.flush();
-    expect(all()).toBe('no newline yet\n');
+    expect(strip(all())).toBe('   agent  no newline yet\n');
   });
 
   it('emits complete lines as they arrive', () => {
     const renderer = new StreamRenderer();
     renderer.render({ type: 'text-delta', text: 'first\nsecond\nthi' });
 
-    expect(all()).toBe('first\nsecond\n');
+    expect(strip(all())).toBe('   agent  first\n          second\n');
   });
 
-  it('separates reasoning from the answer', () => {
-    const renderer = new StreamRenderer();
-    renderer.render({ type: 'reasoning-delta', text: 'weighing options\n' });
-    renderer.render({ type: 'text-delta', text: 'the answer\n' });
+  describe('attribution', () => {
+    it('labels agent prose with the harness that produced it', () => {
+      const renderer = new StreamRenderer();
+      renderer.attribute('claude-code');
+      renderer.render({ type: 'text-delta', text: 'I found two services.\n' });
 
-    const out = all();
-    expect(out).toContain('Thinking');
-    expect(out).toContain('weighing options');
-    expect(out).toContain('the answer');
-    expect(out.indexOf('Thinking')).toBeLessThan(out.indexOf('the answer'));
+      expect(strip(all())).toBe('  claude  I found two services.\n');
+    });
+
+    it('labels a tool call with what it did, not the tool that did it', () => {
+      const renderer = new StreamRenderer();
+      renderer.render({
+        type: 'tool-call',
+        toolName: 'Bash',
+        input: { command: 'vercel build' },
+      });
+
+      expect(strip(all())).toBe('     ran  vercel build\n');
+    });
+
+    it('uses a verb per kind of action', () => {
+      const cases: [string, string][] = [
+        ['Read', '    read'],
+        ['Write', '   wrote'],
+        ['Edit', '  edited'],
+        ['Grep', 'searched'],
+        ['Task', 'delegat'],
+      ];
+
+      for (const [tool, expected] of cases) {
+        written = [];
+        const renderer = new StreamRenderer();
+        renderer.render({ type: 'tool-call', toolName: tool });
+        expect(strip(all())).toContain(expected);
+      }
+    });
+
+    it('labels a line only once per block, holding the text column', () => {
+      const renderer = new StreamRenderer();
+      renderer.attribute('codex');
+      renderer.render({ type: 'text-delta', text: 'one\ntwo\n' });
+
+      expect(strip(all())).toBe('   codex  one\n          two\n');
+    });
+
+    it('labels again after a blank line, since that is a new thought', () => {
+      const renderer = new StreamRenderer();
+      renderer.attribute('codex');
+      renderer.render({ type: 'text-delta', text: 'one\n\ntwo\n' });
+
+      expect(strip(all())).toBe('   codex  one\n\n   codex  two\n');
+    });
   });
 
-  it('closes the thinking block on reasoning-end', () => {
-    const renderer = new StreamRenderer();
-    renderer.render({ type: 'reasoning-delta', text: 'partial reasoning' });
-    renderer.render({ type: 'reasoning-end' });
+  describe('reasoning', () => {
+    it('is collapsed to its duration by default', () => {
+      const renderer = new StreamRenderer();
+      renderer.attribute('claude-code');
+      renderer.render({ type: 'reasoning-delta', text: 'weighing options\n' });
+      vi.useFakeTimers();
+      vi.setSystemTime(Date.now() + 12_000);
+      renderer.render({ type: 'reasoning-end' });
 
-    expect(all()).toContain('partial reasoning');
+      const out = strip(all());
+      expect(out).toContain('thought for 12s');
+      expect(out).not.toContain('weighing options');
+    });
+
+    it('is not worth a line when it was brief', () => {
+      const renderer = new StreamRenderer();
+      renderer.render({ type: 'reasoning-delta', text: 'quick\n' });
+      renderer.render({ type: 'reasoning-end' });
+
+      expect(strip(all())).toBe('');
+    });
+
+    it('is printed in full when verbose', () => {
+      const renderer = new StreamRenderer();
+      renderer.attribute('claude-code', { verbose: true });
+      renderer.render({ type: 'reasoning-delta', text: 'weighing options\n' });
+      renderer.render({ type: 'text-delta', text: 'the answer\n' });
+
+      const out = strip(all());
+      expect(out).toContain('weighing options');
+      expect(out).toContain('the answer');
+      expect(out.indexOf('weighing options')).toBeLessThan(
+        out.indexOf('the answer')
+      );
+    });
+
+    it('emits a partial reasoning line on reasoning-end when verbose', () => {
+      const renderer = new StreamRenderer();
+      renderer.attribute('claude-code', { verbose: true });
+      renderer.render({ type: 'reasoning-delta', text: 'partial reasoning' });
+      renderer.render({ type: 'reasoning-end' });
+
+      expect(strip(all())).toContain('partial reasoning');
+    });
   });
 });

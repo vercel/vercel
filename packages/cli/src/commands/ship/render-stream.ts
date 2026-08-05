@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import stripAnsi from 'strip-ansi';
 import output from '../../output-manager';
 import {
   type ActivityIndicator,
@@ -9,6 +10,15 @@ import {
 import { isTableRow, MarkdownStyler, renderTable } from './markdown';
 import { TOOL_SPAN_PREFIX, type ShipProfile } from './profile';
 import type { DeploymentTracker } from './deployments';
+import {
+  actionVerb,
+  agentLabel,
+  blankGutter,
+  gutter,
+  GUTTER_WIDTH,
+  type Actor,
+} from './voice';
+import { textWidth, truncateAnsi, wrapAnsi } from './wrap';
 
 /** Longest tool-input summary shown on a progress line. */
 const MAX_SUMMARY_LENGTH = 72;
@@ -30,8 +40,11 @@ const SUMMARY_FIELDS = [
   'description',
 ] as const;
 
-/** Gutter marking reasoning output, so it never reads as the final answer. */
+/** Marks a line of reasoning, shown only when reasoning is not collapsed. */
 const THINKING_GUTTER = chalk.dim('│ ');
+
+/** Below this, a reasoning block is not worth a line reporting it happened. */
+const REPORTABLE_THINKING_MS = 2000;
 
 /** Below this, a completed tool is not worth a line of its own. */
 const SLOW_TOOL_MS = 3000;
@@ -72,6 +85,21 @@ export class StreamRenderer {
   /** Watches tool output for deployments the session creates. */
   private deployments: DeploymentTracker | undefined;
 
+  /** Label for the harness driving the session, shown against its output. */
+  private agent = 'agent';
+
+  /**
+   * Print reasoning in full rather than collapsing it to a duration.
+   *
+   * Off by default. Reasoning was a quarter of everything printed in a measured
+   * session, in blocks of up to fifty lines, and it is process rather than
+   * result: the harness keeps its own transcript for anyone who wants it.
+   */
+  private verbose = false;
+
+  /** Whether the current run of agent prose has had its label printed. */
+  private labelled = false;
+
   /** Tool calls settled during the current turn. */
   private turnToolCalls = 0;
 
@@ -92,6 +120,12 @@ export class StreamRenderer {
    */
   trackDeployments(tracker: DeploymentTracker): void {
     this.deployments = tracker;
+  }
+
+  /** Name the harness whose output this is, and set the verbosity. */
+  attribute(harnessId: string, options: { verbose?: boolean } = {}): void {
+    this.agent = agentLabel(harnessId);
+    this.verbose = options.verbose ?? false;
   }
 
   /**
@@ -129,10 +163,12 @@ export class StreamRenderer {
         // reflects what is actually happening.
         this.activity?.setPhrases(THINKING_PHRASES);
         this.openThinking();
-        this.thinkingBuffer = this.drain(
-          this.thinkingBuffer + asString(part.text),
-          line => this.thinkingLine(line)
-        );
+        if (this.verbose) {
+          this.thinkingBuffer = this.drain(
+            this.thinkingBuffer + asString(part.text),
+            line => this.thinkingLine(line)
+          );
+        }
         break;
 
       case 'reasoning-end':
@@ -164,7 +200,7 @@ export class StreamRenderer {
 
       case 'abort':
         this.flush();
-        this.writeLine(chalk.yellow('  Session aborted.'));
+        this.say('vercel', 'vercel', chalk.yellow('Session aborted.'));
         break;
 
       case 'error':
@@ -227,7 +263,63 @@ export class StreamRenderer {
       return;
     }
     this.flushTable();
-    this.writeLine(this.markdown.line(line));
+
+    const styled = this.markdown.line(line);
+
+    // Code keeps the shape it was written in. Wrapping it would reflow the
+    // indentation that carries its meaning. The label is left to `say`, so a
+    // block is labelled once at its first line rather than on every line.
+    if (this.markdown.preformatted) {
+      if (stripAnsi(styled).trim() === '') {
+        this.writeLine('');
+        return;
+      }
+      this.say('agent', this.agent, styled, { wrap: false });
+      return;
+    }
+
+    if (styled.trim() === '') {
+      // A blank line separates paragraphs; the next one is labelled again so a
+      // reader can tell a new thought from a continued one.
+      this.labelled = false;
+      this.writeLine('');
+      return;
+    }
+
+    this.say('agent', this.agent, styled, {
+      hangingIndent: this.markdown.hangingIndent,
+    });
+  }
+
+  /**
+   * Write an attributed line, wrapped, with the label shown once per block.
+   *
+   * Repeating the label on every line of a paragraph turns the column into
+   * noise; showing it once and holding the text column steady is what makes the
+   * transcript readable down one edge.
+   */
+  private say(
+    actor: Actor,
+    label: string,
+    text: string,
+    options: { wrap?: boolean; hangingIndent?: string } = {}
+  ): void {
+    const width = textWidth(GUTTER_WIDTH);
+    const lines =
+      options.wrap === false
+        ? [truncateAnsi(text, width)]
+        : wrapAnsi(text, width, options.hangingIndent ?? '');
+
+    const continued = actor === 'agent' && this.labelled;
+
+    this.writeLine(
+      (continued ? blankGutter() : gutter(actor, label)) + lines[0]
+    );
+    for (const line of lines.slice(1)) {
+      this.writeLine(blankGutter() + line);
+    }
+
+    this.labelled = actor === 'agent';
   }
 
   /** Render and emit any accumulated table. */
@@ -235,9 +327,12 @@ export class StreamRenderer {
     if (this.tableRows.length === 0) return;
     const rows = this.tableRows;
     this.tableRows = [];
-    for (const line of renderTable(rows)) {
-      this.writeLine(line);
+    // Indented to the text column like everything else the agent produced. A
+    // table starting at column zero reads as output from something else.
+    for (const line of renderTable(rows, textWidth(GUTTER_WIDTH))) {
+      this.writeLine(blankGutter() + line);
     }
+    this.labelled = false;
   }
 
   private openThinking(): void {
@@ -248,25 +343,36 @@ export class StreamRenderer {
     }
     this.flushTable();
     this.thinkingStartedAt = Date.now();
-    this.writeLine(chalk.dim('  ✻ Thinking'));
     this.thinking = true;
+
+    // Only announced up front when the text is coming. Collapsed, the block is
+    // one line reporting a duration, which cannot be written until that
+    // duration is known, and the status line already says it is thinking.
+    if (this.verbose) {
+      this.say('agent', this.agent, chalk.dim('thinking'));
+    }
   }
 
   private closeThinking(): void {
     if (!this.thinking) return;
     if (this.thinkingBuffer) {
-      this.writeLine(this.thinkingLine(this.thinkingBuffer));
+      this.writeLine(blankGutter() + this.thinkingLine(this.thinkingBuffer));
       this.thinkingBuffer = '';
     }
 
-    // Close with how long it took. Reasoning that just stops reads as
-    // interrupted; a duration reads as finished.
-    const seconds = Math.round((Date.now() - this.thinkingStartedAt) / 1000);
-    if (seconds >= 2) {
-      this.writeLine(chalk.dim(`  ✻ Thought for ${formatElapsed(seconds)}`));
+    // Reasoning that just stops reads as interrupted; a duration reads as
+    // finished. Under a couple of seconds it is not worth a line at all.
+    const elapsed = Date.now() - this.thinkingStartedAt;
+    if (elapsed >= REPORTABLE_THINKING_MS) {
+      this.labelled = false;
+      this.say(
+        'agent',
+        this.agent,
+        chalk.dim(`thought for ${formatElapsed(Math.round(elapsed / 1000))}`)
+      );
     }
 
-    this.writeLine('');
+    this.labelled = false;
     this.thinking = false;
     this.activity?.setPhrases(WORKING_PHRASES);
   }
@@ -295,11 +401,15 @@ export class StreamRenderer {
   private writeToolCall(part: { [key: string]: unknown }): void {
     const name = asString(part.toolName) || 'tool';
     const summary = summarizeToolInput(part.input ?? part.args);
-    const label = summary ? `${name}  ${summary}` : name;
+    const verb = actionVerb(name);
+    const label = summary ? `${verb} ${summary}` : verb;
 
-    this.writeLine(
-      chalk.cyan(`  › ${name}`) + (summary ? chalk.dim(`  ${summary}`) : '')
-    );
+    // An action is what happened to the user's machine, so it is labelled with
+    // the verb and the thing it acted on, not with the tool that implemented it.
+    // Never wrapped: the shape of a command is what is being scanned for, and a
+    // command folded over three lines is harder to read than a cut one.
+    this.labelled = false;
+    this.say('action', verb, summary || chalk.dim(name), { wrap: false });
 
     const id = asString(part.toolCallId);
     if (id) {
@@ -369,16 +479,18 @@ export class StreamRenderer {
     }
 
     if (failed) {
-      this.writeLine(chalk.yellow(`  ! ${name} failed`));
+      this.labelled = false;
+      this.say('action', 'failed', chalk.yellow(tracked?.label ?? name));
       for (const line of tailLines(part.error ?? part.output)) {
-        this.writeLine(chalk.dim(`    ${line}`));
+        this.writeLine(blankGutter() + chalk.dim(line));
       }
       return;
     }
 
     if (elapsed >= SLOW_TOOL_MS) {
       this.writeLine(
-        chalk.dim(`    took ${formatElapsed(Math.round(elapsed / 1000))}`)
+        blankGutter() +
+          chalk.dim(`took ${formatElapsed(Math.round(elapsed / 1000))}`)
       );
     }
   }

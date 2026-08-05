@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import sharedTable from '../../util/output/table';
+import { truncateAnsi } from './wrap';
 
 /**
  * Line-at-a-time markdown styling for streamed agent output.
@@ -19,9 +20,32 @@ export class MarkdownStyler {
   /** Inside a fenced code block, where markdown syntax must be left alone. */
   private inFence = false;
 
+  /**
+   * Whether the last line styled was preformatted, so a caller knows not to
+   * reflow it. Set by `line()`, because a fence delimiter toggles the state
+   * partway through styling the line that carries it.
+   */
+  private wasPreformatted = false;
+
+  get preformatted(): boolean {
+    return this.wasPreformatted;
+  }
+
+  /**
+   * Extra indent that continuation lines of the last styled line need, so a
+   * wrapped list item aligns under its own text instead of under its marker.
+   */
+  private continuation = '';
+
+  get hangingIndent(): string {
+    return this.continuation;
+  }
+
   /** Style one complete line. Newlines must not be included. */
   line(raw: string): string {
     const fence = raw.trimStart();
+    this.wasPreformatted = this.inFence;
+    this.continuation = '';
 
     // Fence delimiters toggle raw mode and are shown as a subtle rule so the
     // block still reads as a block.
@@ -47,6 +71,8 @@ export class MarkdownStyler {
   /** Reset between turns so an unterminated fence cannot leak. */
   reset(): void {
     this.inFence = false;
+    this.wasPreformatted = false;
+    this.continuation = '';
   }
 
   private block(raw: string): string {
@@ -74,6 +100,7 @@ export class MarkdownStyler {
     // being wrapped in `dim` — nesting bold inside dim would reset the dim.
     const quote = text.match(/^>\s?(.*)$/);
     if (quote) {
+      this.continuation = '  ';
       return `${indent}${chalk.dim('│')} ${inline(quote[1])}`;
     }
 
@@ -83,18 +110,21 @@ export class MarkdownStyler {
       const done = task[1].toLowerCase() === 'x';
       const box = done ? chalk.green('✓') : chalk.dim('○');
       const label = done ? chalk.dim(inline(task[2])) : inline(task[2]);
+      this.continuation = '  ';
       return `${indent}${box} ${label}`;
     }
 
     // Unordered list.
     const bullet = text.match(/^[-*+]\s+(.*)$/);
     if (bullet) {
+      this.continuation = '  ';
       return `${indent}${chalk.dim('•')} ${inline(bullet[1])}`;
     }
 
     // Ordered list.
     const ordered = text.match(/^(\d+)([.)])\s+(.*)$/);
     if (ordered) {
+      this.continuation = ' '.repeat(ordered[1].length + 2);
       return `${indent}${chalk.dim(`${ordered[1]}.`)} ${inline(ordered[3])}`;
     }
 
@@ -182,7 +212,7 @@ function alignmentOf(cell: string): 'l' | 'c' | 'r' {
  * Falls back to returning the rows unchanged when the block has no separator
  * row, because that is pipe-delimited prose rather than a table.
  */
-export function renderTable(lines: string[]): string[] {
+export function renderTable(lines: string[], maxWidth = Infinity): string[] {
   const rows = lines.filter(line => line.trim() !== '');
   if (rows.length === 0) return [];
 
@@ -210,8 +240,15 @@ export function renderTable(lines: string[]): string[] {
   // Borderless, matching the tables the rest of the CLI prints, with a single
   // rule under the header instead of a full box.
   const rendered = sharedTable([head, ...body], { align, hsep: 3 }).split('\n');
-  const width = Math.max(...rendered.map(line => stripAnsi(line).length));
-  const rule = chalk.dim('─'.repeat(width));
+  const width = Math.min(
+    Math.max(...rendered.map(line => stripAnsi(line).length)),
+    maxWidth
+  );
+  const rule = chalk.dim('─'.repeat(Math.max(1, width)));
 
-  return [rendered[0], rule, ...rendered.slice(1)].map(line => `  ${line}`);
+  // A wrapped cell destroys the grid, so an over-wide table is cut rather than
+  // reflowed. The full text is still in the agent's own transcript.
+  return [rendered[0], rule, ...rendered.slice(1)].map(
+    line => `  ${truncateAnsi(line, maxWidth - 2)}`
+  );
 }

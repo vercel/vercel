@@ -72,6 +72,7 @@ export default async function ship(client: Client): Promise<number> {
   const printPrompt = parsedArgs.flags['--print-prompt'] ?? false;
   const promptFile = parsedArgs.flags['--prompt'];
   const dryRun = parsedArgs.flags['--dry-run'] ?? false;
+  const verbose = parsedArgs.flags['--verbose'] ?? false;
   const json = parsedArgs.flags['--json'] ?? false;
   const skipConfirmation = parsedArgs.flags['--yes'] ?? false;
 
@@ -81,6 +82,7 @@ export default async function ship(client: Client): Promise<number> {
   telemetry.trackCliFlagListHarnesses(listHarnesses);
   telemetry.trackCliFlagPrintPrompt(printPrompt);
   telemetry.trackCliFlagDryRun(dryRun);
+  telemetry.trackCliFlagVerbose(verbose);
   telemetry.trackCliFlagJson(json);
   telemetry.trackCliFlagYes(skipConfirmation);
 
@@ -94,6 +96,7 @@ export default async function ship(client: Client): Promise<number> {
       printPrompt,
       promptFile,
       dryRun,
+      verbose,
       skipConfirmation,
       jsonFlags: parsedArgs.flags,
       profile,
@@ -117,6 +120,7 @@ interface ShipOptions {
   printPrompt: boolean;
   promptFile?: string;
   dryRun: boolean;
+  verbose: boolean;
   skipConfirmation: boolean;
   jsonFlags: Record<string, unknown>;
   profile: ShipProfile;
@@ -196,6 +200,7 @@ async function runShip(client: Client, options: ShipOptions): Promise<number> {
     workspace,
     prompt,
     autoApprove: options.skipConfirmation,
+    verbose: options.verbose,
     profile,
   });
 }

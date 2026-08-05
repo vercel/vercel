@@ -18,6 +18,8 @@ import {
 import { StreamRenderer } from './render-stream';
 import { DeploymentTracker } from './deployments';
 import { printContinuation } from './session-continuation';
+import { agentLabel, blankGutter, gutter, GUTTER_WIDTH } from './voice';
+import { textWidth, wrapAnsi } from './wrap';
 import type { ShipProfile } from './profile';
 
 /**
@@ -35,6 +37,8 @@ export interface RunSessionOptions {
   prompt: string;
   /** Skip approval prompts (`--yes`). */
   autoApprove: boolean;
+  /** Print the agent's reasoning in full rather than collapsing it. */
+  verbose: boolean;
   /** Collects where the wall time of this run goes. */
   profile: ShipProfile;
 }
@@ -127,7 +131,7 @@ async function driveSession(
     ...(tools ? { tools } : {}),
   });
 
-  output.log(`Starting ${harness.label} in ${workspace}`);
+  printOpeningFrame(harness, workspace);
 
   // A bridge-backed adapter installs its bridge on first use, so a first run in
   // a project downloads and takes noticeably longer than later ones. Saying so
@@ -147,7 +151,7 @@ async function driveSession(
     const duration = reused
       ? `Your installed ${harness.label} is reused, so this should be quick`
       : 'This is a large download and can take several minutes';
-    output.log(
+    vercelSays(
       `First run in this project: installing the ${harness.label} bridge into ` +
         `${chalk.dim('.harness-bootstrap/')}. ${duration}, and it only happens ` +
         `once per project.`
@@ -156,7 +160,7 @@ async function driveSession(
     // The most likely reason someone sees the long install while holding a
     // perfectly good local executable: the packages in use cannot reuse it yet.
     if (!reused && harness.binPath) {
-      output.log(
+      vercelSays(
         chalk.dim(
           `You have ${harness.label} at ${harness.binPath}, but these harness ` +
             `packages cannot drive it. Set ${HARNESS_SOURCE_ENV_VAR} to a ` +
@@ -194,7 +198,13 @@ async function driveSession(
   }
 
   const activity = new ActivityIndicator();
+  activity.describe({
+    actor: agentLabel(harness.id),
+    sessionStartedAt: Date.now(),
+  });
+
   const renderer = new StreamRenderer(activity, profile);
+  renderer.attribute(harness.id, { verbose: options.verbose });
   const deployments = new DeploymentTracker();
   renderer.trackDeployments(deployments);
   const startedAt = Date.now();
@@ -276,6 +286,44 @@ async function driveSession(
 }
 
 /**
+ * State who is about to do the work, once, before any of it happens.
+ *
+ * The CLI contains no agent and no model. It composes instructions, registers
+ * tools, and renders what comes back. Everything the session does is done by a
+ * harness the developer already installed, running on their machine as them.
+ * Saying so here is the only moment anyone reads it, and the rest of the
+ * transcript is attributed line by line on the strength of it.
+ */
+export function vercelSays(text: string, continued = false): void {
+  for (const [index, line] of wrapAnsi(
+    text,
+    textWidth(GUTTER_WIDTH),
+    ''
+  ).entries()) {
+    const prefix =
+      index === 0 && !continued ? gutter('vercel', 'vercel') : blankGutter();
+    output.print(prefix + line + '\n');
+  }
+}
+
+function printOpeningFrame(harness: DetectedHarness, workspace: string): void {
+  const version = harness.version ? ` ${harness.version}` : '';
+
+  output.print('\n');
+  vercelSays(
+    `Orchestrating ${chalk.bold(`${harness.label}${version}`)} on this machine.`
+  );
+  vercelSays(
+    chalk.dim(
+      'Vercel supplies the instructions and the tools. ' +
+        `${harness.label} does the work, as you, in ${workspace}.`
+    ),
+    true
+  );
+  output.print('\n');
+}
+
+/**
  * Report what the session deployed.
  *
  * The agent runs `vercel deploy` inside a tool call, so without this the URL
@@ -298,12 +346,12 @@ function printDeployments(
   );
 
   output.print('\n');
-  output.log(found.length === 1 ? 'Deployment:' : 'Deployments:');
+  vercelSays(found.length === 1 ? 'Deployed:' : 'Deployed:');
   for (const deployment of found) {
     const label = deployment.production ? chalk.yellow(' production') : '';
-    output.print(`    ${chalk.cyan(deployment.url)}${chalk.dim(label)}\n`);
+    vercelSays(chalk.cyan(deployment.url) + chalk.dim(label), true);
     if (deployment.inspectUrl) {
-      output.print(`      ${chalk.dim(deployment.inspectUrl)}\n`);
+      vercelSays(chalk.dim(deployment.inspectUrl), true);
     }
   }
 }
