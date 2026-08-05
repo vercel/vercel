@@ -8,6 +8,7 @@ import {
   getHarnessPackagesDir,
   type HarnessLoader,
 } from './install-harness-packages';
+import { HARNESS_SOURCE_ENV_VAR } from './local-harness-source';
 import { ActivityIndicator, WORKING_PHRASES } from './activity';
 import { answerAskUser, createAskUserTool, isAskUserTool } from './ask-user';
 import {
@@ -15,7 +16,9 @@ import {
   prepareHarnessBootstrap,
 } from './prepare-bootstrap';
 import { StreamRenderer } from './render-stream';
+import { DeploymentTracker } from './deployments';
 import { printContinuation } from './session-continuation';
+import type { ShipProfile } from './profile';
 
 /**
  * The agent runtime. It also supplies the local workspace sandbox, which the
@@ -32,6 +35,8 @@ export interface RunSessionOptions {
   prompt: string;
   /** Skip approval prompts (`--yes`). */
   autoApprove: boolean;
+  /** Collects where the wall time of this run goes. */
+  profile: ShipProfile;
 }
 
 /**
@@ -46,8 +51,20 @@ export interface RunSessionOptions {
  * one interface as this command grows.
  */
 export async function runSession(options: RunSessionOptions): Promise<number> {
-  const { client, harness, workspace, autoApprove } = options;
+  // Opened here rather than around `driveSession`, so the span covers acquiring
+  // the runtime as well as using it.
+  const endSession = options.profile.start('session');
+  try {
+    return await startSession(options);
+  } finally {
+    endSession();
+  }
+}
 
+async function startSession(options: RunSessionOptions): Promise<number> {
+  const { client, harness, workspace, autoApprove, profile } = options;
+
+  const endInstall = profile.start('install harness packages');
   const loader = await ensureHarnessPackages({
     client,
     harnessLabel: harness.label,
@@ -57,12 +74,16 @@ export async function runSession(options: RunSessionOptions): Promise<number> {
       adapter: harness.adapterPackage,
     },
   });
+  endInstall({ origin: loader?.origin });
 
   if (!loader) {
     return 1;
   }
+  profile.set('runtimeOrigin', loader.origin);
 
+  const endLoad = profile.start('load runtime');
   const runtime = await loadRuntime(loader, harness);
+  endLoad();
   if (!runtime) {
     return 1;
   }
@@ -86,14 +107,17 @@ async function driveSession(
     loader: HarnessLoader;
   }
 ): Promise<number> {
-  const { client, harness, workspace, prompt, runtime, loader } = options;
+  const { client, harness, workspace, prompt, runtime, loader, profile } =
+    options;
 
   // Works around adapters that bootstrap with pnpm but ship no pnpm config.
+  const endPrepare = profile.start('prepare bootstrap');
   await prepareHarnessBootstrap({ harnessId: harness.id, workspace });
+  endPrepare();
 
   // Registered so the agent can ask structured questions the CLI renders as a
-  // real selection. Absent it, questions still arrive as prose and the reply
-  // loop below handles them.
+  // real selection. The instructions require it, so its absence is the case
+  // that has to be corrected, not its presence.
   const tools = await createAskUserTool(loader);
 
   // No `sandbox`: the harness falls back to the local workspace, rooted at the
@@ -105,20 +129,41 @@ async function driveSession(
 
   output.log(`Starting ${harness.label} in ${workspace}`);
 
-  // A bridge-backed adapter installs its bridge on first use. It pins a
-  // project-local package store, so a first run downloads several hundred
-  // megabytes and can take minutes. Saying so is the difference between waiting
-  // and assuming it has hung.
+  // A bridge-backed adapter installs its bridge on first use, so a first run in
+  // a project downloads and takes noticeably longer than later ones. Saying so
+  // is the difference between waiting and assuming it has hung.
   const bootstrapped = await isHarnessBootstrapped({
     harnessId: harness.id,
     workspace,
   });
   if (!bootstrapped) {
+    // Only the local build drives an agent executable the machine already has,
+    // which is the difference between seconds and minutes, since the pinned
+    // copy of the Claude Code binary alone is 236MB. Both builds report the
+    // same version, so where the packages came from is the only signal, and
+    // guessing from `binPath` alone would promise a quick install and then sit
+    // there for minutes.
+    const reused = loader.origin === 'local' && Boolean(harness.binPath);
+    const duration = reused
+      ? `Your installed ${harness.label} is reused, so this should be quick`
+      : 'This is a large download and can take several minutes';
     output.log(
       `First run in this project: installing the ${harness.label} bridge into ` +
-        `${chalk.dim('.harness-bootstrap/')}. This downloads a few hundred MB ` +
-        `and only happens once per project.`
+        `${chalk.dim('.harness-bootstrap/')}. ${duration}, and it only happens ` +
+        `once per project.`
     );
+
+    // The most likely reason someone sees the long install while holding a
+    // perfectly good local executable: the packages in use cannot reuse it yet.
+    if (!reused && harness.binPath) {
+      output.log(
+        chalk.dim(
+          `You have ${harness.label} at ${harness.binPath}, but these harness ` +
+            `packages cannot drive it. Set ${HARNESS_SOURCE_ENV_VAR} to a ` +
+            `checkout of vercel/ai that can, and the install is far smaller.`
+        )
+      );
+    }
   }
 
   const preparing = new ActivityIndicator();
@@ -131,6 +176,11 @@ async function driveSession(
   // `createSession()` owns the sandbox lifecycle; every turn is issued against
   // it and it must be torn down even when a turn throws, or the bound workspace
   // and any adapter bridge process leak.
+  // The single largest phase of a first run, and the one users read as a hang,
+  // so it is measured on its own rather than folded into the session.
+  const endCreate = profile.start('start agent session', {
+    bridgeInstalled: bootstrapped,
+  });
   let session;
   try {
     session = await agent.createSession();
@@ -139,11 +189,14 @@ async function driveSession(
     reportSessionStartFailure(err, harness);
     return 1;
   } finally {
+    endCreate();
     preparing.stop();
   }
 
   const activity = new ActivityIndicator();
-  const renderer = new StreamRenderer(activity);
+  const renderer = new StreamRenderer(activity, profile);
+  const deployments = new DeploymentTracker();
+  renderer.trackDeployments(deployments);
   const startedAt = Date.now();
 
   try {
@@ -151,22 +204,35 @@ async function driveSession(
     // whether to approve a plan that costs money. Ending the process there would
     // throw away the session and force the whole discovery phase to be redone,
     // so keep taking turns until the user is done.
-    let turnPrompt: string | undefined = prompt;
+    let turnPrompt: string | undefined = tools
+      ? prompt
+      : prompt + NO_ASK_USER_SUFFIX;
+    let turnNumber = 0;
 
     while (turnPrompt !== undefined) {
-      const exitCode = await runTurn({
-        agent,
-        session,
-        prompt: turnPrompt,
-        renderer,
-        activity,
-        client,
-      });
+      turnNumber += 1;
+      const endTurn = profile.start(`turn ${turnNumber}`);
+      let exitCode: number;
+      try {
+        exitCode = await runTurn({
+          agent,
+          session,
+          prompt: turnPrompt,
+          renderer,
+          activity,
+          client,
+          profile,
+        });
+      } finally {
+        endTurn({ toolCalls: renderer.toolCallCount });
+      }
       if (exitCode !== 0) {
         return exitCode;
       }
 
+      const endReply = profile.start('waiting for your reply');
       turnPrompt = await readReply(client, harness.label);
+      endReply({ continued: turnPrompt !== undefined });
     }
 
     return 0;
@@ -180,6 +246,7 @@ async function driveSession(
     );
     return 1;
   } finally {
+    const endDestroy = profile.start('stop agent session');
     try {
       await session.destroy();
     } catch (err) {
@@ -188,7 +255,13 @@ async function driveSession(
           err instanceof Error ? err.message : String(err)
         }`
       );
+    } finally {
+      endDestroy();
     }
+
+    // Before the continuation, and before the timing: a URL the session
+    // produced is the result, and the result goes at the end where it is read.
+    printDeployments(deployments, profile);
 
     // Printed on every exit path, including a thrown turn. The conversation
     // holds the project inventory and any agreed plan, so the user must always
@@ -203,6 +276,39 @@ async function driveSession(
 }
 
 /**
+ * Report what the session deployed.
+ *
+ * The agent runs `vercel deploy` inside a tool call, so without this the URL
+ * scrolls past in the transcript and the run ends by telling the user how to
+ * resume rather than what it produced. Recorded into the profile too, so a
+ * finished run can be tied to its deployment afterwards.
+ */
+function printDeployments(
+  deployments: DeploymentTracker,
+  profile: ShipProfile
+): void {
+  const found = deployments.list();
+  if (found.length === 0) {
+    return;
+  }
+
+  profile.set(
+    'deployments',
+    found.map(deployment => deployment.url)
+  );
+
+  output.print('\n');
+  output.log(found.length === 1 ? 'Deployment:' : 'Deployments:');
+  for (const deployment of found) {
+    const label = deployment.production ? chalk.yellow(' production') : '';
+    output.print(`    ${chalk.cyan(deployment.url)}${chalk.dim(label)}\n`);
+    if (deployment.inspectUrl) {
+      output.print(`      ${chalk.dim(deployment.inspectUrl)}\n`);
+    }
+  }
+}
+
+/**
  * Stream one turn to completion.
  */
 async function runTurn(options: {
@@ -212,11 +318,15 @@ async function runTurn(options: {
   renderer: StreamRenderer;
   activity: ActivityIndicator;
   client: Client;
+  profile: ShipProfile;
 }): Promise<number> {
-  const { agent, session, prompt, renderer, activity, client } = options;
+  const { agent, session, prompt, renderer, activity, client, profile } =
+    options;
+
+  renderer.beginTurn();
 
   // Runs for the whole turn. The renderer pauses it around each write, so it is
-  // visible during every gap — waiting on the model, waiting on a tool — and
+  // visible during every gap (waiting on the model, waiting on a tool) and
   // invisible while output is flowing.
   activity.start(WORKING_PHRASES);
 
@@ -237,6 +347,9 @@ async function runTurn(options: {
       }
 
       activity.pause();
+      const endAsk = profile.start('waiting for your answer', {
+        questions: pending.length,
+      });
       const toolResultContinuations: HarnessToolResultContinuation[] = [];
       for (const call of pending) {
         toolResultContinuations.push({
@@ -244,6 +357,7 @@ async function runTurn(options: {
           output: await answerAskUser(client, call.input),
         });
       }
+      endAsk();
       activity.resume();
 
       result = await agent.continueStream({
@@ -299,6 +413,23 @@ async function readReply(
 
 /** Typed at the reply prompt to end the session. */
 const EXIT_WORDS = new Set(['exit', 'quit', 'q', 'done', 'stop']);
+
+/**
+ * Withdraws the instruction to ask through `askUser` when the tool could not be
+ * registered, which happens only if the harness tree cannot supply `ai` or
+ * `zod`. Left as a correction to the mission rather than a variant of it, so
+ * the common case reads as one unconditional rule.
+ */
+const NO_ASK_USER_SUFFIX = `
+
+---
+
+## Override: no \`askUser\` tool
+
+The \`askUser\` tool is not available in this session, so the rule requiring it
+does not apply. Ask in prose instead, put the question at the very end of your
+turn, and stop there. The user's typed reply arrives as your next turn.
+`;
 
 async function drain(
   result: HarnessStreamResult,
@@ -357,7 +488,7 @@ function reportSessionStartFailure(
     output.log(
       `This usually means a platform-native package could not be downloaded when ` +
         `the bridge was installed. Check that your npm registry is reachable and ` +
-        `authenticated, then run ${cmd('vercel ship')} again — the incomplete ` +
+        `authenticated, then run ${cmd('vercel ship')} again. The incomplete ` +
         `install is detected and rebuilt automatically.`
     );
     return;
@@ -368,7 +499,11 @@ function reportSessionStartFailure(
       `The installed ${HARNESS_CORE_PACKAGE} does not support running without a ` +
         `sandbox provider, which ${cmd('vercel ship')} relies on to work against ` +
         `your local project. That capability is not in a published release yet.\n` +
-        `Installed at: ${getHarnessPackagesDir()}`
+        `Installed at: ${getHarnessPackagesDir()}\n\n` +
+        `Until it is published, point ${HARNESS_SOURCE_ENV_VAR} at a checkout of ` +
+        `vercel/ai with the packages built:\n` +
+        `    pnpm --filter ${HARNESS_CORE_PACKAGE} build\n` +
+        `    ${HARNESS_SOURCE_ENV_VAR}=/path/to/ai ${cmd('vercel ship')}`
     );
   }
 }
@@ -427,9 +562,7 @@ function quietSandboxWarning(): void {
 }
 
 interface HarnessRuntime {
-  HarnessAgent: new (
-    config: unknown
-  ) => {
+  HarnessAgent: new (config: unknown) => {
     createSession: () => Promise<HarnessSession>;
     stream: (options: {
       session: HarnessSession;

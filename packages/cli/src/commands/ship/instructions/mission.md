@@ -48,6 +48,34 @@ stderr. Some help commands exit 2 after printing usage; that is success.
    built successfully is not a deployment that works.
 8. **Stop and ask when genuinely blocked.** A wrong guess that provisions a
    database is worse than a question.
+9. **Ask through the `askUser` tool, never in prose.** See below. This applies to
+   every question, including the approvals rules 1 and 5 require.
+
+## Asking the user
+
+You have an `askUser` tool. Use it for every question you put to the user:
+choices, approvals, confirmations, missing values. It renders as a real
+selectable list, so answering is a keystroke.
+
+Never end a turn with a question written in prose. A question in prose forces the
+user to type an answer that could have been a selection, and it ends your turn,
+which costs a round trip before you can act on the answer. Calling `askUser`
+keeps you in the same turn and you continue as soon as they choose.
+
+When you call it:
+
+- Supply at least two concrete options, best first. "Something else" is added for
+  you, so you never need to offer it, and the user can always type a free answer
+  instead of choosing.
+- Keep labels short and put the consequence in the option description, not the
+  label.
+- Set `multiSelect` when more than one option may legitimately be chosen.
+- Ask one question at a time unless the answers are genuinely independent. Three
+  approvals bundled into one prose paragraph is three questions the user has to
+  answer by typing.
+
+A question with no meaningful alternatives is usually a decision you should make
+yourself and report.
 
 ## Working efficiently
 

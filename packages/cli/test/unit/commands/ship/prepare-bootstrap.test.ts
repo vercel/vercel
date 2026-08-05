@@ -1,5 +1,11 @@
 import { describe, beforeEach, expect, it } from 'vitest';
-import { mkdirpSync, readFileSync, writeFileSync, existsSync } from 'fs-extra';
+import {
+  chmodSync,
+  mkdirpSync,
+  readFileSync,
+  writeFileSync,
+  existsSync,
+} from 'fs-extra';
 import { dirname, join } from 'node:path';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import { prepareHarnessBootstrap } from '../../../../src/commands/ship/prepare-bootstrap';
@@ -77,6 +83,74 @@ describe('ship prepareHarnessBootstrap', () => {
     await prepareHarnessBootstrap({ harnessId: 'codex', workspace });
 
     expect(existsSync(bootstrapConfigPath(workspace, 'codex'))).toBe(false);
+  });
+
+  describe('a half-installed bridge', () => {
+    /** Fake the tree the adapter's `pnpm install` leaves behind. */
+    function installBridge(
+      options: { executable?: string; marker?: string } = {}
+    ): string {
+      const bootstrapDir = join(workspace, '.harness-bootstrap', 'claude-code');
+      const modulesDir = join(bootstrapDir, 'node_modules');
+      mkdirpSync(join(modulesDir, '.bin'));
+
+      const linked = join(modulesDir, '.bin', 'claude');
+      writeFileSync(linked, options.executable ?? '#!/bin/sh\nexit 1\n');
+      chmodSync(linked, 0o755);
+
+      if (options.marker !== undefined) {
+        writeFileSync(
+          join(bootstrapDir, '.reused-executable'),
+          options.marker,
+          'utf-8'
+        );
+      }
+
+      return modulesDir;
+    }
+
+    it('is cleared so the next install rebuilds it', async () => {
+      const modulesDir = installBridge();
+
+      await prepareHarnessBootstrap({ harnessId: 'claude-code', workspace });
+
+      expect(existsSync(modulesDir)).toBe(false);
+    });
+
+    it('is kept when a runnable executable is installed', async () => {
+      const modulesDir = installBridge({
+        executable: '#!/bin/sh\necho 2.0.0\n',
+      });
+
+      await prepareHarnessBootstrap({ harnessId: 'claude-code', workspace });
+
+      expect(existsSync(modulesDir)).toBe(true);
+    });
+
+    it('is kept when the install reused an executable from the machine', async () => {
+      // The reuse path skips the optional dependency that provides the pinned
+      // binary, so the linked one is expected not to run. Probing it instead of
+      // the recorded path would wipe a good tree on every run.
+      const reused = join(workspace, 'system-claude');
+      writeFileSync(reused, '#!/bin/sh\necho 2.0.0\n');
+      chmodSync(reused, 0o755);
+
+      const modulesDir = installBridge({ marker: `${reused}\n` });
+
+      await prepareHarnessBootstrap({ harnessId: 'claude-code', workspace });
+
+      expect(existsSync(modulesDir)).toBe(true);
+    });
+
+    it('is cleared when the executable it recorded has gone away', async () => {
+      const modulesDir = installBridge({
+        marker: `${join(workspace, 'removed-claude')}\n`,
+      });
+
+      await prepareHarnessBootstrap({ harnessId: 'claude-code', workspace });
+
+      expect(existsSync(modulesDir)).toBe(false);
+    });
   });
 
   it('never throws when the location is not writable', async () => {

@@ -15,6 +15,13 @@ const BOOTSTRAP_ROOT = '.harness-bootstrap';
 
 const PNPM_WORKSPACE_FILE = 'pnpm-workspace.yaml';
 
+/**
+ * Written by the bridge install when it decided to drive a `claude` that was
+ * already on the machine rather than downloading the pinned one. It holds the
+ * path of the executable it chose.
+ */
+const REUSED_EXECUTABLE_MARKER = '.reused-executable';
+
 /** Grants pnpm permission to run dependency build scripts in this directory. */
 const ALLOW_BUILDS = 'dangerouslyAllowAllBuilds: true\n';
 
@@ -147,10 +154,10 @@ export async function prepareHarnessBootstrap(options: {
  */
 async function repairIncompleteBootstrap(bootstrapDir: string): Promise<void> {
   const modulesDir = join(bootstrapDir, 'node_modules');
-  const executable = join(modulesDir, '.bin', 'claude');
 
   try {
-    if (!(await pathExists(executable))) {
+    const executable = await installedExecutable(bootstrapDir);
+    if (!executable) {
       // Either nothing is installed yet, or the install never got far enough to
       // link a binary. Both are handled by letting the bootstrap run.
       return;
@@ -168,4 +175,30 @@ async function repairIncompleteBootstrap(bootstrapDir: string): Promise<void> {
     );
     await remove(modulesDir).catch(() => {});
   }
+}
+
+/**
+ * The `claude` the installed bridge would actually run, if there is one.
+ *
+ * The install has two outcomes. It either downloaded the pinned executable, in
+ * which case `node_modules/.bin/claude` is the thing to probe, or it reused one
+ * already on the machine and recorded its path in a marker file. Probing the
+ * linked binary in that second case would always fail — the install skipped the
+ * optional dependency that provides it — and would wipe a perfectly good tree
+ * on every run.
+ */
+async function installedExecutable(
+  bootstrapDir: string
+): Promise<string | undefined> {
+  const markerPath = join(bootstrapDir, REUSED_EXECUTABLE_MARKER);
+
+  if (await pathExists(markerPath)) {
+    const recorded = (await readFile(markerPath, 'utf-8')).trim();
+    // An empty marker means the install recorded nothing useful; treat the
+    // bootstrap as incomplete rather than trusting it.
+    return recorded || join(bootstrapDir, 'node_modules', '.bin', 'claude');
+  }
+
+  const linked = join(bootstrapDir, 'node_modules', '.bin', 'claude');
+  return (await pathExists(linked)) ? linked : undefined;
 }

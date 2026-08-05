@@ -7,6 +7,8 @@ import {
   WORKING_PHRASES,
 } from './activity';
 import { isTableRow, MarkdownStyler, renderTable } from './markdown';
+import { TOOL_SPAN_PREFIX, type ShipProfile } from './profile';
+import type { DeploymentTracker } from './deployments';
 
 /** Longest tool-input summary shown on a progress line. */
 const MAX_SUMMARY_LENGTH = 72;
@@ -62,11 +64,44 @@ export class StreamRenderer {
   /** Tool calls issued but not yet resolved, keyed by call id. */
   private readonly inFlight = new Map<
     string,
-    { label: string; startedAt: number }
+    { label: string; startedAt: number; command?: string }
   >();
 
-  constructor(activity?: ActivityIndicator) {
+  private readonly profile: ShipProfile | undefined;
+
+  /** Watches tool output for deployments the session creates. */
+  private deployments: DeploymentTracker | undefined;
+
+  /** Tool calls settled during the current turn. */
+  private turnToolCalls = 0;
+
+  constructor(activity?: ActivityIndicator, profile?: ShipProfile) {
     this.activity = activity;
+    this.profile = profile;
+  }
+
+  get toolCallCount(): number {
+    return this.turnToolCalls;
+  }
+
+  /**
+   * Watch for deployments in tool output.
+   *
+   * Here rather than in the caller because the renderer is the only thing that
+   * sees a tool's command and its result together.
+   */
+  trackDeployments(tracker: DeploymentTracker): void {
+    this.deployments = tracker;
+  }
+
+  /**
+   * Reset per-turn counters.
+   *
+   * At the start of a turn rather than the end, so a caller closing out a turn
+   * can still read what happened during it.
+   */
+  beginTurn(): void {
+    this.turnToolCalls = 0;
   }
 
   /** Text received but not yet terminated by a newline. */
@@ -268,7 +303,13 @@ export class StreamRenderer {
 
     const id = asString(part.toolCallId);
     if (id) {
-      this.inFlight.set(id, { label, startedAt: Date.now() });
+      // Monotonic, so a clock adjustment mid-call cannot report a negative
+      // duration to the user or into the profile.
+      this.inFlight.set(id, {
+        label,
+        startedAt: performance.now(),
+        command: shellCommand(part.input),
+      });
     }
 
     // The harness streams no incremental tool output, so a slow command would
@@ -309,7 +350,23 @@ export class StreamRenderer {
     }
 
     const name = asString(part.toolName) || tracked?.label || 'tool';
-    const elapsed = tracked ? Date.now() - tracked.startedAt : 0;
+    const elapsed = tracked ? performance.now() - tracked.startedAt : 0;
+
+    if (!failed && tracked?.command) {
+      this.deployments?.observe(tracked.command, toText(part.output));
+    }
+
+    this.turnToolCalls += 1;
+    if (tracked) {
+      // Recorded rather than opened and closed as a span: tool calls run in
+      // parallel, which a stack of open spans cannot represent.
+      this.profile?.record(
+        `${TOOL_SPAN_PREFIX}${name}`,
+        tracked.startedAt,
+        elapsed,
+        failed ? { failed: true } : undefined
+      );
+    }
 
     if (failed) {
       this.writeLine(chalk.yellow(`  ! ${name} failed`));
@@ -338,6 +395,18 @@ function summarizeToolInput(input: unknown): string {
     }
   }
   return '';
+}
+
+/**
+ * The full shell command a tool call is running, if it is one.
+ *
+ * Unlike the display summary this is neither truncated nor collapsed, because
+ * it is matched against rather than shown.
+ */
+function shellCommand(input: unknown): string | undefined {
+  if (!input || typeof input !== 'object') return undefined;
+  const command = (input as Record<string, unknown>).command;
+  return typeof command === 'string' && command.trim() ? command : undefined;
 }
 
 function truncate(value: string): string {

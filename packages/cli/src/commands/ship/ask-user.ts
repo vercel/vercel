@@ -70,12 +70,15 @@ export async function createAskUserTool(
     return {
       [ASK_USER_TOOL]: tool({
         description:
-          'Ask the user a question and let them pick from options. Prefer this ' +
-          'over asking in prose whenever the user has to choose between ' +
-          'alternatives, approve a plan, or confirm something — it renders as a ' +
-          'selectable list. Supply 2 or more concise options. Set multiSelect ' +
-          'when more than one may be chosen. The user can always answer freely ' +
-          'instead of choosing.',
+          'Ask the user a question and let them pick from options. Use this for ' +
+          'every question you put to the user: choices, approvals, ' +
+          'confirmations, missing values. Never ask in prose instead, and never ' +
+          'end a turn with a question; both force the user to type an answer ' +
+          'that could have been a keystroke, and cost a round trip. Supply 2 or ' +
+          'more concise options, best first, with any consequence in the option ' +
+          'description rather than the label. Set multiSelect when more than ' +
+          'one may be chosen. A free-text choice is added for you, and the user ' +
+          'can always answer freely instead of choosing.',
         inputSchema: z.object({
           question: z.string(),
           options: z.array(
@@ -127,7 +130,7 @@ export async function answerAskUser(
   const choices = [
     ...input.options.map(option => ({
       name: option.description
-        ? `${option.label} ${chalk.dim(`— ${option.description}`)}`
+        ? `${option.label} ${chalk.dim(`(${option.description})`)}`
         : option.label,
       value: option.label,
     })),

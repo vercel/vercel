@@ -1,5 +1,5 @@
 import execa from 'execa';
-import { outputJSON, pathExists, writeFile } from 'fs-extra';
+import { outputJSON, pathExists, readJSON, writeFile } from 'fs-extra';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { isError } from '@vercel/error-utils';
@@ -7,6 +7,13 @@ import type Client from '../../util/client';
 import getGlobalPathConfig from '../../util/config/global-path';
 import cmd from '../../util/output/cmd';
 import output from '../../output-manager';
+import {
+  getLocalHarnessSource,
+  HARNESS_SOURCE_ENV_VAR,
+  packLocalHarnessPackages,
+  type LocalHarnessSource,
+  type PackedPackage,
+} from './local-harness-source';
 
 /**
  * Directory the CLI owns for harness runtime packages.
@@ -18,6 +25,17 @@ import output from '../../output-manager';
  */
 export function getHarnessPackagesDir(): string {
   return join(getGlobalPathConfig(), 'harnesses');
+}
+
+/**
+ * Where packages built from a local checkout are installed.
+ *
+ * Separate from the registry install so switching between the two does not mean
+ * one overwriting the other, and so deleting a branch build leaves the normal
+ * install intact.
+ */
+function getLocalPackagesDir(): string {
+  return join(getHarnessPackagesDir(), 'local');
 }
 
 /**
@@ -49,7 +67,22 @@ export interface HarnessPackageSpecs {
   adapter: string;
 }
 
+/**
+ * Where the harness runtime came from.
+ *
+ * `local`    — built from a checkout named by `VERCEL_SHIP_HARNESS_SOURCE`.
+ * `bundled`  — resolvable by the CLI itself.
+ * `managed`  — installed from the npm registry into the global config directory.
+ *
+ * Worth carrying because the branch build and the published one currently share
+ * a version number, so nothing about the loaded package distinguishes them, and
+ * they do not behave the same: only the branch reuses a `claude` the machine
+ * already has instead of downloading a second copy.
+ */
+export type HarnessOrigin = 'local' | 'bundled' | 'managed';
+
 export interface HarnessLoader {
+  origin: HarnessOrigin;
   loadCore: () => Promise<Record<string, unknown>>;
   loadAdapter: () => Promise<Record<string, unknown>>;
   /**
@@ -78,12 +111,20 @@ export async function ensureHarnessPackages(options: {
   const { client, specs, harnessLabel, autoApprove } = options;
   const packages = [specs.core, specs.adapter];
 
+  // An explicit local checkout wins over everything else: it is only ever set
+  // deliberately, and silently preferring a stale registry copy would make the
+  // override look broken.
+  const localSource = getLocalHarnessSource(client.cwd);
+  if (localSource) {
+    return installFromLocalSource({ source: localSource, specs, packages });
+  }
+
   // Prefer packages already resolvable by the CLI itself. This is the path taken
   // once these become real dependencies, and by contributors running from the
   // monorepo, and it avoids a redundant managed install.
   const bundled = await tryBundledLoader(specs);
   if (bundled) {
-    output.debug('ship: using harness packages resolvable from the CLI');
+    output.log('Using harness packages bundled with the CLI.');
     return bundled;
   }
 
@@ -108,6 +149,11 @@ export async function ensureHarnessPackages(options: {
     }
   }
 
+  // Named even though nothing went wrong. Two builds of these packages exist
+  // with the same version number and different behaviour, so "which one am I
+  // running" has to be answerable from the session's own output.
+  output.log(`Using harness packages from the npm registry (${dir}).`);
+
   return createManagedLoader(dir, specs);
 }
 
@@ -123,6 +169,7 @@ async function tryBundledLoader(
   }
 
   return {
+    origin: 'bundled',
     loadCore: () => import(`${specs.core}/agent`),
     loadAdapter: () => import(specs.adapter),
     loadAi: () => import(AI_PACKAGE),
@@ -199,9 +246,26 @@ async function installPackages(
     }
   }
 
-  output.spinner(`Installing ${packages.join(', ')}`);
+  return runNpmInstall({ dir, labels: packages, add: packages });
+}
+
+/**
+ * Run `npm install` in a directory the CLI owns.
+ *
+ * `add` names packages to install as new dependencies; omitting it installs
+ * whatever the manifest already declares, which is how the local-source path
+ * works, since its dependencies are tarball paths written ahead of time.
+ */
+async function runNpmInstall(options: {
+  dir: string;
+  labels: string[];
+  add?: string[];
+}): Promise<boolean> {
+  const { dir, labels, add = [] } = options;
+
+  output.spinner(`Installing ${labels.join(', ')}`);
   try {
-    await execa('npm', ['install', '--no-audit', '--no-fund', ...packages], {
+    await execa('npm', ['install', '--no-audit', '--no-fund', ...add], {
       cwd: dir,
       stdio: 'pipe',
       reject: true,
@@ -214,13 +278,21 @@ async function installPackages(
     output.error(
       `Failed to install harness packages.\n\n${formatInstallError(err)}`
     );
-    output.log(
-      `You can retry manually:\n    cd ${dir} && npm install ${packages.join(
-        ' '
-      )}`
-    );
+    const retry = ['npm', 'install', ...add, ...retryFlags(err)].join(' ');
+    output.log(`You can retry manually:\n    cd ${dir} && ${retry}`);
     return false;
   }
+}
+
+/**
+ * Extra flags that would make the retry command succeed.
+ *
+ * Only offered as something to type by hand. Adding `--min-release-age=0` to
+ * the install the CLI runs itself would override a supply-chain control the
+ * user deliberately configured, without them seeing it happen.
+ */
+function retryFlags(err: unknown): string[] {
+  return isMinReleaseAgeFailure(err) ? ['--min-release-age=0'] : [];
 }
 
 /**
@@ -239,7 +311,17 @@ function formatInstallError(err: unknown): string {
   if (/E404|404 Not Found/.test(stderr) || /E404/.test(message)) {
     return (
       'One or more packages were not found in the npm registry. ' +
-      'They may not be published yet.\n\n' +
+      'They may not be published yet.\n' +
+      `Build them from a checkout of vercel/ai and set ${HARNESS_SOURCE_ENV_VAR} ` +
+      'to it to use those instead.\n\n' +
+      stderr.trim().split('\n').slice(0, 6).join('\n')
+    );
+  }
+
+  if (isMinReleaseAgeFailure(err)) {
+    return (
+      'A required version was filtered out by the `min-release-age` setting ' +
+      'in your npmrc, which hides recently published packages.\n\n' +
       stderr.trim().split('\n').slice(0, 6).join('\n')
     );
   }
@@ -247,9 +329,100 @@ function formatInstallError(err: unknown): string {
   return (stderr || message).trim().split('\n').slice(0, 10).join('\n');
 }
 
+/**
+ * Whether npm refused a version only because it is too new.
+ *
+ * `min-release-age` hides packages published in the last few days, which is
+ * exactly what a freshly built branch depends on. npm reports it as an ordinary
+ * "no matching version", so it has to be recognised by the date it appends.
+ */
+function isMinReleaseAgeFailure(err: unknown): boolean {
+  const stderr =
+    typeof (err as { stderr?: unknown })?.stderr === 'string'
+      ? (err as { stderr: string }).stderr
+      : '';
+  const message = isError(err) ? err.message : String(err);
+  return /min-release-age|with a date before/.test(`${stderr}${message}`);
+}
+
+/**
+ * Build the harness packages out of a local `ai` checkout and install them.
+ *
+ * Runs without a confirmation prompt: setting `VERCEL_SHIP_HARNESS_SOURCE` is
+ * already the explicit act of asking for this, and the install is repeated on
+ * every rebuild.
+ */
+async function installFromLocalSource(options: {
+  source: LocalHarnessSource;
+  specs: HarnessPackageSpecs;
+  packages: string[];
+}): Promise<HarnessLoader | undefined> {
+  const { source, specs, packages } = options;
+  const dir = getLocalPackagesDir();
+
+  output.log(
+    `Using harness packages built from ${source.root} ` +
+      `(${HARNESS_SOURCE_ENV_VAR}).`
+  );
+
+  const packed = await packLocalHarnessPackages({
+    source,
+    packages,
+    destination: join(dir, 'tarballs'),
+  });
+  if (!packed) {
+    return undefined;
+  }
+
+  if (!(await syncLocalManifest(dir, packed))) {
+    return undefined;
+  }
+
+  return createManagedLoader(dir, specs, 'local');
+}
+
+/**
+ * Write the manifest describing the packed tarballs and install it if it moved.
+ *
+ * Every package is pinned in `overrides` as well as `dependencies`, because the
+ * adapter depends on `@ai-sdk/harness` by version and npm would otherwise be
+ * free to satisfy that from the registry — quietly loading a published build
+ * alongside the branch one being tested. npm rejects an override that disagrees
+ * with a direct dependency, so the two specs are written from the same value.
+ */
+async function syncLocalManifest(
+  dir: string,
+  packed: PackedPackage[]
+): Promise<boolean> {
+  const pins = Object.fromEntries(
+    packed.map(entry => [entry.name, `file:${entry.tarball}`])
+  );
+  const manifest = {
+    private: true,
+    license: 'UNLICENSED',
+    dependencies: pins,
+    overrides: pins,
+  };
+
+  const manifestPath = join(dir, 'package.json');
+  const unchanged =
+    (await pathExists(join(dir, 'node_modules'))) &&
+    JSON.stringify(await readJSON(manifestPath).catch(() => null)) ===
+      JSON.stringify(manifest);
+
+  if (unchanged) {
+    output.debug('ship: local harness packages already installed');
+    return true;
+  }
+
+  await outputJSON(manifestPath, manifest, { spaces: 2 });
+  return runNpmInstall({ dir, labels: packed.map(entry => entry.name) });
+}
+
 async function createManagedLoader(
   dir: string,
-  specs: HarnessPackageSpecs
+  specs: HarnessPackageSpecs,
+  origin: HarnessOrigin = 'managed'
 ): Promise<HarnessLoader> {
   const loaderPath = join(dir, LOADER_FILENAME);
   await writeFile(
@@ -265,5 +438,12 @@ async function createManagedLoader(
     'utf-8'
   );
 
-  return (await import(pathToFileURL(loaderPath).href)) as HarnessLoader;
+  const loader = (await import(pathToFileURL(loaderPath).href)) as Omit<
+    HarnessLoader,
+    'origin'
+  >;
+
+  output.debug(`ship: harness runtime loaded from ${dir} (${origin})`);
+
+  return { ...loader, origin };
 }

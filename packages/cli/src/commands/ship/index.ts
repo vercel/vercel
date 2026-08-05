@@ -21,6 +21,8 @@ import {
 import { collectPreflight, formatPreflight } from './preflight';
 import { renderMission, renderMissionFromFile } from './instructions';
 import { runSession } from './run-session';
+import { ShipProfile } from './profile';
+import { reportProfile, reportProfileOnAbort } from './report-profile';
 
 const DRY_RUN_SUFFIX = `
 
@@ -42,6 +44,9 @@ const STATUS_LABEL: Record<DetectedHarness['status'], string> = {
 };
 
 export default async function ship(client: Client): Promise<number> {
+  // Started before anything else so the total covers the whole command, not
+  // just the part after the arguments turned out to be valid.
+  const profile = new ShipProfile();
   const flagsSpecification = getFlagsSpecification(shipCommand.options);
   const telemetry = new ShipTelemetryClient({
     opts: { store: client.telemetryEventStore },
@@ -79,8 +84,10 @@ export default async function ship(client: Client): Promise<number> {
   telemetry.trackCliFlagJson(json);
   telemetry.trackCliFlagYes(skipConfirmation);
 
+  let exitCode = 1;
+  const releaseAbortHandlers = reportProfileOnAbort(profile);
   try {
-    return await runShip(client, {
+    exitCode = await runShip(client, {
       pathArgument,
       harnessFlag,
       listHarnesses,
@@ -89,10 +96,17 @@ export default async function ship(client: Client): Promise<number> {
       dryRun,
       skipConfirmation,
       jsonFlags: parsedArgs.flags,
+      profile,
     });
+    return exitCode;
   } catch (error) {
     printError(error);
     return 1;
+  } finally {
+    releaseAbortHandlers();
+    // Reported on every exit path, including a thrown one, since a run that
+    // failed slowly is exactly the one worth having numbers for.
+    await reportProfile(profile, exitCode);
   }
 }
 
@@ -105,10 +119,15 @@ interface ShipOptions {
   dryRun: boolean;
   skipConfirmation: boolean;
   jsonFlags: Record<string, unknown>;
+  profile: ShipProfile;
 }
 
 async function runShip(client: Client, options: ShipOptions): Promise<number> {
+  const { profile } = options;
+
+  const endDetect = profile.start('detect harnesses');
   const harnesses = await detectHarnesses();
+  endDetect({ found: availableHarnesses(harnesses).map(h => h.id) });
 
   if (options.listHarnesses) {
     return printHarnessList(client, harnesses, options.jsonFlags);
@@ -118,21 +137,26 @@ async function runShip(client: Client, options: ShipOptions): Promise<number> {
   if (!workspace) {
     return 1;
   }
+  profile.set('workspace', workspace);
 
   // The prompt is composed before a harness is selected so `--print-prompt`
   // works on a machine with no coding agent installed at all.
+  const endPreflight = profile.start('preflight');
   const preflight = await collectPreflight(client, workspace);
+  endPreflight({ linked: preflight.linked });
   const context = {
     workspace,
     vercelContext: formatPreflight(preflight),
   };
 
+  const endPrompt = profile.start('compose instructions');
   let prompt = options.promptFile
     ? await renderMissionFromFile(
         resolve(client.cwd, options.promptFile),
         context
       )
     : renderMission(context);
+  endPrompt();
 
   if (options.dryRun) {
     prompt += DRY_RUN_SUFFIX;
@@ -143,13 +167,19 @@ async function runShip(client: Client, options: ShipOptions): Promise<number> {
     return 0;
   }
 
+  const endSelect = profile.start('select harness');
   const harness = await selectHarness(client, harnesses, options);
+  endSelect({ harness: harness?.id });
   if (!harness) {
     return 1;
   }
+  profile.set('harness', harness.id);
+  profile.set('harnessVersion', harness.version);
 
   if (!options.skipConfirmation) {
+    const endConfirm = profile.start('waiting for confirmation');
     const decision = await confirmSession(client, harness, workspace, options);
+    endConfirm({ decision });
     if (decision === 'declined') {
       output.log('Canceled.');
       return 0;
@@ -166,6 +196,7 @@ async function runShip(client: Client, options: ShipOptions): Promise<number> {
     workspace,
     prompt,
     autoApprove: options.skipConfirmation,
+    profile,
   });
 }
 
