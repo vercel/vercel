@@ -28,11 +28,14 @@ export const platforms = [
     os: ['linux'],
     cpu: ['x64'],
   },
-  {
-    name: '@vercel/vc-native-win32-x64',
-    asset: 'vercel-windows-x64.exe',
-    os: ['win32'],
-    cpu: ['x64'],
-    binary: 'vercel.exe',
-  },
+  // Temporarily skipped: Windows release-binary is disabled (slow custom Node
+  // embed on windows-2022). Re-enable with the windows matrix entry in
+  // .github/workflows/release-binary.yml.
+  // {
+  //   name: '@vercel/vc-native-win32-x64',
+  //   asset: 'vercel-windows-x64.exe',
+  //   os: ['win32'],
+  //   cpu: ['x64'],
+  //   binary: 'vercel.exe',
+  // },
 ];

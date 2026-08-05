@@ -19,12 +19,21 @@ on:
         required: false
       APPLE_CERT_PASSWORD:
         required: false
-  # Manual rebuilds / republishes of an existing version.
+  # Manual rebuilds / republishes of an existing version, and natives-first
+  # dispatch from Release (so npm trusted publishing sees this workflow file
+  # as the top-level identity — workflow_call presents release.yml instead).
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing tag to build (e.g. vercel@53.3.1)
-        required: true
+        description: Existing tag to build (e.g. vercel@53.3.1). Optional when ref is set.
+        required: false
+        type: string
+        default: ''
+      ref:
+        description: Git SHA to checkout/build (natives-first from Release before vercel is tagged)
+        required: false
+        type: string
+        default: ''
 
 # Default read; build job elevates to write for GitHub Release uploads on
 # workflow_dispatch. The Release caller must grant contents: write so that
@@ -95,6 +104,10 @@ jobs:
             custom_node_platform: linux
             custom_node_arch: x64
             manylinux_image: quay.io/pypa/manylinux_2_28_x86_64
+          # Temporarily skip Windows: custom Node embed is ~45–80+ min on
+          # windows-2022 and dominates release time. Re-enable with the matrix
+          # entry below and the win32 platform in
+          # packages/vc-native/scripts/platforms.mjs.
           # Node 24.14.1 does not build with Clang 22 on the VS 2026 image.
           # windows-latest migrated to VS 2026 in June 2026, so use the
           # stable VS 2022/LLVM 20 toolchain until the embedded Node source
@@ -102,21 +115,27 @@ jobs:
           # Standard windows-2022 (not windows-latest-8-core / *-oss): the org
           # has no Windows Server 2022 larger runner shared with this private
           # repo; invented labels like windows-2022-8-core queue forever.
-          - runs-on: windows-2022
-            target: node24.14.1-win-x64
-            asset: vercel-windows-x64
-            ext: '.exe'
-            sign: false
-            smoke: true
-            custom_node_path: .node-runtime/node-v24.14.1-win-x64-small-icu/node.exe
-            custom_node_platform: win
-            custom_node_arch: x64
+          # - runs-on: windows-2022
+          #   target: node24.14.1-win-x64
+          #   asset: vercel-windows-x64
+          #   ext: '.exe'
+          #   sign: false
+          #   smoke: true
+          #   custom_node_path: .node-runtime/node-v24.14.1-win-x64-small-icu/node.exe
+          #   custom_node_platform: win
+          #   custom_node_arch: x64
     runs-on: ${{ matrix['runs-on'] }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || inputs.tag || github.ref }}
+
+      - name: Require tag or ref for workflow_dispatch
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.tag == '' && inputs.ref == '' }}
+        run: |
+          echo "::error::workflow_dispatch requires inputs.tag or inputs.ref"
+          exit 1
 
       - name: Setup Turborepo Remote Cache
         uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
@@ -383,7 +402,9 @@ jobs:
           if-no-files-found: error
 
       - name: Wait for GitHub Release
-        if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
+        # Only when rebuilding against an existing release tag — not when
+        # Release dispatches with a bare SHA for natives-first publish.
+        if: ${{ github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.tag != '') }}
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -413,7 +434,7 @@ jobs:
           exit 1
 
       - name: Upload to GitHub Release
-        if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.tag != '') }}
         shell: bash
         working-directory: packages/cli
         env:
@@ -520,13 +541,14 @@ jobs:
           path: packages/cli/dist-bin
           merge-multiple: true
 
-      # workflow_call (from Release): always publish so vercel can inject
-      # optionalDependencies. workflow_dispatch: publish latest as usual, or a
-      # rebuild-* dist-tag for non-latest manual rebuilds.
+      # workflow_call (legacy) / Release dispatch with inputs.ref: always publish
+      # so vercel can inject optionalDependencies (default latest dist-tag).
+      # Manual workflow_dispatch with only inputs.tag: publish latest when the
+      # CLI version matches npm latest, otherwise a rebuild-* dist-tag.
       - name: Publish native npm packages
         shell: bash
         run: |
-          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && -n "${{ inputs.tag }}" && -z "${{ inputs.ref }}" ]]; then
             version="$(node -p "require('./packages/cli/package.json').version")"
             latest="$(npm view vercel version)"
             if [[ "$version" == "$latest" ]]; then

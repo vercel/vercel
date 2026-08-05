@@ -49,21 +49,26 @@ jobs:
     name: Binary release
     needs: determine
     if: needs.determine.outputs.should-release-binary == 'true'
-    # Reusable workflow permissions are capped by the calling job.
-    # - id-token: write — npm trusted publishing (OIDC) in publish-npm
-    # - contents: write — release-binary's build job requests write for
-    #   optional GitHub Release asset uploads (workflow_dispatch path)
+    # Dispatch release-binary.yml as a top-level workflow_dispatch (do not use
+    # workflow_call). npm trusted publishing for @vercel/vc-native* is configured
+    # for release-binary.yml; reusable workflow_call presents release.yml and
+    # fails with ENEEDAUTH.
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
     permissions:
-      contents: write
-      id-token: write
-    uses: ./.github/workflows/release-binary.yml
-    with:
-      ref: ${{ github.sha }}
-    secrets:
-      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-      APPLE_CERT_DATA: ${{ secrets.APPLE_CERT_DATA }}
-      APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-      APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+      actions: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Dispatch release-binary and wait
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const script = require('./utils/dispatch-release-binary.js')
+            await script({ github, context, core })
 
   release:
     name: Release
@@ -146,6 +151,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          # Only when binary was skipped (no vercel publish this push).
+          VERCEL_SKIP_NATIVE_DEPS: ${{ needs.binary.result == 'skipped' && '1' || '' }}
 
       - name: Publish CLI release notes
         if: steps.changesets.outputs.published == 'true' && contains(fromJSON(steps.changesets.outputs.publishedPackages).*.name, 'vercel')
