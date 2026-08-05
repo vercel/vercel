@@ -51,6 +51,17 @@ export function isOwnerLookupUnavailableLink(
   );
 }
 
+export interface OrgSlugUnavailableProjectLinked extends ProjectLinked {
+  org: Org & { slug: '' };
+  orgSlugUnavailable: true;
+}
+
+export function isOrgSlugUnavailableLink(
+  link: ProjectLinked
+): link is OrgSlugUnavailableProjectLinked {
+  return 'orgSlugUnavailable' in link && link.orgSlugUnavailable === true;
+}
+
 function isOwnerLookupUnavailableError(error: unknown): boolean {
   return (
     isAPIError(error) &&
@@ -202,6 +213,7 @@ async function getProjectLinkFromRepoLink(
       repoRoot: repoLink.rootPath,
       orgId,
       projectId: project.id,
+      projectName: project.name,
       projectRootDirectory: project.directory,
     };
   }
@@ -317,6 +329,8 @@ export interface GetLinkedProjectOptions {
    * linked project, but cannot fetch the owning user/team.
    */
   allowOwnerLookupFallback?: boolean;
+  /** Uses local link metadata without fetching the owner or project. */
+  skipRemoteLookup?: boolean;
 }
 
 export type ProjectLinkResultWithOrgId = ProjectLinkResult & {
@@ -425,6 +439,39 @@ export async function getLinkedProject(
 
   if (!link) {
     return { status: 'not_linked', org: null, project: null, orgId };
+  }
+
+  if (options.skipRemoteLookup && link.projectName) {
+    const settings = (link as ProjectLink & { settings?: Partial<Project> })
+      .settings;
+    const project: Project = {
+      ...settings,
+      id: link.projectId,
+      accountId: link.orgId,
+      name: link.projectName,
+      createdAt: settings?.createdAt ?? 0,
+      updatedAt: settings?.createdAt ?? 0,
+      rootDirectory:
+        link.projectRootDirectory ?? settings?.rootDirectory ?? null,
+    };
+
+    const localProjectLink: OrgSlugUnavailableProjectLinked = {
+      status: 'linked',
+      org: {
+        type: link.orgId.startsWith('team_') ? 'team' : 'user',
+        id: link.orgId,
+        slug: '',
+      },
+      project,
+      repoRoot: link.repoRoot,
+      orgSlugUnavailable: true,
+    };
+
+    return {
+      ...localProjectLink,
+      projectRootDirectory: link.projectRootDirectory,
+      orgId: link.orgId,
+    };
   }
 
   output.spinner('Retrieving project…', 1000);

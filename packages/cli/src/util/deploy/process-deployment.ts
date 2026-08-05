@@ -46,6 +46,7 @@ export default async function processDeployment({
   manual,
   jsonOutput,
   linkedProject,
+  linkedProjectIsPartial,
   ...args
 }: {
   now: Now;
@@ -68,6 +69,7 @@ export default async function processDeployment({
   manual?: boolean;
   jsonOutput?: boolean;
   linkedProject?: Project;
+  linkedProjectIsPartial?: boolean;
 }) {
   const {
     now,
@@ -124,7 +126,9 @@ export default async function processDeployment({
 
   const deployingSpinnerVal = isSettingUpProject
     ? 'Setting up project'
-    : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`;
+    : `Deploying ${chalk.bold(
+        org.slug ? `${org.slug}/${projectName}` : projectName
+      )}`;
   output.spinner(deployingSpinnerVal, 0);
 
   // collect indications to show the user once
@@ -138,10 +142,35 @@ export default async function processDeployment({
     output.stopSpinner();
   }
 
+  const linkedProjectLookup =
+    linkedProjectIsPartial && linkedProject && !noWait
+      ? getProjectByNameOrId(
+          client,
+          linkedProject.id,
+          linkedProject.accountId
+        ).then(
+          project => ({ project }) as const,
+          error => ({ error }) as const
+        )
+      : undefined;
   let rollingRelease: ProjectRollingRelease | undefined =
     linkedProject?.rollingRelease;
-  let project: Project | ProjectNotFound | undefined = linkedProject;
+  let project: Project | ProjectNotFound | undefined = linkedProjectLookup
+    ? undefined
+    : linkedProject;
   let latestLogMessage = '';
+
+  async function resolveProject(): Promise<Project | ProjectNotFound> {
+    if (!linkedProjectLookup) {
+      return getProjectByNameOrId(client, projectName);
+    }
+
+    const result = await linkedProjectLookup;
+    if ('error' in result) {
+      throw result.error;
+    }
+    return result.project;
+  }
 
   try {
     for await (const event of createDeployment(clientOptions, requestBody)) {
@@ -302,8 +331,11 @@ export default async function processDeployment({
         return event.payload;
       }
 
-      if (project === undefined) {
-        project = await getProjectByNameOrId(client, projectName);
+      if (
+        project === undefined &&
+        (!linkedProjectLookup || event.type === 'ready')
+      ) {
+        project = await resolveProject();
         rollingRelease = (project as Project)?.rollingRelease;
       }
 

@@ -899,6 +899,123 @@ describe('deploy', () => {
     }
   });
 
+  it('should deploy without waiting for the linked project lookup', async () => {
+    const cwd = setupUnitFixture('commands/deploy/static');
+    await fs.writeJSON(join(cwd, '.vercel/project.json'), {
+      orgId: 'team_dummy',
+      projectId: 'prj_static',
+      projectName: 'static',
+    });
+
+    let startProjectLookup!: () => void;
+    const projectLookupStarted = new Promise<void>(resolve => {
+      startProjectLookup = resolve;
+    });
+    let finishProjectLookup!: () => void;
+    const projectLookupFinished = new Promise<void>(resolve => {
+      finishProjectLookup = resolve;
+    });
+    client.scenario.get(`/v9/projects/prj_static`, async (_req, res) => {
+      startProjectLookup();
+      await projectLookupFinished;
+      res.json({
+        ...defaultProject,
+        accountId: 'team_dummy',
+        id: 'prj_static',
+        name: 'static',
+        rollingRelease: {
+          enabled: true,
+          advancementType: 'automatic',
+        },
+      });
+    });
+
+    let startDeploymentRequest!: () => void;
+    const deploymentRequestStarted = new Promise<void>(resolve => {
+      startDeploymentRequest = resolve;
+    });
+    let createTeamId: unknown;
+    let createBody: Record<string, unknown> | undefined;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      startDeploymentRequest();
+      createTeamId = req.query.teamId;
+      createBody = req.body;
+      res.json({
+        creator: {
+          uid: 'user_dummy',
+          username: 'user_dummy',
+        },
+        id: 'dpl_local_link',
+        url: 'local-link.vercel.app',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+        target: 'preview',
+      });
+    });
+
+    client.cwd = cwd;
+    client.setArgv('deploy');
+
+    const originalVercelTeamId = process.env.VERCEL_TEAM_ID;
+    delete process.env.VERCEL_TEAM_ID;
+    let exitCode: number;
+    try {
+      const exitCodePromise = deploy(client);
+
+      await Promise.all([projectLookupStarted, deploymentRequestStarted]);
+      finishProjectLookup();
+      exitCode = await exitCodePromise;
+    } finally {
+      if (originalVercelTeamId === undefined) {
+        delete process.env.VERCEL_TEAM_ID;
+      } else {
+        process.env.VERCEL_TEAM_ID = originalVercelTeamId;
+      }
+    }
+
+    expect(exitCode).toEqual(0);
+    expect(createTeamId).toEqual('team_dummy');
+    expect(createBody?.project).toEqual('prj_static');
+    expect(client.stderr.getFullOutput()).toContain('Deploying static');
+    expect(client.stderr.getFullOutput()).not.toContain('team_dummy/static');
+    expect(client.stderr.getFullOutput()).toContain('Releasing');
+  });
+
+  it('should surface deployment authorization errors from local project metadata', async () => {
+    const cwd = setupUnitFixture('commands/deploy/static');
+    await fs.writeJSON(join(cwd, '.vercel/project.json'), {
+      orgId: 'team_dummy',
+      projectId: 'prj_static',
+      projectName: 'static',
+    });
+    client.scenario.get(`/v9/projects/prj_static`, (_req, res) => {
+      res.json({
+        ...defaultProject,
+        accountId: 'team_dummy',
+        id: 'prj_static',
+        name: 'static',
+      });
+    });
+    client.scenario.post(`/v13/deployments`, (_req, res) => {
+      res.status(403).json({
+        error: {
+          code: 'forbidden',
+          message: 'Not authorized to deploy this project.',
+        },
+      });
+    });
+
+    client.cwd = cwd;
+    client.setArgv('deploy');
+    const exitCodePromise = deploy(client);
+
+    await expect(client.stderr).toOutput(
+      'Error: Not authorized to deploy this project.\n'
+    );
+    expect(await exitCodePromise).toEqual(1);
+  });
+
   it('should deploy a linked project when owner lookup is unavailable', async () => {
     const originalVercelTeamId = process.env.VERCEL_TEAM_ID;
     delete process.env.VERCEL_TEAM_ID;

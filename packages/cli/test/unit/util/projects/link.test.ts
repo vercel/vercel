@@ -5,6 +5,7 @@ import { mkdirp, writeJSON } from 'fs-extra';
 import {
   getLinkFromDir,
   getLinkedProject,
+  isOrgSlugUnavailableLink,
   isOwnerLookupUnavailableLink,
 } from '../../../../src/util/projects/link';
 import { client } from '../../../mocks/client';
@@ -57,6 +58,46 @@ describe('getLinkFromDir', () => {
 });
 
 describe('getLinkedProject', () => {
+  it('uses local link metadata without fetching the owner or project', async () => {
+    const cwd = setupTmpDir('local-project-link');
+    await mkdirp(join(cwd, '.vercel'));
+    await writeJSON(join(cwd, '.vercel/project.json'), {
+      orgId: 'team_local',
+      projectId: 'prj_local',
+      projectName: 'local-project',
+      settings: {
+        createdAt: 123,
+        framework: 'nextjs',
+        rootDirectory: 'app',
+      },
+    });
+
+    const link = await getLinkedProject(client, {
+      cwd,
+      skipRemoteLookup: true,
+    });
+
+    expect(link).toMatchObject({
+      status: 'linked',
+      org: {
+        id: 'team_local',
+        slug: '',
+        type: 'team',
+      },
+      project: {
+        id: 'prj_local',
+        accountId: 'team_local',
+        name: 'local-project',
+        framework: 'nextjs',
+        rootDirectory: 'app',
+      },
+      orgId: 'team_local',
+    });
+    expect(link.status === 'linked' && isOrgSlugUnavailableLink(link)).toBe(
+      true
+    );
+  });
+
   it('should fail to return a link when token is missing', async () => {
     const cwd = fixture('vercel-pull-next');
 
