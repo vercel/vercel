@@ -1,5 +1,11 @@
 # vercel
 
+## 58.7.1
+
+### Patch Changes
+
+- e089b31: Suppress version/beta banner and deploy-subdirectory warnings for `vercel api` and `--json` / `--format json` so agents can parse machine-readable output.
+
 ## 58.7.0
 
 ### Minor Changes
