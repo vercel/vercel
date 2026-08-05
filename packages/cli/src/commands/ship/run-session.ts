@@ -32,7 +32,11 @@ import { StreamRenderer } from './render-stream';
 import { DeploymentTracker } from './deployments';
 import { HandoffKeyListener } from './handoff-key';
 import { NativeTuiSession, nativeTuiSupported } from './native-handoff';
-import { printContinuation, resolveSessionId } from './session-continuation';
+import {
+  printContinuation,
+  resolveSessionId,
+  waitForTranscriptSettle,
+} from './session-continuation';
 import { agentLabel, blankGutter, gutter, GUTTER_WIDTH } from './voice';
 import { textWidth, wrapAnsi } from './wrap';
 import type { ShipProfile } from './profile';
@@ -749,6 +753,11 @@ async function runNativeTui(options: {
   profile: ShipProfile;
 }): Promise<void> {
   const { harness, nativeTui, workspace, startedAt, profile } = options;
+
+  // A hand-off can follow a graceful mid-turn interrupt whose transcript
+  // writes are still flushing; resume only once the agent's store is quiet,
+  // or the TUI would open on a conversation missing its latest work.
+  await waitForTranscriptSettle({ harnessId: harness.id, workspace });
 
   const agentSessionId = await resolveSessionId({
     harnessId: harness.id,

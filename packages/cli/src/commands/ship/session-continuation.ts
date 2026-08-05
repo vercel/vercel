@@ -167,6 +167,62 @@ async function readSessionId(
 }
 
 /**
+ * Wait until the agent's transcript store for this workspace stops changing.
+ *
+ * The native hand-off can follow a graceful mid-turn interrupt, and the agent
+ * persists that turn asynchronously while ship is already heading into the
+ * hand-off; resuming before the flush lands would show a conversation missing
+ * its latest work. Best-effort and bounded: an unreadable store returns
+ * immediately, and a store that never settles is resumed anyway after the
+ * timeout — a slightly stale resume beats no hand-off.
+ */
+export async function waitForTranscriptSettle(options: {
+  harnessId: HarnessId;
+  workspace: string;
+  timeoutMs?: number;
+  /** Overrides the store location, for tests. */
+  transcriptDir?: string;
+}): Promise<void> {
+  if (options.harnessId !== 'claude-code') {
+    return;
+  }
+  const dir =
+    options.transcriptDir ??
+    join(
+      homedir(),
+      '.claude',
+      'projects',
+      encodeProjectPath(options.workspace)
+    );
+  const deadline = Date.now() + (options.timeoutMs ?? 4000);
+
+  let previous: string | undefined;
+  while (Date.now() < deadline) {
+    let fingerprint: string;
+    try {
+      const entries = (await readdir(dir)).filter(name =>
+        name.endsWith('.jsonl')
+      );
+      const stats = await Promise.all(
+        entries.map(async name => {
+          const s = await stat(join(dir, name));
+          return [name, s.size, s.mtimeMs];
+        })
+      );
+      fingerprint = JSON.stringify(stats.sort());
+    } catch {
+      return; // No store to wait on.
+    }
+
+    if (previous !== undefined && fingerprint === previous) {
+      return;
+    }
+    previous = fingerprint;
+    await new Promise(resolve => setTimeout(resolve, 300));
+  }
+}
+
+/**
  * Claude Code names each project directory after the absolute path with every
  * non-alphanumeric character replaced by a dash, so `/private/var/folders/_g`
  * becomes `-private-var-folders--g`.
