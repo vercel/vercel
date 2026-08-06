@@ -1,15 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import stripAnsi from 'strip-ansi';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import output from '../../../../src/output-manager';
 import {
-  formatStint,
+  printStint,
   summarizeStint,
   type StintMessage,
 } from '../../../../src/commands/ship/replay-stint';
-
-/** ANSI-stripped, for assertions about words rather than styling. */
-function plain(lines: string[]): string[] {
-  // eslint-disable-next-line no-control-regex
-  return lines.map(line => line.replace(/\x1b\[[0-9;]*m/g, ''));
-}
 
 const STINT: StintMessage[] = [
   {
@@ -35,48 +31,58 @@ const STINT: StintMessage[] = [
       },
     ],
   },
-  {
-    role: 'user',
-    parts: [{ type: 'tool-result', toolName: 'bash' }],
-  },
+  { role: 'user', parts: [{ type: 'tool-result', toolName: 'bash' }] },
+  { role: 'user', parts: [{ type: 'tool-result', isError: true }] },
 ];
 
-describe('formatStint', () => {
-  it('attributes each line to its actor', () => {
-    const lines = plain(formatStint(STINT, { harnessId: 'claude-code' }));
+describe('printStint', () => {
+  let written: string[];
 
-    expect(lines[0]).toMatch(/\byou\b.*make the api dockerfile/);
-    expect(lines.some(l => /\bclaude\b.*restructure/.test(l))).toBe(true);
-    expect(lines.some(l => /\bran\b.*vercel build/.test(l))).toBe(true);
-    expect(lines.some(l => /\bedited\b.*api\/Dockerfile/.test(l))).toBe(true);
+  beforeEach(() => {
+    written = [];
+    vi.spyOn(output, 'print').mockImplementation((str: string) => {
+      written.push(str);
+    });
+    vi.spyOn(output, 'debug').mockImplementation(() => {});
   });
 
-  it('renders nothing for successful tool results', () => {
-    const lines = plain(formatStint(STINT, { harnessId: 'claude-code' }));
-    // Four content parts render; the bare tool-result does not.
-    expect(lines.filter(l => l.trim()).length).toBe(4);
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
-  it('marks failed tool results', () => {
-    const lines = plain(
-      formatStint(
-        [{ role: 'user', parts: [{ type: 'tool-result', isError: true }] }],
-        { harnessId: 'claude-code' }
-      )
-    );
-    expect(lines.some(l => /failed/.test(l))).toBe(true);
+  const all = () => stripAnsi(written.join(''));
+
+  it('renders the stint through the live pipeline, attributed', () => {
+    printStint(STINT, { harnessId: 'claude-code' });
+
+    const text = all();
+    expect(text).toMatch(/you\s+make the api dockerfile/);
+    expect(text).toMatch(/claude\s+I'll restructure/);
+    expect(text).toMatch(/ran\s+vercel build/);
+    expect(text).toMatch(/edited\s+api\/Dockerfile/);
+  });
+
+  it('marks the failed call with the renderer, not a bespoke line', () => {
+    printStint(STINT, { harnessId: 'claude-code' });
+    expect(all()).toMatch(/failed/);
+  });
+
+  it('does not fabricate durations for instant replays', () => {
+    printStint(STINT, { harnessId: 'claude-code' });
+    expect(all()).not.toMatch(/\btook\b/);
   });
 
   it('keeps the tail of an oversized stint, and says so', () => {
-    const long: StintMessage[] = Array.from({ length: 300 }, (_, i) => ({
+    const long: StintMessage[] = Array.from({ length: 120 }, (_, i) => ({
       role: 'assistant' as const,
       parts: [{ type: 'text', text: `line ${i}` }],
     }));
 
-    const lines = plain(formatStint(long, { harnessId: 'claude-code' }));
-    expect(lines.length).toBe(161); // cap + the omission notice
-    expect(lines[0]).toMatch(/earlier lines/);
-    expect(lines[lines.length - 1]).toMatch(/line 299/);
+    printStint(long, { harnessId: 'claude-code' });
+    const text = all();
+    expect(text).toMatch(/40 earlier exchanges/);
+    expect(text).not.toMatch(/\bline 39\b/);
+    expect(text).toMatch(/line 119/);
   });
 });
 

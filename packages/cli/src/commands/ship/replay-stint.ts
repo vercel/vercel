@@ -1,15 +1,8 @@
 import chalk from 'chalk';
 import output from '../../output-manager';
-import { inline } from './markdown';
-import { summarizeToolInput } from './render-stream';
-import {
-  actionVerb,
-  agentLabel,
-  blankGutter,
-  gutter,
-  GUTTER_WIDTH,
-} from './voice';
-import { textWidth, truncateAnsi, wrapAnsi } from './wrap';
+import { StreamRenderer } from './render-stream';
+import { blankGutter, gutter, GUTTER_WIDTH } from './voice';
+import { textWidth, wrapAnsi } from './wrap';
 
 /**
  * Render the conversation that happened in the agent's own interface into
@@ -18,9 +11,13 @@ import { textWidth, truncateAnsi, wrapAnsi } from './wrap';
  *
  * The messages come from the harness's `readHistory` — the adapter's
  * normalized view of the runtime's own persisted conversation — not from
- * scraping terminal output or asking the model to recall. Rendering follows
- * the transcript's standing rules: prose wraps into the text column, actions
- * carry a verb and are cut rather than folded, reasoning does not appear.
+ * scraping terminal output or asking the model to recall. Rendering drives
+ * the same `StreamRenderer` the live session uses, by translating history
+ * parts into synthetic stream parts: prose gets the same line-at-a-time
+ * markdown, blocks the same spacing and labelling, actions the same verbs —
+ * a replayed stint and a streamed turn are indistinguishable on the page.
+ * The one thing the renderer has no concept of is the user speaking, so
+ * `you` lines are printed directly between renderer feeds.
  */
 export interface StintMessage {
   role: 'user' | 'assistant';
@@ -38,61 +35,71 @@ export interface StintMessage {
  * A stint is user-paced and usually short; one that is not gets its tail,
  * which is where the state the next turn builds on was reached.
  */
-const MAX_LINES = 160;
-
-/** Build the attributed lines. Pure, for tests; `printStint` writes them. */
-export function formatStint(
-  messages: ReadonlyArray<StintMessage>,
-  options: { harnessId: string }
-): string[] {
-  const agent = agentLabel(options.harnessId);
-  const width = textWidth(GUTTER_WIDTH);
-  const lines: string[] = [];
-
-  for (const message of messages) {
-    for (const part of message.parts) {
-      if (part.type === 'text' && part.text) {
-        if (message.role === 'user') {
-          pushWrapped(lines, gutter('you', 'you'), part.text, width);
-        } else {
-          pushWrapped(lines, gutter('agent', agent), inline(part.text), width);
-        }
-        continue;
-      }
-
-      if (part.type === 'tool-call' && message.role === 'assistant') {
-        const verb = actionVerb(part.toolName ?? 'tool');
-        const summary =
-          summarizeToolInput(part.input) || chalk.dim(part.toolName ?? 'tool');
-        // Cut, never folded: the shape of a command is what is scanned for.
-        lines.push(gutter('action', verb) + truncateAnsi(summary, width));
-        continue;
-      }
-
-      if (part.type === 'tool-result' && part.isError) {
-        lines.push(blankGutter() + chalk.red('failed'));
-      }
-    }
-  }
-
-  if (lines.length > MAX_LINES) {
-    const omitted = lines.length - MAX_LINES;
-    return [
-      blankGutter() +
-        chalk.dim(`… ${omitted} earlier lines — the agent has the full record`),
-      ...lines.slice(-MAX_LINES),
-    ];
-  }
-  return lines;
-}
+const MAX_MESSAGES = 80;
 
 export function printStint(
   messages: ReadonlyArray<StintMessage>,
   options: { harnessId: string }
 ): void {
-  for (const line of formatStint(messages, options)) {
-    output.print(`${line}\n`);
+  const kept = messages.slice(-MAX_MESSAGES);
+  if (kept.length < messages.length) {
+    output.print(
+      blankGutter() +
+        chalk.dim(
+          `… ${messages.length - kept.length} earlier exchanges — the agent has the full record`
+        ) +
+        '\n'
+    );
   }
+
+  // A private renderer: same pipeline, no activity line to fight, and its
+  // per-turn counters cannot pollute the live session's.
+  const renderer = new StreamRenderer();
+  renderer.attribute(options.harnessId);
+  renderer.beginTurn();
+
+  // History tool results carry no call ids; replay settles calls in order.
+  let nextCallId = 0;
+  const openCalls: string[] = [];
+
+  for (const message of kept) {
+    for (const part of message.parts) {
+      if (part.type === 'text' && part.text) {
+        if (message.role === 'user') {
+          renderer.flush();
+          printYouSaid(part.text);
+        } else {
+          const text = part.text.endsWith('\n') ? part.text : `${part.text}\n`;
+          renderer.render({ type: 'text-delta', text });
+        }
+        continue;
+      }
+
+      if (part.type === 'tool-call' && message.role === 'assistant') {
+        const toolCallId = `replay-${++nextCallId}`;
+        openCalls.push(toolCallId);
+        renderer.render({
+          type: 'tool-call',
+          toolCallId,
+          toolName: part.toolName ?? 'tool',
+          input: part.input,
+        });
+        continue;
+      }
+
+      if (part.type === 'tool-result') {
+        const toolCallId = openCalls.shift();
+        if (toolCallId) {
+          renderer.render({
+            type: part.isError ? 'tool-error' : 'tool-result',
+            toolCallId,
+          });
+        }
+      }
+    }
+  }
+
+  renderer.flush();
 }
 
 /** Count what the stint contained, for the session ledger. */
@@ -117,14 +124,13 @@ export function summarizeStint(messages: ReadonlyArray<StintMessage>): {
   return { userMessages, agentReplies, toolCalls };
 }
 
-function pushWrapped(
-  lines: string[],
-  firstGutter: string,
-  text: string,
-  width: number
-): void {
-  const wrapped = wrapAnsi(text, width);
-  for (const [index, line] of wrapped.entries()) {
-    lines.push((index === 0 ? firstGutter : blankGutter()) + line);
+/** The user's words, in the `you` gutter, set off like the approval prompts. */
+function printYouSaid(text: string): void {
+  output.print('\n');
+  const lines = wrapAnsi(text, textWidth(GUTTER_WIDTH));
+  for (const [index, line] of lines.entries()) {
+    output.print(
+      (index === 0 ? gutter('you', 'you') : blankGutter()) + line + '\n'
+    );
   }
 }
