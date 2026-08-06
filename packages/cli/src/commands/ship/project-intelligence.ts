@@ -1,0 +1,296 @@
+import { access, readdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import { frameworkList } from '@vercel/frameworks';
+import {
+  detectFrameworks,
+  detectServices,
+  getWorkspaces,
+  LocalFileSystemDetector,
+} from '@vercel/fs-detectors';
+import output from '../../output-manager';
+
+/**
+ * Deployment intelligence the CLI can compute deterministically before the
+ * agent starts.
+ *
+ * Everything here is advisory: the detectors are deliberately conservative and
+ * incomplete — that is why an agent drives the mission at all — but whatever
+ * they do find is fact, and every fact injected into the prompt is a discovery
+ * round trip the agent does not spend. Measured against a real session, the
+ * agent reconstructed exactly these facts by hand (file tree, workspace
+ * manager, framework per directory, which compose/proxy files exist) before it
+ * could plan anything.
+ *
+ * This module is the seam for future static analysis. As the CLI's detectors
+ * grow — more layouts, more intent-file formats, entrypoint inference — wire
+ * them in here and the mission gets faster and more accurate without touching
+ * the instructions.
+ */
+export interface ProjectIntelligence {
+  /** Workspace managers found (`pnpm`, `yarn`, `npm`, `nx`, `rush`). */
+  workspaceManagers: string[];
+  /** Frameworks detected per directory, `.` meaning the workspace root. */
+  frameworks: DetectedFrameworks[];
+  /** Services resolved from `vercel.json` or inferred from the layout. */
+  services: DetectedService[];
+  /** Where the services came from, when any were found. */
+  servicesSource?: string;
+  /** Deployment-intent files present, relative to the workspace. */
+  intentFiles: string[];
+}
+
+export interface DetectedFrameworks {
+  path: string;
+  frameworks: string[];
+}
+
+export interface DetectedService {
+  name: string;
+  root?: string;
+  framework?: string;
+  runtime?: string;
+  mountPath?: string;
+  entrypoint?: string;
+}
+
+/**
+ * Directories that cannot contain a deployable service of their own and are
+ * expensive to stat through.
+ */
+const SKIP_DIRS = new Set([
+  'node_modules',
+  'vendor',
+  'dist',
+  'build',
+  'out',
+  'coverage',
+  'target',
+  '__pycache__',
+]);
+
+/** Upper bound on directories probed, so a huge flat repo stays cheap. */
+const MAX_SCAN_DIRS = 24;
+
+/**
+ * Files that encode how the application is meant to run. The mission calls
+ * these "the highest-value files in the repo"; naming the ones that exist
+ * saves the agent a tree walk.
+ */
+const INTENT_FILES = [
+  'vercel.json',
+  'docker-compose.yml',
+  'docker-compose.yaml',
+  'compose.yaml',
+  'compose.yml',
+  'Dockerfile',
+  'Containerfile',
+  'fly.toml',
+  'render.yaml',
+  'railway.json',
+  'railway.toml',
+  'Procfile',
+  'nginx.conf',
+  'default.conf',
+  'Caddyfile',
+  'traefik.yml',
+  '.env.example',
+  '.env.sample',
+  'Makefile',
+];
+
+/**
+ * Run every deterministic detector the CLI has against the workspace. Each
+ * detector is independent and best-effort: a failure in one is logged and
+ * costs only its own facts.
+ */
+export async function collectProjectIntelligence(
+  cwd: string
+): Promise<ProjectIntelligence> {
+  const intelligence: ProjectIntelligence = {
+    workspaceManagers: [],
+    frameworks: [],
+    services: [],
+    intentFiles: [],
+  };
+
+  const fs = new LocalFileSystemDetector(cwd);
+  const dirs = await listScanDirs(cwd);
+
+  await Promise.all([
+    (async () => {
+      try {
+        const workspaces = await getWorkspaces({ fs });
+        intelligence.workspaceManagers = [
+          ...new Set(workspaces.map(workspace => workspace.type)),
+        ];
+      } catch (error) {
+        debug('workspace detection', error);
+      }
+    })(),
+
+    (async () => {
+      try {
+        const detected = await Promise.all(
+          dirs.map(async dir => {
+            const scoped = dir === '.' ? fs : fs.chdir(dir);
+            const frameworks = await detectFrameworks({
+              fs: scoped,
+              frameworkList,
+            });
+            return {
+              path: dir,
+              frameworks: frameworks.map(framework => framework.name),
+            };
+          })
+        );
+        intelligence.frameworks = detected.filter(
+          entry => entry.frameworks.length > 0
+        );
+      } catch (error) {
+        debug('framework detection', error);
+      }
+    })(),
+
+    (async () => {
+      try {
+        const result = await detectServices({ fs });
+        if (result.services.length > 0) {
+          intelligence.servicesSource = result.source;
+          intelligence.services = result.services.map(service => ({
+            name: service.name,
+            root: 'root' in service ? service.root : service.workspace,
+            framework: service.framework,
+            runtime: service.runtime,
+            entrypoint: service.entrypoint,
+            mountPath:
+              'routePrefix' in service ? service.routePrefix : undefined,
+          }));
+        }
+      } catch (error) {
+        debug('service detection', error);
+      }
+    })(),
+
+    (async () => {
+      try {
+        const checks = dirs.flatMap(dir =>
+          INTENT_FILES.map(async file => {
+            const relative = dir === '.' ? file : join(dir, file);
+            try {
+              await access(join(cwd, relative));
+              return relative;
+            } catch {
+              return undefined;
+            }
+          })
+        );
+        intelligence.intentFiles = (await Promise.all(checks)).filter(
+          (file): file is string => file !== undefined
+        );
+      } catch (error) {
+        debug('intent file scan', error);
+      }
+    })(),
+  ]);
+
+  return intelligence;
+}
+
+/**
+ * Render the intelligence as the prose block substituted into the mission, or
+ * `undefined` when nothing at all was detected — an empty claim of analysis
+ * would only invite the agent to trust a blank.
+ */
+export function formatProjectIntelligence(
+  intelligence: ProjectIntelligence
+): string | undefined {
+  const facts: string[] = [];
+
+  if (intelligence.workspaceManagers.length > 0) {
+    facts.push(
+      `  - Workspace manager: ${intelligence.workspaceManagers.join(', ')}`
+    );
+  }
+
+  if (intelligence.frameworks.length > 0) {
+    const rendered = intelligence.frameworks
+      .map(entry => {
+        const where = entry.path === '.' ? 'workspace root' : `${entry.path}/`;
+        return `${where} → ${entry.frameworks.join(' + ')}`;
+      })
+      .join('; ');
+    facts.push(`  - Frameworks: ${rendered}`);
+  }
+
+  if (intelligence.intentFiles.length > 0) {
+    facts.push(
+      `  - Deployment-intent files present: ${intelligence.intentFiles.join(', ')}`
+    );
+  }
+
+  if (facts.length === 0) {
+    return undefined;
+  }
+
+  if (intelligence.services.length > 0) {
+    const rendered = intelligence.services
+      .map(service => {
+        const detail = [
+          service.root ? `root ${service.root}` : undefined,
+          service.framework,
+          service.runtime,
+          service.entrypoint ? `entrypoint ${service.entrypoint}` : undefined,
+          service.mountPath ? `mounted at ${service.mountPath}` : undefined,
+        ]
+          .filter(Boolean)
+          .join(', ');
+        return detail ? `${service.name} (${detail})` : service.name;
+      })
+      .join('; ');
+    facts.push(
+      `  - Services (source: ${intelligence.servicesSource}): ${rendered}`
+    );
+  } else {
+    facts.push(
+      '  - Services: none configured or inferred — expect to write the `services` block in `vercel.json` yourself.'
+    );
+  }
+
+  return [
+    '- Static analysis of this workspace, pre-computed by the CLI. These findings',
+    '  are facts — start from them instead of re-deriving them. They are not',
+    '  complete (detection reads manifests, not routing or code), so add what they',
+    '  could not see:',
+    ...facts,
+  ].join('\n');
+}
+
+/**
+ * The workspace root plus its first-level directories. Framework and intent
+ * detection run per directory, which is what catches the services a JS-centric
+ * workspace file omits (a `pyproject.toml` API next to a pnpm workspace, say).
+ */
+async function listScanDirs(cwd: string): Promise<string[]> {
+  const dirs = ['.'];
+  try {
+    const entries = await readdir(cwd, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name.startsWith('.')) continue;
+      if (SKIP_DIRS.has(entry.name)) continue;
+      dirs.push(entry.name);
+      if (dirs.length >= MAX_SCAN_DIRS) break;
+    }
+  } catch {
+    // Unreadable workspace — scan the root only.
+  }
+  return dirs;
+}
+
+function debug(what: string, error: unknown): void {
+  output.debug(
+    `ship intelligence: ${what} failed: ${
+      error instanceof Error ? error.message : String(error)
+    }`
+  );
+}

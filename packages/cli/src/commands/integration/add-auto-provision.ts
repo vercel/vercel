@@ -3,6 +3,7 @@ import execa from 'execa';
 import { errorToString } from '@vercel/error-utils';
 import open from 'open';
 import output from '../../output-manager';
+import { recordSessionEvent } from '../../util/ship-session';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import indent from '../../util/output/indent';
@@ -480,6 +481,12 @@ export async function addAutoProvision(
   output.success(
     `${product.name} successfully provisioned: ${chalk.bold(resourceName)}`
   );
+  recordSessionEvent({
+    type: 'resource-provisioned',
+    integration: integration.slug,
+    product: product.name,
+    resource: resourceName,
+  });
 
   // Sandbox resources (e.g. Stripe, Shopify) require the user to claim the
   // account in the provider UI to convert from sandbox to a real owned account.

@@ -5,6 +5,7 @@ import getProjectByDeployment from '../../util/projects/get-project-by-deploymen
 import ms from 'ms';
 import rollbackStatus from './status';
 import output from '../../output-manager';
+import { confirmGatedOperation } from '../../util/ship-session';
 
 /**
  * Requests a rollback and waits for it complete.
@@ -22,6 +23,16 @@ export default async function requestRollback({
   deployId: string;
   timeout?: string;
 }): Promise<number> {
+  if (
+    !(await confirmGatedOperation({
+      command: 'rollback',
+      gate: 'production',
+      description: `changes which deployment production serves (rolls back to ${deployId})`,
+    }))
+  ) {
+    return 1;
+  }
+
   const { contextName, deployment, project } = await getProjectByDeployment({
     client,
     deployId,

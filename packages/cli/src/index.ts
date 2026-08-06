@@ -1163,6 +1163,10 @@ const main = async () => {
           telemetry.trackCliCommandSandbox(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).sandbox;
           break;
+        case 'ship':
+          telemetry.trackCliCommandShip(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).ship;
+          break;
         case 'skills':
           telemetry.trackCliCommandSkills(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).skills;
@@ -1233,9 +1237,27 @@ const main = async () => {
       }
 
       resolvedCommandForUpdate = targetCommand;
+
+      // Inside a `vercel ship` session every command journals itself into the
+      // session ledger. (Approval gates live inside the command handlers, at
+      // the effect sites, where the command's own parsing has decided what is
+      // about to happen.) Dormant otherwise: the env variable is set by ship.
+      const shipSession = process.env.VERCEL_SHIP_SESSION_DIR
+        ? await import('./util/ship-session')
+        : undefined;
+
+      const commandStartedAt = Date.now();
       exitCode = await rootSpan
         .child('vc.cli.command', { command: subcommand || 'deploy' })
         .trace(() => func(client));
+      shipSession?.recordSessionEvent({
+        type: 'command',
+        command: targetCommand,
+        argv: client.argv.slice(2),
+        cwd: client.cwd,
+        exitCode,
+        durationMs: Date.now() - commandStartedAt,
+      });
     }
   } catch (err: unknown) {
     trackAgenticErrorTelemetry(err);

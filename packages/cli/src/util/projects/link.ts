@@ -24,6 +24,7 @@ import { findProjectsFromPath, getRepoLink } from '../link/repo';
 import { addToGitIgnore } from '../link/add-to-gitignore';
 import type { RepoProjectConfig } from '../link/repo';
 import output from '../../output-manager';
+import { recordSessionEvent } from '../ship-session';
 import { printAlignedLabel } from '../output/print-aligned-label';
 import pull from '../../commands/env/pull';
 import { resolveProjectCwd } from './find-project-root';
@@ -609,6 +610,11 @@ export async function linkFolderToProject(
 
   output.print('\n');
   printAlignedLabel(resultLabel, `${orgSlug}/${projectName}`, { gutter: '✓' });
+  recordSessionEvent({
+    type: resultLabel === 'Created' ? 'project-created' : 'project-linked',
+    project: projectName,
+    org: orgSlug,
+  });
 
   if (!pullEnv) {
     return;
