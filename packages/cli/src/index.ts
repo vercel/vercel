@@ -1511,6 +1511,8 @@ Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.`
       // else: userUpToDate — skip notification silently
     }
 
-    process.exitCode = exitCode;
+    // Exit code 2 is used internally to signal that --help was printed
+    // and is not an error, so map it to 0 for the process exit code.
+    process.exitCode = exitCode === 2 ? 0 : exitCode;
   })
   .catch(handleUnexpected);
