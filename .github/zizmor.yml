@@ -1,4 +1,6 @@
 rules:
+  adhoc-packages:
+    disable: true
   artipacked:
     disable: true
   excessive-permissions:
