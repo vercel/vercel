@@ -121,8 +121,12 @@ function emitWebSocketRequest({
         requestContext.run(context, () => {
           req.emit('aborted');
           abortController.abort();
-          closeResponse();
         });
+
+        // Next dev treats ServerResponse "close" as the end of its request
+        // lifecycle. Let ws emit its user-facing "close" event first so those
+        // callbacks can register after() work before Next drains that work.
+        setImmediate(() => requestContext.run(context, closeResponse));
       });
       socket.once('error', noop);
 
