@@ -19,6 +19,7 @@ import {
   runNpmInstall,
   runCustomInstallCommand,
   resetCustomInstallCommandSet,
+  scanParentDirs,
   Span,
   validateNpmrc,
   type Builder,
@@ -703,6 +704,7 @@ export default async function main(client: Client): Promise<number> {
 
     // Clean up VERCEL_INSTALL_COMPLETED to allow subsequent builds in the same process
     delete process.env.VERCEL_INSTALL_COMPLETED;
+    delete process.env.VERCEL_INSTALL_COMPLETED_PATH;
 
     // Reset customInstallCommandSet to allow subsequent builds in the same process
     resetCustomInstallCommandSet();
@@ -736,12 +738,13 @@ async function doBuild(
     corepackShimDir = await initCorepack({ repoRootPath });
 
     const installDepsSpan = span.child('vc.installDeps');
+    let installRan = false;
     try {
       const installCommand = project.settings.installCommand;
       if (typeof installCommand === 'string') {
         if (installCommand.trim()) {
           output.log(`Running install command before config compilation...`);
-          await runCustomInstallCommand({
+          installRan = await runCustomInstallCommand({
             destPath: workPath,
             installCommand,
             spawnOpts: { env: process.env },
@@ -752,7 +755,7 @@ async function doBuild(
         }
       } else {
         output.log(`Installing dependencies before config compilation...`);
-        await runNpmInstall(
+        installRan = await runNpmInstall(
           workPath,
           [],
           { env: process.env },
@@ -763,7 +766,16 @@ async function doBuild(
     } finally {
       installDepsSpan.stop();
     }
-    process.env.VERCEL_INSTALL_COMPLETED = '1';
+    // Mark completion only when an install actually ran, and scope it to the
+    // `package.json` it installed: in a monorepo, services with their own
+    // install roots (a different `package.json`/lockfile) must still install.
+    if (installRan) {
+      const { packageJsonPath } = await scanParentDirs(workPath, false);
+      if (packageJsonPath) {
+        process.env.VERCEL_INSTALL_COMPLETED_PATH = packageJsonPath;
+      }
+      process.env.VERCEL_INSTALL_COMPLETED = '1';
+    }
   }
 
   const compileResult = await span

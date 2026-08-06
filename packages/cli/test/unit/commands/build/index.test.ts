@@ -2763,6 +2763,26 @@ fs.writeFileSync(
     });
   });
 
+  it('should install a service with its own install root when a source config pre-compilation install ran', async () => {
+    // Regression test: `vercel.toml` (a source config) triggers a dependency
+    // install at the repo root before config compilation, which sets
+    // VERCEL_INSTALL_COMPLETED. That marker must not suppress the install of
+    // a service whose install root is a different `package.json` — here the
+    // service's build script requires a dependency that only exists after
+    // `frontend/` installs.
+    const cwd = fixture('services-toml-workspace-install');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const result = await fs.readFile(
+      join(output, 'services', 'web', 'static', 'index.txt'),
+      'utf8'
+    );
+    expect(result.trim()).toEqual('installed');
+  });
+
   it('should allow services to share the same builder source', async () => {
     const cwd = fixture('with-services-shared-source');
     const output = join(cwd, '.vercel', 'output');

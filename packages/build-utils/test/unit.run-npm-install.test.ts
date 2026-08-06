@@ -24,6 +24,45 @@ vi.mock('cross-spawn', () => {
 afterEach(() => {
   spawnExitCode = 0;
   spawnMock.mockClear();
+  delete process.env.VERCEL_INSTALL_COMPLETED;
+  delete process.env.VERCEL_INSTALL_COMPLETED_PATH;
+});
+
+it('should skip every default install when `VERCEL_INSTALL_COMPLETED` has no path scope', async () => {
+  const meta: Meta = {};
+  const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
+
+  process.env.VERCEL_INSTALL_COMPLETED = '1';
+
+  const result = await runNpmInstall(fixture, [], undefined, meta);
+  expect(result).toEqual(false);
+  expect(spawnMock.mock.calls.length).toBe(0);
+});
+
+it('should still install a different install root when `VERCEL_INSTALL_COMPLETED_PATH` scopes the marker', async () => {
+  const meta: Meta = {};
+  const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
+
+  process.env.VERCEL_INSTALL_COMPLETED = '1';
+  process.env.VERCEL_INSTALL_COMPLETED_PATH = path.join(
+    __dirname,
+    'fixtures',
+    'some-other-root',
+    'package.json'
+  );
+
+  const run1 = await runNpmInstall(fixture, [], undefined, meta);
+  expect(run1).toEqual(true);
+  expect(spawnMock.mock.calls.length).toBe(1);
+
+  // The install root named by the marker is still skipped.
+  process.env.VERCEL_INSTALL_COMPLETED_PATH = path.join(
+    fixture,
+    'package.json'
+  );
+  const run2 = await runNpmInstall(fixture, [], undefined, {});
+  expect(run2).toEqual(false);
+  expect(spawnMock.mock.calls.length).toBe(1);
 });
 
 it('should only invoke `runNpmInstall()` once per `package.json` file (serial)', async () => {
