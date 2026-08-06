@@ -144,14 +144,64 @@ export class NativeTuiSession {
     if (saved) {
       applyTerminalState('sane');
     }
+    writeToTerminal(ENTER_PROMPT_SCREEN);
     try {
       return await fn();
     } finally {
+      writeToTerminal(LEAVE_PROMPT_SCREEN);
       if (saved) {
         applyTerminalState(saved);
       }
       thaw(pid);
     }
+  }
+}
+
+/**
+ * Terminal-emulator modes the TUI sets that outlive a termios reset — the
+ * `stty` dance restores the line discipline, but these live in the emulator.
+ * With them still active, the approval prompt reads garbage: the Kitty
+ * keyboard protocol delivers each keypress as a CSI-u sequence readline
+ * echoes literally, focus reporting injects `[I`/`[O` on every window
+ * switch, and pastes arrive wrapped in bracket markers. Observed on a real
+ * gated session as escape noise scribbled across the frozen frame.
+ *
+ * The exact set mirrors what Claude Code 2.1.x enables, captured from a live
+ * pty: kitty push (`>1u`), modifyOtherKeys (`>4;2m`), bracketed paste
+ * (`?2004h`), focus reporting (`?1004h`), theme notifications (`?2031h`),
+ * cursor hidden (`?25l`). Every sequence is a no-op on terminals that do not
+ * support it.
+ *
+ * The prompt also runs on the alternate screen: the TUI's frame is preserved
+ * underneath and returns untouched, and the prompt leaves no debris in
+ * scrollback — the ledger is the durable record of the approval.
+ */
+export const ENTER_PROMPT_SCREEN =
+  '\x1b[?1049h' + // alternate screen, preserving the TUI's frame beneath
+  '\x1b[2J\x1b[H' + // cleared, cursor at the top
+  '\x1b[<u' + // pop the TUI's Kitty keyboard mode
+  '\x1b[>4;0m' + // modifyOtherKeys off
+  '\x1b[?2004l' + // bracketed paste off
+  '\x1b[?1004l' + // focus reporting off
+  '\x1b[?2031l' + // theme-change notifications off
+  '\x1b[?25h'; // the prompt needs a visible cursor
+
+export const LEAVE_PROMPT_SCREEN =
+  '\x1b[?25l' + // hidden again, as the TUI keeps it
+  '\x1b[?2031h' +
+  '\x1b[?1004h' +
+  '\x1b[?2004h' +
+  '\x1b[>4;2m' +
+  '\x1b[>1u' + // push the keyboard mode back
+  '\x1b[?1049l'; // main screen: the frame exactly as it was frozen
+
+function writeToTerminal(sequence: string): void {
+  try {
+    if (process.stdout.isTTY) {
+      process.stdout.write(sequence);
+    }
+  } catch {
+    // A closed stream at teardown; the prompt will cope.
   }
 }
 

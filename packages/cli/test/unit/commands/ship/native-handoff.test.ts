@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ENTER_PROMPT_SCREEN,
+  LEAVE_PROMPT_SCREEN,
   NativeTuiSession,
   nativeTuiSupported,
 } from '../../../../src/commands/ship/native-handoff';
@@ -99,6 +101,25 @@ describe('NativeTuiSession', () => {
     );
     expect(code).toBe(0);
     expect(session.active).toBe(false);
+  });
+
+  it('restores every emulator mode the prompt screen changes', () => {
+    // Modes disabled for the prompt must be re-enabled for the TUI, and the
+    // alternate screen must be entered and left. Asymmetry here is exactly
+    // the class of bug that scribbled escape noise over the frozen frame.
+    const pairs: Array<[string, string]> = [
+      ['\x1b[?1049h', '\x1b[?1049l'], // alternate screen
+      ['\x1b[<u', '\x1b[>1u'], // kitty keyboard pop/push
+      ['\x1b[>4;0m', '\x1b[>4;2m'], // modifyOtherKeys
+      ['\x1b[?2004l', '\x1b[?2004h'], // bracketed paste
+      ['\x1b[?1004l', '\x1b[?1004h'], // focus reporting
+      ['\x1b[?2031l', '\x1b[?2031h'], // theme notifications
+      ['\x1b[?25h', '\x1b[?25l'], // cursor
+    ];
+    for (const [enter, leave] of pairs) {
+      expect(ENTER_PROMPT_SCREEN).toContain(enter);
+      expect(LEAVE_PROMPT_SCREEN).toContain(leave);
+    }
   });
 
   posixOnly('run reports a missing executable as a failure', async () => {
