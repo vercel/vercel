@@ -45,16 +45,6 @@ const runnersMap = new Map([
     },
   ],
   [
-    'vitest-e2e-node-20',
-    {
-      min: 1,
-      max: 7,
-      testScript: 'vitest-run',
-      runners: ['ubuntu-latest'],
-      nodeVersions: ['20'],
-    },
-  ],
-  [
     'test-unit',
     {
       min: 1,
@@ -107,7 +97,6 @@ const runnersMap = new Map([
 const UNIT_TEST_SCRIPTS = ['vitest-unit', 'vitest-unit-node-24', 'test-unit'];
 const E2E_TEST_SCRIPTS = [
   'vitest-e2e',
-  'vitest-e2e-node-20',
   'test-e2e',
   'test-e2e-node-all-versions',
   'test-next-local',
