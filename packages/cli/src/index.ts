@@ -40,7 +40,10 @@ import { URL } from 'url';
 import { getSentry } from './util/get-sentry';
 import hp from './util/humanize-path';
 import { commands, commandNames } from './commands';
-import { handleCommandTypo } from './util/handle-command-typo';
+import {
+  handleCommandTypo,
+  handleUnknownCommand,
+} from './util/handle-command-typo';
 import { matchesCliApiTag } from './util/openapi/matches-cli-api-tag';
 import { tryOpenApiFallback } from './util/openapi';
 import pkg from './util/pkg';
@@ -884,9 +887,10 @@ const main = async () => {
         if (isErrnoException(err) && err.code === 'ENOENT') {
           // Check if the user made a typo before falling back to deploy
           if (
-            handleCommandTypo({
+            handleUnknownCommand({
               command: targetCommand,
               availableCommands: commandNames,
+              cwd,
             })
           ) {
             return 1;
