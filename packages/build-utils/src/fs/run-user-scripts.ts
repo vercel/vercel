@@ -933,16 +933,7 @@ export async function runNpmInstall(
     }
 
     // if yarn 3 or 4, disable global cache so build cache can cache deps
-    if (cliType === 'yarn') {
-      const yarnVersion = detectYarnVersion(lockfileVersion);
-      if (['yarn@3.x', 'yarn@4.x'].includes(yarnVersion)) {
-        await spawnAsync(
-          'yarn',
-          ['config', 'set', 'enableGlobalCache', 'false'],
-          { cwd: destPath }
-        );
-      }
-    }
+    await disableYarnGlobalCache({ destPath, cliType, lockfileVersion });
 
     const installTime = Date.now();
     if (output?.stdout) {
@@ -1139,6 +1130,32 @@ function detectYarnVersion(lockfileVersion: number | undefined) {
     }
   }
   return 'unknown yarn';
+}
+
+/**
+ * Yarn 3 and 4 store packages in a global cache outside the project, which the
+ * build cache does not persist. Disabling it puts the packages back in
+ * `.yarn/cache`, which `defaultCachePathGlob` does persist.
+ *
+ * This must run on every install path, not just the zero config one, otherwise
+ * projects with a custom install command re-download every package on every
+ * build.
+ */
+export async function disableYarnGlobalCache({
+  destPath,
+  cliType,
+  lockfileVersion,
+}: {
+  destPath: string;
+  cliType: CliType;
+  lockfileVersion: number | undefined;
+}) {
+  if (cliType !== 'yarn') return;
+  const yarnVersion = detectYarnVersion(lockfileVersion);
+  if (!['yarn@3.x', 'yarn@4.x'].includes(yarnVersion)) return;
+  await spawnAsync('yarn', ['config', 'set', 'enableGlobalCache', 'false'], {
+    cwd: destPath,
+  });
 }
 
 function validLockfileForPackageManager(
@@ -1554,6 +1571,10 @@ export async function runCustomInstallCommand({
     projectCreatedAt,
   });
   debug(`Running with $PATH:`, env?.PATH || '');
+
+  // if yarn 3 or 4, disable global cache so build cache can cache deps
+  await disableYarnGlobalCache({ destPath, cliType, lockfileVersion });
+
   await execCommand(installCommand, {
     ...spawnOpts,
     env,

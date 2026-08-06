@@ -17,6 +17,7 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   execCommand,
+  disableYarnGlobalCache,
   getEnvForPackageManager,
   getNodeBinPaths,
   scanParentDirs,
@@ -387,6 +388,13 @@ export const build: BuildV2 = async buildOptions => {
           console.log(
             `Running "install" command: \`${trimmedInstallCommand}\`...`
           );
+
+          // if yarn 3 or 4, disable global cache so build cache can cache deps
+          await disableYarnGlobalCache({
+            destPath: entryPath,
+            cliType,
+            lockfileVersion,
+          });
 
           await execCommand(trimmedInstallCommand, {
             env: spawnEnv,
