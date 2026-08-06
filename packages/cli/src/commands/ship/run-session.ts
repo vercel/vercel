@@ -247,7 +247,7 @@ async function driveSession(
   const endCreate = profile.start('start agent session', {
     bridgeInstalled: bootstrapped,
   });
-  let session;
+  let session: HarnessSession;
   try {
     session = await agent.createSession();
   } catch (err) {
@@ -366,11 +366,24 @@ async function driveSession(
             agentName: agentLabel(harness.id),
             keys: handoffKeys,
           });
+        } catch (err) {
+          // A failed turn must not cost the session: the conversation — the
+          // inventory, the plan — is the expensive part, and the menu below
+          // offers ways to carry on (retry with an instruction, continue in
+          // the agent's own interface, or end deliberately).
+          activity.stop();
+          renderer.flush();
+          output.error(
+            `${harness.label} turn failed: ${
+              err instanceof Error ? err.message : String(err)
+            }`
+          );
+          exitCode = 1;
         } finally {
           handoffKeys.disarm();
           endTurn({ toolCalls: renderer.toolCallCount });
         }
-        if (exitCode !== 0) {
+        if (exitCode !== 0 && !client.stdin.isTTY) {
           return exitCode;
         }
 
@@ -421,6 +434,13 @@ async function driveSession(
         // The ledger delta is the record of the TUI stint; print it before
         // asking what to do next, same as after an orchestrated turn.
         await reportOutcome();
+        // The bridge process that performed the interrupt has been observed
+        // poisoning its next turn (an [ede_diagnostic] failure that a fresh
+        // process on the same conversation does not reproduce), so the
+        // session is recycled: stop → resume state → fresh bridge, whose
+        // rerun path continues the same conversation.
+        session =
+          (await recycleSession({ agent, session, profile })) ?? session;
         continue;
       }
 
@@ -799,6 +819,48 @@ async function runNativeTui(options: {
 }
 
 /**
+ * Replace the live harness session with a fresh runtime resuming the same
+ * conversation: stop → resume state → `createSession({ sessionId,
+ * resumeFrom })`, whose rerun path continues the agent's own thread.
+ *
+ * Exists because a bridge process that has performed a mid-turn interrupt
+ * has been observed failing its next turn with a diagnostic that a fresh
+ * process on the same conversation does not reproduce. Best effort:
+ * `undefined` keeps the current session (an older runtime without `stop`,
+ * or a stop that failed before detaching — and if the stop landed but the
+ * recreate failed, the next turn's failure lands in the menu, not on the
+ * floor).
+ */
+async function recycleSession(options: {
+  agent: HarnessAgentInstance;
+  session: HarnessSession;
+  profile: ShipProfile;
+}): Promise<HarnessSession | undefined> {
+  const { agent, session, profile } = options;
+  if (typeof session.stop !== 'function' || !session.sessionId) {
+    return undefined;
+  }
+
+  const endRecycle = profile.start('recycle agent session');
+  try {
+    const resumeFrom = await session.stop();
+    return await agent.createSession({
+      sessionId: session.sessionId,
+      resumeFrom,
+    });
+  } catch (err) {
+    output.debug(
+      `ship: could not recycle the session: ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
+    return undefined;
+  } finally {
+    endRecycle();
+  }
+}
+
+/**
  * Stream one turn to completion.
  */
 async function runTurn(options: {
@@ -1027,7 +1089,11 @@ function swallow(result: HarnessStreamResult): void {
 }
 
 interface HarnessSession {
+  /** Stable id, required to resume the session in a fresh runtime. */
+  sessionId?: string;
   destroy: () => Promise<unknown>;
+  /** Persist resume state and stop the runtime. Newer runtimes only. */
+  stop?: () => Promise<unknown>;
   hasUnfinishedTurn: () => boolean;
 }
 
@@ -1151,7 +1217,10 @@ interface HarnessRuntime {
   HarnessAgent: new (
     config: unknown
   ) => {
-    createSession: () => Promise<HarnessSession>;
+    createSession: (options?: {
+      sessionId?: string;
+      resumeFrom?: unknown;
+    }) => Promise<HarnessSession>;
     stream: (options: {
       session: HarnessSession;
       prompt: string;
