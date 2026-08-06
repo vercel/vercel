@@ -5,7 +5,7 @@ import pkg from '../../util/pkg';
 import type { ShipProfile } from './profile';
 
 /** Where written profiles live, under the directory the CLI already owns. */
-export function getProfilesDir(): string {
+function getProfilesDir(): string {
   return join(getGlobalPathConfig(), 'ship-profiles');
 }
 

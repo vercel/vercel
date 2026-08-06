@@ -543,7 +543,7 @@ export class StreamRenderer {
   }
 }
 
-export function summarizeToolInput(input: unknown): string {
+function summarizeToolInput(input: unknown): string {
   if (!input || typeof input !== 'object') return '';
 
   const record = input as Record<string, unknown>;

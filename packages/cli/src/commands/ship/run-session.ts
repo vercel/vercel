@@ -517,7 +517,7 @@ async function driveSession(
  * Saying so here is the only moment anyone reads it, and the rest of the
  * transcript is attributed line by line on the strength of it.
  */
-export function vercelSays(text: string, continued = false): void {
+function vercelSays(text: string, continued = false): void {
   for (const [index, line] of wrapAnsi(
     text,
     textWidth(GUTTER_WIDTH),
