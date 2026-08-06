@@ -1934,6 +1934,15 @@ async function handleDefaultDeploy(
         }
       : deploymentJson;
     client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+    // Inside a `vercel ship` session, the deployment is journaled from the
+    // typed deployment. This is the main deploy flow's JSON exit — the init
+    // flow journals its own copy of this branch — and a session that missed
+    // this site reported a deployed, verified app as nothing deployed.
+    recordSessionEvent({
+      type: 'deployment',
+      url: `https://${deployment.url}`,
+      target: deployment.target ?? 'preview',
+    });
     return 0;
   }
 
