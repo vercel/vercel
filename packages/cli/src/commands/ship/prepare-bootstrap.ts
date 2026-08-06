@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { pathExists, readFile, outputFile, remove } from 'fs-extra';
+import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import output from '../../output-manager';
 import type { HarnessId } from './detect-harnesses';
@@ -174,6 +175,24 @@ async function repairIncompleteBootstrap(bootstrapDir: string): Promise<void> {
       }); clearing node_modules so it is reinstalled`
     );
     await remove(modulesDir).catch(() => {});
+    // The framework skips the bootstrap while its completion marker exists,
+    // so a wipe that leaves the marker behind is a deadlock: node_modules
+    // gone, recipe "already applied", every session start crashing in the
+    // bridge. The marker goes with the tree it vouched for.
+    await removeBootstrapMarkers(bootstrapDir);
+  }
+}
+
+/** Delete the framework's `.bootstrap-<identity>.ok` markers, best effort. */
+async function removeBootstrapMarkers(bootstrapDir: string): Promise<void> {
+  try {
+    for (const entry of await readdir(bootstrapDir)) {
+      if (entry.startsWith('.bootstrap-') && entry.endsWith('.ok')) {
+        await remove(join(bootstrapDir, entry)).catch(() => {});
+      }
+    }
+  } catch {
+    // No directory, nothing to unmark.
   }
 }
 
