@@ -30,7 +30,11 @@ import {
 } from './prepare-bootstrap';
 import { StreamRenderer } from './render-stream';
 import { DeploymentTracker } from './deployments';
-import { HandoffKeyListener } from './handoff-key';
+import {
+  createHandoffInterrupt,
+  HandoffKeyListener,
+  type HandoffInterrupt,
+} from './handoff-key';
 import { NativeTuiSession, nativeTuiSupported } from './native-handoff';
 import {
   printContinuation,
@@ -820,27 +824,26 @@ async function runTurn(options: {
   // invisible while output is flowing.
   activity.start(WORKING_PHRASES);
 
-  // ctrl+t interrupts the turn at the next step boundary — the end of the
-  // current model response and its tool batch, when nothing is mid-flight —
-  // by aborting the in-flight turn, which the adapter propagates to the agent
-  // exactly like its own interrupt key. Deliberately not a stop condition:
+  // ctrl+t interrupts the turn by aborting it, which the adapter propagates
+  // to the agent exactly like its own interrupt key (the bridge prefers the
+  // SDK's graceful interrupt, so the cut-short turn is persisted). When the
+  // interrupt fires is `createHandoffInterrupt`'s decision: immediately,
+  // except while a tool call is running. Deliberately not a stop condition:
   // for a bridge-backed harness those suspend the host's consumption while
   // the agent keeps working, and a hand-off needs the agent actually paused.
   const abort = new AbortController();
-  const handoff: HandoffInterrupt | undefined = keys && {
-    aborted: false,
-    onPart(type: string): void {
-      if (this.aborted || !keys.hasPending || type !== 'finish-step') {
-        return;
-      }
-      this.aborted = true;
-      activity.pause();
-      vercelSays(
-        chalk.dim(`Pausing ${options.agentName} — the terminal is yours.`)
-      );
-      abort.abort();
-    },
-  };
+  const handoff: HandoffInterrupt | undefined =
+    keys &&
+    createHandoffInterrupt({
+      keys,
+      onAbort: () => {
+        activity.pause();
+        vercelSays(
+          chalk.dim(`Pausing ${options.agentName} — the terminal is yours.`)
+        );
+        abort.abort();
+      },
+    });
 
   try {
     let result = await agent.stream({
@@ -992,15 +995,6 @@ The \`askUser\` tool is not available in this session, so the rule requiring it
 does not apply. Ask in prose instead, put the question at the very end of your
 turn, and stop there. The user's typed reply arrives as your next turn.
 `;
-
-/**
- * Interrupt state for a ctrl+t hand-off: watches the stream for a step
- * boundary and remembers that the abort that follows was deliberate.
- */
-interface HandoffInterrupt {
-  aborted: boolean;
-  onPart(type: string): void;
-}
 
 /** Sent as the `askUser` result when the user is taking over in the TUI. */
 const HANDOFF_ASK_USER_ANSWER =

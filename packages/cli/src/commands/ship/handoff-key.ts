@@ -121,3 +121,45 @@ export class HandoffKeyListener {
 function raiseSigint(): void {
   process.kill(process.pid, 'SIGINT');
 }
+
+/**
+ * Decides the moment a queued hand-off actually interrupts the turn.
+ *
+ * The first cut waited for a `finish-step` part, and a real run showed why
+ * that is wrong: the boundary only exists where a tool batch settles, so a
+ * ctrl+t pressed as the agent starts a long report waits out the whole
+ * report. The agent's own interrupt key stops generation mid-sentence and
+ * the truncated message is persisted; matching that, the turn is interrupted
+ * on the very next stream part — with one exception: never while a tool call
+ * is in flight, because cutting a running `vercel deploy` half-way is worse
+ * than reading one more sentence. Tool calls are counted in and out, and the
+ * interrupt fires the moment none is open.
+ */
+export interface HandoffInterrupt {
+  /** True once the interrupt has fired; the abort that follows is ours. */
+  aborted: boolean;
+  onPart(type: string): void;
+}
+
+export function createHandoffInterrupt(options: {
+  keys: HandoffKeyListener;
+  /** Fires exactly once, at the chosen moment. */
+  onAbort: () => void;
+}): HandoffInterrupt {
+  let openToolCalls = 0;
+  return {
+    aborted: false,
+    onPart(type: string): void {
+      if (type === 'tool-call') {
+        openToolCalls += 1;
+      } else if (type === 'tool-result' || type === 'tool-error') {
+        openToolCalls = Math.max(0, openToolCalls - 1);
+      }
+      if (this.aborted || !options.keys.hasPending || openToolCalls > 0) {
+        return;
+      }
+      this.aborted = true;
+      options.onAbort();
+    },
+  };
+}

@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { describe, expect, it, vi } from 'vitest';
 import {
+  createHandoffInterrupt,
   HandoffKeyListener,
   type KeySource,
 } from '../../../../src/commands/ship/handoff-key';
@@ -155,5 +156,70 @@ describe('HandoffKeyListener', () => {
     expect(stdin.rawMode).toBeUndefined();
     stdin.press(CTRL_T);
     expect(onRequest).not.toHaveBeenCalled();
+  });
+});
+
+describe('createHandoffInterrupt', () => {
+  function pendingInterrupt() {
+    const stdin = new FakeStdin();
+    const keys = new HandoffKeyListener({
+      stdin,
+      onRequest: () => undefined,
+      raiseSigint: () => undefined,
+    });
+    const onAbort = vi.fn();
+    const interrupt = createHandoffInterrupt({ keys, onAbort });
+    return { stdin, keys, onAbort, interrupt };
+  }
+
+  it('fires on the next part once a hand-off is pending', () => {
+    const { stdin, keys, onAbort, interrupt } = pendingInterrupt();
+
+    interrupt.onPart('text-delta');
+    expect(onAbort).not.toHaveBeenCalled();
+
+    keys.arm();
+    stdin.press(CTRL_T);
+    interrupt.onPart('text-delta');
+    expect(onAbort).toHaveBeenCalledTimes(1);
+    expect(interrupt.aborted).toBe(true);
+  });
+
+  it('never fires while a tool call is in flight', () => {
+    const { stdin, keys, onAbort, interrupt } = pendingInterrupt();
+    keys.arm();
+
+    interrupt.onPart('tool-call');
+    stdin.press(CTRL_T);
+    interrupt.onPart('text-delta');
+    expect(onAbort).not.toHaveBeenCalled();
+
+    // The moment the command returns, the interrupt lands.
+    interrupt.onPart('tool-result');
+    expect(onAbort).toHaveBeenCalledTimes(1);
+  });
+
+  it('waits for every call of a parallel batch', () => {
+    const { stdin, keys, onAbort, interrupt } = pendingInterrupt();
+    keys.arm();
+
+    interrupt.onPart('tool-call');
+    interrupt.onPart('tool-call');
+    stdin.press(CTRL_T);
+    interrupt.onPart('tool-result');
+    expect(onAbort).not.toHaveBeenCalled();
+    interrupt.onPart('tool-error');
+    expect(onAbort).toHaveBeenCalledTimes(1);
+  });
+
+  it('fires exactly once', () => {
+    const { stdin, keys, onAbort, interrupt } = pendingInterrupt();
+    keys.arm();
+    stdin.press(CTRL_T);
+
+    interrupt.onPart('text-delta');
+    interrupt.onPart('text-delta');
+    interrupt.onPart('finish-step');
+    expect(onAbort).toHaveBeenCalledTimes(1);
   });
 });
