@@ -1,5 +1,12 @@
 import execa from 'execa';
-import { outputJSON, pathExists, readJSON, remove, writeFile } from 'fs-extra';
+import {
+  move,
+  outputJSON,
+  pathExists,
+  readJSON,
+  remove,
+  writeFile,
+} from 'fs-extra';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -320,7 +327,8 @@ async function runNpmInstall(options: {
       `Failed to install harness packages.\n\n${formatInstallError(err)}`
     );
     const retry = ['npm', 'install', ...add, ...retryFlags(err)].join(' ');
-    output.log(`You can retry manually:\n    cd ${dir} && ${retry}`);
+    // Quoted: the global config directory contains a space on macOS.
+    output.log(`You can retry manually:\n    cd "${dir}" && ${retry}`);
     return false;
   }
 }
@@ -464,8 +472,10 @@ async function syncLocalManifest(
   };
 
   const manifestPath = join(dir, 'package.json');
+  const modulesDir = join(dir, 'node_modules');
+  const previousDir = join(dir, 'node_modules.previous');
   const unchanged =
-    (await pathExists(join(dir, 'node_modules'))) &&
+    (await pathExists(modulesDir)) &&
     JSON.stringify(await readJSON(manifestPath).catch(() => null)) ===
       JSON.stringify(manifest);
 
@@ -474,16 +484,49 @@ async function syncLocalManifest(
     return true;
   }
 
-  await Promise.all([
-    remove(join(dir, 'node_modules')),
-    remove(join(dir, 'package-lock.json')),
-  ]);
+  // Stage the working install aside instead of deleting it: the install can
+  // fail (the registry filtered a dependency, the user declined to bypass
+  // their own min-release-age, the network fell over), and a failure must
+  // not cost the runtime that was working seconds earlier. The lockfile
+  // still goes — npm resolves an unchanged file: spec of the same version
+  // from it and quietly keeps a stale copy.
+  await remove(previousDir);
+  if (await pathExists(modulesDir)) {
+    await move(modulesDir, previousDir);
+  }
+  await remove(join(dir, 'package-lock.json'));
   await outputJSON(manifestPath, manifest, { spaces: 2 });
-  return runNpmInstall({
+
+  const installed = await runNpmInstall({
     dir,
     labels: packed.map(entry => entry.name),
     consent: client,
   });
+
+  if (installed) {
+    await remove(previousDir);
+    return true;
+  }
+
+  if (await pathExists(previousDir)) {
+    await remove(modulesDir);
+    await move(previousDir, modulesDir);
+    // The restored tree predates the tarballs the manifest's hashes vouch
+    // for; drop them so the next run retries the install instead of
+    // mistaking the fallback for current.
+    await outputJSON(
+      manifestPath,
+      { ...manifest, shipTarballHashes: {} },
+      { spaces: 2 }
+    );
+    output.warn(
+      'Running the previously installed harness build — it does not include ' +
+        'what you just rebuilt. The install will be retried on the next run.'
+    );
+    return true;
+  }
+
+  return false;
 }
 
 async function hashFile(path: string): Promise<string> {
