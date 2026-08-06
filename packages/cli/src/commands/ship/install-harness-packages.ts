@@ -1,5 +1,7 @@
 import execa from 'execa';
-import { outputJSON, pathExists, readJSON, writeFile } from 'fs-extra';
+import { outputJSON, pathExists, readJSON, remove, writeFile } from 'fs-extra';
+import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { isError } from '@vercel/error-utils';
@@ -389,6 +391,16 @@ async function installFromLocalSource(options: {
  * free to satisfy that from the registry — quietly loading a published build
  * alongside the branch one being tested. npm rejects an override that disagrees
  * with a direct dependency, so the two specs are written from the same value.
+ *
+ * The manifest also records each tarball's content hash — npm ignores the
+ * extra field — because the paths alone cannot signal a rebuild: they embed
+ * the package version, and a rebuilt branch keeps its version. Comparing only
+ * the pins therefore skipped the install after every repack, and the runtime
+ * kept executing the previous build while the tarballs on disk carried the
+ * fix being tested. When the hashes move, `node_modules` and the lockfile are
+ * cleared first: npm resolves an unchanged `file:` spec of the same version
+ * from its lockfile and cache, so a plain install can quietly keep the stale
+ * copy.
  */
 async function syncLocalManifest(
   dir: string,
@@ -402,6 +414,11 @@ async function syncLocalManifest(
     license: 'UNLICENSED',
     dependencies: pins,
     overrides: pins,
+    shipTarballHashes: Object.fromEntries(
+      await Promise.all(
+        packed.map(async entry => [entry.name, await hashFile(entry.tarball)])
+      )
+    ),
   };
 
   const manifestPath = join(dir, 'package.json');
@@ -415,8 +432,20 @@ async function syncLocalManifest(
     return true;
   }
 
+  await Promise.all([
+    remove(join(dir, 'node_modules')),
+    remove(join(dir, 'package-lock.json')),
+  ]);
   await outputJSON(manifestPath, manifest, { spaces: 2 });
   return runNpmInstall({ dir, labels: packed.map(entry => entry.name) });
+}
+
+async function hashFile(path: string): Promise<string> {
+  // Hex avoids a Buffer/typed-array variance clash between the repo's TS lib
+  // and the bundled node types; the content is hashed either way.
+  return createHash('sha256')
+    .update(await readFile(path, 'hex'), 'hex')
+    .digest('hex');
 }
 
 async function createManagedLoader(
