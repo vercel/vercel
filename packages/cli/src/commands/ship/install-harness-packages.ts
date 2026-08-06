@@ -118,7 +118,12 @@ export async function ensureHarnessPackages(options: {
   // override look broken.
   const localSource = getLocalHarnessSource(client.cwd);
   if (localSource) {
-    return installFromLocalSource({ source: localSource, specs, packages });
+    return installFromLocalSource({
+      client,
+      source: localSource,
+      specs,
+      packages,
+    });
   }
 
   // Prefer packages already resolvable by the CLI itself. This is the path taken
@@ -262,21 +267,55 @@ async function runNpmInstall(options: {
   dir: string;
   labels: string[];
   add?: string[];
+  extraFlags?: string[];
+  /**
+   * When set, a `min-release-age` failure asks this client's user whether to
+   * retry without the age filter, instead of only printing the command.
+   */
+  consent?: Client;
 }): Promise<boolean> {
-  const { dir, labels, add = [] } = options;
+  const { dir, labels, add = [], extraFlags = [], consent } = options;
 
   output.spinner(`Installing ${labels.join(', ')}`);
   try {
-    await execa('npm', ['install', '--no-audit', '--no-fund', ...add], {
-      cwd: dir,
-      stdio: 'pipe',
-      reject: true,
-    });
+    await execa(
+      'npm',
+      ['install', '--no-audit', '--no-fund', ...extraFlags, ...add],
+      {
+        cwd: dir,
+        stdio: 'pipe',
+        reject: true,
+      }
+    );
     output.stopSpinner();
     output.log('Installed.');
     return true;
   } catch (err) {
     output.stopSpinner();
+
+    // Rebuilding the local checkout re-resolves its registry dependencies,
+    // and a dependency published within the `min-release-age` window fails
+    // the install every time — a recurring toll on the very workflow
+    // `VERCEL_SHIP_HARNESS_SOURCE` exists for. Overriding the setting
+    // silently is off the table (it is a supply-chain control the user
+    // configured); asking is not.
+    if (consent && isMinReleaseAgeFailure(err) && consent.stdin.isTTY) {
+      output.log(
+        'npm refused a dependency because it was published more recently ' +
+          'than your `min-release-age` setting allows.'
+      );
+      const approved = await consent.input
+        .confirm('Retry this install with --min-release-age=0?', false)
+        .catch(() => false);
+      if (approved) {
+        return runNpmInstall({
+          ...options,
+          extraFlags: [...extraFlags, '--min-release-age=0'],
+          consent: undefined,
+        });
+      }
+    }
+
     output.error(
       `Failed to install harness packages.\n\n${formatInstallError(err)}`
     );
@@ -289,9 +328,10 @@ async function runNpmInstall(options: {
 /**
  * Extra flags that would make the retry command succeed.
  *
- * Only offered as something to type by hand. Adding `--min-release-age=0` to
- * the install the CLI runs itself would override a supply-chain control the
- * user deliberately configured, without them seeing it happen.
+ * Offered in the manual retry, and applied by the CLI itself only after the
+ * user has said yes to an explicit prompt — never silently, because
+ * `min-release-age` is a supply-chain control the user deliberately
+ * configured.
  */
 function retryFlags(err: unknown): string[] {
   return isMinReleaseAgeFailure(err) ? ['--min-release-age=0'] : [];
@@ -355,11 +395,12 @@ function isMinReleaseAgeFailure(err: unknown): boolean {
  * every rebuild.
  */
 async function installFromLocalSource(options: {
+  client: Client;
   source: LocalHarnessSource;
   specs: HarnessPackageSpecs;
   packages: string[];
 }): Promise<HarnessLoader | undefined> {
-  const { source, specs, packages } = options;
+  const { client, source, specs, packages } = options;
   const dir = getLocalPackagesDir();
 
   output.log(
@@ -376,7 +417,7 @@ async function installFromLocalSource(options: {
     return undefined;
   }
 
-  if (!(await syncLocalManifest(dir, packed))) {
+  if (!(await syncLocalManifest(client, dir, packed))) {
     return undefined;
   }
 
@@ -403,6 +444,7 @@ async function installFromLocalSource(options: {
  * copy.
  */
 async function syncLocalManifest(
+  client: Client,
   dir: string,
   packed: PackedPackage[]
 ): Promise<boolean> {
@@ -437,7 +479,11 @@ async function syncLocalManifest(
     remove(join(dir, 'package-lock.json')),
   ]);
   await outputJSON(manifestPath, manifest, { spaces: 2 });
-  return runNpmInstall({ dir, labels: packed.map(entry => entry.name) });
+  return runNpmInstall({
+    dir,
+    labels: packed.map(entry => entry.name),
+    consent: client,
+  });
 }
 
 async function hashFile(path: string): Promise<string> {
