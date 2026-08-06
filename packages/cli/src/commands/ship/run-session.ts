@@ -36,6 +36,7 @@ import {
   type HandoffInterrupt,
 } from './handoff-key';
 import { NativeTuiSession, nativeTuiSupported } from './native-handoff';
+import { printStint, summarizeStint, type StintMessage } from './replay-stint';
 import {
   printContinuation,
   resolveSessionId,
@@ -396,11 +397,16 @@ async function driveSession(
           await runNativeTui({
             harness,
             nativeTui,
+            session,
             workspace,
             startedAt,
             profile,
           });
           await reportOutcome();
+          // This hand-off followed an interrupt — the very case the recycle
+          // exists for (see the menu path); the two paths must not differ.
+          session =
+            (await recycleSession({ agent, session, profile })) ?? session;
         }
       }
       turnPrompt = undefined;
@@ -427,6 +433,7 @@ async function driveSession(
         await runNativeTui({
           harness,
           nativeTui,
+          session,
           workspace,
           startedAt,
           profile,
@@ -772,16 +779,23 @@ async function chooseFollowUp(options: {
 async function runNativeTui(options: {
   harness: DetectedHarness;
   nativeTui: NativeTuiSession;
+  session: HarnessSession;
   workspace: string;
   startedAt: number;
   profile: ShipProfile;
 }): Promise<void> {
-  const { harness, nativeTui, workspace, startedAt, profile } = options;
+  const { harness, nativeTui, session, workspace, startedAt, profile } =
+    options;
 
   // A hand-off can follow a graceful mid-turn interrupt whose transcript
   // writes are still flushing; resume only once the agent's store is quiet,
   // or the TUI would open on a conversation missing its latest work.
   await waitForTranscriptSettle({ harnessId: harness.id, workspace });
+
+  // Where the conversation stands before the stint, so what happened during
+  // it can be read back — through the harness, which asks the adapter, which
+  // owns its runtime's store. No transcript parsing lives on this side.
+  const historyBefore = await readHistoryQuietly(session);
 
   const agentSessionId = await resolveSessionId({
     harnessId: harness.id,
@@ -816,6 +830,44 @@ async function runNativeTui(options: {
 
   output.print('\n');
   vercelSays(`Back from ${harness.label}.`);
+
+  // Replay what the stint contained, so ship's transcript stays one
+  // continuous story: the missing chunk comes from the runtime's own store,
+  // not from scraping or from the model's recall.
+  await waitForTranscriptSettle({ harnessId: harness.id, workspace });
+  const delta = await readHistoryQuietly(session, historyBefore?.cursor);
+  if (delta && delta.messages.length > 0) {
+    output.print('\n');
+    printStint(delta.messages, { harnessId: harness.id });
+    recordSessionEvent({
+      type: 'handoff-summary',
+      ...summarizeStint(delta.messages),
+    });
+  }
+}
+
+/**
+ * `readHistory` where the runtime supports it, `undefined` where it does not
+ * — and never an error either way: the replay is an observer, and a session
+ * without it is merely a session with a quieter log.
+ */
+async function readHistoryQuietly(
+  session: HarnessSession,
+  since?: string
+): Promise<{ messages: StintMessage[]; cursor: string } | undefined> {
+  if (typeof session.readHistory !== 'function') {
+    return undefined;
+  }
+  try {
+    return await session.readHistory(since ? { since } : undefined);
+  } catch (err) {
+    output.debug(
+      `ship: could not read the agent's history: ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
+    return undefined;
+  }
 }
 
 /**
@@ -899,6 +951,11 @@ async function runTurn(options: {
     createHandoffInterrupt({
       keys,
       onAbort: () => {
+        // Emit anything the renderer is still holding (a collapsed "thought
+        // for Ns" line, a partial paragraph) before announcing the pause, or
+        // it prints after the announcement and reads as the agent talking
+        // over the hand-off.
+        renderer.flush();
         activity.pause();
         vercelSays(
           chalk.dim(`Pausing ${options.agentName} — the terminal is yours.`)
@@ -1094,6 +1151,14 @@ interface HarnessSession {
   destroy: () => Promise<unknown>;
   /** Persist resume state and stop the runtime. Newer runtimes only. */
   stop?: () => Promise<unknown>;
+  /**
+   * The adapter's normalized view of the runtime's own conversation store,
+   * including exchanges that happened outside this process. Newer runtimes
+   * only, and only where the adapter can reach the store.
+   */
+  readHistory?: (options?: {
+    since?: string;
+  }) => Promise<{ messages: StintMessage[]; cursor: string } | undefined>;
   hasUnfinishedTurn: () => boolean;
 }
 
