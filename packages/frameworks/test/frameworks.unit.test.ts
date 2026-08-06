@@ -313,7 +313,12 @@ describe('frameworks', () => {
 
   it('ensure logo file exists in ./packages/frameworks/logos/', async () => {
     const missing = frameworkList
-      .map(f => f.logo)
+      .flatMap(f => [
+        f.logo,
+        f.darkModeLogo,
+        (f as { platform?: { logo: string } }).platform?.logo,
+      ])
+      .filter(isString)
       .filter(logo => {
         const filename = logo.slice(logoPrefix.length);
         const filepath = join(__dirname, '..', 'logos', filename);
