@@ -849,6 +849,7 @@ exports[`help command > connex help output snapshots > connex create subcommand 
        --icon <PATH>             Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)               
        --json                    Output as JSON                                                                              
   -n,  --name <NAME>             Name of the connector                                                                       
+       --trigger-event <EVENT>   Webhook event to receive. Repeatable.                                                       
        --triggers                Enable webhook triggers for this connector                                                  
 
 
@@ -879,6 +880,10 @@ exports[`help command > connex help output snapshots > connex create subcommand 
   - Create with webhook triggers enabled
 
     $ vercel connect create slack --name my-bot --triggers
+
+  - Create with selected webhook events
+
+    $ vercel connect create linear --name linear --triggers --trigger-event Issue --trigger-event Comment --trigger-event Project
 
   - Create with branding (icon and colors)
 

@@ -19,6 +19,7 @@ import split from './split';
 import rollout from './rollout';
 import rm from './rm';
 import archive from './archive';
+import unarchive from './unarchive';
 import disable from './disable';
 import enable from './enable';
 import { sdkKeys } from './sdk-keys';
@@ -38,6 +39,7 @@ import {
   rolloutSubcommand,
   removeSubcommand,
   archiveSubcommand,
+  unarchiveSubcommand,
   disableSubcommand,
   prepareSubcommand,
   enableSubcommand,
@@ -62,6 +64,7 @@ const COMMAND_CONFIG = {
   rollout: getCommandAliases(rolloutSubcommand),
   rm: getCommandAliases(removeSubcommand),
   archive: getCommandAliases(archiveSubcommand),
+  unarchive: getCommandAliases(unarchiveSubcommand),
   disable: getCommandAliases(disableSubcommand),
   enable: getCommandAliases(enableSubcommand),
   rules: getCommandAliases(rulesSubcommand),
@@ -201,6 +204,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandArchive(subcommandOriginal);
       return archive(client, args);
+    case 'unarchive':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(unarchiveSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandUnarchive(subcommandOriginal);
+      return unarchive(client, args);
     case 'disable':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);
