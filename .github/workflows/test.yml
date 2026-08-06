@@ -15,7 +15,7 @@ permissions:
 
 env:
   VERCEL_TELEMETRY_DISABLED: '1'
-  TURBO_REMOTE_ONLY: 'true'
+  TURBO_CACHE: 'remote:rw'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

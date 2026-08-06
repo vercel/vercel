@@ -45,7 +45,7 @@ permissions:
   id-token: write
 
 env:
-  TURBO_REMOTE_ONLY: 'true'
+  TURBO_CACHE: 'remote:rw'
 
 concurrency:
   group: release-binary-${{ inputs.ref || inputs.tag || github.ref }}
