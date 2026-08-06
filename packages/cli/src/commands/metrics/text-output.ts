@@ -100,6 +100,9 @@ export interface FormatTextOptions {
 const GROUP_KEY_DELIMITER = '\u001f';
 const MAX_SPARKLINE_LENGTH = 120;
 
+/** Placeholder shown for group values the API reports as missing or empty. */
+export const NOT_SET_GROUP_VALUE = '(not set)';
+
 type TableAlignment = 'l' | 'c' | 'r';
 type StatColumn = 'total' | 'avg' | 'min' | 'max';
 
@@ -282,7 +285,7 @@ function getOrCreate<K, V>(map: Map<K, V>, key: K, make: () => V): V {
 
 function getGroupFieldValue(row: MetricsDataRow, field: string): string {
   const value = row[field];
-  return value == null || value === '' ? '(not set)' : String(value);
+  return value == null || value === '' ? NOT_SET_GROUP_VALUE : String(value);
 }
 
 /**

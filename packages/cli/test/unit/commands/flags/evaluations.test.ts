@@ -289,7 +289,7 @@ describe('flags evaluations', () => {
         },
         {
           timestamp: '2026-07-10T10:01:00.000Z',
-          variant: '',
+          variant: null,
           evaluations: 1,
         },
       ],
@@ -303,6 +303,145 @@ describe('flags evaluations', () => {
       { key: 'option:since', value: '[REDACTED]' },
       { key: 'option:until', value: '[REDACTED]' },
       { key: 'flag:json', value: 'TRUE' },
+    ]);
+  });
+
+  it('reports default-in-code evaluations as a null variant in JSON', async () => {
+    // The API attributes evaluations that fell back to the default in code to
+    // an empty variant id, because no variant was assigned.
+    useEvaluationsResponse({
+      data: [
+        {
+          timestamp: '2026-07-10T10:00:00.000Z',
+          flagVariant: '',
+          [ROLLUP]: 13,
+        },
+        {
+          timestamp: '2026-07-10T10:01:00.000Z',
+          flagVariant: '',
+          [ROLLUP]: 46,
+        },
+        {
+          timestamp: '2026-07-10T10:01:00.000Z',
+          flagVariant: 'on',
+          [ROLLUP]: 107,
+        },
+      ],
+      summary: [
+        { flagVariant: '', [ROLLUP]: 59 },
+        { flagVariant: 'on', [ROLLUP]: 107 },
+      ],
+    });
+    client.setArgv(
+      'flags',
+      'evaluations',
+      'my-feature',
+      '--since',
+      '2026-07-10T10:00:00.000Z',
+      '--until',
+      '2026-07-10T11:00:00.000Z',
+      '--json'
+    );
+
+    expect(await flags(client)).toBe(0);
+
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).not.toContain('"variant": ""');
+    expect(JSON.parse(stdout).buckets).toEqual([
+      {
+        timestamp: '2026-07-10T10:00:00.000Z',
+        variant: null,
+        evaluations: 13,
+      },
+      {
+        timestamp: '2026-07-10T10:01:00.000Z',
+        variant: null,
+        evaluations: 46,
+      },
+      {
+        timestamp: '2026-07-10T10:01:00.000Z',
+        variant: 'on',
+        evaluations: 107,
+      },
+    ]);
+  });
+
+  it('labels default-in-code evaluations in human-readable output', async () => {
+    useEvaluationsResponse({
+      data: [
+        {
+          timestamp: '2026-07-10T10:00:00.000Z',
+          flagVariant: '',
+          [ROLLUP]: 13,
+        },
+        {
+          timestamp: '2026-07-10T10:01:00.000Z',
+          flagVariant: 'on',
+          [ROLLUP]: 107,
+        },
+      ],
+      summary: [
+        { flagVariant: '', [ROLLUP]: 13 },
+        { flagVariant: 'on', [ROLLUP]: 107 },
+      ],
+    });
+    client.setArgv(
+      'flags',
+      'evaluations',
+      'my-feature',
+      '--since',
+      '2026-07-10T10:00:00.000Z',
+      '--until',
+      '2026-07-10T11:00:00.000Z'
+    );
+
+    expect(await flags(client)).toBe(0);
+
+    const stdout = stripAnsi(client.stdout.getFullOutput());
+    expect(stdout).toContain('Default in Code');
+    expect(stdout).toContain('true: On');
+    expect(stdout).not.toContain('(not set)');
+  });
+
+  it('keeps default-in-code buckets when the API omits the variant id', async () => {
+    // The summary and the buckets may spell the missing variant differently.
+    useEvaluationsResponse({
+      summary: [
+        { flagVariant: '', [ROLLUP]: 59 },
+        ...Array.from({ length: 100 }, (_, index) => ({
+          flagVariant: `variant-${index}`,
+          [ROLLUP]: 100 - index,
+        })),
+      ],
+      data: [
+        {
+          timestamp: '2026-07-10T10:00:00.000Z',
+          flagVariant: null,
+          [ROLLUP]: 59,
+        },
+      ],
+    });
+    client.setArgv(
+      'flags',
+      'evaluations',
+      'my-feature',
+      '--since',
+      '2026-07-10T10:00:00.000Z',
+      '--until',
+      '2026-07-10T11:00:00.000Z',
+      '--json'
+    );
+
+    expect(await flags(client)).toBe(0);
+
+    const json = JSON.parse(client.stdout.getFullOutput());
+    expect(json.truncated).toBe(true);
+    expect(json.buckets).toEqual([
+      {
+        timestamp: '2026-07-10T10:00:00.000Z',
+        variant: null,
+        evaluations: 59,
+      },
     ]);
   });
 

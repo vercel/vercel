@@ -12,13 +12,14 @@ import { FlagsEvaluationsTelemetryClient } from '../../util/telemetry/commands/f
 import { resolveTimeRange } from '../../util/time-utils';
 import output from '../../output-manager';
 import { getRollupColumnName, handleApiError } from '../metrics/output';
-import { formatText } from '../metrics/text-output';
+import { formatText, NOT_SET_GROUP_VALUE } from '../metrics/text-output';
 import {
   computeGranularity,
   toGranularityMsFromDuration,
 } from '../metrics/time-utils';
 import type {
   Granularity,
+  MetricsApiDataCell,
   MetricsQueryResponse,
   ProjectScope,
 } from '../metrics/types';
@@ -39,6 +40,34 @@ const FLAG_EVALUATIONS_ROLLUP = getRollupColumnName(
 const DISPLAY_GROUP_BY = 'Variants';
 const QUERY_ENGINE_GROUP_BY = 'flagVariant';
 const MAX_VARIANTS = 100;
+const DEFAULT_IN_CODE_LABEL = 'Default in Code';
+
+/**
+ * Evaluations that fell back to the default value in code are not tied to a
+ * variant, so the API reports them with an empty variant id. Missing cells and
+ * the text renderer's `(not set)` placeholder mean the same thing.
+ */
+function isDefaultInCodeVariant(
+  variantId: MetricsApiDataCell | undefined
+): variantId is '' | typeof NOT_SET_GROUP_VALUE | null | undefined {
+  return (
+    variantId === undefined ||
+    variantId === null ||
+    variantId === '' ||
+    variantId === NOT_SET_GROUP_VALUE
+  );
+}
+
+/**
+ * Canonicalizes a variant id so the default-in-code bucket is represented as
+ * `null` everywhere instead of leaking an empty variant into output, and so a
+ * single grouping key covers every spelling the API may use for it.
+ */
+function toVariantId(
+  variantId: MetricsApiDataCell | undefined
+): MetricsApiDataCell {
+  return isDefaultInCodeVariant(variantId) ? null : variantId;
+}
 
 function getFlagEvaluationsApiUrl(ownerId: string): string {
   const url = new URL(
@@ -69,8 +98,8 @@ function alignTimeRange(
 }
 
 function getVariantDisplayName(flag: Flag, variantId: string): string {
-  if (!variantId || variantId === '(not set)') {
-    return 'Default in Code';
+  if (isDefaultInCodeVariant(variantId)) {
+    return DEFAULT_IN_CODE_LABEL;
   }
 
   const variant = flag.variants.find(item => item.id === variantId);
@@ -120,14 +149,14 @@ function limitEvaluationVariants(response: MetricsQueryResponse): {
 
   const summary = response.summary.slice(0, MAX_VARIANTS);
   const visibleVariants = new Set(
-    summary.map(row => row[QUERY_ENGINE_GROUP_BY])
+    summary.map(row => toVariantId(row[QUERY_ENGINE_GROUP_BY]))
   );
   return {
     response: {
       ...response,
       summary,
       data: response.data?.filter(row =>
-        visibleVariants.has(row[QUERY_ENGINE_GROUP_BY])
+        visibleVariants.has(toVariantId(row[QUERY_ENGINE_GROUP_BY]))
       ),
     },
     truncated: true,
@@ -152,9 +181,11 @@ function formatEvaluationsJson(
       endTime: endTime.toISOString(),
       granularity,
       truncated,
+      // A `null` variant marks evaluations that used the default in code, which
+      // the API reports without a variant id.
       buckets: (response.data ?? []).map(row => ({
         timestamp: row.timestamp,
-        variant: row[QUERY_ENGINE_GROUP_BY] ?? null,
+        variant: toVariantId(row[QUERY_ENGINE_GROUP_BY]),
         evaluations: row[FLAG_EVALUATIONS_ROLLUP] ?? null,
       })),
     },
@@ -361,7 +392,7 @@ export default async function evaluations(
           ...limited.response,
           data: limited.response.data?.map(row => ({
             ...row,
-            [DISPLAY_GROUP_BY]: row[QUERY_ENGINE_GROUP_BY] ?? null,
+            [DISPLAY_GROUP_BY]: toVariantId(row[QUERY_ENGINE_GROUP_BY]),
           })),
         },
         {
