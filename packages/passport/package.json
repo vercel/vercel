@@ -37,7 +37,7 @@
     "build": "node ../../utils/build.mjs",
     "test": "vitest run --config ../../vitest.config.mts",
     "type-check": "tsc --noEmit",
-    "vitest-unit": "pnpm test"
+    "vitest-unit": "vitest run --config ../../vitest.config.mts"
   },
   "license": "Apache-2.0",
   "publishConfig": {

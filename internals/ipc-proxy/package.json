@@ -12,11 +12,11 @@
   "scripts": {
     "build": "node build.mjs",
     "type-check": "tsc --noEmit",
-    "test": "pnpm test-go && vitest run --config ../../vitest.config.mts",
+    "test": "go -C bootstrap test ./... && vitest run --config ../../vitest.config.mts",
     "test-go": "go -C bootstrap test ./...",
-    "test-unit": "pnpm test",
+    "test-unit": "go -C bootstrap test ./... && vitest run --config ../../vitest.config.mts",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "pnpm test"
+    "vitest-unit": "go -C bootstrap test ./... && vitest run --config ../../vitest.config.mts"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",

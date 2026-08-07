@@ -34,7 +34,7 @@
     "generate:schemas": "ts-to-zod --all",
     "test": "vitest run --config ../../vitest.config.mts",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "pnpm vitest-run --run",
+    "vitest-unit": "vitest run --config ../../vitest.config.mts",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

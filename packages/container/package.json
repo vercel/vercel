@@ -13,7 +13,7 @@
     "build": "node ../../utils/build-builder.mjs",
     "type-check": "tsc --noEmit",
     "test-unit": "vitest run --config ../../vitest.config.mts test/unit.test.ts test/diagnostics.test.ts",
-    "vitest-unit": "pnpm test-unit"
+    "vitest-unit": "vitest run --config ../../vitest.config.mts test/unit.test.ts test/diagnostics.test.ts"
   },
   "files": [
     "dist"

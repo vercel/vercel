@@ -13,7 +13,7 @@
     "build": "node scripts/stage-packages.mjs --check-sources",
     "test": "vitest run --config ../../vitest.config.mts test/*.test.mjs",
     "vitest-run": "vitest run --config ../../vitest.config.mts",
-    "vitest-unit": "pnpm vitest-run --run",
+    "vitest-unit": "vitest run --config ../../vitest.config.mts",
     "type-check": "echo 'No type-check needed for vc-native staging package'"
   },
   "files": [

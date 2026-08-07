@@ -15,7 +15,7 @@
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "pnpm vitest-run --run test/unit/",
+    "vitest-unit": "vitest run --config ../../vitest.config.mts test/unit/",
     "type-check": "tsc --noEmit"
   },
   "files": [

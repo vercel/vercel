@@ -16,10 +16,10 @@
   "scripts": {
     "build": "node ../../utils/build.mjs",
     "test": "vitest run --config ../../vitest.config.mts",
-    "test-unit": "pnpm test",
+    "test-unit": "vitest run --config ../../vitest.config.mts",
     "type-check": "tsc --noEmit",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "pnpm test"
+    "vitest-unit": "vitest run --config ../../vitest.config.mts"
   },
   "dependencies": {
     "path-to-regexp-updated": "npm:path-to-regexp@6.3.0",

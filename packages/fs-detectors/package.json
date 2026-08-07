@@ -16,11 +16,11 @@
   "scripts": {
     "build": "node ../../utils/build.mjs",
     "test": "vitest run --config ../../vitest.config.mts",
-    "test-unit": "pnpm test test/unit.*test.*",
-    "test-e2e": "pnpm test test/integration.test.ts",
+    "test-unit": "vitest run --config ../../vitest.config.mts test/unit.*test.*",
+    "test-e2e": "vitest run --config ../../vitest.config.mts test/integration.test.ts",
     "type-check": "tsc --noEmit",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "pnpm test test/unit.",
+    "vitest-unit": "vitest run --config ../../vitest.config.mts test/unit.",
     "vitest-e2e": "glob --absolute 'test/integration.test.ts'"
   },
   "dependencies": {

@@ -15,10 +15,10 @@
   "scripts": {
     "build": "node ../../utils/build.mjs",
     "test": "vitest run --config ../../vitest.config.mts --coverage",
-    "test-unit": "pnpm test",
+    "test-unit": "vitest run --config ../../vitest.config.mts --coverage",
     "type-check": "tsc --noEmit",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "pnpm test"
+    "vitest-unit": "vitest run --config ../../vitest.config.mts --coverage"
   },
   "devDependencies": {
     "@types/node": "20.11.0",

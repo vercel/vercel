@@ -22,10 +22,10 @@
   "scripts": {
     "build": "pnpm generate:schemas && tsc",
     "generate:schemas": "ts-to-zod src/types.ts src/schema.zod.ts",
-    "test": "pnpm test-unit",
-    "test-unit": "pnpm run vitest-run -- test",
+    "test": "vitest run --config ../../vitest.config.mts test",
+    "test-unit": "vitest run --config ../../vitest.config.mts test",
     "vitest-run": "vitest run -c ../../vitest.config.mts",
-    "vitest-unit": "pnpm vitest-run --run",
+    "vitest-unit": "vitest run --config ../../vitest.config.mts",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

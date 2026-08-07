@@ -10,9 +10,9 @@
   "scripts": {
     "build": "node ../../utils/build.mjs",
     "test": "vitest run --config ../../vitest.config.mts",
-    "test-unit": "pnpm test tests/unit",
+    "test-unit": "vitest run --config ../../vitest.config.mts tests/unit",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "pnpm test tests/unit/"
+    "vitest-unit": "vitest run --config ../../vitest.config.mts tests/unit/"
   },
   "devDependencies": {
     "@types/node": "20.11.0",

@@ -1,4 +1,4 @@
-const { intoChunks } = require('./chunk-tests');
+const { getScriptTestPatterns, intoChunks } = require('./chunk-tests');
 
 describe('it should create chunks correctly', () => {
   it('should split chunks correctly less chunks than items', () => {
@@ -25,5 +25,31 @@ describe('it should create chunks correctly', () => {
       ['/second'],
       ['/third'],
     ]);
+  });
+});
+
+describe('getScriptTestPatterns', () => {
+  it('reads filters from direct vitest commands', () => {
+    const packageJson = {
+      scripts: {
+        'vitest-unit': 'vitest run --config ../../vitest.config.mts test/unit/',
+      },
+    };
+
+    expect(getScriptTestPatterns(packageJson, 'vitest-unit')).toEqual([
+      'test/unit/',
+    ]);
+  });
+
+  it('uses default patterns for an unfiltered vitest command', () => {
+    const packageJson = {
+      scripts: {
+        'vitest-unit': 'vitest run --config ../../vitest.config.mts',
+      },
+    };
+
+    expect(getScriptTestPatterns(packageJson, 'vitest-unit')).toContain(
+      'test/**/*.test.ts'
+    );
   });
 });

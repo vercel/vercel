@@ -263,6 +263,11 @@ function getScriptTestPatterns(packageJson, scriptName) {
     return getDefaultTestPatterns();
   }
 
+  const vitestPatterns = getPatternsAfterCommand(script, 'vitest run');
+  if (vitestPatterns.length > 0) {
+    return vitestPatterns;
+  }
+
   return [];
 }
 
