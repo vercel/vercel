@@ -1,10 +1,8 @@
+import { exchangeVercelOidcToken } from './exchange-vercel-oidc-token';
 import { getVercelOidcTokenSync } from './get-vercel-oidc-token-sync';
 import { VercelOidcTokenError } from './token-error';
 
-/**
- * Options for getting the Vercel OIDC token.
- */
-export interface GetVercelOidcTokenOptions {
+interface GetVercelOidcTokenBaseOptions {
   /**
    * Optional team ID (team_*) or slug to use for token refresh.
    * When provided, this team will be used instead of reading from `.vercel/project.json`.
@@ -22,6 +20,40 @@ export interface GetVercelOidcTokenOptions {
    */
   expirationBufferMs?: number;
 }
+
+/**
+ * Options for getting the Vercel OIDC token.
+ *
+ * `jti` and `skipCache` are only accepted when `audience` is provided, because
+ * they only take effect while exchanging the token for a custom audience —
+ * without an `audience` there is no exchange.
+ */
+export type GetVercelOidcTokenOptions =
+  | (GetVercelOidcTokenBaseOptions & {
+      /**
+       * Audience to set on the exchanged token.
+       */
+      audience: string;
+      /**
+       * Optional JTI to set on the exchanged token.
+       * @default undefined
+       */
+      jti?: string;
+      /**
+       * When `true`, bypasses the in-memory exchange cache and performs a fresh
+       * token exchange.
+       * @default false
+       */
+      skipCache?: boolean;
+    })
+  | (GetVercelOidcTokenBaseOptions & {
+      /**
+       * @default undefined
+       */
+      audience?: undefined;
+      jti?: never;
+      skipCache?: never;
+    });
 
 /**
  * Gets the current OIDC token from the request context or the environment variable.
@@ -96,6 +128,15 @@ export async function getVercelOidcToken(
       throw new VercelOidcTokenError(message);
     }
     throw error;
+  }
+
+  if (options?.audience) {
+    token = await exchangeVercelOidcToken({
+      token,
+      audience: options.audience,
+      jti: options.jti,
+      skipCache: options.skipCache,
+    });
   }
   return token;
 }

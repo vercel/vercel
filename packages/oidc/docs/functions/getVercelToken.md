@@ -12,7 +12,7 @@ Defined in: [packages/oidc/src/token-util.ts:27](https://github.com/vercel/verce
 
 ### options?
 
-`GetVercelTokenOptions`
+[`GetVercelTokenOptions`](../interfaces/GetVercelTokenOptions.md)
 
 ## Returns
 

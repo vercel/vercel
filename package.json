@@ -31,10 +31,11 @@
     "syncpack": "13.0.4",
     "tmp-promise": "1.0.3",
     "ts-eager": "2.0.2",
-    "turbo": "2.5.0",
+    "turbo": "2.10.8",
     "typescript": "5.9.3",
     "vite": "5.1.8",
-    "vitest": "2.0.3"
+    "vitest": "2.0.3",
+    "ws": "8.18.0"
   },
   "scripts": {
     "build": "node utils/gen.js && turbo --no-update-notifier run build",
@@ -52,7 +53,7 @@
     "prepare": "husky install",
     "pack": "cd utils && node -r ts-eager/register ./pack.ts",
     "ci:version": "changeset version && node utils/sync-python-version.js && uv lock && pnpm install --no-frozen-lockfile",
-    "ci:publish": "node utils/publish-runtimes.mjs && bash utils/npm-publish.sh && changeset tag",
+    "ci:publish": "node utils/inject-native-optional-deps.mjs && node utils/publish-runtimes.mjs && bash utils/npm-publish.sh && changeset tag",
     "ci:version:canary": "node utils/changeset-version-canary.js && pnpm install --no-frozen-lockfile",
     "ci:publish:canary": "bash utils/npm-publish.sh canary",
     "type-check": "turbo type-check --concurrency=12 --output-logs=errors-only --summarize --continue"

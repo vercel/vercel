@@ -6,7 +6,17 @@
 
 > **getVercelOidcTokenSync**(): `string`
 
-Defined in: packages/oidc/dist/get-vercel-oidc-token-sync.d.ts:22
+Defined in: packages/oidc/dist/get-vercel-oidc-token-sync.d.ts:23
+
+## Returns
+
+`string`
+
+The OIDC token.
+
+## Deprecated
+
+Use `getVercelOidcToken` instead.
 
 Gets the current OIDC token from the request context or the environment variable.
 
@@ -17,12 +27,6 @@ It checks for the `x-vercel-oidc-token` header in the request context and falls 
 
 This function will not refresh the token if it is expired. For refreshing the token, use the @{link getVercelOidcToken} function.
 
-## Returns
-
-`string`
-
-The OIDC token.
-
 ## Throws
 
 If the `x-vercel-oidc-token` header is missing from the request context and the environment variable `VERCEL_OIDC_TOKEN` is not set.
@@ -30,7 +34,6 @@ If the `x-vercel-oidc-token` header is missing from the request context and the 
 ## Example
 
 ```js
-// Using the OIDC token
 const token = getVercelOidcTokenSync();
 console.log('OIDC Token:', token);
 ```

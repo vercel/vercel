@@ -12,7 +12,7 @@ import {
   testFixtureStdio,
   validateResponseHeaders,
 } from './utils';
-import nodeFetch from 'node-fetch';
+import nodeFetch from '../../src/util/fetch';
 
 test('[verdel dev] should support serverless functions', async () => {
   const dir = fixture('serverless-function');

@@ -2,11 +2,12 @@
 
 import ms from 'ms';
 import { randomBytes } from 'crypto';
-import nodeFetch from 'node-fetch';
+import { directFetch } from '../fetch';
 import type { ExperimentalService } from '@vercel/fs-detectors';
 import {
   getServiceQueueTopicConfigs,
   isQueueBackedService,
+  type DevQueueSubscription,
 } from '@vercel/build-utils';
 import output from '../../output-manager';
 
@@ -22,6 +23,7 @@ interface StoredMessage {
 interface ConsumerGroup {
   id: string;
   name: string;
+  serviceName: string;
   topicPattern: string;
   topicRegex: RegExp;
   serviceOriginFn: () => string | null;
@@ -70,28 +72,51 @@ export function topicPatternToRegex(pattern: string): RegExp {
 export interface EnqueueOptions {
   retentionSeconds?: number;
   delaySeconds?: number;
+  idempotencyKey?: string;
 }
+
+interface IdempotencyRecord {
+  messageId: string;
+  expiresAt: number;
+}
+
+interface DuplicateMessageRecord {
+  queueName: string;
+  originalMessageId: string;
+  expiresAt: number;
+}
+
+type QueueBrokerService = ExperimentalService & { consumer?: string };
 
 export class QueueBroker {
   private messages = new Map<string, StoredMessage>();
+  private idempotencyRecords = new Map<string, IdempotencyRecord>();
+  private duplicateMessages = new Map<string, DuplicateMessageRecord>();
   private consumerGroups: ConsumerGroup[] = [];
   private deliveryState = new Map<string, Map<string, DeliveryState>>();
   private tickTimer: ReturnType<typeof setInterval>;
 
   constructor(
-    services: ExperimentalService[],
+    services: QueueBrokerService[],
     private getServiceOrigin: (name: string) => string | null
   ) {
     for (const service of services) {
       if (!isQueueBackedService(service)) continue;
 
       const topicConfigs = getServiceQueueTopicConfigs(service);
+      const consumerGroup = service.consumer ?? service.name;
       for (const topicConfig of topicConfigs) {
         const topicPattern = topicConfig.topic;
-        const id = `${service.name}::${topicPattern}`;
+        const id = `${consumerGroup}::${topicPattern}`;
+        if (this.deliveryState.has(id)) {
+          throw new Error(
+            `Queue consumer "${consumerGroup}" is configured more than once for topic "${topicPattern}"`
+          );
+        }
         const group: ConsumerGroup = {
           id,
-          name: service.name,
+          name: consumerGroup,
+          serviceName: service.name,
           topicPattern,
           topicRegex: topicPatternToRegex(topicPattern),
           serviceOriginFn: () => this.getServiceOrigin(service.name),
@@ -115,6 +140,67 @@ export class QueueBroker {
     this.tickTimer.unref();
   }
 
+  /**
+   * Replace a service's consumer groups with the queue subscriptions its
+   * dev server introspected from the runtime SDK. The SDK dispatches push
+   * deliveries by the registered (consumer group, topic) pair, so deliveries
+   * must carry these consumer groups — not the synthesized per-service name
+   * derived from the service topology.
+   */
+  updateServiceSubscriptions(
+    serviceName: string,
+    subscriptions: DevQueueSubscription[]
+  ): void {
+    if (subscriptions.length === 0) {
+      return;
+    }
+
+    const kept: ConsumerGroup[] = [];
+    for (const group of this.consumerGroups) {
+      if (group.serviceName === serviceName) {
+        this.deliveryState.delete(group.id);
+      } else {
+        kept.push(group);
+      }
+    }
+    this.consumerGroups = kept;
+
+    for (const subscription of subscriptions) {
+      const id = `${subscription.consumer}::${subscription.topic}`;
+      if (this.deliveryState.has(id)) {
+        output.debug(
+          `Queue consumer "${subscription.consumer}" is already registered ` +
+            `for topic "${subscription.topic}"; keeping the first registration`
+        );
+        continue;
+      }
+      const group: ConsumerGroup = {
+        id,
+        name: subscription.consumer,
+        serviceName,
+        topicPattern: subscription.topic,
+        topicRegex: topicPatternToRegex(subscription.topic),
+        serviceOriginFn: () => this.getServiceOrigin(serviceName),
+        retryAfterMs:
+          subscription.retryAfterSeconds !== undefined
+            ? subscription.retryAfterSeconds * 1000
+            : DEFAULT_RETRY_AFTER,
+        maxDeliveries: subscription.maxDeliveries ?? DEFAULT_MAX_DELIVERIES,
+        initialDelayMs:
+          subscription.initialDelaySeconds !== undefined
+            ? subscription.initialDelaySeconds * 1000
+            : DEFAULT_INITIAL_DELAY,
+      };
+      this.consumerGroups.push(group);
+      this.deliveryState.set(group.id, new Map());
+    }
+
+    output.debug(
+      `Queue consumer groups for service "${serviceName}" updated from ` +
+        `${subscriptions.length} introspected subscription(s)`
+    );
+  }
+
   enqueue(
     queueName: string,
     payload: Buffer,
@@ -126,6 +212,34 @@ export class QueueBroker {
       (options?.retentionSeconds ?? 0) > 0
         ? options!.retentionSeconds! * 1000
         : DEFAULT_RETENTION;
+    const idempotencyRecordKey = options?.idempotencyKey
+      ? `${queueName}:${options.idempotencyKey}`
+      : undefined;
+
+    if (idempotencyRecordKey) {
+      const record = this.idempotencyRecords.get(idempotencyRecordKey);
+      if (record && record.expiresAt > Date.now()) {
+        this.duplicateMessages.set(messageId, {
+          queueName,
+          originalMessageId: record.messageId,
+          expiresAt: Date.now() + retentionMs,
+        });
+        output.debug(
+          `queues: skipped duplicate message for queue "${queueName}"`
+        );
+        return { messageId };
+      }
+      if (record) {
+        this.idempotencyRecords.delete(idempotencyRecordKey);
+      }
+    }
+
+    if (idempotencyRecordKey) {
+      this.idempotencyRecords.set(idempotencyRecordKey, {
+        messageId,
+        expiresAt: Date.now() + retentionMs,
+      });
+    }
 
     const message: StoredMessage = {
       messageId,
@@ -178,6 +292,21 @@ export class QueueBroker {
     return { messageId };
   }
 
+  getOriginalMessageIdForDuplicate(
+    queueName: string,
+    messageId: string
+  ): string | null {
+    const duplicate = this.duplicateMessages.get(messageId);
+    if (!duplicate || duplicate.queueName !== queueName) {
+      return null;
+    }
+    if (duplicate.expiresAt <= Date.now()) {
+      this.duplicateMessages.delete(messageId);
+      return null;
+    }
+    return duplicate.originalMessageId;
+  }
+
   receiveById(
     messageId: string,
     consumerGroup: string
@@ -206,7 +335,9 @@ export class QueueBroker {
       visibilityTimeoutSeconds?: number;
     }
   ): ReceivedMessage[] {
-    const group = this.consumerGroups.find(g => g.name === consumerGroup);
+    const group = this.consumerGroups.find(
+      g => g.name === consumerGroup && g.topicRegex.test(queueName)
+    );
     if (!group) return [];
 
     const groupDeliveries = this.deliveryState.get(group.id);
@@ -382,7 +513,7 @@ export class QueueBroker {
     );
 
     try {
-      const response = await nodeFetch(`${upstream}/`, {
+      const response = await directFetch(`${upstream}/`, {
         method: 'POST',
         headers: {
           'content-type': message.contentType,
@@ -431,6 +562,18 @@ export class QueueBroker {
 
   private tick(): void {
     const now = Date.now();
+
+    for (const [key, record] of this.idempotencyRecords) {
+      if (record.expiresAt <= now) {
+        this.idempotencyRecords.delete(key);
+      }
+    }
+
+    for (const [messageId, record] of this.duplicateMessages) {
+      if (record.expiresAt <= now) {
+        this.duplicateMessages.delete(messageId);
+      }
+    }
 
     for (const group of this.consumerGroups) {
       const groupDeliveries = this.deliveryState.get(group.id);

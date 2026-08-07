@@ -113,6 +113,9 @@ export default async function connex(client: Client): Promise<number> {
         telemetry.trackCliOptionConnectorType(
           createParsedArgs.flags['--connector-type']
         );
+        telemetry.trackCliOptionTriggerEvent(
+          createParsedArgs.flags['--trigger-event']
+        );
         return await create(
           client,
           createParsedArgs.args,
@@ -195,6 +198,9 @@ export default async function connex(client: Client): Promise<number> {
         telemetry.trackCliFlagTriggers(attachParsedArgs.flags['--triggers']);
         telemetry.trackCliOptionTriggerBranch(
           attachParsedArgs.flags['--trigger-branch']
+        );
+        telemetry.trackCliOptionTriggerEnvironment(
+          attachParsedArgs.flags['--trigger-environment']
         );
         telemetry.trackCliOptionTriggerPath(
           attachParsedArgs.flags['--trigger-path']

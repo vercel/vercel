@@ -1,5 +1,37 @@
 # @vercel/oidc
 
+## 3.8.1
+
+### Patch Changes
+
+- Updated dependencies [6e29745]
+  - @vercel/cli-config@0.2.1
+
+## 3.8.0
+
+### Minor Changes
+
+- d29a8f9: Cache exchanged OIDC tokens in memory, keyed by a hash of the source token, audience, and jti, so repeated exchanges reuse the result instead of calling the token-exchange endpoint every time. Cached tokens are evicted when the API-provided expiry passes, and the cache is bounded with least-recently-used eviction to avoid unbounded growth. Add a `skipCache` option (surfaced as `skipTokenCache` on `awsCredentialsProvider`) to bypass the cache. `jti` and the cache-skip flags are now only accepted alongside an `audience`, since they only take effect during a token exchange.
+
+## 3.7.1
+
+### Patch Changes
+
+- fb93ff6: Deprecate `getVercelOidcTokenSync` in favor of `getVercelOidcToken`
+
+## 3.7.0
+
+### Minor Changes
+
+- 415fde0: Add optional `audience` and `jti` parameters to exchange Vercel OIDC tokens for use with AWS STS and other providers.
+
+## 3.6.2
+
+### Patch Changes
+
+- Updated dependencies [3f21605]
+  - @vercel/cli-exec@1.0.0
+
 ## 3.6.1
 
 ### Patch Changes

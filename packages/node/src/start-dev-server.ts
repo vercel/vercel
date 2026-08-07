@@ -20,7 +20,11 @@ import {
   readMessage as readDevServerMessage,
 } from './fork-dev-server';
 import { fixConfig } from './typescript';
-import { getRegExpFromMatchers } from './utils';
+import {
+  getRegExpFromMatchers,
+  resolveMiddlewareMatcher,
+  validateMiddlewareRuntime,
+} from './utils';
 
 const require_ = createRequire(__filename);
 const treeKill = promisify(_treeKill);
@@ -105,6 +109,13 @@ export const startDevServer: StartDevServer = async opts => {
 
   const project = new Project();
   const staticConfig = getConfig(project, entrypointPath);
+  if (config.middlewareRuntime) {
+    validateMiddlewareRuntime(
+      staticConfig?.runtime,
+      entrypoint,
+      config.middlewareRuntime
+    );
+  }
   const vercelConfigFile = opts.files['vercel.json'];
   let bunVersion: BunVersion | undefined;
   try {
@@ -131,7 +142,12 @@ export const startDevServer: StartDevServer = async opts => {
 
   if (config.middleware === true && typeof meta.requestUrl === 'string') {
     // Middleware is a catch-all for all paths unless a `matcher` property is defined
-    const matchers = new RegExp(getRegExpFromMatchers(staticConfig?.matcher));
+    const matcher = resolveMiddlewareMatcher(
+      config.middlewareMatcher,
+      staticConfig?.matcher,
+      entrypoint
+    );
+    const matchers = new RegExp(getRegExpFromMatchers(matcher));
 
     const parsed = new URL(meta.requestUrl, 'http://localhost');
     if (!matchers.test(parsed.pathname)) {

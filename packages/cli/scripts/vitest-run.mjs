@@ -1,7 +1,7 @@
 // Wrapper around vitest that accepts test file paths via VITEST_TEST_FILES env var
 // instead of CLI arguments. This bypasses the Windows cmd.exe ~8191 char arg limit
 // that turbo hits when passing many test paths through package.json scripts.
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
@@ -25,10 +25,69 @@ const envFiles = (process.env.VITEST_TEST_FILES ?? '')
   .filter(Boolean);
 const files = envFiles.length > 0 ? envFiles : process.argv.slice(2);
 
-const result = spawnSync(
+// CI hardening: if vitest's fork pool hangs (leaked handles, server not closed),
+// spawnSync with inherited stdio would block forever and the job would run until
+// the workflow-level timeout (120m). Use async spawn + watchdog timers so we
+// surface a actionable error and fail fast instead of burning runner minutes.
+//
+// Timeouts are generous: tests themselves have a 12m per-test/hook timeout in
+// vitest.config.mts, chunks should finish well under 10m even on slow runners;
+// the watchdog is just a safety net for runaway forks.
+const CHUNK_TIMEOUT_MS = 20 * 60 * 1000; // total wall clock for the chunk
+const GRACE_MS = 15_000; // after SIGTERM -> SIGKILL
+
+const child = spawn(
   process.execPath,
   [vitestBin, '--config', './vitest.config.mts', ...files],
-  { stdio: 'inherit', shell: false }
+  {
+    stdio: 'inherit',
+    shell: false,
+  }
 );
 
-process.exit(result.status ?? 1);
+let timedOut = false;
+let hardKillTimer = null;
+
+const chunkTimer = setTimeout(() => {
+  timedOut = true;
+  console.error(
+    `\n[vitest-run] chunk timed out after ${CHUNK_TIMEOUT_MS / 1000}s — sending SIGTERM`
+  );
+  if (typeof child.kill === 'function') {
+    try {
+      child.kill('SIGTERM');
+    } catch {}
+  }
+  hardKillTimer = setTimeout(() => {
+    console.error(
+      '[vitest-run] still alive after grace period — sending SIGKILL'
+    );
+    try {
+      child.kill('SIGKILL');
+    } catch {}
+  }, GRACE_MS);
+  // Don't unref hardKillTimer: we want it to fire even if event loop is idle.
+}, CHUNK_TIMEOUT_MS);
+chunkTimer.unref?.();
+
+child.on('exit', (code, signal) => {
+  clearTimeout(chunkTimer);
+  if (hardKillTimer) clearTimeout(hardKillTimer);
+
+  if (timedOut) {
+    console.error(
+      `[vitest-run] chunk failed due to watchdog timeout (code=${code} signal=${signal}). ` +
+        'This usually means a fork leaked handles (open server/timer) or a build dep hung.'
+    );
+    process.exit(124);
+  }
+
+  process.exit(code ?? (signal ? 1 : 0));
+});
+
+child.on('error', err => {
+  clearTimeout(chunkTimer);
+  if (hardKillTimer) clearTimeout(hardKillTimer);
+  console.error('[vitest-run] failed to spawn vitest:', err);
+  process.exit(1);
+});

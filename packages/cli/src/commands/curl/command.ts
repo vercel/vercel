@@ -1,11 +1,15 @@
 import { packageName } from '../../util/pkg-name';
-import { yesOption } from '../../util/arg-common';
+import {
+  deploymentOption,
+  protectionBypassOption,
+  yesOption,
+} from '../../util/arg-common';
 
 export const curlCommand = {
   name: 'curl',
   aliases: [],
   description:
-    'Execute curl with automatic deployment URL and protection bypass.',
+    'Make curl requests to Vercel deployments with automatic protection bypass.',
   arguments: [
     {
       name: 'path',
@@ -18,23 +22,8 @@ export const curlCommand = {
       description:
         'Skip confirmation when linking is required (e.g. in non-interactive mode)',
     },
-    {
-      name: 'deployment',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-      description: 'The deployment ID or URL to target',
-      argument: 'ID|URL',
-    },
-    {
-      name: 'protection-bypass',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-      description:
-        'Protection bypass secret for accessing protected deployments',
-      argument: 'SECRET',
-    },
+    deploymentOption,
+    protectionBypassOption,
     {
       name: 'trace',
       shorthand: null,
@@ -53,6 +42,10 @@ export const curlCommand = {
     },
   ],
   examples: [
+    {
+      name: 'Access a protected deployment URL',
+      value: `${packageName} curl https://your-project-abc123.vercel.app/api/hello`,
+    },
     {
       name: 'Make a GET request to an API endpoint',
       value: `${packageName} curl /api/hello`,

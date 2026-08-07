@@ -111,7 +111,8 @@ async function main() {
   );
 
   const proxyServer = createServer(onDevRequest);
-  await listen(proxyServer, { host: '127.0.0.1', port: 0 });
+  const requestedPort = Number(process.env.VERCEL_DEV_PORT) || 0;
+  await listen(proxyServer, { host: '127.0.0.1', port: requestedPort });
 
   try {
     const result = await createEventHandler(entrypoint!, config, {

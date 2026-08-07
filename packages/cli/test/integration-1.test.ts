@@ -1,10 +1,12 @@
 import path from 'path';
 import { execCli } from './helpers/exec';
-import nodeFetch from 'node-fetch';
+import nodeFetch from '../src/util/fetch';
 import { apiFetch } from './helpers/api-fetch';
 import fs from 'fs-extra';
 import sleep from '../src/util/sleep';
-import waitForPrompt from './helpers/wait-for-prompt';
+import waitForPrompt, {
+  answerTeamPromptThenWait,
+} from './helpers/wait-for-prompt';
 import { listTmpDirs } from './helpers/get-tmp-dir';
 import { teamPromise } from './helpers/get-account';
 import {
@@ -373,17 +375,15 @@ test('deploy from a nested directory', async () => {
     },
   });
 
-  await waitForPrompt(vc, /Set up [“"]/);
-  await waitForPrompt(vc, 'Which team?');
+  await waitForPrompt(vc, 'Directory');
+  // Single-team accounts auto-select the team; answer the prompt only if shown.
+  await answerTeamPromptThenWait(vc, 'Project?');
   vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, 'Link to existing project?');
-  vc.stdin?.write('no\n');
 
   await waitForPrompt(vc, `Name? (${projectName})`);
   vc.stdin?.write(`\n`);
 
-  await waitForPrompt(vc, 'In which directory is your code located?');
+  await waitForPrompt(vc, 'Code directory?');
   vc.stdin?.write('app\n');
 
   // This means the framework detection worked!
@@ -409,17 +409,15 @@ test('deploy from a nested directory with `--archive=tgz` option', async () => {
     }
   );
 
-  await waitForPrompt(vc, /Set up [“"]/);
-  await waitForPrompt(vc, 'Which team?');
+  await waitForPrompt(vc, 'Directory');
+  // Single-team accounts auto-select the team; answer the prompt only if shown.
+  await answerTeamPromptThenWait(vc, 'Project?');
   vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, 'Link to existing project?');
-  vc.stdin?.write('no\n');
 
   await waitForPrompt(vc, `Name? (${projectName})`);
   vc.stdin?.write(`\n`);
 
-  await waitForPrompt(vc, 'In which directory is your code located?');
+  await waitForPrompt(vc, 'Code directory?');
   vc.stdin?.write('app\n');
 
   // This means the framework detection worked!
@@ -495,22 +493,14 @@ test.skip('deploy `api-env` fixture and test `vercel env` command', async () => 
       cwd: target,
     });
 
-    await waitForPrompt(vc, "What's the name of the variable?");
+    await waitForPrompt(vc, 'Name?');
     vc.stdin?.write(`${promptEnvVar}\n`);
-    await waitForPrompt(vc, 'Mark as sensitive?');
+    await waitForPrompt(vc, 'Store as sensitive?');
     vc.stdin?.write('n\n');
-    await waitForPrompt(
-      vc,
-      chunk =>
-        chunk.includes("What's the value of") && chunk.includes(promptEnvVar)
-    );
+    await waitForPrompt(vc, 'Value?');
     vc.stdin?.write('my plaintext value\n');
 
-    await waitForPrompt(
-      vc,
-      chunk =>
-        chunk.includes('which Environments') && chunk.includes(promptEnvVar)
-    );
+    await waitForPrompt(vc, 'Environments?');
     vc.stdin?.write('a\n'); // select all
 
     const { exitCode, stdout, stderr } = await vc;

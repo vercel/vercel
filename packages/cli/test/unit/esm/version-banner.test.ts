@@ -16,12 +16,24 @@ describe('vc.js version banner', () => {
       'export const version = "1.2.3";\n'
     );
 
+    // Strip NODE_PATH / VITEST vars so require.resolve inside the temp
+    // vc.js does not leak the repo's pnpm store native binary.
+    const {
+      NODE_PATH: _np,
+      NODE_OPTIONS: _no,
+      VITEST: _v,
+      VITEST_POOL_ID: _vp,
+      ...rest
+    } = process.env as Record<string, string | undefined>;
+    const cleanEnv: Record<string, string> = {};
+    for (const [k, v] of Object.entries(rest)) if (v != null) cleanEnv[k] = v;
+
     const { stdout, stderr } = await execFileAsync(
       process.execPath,
       [join(dir, 'vc.js'), '--version'],
       {
         env: {
-          ...process.env,
+          ...cleanEnv,
           VERCEL_VC_NATIVE: '1',
         },
       }

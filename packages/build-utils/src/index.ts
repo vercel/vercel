@@ -8,7 +8,7 @@ import {
   sanitizeConsumerName,
 } from './lambda';
 import { NodejsLambda, type NodejsLambdaOptions } from './nodejs-lambda';
-import { Prerender } from './prerender';
+import { Prerender, type PrerenderClassification } from './prerender';
 import download, {
   downloadFile,
   DownloadedFiles,
@@ -47,6 +47,7 @@ import {
   traverseUpDirectories,
   PipInstallResult,
   NpmInstallOutput,
+  type CliType,
 } from './fs/run-user-scripts';
 import {
   getLatestNodeVersion,
@@ -68,7 +69,7 @@ import { cloneEnv } from './clone-env';
 import { hardLinkDir } from './hard-link-dir';
 import { validateNpmrc } from './validate-npmrc';
 
-export type { NodejsLambdaOptions };
+export type { NodejsLambdaOptions, PrerenderClassification };
 
 export {
   FileBlob,
@@ -133,12 +134,15 @@ export {
   hardLinkDir,
   traverseUpDirectories,
   validateNpmrc,
+  type CliType,
 };
 
 export { EdgeFunction } from './edge-function';
+export { ContainerImage } from './container-image';
+export type { ContainerImageConfig } from './container-image';
 export { readConfigFile, getPackageJson } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
-export { getOsRelease, getProvidedRuntime } from './os';
+export { getProvidedRuntime } from './provided-runtime';
 
 export * from './should-serve';
 export * from './schemas';
@@ -149,7 +153,12 @@ export {
   getMaxDurationSchema,
 } from './max-duration';
 export * from './package-manifest';
+export * from './deploy-manifest';
 export { generateProjectManifest } from './node-diagnostics';
+export {
+  generateRubyProjectManifest,
+  parseGemfileLock,
+} from './ruby-diagnostics';
 export * from './types';
 export * from './errors';
 

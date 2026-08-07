@@ -11,6 +11,11 @@ import {
   formatStoreLabel,
   formatConnectedProjects,
 } from '../../util/blob/confirm';
+import {
+  outputAgentError,
+  buildCommandWithYes,
+  buildCommandWithGlobalFlags,
+} from '../../util/agent-output';
 
 export default async function removeStore(
   client: Client,
@@ -34,6 +39,8 @@ export default async function removeStore(
     flags: { '--yes': yes },
   } = parsedArgs;
 
+  const interactive = client.stdin.isTTY && !client.nonInteractive;
+
   let storeId: string | undefined = storeIdArg;
 
   if (!storeId) {
@@ -41,19 +48,34 @@ export default async function removeStore(
   }
 
   if (!storeId) {
-    if (!client.stdin.isTTY) {
+    if (interactive) {
+      storeId = await client.input.text({
+        message: 'Enter the ID of the blob store you want to remove',
+        validate: value => {
+          if (value.length !== 22) {
+            return 'ID must be 22 characters long';
+          }
+          return true;
+        },
+      });
+    } else {
+      outputAgentError(client, {
+        status: 'error',
+        reason: 'missing_arguments',
+        message: 'Missing required argument: storeId.',
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'blob delete-store <storeId> --yes'
+            ),
+            when: 'delete the blob store',
+          },
+        ],
+      });
       output.error('Missing required argument: storeId');
       return 1;
     }
-    storeId = await client.input.text({
-      message: 'Enter the ID of the blob store you want to remove',
-      validate: value => {
-        if (value.length !== 22) {
-          return 'ID must be 22 characters long';
-        }
-        return true;
-      },
-    });
   }
 
   const link = await getLinkedProject(client);
@@ -82,7 +104,18 @@ export default async function removeStore(
     );
 
     if (!yes) {
-      if (!client.stdin.isTTY) {
+      if (!interactive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'confirmation_required',
+          message: `Removing ${label} cannot be undone and requires confirmation. Re-run with --yes.`,
+          next: [
+            {
+              command: buildCommandWithYes(client.argv),
+              when: 'remove the blob store without prompting',
+            },
+          ],
+        });
         output.error(
           'Confirmation required. Use --yes to skip confirmation in non-interactive environments.'
         );

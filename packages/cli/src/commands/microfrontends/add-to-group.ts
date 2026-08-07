@@ -7,6 +7,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
 import { isAPIError } from '../../util/errors-ts';
+import { getTeamBillingUrl } from '../../util/billing-url';
 import type { MicrofrontendsGroupResponse } from './types';
 import {
   ensureMicrofrontendsContext,
@@ -17,7 +18,7 @@ import {
   openUrlInBrowserCommand,
   outputAgentError,
 } from '../../util/agent-output';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import { getCommandNamePlain } from '../../util/pkg-name';
 
 export default async function addToGroup(client: Client): Promise<number> {
@@ -74,7 +75,7 @@ export default async function addToGroup(client: Client): Promise<number> {
 
   if (isLimitedPlan && totalAfter > freeProjects) {
     const planName = isProTrialPlan ? 'Pro Trial' : 'Hobby';
-    const url = `https://vercel.com/${teamSlug}/~/settings/billing`;
+    const url = getTeamBillingUrl(teamSlug);
     output.log(
       `You've reached the microfrontends project limit for ${planName}. Upgrade to Pro to add more projects.`
     );
@@ -97,7 +98,7 @@ export default async function addToGroup(client: Client): Promise<number> {
   if (wouldAffectBilling) {
     if (client.nonInteractive) {
       const settingsUrl = `https://vercel.com/${teamSlug}/${project.name}/settings/microfrontends`;
-      const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+      const flags = getGlobalFlagsFromArgs(client.argv.slice(2));
       const interactiveCmd = getCommandNamePlain(
         `microfrontends add-to-group ${flags.filter(f => f !== '--non-interactive').join(' ')}`.trim()
       );
@@ -155,7 +156,7 @@ export default async function addToGroup(client: Client): Promise<number> {
   if (selectedGroup.projects.length >= maxMicrofrontendsPerGroup) {
     if (isLimitedPlan) {
       const planName = isProTrialPlan ? 'Pro Trial' : 'Hobby';
-      const url = `https://vercel.com/${teamSlug}/~/settings/billing`;
+      const url = getTeamBillingUrl(teamSlug);
       output.log(
         `You've reached the microfrontends project limit for ${planName}. Upgrade to Pro to add more projects.`
       );

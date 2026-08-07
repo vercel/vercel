@@ -42,7 +42,7 @@ describe('routes export', () => {
 
   it('should export routes as vercel.ts format', async () => {
     useRoutes(3);
-    client.setArgv('routes', 'export', '--format', 'ts');
+    client.setArgv('routes', 'export', '--output', 'ts');
     const exitCode = await routes(client);
     expect(exitCode).toEqual(0);
 
@@ -54,12 +54,71 @@ describe('routes export', () => {
     expect(output).toContain('routes:');
   });
 
-  it('should error on invalid format', async () => {
+  it('should export routes as vercel.ts format with -o shorthand', async () => {
     useRoutes(3);
-    client.setArgv('routes', 'export', '--format', 'xml');
+    client.setArgv('routes', 'export', '-o', 'ts');
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(0);
+
+    const output = client.stdout.getFullOutput();
+    expect(output).toContain(
+      "import type { VercelConfig } from '@vercel/config/v1'"
+    );
+    expect(output).toContain('export const config: VercelConfig');
+  });
+
+  it('should accept dotted file-extension format (.ts)', async () => {
+    useRoutes(3);
+    client.setArgv('routes', 'export', '--output', '.ts');
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(0);
+
+    const output = client.stdout.getFullOutput();
+    expect(output).toContain('export const config: VercelConfig');
+  });
+
+  it('should accept a dotted json extension (.json)', async () => {
+    useRoutes(3);
+    client.setArgv('routes', 'export', '--output', '.json');
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(0);
+
+    const parsed = JSON.parse(client.stdout.getFullOutput());
+    expect(parsed).toHaveProperty('routes');
+  });
+
+  it('should be case-insensitive for the output format', async () => {
+    useRoutes(3);
+    client.setArgv('routes', 'export', '--output', 'TS');
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(0);
+
+    const output = client.stdout.getFullOutput();
+    expect(output).toContain('export const config: VercelConfig');
+  });
+
+  it('should error on invalid output format', async () => {
+    useRoutes(3);
+    client.setArgv('routes', 'export', '--output', 'xml');
     const exitCode = await routes(client);
     expect(exitCode).toEqual(1);
-    await expect(client.stderr).toOutput('Invalid format');
+    await expect(client.stderr).toOutput('Invalid output format');
+  });
+
+  it('should echo the raw value the user typed in the error', async () => {
+    useRoutes(3);
+    client.setArgv('routes', 'export', '--output', 'XML');
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(1);
+    // The message reports what was typed ("XML"), not the normalized value.
+    await expect(client.stderr).toOutput('Invalid output format: "XML"');
+  });
+
+  it('should reject the removed --format flag', async () => {
+    useRoutes(3);
+    client.setArgv('routes', 'export', '--format', 'ts');
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(1);
   });
 
   it('should export a specific route by name', async () => {

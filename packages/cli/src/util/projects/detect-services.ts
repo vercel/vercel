@@ -7,9 +7,10 @@ import {
   type DetectServicesResult,
 } from '@vercel/fs-detectors';
 import type { InferredServicesConfig } from '@vercel/fs-detectors';
+import type { Rewrite } from '@vercel/routing-utils';
+import type { Services } from '@vercel/build-utils';
 import type { VercelConfig } from '../dev/types';
 import { compileVercelConfig } from '../compile-vercel-config';
-import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
 import { CantParseJSONFile } from '../errors-ts';
 import readJSONFile from '../read-json-file';
 import { validateConfig } from '../validate-config';
@@ -43,6 +44,7 @@ async function hasExperimentalServicesConfig(cwd: string): Promise<boolean> {
     return (
       (config.experimentalServices != null &&
         typeof config.experimentalServices === 'object') ||
+      (config.services != null && typeof config.services === 'object') ||
       (config.experimentalServicesV2 != null &&
         typeof config.experimentalServicesV2 === 'object')
     );
@@ -76,7 +78,7 @@ export async function tryDetectServices(
 
   // No services configured
   const hasNoServicesError = result.errors.some(
-    e => e.code === 'NO_EXPERIMENTAL_SERVICES_CONFIGURED'
+    e => e.code === 'NO_SERVICES_CONFIGURED'
   );
   if (hasNoServicesError) {
     return null;
@@ -108,9 +110,49 @@ export async function getServicesConfigWriteBlocker(
 
 function toProjectServicesConfigPatch(
   config: InferredServicesConfig
-): Pick<VercelConfig, 'experimentalServices'> {
+): Pick<VercelConfig, 'services' | 'rewrites'> {
+  const services: Services = {};
+  for (const [name, svc] of Object.entries(config)) {
+    // Combine preDeployCommand into buildCommand since V2 ServiceConfig
+    // doesn't have a separate preDeployCommand field.
+    const buildCommand =
+      svc.preDeployCommand && svc.buildCommand
+        ? `${svc.buildCommand} && ${svc.preDeployCommand}`
+        : svc.preDeployCommand || svc.buildCommand;
+
+    services[name] = {
+      root: svc.root,
+      ...(svc.framework ? { framework: svc.framework } : {}),
+      ...(svc.entrypoint ? { entrypoint: svc.entrypoint } : {}),
+      ...(buildCommand ? { buildCommand } : {}),
+    };
+  }
+  // Top-level rewrites route public traffic into web services by mountPath.
+  // Non-web services (workers, crons) don't get public HTTP rewrites.
+  // Ordered longest-first so specific paths match before catch-all.
+  const rewrites: Rewrite[] = Object.entries(config)
+    .filter(
+      ([, svc]) =>
+        typeof svc.mountPath === 'string' && (!svc.type || svc.type === 'web')
+    )
+    .sort(([, a], [, b]) => b.mountPath!.length - a.mountPath!.length)
+    .map(([name, svc]) => {
+      const mountPath = svc.mountPath!;
+      if (mountPath === '/') {
+        return {
+          source: '/(.*)',
+          destination: { type: 'service' as const, service: name },
+        };
+      }
+      const prefix = mountPath.startsWith('/') ? mountPath.slice(1) : mountPath;
+      return {
+        source: `/${prefix}(/.*)?`,
+        destination: { type: 'service' as const, service: name },
+      };
+    });
   return {
-    experimentalServices: config,
+    services,
+    ...(rewrites.length > 0 ? { rewrites } : {}),
   };
 }
 
@@ -124,7 +166,7 @@ async function prepareServicesConfigWrite(
   const compileResult = await compileVercelConfig(cwd);
   const configPath = join(cwd, 'vercel.json');
 
-  if (isVercelTomlEnabled() && compileResult.sourceFile === 'vercel.toml') {
+  if (compileResult.sourceFile === 'vercel.toml') {
     return prepareTomlServicesConfigWrite(join(cwd, 'vercel.toml'), config);
   }
 
@@ -146,9 +188,19 @@ async function prepareServicesConfigWrite(
     existingConfig = result ?? {};
   }
 
+  const patch = toProjectServicesConfigPatch(config);
   const nextConfig: VercelConfig = {
     ...existingConfig,
-    ...toProjectServicesConfigPatch(config),
+    ...patch,
+    // Preserve existing user rewrites; append auto-detected service rewrites.
+    ...(patch.rewrites
+      ? {
+          rewrites: [
+            ...((existingConfig.rewrites as Rewrite[]) ?? []),
+            ...patch.rewrites,
+          ],
+        }
+      : {}),
   };
   const validationError = validateConfig(nextConfig);
   if (validationError) {
@@ -205,8 +257,10 @@ function getServicesConfigWriteBlockerFromError(
 ): ServicesConfigWriteBlocker | null {
   switch ((error as { code?: string })?.code) {
     case 'EXPERIMENTAL_SERVICES_AND_BUILDS':
+    case 'SERVICES_AND_BUILDS':
       return 'builds';
     case 'EXPERIMENTAL_SERVICES_AND_FUNCTIONS':
+    case 'SERVICES_AND_FUNCTIONS':
       return 'functions';
     default:
       return null;

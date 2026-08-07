@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Headers } from 'node-fetch';
+import { Headers } from '../../../../src/util/fetch';
 import { applyOverriddenHeaders } from '../../../../src/util/dev/headers';
 
 describe('applyOverriddenHeaders', () => {
@@ -20,8 +20,14 @@ describe('applyOverriddenHeaders', () => {
       'x-middleware-request-b': '2',
     });
 
-    applyOverriddenHeaders(reqHeaders, respHeaders);
+    const sanitizedHeaders = applyOverriddenHeaders(reqHeaders, respHeaders);
     expect(reqHeaders).toStrictEqual({ a: '1', b: '2' });
+    expect(respHeaders.has('x-middleware-override-headers')).toBe(true);
+    expect(respHeaders.has('x-middleware-request-a')).toBe(true);
+    expect(respHeaders.has('x-middleware-request-b')).toBe(true);
+    expect(sanitizedHeaders.has('x-middleware-override-headers')).toBe(false);
+    expect(sanitizedHeaders.has('x-middleware-request-a')).toBe(false);
+    expect(sanitizedHeaders.has('x-middleware-request-b')).toBe(false);
   });
 
   it('delete the header if x-middleware-request-* is undefined', async () => {

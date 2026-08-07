@@ -18,7 +18,7 @@ import { renderMarkdown } from './render-markdown';
 import { resolveScope } from './scope-resolver';
 import type { TracesTelemetryClient } from '../../util/telemetry/commands/traces';
 
-const VIEW_OPTIONS = ['timeline', 'tree', 'gantt'] as const;
+const VIEW_OPTIONS = ['timeline', 'tree', 'waterfall'] as const;
 type View = (typeof VIEW_OPTIONS)[number];
 
 function isView(value: string): value is View {

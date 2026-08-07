@@ -1,5 +1,51 @@
 # @vercel/next
 
+## 4.20.5
+
+### Patch Changes
+
+- a69c714: Propagate per-function `maxConcurrency` configuration into build outputs and keep every configured Next.js route in its own Lambda group, including routes with the same limit.
+
+## 4.20.4
+
+### Patch Changes
+
+- 0f67a94: Include instrumentation for Node.js Middleware
+
+## 4.20.3
+
+### Patch Changes
+
+- 6dbc280: [next] Update to latest Next.js adapter
+
+## 4.20.2
+
+### Patch Changes
+
+- e05ed3c: Add support for stable Cache Components without experimental PPR
+
+## 4.20.1
+
+### Patch Changes
+
+- d538795: Revert update to latest Next.js adapter
+
+## 4.20.0
+
+### Minor Changes
+
+- 68ed45c: Add opt-in handling for routes that individually do not fit the default uncompressed function budget.
+
+  When `NEXT_EXPERIMENTAL_LARGE_FUNCTIONS` is set, any route whose own uncompressed size exceeds the default per-runtime packing budget (e.g. 225 MiB on Node) is emitted as its own function under a higher 5 GiB ceiling rather than bundled. Such routes are never bundled together or with normal routes; the default bundling pool is unchanged.
+
+  The gate is read at build time and defaults to off, so behavior is unchanged unless the env var is set. It relies on the upstream build system supporting functions above the default uncompressed limit.
+
+## 4.19.1
+
+### Patch Changes
+
+- bc6f22f: Upgrade to the latest Next.js adapter
+
 ## 4.19.0
 
 ### Minor Changes

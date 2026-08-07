@@ -1,9 +1,0 @@
-.vercel
-
-node_modules
-.next
-
-.venv
-venv
-__pycache__
-*.py[cod]

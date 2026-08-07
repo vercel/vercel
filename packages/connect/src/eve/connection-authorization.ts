@@ -52,6 +52,7 @@ import {
   revokeToken,
   UserAuthorizationRequiredError,
 } from '../token.js';
+import { provisionEveOAuthConnector } from './provision-oauth-connector.js';
 
 /**
  * Authorization phase passed to {@link EveAuthorizationOptions.onError}
@@ -62,19 +63,53 @@ export type ConnectAuthorizationPhase =
   | 'startAuthorization'
   | 'completeAuthorization';
 
+/**
+ * Eve's per-connection authorization context — the `connection` argument
+ * Eve's runtime hands to every `getToken` / `startAuthorization` /
+ * `completeAuthorization` callback alongside the resolved principal.
+ * Currently carries the connection's declared server `url`; Eve documents
+ * the shape as strictly additive, so destructuring only the fields you
+ * need stays forward-compatible.
+ *
+ * eve 0.6.0-beta.1 declares this type as
+ * `ConnectionAuthorizationContext` but does not re-export it from
+ * `eve/connections` (or any other public subpath), so it is derived
+ * structurally here from the exported authorization definition — this is
+ * exactly the type Eve passes at runtime. Once eve exports the type
+ * directly, this alias can switch to a plain re-export without a
+ * breaking change.
+ */
+export type EveConnectionAuthorizationContext = Parameters<
+  NonInteractiveAuthorizationDefinition['getToken']
+>[0]['connection'];
+
 interface GetTokenOptions {
   readonly principal: ConnectionPrincipal;
+  readonly connection: EveConnectionAuthorizationContext;
 }
 
 interface StartAuthorizationOptions {
   readonly principal: ConnectionPrincipal;
+  readonly connection: EveConnectionAuthorizationContext;
   readonly callbackUrl?: string;
   readonly webhook?: string;
 }
 
 interface CompleteAuthorizationOptions {
   readonly principal: ConnectionPrincipal;
+  readonly connection: EveConnectionAuthorizationContext;
 }
+
+/**
+ * `displayName` is being added to Eve's
+ * `ConnectionAuthorizationChallenge` (in-flight upstream PR); this
+ * intersection can be dropped in favour of the plain challenge type
+ * once the `eve` dependency picks it up.
+ */
+type ConnectionAuthorizationChallengeWithDisplayName =
+  ConnectionAuthorizationChallenge & {
+    readonly displayName?: string;
+  };
 
 /** Options accepted by {@link connect}. */
 export interface EveAuthorizationOptions {
@@ -114,10 +149,30 @@ export interface EveAuthorizationOptions {
   readonly tokenParams?: Omit<ConnectTokenParams, 'subject'>;
 
   /**
+   * Builds the Vercel Connect token subject from the framework-resolved
+   * principal plus the connection's authorization context (Eve's
+   * per-connection metadata — currently the declared server `url`).
+   *
+   * Needed by jwt-bearer-style connectors whose subject/assertion
+   * depends on more than the principal: custom claims, the connection
+   * URL, or an audience derived from it. Takes precedence over the
+   * deprecated {@link principalToSubject}. When neither is set, the
+   * default mapping applies — app principals map to `{ type: "app" }`
+   * and user principals map to `{ type: "user", id, issuer }`.
+   */
+  readonly createSubject?: (
+    principal: ConnectionPrincipal,
+    ctx: EveConnectionAuthorizationContext
+  ) => ConnectTokenSubject | Promise<ConnectTokenSubject>;
+
+  /**
    * Override how Eve's framework-resolved principal is mapped to a
    * Vercel Connect token subject. When omitted, app principals map to
    * `{ type: "app" }` and user principals map to
    * `{ type: "user", id, issuer }`.
+   *
+   * @deprecated Use {@link createSubject}, which also receives the
+   * connection authorization context.
    */
   readonly principalToSubject?: (
     principal: ConnectionPrincipal
@@ -129,6 +184,23 @@ export interface EveAuthorizationOptions {
    * and rely on `@vercel/oidc` auto-discovery.
    */
   readonly connectOptions?: ConnectOptions;
+
+  /**
+   * Create or link the declared connector against the deploying Vercel
+   * project before the first token / authorization call. Defaults to
+   * `true`.
+   *
+   * The provision request is authenticated with the deployment OIDC token
+   * and carries the eve connection's `url` plus this connector UID. Connect
+   * creates the managed OAuth connector when missing, links an existing
+   * OAuth connector when the UID already exists, and scopes the new project
+   * link to the OIDC token's environment and higher promotion targets.
+   *
+   * Set this to `false` for callers that intentionally manage the connector
+   * linkage elsewhere. Opaque connector ids (`scl_...`) and connections
+   * without a URL are skipped automatically.
+   */
+  readonly autoProvision?: boolean;
 
   /**
    * Re-validate the grant against Vercel Connect on every `getToken`
@@ -157,6 +229,15 @@ export interface EveAuthorizationOptions {
    * from the connection's filename.
    */
   readonly instructions?: string;
+
+  /**
+   * Manual override for the human-readable provider name channels
+   * render on the authorization affordance (eg. a
+   * `Sign in with Salesforce` button). When omitted, the connector's
+   * service display name reported by Vercel Connect is used, falling
+   * back to the connector's own name for unknown services.
+   */
+  readonly displayName?: string;
 
   /**
    * Escape hatch for turning an unexpected Vercel Connect / network
@@ -192,9 +273,10 @@ export type EveAuthorizationInput = string | EveAuthorizationOptions;
  * both forms address the same connector.
  *
  * The marker is purely metadata — it does not influence the runtime
- * token-fetching behaviour, which continues to be driven by the
+ * token-fetching identity, which continues to be driven by the
  * `getToken` / `startAuthorization` / `completeAuthorization`
- * callbacks.
+ * callbacks. When auto-provisioning is enabled, the same connector value is
+ * also sent as the managed OAuth UID.
  */
 export interface VercelConnectMetadata {
   readonly connector: string;
@@ -234,9 +316,17 @@ export type EveConnectAuthorizationDefinition<
    * failed or duplicate revoke is swallowed so it never masks the error
    * that triggered eviction, and the local cache entry is dropped either
    * way.
+   *
+   * Pass `connection` (Eve's per-connection authorization context) when
+   * the connection uses {@link EveAuthorizationOptions.createSubject}:
+   * the cache entry is keyed by the resolved subject, and a
+   * context-dependent subject can only be reproduced with the context in
+   * hand. Without it, eviction falls back to the legacy
+   * principal-only mapping and may miss the entry.
    */
   readonly evict: (opts: {
     readonly principal: ConnectionPrincipal;
+    readonly connection?: EveConnectionAuthorizationContext;
     readonly revoke?: boolean;
   }) => Promise<void>;
 };
@@ -300,10 +390,11 @@ function makeEvict(
   options: EveAuthorizationOptions
 ): (opts: {
   readonly principal: ConnectionPrincipal;
+  readonly connection?: EveConnectionAuthorizationContext;
   readonly revoke?: boolean;
 }) => Promise<void> {
-  return async ({ principal, revoke }) => {
-    const params = await buildTokenParams(options, principal);
+  return async ({ principal, connection, revoke }) => {
+    const params = await buildTokenParams(options, principal, connection);
     if (revoke) {
       try {
         // Destructive: tears down the grant at Vercel Connect (refresh
@@ -343,11 +434,15 @@ function buildInteractiveDefinition(
   return {
     principalType: 'user',
 
-    async getToken({ principal }: GetTokenOptions): Promise<TokenResult> {
+    async getToken({
+      principal,
+      connection,
+    }: GetTokenOptions): Promise<TokenResult> {
       try {
+        await autoProvisionConnectorIfEnabled(options, connection);
         const response = await getTokenResponse(
           options.connector,
-          await buildTokenParams(options, principal),
+          await buildTokenParams(options, principal, connection),
           getTokenConnectOptions(options)
         );
         return { token: response.token, expiresAt: response.expiresAt };
@@ -358,42 +453,52 @@ function buildInteractiveDefinition(
 
     async startAuthorization({
       principal,
+      connection,
       callbackUrl,
       webhook,
     }: StartAuthorizationOptions): Promise<{
-      challenge: ConnectionAuthorizationChallenge;
+      challenge: ConnectionAuthorizationChallengeWithDisplayName;
     }> {
       try {
-        // Eve's `webhook` parameter is semantically a browser-redirect
-        // target — the orchestrator mints it via `createWebhook({
-        // respondWith: buildAuthorizationCompletePage() })` so the
-        // user lands on a friendly "you can close this tab" page after
-        // consent. That maps to Vercel Connect's `callbackUrl:`
-        // semantics, which accepts both `https://` (prod) and
-        // `http://localhost` (vercel dev) — one field covers both.
+        await autoProvisionConnectorIfEnabled(options, connection);
+        // eve's `webhook` parameter is also the browser-redirect
+        // target when `callbackUrl` is absent — the orchestrator mints
+        // it via `createWebhook({ respondWith:
+        // buildAuthorizationCompletePage() })` so the user lands on a
+        // friendly "you can close this tab" page after consent. That
+        // maps to Vercel Connect's `callbackUrl:` semantics, which
+        // accepts both `https://` (prod) and `http://localhost`
+        // (vercel dev).
+        //
+        // When the eve webhook is HTTPS, also pass it as Vercel
+        // Connect's server-side completion webhook. That lets Connect
+        // resume the eve session even when the OAuth callback fails
+        // before the browser can be redirected back, such as a token
+        // exchange error after provider consent.
+        //
         // Vercel Connect authenticates the calling Vercel project via
         // OIDC, which is what lets per-workflow dynamic webhook URLs
         // work without an OAuth-style redirect-URI allowlist.
-        //
-        // We don't route `https://` URLs into Vercel Connect's
-        // `webhook:` (server-POST) field, even though it would
-        // survive the user closing the consent tab right after IdP
-        // callback. That mode shows the user Vercel Connect's
-        // generic "close this window" page instead of Eve's branded
-        // landing page, and the helper would need to grow
-        // protocol-aware logic that diverges from the simple "Eve
-        // mints one URL, Vercel Connect redirects there" mental
-        // model. Revisit if tab-close timeouts become a real problem
-        // in production.
+        const completionWebhook = connectCompletionWebhook(webhook);
         const response = await startAuthorization(
           options.connector,
-          await buildTokenParams(options, principal),
+          await buildTokenParams(options, principal, connection),
           {
             ...options.connectOptions,
             callbackUrl: callbackUrl ?? webhook,
+            ...(completionWebhook ? { webhook: completionWebhook } : null),
             deviceCode: true,
           }
         );
+        // Sign-in buttons name the destination service ("Sign in with
+        // Salesforce"), matching the OAuth idiom — the consent screen
+        // names the specific requesting app. The connector's own name is
+        // the fallback for custom connectors on unknown services, and an
+        // author-provided override wins over both.
+        const displayName =
+          options.displayName ??
+          response.connector?.serviceName ??
+          response.connector?.name;
         return {
           challenge: {
             url: response.url,
@@ -404,7 +509,8 @@ function buildInteractiveDefinition(
             ...(options.instructions
               ? { instructions: options.instructions }
               : null),
-          } satisfies ConnectionAuthorizationChallenge,
+            ...(displayName ? { displayName } : null),
+          } satisfies ConnectionAuthorizationChallengeWithDisplayName,
         };
       } catch (error) {
         throw translate(error, 'startAuthorization', options);
@@ -413,11 +519,13 @@ function buildInteractiveDefinition(
 
     async completeAuthorization({
       principal,
+      connection,
     }: CompleteAuthorizationOptions): Promise<TokenResult> {
       try {
+        await autoProvisionConnectorIfEnabled(options, connection);
         const response = await getTokenResponse(
           options.connector,
-          await buildTokenParams(options, principal),
+          await buildTokenParams(options, principal, connection),
           options.connectOptions
         );
         return { token: response.token, expiresAt: response.expiresAt };
@@ -428,16 +536,31 @@ function buildInteractiveDefinition(
   };
 }
 
+function connectCompletionWebhook(webhook: string | undefined): string | null {
+  if (!webhook) {
+    return null;
+  }
+  try {
+    return new URL(webhook).protocol === 'https:' ? webhook : null;
+  } catch {
+    return null;
+  }
+}
+
 function buildNonInteractiveDefinition(
   options: EveAuthorizationOptions
 ): NonInteractiveAuthorizationDefinition {
   return {
     principalType: 'app',
-    async getToken({ principal }: GetTokenOptions): Promise<TokenResult> {
+    async getToken({
+      principal,
+      connection,
+    }: GetTokenOptions): Promise<TokenResult> {
       try {
+        await autoProvisionConnectorIfEnabled(options, connection);
         const response = await getTokenResponse(
           options.connector,
-          await buildTokenParams(options, principal),
+          await buildTokenParams(options, principal, connection),
           getTokenConnectOptions(options)
         );
         return { token: response.token, expiresAt: response.expiresAt };
@@ -446,6 +569,20 @@ function buildNonInteractiveDefinition(
       }
     },
   };
+}
+
+async function autoProvisionConnectorIfEnabled(
+  options: EveAuthorizationOptions,
+  connection: EveConnectionAuthorizationContext
+): Promise<void> {
+  if (options.autoProvision === false) {
+    return;
+  }
+  await provisionEveOAuthConnector({
+    connector: options.connector,
+    connection,
+    connectOptions: options.connectOptions,
+  });
 }
 
 /**
@@ -465,13 +602,41 @@ function getTokenConnectOptions(
 
 async function buildTokenParams(
   options: EveAuthorizationOptions,
-  principal: ConnectionPrincipal
+  principal: ConnectionPrincipal,
+  connection: EveConnectionAuthorizationContext | undefined
 ): Promise<ConnectTokenParams> {
-  const toSubject = options.principalToSubject ?? principalToSubject;
   return {
     ...options.tokenParams,
-    subject: await toSubject(principal),
+    subject: await resolveSubject(options, principal, connection),
   };
+}
+
+/**
+ * Resolves the Vercel Connect token subject for `principal`, applying
+ * the documented precedence: {@link EveAuthorizationOptions.createSubject}
+ * (when the connection context is in hand), then the deprecated
+ * {@link EveAuthorizationOptions.principalToSubject}, then the default
+ * principal mapping.
+ *
+ * Eve's runtime passes `connection` to every authorization callback, so
+ * on the `getToken` / `startAuthorization` / `completeAuthorization`
+ * paths `createSubject` always receives it. Only the adapter's own
+ * `evict` entry point may run without a context (its callers predate the
+ * context plumbing); in that case the resolution falls back past
+ * `createSubject` so eviction stays best-effort instead of throwing.
+ */
+function resolveSubject(
+  options: EveAuthorizationOptions,
+  principal: ConnectionPrincipal,
+  connection: EveConnectionAuthorizationContext | undefined
+): ConnectTokenSubject | Promise<ConnectTokenSubject> {
+  if (options.createSubject !== undefined && connection !== undefined) {
+    return options.createSubject(principal, connection);
+  }
+  if (options.principalToSubject !== undefined) {
+    return options.principalToSubject(principal);
+  }
+  return principalToSubject(principal);
 }
 
 function principalToSubject(

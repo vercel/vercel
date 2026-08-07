@@ -175,6 +175,26 @@ describe('buy credits', () => {
       );
     });
 
+    it('handles invalid_v0_subscription error', async () => {
+      setupTeam();
+      client.scenario.post('/v1/billing/buy', (_req, res) => {
+        res.status(400).json({
+          error: {
+            code: 'invalid_v0_subscription',
+            message: 'Team must have a paid v0 plan to purchase v0 credits',
+          },
+        });
+      });
+      client.setArgv('buy', 'credits', 'v0', '100', '--yes');
+      const exitCode = await buy(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput(
+        'Your team must have a paid v0 plan to purchase v0 credits. Upgrade at https://v0.app/pricing'
+      );
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).not.toContain('An unexpected error occurred');
+    });
+
     it('handles payment_failed error', async () => {
       const team = setupTeam();
       client.scenario.post('/v1/billing/buy', (_req, res) => {

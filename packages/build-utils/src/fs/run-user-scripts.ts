@@ -346,51 +346,104 @@ export async function getNodeVersion(
   meta: Meta = {},
   availableVersions = getAvailableNodeVersions()
 ): Promise<NodeVersion | BunVersion> {
-  if (config.bunVersion) {
-    return getSupportedBunVersion(config.bunVersion);
-  }
-
-  const latestVersion = getLatestNodeVersion(availableVersions);
-  if (meta.isDev) {
-    // Use the system-installed version of `node` in PATH for `vercel dev`
-    latestVersion.runtime = 'nodejs';
-    return latestVersion;
-  }
+  // All the different versions/sources to consider
   const { packageJson } = await findPackageJson(destPath, true);
-  const configuredVersion = config.nodeVersion || fallbackVersion;
+  const packageJsonNodeVersion = packageJson?.engines?.node;
+  const packageJsonBunVersion = packageJson?.engines?.bun;
 
-  const packageJsonVersion = packageJson?.engines?.node;
-  const supportedNodeVersion = await getSupportedNodeVersion(
-    packageJsonVersion || configuredVersion,
-    !packageJsonVersion,
-    availableVersions
-  );
+  const latestNodeVersion = getLatestNodeVersion(availableVersions);
 
-  if (packageJson?.engines?.node) {
-    const { node } = packageJson.engines;
-    if (
-      configuredVersion &&
-      !intersects(configuredVersion, supportedNodeVersion.range)
-    ) {
+  // Determine the target runtime
+  let targetRuntime: 'node' | 'bun';
+  if (packageJsonNodeVersion && packageJsonBunVersion) {
+    // If package.json specifies both Node and Bun
+    if (config.bunVersion) {
+      // if vercel.json specifies a bun version, use bun
+      targetRuntime = 'bun';
       console.warn(
-        `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${configuredVersion}") will not apply, Node.js Version "${supportedNodeVersion.range}" will be used instead. Learn More: https://vercel.link/node-version`
+        `Warning detected "engines": { "node": ..., "bun": ... } in \`package.json\`. Since "bunVersion" is set in \`vercel.json\`, using "bun".`
+      );
+    } else {
+      // otherwise default to node
+      targetRuntime = 'node';
+      console.warn(
+        `Warning detected "engines": { "node": ..., "bun": ... } in \`package.json\`. Defaulting to "node".`
       );
     }
+  } else if (packageJsonNodeVersion) {
+    targetRuntime = 'node';
+    if (config.bunVersion) {
+      console.warn(
+        `Warning detected "engines": { "node": ... } in \`package.json\` and "bunVersion" in \`vercel.json\`. \`package.json\` takes precedence, using "node".`
+      );
+    }
+  } else if (packageJsonBunVersion || config.bunVersion) {
+    targetRuntime = 'bun';
+  } else {
+    // If no target runtime is determined, fallback to the configured node version
+    targetRuntime = 'node';
+  }
 
-    if (coerce(node)?.raw === node) {
-      console.warn(
-        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: https://vercel.link/node-version`
-      );
-    } else if (
-      validRange(node) &&
-      intersects(`${latestVersion.major + 1}.x`, node)
-    ) {
-      console.warn(
-        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: https://vercel.link/node-version`
-      );
+  // For `vercel dev`, return the latest node or bun version
+  if (meta.isDev) {
+    if (targetRuntime === 'node') {
+      // Use the system-installed version of `node` in PATH for `vercel dev`
+      latestNodeVersion.runtime = 'nodejs';
+      return latestNodeVersion;
+    } else {
+      // Hard coded for now...
+      return getSupportedBunVersion('1.x');
     }
   }
-  return supportedNodeVersion;
+
+  // Get the version for the target runtime
+  if (targetRuntime === 'node') {
+    const configuredNodeVersion = config.nodeVersion ?? fallbackVersion;
+
+    const supportedNodeVersion = await getSupportedNodeVersion(
+      packageJsonNodeVersion || configuredNodeVersion,
+      !packageJsonNodeVersion,
+      availableVersions
+    );
+
+    if (packageJson?.engines?.node) {
+      const { node } = packageJson.engines;
+      if (
+        configuredNodeVersion &&
+        !intersects(configuredNodeVersion, supportedNodeVersion.range)
+      ) {
+        console.warn(
+          `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${configuredNodeVersion}") will not apply, Node.js Version "${supportedNodeVersion.range}" will be used instead. Learn More: https://vercel.link/node-version`
+        );
+      }
+
+      if (coerce(node)?.raw === node) {
+        console.warn(
+          `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: https://vercel.link/node-version`
+        );
+      } else if (
+        validRange(node) &&
+        intersects(`${latestNodeVersion.major + 1}.x`, node)
+      ) {
+        console.warn(
+          `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: https://vercel.link/node-version`
+        );
+      }
+    }
+    return supportedNodeVersion;
+  } else {
+    // targetRuntime === 'bun'
+    if (packageJsonBunVersion) {
+      // engines.bun is set
+      return getSupportedBunVersion(packageJsonBunVersion);
+    }
+    if (config.bunVersion) {
+      // bunVersion is set in vercel.json
+      return getSupportedBunVersion(config.bunVersion);
+    }
+    // default to 1.x as a fallback
+    return getSupportedBunVersion('1.x');
+  }
 }
 
 /**

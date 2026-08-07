@@ -110,7 +110,7 @@ export default async function ls(client: Client, argv: string[]) {
       output.print('\n\n');
     }
 
-    if (pagination && pagination.count === 20) {
+    if (pagination?.next) {
       const flags = getCommandFlags(opts, ['_', '--next', '--format']);
       output.log(
         `To display the next page, run ${getCommandName(

@@ -1,0 +1,6 @@
+[project]
+name = "app"
+version = "0.1.0"
+dependencies = [ "fastapi==0.139.0" ]
+requires-python = "~=3.12.0"
+

@@ -1,0 +1,9 @@
+{
+  "experimentalServicesV2": {
+    "app": {
+      "root": ".",
+      "runtime": "container",
+      "entrypoint": "src/server.ts"
+    }
+  }
+}

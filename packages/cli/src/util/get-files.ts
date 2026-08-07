@@ -150,7 +150,22 @@ async function explode(
     }
 
     if (s.isDirectory()) {
-      const all = await fs.readdir(file);
+      let all: string[];
+      try {
+        all = await fs.readdir(file);
+      } catch (err: unknown) {
+        // The directory may have been removed between the `stat()` above and
+        // this `readdir()` (a common race with tools that churn temporary
+        // files, e.g. `cargo build` writing to `target/`). Skip it instead of
+        // crashing the whole scan.
+        const code =
+          err instanceof Error && 'code' in err ? err.code : undefined;
+        if (code === 'ENOENT' || code === 'ENOTDIR') {
+          debug(`Ignoring directory that has since been removed ${file}`);
+          return null;
+        }
+        throw err;
+      }
       const recursive = many(all.map(subdir => asAbsolute(subdir, file)));
       return recursive as any as Promise<string | null>;
       /* eslint-enable no-use-before-define */

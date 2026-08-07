@@ -11,6 +11,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import getScope from '../../util/get-scope';
+import { getPaginationOpts } from '../../util/get-pagination-opts';
 import type Client from '../../util/client';
 import type { Project } from '@vercel-internals/types';
 
@@ -30,7 +31,7 @@ const PAGINATION_FLAGS_TO_EXCLUDE = [
   '--json',
   '--format',
 ];
-const BASE_PROJECTS_URL = '/v9/projects?limit=20';
+const DEFAULT_PROJECTS_LIMIT = 20;
 
 export default async function list(
   client: Client,
@@ -116,11 +117,18 @@ function processFlags(
   opts: Record<string, any>,
   telemetryClient: ProjectListTelemetryClient
 ):
-  | { deprecated: boolean; next?: number; json: boolean; filter?: string }
+  | {
+      deprecated: boolean;
+      next?: number;
+      json: boolean;
+      filter?: string;
+      limit?: number;
+    }
   | { error: string } {
   const deprecated = opts['--update-required'] || false;
   const next = opts['--next'];
   const filter = opts['--filter'];
+  const limit = opts['--limit'];
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     return { error: formatResult.error };
@@ -129,11 +137,18 @@ function processFlags(
 
   telemetryClient.trackCliFlagUpdateRequired(deprecated);
   telemetryClient.trackCliOptionNext(next);
+  telemetryClient.trackCliOptionLimit(limit);
   telemetryClient.trackCliOptionFormat(opts['--format']);
   telemetryClient.trackCliFlagJson(opts['--json']);
   telemetryClient.trackCliOptionFilter(filter);
 
-  return { deprecated, next, json, filter };
+  try {
+    getPaginationOpts(opts);
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
+
+  return { deprecated, next, json, filter, limit };
 }
 
 // Helper function to build projects URL
@@ -141,20 +156,23 @@ function buildProjectsUrl(flags: {
   deprecated: boolean;
   next?: number;
   filter?: string;
+  limit?: number;
 }) {
-  let url = BASE_PROJECTS_URL;
+  const query = new URLSearchParams({
+    limit: String(flags.limit ?? DEFAULT_PROJECTS_LIMIT),
+  });
 
   if (flags.deprecated) {
-    url += `&deprecated=${flags.deprecated}`;
+    query.set('deprecated', String(flags.deprecated));
   }
   if (flags.next) {
-    url += `&until=${flags.next}`;
+    query.set('until', String(flags.next));
   }
   if (flags.filter) {
-    url += `&search=${encodeURIComponent(flags.filter)}`;
+    query.set('search', flags.filter);
   }
 
-  return url;
+  return `/v9/projects?${query}`;
 }
 
 // Helper function to create project JSON representation
@@ -242,7 +260,7 @@ function printPaginationInstructions(
   opts: Record<string, any>,
   pagination: { count: number; next: number }
 ) {
-  if (pagination && pagination.count === 20) {
+  if (pagination?.next) {
     const flags = getCommandFlags(opts, PAGINATION_FLAGS_TO_EXCLUDE);
     const nextCmd = `project ls${flags} --next ${pagination.next}`;
     output.log(`To display the next page, run ${getCommandName(nextCmd)}`);

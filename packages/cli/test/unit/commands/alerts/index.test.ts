@@ -128,6 +128,33 @@ describe('alerts', () => {
     expect(client.stderr.getFullOutput()).toContain('resolved after');
   });
 
+  it('renders plain resolved status when resolvedAt is missing', async () => {
+    client.scenario.get('/alerts/v3/groups', (_req, res) => {
+      res.json([
+        {
+          id: 'ag_2',
+          type: 'error_anomaly',
+          status: 'resolved',
+          recordedStartedAt: 1772755200000,
+          alerts: [
+            {
+              title: '5xx on /api/logs',
+              startedAt: 1772755200000,
+            },
+          ],
+        },
+      ]);
+    });
+
+    client.setArgv('alerts');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('resolved');
+  });
+
   it('prefers ai title when available', async () => {
     client.scenario.get('/alerts/v3/groups', (_req, res) => {
       res.json([
@@ -147,7 +174,55 @@ describe('alerts', () => {
 
     expect(exitCode).toBe(0);
     expect(client.stderr.getFullOutput()).toContain('AI generated title');
-    expect(client.stderr.getFullOutput()).not.toContain('Fallback title');
+  });
+
+  it('renders custom alert titles from the API without crowding the table', async () => {
+    let requestQuery: any;
+    const longTitle =
+      'Checkout request volume with a very long custom alert title that would otherwise stretch the alerts table beyond a comfortable width';
+    client.scenario.get('/alerts/v3/groups', (req, res) => {
+      requestQuery = req.query;
+      res.json([
+        {
+          id: 'ag_custom',
+          type: 'custom_alert',
+          status: 'active',
+          recordedStartedAt: 1772755200000,
+          alerts: [
+            {
+              id: 'al_custom',
+              startedAt: 1772755200000,
+              status: 'active',
+              type: 'custom_alert',
+              pipe: 'customAlert',
+              title: longTitle,
+              eventLabel: 'Requests',
+              measureLabel: 'Count',
+              unit: 'requests',
+              formattedValues: {
+                formattedCount: '150',
+                formattedAvg: '100',
+                formattedThreshold: '120',
+              },
+              data: {
+                triggerType: 'threshold',
+                triggerOperator: 'gt',
+              },
+            },
+          ],
+        },
+      ]);
+    });
+
+    client.setArgv('alerts', '--type', 'custom_alert');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    expect(requestQuery.types).toBe('custom_alert');
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain(`${longTitle.slice(0, 77)}...`);
+    expect(output).toContain('custom_alert');
   });
 
   it('supports --all and does not set projectId', async () => {
@@ -312,7 +387,312 @@ describe('alerts', () => {
 
     expect(exitCode).toBe(0);
     expect(inspectPath).toContain('/alerts/v3/groups/grp_x');
-    expect(client.stdout.getFullOutput()).toContain('"id"');
-    expect(client.stdout.getFullOutput()).toContain('grp_x');
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Alert group');
+    expect(output).toContain('grp_x');
+    expect(output).toContain('No alerts in this group.');
+    expect(client.stdout.getFullOutput()).not.toContain('"id"');
+  });
+
+  it('passes nested inspect args when global flags precede alerts', async () => {
+    let inspectPath = '';
+    client.scenario.get('/alerts/v3/groups/:groupId', (req, res) => {
+      inspectPath = req.path;
+      res.json({ id: 'grp_x', status: 'active' });
+    });
+
+    client.setArgv('--debug', 'alerts', 'inspect', 'grp_x');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    expect(inspectPath).toContain('/alerts/v3/groups/grp_x');
+  });
+
+  it('inspect folds single-alert metadata into the group summary', async () => {
+    client.scenario.get('/alerts/v3/groups/:groupId', (_req, res) => {
+      res.json({
+        id: 'ag_build',
+        type: 'buildTime_anomaly',
+        status: 'resolved',
+        recordedStartedAt: 1772755200000,
+        alerts: [
+          {
+            id: 'al_build',
+            startedAt: 1772755200000,
+            resolvedAt: 1772758800000,
+            status: 'resolved',
+            type: 'buildTime_anomaly',
+            title: 'Build Time',
+            unit: 'seconds',
+            formattedValues: {
+              changeAmount: '1.75x',
+              changeDirection: 'increase',
+              formattedAvg: '106.88',
+              formattedCount: '187.44',
+            },
+            rules: ['ar_default'],
+            data: {
+              deploymentId: 'dpl_123',
+              zscore: 5.15,
+            },
+          },
+        ],
+      });
+    });
+
+    client.setArgv('alerts', 'inspect', 'ag_build');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output.match(/Build Time/g)).toHaveLength(1);
+    expect(output).toContain('Alert id');
+    expect(output).toContain('al_build');
+    expect(output).toContain('Rule id');
+    expect(output).toContain('ar_default');
+    expect(output).toContain('Deployment ID');
+    expect(output).toContain('dpl_123');
+    expect(output).toContain('Signals');
+    expect(output).toContain('187.44 seconds');
+  });
+
+  it('inspect renders custom alert signals and query', async () => {
+    const sonarQuery = {
+      event: 'incomingRequest',
+      rollups: {
+        value: {
+          aggregation: 'avg',
+          measure: 'successRate',
+        },
+      },
+      groupBy: ['requestHostname'],
+      filter: "environment eq 'production'",
+      granularity: { hours: 1 },
+    };
+
+    client.scenario.get('/alerts/v3/groups/:groupId', (_req, res) => {
+      res.json({
+        id: 'ag_custom',
+        type: 'custom_alert',
+        status: 'active',
+        recordedStartedAt: 1772755200000,
+        alerts: [
+          {
+            id: 'al_custom',
+            startedAt: 1772755200000,
+            status: 'active',
+            type: 'custom_alert',
+            title: 'Checkout conversion dropped',
+            eventLabel: 'Requests',
+            measureLabel: 'Success Rate',
+            unit: '%',
+            sonarQuery,
+            formattedValues: {
+              changeAmount: '7.69x',
+              changeDirection: 'increase',
+              formattedAvg: '13',
+              formattedCount: '100',
+              formattedThreshold: '3.5',
+            },
+            data: {
+              fields: {
+                requestHostname:
+                  'backend-r9y2e7ore-factory-long-hostname.vercel.app',
+              },
+              ruleId: 'ar_custom',
+              triggerOperator: 'gt',
+              triggerThreshold: 3.5,
+              triggerType: 'anomaly',
+              sonarQuery,
+              zscore: 3.47,
+            },
+          },
+        ],
+      });
+    });
+
+    client.setArgv('alerts', 'inspect', 'ag_custom');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Checkout conversion dropped');
+    expect(output).toContain('Signals');
+    expect(output).toContain('Observed Value');
+    expect(output).toContain('100%');
+    expect(output).toContain('7-Day Baseline');
+    expect(output).toContain('13%');
+    expect(output).toContain('Observed Deviation');
+    expect(output).toContain('3.47 z-score');
+    expect(output).toContain('Threshold');
+    expect(output).toContain('> 3.5 z-score');
+    expect(output).toContain('Request Hostname');
+    expect(output).toContain('backend-r9y2e7ore-factory');
+    expect(output).toContain('Query');
+    expect(output).toContain('Event');
+    expect(output).toContain('Requests');
+    expect(output).toContain('Measure');
+    expect(output).toContain('Success Rate');
+    expect(output).toContain('Aggregation');
+    expect(output).toContain('Average');
+    expect(output).toContain('Granularity');
+    expect(output).toContain('1h');
+    expect(output).toContain('Group by');
+    expect(output).toContain('Request Hostname');
+    expect(output).toContain('Filter by');
+    expect(output).toContain("environment eq 'production'");
+    expect(output).toContain('Rule id');
+    expect(output).toContain('ar_custom');
+  });
+
+  it('inspect renders custom alert ratio query filters', async () => {
+    const sonarQuery = {
+      event: 'incomingRequest',
+      rollups: {
+        errors: {
+          aggregation: 'sum',
+          measure: 'count',
+          filter: 'statusCode ge 500',
+        },
+        requests: {
+          aggregation: 'sum',
+          measure: 'count',
+          filter: "requestPath eq '/api'",
+        },
+      },
+      groupBy: ['requestHostname'],
+      granularity: { minutes: 5 },
+    };
+
+    client.scenario.get('/alerts/v3/groups/:groupId', (_req, res) => {
+      res.json({
+        id: 'ag_ratio',
+        type: 'custom_alert',
+        status: 'active',
+        alerts: [
+          {
+            id: 'al_ratio',
+            startedAt: 1772755200000,
+            status: 'active',
+            type: 'custom_alert',
+            title: 'Error rate',
+            eventLabel: 'Requests',
+            measureLabel: 'errors / requests',
+            unit: 'ratio',
+            sonarQuery,
+            formattedValues: {
+              changeAmount: '2x',
+              changeDirection: 'increase',
+              formattedAvg: '0.002278',
+              formattedCount: '0.01744',
+              formattedThreshold: '0.01',
+            },
+            data: {
+              fields: {
+                requestHostname: 'api.vercel.com',
+              },
+              formula: {
+                operator: 'divide',
+                left: 'errors',
+                right: 'requests',
+              },
+              minThreshold: 50,
+              ruleId: 'ar_ratio',
+              sonarQuery,
+              triggerOperator: 'gt',
+              triggerThreshold: 0.01,
+              triggerType: 'threshold',
+            },
+          },
+        ],
+      });
+    });
+
+    client.setArgv('alerts', 'inspect', 'ag_ratio');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Observed Value');
+    expect(output).toContain('1.74%');
+    expect(output).toContain('Baseline');
+    expect(output).toContain('0.23%');
+    expect(output).toContain('Threshold');
+    expect(output).toContain('> 1%');
+    expect(output).toContain('Query');
+    expect(output).toContain('Numerator');
+    expect(output).toContain('Sum Count');
+    expect(output).toContain('Denominator');
+    expect(output).toContain('Minimum Numerator');
+    expect(output).toContain('50');
+    expect(output).toContain('Numerator filter');
+    expect(output).toContain('statusCode ge 500');
+    expect(output).toContain('Denominator filter');
+    expect(output).toContain("requestPath eq '/api'");
+  });
+
+  it('inspect renders non-custom alert signals and route details', async () => {
+    client.scenario.get('/alerts/v3/groups/:groupId', (_req, res) => {
+      res.json({
+        id: 'ag_error',
+        type: 'error_anomaly',
+        status: 'active',
+        alerts: [
+          {
+            id: 'al_error',
+            startedAt: 1772755200000,
+            status: 'active',
+            type: 'error_anomaly',
+            title: '5xx error spike',
+            eventLabel: 'Function Errors',
+            measureLabel: 'Error Count',
+            unit: 'Errors',
+            formattedValues: {
+              avgErrorRate: '1%',
+              changeAmount: '17x',
+              changeDirection: 'increase',
+              errorRate: '13%',
+              formattedAvg: '104',
+              formattedCount: '1.8k',
+            },
+            data: {
+              average: 104,
+              cause: 'function',
+              count: 1806,
+              route: '/api/logs',
+              statusGroup: '5xx',
+              stddev: 10,
+              zscore: 4.5,
+            },
+          },
+        ],
+      });
+    });
+
+    client.setArgv('alerts', 'inspect', 'ag_error');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('5xx error spike');
+    expect(output).toContain('Observed Value');
+    expect(output).toContain('1.8k Errors');
+    expect(output).toContain('Baseline');
+    expect(output).toContain('104 Errors');
+    expect(output).toContain('Observed Deviation');
+    expect(output).toContain('4.5 z-score');
+    expect(output).toContain('Error Rate');
+    expect(output).toContain('13%');
+    expect(output).toContain('Baseline Error Rate');
+    expect(output).toContain('1%');
+    expect(output).toContain('Route');
+    expect(output).toContain('/api/logs');
+    expect(output).toContain('Status Group');
+    expect(output).toContain('5xx');
   });
 });

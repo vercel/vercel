@@ -32,6 +32,7 @@ import {
 import type {
   EditableRoute,
   HasField,
+  PathTransform,
   Transform,
   SrcSyntax,
 } from '../../util/routes/types';
@@ -134,6 +135,17 @@ export function printRouteConfig(route: EditableRoute): void {
     output.print(`\n  ${chalk.cyan('Request Query:')}\n`);
     for (const t of requestQuery) {
       output.print(`    ${formatTransformDisplay(t)}\n`);
+    }
+  }
+
+  const requestPaths = getTransformsByType(route, 'request.path');
+  if (requestPaths.length > 0) {
+    output.print(`\n  ${chalk.cyan('Request Path:')}\n`);
+    for (const transform of requestPaths) {
+      const env = transform.env?.length
+        ? chalk.gray(` (env: ${transform.env.join(', ')})`)
+        : '';
+      output.print(`    ${formatTransformDisplay(transform)}${env}\n`);
     }
   }
 
@@ -330,6 +342,7 @@ export async function runInteractiveEditLoop(
     const responseHeaders = getAllResponseHeaders(route).length;
     const requestHeaders = getTransformsByType(route, 'request.headers').length;
     const requestQuery = getTransformsByType(route, 'request.query').length;
+    const requestPaths = getTransformsByType(route, 'request.path').length;
 
     const syntaxLabel =
       route.srcSyntax === 'path-to-regexp'
@@ -375,6 +388,10 @@ export async function runInteractiveEditLoop(
         name: `Request Query (${requestQuery})`,
         value: 'request-query',
       },
+      {
+        name: `Request Path (${requestPaths})`,
+        value: 'request-path',
+      },
       { name: 'Done - save changes', value: 'done' },
     ];
 
@@ -419,6 +436,9 @@ export async function runInteractiveEditLoop(
           'request.query',
           'request-query'
         );
+        break;
+      case 'request-path':
+        await editRequestPaths(client, route);
         break;
       case 'done':
         break;
@@ -974,6 +994,107 @@ async function editTransformsByType(
       if (transforms.length > 0) {
         route.route.transforms = [...allTransforms, ...transforms];
       }
+      break;
+    }
+  }
+}
+
+async function editRequestPaths(
+  client: Client,
+  route: EditableRoute
+): Promise<void> {
+  for (;;) {
+    const allTransforms = (route.route.transforms ?? []) as Transform[];
+    const matching = allTransforms.filter(
+      (transform): transform is PathTransform =>
+        transform.type === 'request.path'
+    );
+
+    if (matching.length > 0) {
+      output.print(`\n  ${chalk.cyan('Request Path:')}\n`);
+      matching.forEach((transform, index) => {
+        const env = transform.env?.length
+          ? chalk.gray(` (env: ${transform.env.join(', ')})`)
+          : '';
+        output.print(
+          `    ${chalk.gray(`${index + 1}.`)} ${formatTransformDisplay(transform)}${env}\n`
+        );
+      });
+      output.print('\n');
+    } else {
+      output.print('\n  No request path transforms set.\n\n');
+    }
+
+    const choices = [];
+    if (matching.length > 0) {
+      choices.push({
+        name: 'Remove a request path transform',
+        value: 'remove',
+      });
+    }
+    choices.push({ name: 'Add a request path transform', value: 'add' });
+    choices.push({ name: 'Back', value: 'back' });
+
+    const action = await client.input.select({
+      message: 'Request Path:',
+      choices,
+    });
+
+    if (action === 'back') break;
+
+    if (action === 'remove') {
+      const toRemove = await client.input.select({
+        message: 'Select request path transform to remove:',
+        choices: [
+          ...matching.map((transform, index) => ({
+            name: formatTransformDisplay(transform),
+            value: index,
+          })),
+          { name: 'Cancel', value: -1 },
+        ],
+      });
+
+      if (toRemove !== -1) {
+        let matchIndex = 0;
+        const removeIndex = allTransforms.findIndex(transform => {
+          if (transform.type === 'request.path') {
+            if (matchIndex === (toRemove as number)) return true;
+            matchIndex++;
+          }
+          return false;
+        });
+
+        if (removeIndex !== -1) {
+          allTransforms.splice(removeIndex, 1);
+          route.route.transforms = allTransforms;
+        }
+      }
+    }
+
+    if (action === 'add') {
+      const example =
+        route.srcSyntax === 'path-to-regexp'
+          ? '/:path*'
+          : route.srcSyntax === 'regex'
+            ? '/$1'
+            : '/internal';
+      const args = await client.input.text({
+        message: `Runtime-visible request path (e.g., ${example}):`,
+        validate: value => {
+          if (!value.startsWith('/') || value.startsWith('//')) {
+            return 'Request path must be an origin-form path starting with a single `/`';
+          }
+          if (/[?#\s\x00-\x1f\x7f]/.test(value)) {
+            return 'Request path cannot contain a query, fragment, whitespace, or control characters';
+          }
+          return true;
+        },
+      });
+
+      route.route.transforms = [
+        ...allTransforms,
+        { type: 'request.path', op: 'set', args },
+      ];
       break;
     }
   }

@@ -1,4 +1,3 @@
-import Ajv from 'ajv';
 import {
   routesSchema,
   cleanUrlsSchema,
@@ -11,12 +10,13 @@ import type { VercelConfig } from './dev/types';
 import {
   getFunctionsSchema,
   buildsSchema,
-  getMaxDurationLimit,
   getMaxDurationSchema,
   NowBuildError,
   getPrettyError,
 } from '@vercel/build-utils';
 import { fileNameSymbol } from '@vercel/client';
+import { validateProxyConfig } from '@vercel/fs-detectors';
+import { getConfigValidator } from './config-validator';
 
 const imagesSchema = {
   type: 'object',
@@ -299,6 +299,16 @@ const getExperimentalServicesCommonProperties = () => ({
     minLength: 1,
     maxLength: 2048,
   },
+  command: {
+    oneOf: [
+      { type: 'string', minLength: 1, maxLength: 2048 },
+      {
+        type: 'array',
+        minItems: 1,
+        items: { type: 'string', minLength: 1, maxLength: 2048 },
+      },
+    ],
+  },
   memory: {
     type: 'integer',
     minimum: 128,
@@ -477,29 +487,35 @@ const experimentalServiceGroupsSchema = {
   },
 };
 
-const experimentalServicesV2PathSchema = {
+const servicesPathSchema = {
   type: 'string',
   minLength: 1,
   maxLength: 512,
 };
 
-const experimentalServicesV2CommandSchema = {
+const servicesCommandSchema = {
   type: 'string',
   minLength: 1,
   maxLength: 2048,
 };
 
-const experimentalServicesV2BindingSchema = {
+const servicesServiceNamePattern = '^[a-z]([a-z_-]*[a-z])?$';
+
+const servicesBindingSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['type', 'service', 'format', 'env'],
+  required: ['service', 'format', 'env'],
   properties: {
-    type: { const: 'service' },
+    type: {
+      description:
+        'Optional binding type marker. Currently the only supported type is `service`. When present this must be `service`.',
+      const: 'service',
+    },
     service: {
       type: 'string',
       minLength: 1,
       maxLength: 64,
-      pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+      pattern: servicesServiceNamePattern,
     },
     format: { const: 'url' },
     env: {
@@ -509,18 +525,18 @@ const experimentalServicesV2BindingSchema = {
   },
 };
 
-const experimentalServicesV2BindingsSchema = {
+const servicesBindingsSchema = {
   type: 'array',
   maxItems: 100,
-  items: experimentalServicesV2BindingSchema,
+  items: servicesBindingSchema,
 };
 
-const getExperimentalServicesV2ServiceConfigSchema = () => ({
+const getServicesServiceConfigSchema = () => ({
   type: 'object',
   additionalProperties: false,
   required: ['root'],
   properties: {
-    root: experimentalServicesV2PathSchema,
+    root: servicesPathSchema,
     framework: {
       type: 'string',
       minLength: 1,
@@ -531,13 +547,16 @@ const getExperimentalServicesV2ServiceConfigSchema = () => ({
       minLength: 1,
       maxLength: 256,
     },
-    entrypoint: experimentalServicesV2PathSchema,
-    installCommand: experimentalServicesV2CommandSchema,
-    buildCommand: experimentalServicesV2CommandSchema,
-    devCommand: experimentalServicesV2CommandSchema,
-    ignoreCommand: experimentalServicesV2CommandSchema,
-    outputDirectory: experimentalServicesV2PathSchema,
-    bindings: experimentalServicesV2BindingsSchema,
+    entrypoint: servicesPathSchema,
+    command: {
+      oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
+    },
+    installCommand: servicesCommandSchema,
+    buildCommand: servicesCommandSchema,
+    devCommand: servicesCommandSchema,
+    ignoreCommand: servicesCommandSchema,
+    outputDirectory: servicesPathSchema,
+    bindings: servicesBindingsSchema,
     functions: getFunctionsSchema(),
     headers: headersSchema,
     redirects: redirectsSchema,
@@ -548,16 +567,44 @@ const getExperimentalServicesV2ServiceConfigSchema = () => ({
   },
 });
 
-const getExperimentalServicesV2Schema = () => ({
+const getServicesSchema = () => ({
   type: 'object',
   propertyNames: {
-    pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+    pattern: servicesServiceNamePattern,
     maxLength: 64,
   },
-  additionalProperties: getExperimentalServicesV2ServiceConfigSchema(),
+  additionalProperties: getServicesServiceConfigSchema(),
 });
 
-function buildVercelConfigSchema() {
+const proxySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['entrypoint'],
+  properties: {
+    entrypoint: {
+      type: 'string',
+      minLength: 1,
+    },
+    matcher: {
+      oneOf: [
+        {
+          type: 'string',
+          minLength: 1,
+        },
+        {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'string',
+            minLength: 1,
+          },
+        },
+      ],
+    },
+  },
+};
+
+export function buildVercelConfigSchema() {
   return {
     type: 'object',
     // These are not all possibilities because `vc dev`
@@ -575,45 +622,17 @@ function buildVercelConfigSchema() {
       images: imagesSchema,
       crons: cronsSchema,
       bunVersion: { type: 'string' },
+      proxy: proxySchema,
       experimentalServices: getExperimentalServicesSchema(),
       experimentalServiceGroups: experimentalServiceGroupsSchema,
-      experimentalServicesV2: getExperimentalServicesV2Schema(),
+      services: getServicesSchema(),
+      experimentalServicesV2: getServicesSchema(),
     },
   };
 }
 
-const ajv = new Ajv();
-
-/**
- * The `maxDuration` upper bound is gated behind
- * `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT` (see `getMaxDurationSchema`), which may be
- * set after this module is imported. Compiling the validator once at module load
- * would bake in whatever limit was active at import time and ignore the variable,
- * so instead we build and compile lazily, caching one validator per resolved
- * limit (bounded vs. skipped).
- *
- * TODO: This machinery exists only to honor the runtime
- * `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT` toggle. Once the flag is fully rolled out
- * and the client-side bound is dropped (see `max-duration.ts` in
- * `@vercel/build-utils`), revert to a single statically compiled validator.
- */
-const validatorCacheByLimit = new Map<
-  number | 'skipped',
-  ReturnType<typeof ajv.compile>
->();
-
-function getConfigValidator() {
-  const cacheKey = getMaxDurationLimit() ?? 'skipped';
-  let validate = validatorCacheByLimit.get(cacheKey);
-  if (!validate) {
-    validate = ajv.compile(buildVercelConfigSchema());
-    validatorCacheByLimit.set(cacheKey, validate);
-  }
-  return validate;
-}
-
 export function validateConfig(config: VercelConfig): NowBuildError | null {
-  const validate = getConfigValidator();
+  const validate = getConfigValidator(buildVercelConfigSchema);
   if (!validate(config)) {
     if (validate.errors && validate.errors[0]) {
       const error = validate.errors[0];
@@ -624,12 +643,30 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
     }
   }
 
+  if (config.proxy) {
+    const proxyError = validateProxyConfig(config.proxy);
+    if (proxyError) {
+      return new NowBuildError({
+        code: proxyError.code.toUpperCase(),
+        message: proxyError.message,
+      });
+    }
+  }
+
   if (config.functions && config.builds) {
     return new NowBuildError({
       code: 'FUNCTIONS_AND_BUILDS',
       message:
         'The `functions` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
       link: 'https://vercel.link/functions-and-builds',
+    });
+  }
+
+  if (config.proxy && config.builds) {
+    return new NowBuildError({
+      code: 'PROXY_AND_BUILDS',
+      message:
+        'The `proxy` property cannot be used with the `builds` property. Remove `builds` to use an explicit proxy entrypoint.',
     });
   }
 
@@ -659,26 +696,39 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
     });
   }
 
-  const hasExperimentalServicesV2 = Boolean(config.experimentalServicesV2);
+  const hasServices = config.services != null;
+  const hasExperimentalServicesV2 = config.experimentalServicesV2 != null;
 
-  if (hasExperimentalServicesV2 && hasExperimentalServices) {
+  if (hasServices && hasExperimentalServicesV2) {
     return new NowBuildError({
-      code: 'EXPERIMENTAL_SERVICES_V2_AND_EXPERIMENTAL_SERVICES',
+      code: 'SERVICES_AND_EXPERIMENTAL_SERVICES_V2',
       message:
-        'The `experimentalServicesV2` property cannot be used in conjunction with the `experimentalServices` property. Please use only one services configuration.',
+        'The `services` property cannot be used in conjunction with its deprecated alias `experimentalServicesV2`. Please use only `services`.',
     });
   }
 
-  if (hasExperimentalServicesV2 && config.builds) {
+  const servicesConfig = config.services ?? config.experimentalServicesV2;
+  const servicesConfigKey = hasServices ? 'services' : 'experimentalServicesV2';
+  const servicesErrorCodePrefix = hasServices
+    ? 'SERVICES'
+    : 'EXPERIMENTAL_SERVICES_V2';
+
+  if (servicesConfig && hasExperimentalServices) {
     return new NowBuildError({
-      code: 'EXPERIMENTAL_SERVICES_V2_AND_BUILDS',
-      message:
-        'The `experimentalServicesV2` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
+      code: `${servicesErrorCodePrefix}_AND_EXPERIMENTAL_SERVICES`,
+      message: `The \`${servicesConfigKey}\` property cannot be used in conjunction with the \`experimentalServices\` property. Please use only one services configuration.`,
     });
   }
 
-  // with `experimentalServicesV2` some fields could be present only in services declaration
-  if (hasExperimentalServicesV2) {
+  if (servicesConfig && config.builds) {
+    return new NowBuildError({
+      code: `${servicesErrorCodePrefix}_AND_BUILDS`,
+      message: `The \`${servicesConfigKey}\` property cannot be used in conjunction with the \`builds\` property. Please remove one of them.`,
+    });
+  }
+
+  // In services mode some fields can be present only in service declarations.
+  if (servicesConfig) {
     const ambiguousTopLevel: string[] = [];
     if (config.functions != null) {
       ambiguousTopLevel.push('functions');
@@ -706,27 +756,25 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
       const count = ambiguousTopLevel.length;
       const fields = ambiguousTopLevel.map(field => `\`${field}\``).join(', ');
       return new NowBuildError({
-        code: 'EXPERIMENTAL_SERVICES_V2_AND_TOP_LEVEL_BUILD_SETTINGS',
+        code: `${servicesErrorCodePrefix}_AND_TOP_LEVEL_BUILD_SETTINGS`,
         message:
-          `The top-level ${count > 1 ? 'properties' : 'property'} ${fields} cannot be used with \`experimentalServicesV2\` ` +
+          `The top-level ${count > 1 ? 'properties' : 'property'} ${fields} cannot be used with \`${servicesConfigKey}\` ` +
           `because the owning service is ambiguous. ` +
-          `Move ${count > 1 ? 'them' : 'it'} under the relevant service in \`experimentalServicesV2\`.`,
+          `Move ${count > 1 ? 'them' : 'it'} under the relevant service in \`${servicesConfigKey}\`.`,
       });
     }
   }
 
-  if (config.experimentalServicesV2) {
-    const serviceNames = new Set(Object.keys(config.experimentalServicesV2));
-    for (const [serviceName, serviceConfig] of Object.entries(
-      config.experimentalServicesV2
-    )) {
+  if (servicesConfig) {
+    const serviceNames = new Set(Object.keys(servicesConfig));
+    for (const [serviceName, serviceConfig] of Object.entries(servicesConfig)) {
       for (const binding of serviceConfig.bindings ?? []) {
         if (!serviceNames.has(binding.service)) {
           return new NowBuildError({
-            code: 'EXPERIMENTAL_SERVICES_V2_BINDING_UNKNOWN_SERVICE',
+            code: `${servicesErrorCodePrefix}_BINDING_UNKNOWN_SERVICE`,
             message:
               `Service "${serviceName}" declares a binding to unknown service "${binding.service}". ` +
-              `Add "${binding.service}" to \`experimentalServicesV2\` or fix the binding.`,
+              `Add "${binding.service}" to \`${servicesConfigKey}\` or fix the binding.`,
           });
         }
       }

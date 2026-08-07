@@ -35,12 +35,18 @@ vercel skills --json
 
 ## AI Gateway
 
-`vercel ai-gateway` currently manages AI Gateway API keys.
+`vercel ai-gateway` manages AI Gateway API keys, routing rules, and models.
 
 ```bash
 vercel ai-gateway api-keys create
 vercel ai-gateway api-keys create --name my-key --budget 500 --refresh-period monthly
 vercel ai-gateway api-keys create --include-byok
+
+vercel ai-gateway rules ls
+vercel ai-gateway rules add --type rewrite --source anthropic/claude-fable-5 --destination anthropic/claude-opus-4.8
+
+vercel ai-gateway models ls
+vercel ai-gateway models endpoints anthropic/claude-opus-4.8
 ```
 
 Use the dashboard or `vercel api` only when first-class CLI commands do not expose the needed operation.

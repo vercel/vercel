@@ -206,7 +206,8 @@ export async function linkRepoProject(
   await writeReadme(repoLink.rootPath);
   await addToGitIgnore(repoLink.rootPath);
 
-  printAlignedLabel('Linked', `${orgSlug}/${project.name}`);
+  output.print('\n');
+  printAlignedLabel('Linked', `${orgSlug}/${project.name}`, { gutter: '✓' });
 
   return {
     repoConfig,
@@ -476,7 +477,8 @@ export async function ensureRepoLink(
 
     printAlignedLabel(
       'Linked',
-      `${pluralize('Project', result.projects.length, true)} under ${result.orgSlug}`
+      `${pluralize('Project', result.projects.length, true)} under ${result.orgSlug}`,
+      { gutter: '✓' }
     );
   }
 
@@ -551,7 +553,8 @@ export async function addRepoLink(
 
   printAlignedLabel(
     'Added',
-    `${pluralize('Project', result.projects.length, true)} under ${result.orgSlug}`
+    `${pluralize('Project', result.projects.length, true)} under ${result.orgSlug}`,
+    { gutter: '✓' }
   );
 
   return {

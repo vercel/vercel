@@ -1,17 +1,17 @@
-import { lstatSync } from 'fs-extra';
-import { isAbsolute, relative, sep } from 'path';
-import { hashes, mapToObject, type FilesMap } from './utils/hashes';
+import { mapToObject } from './utils/hashes';
 import { deploy } from './deploy';
 import { upload } from './upload';
-import { buildFileTree, createDebug } from './utils';
+import { createDebug } from './utils';
 import { DeploymentError } from './errors';
-import { isErrnoException } from '@vercel/error-utils';
 import {
   VercelClientOptions,
   DeploymentOptions,
   DeploymentEventType,
 } from './types';
-import { createTgzFiles } from './utils/archive';
+import {
+  assertDeploymentPath,
+  collectDeploymentFiles,
+} from './collect-deployment-files';
 
 export default function buildCreateDeployment() {
   return async function* createDeployment(
@@ -24,16 +24,7 @@ export default function buildCreateDeployment() {
 
     debug('Creating deployment...');
 
-    if (typeof path !== 'string' && !Array.isArray(path)) {
-      debug(
-        `Error: 'path' is expected to be a string or an array. Received ${typeof path}`
-      );
-
-      throw new DeploymentError({
-        code: 'missing_path',
-        message: 'Path not provided',
-      });
-    }
+    assertDeploymentPath(path, debug);
 
     if (typeof clientOptions.token !== 'string') {
       debug(
@@ -71,34 +62,11 @@ export default function buildCreateDeployment() {
       return;
     }
 
-    clientOptions.isDirectory =
-      !Array.isArray(path) && lstatSync(path).isDirectory();
-
-    if (Array.isArray(path)) {
-      for (const filePath of path) {
-        if (!isAbsolute(filePath)) {
-          throw new DeploymentError({
-            code: 'invalid_path',
-            message: `Provided path ${filePath} is not absolute`,
-          });
-        }
-      }
-    } else if (!isAbsolute(path)) {
-      throw new DeploymentError({
-        code: 'invalid_path',
-        message: `Provided path ${path} is not absolute`,
-      });
-    }
-
-    if (clientOptions.isDirectory && !Array.isArray(path)) {
-      debug(`Provided 'path' is a directory.`);
-    } else if (Array.isArray(path)) {
-      debug(`Provided 'path' is an array of file paths`);
-    } else {
-      debug(`Provided 'path' is a single file`);
-    }
-
-    const { fileList } = await buildFileTree(path, clientOptions, debug);
+    const { fileList, filesMap: files } = await collectDeploymentFiles(
+      path,
+      clientOptions,
+      debug
+    );
 
     // This is a useful warning because it prevents people
     // from getting confused about a deployment that renders 404.
@@ -108,33 +76,6 @@ export default function buildCreateDeployment() {
         type: 'warning',
         payload: 'There are no files inside your deployment.',
       };
-    }
-
-    // Populate Files -> FileFsRef mapping
-    const workPath = typeof path === 'string' ? path : path[0];
-
-    let files: FilesMap;
-
-    try {
-      if (clientOptions.archive === 'tgz') {
-        files = await createTgzFiles(workPath, fileList, debug);
-      } else {
-        files = await hashes(fileList);
-      }
-    } catch (err: unknown) {
-      if (
-        clientOptions.prebuilt &&
-        isErrnoException(err) &&
-        err.code === 'ENOENT' &&
-        err.path
-      ) {
-        const errPath = relative(workPath, err.path);
-        err.message = `File does not exist: "${relative(workPath, errPath)}"`;
-        if (errPath.split(sep).includes('node_modules')) {
-          err.message = `Please ensure project dependencies have been installed:\n${err.message}`;
-        }
-      }
-      throw err;
     }
 
     debug(`Yielding a 'hashes-calculated' event with ${files.size} hashes`);

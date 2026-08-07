@@ -1,6 +1,8 @@
 import { getContext } from './get-context';
 
 /**
+ * @deprecated Use `getVercelOidcToken` instead.
+ *
  * Gets the current OIDC token from the request context or the environment variable.
  *
  * Do not cache this value, as it is subject to change in production!
@@ -16,7 +18,6 @@ import { getContext } from './get-context';
  * @example
  *
  * ```js
- * // Using the OIDC token
  * const token = getVercelOidcTokenSync();
  * console.log('OIDC Token:', token);
  * ```

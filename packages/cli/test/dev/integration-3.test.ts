@@ -10,7 +10,7 @@ import {
   testFixtureStdio,
   validateResponseHeaders,
 } from './utils';
-import nodeFetch from 'node-fetch';
+import nodeFetch from '../../src/util/fetch';
 
 // Angular has `engines: { node: "10.x" }` in its `package.json`
 test('[vercel dev] 02-angular-node', async () => {
@@ -222,9 +222,7 @@ test(
 
         const body = await res.text();
         expect(res.status).toBe(301);
-        expect(res.headers.get('location')).toBe(
-          `http://localhost:${port}/?foo=bar`
-        );
+        expect(res.headers.get('location')).toBe('/?foo=bar');
         expect(body).toBe('Redirecting...\n');
       }
 

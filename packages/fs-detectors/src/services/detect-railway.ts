@@ -4,20 +4,20 @@ import type { DetectEntrypointFn } from '@vercel/build-utils';
 import { detectFrameworks } from '../detect-framework';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
-  ExperimentalServiceConfig,
-  ExperimentalServices,
+  InferredServiceConfig,
+  InferredServicesConfig,
   ServiceDetectionError,
   ServiceDetectionWarning,
 } from './types';
 import {
-  assignRoutePrefixes,
+  assignMountPaths,
   DETECTION_FRAMEWORKS,
   inferRuntimeFromFramework,
   isFrontendFramework,
 } from './utils';
 
 export interface RailwayDetectResult {
-  services: ExperimentalServices | null;
+  services: InferredServicesConfig | null;
   errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
 }
@@ -92,7 +92,7 @@ export async function detectRailwayServices(options: {
     return { services: null, errors: [], warnings };
   }
 
-  const services: ExperimentalServices = {};
+  const services: InferredServicesConfig = {};
   const serviceDirs = new Map<string, string>();
   const errors: ServiceDetectionError[] = [];
 
@@ -173,19 +173,18 @@ export async function detectRailwayServices(options: {
     const framework = frameworks[0];
     const slug = framework.slug ?? undefined;
 
-    let serviceConfig: ExperimentalServiceConfig = {};
-    serviceConfig.framework = slug;
+    const serviceConfig: InferredServiceConfig = {
+      root: cf.dirPath,
+      framework: slug,
+    };
 
-    if (cf.dirPath !== '.') {
-      serviceConfig.root = cf.dirPath;
-      if (detectEntrypoint && !isFrontendFramework(slug)) {
-        const detected = await detectEntrypoint({
-          workPath: cf.dirPath,
-          framework: slug,
-        });
-        if (detected) {
-          serviceConfig.entrypoint = detected.entrypoint;
-        }
+    if (cf.dirPath !== '.' && detectEntrypoint && !isFrontendFramework(slug)) {
+      const detected = await detectEntrypoint({
+        workPath: cf.dirPath,
+        framework: slug,
+      });
+      if (detected) {
+        serviceConfig.entrypoint = detected.entrypoint;
       }
     }
 
@@ -211,7 +210,7 @@ export async function detectRailwayServices(options: {
     return { services: null, errors: [], warnings };
   }
 
-  warnings.push(...assignRoutePrefixes(services));
+  warnings.push(...assignMountPaths(services));
 
   return { services, errors: [], warnings };
 }

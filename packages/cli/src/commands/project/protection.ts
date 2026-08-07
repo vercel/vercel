@@ -19,6 +19,27 @@ const PROTECTION_ACTIONS = ['enable', 'disable'] as const;
 type ProtectionAction = (typeof PROTECTION_ACTIONS)[number];
 const DEFAULT_SKEW_PROTECTION_MAX_AGE = 2592000;
 const ENABLED_DEPLOYMENT_TYPE = 'prod_deployment_urls_and_all_previews';
+const MAX_PROTECTION_PASSWORD_LENGTH = 72;
+
+function validateProtectionPassword(
+  value: string
+): { ok: true; password: string } | { ok: false; message: string } {
+  const password = value.trim();
+  if (password === '') {
+    return {
+      ok: false,
+      message:
+        'Invalid --protection-password: expected a non-empty password string.',
+    };
+  }
+  if (password.length > MAX_PROTECTION_PASSWORD_LENGTH) {
+    return {
+      ok: false,
+      message: `Invalid --protection-password: password must be at most ${MAX_PROTECTION_PASSWORD_LENGTH} characters.`,
+    };
+  }
+  return { ok: true, password };
+}
 
 function parseSkewMaxAgeSeconds(
   value: string
@@ -200,6 +221,9 @@ export default async function protection(
 
   const ssoSelected = Boolean(parsedArgs.flags['--sso']);
   const passwordSelected = Boolean(parsedArgs.flags['--password']);
+  const protectionPasswordFlag = parsedArgs.flags['--protection-password'] as
+    | string
+    | undefined;
   const customerSupportCodeVisibilitySelected = Boolean(
     parsedArgs.flags['--customer-support-code-visibility']
   );
@@ -211,6 +235,79 @@ export default async function protection(
   const gitForkProtectionSelected = Boolean(
     parsedArgs.flags['--git-fork-protection']
   );
+
+  if (protectionPasswordFlag !== undefined && !passwordSelected) {
+    const msg =
+      '`--protection-password` requires `--password`. Usage: `vercel project protection enable [name] --password --protection-password <password>`';
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: msg,
+        hint: 'Pass --password together with --protection-password when enabling password protection.',
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'project protection enable --password --protection-password <password>'
+            ),
+            when: 'Replace <password> with the deployment protection password',
+          },
+        ],
+      },
+      2
+    );
+    output.error(msg);
+    return 2;
+  }
+
+  if (action === 'disable' && protectionPasswordFlag !== undefined) {
+    const msg =
+      '`--protection-password` can only be used with `project protection enable`.';
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: msg,
+        hint: 'Use `project protection disable ... --password` to turn password protection off.',
+      },
+      2
+    );
+    output.error(msg);
+    return 2;
+  }
+
+  let protectionPassword: string | undefined;
+  if (action === 'enable' && protectionPasswordFlag !== undefined) {
+    const parsed = validateProtectionPassword(protectionPasswordFlag);
+    if (!parsed.ok) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: parsed.message,
+          hint: `Pass a password string up to ${MAX_PROTECTION_PASSWORD_LENGTH} characters.`,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'project protection enable --password --protection-password <password>'
+              ),
+              when: 'Replace <password> with a valid deployment protection password',
+            },
+          ],
+        },
+        1
+      );
+      output.error(parsed.message);
+      return 1;
+    }
+    protectionPassword = parsed.password;
+  }
+
   if (
     action &&
     !ssoSelected &&
@@ -366,7 +463,10 @@ export default async function protection(
     if (passwordSelected) {
       patchBody.passwordProtection =
         action === 'enable'
-          ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
+          ? {
+              deploymentType: ENABLED_DEPLOYMENT_TYPE,
+              ...(protectionPassword ? { password: protectionPassword } : {}),
+            }
           : null;
     }
     if (customerSupportCodeVisibilitySelected) {

@@ -1,10 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { homedir } from 'node:os';
-import XDGAppPaths from 'xdg-app-paths';
 import { z } from 'zod';
 import { authConfigSchema, globalConfigSchema } from './schema';
 import type { AuthConfig, AuthFileConfig, GlobalConfig } from './types';
+import {
+  getAuthConfigFilePath,
+  getConfigFilePath,
+  getGlobalPathConfig,
+} from './paths';
+
+export { getAuthConfigFilePath, getConfigFilePath, getGlobalPathConfig };
 
 const DOCS_URL =
   'https://vercel.com/docs/projects/project-configuration/global-configuration';
@@ -114,38 +119,6 @@ export function writeConfigFile<S extends z.ZodType>(
     indent: 2,
     ...options,
   });
-}
-
-function isReadableDirectory(targetPath: string): boolean {
-  try {
-    return fs.lstatSync(targetPath).isDirectory();
-  } catch (_) {
-    // We don't care which kind of error occured, it isn't a readable directory anyway.
-    return false;
-  }
-}
-
-export function getGlobalPathConfig(): string {
-  const vercelDirectories = XDGAppPaths('com.vercel.cli').dataDirs();
-
-  const possibleConfigPaths = [
-    ...vercelDirectories, // latest vercel directory
-    path.join(homedir(), '.now'), // legacy config in user's home directory
-    ...XDGAppPaths('now').dataDirs(), // legacy XDG directory
-  ];
-
-  return (
-    possibleConfigPaths.find(configPath => isReadableDirectory(configPath)) ||
-    vercelDirectories[0]
-  );
-}
-
-export function getConfigFilePath(configDir: string): string {
-  return path.join(configDir, 'config.json');
-}
-
-export function getAuthConfigFilePath(configDir: string): string {
-  return path.join(configDir, 'auth.json');
 }
 
 export function readGlobalConfigFile(configPath: string): GlobalConfig {

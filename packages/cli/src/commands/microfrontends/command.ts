@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, yesOption } from '../../util/arg-common';
+import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
 
 export const createGroupSubcommand = {
   name: 'create-group',
@@ -201,6 +201,7 @@ export const inspectGroupSubcommand = {
         'Custom microfrontends config file path/name relative to the default app root (must end with .json or .jsonc)',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -209,7 +210,7 @@ export const inspectGroupSubcommand = {
     },
     {
       name: 'Inspect a microfrontends group as JSON',
-      value: `${packageName} mf inspect-group --group="My Group" --format=json`,
+      value: `${packageName} mf inspect-group --group="My Group" --json`,
     },
   ],
 } as const;

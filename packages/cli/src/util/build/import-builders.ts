@@ -1,5 +1,5 @@
 import npa from 'npm-package-arg';
-import { satisfies } from 'semver';
+import { satisfies, validRange } from 'semver';
 import { dirname, join } from 'path';
 import { createRequire } from 'module';
 import { readJSON } from 'fs-extra';
@@ -15,6 +15,7 @@ import * as staticBuilder from './static-builder';
 import { VERCEL_DIR } from '../projects/link';
 import { isErrnoException } from '@vercel/error-utils';
 import output from '../../output-manager';
+import cliPkg from '../pkg';
 import { installBuilders } from './install-builders';
 
 export interface BuilderWithPkg {
@@ -36,11 +37,62 @@ export interface BuilderWithPkg {
 }
 
 type ResolveBuildersResult =
-  | { buildersToAdd: Set<string> }
+  | { buildersToAdd: Set<string>; installReasons: Map<string, string> }
   | { builders: Map<string, BuilderWithPkg> };
 
 // Get a real `require()` reference that esbuild won't mutate
 const require_ = createRequire(__filename);
+
+// Builder versions this CLI release was published with, from its `builders`
+// manifest (`workspace:*` in the monorepo, so a no-op in dev)
+let builderPins: Map<string, string> | undefined;
+
+function getBuilderPins(): Map<string, string> {
+  if (!builderPins) {
+    builderPins = new Map();
+    const pins: Record<string, string> =
+      (cliPkg as { builders?: Record<string, string> }).builders ?? {};
+    for (const [name, version] of Object.entries(pins)) {
+      if (validRange(version)) {
+        builderPins.set(name, version);
+      }
+    }
+  }
+  return builderPins;
+}
+
+function isBareSpec(parsed: ReturnType<typeof npa>): boolean {
+  return parsed.type === 'tag' && parsed.rawSpec === '';
+}
+
+/**
+ * Formats resolved Builders as `name@version=<dir>` pairs for trace
+ * attributes, so we can tell which installation each Builder loaded from.
+ */
+export function formatResolvedBuilders(
+  builders: Map<string, BuilderWithPkg>
+): string {
+  return Array.from(builders.values(), b =>
+    b.pkgPath
+      ? `${b.pkg.name}@${b.pkg.version}=${dirname(b.pkgPath)}`
+      : `${b.pkg.name}=built-in`
+  ).join(',');
+}
+
+function pinBuilderSpecs(specs: Set<string>): Map<string, string> {
+  const pins = getBuilderPins();
+  const pinnedSpecs = new Map<string, string>();
+  for (const spec of specs) {
+    const parsed = npa(spec);
+    if (parsed.name && isBareSpec(parsed)) {
+      const version = pins.get(parsed.name);
+      if (version) {
+        pinnedSpecs.set(spec, `${parsed.name}@${version}`);
+      }
+    }
+  }
+  return pinnedSpecs;
+}
 
 /**
  * Imports the specified Vercel Builders, installing any missing ones
@@ -56,11 +108,13 @@ export async function importBuilders(
   let importResult = await resolveBuilders(buildersDir, builderSpecs);
 
   if ('buildersToAdd' in importResult) {
-    const { buildersToAdd } = importResult;
+    const { buildersToAdd, installReasons } = importResult;
+    const pinnedSpecs = pinBuilderSpecs(buildersToAdd);
     const installResult = await installBuilders(
       buildersDir,
-      buildersToAdd,
-      span
+      new Set(Array.from(buildersToAdd, spec => pinnedSpecs.get(spec) ?? spec)),
+      span,
+      installReasons
     );
 
     importResult = await resolveBuilders(
@@ -70,7 +124,19 @@ export async function importBuilders(
     );
 
     if ('buildersToAdd' in importResult) {
-      throw new Error('Something went wrong!');
+      const { buildersToAdd: failed, installReasons: reasons } = importResult;
+      const failures = Array.from(failed, spec => {
+        const reason = reasons.get(spec);
+        return reason ? `${spec} (${reason})` : spec;
+      });
+      const err = new Error(
+        `Failed to load Builders after installing them: ${failures.join(
+          ', '
+        )}. Retry the build. If the failure persists, contact Vercel Support.`
+      );
+      (err as any).link =
+        'https://vercel.link/builder-dependencies-install-failed';
+      throw err;
     }
   }
 
@@ -84,6 +150,22 @@ export async function importBuilders(
   return importResult.builders;
 }
 
+/**
+ * Extracts the module ID from a `MODULE_NOT_FOUND` error message when it is
+ * a package-style ID (not a filesystem path), for use in trace attributes.
+ */
+function missingModuleId(err: Error): string | undefined {
+  const match = /Cannot find module '([^']+)'/.exec(err.message);
+  const id = match?.[1];
+  if (!id) {
+    return undefined;
+  }
+  if (id.startsWith('/') || id.startsWith('.') || /^[A-Za-z]:[\\/]/.test(id)) {
+    return undefined;
+  }
+  return id.replace(/[,=]/g, '_').slice(0, 100);
+}
+
 async function resolveBuilders(
   buildersDir: string,
   builderSpecs: Set<string>,
@@ -91,6 +173,7 @@ async function resolveBuilders(
 ): Promise<ResolveBuildersResult> {
   const builders = new Map<string, BuilderWithPkg>();
   const buildersToAdd = new Set<string>();
+  const installReasons = new Map<string, string>();
 
   for (const spec of builderSpecs) {
     const resolvedSpec = resolvedSpecs?.get(spec) || spec;
@@ -101,6 +184,7 @@ async function resolveBuilders(
       // A URL was specified - will need to install it and resolve the
       // proper package name from the written `package.json` file
       buildersToAdd.add(spec);
+      installReasons.set(spec, 'url-spec');
       continue;
     }
 
@@ -116,6 +200,7 @@ async function resolveBuilders(
       continue;
     }
 
+    let entrypointLoadFailed = false;
     try {
       let pkgPath: string | undefined;
       let builderPkg: PackageJson | undefined;
@@ -152,6 +237,21 @@ async function resolveBuilders(
         );
       }
 
+      const peerVersion = getBuilderPins().get(name);
+      if (
+        isBareSpec(parsed) &&
+        peerVersion &&
+        pkgPath.startsWith(buildersDir) &&
+        !satisfies(builderPkg.version, peerVersion)
+      ) {
+        output.debug(
+          `Cached "${name}@${builderPkg.version}" does not satisfy "${peerVersion}"`
+        );
+        buildersToAdd.add(spec);
+        installReasons.set(spec, 'peer-version-mismatch');
+        continue;
+      }
+
       if (parsed.type === 'version' && parsed.rawSpec !== builderPkg.version) {
         // An explicit Builder version was specified but it does
         // not match the version that is currently installed
@@ -159,6 +259,7 @@ async function resolveBuilders(
           `Installed version "${name}@${builderPkg.version}" does not match "${parsed.rawSpec}"`
         );
         buildersToAdd.add(spec);
+        installReasons.set(spec, 'version-mismatch');
         continue;
       }
 
@@ -172,13 +273,23 @@ async function resolveBuilders(
           `Installed version "${name}@${builderPkg.version}" is not compatible with "${parsed.rawSpec}"`
         );
         buildersToAdd.add(spec);
+        installReasons.set(spec, 'range-mismatch');
         continue;
       }
 
       // TODO: handle `parsed.type === 'tag'` ("latest" vs. anything else?)
       const path = join(dirname(pkgPath), builderPkg.main || 'index.js');
 
-      const builder = require_(path);
+      let builder;
+      try {
+        builder = require_(path);
+      } catch (requireErr: unknown) {
+        // The Builder's `package.json` was found but loading its entrypoint
+        // failed — track separately from "not installed" so traces can tell
+        // a broken installation apart from a missing one.
+        entrypointLoadFailed = true;
+        throw requireErr;
+      }
 
       const dynamicallyInstalled = pkgPath.startsWith(buildersDir);
 
@@ -200,6 +311,17 @@ async function resolveBuilders(
       if (err.code === 'MODULE_NOT_FOUND' && !resolvedSpecs) {
         output.debug(`Failed to import "${name}": ${err}`);
         buildersToAdd.add(spec);
+        if (entrypointLoadFailed) {
+          const missing = missingModuleId(err);
+          installReasons.set(
+            spec,
+            missing
+              ? `entrypoint-load-failed:${missing}`
+              : 'entrypoint-load-failed'
+          );
+        } else {
+          installReasons.set(spec, 'not-installed');
+        }
       } else {
         err.message = `Importing "${name}": ${err.message}`;
         throw err;
@@ -209,7 +331,7 @@ async function resolveBuilders(
 
   // Add any Builders that are not yet present into `.vercel/builders`
   if (buildersToAdd.size > 0) {
-    return { buildersToAdd };
+    return { buildersToAdd, installReasons };
   }
 
   return { builders };

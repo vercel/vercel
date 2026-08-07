@@ -22,7 +22,8 @@ export function parseOutputFormat(value: string): OutputFormat {
 
 /**
  * Determines the output format from parsed CLI flags.
- * Handles both --format and deprecated --json flags.
+ * Handles the documented --json flag and the supported --format compatibility
+ * path.
  *
  * @param flags - Parsed CLI flags object
  * @returns The output format if specified, undefined for default human output

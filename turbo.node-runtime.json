@@ -6,7 +6,8 @@
       "inputs": [
         ".github/workflows/release-binary.yml",
         "turbo.node-runtime.json",
-        "packages/cli/scripts/build-binary-node.mjs"
+        "packages/cli/scripts/build-binary-node.mjs",
+        "packages/cli/scripts/patch-node-source.mjs"
       ],
       "outputs": ["packages/cli/.node-runtime/**"],
       "env": [

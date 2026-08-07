@@ -1,5 +1,5 @@
 import bytes from 'bytes';
-import type { Response } from 'node-fetch';
+import type { Response } from './fetch';
 import { NowBuildError } from '@vercel/build-utils';
 import { NowError } from './now-error';
 import code from './output/code';
@@ -1062,11 +1062,25 @@ export class DeploymentsRateLimited extends NowError<
   }
 }
 
-export class BuildsRateLimited extends NowError<'BUILDS_RATE_LIMITED', {}> {
-  constructor(message: string) {
+export interface BuildsRateLimitedMeta {
+  /** Backend-provided call-to-action label (newer field). */
+  ctaLabel?: string;
+  /** Backend-provided call-to-action URL (newer field). */
+  ctaUrl?: string;
+  /** Legacy call-to-action label. */
+  action?: string;
+  /** Legacy call-to-action URL. */
+  link?: string;
+}
+
+export class BuildsRateLimited extends NowError<
+  'BUILDS_RATE_LIMITED',
+  BuildsRateLimitedMeta
+> {
+  constructor(message: string, meta: BuildsRateLimitedMeta = {}) {
     super({
       code: 'BUILDS_RATE_LIMITED',
-      meta: {},
+      meta,
       message,
     });
   }

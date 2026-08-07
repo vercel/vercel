@@ -111,6 +111,39 @@ describe('git disconnect', () => {
     }
   });
 
+  it('disconnects the project selected by --project', async () => {
+    useUser();
+    useTeams('team_dummy');
+    const project = useProject({
+      ...defaultProject,
+      id: 'explicit-project',
+      name: 'explicit-project',
+      accountId: 'team_dummy',
+    });
+    project.project.link = {
+      type: 'github',
+      repo: 'repo',
+      org: 'user',
+      repoId: 1010,
+      gitCredentialId: '',
+      sourceless: true,
+      createdAt: 1656109539791,
+      updatedAt: 1656109539791,
+    };
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    client.setArgv(
+      'git',
+      'disconnect',
+      '--project',
+      'explicit-project',
+      '--yes'
+    );
+
+    await expect(git(client)).resolves.toEqual(0);
+    await expect(client.stderr).toOutput('Disconnected user/repo.');
+  });
+
   describe('--yes', () => {
     it('tracks telemetry', async () => {
       const cwd = fixture('new-connection');

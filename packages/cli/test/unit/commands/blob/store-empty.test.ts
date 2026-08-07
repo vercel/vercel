@@ -393,4 +393,60 @@ describe('blob empty-store', () => {
       ]);
     });
   });
+
+  describe('non-interactive mode (agents)', () => {
+    beforeEach(() => {
+      client.nonInteractive = true;
+      // The mock throws to simulate process.exit terminating; the command's
+      // try/catch may swallow it, so we assert on the spy, not a rejection.
+      vi.spyOn(process, 'exit').mockImplementation(((_code?: number) => {
+        throw new Error('exit');
+      }) as () => never);
+    });
+
+    it('requires --yes and emits confirmation_required instead of prompting', async () => {
+      await emptyStore(client, [], fullToken).catch(() => {});
+
+      expect(vi.mocked(process.exit)).toHaveBeenCalledWith(1);
+      expect(confirmInputMock).not.toHaveBeenCalled();
+      expect(mockedBlob.del).not.toHaveBeenCalled();
+      const payload = JSON.parse(client.stdout.getFullOutput());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'confirmation_required',
+        message: expect.stringMatching(/--yes/),
+        next: expect.arrayContaining([
+          expect.objectContaining({
+            command: expect.stringContaining('--yes'),
+          }),
+        ]),
+      });
+    });
+
+    it('empties without prompting when --yes is passed', async () => {
+      mockedBlob.list.mockReset();
+      mockedBlob.list
+        .mockResolvedValueOnce({
+          blobs: [{ url: 'https://example.com/a.txt' }],
+          cursor: '',
+          hasMore: false,
+        } as any)
+        .mockResolvedValueOnce({
+          blobs: [{ url: 'https://example.com/a.txt' }],
+          cursor: '',
+          hasMore: false,
+        } as any)
+        .mockResolvedValueOnce({
+          blobs: [],
+          cursor: '',
+          hasMore: false,
+        } as any);
+
+      const exitCode = await emptyStore(client, ['--yes'], fullToken);
+
+      expect(exitCode).toBe(0);
+      expect(confirmInputMock).not.toHaveBeenCalled();
+      expect(mockedBlob.del).toHaveBeenCalled();
+    });
+  });
 });

@@ -15,15 +15,16 @@ Testing API endpoints on Vercel deployments typically requires:
 ## Usage
 
 ```bash
-vercel curl <path> [options] [-- <curl-args>]
+vercel curl <url|path> [options] [-- <curl-args>]
 ```
 
 ### Arguments
 
-- **`path`** (required): The API path to request
+- **`url|path`** (required): The deployment URL or API path to request
+  - Full URLs and bare hostnames are supported (e.g., `https://your-project.vercel.app/api/hello`)
   - Can start with `/` (e.g., `/api/hello`) or without (e.g., `api/hello`)
   - Automatically normalized to include leading slash
-  - Must be a relative path — do not pass a full URL. To target a specific deployment base URL, use `--deployment <id>`
+  - Relative paths use the currently linked project. You can also target a specific deployment with `--deployment <id|url>`
 
 ### Options
 
@@ -49,6 +50,12 @@ vercel curl /api/endpoint -- --header "Content-Type: application/json" --request
 ```
 
 ## Examples
+
+### Protected Deployment URL
+
+```bash
+vercel curl https://your-project-abc123.vercel.app/api/hello
+```
 
 ### Basic GET Request
 
@@ -230,13 +237,6 @@ When using `--deployment`:
 - Verify the deployment ID is correct
 - Check that the deployment belongs to your linked project
 - Ensure the deployment hasn't been deleted
-
-### "Path must be relative (not a full URL)"
-
-When invoking `vercel curl`, pass only the API path (e.g., `/api/hello`).
-
-- Don’t include the protocol or host (e.g., `https://my-app.vercel.app/api/hello`)
-- If you need to target a particular deployment, use `--deployment <id|url>` and keep `<path>` relative
 
 ## Requirements
 

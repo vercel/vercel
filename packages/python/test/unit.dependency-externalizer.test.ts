@@ -1,0 +1,1642 @@
+import { afterEach, describe, it, expect, vi } from 'vitest';
+import fs from 'fs-extra';
+import path from 'path';
+import { tmpdir } from 'os';
+import {
+  PythonDependencyExternalizer,
+  BYTECODE_FILL_CEILING_BYTES,
+  calculateBundleSize,
+  getPackagesReachableOnPlatform,
+  lambdaKnapsack,
+  planPublicPackagePacking,
+  EPHEMERAL_INSTALL_BUDGET_BYTES,
+  LAMBDA_SIZE_THRESHOLD_BYTES,
+  LAMBDA_EPHEMERAL_STORAGE_BYTES,
+  LARGE_FUNCTION_FILL_CEILING_BYTES,
+  MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE,
+} from '../src/dependency-externalizer';
+import { classifyPackages, parseUvLock } from '@vercel/python-analysis';
+import { FileFsRef, FileBlob, type Files } from '@vercel/build-utils';
+import { detectTargetPlatform } from '../src/platform-info';
+import {
+  UV_VERSION,
+  UV_BINARY_CHECKSUM,
+  downloadUvBinaryForTarget,
+} from '../src/uv';
+import { InstalledPythonDistributions } from '../src/installed-distributions';
+import type { PythonVersion } from '../src/version';
+
+const TEST_PYTHON_VERSION = {
+  major: 3,
+  minor: 12,
+  pipPath: 'pip3.12',
+  pythonPath: '/usr/bin/python3',
+  runtime: 'python3.12',
+} satisfies PythonVersion;
+
+function createInstalledDistributions() {
+  return new InstalledPythonDistributions({
+    sitePackageDirs: [],
+    distributions: new Map(),
+    pythonMajor: 3,
+    pythonMinor: 12,
+  });
+}
+
+describe('dependency externalizer support', () => {
+  describe('shouldEnableRuntimeInstall', () => {
+    const originalLargeFunctionsEnv =
+      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+
+    afterEach(() => {
+      if (originalLargeFunctionsEnv === undefined) {
+        delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+      } else {
+        process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = originalLargeFunctionsEnv;
+      }
+    });
+
+    const oversized = LAMBDA_SIZE_THRESHOLD_BYTES + 1;
+    const undersized = LAMBDA_SIZE_THRESHOLD_BYTES - 1;
+    // Exceeds even the ephemeral-storage budget, so runtime installation can't
+    // fit it on Lambda.
+    const ephemeralOversized = LAMBDA_EPHEMERAL_STORAGE_BYTES + 1;
+
+    function createExternalizer({
+      uvLockPath = '/path/to/uv.lock' as string | null,
+      hasCustomCommand = false,
+      totalBundleSize = 0,
+    } = {}) {
+      const ext = new PythonDependencyExternalizer({
+        installedDistributions: createInstalledDistributions(),
+        vendorDir: '_vendor',
+        workPath: '/tmp/work',
+        uvLockPath,
+        uvProjectDir: '/tmp/work',
+        projectName: 'test-project',
+        pythonVersion: TEST_PYTHON_VERSION,
+        hasCustomCommand,
+      });
+      // Set the private totalBundleSize field for testing
+      (ext as any).totalBundleSize = totalBundleSize;
+      return ext;
+    }
+
+    it('returns true when bundle exceeds threshold and uvLockPath is present', () => {
+      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+      const ext = createExternalizer({ totalBundleSize: oversized });
+      expect(ext.shouldEnableRuntimeInstall()).toBe(true);
+    });
+
+    it('still attempts runtime install under VERCEL_SUPPORT_LARGE_FUNCTIONS when the bundle fits ephemeral storage', () => {
+      // Large functions keep deferrable bundles on Lambda via runtime install;
+      // Hive is only used when the deps can't fit ephemeral storage.
+      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
+      const ext = createExternalizer({ totalBundleSize: oversized });
+      expect(ext.shouldEnableRuntimeInstall()).toBe(true);
+    });
+
+    it('skips runtime install under VERCEL_SUPPORT_LARGE_FUNCTIONS when the bundle exceeds ephemeral storage', () => {
+      // Too big for /tmp: bundle everything and serve on Hive instead.
+      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
+      const ext = createExternalizer({ totalBundleSize: ephemeralOversized });
+      expect(ext.shouldEnableRuntimeInstall()).toBe(false);
+    });
+
+    it('skips runtime install under VERCEL_SUPPORT_LARGE_FUNCTIONS when the bundle is under threshold', () => {
+      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
+      const ext = createExternalizer({ totalBundleSize: undersized });
+      expect(ext.shouldEnableRuntimeInstall()).toBe(false);
+    });
+
+    it('attempts runtime install when VERCEL_SUPPORT_LARGE_FUNCTIONS is an unrecognised value', () => {
+      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = 'yes';
+      const ext = createExternalizer({ totalBundleSize: oversized });
+      expect(ext.shouldEnableRuntimeInstall()).toBe(true);
+    });
+
+    it('still attempts runtime install when the bundle exceeds ephemeral storage without large functions enabled', () => {
+      // Without large functions the ephemeral short-circuit does not apply, so
+      // it still attempts the hack (generateBundle later throws).
+      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+      const ext = createExternalizer({ totalBundleSize: ephemeralOversized });
+      expect(ext.shouldEnableRuntimeInstall()).toBe(true);
+    });
+
+    it('returns false when bundle is under threshold', () => {
+      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+      const ext = createExternalizer({ totalBundleSize: undersized });
+      expect(ext.shouldEnableRuntimeInstall()).toBe(false);
+    });
+
+    it('returns false when uvLockPath is null', () => {
+      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+      const ext = createExternalizer({
+        totalBundleSize: oversized,
+        uvLockPath: null,
+      });
+      expect(ext.shouldEnableRuntimeInstall()).toBe(false);
+    });
+
+    it('returns false when hasCustomCommand is true even with oversized bundle and uvLockPath', () => {
+      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+      const ext = createExternalizer({
+        totalBundleSize: oversized,
+        hasCustomCommand: true,
+      });
+      expect(ext.shouldEnableRuntimeInstall()).toBe(false);
+    });
+
+    it('returns false when hasCustomCommand is true and bundle is under threshold', () => {
+      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+      const ext = createExternalizer({
+        totalBundleSize: undersized,
+        hasCustomCommand: true,
+      });
+      expect(ext.shouldEnableRuntimeInstall()).toBe(false);
+    });
+  });
+
+  describe('calculateBundleSize', () => {
+    it('calculates size from FileFsRef objects', async () => {
+      const tempDir = path.join(tmpdir(), `size-test-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+
+      // Create test files with known sizes
+      const file1Path = path.join(tempDir, 'file1.txt');
+      const file2Path = path.join(tempDir, 'file2.txt');
+      fs.writeFileSync(file1Path, 'a'.repeat(100)); // 100 bytes
+      fs.writeFileSync(file2Path, 'b'.repeat(200)); // 200 bytes
+
+      const files = {
+        'file1.txt': new FileFsRef({ fsPath: file1Path }),
+        'file2.txt': new FileFsRef({ fsPath: file2Path }),
+      };
+
+      try {
+        const size = await calculateBundleSize(files);
+        expect(size).toBe(300);
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+
+    it('calculates size from FileBlob objects', async () => {
+      const files = {
+        'file1.txt': new FileBlob({ data: 'a'.repeat(100) }),
+        'file2.txt': new FileBlob({ data: Buffer.from('b'.repeat(200)) }),
+      };
+
+      const size = await calculateBundleSize(files);
+      expect(size).toBe(300);
+    });
+
+    it('returns 0 for empty files object', async () => {
+      const size = await calculateBundleSize({});
+      expect(size).toBe(0);
+    });
+
+    it('uses pre-populated size on FileFsRef without stat', async () => {
+      // FileFsRef with a pre-populated size should be used directly
+      // without hitting the filesystem, so we can use a non-existent path.
+      const files = {
+        'file1.txt': new FileFsRef({
+          fsPath: '/nonexistent/file1.txt',
+          size: 100,
+        }),
+        'file2.txt': new FileFsRef({
+          fsPath: '/nonexistent/file2.txt',
+          size: 200,
+        }),
+      };
+
+      const size = await calculateBundleSize(files);
+      expect(size).toBe(300);
+    });
+
+    it('mixes pre-populated and stat-based sizes', async () => {
+      const tempDir = path.join(tmpdir(), `size-mixed-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+
+      const filePath = path.join(tempDir, 'real.txt');
+      fs.writeFileSync(filePath, 'a'.repeat(50));
+
+      const files = {
+        'pre-sized.txt': new FileFsRef({
+          fsPath: '/nonexistent/pre-sized.txt',
+          size: 150,
+        }),
+        'real.txt': new FileFsRef({ fsPath: filePath }),
+      };
+
+      try {
+        const size = await calculateBundleSize(files);
+        expect(size).toBe(200);
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+
+    it('caches stat results on the FileFsRef so later calls skip I/O', async () => {
+      const tempDir = path.join(tmpdir(), `size-cache-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+
+      const filePath = path.join(tempDir, 'cached.txt');
+      fs.writeFileSync(filePath, 'a'.repeat(75));
+      const ref = new FileFsRef({ fsPath: filePath });
+      const files = { 'cached.txt': ref };
+
+      try {
+        expect(ref.size).toBeUndefined();
+        expect(await calculateBundleSize(files)).toBe(75);
+        expect(ref.size).toBe(75);
+      } finally {
+        fs.removeSync(tempDir);
+      }
+
+      // File is gone; a second call must use the cached size without stat.
+      expect(await calculateBundleSize(files)).toBe(75);
+    });
+
+    it('only counts files matching the filter when provided', async () => {
+      const files = {
+        'app.py': new FileFsRef({ fsPath: '/nonexistent/app.py', size: 100 }),
+        'pkg/mod.py': new FileFsRef({
+          fsPath: '/nonexistent/mod.py',
+          size: 50,
+        }),
+        'lib.so': new FileFsRef({ fsPath: '/nonexistent/lib.so', size: 999 }),
+        'data.json': new FileBlob({ data: 'x'.repeat(40) }),
+      };
+
+      const pySize = await calculateBundleSize(files, p => p.endsWith('.py'));
+      expect(pySize).toBe(150);
+
+      const allSize = await calculateBundleSize(files);
+      expect(allSize).toBe(1189);
+    });
+  });
+
+  describe('bytecode fill capacity guard', () => {
+    const MB = 1024 * 1024;
+    // Mirrors the gate in the builder: compile whenever any capacity
+    // remains under the fill ceiling; skip only when nothing could ship.
+    const gatePasses = (bundleSize: number) =>
+      BYTECODE_FILL_CEILING_BYTES - bundleSize > 0;
+
+    it('compiles near-limit apps regardless of expected coverage', () => {
+      // Previously skipped by the coverage-ratio heuristic.
+      expect(gatePasses(219 * MB)).toBe(true);
+      expect(gatePasses(200 * MB)).toBe(true);
+    });
+
+    it('skips when the bundle meets or exceeds the fill ceiling', () => {
+      expect(gatePasses(BYTECODE_FILL_CEILING_BYTES)).toBe(false);
+      expect(gatePasses(221 * MB)).toBe(false);
+    });
+  });
+
+  describe('Lambda size constants', () => {
+    it('LAMBDA_SIZE_THRESHOLD_BYTES is 225 MB', () => {
+      expect(LAMBDA_SIZE_THRESHOLD_BYTES).toBe(225 * 1024 * 1024);
+    });
+
+    it('LAMBDA_EPHEMERAL_STORAGE_BYTES is 500 MB', () => {
+      expect(LAMBDA_EPHEMERAL_STORAGE_BYTES).toBe(500 * 1024 * 1024);
+    });
+
+    it('ephemeral storage limit is greater than the bundle size threshold', () => {
+      expect(LAMBDA_EPHEMERAL_STORAGE_BYTES).toBeGreaterThan(
+        LAMBDA_SIZE_THRESHOLD_BYTES
+      );
+    });
+
+    it('MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE is 5 GB', () => {
+      expect(MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE).toBe(5 * 1024 * 1024 * 1024);
+    });
+
+    it('large function limit is greater than the ephemeral storage limit', () => {
+      expect(MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE).toBeGreaterThan(
+        LAMBDA_EPHEMERAL_STORAGE_BYTES
+      );
+    });
+
+    it('large function fill ceiling is 5 MiB under the 5 GiB limit', () => {
+      expect(LARGE_FUNCTION_FILL_CEILING_BYTES).toBe(
+        MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE - 5 * 1024 * 1024
+      );
+    });
+
+    it('large function fill ceiling leaves margin under the size limit', () => {
+      // The margin absorbs files added after the fill (e.g. the handler
+      // trampoline) and byte-sum vs. platform measurement drift, so
+      // bytecode can never push a near-limit function over the check.
+      expect(LARGE_FUNCTION_FILL_CEILING_BYTES).toBeLessThan(
+        MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
+      );
+    });
+
+    it('large function fill ceiling is greater than the ephemeral storage limit', () => {
+      expect(LARGE_FUNCTION_FILL_CEILING_BYTES).toBeGreaterThan(
+        LAMBDA_EPHEMERAL_STORAGE_BYTES
+      );
+    });
+  });
+
+  describe('classifyPackages', () => {
+    it('classifies PyPI packages as public', () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = classifyPackages({ lockFile });
+      expect(result.publicPackages).toContain('requests');
+      expect(result.privatePackages).not.toContain('requests');
+      expect(result.packageVersions['requests']).toBe('2.31.0');
+    });
+
+    it('classifies git source packages as private', () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-private-pkg"
+version = "1.0.0"
+
+[package.source]
+git = "https://github.com/myorg/private-pkg.git"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = classifyPackages({ lockFile });
+      expect(result.privatePackages).toContain('my-private-pkg');
+      expect(result.publicPackages).not.toContain('my-private-pkg');
+    });
+
+    it('classifies path source packages as private', () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "local-pkg"
+version = "0.1.0"
+
+[package.source]
+path = "./packages/local-pkg"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = classifyPackages({ lockFile });
+      expect(result.privatePackages).toContain('local-pkg');
+      expect(result.publicPackages).not.toContain('local-pkg');
+    });
+
+    it('classifies non-PyPI registry packages as private', () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "internal-pkg"
+version = "1.0.0"
+
+[package.source]
+registry = "https://private.pypi.mycompany.com/simple"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = classifyPackages({ lockFile });
+      expect(result.privatePackages).toContain('internal-pkg');
+      expect(result.publicPackages).not.toContain('internal-pkg');
+    });
+
+    it('returns empty classification for empty lock file', () => {
+      const lockFile = { packages: [] };
+      const result = classifyPackages({ lockFile });
+      expect(result.privatePackages).toHaveLength(0);
+      expect(result.publicPackages).toHaveLength(0);
+    });
+
+    it('excludes specified packages from classification', () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = classifyPackages({
+        lockFile,
+        excludePackages: ['my-app'],
+      });
+      // my-app should be excluded entirely
+      expect(result.publicPackages).not.toContain('my-app');
+      expect(result.privatePackages).not.toContain('my-app');
+      expect(result.packageVersions['my-app']).toBeUndefined();
+      // requests should still be classified
+      expect(result.publicPackages).toContain('requests');
+    });
+  });
+
+  describe('getPackagesReachableOnPlatform', () => {
+    it('returns null when projectName is undefined', async () => {
+      const lockFile = { packages: [] };
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        undefined,
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).toBeNull();
+    });
+
+    it('returns null when root package is not found in lock file', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).toBeNull();
+    });
+
+    it('includes all unmarked dependencies', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "requests" },
+    { name = "flask" },
+]
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+
+[[package]]
+name = "flask"
+version = "3.0.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('requests')).toBe(true);
+      expect(result!.has('flask')).toBe(true);
+    });
+
+    it('excludes packages guarded by win32 marker on linux', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "requests" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
+]
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+
+[[package]]
+name = "pywin32"
+version = "306"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('requests')).toBe(true);
+      expect(result!.has('pywin32')).toBe(false);
+    });
+
+    it('prunes entire subtree behind an excluded marker', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "requests" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
+]
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+
+[[package]]
+name = "pywin32"
+version = "306"
+dependencies = [
+    { name = "pywin32-ctypes" },
+]
+
+[[package]]
+name = "pywin32-ctypes"
+version = "0.2.2"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('requests')).toBe(true);
+      expect(result!.has('pywin32')).toBe(false);
+      expect(result!.has('pywin32-ctypes')).toBe(false);
+    });
+
+    it('includes packages with linux-satisfied markers', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "uvloop", marker = "sys_platform == 'linux'" },
+]
+
+[[package]]
+name = "uvloop"
+version = "0.19.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('uvloop')).toBe(true);
+    });
+
+    it('includes win32 packages when target is win32', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
+]
+
+[[package]]
+name = "pywin32"
+version = "306"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'win32',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('pywin32')).toBe(true);
+    });
+
+    it('traverses transitive dependencies', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "requests" },
+]
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+dependencies = [
+    { name = "urllib3" },
+    { name = "certifi" },
+]
+
+[[package]]
+name = "urllib3"
+version = "2.1.0"
+
+[[package]]
+name = "certifi"
+version = "2024.2.2"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('requests')).toBe(true);
+      expect(result!.has('urllib3')).toBe(true);
+      expect(result!.has('certifi')).toBe(true);
+    });
+
+    it('does not include the root project itself in the reachable set', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "requests" },
+]
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('my-app')).toBe(false);
+      expect(result!.has('requests')).toBe(true);
+    });
+
+    it('handles diamond dependencies without duplication', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "pkg-a" },
+    { name = "pkg-b" },
+]
+
+[[package]]
+name = "pkg-a"
+version = "1.0.0"
+dependencies = [
+    { name = "shared" },
+]
+
+[[package]]
+name = "pkg-b"
+version = "1.0.0"
+dependencies = [
+    { name = "shared" },
+]
+
+[[package]]
+name = "shared"
+version = "1.0.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('pkg-a')).toBe(true);
+      expect(result!.has('pkg-b')).toBe(true);
+      expect(result!.has('shared')).toBe(true);
+      expect(result!.size).toBe(3);
+    });
+
+    it('handles compound markers with mixed platform conditions', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "linux-only", marker = "sys_platform == 'linux' and python_version >= '3.12'" },
+    { name = "win-and-py", marker = "sys_platform == 'win32' and python_version >= '3.12'" },
+]
+
+[[package]]
+name = "linux-only"
+version = "1.0.0"
+
+[[package]]
+name = "win-and-py"
+version = "1.0.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('linux-only')).toBe(true);
+      expect(result!.has('win-and-py')).toBe(false);
+    });
+
+    it('normalizes package names for matching', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "My-App"
+version = "0.1.0"
+dependencies = [
+    { name = "My-Package" },
+]
+
+[[package]]
+name = "My-Package"
+version = "1.0.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('my-package')).toBe(true);
+    });
+
+    it('returns empty set when root has no dependencies', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.size).toBe(0);
+    });
+
+    it('excludes os_name == nt dependencies on linux', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "colorama", marker = "os_name == 'nt'" },
+    { name = "click" },
+]
+
+[[package]]
+name = "colorama"
+version = "0.4.6"
+
+[[package]]
+name = "click"
+version = "8.1.7"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('click')).toBe(true);
+      expect(result!.has('colorama')).toBe(false);
+    });
+  });
+
+  describe('lambdaKnapsack', () => {
+    it('bundles all packages when they fit within capacity', () => {
+      const packages = new Map([
+        ['a', 10],
+        ['b', 20],
+        ['c', 30],
+      ]);
+      const result = lambdaKnapsack(packages, 100);
+      expect(result).toHaveLength(3);
+      expect(result).toContain('a');
+      expect(result).toContain('b');
+      expect(result).toContain('c');
+    });
+
+    it('returns empty array when capacity is zero', () => {
+      const packages = new Map([
+        ['a', 10],
+        ['b', 20],
+      ]);
+      const result = lambdaKnapsack(packages, 0);
+      expect(result).toEqual([]);
+    });
+
+    it('returns empty array when capacity is negative', () => {
+      const packages = new Map([
+        ['a', 10],
+        ['b', 20],
+      ]);
+      const result = lambdaKnapsack(packages, -5);
+      expect(result).toEqual([]);
+    });
+
+    it('returns empty array for empty package map', () => {
+      const result = lambdaKnapsack(new Map(), 100);
+      expect(result).toHaveLength(0);
+    });
+
+    it('selects larger packages first for efficient packing', () => {
+      // 49MB capacity, packages: 10MB, 20MB, 20MB
+      // Should pick the two 20MB packages (40MB total) instead of
+      // 20MB + 10MB (30MB total)
+      const packages = new Map([
+        ['pkg-10', 10 * 1024 * 1024],
+        ['pkg-20a', 20 * 1024 * 1024],
+        ['pkg-20b', 20 * 1024 * 1024],
+      ]);
+      const capacity = 49 * 1024 * 1024;
+      const result = lambdaKnapsack(packages, capacity);
+      expect(result).toEqual(['pkg-20a', 'pkg-20b']);
+    });
+
+    it('fills remaining capacity with smaller packages after large ones', () => {
+      const packages = new Map<string, number>([
+        ['large', 100],
+        ['medium', 40],
+        ['small', 10],
+        ['tiny', 5],
+      ]);
+      const result = lambdaKnapsack(packages, 150);
+      // large (100) + medium (40) = 140, then small (10) = 150
+      expect(result).toEqual(['large', 'medium', 'small']);
+    });
+
+    it('handles a single package that exactly fits', () => {
+      const packages = new Map([['exact', 100]]);
+      const result = lambdaKnapsack(packages, 100);
+      expect(result).toEqual(['exact']);
+    });
+
+    it('defers a single package that is too large', () => {
+      const packages = new Map([['toobig', 101]]);
+      const result = lambdaKnapsack(packages, 100);
+      expect(result).toHaveLength(0);
+    });
+
+    it('handles packages with zero size', () => {
+      const packages = new Map([
+        ['empty', 0],
+        ['real', 50],
+      ]);
+      const result = lambdaKnapsack(packages, 50);
+      expect(result).toContain('real');
+      expect(result).toContain('empty');
+    });
+
+    it('does not mutate the input map', () => {
+      const packages = new Map([
+        ['c', 30],
+        ['a', 10],
+        ['b', 20],
+      ]);
+      const original = new Map(packages);
+      lambdaKnapsack(packages, 50);
+      expect(packages).toEqual(original);
+    });
+
+    it('packs many small packages efficiently', () => {
+      // 10 packages of 10 bytes each, capacity of 95
+      // Should fit 9 packages (90 bytes)
+      const packages = new Map(
+        Array.from({ length: 10 }, (_, i) => [`pkg-${i}`, 10] as const)
+      );
+      const result = lambdaKnapsack(packages, 95);
+      expect(result).toHaveLength(9);
+    });
+  });
+
+  describe('planPublicPackagePacking', () => {
+    const MB = 1024 * 1024;
+
+    it('chooses bytecode-first when requested and the public set fits the ephemeral budget', () => {
+      const plan = planPublicPackagePacking({
+        publicPackageSizes: new Map([
+          ['a', 100 * MB],
+          ['b', 200 * MB],
+        ]),
+        zipCapacity: 150 * MB,
+        bytecodeFirst: true,
+      });
+      expect(plan.packingMode).toBe('bytecode-first');
+      expect(plan.bundledPublic).toEqual([]);
+    });
+
+    it('falls back to knapsack when the public set exceeds the ephemeral budget', () => {
+      const plan = planPublicPackagePacking({
+        publicPackageSizes: new Map([
+          ['a', 200 * MB],
+          ['b', EPHEMERAL_INSTALL_BUDGET_BYTES],
+        ]),
+        zipCapacity: 210 * MB,
+        bytecodeFirst: true,
+      });
+      expect(plan.packingMode).toBe('knapsack');
+      // The knapsack bundles what fits the zip; the rest installs at cold
+      // start.
+      expect(plan.bundledPublic).toEqual(['a']);
+    });
+
+    it('uses knapsack when bytecode-first is not requested, regardless of size', () => {
+      const plan = planPublicPackagePacking({
+        publicPackageSizes: new Map([
+          ['a', 150 * MB],
+          ['b', 100 * MB],
+        ]),
+        zipCapacity: 160 * MB,
+        bytecodeFirst: false,
+      });
+      expect(plan.packingMode).toBe('knapsack');
+      expect(plan.bundledPublic).toEqual(['a']);
+    });
+  });
+
+  describe('analyze', () => {
+    const originalLargeFunctionsEnv =
+      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+
+    afterEach(() => {
+      if (originalLargeFunctionsEnv === undefined) {
+        delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+      } else {
+        process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = originalLargeFunctionsEnv;
+      }
+    });
+
+    it('uses the injected installed distributions when sizing the bundle', async () => {
+      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+
+      const installedDistributions = createInstalledDistributions();
+      const mirrorPackagesIntoVendor = vi
+        .spyOn(installedDistributions, 'mirrorPackagesIntoVendor')
+        .mockResolvedValue({
+          '_vendor/pkg.py': new FileBlob({ data: 'vendor' }),
+        });
+      const ext = new PythonDependencyExternalizer({
+        installedDistributions,
+        vendorDir: '_vendor',
+        workPath: '/tmp/work',
+        uvLockPath: null,
+        uvProjectDir: null,
+        projectName: 'test-project',
+        pythonVersion: TEST_PYTHON_VERSION,
+        hasCustomCommand: false,
+      });
+
+      const result = await ext.analyze({});
+
+      expect(mirrorPackagesIntoVendor).toHaveBeenCalledWith({
+        vendorDirName: '_vendor',
+      });
+      expect(result.totalBundleSize).toBe(6);
+      expect(Object.keys(result.allVendorFiles)).toEqual(['_vendor/pkg.py']);
+    });
+
+    it('throws user-friendly error for custom install command with oversized bundle', async () => {
+      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+
+      const tempDir = path.join(tmpdir(), `dep-ext-analyze-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+
+      // Create a sparse file that reports > 225 MB without using real disk space
+      const bigFilePath = path.join(tempDir, 'big-file.dat');
+      const fd = fs.openSync(bigFilePath, 'w');
+      fs.ftruncateSync(fd, LAMBDA_SIZE_THRESHOLD_BYTES + 1024 * 1024);
+      fs.closeSync(fd);
+
+      const ext = new PythonDependencyExternalizer({
+        installedDistributions: createInstalledDistributions(),
+        vendorDir: '_vendor',
+        workPath: tempDir,
+        uvLockPath: path.join(tempDir, 'uv.lock'),
+        uvProjectDir: tempDir,
+        projectName: 'test-project',
+        pythonVersion: TEST_PYTHON_VERSION,
+        hasCustomCommand: true,
+      });
+
+      const files = {
+        'big-file.dat': new FileFsRef({ fsPath: bigFilePath }),
+      };
+
+      try {
+        await expect(ext.analyze(files)).rejects.toThrow(
+          'exceeds the maximum function size'
+        );
+
+        // Re-create the externalizer since the previous one may have mutated state
+        const ext2 = new PythonDependencyExternalizer({
+          installedDistributions: createInstalledDistributions(),
+          vendorDir: '_vendor',
+          workPath: tempDir,
+          uvLockPath: path.join(tempDir, 'uv.lock'),
+          uvProjectDir: tempDir,
+          projectName: 'test-project',
+          pythonVersion: TEST_PYTHON_VERSION,
+          hasCustomCommand: true,
+        });
+
+        try {
+          await ext2.analyze(files);
+          expect.fail('Expected analyze() to throw');
+        } catch (error: unknown) {
+          const message = (error as Error).message;
+          expect(message).toContain('custom install command');
+          expect(message).not.toContain('Lambda size limit');
+          expect(message).not.toContain('runtime dependency installation');
+        }
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+
+    it('does not throw for custom install command when bundle is under threshold', async () => {
+      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+
+      const tempDir = path.join(tmpdir(), `dep-ext-analyze-ok-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+
+      const smallFilePath = path.join(tempDir, 'small-file.dat');
+      fs.writeFileSync(smallFilePath, 'a'.repeat(100));
+
+      const ext = new PythonDependencyExternalizer({
+        installedDistributions: createInstalledDistributions(),
+        vendorDir: '_vendor',
+        workPath: tempDir,
+        uvLockPath: path.join(tempDir, 'uv.lock'),
+        uvProjectDir: tempDir,
+        projectName: 'test-project',
+        pythonVersion: TEST_PYTHON_VERSION,
+        hasCustomCommand: true,
+      });
+
+      const files = {
+        'small-file.dat': new FileFsRef({ fsPath: smallFilePath }),
+      };
+
+      try {
+        const result = await ext.analyze(files);
+        expect(result.runtimeInstallEnabled).toBe(false);
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+
+    it('invokes onSized with the size even when the bundle exceeds the large-function limit and throws', async () => {
+      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
+
+      const tempDir = path.join(
+        tmpdir(),
+        `dep-ext-onsized-large-${Date.now()}`
+      );
+      fs.mkdirSync(tempDir, { recursive: true });
+
+      // Sparse file just over the 5 GB large-function limit (no real disk usage).
+      const bigFilePath = path.join(tempDir, 'big-file.dat');
+      const fd = fs.openSync(bigFilePath, 'w');
+      const oversized = MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE + 1024 * 1024;
+      fs.ftruncateSync(fd, oversized);
+      fs.closeSync(fd);
+
+      const ext = new PythonDependencyExternalizer({
+        installedDistributions: createInstalledDistributions(),
+        vendorDir: '_vendor',
+        workPath: tempDir,
+        uvLockPath: path.join(tempDir, 'uv.lock'),
+        uvProjectDir: tempDir,
+        projectName: 'test-project',
+        pythonVersion: TEST_PYTHON_VERSION,
+        hasCustomCommand: false,
+      });
+
+      const files = {
+        'big-file.dat': new FileFsRef({ fsPath: bigFilePath }),
+      };
+
+      const onSized = vi.fn();
+
+      try {
+        await expect(ext.analyze(files, { onSized })).rejects.toThrow(
+          'exceeds the extended function size limit'
+        );
+        // The callback must have fired before the throw, carrying the size.
+        expect(onSized).toHaveBeenCalledTimes(1);
+        expect(onSized).toHaveBeenCalledWith({
+          totalSizeBytes: oversized,
+          runtimeInstallEnabled: false,
+        });
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+
+    it('attempts runtime install under supportLargeFunctions when the bundle fits ephemeral storage', async () => {
+      // Over the 225 MB Lambda threshold but within /tmp: keep it on Lambda via
+      // runtime install rather than sending it to Hive.
+      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
+
+      const tempDir = path.join(tmpdir(), `dep-ext-large-defer-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+
+      const bigFilePath = path.join(tempDir, 'big-file.dat');
+      const fd = fs.openSync(bigFilePath, 'w');
+      const size = LAMBDA_SIZE_THRESHOLD_BYTES + 1024 * 1024;
+      fs.ftruncateSync(fd, size);
+      fs.closeSync(fd);
+
+      const ext = new PythonDependencyExternalizer({
+        installedDistributions: createInstalledDistributions(),
+        vendorDir: '_vendor',
+        workPath: tempDir,
+        uvLockPath: path.join(tempDir, 'uv.lock'),
+        uvProjectDir: tempDir,
+        projectName: 'test-project',
+        pythonVersion: TEST_PYTHON_VERSION,
+        hasCustomCommand: false,
+      });
+
+      const files = {
+        'big-file.dat': new FileFsRef({ fsPath: bigFilePath }),
+      };
+
+      try {
+        const result = await ext.analyze(files);
+        expect(result.runtimeInstallEnabled).toBe(true);
+        expect(result.totalBundleSize).toBe(size);
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+
+    it('skips runtime install under supportLargeFunctions when the bundle exceeds ephemeral storage', async () => {
+      // Too big for /tmp: bundle everything (no runtime install) and let the
+      // platform route it to Hive.
+      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
+
+      const tempDir = path.join(tmpdir(), `dep-ext-large-hive-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+
+      const bigFilePath = path.join(tempDir, 'big-file.dat');
+      const fd = fs.openSync(bigFilePath, 'w');
+      const size = LAMBDA_EPHEMERAL_STORAGE_BYTES + 1024 * 1024;
+      fs.ftruncateSync(fd, size);
+      fs.closeSync(fd);
+
+      const ext = new PythonDependencyExternalizer({
+        installedDistributions: createInstalledDistributions(),
+        vendorDir: '_vendor',
+        workPath: tempDir,
+        uvLockPath: path.join(tempDir, 'uv.lock'),
+        uvProjectDir: tempDir,
+        projectName: 'test-project',
+        pythonVersion: TEST_PYTHON_VERSION,
+        hasCustomCommand: false,
+      });
+
+      const files = {
+        'big-file.dat': new FileFsRef({ fsPath: bigFilePath }),
+      };
+
+      try {
+        const result = await ext.analyze(files);
+        expect(result.runtimeInstallEnabled).toBe(false);
+        expect(result.totalBundleSize).toBe(size);
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+
+    it('throws the extended limit error under supportLargeFunctions when the bundle exceeds 5 GB', async () => {
+      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
+
+      const tempDir = path.join(tmpdir(), `dep-ext-large-over-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+
+      // Sparse file just over the 5 GB large-function limit (no real disk use).
+      const bigFilePath = path.join(tempDir, 'big-file.dat');
+      const fd = fs.openSync(bigFilePath, 'w');
+      fs.ftruncateSync(fd, MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE + 1024 * 1024);
+      fs.closeSync(fd);
+
+      const ext = new PythonDependencyExternalizer({
+        installedDistributions: createInstalledDistributions(),
+        vendorDir: '_vendor',
+        workPath: tempDir,
+        uvLockPath: path.join(tempDir, 'uv.lock'),
+        uvProjectDir: tempDir,
+        projectName: 'test-project',
+        pythonVersion: TEST_PYTHON_VERSION,
+        hasCustomCommand: false,
+      });
+
+      const files = {
+        'big-file.dat': new FileFsRef({ fsPath: bigFilePath }),
+      };
+
+      try {
+        await expect(ext.analyze(files)).rejects.toThrow(
+          'exceeds the extended function size limit'
+        );
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+
+    it('throws under supportLargeFunctions when the bundle is exactly at the 5 GB limit', async () => {
+      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
+
+      const tempDir = path.join(tmpdir(), `dep-ext-large-eq-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+
+      // Sparse file exactly at the limit: must throw (>=), matching the
+      // authoritative uncompressed-size check applied downstream.
+      const bigFilePath = path.join(tempDir, 'big-file.dat');
+      const fd = fs.openSync(bigFilePath, 'w');
+      fs.ftruncateSync(fd, MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE);
+      fs.closeSync(fd);
+
+      const ext = new PythonDependencyExternalizer({
+        installedDistributions: createInstalledDistributions(),
+        vendorDir: '_vendor',
+        workPath: tempDir,
+        uvLockPath: path.join(tempDir, 'uv.lock'),
+        uvProjectDir: tempDir,
+        projectName: 'test-project',
+        pythonVersion: TEST_PYTHON_VERSION,
+        hasCustomCommand: false,
+      });
+
+      const files = {
+        'big-file.dat': new FileFsRef({ fsPath: bigFilePath }),
+      };
+
+      try {
+        await expect(ext.analyze(files)).rejects.toThrow(
+          'exceeds the extended function size limit'
+        );
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+
+    it('does not throw the custom-install-command error under supportLargeFunctions', async () => {
+      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
+
+      const tempDir = path.join(tmpdir(), `dep-ext-large-custom-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+
+      // Over the AWS Lambda threshold; with a custom command this throws on the
+      // standard path, but direct-bundle mode bundles it for Hive instead.
+      const bigFilePath = path.join(tempDir, 'big-file.dat');
+      const fd = fs.openSync(bigFilePath, 'w');
+      fs.ftruncateSync(fd, LAMBDA_SIZE_THRESHOLD_BYTES + 1024 * 1024);
+      fs.closeSync(fd);
+
+      const ext = new PythonDependencyExternalizer({
+        installedDistributions: createInstalledDistributions(),
+        vendorDir: '_vendor',
+        workPath: tempDir,
+        uvLockPath: path.join(tempDir, 'uv.lock'),
+        uvProjectDir: tempDir,
+        projectName: 'test-project',
+        pythonVersion: TEST_PYTHON_VERSION,
+        hasCustomCommand: true,
+      });
+
+      const files = {
+        'big-file.dat': new FileFsRef({ fsPath: bigFilePath }),
+      };
+
+      try {
+        const result = await ext.analyze(files);
+        expect(result.runtimeInstallEnabled).toBe(false);
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+
+    it('invokes onSized on the under-threshold success path', async () => {
+      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+
+      const tempDir = path.join(tmpdir(), `dep-ext-onsized-ok-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+
+      const smallFilePath = path.join(tempDir, 'small-file.dat');
+      fs.writeFileSync(smallFilePath, 'a'.repeat(100));
+
+      const ext = new PythonDependencyExternalizer({
+        installedDistributions: createInstalledDistributions(),
+        vendorDir: '_vendor',
+        workPath: tempDir,
+        uvLockPath: path.join(tempDir, 'uv.lock'),
+        uvProjectDir: tempDir,
+        projectName: 'test-project',
+        pythonVersion: TEST_PYTHON_VERSION,
+        hasCustomCommand: false,
+      });
+
+      const files = {
+        'small-file.dat': new FileFsRef({ fsPath: smallFilePath }),
+      };
+
+      const onSized = vi.fn();
+
+      try {
+        await ext.analyze(files, { onSized });
+        expect(onSized).toHaveBeenCalledTimes(1);
+        expect(onSized).toHaveBeenCalledWith({
+          totalSizeBytes: 100,
+          runtimeInstallEnabled: false,
+        });
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+  });
+
+  describe('generateBundle Hive fallback', () => {
+    const originalLargeFunctionsEnv =
+      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+
+    afterEach(() => {
+      if (originalLargeFunctionsEnv === undefined) {
+        delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+      } else {
+        process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = originalLargeFunctionsEnv;
+      }
+    });
+
+    // Build an externalizer in the post-analyze() state without a real venv:
+    // the ephemeral-storage check runs before any uv.lock work, so the fallback
+    // it triggers can be exercised by setting the analyzed fields directly.
+    function createAnalyzedExternalizer({
+      totalBundleSize,
+      allVendorFiles,
+    }: {
+      totalBundleSize: number;
+      allVendorFiles: Files;
+    }) {
+      const ext = new PythonDependencyExternalizer({
+        installedDistributions: createInstalledDistributions(),
+        vendorDir: '_vendor',
+        workPath: '/tmp/work',
+        uvLockPath: '/tmp/work/uv.lock',
+        uvProjectDir: '/tmp/work',
+        projectName: 'test-project',
+        pythonVersion: TEST_PYTHON_VERSION,
+        hasCustomCommand: false,
+      });
+      (ext as any).analyzed = true;
+      (ext as any).totalBundleSize = totalBundleSize;
+      (ext as any).allVendorFiles = allVendorFiles;
+      return ext;
+    }
+
+    it('bundles all dependencies for Hive and discards runtime-install artifacts when deps exceed ephemeral storage under supportLargeFunctions', async () => {
+      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
+
+      const allVendorFiles: Files = {
+        '_vendor/pkg/__init__.py': new FileBlob({ data: 'a' }),
+        '_vendor/pkg/module.py': new FileBlob({ data: 'b' }),
+      };
+      const ext = createAnalyzedExternalizer({
+        totalBundleSize: LAMBDA_EPHEMERAL_STORAGE_BYTES + 1,
+        allVendorFiles,
+      });
+
+      // Pre-seed runtime-install artifacts to verify the fallback discards them.
+      const files: Files = {
+        '_uv/_runtime_config.json': new FileBlob({ data: '{}' }),
+        '_uv/uv': new FileBlob({ data: 'binary' }),
+        '_uv/pyproject.toml': new FileBlob({ data: '[project]' }),
+        '_uv/uv.lock': new FileBlob({ data: 'version = 1' }),
+      };
+
+      const result = await ext.generateBundle(files);
+
+      expect(result.fellBackToFullBundle).toBe(true);
+      // Package lists are only reported for a generated runtime-install
+      // bundle; the fallback bundles everything.
+      expect(result.alwaysBundledPackages).toBeUndefined();
+      expect(result.bundledPublicPackages).toBeUndefined();
+      // Every vendor file is bundled directly.
+      expect(files['_vendor/pkg/__init__.py']).toBe(
+        allVendorFiles['_vendor/pkg/__init__.py']
+      );
+      expect(files['_vendor/pkg/module.py']).toBe(
+        allVendorFiles['_vendor/pkg/module.py']
+      );
+      // Runtime-install artifacts are removed (the function runs on Hive).
+      expect(files['_uv/_runtime_config.json']).toBeUndefined();
+      expect(files['_uv/uv']).toBeUndefined();
+      expect(files['_uv/pyproject.toml']).toBeUndefined();
+      expect(files['_uv/uv.lock']).toBeUndefined();
+    });
+
+    it('throws when deps exceed ephemeral storage without supportLargeFunctions', async () => {
+      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+
+      const ext = createAnalyzedExternalizer({
+        totalBundleSize: LAMBDA_EPHEMERAL_STORAGE_BYTES + 1,
+        allVendorFiles: {},
+      });
+
+      await expect(ext.generateBundle({})).rejects.toThrow(
+        'exceeds the maximum function size'
+      );
+    });
+  });
+});
+
+describe('detectTargetPlatform', () => {
+  const originalEnv = process.env.VERCEL_BUILD_ARCH;
+
+  afterEach(() => {
+    if (originalEnv === undefined) {
+      delete process.env.VERCEL_BUILD_ARCH;
+    } else {
+      process.env.VERCEL_BUILD_ARCH = originalEnv;
+    }
+  });
+
+  it('returns linux sysPlatform regardless of host', () => {
+    delete process.env.VERCEL_BUILD_ARCH;
+    const platform = detectTargetPlatform();
+    expect(platform.sysPlatform).toBe('linux');
+    expect(platform.os).toBe('linux');
+  });
+
+  it('returns manylinux osName', () => {
+    delete process.env.VERCEL_BUILD_ARCH;
+    const platform = detectTargetPlatform();
+    expect(platform.osName).toBe('manylinux');
+  });
+
+  it('returns gnu libc', () => {
+    delete process.env.VERCEL_BUILD_ARCH;
+    const platform = detectTargetPlatform();
+    expect(platform.libc).toBe('gnu');
+  });
+
+  it('defaults to x86_64 archName', () => {
+    delete process.env.VERCEL_BUILD_ARCH;
+    const platform = detectTargetPlatform();
+    expect(platform.archName).toBe('x86_64');
+  });
+
+  it('returns valid glibc version numbers', () => {
+    delete process.env.VERCEL_BUILD_ARCH;
+    const platform = detectTargetPlatform();
+    expect(platform.osMajor).toBeGreaterThanOrEqual(2);
+    expect(platform.osMinor).toBeGreaterThanOrEqual(0);
+  });
+
+  it('returns aarch64 when VERCEL_BUILD_ARCH is aarch64', () => {
+    process.env.VERCEL_BUILD_ARCH = 'aarch64';
+    const platform = detectTargetPlatform();
+    expect(platform.archName).toBe('aarch64');
+    expect(platform.sysPlatform).toBe('linux');
+  });
+
+  it('returns x86_64 when VERCEL_BUILD_ARCH is x86_64', () => {
+    process.env.VERCEL_BUILD_ARCH = 'x86_64';
+    const platform = detectTargetPlatform();
+    expect(platform.archName).toBe('x86_64');
+  });
+
+  it('is case-insensitive', () => {
+    process.env.VERCEL_BUILD_ARCH = 'AARCH64';
+    const platform = detectTargetPlatform();
+    expect(platform.archName).toBe('aarch64');
+  });
+
+  it('throws on unrecognized VERCEL_BUILD_ARCH', () => {
+    process.env.VERCEL_BUILD_ARCH = 'mips';
+    expect(() => detectTargetPlatform()).toThrow(
+      'Unrecognized VERCEL_BUILD_ARCH'
+    );
+  });
+});
+
+describe('UV_BINARY_CHECKSUM', () => {
+  it('is a 64-character hex string', () => {
+    expect(UV_BINARY_CHECKSUM).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
+describe('downloadUvBinaryForTarget', () => {
+  it('returns cached binary without downloading', async () => {
+    const cacheDir = path.join(tmpdir(), `uv-dl-cache-${Date.now()}`);
+    const target = 'x86_64-unknown-linux-gnu';
+    const destDir = path.join(cacheDir, `uv-${UV_VERSION}-${target}`);
+    const destBinary = path.join(destDir, 'uv');
+
+    fs.mkdirSync(destDir, { recursive: true });
+    fs.writeFileSync(destBinary, '#!/bin/sh\necho mock');
+    fs.chmodSync(destBinary, 0o755);
+
+    try {
+      const result = await downloadUvBinaryForTarget(cacheDir);
+      expect(result).toBe(destBinary);
+    } finally {
+      fs.removeSync(cacheDir);
+    }
+  });
+});

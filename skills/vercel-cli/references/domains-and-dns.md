@@ -15,9 +15,10 @@ Most users only need `vercel alias` — domains and DNS are auto-configured when
 
 ## Typical Flow
 
-1. Add domain to project. The arg count is decided by the current directory's link status — `domains add` rejects the other form:
-   - **Linked directory** — exactly one arg: `vercel domains add example.com`. The CLI errors with "expects one argument" if you pass a project name.
-   - **Unlinked directory** — exactly two args: `vercel domains add example.com my-project`. To target a project from a linked directory, `cd` to an unlinked location or to a directory linked to the intended project; there is no "linked dir, override target" form.
+1. Add domain to your team, optionally assigning it to a project:
+   - **Team only** — `vercel domains add example.com` adds the domain to your team without assigning a project (works from any directory).
+   - **Assign to a project** — pass the project name as a second argument: `vercel domains add example.com my-project`.
+   - **Linked directory** — one argument still adds to your team only; pass a project name as a second argument to assign it to a project.
 2. Configure nameservers at registrar to point to Vercel
 3. Deploy: `vercel --prod` (domain is auto-assigned)
 
@@ -62,8 +63,8 @@ vercel domains buy example.com
 
 ```bash
 vercel domains inspect example.com
-vercel domains add example.com              # in a linked project directory (1 arg only)
-vercel domains add example.com my-project   # in an unlinked directory (2 args only)
+vercel domains add example.com              # add to team
+vercel domains add example.com my-project   # add to team and assign to a project
 ```
 
 ## DNS Records

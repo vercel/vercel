@@ -6,7 +6,6 @@ import {
   isExperimentalServicesEnabled,
   tryDetectServices,
 } from './detect-services';
-import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
 import output from '../../output-manager';
 
 /**
@@ -43,8 +42,7 @@ export async function findProjectRoot(
 
     const hasVercelDir = await pathExists(join(dir, '.vercel'));
     const hasVercelJson = await pathExists(join(dir, 'vercel.json'));
-    const hasVercelToml =
-      isVercelTomlEnabled() && (await pathExists(join(dir, 'vercel.toml')));
+    const hasVercelToml = await pathExists(join(dir, 'vercel.toml'));
     const hasGit = await pathExists(join(dir, '.git'));
 
     if (hasVercelDir || hasVercelJson || hasVercelToml || hasGit) {

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import logout from '../../../../src/commands/logout';
 import { client } from '../../../mocks/client';
 import { vi } from 'vitest';
-import _fetch, { type Response } from 'node-fetch';
+import _fetch, { type Response } from '../../../../src/util/fetch';
 import {
   as,
   VERCEL_CLI_CLIENT_ID,
@@ -11,8 +11,8 @@ import {
 import { randomUUID } from 'node:crypto';
 
 const fetch = vi.mocked(_fetch);
-vi.mock('node-fetch', async () => ({
-  ...(await vi.importActual('node-fetch')),
+vi.mock('../../../../src/util/fetch', async () => ({
+  ...(await vi.importActual('../../../../src/util/fetch')),
   default: vi.fn(),
 }));
 

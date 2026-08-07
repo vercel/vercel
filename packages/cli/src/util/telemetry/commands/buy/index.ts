@@ -27,13 +27,6 @@ export class BuyTelemetryClient
     });
   }
 
-  trackCliSubcommandV0(actual: string) {
-    this.trackCliSubcommand({
-      subcommand: 'v0',
-      value: actual,
-    });
-  }
-
   trackCliSubcommandDomain(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'domain',

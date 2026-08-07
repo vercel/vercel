@@ -1,12 +1,13 @@
 import { getVercelOidcToken } from '@vercel/oidc';
 import type { ConnectAuthorizationDetail } from './authorization-details.js';
 
-export type ConnectSubjectType = 'app' | 'user' | 'jwt-bearer';
+export type ConnectSubjectType = 'app' | 'user' | 'jwt-bearer' | 'token';
 
 export type ConnectTokenSubject =
   | ConnectAppTokenSubject
   | ConnectUserTokenSubject
-  | ConnectJwtBearerTokenSubject;
+  | ConnectJwtBearerTokenSubject
+  | ConnectTokenExchangeSubject;
 
 export interface ConnectAppTokenSubject {
   type: 'app';
@@ -26,6 +27,11 @@ export interface ConnectJwtBearerTokenSubject {
   /** Defaults to the connector's OAuth token endpoint. */
   aud?: string;
   additionalClaims?: Record<string, unknown>;
+}
+
+export interface ConnectTokenExchangeSubject {
+  type: 'token';
+  token: string;
 }
 
 export interface ConnectTokenParams {
@@ -50,6 +56,11 @@ export interface ConnectTokenParams {
 
 export interface ConnectTokenResponse {
   token: string;
+  /**
+   * Per-issuance identifier for the token (`stk_…`), stable for its lifetime;
+   * use it to correlate the token with its usage in Vercel observability data.
+   */
+  tokenId?: string;
   /** Token expiration timestamp in milliseconds since epoch. */
   expiresAt: number;
   connector: {
@@ -66,6 +77,8 @@ export interface ConnectTokenResponse {
   externalSubject?: string;
   /** Driver-specific metadata stored during OAuth */
   metadata?: Record<string, unknown>;
+  /** Allow-listed claims propagated from the upstream OAuth token. */
+  claims?: Record<string, unknown>;
 }
 
 export type ConnectVendorErrorPayload = Record<string, unknown>;

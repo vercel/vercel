@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import createApiKeyRequest from '../../util/ai-gateway/create-api-key';
+import { createApiKey } from '../../util/ai-gateway/api-keys';
 import selectOrg from '../../util/input/select-org';
 import stamp from '../../util/output/stamp';
 import output from '../../output-manager';
@@ -13,9 +13,18 @@ import { isAPIError } from '../../util/errors-ts';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
-import type { AiGatewayQuota } from '../../util/ai-gateway/create-api-key';
-
-const VALID_REFRESH_PERIODS = ['daily', 'weekly', 'monthly', 'none'] as const;
+import {
+  buildQuota,
+  isValidRefreshPeriod,
+  parseAlertThresholds,
+  VALID_ALERT_THRESHOLDS,
+  VALID_REFRESH_PERIODS,
+} from '../../util/ai-gateway/quota';
+import {
+  isValidExpiry,
+  presetToExpiresAt,
+  VALID_EXPIRY_VALUES,
+} from '../../util/ai-gateway/expiry';
 
 export default async function create(client: Client, argv: string[]) {
   const telemetry = new AiGatewayApiKeysCreateTelemetryClient({
@@ -38,12 +47,16 @@ export default async function create(client: Client, argv: string[]) {
   const budget = opts['--budget'] as number | undefined;
   const refreshPeriod = opts['--refresh-period'] as string | undefined;
   const includeByok = opts['--include-byok'] as boolean | undefined;
+  const alertThresholdsInput = opts['--alert-thresholds'] as string | undefined;
+  const expiration = opts['--expiration'] as string | undefined;
 
   // Track telemetry
   telemetry.trackCliOptionName(name);
   telemetry.trackCliOptionBudget(budget);
   telemetry.trackCliOptionRefreshPeriod(refreshPeriod);
   telemetry.trackCliFlagIncludeByok(includeByok);
+  telemetry.trackCliOptionAlertThresholds(alertThresholdsInput);
+  telemetry.trackCliOptionExpiration(expiration);
 
   // Validate --budget if provided
   if (budget !== undefined && budget < 1) {
@@ -69,12 +82,7 @@ export default async function create(client: Client, argv: string[]) {
   }
 
   // Validate --refresh-period if provided
-  if (
-    refreshPeriod &&
-    !VALID_REFRESH_PERIODS.includes(
-      refreshPeriod as (typeof VALID_REFRESH_PERIODS)[number]
-    )
-  ) {
+  if (refreshPeriod && !isValidRefreshPeriod(refreshPeriod)) {
     const message = `Invalid refresh period "${refreshPeriod}". Must be one of: ${VALID_REFRESH_PERIODS.join(', ')}.`;
     outputAgentError(
       client,
@@ -96,19 +104,64 @@ export default async function create(client: Client, argv: string[]) {
     return 1;
   }
 
+  let alertThresholds: number[] | undefined;
+  if (alertThresholdsInput !== undefined) {
+    const result = parseAlertThresholds(alertThresholdsInput);
+    if (!result.valid) {
+      const message = `Invalid alert threshold "${result.invalid}". Must be a comma-separated subset of: ${VALID_ALERT_THRESHOLDS.join(', ')}.`;
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ALERT_THRESHOLDS,
+          message,
+          next: [
+            {
+              command: getCommandNamePlain(
+                'ai-gateway api-keys create --alert-thresholds 50,75,100'
+              ),
+            },
+          ],
+        },
+        1
+      );
+      output.error(message);
+      return 1;
+    }
+    alertThresholds = result.values;
+  }
+
+  if (expiration !== undefined && !isValidExpiry(expiration)) {
+    const message = `Invalid expiration "${expiration}". Must be one of: ${VALID_EXPIRY_VALUES.join(', ')}.`;
+    outputAgentError(
+      client,
+      {
+        status: AGENT_STATUS.ERROR,
+        reason: AGENT_REASON.INVALID_EXPIRATION,
+        message,
+        next: [
+          {
+            command: getCommandNamePlain(
+              'ai-gateway api-keys create --expiration 90d'
+            ),
+          },
+        ],
+      },
+      1
+    );
+    output.error(message);
+    return 1;
+  }
+  const expiresAt =
+    expiration !== undefined ? presetToExpiresAt(expiration) : undefined;
+
   // Build aiGatewayQuota only when any quota flag is provided
-  const effectiveRefreshPeriod =
-    refreshPeriod && refreshPeriod !== 'none' ? refreshPeriod : undefined;
-  const aiGatewayQuota: AiGatewayQuota | undefined =
-    budget !== undefined || effectiveRefreshPeriod || includeByok
-      ? {
-          ...(budget !== undefined && { limitAmount: budget }),
-          ...(effectiveRefreshPeriod && {
-            refreshPeriod: effectiveRefreshPeriod,
-          }),
-          ...(includeByok && { includeByokInQuota: true }),
-        }
-      : undefined;
+  const aiGatewayQuota = buildQuota({
+    budget,
+    refreshPeriod,
+    includeByok,
+    alertThresholds,
+  });
 
   // Ensure a team is selected; fail in non-interactive/piped mode if missing
   if (!client.config.currentTeam) {
@@ -129,9 +182,10 @@ export default async function create(client: Client, argv: string[]) {
   output.spinner('Creating API key');
 
   try {
-    const result = await createApiKeyRequest(client, {
+    const result = await createApiKey(client, {
       name,
       aiGatewayQuota,
+      ...(expiresAt !== undefined && { expiresAt }),
     });
 
     output.stopSpinner();

@@ -18,6 +18,7 @@ export interface CurrentRouteInput {
     dest?: string;
     status?: number;
     headers?: Array<{ key: string; value?: string; op: string }>;
+    requestPath?: { value: string; op: string; env?: string[] };
   }>;
 }
 
@@ -25,10 +26,12 @@ type GeneratedActionType = 'rewrite' | 'redirect' | 'set-status' | 'modify';
 type GeneratedModifySubType =
   | 'response-headers'
   | 'transform-request-header'
-  | 'transform-request-query';
+  | 'transform-request-query'
+  | 'transform-request-path';
 type GeneratedConditionOperator = 'eq' | 'contains' | 're' | 'exists';
 type GeneratedConditionField = 'header' | 'cookie' | 'query' | 'host';
 type GeneratedHeaderOp = 'set' | 'append' | 'delete';
+type GeneratedPathTransformOp = 'set';
 
 export interface GeneratedRoute {
   name: string;
@@ -47,6 +50,11 @@ export interface GeneratedRoute {
     dest?: string;
     status?: number;
     headers?: Array<{ key: string; value?: string; op: GeneratedHeaderOp }>;
+    requestPath?: {
+      value: string;
+      op: GeneratedPathTransformOp;
+      env?: string[];
+    };
   }>;
 }
 

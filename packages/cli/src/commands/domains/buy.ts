@@ -21,7 +21,7 @@ import {
   openUrlInBrowserCommand,
   outputAgentError,
 } from '../../util/agent-output';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import { getCommandNamePlain } from '../../util/pkg-name';
 
 const VERCEL_DOMAINS_URL = 'https://vercel.com/dashboard/domains';
@@ -60,7 +60,7 @@ export default async function buy(client: Client, argv: string[]) {
 
   if (!domainName) {
     if (client.nonInteractive) {
-      const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+      const flags = getGlobalFlagsFromArgs(client.argv.slice(2));
       const cmd = getCommandNamePlain(
         `domains buy <domain> ${flags.join(' ')}`.trim()
       );
@@ -88,7 +88,7 @@ export default async function buy(client: Client, argv: string[]) {
 
   // Domain purchase requires confirmation and contact details—never run by agents.
   if (client.nonInteractive) {
-    const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+    const flags = getGlobalFlagsFromArgs(client.argv.slice(2));
     const interactiveCmd = getCommandNamePlain(
       `domains buy ${domainName} ${flags.filter(f => f !== '--non-interactive').join(' ')}`.trim()
     );

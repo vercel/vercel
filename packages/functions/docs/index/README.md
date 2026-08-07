@@ -11,6 +11,7 @@
 - [PurgeApi](interfaces/PurgeApi.md)
 - [Request](interfaces/Request.md)
 - [RuntimeCache](interfaces/RuntimeCache.md)
+- [UpgradeWebSocketOptions](interfaces/UpgradeWebSocketOptions.md)
 - [WebSocket](interfaces/WebSocket.md)
 
 ## Type Aliases

@@ -1,7 +1,6 @@
 import type Client from '../../util/client';
 import ms from 'ms';
 import chalk from 'chalk';
-import table from '../../util/output/table';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
@@ -27,6 +26,16 @@ import {
   shouldEmitNonInteractiveCommandError,
 } from '../../util/agent-output';
 import { AGENT_REASON } from '../../util/agent-output-constants';
+import formatDate from '../../util/format-date';
+import { truncateEnd } from '../../util/output/truncate';
+import {
+  getGroupStartedAt,
+  getGroupTitle,
+  getGroupType,
+  normalizeTimestamp,
+  renderAlertTable,
+} from './format';
+import type { AlertGroup } from './types';
 
 interface ListFlags {
   '--type'?: string[];
@@ -45,48 +54,6 @@ type ValidatedInputs = {
   since: Date | undefined;
   until: Date | undefined;
 };
-
-interface Ai {
-  activityId: string;
-  version?: number;
-  keyFindings?: string[];
-  currentSummary?: string;
-  title?: string;
-  level?: string;
-}
-
-interface Alert {
-  id?: string;
-  teamId?: string;
-  projectId?: string;
-  type: string;
-  pipe?: string;
-  status: string;
-  level?: string;
-  startedAt: number;
-  resolvedAt?: number;
-  recordedStartedAt?: number;
-  recordedResolvedAt?: number;
-  ai?: Ai;
-  data?: Record<string, unknown>;
-}
-
-interface AlertGroup {
-  teamId: string;
-  projectId: string;
-  id: string;
-  pipe?: string;
-  level?: string;
-  type?: string;
-  status?: string;
-  recordedStartedAt?: number;
-  updatedAt?: number;
-  validatedAt?: number;
-  version?: number;
-  relatedGroupIds?: string[];
-  ai?: Ai;
-  alerts?: Alert[];
-}
 
 function handleApiError(
   err: { status: number; code?: string; serverMessage?: string },
@@ -145,60 +112,22 @@ function getDefaultRange(): { from: string; to: string } {
   return { from: from.toISOString(), to: to.toISOString() };
 }
 
-function getGroupTitle(group: AlertGroup): string {
-  return group.ai?.title || 'Alert group';
-}
-
-function parseDateInput(value?: number): Date | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  const epochMs = value < 1_000_000_000_000 ? value * 1000 : value;
-  const date = new Date(epochMs);
-  return Number.isNaN(date.getTime()) ? undefined : date;
-}
-
-function formatDateForDisplay(value?: number): string {
-  const date = parseDateInput(value);
-  if (!date) {
-    return '-';
-  }
-
-  return date.toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-    timeZoneName: 'short',
-  });
-}
-
 function getStartedAt(group: AlertGroup): string {
-  return formatDateForDisplay(getGroupStartedAt(group)?.getTime());
+  return formatDate(getGroupStartedAt(group));
 }
 
-function getGroupStartedAt(group: AlertGroup): Date | undefined {
-  return (
-    parseDateInput(group.recordedStartedAt) ||
-    parseDateInput(group.alerts?.[0]?.startedAt)
-  );
-}
-
-function getGroupResolvedAt(group: AlertGroup): Date | undefined {
+function getGroupResolvedAt(group: AlertGroup): number | undefined {
   const resolvedTimes = (group.alerts ?? [])
-    .map(alert => parseDateInput(alert.resolvedAt))
-    .filter((d): d is Date => Boolean(d))
-    .map(d => d.getTime());
+    .map(alert =>
+      normalizeTimestamp(alert.recordedResolvedAt ?? alert.resolvedAt)
+    )
+    .filter((time): time is number => time !== undefined);
 
   if (resolvedTimes.length > 0) {
-    return new Date(Math.max(...resolvedTimes));
+    return Math.max(...resolvedTimes);
   }
 
-  return getGroupStartedAt(group);
+  return undefined;
 }
 
 function getStatus(group: AlertGroup): string {
@@ -211,12 +140,8 @@ function getStatus(group: AlertGroup): string {
     const startedAt = getGroupStartedAt(group);
     const resolvedAt = getGroupResolvedAt(group);
 
-    if (
-      startedAt &&
-      resolvedAt &&
-      resolvedAt.getTime() >= startedAt.getTime()
-    ) {
-      return `resolved after ${ms(resolvedAt.getTime() - startedAt.getTime())}`;
+    if (startedAt && resolvedAt && resolvedAt >= startedAt) {
+      return `resolved after ${ms(resolvedAt - startedAt)}`;
     }
 
     return 'resolved';
@@ -231,7 +156,7 @@ function getResolvedAt(group: AlertGroup): string {
     return 'active';
   }
 
-  return formatDateForDisplay(getGroupResolvedAt(group)?.getTime());
+  return formatDate(getGroupResolvedAt(group));
 }
 
 function getAlertsCount(group: AlertGroup): string {
@@ -280,22 +205,21 @@ function printGroups(groups: AlertGroup[]) {
 
   const rows = [
     headers,
-    ...groups.map(group => [
-      chalk.bold(getGroupTitle(group)),
-      chalk.dim(group.id || '-'),
-      getStartedAt(group),
-      group.type || '-',
-      getStatus(group),
-      getAlertsCount(group),
-    ]),
+    ...groups.map(group => {
+      const row = [
+        chalk.bold(truncateEnd(getGroupTitle(group), 80)),
+        chalk.dim(group.id || '-'),
+        getStartedAt(group),
+        getGroupType(group),
+      ];
+
+      row.push(getStatus(group), getAlertsCount(group));
+
+      return row;
+    }),
   ];
 
-  const tableOutput = table(rows, { hsep: 3 })
-    .split('\n')
-    .map(line => line.trimEnd())
-    .join('\n')
-    .replace(/^/gm, '  ');
-  output.print(`\n${tableOutput}\n`);
+  output.print(`\n${renderAlertTable(rows, 3)}\n`);
 }
 
 function printAiSections(groups: AlertGroup[]) {

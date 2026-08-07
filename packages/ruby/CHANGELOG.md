@@ -1,5 +1,17 @@
 # @vercel/ruby
 
+## 2.5.1
+
+### Patch Changes
+
+- 2158ab6: [vc dev] Add support to `experimentalServicesV2` for bindings in `vc dev`
+
+## 2.5.0
+
+### Minor Changes
+
+- 3afdb18: Emit project manifest for hugo, zola, jekyll, and middleman frameworks.
+
 ## 2.4.0
 
 ### Minor Changes

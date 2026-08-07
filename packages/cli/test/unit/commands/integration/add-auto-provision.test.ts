@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import open from 'open';
+import execa from 'execa';
 import integrationCommand from '../../../../src/commands/integration';
 import install from '../../../../src/commands/install';
 import pull from '../../../../src/commands/env/pull';
@@ -35,14 +36,22 @@ vi.mock(
   }
 );
 
+vi.mock('execa', () => {
+  return {
+    default: vi.fn().mockResolvedValue({ exitCode: 0 }),
+  };
+});
+
 const openMock = vi.mocked(open);
 const pullMock = vi.mocked(pull);
 const connectMock = vi.mocked(connectResourceToProject);
+const execaMock = vi.mocked(execa);
 
 beforeEach(() => {
   openMock.mockReset().mockResolvedValue(undefined as never);
   pullMock.mockClear();
   connectMock.mockClear();
+  execaMock.mockReset().mockResolvedValue({ exitCode: 0 } as never);
   // Mock Math.random to get predictable resource names (gray-apple suffix)
   vi.spyOn(Math, 'random').mockReturnValue(0);
 });
@@ -346,20 +355,21 @@ describe('integration add (auto-provision)', () => {
       });
     });
 
-    it('should prompt for terms upfront and provision', async () => {
+    it('should list all documents and provision after a single acceptance', async () => {
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
 
-      // 3-term prompt sequence (upfront, before provisioning)
+      // All legal documents are listed together, each on its own line...
       await expect(client.stderr).toOutput(
-        'Accept Vercel Marketplace End User Addendum?'
+        'Vercel Marketplace End User Addendum'
       );
-      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Privacy Policy');
+      await expect(client.stderr).toOutput('Terms of Service');
 
-      await expect(client.stderr).toOutput('Accept privacy policy?');
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput('Accept terms of service?');
+      // ...and accepted with a single confirmation.
+      await expect(client.stderr).toOutput(
+        'Accept all of the documents listed above?'
+      );
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
@@ -370,17 +380,17 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(0);
     });
 
-    it('should exit with code 1 when addendum declined', async () => {
+    it('should exit with code 1 when the documents are declined', async () => {
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Accept Vercel Marketplace End User Addendum?'
+        'Accept all of the documents listed above?'
       );
       client.stdin.write('n\n');
 
       await expect(client.stderr).toOutput(
-        'Vercel Marketplace End User Addendum must be accepted to continue.'
+        'All of the listed documents must be accepted to continue.'
       );
 
       const exitCode = await exitCodePromise;
@@ -398,49 +408,6 @@ describe('integration add (auto-provision)', () => {
           }),
         ])
       );
-    });
-
-    it('should exit with code 1 when privacy policy declined', async () => {
-      client.setArgv('integration', 'add', 'acme');
-      const exitCodePromise = integrationCommand(client);
-
-      await expect(client.stderr).toOutput(
-        'Accept Vercel Marketplace End User Addendum?'
-      );
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput('Accept privacy policy?');
-      client.stdin.write('n\n');
-
-      await expect(client.stderr).toOutput(
-        'Privacy policy must be accepted to continue.'
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(1);
-    });
-
-    it('should exit with code 1 when terms of service declined', async () => {
-      client.setArgv('integration', 'add', 'acme');
-      const exitCodePromise = integrationCommand(client);
-
-      await expect(client.stderr).toOutput(
-        'Accept Vercel Marketplace End User Addendum?'
-      );
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput('Accept privacy policy?');
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput('Accept terms of service?');
-      client.stdin.write('n\n');
-
-      await expect(client.stderr).toOutput(
-        'Terms of service must be accepted to continue.'
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(1);
     });
 
     it('should open browser for terms acceptance in non-TTY mode', async () => {
@@ -711,17 +678,20 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(1);
     });
 
-    it('should only prompt for addendum when integration has no privacy or EULA', async () => {
+    it('should only list the addendum when integration has no privacy or EULA', async () => {
       client.setArgv('integration', 'add', 'acme-prepayment');
       const exitCodePromise = integrationCommand(client);
 
-      // Only the addendum prompt should appear (acme-prepayment has no eulaDocUri/privacyDocUri)
+      // Only the addendum is listed (acme-prepayment has no eulaDocUri/privacyDocUri)
       await expect(client.stderr).toOutput(
-        'Accept Vercel Marketplace End User Addendum?'
+        'Vercel Marketplace End User Addendum'
+      );
+      await expect(client.stderr).toOutput(
+        'Accept all of the documents listed above?'
       );
       client.stdin.write('y\n');
 
-      // Should go straight to provisioning without privacy/EULA prompts
+      // Should go straight to provisioning
       await expect(client.stderr).toOutput(
         'Acme Product successfully provisioned'
       );
@@ -897,14 +867,10 @@ describe('integration add (auto-provision)', () => {
       );
       const exitCodePromise = integrationCommand(client);
 
-      // Upfront term prompts
+      // Upfront term acceptance (single confirmation)
       await expect(client.stderr).toOutput(
-        'Accept Vercel Marketplace End User Addendum?'
+        'Accept all of the documents listed above?'
       );
-      client.stdin.write('y\n');
-      await expect(client.stderr).toOutput('Accept privacy policy?');
-      client.stdin.write('y\n');
-      await expect(client.stderr).toOutput('Accept terms of service?');
       client.stdin.write('y\n');
 
       // After provisioning attempt, falls back to browser
@@ -931,14 +897,10 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
 
-      // Upfront term prompts
+      // Upfront term acceptance (single confirmation)
       await expect(client.stderr).toOutput(
-        'Accept Vercel Marketplace End User Addendum?'
+        'Accept all of the documents listed above?'
       );
-      client.stdin.write('y\n');
-      await expect(client.stderr).toOutput('Accept privacy policy?');
-      client.stdin.write('y\n');
-      await expect(client.stderr).toOutput('Accept terms of service?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
@@ -1472,14 +1434,10 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme', '--plan', 'pro');
       const exitCodePromise = integrationCommand(client);
 
-      // Upfront term prompts
+      // Upfront term acceptance (single confirmation)
       await expect(client.stderr).toOutput(
-        'Accept Vercel Marketplace End User Addendum?'
+        'Accept all of the documents listed above?'
       );
-      client.stdin.write('y\n');
-      await expect(client.stderr).toOutput('Accept privacy policy?');
-      client.stdin.write('y\n');
-      await expect(client.stderr).toOutput('Accept terms of service?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
@@ -2625,6 +2583,128 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(0);
       // No JSON on stdout
       expect(client.stdout.getFullOutput()).toBe('');
+    });
+  });
+
+  describe('agent skills', () => {
+    beforeEach(() => {
+      useAutoProvision({ responseKey: 'provisioned' });
+    });
+
+    it('auto-installs declared skills without prompting', async () => {
+      client.setArgv('integration', 'add', 'acme-skills');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      expect(execaMock).toHaveBeenCalledWith(
+        'npx',
+        [
+          '--yes',
+          'skills',
+          'add',
+          'https://github.com/shopify/shopify-ai-toolkit',
+          '--skill',
+          'shopify-dev',
+          '--yes',
+          '--metadata',
+          '{"origin":"vercel-cli","flow":"integration-install","integration":"acme-skills","product":"acme"}',
+        ],
+        expect.objectContaining({ stdio: 'pipe', reject: false })
+      );
+      await expect(client.stderr).toOutput(
+        'Installed 1 agent skill for Acme Product'
+      );
+      await expect(client.stderr).toOutput(
+        'Learn more: https://vercel.com/marketplace/acme-skills'
+      );
+    });
+
+    it('auto-installs when non-interactive', async () => {
+      client.stdin.isTTY = false;
+      client.setArgv('integration', 'add', 'acme-skills');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      expect(execaMock).toHaveBeenCalledWith(
+        'npx',
+        [
+          '--yes',
+          'skills',
+          'add',
+          'https://github.com/shopify/shopify-ai-toolkit',
+          '--skill',
+          'shopify-dev',
+          '--yes',
+          '--metadata',
+          '{"origin":"vercel-cli","flow":"integration-install","integration":"acme-skills","product":"acme"}',
+        ],
+        expect.objectContaining({ stdio: 'pipe', reject: false })
+      );
+      await expect(client.stderr).toOutput(
+        'Installed 1 agent skill for Acme Product'
+      );
+    });
+
+    it('falls back to the manual command when the install fails', async () => {
+      execaMock.mockResolvedValue({ exitCode: 1, stderr: 'boom' } as never);
+      client.setArgv('integration', 'add', 'acme-skills');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      await expect(client.stderr).toOutput(
+        'Failed to install shopify-dev. Run it manually: npx skills add https://github.com/shopify/shopify-ai-toolkit --skill shopify-dev'
+      );
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Installed 1 agent skill'
+      );
+    });
+
+    it('installs skills in --format=json and reports their status', async () => {
+      client.setArgv('integration', 'add', 'acme-skills', '--format=json');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      expect(execaMock).toHaveBeenCalledWith(
+        'npx',
+        [
+          '--yes',
+          'skills',
+          'add',
+          'https://github.com/shopify/shopify-ai-toolkit',
+          '--skill',
+          'shopify-dev',
+          '--yes',
+          '--metadata',
+          '{"origin":"vercel-cli","flow":"integration-install","integration":"acme-skills","product":"acme"}',
+        ],
+        expect.objectContaining({ stdio: 'pipe', reject: false })
+      );
+      const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+      expect(jsonOutput.skills).toEqual([
+        {
+          repoUrl: 'https://github.com/shopify/shopify-ai-toolkit',
+          skill: 'shopify-dev',
+          command:
+            'npx skills add https://github.com/shopify/shopify-ai-toolkit --skill shopify-dev',
+          installed: true,
+        },
+      ]);
+      expect(jsonOutput.warnings).toEqual([]);
+    });
+
+    it('reports failed installs in --format=json warnings', async () => {
+      execaMock.mockResolvedValue({ exitCode: 1, stderr: 'boom' } as never);
+      client.setArgv('integration', 'add', 'acme-skills', '--format=json');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+      expect(jsonOutput.skills).toEqual([
+        expect.objectContaining({ skill: 'shopify-dev', installed: false }),
+      ]);
+      expect(jsonOutput.warnings).toEqual([
+        'Failed to install shopify-dev. Run it manually: npx skills add https://github.com/shopify/shopify-ai-toolkit --skill shopify-dev',
+      ]);
     });
   });
 

@@ -34,8 +34,12 @@ import { join } from 'path';
 import { existsSync } from 'fs';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
+import semver from 'semver';
 import epipebomb from 'epipebomb';
-import getLatestVersion from './util/get-latest-version';
+import getLatestVersion, {
+  fetchLatestVersion,
+  updateLatestVersionCache,
+} from './util/get-latest-version';
 import { URL } from 'url';
 import { getSentry } from './util/get-sentry';
 import hp from './util/humanize-path';
@@ -51,6 +55,7 @@ import { parseArguments } from './util/get-args';
 import getUser from './util/get-user';
 import getTeams from './util/teams/get-teams';
 import Client from './util/client';
+import { setFetchDispatcher } from './util/fetch';
 import { printError } from './util/error';
 import reportError from './util/report-error';
 import earlyGetConfig from './util/get-config';
@@ -69,9 +74,13 @@ import {
 } from './util/updates';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import login from './commands/login';
-import type { AuthConfig, GlobalConfig, User } from '@vercel-internals/types';
+import type {
+  AuthConfig,
+  GlobalConfig,
+  Team,
+  User,
+} from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
-import { Agent as HttpsAgent } from 'https';
 import box from './util/output/box';
 import { TelemetryEventStore } from './util/telemetry';
 import { RootTelemetryClient } from './util/telemetry/root';
@@ -251,7 +260,9 @@ const main = async () => {
 
   // If empty, leave this code here for easy adding of beta commands later
   const betaCommands: string[] = ['api', 'crons', 'curl', 'webhooks'];
-  const versionBanner = `${getTitleName()} CLI ${pkg.version} (Node.js ${process.versions.node})`;
+  const versionBanner = isNativeBinaryInstall()
+    ? `${getTitleName()} CLI ${pkg.version}`
+    : `${getTitleName()} CLI ${pkg.version} (Node.js ${process.versions.node})`;
   const msg = betaCommands.includes(targetOrSubcommand)
     ? `${versionBanner} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
     : versionBanner;
@@ -532,13 +543,13 @@ const main = async () => {
     `Agent/TTY/nonInteractive: isAgent=${isAgent} agentName=${detectedAgent?.name ?? 'none'} stdin.isTTY=${String(process.stdin?.isTTY)} --non-interactive=${nonInteractiveFlag} explicitFalse=${explicitNonInteractiveFalse} => nonInteractive=${nonInteractive}`
   );
 
-  // Only load proxy-agent if proxy env vars are configured (saves ~60ms startup)
-  const agent = hasProxyConfig()
-    ? new (await import('proxy-agent')).ProxyAgent({ keepAlive: true })
-    : new HttpsAgent({ keepAlive: true });
+  // Only load proxy support if proxy env vars are configured (saves startup time).
+  if (hasProxyConfig()) {
+    const { EnvProxyDispatcher } = await import('./util/fetch-proxy');
+    setFetchDispatcher(new EnvProxyDispatcher());
+  }
 
   client = new Client({
-    agent,
     apiUrl,
     stdin: process.stdin,
     stdout: process.stdout,
@@ -630,7 +641,6 @@ const main = async () => {
   }
 
   const subcommandsWithoutToken = [
-    'agent',
     'login',
     'logout',
     'help',
@@ -640,6 +650,7 @@ const main = async () => {
     'telemetry',
     'upgrade',
     'skills',
+    'agent',
   ];
 
   if (process.env.FF_GUIDANCE_MODE) {
@@ -773,11 +784,17 @@ const main = async () => {
     parsedArgs.flags['--scope'] ||
     parsedArgs.flags['--team'] ||
     localConfig?.scope;
+  const separatorIndex = client.argv.indexOf('--');
+  const cliArgs =
+    separatorIndex === -1 ? client.argv : client.argv.slice(0, separatorIndex);
+  const buildNeedsRemoteProjectScope =
+    targetCommand === 'build' &&
+    cliArgs.some(arg => arg === '--project' || arg.startsWith('--project='));
 
   if (
     typeof scope === 'string' &&
     targetCommand !== 'login' &&
-    targetCommand !== 'build' &&
+    (targetCommand !== 'build' || buildNeedsRemoteProjectScope) &&
     targetCommand !== 'sandbox'
   ) {
     let user = null;
@@ -807,7 +824,57 @@ const main = async () => {
       return finishWithExitCode(1);
     }
 
-    if (user.id === scope || user.email === scope || user.username === scope) {
+    const scopeMatchesUserIdentity =
+      user.id === scope || user.email === scope || user.username === scope;
+
+    let teams: Team[] = [];
+
+    try {
+      teams = await getTeams(client);
+    } catch (err: unknown) {
+      // If the scope clearly refers to the user's own identity we don't need
+      // the teams list to resolve it, so swallow any failure and fall through
+      // to personal-account handling. Otherwise the teams list is required, so
+      // surface the error.
+      if (scopeMatchesUserIdentity) {
+        output.debug(
+          `Ignoring failure to load teams; scope matches the current user's identity`
+        );
+      } else if (isErrnoException(err) && err.code === 'not_authorized') {
+        output.prettyError({
+          message: `You do not have access to the specified team`,
+          link: 'https://err.sh/vercel/scope-not-accessible',
+        });
+
+        trackAgenticErrorTelemetry(err);
+        return finishWithExitCode(1);
+      } else if (isErrnoException(err) && err.code === 'rate_limited') {
+        output.prettyError({
+          message:
+            'Rate limited. Too many requests to the same endpoint: /teams',
+        });
+
+        trackAgenticErrorTelemetry(err);
+        return finishWithExitCode(1);
+      } else {
+        output.error('Not able to load teams');
+        trackAgenticErrorTelemetry(err);
+        return finishWithExitCode(1);
+      }
+    }
+
+    // A scope string can be ambiguous: a Northstar user's username may also be
+    // the slug of a team they own (the team backing their default scope). In
+    // that case the team must win — otherwise the user could never target it by
+    // name, since the personal-account check below would reject it. So resolve
+    // teams first and only fall back to personal-account handling when no team
+    // matches the scope.
+    const related =
+      teams && teams.find(team => team.id === scope || team.slug === scope);
+
+    if (related) {
+      client.config.currentTeam = related.id;
+    } else if (scopeMatchesUserIdentity) {
       if (user.version === 'northstar') {
         output.error('You cannot set your Personal Account as the scope.');
         return finishWithExitCode(1);
@@ -815,49 +882,12 @@ const main = async () => {
 
       delete client.config.currentTeam;
     } else {
-      let teams = [];
+      output.prettyError({
+        message: 'The specified scope does not exist',
+        link: 'https://err.sh/vercel/scope-not-existent',
+      });
 
-      try {
-        teams = await getTeams(client);
-      } catch (err: unknown) {
-        if (isErrnoException(err) && err.code === 'not_authorized') {
-          output.prettyError({
-            message: `You do not have access to the specified team`,
-            link: 'https://err.sh/vercel/scope-not-accessible',
-          });
-
-          trackAgenticErrorTelemetry(err);
-          return finishWithExitCode(1);
-        }
-
-        if (isErrnoException(err) && err.code === 'rate_limited') {
-          output.prettyError({
-            message:
-              'Rate limited. Too many requests to the same endpoint: /teams',
-          });
-
-          trackAgenticErrorTelemetry(err);
-          return finishWithExitCode(1);
-        }
-
-        output.error('Not able to load teams');
-        trackAgenticErrorTelemetry(err);
-        return finishWithExitCode(1);
-      }
-
-      const related =
-        teams && teams.find(team => team.id === scope || team.slug === scope);
-
-      if (!related) {
-        output.prettyError({
-          message: 'The specified scope does not exist',
-          link: 'https://err.sh/vercel/scope-not-existent',
-        });
-
-        return finishWithExitCode(1);
-      }
-
-      client.config.currentTeam = related.id;
+      return finishWithExitCode(1);
     }
   }
 
@@ -934,6 +964,10 @@ const main = async () => {
           telemetry.trackCliCommandAgent(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).agent;
           break;
+        case 'agent-runs':
+          telemetry.trackCliCommandAgentRuns(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).agentRuns;
+          break;
         case 'ai-gateway':
           telemetry.trackCliCommandAiGateway(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).aiGateway;
@@ -986,6 +1020,10 @@ const main = async () => {
           telemetry.trackCliCommandCerts(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).certs;
           break;
+        case 'comments':
+          telemetry.trackCliCommandComments(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).comments;
+          break;
         case 'crons':
         case 'cron':
           telemetry.trackCliCommandCrons(userSuppliedSubCommand);
@@ -1004,9 +1042,9 @@ const main = async () => {
           telemetry.trackCliCommandDeployHooks(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).deployHooks;
           break;
-        case 'edge-config':
-          telemetry.trackCliCommandEdgeConfig(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).edgeConfig;
+        case 'global-config':
+          telemetry.trackCliCommandGlobalConfig(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).globalConfig;
           break;
         case 'domains':
           telemetry.trackCliCommandDomains(userSuppliedSubCommand);
@@ -1078,10 +1116,6 @@ const main = async () => {
         case 'microfrontends':
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).microfrontends;
-          break;
-        case 'oauth-apps':
-          telemetry.trackCliCommandOauthApps(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).oauthApps;
           break;
         case 'open':
           telemetry.trackCliCommandOpen(userSuppliedSubCommand);
@@ -1164,6 +1198,10 @@ const main = async () => {
         case 'usage':
           telemetry.trackCliCommandUsage(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).usage;
+          break;
+        case 'vcr':
+          telemetry.trackCliCommandVcr(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).vcr;
           break;
         case 'whoami':
           telemetry.trackCliCommandWhoami(userSuppliedSubCommand);
@@ -1291,32 +1329,117 @@ const main = async () => {
   return exitCode;
 };
 
+// Start the CLI update check early so the fresh registry lookup runs in
+// parallel with the command, avoiding any perceived delay when the
+// command finishes and the update prompt needs to appear.
+//
+// The notification is NOT consumed here so that if the command crashes, the
+// notification cycle is preserved for the next run.
+let cachedLatest: string | undefined;
+let freshLookupPromise: Promise<string | undefined> | undefined;
+
+if (SHOULD_CHECK_FOR_UPDATES && !isNativeBinaryInstall()) {
+  cachedLatest = getLatestVersion({ pkg, consumeNotification: false });
+  if (cachedLatest) {
+    output.debug('Update may be available, fetching fresh version...');
+    freshLookupPromise = fetchLatestVersion({
+      name: pkg.name,
+      timeout: 3000,
+    }).catch(() => undefined);
+  }
+}
+
+/**
+ * Prompts the user to upgrade now and, if they accept, runs the upgrade
+ * and optionally asks about enabling automatic updates.
+ *
+ * @returns The upgrade exit code if the user accepted, otherwise `undefined`.
+ */
+async function promptAndUpgrade(
+  client: Client,
+  targetVersion?: string
+): Promise<number | undefined> {
+  try {
+    const shouldUpgrade = await client.input.confirm(
+      'Would you like to upgrade now?',
+      true
+    );
+
+    if (!shouldUpgrade) return;
+
+    const upgradeExitCode = await executeUpgrade(targetVersion);
+    if (upgradeExitCode === 0 && !hasAutoUpdatePreference(client.config)) {
+      const enableAutoUpdates = await client.input.confirm(
+        'Enable automatic CLI updates for future releases?',
+        false
+      );
+      setAutoUpdate(client, enableAutoUpdates);
+    }
+    return upgradeExitCode;
+  } catch (err: unknown) {
+    if (
+      err instanceof Error &&
+      err.message.includes('User force closed the prompt')
+    ) {
+      // User pressed Ctrl+C to dismiss the prompt
+      return;
+    }
+    throw err;
+  }
+}
+
 main()
   .then(async exitCode => {
-    if (SHOULD_CHECK_FOR_UPDATES && !isNativeBinaryInstall()) {
-      const latest = getLatestVersion({
-        pkg,
-      });
+    // Skip the update notification after `vc upgrade`: the process still has
+    // the pre-upgrade version in memory, so it would prompt the user to
+    // upgrade again right after the upgrade completed.
+    if (cachedLatest && resolvedCommandForUpdate !== 'upgrade') {
+      const originalExitCode = typeof exitCode === 'number' ? exitCode : 0;
+
+      // Await the fresh registry lookup to verify the exact version before
+      // presenting it. This is needed for both the auto-update and interactive paths.
+      const fresh = freshLookupPromise ? await freshLookupPromise : undefined;
+      output.debug(`Fresh lookup result: ${fresh ?? 'failed'}`);
+
+      let latest: string | undefined;
+      let userUpToDate = false;
+
+      if (fresh) {
+        updateLatestVersionCache({ name: pkg.name, version: fresh });
+
+        if (semver.lt(pkg.version, fresh)) {
+          latest = fresh;
+        } else {
+          // Cache was stale, user is already on the latest version
+          userUpToDate = true;
+        }
+      }
+
+      // Consume the notification cycle now that the command has completed
+      // and we've determined the update status. If the command had crashed,
+      // this code never runs and the notification is preserved for next time.
+      getLatestVersion({ pkg });
+
+      if (
+        !userUpToDate &&
+        (await canAutoUpdate(
+          client,
+          originalExitCode,
+          resolvedCommandForUpdate
+        ))
+      ) {
+        const upgradeExitCode = await executeUpgrade();
+        process.exitCode = originalExitCode;
+        if (upgradeExitCode !== 0) {
+          output.log(
+            `Automatic update failed. Continuing with original exit code ${originalExitCode}.`
+          );
+        }
+        return;
+      }
+
       if (latest) {
         const changelog = `https://github.com/vercel/vercel/releases/tag/vercel%40${latest}`;
-        const originalExitCode = typeof exitCode === 'number' ? exitCode : 0;
-
-        if (
-          await canAutoUpdate(
-            client,
-            originalExitCode,
-            resolvedCommandForUpdate
-          )
-        ) {
-          const upgradeExitCode = await executeUpgrade();
-          process.exitCode = originalExitCode;
-          if (upgradeExitCode !== 0) {
-            output.log(
-              `Automatic update failed. Continuing with original exit code ${originalExitCode}.`
-            );
-          }
-          return;
-        }
 
         if (isTTY) {
           // Interactive mode: prompt user to update now
@@ -1338,36 +1461,10 @@ main()
             `Changelog: ${output.link(changelog, changelog, { fallback: false })}\n`
           );
 
-          try {
-            const shouldUpgrade = await client.input.confirm(
-              'Would you like to upgrade now?',
-              true
-            );
-
-            if (shouldUpgrade) {
-              const upgradeExitCode = await executeUpgrade();
-              if (
-                upgradeExitCode === 0 &&
-                !hasAutoUpdatePreference(client.config)
-              ) {
-                const enableAutoUpdates = await client.input.confirm(
-                  'Enable automatic CLI updates for future releases?',
-                  false
-                );
-                setAutoUpdate(client, enableAutoUpdates);
-              }
-              process.exitCode = upgradeExitCode;
-              return;
-            }
-          } catch (err: unknown) {
-            if (
-              err instanceof Error &&
-              err.message.includes('User force closed the prompt')
-            ) {
-              // User pressed Ctrl+C to dismiss the prompt
-            } else {
-              throw err;
-            }
+          const upgradeExitCode = await promptAndUpgrade(client, latest);
+          if (upgradeExitCode !== undefined) {
+            process.exitCode = upgradeExitCode;
+            return;
           }
         } else {
           const errorMsg =
@@ -1389,7 +1486,29 @@ Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
           );
           output.print('\n');
         }
+        // If the fresh lookup failed we don't show the exact version.
+      } else if (!fresh) {
+        // Fresh lookup failed — show a generic update message without
+        // naming a specific version, since the cached version may be stale.
+        if (isTTY) {
+          output.print('\nA newer version of Vercel CLI may be available.\n');
+
+          const upgradeExitCode = await promptAndUpgrade(client);
+          if (upgradeExitCode !== undefined) {
+            process.exitCode = upgradeExitCode;
+            return;
+          }
+        } else {
+          output.print(
+            box(
+              `A newer version of Vercel CLI may be available.
+Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.`
+            )
+          );
+          output.print('\n');
+        }
       }
+      // else: userUpToDate — skip notification silently
     }
 
     process.exitCode = exitCode;

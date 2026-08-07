@@ -125,7 +125,7 @@ export default async function main(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandRun(subcommandOriginal);
-      exitCode = await run(client);
+      exitCode = await run(client, telemetry);
       break;
     case 'update':
       if (needHelp) {

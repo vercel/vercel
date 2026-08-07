@@ -1,24 +1,24 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
-import { outputAgentError, buildCommandWithYes } from '../../util/agent-output';
+import {
+  outputAgentError,
+  buildCommandWithYes,
+  withGlobalFlags as withClientGlobalFlags,
+} from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import type { Command } from '../help';
+import {
+  parseSubcommandArguments,
+  type ParsedSubcommandArguments,
+} from '../../util/command-arguments';
 import type { FirewallIpRule, FirewallRule } from '../../util/firewall/types';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import activateFirewallConfig from '../../util/firewall/activate-firewall-config';
 import stamp from '../../util/output/stamp';
-
-export interface ParsedSubcommand {
-  args: string[];
-  flags: { [key: string]: any };
-}
 
 /**
  * Plain suggested command with global flags from argv (--cwd, --non-interactive, etc.).
@@ -27,8 +27,9 @@ export function withGlobalFlags(
   client: Client,
   commandTemplate: string
 ): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+  return withClientGlobalFlags(client, commandTemplate, {
+    preserveProject: true,
+  });
 }
 
 export async function parseSubcommandArgs(
@@ -36,18 +37,18 @@ export async function parseSubcommandArgs(
   command: Command,
   client?: Client,
   commandPath?: string
-): Promise<ParsedSubcommand | number> {
+): Promise<ParsedSubcommandArguments | number> {
   let parsedArgs;
-  const flagsSpecification = getFlagsSpecification(command.options);
   const fullPath = commandPath || command.name;
 
   try {
-    // @ts-expect-error - TypeScript complains about the flags specification type
-    parsedArgs = parseArguments(argv, flagsSpecification);
+    parsedArgs = parseSubcommandArguments(argv, command);
   } catch (err) {
     if (client?.nonInteractive) {
       const rawMessage = err instanceof Error ? err.message : String(err);
-      const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+      const flags = getGlobalFlagsFromArgs(client.argv.slice(2), {
+        preserveProject: true,
+      });
       outputAgentError(
         client,
         {
@@ -72,46 +73,6 @@ export async function parseSubcommandArgs(
   }
 
   return parsedArgs;
-}
-
-export async function ensureProjectLink(client: Client) {
-  const link = await getLinkedProject(client);
-
-  if (link.status === 'error') {
-    return link.exitCode;
-  } else if (link.status === 'not_linked') {
-    if (client.nonInteractive) {
-      const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-      const cmd = getCommandNamePlain(`link ${flags.join(' ')}`.trim());
-      outputAgentError(
-        client,
-        {
-          status: AGENT_STATUS.ERROR,
-          reason: AGENT_REASON.NOT_LINKED,
-          userActionRequired: true,
-          message:
-            'Your codebase is not linked to a Vercel project. Run link first, then retry firewall commands.',
-          next: [
-            {
-              command: cmd,
-              when: 'to link this directory to a project',
-            },
-          ],
-        },
-        1
-      );
-      return 1;
-    }
-    output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
-    );
-    return 1;
-  }
-
-  client.config.currentTeam =
-    link.org.type === 'team' ? link.org.id : undefined;
-
-  return link;
 }
 
 export async function confirmAction(
@@ -174,7 +135,7 @@ export async function offerAutoPublish(
   opts: { teamId?: string; skipPrompts?: boolean }
 ): Promise<void> {
   output.print(
-    `\n  ${chalk.gray(`This change is staged. Run ${chalk.cyan(getCommandName('firewall publish'))} to make it live, or ${chalk.cyan(getCommandName('firewall discard'))} to undo.`)}\n`
+    `\n  ${chalk.gray(`This change is staged. Run ${chalk.cyan(withGlobalFlags(client, 'firewall publish'))} to make it live, or ${chalk.cyan(withGlobalFlags(client, 'firewall discard'))} to undo.`)}\n`
   );
 
   if (
@@ -209,7 +170,7 @@ export async function offerAutoPublish(
     }
   } else if (hadExistingDraft) {
     output.warn(
-      `There are other draft changes. Review with ${chalk.cyan(getCommandName('firewall diff'))} before publishing.`
+      `There are other draft changes. Review with ${chalk.cyan(withGlobalFlags(client, 'firewall diff'))} before publishing.`
     );
   }
 }

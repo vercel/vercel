@@ -2,9 +2,10 @@
 
 SDK for obtaining scoped tokens for third-party services on behalf of apps or users. Authenticates the calling Vercel project via [`@vercel/oidc`](https://www.npmjs.com/package/@vercel/oidc) and exchanges the OIDC token for a Vercel Connect-issued credential.
 
-Six entrypoints, all ESM:
+Seven entrypoints, all ESM:
 
 - `@vercel/connect` — core token / authorization SDK
+- `@vercel/connect/chat` — adapter helpers for the [Chat SDK](https://chat-sdk.dev) (`chat`): `connectSlackAdapter`, `connectGitHubAdapter`, `connectLinearAdapter` (no Chat SDK dependency — returns structural config)
 - `@vercel/connect/ai-sdk` — [Vercel AI SDK](https://ai-sdk.dev) glue: re-exports `connectAuthProvider` for MCP transports (optional peers: `ai`, `@ai-sdk/mcp`)
 - `@vercel/connect/mcp` — canonical MCP-spec `OAuthClientProvider` for any MCP client (optional peer: `@ai-sdk/mcp`)
 - `@vercel/connect/eve` — adapter helpers for [Eve](https://github.com/vercel/eve) connections (optional peer: `eve`)
@@ -28,6 +29,43 @@ const token = await getToken(process.env.CONNECTOR_LINEAR!, {
   subject: { type: 'user', id: 'user_123' },
 });
 ```
+
+To create an operator installation request for an app-scoped connector, use the
+experimental install helper:
+
+This feature is gated while experimental. Contact Vercel to enable access
+before using it.
+
+```ts
+import { experimental_startInstallation } from '@vercel/connect';
+
+const { url } = await experimental_startInstallation(
+  process.env.CONNECTOR_SLACK!,
+  {},
+  { returnUrl: 'https://example.com/settings/integrations' }
+);
+```
+
+### Chat SDK
+
+Spread the helper into the matching `create*Adapter` factory. Each helper
+wires both outbound app-scoped tokens and inbound Connect trigger-forwarded
+webhook verification (Vercel OIDC), so no provider secret lives in your env.
+
+```ts
+import { createSlackAdapter } from '@chat-adapter/slack';
+import { connectSlackAdapter } from '@vercel/connect/chat';
+
+createSlackAdapter({
+  ...connectSlackAdapter('slack/acme-slack'),
+  userName: 'my-bot',
+});
+```
+
+`connectGitHubAdapter` (`installationToken`) and `connectLinearAdapter`
+(`accessToken`) follow the same shape. See the
+[Chat SDK integration guide](https://github.com/vercel/vercel/blob/main/packages/connect/docs/chat-integration.md)
+for connector setup, trigger forwarding, and per-platform examples.
 
 ### Vercel AI SDK + MCP
 
@@ -68,7 +106,7 @@ SDK's `toolApproval` option or `wrapMcpTools` from `@ai-sdk/policy-opa`.
 Non-AI-SDK MCP clients (the official MCP TypeScript SDK, Mastra, etc.)
 can import the same `connectAuthProvider` from `@vercel/connect/mcp`.
 
-### Eve
+### eve
 
 ```ts
 import { defineMcpClientConnection } from 'eve/connections';
@@ -79,6 +117,10 @@ export default defineMcpClientConnection({
   auth: connect('linear'),
 });
 ```
+
+By default, `connect()` provisions or links the connector for the deploying
+Vercel project on first use. Pass `autoProvision: false` when the connector is
+managed elsewhere.
 
 ### Better Auth
 
@@ -97,4 +139,4 @@ import { connect } from '@vercel/connect/authjs';
 const providers = [connect({ connector: 'linear' })];
 ```
 
-See the source under `src/` for the full API (additional helpers like `revokeToken`, `getTokenResponse`, `startAuthorization`, typed error classes, and per-adapter options).
+See the source under `src/` for the full API (additional helpers like `revokeToken`, `getTokenResponse`, `startAuthorization`, `experimental_startInstallation`, typed error classes, and per-adapter options).

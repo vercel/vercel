@@ -13,7 +13,7 @@ Use `vercel api` when:
 - JSON output is needed for filtering or aggregation.
 - Endpoint discovery is needed through `vercel api list`.
 
-Keep calls narrow and shape large responses before presenting them. Use `--raw-field` instead of typed `--field` when the API expects a string value that looks like a boolean or number.
+Keep calls narrow and shape large responses before presenting them. Add `--raw` when a downstream parser should receive only the JSON response payload. Use `--raw-field` instead of typed `--field` when the API expects a string value that looks like a boolean or number.
 
 ```bash
 vercel api /v2/user                                    # GET current user
@@ -23,10 +23,15 @@ vercel api /v6/deployments --paginate                  # paginate all results
 vercel api list                                        # list available endpoints
 vercel api list --format json                          # list endpoints as JSON
 vercel api "/v6/deployments?projectId=<project-id>&limit=10" --scope <team>
+vercel api "/v6/deployments?limit=10" --raw            # JSON payload
 vercel api /v9/projects/<project>/env/<env-id> -X PATCH --raw-field value=false --scope <team>
 ```
 
 Use `vercel api list` to discover available endpoints. `vercel api ls` is also accepted as an alias.
+
+Do not parse `vercel api --generate=curl` output as JSON; it emits a curl command.
+
+DELETE requests prompt for confirmation; in non-interactive/agent mode they are refused unless `--dangerously-skip-permissions` is passed. Use that flag only for deletions the user explicitly approved.
 
 ## `vercel traces` — Captured Request Traces
 

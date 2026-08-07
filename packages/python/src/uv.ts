@@ -8,10 +8,15 @@ import execa from 'execa';
 import fs from 'fs';
 import os from 'os';
 import which from 'which';
+import semver from 'semver';
 import { debug, NowBuildError } from '@vercel/build-utils';
 import { getVenvPythonBin } from './utils';
 
 export const UV_VERSION = '0.10.11';
+// Minimum uv version we require at runtime. We currently require
+// 0.9.25 at least, since it adds `--exclude-newer-package
+// <pkg>=false`.
+export const MIN_UV_VERSION = '0.9.25';
 export const UV_PYTHON_PATH_PREFIX = '/uv/python/';
 export const UV_PYTHON_DOWNLOADS_MODE = 'automatic';
 export const UV_CACHE_DIR_SUBPATH = ['.vercel', 'python', 'cache', 'uv'];
@@ -216,6 +221,24 @@ export class UvRunner {
   }
 
   /**
+   * Run a command through `uv run` inside the active virtual environment.
+   */
+  async run(options: {
+    venvPath: string;
+    projectDir: string;
+    args: string[];
+    env?: Record<string, string>;
+  }): Promise<{ stdout: string; stderr: string }> {
+    const { venvPath, projectDir, args, env } = options;
+    return this.runUvCmdWithOutput(
+      ['run', '--active', '--no-sync', ...args],
+      projectDir,
+      venvPath,
+      env
+    );
+  }
+
+  /**
    * Prune the uv cache for CI: removes pre-built wheels and unzipped source
    * distributions while retaining source-built wheels.
    */
@@ -253,6 +276,37 @@ export class UvRunner {
         `Failed to run "${pretty}": ${err instanceof Error ? err.message : String(err)}`
       );
       // retain code/signal to ensure it's treated as a build error
+      if (err && typeof err === 'object') {
+        if ('code' in err) {
+          error.code = (err as { code: number | string }).code;
+        } else if ('signal' in err) {
+          error.code = (err as { signal: string }).signal;
+        }
+      }
+
+      throw error;
+    }
+  }
+
+  private async runUvCmdWithOutput(
+    args: string[],
+    cwd: string,
+    venvPath: string,
+    env?: Record<string, string>
+  ): Promise<{ stdout: string; stderr: string }> {
+    const pretty = `uv ${args.join(' ')}`;
+    debug(`Running "${pretty}"...`);
+
+    try {
+      const result = await execa(this.uvPath, args, {
+        cwd,
+        env: { ...this.getVenvEnv(venvPath), ...env },
+      });
+      return { stdout: result.stdout, stderr: result.stderr };
+    } catch (err) {
+      const error: Error & { code?: unknown } = new Error(
+        `Failed to run "${pretty}": ${err instanceof Error ? err.message : String(err)}`
+      );
       if (err && typeof err === 'object') {
         if ('code' in err) {
           error.code = (err as { code: number | string }).code;
@@ -349,6 +403,54 @@ export async function findUvBinary(pythonPath: string): Promise<string | null> {
   }
 
   return null;
+}
+
+/**
+ * Verify the uv binary at `uvPath` is at least {@link MIN_UV_VERSION}.
+ *
+ * Returns the raw `uv --version` output (e.g. `uv 0.9.25 (<hash> <date>)`) so
+ * callers can report the version without invoking uv a second time.
+ *
+ * Throws a NowBuildError if uv can't be run, its version can't be determined,
+ * or it's older than the minimum — uv is unusable in all of those cases.
+ */
+export function checkUvBinaryVersion(uvPath: string): string {
+  let output: string;
+  try {
+    output = execFileSync(uvPath, ['--version'], {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+      shell: isWin,
+    }).trim();
+  } catch (err) {
+    throw new NowBuildError({
+      code: 'UV_ERROR',
+      link: 'https://vercel.link/python-version',
+      message: `Found uv at "${uvPath}" but could not run "uv --version": ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    });
+  }
+
+  // `uv --version` prints e.g. `uv 0.9.25 (<hash> <date>)`.
+  const found = semver.coerce(output);
+  if (!found) {
+    throw new NowBuildError({
+      code: 'UV_ERROR',
+      link: 'https://vercel.link/python-version',
+      message: `Could not determine the uv version from "${output}".`,
+    });
+  }
+
+  if (semver.lt(found, MIN_UV_VERSION)) {
+    throw new NowBuildError({
+      code: 'UV_VERSION_TOO_OLD',
+      link: 'https://vercel.link/python-version',
+      message: `Found uv ${found.version} at "${uvPath}", but Vercel requires uv ${MIN_UV_VERSION} or newer. Please upgrade uv: https://docs.astral.sh/uv/getting-started/installation/`,
+    });
+  }
+
+  return output;
 }
 
 export async function getUvBinaryOrInstall(

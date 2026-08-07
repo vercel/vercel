@@ -4,6 +4,7 @@ import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import { help, type Command } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getCommonArgs from '../../util/arg-common';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import { AlertsTelemetryClient } from '../../util/telemetry/commands/alerts';
@@ -20,14 +21,101 @@ import {
   rulesInspectSubcommand,
   rulesLsSubcommand,
   rulesRmSubcommand,
+  rulesSchemaSubcommand,
   rulesUpdateSubcommand,
 } from './rules/command';
+import { getRulesAddBodyExamplesHelp } from './rules/add-help';
 
 const COMMAND_CONFIG = {
   inspect: getCommandAliases(inspectSubcommand),
   ls: getCommandAliases(listSubcommand),
   rules: ['rules'],
 };
+
+type FlagsSpecification = Record<string, unknown>;
+
+function getFlagSpecValue(
+  flagsSpecification: FlagsSpecification,
+  flag: string
+): unknown {
+  const value = flagsSpecification[flag];
+  if (typeof value === 'string') {
+    return flagsSpecification[value];
+  }
+  return value;
+}
+
+function flagConsumesValue(
+  rawArg: string,
+  flagsSpecification: FlagsSpecification
+): boolean {
+  if (!rawArg.startsWith('-') || rawArg === '-' || rawArg.includes('=')) {
+    return false;
+  }
+
+  const value = getFlagSpecValue(flagsSpecification, rawArg);
+  return value === String || value === Number || Array.isArray(value);
+}
+
+function findCommandIndex(
+  rawArgs: string[],
+  commandName: string | undefined,
+  flagsSpecification: FlagsSpecification
+): number {
+  if (!commandName) {
+    return -1;
+  }
+
+  for (let index = 0; index < rawArgs.length; index++) {
+    const rawArg = rawArgs[index];
+    if (rawArg === '--') {
+      return rawArgs.indexOf(commandName, index + 1);
+    }
+
+    if (rawArg.startsWith('-')) {
+      if (flagConsumesValue(rawArg, flagsSpecification)) {
+        index++;
+      }
+      continue;
+    }
+
+    if (rawArg === commandName) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function normalizeHelpAlias(rawArgs: string[]): string[] {
+  return rawArgs.map(arg => (arg === '-help' ? '--help' : arg));
+}
+
+function getAlertsSubcommand(
+  rawArgs: string[],
+  parsedArgs: string[],
+  flagsSpecification: FlagsSpecification
+) {
+  const commandIndex = findCommandIndex(
+    rawArgs,
+    parsedArgs[0],
+    flagsSpecification
+  );
+  const rawArgsAfterCommand =
+    commandIndex === -1 ? [] : rawArgs.slice(commandIndex + 1);
+  const rawSubcommand = rawArgsAfterCommand[0];
+  if (!rawSubcommand || rawSubcommand.startsWith('-')) {
+    return {
+      ...getSubcommand([], COMMAND_CONFIG),
+      rawSubcommandArgs: rawArgsAfterCommand,
+    };
+  }
+
+  return {
+    ...getSubcommand(parsedArgs.slice(1), COMMAND_CONFIG),
+    rawSubcommandArgs: rawArgsAfterCommand.slice(1),
+  };
+}
 
 export default async function alerts(client: Client): Promise<number> {
   const telemetry = new AlertsTelemetryClient({
@@ -38,8 +126,9 @@ export default async function alerts(client: Client): Promise<number> {
 
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(alertsCommand.options);
+  const rawArgs = normalizeHelpAlias(client.argv.slice(2));
   try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification, {
+    parsedArgs = parseArguments(rawArgs, flagsSpecification, {
       permissive: true,
     });
   } catch (err) {
@@ -89,16 +178,28 @@ export default async function alerts(client: Client): Promise<number> {
     return 1;
   }
 
-  const { subcommand, args, subcommandOriginal } = getSubcommand(
-    parsedArgs.args.slice(1),
-    COMMAND_CONFIG
-  );
+  const { subcommand, args, subcommandOriginal, rawSubcommandArgs } =
+    getAlertsSubcommand(rawArgs, parsedArgs.args, {
+      ...getCommonArgs(),
+      ...flagsSpecification,
+    });
   const needHelp = parsedArgs.flags['--help'];
 
-  function printHelp(command: Command): void {
-    output.print(
-      help(command, { parent: alertsCommand, columns: client.stderr.columns })
-    );
+  const rulesHelpParent = {
+    ...rulesAggregateCommand,
+    name: `${alertsCommand.name} ${rulesAggregateCommand.name}`,
+  } satisfies Command;
+
+  function printHelp(
+    command: Command,
+    parent: Command = alertsCommand,
+    extra?: string
+  ): void {
+    const helpOutput = help(command, {
+      parent,
+      columns: client.stderr.columns,
+    });
+    output.print(extra ? `${helpOutput}\n${extra}` : helpOutput);
   }
 
   if (needHelp) {
@@ -111,23 +212,31 @@ export default async function alerts(client: Client): Promise<number> {
       telemetry.trackCliFlagHelp('alerts', 'rules');
       const nested = args[0];
       if (nested === 'ls' || nested === 'list') {
-        printHelp(rulesLsSubcommand);
+        printHelp(rulesLsSubcommand, rulesHelpParent);
+        return 0;
+      }
+      if (nested === 'schema') {
+        printHelp(rulesSchemaSubcommand, rulesHelpParent);
         return 0;
       }
       if (nested === 'add' || nested === 'create') {
-        printHelp(rulesAddSubcommand);
+        printHelp(
+          rulesAddSubcommand,
+          rulesHelpParent,
+          getRulesAddBodyExamplesHelp()
+        );
         return 0;
       }
       if (nested === 'inspect' || nested === 'get') {
-        printHelp(rulesInspectSubcommand);
+        printHelp(rulesInspectSubcommand, rulesHelpParent);
         return 0;
       }
       if (nested === 'rm' || nested === 'remove' || nested === 'delete') {
-        printHelp(rulesRmSubcommand);
+        printHelp(rulesRmSubcommand, rulesHelpParent);
         return 0;
       }
       if (nested === 'update' || nested === 'patch') {
-        printHelp(rulesUpdateSubcommand);
+        printHelp(rulesUpdateSubcommand, rulesHelpParent);
         return 0;
       }
       output.print(
@@ -147,12 +256,12 @@ export default async function alerts(client: Client): Promise<number> {
     case 'inspect': {
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
       const inspectFn = (await import('./inspect')).default;
-      return inspectFn(client, args);
+      return inspectFn(client, rawSubcommandArgs);
     }
     case 'rules': {
       telemetry.trackCliSubcommandRules(args[0] ?? 'ls');
       const rulesFn = (await import('./rules')).default;
-      return rulesFn(client, args);
+      return rulesFn(client, rawSubcommandArgs);
     }
     default: {
       telemetry.trackCliSubcommandLs(subcommandOriginal);

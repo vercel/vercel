@@ -329,7 +329,7 @@ describe('integration-resource', () => {
         const exitCode = await integrationResourceCommand(client);
         expect(exitCode).toEqual(1);
         await expect(client.stderr).toOutput(
-          'Error: --format=json requires --yes to skip confirmation prompts'
+          'Error: --json requires --yes to skip confirmation prompts'
         );
       });
 
@@ -449,7 +449,7 @@ describe('integration-resource', () => {
           expect(payload.status).toBe('error');
           expect(payload.reason).toBe('invalid_arguments');
           expect(payload.next?.[0]?.command).toContain(
-            'integration-resource remove <resource> --disconnect-all --yes'
+            'integration resource remove <resource> --disconnect-all --yes'
           );
           expect(payload.next?.[0]?.command).toContain('--cwd /tmp/r');
         });

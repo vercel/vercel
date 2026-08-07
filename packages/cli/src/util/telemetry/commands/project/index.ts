@@ -55,6 +55,13 @@ export class ProjectTelemetryClient
     });
   }
 
+  trackCliSubcommandUpdate(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'update',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandToken(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'token',

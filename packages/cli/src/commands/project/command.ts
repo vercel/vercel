@@ -2,6 +2,7 @@ import { packageName } from '../../util/pkg-name';
 import {
   formatOption,
   jsonOption,
+  limitOption,
   nextOption,
   yesOption,
 } from '../../util/arg-common';
@@ -38,6 +39,7 @@ const checksBlocksOption = {
 /** Flags for `vercel project checks add` (also merged into `checks` help). */
 export const checksAddFlags = [
   formatOption,
+  jsonOption,
   checksBlocksOption,
   {
     name: 'file',
@@ -88,7 +90,7 @@ export const checksAddFlags = [
 ] as const;
 
 /** Flags for `vercel project checks remove` / `rm` (subset of shared `checks` help). */
-export const checksRemoveFlags = [formatOption] as const;
+export const checksRemoveFlags = [formatOption, jsonOption] as const;
 
 export const checksSubcommand = {
   name: 'checks',
@@ -157,6 +159,7 @@ export const listSubcommand = {
   arguments: [],
   options: [
     nextOption,
+    limitOption,
     formatOption,
     jsonOption,
     {
@@ -182,7 +185,7 @@ export const listSubcommand = {
     },
     {
       name: 'List projects using a deprecated Node.js version in JSON format',
-      value: `${packageName} project ls --update-required --format=json`,
+      value: `${packageName} project ls --update-required --json`,
     },
     {
       name: 'Filter projects by name',
@@ -228,6 +231,103 @@ export const renameSubcommand = {
   ],
 } as const;
 
+export const updateSubcommand = {
+  name: 'update',
+  aliases: ['set'],
+  description:
+    'Update one or more project settings; omitted settings remain unchanged',
+  arguments: [
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      name: 'framework',
+      shorthand: null,
+      type: String,
+      argument: 'SLUG',
+      description:
+        'Set the framework preset by slug; use "other" to clear the preset',
+      deprecated: false,
+    },
+    {
+      name: 'build-command',
+      shorthand: null,
+      type: String,
+      argument: 'COMMAND',
+      description: 'Set the build command',
+      deprecated: false,
+    },
+    {
+      name: 'dev-command',
+      shorthand: null,
+      type: String,
+      argument: 'COMMAND',
+      description: 'Set the development command',
+      deprecated: false,
+    },
+    {
+      name: 'install-command',
+      shorthand: null,
+      type: String,
+      argument: 'COMMAND',
+      description: 'Set the install command',
+      deprecated: false,
+    },
+    {
+      name: 'output-directory',
+      shorthand: null,
+      type: String,
+      argument: 'DIR',
+      description: 'Set the output directory',
+      deprecated: false,
+    },
+    {
+      name: 'root-directory',
+      shorthand: null,
+      type: String,
+      argument: 'DIR',
+      description: 'Set the project root directory',
+      deprecated: false,
+    },
+    {
+      name: 'auto-detect',
+      shorthand: null,
+      type: [String],
+      argument: 'SETTING',
+      description:
+        'Reset a setting to automatic detection; repeat for build-command, dev-command, install-command, output-directory, or root-directory',
+      deprecated: false,
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Set the linked project framework preset to Next.js',
+      value: `${packageName} project update --framework nextjs`,
+    },
+    {
+      name: 'Set a named project framework preset to Vite',
+      value: `${packageName} project update my-project --framework vite`,
+    },
+    {
+      name: 'Update multiple settings in one command',
+      value: `${packageName} project update my-project --build-command "pnpm build" --output-directory dist`,
+    },
+    {
+      name: 'Reset individual settings to automatic detection',
+      value: `${packageName} project update my-project --auto-detect build-command --auto-detect output-directory`,
+    },
+    {
+      name: 'Clear the framework preset and return JSON',
+      value: `${packageName} project update my-project --framework other --json`,
+    },
+  ],
+} as const;
+
 export const tokenSubcommand = {
   name: 'token',
   aliases: [],
@@ -238,7 +338,7 @@ export const tokenSubcommand = {
       required: false,
     },
   ],
-  options: [yesOption, formatOption],
+  options: [yesOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Get a development OIDC token for the linked project',
@@ -250,7 +350,7 @@ export const tokenSubcommand = {
     },
     {
       name: 'Get a development OIDC token as JSON',
-      value: `${packageName} project token my-project --format=json`,
+      value: `${packageName} project token my-project --json`,
     },
   ],
 } as const;
@@ -266,7 +366,7 @@ export const accessSummarySubcommand = {
       required: false,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Summary for the linked project',
@@ -274,7 +374,7 @@ export const accessSummarySubcommand = {
     },
     {
       name: 'Summary as JSON',
-      value: `${packageName} project access-summary my-app --format json`,
+      value: `${packageName} project access-summary my-app --json`,
     },
   ],
 } as const;
@@ -291,6 +391,7 @@ export const membersSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     {
       name: 'search',
       shorthand: null,
@@ -313,7 +414,7 @@ export const membersSubcommand = {
     },
     {
       name: 'List members for a named project as JSON',
-      value: `${packageName} project members my-project --format json`,
+      value: `${packageName} project members my-project --json`,
     },
   ],
 } as const;
@@ -328,6 +429,7 @@ export const protectionSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     {
       name: 'sso',
       shorthand: null,
@@ -341,6 +443,15 @@ export const protectionSubcommand = {
       type: Boolean,
       description:
         'Apply action to password protection (requires eligible plan/permissions).',
+      deprecated: false,
+    },
+    {
+      name: 'protection-password',
+      shorthand: null,
+      type: String,
+      argument: 'PASSWORD',
+      description:
+        'Password value when enabling password protection (max 72 characters). Requires --password.',
       deprecated: false,
     },
     {
@@ -398,7 +509,7 @@ export const protectionSubcommand = {
     },
     {
       name: 'Named project as JSON',
-      value: `${packageName} project protection my-app --format json`,
+      value: `${packageName} project protection my-app --json`,
     },
     {
       name: 'Disable password protection',
@@ -407,6 +518,10 @@ export const protectionSubcommand = {
     {
       name: 'Enable password protection',
       value: `${packageName} project protection enable my-app --password`,
+    },
+    {
+      name: 'Enable password protection with a password',
+      value: `${packageName} project protection enable my-app --password --protection-password <password>`,
     },
     {
       name: 'Enable customer support code visibility',
@@ -467,6 +582,7 @@ export const accessGroupsSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     nextOption,
     {
       name: 'search',
@@ -490,7 +606,7 @@ export const accessGroupsSubcommand = {
     },
     {
       name: 'List access groups for a named project as JSON',
-      value: `${packageName} project access-groups my-project --format json`,
+      value: `${packageName} project access-groups my-project --json`,
     },
   ],
 } as const;
@@ -505,7 +621,7 @@ export const webAnalyticsSubcommand = {
       required: false,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Enable Web Analytics for the linked project',
@@ -517,7 +633,7 @@ export const webAnalyticsSubcommand = {
     },
     {
       name: 'Confirm enablement as JSON (non-interactive / agents)',
-      value: `${packageName} project web-analytics --format json`,
+      value: `${packageName} project web-analytics --json`,
     },
   ],
 } as const;
@@ -532,7 +648,7 @@ export const speedInsightsSubcommand = {
       required: false,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Enable Speed Insights for the linked project',
@@ -544,7 +660,7 @@ export const speedInsightsSubcommand = {
     },
     {
       name: 'Confirm enablement as JSON (non-interactive / agents)',
-      value: `${packageName} project speed-insights --format json`,
+      value: `${packageName} project speed-insights --json`,
     },
   ],
 } as const;
@@ -565,6 +681,7 @@ export const projectCommand = {
     protectionSubcommand,
     webAnalyticsSubcommand,
     speedInsightsSubcommand,
+    updateSubcommand,
     renameSubcommand,
     removeSubcommand,
     tokenSubcommand,

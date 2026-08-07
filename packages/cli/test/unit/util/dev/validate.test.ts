@@ -2,10 +2,120 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { validateConfig } from '../../../../src/util/validate-config';
 
 describe('validateConfig', () => {
-  describe('experimentalServicesV2', () => {
-    it('should not error with a valid config', () => {
+  describe('proxy', () => {
+    it.each([
+      'proxy.js',
+      'src/proxy.ts',
+    ])('accepts the supported entrypoint %s', entrypoint => {
+      expect(validateConfig({ proxy: { entrypoint } })).toBeNull();
+    });
+
+    it.each([
+      '/api/:func*',
+      ['/api/:func*', '/dashboard/:path*'],
+    ])('accepts the matcher %j', matcher => {
+      expect(
+        validateConfig({ proxy: { entrypoint: 'proxy.ts', matcher } })
+      ).toBeNull();
+    });
+
+    it('accepts functions configuration for the proxy', () => {
+      expect(
+        validateConfig({
+          proxy: { entrypoint: 'proxy.ts' },
+          functions: {
+            'proxy.ts': {
+              maxDuration: 10,
+              memory: 1024,
+            },
+          },
+        })
+      ).toBeNull();
+    });
+
+    it.each([
+      'proxy.ts',
+      '**/*.ts',
+    ])('accepts a functions runtime targeting the proxy through %s', pattern => {
+      expect(
+        validateConfig({
+          proxy: { entrypoint: 'proxy.ts' },
+          functions: {
+            [pattern]: {
+              runtime: 'some-runtime@1.0.0',
+            },
+          },
+        })
+      ).toBeNull();
+    });
+
+    it('requires an entrypoint', () => {
       const error = validateConfig({
-        experimentalServicesV2: {
+        // @ts-expect-error - testing invalid configuration
+        proxy: {},
+      });
+
+      expect(error?.message).toBe(
+        'Invalid vercel.json - `proxy` missing required property `entrypoint`.'
+      );
+    });
+
+    it('rejects unsupported entrypoint extensions', () => {
+      const error = validateConfig({
+        proxy: { entrypoint: 'proxy.mjs' },
+      });
+
+      expect(error?.code).toBe('INVALID_PROXY_ENTRYPOINT');
+      expect(error?.message).toBe(
+        'The `proxy.entrypoint` path must end in `.js` or `.ts` and reference an executable file.'
+      );
+    });
+
+    it('rejects proxy together with builds', () => {
+      const error = validateConfig({
+        proxy: { entrypoint: 'proxy.ts' },
+        builds: [{ src: 'api/index.ts', use: '@vercel/node' }],
+      });
+
+      expect(error?.code).toBe('PROXY_AND_BUILDS');
+      expect(error?.message).toBe(
+        'The `proxy` property cannot be used with the `builds` property. Remove `builds` to use an explicit proxy entrypoint.'
+      );
+    });
+
+    it.each([
+      '/proxy.ts',
+      '../proxy.ts',
+      'src\\proxy.ts',
+      'proxy.ts?x=1',
+    ])('rejects the unsafe entrypoint %s', entrypoint => {
+      const error = validateConfig({ proxy: { entrypoint } });
+
+      expect(error?.code).toBe('INVALID_PROXY_ENTRYPOINT');
+      expect(error?.message).toBe(
+        'The `proxy.entrypoint` path must be relative to the project root and cannot contain traversal, query, fragment, or control characters.'
+      );
+    });
+
+    it.each([
+      'api/:func*',
+      ['/api/:func*', 'dashboard/:path*'],
+    ])('rejects the invalid matcher %j', matcher => {
+      const error = validateConfig({
+        proxy: { entrypoint: 'proxy.ts', matcher },
+      });
+
+      expect(error?.code).toBe('INVALID_PROXY_MATCHER');
+      expect(error?.message).toBe(
+        'The `proxy.matcher` value must be a path matcher starting with `/`, or an array of path matchers starting with `/`.'
+      );
+    });
+  });
+
+  describe('services', () => {
+    it('should not error with a valid canonical config', () => {
+      const error = validateConfig({
+        services: {
           my_frontend: {
             root: 'frontend/',
             framework: 'nextjs',
@@ -28,6 +138,48 @@ describe('validateConfig', () => {
       expect(error).toBeNull();
     });
 
+    it('should keep experimentalServicesV2 as a backwards-compatible alias', () => {
+      const error = validateConfig({
+        experimentalServicesV2: {
+          api: { root: 'api', framework: 'express' },
+        },
+      });
+
+      expect(error).toBeNull();
+    });
+
+    it('should reject services together with experimentalServicesV2', () => {
+      const error = validateConfig({
+        services: { web: { root: '.', framework: 'nextjs' } },
+        experimentalServicesV2: {
+          api: { root: 'api', framework: 'express' },
+        },
+      });
+
+      expect(error?.code).toBe('SERVICES_AND_EXPERIMENTAL_SERVICES_V2');
+    });
+
+    it('should report canonical services validation errors', () => {
+      const error = validateConfig({
+        services: {
+          web: {
+            root: '.',
+            bindings: [
+              {
+                type: 'service',
+                service: 'ghost',
+                format: 'url',
+                env: 'GHOST_URL',
+              },
+            ],
+          },
+        },
+      });
+
+      expect(error?.code).toBe('SERVICES_BINDING_UNKNOWN_SERVICE');
+      expect(error?.message).toContain('`services`');
+    });
+
     it('should not error with a service-local route table and functions', () => {
       const error = validateConfig({
         experimentalServicesV2: {
@@ -42,6 +194,35 @@ describe('validateConfig', () => {
           },
         },
       });
+      expect(error).toBeNull();
+    });
+
+    it('should accept a request path transform on a service rewrite', () => {
+      const error = validateConfig({
+        experimentalServicesV2: {
+          my_backend: {
+            root: 'backend/',
+          },
+        },
+        rewrites: [
+          {
+            source: '/api/:path*',
+            destination: {
+              type: 'service',
+              service: 'my_backend',
+              path: '/:path*',
+            },
+            transforms: [
+              {
+                type: 'request.path',
+                op: 'set',
+                args: '/:path*',
+              },
+            ],
+          },
+        ],
+      } as unknown as Parameters<typeof validateConfig>[0]);
+
       expect(error).toBeNull();
     });
 
@@ -114,6 +295,19 @@ describe('validateConfig', () => {
       expect(error?.code).toBe(
         'EXPERIMENTAL_SERVICES_V2_BINDING_UNKNOWN_SERVICE'
       );
+    });
+
+    it('should accept a binding with `type` omitted', () => {
+      const error = validateConfig({
+        services: {
+          web: { root: '.' },
+          api: {
+            root: 'api/',
+            bindings: [{ service: 'web', format: 'url', env: 'WEB_URL' }],
+          },
+        },
+      } as any);
+      expect(error).toBeNull();
     });
 
     it('should reject a binding missing a required field', () => {
@@ -204,14 +398,15 @@ describe('validateConfig', () => {
   it('should not error with complete config', async () => {
     const config = {
       version: 2,
-      public: true,
       regions: ['sfo1', 'iad1'],
       cleanUrls: true,
       headers: [{ source: '/', headers: [{ key: 'x-id', value: '123' }] }],
       rewrites: [{ source: '/help', destination: '/support' }],
       redirects: [{ source: '/kb', destination: 'https://example.com' }],
       trailingSlash: false,
-      functions: { 'api/user.go': { memory: 128, maxDuration: 5 } },
+      functions: {
+        'api/user.go': { memory: 128, maxDuration: 5, maxConcurrency: 8 },
+      },
     };
     const error = validateConfig(config);
     expect(error).toBeNull();
@@ -226,6 +421,16 @@ describe('validateConfig', () => {
     } as unknown as Parameters<typeof validateConfig>[0];
     const error = validateConfig(config);
     expect(error).toBeNull();
+  });
+
+  it.each([
+    0, -1, 1.5,
+  ])('should reject maxConcurrency set to %s', maxConcurrency => {
+    const error = validateConfig({
+      functions: { 'api/user.go': { maxConcurrency } },
+    } as Parameters<typeof validateConfig>[0]);
+    expect(error).not.toBeNull();
+    expect(error?.message).toContain('maxConcurrency');
   });
 
   // Regression test for honoring the env var when it is set *after* this module
@@ -254,6 +459,7 @@ describe('validateConfig', () => {
     it('allows maxDuration above 1800s when set to "1" (defers to the server)', () => {
       process.env[ENV] = '1';
       expect(validateConfig(configWith(1800))).toBeNull();
+      expect(validateConfig(configWith(1900))).toBeNull();
     });
 
     it('still enforces the lower bound and integer check when skipped', () => {
@@ -296,9 +502,7 @@ describe('validateConfig', () => {
     expect(error).toBeNull();
   });
 
-  it('should ignore the removed `services` property', () => {
-    // The CLI config schema is `additionalProperties: true`,
-    // so the error would come from the API
+  it('should validate the `services` property', () => {
     const error = validateConfig({
       services: {
         frontend: {
@@ -307,7 +511,75 @@ describe('validateConfig', () => {
         },
       },
     } as any);
+    expect(error).not.toBeNull();
+  });
+
+  it.each([
+    'services',
+    'experimentalServicesV2',
+  ] as const)('should reject invalid service names in `%s`', configKey => {
+    for (const name of ['Bad', 'api1', 'api.service', 'api_', 'api-']) {
+      const error = validateConfig({
+        [configKey]: {
+          [name]: {
+            root: 'api',
+          },
+        },
+      } as any);
+
+      expect(error).not.toBeNull();
+    }
+  });
+
+  it.each([
+    'services',
+    'experimentalServicesV2',
+  ] as const)('should reject service names longer than 64 characters in `%s`', configKey => {
+    const error = validateConfig({
+      [configKey]: {
+        ['a'.repeat(65)]: {
+          root: 'api',
+        },
+      },
+    } as any);
+
+    expect(error).not.toBeNull();
+  });
+
+  it.each([
+    'services',
+    'experimentalServicesV2',
+  ] as const)('should accept service names matching the API schema in `%s`', configKey => {
+    const error = validateConfig({
+      [configKey]: {
+        ['a'.repeat(64)]: {
+          root: 'api',
+        },
+        my_service: {
+          root: 'worker',
+        },
+        'my-service': {
+          root: 'web',
+        },
+      },
+    } as any);
+
     expect(error).toBeNull();
+  });
+
+  it('should reject invalid `experimentalServicesV2` service binding names', () => {
+    const error = validateConfig({
+      experimentalServicesV2: {
+        web: {
+          root: 'web',
+          bindings: [
+            { type: 'service', service: 'Api', format: 'url', env: 'API_URL' },
+          ],
+        },
+      },
+    } as any);
+
+    expect(error).not.toBeNull();
   });
 
   it('should not error with experimentalServices static schedule arrays', () => {

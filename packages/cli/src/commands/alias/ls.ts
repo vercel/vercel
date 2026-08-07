@@ -95,7 +95,7 @@ export default async function ls(client: Client, argv: string[]) {
     output.log(`aliases found under ${chalk.bold(contextName)} ${lsStamp()}`);
     client.stdout.write(printAliasTable(aliases));
 
-    if (pagination.count === 20) {
+    if (pagination.next) {
       const flags = getCommandFlags(opts, ['_', '--next', '--format']);
       output.log(
         `To display the next page run ${getCommandName(

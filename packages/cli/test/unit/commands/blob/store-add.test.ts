@@ -797,4 +797,136 @@ describe('blob store add', () => {
       expect(mockedOutput.stopSpinner).not.toHaveBeenCalled();
     });
   });
+
+  describe('non-interactive mode (agents)', () => {
+    beforeEach(() => {
+      client.nonInteractive = true;
+      vi.spyOn(process, 'exit').mockImplementation(((_code?: number) => {
+        throw new Error('exit');
+      }) as () => never);
+    });
+
+    it('does not prompt or create a store without --yes when linked, emitting confirmation_required', async () => {
+      client.setArgv(
+        'blob',
+        'create-store',
+        'agent-store',
+        '--access',
+        'private'
+      );
+
+      await expect(
+        addStore(client, ['agent-store', '--access', 'private'])
+      ).rejects.toThrow('exit');
+
+      // Nothing is created on a blocked run, so the --yes retry can't duplicate.
+      expect(client.fetch).not.toHaveBeenCalled();
+      expect(client.input.confirm).not.toHaveBeenCalled();
+
+      const payload = JSON.parse(client.stdout.getFullOutput());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'confirmation_required',
+        message: expect.stringMatching(/confirmation|--yes/),
+        next: expect.arrayContaining([
+          expect.objectContaining({
+            command: expect.stringContaining('--yes'),
+          }),
+        ]),
+      });
+    });
+
+    it('creates and links to all environments with --yes and never prompts', async () => {
+      const exitCode = await addStore(client, [
+        'agent-store',
+        '--access',
+        'private',
+        '--yes',
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(client.input.confirm).not.toHaveBeenCalled();
+      expect(client.input.checkbox).not.toHaveBeenCalled();
+      expect(mockedConnectResourceToProject).toHaveBeenCalledWith(
+        client,
+        'proj_123',
+        'store_test123',
+        ['production', 'preview', 'development'],
+        { accountId: 'org_123' }
+      );
+    });
+
+    it('creates and links to the given --environment list without --yes', async () => {
+      const exitCode = await addStore(client, [
+        'agent-store',
+        '--access',
+        'private',
+        '--environment',
+        'production',
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(client.input.confirm).not.toHaveBeenCalled();
+      expect(mockedConnectResourceToProject).toHaveBeenCalledWith(
+        client,
+        'proj_123',
+        'store_test123',
+        ['production'],
+        { accountId: 'org_123' }
+      );
+    });
+
+    it('emits missing_arguments when --access is absent', async () => {
+      await expect(addStore(client, ['agent-store'])).rejects.toThrow('exit');
+
+      expect(client.fetch).not.toHaveBeenCalled();
+      const payload = JSON.parse(client.stdout.getFullOutput());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'missing_arguments',
+        message: expect.stringContaining('--access'),
+      });
+    });
+
+    it('emits missing_arguments when the name is absent', async () => {
+      await expect(addStore(client, ['--access', 'private'])).rejects.toThrow(
+        'exit'
+      );
+
+      expect(client.fetch).not.toHaveBeenCalled();
+      const payload = JSON.parse(client.stdout.getFullOutput());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'missing_arguments',
+        message: expect.stringContaining('name'),
+      });
+    });
+
+    it('creates the store without a confirmation gate when not linked', async () => {
+      mockedGetLinkedProject.mockResolvedValue({
+        org: null,
+        project: null,
+        status: 'not_linked',
+      });
+
+      const exitCode = await addStore(client, [
+        'standalone-store',
+        '--access',
+        'private',
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'standalone-store',
+          region: 'iad1',
+          access: 'private',
+        }),
+        accountId: undefined,
+      });
+      expect(mockedConnectResourceToProject).not.toHaveBeenCalled();
+    });
+  });
 });

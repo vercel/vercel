@@ -12,7 +12,8 @@
   "scripts": {
     "build": "node build.mjs",
     "type-check": "tsc --noEmit",
-    "test": "vitest run --config ../../vitest.config.mts",
+    "test": "pnpm test-go && vitest run --config ../../vitest.config.mts",
+    "test-go": "go -C bootstrap test ./...",
     "test-unit": "pnpm test",
     "vitest-run": "vitest -c ../../vitest.config.mts"
   },

@@ -4,7 +4,10 @@ import redirects from '../../../../src/commands/redirects';
 import { useUser } from '../../../mocks/user';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 
 describe('redirects add', () => {
   beforeEach(() => {
@@ -14,6 +17,7 @@ describe('redirects add', () => {
       ...defaultProject,
       id: 'redirects-test',
       name: 'redirects-test',
+      accountId: 'team_dummy',
     });
     client.scenario.get('/v9/projects/:projectNameOrId', (_req, res) => {
       res.json(project);
@@ -489,7 +493,20 @@ describe('redirects add', () => {
         throw new Error('exit');
       }) as () => never);
 
-      client.setArgv('redirects', 'add');
+      client.setArgv(
+        'redirects',
+        'add',
+        '--status',
+        '301',
+        '--name',
+        'release-1',
+        '--project',
+        'redirects-test',
+        '--scope',
+        'team_dummy',
+        '--cwd',
+        '/tmp/project'
+      );
       await expect(redirects(client)).rejects.toThrow('exit');
 
       expect(logSpy).toHaveBeenCalled();
@@ -498,8 +515,9 @@ describe('redirects add', () => {
       expect(payload.reason).toBe('missing_arguments');
       expect(payload.message).toContain('source and destination are required');
       expect(Array.isArray(payload.next)).toBe(true);
-      expect(payload.next[0].command).toContain('redirects add');
-      expect(payload.next[0].command).toContain('--yes');
+      expect(payload.next[0].command).toBe(
+        'vercel redirects add <source> <destination> --status 301 --name release-1 --project redirects-test --scope team_dummy --cwd /tmp/project --yes'
+      );
       expect(payload.next[0].when).toBe('to add a redirect');
 
       logSpy.mockRestore();
@@ -565,6 +583,34 @@ describe('redirects add', () => {
         true
       );
 
+      client.nonInteractive = false;
+    });
+
+    it('adds a redirect to the project selected by --project', async () => {
+      mockGetVersions();
+      mockPutRedirects();
+      client.cwd = setupTmpDir();
+      client.config.currentTeam = 'team_dummy';
+      client.nonInteractive = true;
+      client.setArgv(
+        'redirects',
+        'add',
+        '/old-path',
+        '/new-path',
+        '--project',
+        'redirects-test',
+        '--yes'
+      );
+
+      expect(await redirects(client)).toEqual(0);
+      const output = JSON.parse(client.stdout.getFullOutput());
+      expect(output.next).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            command: expect.stringContaining('--project redirects-test'),
+          }),
+        ])
+      );
       client.nonInteractive = false;
     });
 

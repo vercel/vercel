@@ -5,7 +5,11 @@ import path from 'path';
 import pull from '../../../../src/commands/pull';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
-import { defaultProject, useProject } from '../../../mocks/project';
+import {
+  defaultProject,
+  useProject,
+  useUnknownProject,
+} from '../../../mocks/project';
 import { useTeams, createTeam } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
@@ -75,10 +79,10 @@ describe('pull', () => {
     client.setArgv('pull', cwd);
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
-      `Downloading \`development\` Environment Variables for ${teams[0].slug}/vercel-pull-next`
+      `Downloading \`development\` environment variables for ${teams[0].slug}/vercel-pull-next`
     );
     await expect(client.stderr).toOutput(
-      `Created .vercel${path.sep}.env.development.local file`
+      `✓ Created         .vercel${path.sep}.env.development.local file`
     );
     await expect(client.stderr).toOutput(
       `Downloaded project settings to ${cwd}${path.sep}.vercel${path.sep}project.json`
@@ -91,6 +95,25 @@ describe('pull', () => {
     );
     const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
     expect(devFileHasDevEnv).toBeTruthy();
+  });
+
+  it('should not use owner lookup fallback for pulling', async () => {
+    const cwd = setupUnitFixture('vercel-pull-next');
+
+    useUser();
+    useTeams('team_dummy', { failNoAccess: true });
+    useProject({
+      ...defaultProject,
+      accountId: 'team_dummy',
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+
+    client.setArgv('pull', cwd);
+
+    await expect(pull(client)).rejects.toThrow(
+      'Could not retrieve Project Settings. To link your Project, remove the `.vercel` directory and deploy again.'
+    );
   });
 
   it('should fail with message to pull without a link and without --env', async () => {
@@ -118,7 +141,9 @@ describe('pull', () => {
       return res.status(404).json({});
     });
 
-    useUser();
+    // Northstar + a single team: the team resolves unambiguously, since
+    // `--yes` no longer guesses a team when several are available.
+    useUser({ version: 'northstar' });
     useTeams('team_dummy');
     (client as { nonInteractive: boolean }).nonInteractive = false;
 
@@ -154,10 +179,10 @@ describe('pull', () => {
       client.setArgv('pull', cwd);
       const exitCodePromise = pull(client);
       await expect(client.stderr).toOutput(
-        `Downloading \`development\` Environment Variables for ${teams[0].slug}/vercel-pull-next`
+        `Downloading \`development\` environment variables for ${teams[0].slug}/vercel-pull-next`
       );
       await expect(client.stderr).toOutput(
-        `Created .vercel${path.sep}.env.development.local file`
+        `✓ Created         .vercel${path.sep}.env.development.local file`
       );
       await expect(client.stderr).toOutput(
         `Downloaded project settings to ${cwd}${path.sep}.vercel${path.sep}project.json`
@@ -195,10 +220,10 @@ describe('pull', () => {
     client.setArgv('pull', '--environment=preview', cwd);
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
-      `Downloading \`preview\` Environment Variables for ${teams[0].slug}/vercel-pull-next`
+      `Downloading \`preview\` environment variables for ${teams[0].slug}/vercel-pull-next`
     );
     await expect(client.stderr).toOutput(
-      `Created .vercel${path.sep}.env.preview.local file`
+      `✓ Created         .vercel${path.sep}.env.preview.local file`
     );
     await expect(client.stderr).toOutput(
       `Downloaded project settings to ${cwd}${path.sep}.vercel${path.sep}project.json`
@@ -240,10 +265,10 @@ describe('pull', () => {
     client.setArgv('pull', '--environment=production', cwd);
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
-      `Downloading \`production\` Environment Variables for ${teams[0].slug}/vercel-pull-next`
+      `Downloading \`production\` environment variables for ${teams[0].slug}/vercel-pull-next`
     );
     await expect(client.stderr).toOutput(
-      `Created .vercel${path.sep}.env.production.local file`
+      `✓ Created         .vercel${path.sep}.env.production.local file`
     );
     await expect(client.stderr).toOutput(
       `Downloaded project settings to ${cwd}${path.sep}.vercel${path.sep}project.json`
@@ -291,10 +316,10 @@ describe('pull', () => {
     client.setArgv('pull');
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
-      `Downloading \`development\` Environment Variables for ${teams[0].slug}/dashboard`
+      `Downloading \`development\` environment variables for ${teams[0].slug}/dashboard`
     );
     await expect(client.stderr).toOutput(
-      `Created .vercel${path.sep}.env.development.local file`
+      `✓ Created         .vercel${path.sep}.env.development.local file`
     );
     await expect(client.stderr).toOutput(
       `Downloaded project settings to ${cwd}${path.sep}dashboard${path.sep}.vercel${path.sep}project.json`
@@ -446,7 +471,7 @@ describe('pull', () => {
       const exitCodePromise = pull(client);
 
       await expect(client.stderr).toOutput(
-        `Downloading \`production\` Environment Variables for ${teams[0].slug}/project-via-flag`
+        `Downloading \`production\` environment variables for ${teams[0].slug}/project-via-flag`
       );
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "pull"').toEqual(0);
@@ -475,7 +500,7 @@ describe('pull', () => {
       const cwd = setupUnitFixture('vercel-pull-unlinked');
       useUser();
       useTeams('team_dummy');
-      // No useProject() — every GET /v9/projects/* will 404.
+      useUnknownProject();
 
       client.setArgv('pull', '--yes', '--project=does-not-exist', cwd);
       const exitCodePromise = pull(client);

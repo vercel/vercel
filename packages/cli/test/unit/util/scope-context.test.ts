@@ -5,7 +5,10 @@ import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
 import { useTeam } from '../../mocks/team';
 import { setupTmpDir } from '../../helpers/setup-unit-fixture';
-import getScope, { applyScopeFromLink } from '../../../src/util/get-scope';
+import getScope, {
+  applyScopeFromLink,
+  detectExplicitScope,
+} from '../../../src/util/get-scope';
 
 describe('resolveScopeContext', () => {
   describe('with no local links', () => {
@@ -251,6 +254,13 @@ describe('resolveScopeContext', () => {
       const ctx = await getScope(client, { resolveLocalScope: true });
 
       expect(ctx.explicitScopeProvided).toBe(false);
+    });
+
+    it('should ignore scope flags after the argument delimiter', async () => {
+      client.setArgv('env', 'run', '--', 'child', '--scope', 'child-scope');
+      client.localConfig = {};
+
+      expect(detectExplicitScope(client)).toBe(false);
     });
   });
 

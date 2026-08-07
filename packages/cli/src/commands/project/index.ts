@@ -11,6 +11,7 @@ import list from './list';
 import members from './members';
 import accessGroups from './access-groups';
 import rename from './rename';
+import update from './update';
 import rm from './rm';
 import getOidcToken from './token';
 import speedInsights from './speed-insights';
@@ -30,6 +31,7 @@ import {
   removeSubcommand,
   speedInsightsSubcommand,
   tokenSubcommand,
+  updateSubcommand,
   webAnalyticsSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -50,6 +52,7 @@ const COMMAND_CONFIG = {
   'access-summary': getCommandAliases(accessSummarySubcommand),
   checks: getCommandAliases(checksSubcommand),
   protection: getCommandAliases(protectionSubcommand),
+  update: getCommandAliases(updateSubcommand),
   rename: getCommandAliases(renameSubcommand),
   remove: getCommandAliases(removeSubcommand),
   token: getCommandAliases(tokenSubcommand),
@@ -209,6 +212,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandRename(subcommandOriginal);
       exitCode = await rename(client, args);
+      break;
+    case 'update':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(updateSubcommand);
+      }
+      telemetry.trackCliSubcommandUpdate(subcommandOriginal);
+      exitCode = await update(client, args);
       break;
     case 'remove':
       if (needHelp) {

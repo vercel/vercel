@@ -20,17 +20,17 @@ function lastPrinted(): string {
 }
 
 // Layout:
-//   "  " (2-char prefix, cols 0-1) + label padded to 12 (cols 2-13) + value (col 14+)
-// With a gutter, "  " becomes "${gutter} " — value column stays at 14.
-const VALUE_COL = 14;
+//   "  " (2-char prefix, cols 0-1) + label padded to 16 (cols 2-17) + value (col 18+)
+// With a gutter, "  " becomes "${gutter} " — value column stays at 18.
+const VALUE_COL = 18;
 
 describe('printAlignedLabel()', () => {
   beforeEach(() => {
     vi.mocked(output.print).mockClear();
   });
 
-  it('exports a 12-char aligned label width', () => {
-    expect(ALIGNED_LABEL_WIDTH).toBe(12);
+  it('exports a 16-char aligned label width', () => {
+    expect(ALIGNED_LABEL_WIDTH).toBe(16);
   });
 
   it('emits 2-space indent + bold padded label + bold value + trailing newline', () => {
@@ -38,37 +38,37 @@ describe('printAlignedLabel()', () => {
     const raw = lastPrinted();
     const plain = stripAnsi(raw);
 
-    expect(plain).toBe(`  Linked      acme/web\n`);
+    expect(plain).toBe(`  Linked          acme/web\n`);
     expect(raw.endsWith('\n')).toBe(true);
-    expect(raw.startsWith(`  ${chalk.bold('Linked      ')}`)).toBe(true);
+    expect(raw.startsWith(`  ${chalk.bold('Linked          ')}`)).toBe(true);
     expect(raw).toContain(chalk.bold('acme/web'));
   });
 
-  it('pads `Linked` (6 chars) with 6 spaces so value lands at col 14', () => {
+  it('pads `Linked` (6 chars) with 10 spaces so value lands at col 18', () => {
     printAlignedLabel('Linked', 'X');
     const plain = stripAnsi(lastPrinted());
-    expect(plain).toBe('  Linked      X\n');
+    expect(plain).toBe('  Linked          X\n');
     expect(plain.indexOf('X')).toBe(VALUE_COL);
   });
 
-  it('pads `Inspect` (7 chars) with 5 spaces so value lands at col 14', () => {
+  it('pads `Inspect` (7 chars) with 9 spaces so value lands at col 18', () => {
     printAlignedLabel('Inspect', 'X');
     const plain = stripAnsi(lastPrinted());
-    expect(plain).toBe('  Inspect     X\n');
+    expect(plain).toBe('  Inspect         X\n');
     expect(plain.indexOf('X')).toBe(VALUE_COL);
   });
 
-  it('pads `Production` (10 chars) with 2 spaces so value lands at col 14', () => {
+  it('pads `Production` (10 chars) with 6 spaces so value lands at col 18', () => {
     printAlignedLabel('Production', 'X');
     const plain = stripAnsi(lastPrinted());
-    expect(plain).toBe('  Production  X\n');
+    expect(plain).toBe('  Production      X\n');
     expect(plain.indexOf('X')).toBe(VALUE_COL);
   });
 
-  it('pads `Preview` (7 chars) with 5 spaces so value lands at col 14', () => {
+  it('pads `Preview` (7 chars) with 9 spaces so value lands at col 18', () => {
     printAlignedLabel('Preview', 'X');
     const plain = stripAnsi(lastPrinted());
-    expect(plain).toBe('  Preview     X\n');
+    expect(plain).toBe('  Preview         X\n');
     expect(plain.indexOf('X')).toBe(VALUE_COL);
   });
 
@@ -84,10 +84,17 @@ describe('printAlignedLabel()', () => {
   });
 
   describe('gutter option', () => {
-    it('renders `▲ Production  <value>` when gutter is set', () => {
+    it('renders `▲ Production      <value>` when gutter is set', () => {
       printAlignedLabel('Production', 'https://example.com', { gutter: '▲' });
       const plain = stripAnsi(lastPrinted());
-      expect(plain).toBe('▲ Production  https://example.com\n');
+      expect(plain).toBe('▲ Production      https://example.com\n');
+    });
+
+    it('renders `✓ Added           <value>` for completed action rows', () => {
+      printAlignedLabel('Added', 'API_TOKEN', { gutter: '✓' });
+      const plain = stripAnsi(lastPrinted());
+      expect(plain).toBe('✓ Added           API_TOKEN\n');
+      expect(plain.indexOf('API_TOKEN')).toBe(VALUE_COL);
     });
 
     it('keeps value column aligned with the non-gutter case', () => {
@@ -99,7 +106,7 @@ describe('printAlignedLabel()', () => {
       printAlignedLabel('Production', 'VALUE', { gutter: '▲' });
       const plainGutter = stripAnsi(lastPrinted());
 
-      // Both should land 'VALUE' at col 14 (2-char prefix + 12-char label)
+      // Both should land 'VALUE' at col 18 (2-char prefix + 16-char label)
       expect(plainNoGutter.indexOf('VALUE')).toBe(VALUE_COL);
       expect(plainGutter.indexOf('VALUE')).toBe(VALUE_COL);
     });

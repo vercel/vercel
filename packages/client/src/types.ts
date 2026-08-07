@@ -1,4 +1,3 @@
-import type { Agent } from 'http';
 import type {
   Builder,
   BuilderFunctions,
@@ -8,17 +7,51 @@ import type {
   ExperimentalServices,
   ExperimentalServiceGroups,
   ExperimentalServicesV2,
+  Services,
 } from '@vercel/build-utils';
 import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
 
 export { DeploymentEventType } from './utils';
 
+/**
+ * Minimal interface of an undici `Dispatcher` (e.g. `undici.ProxyAgent`),
+ * passed to `fetch` as the non-standard `dispatcher` init option to customize
+ * connection handling, such as routing requests through an HTTP(S) proxy.
+ */
+export interface FetchDispatcher {
+  dispatch(options: unknown, handler: unknown): boolean;
+}
+
 export interface Dictionary<T> {
   [key: string]: T;
 }
 
+export interface ProxyConfig {
+  entrypoint: string;
+  matcher?: string | string[];
+}
+
 export const VALID_ARCHIVE_FORMATS = ['tgz'] as const;
 export type ArchiveFormat = (typeof VALID_ARCHIVE_FORMATS)[number];
+
+export interface DeploymentAliasError {
+  code: string;
+  message: string;
+}
+
+export interface DeploymentAliasWarning extends DeploymentAliasError {
+  link?: string;
+  action?: string;
+}
+
+export interface DeploymentAliasAssignedEvent {
+  type: 'alias-assigned';
+  deploymentId: string;
+  date: number;
+  alias: string[];
+  aliasError: DeploymentAliasError | null;
+  aliasWarning: DeploymentAliasWarning | null;
+}
 
 export interface VercelClientOptions {
   token: string;
@@ -36,7 +69,7 @@ export interface VercelClientOptions {
   isDirectory?: boolean;
   skipAutoDetectionConfirmation?: boolean;
   archive?: ArchiveFormat;
-  agent?: Agent;
+  dispatcher?: FetchDispatcher;
   projectName?: string;
   /**
    * Path to a file containing bulk redirects (relative to the project root).
@@ -48,6 +81,11 @@ export interface VercelClientOptions {
    * that the user later continues the deployment with an API call.
    */
   manual?: boolean;
+  /**
+   * Aborted with a `DeploymentAliasAssignedEvent` when an existing deployment
+   * event stream observes alias assignment.
+   */
+  aliasAssignedSignal?: AbortSignal;
 }
 
 /** @deprecated Use VercelClientOptions instead. */
@@ -105,8 +143,9 @@ export interface Deployment {
   };
   target: string;
   alias: string[];
-  aliasAssigned: boolean;
-  aliasError: string | null;
+  aliasAssigned: boolean | number | null;
+  aliasError: string | DeploymentAliasError | null;
+  aliasWarning?: DeploymentAliasWarning | null;
   checks?: Record<
     string,
     {
@@ -157,7 +196,6 @@ export interface VercelConfig {
   name?: string;
   meta?: string[];
   version?: number;
-  public?: boolean;
   env?: Dictionary<string>;
   build?: {
     env?: Dictionary<string>;
@@ -185,6 +223,7 @@ export interface VercelConfig {
   images?: Images;
   crons?: Cron[];
   bunVersion?: string;
+  proxy?: ProxyConfig;
   /**
    * Path to a file containing bulk redirects (relative to the project root).
    * This file will be included in prebuilt deployments.
@@ -199,7 +238,11 @@ export interface VercelConfig {
    */
   experimentalServiceGroups?: ExperimentalServiceGroups;
   /**
-   * @experimental This feature is experimental and may change.
+   * Configures multiple services in this project.
+   */
+  services?: Services;
+  /**
+   * @deprecated Use `services` instead.
    */
   experimentalServicesV2?: ExperimentalServicesV2;
 }
@@ -211,6 +254,11 @@ export interface GitMetadata {
   commitSha?: string | undefined;
   dirty?: boolean | undefined;
   remoteUrl?: string;
+  /**
+   * Path of the deployed directory relative to the detected git repository
+   * root. Empty string when deploying from the repository root.
+   */
+  rootDirectory?: string;
 }
 
 /**
@@ -234,7 +282,6 @@ export interface DeploymentOptions {
   source?: string;
   target?: string;
   name?: string;
-  public?: boolean;
   meta?: Dictionary<string>;
   projectSettings?: ProjectSettings;
   gitMetadata?: GitMetadata;

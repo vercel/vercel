@@ -64,6 +64,7 @@ export interface LambdaOptionsBase {
   architecture?: LambdaArchitecture;
   memory?: number;
   maxDuration?: MaxDuration;
+  maxConcurrency?: number;
   environment?: Env;
   allowQuery?: string[];
   regions?: string[];
@@ -122,7 +123,7 @@ export interface LambdaOptionsWithZipBuffer extends LambdaOptionsBase {
 
 interface GetLambdaOptionsFromFunctionOptions {
   sourceFile: string;
-  config?: Pick<Config, 'functions'>;
+  config?: Pick<Config, 'functions' | 'serviceName'>;
 }
 
 function getDefaultLambdaArchitecture(
@@ -162,6 +163,8 @@ export class Lambda {
   architecture: LambdaArchitecture;
   memory?: number;
   maxDuration?: MaxDuration;
+  /** Maximum number of requests that one function instance can process concurrently. */
+  maxConcurrency?: number;
   environment: Env;
   allowQuery?: string[];
   regions?: string[];
@@ -208,6 +211,7 @@ export class Lambda {
       runtime,
       runtimeLanguage,
       maxDuration,
+      maxConcurrency,
       architecture,
       memory,
       environment = {},
@@ -266,6 +270,13 @@ export class Lambda {
       assert(
         typeof maxDuration === 'number' || maxDuration === 'max',
         '"maxDuration" is not a number or "max"'
+      );
+    }
+
+    if (maxConcurrency !== undefined) {
+      assert(
+        Number.isInteger(maxConcurrency) && maxConcurrency >= 1,
+        '"maxConcurrency" must be an integer greater than or equal to 1'
       );
     }
 
@@ -427,6 +438,7 @@ export class Lambda {
     this.architecture = getDefaultLambdaArchitecture(architecture);
     this.memory = memory;
     this.maxDuration = maxDuration;
+    this.maxConcurrency = maxConcurrency;
     this.environment = environment;
     this.allowQuery = allowQuery;
     this.regions = regions;
@@ -534,6 +546,7 @@ export async function getLambdaOptionsFromFunction({
     | 'architecture'
     | 'memory'
     | 'maxDuration'
+    | 'maxConcurrency'
     | 'regions'
     | 'functionFailoverRegions'
     | 'experimentalTriggers'
@@ -541,15 +554,24 @@ export async function getLambdaOptionsFromFunction({
   >
 > {
   if (config?.functions) {
+    // `pattern` is service-root-relative, so two services sharing a function
+    // path would derive the same consumer; scope it by service name.
+    const serviceName =
+      typeof config.serviceName === 'string' && config.serviceName !== ''
+        ? config.serviceName
+        : undefined;
     for (const [pattern, fn] of Object.entries(config.functions)) {
       if (sourceFile === pattern || minimatch(sourceFile, pattern)) {
+        const consumer = sanitizeConsumerName(
+          serviceName ? `${serviceName}~${pattern}` : pattern
+        );
         const experimentalTriggers: TriggerEvent[] | undefined =
           fn.experimentalTriggers?.map(
             (trigger: TriggerEventInput): TriggerEvent => {
               if (trigger.type === 'queue/v2beta') {
                 return {
                   ...trigger,
-                  consumer: sanitizeConsumerName(pattern),
+                  consumer,
                 };
               }
               return trigger;
@@ -572,6 +594,7 @@ export async function getLambdaOptionsFromFunction({
           architecture: fn.architecture,
           memory: fn.memory,
           maxDuration: fn.maxDuration,
+          maxConcurrency: fn.maxConcurrency,
           regions: fn.regions,
           functionFailoverRegions: fn.functionFailoverRegions,
           experimentalTriggers,

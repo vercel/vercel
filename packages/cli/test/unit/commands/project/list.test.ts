@@ -71,7 +71,7 @@ describe('list', () => {
         ...defaultProject,
       });
 
-      client.setArgv('project', 'ls', '--next', '1');
+      client.setArgv('project', 'ls', '--next', '1', '--limit', '5');
       await projects(client);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -81,6 +81,10 @@ describe('list', () => {
         },
         {
           key: `option:next`,
+          value: '[REDACTED]',
+        },
+        {
+          key: `option:limit`,
           value: '[REDACTED]',
         },
       ]);

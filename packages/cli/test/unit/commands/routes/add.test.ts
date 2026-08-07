@@ -2276,8 +2276,8 @@ describe('routes add', () => {
       // Should see the edit menu with pre-populated values
       await expect(client.stderr).toOutput('What would you like to edit?');
 
-      // Navigate to "Done - save changes" — last option (9th)
-      for (let i = 0; i < 8; i++) {
+      // Navigate to "Done - save changes" — last option (10th)
+      for (let i = 0; i < 9; i++) {
         client.stdin.write('\x1B[B');
       }
       client.stdin.write('\n');

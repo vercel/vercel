@@ -134,13 +134,30 @@ export type TransformType =
   | 'request.query'
   | 'response.headers';
 
-export interface Transform {
+export interface TargetTransform {
   type: TransformType;
   op: TransformOp;
-  target: { key: string };
+  target: { key: string | Record<string, unknown> };
   args?: string | string[];
   /** Environment variables referenced in args. The proxy only expands listed vars. */
   env?: string[];
+}
+
+export interface PathTransform {
+  type: 'request.path';
+  op: 'set';
+  /** Uses `:param` for path-to-regexp routes and `$1`/`$name` for regex routes. */
+  args: string;
+  /** Environment variables referenced in args. The proxy only expands listed vars. */
+  env?: string[];
+}
+
+export type Transform = TargetTransform | PathTransform;
+
+export function isTargetTransform(
+  transform: Transform
+): transform is TargetTransform {
+  return 'target' in transform;
 }
 
 /**
@@ -162,13 +179,7 @@ export interface EditableRoute {
     headers?: Record<string, string>;
     has?: Array<{ type: string; key?: string; value?: unknown }>;
     missing?: Array<{ type: string; key?: string; value?: unknown }>;
-    transforms?: Array<{
-      type: string;
-      op: string;
-      target: { key: string | Record<string, unknown> };
-      args?: string | string[];
-      env?: string[];
-    }>;
+    transforms?: Transform[];
     env?: string[];
   };
 }

@@ -15,6 +15,8 @@ import type {
   ServiceRuntime,
   ExperimentalServices,
   ExperimentalServicesV2,
+  InferredServicesConfig,
+  Services,
   ServiceDetectionError,
   ServiceDetectionWarning,
   ResolvedService,
@@ -39,6 +41,20 @@ export {
   getInternalServiceCronPathPrefix,
   getInternalServiceCronPath,
 };
+
+/**
+ * Removes a trailing slash from an already-`posixPath.normalize`d path.
+ *
+ * `posixPath.normalize` preserves trailing slashes (`"frontend/"` stays
+ * `"frontend/"`), which double-prefixes builder paths when the value is later
+ * used as both `builder.config.workspace` and a `posixPath.join` prefix. Strip
+ * it so `"frontend/"` and `"frontend"` resolve identically. An empty result or
+ * a lone `"/"` collapses to `"."` (matching `normalizeServiceEntrypoint`).
+ */
+export function stripTrailingSlash(p: string): string {
+  const stripped = p.replace(/\/+$/, '');
+  return stripped === '' ? '.' : stripped;
+}
 
 export async function hasFile(
   fs: DetectorFilesystem,
@@ -142,6 +158,24 @@ export function isFrontendFramework(
   return !inferRuntimeFromFramework(framework);
 }
 
+/**
+ * BFF (Backend-for-Frontend) frameworks have their own server-side API routes
+ * (e.g. Next.js `/api/*`, Nuxt `/api/*`). Backend services mounted alongside
+ * a BFF frontend need a namespaced prefix like `/api/{name}` to avoid
+ * shadowing the frontend's API routes.
+ */
+const BFF_FRAMEWORKS = new Set([
+  'nextjs',
+  'nuxtjs',
+  'sveltekit',
+  'remix',
+  'solidstart',
+]);
+
+export function isBFFFramework(framework: string | null | undefined): boolean {
+  return !!framework && BFF_FRAMEWORKS.has(framework);
+}
+
 export function filterFrameworksByRuntime<T extends { slug?: string | null }>(
   frameworks: readonly T[],
   runtime?: ServiceRuntime
@@ -194,6 +228,15 @@ export function inferServiceRuntime(config: {
 
   // Infer from entrypoint extension
   if (config.entrypoint) {
+    // "pyproject.toml" is the declared-services entrypoint for Python: the
+    // service builds exactly what `[tool.vercel]` in that file declares
+    // (web entrypoint and/or subscribers), with no auto-detection.
+    if (
+      config.entrypoint === 'pyproject.toml' ||
+      config.entrypoint.endsWith('/pyproject.toml')
+    ) {
+      return 'python';
+    }
     for (const [ext, runtime] of Object.entries(ENTRYPOINT_EXTENSIONS)) {
       if (config.entrypoint.endsWith(ext)) {
         return runtime;
@@ -207,6 +250,7 @@ export function inferServiceRuntime(config: {
 export interface ReadVercelConfigResult {
   config: {
     experimentalServices?: ExperimentalServices;
+    services?: Services;
     experimentalServicesV2?: ExperimentalServicesV2;
   } | null;
   error: ServiceDetectionError | null;
@@ -237,9 +281,7 @@ export async function readVercelConfig(
     }
   }
 
-  const hasVercelToml =
-    process.env.VERCEL_TOML_CONFIG_ENABLED === '1' &&
-    (await fs.hasPath('vercel.toml'));
+  const hasVercelToml = await fs.hasPath('vercel.toml');
   if (hasVercelToml) {
     try {
       const { parse: tomlParse } = await import('smol-toml');
@@ -262,22 +304,27 @@ export async function readVercelConfig(
 }
 
 /**
- * Assign route prefixes to inferred services.
+ * Assign mount paths to inferred services.
  *
- * A frontend service gets `/`, the rest get `/_/{name}`.
- * A single non-frontend service would also get `/`.
- * If no frontend service found, then multiple services get `/_/{name}`.
+ * A frontend service gets `/`, backend services get `/api/...`:
+ * - If the frontend is a BFF (e.g. Next.js, has its own API routes):
+ *   backends get `/api/{name}/(.*)` to avoid shadowing the frontend's API routes.
+ * - If the frontend is client-only (e.g. Vite):
+ *   backends get `/api/(.*)`.
+ *
+ * A single non-frontend service gets `/`.
+ * If no frontend service found, multiple services get `/api/{name}`.
  *
  * Priority for `/`: single service or frontend > name "frontend" or "web" > alphabetical.
  */
-export function assignRoutePrefixes(
-  services: ExperimentalServices
+export function assignMountPaths(
+  services: InferredServicesConfig
 ): ServiceDetectionWarning[] {
   const warnings: ServiceDetectionWarning[] = [];
   const names = Object.keys(services);
 
   if (names.length === 1) {
-    services[names[0]].routePrefix = '/';
+    services[names[0]].mountPath = '/';
     return warnings;
   }
 
@@ -294,12 +341,28 @@ export function assignRoutePrefixes(
       frontendNames.sort()[0];
     warnings.push({
       code: 'MULTIPLE_FRONTENDS',
-      message: `Multiple frontend services detected (${frontendNames.join(', ')}). "${rootName}" was assigned routePrefix "/". Adjust manually if a different service should be the root.`,
+      message: `Multiple frontend services detected (${frontendNames.join(', ')}). "${rootName}" was assigned mount path "/". Adjust manually if a different service should be the root.`,
     });
   }
 
+  // BFF frontends (e.g. Next.js) have their own /api routes, so backend
+  // services need a namespaced prefix to avoid conflicts.
+  const rootFramework = rootName ? services[rootName].framework : undefined;
+  const isBFF = rootFramework ? isBFFFramework(rootFramework) : false;
+
+  // Count non-root services to determine if namespacing is needed.
+  const nonRootNames = names.filter(n => n !== rootName);
+  // For client-only frontends with exactly one non-root service, use /api
+  // directly. For BFF frontends or multiple non-root services, namespace
+  // by service name to avoid mount path conflicts.
+  const needsNamespace = isBFF || nonRootNames.length > 1;
+
   for (const name of names) {
-    services[name].routePrefix = name === rootName ? '/' : `/_/${name}`;
+    if (name === rootName) {
+      services[name].mountPath = '/';
+    } else {
+      services[name].mountPath = needsNamespace ? `/api/${name}` : '/api';
+    }
   }
 
   return warnings;

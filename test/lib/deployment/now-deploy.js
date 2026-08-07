@@ -63,7 +63,6 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
 
   const nowDeployPayload = {
     version: 2,
-    public: true,
     name: projectName,
     files,
     meta: {},

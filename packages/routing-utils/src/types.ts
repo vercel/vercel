@@ -39,7 +39,7 @@ export type HasField = Array<
     }
 >;
 
-type Transform = {
+export type HeaderQueryTransform = {
   type: 'request.headers' | 'request.query' | 'response.headers';
   op: 'append' | 'set' | 'delete';
   target: {
@@ -63,8 +63,21 @@ type Transform = {
   env?: string[];
 };
 
+export type PathTransform = {
+  type: 'request.path';
+  op: 'set';
+  args: string;
+  env?: string[];
+};
+
+export type Transform = HeaderQueryTransform | PathTransform;
+
 export type ServiceDestination = {
-  type: 'service';
+  /**
+   * Optional explicit format marker. The destination is identified by the
+   * presence of `service`, so `type` is no longer required.
+   */
+  type?: 'service';
   service: string;
   /** Routing-only path used to select a route inside the target service. */
   path?: string;
@@ -167,6 +180,7 @@ export interface Build {
 export interface Rewrite {
   source: string;
   destination: string | ServiceDestination;
+  transforms?: PathTransform[];
   has?: HasField;
   missing?: HasField;
   statusCode?: number;

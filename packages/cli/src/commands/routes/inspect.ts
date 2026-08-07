@@ -1,37 +1,37 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { inspectSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   formatCondition,
   formatTransform,
   TRANSFORM_TYPE_LABELS,
+  withGlobalFlags,
 } from './shared';
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import stamp from '../../util/output/stamp';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import {
   getRouteTypeLabel,
   getSrcSyntaxLabel,
+  isTargetTransform,
   type RoutingRule,
+  type Transform,
 } from '../../util/routes/types';
-
-function withGlobalFlags(client: Client, commandTemplate: string): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
-}
 
 export default async function inspect(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, inspectSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -66,7 +66,7 @@ export default async function inspect(client: Client, argv: string[]) {
       return 1;
     }
     output.error(
-      `Missing route name or ID. Usage: ${chalk.cyan(getCommandName('routes inspect <name-or-id>'))}`
+      `Missing route name or ID. Usage: ${chalk.cyan(withGlobalFlags(client, 'routes inspect <name-or-id>'))}`
     );
     return 1;
   }
@@ -113,7 +113,7 @@ export default async function inspect(client: Client, argv: string[]) {
     }
     output.error(
       `No route found matching "${identifier}". Run ${chalk.cyan(
-        getCommandName('routes list')
+        withGlobalFlags(client, 'routes list')
       )} to see all routes.`
     );
     return 1;
@@ -473,15 +473,12 @@ function normalizeForComparison(rule: RoutingRule) {
   };
 }
 
-function transformKey(t: {
-  type: string;
-  op: string;
-  target: { key: unknown };
-}): string {
-  const key =
-    typeof t.target.key === 'string'
+function transformKey(t: Transform): string {
+  const key = isTargetTransform(t)
+    ? typeof t.target.key === 'string'
       ? t.target.key
-      : JSON.stringify(t.target.key);
+      : JSON.stringify(t.target.key)
+    : stringifyArgs(t.args);
   return `${t.type}:${t.op}:${key}`;
 }
 
@@ -495,17 +492,13 @@ function stringifyArgs(args: unknown): string {
 /**
  * Plain-text format for a transform (no chalk colors, for use with strikethrough).
  */
-function formatTransformPlain(transform: {
-  type: string;
-  op: string;
-  target: { key: string | Record<string, unknown> };
-  args?: string | string[];
-}): string {
+function formatTransformPlain(transform: Transform): string {
   const typeLabel = TRANSFORM_TYPE_LABELS[transform.type] ?? transform.type;
-  const key =
-    typeof transform.target.key === 'string'
+  const key = isTargetTransform(transform)
+    ? typeof transform.target.key === 'string'
       ? transform.target.key
-      : JSON.stringify(transform.target.key);
+      : JSON.stringify(transform.target.key)
+    : 'path';
   const parts = [`[${typeLabel}]`, transform.op, key];
   if (transform.args !== undefined && transform.op !== 'delete') {
     const argsStr = Array.isArray(transform.args)
@@ -593,12 +586,7 @@ function formatRouteDetails(rule: RoutingRule): string {
 
   // Group all header/transform operations by type
   const responseHeaderSets = Object.entries(rule.route.headers ?? {});
-  const allTransforms = (rule.route.transforms ?? []) as Array<{
-    type: string;
-    op: string;
-    target: { key: string | Record<string, unknown> };
-    args?: string | string[];
-  }>;
+  const allTransforms = (rule.route.transforms ?? []) as Transform[];
   const responseHeaderTransforms = allTransforms.filter(
     t => t.type === 'response.headers'
   );
@@ -607,6 +595,9 @@ function formatRouteDetails(rule: RoutingRule): string {
   );
   const requestQueryTransforms = allTransforms.filter(
     t => t.type === 'request.query'
+  );
+  const requestPathTransforms = allTransforms.filter(
+    t => t.type === 'request.path'
   );
 
   if (responseHeaderSets.length > 0 || responseHeaderTransforms.length > 0) {
@@ -632,6 +623,14 @@ function formatRouteDetails(rule: RoutingRule): string {
     lines.push('');
     lines.push(chalk.bold('  Request Query'));
     for (const t of requestQueryTransforms) {
+      lines.push(`  ${formatTransform(t, false)}`);
+    }
+  }
+
+  if (requestPathTransforms.length > 0) {
+    lines.push('');
+    lines.push(chalk.bold('  Request Path'));
+    for (const t of requestPathTransforms) {
       lines.push(`  ${formatTransform(t, false)}`);
     }
   }

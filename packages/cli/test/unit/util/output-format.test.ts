@@ -38,7 +38,7 @@ describe('output-format', () => {
       expect(getOutputFormat({ '--format': 'json' })).toBe('json');
     });
 
-    it('should return "json" when --json flag is set (backward compat)', () => {
+    it('should return "json" when --json flag is set', () => {
       expect(getOutputFormat({ '--json': true })).toBe('json');
     });
 
@@ -150,6 +150,7 @@ describe('output-format', () => {
       expect(formatOption.type).toBe(String);
       expect(formatOption.argument).toBe('FORMAT');
       expect(formatOption.deprecated).toBe(false);
+      expect(formatOption.description).toBe('Specify the output format (json)');
     });
   });
 
@@ -158,7 +159,8 @@ describe('output-format', () => {
       expect(jsonOption.name).toBe('json');
       expect(jsonOption.shorthand).toBeNull();
       expect(jsonOption.type).toBe(Boolean);
-      expect(jsonOption.deprecated).toBe(true);
+      expect(jsonOption.deprecated).toBe(false);
+      expect(jsonOption.description).toBe('Output as JSON');
     });
   });
 });

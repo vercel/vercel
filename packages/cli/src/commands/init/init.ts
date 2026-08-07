@@ -13,6 +13,7 @@ import didYouMean from '../../util/did-you-mean';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import type { InitTelemetryClient } from '../../util/telemetry/commands/init';
+import { toNodeReadable } from '../../util/fetch';
 
 type Options = {
   '--debug': boolean;
@@ -144,11 +145,17 @@ async function extractExample(
       }
 
       await new Promise((resolve, reject) => {
-        const extractor = tar.extract(folder);
-        res.body.on('error', reject);
+        const extractor = tar.extract(folder, {
+          // Drop symlink/hardlink entries: they're the tar link-following
+          // traversal vector (CVE-2024-12905 / CVE-2025-48387).
+          ignore: (_name, header) =>
+            header?.type !== 'file' && header?.type !== 'directory',
+        });
+        const body = toNodeReadable(res.body);
+        body.on('error', reject);
         extractor.on('error', reject);
         extractor.on('finish', resolve);
-        res.body.pipe(extractor);
+        body.pipe(extractor);
       });
 
       const successLog = `Initialized "${chalk.bold(

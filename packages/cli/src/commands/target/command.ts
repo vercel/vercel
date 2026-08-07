@@ -1,4 +1,9 @@
-import { formatOption, yesOption } from '../../util/arg-common';
+import {
+  formatOption,
+  jsonOption,
+  projectOption,
+  yesOption,
+} from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const listSubcommand = {
@@ -8,6 +13,8 @@ export const listSubcommand = {
   arguments: [],
   options: [
     formatOption,
+    jsonOption,
+    projectOption,
     {
       ...yesOption,
       description:

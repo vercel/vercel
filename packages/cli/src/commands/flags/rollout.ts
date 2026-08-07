@@ -4,7 +4,6 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { getFlag, getFlagSettings } from '../../util/flags/get-flags';
 import { updateFlag } from '../../util/flags/update-flag';
@@ -21,6 +20,7 @@ import {
 import output from '../../output-manager';
 import { FlagsRolloutTelemetryClient } from '../../util/telemetry/commands/flags/rollout';
 import { rolloutSubcommand } from './command';
+import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
 export default async function rollout(
   client: Client,
@@ -63,6 +63,7 @@ export default async function rollout(
   const message = normalizeOptionalInput(
     flags['--message'] as string | undefined
   );
+  const projectName = getProjectNameFromFlags(flags);
 
   if (!flagArg) {
     output.error('Please provide a flag slug or ID to roll out');
@@ -73,6 +74,7 @@ export default async function rollout(
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
+  telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliOptionEnvironment(environment);
   telemetryClient.trackCliOptionFromVariant(rollFromVariantSelector);
   telemetryClient.trackCliOptionToVariant(rollToVariantSelector);
@@ -84,12 +86,12 @@ export default async function rollout(
   telemetryClient.trackCliOptionStart(start);
   telemetryClient.trackCliOptionMessage(message);
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
+      `Your codebase isn't linked to a project on Vercel. Pass --project <name>, or run ${getCommandName('link')} to link it.`
     );
     return 1;
   }

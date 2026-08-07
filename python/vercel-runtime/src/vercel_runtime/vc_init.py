@@ -54,10 +54,12 @@ from vercel_runtime.routing import (
 )
 from vercel_runtime.utils import read_wsgi_request_body
 from vercel_runtime.workers import (
+    install_queue_integrations,
     is_worker_service,
     maybe_bootstrap_worker_service_app,
     prepare_worker_environment,
 )
+from vercel_runtime.wsgi_websocket import attach_wsgi_websocket
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -483,6 +485,9 @@ if _extra_path:
 
 try:
     prepare_worker_environment()
+    # Publish-side activation only: subscriber lambdas do the consuming-side
+    # activation themselves in their generated handler modules.
+    install_queue_integrations(queue_serving=False)
     __vc_module = import_module(_entrypoint_modname, _entrypoint_abs)
     __vc_variables = dir(__vc_module)
 except Exception:
@@ -547,12 +552,13 @@ class ASGIMiddleware:
         receive: _ASGIReceive,
         send: _ASGISend,
     ) -> None:
-        if scope.get("type") != "http":
-            # Non-HTTP traffic is forwarded verbatim
+        scope_type = scope.get("type")
+        if scope_type not in ("http", "websocket"):
+            # Non-HTTP/WebSocket traffic is forwarded verbatim
             await self.app(scope, receive, send)
             return
 
-        if scope.get("path") == "/_vercel/ping":
+        if scope_type == "http" and scope.get("path") == "/_vercel/ping":
             await send(
                 {
                     "type": "http.response.start",
@@ -645,9 +651,14 @@ class ASGIMiddleware:
         set_vercel_headers_from_asgi_pairs(new_headers)
         set_runtime_cache_from_asgi_pairs(sc_pairs)
 
-        try:
-            await self.app(new_scope, receive, send)
-        finally:
+        request_finished = False
+
+        def finish_request() -> None:
+            nonlocal request_finished
+            if request_finished:
+                return
+
+            request_finished = True
             clear_runtime_cache_context()
             clear_vercel_headers_context()
             storage.reset(token)
@@ -662,6 +673,34 @@ class ASGIMiddleware:
                     },
                 }
             )
+
+        async def send_wrapper(message: dict[str, Any]) -> None:
+            await send(message)
+
+            if scope_type != "websocket":
+                return
+
+            message_type = message.get("type")
+            if message_type == "websocket.accept":
+                # End the request lifecycle once the 101 is sent so the
+                # platform can begin bidirectional WebSocket streaming.
+                finish_request()
+                return
+
+            if message_type == "websocket.close":
+                finish_request()
+                return
+
+            if (
+                message_type == "websocket.http.response.body"
+                and not message.get("more_body")
+            ):
+                finish_request()
+
+        try:
+            await self.app(new_scope, receive, send_wrapper)
+        finally:
+            finish_request()
 
 
 if "VERCEL_IPC_PATH" in os.environ:
@@ -735,9 +774,39 @@ if "VERCEL_IPC_PATH" in os.environ:
                 f"{addr} - - [{ts}] {msg}\n",
             )
 
+        def _vc_fire_end_once(self) -> None:
+            # Send the IPC "end" message exactly once per request. For a
+            # WebSocket upgrade this is called as soon as the 101 handshake is
+            # written so the platform can begin bidirectional streaming, while
+            # the WSGI worker thread keeps driving the socket. For regular
+            # requests it is called once the response is fully sent.
+            if getattr(self, "_vc_end_sent", False):
+                return
+            self._vc_end_sent = True
+            clear_runtime_cache_context()
+            clear_vercel_headers_context()
+            token = getattr(self, "_vc_end_token", None)
+            if token is not None:
+                storage.reset(token)
+            send_message(
+                {
+                    "type": "end",
+                    "payload": {
+                        "context": {
+                            "invocationId": getattr(
+                                self, "_vc_invocation_id", "0"
+                            ),
+                            "requestId": getattr(self, "_vc_request_id", 0),
+                        }
+                    },
+                }
+            )
+
         # Re-implementation of handle_one_request to send
         # the end message after the response is fully sent.
         def handle_one_request(self) -> None:
+            self._vc_end_sent = False
+            self._vc_end_token = None
             self.raw_requestline = self.rfile.readline(65537)
             if not self.raw_requestline:
                 self.close_connection = True
@@ -763,6 +832,8 @@ if "VERCEL_IPC_PATH" in os.environ:
                 "0",
             )
             request_id = int(raw_request_id) if raw_request_id.isdigit() else 0
+            self._vc_invocation_id = invocation_id
+            self._vc_request_id = request_id
             del self.headers["x-vercel-internal-invocation-id"]
             del self.headers["x-vercel-internal-request-id"]
             del self.headers["x-vercel-internal-span-id"]
@@ -809,7 +880,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                 }
             )
 
-            token = storage.set(
+            self._vc_end_token = storage.set(
                 {
                     "invocationId": invocation_id,
                     "requestId": request_id,
@@ -820,20 +891,7 @@ if "VERCEL_IPC_PATH" in os.environ:
             try:
                 self.handle_request()  # type: ignore[attr-defined]
             finally:
-                clear_runtime_cache_context()
-                clear_vercel_headers_context()
-                storage.reset(token)
-                send_message(
-                    {
-                        "type": "end",
-                        "payload": {
-                            "context": {
-                                "invocationId": invocation_id,
-                                "requestId": request_id,
-                            }
-                        },
-                    }
-                )
+                self._vc_fire_end_once()
 
     try:
         app_name, app_obj = resolve_app(
@@ -933,6 +991,16 @@ if "VERCEL_IPC_PATH" in os.environ:
                         if k.lower() == "transfer-encoding":
                             continue
                         env["HTTP_" + k.replace("-", "_").upper()] = v
+
+                    if attach_wsgi_websocket(
+                        env,
+                        self.headers,
+                        self.connection,
+                        self._vc_fire_end_once,
+                    ):
+                        # The hijacked connection cannot be reused for further
+                        # requests once the upgrade completes.
+                        self.close_connection = True
 
                     def start_response(
                         status: str,

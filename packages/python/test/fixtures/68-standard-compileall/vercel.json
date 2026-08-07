@@ -1,0 +1,7 @@
+{
+  "build": {
+    "env": {
+      "VERCEL_PYTHON_COMPILEALL": "1"
+    }
+  }
+}

@@ -1,8 +1,12 @@
 import { join } from 'path';
 import fs from 'fs-extra';
 
-import type { Agent } from 'http';
-import type { ArchiveFormat, Deployment, DeploymentEventType } from './types';
+import type {
+  ArchiveFormat,
+  Deployment,
+  DeploymentEventType,
+  FetchDispatcher,
+} from './types';
 import { checkDeploymentStatus } from './check-deployment-status';
 import { fetchApi, buildFileTree, createDebug, prepareFiles } from './utils';
 import { hashes, mapToObject, FilesMap } from './utils/hashes';
@@ -17,7 +21,7 @@ import { createTgzFiles } from './utils/archive';
  * events early.
  */
 export async function* continueDeployment(options: {
-  agent?: Agent;
+  dispatcher?: FetchDispatcher;
   apiUrl?: string;
   debug?: boolean;
   deploymentId: string;
@@ -87,7 +91,7 @@ export async function* continueDeployment(options: {
     teamId: options.teamId,
     apiUrl: options.apiUrl,
     userAgent: options.userAgent,
-    agent: options.agent,
+    dispatcher: options.dispatcher,
     debug: options.debug,
   });
 
@@ -104,7 +108,7 @@ export async function* continueDeployment(options: {
     };
 
     for await (const event of uploadFiles({
-      agent: options.agent,
+      dispatcher: options.dispatcher,
       apiUrl: options.apiUrl,
       debug: options.debug,
       teamId: options.teamId,
@@ -131,7 +135,7 @@ export async function* continueDeployment(options: {
       teamId: options.teamId,
       apiUrl: options.apiUrl,
       userAgent: options.userAgent,
-      agent: options.agent,
+      dispatcher: options.dispatcher,
       debug: options.debug,
     });
 
@@ -172,7 +176,7 @@ export async function* continueDeployment(options: {
   }
 
   yield* checkDeploymentStatus(deployment, {
-    agent: options.agent,
+    dispatcher: options.dispatcher,
     apiUrl: options.apiUrl,
     debug: options.debug,
     path: options.path,
@@ -183,7 +187,7 @@ export async function* continueDeployment(options: {
 }
 
 async function postContinue(options: {
-  agent?: Agent;
+  dispatcher?: FetchDispatcher;
   apiUrl?: string;
   debug?: boolean;
   deploymentId: string;
@@ -221,7 +225,7 @@ async function postContinue(options: {
       }),
       apiUrl: options.apiUrl,
       userAgent: options.userAgent,
-      agent: options.agent,
+      dispatcher: options.dispatcher,
     }
   );
 

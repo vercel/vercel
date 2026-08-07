@@ -1,7 +1,0 @@
-.vercel
-
-node_modules
-.next
-
-backend/*.test
-backend/*.out

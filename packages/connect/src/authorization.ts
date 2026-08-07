@@ -1,4 +1,9 @@
 import { getVercelOidcToken } from '@vercel/oidc';
+import {
+  isDetachedInteractiveAuth,
+  validateCallbackUrl,
+  validateWebhookUrl,
+} from './internal/url-validation.js';
 import type { ConnectTokenParams } from './token.js';
 
 export interface ConnectAuthorizationOptions {
@@ -15,6 +20,29 @@ export interface ConnectAuthorizationResponse {
   url: string;
   deviceCode?: string;
   expiresAt?: number;
+  /**
+   * Connector (client) being authorized, matching the `connector`
+   * object on the Vercel Connect token response. Present once the
+   * Vercel API supports returning it.
+   */
+  connector?: {
+    /** Client id. */
+    id: string;
+    /** Client uid. */
+    uid: string;
+    /** Client type, eg. `oauth`, `salesforce`. */
+    type: string;
+    /** Resolved service id when known, eg. `salesforce`. */
+    service?: string;
+    /**
+     * Curated display name of the resolved service, eg. `Salesforce`,
+     * present when the service is known to Vercel Connect. Suited for
+     * end-user surfaces like "Sign in with {serviceName}".
+     */
+    serviceName?: string;
+    /** The connector's own (operator-given) name. */
+    name: string;
+  };
 }
 
 export async function startAuthorization(
@@ -25,7 +53,8 @@ export async function startAuthorization(
   if (!connector) {
     throw new Error('connector is required');
   }
-  if (options?.callbackUrl !== undefined) {
+  const detachedInteractiveAuth = isDetachedInteractiveAuth();
+  if (!detachedInteractiveAuth && options?.callbackUrl !== undefined) {
     validateCallbackUrl(options.callbackUrl);
   }
   if (options?.webhook !== undefined) {
@@ -34,15 +63,19 @@ export async function startAuthorization(
 
   const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
   const endpoint = `https://api.vercel.com/v1/connect/authorize/${encodeURIComponent(connector)}`;
+  const deviceCode =
+    options?.deviceCode ?? (detachedInteractiveAuth ? true : undefined);
+  const returnUrl =
+    !detachedInteractiveAuth && options?.callbackUrl !== undefined
+      ? { returnUrl: options.callbackUrl }
+      : {};
 
   const body = {
     ...params,
-    ...(options?.callbackUrl !== undefined && {
-      returnUrl: options.callbackUrl,
-    }),
+    ...returnUrl,
     ...(options?.webhook !== undefined && { webhook: options.webhook }),
-    ...(options?.deviceCode !== undefined && {
-      deviceCode: options.deviceCode,
+    ...(deviceCode !== undefined && {
+      deviceCode,
     }),
     ...(options?.expiresInMs !== undefined && {
       expiresInMs: options.expiresInMs,
@@ -71,35 +104,4 @@ export async function startAuthorization(
 
   const data: ConnectAuthorizationResponse = await response.json();
   return data;
-}
-
-function validateCallbackUrl(value: string): void {
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new Error(`Invalid callbackUrl: ${value}`);
-  }
-  if (url.protocol === 'https:') return;
-  if (
-    url.protocol === 'http:' &&
-    (url.hostname === 'localhost' || url.hostname === '127.0.0.1')
-  ) {
-    return;
-  }
-  throw new Error(
-    `callbackUrl must be https:// or http://localhost, got: ${value}`
-  );
-}
-
-function validateWebhookUrl(value: string): void {
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new Error(`Invalid webhook URL: ${value}`);
-  }
-  if (url.protocol !== 'https:') {
-    throw new Error(`webhook must be https://, got: ${value}`);
-  }
 }

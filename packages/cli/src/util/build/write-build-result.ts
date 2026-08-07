@@ -26,6 +26,7 @@ import {
   download,
   downloadFile,
   type EdgeFunction,
+  type ContainerImage,
   type BuildResultBuildOutput,
   getLambdaOptionsFromFunction,
   normalizePath,
@@ -35,7 +36,8 @@ import {
   type ExperimentalService,
   type Service,
   isExperimentalService,
-  isExternalSymlink,
+  isExperimentalServiceV2,
+  isSymbolicLink,
 } from '@vercel/build-utils';
 import { getInternalServiceFunctionPath } from '@vercel/fs-detectors';
 import pipe from 'promisepipe';
@@ -65,6 +67,7 @@ interface FunctionConfiguration {
   architecture?: string;
   memory?: number;
   maxDuration?: number | 'max';
+  maxConcurrency?: number;
   regions?: Lambda['regions'];
   functionFailoverRegions?: Lambda['functionFailoverRegions'];
   experimentalTriggers?: TriggerEvent[];
@@ -150,6 +153,17 @@ function isEdgeFunction(v: any): v is EdgeFunction {
   return v?.type === 'EdgeFunction';
 }
 
+function isContainerImage(value: unknown): value is ContainerImage {
+  // Container image outputs use `runtime: 'container'`. Detect by runtime so
+  // they are handled before the generic Lambda path.
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'runtime' in value &&
+    value.runtime === 'container'
+  );
+}
+
 export function isLambda(v: any): v is Lambda {
   return v?.type === 'Lambda';
 }
@@ -169,26 +183,28 @@ export interface PathOverride {
 }
 
 function injectServiceEnvVars(
-  lambda: Lambda,
+  fn: { environment?: Record<string, string | undefined>; config?: any },
   service?: ExperimentalService,
   stripServiceRoutePrefix: boolean = false
 ): void {
+  const target = fn.config ?? fn;
+  target.environment ??= {};
   if (service?.name) {
     // Exposes the owning service so the API can resolve per-service envVars
     // at deploy time.
-    lambda.environment.VERCEL_SERVICE_NAME = service.name;
+    target.environment.VERCEL_SERVICE_NAME = service.name;
   }
   if (service?.type) {
-    lambda.environment.VERCEL_SERVICE_TYPE = service.type;
+    target.environment.VERCEL_SERVICE_TYPE = service.type;
   }
   if (service?.trigger) {
-    lambda.environment.VERCEL_SERVICE_TRIGGER = service.trigger;
+    target.environment.VERCEL_SERVICE_TRIGGER = service.trigger;
   }
   if (service?.routePrefix && service.routePrefix !== '/') {
-    lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
+    target.environment.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
   }
   if (stripServiceRoutePrefix) {
-    lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
+    target.environment.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
   }
 }
 
@@ -197,6 +213,40 @@ function injectServiceEnvVars(
  */
 function stripDuplicateSlashes(path: string): string {
   return normalize(path).replace(/(^\/|\/$)/g, '');
+}
+
+async function resolveFunctionConfiguration(
+  src: string,
+  vercelConfig: VercelConfig | null,
+  service?: Service
+): Promise<FunctionConfiguration> {
+  if (service && isExperimentalServiceV2(service) && service.functions) {
+    // `functions` keys are service-root-relative but `build.src` is
+    // project-relative; strip the root so patterns match.
+    let sourceFile = src;
+    const serviceRoot = stripDuplicateSlashes(service.root);
+    if (serviceRoot && serviceRoot !== '.') {
+      const prefix = `${serviceRoot}/`;
+      if (sourceFile.startsWith(prefix)) {
+        sourceFile = sourceFile.slice(prefix.length);
+      }
+    }
+    return getLambdaOptionsFromFunction({
+      sourceFile,
+      config: {
+        ...vercelConfig,
+        functions: service.functions,
+        serviceName: service.name,
+      },
+    });
+  }
+  if (vercelConfig) {
+    return getLambdaOptionsFromFunction({
+      sourceFile: src,
+      config: vercelConfig,
+    });
+  }
+  return {};
 }
 
 function getServiceOutputDir(outputDir: string, service: Service): string {
@@ -263,10 +313,25 @@ async function writeBuildResultV2(args: {
 
   const existingFunctions = new Map<Lambda | EdgeFunction, string>();
   const overrides: Record<string, PathOverride> = {};
+  const functionConfiguration = build.src
+    ? await resolveFunctionConfiguration(build.src, vercelConfig, service)
+    : {};
 
   for (const [path, output] of Object.entries(buildResult.output)) {
     const normalizedPath = stripDuplicateSlashes(path);
-    if (isLambda(output)) {
+    if (isContainerImage(output)) {
+      injectServiceEnvVars(
+        output,
+        service && isExperimentalService(service) ? service : undefined,
+        stripServiceRoutePrefix
+      );
+      await writeContainerImage(
+        outputDir,
+        output,
+        normalizedPath,
+        functionConfiguration
+      );
+    } else if (isLambda(output)) {
       injectServiceEnvVars(
         output,
         service && isExperimentalService(service) ? service : undefined,
@@ -465,23 +530,34 @@ async function writeBuildResultV3(args: {
     throw new Error(`Expected "build.src" to be a string`);
   }
 
-  const functionConfiguration = vercelConfig
-    ? await getLambdaOptionsFromFunction({
-        sourceFile: src,
-        config: vercelConfig,
-      })
-    : {};
+  const functionConfiguration = await resolveFunctionConfiguration(
+    src,
+    vercelConfig,
+    service
+  );
 
   const ext = extname(src);
+  // V2 services are already isolated under `services/<name>`, so scalar
+  // runtime outputs can use the natural `index` path. V1 services still share
+  // one output directory and require their internal namespace.
   const path =
-    service && typeof service.runtime === 'string'
-      ? stripDuplicateSlashes(getInternalServiceFunctionPath(service.name))
-      : stripDuplicateSlashes(
-          build.config?.zeroConfig
-            ? src.substring(0, src.length - ext.length)
-            : src
-        );
-  if (isLambda(output)) {
+    service && isExperimentalServiceV2(service)
+      ? 'index'
+      : service && typeof service.runtime === 'string'
+        ? stripDuplicateSlashes(getInternalServiceFunctionPath(service.name))
+        : stripDuplicateSlashes(
+            build.config?.zeroConfig
+              ? src.substring(0, src.length - ext.length)
+              : src
+          );
+  if (isContainerImage(output)) {
+    injectServiceEnvVars(
+      output,
+      service && isExperimentalService(service) ? service : undefined,
+      stripServiceRoutePrefix
+    );
+    await writeContainerImage(outputDir, output, path, functionConfiguration);
+  } else if (isLambda(output)) {
     injectServiceEnvVars(
       output,
       service && isExperimentalService(service) ? service : undefined,
@@ -611,13 +687,66 @@ async function writeFunctionSymlink(
 }
 
 /**
- * Serializes the `EdgeFunction` instance to the file system.
- *
- * @param outputPath The path of the `.vercel/output` directory
- * @param edgeFunction The `EdgeFunction` instance
- * @param path The URL path where the `EdgeFunction` can be accessed from
- * @param existingFunctions (optional) Map of `Lambda`/`EdgeFunction` instances that have previously been written
+ * Serializes a container image output (`runtime: 'container'`) to the file
+ * system as a `.func` directory with a `.vc-config.json`.
  */
+async function writeContainerImage(
+  outputDir: string,
+  containerImage: ContainerImage,
+  path: string,
+  functionConfiguration?: FunctionConfiguration
+) {
+  const dest = join(outputDir, 'functions', `${path}.func`);
+  // For `runtime: 'container'` the OCI image reference is carried in `handler`;
+  // the platform uses it as the container image reference.
+  const handler = containerImage.handler;
+  if (typeof handler !== 'string' || handler.length === 0) {
+    throw new Error(
+      `Container image output for "${path}" is missing "handler".`
+    );
+  }
+
+  const architecture =
+    functionConfiguration?.architecture ?? containerImage.architecture;
+  const memory = functionConfiguration?.memory ?? containerImage.memory;
+  const maxDuration =
+    functionConfiguration?.maxDuration ?? containerImage.maxDuration;
+  const maxConcurrency =
+    functionConfiguration?.maxConcurrency ?? containerImage.maxConcurrency;
+  const regions = functionConfiguration?.regions ?? containerImage.regions;
+  const functionFailoverRegions =
+    functionConfiguration?.functionFailoverRegions ??
+    containerImage.functionFailoverRegions;
+  const experimentalTriggers =
+    functionConfiguration?.experimentalTriggers ??
+    containerImage.experimentalTriggers;
+  const supportsCancellation =
+    functionConfiguration?.supportsCancellation ??
+    containerImage.supportsCancellation;
+
+  await fs.mkdirp(dest);
+  await fs.writeJSON(
+    join(dest, '.vc-config.json'),
+    {
+      handler,
+      runtime: 'container',
+      environment: containerImage.environment ?? {},
+      ...(containerImage.command ? { command: containerImage.command } : {}),
+      ...(architecture !== undefined ? { architecture } : {}),
+      ...(memory !== undefined ? { memory } : {}),
+      ...(maxDuration !== undefined ? { maxDuration } : {}),
+      ...(maxConcurrency !== undefined ? { maxConcurrency } : {}),
+      ...(regions !== undefined ? { regions } : {}),
+      ...(functionFailoverRegions !== undefined
+        ? { functionFailoverRegions }
+        : {}),
+      ...(experimentalTriggers !== undefined ? { experimentalTriggers } : {}),
+      ...(supportsCancellation !== undefined ? { supportsCancellation } : {}),
+    },
+    { spaces: 2 }
+  );
+}
+
 async function writeEdgeFunction(
   repoRootPath: string,
   outputDir: string,
@@ -644,17 +773,12 @@ async function writeEdgeFunction(
 
   await fs.mkdirp(dest);
   const ops: Promise<any>[] = [];
-  const sharedDest = join(outputDir, 'shared');
-  const { files, filePathMap, shared } = filesWithoutFsRefs(
+  const { files, filePathMap } = filesWithoutFsRefs(
     edgeFunction.files,
     repoRootPath,
-    sharedDest,
     standalone
   );
   ops.push(download(files, dest));
-  if (shared) {
-    ops.push(download(shared, sharedDest));
-  }
 
   const config = {
     runtime: 'edge',
@@ -706,19 +830,10 @@ async function writeLambda(
   const ops: Promise<any>[] = [];
   let filePathMap: Record<string, string> | undefined;
   if (lambda.files) {
-    const sharedDest = join(outputDir, 'shared');
     // `files` is defined
-    const f = filesWithoutFsRefs(
-      lambda.files,
-      repoRootPath,
-      sharedDest,
-      standalone
-    );
+    const f = filesWithoutFsRefs(lambda.files, repoRootPath, standalone);
     filePathMap = f.filePathMap;
     ops.push(download(f.files, dest));
-    if (f.shared) {
-      ops.push(download(f.shared, sharedDest));
-    }
   } else if (lambda.zipBuffer) {
     // Builders that use the deprecated `createLambda()` might only have `zipBuffer`
     ops.push(unzip(lambda.zipBuffer, dest));
@@ -730,6 +845,8 @@ async function writeLambda(
     functionConfiguration?.architecture ?? lambda.architecture;
   const memory = functionConfiguration?.memory ?? lambda.memory;
   const maxDuration = functionConfiguration?.maxDuration ?? lambda.maxDuration;
+  const maxConcurrency =
+    functionConfiguration?.maxConcurrency ?? lambda.maxConcurrency;
   const regions = functionConfiguration?.regions ?? lambda.regions;
   const functionFailoverRegions =
     functionConfiguration?.functionFailoverRegions ??
@@ -745,6 +862,7 @@ async function writeLambda(
     architecture,
     memory,
     maxDuration,
+    maxConcurrency,
     regions,
     functionFailoverRegions,
     experimentalTriggers,
@@ -934,69 +1052,43 @@ export async function* findDirs(
 }
 
 /**
- * Re-anchors a Lambda file key that escapes the function root back inside it.
- *
- * When `vc build` runs from a monorepo subdirectory without a Root Directory
- * setting, the repo root is detected as the app directory while dependencies
- * are hoisted to the actual monorepo root above it. Builders then emit Lambda
- * file keys that climb out of the function root, e.g.
- * `../../node_modules/.pnpm/next@.../next/dist/.../server.runtime.prod.js`.
- *
- * Such keys cannot be used as zip entry names (`yazl` rejects any path
- * containing a `..` segment with "invalid relative path"), and they would not
- * resolve at runtime since nothing exists above a deployed function's root.
- * Stripping the leading `..` segments anchors the file inside the function
- * (e.g. `node_modules/.pnpm/.../server.runtime.prod.js`), matching the layout
- * a root-level build produces. Relative paths between these files (such as the
- * symlinks inside the pnpm store) are unaffected because every escaping key
- * shares the same leading prefix and is re-anchored consistently.
- */
-function stripParentSegments(path: string): string {
-  const normalized = normalizePath(path);
-  const segments = normalized.split('/');
-  let i = 0;
-  while (i < segments.length && segments[i] === '..') {
-    i++;
-  }
-  return segments.slice(i).join('/');
-}
-
-/**
  * Removes the `FileFsRef` instances from the `Files` object
  * and returns them in a JSON serializable map of repo root
  * relative paths to Lambda destination paths.
+ *
+ * In standalone mode the build is anchored at the repo root, so traced keys
+ * already sit inside the function; files (and package-manager symlinks) are
+ * written directly instead of being recorded in `filePathMap`.
  */
 export function filesWithoutFsRefs(
   files: Files,
   repoRootPath: string,
-  sharedDest?: string,
   standalone?: boolean
-): { files: Files; filePathMap?: Record<string, string>; shared?: Files } {
+): { files: Files; filePathMap?: Record<string, string> } {
+  // Directory symlinks whose descendants must not be materialized separately:
+  // `download()` would write the descendants concurrently and could create a
+  // real directory at the symlink's path before the symlink itself is written
+  // (EEXIST -> readlink on a dir -> EINVAL). Only the symlink is kept; its
+  // target still points at the real files elsewhere in the function.
+  const symlinkDirs = standalone
+    ? Object.entries(files)
+        .filter(([, f]) => f.type === 'FileFsRef' && isSymbolicLink(f.mode))
+        .map(([p]) => `${normalizePath(p)}/`)
+    : [];
   let filePathMap: Record<string, string> | undefined;
   const out: Files = {};
-  const shared: Files = {};
   for (const [path, file] of Object.entries(files)) {
     if (file.type === 'FileFsRef') {
-      if (!filePathMap) filePathMap = {};
-      if (standalone && sharedDest) {
-        // pnpm and other package managers create symlinks in node_modules that
-        // point outside the app directory (e.g. ../../node_modules/.pnpm/...).
-        // These targets are rejected during prebuilt deploys, so skip them.
-        // The traced dependency files are included at their logical paths.
-        if (isExternalSymlink(file)) {
+      if (standalone) {
+        // Keep symlinks so bare imports resolve at runtime, but drop any entry
+        // nested under a symlink (the symlink's target holds the real files).
+        const normalized = normalizePath(path);
+        if (symlinkDirs.some(prefix => normalized.startsWith(prefix))) {
           continue;
         }
-        // A standalone function must be self-contained, so any remaining file
-        // whose key escapes the function root (e.g. `../../node_modules/...`,
-        // produced when building from a monorepo subdirectory) is re-anchored
-        // inside the function. The shared bytes are placed under the same
-        // anchored key so the recorded `filePathMap` value points at them.
-        const funcPath = stripParentSegments(path);
-        shared[funcPath] = file;
-        filePathMap[funcPath] = normalizePath(
-          relative(repoRootPath, join(sharedDest, funcPath))
-        );
+        out[normalized] = file;
       } else {
+        if (!filePathMap) filePathMap = {};
         filePathMap[normalizePath(path)] = normalizePath(
           relative(repoRootPath, file.fsPath)
         );
@@ -1005,5 +1097,5 @@ export function filesWithoutFsRefs(
       out[path] = file;
     }
   }
-  return { files: out, filePathMap, shared };
+  return { files: out, filePathMap };
 }

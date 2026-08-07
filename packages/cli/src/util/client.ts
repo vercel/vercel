@@ -24,7 +24,7 @@ import fetch, {
   Headers,
   type RequestInit,
   type Response,
-} from 'node-fetch';
+} from './fetch';
 import pkg from './pkg';
 import ua from './ua';
 import responseError from './response-error';
@@ -47,13 +47,21 @@ import type {
 import { sharedPromise } from './promise';
 import { APIError } from './errors-ts';
 import { normalizeError } from '@vercel/error-utils';
-import type { Agent } from 'http';
 import sleep from './sleep';
 import type * as tty from 'tty';
 import type { z } from 'zod';
 import output from '../output-manager';
 import { parseArguments } from './get-args';
-import { processTokenResponse, refreshTokenRequest } from './oauth';
+import {
+  isOAuthError,
+  processTokenResponse,
+  refreshTokenRequest,
+} from './oauth';
+import {
+  PromptBackError,
+  PromptCanceledError,
+} from './input/prompt-cancellation';
+import { performDeviceCodeFlow } from '../commands/login/future';
 
 const DOMAINS_API_PATH = /^\/v\d+\/(?:domains|registrar)(?:\/|$)/;
 
@@ -64,6 +72,10 @@ const isSAMLError = (v: any): v is SAMLError => {
 type ParsedArgsCache = {
   args: string[];
   flags: Record<string, string | boolean | undefined>;
+};
+
+type CancelablePrompt<T> = Promise<T> & {
+  cancel?: () => void;
 };
 
 export interface FetchOptions extends Omit<RequestInit, 'body'> {
@@ -83,7 +95,6 @@ export interface ClientOptions extends Stdio {
   config: GlobalConfig;
   localConfig?: VercelConfig;
   localConfigPath?: string;
-  agent?: Agent;
   telemetryEventStore: TelemetryEventStore;
   /** Whether the CLI is being run by an AI agent */
   isAgent?: boolean;
@@ -124,7 +135,6 @@ export default class Client extends EventEmitter implements Stdio {
   stdout: tty.WriteStream;
   stderr: tty.WriteStream;
   config: GlobalConfig;
-  agent?: Agent;
   localConfig?: VercelConfig;
   localConfigPath?: string;
   requestIdCounter: number;
@@ -145,6 +155,8 @@ export default class Client extends EventEmitter implements Stdio {
   /** Track if we've already logged the token source debug message */
   private _loggedTokenSource: boolean = false;
   private _parsedArgsCache?: ParsedArgsCache;
+  private escapePromptCancellationDepth = 0;
+  private promptBackNavigationDepth = 0;
   /** Request-scoped identity caches used to avoid repeated scope lookups. */
   user?: User;
   userPromise?: Promise<User>;
@@ -153,7 +165,6 @@ export default class Client extends EventEmitter implements Stdio {
 
   constructor(opts: ClientOptions) {
     super();
-    this.agent = opts.agent;
     this.setArgv(opts.argv);
     this.apiUrl = opts.apiUrl;
     this.authConfig = opts.authConfig;
@@ -176,35 +187,114 @@ export default class Client extends EventEmitter implements Stdio {
     };
     this.input = {
       text: (opts: Parameters<typeof input>[0]) =>
-        input({ theme, ...opts }, { input: this.stdin, output: this.stderr }),
+        this.runPrompt(
+          input({ theme, ...opts }, { input: this.stdin, output: this.stderr })
+        ),
       password: (opts: Parameters<typeof password>[0]) =>
-        password(
-          { theme, ...opts },
-          { input: this.stdin, output: this.stderr }
+        this.runPrompt(
+          password(
+            { theme, ...opts },
+            { input: this.stdin, output: this.stderr }
+          )
         ),
       checkbox: <T>(opts: Parameters<typeof checkbox<T>>[0]) =>
-        checkbox<T>(
-          { theme, ...opts },
-          { input: this.stdin, output: this.stderr }
+        this.runPrompt(
+          checkbox<T>(
+            { theme, ...opts },
+            { input: this.stdin, output: this.stderr }
+          )
         ),
       expand: (opts: Parameters<typeof expand>[0]) =>
-        expand({ theme, ...opts }, { input: this.stdin, output: this.stderr }),
+        this.runPrompt(
+          expand({ theme, ...opts }, { input: this.stdin, output: this.stderr })
+        ),
       confirm: (message: string, default_value: boolean) =>
-        confirm(
-          { theme, message, default: default_value },
-          { input: this.stdin, output: this.stderr }
+        this.runPrompt(
+          confirm(
+            { theme, message, default: default_value },
+            { input: this.stdin, output: this.stderr }
+          )
         ),
       select: <T>(opts: Parameters<typeof select<T>>[0]) =>
-        select<T>(
-          { theme, ...opts },
-          { input: this.stdin, output: this.stderr }
+        this.runPrompt(
+          select<T>(
+            { theme, ...opts },
+            { input: this.stdin, output: this.stderr }
+          )
         ),
       search: <T>(opts: Parameters<typeof search<T>>[0]) =>
-        search<T>(
-          { theme, ...opts },
-          { input: this.stdin, output: this.stderr }
+        this.runPrompt(
+          search<T>(
+            { theme, ...opts },
+            { input: this.stdin, output: this.stderr }
+          )
         ),
     };
+  }
+
+  async withEscapePromptCancellation<T>(run: () => Promise<T>): Promise<T> {
+    this.escapePromptCancellationDepth++;
+    try {
+      return await run();
+    } finally {
+      this.escapePromptCancellationDepth--;
+    }
+  }
+
+  async withPromptBackNavigation<T>(run: () => Promise<T>): Promise<T> {
+    this.promptBackNavigationDepth++;
+    try {
+      return await run();
+    } finally {
+      this.promptBackNavigationDepth--;
+    }
+  }
+
+  private runPrompt<T>(prompt: CancelablePrompt<T>): Promise<T> {
+    const escapeCancellationEnabled = this.escapePromptCancellationDepth > 0;
+    const backNavigationEnabled = this.promptBackNavigationDepth > 0;
+
+    if (
+      (!escapeCancellationEnabled && !backNavigationEnabled) ||
+      !this.stdin.isTTY ||
+      !prompt.cancel
+    ) {
+      return prompt;
+    }
+
+    let cancellation: 'escape' | 'back' | undefined;
+    const onKeypress = (
+      _input: string | undefined,
+      key: { name?: string } | undefined
+    ) => {
+      if (
+        key?.name === 'escape' &&
+        escapeCancellationEnabled &&
+        !cancellation
+      ) {
+        cancellation = 'escape';
+        prompt.cancel?.();
+      } else if (key?.name === 'up' && backNavigationEnabled && !cancellation) {
+        cancellation = 'back';
+        prompt.cancel?.();
+      }
+    };
+
+    this.stdin.on('keypress', onKeypress);
+
+    return prompt
+      .catch(error => {
+        if (cancellation === 'escape') {
+          throw new PromptCanceledError();
+        }
+        if (cancellation === 'back') {
+          throw new PromptBackError();
+        }
+        throw error;
+      })
+      .finally(() => {
+        this.stdin.off('keypress', onKeypress);
+      });
   }
 
   get argv(): string[] {
@@ -286,6 +376,34 @@ export default class Client extends EventEmitter implements Stdio {
     });
 
     const [tokensError, tokens] = await processTokenResponse(tokenResponse);
+
+    // CLI versions before 56.4.1 could persist a rotated access token without
+    // its matching refresh token after step-up authentication. Once that
+    // access token expires, recover the interactive stored session here so
+    // commands such as `vercel link` do not fail before their first API call.
+    if (
+      isOAuthError(tokensError) &&
+      tokensError.code === 'invalid_grant' &&
+      !authConfig.tokenSource &&
+      this.stdin.isTTY &&
+      !this.nonInteractive
+    ) {
+      output.debug(
+        `Stored session refresh failed: ${tokensError.cause.message}`
+      );
+      output.log("Couldn't refresh the saved login. Starting a new login.");
+      const recoveredTokens = await performDeviceCodeFlow(this);
+      if (recoveredTokens) {
+        this.updateAuthConfig({
+          token: recoveredTokens.access_token,
+          userId: undefined,
+          expiresAt: Math.floor(Date.now() / 1000) + recoveredTokens.expires_in,
+          refreshToken: recoveredTokens.refresh_token,
+        });
+        this.persistAuthConfig();
+        return;
+      }
+    }
 
     // If we had an error, during the refresh process, empty the auth config
     // to force the user to re-authenticate
@@ -477,6 +595,14 @@ export default class Client extends EventEmitter implements Stdio {
     if (this.agentName) {
       headers.set('x-ai-agent', this.agentName);
     }
+    headers.set(
+      'x-vercel-cli-session-id',
+      this.telemetryEventStore.currentSessionId
+    );
+    headers.set(
+      'x-vercel-cli-invocation-id',
+      this.telemetryEventStore.currentInvocationId
+    );
 
     await this.ensureAuthorized();
 
@@ -503,7 +629,7 @@ export default class Client extends EventEmitter implements Stdio {
           return `#${requestId} → ${opts.method || 'GET'} ${url.href}`;
         }
       },
-      fetch(url, { agent: this.agent, ...opts, headers, body })
+      fetch(url, { ...opts, headers, body })
     );
   }
 

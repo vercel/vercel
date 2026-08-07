@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../client';
 import type { AcceptedPolicies, Integration } from './types';
@@ -47,43 +48,56 @@ export async function promptForTermAcceptance(
     return null;
   }
 
-  const addendumAccepted = await client.input.confirm(
-    `Accept Vercel Marketplace End User Addendum? (${MARKETPLACE_ADDENDUM_URL})`,
+  // Collect every legal document the user must agree to so they can be
+  // reviewed together and accepted with a single confirmation.
+  const documents: { label: string; url: string }[] = [
+    {
+      label: 'Vercel Marketplace End User Addendum',
+      url: MARKETPLACE_ADDENDUM_URL,
+    },
+  ];
+  if (integration.privacyDocUri) {
+    documents.push({
+      label: 'Privacy Policy',
+      url: integration.privacyDocUri,
+    });
+  }
+  if (integration.eulaDocUri) {
+    documents.push({
+      label: 'Terms of Service',
+      url: integration.eulaDocUri,
+    });
+  }
+
+  output.print('\n');
+  output.log(
+    `Installing ${chalk.bold(integration.name)} requires accepting the following:`
+  );
+  output.print('\n');
+  for (const { label, url } of documents) {
+    output.print(`  ${chalk.bold(label)}\n`);
+    output.print(`  ${chalk.dim(url)}\n`);
+    output.print('\n');
+  }
+
+  const accepted = await client.input.confirm(
+    'Accept all of the documents listed above?',
     false
   );
-  if (!addendumAccepted) {
-    output.error(
-      'Vercel Marketplace End User Addendum must be accepted to continue.'
-    );
+  if (!accepted) {
+    output.error('All of the listed documents must be accepted to continue.');
     return null;
   }
 
+  const acceptedAt = new Date().toISOString();
   const acceptedPolicies: AcceptedPolicies = {
-    toc: new Date().toISOString(),
+    toc: acceptedAt,
   };
-
   if (integration.privacyDocUri) {
-    const accepted = await client.input.confirm(
-      `Accept privacy policy? (${integration.privacyDocUri})`,
-      false
-    );
-    if (!accepted) {
-      output.error('Privacy policy must be accepted to continue.');
-      return null;
-    }
-    acceptedPolicies.privacy = new Date().toISOString();
+    acceptedPolicies.privacy = acceptedAt;
   }
-
   if (integration.eulaDocUri) {
-    const accepted = await client.input.confirm(
-      `Accept terms of service? (${integration.eulaDocUri})`,
-      false
-    );
-    if (!accepted) {
-      output.error('Terms of service must be accepted to continue.');
-      return null;
-    }
-    acceptedPolicies.eula = new Date().toISOString();
+    acceptedPolicies.eula = acceptedAt;
   }
 
   return acceptedPolicies;

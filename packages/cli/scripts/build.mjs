@@ -11,6 +11,7 @@ import { compileDevTemplates } from './compile-templates.mjs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { esbuild, getDependencies } from '../../../utils/build.mjs';
+import { createConfigValidatorPlugin } from './precompile-config-validator.mjs';
 
 const repoRoot = new URL('../', import.meta.url);
 const cwd = process.cwd();
@@ -127,7 +128,7 @@ await esbuild({
   outdir: distDir,
   external: getDependencies(),
   banner,
-  plugins: [jsoncParserPlugin],
+  plugins: [jsoncParserPlugin, await createConfigValidatorPlugin()],
 });
 
 // Move priority command outputs to expected locations
@@ -162,8 +163,16 @@ copyFileSync(
   new URL('commands/dev/builder-worker.cjs', distRoot)
 );
 copyFileSync(
+  new URL('src/util/dev/next-dev-websocket-shim-preload.cjs', repoRoot),
+  new URL('commands/dev/next-dev-websocket-shim-preload.cjs', distRoot)
+);
+copyFileSync(
   new URL('src/util/get-latest-version/get-latest-worker.cjs', repoRoot),
   new URL('get-latest-worker.cjs', distRoot)
+);
+copyFileSync(
+  new URL('src/util/get-latest-version/fetch-dist-tags.cjs', repoRoot),
+  new URL('fetch-dist-tags.cjs', distRoot)
 );
 copyFileSync(new URL('src/vc.js', repoRoot), new URL('vc.js', distRoot));
 

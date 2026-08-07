@@ -16,6 +16,7 @@ describe('teams members', () => {
     client.config.currentTeam = 'team_123';
     client.scenario.get('/v2/teams/:teamId/members', (req, res) => {
       expect(req.params.teamId).toBe('team_123');
+      expect(req.query.limit).toBe('5');
       res.json({
         members: [
           {
@@ -27,7 +28,7 @@ describe('teams members', () => {
         ],
       });
     });
-    client.setArgv('teams', 'members');
+    client.setArgv('teams', 'members', '--limit', '5');
 
     const exitCode = await teams(client);
     expect(exitCode).toBe(0);
@@ -38,6 +39,26 @@ describe('teams members', () => {
         value: 'members',
       },
     ]);
+  });
+
+  it('uses the next timestamp as the API until cursor', async () => {
+    client.config.currentTeam = 'team_123';
+    client.scenario.get('/v2/teams/:teamId/members', (req, res) => {
+      expect(req.query.until).toBe('1584722256178');
+      expect(req.query.next).toBeUndefined();
+      res.json({
+        members: [],
+        pagination: {
+          count: 0,
+          next: null,
+          prev: 1584722256178,
+        },
+      });
+    });
+    client.setArgv('teams', 'members', '--next', '1584722256178');
+
+    const exitCode = await teams(client);
+    expect(exitCode).toBe(0);
   });
 
   it('outputs valid JSON with --format json', async () => {

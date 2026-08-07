@@ -13,7 +13,10 @@ import {
 } from '../../../mocks/firewall';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 
 describe('firewall rules enable', () => {
   beforeEach(() => {
@@ -45,6 +48,38 @@ describe('firewall rules enable', () => {
 
     expect(lastPatchBody.action).toBe('rules.update');
     expect(lastPatchBody.value.active).toBe(true);
+  });
+
+  it('enables a rule for the project selected by --project', async () => {
+    const active = createConfig({ rules: [createRule(3)] });
+    useListFirewallConfigs(active, null);
+    usePatchDraft();
+    useActivateConfig();
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject({
+      ...defaultProject,
+      id: 'explicit-firewall',
+      name: 'explicit-firewall',
+      accountId: 'team_dummy',
+    });
+    client.setArgv(
+      'firewall',
+      'rules',
+      'enable',
+      'Test Rule 3',
+      '--project',
+      'explicit-firewall',
+      '--yes'
+    );
+
+    await expect(firewall(client)).resolves.toEqual(0);
+    await expect(client.stderr).toOutput('Enabled');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'option:project', value: '[REDACTED]' },
+      { key: 'subcommand:rules', value: 'rules' },
+      { key: 'subcommand:rules:enable', value: 'enable' },
+    ]);
   });
 
   it('should report already enabled', async () => {

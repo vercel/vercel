@@ -749,4 +749,32 @@ describe('blob store get', () => {
       );
     });
   });
+
+  describe('non-interactive mode (agents)', () => {
+    beforeEach(() => {
+      client.nonInteractive = true;
+      vi.spyOn(process, 'exit').mockImplementation(((_code?: number) => {
+        throw new Error('exit');
+      }) as () => never);
+    });
+
+    it('emits missing_arguments instead of prompting for a store id', async () => {
+      await expect(getStore(client, [], noToken)).rejects.toThrow('exit');
+
+      expect(textInputMock).not.toHaveBeenCalled();
+      const payload = JSON.parse(client.stdout.getFullOutput());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'missing_arguments',
+        message: expect.stringContaining('storeId'),
+      });
+    });
+
+    it('still works when the store id is provided', async () => {
+      const exitCode = await getStore(client, ['store_provided_123456'], token);
+
+      expect(exitCode).toBe(0);
+      expect(textInputMock).not.toHaveBeenCalled();
+    });
+  });
 });

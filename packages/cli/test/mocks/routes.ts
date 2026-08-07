@@ -1224,6 +1224,7 @@ export function useGenerateRoute(options?: {
       dest?: string;
       status?: number;
       headers?: Array<{ key: string; value?: string; op: string }>;
+      requestPath?: { value: string; op: string; env?: string[] };
     }>;
   };
 }) {

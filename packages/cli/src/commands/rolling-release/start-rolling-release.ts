@@ -74,12 +74,12 @@ export default async function startRollingRelease({
     );
     return 0;
   }
-  // request the promotion
+  // request the rolling release start
   await client.fetch(
-    `/v10/projects/${projectId}/promote/${deployment.id}?teamId=${teamId}`,
+    `/v1/projects/${projectId}/rolling-release/start?teamId=${teamId}`,
     {
-      body: {}, // required
-      json: false,
+      body: { canaryDeploymentId: deployment.id }, // required
+      json: true,
       method: 'POST',
     }
   );

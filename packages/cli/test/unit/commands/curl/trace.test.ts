@@ -255,6 +255,39 @@ describe('curl --trace', () => {
     ]);
   });
 
+  it('uses the explicit deployment project for traces with a supplied bypass', async () => {
+    await setupLinkedProject();
+    mockDeploymentLookup({
+      target: null,
+      ownerId: 'team_target',
+      projectId: 'explicit-project',
+      id: 'dpl_explicit',
+    });
+    client.scenario.get('/v9/projects/explicit-project', (_req, res) => {
+      res.json({ id: 'explicit-project', name: 'explicit-project' });
+    });
+    const captured = makeCaptured();
+    mockSessionEndpoint(captured);
+    installSpawnMock();
+
+    client.setArgv(
+      'curl',
+      '--trace',
+      '/api/hello',
+      '--deployment',
+      'https://explicit-project.vercel.app',
+      '--protection-bypass',
+      'caller-secret'
+    );
+
+    await expect(curl(client)).resolves.toBe(0);
+    expect(captured.value).toEqual({
+      projectId: 'explicit-project',
+      hostname: 'explicit-project.vercel.app',
+    });
+    expect(captured.query?.teamId).toBe('team_target');
+  });
+
   it('--json: JSON envelope to stdout, no trace lines on stderr', async () => {
     await setupLinkedProject();
     mockDeploymentLookup({ target: null });

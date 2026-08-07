@@ -1,6 +1,7 @@
 import type { Lambda } from '../lambda';
 import type { NodejsLambda } from '../nodejs-lambda';
 import type { EdgeFunction } from '../edge-function';
+import type { ContainerImage } from '../container-image';
 import type FileFsRef from '../file-fs-ref';
 import type { Prerender } from '../prerender';
 
@@ -41,3 +42,10 @@ export type SerializedEdgeFunction = Properties<
   Omit<EdgeFunction, 'name' | 'files' | 'deploymentTarget'>
 > &
   FilesMapProp;
+
+export type SerializedContainerImage = Omit<
+  Properties<ContainerImage>,
+  'files' | 'type'
+> & {
+  type?: 'ContainerImage';
+} & FilesMapProp;

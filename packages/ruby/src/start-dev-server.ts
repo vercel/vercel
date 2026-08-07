@@ -242,6 +242,9 @@ export const startDevServer: StartDevServer = async opts => {
       const projectDir = gemfile ? dirname(gemfile) : workPath;
       if (gemfile) {
         env.BUNDLE_GEMFILE = gemfile;
+        if (meta.syncDependencies) {
+          env.BUNDLE_PATH = join(workPath, '.vercel', 'ruby', 'bundle');
+        }
       }
 
       const checkDeps = async () => {
@@ -258,7 +261,23 @@ export const startDevServer: StartDevServer = async opts => {
             }
           );
           if (check.code !== 0) {
-            return false;
+            if (!meta.syncDependencies) {
+              return false;
+            }
+            const sync = '\x1b[90mSynchronizing dependencies...\x1b[0m\n';
+            if (opts.onStdout) {
+              opts.onStdout(Buffer.from(sync));
+            } else {
+              process.stdout.write(sync);
+            }
+            debug(`Running "bundle install" for ${gemfile}`);
+            const install = await run(bundlerPath, ['install'], {
+              cwd: projectDir,
+              env,
+              onStdout: opts.onStdout,
+              onStderr: opts.onStderr,
+            });
+            return install.code === 0;
           }
         }
         return true;

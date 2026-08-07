@@ -26,7 +26,10 @@ export const AGENT_REASON = {
   NOT_FOUND: 'not_found',
   PROJECT_NOT_FOUND: 'project_not_found',
   MISSING_SCOPE: 'missing_scope',
+  SCOPE_NOT_ACCESSIBLE: 'scope_not_accessible',
   API_ERROR: 'api_error',
+  // Flags
+  SEGMENT_IN_USE: 'segment_in_use',
   // Env
   MISSING_REQUIREMENTS: 'missing_requirements',
   MISSING_NAME: 'missing_name',
@@ -50,6 +53,14 @@ export const AGENT_REASON = {
   INVALID_DNS_TYPE: 'invalid_dns_type',
   DNS_ADD_FAILED: 'dns_add_failed',
   INVALID_DOMAIN: 'invalid_domain',
+  CONFIGURED_CORRECTLY: 'configured_correctly',
+  VERIFICATION_NEEDED: 'verification_needed',
+  INVALID_CONFIGURATION: 'invalid_configuration',
+  DNS_CHANGE_REQUIRED: 'dns_change_required',
+  DNS_CHANGE_RECOMMENDED: 'dns_change_recommended',
+  DNSSEC_NEEDS_TO_BE_DISABLED: 'dnssec_needs_to_be_disabled',
+  PROJECT_ATTACHMENT_RECOMMENDED: 'project_attachment_recommended',
+  PROJECT_DOMAIN_MISSING: 'project_domain_missing',
   /** User must accept marketplace integration terms in the browser before install can continue. */
   INTEGRATION_TERMS_ACCEPTANCE_REQUIRED:
     'integration_terms_acceptance_required',
@@ -69,6 +80,14 @@ export const AGENT_REASON = {
   // AI Gateway
   INVALID_BUDGET: 'invalid_budget',
   INVALID_REFRESH_PERIOD: 'invalid_refresh_period',
+  INVALID_EXPIRATION: 'invalid_expiration',
+  INVALID_ALERT_THRESHOLDS: 'invalid_alert_thresholds',
+  /**
+   * Every selected agent needs explicit `--agent`/`--all` consent (see the
+   * payload's skipped[]). `--yes` does not grant it, so this is deliberately
+   * not `confirmation_required` — re-running with --yes would loop forever.
+   */
+  REQUIRES_CONSENT: 'requires_consent',
   // Redirects
   REDIRECT_NOT_FOUND: 'redirect_not_found',
   VERSION_NOT_FOUND: 'version_not_found',

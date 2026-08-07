@@ -13,6 +13,7 @@ import {
   resolveGitRemote,
   type ResolvedGitRemote,
 } from '../link/repo';
+import { isPromptCanceledError } from '../input/prompt-cancellation';
 
 export interface CrossTeamMatch {
   project: Project;
@@ -130,7 +131,7 @@ export default async function searchProjectAcrossTeams(
   };
 }
 
-async function searchProjectsByRepoRoot({
+export async function searchProjectsByRepoRoot({
   client,
   cwd,
   gitProjectName,
@@ -156,9 +157,10 @@ async function searchProjectsByRepoRoot({
       yes: autoConfirm || nonInteractive,
     });
   } catch (error) {
-    output.debug(
-      `Failed to resolve Git remote for cross-team search: ${error}`
-    );
+    if (isPromptCanceledError(error)) {
+      throw error;
+    }
+    output.debug(`Failed to resolve Git remote for project search: ${error}`);
     return [];
   }
 
@@ -210,6 +212,9 @@ async function searchProjectsByRepoRoot({
           })
           .filter(Boolean) as CrossTeamMatch[];
       } catch (error) {
+        if (isPromptCanceledError(error)) {
+          throw error;
+        }
         output.debug(
           `Failed to search Git-linked projects under ${org.slug}: ${error}`
         );

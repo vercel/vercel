@@ -1,5 +1,123 @@
 # @vercel/backends
 
+## 0.8.30
+
+### Patch Changes
+
+- Updated dependencies [a69c714]
+- Updated dependencies [654e898]
+  - @vercel/build-utils@13.36.3
+
+## 0.8.29
+
+### Patch Changes
+
+- 57dec92: Fix output directory discovery after the build command: the `dist`/`build`/`output` fallback was unreachable dead code, and `outputDirectory` was only read from `config.outputDirectory`, missing `config.projectSettings.outputDirectory` (the key wrapper builders use).
+- Updated dependencies [2c75803]
+  - @vercel/build-utils@13.36.2
+
+## 0.8.28
+
+### Patch Changes
+
+- Updated dependencies [17ee736]
+  - @vercel/build-utils@13.36.1
+
+## 0.8.27
+
+### Patch Changes
+
+- Updated dependencies [4502520]
+  - @vercel/build-utils@13.36.0
+
+## 0.8.26
+
+### Patch Changes
+
+- Updated dependencies [7dd4301]
+  - @vercel/build-utils@13.35.0
+
+## 0.8.25
+
+### Patch Changes
+
+- Updated dependencies [238543c]
+  - @vercel/build-utils@13.34.0
+
+## 0.8.24
+
+### Patch Changes
+
+- Updated dependencies [def07fc]
+  - @vercel/build-utils@13.33.1
+
+## 0.8.23
+
+### Patch Changes
+
+- Updated dependencies [607f0ef]
+  - @vercel/build-utils@13.33.0
+
+## 0.8.22
+
+### Patch Changes
+
+- Updated dependencies [7b30856]
+  - @vercel/build-utils@13.32.3
+
+## 0.8.21
+
+### Patch Changes
+
+- cbf22bf: Reject services that opt into the Edge Runtime. A service entrypoint exporting `config.runtime = 'edge'` (or `'experimental-edge'`) was previously ignored and silently built as a Node function; the build now fails with a clear `EDGE_RUNTIME_UNSUPPORTED_IN_SERVICES` error.
+
+## 0.8.20
+
+### Patch Changes
+
+- Updated dependencies [6b49a17]
+  - @vercel/build-utils@13.32.2
+
+## 0.8.19
+
+### Patch Changes
+
+- 62a884e: Simplify isolated `services` and `experimentalServicesV2` runtime outputs by emitting their function at `index` instead of `_svc/<service-name>/index`.
+
+## 0.8.18
+
+### Patch Changes
+
+- 8dc4702: Fix `vercel dev` for standalone Node servers, including projects without a `package.json`, and reuse the server process between requests.
+- Updated dependencies [8dc4702]
+  - @vercel/build-utils@13.32.1
+
+## 0.8.17
+
+### Patch Changes
+
+- fdb6121: Fix build failure when `outputDirectory` is set to the project root (e.g. `.`). The builder no longer globs the working tree as build output in that case, avoiding tracing errors from package-manager symlinks in `node_modules`.
+- Updated dependencies [9fb2976]
+- Updated dependencies [186014d]
+- Updated dependencies [cb0988f]
+  - @vercel/build-utils@13.32.0
+
+## 0.8.16
+
+### Patch Changes
+
+- Updated dependencies [2158ab6]
+  - @vercel/build-utils@13.31.1
+
+## 0.8.15
+
+### Patch Changes
+
+- Updated dependencies [8dec9ea]
+- Updated dependencies [3afdb18]
+- Updated dependencies [04f830c]
+  - @vercel/build-utils@13.31.0
+
 ## 0.8.14
 
 ### Patch Changes

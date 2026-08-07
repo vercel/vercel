@@ -15,7 +15,7 @@ export async function inputRootDirectory(
 
   while (true) {
     const rootDirectory = await client.input.text({
-      message: `In which directory is your code located?`,
+      message: `Code directory?`,
       transformer: (input: string) => {
         return `${chalk.dim(`./`)}${input}`;
       },

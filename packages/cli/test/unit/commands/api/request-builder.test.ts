@@ -349,6 +349,18 @@ describe('request-builder', () => {
       expect(result).not.toContain('-X');
     });
 
+    it('does not include body flags for GET requests', () => {
+      const config: RequestConfig = {
+        url: '/v2/user',
+        method: 'GET',
+        headers: {},
+        body: { name: 'test' },
+      };
+      const result = generateCurlCommand(config, baseUrl);
+      expect(result).not.toContain('-d');
+      expect(result).not.toContain('Content-Type: application/json');
+    });
+
     it('includes Authorization header with placeholder', () => {
       const config: RequestConfig = {
         url: '/v2/user',

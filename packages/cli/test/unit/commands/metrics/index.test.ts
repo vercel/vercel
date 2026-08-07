@@ -33,6 +33,8 @@ describe('metrics', () => {
       expect(output).toContain('schema');
       // Shows positional metric examples
       expect(output).toContain('metrics vercel.function_invocation.count');
+      // Shows production convenience flag
+      expect(output).toContain('--prod');
     });
 
     it('should track telemetry for help', async () => {

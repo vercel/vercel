@@ -9,13 +9,13 @@ import {
 } from 'vitest';
 import reauthenticate from '../../../../src/util/login/reauthenticate';
 import { client } from '../../../mocks/client';
-import _fetch, { type Response } from 'node-fetch';
+import _fetch, { type Response } from '../../../../src/util/fetch';
 import * as oauth from '../../../../src/util/oauth';
 import { randomUUID } from 'node:crypto';
 
 const fetch = vi.mocked(_fetch);
-vi.mock('node-fetch', async () => ({
-  ...(await vi.importActual('node-fetch')),
+vi.mock('../../../../src/util/fetch', async () => ({
+  ...(await vi.importActual('../../../../src/util/fetch')),
   default: vi.fn(),
 }));
 

@@ -75,4 +75,11 @@ export class DomainsTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandVerify(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'verify',
+      value: actual,
+    });
+  }
 }

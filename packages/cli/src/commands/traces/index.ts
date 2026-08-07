@@ -4,17 +4,25 @@ import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { help } from '../help';
+import { help, type Command } from '../help';
 import { getCommandAliases } from '..';
 import { TracesTelemetryClient } from '../../util/telemetry/commands/traces';
 import {
+  createSubcommand as createSubcommandMetadata,
   getSubcommand as getSubcommandMetadata,
   tracesCommand,
 } from './command';
 import get from './get';
+import { runCurl } from '../curl';
 
 const COMMAND_CONFIG = {
   get: getCommandAliases(getSubcommandMetadata),
+  create: getCommandAliases(createSubcommandMetadata),
+};
+
+const SUBCOMMAND_METADATA: Record<string, Command> = {
+  [getSubcommandMetadata.name]: getSubcommandMetadata,
+  [createSubcommandMetadata.name]: createSubcommandMetadata,
 };
 
 export default async function traces(client: Client): Promise<number> {
@@ -42,14 +50,28 @@ export default async function traces(client: Client): Promise<number> {
 
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('traces', subcommandOriginal);
-    const isGet = subcommand === getSubcommandMetadata.name;
+    const subMetadata =
+      typeof subcommand === 'string'
+        ? SUBCOMMAND_METADATA[subcommand]
+        : undefined;
     output.print(
-      help(isGet ? getSubcommandMetadata : tracesCommand, {
-        parent: isGet ? tracesCommand : undefined,
+      help(subMetadata ?? tracesCommand, {
+        parent: subMetadata ? tracesCommand : undefined,
         columns: client.stderr.columns,
       })
     );
     return 2;
+  }
+
+  if (subcommand === createSubcommandMetadata.name) {
+    // `traces create` is an alias for `vercel curl --trace`. The router
+    // dispatched here off `client.argv`, so the first two tokens are always
+    // `traces create` (like `curl`, this assumes no global flags precede the
+    // command token). Drop that prefix and hand the rest to the shared curl
+    // runner with the trace flow forced on. Passing `args` explicitly avoids
+    // mutating `client.argv` (which is the live `process.argv` in production).
+    const args = client.argv.slice(4);
+    return runCurl(client, { forceTrace: true, args });
   }
 
   return get(client, telemetry);

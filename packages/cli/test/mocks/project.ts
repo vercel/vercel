@@ -459,6 +459,8 @@ function exposeSystemEnvs(
   for (const env of projectEnvs) {
     if (env.type === 'system') {
       envs[env.key] = getSystemEnvValue(env.value, { vercelUrl });
+    } else if (env.type === 'sensitive') {
+      envs[env.key] = '';
     } else {
       envs[env.key] = env.value;
     }

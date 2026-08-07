@@ -1,6 +1,7 @@
 import minimatch from 'minimatch';
 import { shouldServe as defaultShouldServe } from '@vercel/build-utils';
 import type { BuildV2, Files, ShouldServe } from '@vercel/build-utils';
+import { VERCEL_CONFIG_EXTENSIONS } from '../compile-vercel-config';
 
 export const version = 2;
 
@@ -8,6 +9,7 @@ const ALWAYS_EXCLUDED_PREFIXES = ['.git/', 'node_modules/'];
 const ALWAYS_EXCLUDED_FILES = [
   'vercel.json',
   'vercel.toml',
+  ...VERCEL_CONFIG_EXTENSIONS.map(ext => `vercel.${ext}`),
   '.vercelignore',
   'now.json',
   '.nowignore',

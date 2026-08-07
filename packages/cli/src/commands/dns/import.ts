@@ -4,7 +4,7 @@ import getScope from '../../util/get-scope';
 import { DomainNotFound, InvalidDomain } from '../../util/errors-ts';
 import stamp from '../../util/output/stamp';
 import importZonefile from '../../util/dns/import-zonefile';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { DnsImportTelemetryClient } from '../../util/telemetry/commands/dns/import';
 import { importSubcommand } from './command';
@@ -14,18 +14,13 @@ import { printError } from '../../util/error';
 import {
   outputActionRequired,
   outputAgentError,
+  withGlobalFlags,
 } from '../../util/agent-output';
 import {
   AGENT_ACTION,
   AGENT_REASON,
   AGENT_STATUS,
 } from '../../util/agent-output-constants';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
-
-function withGlobalFlags(client: Client, commandTemplate: string): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
-}
 
 export default async function importZone(client: Client, argv: string[]) {
   let parsedArgs;

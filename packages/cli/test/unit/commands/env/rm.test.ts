@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import env from '../../../../src/commands/env';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
@@ -50,6 +53,43 @@ describe('env rm', () => {
         },
       ]);
     });
+  });
+
+  it('removes a variable from the project selected by --project', async () => {
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject(
+      {
+        ...defaultProject,
+        id: 'explicit-env-rm',
+        name: 'explicit-env-rm',
+        accountId: 'team_dummy',
+      },
+      [
+        {
+          type: 'encrypted',
+          id: 'explicit-env',
+          key: 'ENVIRONMENT_NAME',
+          value: 'value',
+          target: ['development'],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+      ]
+    );
+    client.setArgv(
+      'env',
+      'rm',
+      'ENVIRONMENT_NAME',
+      'development',
+      '--yes',
+      '--project',
+      'explicit-env-rm'
+    );
+
+    await expect(env(client)).resolves.toEqual(0);
   });
 
   describe('non-interactive', () => {

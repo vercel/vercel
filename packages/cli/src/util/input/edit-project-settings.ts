@@ -91,6 +91,8 @@ export async function editProjectSettings(
     return settings;
   }
 
+  output.print('\n');
+
   // A missing framework slug implies the "Other" framework was selected
   if (!framework.slug) {
     output.print(`  No framework detected. Default Project Settings:\n`);
@@ -112,7 +114,7 @@ export async function editProjectSettings(
       outputDir ? `${settingMap.outputDirectory}: ${outputDir}` : null,
     ].filter(Boolean);
     const detail = inline.length ? chalk.dim(` (${inline.join(', ')})`) : '';
-    // 2-space indent matches the Set up status line and the printAlignedLabel block.
+    // 2-space indent matches the Directory setup row and printAlignedLabel block.
     // Framework name is plain (not bold) per prototype — only "Detected" is bold.
     output.print(`  ${chalk.bold('Detected')} ${framework.name}${detail}\n`);
   }

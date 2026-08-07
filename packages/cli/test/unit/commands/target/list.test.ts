@@ -116,6 +116,23 @@ describe('target ls', () => {
     });
   });
 
+  it('lists targets for the project selected by --project', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'static',
+      id: 'static',
+      accountId: 'team_dummy',
+    });
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    client.setArgv('target', 'list', '--project', 'static');
+
+    await expect(target(client)).resolves.toEqual(0);
+    await expect(client.stderr).toOutput('Environment');
+  });
+
   it('should show custom environments with `vc target ls`', async () => {
     useUser();
     const teams = useTeams('team_dummy');

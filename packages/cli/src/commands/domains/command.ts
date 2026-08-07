@@ -2,8 +2,10 @@ import { packageName } from '../../util/pkg-name';
 import {
   forceOption,
   formatOption,
+  jsonOption,
   limitOption,
   nextOption,
+  projectOption,
   yesOption,
 } from '../../util/arg-common';
 
@@ -13,7 +15,7 @@ export const listSubcommand = {
   description: 'Show all domains in a list',
   default: true,
   arguments: [],
-  options: [limitOption, nextOption, formatOption],
+  options: [limitOption, nextOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch',
@@ -47,7 +49,7 @@ export const addSubcommand = {
     },
     {
       name: 'project',
-      required: true,
+      required: false,
     },
   ],
   options: [
@@ -100,7 +102,7 @@ export const priceSubcommand = {
       multiple: true,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Price quote for a domain',
@@ -112,7 +114,7 @@ export const priceSubcommand = {
     },
     {
       name: 'JSON output',
-      value: `${packageName} domains price example.com --format json`,
+      value: `${packageName} domains price example.com --json`,
     },
   ],
 } as const;
@@ -170,6 +172,7 @@ export const searchSubcommand = {
       deprecated: false,
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -190,7 +193,7 @@ export const searchSubcommand = {
     },
     {
       name: 'JSON output',
-      value: `${packageName} domains search acme --format=json`,
+      value: `${packageName} domains search acme --json`,
     },
   ],
 } as const;
@@ -220,7 +223,7 @@ export const checkSubcommand = {
       multiple: true,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Check if a domain is available',
@@ -232,7 +235,7 @@ export const checkSubcommand = {
     },
     {
       name: 'JSON output',
-      value: `${packageName} domains check example.com --format json`,
+      value: `${packageName} domains check example.com --json`,
     },
   ],
 } as const;
@@ -282,6 +285,50 @@ export const transferInSubcommand = {
   examples: [],
 } as const;
 
+export const verifySubcommand = {
+  name: 'verify',
+  aliases: [],
+  description:
+    "Check a domain's DNS configuration and explain what to fix when it is misconfigured or unverified",
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'strict',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Check DNS for the exact domain only, without falling back to the parent zone configuration',
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Check why a domain is not working',
+      value: `${packageName} domains verify example.com`,
+    },
+    {
+      name: 'Check a domain against a specific project',
+      value: `${packageName} domains verify example.com --project my-site`,
+    },
+    {
+      name: 'JSON output (the exit code is non-zero when the domain is misconfigured or unverified)',
+      value: `${packageName} domains verify example.com --json`,
+    },
+    {
+      name: 'Agent-friendly output with status, reason, and suggested next commands',
+      value: `${packageName} domains verify example.com --non-interactive`,
+    },
+  ],
+} as const;
+
 export const domainsCommand = {
   name: 'domains',
   aliases: ['domain'],
@@ -298,6 +345,7 @@ export const domainsCommand = {
     searchSubcommand,
     transferInSubcommand,
     removeSubcommand,
+    verifySubcommand,
   ],
   options: [],
   examples: [],

@@ -24,11 +24,11 @@ jobs:
       matrix:
         include:
           - runner: ubuntu-latest
-            target: node22-linux-x64
+            target: node24.14.1-linux-x64
             asset: vercel-linux-x64
             ext: ''
           - runner: windows-latest
-            target: node22-win-x64
+            target: node24.14.1-win-x64
             asset: vercel-windows-x64
             ext: '.exe'
     runs-on: ${{ matrix.runner }}
@@ -41,14 +41,24 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24.14.1
           package-manager-cache: false
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
         with:
           toolchain: stable
           targets: wasm32-wasip2
+
+      # The workspace build compiles @vercel-internals/ipc-proxy, which
+      # requires a Go toolchain on PATH (build.mjs hard-fails in GitHub
+      # Actions rather than downloading Go). Keep in sync with GO_VERSION
+      # in internals/ipc-proxy/build.mjs and test.yml.
+      - name: Setup Go toolchain
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.23.12'
+          cache: false
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -117,7 +127,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24.14.1
           package-manager-cache: false
 
       - name: Install pnpm

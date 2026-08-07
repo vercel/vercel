@@ -12,11 +12,11 @@ function servicesV2(services: { schema: string }[]): ExperimentalServiceV2[] {
   );
 }
 
-describe('detectServices (experimentalServicesV2)', () => {
-  it('resolves a node backend framework service to @vercel/backends', async () => {
+describe('detectServices (services)', () => {
+  it('resolves canonical services config to @vercel/backends', async () => {
     const fs = new VirtualFilesystem({
       'vercel.json': vercelJson({
-        experimentalServicesV2: {
+        services: {
           api: { root: 'api', framework: 'express' },
         },
       }),
@@ -44,6 +44,26 @@ describe('detectServices (experimentalServicesV2)', () => {
     expect(api.builder.src).toBe('api/index.js');
   });
 
+  it('rejects services together with its deprecated alias', async () => {
+    const fs = new VirtualFilesystem({
+      'vercel.json': vercelJson({
+        services: { web: { root: 'web', framework: 'nextjs' } },
+        experimentalServicesV2: {
+          api: { root: 'api', framework: 'express' },
+        },
+      }),
+    });
+
+    const result = await detectServices({ fs });
+
+    expect(result.services).toEqual([]);
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        code: 'SERVICES_AND_EXPERIMENTAL_SERVICES_V2',
+      }),
+    ]);
+  });
+
   it('resolves a runtime + file entrypoint service to the runtime builder', async () => {
     const fs = new VirtualFilesystem({
       'vercel.json': vercelJson({
@@ -67,6 +87,42 @@ describe('detectServices (experimentalServicesV2)', () => {
     });
     expect(worker.builder.use).toBe('@vercel/python');
     expect(worker.builder.src).toBe('svc/main.py');
+  });
+
+  it('resolves a pyproject.toml entrypoint to the python builder', async () => {
+    const fs = new VirtualFilesystem({
+      'vercel.json': vercelJson({
+        services: {
+          backend: { root: 'backend', entrypoint: 'pyproject.toml' },
+        },
+      }),
+      'backend/pyproject.toml': [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        '',
+        '[[tool.vercel.subscribers]]',
+        'entrypoint = "worker:app"',
+        'topics = ["invoices"]',
+        '',
+      ].join('\n'),
+      'backend/worker.py': 'app = object()',
+    });
+
+    const result = await detectServices({ fs });
+
+    expect(result.errors).toEqual([]);
+    const [backend] = servicesV2(result.services);
+    expect(backend).toMatchObject({
+      schema: 'experimentalServicesV2',
+      name: 'backend',
+      root: 'backend',
+      runtime: 'python',
+      entrypoint: 'pyproject.toml',
+    });
+    expect(backend.builder.use).toBe('@vercel/python');
+    expect(backend.builder.src).toBe('backend/pyproject.toml');
+    expect(backend.builder.config).toMatchObject({ workspace: 'backend' });
   });
 
   it('returns empty routes for V2', async () => {
@@ -168,6 +224,43 @@ describe('detectServices (experimentalServicesV2)', () => {
     expect(isRouteOwningBuilder(web)).toBe(true);
   });
 
+  it('detects a root-only frontend framework service', async () => {
+    const fs = new VirtualFilesystem({
+      'vercel.json': vercelJson({
+        experimentalServicesV2: {
+          frontend: { root: 'frontend' },
+        },
+      }),
+      'frontend/package.json': JSON.stringify({
+        dependencies: {
+          next: 'latest',
+          react: 'latest',
+          'react-dom': 'latest',
+        },
+      }),
+    });
+
+    const result = await detectServices({ fs });
+
+    expect(result.errors).toEqual([]);
+    const [frontend] = servicesV2(result.services);
+    expect(frontend).toMatchObject({
+      name: 'frontend',
+      root: 'frontend',
+      framework: 'nextjs',
+    });
+    expect(frontend.builder).toEqual({
+      src: 'frontend/package.json',
+      use: '@vercel/next',
+      config: {
+        zeroConfig: true,
+        framework: 'nextjs',
+        workspace: 'frontend',
+      },
+    });
+    expect(isRouteOwningBuilder(frontend)).toBe(true);
+  });
+
   it('resolves a static framework to @vercel/static-build', async () => {
     const fs = new VirtualFilesystem({
       'vercel.json': vercelJson({
@@ -213,6 +306,37 @@ describe('detectServices (experimentalServicesV2)', () => {
     expect(api.builder.config).toMatchObject({ handlerFunction: 'app' });
   });
 
+  it('auto-detects framework using service root when entrypoint is in a subdirectory', async () => {
+    const fs = new VirtualFilesystem({
+      'vercel.json': vercelJson({
+        experimentalServicesV2: {
+          backend: {
+            root: 'backend',
+            entrypoint: 'src/main.py',
+          },
+        },
+      }),
+      'backend/pyproject.toml': '[project]\ndependencies = ["fastapi"]\n',
+      'backend/src/main.py': 'from fastapi import FastAPI\napp = FastAPI()',
+    });
+
+    const result = await detectServices({ fs });
+
+    expect(result.errors).toEqual([]);
+    const [backend] = servicesV2(result.services);
+    expect(backend).toMatchObject({
+      name: 'backend',
+      framework: 'fastapi',
+      runtime: 'python',
+      entrypoint: 'src/main.py',
+    });
+    expect(backend.builder.use).toBe('@vercel/python');
+    expect(backend.builder.config).toMatchObject({
+      framework: 'fastapi',
+      workspace: 'backend',
+    });
+  });
+
   it('resolves a service rooted at the project root (".")', async () => {
     const fs = new VirtualFilesystem({
       'vercel.json': vercelJson({
@@ -230,6 +354,50 @@ describe('detectServices (experimentalServicesV2)', () => {
     expect(api).toMatchObject({ name: 'api', root: '.', framework: 'express' });
     expect(api.builder.use).toBe('@vercel/backends');
     expect(api.builder.src).toBe('index.js');
+  });
+
+  it('strips a trailing slash from a framework service root', async () => {
+    const fs = new VirtualFilesystem({
+      'vercel.json': vercelJson({
+        experimentalServicesV2: {
+          frontend: { root: 'frontend/', framework: 'nextjs' },
+        },
+      }),
+      'frontend/package.json': JSON.stringify({
+        dependencies: { next: 'latest' },
+      }),
+    });
+
+    const result = await detectServices({ fs });
+
+    expect(result.errors).toEqual([]);
+    const [frontend] = servicesV2(result.services);
+    // Trailing slash is normalized away so it isn't double-prefixed downstream.
+    expect(frontend.root).toBe('frontend');
+    expect(frontend.builder.use).toBe('@vercel/next');
+    expect(frontend.builder.src).toBe('frontend/package.json');
+    expect(frontend.builder.config).toMatchObject({ workspace: 'frontend' });
+  });
+
+  it('strips a trailing slash from an entrypoint service root', async () => {
+    const fs = new VirtualFilesystem({
+      'vercel.json': vercelJson({
+        experimentalServicesV2: {
+          backend: { root: 'backend/', entrypoint: 'cmd/api/main.go' },
+        },
+      }),
+      'backend/cmd/api/main.go': 'package main',
+      'backend/go.mod': 'module backend',
+    });
+
+    const result = await detectServices({ fs });
+
+    expect(result.errors).toEqual([]);
+    const [backend] = servicesV2(result.services);
+    expect(backend.root).toBe('backend');
+    expect(backend.builder.use).toBe('@vercel/go');
+    // Root prefix applied exactly once.
+    expect(backend.builder.src).toBe('backend/cmd/api/main.go');
   });
 
   it('resolves multiple services independently', async () => {
@@ -384,18 +552,147 @@ describe('detectServices (experimentalServicesV2)', () => {
       });
     });
 
-    it('errors when neither framework nor entrypoint is given', async () => {
+    it('resolves a root-only static service when static files are present', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': vercelJson({
-          experimentalServicesV2: { a: { root: 'svc' } },
+          experimentalServicesV2: {
+            frontend: {
+              root: 'frontend/',
+              rewrites: [{ source: '/(.*)', destination: '/index.html' }],
+            },
+          },
         }),
+        'frontend/index.html': '<h1>Hello static service</h1>',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const [frontend] = servicesV2(result.services);
+      expect(frontend).toMatchObject({
+        schema: 'experimentalServicesV2',
+        name: 'frontend',
+        root: 'frontend',
+        rewrites: [{ source: '/(.*)', destination: '/index.html' }],
+      });
+      expect(frontend.builder).toEqual({
+        src: 'frontend/**',
+        use: '@vercel/static',
+        config: { zeroConfig: true, workspace: 'frontend' },
+      });
+      expect(frontend.framework).toBeUndefined();
+      expect(frontend.runtime).toBeUndefined();
+      expect(frontend.entrypoint).toBeUndefined();
+      expect(isStaticBuild(frontend)).toBe(true);
+    });
+
+    it('resolves a root-only static service with a build command to @vercel/static-build', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          experimentalServicesV2: {
+            frontend: {
+              root: 'frontend',
+              buildCommand: 'npm run build',
+              outputDirectory: 'dist',
+              rewrites: [{ source: '/(.*)', destination: '/index.html' }],
+            },
+          },
+        }),
+        'frontend/package.json': JSON.stringify({
+          scripts: { build: 'echo built' },
+        }),
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const [frontend] = servicesV2(result.services);
+      expect(frontend).toMatchObject({
+        name: 'frontend',
+        buildCommand: 'npm run build',
+        outputDirectory: 'dist',
+        rewrites: [{ source: '/(.*)', destination: '/index.html' }],
+      });
+      expect(frontend.builder).toEqual({
+        src: 'frontend/package.json',
+        use: '@vercel/static-build',
+        config: {
+          zeroConfig: true,
+          outputDirectory: 'dist',
+          workspace: 'frontend',
+        },
+      });
+      expect(frontend.framework).toBeUndefined();
+      expect(frontend.runtime).toBeUndefined();
+      expect(isStaticBuild(frontend)).toBe(true);
+    });
+
+    it('resolves a root-only static service with an output directory to @vercel/static', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          experimentalServicesV2: {
+            frontend: { root: 'frontend', outputDirectory: 'public' },
+          },
+        }),
+        'frontend/public/index.html': '<h1>Hello public directory</h1>',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const [frontend] = servicesV2(result.services);
+      expect(frontend.builder).toEqual({
+        src: 'frontend/public/**',
+        use: '@vercel/static',
+        config: {
+          zeroConfig: true,
+          outputDirectory: 'public',
+          workspace: 'frontend',
+        },
+      });
+      expect(frontend.outputDirectory).toBe('public');
+      expect(frontend.runtime).toBeUndefined();
+      expect(isStaticBuild(frontend)).toBe(true);
+    });
+
+    it('errors when a runtime service has no entrypoint', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          experimentalServicesV2: {
+            worker: { root: 'svc', runtime: 'node' },
+          },
+        }),
+        'svc/index.html': '<h1>Not a Node entrypoint</h1>',
       });
 
       const result = await detectServices({ fs });
 
       expect(result.errors[0]).toMatchObject({
         code: 'MISSING_SERVICE_CONFIG',
+        serviceName: 'worker',
       });
+    });
+
+    it('errors when a root-only service detects a backend framework without an entrypoint', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          experimentalServicesV2: {
+            api: { root: 'api' },
+          },
+        }),
+        'api/pyproject.toml': '[project]\ndependencies = ["fastapi"]\n',
+        'api/main.py': 'app = object()',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(servicesV2(result.services)).toEqual([]);
+      expect(result.errors[0]).toMatchObject({
+        code: 'MISSING_SERVICE_CONFIG',
+        serviceName: 'api',
+      });
+      expect(result.errors[0].message).toContain('framework "fastapi"');
+      expect(result.errors[0].message).toContain('"entrypoint"');
     });
 
     it('errors when root is missing', async () => {
@@ -436,18 +733,45 @@ describe('detectServices (experimentalServicesV2)', () => {
       expect(result.errors[0]).toMatchObject({ code: 'INVALID_ROOT' });
     });
 
-    it('errors on an invalid service name', async () => {
+    it.each([
+      '1bad',
+      'bad1',
+      'Bad',
+      'bad.service',
+      'bad_service_',
+      'bad'.repeat(22),
+    ])('errors on invalid service name "%s"', async name => {
       const fs = new VirtualFilesystem({
         'vercel.json': vercelJson({
           experimentalServicesV2: {
-            '1bad': { root: 'svc', framework: 'express' },
+            [name]: { root: 'svc', framework: 'express' },
           },
         }),
       });
 
       const result = await detectServices({ fs });
 
-      expect(result.errors[0]).toMatchObject({ code: 'INVALID_SERVICE_NAME' });
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_SERVICE_NAME',
+      });
+    });
+
+    it('accepts service names matching the API schema', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          experimentalServicesV2: {
+            ['a'.repeat(64)]: { root: 'svc', framework: 'express' },
+            my_service: { root: 'svc', framework: 'express' },
+            'my-service': { root: 'svc', framework: 'express' },
+          },
+        }),
+        'svc/package.json': '{}',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(3);
     });
 
     it('reports errors per service and resolves the valid ones', async () => {
@@ -493,5 +817,32 @@ describe('detectServices (experimentalServicesV2)', () => {
         code: 'UNKNOWN_SERVICE_BINDING',
       });
     });
+
+    it('errors when a binding references an invalid service name', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          experimentalServicesV2: {
+            web: {
+              root: 'apps/web',
+              framework: 'express',
+              bindings: [
+                { type: 'service', service: 'Bad', format: 'url', env: 'G' },
+              ],
+            },
+          },
+        }),
+        'apps/web/package.json': '{}',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_SERVICE_BINDING_NAME',
+      });
+    });
   });
+
+  // Container detection (entrypoint inference, runtime auto-detection, and
+  // failure cases) is covered comprehensively with shareable fixtures in
+  // unit.detect-services-v2-container.test.ts.
 });

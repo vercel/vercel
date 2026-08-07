@@ -18,7 +18,7 @@
       "require": "./dist/index.js"
     }
   },
-  "version": "3.6.1",
+  "version": "3.8.1",
   "repository": {
     "directory": "packages/oidc",
     "type": "git",
@@ -48,7 +48,7 @@
     "pretest": "pnpm run build:code",
     "test": "vitest",
     "build": "pnpm run build:code && pnpm run build:docs",
-    "build:code": "node ../../utils/build.mjs",
+    "build:code": "node build.mjs",
     "build:docs": "typedoc && prettier --write docs/**/*.md docs/*.md"
   },
   "license": "Apache-2.0",

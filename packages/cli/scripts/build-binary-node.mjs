@@ -7,11 +7,12 @@ import { availableParallelism, platform, arch, tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { pipeline } from 'node:stream/promises';
 import { promisify } from 'node:util';
+import { patchWindowsSmallIcuGenccode } from './patch-node-source.mjs';
 
 const execFileAsync = promisify(execFile);
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const nodeVersion = process.env.VERCEL_CLI_NODE_VERSION ?? '22.22.2';
+const nodeVersion = process.env.VERCEL_CLI_NODE_VERSION ?? '24.14.1';
 const nodeTag = `v${nodeVersion}`;
 const nodePlatform =
   process.env.VERCEL_CLI_NODE_PLATFORM ?? nodePlatformForHost(platform());
@@ -47,6 +48,10 @@ const sourceDir = join(buildRoot, `node-${nodeTag}`);
 try {
   await downloadAndVerifySource(sourceArchive);
   await run('tar', ['-xzf', sourceArchive], buildRoot);
+
+  if (nodePlatform === 'win') {
+    await patchWindowsSmallIcuGenccode(sourceDir);
+  }
 
   const builtNode = await buildNode(sourceDir);
   await fs.mkdir(dirname(outputNode), { recursive: true });

@@ -229,6 +229,9 @@ describe('microfrontends delete-group', () => {
       client.stdin.write('My Group\n');
 
       expect(await exitCodePromise).toBe(0);
+      expect(mockedGetLinkedProject).toHaveBeenCalledWith(client, {
+        cwd: client.cwd,
+      });
       expect(mocks.getDeleteCalled()).toBe(true);
       expect(mocks.getDeleteGroupId()).toBe('group_1');
     });

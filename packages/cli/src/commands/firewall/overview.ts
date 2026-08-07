@@ -1,13 +1,9 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { overviewSubcommand } from './command';
-import {
-  parseSubcommandArgs,
-  ensureProjectLink,
-  outputJson,
-  withGlobalFlags,
-} from './shared';
+import { parseSubcommandArgs, outputJson, withGlobalFlags } from './shared';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import getBypass from '../../util/firewall/get-bypass';
 import {
@@ -21,7 +17,11 @@ export default async function overview(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, overviewSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await requireProjectContext(
+    client,
+    'firewall',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

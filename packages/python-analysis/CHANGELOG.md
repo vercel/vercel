@@ -1,5 +1,11 @@
 # @vercel/python-analysis
 
+## 0.12.0
+
+### Minor Changes
+
+- 6aa29e5: Add [tool.vercel.fastapi.static] cdn opt-out flag.
+
 ## 0.11.1
 
 ### Patch Changes

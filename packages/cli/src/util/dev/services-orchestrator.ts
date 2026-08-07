@@ -13,7 +13,7 @@ import {
   type ExperimentalServiceV2,
   type Service,
 } from '@vercel/fs-detectors';
-import type { Cron } from '@vercel/build-utils';
+import type { Cron, DevQueueSubscription } from '@vercel/build-utils';
 import { frameworkList, type Framework } from '@vercel/frameworks';
 import { getNextCronDelay } from './cron';
 import {
@@ -40,6 +40,7 @@ import { importBuilders } from '../build/import-builders';
 import { getStaticServiceSchedules } from '../service-schedules';
 import output from '../../output-manager';
 import { treeKill } from '../tree-kill';
+import { injectNextDevWebSocketShimIfNeeded } from './next-dev-websocket-shim-injection';
 
 const STARTUP_TIMEOUT = ms('5m');
 
@@ -151,6 +152,7 @@ interface ServiceDevProcess {
   workspace: string;
   logger: ServiceLogger;
   crons?: Cron[];
+  queueSubscriptions?: DevQueueSubscription[];
 }
 
 function getServiceRoutePrefixes(service: ExperimentalService): string[] {
@@ -207,6 +209,16 @@ interface ServicesOrchestratorOptions {
   env: NodeJS.ProcessEnv;
   proxyOrigin: string;
   useImplicitEnvInjection: boolean;
+  preferServiceBuilder?: boolean;
+  /**
+   * Invoked when a service's dev server reports the queue subscriptions its
+   * code registered, so the dev queue broker can deliver with the
+   * SDK-registered consumer groups.
+   */
+  onQueueSubscriptions?: (
+    serviceName: string,
+    subscriptions: DevQueueSubscription[]
+  ) => void;
 }
 
 // Max time we wait between SIGTERM and SIGKILL when force-stopping a service.
@@ -288,6 +300,7 @@ function waitForExit(
 export class ServicesOrchestrator {
   private managedServices = new Map<string, ServiceDevProcess>();
   private managedProcesses = new Map<string, ChildProcess>();
+  private servicePorts = new Map<string, number>();
   private cronTimers: ReturnType<typeof setTimeout>[] = [];
   private stopping = false;
   private exitBackstop: (() => void) | undefined;
@@ -301,6 +314,11 @@ export class ServicesOrchestrator {
   private pythonServiceCount: number;
   private hasQueueServices: boolean;
   private useImplicitEnvInjection: boolean;
+  private preferServiceBuilder: boolean;
+  private onQueueSubscriptions?: (
+    serviceName: string,
+    subscriptions: DevQueueSubscription[]
+  ) => void;
 
   constructor(options: ServicesOrchestratorOptions) {
     this.services = options.services;
@@ -310,9 +328,21 @@ export class ServicesOrchestrator {
     this.proxyOrigin = options.proxyOrigin;
     this.envFilesValues = options.env;
     this.useImplicitEnvInjection = options.useImplicitEnvInjection;
-    this.pythonServiceCount = options.services.filter(
-      s => s.runtime === 'python'
-    ).length;
+    this.preferServiceBuilder = options.preferServiceBuilder ?? false;
+    this.onQueueSubscriptions = options.onQueueSubscriptions;
+    // Python services in one workspace intentionally share a managed virtualenv.
+    // Count environments, rather than processes, for the external-venv guard.
+    const pythonWorkspaces = options.services
+      .filter(service => service.runtime === 'python')
+      .map(service =>
+        path.resolve(
+          this.cwd,
+          isExperimentalServiceV2(service)
+            ? service.root || '.'
+            : service.workspace || '.'
+        )
+      );
+    this.pythonServiceCount = new Set(pythonWorkspaces).size;
     this.hasQueueServices = options.services
       .filter(isExperimentalService)
       .some(isQueueBackedService);
@@ -355,6 +385,10 @@ export class ServicesOrchestrator {
     output.debug(`Starting ${this.services.length} services`);
 
     this.registerExitBackstop();
+
+    // Pre-allocate a port for every service before starting any of them,
+    // so if a service requires bindings we can provide them
+    await this.allocateServicePorts();
 
     const startPromises = this.services.map((service, index) =>
       this.startService(service, index).then(result => {
@@ -545,6 +579,20 @@ export class ServicesOrchestrator {
     return this.managedServices;
   }
 
+  // Pre-allocate ports for services in advance, can be subject for
+  //  TOCTOU but for dev purposes it shouldn't be an often case
+  private async allocateServicePorts(): Promise<void> {
+    const used = new Set<number>();
+    for (const service of this.services) {
+      let port = await getPort();
+      while (used.has(port)) {
+        port = await getPort();
+      }
+      used.add(port);
+      this.servicePorts.set(service.name, port);
+    }
+  }
+
   private async startService(
     service: Service,
     colorIndex: number
@@ -558,8 +606,18 @@ export class ServicesOrchestrator {
       ? this.getV2StartSpec(service)
       : this.getV1StartSpec(service);
 
+    const port = this.servicePorts.get(service.name);
+    if (port !== undefined) {
+      spec.env.VERCEL_DEV_PORT = String(port);
+    }
+
     if (spec.builderSpec) {
-      const result = await this.tryStartWithBuilder(service.name, spec, logger);
+      const result = await this.tryStartWithBuilder(
+        service.name,
+        spec,
+        logger,
+        port
+      );
       if (result) {
         return result;
       }
@@ -576,12 +634,14 @@ export class ServicesOrchestrator {
     return this.spawnDevCommandProcess({
       name: service.name,
       devCommand,
+      framework: spec.framework,
       workspacePath: spec.rootPath,
       env: spec.env,
       logger,
       builderConfig: spec.builderConfig,
       routePrefixes: spec.routePrefixes,
       workspaceLabel: spec.rootLabel,
+      port,
     });
   }
 
@@ -639,6 +699,8 @@ export class ServicesOrchestrator {
     if (this.hasQueueServices) {
       env.VERCEL_QUEUE_BASE_URL = `${this.proxyOrigin}/_svc/_queues`;
       env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
+      env.VERCEL_REGION = 'dev1';
+      env.VERCEL_DEPLOYMENT_ID = 'dpl_dev';
     }
 
     if (service.routePrefix && service.routePrefix !== '/') {
@@ -651,8 +713,9 @@ export class ServicesOrchestrator {
       rootPath: path.join(this.cwd, workspace),
       rootLabel: workspace,
       framework,
-      // Prefer the framework's useRuntime, falling back to the resolved builder.
-      builderSpec: framework?.useRuntime?.use || service.builder?.use,
+      builderSpec: this.preferServiceBuilder
+        ? service.builder?.use || framework?.useRuntime?.use
+        : framework?.useRuntime?.use || service.builder?.use,
       entrypoint: getEntrypointForService(
         service.builder?.src,
         service.entrypoint,
@@ -676,13 +739,48 @@ export class ServicesOrchestrator {
 
   private getV2StartSpec(service: ExperimentalServiceV2): ServiceStartSpec {
     const framework = frameworkList.find(f => f.slug === service.framework);
+    const effectiveProcessEnv = cloneEnv(this.envFilesValues, process.env);
+
+    const perServiceEnv: Record<string, string> = {};
+    for (const binding of service.bindings ?? []) {
+      if (
+        (binding.type !== undefined && binding.type !== 'service') ||
+        binding.format !== 'url'
+      ) {
+        continue;
+      }
+      if (binding.env in effectiveProcessEnv) {
+        continue;
+      }
+      const targetPort = this.servicePorts.get(binding.service);
+      if (targetPort === undefined) {
+        continue;
+      }
+      perServiceEnv[binding.env] = `http://127.0.0.1:${targetPort}`;
+    }
+
     const env = cloneEnv(
       {
         FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
         BROWSER: 'none',
       },
-      cloneEnv(this.envFilesValues, process.env)
+      effectiveProcessEnv,
+      perServiceEnv
     );
+
+    if (
+      this.hasQueueServices &&
+      service.runtime === 'python' &&
+      env.VERCEL_HAS_WORKER_SERVICES === undefined
+    ) {
+      env.VERCEL_HAS_WORKER_SERVICES = '1';
+    }
+    if (this.hasQueueServices) {
+      env.VERCEL_QUEUE_BASE_URL = `${this.proxyOrigin}/_svc/_queues`;
+      env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
+      env.VERCEL_REGION = 'dev1';
+      env.VERCEL_DEPLOYMENT_ID = 'dpl_dev';
+    }
 
     const root = service.root || '.';
     return {
@@ -709,7 +807,8 @@ export class ServicesOrchestrator {
   private async tryStartWithBuilder(
     name: string,
     spec: ServiceStartSpec,
-    logger: ServiceLogger
+    logger: ServiceLogger,
+    port?: number
   ): Promise<ServiceDevProcess | null> {
     if (!spec.builderSpec) {
       return null;
@@ -733,6 +832,12 @@ export class ServicesOrchestrator {
         `Starting ${chalk.bold(name)} using ${chalk.cyan.bold(spec.builderSpec)}`
       );
 
+      injectNextDevWebSocketShimIfNeeded(
+        spec.env,
+        spec.framework?.settings.devCommand?.value || '',
+        { framework: spec.framework?.slug }
+      );
+
       const result = await builder.startDevServer({
         entrypoint: spec.entrypoint,
         workPath: spec.rootPath,
@@ -744,6 +849,7 @@ export class ServicesOrchestrator {
         meta: {
           isDev: true,
           env: spec.env,
+          port,
           serviceCount: this.services.length,
           pythonServiceCount: this.pythonServiceCount,
           syncDependencies: true,
@@ -762,6 +868,10 @@ export class ServicesOrchestrator {
       const host = await checkForPort(result.port, STARTUP_TIMEOUT);
       output.debug(`Service ${name} started on ${host}:${result.port}`);
 
+      if (result.queueSubscriptions?.length) {
+        this.onQueueSubscriptions?.(name, result.queueSubscriptions);
+      }
+
       return {
         name,
         host,
@@ -772,6 +882,7 @@ export class ServicesOrchestrator {
         workspace: spec.rootLabel,
         logger,
         crons: result.crons,
+        queueSubscriptions: result.queueSubscriptions,
       };
     } catch (err) {
       output.debug(`Failed to use startDevServer for ${name}: ${err}`);
@@ -786,16 +897,19 @@ export class ServicesOrchestrator {
   private async spawnDevCommandProcess(params: {
     name: string;
     devCommand: string;
+    framework: Framework | undefined;
     workspacePath: string;
     env: NodeJS.ProcessEnv;
     logger: ServiceLogger;
     builderConfig: Config | undefined;
     routePrefixes: string[];
     workspaceLabel: string;
+    port?: number;
   }): Promise<ServiceDevProcess> {
     const {
       name,
       devCommand,
+      framework,
       workspacePath,
       env,
       logger,
@@ -806,7 +920,7 @@ export class ServicesOrchestrator {
 
     await this.syncDependencies(builderConfig, workspacePath, logger);
 
-    const port = await getPort();
+    const port = params.port ?? (await getPort());
     env.PORT = `${port}`;
 
     // Add node_modules/.bin to PATH
@@ -825,6 +939,10 @@ export class ServicesOrchestrator {
     if (process.stdout.columns) {
       env.COLUMNS = `${process.stdout.columns}`;
     }
+
+    injectNextDevWebSocketShimIfNeeded(env, devCommand, {
+      framework: framework?.slug,
+    });
 
     const child = spawnCommand(devCommand, {
       cwd: workspacePath,

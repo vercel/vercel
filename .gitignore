@@ -48,8 +48,11 @@ junit.xml
 # CLI "target" subcommand (e.g. vercel target list) is source, not build output
 !packages/cli/src/commands/target/
 !packages/cli/src/commands/target/**
+!packages/cli/src/util/telemetry/commands/target/
+!packages/cli/src/util/telemetry/commands/target/**
 # CLI target command tests
 !packages/cli/test/unit/commands/target/
 !packages/cli/test/unit/commands/target/**
 .claude/settings.local.json
 .pnpm-store
+.env*

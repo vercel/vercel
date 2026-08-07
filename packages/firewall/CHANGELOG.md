@@ -1,5 +1,11 @@
 # @vercel/firewall
 
+## 1.2.2
+
+### Patch Changes
+
+- 20ae4d3: Clarify rate limit key documentation and remove `x-real-ip` implementation detail from error message.
+
 ## 1.2.1
 
 ### Patch Changes

@@ -12,6 +12,8 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -27,6 +29,88 @@ import (
 	"sync"
 	"time"
 )
+
+// hijackAwareResponseWriter reports when an HTTP protocol upgrade has written
+// and flushed its handshake response. ReverseProxy performs the hijack only
+// after receiving and validating a 101 response from the upstream server.
+//
+// Unwrap preserves optional ResponseWriter capabilities used by ReverseProxy
+// for ordinary and streaming HTTP responses.
+type hijackAwareResponseWriter struct {
+	http.ResponseWriter
+	onUpgrade func()
+}
+
+func (w *hijackAwareResponseWriter) Unwrap() http.ResponseWriter {
+	return w.ResponseWriter
+}
+
+func (w *hijackAwareResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	conn, readWriter, err := http.NewResponseController(w.ResponseWriter).Hijack()
+	if err != nil {
+		return conn, readWriter, err
+	}
+
+	upgradeWriter := &upgradeHandshakeWriter{
+		writer:     readWriter.Writer,
+		onComplete: w.onUpgrade,
+	}
+	return conn, bufio.NewReadWriter(
+		readWriter.Reader,
+		bufio.NewWriter(upgradeWriter),
+	), nil
+}
+
+type upgradeHandshakeWriter struct {
+	writer     *bufio.Writer
+	onComplete func()
+	header     bytes.Buffer
+	complete   bool
+}
+
+func (w *upgradeHandshakeWriter) Write(data []byte) (int, error) {
+	written, err := w.writer.Write(data)
+	if err != nil {
+		return written, err
+	}
+	if err := w.writer.Flush(); err != nil {
+		return written, err
+	}
+
+	if !w.complete && written > 0 {
+		_, _ = w.header.Write(data[:written])
+		if bytes.Contains(w.header.Bytes(), []byte("\r\n\r\n")) {
+			w.complete = true
+			w.header.Reset()
+			if w.onComplete != nil {
+				w.onComplete()
+			}
+		}
+	}
+
+	return written, nil
+}
+
+func onceCallback(callback func()) func() {
+	var once sync.Once
+	return func() {
+		once.Do(callback)
+	}
+}
+
+func serveWithUpgradeLifecycle(
+	handler http.Handler,
+	w http.ResponseWriter,
+	r *http.Request,
+	onEnd func(),
+) {
+	endRequest := onceCallback(onEnd)
+	handler.ServeHTTP(&hijackAwareResponseWriter{
+		ResponseWriter: w,
+		onUpgrade:      endRequest,
+	}, r)
+	endRequest()
+}
 
 // IPC message types
 type StartMessage struct {
@@ -89,7 +173,7 @@ func sendIPCMessage(msg interface{}) error {
 	return err
 }
 
-// fatal reports a fatal init error via IPC and exits.
+// fatal reports an unrecoverable error via IPC and exits.
 func fatal(exitCode int, msg string) {
 	fmt.Fprintln(os.Stderr, msg)
 	sendIPCMessage(UnrecoverableErrorMessage{
@@ -99,7 +183,46 @@ func fatal(exitCode int, msg string) {
 			Message:  msg,
 		},
 	})
-	os.Exit(exitCode)
+	os.Exit(proxyExitCode(exitCode))
+}
+
+// childExitCode derives the user server exit code to report from a cmd.Wait()
+// error. A clean exit is reported as 0 even though it is fatal for the proxy.
+func childExitCode(waitErr error) int {
+	if waitErr == nil {
+		return 0
+	}
+
+	var exitErr *exec.ExitError
+	if errors.As(waitErr, &exitErr) {
+		exitCode := exitErr.ExitCode()
+		if exitCode >= 0 {
+			return exitCode
+		}
+	}
+
+	return 1
+}
+
+// proxyExitCode derives the proxy process exit code from the reported user
+// server exit code. A clean child exit is still fatal because the process must
+// keep serving requests.
+func proxyExitCode(exitCode int) int {
+	if exitCode <= 0 {
+		return 1
+	}
+	return exitCode
+}
+
+func childExitMessage(waitErr error, reason string) string {
+	msg := fmt.Sprintf(
+		"Expected a long-running server process, but the user server %s",
+		reason,
+	)
+	if waitErr == nil {
+		return fmt.Sprintf("%s with exit code 0", msg)
+	}
+	return fmt.Sprintf("%s: %v", msg, waitErr)
 }
 
 func connectIPC() error {
@@ -161,18 +284,28 @@ func main() {
 	select {
 	case waitErr := <-childDone:
 		// Child exited before the server became ready.
-		exitCode := 1
-		var exitErr *exec.ExitError
-		if errors.As(waitErr, &exitErr) {
-			exitCode = exitErr.ExitCode()
-		}
-		fatal(exitCode, "User server exited during startup")
+		fatal(
+			childExitCode(waitErr),
+			childExitMessage(waitErr, "exited during startup"),
+		)
 	case err := <-serverReady:
 		if err != nil {
 			cmd.Process.Kill()
 			fatal(1, fmt.Sprintf("User server failed to start: %v", err))
 		}
 	}
+
+	// Supervise the user server for the lifetime of the instance. If it
+	// exits after startup, report an unrecoverable error so the platform
+	// recycles this instance instead of leaving the proxy serving 502s
+	// while the health check still reports OK.
+	go func() {
+		waitErr := <-childDone
+		fatal(
+			childExitCode(waitErr),
+			childExitMessage(waitErr, "exited unexpectedly"),
+		)
+	}()
 
 	// Create reverse proxy to user's server
 	targetURL, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", userPort))
@@ -207,6 +340,27 @@ func main() {
 			requestIDStr := r.Header.Get("X-Vercel-Internal-Request-Id")
 			requestID, _ := strconv.ParseUint(requestIDStr, 10, 64)
 
+			// A successful protocol upgrade detaches the connection from the
+			// request lifecycle. End the invocation at that boundary while the
+			// reverse proxy continues tunneling the upgraded connection. The
+			// fallback after ServeHTTP handles ordinary responses and failed
+			// upgrades. sync.Once prevents a second end message when an upgraded
+			// connection eventually closes and ServeHTTP returns.
+			endRequest := func() {
+				if ipcConn != nil && invocationID != "" {
+					endMsg := EndMessage{
+						Type: "end",
+						Payload: EndPayload{
+							Context: RequestContext{
+								InvocationID: invocationID,
+								RequestID:    requestID,
+							},
+						},
+					}
+					sendIPCMessage(endMsg)
+				}
+			}
+
 			// Remove internal headers before forwarding
 			for key := range r.Header {
 				if strings.HasPrefix(strings.ToLower(key), "x-vercel-internal-") {
@@ -224,21 +378,7 @@ func main() {
 			}
 
 			// Forward request to user's server
-			proxy.ServeHTTP(w, r)
-
-			// Send end message via IPC
-			if ipcConn != nil && invocationID != "" {
-				endMsg := EndMessage{
-					Type: "end",
-					Payload: EndPayload{
-						Context: RequestContext{
-							InvocationID: invocationID,
-							RequestID:    requestID,
-						},
-					},
-				}
-				sendIPCMessage(endMsg)
-			}
+			serveWithUpgradeLifecycle(proxy, w, r, endRequest)
 		}),
 	}
 

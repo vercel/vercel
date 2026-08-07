@@ -63,7 +63,7 @@ export async function claim(client: Client, argv: string[]) {
 
   if (parsedArguments.args.length > 1) {
     output.error(
-      'Too many arguments. Usage: `vercel integration-resource claim [name]`.'
+      'Too many arguments. Usage: `vercel integration resource claim [name]`.'
     );
     return 1;
   }
