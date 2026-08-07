@@ -17,7 +17,18 @@ const nodeTag = `v${nodeVersion}`;
 const nodePlatform =
   process.env.VERCEL_CLI_NODE_PLATFORM ?? nodePlatformForHost(platform());
 const nodeArch = process.env.VERCEL_CLI_NODE_ARCH ?? nodeArchForHost(arch());
-const runtimeName = `node-${nodeTag}-${nodePlatform}-${nodeArch}-small-icu`;
+// 'musl' builds a runtime linked against musl libc (Alpine and other
+// musl-based distros). Must run on a musl host (e.g. an Alpine container).
+const nodeLibc = process.env.VERCEL_CLI_NODE_LIBC ?? '';
+if (nodeLibc !== '' && nodeLibc !== 'musl') {
+  throw new Error(`Unsupported VERCEL_CLI_NODE_LIBC: ${nodeLibc}`);
+}
+if (nodeLibc === 'musl' && nodePlatform !== 'linux') {
+  throw new Error('VERCEL_CLI_NODE_LIBC=musl requires a linux target');
+}
+const runtimeName = `node-${nodeTag}-${nodePlatform}-${nodeArch}${
+  nodeLibc ? `-${nodeLibc}` : ''
+}-small-icu`;
 const outputNode = join(
   packageRoot,
   '.node-runtime',
@@ -65,6 +76,12 @@ try {
     );
   }
 
+  if (nodeLibc === 'musl' && !(await isMuslNode(outputNode))) {
+    throw new Error(
+      `Built runtime is not linked against musl libc: ${outputNode}`
+    );
+  }
+
   await fs.writeFile(
     join(dirname(outputNode), 'metadata.json'),
     JSON.stringify(
@@ -72,6 +89,7 @@ try {
         nodeVersion: nodeTag,
         platform: nodePlatform,
         arch: nodeArch,
+        ...(nodeLibc ? { libc: nodeLibc } : {}),
         intl: 'small-icu',
         locales: ['en'],
         stripped,
@@ -150,6 +168,10 @@ function configureFlags() {
     '--without-npm',
     '--without-corepack',
     '--without-sqlite',
+    // musl: statically link libgcc/libstdc++ so the runtime only depends on
+    // musl itself (/lib/ld-musl-*), which every Alpine install has. Keeps
+    // dlopen working for native addons, unlike --fully-static.
+    ...(nodeLibc === 'musl' ? ['--partly-static'] : []),
   ];
 }
 
@@ -268,6 +290,20 @@ function configureOsForNodePlatform(targetPlatform) {
 
 function nodeBinPath() {
   return nodePlatform === 'win' ? 'node.exe' : join('bin', 'node');
+}
+
+async function isMuslNode(nodePath) {
+  try {
+    const { stdout } = await execFileAsync(nodePath, [
+      '-p',
+      "JSON.stringify(require('node:process').report.getReport().header)",
+    ]);
+    const header = JSON.parse(stdout);
+    // Musl builds report no glibc version in the diagnostic report header.
+    return !header.glibcVersionRuntime;
+  } catch {
+    return false;
+  }
 }
 
 async function isExpectedNode(nodePath, expectedPlatform, expectedArch) {
