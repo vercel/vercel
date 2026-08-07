@@ -9,6 +9,7 @@ interface ValidationOptions {
 interface ValidationResult {
   valid: boolean;
   error?: string;
+  warnings?: string[];
 }
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
@@ -16,6 +17,21 @@ const ALLOWED_EXTENSIONS = ['.csv', '.json'];
 const MAX_REDIRECTS = 1_000_000;
 const MAX_URL_LENGTH = 2048;
 const VALID_STATUS_CODES = [301, 302, 303, 307, 308];
+
+/**
+ * Columns the bulk-redirects CSV schema understands. Anything else is
+ * silently ignored server-side, which is dangerous: a typo like `status`
+ * instead of `statusCode` makes every row fall back to the default 307
+ * with no error (see #17261).
+ */
+const KNOWN_CSV_COLUMNS = new Set([
+  'source',
+  'destination',
+  'statuscode',
+  'permanent',
+  'casesensitive',
+  'preservequeryparams',
+]);
 
 export function validateUploadFile(
   filePath: string,
@@ -144,18 +160,33 @@ export function validateCSVStructure(content: string): ValidationResult {
     };
   }
 
-  const header = lines[0].toLowerCase();
-  const hasSource = header.includes('source');
-  const hasDestination = header.includes('destination');
+  const columns = lines[0]
+    .split(',')
+    .map(column => column.trim().replace(/^"|"$/g, ''));
+  const normalized = columns.map(column => column.toLowerCase());
 
-  if (!hasSource || !hasDestination) {
+  if (!normalized.includes('source') || !normalized.includes('destination')) {
     return {
       valid: false,
       error: 'CSV must have "source" and "destination" columns',
     };
   }
 
-  return { valid: true };
+  const warnings: string[] = [];
+  for (let i = 0; i < columns.length; i++) {
+    const column = normalized[i];
+    if (!column || KNOWN_CSV_COLUMNS.has(column)) {
+      continue;
+    }
+    let warning = `Unrecognized CSV column "${columns[i]}" will be ignored.`;
+    if (column === 'status') {
+      warning +=
+        ' Did you mean "statusCode"? Without it, redirects default to 307.';
+    }
+    warnings.push(warning);
+  }
+
+  return warnings.length > 0 ? { valid: true, warnings } : { valid: true };
 }
 
 export function validateVersionName(name: string): ValidationResult {
