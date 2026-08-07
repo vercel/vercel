@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'packages/cli/package.json'
+      - 'packages/cli/src/**'
       - 'packages/cli/pkg.js'
       - 'packages/cli/pkg.config.mjs'
       - 'packages/cli/scripts/build-binary.mjs'

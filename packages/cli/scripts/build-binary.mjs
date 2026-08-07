@@ -36,6 +36,7 @@ const binaryRuntimePackageNames = [
   'sandbox',
   'smol-toml',
   'undici',
+  'uuid',
   'zod',
 ];
 for (const name of binaryRuntimePackageNames) {
