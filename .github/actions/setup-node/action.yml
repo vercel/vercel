@@ -1,0 +1,93 @@
+name: Setup Node.js with retries
+description: Set up Node.js with up to ten attempts.
+inputs:
+  node-version:
+    description: Node.js version to install.
+    required: true
+runs:
+  using: composite
+  steps:
+    - id: attempt-1
+      continue-on-error: true
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+    - if: steps.attempt-1.outcome == 'failure'
+      shell: bash
+      run: sleep 2
+    - id: attempt-2
+      if: steps.attempt-1.outcome == 'failure'
+      continue-on-error: true
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+    - if: steps.attempt-2.outcome == 'failure'
+      shell: bash
+      run: sleep 2
+    - id: attempt-3
+      if: steps.attempt-2.outcome == 'failure'
+      continue-on-error: true
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+    - if: steps.attempt-3.outcome == 'failure'
+      shell: bash
+      run: sleep 2
+    - id: attempt-4
+      if: steps.attempt-3.outcome == 'failure'
+      continue-on-error: true
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+    - if: steps.attempt-4.outcome == 'failure'
+      shell: bash
+      run: sleep 2
+    - id: attempt-5
+      if: steps.attempt-4.outcome == 'failure'
+      continue-on-error: true
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+    - if: steps.attempt-5.outcome == 'failure'
+      shell: bash
+      run: sleep 2
+    - id: attempt-6
+      if: steps.attempt-5.outcome == 'failure'
+      continue-on-error: true
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+    - if: steps.attempt-6.outcome == 'failure'
+      shell: bash
+      run: sleep 2
+    - id: attempt-7
+      if: steps.attempt-6.outcome == 'failure'
+      continue-on-error: true
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+    - if: steps.attempt-7.outcome == 'failure'
+      shell: bash
+      run: sleep 2
+    - id: attempt-8
+      if: steps.attempt-7.outcome == 'failure'
+      continue-on-error: true
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+    - if: steps.attempt-8.outcome == 'failure'
+      shell: bash
+      run: sleep 2
+    - id: attempt-9
+      if: steps.attempt-8.outcome == 'failure'
+      continue-on-error: true
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+    - if: steps.attempt-9.outcome == 'failure'
+      shell: bash
+      run: sleep 2
+    - if: steps.attempt-9.outcome == 'failure'
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}

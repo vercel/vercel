@@ -318,24 +318,24 @@ jobs:
       - parallel:
           - name: Setup Turborepo Remote Cache
             if: steps.affected.outputs.run == 'true'
-            uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
+            uses: ./.github/actions/setup-turborepo-remote-cache
             with:
               team: ${{ vars.TURBO_TEAM }}
           - name: Setup Go toolchain
             if: steps.affected.outputs.run == 'true'
-            uses: actions/setup-go@v6
+            uses: ./.github/actions/setup-go
             with:
               go-version: '1.23.12'
               cache: false
           - name: Setup Rust toolchain
             if: steps.affected.outputs.run == 'true'
-            uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+            uses: ./.github/actions/setup-rust
             with:
               toolchain: '1.96.1'
               targets: wasm32-wasip2
           - name: install uv@0.10.11
             if: steps.affected.outputs.run == 'true'
-            uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+            uses: ./.github/actions/setup-uv
             with:
               version: '0.10.11'
       # yarn 1.22.21 introduced a Corepack bug when running tests.
@@ -432,24 +432,24 @@ jobs:
       - parallel:
           - name: Setup Turborepo Remote Cache
             if: steps.affected.outputs.run == 'true'
-            uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
+            uses: ./.github/actions/setup-turborepo-remote-cache
             with:
               team: ${{ vars.TURBO_TEAM }}
           - name: Setup Go toolchain
             if: steps.affected.outputs.run == 'true'
-            uses: actions/setup-go@v6
+            uses: ./.github/actions/setup-go
             with:
               go-version: '1.23.12'
               cache: false
           - name: Setup Rust toolchain
             if: steps.affected.outputs.run == 'true'
-            uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+            uses: ./.github/actions/setup-rust
             with:
               toolchain: '1.96.1'
               targets: wasm32-wasip2
           - name: install uv@0.10.11
             if: steps.affected.outputs.run == 'true'
-            uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+            uses: ./.github/actions/setup-uv
             with:
               version: '0.10.11'
       - name: install yarn@1.22.19
@@ -606,26 +606,26 @@ jobs:
           ref: ${{ needs.setup.outputs.headSha }}
       - parallel:
           - name: Setup Turborepo Remote Cache
-            uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
+            uses: ./.github/actions/setup-turborepo-remote-cache
             with:
               team: ${{ vars.TURBO_TEAM }}
-          - uses: actions/setup-node@v4
+          - uses: ./.github/actions/setup-node
             with:
               node-version: ${{ matrix.nodeVersion }}
           - name: Setup Go toolchain
             if: ${{ matrix.needsGo == true }}
-            uses: actions/setup-go@v6
+            uses: ./.github/actions/setup-go
             with:
               go-version: '1.23.12'
               cache: false
           - name: Setup Rust toolchain
             if: ${{ matrix.needsRust == true }}
-            uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+            uses: ./.github/actions/setup-rust
             with:
               toolchain: '1.96.1'
               targets: wasm32-wasip2
           - name: Install uv
-            uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+            uses: ./.github/actions/setup-uv
             with:
               version: '0.10.11'
       # yarn 1.22.21 introduced a Corepack bug when running tests.
