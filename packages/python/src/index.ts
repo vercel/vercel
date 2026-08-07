@@ -20,6 +20,7 @@ import {
 } from './conditional-vendoring';
 import {
   isLegacyWorkersProject,
+  MIN_QUEUE_WORKFLOW_SDK_VERSION,
   resolveWorkflowServingMode,
   type WorkflowServingMode,
 } from './sdk-detection';
@@ -127,6 +128,7 @@ import {
   getPyprojectSubscribers,
   getSubscriberConsumerName,
   getSubscriberOutputPath,
+  queueTopicPatternsOverlap,
   resolveQueueSubscribers,
   type Subscriber,
   type SubscriberDeclaration,
@@ -135,6 +137,8 @@ import {
   getPyprojectWorkflows,
   getWorkflowConsumerName,
   getWorkflowOutputPath,
+  isWorkflowQueueTopic,
+  WORKFLOW_DEV_TOPIC_PATTERN,
   WORKFLOW_TOPIC_PATTERN,
   type PyprojectWorkflow,
 } from './workflows';
@@ -236,7 +240,7 @@ export async function getDevSidecars({
             pythonQueueSidecar: 'workflow',
           },
         },
-        topics: [{ topic: WORKFLOW_TOPIC_PATTERN }],
+        topics: [{ topic: WORKFLOW_DEV_TOPIC_PATTERN }],
       })
     ),
   ];
@@ -1161,6 +1165,18 @@ export const build: BuildVX = async ({
       projectDir: join(workPath, entryDirectory),
       uvLockPath,
     });
+    // The legacy serving mode attaches every workflow consumer to the shared
+    // `__wkf_*` topic, so a second Lambda would fail on runs registered only
+    // in the first. Namespaced topics require a vercel-queue SDK.
+    if (workflowMode === 'workers' && workflows.length > 1) {
+      throw new NowBuildError({
+        code: 'PYTHON_INVALID_WORKFLOW_CONFIG',
+        message:
+          '"tool.vercel.workflows" declares multiple entrypoints, which requires ' +
+          `vercel>=${MIN_QUEUE_WORKFLOW_SDK_VERSION} with a distinct namespace per ` +
+          'Workflows registry; the installed SDK serves every workflow on the shared __wkf_* topic',
+      });
+    }
   }
 
   // The legacy vercel-workers integration needs the vercel-workers package
@@ -1226,13 +1242,13 @@ export const build: BuildVX = async ({
     });
 
     if (workflowMode === 'queue') {
-      // Workflow subscriptions register on `__wkf_*` topics in the same
-      // import graph; keep them out of topic-less subscriber lambdas so
-      // workflow traffic is consumed only by the workflow Lambda.
+      // Workflow subscriptions register on workflow-shaped topics in the
+      // same import graph; keep them out of topic-less subscriber lambdas
+      // so workflow traffic is consumed only by the workflow Lambdas.
       for (const subscriber of subscribers) {
         if (!subscriber.topicPatterns) {
           subscriber.subscriptions = subscriber.subscriptions.filter(
-            subscription => !subscription.topic.startsWith('__wkf_')
+            subscription => !isWorkflowQueueTopic(subscription.topic)
           );
         }
       }
@@ -1247,8 +1263,9 @@ export const build: BuildVX = async ({
   }
 
   // For SDKs ported to vercel-queue, workflow entrypoints are served exactly
-  // like subscribers: introspect the registered `__wkf_*` subscriptions and
-  // serve them through a generated `vercel.queue.asgi_app()` module.
+  // like subscribers: introspect the registered workflow subscriptions —
+  // whose topics carry the registry's namespace — and serve them through a
+  // generated `vercel.queue.asgi_app()` module.
   const workflowQueueSubscriptions = new Map<
     string,
     Subscriber['subscriptions']
@@ -1260,7 +1277,6 @@ export const build: BuildVX = async ({
         entrypoint: workflow.entrypoint,
         moduleName: workflow.moduleName,
         variableName: workflow.variableName,
-        topicPatterns: [WORKFLOW_TOPIC_PATTERN],
       })),
       uv,
       venvPath,
@@ -1268,6 +1284,27 @@ export const build: BuildVX = async ({
       kind: 'workflow',
       integrations: queueIntegrations,
     });
+    // Registries sharing a namespace subscribe with the same (topic,
+    // consumer group) pairs, so their Lambdas would split each other's
+    // deliveries and fail on runs registered only in the other entrypoint.
+    for (let i = 0; i < resolved.length; i++) {
+      for (let j = i + 1; j < resolved.length; j++) {
+        const overlaps = resolved[i].subscriptions.some(left =>
+          resolved[j].subscriptions.some(right =>
+            queueTopicPatternsOverlap(left.topic, right.topic)
+          )
+        );
+        if (overlaps) {
+          throw new NowBuildError({
+            code: 'PYTHON_INVALID_WORKFLOW_CONFIG',
+            message:
+              `workflow entrypoints "${resolved[i].moduleName}:${resolved[i].variableName}" and ` +
+              `"${resolved[j].moduleName}:${resolved[j].variableName}" subscribe to overlapping ` +
+              'queue topics; construct each vercel.workflow.Workflows registry with a distinct namespace',
+          });
+        }
+      }
+    }
     for (const workflow of resolved) {
       workflowQueueSubscriptions.set(workflow.name, workflow.subscriptions);
       await writeGeneratedQueueHandler(

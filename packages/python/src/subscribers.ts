@@ -17,6 +17,7 @@ import {
 } from './module-entrypoint';
 import type { UvRunner } from './uv';
 import type { QueueIntegration } from './conditional-vendoring';
+import { isWorkflowQueueTopic } from './workflows';
 
 // Shared by the vercel-queue and legacy vercel-workers integrations.
 // Consumer names are derived from output paths, so deployments must keep
@@ -267,8 +268,22 @@ export async function resolveQueueSubscribers({
         )}]${hint}`
       );
     }
-    const subscriptions = filterQueueSubscriptions(declaration, introspected);
+    // Workflow entrypoints keep only the `__wkf_*`-shaped subscriptions
+    // their registry created (the namespace embedded in the topic is only
+    // known to the SDK); other queue subscriptions in the same import graph
+    // belong to subscriber lambdas.
+    const subscriptions =
+      kind === 'workflow'
+        ? introspected.filter(subscription =>
+            isWorkflowQueueTopic(subscription.topic)
+          )
+        : filterQueueSubscriptions(declaration, introspected);
     if (subscriptions.length === 0) {
+      if (kind === 'workflow') {
+        throw subscriberError(
+          `workflow "${declaration.name}" registered no workflow queue subscriptions${hint}`
+        );
+      }
       const declared = declaration.topicPatterns?.join(', ') ?? '*';
       throw subscriberError(
         `${kind} "${declaration.name}" declared topics [${declared}] but no introspected queue subscriptions matched${hint}`

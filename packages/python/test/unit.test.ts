@@ -139,7 +139,7 @@ function getBuildOutputV3(result: Awaited<ReturnType<typeof build>>) {
 }
 
 function mockQueueIntrospection(
-  subscriptions: unknown[],
+  subscriptions: unknown[] | Record<string, unknown[]>,
   opts: { sdkVersion?: string } = {}
 ) {
   vi.mocked(execa).mockImplementation(async (_cmd, args, execaOpts) => {
@@ -157,7 +157,16 @@ function mockQueueIntrospection(
           (execaOpts as { env?: Record<string, string> } | undefined)?.env
             ?.VERCEL
         ).toBe('1');
-        return { stdout: JSON.stringify(subscriptions) } as any;
+        // A map keys per-declaration results by the module the
+        // introspection script imports.
+        const result = Array.isArray(subscriptions)
+          ? subscriptions
+          : (Object.entries(subscriptions).find(([moduleName]) =>
+              script.includes(
+                `importlib.import_module(${JSON.stringify(moduleName)})`
+              )
+            )?.[1] ?? []);
+        return { stdout: JSON.stringify(result) } as any;
       }
       if (script.includes('importlib.metadata')) {
         // Empty output means "undeterminable" → legacy workers path.
@@ -4021,7 +4030,7 @@ describe('pyproject workflows', () => {
             pythonQueueSidecar: 'workflow',
           },
         },
-        topics: [{ topic: '__wkf_*' }],
+        topics: [{ topic: '__*wkf_*' }],
       },
     ]);
   });
@@ -4203,40 +4212,117 @@ describe('pyproject workflows', () => {
     ).rejects.toThrow(/vercel\.workflow\.Workflows/);
   });
 
-  it('rejects more than one workflow entrypoint', async () => {
-    const files = {
+  function multiWorkflowBuildFiles(pyprojectExtra: string[] = []) {
+    return {
       'app.py': new FileBlob({
         data: 'def app(environ, start_response): pass\n',
       }),
       'flows.py': new FileBlob({
-        data: 'workflows = object()\nmore = object()\n',
+        data: 'from vercel.workflow import Workflows\nworkflows = Workflows()\n',
+      }),
+      'billing.py': new FileBlob({
+        data: 'from vercel.workflow import Workflows\nworkflows = Workflows(namespace="billing")\n',
       }),
       'pyproject.toml': new FileBlob({
         data: [
           '[project]',
           'name = "x"',
           'version = "0.0.1"',
+          ...pyprojectExtra,
           '',
           '[[tool.vercel.workflows]]',
           'entrypoint = "flows:workflows"',
           '',
           '[[tool.vercel.workflows]]',
-          'entrypoint = "flows:more"',
+          'entrypoint = "billing:workflows"',
           '',
         ].join('\n'),
       }),
     } as Record<string, FileBlob>;
+  }
+
+  it('rejects multiple workflow entrypoints when the SDK predates queue namespaces', async () => {
+    await expect(
+      buildWorkflowProject(multiWorkflowBuildFiles())
+    ).rejects.toThrow(/requires vercel>=0\.8\.0 with a distinct namespace/);
+  });
+
+  it('builds multiple workflow entrypoints with distinct namespaces', async () => {
+    mockQueueIntrospection(
+      {
+        flows: [
+          { topic: '__wkf_workflow_*', consumer_group: 'default' },
+          { topic: '__wkf_step_*', consumer_group: 'default' },
+        ],
+        billing: [
+          { topic: '__billing_wkf_workflow_*', consumer_group: 'default' },
+          { topic: '__billing_wkf_step_*', consumer_group: 'default' },
+        ],
+      },
+      { sdkVersion: '0.8.0' }
+    );
+
+    const result = await buildWorkflowProject(
+      multiWorkflowBuildFiles(['dependencies = ["vercel"]'])
+    );
+
+    const output = getBuildOutputV2(result).output as any;
+    expect(
+      output[getWorkflowOutputPath('flows_workflows')].experimentalTriggers
+    ).toEqual([
+      expect.objectContaining({ topic: '__wkf_workflow_*' }),
+      expect.objectContaining({ topic: '__wkf_step_*' }),
+    ]);
+    expect(
+      output[getWorkflowOutputPath('billing_workflows')].experimentalTriggers
+    ).toEqual([
+      expect.objectContaining({ topic: '__billing_wkf_workflow_*' }),
+      expect.objectContaining({ topic: '__billing_wkf_step_*' }),
+    ]);
+  });
+
+  it('rejects workflow entrypoints whose queue topics overlap', async () => {
+    mockQueueIntrospection(
+      {
+        flows: [
+          { topic: '__wkf_workflow_*', consumer_group: 'default' },
+          { topic: '__wkf_step_*', consumer_group: 'default' },
+        ],
+        billing: [
+          { topic: '__wkf_workflow_*', consumer_group: 'default' },
+          { topic: '__wkf_step_*', consumer_group: 'default' },
+        ],
+      },
+      { sdkVersion: '0.8.0' }
+    );
 
     await expect(
-      build({
-        workPath: mockWorkPath,
-        files,
-        entrypoint: 'app.py',
-        meta: { isDev: false },
-        config: { framework: 'flask' },
-        repoRootPath: mockWorkPath,
-      })
-    ).rejects.toThrow(/must declare a single entrypoint/);
+      buildWorkflowProject(
+        multiWorkflowBuildFiles(['dependencies = ["vercel"]'])
+      )
+    ).rejects.toThrow(/distinct namespace/);
+  });
+
+  it('rejects a workflow entrypoint declared more than once', async () => {
+    const files = workflowBuildFiles();
+    files['pyproject.toml'] = new FileBlob({
+      data: [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        '',
+        '[[tool.vercel.workflows]]',
+        'entrypoint = "flows:workflows"',
+        '',
+        '[[tool.vercel.workflows]]',
+        'entrypoint = "flows:workflows"',
+        '',
+      ].join('\n'),
+    });
+
+    await expect(buildWorkflowProject(files)).rejects.toThrow(
+      /declared more than once/
+    );
   });
 
   it('rejects topics because workflow topics are implicit', async () => {
