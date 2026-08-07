@@ -2037,9 +2037,12 @@ describe('deploy', () => {
         await expect(client.stderr).toOutput(`Name? (${nameOption})`);
         client.stdin.write('\n');
         // Fixture has no detectable framework at the root, so the
-        // root-directory prompt now fires (nested-monolith guard).
-        await expect(client.stderr).toOutput('Code directory?');
-        client.stdin.write('\n');
+        // root-directory prompt now fires (nested-monolith guard). Wait for
+        // the choice list and submit with `\r`, since `@inquirer/search`
+        // ignores Enter until its source resolves and only treats a carriage
+        // return as enter.
+        await expect(client.stderr).toOutput('Use this directory');
+        client.stdin.write('\r');
         await expect(client.stderr).toOutput('Customize settings?');
         client.stdin.write('\n');
 
@@ -2076,9 +2079,12 @@ describe('deploy', () => {
         expect(client.stderr.getFullOutput()).toContain(`(${directoryName})`);
         client.stdin.write('\n');
         // Fixture has no detectable framework at the root, so the
-        // root-directory prompt now fires (nested-monolith guard).
-        await expect(client.stderr).toOutput('Code directory?');
-        client.stdin.write('\n');
+        // root-directory prompt now fires (nested-monolith guard). Wait for
+        // the choice list and submit with `\r`, since `@inquirer/search`
+        // ignores Enter until its source resolves and only treats a carriage
+        // return as enter.
+        await expect(client.stderr).toOutput('Use this directory');
+        client.stdin.write('\r');
         await expect(client.stderr).toOutput('Customize settings?');
         client.stdin.write('\n');
 

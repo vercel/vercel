@@ -1,7 +1,7 @@
 import path from 'path';
 import { execCli } from './helpers/exec';
 import fs from 'fs-extra';
-import waitForPrompt from './helpers/wait-for-prompt';
+import waitForPrompt, { selectCodeDirectory } from './helpers/wait-for-prompt';
 import { listTmpDirs } from './helpers/get-tmp-dir';
 import { teamPromise } from './helpers/get-account';
 import {
@@ -55,8 +55,7 @@ test('[vc link] should refresh OIDC when creating a new project', async () => {
   await waitForPrompt(vc, `Name? (${projectName})`);
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Code directory?');
-  vc.stdin?.write('\n');
+  await selectCodeDirectory(vc);
 
   await waitForPrompt(vc, 'Customize settings?');
   vc.stdin?.write('no\n');
@@ -98,8 +97,7 @@ test('[vc link] should preserve existing .env.local when refreshing OIDC', async
   await waitForPrompt(vc, `Name? (${projectName})`);
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Code directory?');
-  vc.stdin?.write('\n');
+  await selectCodeDirectory(vc);
 
   await waitForPrompt(vc, 'Customize settings?');
   vc.stdin?.write('no\n');

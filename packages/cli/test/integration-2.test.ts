@@ -115,7 +115,10 @@ async function setupProject(
   });
 
   if (sawDirectoryPrompt) {
-    process.stdin?.write('\n');
+    // The root-directory prompt is an `@inquirer/search` list: wait for the
+    // choices and submit with `\r`, which is the only key it treats as enter.
+    await waitForPrompt(process, 'Use this directory');
+    process.stdin?.write('\r');
     await waitForPrompt(process, 'Customize settings?');
   }
 
@@ -359,8 +362,8 @@ test('should prefill "project name" prompt with vercel.json `name`', async () =>
   await waitForPrompt(now, `Name? (${projectName})`);
   now.stdin?.write(`\n`);
 
-  await waitForPrompt(now, 'Code directory?');
-  now.stdin?.write('\n');
+  await waitForPrompt(now, 'Use this directory');
+  now.stdin?.write('\r');
 
   await waitForPrompt(now, 'Customize settings?');
   now.stdin?.write('no\n');
@@ -1027,8 +1030,10 @@ test('[vc link] should detect frameworks in project rootDirectory', async () => 
   await waitForPrompt(vc, 'Name?');
   vc.stdin?.write(`${projectName}\n`);
 
-  await waitForPrompt(vc, 'Code directory?');
-  vc.stdin?.write(`${projectRootDir}\n`);
+  await waitForPrompt(vc, 'Use this directory');
+  vc.stdin?.write(projectRootDir);
+  await waitForPrompt(vc, `❯ ${projectRootDir}`);
+  vc.stdin?.write('\r');
 
   // This means the framework detection worked!
   await waitForPrompt(vc, 'Detected');
@@ -1133,8 +1138,8 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   await waitForPrompt(vc, 'Name?');
   vc.stdin?.write(`${projectName}\n`);
 
-  await waitForPrompt(vc, 'Code directory?');
-  vc.stdin?.write('\n');
+  await waitForPrompt(vc, 'Use this directory');
+  vc.stdin?.write('\r');
 
   await waitForPrompt(vc, /Created\s+/);
 
