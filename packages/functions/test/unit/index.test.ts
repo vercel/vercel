@@ -20,6 +20,7 @@ describe('@vercel/functions', () => {
     'invalidateBySrcImage',
     'invalidateByTag',
     'ipAddress',
+    'metric',
     'next',
     'rewrite',
     'waitUntil',

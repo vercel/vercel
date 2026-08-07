@@ -38,6 +38,7 @@
 - [invalidateBySrcImage](functions/invalidateBySrcImage.md)
 - [invalidateByTag](functions/invalidateByTag.md)
 - [ipAddress](functions/ipAddress.md)
+- [metric](functions/metric.md)
 - [next](functions/next.md)
 - [rewrite](functions/rewrite.md)
 - [waitUntil](functions/waitUntil.md)

@@ -3,6 +3,7 @@ export { geolocation, ipAddress } from './headers';
 export { getEnv } from './get-env';
 export { getDeadline } from './deadline';
 export { waitUntil } from './wait-until';
+export { metric } from './metric';
 export { rewrite, next } from './middleware';
 export { getCache } from './cache';
 export {
