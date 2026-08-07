@@ -323,6 +323,7 @@ describe('@vercel/container', () => {
     /** Override the simulated `buildah info` store object. */
     storeInfo?: Record<string, unknown>;
     meta?: Record<string, unknown>;
+    config?: Record<string, unknown>;
     /**
      * When true, simulate the build container having provisioned a registry
      * auth file (vercel/api#76560), so the builder skips the explicit login.
@@ -378,7 +379,7 @@ describe('@vercel/container', () => {
 
     const result = expectTypicalBuildResult(
       await build({
-        ...createBuildOptions({ runtime: 'container' }),
+        ...createBuildOptions({ runtime: 'container', ...options?.config }),
         ...(options?.entrypoint ? { entrypoint: options.entrypoint } : {}),
         service: { name: 'api' },
         ...(options?.meta ? { meta: options.meta } : {}),
@@ -585,6 +586,26 @@ describe('@vercel/container', () => {
           /\bbuildah\b.*\bbuild\b/.test(c) &&
           c.includes('--build-arg MY_BUILD_VAR=hello') &&
           c.includes('--build-arg OTHER=world')
+      )
+    ).toBe(true);
+  });
+
+  it('forwards config.buildSecrets to the image build as --secret flags', async () => {
+    const commands = await runDockerfileBuild({
+      buildImageEnv: 'al2023',
+      config: {
+        buildSecrets: { npmrc: 'NPM_TOKEN' },
+      },
+      meta: {
+        buildEnv: { NPM_TOKEN: 'super-secret-token' },
+      },
+    });
+
+    expect(
+      commands.some(
+        c =>
+          /\bbuildah\b.*\bbuild\b/.test(c) &&
+          c.includes('--secret id=npmrc,env=NPM_TOKEN')
       )
     ).toBe(true);
   });

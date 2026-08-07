@@ -87,10 +87,18 @@ async function buildAndPushImage(params: {
   repository: string;
   tag: string;
   buildArgs?: Record<string, string>;
+  buildSecrets?: Record<string, string>;
   parentSpan?: Span;
 }): Promise<string> {
-  const { contextDir, dockerfilePath, repository, tag, buildArgs, parentSpan } =
-    params;
+  const {
+    contextDir,
+    dockerfilePath,
+    repository,
+    tag,
+    buildArgs,
+    buildSecrets,
+    parentSpan,
+  } = params;
   const engine = selectContainerEngine();
 
   return withSpan(
@@ -164,6 +172,7 @@ async function buildAndPushImage(params: {
           token,
           repository,
           buildArgs,
+          buildSecrets,
           span: buildSpan,
         };
 
@@ -346,6 +355,17 @@ async function resolveImageHandler(
   // (`meta.buildEnv`) is used, never the build container's own environment.
   const buildArgs = buildArgsFromEnv(meta?.buildEnv);
 
+  // Extract buildSecrets from the user's config (e.g., vercel.json)
+  const buildSecrets = (config?.buildSecrets as Record<string, string>) || {};
+
+  // Inject explicit secrets into the Node.js process environment.
+  // Buildah's --secret flag looks for the value in the spawning process's environment.
+  for (const envVarName of Object.values(buildSecrets)) {
+    if (meta?.buildEnv?.[envVarName]) {
+      process.env[envVarName] = meta.buildEnv[envVarName];
+    }
+  }
+
   span?.setAttributes({
     'container.mode': 'build_and_push',
     'container.repository': repository,
@@ -357,6 +377,7 @@ async function resolveImageHandler(
     repository,
     tag,
     buildArgs,
+    buildSecrets,
     parentSpan: span,
   });
 }
