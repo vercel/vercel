@@ -8,6 +8,8 @@ export const GATEWAY_CLAUDE_CODE_BASE_URL =
 
 export const GATEWAY_API_KEY_ENV = 'AI_GATEWAY_API_KEY';
 
+export const GATEWAY_DEFAULT_MODEL = 'anthropic/claude-fable-5';
+
 export const KEY_PLACEHOLDER = '__AI_GATEWAY_API_KEY__';
 
 export function resolveGatewayBaseUrl(

@@ -399,6 +399,84 @@ describe('ai-gateway coding-agents setup', () => {
       }
     );
 
+    it('configures Cline via its providers.json (0600), version only when new', async () => {
+      useUser();
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.cline'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0002',
+        '--agent',
+        'cline'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const providersPath = join(
+        home,
+        '.cline',
+        'data',
+        'settings',
+        'providers.json'
+      );
+      const config = JSON.parse(readFileSync(providersPath, 'utf8'));
+      expect(config.version).toBe(1);
+      expect(config.lastUsedProvider).toBe('vercel-ai-gateway');
+      expect(config.providers['vercel-ai-gateway'].settings).toMatchObject({
+        provider: 'vercel-ai-gateway',
+        apiKey: 'vck_DummyKey0002',
+      });
+      expect(config.providers['vercel-ai-gateway'].tokenSource).toBe('manual');
+      if (process.platform !== 'win32') {
+        expect(statSync(providersPath).mode & 0o777).toBe(0o600);
+      }
+    });
+
+    it('preserves an existing providers.json schema version for Cline', async () => {
+      useUser();
+      client.nonInteractive = true;
+      const settingsDir = join(home, '.cline', 'data', 'settings');
+      mkdirSync(settingsDir, { recursive: true });
+      writeFileSync(
+        join(settingsDir, 'providers.json'),
+        JSON.stringify({
+          version: 2,
+          lastUsedProvider: 'anthropic',
+          providers: {
+            anthropic: { settings: { provider: 'anthropic' } },
+          },
+        })
+      );
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0002',
+        '--agent',
+        'cline'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const config = JSON.parse(
+        readFileSync(join(settingsDir, 'providers.json'), 'utf8')
+      );
+      // Never downgrade another tool's schema version.
+      expect(config.version).toBe(2);
+      // Existing provider entries survive alongside the new one.
+      expect(config.providers.anthropic).toBeDefined();
+      expect(config.providers['vercel-ai-gateway'].settings.apiKey).toBe(
+        'vck_DummyKey0002'
+      );
+      expect(config.lastUsedProvider).toBe('vercel-ai-gateway');
+    });
+
     it('writes a --base-url override verbatim into the Codex config', async () => {
       useUser();
       client.nonInteractive = true;
