@@ -126,6 +126,90 @@ jobs:
           FORCE_COLOR: '1'
           VITEST_TEST_FILES: ${{ matrix.useEnvPaths == true && join(matrix.testPaths, ' ') || '' }}
 
+  e2e-artifacts:
+    name: Resolve E2E Artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    if: ${{ needs.setup.outputs['e2eTests'] != '[]' }}
+    needs:
+      - setup
+    permissions:
+      contents: read
+      deployments: read
+      statuses: read
+    outputs:
+      deploymentUrl: ${{ steps.resolve.outputs.deploymentUrl }}
+      cliVersion: ${{ steps.resolve.outputs.cliVersion }}
+    steps:
+      - name: Wait for deployment tarballs
+        id: resolve
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          # E2E needs the CLI and Python wheel tarballs produced by the Vercel
+          # deployment. Resolve them once before the E2E matrix starts so every
+          # shard uses the same deployment without duplicating API calls.
+          validate_deployment_url() {
+            local url="${1%/}"
+            if [ -z "$url" ]; then
+              return 1
+            fi
+
+            if curl --connect-timeout 5 --max-time 15 -fsI "$url/tarballs/vercel.tgz" >/dev/null; then
+              echo "deploymentUrl=$url" >> "$GITHUB_OUTPUT"
+              echo "cliVersion=$url/tarballs/vercel.tgz" >> "$GITHUB_OUTPUT"
+              echo "Deployment tarball is ready at $url/tarballs/vercel.tgz"
+              return 0
+            fi
+
+            return 1
+          }
+
+          get_candidate_urls() {
+            local deployment_ids
+            deployment_ids="$(gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${HEAD_SHA}&per_page=20" --jq '.[].id')" || return 1
+
+            while IFS= read -r deployment_id; do
+              if [ -n "$deployment_id" ]; then
+                gh api "repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses" \
+                  --jq '.[] | select(.state == "success" and .environment_url != null and .environment_url != "") | .environment_url' || return 1
+              fi
+            done <<< "$deployment_ids"
+
+            gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/status" \
+              --jq '.statuses[] | select(.state == "success" and .target_url != null and .target_url != "") | .target_url'
+          }
+
+          api_failures=0
+          for attempt in {1..120}; do
+            if ! candidate_urls="$(get_candidate_urls)"; then
+              api_failures=$((api_failures + 1))
+              echo "Failed to query deployment URLs (attempt $api_failures/3)."
+              if [ "$api_failures" -eq 3 ]; then
+                exit 1
+              fi
+              sleep 10
+              continue
+            fi
+            api_failures=0
+
+            while IFS= read -r candidate_url; do
+              if validate_deployment_url "$candidate_url"; then
+                exit 0
+              fi
+            done < <(printf '%s\n' "$candidate_urls" | sort -u)
+
+            echo "Deployment tarball is not ready yet (attempt $attempt/120)."
+            sleep 10
+          done
+
+          echo "Timed out waiting for deployment tarball."
+          exit 1
+
   e2e-test:
     timeout-minutes: 120
     runs-on: ${{ matrix.runner }}
@@ -138,6 +222,10 @@ jobs:
     if: ${{ needs.setup.outputs['e2eTests'] != '[]' }}
     needs:
       - setup
+      - e2e-artifacts
+    env:
+      DPL_URL: ${{ needs.e2e-artifacts.outputs.deploymentUrl }}
+      VERCEL_CLI_VERSION: ${{ needs.e2e-artifacts.outputs.cliVersion }}
     strategy:
       fail-fast: false
       max-parallel: 75
@@ -186,59 +274,6 @@ jobs:
 
       - run: pnpm install
 
-      - name: Wait for deployment tarballs
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HEAD_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-
-          # E2E needs the CLI and Python wheel tarballs produced by the Vercel
-          # deployment for this commit. Main commits are deployed by Vercel,
-          # which reports back via deployment statuses and commit statuses.
-          # We poll those records for candidate URLs, then trust a URL only
-          # after the actual tarball endpoint responds.
-          validate_deployment_url() {
-            local url="${1%/}"
-            if [ -z "$url" ]; then
-              return 1
-            fi
-
-            if curl -fsI "$url/tarballs/vercel.tgz" >/dev/null; then
-              echo "DPL_URL=$url" >> "$GITHUB_ENV"
-              echo "VERCEL_CLI_VERSION=$url/tarballs/vercel.tgz" >> "$GITHUB_ENV"
-              echo "Deployment tarball is ready at $url/tarballs/vercel.tgz"
-              return 0
-            fi
-
-            return 1
-          }
-
-          get_candidate_urls() {
-            gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${HEAD_SHA}&per_page=20" \
-              --jq '.[].id' | while IFS= read -r deployment_id; do
-                gh api "repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses" \
-                  --jq '.[] | select(.state == "success" and .environment_url != null and .environment_url != "") | .environment_url'
-              done
-
-            gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/status" \
-              --jq '.statuses[] | select(.state == "success" and .target_url != null and .target_url != "") | .target_url'
-          }
-
-          for attempt in {1..120}; do
-            while IFS= read -r candidate_url; do
-              if validate_deployment_url "$candidate_url"; then
-                exit 0
-              fi
-            done < <(get_candidate_urls | sort -u)
-
-            echo "Deployment tarball is not ready yet (attempt $attempt/120)."
-            sleep 10
-          done
-
-          echo "Timed out waiting for deployment tarball."
-          exit 1
       - name: Resolve Python wheel URLs
         shell: bash
         run: |
@@ -284,6 +319,7 @@ jobs:
     needs:
       - setup
       - unit-test
+      - e2e-artifacts
       - e2e-test
     permissions:
       issues: write
