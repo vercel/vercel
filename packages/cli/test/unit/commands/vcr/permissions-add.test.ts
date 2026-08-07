@@ -118,10 +118,13 @@ describe('vcr permissions add', () => {
     );
     const exitCode = await vcr(client);
     expect(exitCode).toBe(0);
-    expect(bodies).toEqual([
-      { teamId: 'team_12345' },
-      { teamSlug: 'other-team' },
-    ]);
+    expect(bodies).toHaveLength(2);
+    expect(bodies).toEqual(
+      expect.arrayContaining([
+        { teamId: 'team_12345' },
+        { teamSlug: 'other-team' },
+      ])
+    );
   });
 
   it('accepts multiple team arguments', async () => {

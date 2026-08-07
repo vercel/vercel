@@ -13,6 +13,7 @@ import {
   listSubcommand,
   inspectSubcommand,
   addSubcommand,
+  configSubcommand,
   removeSubcommand,
   loginSubcommand,
   buildSubcommand,
@@ -42,6 +43,7 @@ const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
   inspect: getCommandAliases(inspectSubcommand),
   add: getCommandAliases(addSubcommand),
+  config: getCommandAliases(configSubcommand),
   rm: getCommandAliases(removeSubcommand),
   login: getCommandAliases(loginSubcommand),
   build: getCommandAliases(buildSubcommand),
@@ -94,6 +96,10 @@ export default async function vcr(client: Client): Promise<number> {
       case 'add':
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         printHelp(addSubcommand);
+        return 2;
+      case 'config':
+        telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
+        printHelp(configSubcommand);
         return 2;
       case 'rm':
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
@@ -194,6 +200,9 @@ export default async function vcr(client: Client): Promise<number> {
     case 'add':
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return (await import('./add')).default(client, args, telemetry);
+    case 'config':
+      telemetry.trackCliSubcommandConfig(subcommandOriginal);
+      return (await import('./config')).default(client, args, telemetry);
     case 'rm':
       telemetry.trackCliSubcommandRm(subcommandOriginal);
       return (await import('./rm')).default(client, args, telemetry);
