@@ -43,6 +43,42 @@ export const createSubcommand = {
         "Webhook event to receive. Repeatable. Requires --triggers and replaces the provider's default events.",
     },
     {
+      name: 'trigger-project',
+      shorthand: null,
+      type: String,
+      argument: 'PROJECT',
+      deprecated: false,
+      description:
+        'Target a project by name or ID instead of the linked project. Requires --triggers.',
+    },
+    {
+      name: 'trigger-path',
+      shorthand: null,
+      type: String,
+      argument: 'PATH',
+      deprecated: false,
+      description:
+        'Set the path on the destination project that receives forwarded webhooks. Requires --triggers.',
+    },
+    {
+      name: 'trigger-branch',
+      shorthand: null,
+      type: String,
+      argument: 'BRANCH',
+      deprecated: false,
+      description:
+        'Target a specific git branch for the trigger destination. Requires --triggers.',
+    },
+    {
+      name: 'trigger-environment',
+      shorthand: null,
+      type: String,
+      argument: 'ENV',
+      deprecated: false,
+      description:
+        'Target a custom environment by slug or stable ID. Mutually exclusive with --trigger-branch and requires --triggers.',
+    },
+    {
       name: 'connection-method',
       shorthand: null,
       type: String,
@@ -135,6 +171,18 @@ export const createSubcommand = {
     {
       name: 'Create with selected webhook events',
       value: `${packageName} connect create linear --name linear --triggers --trigger-event Issue --trigger-event Comment --trigger-event Project`,
+    },
+    {
+      name: 'Create with a custom trigger path',
+      value: `${packageName} connect create github --name github --triggers --trigger-path /eve/v1/github`,
+    },
+    {
+      name: 'Create with branch-specific trigger routing',
+      value: `${packageName} connect create github --name github --triggers --trigger-path /api/webhooks --trigger-branch main`,
+    },
+    {
+      name: 'Create with trigger routing on another project',
+      value: `${packageName} connect create github --name github --triggers --trigger-project my-api --trigger-path /api/webhooks`,
     },
     {
       name: 'Create with branding (icon and colors)',

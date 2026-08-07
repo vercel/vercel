@@ -223,6 +223,15 @@ export class ConnexTelemetryClient
     }
   }
 
+  trackCliOptionTriggerProject(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'trigger-project',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliFlagMyTokens(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('my-tokens');

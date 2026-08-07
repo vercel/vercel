@@ -6,6 +6,7 @@ import open from 'open';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
+import { defaultProject, useProject } from '../../../mocks/project';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import connect from '../../../../src/commands/connex';
 import * as configFilesUtil from '../../../../src/util/config/files';
@@ -39,7 +40,7 @@ describe('connex create', () => {
     writeConfigSpy.mockClear();
     (open as unknown as ReturnType<typeof vi.fn>).mockClear();
     useUser();
-    team = useTeam();
+    team = useTeam('team_test');
     client.config.currentTeam = team.id;
   });
 
@@ -128,6 +129,161 @@ describe('connex create', () => {
     expect(requestMade).toBe(false);
     await expect(client.stderr).toOutput(
       'The --trigger-event flag requires --triggers.'
+    );
+  });
+
+  it('requires --triggers when setting a trigger path', async () => {
+    client.setArgv(
+      'connect',
+      'create',
+      'github',
+      '--name',
+      'github',
+      '--trigger-path',
+      '/eve/v1/github'
+    );
+
+    expect(await connect(client)).toBe(1);
+    await expect(client.stderr).toOutput(
+      'The --trigger-project, --trigger-path, --trigger-branch, and --trigger-environment flags require --triggers.'
+    );
+  });
+
+  it('requires a linked project when setting a trigger path', async () => {
+    client.setArgv(
+      'connect',
+      'create',
+      'github',
+      '--name',
+      'github',
+      '--triggers',
+      '--trigger-path',
+      '/eve/v1/github'
+    );
+
+    expect(await connect(client)).toBe(1);
+    await expect(client.stderr).toOutput(
+      'Trigger destination flags require a linked project. Run `vercel link` first.'
+    );
+  });
+
+  it('forwards a custom trigger path and branch during connector creation', async () => {
+    const cwd = setupTmpDir();
+    await mkdirp(join(cwd, '.vercel'));
+    await writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: team.id,
+      projectId: 'proj_linked',
+    });
+    client.cwd = cwd;
+
+    let postBody: any;
+    client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
+      postBody = req.body;
+      res.json(fakeConnexClient({ type: 'github', name: 'github' }));
+    });
+    client.setArgv(
+      'connect',
+      'create',
+      'github',
+      '--name',
+      'github',
+      '--triggers',
+      '--trigger-path',
+      '/eve/v1/github',
+      '--trigger-branch',
+      'main'
+    );
+
+    expect(await connect(client)).toBe(0);
+    expect(postBody).toMatchObject({
+      projectId: 'proj_linked',
+      triggers: { enabled: true },
+      triggerDestination: {
+        path: '/eve/v1/github',
+        branch: 'main',
+      },
+    });
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:create', value: 'create' },
+      { key: 'flag:triggers', value: 'TRUE' },
+      { key: 'option:trigger-path', value: '[REDACTED]' },
+      { key: 'option:trigger-branch', value: '[REDACTED]' },
+    ]);
+  });
+
+  it('resolves a custom trigger environment slug to its stable ID', async () => {
+    const cwd = setupTmpDir();
+    await mkdirp(join(cwd, '.vercel'));
+    await writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: team.id,
+      projectId: 'proj_linked',
+    });
+    client.cwd = cwd;
+    useProject({
+      ...defaultProject,
+      id: 'proj_destination',
+      customEnvironments: [
+        {
+          id: 'env_qa123',
+          slug: 'qa',
+          type: 'preview',
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      ],
+    });
+
+    let postBody: any;
+    client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
+      postBody = req.body;
+      res.json(fakeConnexClient({ type: 'github', name: 'github' }));
+    });
+    client.setArgv(
+      'connect',
+      'create',
+      'github',
+      '--name',
+      'github',
+      '--triggers',
+      '--trigger-project',
+      'proj_destination',
+      '--trigger-environment',
+      'qa'
+    );
+
+    expect(await connect(client)).toBe(0);
+    expect(postBody).toMatchObject({
+      projectId: 'proj_linked',
+      triggerDestination: {
+        projectId: 'proj_destination',
+        customEnvironmentId: 'env_qa123',
+      },
+    });
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:create', value: 'create' },
+      { key: 'flag:triggers', value: 'TRUE' },
+      { key: 'option:trigger-project', value: '[REDACTED]' },
+      { key: 'option:trigger-environment', value: '[REDACTED]' },
+    ]);
+  });
+
+  it('rejects branch and custom environment routing together', async () => {
+    client.setArgv(
+      'connect',
+      'create',
+      'github',
+      '--name',
+      'github',
+      '--triggers',
+      '--trigger-branch',
+      'main',
+      '--trigger-environment',
+      'qa'
+    );
+
+    expect(await connect(client)).toBe(1);
+    await expect(client.stderr).toOutput(
+      'The --trigger-branch and --trigger-environment flags are mutually exclusive.'
     );
   });
 

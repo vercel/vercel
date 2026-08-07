@@ -8,6 +8,8 @@ import type { JSONObject } from '@vercel-internals/types';
 import { validateJsonOutput } from '../../util/output-format';
 import { printError } from '../../util/error';
 import { getProjectLink } from '../../util/projects/link';
+import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
+import { ProjectNotFound } from '../../util/errors-ts';
 import { selectConnexTeam } from '../../util/connex/select-team';
 import {
   generateRequestCode,
@@ -32,6 +34,10 @@ import {
   type ConnexServiceInfo,
 } from '../../util/connex/connection-methods';
 import type { ConnexClient } from './types';
+import {
+  getCustomEnvironments,
+  pickCustomEnvironment,
+} from '../../util/target/get-custom-environments';
 
 export async function create(
   client: Client,
@@ -42,6 +48,10 @@ export async function create(
     '--json'?: boolean;
     '--triggers'?: boolean;
     '--trigger-event'?: string[];
+    '--trigger-path'?: string;
+    '--trigger-project'?: string;
+    '--trigger-branch'?: string;
+    '--trigger-environment'?: string;
     '--icon'?: string;
     '--background-color'?: string;
     '--accent-color'?: string;
@@ -68,6 +78,50 @@ export async function create(
 
   if (flags['--trigger-event'] && !flags['--triggers']) {
     output.error('The --trigger-event flag requires --triggers.');
+    return 1;
+  }
+
+  const triggerPath = flags['--trigger-path'];
+  const triggerProject = flags['--trigger-project'];
+  const triggerBranch = flags['--trigger-branch'];
+  const triggerEnvironment = flags['--trigger-environment'];
+  if (
+    !flags['--triggers'] &&
+    (triggerPath !== undefined ||
+      triggerProject !== undefined ||
+      triggerBranch !== undefined ||
+      triggerEnvironment !== undefined)
+  ) {
+    output.error(
+      'The --trigger-project, --trigger-path, --trigger-branch, and --trigger-environment flags require --triggers.'
+    );
+    return 1;
+  }
+  if (triggerBranch !== undefined && triggerEnvironment !== undefined) {
+    output.error(
+      'The --trigger-branch and --trigger-environment flags are mutually exclusive.'
+    );
+    return 1;
+  }
+  if (triggerProject !== undefined && triggerProject.trim() === '') {
+    output.error('The --trigger-project value must not be empty.');
+    return 1;
+  }
+  if (
+    triggerPath !== undefined &&
+    (triggerPath.length === 0 || triggerPath.length > 2048)
+  ) {
+    output.error(
+      'The --trigger-path value must be between 1 and 2048 characters.'
+    );
+    return 1;
+  }
+  if (triggerBranch !== undefined && triggerBranch.trim() === '') {
+    output.error('The --trigger-branch value must not be empty.');
+    return 1;
+  }
+  if (triggerEnvironment !== undefined && triggerEnvironment.trim() === '') {
+    output.error('The --trigger-environment value must not be empty.');
     return 1;
   }
 
@@ -171,6 +225,68 @@ export async function create(
     client,
     'Select the team where you want to create this connector'
   );
+
+  const link = await getProjectLink(client, client.cwd);
+  let triggerProjectId: string | undefined;
+  if (triggerProject !== undefined) {
+    output.spinner('Looking up trigger destination project…');
+    try {
+      const resolvedProject = await getProjectByNameOrId(
+        client,
+        triggerProject,
+        client.config.currentTeam
+      );
+      output.stopSpinner();
+      if (resolvedProject instanceof ProjectNotFound) {
+        output.error(
+          `Trigger destination project ${triggerProject} was not found. Check the name/ID and try again.`
+        );
+        return 1;
+      }
+      triggerProjectId = resolvedProject.id;
+    } catch (err: unknown) {
+      output.stopSpinner();
+      printError(err);
+      return 1;
+    }
+  }
+  const destinationProjectId = triggerProjectId ?? link?.projectId;
+  if (
+    (triggerPath !== undefined ||
+      triggerProject !== undefined ||
+      triggerBranch !== undefined ||
+      triggerEnvironment !== undefined) &&
+    !destinationProjectId
+  ) {
+    output.error(
+      'Trigger destination flags require a linked project. Run `vercel link` first.'
+    );
+    return 1;
+  }
+
+  let customEnvironmentId: string | undefined;
+  if (triggerEnvironment !== undefined && destinationProjectId) {
+    try {
+      const customEnvironments = await getCustomEnvironments(
+        client,
+        destinationProjectId
+      );
+      const customEnvironment = pickCustomEnvironment(
+        customEnvironments,
+        triggerEnvironment
+      );
+      if (!customEnvironment) {
+        output.error(
+          `Unknown trigger environment ${triggerEnvironment} for project ${destinationProjectId}. Use a custom environment slug or stable ID from that project.`
+        );
+        return 1;
+      }
+      customEnvironmentId = customEnvironment.id;
+    } catch (err: unknown) {
+      printError(err);
+      return 1;
+    }
+  }
 
   if (isDataFlagEmpty && isDataOnlyCreate) {
     return await outputMissingDataError(client, service, connectorType);
@@ -321,8 +437,6 @@ export async function create(
     output.stopSpinner();
   }
 
-  const link = await getProjectLink(client, client.cwd);
-
   const body: JSONObject = {
     service: service,
     name,
@@ -333,6 +447,21 @@ export async function create(
   body.triggers = { enabled: flags['--triggers'] === true };
   if (flags['--trigger-event'] !== undefined) {
     body.events = flags['--trigger-event'];
+  }
+  if (
+    triggerPath !== undefined ||
+    triggerProject !== undefined ||
+    triggerBranch !== undefined ||
+    triggerEnvironment !== undefined
+  ) {
+    body.triggerDestination = {
+      ...(triggerProjectId !== undefined
+        ? { projectId: triggerProjectId }
+        : {}),
+      ...(triggerPath !== undefined ? { path: triggerPath } : {}),
+      ...(triggerBranch !== undefined ? { branch: triggerBranch } : {}),
+      ...(customEnvironmentId !== undefined ? { customEnvironmentId } : {}),
+    };
   }
   if (iconSha) {
     body.icon = iconSha;

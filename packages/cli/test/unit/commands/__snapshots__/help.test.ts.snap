@@ -858,8 +858,14 @@ exports[`help command > connex help output snapshots > connex create subcommand 
        --param <KEY=VALUE>           Value for a connection method template field (e.g. domain=acme.okta.com). Repeatable.   
        --target <TARGET>             Which of the service's products to connect to (e.g. api, mcp). Only needed when a       
                                      service exposes more than one.                                                          
+       --trigger-branch <BRANCH>     Target a specific git branch for the trigger destination. Requires --triggers.          
+       --trigger-environment <ENV>   Target a custom environment by slug or stable ID. Mutually exclusive with               
+                                     --trigger-branch and requires --triggers.                                               
        --trigger-event <EVENT>       Webhook event to receive. Repeatable. Requires --triggers and replaces the provider's   
                                      default events.                                                                         
+       --trigger-path <PATH>         Set the path on the destination project that receives forwarded webhooks. Requires      
+                                     --triggers.                                                                             
+       --trigger-project <PROJECT>   Target a project by name or ID instead of the linked project. Requires --triggers.      
        --triggers                    Enable webhook triggers for this connector                                              
   -y,  --yes                         Skip the single-connection-method confirmation prompt                                   
 
@@ -895,6 +901,18 @@ exports[`help command > connex help output snapshots > connex create subcommand 
   - Create with selected webhook events
 
     $ vercel connect create linear --name linear --triggers --trigger-event Issue --trigger-event Comment --trigger-event Project
+
+  - Create with a custom trigger path
+
+    $ vercel connect create github --name github --triggers --trigger-path /eve/v1/github
+
+  - Create with branch-specific trigger routing
+
+    $ vercel connect create github --name github --triggers --trigger-path /api/webhooks --trigger-branch main
+
+  - Create with trigger routing on another project
+
+    $ vercel connect create github --name github --triggers --trigger-project my-api --trigger-path /api/webhooks
 
   - Create with branding (icon and colors)
 
