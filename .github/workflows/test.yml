@@ -285,7 +285,7 @@ jobs:
             nodeVersion: 22
             concurrency: 2
             label: mac/node22
-          - runner: windows-latest
+          - runner: windows-latest-8-core
             nodeVersion: 22
             concurrency: 1
             label: win/node22
