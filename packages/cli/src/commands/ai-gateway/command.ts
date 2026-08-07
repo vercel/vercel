@@ -409,6 +409,14 @@ export const setupSubcommand = {
       description: 'Do not write .bak backups of changed files',
     },
     {
+      name: 'no-session-migration',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Do not copy existing Codex Desktop sessions for use with the Vercel AI Gateway provider.',
+    },
+    {
       name: 'no-keychain',
       shorthand: null,
       type: Boolean,
