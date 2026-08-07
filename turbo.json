@@ -33,6 +33,9 @@
     }
   },
   "tasks": {
+    "//#format:check": {},
+    "//#lint": {},
+    "//#lint:dependencies": {},
     "build": {
       "dependsOn": ["^build"],
       "outputLogs": "new-only",
@@ -84,7 +87,7 @@
       "outputLogs": "new-only"
     },
     "type-check": {
-      "dependsOn": ["source", "^build"]
+      "dependsOn": ["build", "source", "^build"]
     },
     "source": {
       "dependsOn": ["^source"]
