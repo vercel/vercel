@@ -1,6 +1,6 @@
 {
   "name": "@vercel/frameworks",
-  "version": "3.30.8",
+  "version": "3.30.9",
   "main": "./dist/frameworks.js",
   "types": "./dist/frameworks.d.ts",
   "files": [

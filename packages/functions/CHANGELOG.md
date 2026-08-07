@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 3.9.0
+
+### Minor Changes
+
+- 0b0a4a8: Add a `metric()` helper for reporting custom metrics from Vercel Functions.
+
 ## 3.8.0
 
 ### Minor Changes

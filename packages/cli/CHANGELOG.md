@@ -1,5 +1,39 @@
 # vercel
 
+## 58.8.0
+
+### Minor Changes
+
+- fa93c8f: Add `--trigger-project`, `--trigger-path`, `--trigger-branch`, and `--trigger-environment` to `vercel connect create` so trigger-enabled connectors can atomically register full destination routing, defaulting to the linked project.
+- c5caaf8: Add `vercel vcr config <repository> --public <true|false>` to configure a container registry repository's visibility.
+
+### Patch Changes
+
+- 19c6a71: Skip owner and project lookups before deploying a linked project.
+- b7ec19b: Scope the pre-compilation install's `VERCEL_INSTALL_COMPLETED` marker to the `package.json` it installed. Previously, a `vercel.toml`/`vercel.ts` config caused `vc build` to install at the repo root and then silently skip every later default install, so services whose install root is a different workspace (its own `package.json`/lockfile) built without dependencies.
+- Updated dependencies [a61bdfc]
+- Updated dependencies [b7ec19b]
+  - @vercel/python@6.55.3
+  - @vercel/build-utils@14.0.2
+  - @vercel/node@5.9.6
+  - @vercel/static-build@2.12.2
+  - @vercel/backends@0.8.33
+  - @vercel/container@0.1.1
+  - @vercel/elysia@0.1.110
+  - @vercel/express@0.1.124
+  - @vercel/fastify@0.1.113
+  - @vercel/go@3.10.4
+  - @vercel/h3@0.1.119
+  - @vercel/hono@0.2.113
+  - @vercel/hydrogen@1.4.1
+  - @vercel/koa@0.1.93
+  - @vercel/nestjs@0.2.114
+  - @vercel/next@4.21.1
+  - @vercel/redwood@2.5.1
+  - @vercel/remix-builder@5.9.2
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.1
+
 ## 58.7.1
 
 ### Patch Changes
