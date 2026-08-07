@@ -342,9 +342,18 @@ async function resolveImageHandler(
 
   // Forward the project's build env to the image build as `--build-arg`s, so
   // Dockerfiles can consume declared `ARG`s during build — matching how other
-  // builders run build steps with the build env. Only the project's build env
-  // (`meta.buildEnv`) is used, never the build container's own environment.
-  const buildArgs = buildArgsFromEnv(meta?.buildEnv);
+  // builders run build steps with the build env. We merge the CLI/config build
+  // env (`config.build.env`) with the platform's build env (`meta.buildEnv`).
+  // The build container's own environment (`process.env`) is never used.
+
+  const combinedBuildEnv = {
+    ...(config?.build as Record<string, any>)?.env,
+    ...meta?.buildEnv,
+  };
+
+  const buildArgs = buildArgsFromEnv(
+    combinedBuildEnv as Record<string, string>
+  );
 
   span?.setAttributes({
     'container.mode': 'build_and_push',
