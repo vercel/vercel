@@ -339,6 +339,66 @@ describe('ai-gateway coding-agents setup', () => {
       }
     );
 
+    it('configures Kilo Code with an env-referenced openai-compatible provider', async () => {
+      useUser();
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.config', 'kilo'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0002',
+        '--agent',
+        'kilo'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const raw = readFileSync(
+        join(home, '.config', 'kilo', 'kilo.json'),
+        'utf8'
+      );
+      const config = JSON.parse(raw);
+      expect(config.provider['openai-compatible'].options).toEqual({
+        apiKey: '{env:AI_GATEWAY_API_KEY}',
+        baseURL: 'https://ai-gateway.vercel.sh/v1',
+      });
+      // Kilo substitutes {env:…} itself — the literal key stays out of the file.
+      expect(raw).not.toContain('vck_DummyKey0002');
+    });
+
+    // XDG_CONFIG_HOME is a unix convention; kiloConfigDir requires an
+    // absolute unix path, so Windows exercises the ~/.config fallback.
+    it.skipIf(process.platform === 'win32')(
+      'honors XDG_CONFIG_HOME for the Kilo config location',
+      async () => {
+        useUser();
+        client.nonInteractive = true;
+        const xdg = join(home, 'xdg-config');
+        const saved = process.env.XDG_CONFIG_HOME;
+        process.env.XDG_CONFIG_HOME = xdg;
+        try {
+          mkdirSync(join(xdg, 'kilo'), { recursive: true });
+          client.setArgv(
+            'ai-gateway',
+            'coding-agents',
+            'setup',
+            '--key',
+            'vck_DummyKey0002',
+            '--agent',
+            'kilo'
+          );
+          expect(await aiGateway(client)).toBe(0);
+          expect(existsSync(join(xdg, 'kilo', 'kilo.json'))).toBe(true);
+        } finally {
+          if (saved === undefined) delete process.env.XDG_CONFIG_HOME;
+          else process.env.XDG_CONFIG_HOME = saved;
+        }
+      }
+    );
+
     it('writes a --base-url override verbatim into the Codex config', async () => {
       useUser();
       client.nonInteractive = true;
