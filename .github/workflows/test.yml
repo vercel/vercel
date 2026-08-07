@@ -365,26 +365,12 @@ jobs:
           DD_PROFILING_ENABLED: 'false'
           DD_NATIVE_METRICS: 'false'
         run: |
-          attempt=1
-          max_attempts=2
           export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
           if [ -n "$TURBO_EXPERIMENTAL_OTEL_ENDPOINT" ]; then
             export TURBO_EXPERIMENTAL_OTEL_HEADERS="Authorization=Bearer ${TURBO_TOKEN}"
           fi
 
-          while [ "$attempt" -le "$max_attempts" ]; do
-            if turbo run vitest-unit --affected --filter=!vercel --summarize --cache-dir='.turbo' --log-order=stream --continue=always --concurrency=${{ matrix.concurrency }}; then
-              exit 0
-            fi
-
-            if [ "$attempt" -eq "$max_attempts" ]; then
-              echo "Tests failed after $max_attempts attempts."
-              exit 1
-            fi
-
-            echo "Tests failed; retrying once."
-            attempt=$((attempt + 1))
-          done
+          turbo run vitest-unit --affected --filter=!vercel --summarize --cache-dir='.turbo' --log-order=stream --continue=always --concurrency=${{ matrix.concurrency }}
 
   cli-unit-test:
     name: CLI Unit / ${{ matrix.runner }}/node${{ matrix.nodeVersion }} / ${{ matrix.shard }}/7
