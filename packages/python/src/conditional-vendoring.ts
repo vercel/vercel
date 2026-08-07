@@ -73,50 +73,67 @@ export interface QueueIntegration {
   servingActivator?: string;
 }
 
-/**
- * Queue adapter integrations required by the project's direct
- * dependencies. Activation is keyed on the upstream dependency (celery,
- * dramatiq, …) being declared by the project — the integration package
- * itself may be conditionally injected or declared directly. Failing to
- * import or install a required integration is a hard error for the
- * callers emitting activation code.
- */
-export async function getQueueIntegrations({
-  pythonPackage,
-}: {
-  pythonPackage: PythonPackage | undefined;
-}): Promise<QueueIntegration[]> {
-  const dependencies = await getDirectDependencyNames(pythonPackage);
-  if (!dependencies) return [];
-  const integrations: QueueIntegration[] = [];
-  for (const [upstream, adapter] of UPSTREAM_DEPENDENCY_ADAPTERS) {
-    if (dependencies.has(upstream)) {
-      integrations.push(adapter.integration);
-    }
-  }
-  return integrations;
-}
-
-export interface ConditionalInjectedPackage {
+export interface QueueAdapterInjectedPackage {
   name: InjectedPackageName;
   requirement: string;
   envOverride: string | undefined;
   allowLocalSource: boolean;
 }
 
-export async function getConditionalInjectedPackages({
+export interface QueueAdapterBootstrap {
+  /**
+   * Integrations to activate around importing subscriber modules, keyed on
+   * the upstream dependency (celery, dramatiq, …). The adapter package may
+   * be injected or self-declared. Callers emitting activation code treat a
+   * failed import or install as a hard error.
+   */
+  integrations: QueueIntegration[];
+  /** Adapter packages to install when the project does not declare them itself. */
+  injectedPackages: QueueAdapterInjectedPackage[];
+}
+
+/**
+ * The queue adapter bootstrap (package injection plus integration
+ * activation) required by the project's dependencies. Owns the
+ * applicability policy:
+ *
+ * - Only projects declaring `[[tool.vercel.subscribers]]` bootstrap
+ *   adapters: without a subscriber nothing serves the queues, and keying
+ *   on the upstream dependency alone would couple every project using the
+ *   framework to the adapter packages. hasDeclaredSubscribers is presence
+ *   in the project pyproject.toml (hasPyprojectSubscribers), not this
+ *   build's composed subscribers, so web service builds that only publish
+ *   still bootstrap.
+ * - Legacy vercel-workers projects are excluded: their runtime brings its
+ *   own adapter integration, and a second transport would compete with it.
+ */
+export async function getQueueAdapterBootstrap({
   pythonPackage,
   env,
+  legacyWorkersProject,
+  hasDeclaredSubscribers,
 }: {
   pythonPackage: PythonPackage | undefined;
   env: NodeJS.ProcessEnv;
-}): Promise<ConditionalInjectedPackage[]> {
+  legacyWorkersProject: boolean;
+  hasDeclaredSubscribers: boolean;
+}): Promise<QueueAdapterBootstrap> {
+  const integrations: QueueIntegration[] = [];
+  const injectedPackages: QueueAdapterInjectedPackage[] = [];
+  const bootstrap = { integrations, injectedPackages };
+  if (legacyWorkersProject || !hasDeclaredSubscribers) {
+    return bootstrap;
+  }
   const dependencies = await getDirectDependencyNames(pythonPackage);
-  if (!dependencies) return [];
+  if (!dependencies) {
+    return bootstrap;
+  }
 
-  const injectedPackages: ConditionalInjectedPackage[] = [];
   for (const [upstream, adapter] of UPSTREAM_DEPENDENCY_ADAPTERS) {
     if (!dependencies.has(upstream)) continue;
+    integrations.push(adapter.integration);
+    // Injection is narrower than activation: a self-declared adapter is
+    // the user's to manage but must still be activated.
     if (
       dependencies.has(adapter.bundled) ||
       dependencies.has(adapter.unbundled)
@@ -137,7 +154,7 @@ export async function getConditionalInjectedPackages({
     });
   }
 
-  return injectedPackages;
+  return bootstrap;
 }
 
 async function getDirectDependencyNames(

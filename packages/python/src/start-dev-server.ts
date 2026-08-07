@@ -51,11 +51,13 @@ import {
   VERCEL_WORKERS_VERSION,
 } from './package-versions';
 import {
-  getConditionalInjectedPackages,
-  getQueueIntegrations,
+  getQueueAdapterBootstrap,
   type QueueIntegration,
 } from './conditional-vendoring';
-import { introspectDevQueueSubscriptions } from './subscribers';
+import {
+  hasPyprojectSubscribers,
+  introspectDevQueueSubscriptions,
+} from './subscribers';
 import {
   isLegacyWorkersProject,
   isQueueWorkflowSdkVersion,
@@ -911,11 +913,8 @@ export const startDevServer: StartDevServer = async opts => {
       devOpts
     );
 
-    // Mirror the build-time conditional adapter injection (celery/dramatiq →
-    // vercel-celery(-bundle)/vercel-dramatiq(-bundle)) so modules importing
-    // `vercel.integrations.*` resolve in dev too. Legacy vercel-workers
-    // projects use the legacy integration instead — injecting or activating
-    // the vercel-queue adapters there would install competing transports.
+    // Mirror the build-time queue adapter bootstrap so modules importing
+    // `vercel.integrations.*` resolve in dev too.
     const legacyProject = await isLegacyWorkersProject(workPath);
     let queueIntegrations: QueueIntegration[] = [];
     try {
@@ -923,9 +922,13 @@ export const startDevServer: StartDevServer = async opts => {
         entrypointDir: workPath,
         rootDir: workPath,
       });
-      queueIntegrations = legacyProject
-        ? []
-        : await getQueueIntegrations({ pythonPackage });
+      const queueAdapterBootstrap = await getQueueAdapterBootstrap({
+        pythonPackage,
+        env,
+        legacyWorkersProject: legacyProject,
+        hasDeclaredSubscribers: await hasPyprojectSubscribers(workPath),
+      });
+      queueIntegrations = queueAdapterBootstrap.integrations;
       // Any function of the project may publish through an adapter's
       // transport, so the runtime activates the required integrations at
       // startup in every dev process; activation failures are hard errors.
@@ -940,13 +943,7 @@ export const startDevServer: StartDevServer = async opts => {
       } else {
         delete env.VERCEL_QUEUE_INTEGRATIONS;
       }
-      const conditionalInjectedPackages = legacyProject
-        ? []
-        : await getConditionalInjectedPackages({
-            pythonPackage,
-            env,
-          });
-      for (const injectedPackage of conditionalInjectedPackages) {
+      for (const injectedPackage of queueAdapterBootstrap.injectedPackages) {
         await installInjectedDevPackage(
           {
             name: injectedPackage.name,

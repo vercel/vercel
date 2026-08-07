@@ -14,10 +14,7 @@ import {
   VERCEL_RUNTIME_VERSION,
   VERCEL_WORKERS_VERSION,
 } from './package-versions';
-import {
-  getConditionalInjectedPackages,
-  getQueueIntegrations,
-} from './conditional-vendoring';
+import { getQueueAdapterBootstrap } from './conditional-vendoring';
 import {
   isLegacyWorkersProject,
   MIN_QUEUE_WORKFLOW_SDK_VERSION,
@@ -126,6 +123,7 @@ import {
   generatedPythonPathToModule,
   getGeneratedQueueHandlerPath,
   getPyprojectSubscribers,
+  hasPyprojectSubscribers,
   getSubscriberConsumerName,
   getSubscriberOutputPath,
   queueTopicPatternsOverlap,
@@ -1136,18 +1134,18 @@ export const build: BuildVX = async ({
     pipPlatformArgs,
   });
 
-  // Legacy vercel-workers projects bring their own adapter integration
-  // through the vercel-workers runtime; injecting or activating the
-  // vercel-queue adapters there would install two competing transports.
-  const conditionalInjectedPackages =
-    usedUvManagedInstall && !legacyWorkersProject
-      ? await getConditionalInjectedPackages({
-          pythonPackage,
-          env: baseEnv,
-        })
-      : [];
+  const queueAdapterBootstrap = await getQueueAdapterBootstrap({
+    pythonPackage,
+    env: baseEnv,
+    legacyWorkersProject,
+    hasDeclaredSubscribers: await hasPyprojectSubscribers(workPath),
+  });
+  // Injection mutates the venv, so it only applies to uv-managed installs.
+  const queueAdapterInjectedPackages = usedUvManagedInstall
+    ? queueAdapterBootstrap.injectedPackages
+    : [];
 
-  for (const injectedPackage of conditionalInjectedPackages) {
+  for (const injectedPackage of queueAdapterInjectedPackages) {
     await installInjectedPackage({
       ...injectedPackage,
       uv,
@@ -1212,11 +1210,8 @@ export const build: BuildVX = async ({
   // introspection and the generated handler modules activate them right
   // after importing the subscriber module (each installer retroactively
   // registers apps the import created) and fail hard when activation
-  // fails. Legacy vercel-workers projects use the legacy integration
-  // instead (see the conditional injection gate above).
-  const queueIntegrations = legacyWorkersProject
-    ? []
-    : await getQueueIntegrations({ pythonPackage });
+  // fails.
+  const queueIntegrations = queueAdapterBootstrap.integrations;
 
   const writeGeneratedQueueHandler = async (
     outputPath: string,

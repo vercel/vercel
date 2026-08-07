@@ -185,6 +185,25 @@ export function generatedPythonPathToModule(filePath: string): string {
     .join('.');
 }
 
+/**
+ * Whether the project's pyproject.toml declares any
+ * `[[tool.vercel.subscribers]]`. Presence check only; schema validation
+ * stays in getPyprojectSubscribers. The queue adapter bootstrap gates on
+ * this rather than on composed subscribers so web service builds sharing
+ * the pyproject.toml still bootstrap the adapters for publishing.
+ */
+export async function hasPyprojectSubscribers(
+  workPath: string
+): Promise<boolean> {
+  const pyprojectPath = join(workPath, 'pyproject.toml');
+  if (!fs.existsSync(pyprojectPath)) {
+    return false;
+  }
+  const pyproject = await readConfigFile<Pyproject>(pyprojectPath);
+  const subscribers = pyproject?.tool?.vercel?.subscribers;
+  return Array.isArray(subscribers) && subscribers.length > 0;
+}
+
 export async function getPyprojectSubscribers(
   workPath: string,
   { legacySchema = false }: { legacySchema?: boolean } = {}

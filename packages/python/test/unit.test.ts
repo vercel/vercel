@@ -85,8 +85,9 @@ import {
   findUvOnBuildImage,
 } from '../src/uv';
 import {
-  getConditionalInjectedPackages,
-  getQueueIntegrations,
+  getQueueAdapterBootstrap,
+  type QueueAdapterInjectedPackage,
+  type QueueIntegration,
 } from '../src/conditional-vendoring';
 import {
   isLegacyWorkersProject,
@@ -241,10 +242,75 @@ function selectVersion(opts: {
   });
 }
 
+// Per-output views over getQueueAdapterBootstrap: each assertion targets
+// either activation or injection.
+function getQueueIntegrations({
+  pythonPackage,
+  hasDeclaredSubscribers,
+  legacyWorkersProject = false,
+}: {
+  pythonPackage: PythonPackage | undefined;
+  hasDeclaredSubscribers: boolean;
+  legacyWorkersProject?: boolean;
+}): Promise<QueueIntegration[]> {
+  return getQueueAdapterBootstrap({
+    pythonPackage,
+    env: {},
+    legacyWorkersProject,
+    hasDeclaredSubscribers,
+  }).then(bootstrap => bootstrap.integrations);
+}
+
+function getQueueAdapterInjectedPackages({
+  pythonPackage,
+  env,
+  hasDeclaredSubscribers,
+  legacyWorkersProject = false,
+}: {
+  pythonPackage: PythonPackage | undefined;
+  env: NodeJS.ProcessEnv;
+  hasDeclaredSubscribers: boolean;
+  legacyWorkersProject?: boolean;
+}): Promise<QueueAdapterInjectedPackage[]> {
+  return getQueueAdapterBootstrap({
+    pythonPackage,
+    env,
+    legacyWorkersProject,
+    hasDeclaredSubscribers,
+  }).then(bootstrap => bootstrap.injectedPackages);
+}
+
 describe('queue adapter integration activation', () => {
+  it('bootstraps nothing for legacy vercel-workers projects', async () => {
+    await expect(
+      getQueueAdapterBootstrap({
+        pythonPackage: makePackageWithDependencies([
+          'celery>=5.3',
+          'vercel-workers',
+        ]),
+        env: {},
+        legacyWorkersProject: true,
+        hasDeclaredSubscribers: true,
+      })
+    ).resolves.toEqual({ integrations: [], injectedPackages: [] });
+  });
+
+  it('activates nothing without declared subscribers', async () => {
+    await expect(
+      getQueueIntegrations({
+        hasDeclaredSubscribers: false,
+        pythonPackage: makePackageWithDependencies([
+          'celery>=5.3',
+          'dramatiq>=1.17',
+        ]),
+      })
+    ).resolves.toEqual([]);
+  });
+
   it('activates integrations for declared upstream dependencies', async () => {
     await expect(
       getQueueIntegrations({
+        hasDeclaredSubscribers: true,
         pythonPackage: makePackageWithDependencies(['celery>=5.3', 'fastapi']),
       })
     ).resolves.toEqual([
@@ -255,6 +321,7 @@ describe('queue adapter integration activation', () => {
     ]);
     await expect(
       getQueueIntegrations({
+        hasDeclaredSubscribers: true,
         pythonPackage: makePackageWithDependencies(['fastapi']),
       })
     ).resolves.toEqual([]);
@@ -290,9 +357,23 @@ describe('queue adapter integration activation', () => {
 });
 
 describe('conditional Python adapter vendoring', () => {
+  it('injects nothing without declared subscribers', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: false,
+        pythonPackage: makePackageWithDependencies([
+          'celery>=5.3',
+          'dramatiq>=1.17',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([]);
+  });
+
   it('selects vercel-celery-bundle when celery is declared', async () => {
     await expect(
-      getConditionalInjectedPackages({
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
         pythonPackage: makePackageWithDependencies(['celery>=5.3']),
         env: {},
       })
@@ -303,7 +384,8 @@ describe('conditional Python adapter vendoring', () => {
 
   it('selects vercel-celery when vercel-queue is declared', async () => {
     await expect(
-      getConditionalInjectedPackages({
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
         pythonPackage: makePackageWithDependencies([
           'celery>=5.3',
           'vercel-queue',
@@ -315,7 +397,8 @@ describe('conditional Python adapter vendoring', () => {
 
   it('does not select vercel-celery for unrelated packages', async () => {
     await expect(
-      getConditionalInjectedPackages({
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
         pythonPackage: makePackageWithDependencies(['celery>=5.3', 'fastapi']),
         env: {},
       })
@@ -326,7 +409,8 @@ describe('conditional Python adapter vendoring', () => {
 
   it('does not inject when celery is absent', async () => {
     await expect(
-      getConditionalInjectedPackages({
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
         pythonPackage: makePackageWithDependencies(['fastapi']),
         env: {},
       })
@@ -335,7 +419,8 @@ describe('conditional Python adapter vendoring', () => {
 
   it('does not inject when only vercel-queue is declared', async () => {
     await expect(
-      getConditionalInjectedPackages({
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
         pythonPackage: makePackageWithDependencies(['vercel-queue']),
         env: {},
       })
@@ -344,7 +429,8 @@ describe('conditional Python adapter vendoring', () => {
 
   it('keeps injecting other adapters when one is declared directly', async () => {
     await expect(
-      getConditionalInjectedPackages({
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
         pythonPackage: makePackageWithDependencies([
           'celery>=5.3',
           'dramatiq>=1.17',
@@ -359,7 +445,8 @@ describe('conditional Python adapter vendoring', () => {
 
   it('does not inject when vercel-celery is declared', async () => {
     await expect(
-      getConditionalInjectedPackages({
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
         pythonPackage: makePackageWithDependencies([
           'celery>=5.3',
           'vercel-celery',
@@ -371,7 +458,8 @@ describe('conditional Python adapter vendoring', () => {
 
   it('does not inject when vercel-celery-bundle is declared', async () => {
     await expect(
-      getConditionalInjectedPackages({
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
         pythonPackage: makePackageWithDependencies([
           'celery>=5.3',
           'vercel-celery-bundle',
@@ -383,7 +471,8 @@ describe('conditional Python adapter vendoring', () => {
 
   it('handles extras, specifiers, and markers through PEP 508 parsing', async () => {
     await expect(
-      getConditionalInjectedPackages({
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
         pythonPackage: makePackageWithDependencies([
           'Celery[redis]>=5.3; python_version >= "3.11"',
         ]),
@@ -396,7 +485,8 @@ describe('conditional Python adapter vendoring', () => {
 
   it('returns the unpinned injected package request', async () => {
     await expect(
-      getConditionalInjectedPackages({
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
         pythonPackage: makePackageWithDependencies(['celery>=5.3']),
         env: {},
       })
@@ -411,7 +501,8 @@ describe('conditional Python adapter vendoring', () => {
 
   it('returns the unbundled injected package request when its upstream is declared', async () => {
     await expect(
-      getConditionalInjectedPackages({
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
         pythonPackage: makePackageWithDependencies([
           'celery>=5.3',
           'vercel-queue',
@@ -429,7 +520,8 @@ describe('conditional Python adapter vendoring', () => {
 
   it('selects vercel-dramatiq-bundle when dramatiq is declared', async () => {
     await expect(
-      getConditionalInjectedPackages({
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
         pythonPackage: makePackageWithDependencies(['dramatiq>=1.17']),
         env: {},
       })
@@ -444,7 +536,8 @@ describe('conditional Python adapter vendoring', () => {
 
   it('selects vercel-dramatiq when dramatiq and vercel-queue are declared', async () => {
     await expect(
-      getConditionalInjectedPackages({
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
         pythonPackage: makePackageWithDependencies([
           'dramatiq>=1.17',
           'vercel-queue',
@@ -462,7 +555,8 @@ describe('conditional Python adapter vendoring', () => {
 
   it('does not inject when vercel-dramatiq is declared', async () => {
     await expect(
-      getConditionalInjectedPackages({
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
         pythonPackage: makePackageWithDependencies([
           'dramatiq>=1.17',
           'vercel-dramatiq',
@@ -474,7 +568,8 @@ describe('conditional Python adapter vendoring', () => {
 
   it('does not inject when vercel-dramatiq-bundle is declared', async () => {
     await expect(
-      getConditionalInjectedPackages({
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
         pythonPackage: makePackageWithDependencies([
           'dramatiq>=1.17',
           'vercel-dramatiq-bundle',
@@ -486,7 +581,8 @@ describe('conditional Python adapter vendoring', () => {
 
   it('returns all matching adapter requests', async () => {
     await expect(
-      getConditionalInjectedPackages({
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
         pythonPackage: makePackageWithDependencies([
           'celery>=5.3',
           'dramatiq>=1.17',
@@ -5820,7 +5916,13 @@ describe('custom install hooks', () => {
 });
 
 describe('worker services dependency installation', () => {
-  async function buildWithPipSpy(options: { dependencies?: string[] } = {}) {
+  async function buildWithPipSpy(
+    options: {
+      dependencies?: string[];
+      declareSubscriber?: boolean;
+      declareWorkflow?: boolean;
+    } = {}
+  ) {
     const pipCalls: string[][] = [];
     const operations: string[] = [];
 
@@ -5910,6 +6012,18 @@ describe('worker services dependency installation', () => {
                 `dependencies = [${options.dependencies
                   .map(dep => JSON.stringify(dep))
                   .join(', ')}]`,
+                // Declared by default so injection applies. This build does
+                // not compose the declaration, mirroring a web service that
+                // shares the project pyproject.toml.
+                ...(options.declareSubscriber === false
+                  ? []
+                  : [
+                      '[[tool.vercel.subscribers]]',
+                      'entrypoint = "worker:app"',
+                    ]),
+                ...(options.declareWorkflow
+                  ? ['[[tool.vercel.workflows]]', 'entrypoint = "flows:wf"']
+                  : []),
               ].join('\n'),
             }),
           }
@@ -5966,6 +6080,37 @@ describe('worker services dependency installation', () => {
     for (const args of pipCalls) {
       expect(args.slice(0, 3)).toEqual(['install', '--link-mode', 'copy']);
     }
+  });
+
+  it('skips adapter injection when no subscribers are declared', async () => {
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['celery>=5.3', 'dramatiq>=1.17'],
+      declareSubscriber: false,
+    });
+
+    expect(
+      pipCalls.some(args =>
+        args.some(arg => arg.startsWith('vercel-') && arg.includes('bundle'))
+      )
+    ).toBe(false);
+    expect(pipCalls.some(args => args.includes('vercel-celery'))).toBe(false);
+  });
+
+  it('does not treat declared workflows as adapter consumers', async () => {
+    // Workflows serve through the vercel SDK, a declared project
+    // dependency, so [[tool.vercel.workflows]] alone must not trigger
+    // adapter injection.
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['celery>=5.3'],
+      declareSubscriber: false,
+      declareWorkflow: true,
+    });
+
+    expect(
+      pipCalls.some(args =>
+        args.some(arg => arg.startsWith('vercel-') && arg.includes('bundle'))
+      )
+    ).toBe(false);
   });
 
   it('installs vercel-celery-bundle after uv sync when celery is declared', async () => {
