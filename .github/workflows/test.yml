@@ -354,6 +354,7 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          TURBO_EXPERIMENTAL_OTEL_ENDPOINT: ${{ secrets.TURBO_EXPERIMENTAL_OTEL_ENDPOINT }}
           CARGO_NET_GIT_FETCH_WITH_CLI: 'true'
           FORCE_COLOR: '1'
           DD_CIVISIBILITY_AGENTLESS_ENABLED: 'true'
@@ -367,6 +368,9 @@ jobs:
           attempt=1
           max_attempts=2
           export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
+          if [ -n "$TURBO_EXPERIMENTAL_OTEL_ENDPOINT" ]; then
+            export TURBO_EXPERIMENTAL_OTEL_HEADERS="Authorization=Bearer ${TURBO_TOKEN}"
+          fi
 
           while [ "$attempt" -le "$max_attempts" ]; do
             if turbo run vitest-unit --affected --filter=!vercel --summarize --cache-dir='.turbo' --log-order=stream --continue=always --concurrency=${{ matrix.concurrency }}; then
@@ -466,6 +470,7 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          TURBO_EXPERIMENTAL_OTEL_ENDPOINT: ${{ secrets.TURBO_EXPERIMENTAL_OTEL_ENDPOINT }}
           CARGO_NET_GIT_FETCH_WITH_CLI: 'true'
           FORCE_COLOR: '1'
           DD_CIVISIBILITY_AGENTLESS_ENABLED: 'true'
@@ -479,6 +484,9 @@ jobs:
           attempt=1
           max_attempts=2
           export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
+          if [ -n "$TURBO_EXPERIMENTAL_OTEL_ENDPOINT" ]; then
+            export TURBO_EXPERIMENTAL_OTEL_HEADERS="Authorization=Bearer ${TURBO_TOKEN}"
+          fi
 
           while [ "$attempt" -le "$max_attempts" ]; do
             if turbo run vitest-unit --affected --filter=vercel; then
@@ -675,6 +683,9 @@ jobs:
           attempt=1
           max_attempts=2
           export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
+          if [ -n "$TURBO_EXPERIMENTAL_OTEL_ENDPOINT" ]; then
+            export TURBO_EXPERIMENTAL_OTEL_HEADERS="Authorization=Bearer ${TURBO_TOKEN}"
+          fi
 
           while [ "$attempt" -le "$max_attempts" ]; do
             echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
@@ -699,6 +710,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
           TURBO_BASE_SHA: ${{ needs.setup.outputs.baseSha }}
+          TURBO_EXPERIMENTAL_OTEL_ENDPOINT: ${{ secrets.TURBO_EXPERIMENTAL_OTEL_ENDPOINT }}
           FORCE_COLOR: '1'
           # Datadog Test Optimization: emit per-test spans correlated to the
           # GitHub Actions job span, replacing the previous post-hoc JUnit

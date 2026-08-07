@@ -39,10 +39,16 @@ if (process.env.VITEST_SHARD) {
 const CHUNK_TIMEOUT_MS = 20 * 60 * 1000; // total wall clock for the chunk
 const GRACE_MS = 15_000; // after SIGTERM -> SIGKILL
 
+const env = { ...process.env };
+for (const key of Object.keys(env)) {
+  if (key.startsWith('TURBO_EXPERIMENTAL_OTEL_')) delete env[key];
+}
+
 const child = spawn(
   process.execPath,
   [vitestBin, '--config', './vitest.config.mts', ...files],
   {
+    env,
     stdio: 'inherit',
     shell: false,
   }

@@ -1,5 +1,8 @@
 {
   "$schema": "https://turborepo.org/schema.json",
+  "futureFlags": {
+    "experimentalObservability": true
+  },
   "globalDependencies": [
     ".github/workflows/**",
     "packages/build-utils/src/**",
@@ -14,6 +17,21 @@
   ],
   "globalEnv": ["OS", "RUNNER_OS"],
   "envMode": "loose",
+  "experimentalObservability": {
+    "otel": {
+      "enabled": true,
+      "protocol": "http/protobuf",
+      "timeoutMs": 10000,
+      "intervalMs": 15000,
+      "resource": {
+        "service.name": "turborepo"
+      },
+      "metrics": {
+        "runSummary": true,
+        "taskDetails": true
+      }
+    }
+  },
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
