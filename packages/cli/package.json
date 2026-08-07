@@ -80,6 +80,7 @@
     "sandbox": "3.4.0",
     "smol-toml": "1.5.2",
     "undici": "5.29.0",
+    "uuid": "14.0.1",
     "zod": "4.1.11"
   },
   "builders": {
