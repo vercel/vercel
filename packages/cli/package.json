@@ -14,7 +14,6 @@
   "scripts": {
     "test": "vitest run --config ./vitest.config.mts",
     "vitest-run": "node scripts/vitest-run.mjs",
-    "vitest-unit": "node scripts/vitest-run.mjs --run test/unit/",
     "vitest-e2e": "glob --absolute 'test/e2e-*.test.ts'",
     "test-e2e-node-all-versions": "rimraf test/fixtures/integration && vitest run --config ./vitest.config.mts test/integration-1.test.ts test/integration-2.test.ts test/integration-3.test.ts test/integration-link-env-pull.test.ts",
     "test-dev": "vitest run --config ./vitest.config.mts test/dev/",
@@ -33,7 +32,8 @@
     "test:evals": "tsx evals/run.ts",
     "test:evals:smoke": "tsx evals/run.ts smoke --smoke",
     "test:evals:dry": "tsx evals/run.ts --dry",
-    "test:evals:local-fixture": "tsx evals/run.ts --local-fixture"
+    "test:evals:local-fixture": "tsx evals/run.ts --local-fixture",
+    "test-unit": "node scripts/vitest-run.mjs --run test/unit/"
   },
   "bin": {
     "vc": "./dist/vc.js",

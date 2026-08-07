@@ -29,14 +29,26 @@ describe('it should create chunks correctly', () => {
 });
 
 describe('getScriptTestPatterns', () => {
-  it('reads filters from direct vitest commands', () => {
+  it('reads filters from the CLI test wrapper', () => {
     const packageJson = {
       scripts: {
-        'vitest-unit': 'vitest run --config ../../vitest.config.mts test/unit/',
+        'test-unit': 'node scripts/vitest-run.mjs --run test/unit/',
       },
     };
 
-    expect(getScriptTestPatterns(packageJson, 'vitest-unit')).toEqual([
+    expect(getScriptTestPatterns(packageJson, 'test-unit')).toEqual([
+      'test/unit/',
+    ]);
+  });
+
+  it('reads filters from direct vitest commands', () => {
+    const packageJson = {
+      scripts: {
+        'test-unit': 'vitest run --config ../../vitest.config.mts test/unit/',
+      },
+    };
+
+    expect(getScriptTestPatterns(packageJson, 'test-unit')).toEqual([
       'test/unit/',
     ]);
   });
@@ -44,11 +56,11 @@ describe('getScriptTestPatterns', () => {
   it('uses default patterns for an unfiltered vitest command', () => {
     const packageJson = {
       scripts: {
-        'vitest-unit': 'vitest run --config ../../vitest.config.mts',
+        'test-unit': 'vitest run --config ../../vitest.config.mts',
       },
     };
 
-    expect(getScriptTestPatterns(packageJson, 'vitest-unit')).toContain(
+    expect(getScriptTestPatterns(packageJson, 'test-unit')).toContain(
       'test/**/*.test.ts'
     );
   });

@@ -14,7 +14,6 @@
     "test-e2e": "rm -f test/builder-info.json; vitest run --config ../../vitest.config.mts test/fixtures/**/*.test.js",
     "type-check": "tsc --noEmit",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "vitest run --config ../../vitest.config.mts test/unit/",
     "vitest-e2e": "glob --absolute 'test/fixtures/**/*.test.js'"
   },
   "repository": {

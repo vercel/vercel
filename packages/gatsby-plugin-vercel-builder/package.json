@@ -15,10 +15,9 @@
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
     "test": "vitest run --config ../../vitest.config.mts",
-    "test-unit": "vitest run --config ../../vitest.config.mts test/unit.*test.*",
+    "test-unit": "vitest run --config ../../vitest.config.mts test/unit.",
     "type-check": "tsc --noEmit",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "vitest run --config ../../vitest.config.mts test/unit."
+    "vitest-run": "vitest -c ../../vitest.config.mts"
   },
   "dependencies": {
     "@sinclair/typebox": "0.25.24",

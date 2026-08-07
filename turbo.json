@@ -41,15 +41,6 @@
       "outputLogs": "new-only",
       "outputs": ["dist/**"]
     },
-    "vitest-unit": {
-      "dependsOn": ["build"],
-      "env": ["NODE_VERSION", "VITEST_SHARD"],
-      "outputLogs": "new-only"
-    },
-    "vitest-unit-node-24": {
-      "dependsOn": ["build"],
-      "outputLogs": "new-only"
-    },
     "vitest-run": {
       "dependsOn": ["build"],
       "outputLogs": "new-only"
@@ -64,6 +55,7 @@
     },
     "test-unit": {
       "dependsOn": ["build"],
+      "env": ["NODE_VERSION", "VITEST_SHARD"],
       "outputLogs": "new-only"
     },
     "test-dev": {

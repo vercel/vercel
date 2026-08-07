@@ -9,7 +9,7 @@ const {
 
 const runnersMap = new Map([
   [
-    'vitest-unit',
+    'test-unit',
     {
       min: 1,
       max: 1,
@@ -26,31 +26,12 @@ const runnersMap = new Map([
     },
   ],
   [
-    'vitest-unit-node-24',
-    {
-      min: 1,
-      max: 1,
-      testScript: 'vitest-run',
-      runners: ['ubuntu-latest', 'macos-14'],
-      nodeVersions: ['24'],
-    },
-  ],
-  [
     'vitest-e2e',
     {
       min: 1,
       max: 7,
       testScript: 'vitest-run',
       runners: ['ubuntu-latest'],
-    },
-  ],
-  [
-    'test-unit',
-    {
-      min: 1,
-      max: 1,
-      testScript: 'test',
-      runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
     },
   ],
   [
@@ -94,7 +75,7 @@ const runnersMap = new Map([
 ]);
 
 // Test type categorization for filtering
-const UNIT_TEST_SCRIPTS = ['vitest-unit', 'vitest-unit-node-24', 'test-unit'];
+const UNIT_TEST_SCRIPTS = ['test-unit'];
 const E2E_TEST_SCRIPTS = [
   'vitest-e2e',
   'test-e2e',
@@ -266,6 +247,11 @@ function getScriptTestPatterns(packageJson, scriptName) {
   const vitestPatterns = getPatternsAfterCommand(script, 'vitest run');
   if (vitestPatterns.length > 0) {
     return vitestPatterns;
+  }
+
+  const nodeRunner = script.match(/^node scripts\/(?:vitest-run|test)\.mjs/);
+  if (nodeRunner) {
+    return getPatternsAfterCommand(script, nodeRunner[0]);
   }
 
   return [];

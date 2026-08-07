@@ -15,8 +15,7 @@
     "test": "go -C bootstrap test ./... && vitest run --config ../../vitest.config.mts",
     "test-go": "go -C bootstrap test ./...",
     "test-unit": "go -C bootstrap test ./... && vitest run --config ../../vitest.config.mts",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "go -C bootstrap test ./... && vitest run --config ../../vitest.config.mts"
+    "vitest-run": "vitest -c ../../vitest.config.mts"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",

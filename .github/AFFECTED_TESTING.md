@@ -11,7 +11,7 @@ To inspect the affected unit tasks locally, run:
 
 ```bash
 TURBO_SCM_BASE=<base-sha> TURBO_SCM_HEAD=<head-sha> \
-  pnpm turbo run vitest-unit --affected --dry=json
+  pnpm turbo run test-unit --affected --dry=json
 ```
 
 ## How E2E Selection Works

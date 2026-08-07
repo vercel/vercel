@@ -17,10 +17,9 @@
     "build": "node ../../utils/build-builder.mjs",
     "type-check": "tsc --noEmit",
     "test": "cross-env VERCEL_FORCE_PYTHON_STREAMING=1 NODE_OPTIONS=--experimental-vm-modules vitest run --config ../../vitest.config.mts",
-    "test-unit": "vitest run --config ../../vitest.config.mts test/unit",
+    "test-unit": "cross-env VERCEL_FORCE_PYTHON_STREAMING=1 NODE_OPTIONS=--experimental-vm-modules vitest run --config ../../vitest.config.mts test/unit",
     "test-e2e": "cross-env VERCEL_FORCE_PYTHON_STREAMING=1 NODE_OPTIONS=--experimental-vm-modules vitest run --config ../../vitest.config.mts test/integration-*",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "cross-env VERCEL_FORCE_PYTHON_STREAMING=1 NODE_OPTIONS=--experimental-vm-modules vitest run --config ../../vitest.config.mts test/unit",
     "vitest-e2e": "glob --absolute 'test/integration-*'"
   },
   "dependencies": {

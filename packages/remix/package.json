@@ -14,9 +14,9 @@
     "build": "node ../../utils/build-builder.mjs",
     "test": "vitest run --config ../../vitest.config.mts",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "vitest run --config ../../vitest.config.mts test/unit.",
     "vitest-e2e": "glob --absolute 'test/integration-*.test.ts'",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test-unit": "vitest run --config ../../vitest.config.mts test/unit."
   },
   "files": [
     "dist",

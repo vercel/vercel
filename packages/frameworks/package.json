@@ -17,8 +17,7 @@
     "test": "vitest run --config ../../vitest.config.mts",
     "test-unit": "vitest run --config ../../vitest.config.mts",
     "type-check": "tsc --noEmit",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "vitest run --config ../../vitest.config.mts"
+    "vitest-run": "vitest -c ../../vitest.config.mts"
   },
   "dependencies": {
     "smol-toml": "1.5.2",

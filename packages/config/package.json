@@ -37,8 +37,8 @@
     "build": "tsc",
     "generate-types": "tsx scripts/generate-types.ts",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "vitest run --config ../../vitest.config.mts",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test-unit": "vitest run --config ../../vitest.config.mts"
   },
   "dependencies": {
     "@vercel/routing-utils": "workspace:*",

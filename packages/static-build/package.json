@@ -19,7 +19,6 @@
     "test-e2e": "vitest run --config ../../vitest.config.mts test/integration-*.test.js",
     "type-check": "tsc --noEmit",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "vitest run --config ../../vitest.config.mts test/build.test.ts test/hugo.test.ts test/gatsby.test.ts test/prepare-cache.test.ts",
     "vitest-e2e": "glob --absolute 'test/integration-*.test.js'"
   },
   "dependencies": {

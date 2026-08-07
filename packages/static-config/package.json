@@ -13,8 +13,7 @@
     "test-unit": "vitest run --config ../../vitest.config.mts",
     "test": "vitest run --config ../../vitest.config.mts",
     "type-check": "tsc --noEmit",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "vitest run --config ../../vitest.config.mts"
+    "vitest-run": "vitest -c ../../vitest.config.mts"
   },
   "files": [
     "dist"

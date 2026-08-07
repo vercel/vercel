@@ -46,8 +46,8 @@
     "typecheck": "tsc --noEmit",
     "type-check": "tsc --noEmit",
     "test": "vitest run --config ../../vitest.config.mts",
-    "vitest-unit": "vitest run --config ../../vitest.config.mts",
-    "prepublishOnly": "pnpm typecheck && pnpm build"
+    "prepublishOnly": "pnpm typecheck && pnpm build",
+    "test-unit": "vitest run --config ../../vitest.config.mts"
   },
   "dependencies": {
     "@vercel/oidc": "workspace:*"
