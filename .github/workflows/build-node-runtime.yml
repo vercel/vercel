@@ -253,6 +253,9 @@ jobs:
             packages/cli/.node-runtime/*.tar.gz.sha256
           retention-days: 7
           if-no-files-found: error
+          # .node-runtime is a dot-directory; without this the v4 action
+          # silently matches nothing (hidden paths excluded by default).
+          include-hidden-files: true
 
       - name: Upload to rolling release
         shell: bash
