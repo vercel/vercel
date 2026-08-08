@@ -5,6 +5,7 @@ import { codex } from './codex';
 import { cursor } from './cursor';
 import { hermes } from './hermes';
 import { kilo } from './kilo';
+import { openclaw } from './openclaw';
 import { opencode } from './opencode';
 import { pi } from './pi';
 
@@ -15,6 +16,7 @@ export const CODING_AGENTS: CodingAgent[] = [
   cursor,
   hermes,
   kilo,
+  openclaw,
   opencode,
   pi,
 ];

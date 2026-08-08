@@ -508,6 +508,39 @@ describe('ai-gateway coding-agents setup', () => {
       expect(raw).not.toContain('vck_DummyKey0002');
     });
 
+    it('configures OpenClaw with an env-referenced provider and starter models', async () => {
+      useUser();
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.openclaw'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0002',
+        '--agent',
+        'openclaw'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+
+      const raw = readFileSync(
+        join(home, '.openclaw', 'openclaw.json'),
+        'utf8'
+      );
+      const config = JSON.parse(raw);
+      const provider = config.models.providers['vercel-ai-gateway'];
+      expect(provider.baseUrl).toBe('https://ai-gateway.vercel.sh/v1');
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: asserting OpenClaw's literal env-reference syntax
+      expect(provider.apiKey).toBe('${AI_GATEWAY_API_KEY}');
+      expect(provider.api).toBe('openai-completions');
+      expect(provider.models.length).toBeGreaterThan(0);
+      expect(config.agents.defaults.model.primary).toBe(
+        'vercel-ai-gateway/anthropic/claude-fable-5'
+      );
+      expect(raw).not.toContain('vck_DummyKey0002');
+    });
+
     it('writes a --base-url override verbatim into the Codex config', async () => {
       useUser();
       client.nonInteractive = true;
