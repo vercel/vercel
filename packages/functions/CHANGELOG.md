@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 3.9.1
+
+### Patch Changes
+
+- d72826e: Prevented unit tests and generated outputs from changing Turborepo task inputs during CI, and removed the redundant affected Unit test retry.
+
 ## 3.9.0
 
 ### Minor Changes

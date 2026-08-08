@@ -1,5 +1,48 @@
 # vercel
 
+## 58.9.0
+
+### Minor Changes
+
+- f4c7bc0: Preserve existing Claude Desktop sessions when configuring the Vercel AI Gateway.
+- 9508026: Preserve existing Codex Desktop sessions when configuring the Vercel AI Gateway.
+
+### Patch Changes
+
+- 6989e14: Add an experimental Cline agent to `vercel ai-gateway coding-agents setup`. Writes Cline's first-party `vercel-ai-gateway` provider entry in `~/.cline/data/settings/providers.json` (the same 0600 file `cline auth` manages), preserving any existing schema version and provider entries. Select it explicitly with `--agent cline`.
+- a29784e: Add the Codex Desktop session-migration engine: a deterministic, atomic copy of Codex rollout sessions into the Vercel AI Gateway provider (UUIDv5 destinations, no-clobber writes, originals never modified). This is the internal capability; it is wired into `ai-gateway coding-agents setup` in a follow-up.
+- 20629d5: Add experimental Cursor support to `vercel ai-gateway coding-agents setup`. Cursor stores its BYOK settings in its own account-synced store, so setup provisions the AI Gateway key into the shell environment and walks through the manual steps in Cursor's Models settings (base URL override, adding gateway model ids), instead of writing config files. Select it explicitly with `--agent cursor`.
+- 823940c: Stage the UUID dependency in native binaries and validate binaries after CLI source changes.
+- eaf633f: Add an experimental Hermes agent to `vercel ai-gateway coding-agents setup`. Writes a gateway provider to `~/.hermes/config.yaml` using `key_env` (the key stays in the shell environment) with model auto-discovery enabled. Select it explicitly with `--agent hermes`.
+- 4e93b80: Add an experimental Kilo Code agent to `vercel ai-gateway coding-agents setup`. Writes an `openai-compatible` provider to `~/.config/kilo/kilo.json` using Kilo's `{env:AI_GATEWAY_API_KEY}` substitution so the key never lands in the file; the model picker auto-populates from the gateway's `/v1/models`. Select it explicitly with `--agent kilo`.
+- edd4e56: Add an experimental OpenClaw agent to `vercel ai-gateway coding-agents setup`. Writes a `models.providers` entry to `~/.openclaw/openclaw.json` with a `${AI_GATEWAY_API_KEY}` reference OpenClaw resolves itself, plus a starter model list. Select it explicitly with `--agent openclaw`.
+- 9508026: `vercel ai-gateway coding-agents setup` no longer drops env exports that other agents previously wrote into the managed shell block. A codex-only rerun used to rewrite the block with just its own exports, wiping claude-code's `ANTHROPIC_AUTH_TOKEN` — which silently disabled gateway model discovery in Claude Code.
+- Updated dependencies [4e2c621]
+- Updated dependencies [d72826e]
+- Updated dependencies [eee4afc]
+- Updated dependencies [d0f5927]
+- Updated dependencies [bacf4ff]
+  - @vercel/python@6.56.0
+  - @vercel/build-utils@14.0.3
+  - @vercel/next@4.21.2
+  - @vercel/backends@0.8.34
+  - @vercel/container@0.1.1
+  - @vercel/elysia@0.1.111
+  - @vercel/express@0.1.125
+  - @vercel/fastify@0.1.114
+  - @vercel/go@3.10.4
+  - @vercel/h3@0.1.120
+  - @vercel/hono@0.2.114
+  - @vercel/hydrogen@1.4.1
+  - @vercel/koa@0.1.94
+  - @vercel/nestjs@0.2.115
+  - @vercel/node@5.9.7
+  - @vercel/redwood@2.5.1
+  - @vercel/remix-builder@5.9.2
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.1
+  - @vercel/static-build@2.12.3
+
 ## 58.8.0
 
 ### Minor Changes

@@ -1,5 +1,19 @@
 # vercel-runtime
 
+## 0.19.0
+
+### Minor Changes
+
+- 4e2c621: Discover durable APScheduler subscribers, inject their stable runtime
+  identities, and activate the integration consistently in web and queue
+  Functions. Production schedulers activate on their first request, and
+  opted-in previews use request activity to renew a durable scheduling
+  deadline configured in pyproject.toml.
+- bacf4ff: Execute `wait_until` only for HTTP requests that are short-lived in `vc dev`. Lifespan ASGI events or websocket events are skipped for this mechanism to not block a possible fast request from invoking hooks.
+- 64879d7: Let invocation hook callbacks choose their next run time by returning a
+  non-negative number of seconds. Returning a number keeps even a one-shot
+  hook alive; returning None keeps the registered cadence.
+
 ## 0.18.0
 
 ### Minor Changes

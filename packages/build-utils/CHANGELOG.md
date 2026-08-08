@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 14.0.3
+
+### Patch Changes
+
+- d72826e: Prevented unit tests and generated outputs from changing Turborepo task inputs during CI, and removed the redundant affected Unit test retry.
+
 ## 14.0.2
 
 ### Patch Changes

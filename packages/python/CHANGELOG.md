@@ -1,5 +1,21 @@
 # @vercel/python
 
+## 6.56.0
+
+### Minor Changes
+
+- 4e2c621: Discover durable APScheduler subscribers, inject their stable runtime
+  identities, and activate the integration consistently in web and queue
+  Functions. Production schedulers activate on their first request, and
+  opted-in previews use request activity to renew a durable scheduling
+  deadline configured in pyproject.toml.
+
+### Patch Changes
+
+- eee4afc: Only inject and activate the queue adapter when the project declares `[[tool.vercel.subscribers]]`, instead of for any project depending on Celery or Dramatiq.
+- d0f5927: Accept bare module paths as `[[tool.vercel.subscribers]]` entrypoints. vercel-queue subscribers only need their module imported (subscriptions register globally on import), so `entrypoint = "tasks"` or `entrypoint = "pkg.tasks"` now works alongside `entrypoint = "module:object"`. File paths like `tasks.py` are rejected with a pointer to the equivalent import path. The legacy vercel-workers schema still requires `module:object` because it serves the named object directly.
+- bacf4ff: Skip integration ownership probes for subscribers declared with a bare module entrypoint.
+
 ## 6.55.3
 
 ### Patch Changes

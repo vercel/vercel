@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.21.2
+
+### Patch Changes
+
+- d72826e: Prevented unit tests and generated outputs from changing Turborepo task inputs during CI, and removed the redundant affected Unit test retry.
+
 ## 4.21.1
 
 ### Patch Changes
