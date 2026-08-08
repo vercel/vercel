@@ -79,10 +79,9 @@ jobs:
             custom_node_path: ''
             custom_node_platform: ''
             custom_node_arch: ''
-          # Linux Node is compiled inside manylinux_2_28 so the published ELF
-          # stays at glibc <= 2.28 (matches official Node; runs on AL2023 /
-          # Vercel Sandboxes with glibc 2.34). Building on ubuntu-latest
-          # previously produced GLIBC_2.38 and broke those hosts.
+          # Linux runtimes are prebuilt inside manylinux_2_28 (glibc floor
+          # 2.28) by build-node-runtime.yml and downloaded below; the glibc
+          # ceiling is re-verified on the final binary in this workflow.
           # Use paid org larger runners (same labels as front/api). The
           # *-oss pool is for public repos and never assigns on private
           # vercel-internal.
@@ -95,7 +94,6 @@ jobs:
             custom_node_path: .node-runtime/node-v24.14.1-linux-arm64-small-icu/bin/node
             custom_node_platform: linux
             custom_node_arch: arm64
-            manylinux_image: quay.io/pypa/manylinux_2_28_aarch64
           - runs-on: ubuntu-latest-32-core
             target: node24.14.1-linux-x64
             asset: vercel-linux-x64
@@ -105,15 +103,10 @@ jobs:
             custom_node_path: .node-runtime/node-v24.14.1-linux-x64-small-icu/bin/node
             custom_node_platform: linux
             custom_node_arch: x64
-            manylinux_image: quay.io/pypa/manylinux_2_28_x86_64
-          # Temporarily skip Windows: custom Node embed is ~45–80+ min on
-          # windows-2022 and dominates release time. Re-enable with the matrix
-          # entry below and the win32 platform in
-          # packages/vc-native/scripts/platforms.mjs.
-          # Node 24.14.1 does not build with Clang 22 on the VS 2026 image.
-          # windows-latest migrated to VS 2026 in June 2026, so use the
-          # stable VS 2022/LLVM 20 toolchain until the embedded Node source
-          # supports Clang 22.
+          # Windows was previously skipped because the custom Node embed took
+          # ~45-80+ min on windows-2022. The runtime is now prebuilt, so this
+          # is just a pkg link + smoke test. Re-enabling also requires the
+          # win32 platform in packages/vc-native/scripts/platforms.mjs.
           # Standard windows-2022 (not windows-latest-8-core / *-oss): the org
           # has no Windows Server 2022 larger runner shared with this private
           # repo; invented labels like windows-2022-8-core queue forever.
@@ -222,52 +215,41 @@ jobs:
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
-      - name: Build custom Node runtime
-        if: ${{ matrix.custom_node_path != '' && matrix.custom_node_platform != 'linux' }}
+      # Prebuilt by build-node-runtime.yml and published to the rolling
+      # `node-runtime-v<version>` GitHub Release. Compiling Node from source
+      # here previously took 45-80+ minutes per platform; if this download
+      # fails because an asset is missing, dispatch "Build Node Runtime" to
+      # (re)publish the runtimes for this Node version.
+      - name: Download prebuilt Node runtime
+        if: ${{ matrix.custom_node_path != '' }}
+        shell: bash
+        working-directory: packages/cli
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERCEL_CLI_NODE_VERSION: 24.14.1
           VERCEL_CLI_NODE_PLATFORM: ${{ matrix.custom_node_platform }}
           VERCEL_CLI_NODE_ARCH: ${{ matrix.custom_node_arch }}
-        run: pnpm turbo --no-update-notifier --root-turbo-json turbo.node-runtime.json run //#build-binary-node --output-logs=new-only
-
-      # Compile the pruned Node on manylinux_2_28 so the final vercel ELF's
-      # glibc floor stays at 2.28 (ubuntu-latest hosts produce 2.38+).
-      - name: Build custom Node runtime (manylinux)
-        if: ${{ matrix.custom_node_platform == 'linux' }}
-        env:
-          VERCEL_CLI_NODE_VERSION: 24.14.1
-          VERCEL_CLI_NODE_PLATFORM: linux
-          VERCEL_CLI_NODE_ARCH: ${{ matrix.custom_node_arch }}
-          MANYLINUX_IMAGE: ${{ matrix.manylinux_image }}
         run: |
           set -euo pipefail
-          case "${VERCEL_CLI_NODE_ARCH}" in
-            x64) NODE_DIST_ARCH=x64 ;;
-            arm64) NODE_DIST_ARCH=arm64 ;;
-            *)
-              echo "::error::Unsupported VERCEL_CLI_NODE_ARCH=${VERCEL_CLI_NODE_ARCH}"
-              exit 1
-              ;;
-          esac
-
-          docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            -e HOME=/tmp \
-            -e VERCEL_CLI_NODE_VERSION \
-            -e VERCEL_CLI_NODE_PLATFORM \
-            -e VERCEL_CLI_NODE_ARCH \
-            -e TMPDIR=/tmp \
-            -v "$GITHUB_WORKSPACE:/work" \
-            -w /work \
-            "$MANYLINUX_IMAGE" \
-            bash -lc "
-              set -euo pipefail
-              curl -fsSL \"https://nodejs.org/dist/v\${VERCEL_CLI_NODE_VERSION}/node-v\${VERCEL_CLI_NODE_VERSION}-linux-${NODE_DIST_ARCH}.tar.gz\" \
-                | tar -xz -C /tmp
-              export PATH=\"/tmp/node-v\${VERCEL_CLI_NODE_VERSION}-linux-${NODE_DIST_ARCH}/bin:\$PATH\"
-              node --version
-              node packages/cli/scripts/build-binary-node.mjs
-            "
+          dir="node-v${VERCEL_CLI_NODE_VERSION}-${VERCEL_CLI_NODE_PLATFORM}-${VERCEL_CLI_NODE_ARCH}-small-icu"
+          tag="node-runtime-v${VERCEL_CLI_NODE_VERSION}"
+          mkdir -p .node-runtime
+          cd .node-runtime
+          if ! gh release download "$tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "$dir.tar.gz" \
+            --pattern "$dir.tar.gz.sha256"; then
+            echo "::error::Could not download $dir.tar.gz from release $tag. Run the 'Build Node Runtime' workflow to publish runtimes for this Node version."
+            exit 1
+          fi
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            shasum -a 256 -c "$dir.tar.gz.sha256"
+          else
+            sha256sum -c "$dir.tar.gz.sha256"
+          fi
+          tar -xzf "$dir.tar.gz"
+          rm "$dir.tar.gz" "$dir.tar.gz.sha256"
+          test -e "$dir/bin/node" -o -e "$dir/node.exe"
 
       - name: Build binary
         working-directory: packages/cli
