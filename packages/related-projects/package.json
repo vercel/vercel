@@ -16,8 +16,7 @@
     "build": "node ../../utils/build.mjs",
     "test": "vitest run --config ../../vitest.config.mts --coverage",
     "test-unit": "vitest run --config ../../vitest.config.mts --coverage",
-    "type-check": "tsc --noEmit",
-    "vitest-run": "vitest -c ../../vitest.config.mts"
+    "type-check": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "20.11.0",

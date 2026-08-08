@@ -14,7 +14,6 @@
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules vitest run --config ../../vitest.config.mts",
     "test-e2e": "cross-env NODE_OPTIONS=--experimental-vm-modules vitest run --config ../../vitest.config.mts test/integration",
     "type-check": "tsc --noEmit",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
     "vitest-e2e": "glob --absolute 'test/integration'",
     "test-unit": "cross-env NODE_OPTIONS=--experimental-vm-modules vitest run --config ../../vitest.config.mts test/unit/"
   },

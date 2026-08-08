@@ -24,7 +24,6 @@
     "generate:schemas": "ts-to-zod src/types.ts src/schema.zod.ts",
     "test": "vitest run --config ../../vitest.config.mts test",
     "test-unit": "vitest run --config ../../vitest.config.mts",
-    "vitest-run": "vitest run -c ../../vitest.config.mts",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

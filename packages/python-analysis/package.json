@@ -33,7 +33,6 @@
     "build:wasm": "node scripts/build-wasm.mjs",
     "generate:schemas": "ts-to-zod --all",
     "test": "vitest run --config ../../vitest.config.mts",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
     "type-check": "tsc --noEmit",
     "test-unit": "vitest run --config ../../vitest.config.mts"
   },

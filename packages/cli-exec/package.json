@@ -27,7 +27,6 @@
   "scripts": {
     "build": "node ../../utils/build.mjs",
     "test": "vitest run -c ../../vitest.config.mts",
-    "vitest-run": "vitest run -c ../../vitest.config.mts",
     "type-check": "tsc --noEmit",
     "test-unit": "vitest run --config ../../vitest.config.mts"
   },

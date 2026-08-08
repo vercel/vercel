@@ -17,8 +17,7 @@
     "build": "node ../../utils/build.mjs",
     "test": "vitest run --config ../../vitest.config.mts",
     "test-unit": "vitest run --config ../../vitest.config.mts",
-    "type-check": "tsc --noEmit",
-    "vitest-run": "vitest -c ../../vitest.config.mts"
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "path-to-regexp-updated": "npm:path-to-regexp@6.3.0",

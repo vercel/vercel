@@ -15,7 +15,7 @@
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
     "type-check": "tsc --noEmit",
-    "vitest-run": "vitest -c ../../vitest.config.mts"
+    "test": "vitest run --config ../../vitest.config.mts"
   },
   "dependencies": {
     "@vercel/nft": "1.10.0",

@@ -60,7 +60,7 @@ let hardKillTimer = null;
 const chunkTimer = setTimeout(() => {
   timedOut = true;
   console.error(
-    `\n[vitest-run] chunk timed out after ${CHUNK_TIMEOUT_MS / 1000}s — sending SIGTERM`
+    `\n[test] chunk timed out after ${CHUNK_TIMEOUT_MS / 1000}s — sending SIGTERM`
   );
   if (typeof child.kill === 'function') {
     try {
@@ -68,9 +68,7 @@ const chunkTimer = setTimeout(() => {
     } catch {}
   }
   hardKillTimer = setTimeout(() => {
-    console.error(
-      '[vitest-run] still alive after grace period — sending SIGKILL'
-    );
+    console.error('[test] still alive after grace period — sending SIGKILL');
     try {
       child.kill('SIGKILL');
     } catch {}
@@ -85,7 +83,7 @@ child.on('exit', (code, signal) => {
 
   if (timedOut) {
     console.error(
-      `[vitest-run] chunk failed due to watchdog timeout (code=${code} signal=${signal}). ` +
+      `[test] chunk failed due to watchdog timeout (code=${code} signal=${signal}). ` +
         'This usually means a fork leaked handles (open server/timer) or a build dep hung.'
     );
     process.exit(124);
@@ -97,6 +95,6 @@ child.on('exit', (code, signal) => {
 child.on('error', err => {
   clearTimeout(chunkTimer);
   if (hardKillTimer) clearTimeout(hardKillTimer);
-  console.error('[vitest-run] failed to spawn vitest:', err);
+  console.error('[test] failed to spawn vitest:', err);
   process.exit(1);
 });

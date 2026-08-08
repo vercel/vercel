@@ -13,7 +13,7 @@ const runnersMap = new Map([
     {
       min: 1,
       max: 1,
-      testScript: 'vitest-run',
+      testScript: 'test',
       runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
       nodeVersions: ['20', '22'],
       // Skip Node 20 on Windows: it's the slowest runner with the highest
@@ -30,7 +30,7 @@ const runnersMap = new Map([
     {
       min: 1,
       max: 7,
-      testScript: 'vitest-run',
+      testScript: 'test',
       runners: ['ubuntu-latest'],
     },
   ],

@@ -22,10 +22,10 @@
   },
   "scripts": {
     "build": "tsdown",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
     "vitest": "tsdown && vitest",
     "type-check": "tsc --noEmit",
-    "test-unit": "vitest run --config ../../vitest.config.mts test/unit."
+    "test-unit": "vitest run --config ../../vitest.config.mts test/unit.",
+    "test": "vitest run --config ../../vitest.config.mts"
   },
   "files": [
     "dist",

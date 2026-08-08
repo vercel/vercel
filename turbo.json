@@ -41,10 +41,6 @@
       "outputLogs": "new-only",
       "outputs": ["dist/**"]
     },
-    "vitest-run": {
-      "dependsOn": ["build"],
-      "outputLogs": "new-only"
-    },
     "vitest-e2e": {
       "dependsOn": ["build"],
       "outputLogs": "new-only"
@@ -76,6 +72,7 @@
     },
     "test": {
       "dependsOn": ["build"],
+      "env": ["VITEST_SHARD", "VITEST_TEST_FILES"],
       "outputLogs": "new-only"
     },
     "type-check": {

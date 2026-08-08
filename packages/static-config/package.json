@@ -12,8 +12,7 @@
     "build": "node ../../utils/build.mjs",
     "test-unit": "vitest run --config ../../vitest.config.mts",
     "test": "vitest run --config ../../vitest.config.mts",
-    "type-check": "tsc --noEmit",
-    "vitest-run": "vitest -c ../../vitest.config.mts"
+    "type-check": "tsc --noEmit"
   },
   "files": [
     "dist"

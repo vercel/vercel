@@ -32,6 +32,6 @@
     "vitest": "2.0.3"
   },
   "scripts": {
-    "vitest-run": "vitest -c ../../vitest.config.mts"
+    "test": "vitest run --config ../../vitest.config.mts"
   }
 }

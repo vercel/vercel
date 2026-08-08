@@ -13,7 +13,6 @@
     "test-next-local:middleware": "vitest run --config ../../vitest.config.mts test/integration/middleware.test.ts",
     "test-e2e": "rm -f test/builder-info.json; vitest run --config ../../vitest.config.mts test/fixtures/**/*.test.js",
     "type-check": "tsc --noEmit",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
     "vitest-e2e": "glob --absolute 'test/fixtures/**/*.test.js'"
   },
   "repository": {
