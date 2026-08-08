@@ -2,18 +2,8 @@
   "$schema": "https://turborepo.org/schema.json",
   "extends": ["//"],
   "tasks": {
-    "build": {
-      "outputs": [
-        "dist/**",
-        "src/util/constants.ts",
-        "src/util/dev/templates/*.ts"
-      ]
-    },
     "test": {
       "dependsOn": ["build"]
-    },
-    "test-e2e": {
-      "dependsOn": []
     },
     "test-unit": {
       "dependsOn": ["build"]

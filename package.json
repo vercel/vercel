@@ -44,7 +44,6 @@
     "pre-commit": "lint-staged",
     "test": "vitest run --config vitest.config.mts --dir test",
     "test-unit": "vitest run --config vitest.config.mts --dir test && node utils/gen.js && turbo --no-update-notifier run test-unit",
-    "test-cli": "node utils/gen.js && turbo --no-update-notifier run test-cli",
     "test-e2e": "node utils/gen.js && turbo --no-update-notifier run test-e2e",
     "test-dev": "node utils/gen.js && turbo --no-update-notifier run test-dev",
     "build-binary-node": "node packages/cli/scripts/build-binary-node.mjs",
