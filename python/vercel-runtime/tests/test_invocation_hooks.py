@@ -101,6 +101,52 @@ class TestInvocationHooks(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(calls, 1)
 
+    async def test_callback_return_value_overrides_the_cadence(self) -> None:
+        """A hook that is not done yet asks to run again sooner."""
+        calls: list[str] = []
+
+        def callback() -> float | None:
+            calls.append("called")
+            return 0.0 if len(calls) < 2 else None
+
+        with patch(
+            "vercel_runtime.invocation_hooks.monotonic",
+            side_effect=[100.0, 100.0, 101.0, 101.0, 102.0],
+        ):
+            run_on_next_invocation(
+                "activate",
+                callback,
+                repeat_after_seconds=300,
+            )
+            # Returned 0.0: due again on the very next invocation despite
+            # the 300 second registration.
+            for _ in range(2):
+                collector = WaitUntilCollector()
+                attach_due_hooks(collector.wait_until)
+                await collector.drain()
+            # Returned None: back on the registered cadence, not due now.
+            collector = WaitUntilCollector()
+            attach_due_hooks(collector.wait_until)
+            await collector.drain()
+
+        self.assertEqual(calls, ["called", "called"])
+
+    async def test_one_shot_hook_stays_alive_by_returning_a_delay(self) -> None:
+        calls: list[str] = []
+
+        def callback() -> float | None:
+            calls.append("called")
+            return 0.0 if len(calls) < 2 else None
+
+        run_on_next_invocation("activate", callback)
+        for _ in range(3):
+            collector = WaitUntilCollector()
+            attach_due_hooks(collector.wait_until)
+            await collector.drain()
+
+        # The number kept the one-shot alive; the None completed it.
+        self.assertEqual(calls, ["called", "called"])
+
     async def test_failed_hook_retries_after_backoff(self) -> None:
         attempts = 0
 

@@ -23,7 +23,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-type _HookCallback = Callable[[], None]
+type _HookCallback = Callable[[], float | None]
 type _WaitUntil = Callable[[Awaitable[object]], None]
 
 
@@ -57,6 +57,11 @@ def run_on_next_invocation(
     first success the hook is done — unless repeat_after_seconds is set, in
     which case it becomes eligible again that long after each success,
     still running only when a request arrives. Never a timer.
+
+    A callback may choose its own next run time by returning a non-negative
+    number of seconds; zero means the next invocation. Returning a number
+    keeps even a one-shot hook alive: it is the callback's way of saying it
+    is not done yet. Returning None keeps the registered cadence.
     """
     if not name:
         msg = "invocation hook name must not be empty"
@@ -98,8 +103,11 @@ def attach_due_hooks(wait_until: _WaitUntil) -> None:
 
 async def _run_hook(name: str, hook: _InvocationHook) -> None:
     succeeded = False
+    reschedule_after: float | None = None
     try:
-        await asyncio.to_thread(hook.callback)
+        result = await asyncio.to_thread(hook.callback)
+        if isinstance(result, (int, float)) and not isinstance(result, bool):
+            reschedule_after = max(0.0, float(result))
         succeeded = True
     except Exception:
         logger.exception("Invocation hook %r failed", name)
@@ -110,7 +118,9 @@ async def _run_hook(name: str, hook: _InvocationHook) -> None:
                 hook.running = False
                 if succeeded:
                     hook.failures = 0
-                    if hook.repeat_after_seconds is None:
+                    if reschedule_after is not None:
+                        hook.next_run_at = monotonic() + reschedule_after
+                    elif hook.repeat_after_seconds is None:
                         hook.completed = True
                     else:
                         hook.next_run_at = (
