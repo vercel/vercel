@@ -9,6 +9,14 @@
         "src/util/dev/templates/*.ts"
       ]
     },
+    "build-binary": {
+      "cache": false,
+      "dependsOn": ["build"]
+    },
+    "build-binary:host": {
+      "cache": false,
+      "dependsOn": ["build"]
+    },
     "test": {
       "dependsOn": ["build"]
     },

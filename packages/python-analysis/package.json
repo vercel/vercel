@@ -29,7 +29,7 @@
     "directory": "packages/python-analysis"
   },
   "scripts": {
-    "build": "pnpm generate:schemas && pnpm build:wasm && node scripts/build.mjs",
+    "build": "node scripts/build.mjs",
     "build:wasm": "node scripts/build-wasm.mjs",
     "generate:schemas": "ts-to-zod --all",
     "test": "vitest run --config ../../vitest.config.mts",

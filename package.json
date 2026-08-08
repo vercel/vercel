@@ -39,7 +39,7 @@
     "ws": "8.18.0"
   },
   "scripts": {
-    "build": "node utils/gen.js && turbo --no-update-notifier run build",
+    "build": "node utils/gen.js && turbo --no-update-notifier run build build:docs",
     "vercel-build": "pnpm build && pnpm run pack && cd api && node -r ts-eager/register ./_lib/script/build.ts",
     "pre-commit": "lint-staged",
     "test": "vitest run --config vitest.config.mts --dir test",

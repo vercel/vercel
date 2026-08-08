@@ -4,7 +4,7 @@
   "tasks": {
     "build": {
       "inputs": ["$TURBO_EXTENDS$", "!docs/**"],
-      "outputs": ["**/*.js", "**/*.d.ts", "**/*.md"]
+      "outputs": ["**/*.js", "**/*.d.ts"]
     }
   }
 }

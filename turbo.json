@@ -37,6 +37,18 @@
       "outputLogs": "new-only",
       "outputs": ["dist/**"]
     },
+    "build:docs": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "!docs/**"],
+      "outputLogs": "new-only",
+      "outputs": ["docs/**"]
+    },
+    "generate:schemas": {
+      "outputLogs": "new-only"
+    },
+    "build:wasm": {
+      "outputLogs": "new-only"
+    },
     "test-e2e-node-all-versions": {
       "dependsOn": ["build"],
       "inputs": [

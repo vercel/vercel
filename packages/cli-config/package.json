@@ -20,7 +20,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "pnpm generate:schemas && tsc",
+    "build": "tsc",
     "generate:schemas": "ts-to-zod src/types.ts src/schema.zod.ts",
     "test": "vitest run --config ../../vitest.config.mts test",
     "test-unit": "vitest run --config ../../vitest.config.mts",
