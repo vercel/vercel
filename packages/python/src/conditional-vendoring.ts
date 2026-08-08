@@ -2,6 +2,8 @@ import { normalizePackageName, parsePep508 } from '@vercel/python-analysis';
 import type { PythonPackage } from '@vercel/python-analysis';
 
 type InjectedPackageName =
+  | 'vercel-apscheduler'
+  | 'vercel-apscheduler-bundle'
   | 'vercel-celery'
   | 'vercel-celery-bundle'
   | 'vercel-dramatiq'
@@ -17,6 +19,23 @@ const UPSTREAM_DEPENDENCY_ADAPTERS = new Map<
     integration: QueueIntegration;
   }
 >([
+  [
+    'apscheduler',
+    {
+      bundled: 'vercel-apscheduler-bundle',
+      unbundled: 'vercel-apscheduler',
+      envOverride: 'VERCEL_PYTHON_APSCHEDULER_DEPENDENCY',
+      preferUnbundledWhenPresent: ['vercel-queue'],
+      integration: {
+        module: 'vercel.integrations.apscheduler',
+        installer: 'install_vercel_apscheduler_integration',
+        // APScheduler jobs are declared while the subscriber module imports.
+        // Install first so the adapter can capture those definitions.
+        installBeforeImport: true,
+        subscriberProbe: 'is_scheduler_subscriber',
+      },
+    },
+  ],
   [
     'celery',
     {
@@ -65,6 +84,14 @@ export interface QueueIntegration {
    */
   installBeforeImport?: boolean;
   /**
+   * Optional function within {@link module} that reports whether a declared
+   * subscriber object belongs to this integration, given
+   * (module_name, variable_name). Build-time introspection calls it so
+   * classification stays in the integration instead of leaking wire details
+   * such as internal topic names.
+   */
+  subscriberProbe?: string;
+  /**
    * Optional function within {@link module} that queue-serving processes
    * call after {@link installer} to activate consumption (register push
    * callbacks, start the adapter's embedded worker). Never called from
@@ -83,9 +110,9 @@ export interface QueueAdapterInjectedPackage {
 export interface QueueAdapterBootstrap {
   /**
    * Integrations to activate around importing subscriber modules, keyed on
-   * the upstream dependency (celery, dramatiq, …). The adapter package may
-   * be injected or self-declared. Callers emitting activation code treat a
-   * failed import or install as a hard error.
+   * the upstream dependency (APScheduler, Celery, Dramatiq, …). The
+   * adapter package may be injected or self-declared. Callers emitting
+   * activation code treat a failed import or install as a hard error.
    */
   integrations: QueueIntegration[];
   /** Adapter packages to install when the project does not declare them itself. */

@@ -141,7 +141,7 @@ function getBuildOutputV3(result: Awaited<ReturnType<typeof build>>) {
 
 function mockQueueIntrospection(
   subscriptions: unknown[] | Record<string, unknown[]>,
-  opts: { sdkVersion?: string } = {}
+  opts: { sdkVersion?: string; owners?: string[] } = {}
 ) {
   vi.mocked(execa).mockImplementation(async (_cmd, args, execaOpts) => {
     if (
@@ -167,7 +167,12 @@ function mockQueueIntrospection(
                 `importlib.import_module(${JSON.stringify(moduleName)})`
               )
             )?.[1] ?? []);
-        return { stdout: JSON.stringify(result) } as any;
+        return {
+          stdout: JSON.stringify({
+            subscriptions: result,
+            owners: opts.owners ?? [],
+          }),
+        } as any;
       }
       if (script.includes('importlib.metadata')) {
         // Empty output means "undeterminable" → legacy workers path.
@@ -302,6 +307,7 @@ describe('queue adapter integration activation', () => {
         pythonPackage: makePackageWithDependencies([
           'celery>=5.3',
           'dramatiq>=1.17',
+          'APScheduler>=3.10.4,<4',
         ]),
       })
     ).resolves.toEqual([]);
@@ -325,6 +331,19 @@ describe('queue adapter integration activation', () => {
         pythonPackage: makePackageWithDependencies(['fastapi']),
       })
     ).resolves.toEqual([]);
+    await expect(
+      getQueueIntegrations({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies(['APScheduler>=3.10.4,<4']),
+      })
+    ).resolves.toEqual([
+      {
+        module: 'vercel.integrations.apscheduler',
+        installer: 'install_vercel_apscheduler_integration',
+        installBeforeImport: true,
+        subscriberProbe: 'is_scheduler_subscriber',
+      },
+    ]);
   });
 
   it('generated handler modules activate integrations after the import', () => {
@@ -353,6 +372,20 @@ describe('queue adapter integration activation', () => {
 
     const withoutIntegrations = createQueueHandlerModule(declaration, []);
     expect(withoutIntegrations).not.toContain('vercel.integrations');
+
+    const withAPScheduler = createQueueHandlerModule(declaration, [
+      {
+        module: 'vercel.integrations.apscheduler',
+        installer: 'install_vercel_apscheduler_integration',
+        installBeforeImport: true,
+      },
+    ]);
+    expect(withAPScheduler).toContain(
+      'os.environ["VERCEL_PYTHON_SUBSCRIBER_ID"] = "worker_app"'
+    );
+    expect(
+      withAPScheduler.indexOf('install_vercel_apscheduler_integration')
+    ).toBeLessThan(withAPScheduler.indexOf('importlib.import_module'));
   });
 });
 
@@ -364,6 +397,57 @@ describe('conditional Python adapter vendoring', () => {
         pythonPackage: makePackageWithDependencies([
           'celery>=5.3',
           'dramatiq>=1.17',
+          'APScheduler>=3.10.4,<4',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([]);
+  });
+
+  it('selects vercel-apscheduler-bundle when APScheduler is declared', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies(['APScheduler>=3.10.4,<4']),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({ name: 'vercel-apscheduler-bundle' }),
+    ]);
+  });
+
+  it('selects vercel-apscheduler when vercel-queue is declared', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies([
+          'APScheduler>=3.10.4,<4',
+          'vercel-queue',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({ name: 'vercel-apscheduler' }),
+    ]);
+  });
+
+  it('does not inject when an APScheduler adapter is declared', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies([
+          'APScheduler>=3.10.4,<4',
+          'vercel-apscheduler',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([]);
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies([
+          'APScheduler>=3.10.4,<4',
+          'vercel-apscheduler-bundle',
         ]),
         env: {},
       })
@@ -584,14 +668,32 @@ describe('conditional Python adapter vendoring', () => {
       getQueueAdapterInjectedPackages({
         hasDeclaredSubscribers: true,
         pythonPackage: makePackageWithDependencies([
+          'APScheduler>=3.10.4,<4',
           'celery>=5.3',
           'dramatiq>=1.17',
         ]),
         env: {},
       })
     ).resolves.toEqual([
+      expect.objectContaining({ name: 'vercel-apscheduler-bundle' }),
       expect.objectContaining({ name: 'vercel-celery-bundle' }),
       expect.objectContaining({ name: 'vercel-dramatiq-bundle' }),
+    ]);
+  });
+
+  it('only suppresses the adapter that the project already declares', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies([
+          'APScheduler>=3.10.4,<4',
+          'celery>=5.3',
+          'vercel-celery',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({ name: 'vercel-apscheduler-bundle' }),
     ]);
   });
 });
@@ -3248,6 +3350,165 @@ describe('pyproject subscribers', () => {
     expect(getGeneratedQueueHandlerPath('_py_workflows/flows_workflows')).toBe(
       '_vc_queue_handlers/_py_workflows_flows_workflows.py'
     );
+  });
+
+  it('injects APScheduler subscriber identities into runtime Lambdas', async () => {
+    mockQueueIntrospection(
+      [
+        {
+          topic: '__aps_scheduler_scheduler_start',
+          consumer_group: 'apscheduler-scheduler_scheduler',
+        },
+        {
+          topic: '__aps_scheduler_scheduler_wakeup',
+          consumer_group: 'apscheduler-scheduler_scheduler',
+        },
+      ],
+      { owners: ['vercel.integrations.apscheduler'] }
+    );
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'scheduler.py': new FileBlob({
+        data: 'scheduler = object()\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          'dependencies = ["APScheduler>=3.10.4,<4", "vercel-apscheduler", "redis>=5,<7"]',
+          '',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "scheduler:scheduler"',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: false },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+    const output = getBuildOutputV2(result).output as any;
+    const scheduler = output[getSubscriberOutputPath('scheduler_scheduler')];
+
+    for (const lambda of [output.flask, scheduler]) {
+      expect(lambda.environment.VERCEL_APSCHEDULER_SUBSCRIBERS).toBe(
+        '[{"id":"scheduler_scheduler","entrypoint":"scheduler:scheduler"}]'
+      );
+      expect(lambda.environment.VERCEL_QUEUE_INTEGRATIONS).toBe(
+        'vercel.integrations.apscheduler:install_vercel_apscheduler_integration'
+      );
+    }
+    expect(
+      output.flask.environment.VERCEL_PYTHON_SUBSCRIBER_ID
+    ).toBeUndefined();
+    expect(scheduler.environment.VERCEL_PYTHON_SUBSCRIBER_ID).toBe(
+      'scheduler_scheduler'
+    );
+
+    const introspectionScripts = mockedExeca.mock.calls
+      .map(([, args]) => (Array.isArray(args) ? args[args.length - 1] : ''))
+      .filter(
+        script =>
+          typeof script === 'string' && script.includes('get_subscriptions')
+      );
+    expect(introspectionScripts).not.toEqual([]);
+    for (const script of introspectionScripts) {
+      expect(script).not.toContain('VERCEL_APSCHEDULER_SUBSCRIBERS');
+      expect(script).toContain('VERCEL_APSCHEDULER_DISCOVERY');
+    }
+  });
+
+  it('injects only discovered APScheduler subscriber identities', async () => {
+    mockedExeca.mockImplementation(async (_cmd, args) => {
+      if (
+        Array.isArray(args) &&
+        args[0] === 'run' &&
+        typeof args[args.length - 1] === 'string'
+      ) {
+        const script = args[args.length - 1] as string;
+        if (script.includes('get_subscriptions')) {
+          if (script.includes('importlib.import_module("scheduler")')) {
+            expect(script).toContain('is_scheduler_subscriber');
+            return {
+              stdout: JSON.stringify({
+                subscriptions: [
+                  {
+                    topic: '__aps_scheduler_scheduler_start',
+                    consumer_group: 'apscheduler-scheduler_scheduler',
+                  },
+                  {
+                    topic: '__aps_scheduler_scheduler_wakeup',
+                    consumer_group: 'apscheduler-scheduler_scheduler',
+                  },
+                ],
+                owners: ['vercel.integrations.apscheduler'],
+              }),
+            } as any;
+          }
+          return {
+            stdout: JSON.stringify({
+              subscriptions: [
+                { topic: 'work', consumer_group: 'work-consumer' },
+              ],
+              owners: [],
+            }),
+          } as any;
+        }
+      }
+      return { stdout: '' } as any;
+    });
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'scheduler.py': new FileBlob({
+        data: 'scheduler = object()\n',
+      }),
+      'worker.py': new FileBlob({
+        data: 'worker = object()\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          'dependencies = ["APScheduler>=3.10.4,<4", "vercel-apscheduler", "redis>=5,<7"]',
+          '',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "scheduler:scheduler"',
+          '',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "worker:worker"',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: false },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+    const output = getBuildOutputV2(result).output as any;
+    const worker = output[getSubscriberOutputPath('worker_worker')];
+
+    expect(worker.environment.VERCEL_APSCHEDULER_SUBSCRIBERS).toBe(
+      '[{"id":"scheduler_scheduler","entrypoint":"scheduler:scheduler"}]'
+    );
+    expect(
+      worker.environment.VERCEL_APSCHEDULER_PREVIEW_IDLE_TIMEOUT_SECONDS
+    ).toBeUndefined();
   });
 
   it('returns dev sidecars matching build consumer names', async () => {
@@ -6052,12 +6313,14 @@ describe('worker services dependency installation', () => {
   beforeEach(() => {
     vi.resetModules();
     makeMockPython('3.12');
+    delete process.env.VERCEL_PYTHON_APSCHEDULER_DEPENDENCY;
     delete process.env.VERCEL_PYTHON_CELERY_DEPENDENCY;
     delete process.env.VERCEL_PYTHON_DRAMATIQ_DEPENDENCY;
     delete process.env.VERCEL_WORKERS_PYTHON;
   });
 
   afterEach(() => {
+    delete process.env.VERCEL_PYTHON_APSCHEDULER_DEPENDENCY;
     delete process.env.VERCEL_PYTHON_CELERY_DEPENDENCY;
     delete process.env.VERCEL_PYTHON_DRAMATIQ_DEPENDENCY;
     delete process.env.VERCEL_WORKERS_PYTHON;
@@ -6084,7 +6347,7 @@ describe('worker services dependency installation', () => {
 
   it('skips adapter injection when no subscribers are declared', async () => {
     const { pipCalls } = await buildWithPipSpy({
-      dependencies: ['celery>=5.3', 'dramatiq>=1.17'],
+      dependencies: ['APScheduler>=3.10.4,<4', 'celery>=5.3', 'dramatiq>=1.17'],
       declareSubscriber: false,
     });
 
@@ -6101,7 +6364,7 @@ describe('worker services dependency installation', () => {
     // dependency, so [[tool.vercel.workflows]] alone must not trigger
     // adapter injection.
     const { pipCalls } = await buildWithPipSpy({
-      dependencies: ['celery>=5.3'],
+      dependencies: ['APScheduler>=3.10.4,<4', 'celery>=5.3'],
       declareSubscriber: false,
       declareWorkflow: true,
     });
@@ -6111,6 +6374,36 @@ describe('worker services dependency installation', () => {
         args.some(arg => arg.startsWith('vercel-') && arg.includes('bundle'))
       )
     ).toBe(false);
+  });
+
+  it('installs vercel-apscheduler-bundle after uv sync when APScheduler is declared', async () => {
+    const { operations, pipCalls } = await buildWithPipSpy({
+      dependencies: ['APScheduler>=3.10.4,<4'],
+    });
+
+    expect(
+      pipCalls.some(args => args.includes('vercel-apscheduler-bundle'))
+    ).toBe(true);
+    expect(operations.indexOf('sync')).toBeGreaterThanOrEqual(0);
+    expect(operations.indexOf('pip:vercel-apscheduler-bundle')).toBeGreaterThan(
+      operations.indexOf('sync')
+    );
+  });
+
+  it('installs vercel-apscheduler when vercel-queue is declared', async () => {
+    const { operations, pipCalls } = await buildWithPipSpy({
+      dependencies: ['APScheduler>=3.10.4,<4', 'vercel-queue'],
+    });
+
+    expect(
+      pipCalls.some(args => args[args.length - 1] === 'vercel-apscheduler')
+    ).toBe(true);
+    expect(
+      pipCalls.some(args => args.includes('vercel-apscheduler-bundle'))
+    ).toBe(false);
+    expect(operations.indexOf('pip:vercel-apscheduler')).toBeGreaterThan(
+      operations.indexOf('sync')
+    );
   });
 
   it('installs vercel-celery-bundle after uv sync when celery is declared', async () => {
@@ -6222,6 +6515,36 @@ describe('worker services dependency installation', () => {
     expect(
       pipCalls.some(args =>
         args.includes('vercel-workers @ file:///tmp/vercel-workers.whl')
+      )
+    ).toBe(true);
+  });
+
+  it('uses VERCEL_PYTHON_APSCHEDULER_DEPENDENCY override for bundled APScheduler', async () => {
+    process.env.VERCEL_PYTHON_APSCHEDULER_DEPENDENCY =
+      'vercel-apscheduler-bundle @ file:///tmp/vercel-apscheduler-bundle.whl';
+
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['APScheduler>=3.10.4,<4'],
+    });
+    expect(
+      pipCalls.some(args =>
+        args.includes(
+          'vercel-apscheduler-bundle @ file:///tmp/vercel-apscheduler-bundle.whl'
+        )
+      )
+    ).toBe(true);
+  });
+
+  it('uses VERCEL_PYTHON_APSCHEDULER_DEPENDENCY override for unbundled APScheduler', async () => {
+    process.env.VERCEL_PYTHON_APSCHEDULER_DEPENDENCY =
+      'vercel-apscheduler @ file:///tmp/vercel-apscheduler.whl';
+
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['APScheduler>=3.10.4,<4', 'vercel-queue'],
+    });
+    expect(
+      pipCalls.some(args =>
+        args.includes('vercel-apscheduler @ file:///tmp/vercel-apscheduler.whl')
       )
     ).toBe(true);
   });

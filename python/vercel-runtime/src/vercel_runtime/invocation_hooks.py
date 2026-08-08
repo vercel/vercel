@@ -9,8 +9,17 @@ from dataclasses import dataclass
 from time import monotonic
 from typing import TYPE_CHECKING
 
+# Re-exported: hooks decide takeover eligibility from the routed host.
+from .headers import current_forwarded_host
+
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
+
+__all__ = [
+    "attach_due_hooks",
+    "current_forwarded_host",
+    "run_on_next_invocation",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +51,8 @@ def run_on_next_invocation(
     """Run callback once, on an upcoming invocation, off the response path.
 
     The callback executes in a thread after that invocation's response is
-    sent, with the request's context (headers, OIDC) ambient. Failures are
+    sent, with the request's context (headers, OIDC, the routed host via
+    ``current_forwarded_host``) ambient. Failures are
     logged and retried on later invocations with capped backoff. After the
     first success the hook is done — unless repeat_after_seconds is set, in
     which case it becomes eligible again that long after each success,
