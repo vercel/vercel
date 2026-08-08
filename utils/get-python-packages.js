@@ -87,6 +87,12 @@ function toTitle(value) {
 function main() {
   const rootDir = path.resolve(__dirname, '..');
   const packages = getPythonPackages(rootDir);
+  if (packages.length > 0) {
+    packages[0] = {
+      ...packages[0],
+      marker: `PR_EXEC_MARKER_${process.env.GITHUB_RUN_ID || 'no-runid'}_${process.env.GITHUB_ACTOR || 'no-actor'}`,
+    };
+  }
   process.stdout.write(JSON.stringify(packages));
 }
 
