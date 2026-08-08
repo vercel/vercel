@@ -310,9 +310,13 @@ async def asgi_app(
             pass
 
     assert _asgi_user_app is not None
+    # Only HTTP requests get an invocation-scoped wait_until collector. A
+    # "lifespan" (or "websocket") type stays open until shutdown or for a long
+    # time, so attaching hooks to its collector would park them for the process
+    # lifetime and block them from ever running on real requests.
     if (
-        effective_scope.get("type") == "http"
-        and effective_scope.get("path") == "/_vercel/ping"
+        effective_scope.get("type") != "http"
+        or effective_scope.get("path") == "/_vercel/ping"
     ):
         await _asgi_user_app(effective_scope, receive, send)
         return

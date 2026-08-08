@@ -732,18 +732,24 @@ function createQueueIntrospectionScript(
 ): string {
   // Ask each integration whether it owns the declared object. The ImportError
   // guard tolerates adapter versions that predate the probe; those degrade to
-  // "not owned" rather than failing introspection.
-  const probeLines = integrations
-    .filter(integration => integration.subscriberProbe)
-    .flatMap(({ module, subscriberProbe }) => [
-      'try:',
-      `    from ${module} import ${subscriberProbe}`,
-      'except ImportError:',
-      '    pass',
-      'else:',
-      `    if ${subscriberProbe}(${JSON.stringify(declaration.moduleName)}, ${JSON.stringify(declaration.variableName)}):`,
-      `        owners.append(${JSON.stringify(module)})`,
-    ]);
+  // "not owned" rather than failing introspection. Probes identify an object
+  // by (module_name, variable_name), so bare-module declarations without a
+  // variable name cannot be probed and stay unowned.
+  const { variableName } = declaration;
+  const probeLines =
+    variableName === undefined
+      ? []
+      : integrations
+          .filter(integration => integration.subscriberProbe)
+          .flatMap(({ module, subscriberProbe }) => [
+            'try:',
+            `    from ${module} import ${subscriberProbe}`,
+            'except ImportError:',
+            '    pass',
+            'else:',
+            `    if ${subscriberProbe}(${JSON.stringify(declaration.moduleName)}, ${JSON.stringify(variableName)}):`,
+            `        owners.append(${JSON.stringify(module)})`,
+          ]);
   return [
     'import importlib, json, os, sys',
     `os.environ[${JSON.stringify(SUBSCRIBER_ID_ENV)}] = ${JSON.stringify(declaration.name)}`,
@@ -840,7 +846,7 @@ export async function introspectDevQueueSubscriptions({
 }: {
   moduleName: string;
   subscriberName: string;
-  variableName: string;
+  variableName?: string;
   pythonBin: string;
   cwd: string;
   env: NodeJS.ProcessEnv;
