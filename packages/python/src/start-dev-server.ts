@@ -56,6 +56,7 @@ import {
 } from './conditional-vendoring';
 import {
   apschedulerSubscriberIdentities,
+  getApschedulerPreviewConfig,
   getPyprojectSubscribers,
   hasPyprojectSubscribers,
   introspectDevQueueSubscriptions,
@@ -1004,8 +1005,17 @@ export const startDevServer: StartDevServer = async opts => {
       env.VERCEL_APSCHEDULER_SUBSCRIBERS = JSON.stringify(
         apschedulerSubscribers
       );
+      const previewConfig = await getApschedulerPreviewConfig(workPath);
+      if (previewConfig) {
+        env.VERCEL_APSCHEDULER_PREVIEW_IDLE_TIMEOUT_SECONDS = String(
+          previewConfig.idleTimeoutSeconds
+        );
+      } else {
+        delete env.VERCEL_APSCHEDULER_PREVIEW_IDLE_TIMEOUT_SECONDS;
+      }
     } else {
       delete env.VERCEL_APSCHEDULER_SUBSCRIBERS;
+      delete env.VERCEL_APSCHEDULER_PREVIEW_IDLE_TIMEOUT_SECONDS;
     }
 
     // Legacy vercel-workers projects run every dev process on the injected

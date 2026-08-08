@@ -93,6 +93,19 @@ interface RawQueueSubscription {
   max_attempts?: unknown;
 }
 
+interface RawApschedulerPreviews {
+  enabled?: unknown;
+  idle_timeout?: unknown;
+}
+
+interface RawApschedulerConfig {
+  previews?: unknown;
+}
+
+export interface ApschedulerPreviewConfig {
+  idleTimeoutSeconds: number;
+}
+
 interface TriggerNumberField {
   field: keyof RawQueueSubscription;
   output: keyof SubscriberTriggerDefaults;
@@ -173,9 +186,18 @@ interface Pyproject {
   tool?: {
     vercel?: {
       subscribers?: RawSubscriber[];
+      apscheduler?: RawApschedulerConfig;
     };
   };
 }
+
+const APSCHEDULER_PREVIEW_FIELD_NAMES = new Set(['enabled', 'idle_timeout']);
+const APSCHEDULER_DURATION_UNITS: Record<string, number> = {
+  s: 1,
+  m: 60,
+  h: 60 * 60,
+  d: 24 * 60 * 60,
+};
 
 export function getSubscriberOutputPath(subscriberName: string): string {
   return `${SUBSCRIBER_OUTPUT_DIR}/${safePathSegment(subscriberName)}`;
@@ -256,6 +278,80 @@ export async function getPyprojectSubscribers(
   }
 
   return parsedSubscribers;
+}
+
+export async function getApschedulerPreviewConfig(
+  workPath: string
+): Promise<ApschedulerPreviewConfig | undefined> {
+  const pyprojectPath = join(workPath, 'pyproject.toml');
+  if (!fs.existsSync(pyprojectPath)) {
+    return undefined;
+  }
+
+  const pyproject = await readConfigFile<Pyproject>(pyprojectPath);
+  const apscheduler = pyproject?.tool?.vercel?.apscheduler;
+  if (apscheduler === undefined) {
+    return undefined;
+  }
+  if (
+    !apscheduler ||
+    typeof apscheduler !== 'object' ||
+    Array.isArray(apscheduler)
+  ) {
+    throw apschedulerError('"tool.vercel.apscheduler" must be a table');
+  }
+
+  const previews = apscheduler.previews;
+  if (previews === undefined) {
+    return undefined;
+  }
+  if (!previews || typeof previews !== 'object' || Array.isArray(previews)) {
+    throw apschedulerError(
+      '"tool.vercel.apscheduler.previews" must be a table'
+    );
+  }
+
+  const rawPreviews = previews as RawApschedulerPreviews;
+  for (const key of Object.keys(rawPreviews)) {
+    if (!APSCHEDULER_PREVIEW_FIELD_NAMES.has(key)) {
+      throw apschedulerError(
+        `"tool.vercel.apscheduler.previews" has unrecognized field "${key}"`
+      );
+    }
+  }
+
+  if (
+    rawPreviews.enabled !== undefined &&
+    typeof rawPreviews.enabled !== 'boolean'
+  ) {
+    throw apschedulerError(
+      '"tool.vercel.apscheduler.previews.enabled" must be a boolean'
+    );
+  }
+  if (rawPreviews.enabled !== true) {
+    return undefined;
+  }
+  if (typeof rawPreviews.idle_timeout !== 'string') {
+    throw apschedulerError(
+      '"tool.vercel.apscheduler.previews.idle_timeout" must be a duration such as "30m"'
+    );
+  }
+
+  const match = /^([1-9]\d*)([smhd])$/.exec(rawPreviews.idle_timeout);
+  if (!match) {
+    throw apschedulerError(
+      '"tool.vercel.apscheduler.previews.idle_timeout" must be a positive duration using s, m, h, or d (for example "30m")'
+    );
+  }
+  const idleTimeoutSeconds =
+    Number(match[1]) * APSCHEDULER_DURATION_UNITS[match[2]];
+  if (!Number.isSafeInteger(idleTimeoutSeconds)) {
+    throw apschedulerError(
+      '"tool.vercel.apscheduler.previews.idle_timeout" is too large'
+    );
+  }
+
+  return { idleTimeoutSeconds };
 }
 
 export async function resolveQueueSubscribers({
@@ -930,6 +1026,13 @@ export function apschedulerSubscriberIdentities(
 function subscriberError(message: string): NowBuildError {
   return new NowBuildError({
     code: 'PYTHON_INVALID_SUBSCRIBER_CONFIG',
+    message,
+  });
+}
+
+function apschedulerError(message: string): NowBuildError {
+  return new NowBuildError({
+    code: 'PYTHON_INVALID_APSCHEDULER_CONFIG',
     message,
   });
 }
