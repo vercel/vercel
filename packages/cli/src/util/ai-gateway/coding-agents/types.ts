@@ -7,7 +7,7 @@ export interface SetupContext {
   baseUrlOverride?: string;
 }
 
-export type FileFormat = 'json' | 'toml' | 'shell';
+export type FileFormat = 'json' | 'toml' | 'yaml' | 'shell';
 
 export interface FileChange {
   path: string;

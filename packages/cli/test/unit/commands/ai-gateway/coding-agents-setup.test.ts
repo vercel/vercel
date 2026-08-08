@@ -477,6 +477,37 @@ describe('ai-gateway coding-agents setup', () => {
       expect(config.lastUsedProvider).toBe('vercel-ai-gateway');
     });
 
+    it('configures Hermes via config.yaml with key_env, preserving existing entries', async () => {
+      useUser();
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.hermes'), { recursive: true });
+      writeFileSync(
+        join(home, '.hermes', 'config.yaml'),
+        'providers:\n  work-gpu:\n    api: https://internal.corp/v1\n    key_env: CORP_KEY\n'
+      );
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0002',
+        '--agent',
+        'hermes'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+
+      const raw = readFileSync(join(home, '.hermes', 'config.yaml'), 'utf8');
+      expect(raw).toContain('vercel-ai-gateway');
+      expect(raw).toContain('key_env: AI_GATEWAY_API_KEY');
+      expect(raw).toContain('discover_models: true');
+      // Existing provider entries survive the merge.
+      expect(raw).toContain('work-gpu');
+      expect(raw).toContain('CORP_KEY');
+      // The literal key never lands in the file.
+      expect(raw).not.toContain('vck_DummyKey0002');
+    });
+
     it('writes a --base-url override verbatim into the Codex config', async () => {
       useUser();
       client.nonInteractive = true;

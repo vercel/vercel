@@ -3,6 +3,7 @@ import { claudeCode } from './claude-code';
 import { cline } from './cline';
 import { codex } from './codex';
 import { cursor } from './cursor';
+import { hermes } from './hermes';
 import { kilo } from './kilo';
 import { opencode } from './opencode';
 import { pi } from './pi';
@@ -12,6 +13,7 @@ export const CODING_AGENTS: CodingAgent[] = [
   cline,
   codex,
   cursor,
+  hermes,
   kilo,
   opencode,
   pi,
