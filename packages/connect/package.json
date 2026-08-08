@@ -21,6 +21,10 @@
       "types": "./dist/eve/index.d.ts",
       "default": "./dist/eve/index.js"
     },
+    "./workflow": {
+      "types": "./dist/workflow/index.d.ts",
+      "default": "./dist/workflow/index.js"
+    },
     "./betterauth": {
       "types": "./dist/betterauth/index.d.ts",
       "default": "./dist/betterauth/index.js"
@@ -58,7 +62,8 @@
     "@chat-adapter/slack": "^4.0.0",
     "ai": "^6 || ^7.0.0-beta.0",
     "better-auth": ">=1.5.0",
-    "eve": ">=0.13.7"
+    "eve": ">=0.13.7",
+    "workflow": ">=5.0.0-beta.36"
   },
   "peerDependenciesMeta": {
     "@ai-sdk/mcp": {
@@ -78,6 +83,9 @@
     },
     "eve": {
       "optional": true
+    },
+    "workflow": {
+      "optional": true
     }
   },
   "devDependencies": {
@@ -87,7 +95,8 @@
     "ai": "7.0.26",
     "better-auth": "1.5.5",
     "eve": "0.24.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "workflow": "5.0.0-beta.36"
   },
   "private": false,
   "publishConfig": {
