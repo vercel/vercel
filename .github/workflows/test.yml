@@ -111,23 +111,18 @@ jobs:
         include:
           - runner: ubuntu-latest
             nodeVersion: 20
-            concurrency: 2
             label: linux/node20
           - runner: ubuntu-latest
             nodeVersion: 22
-            concurrency: 2
             label: linux/node22
           - runner: macos-14
             nodeVersion: 20
-            concurrency: 2
             label: mac/node20
           - runner: macos-14
             nodeVersion: 22
-            concurrency: 2
             label: mac/node22
           - runner: windows-latest-8-core
             nodeVersion: 22
-            concurrency: 1
             label: win/node22
     env:
       TURBO_SCM_BASE: ${{ needs.setup.outputs.baseSha }}
@@ -210,7 +205,7 @@ jobs:
             export TURBO_EXPERIMENTAL_OTEL_HEADERS="Authorization=Bearer ${TURBO_TOKEN}"
           fi
 
-          turbo run test-unit --affected --filter=!vercel --summarize --cache-dir='.turbo' --log-order=stream --continue=always --concurrency=${{ matrix.concurrency }}
+          turbo run test-unit --affected --filter=!vercel --summarize --log-order=stream --continue=always
 
   cli-unit-test:
     name: CLI Unit / ${{ matrix.runner }}/node${{ matrix.nodeVersion }} / ${{ matrix.shard }}/7
