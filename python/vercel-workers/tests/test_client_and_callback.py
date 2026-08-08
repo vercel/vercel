@@ -23,7 +23,11 @@ from vercel.workers._queue.subscribe import (
     select_subscriptions,
 )
 from vercel.workers.client import WorkerJSONEncoder
-from vercel.workers.exceptions import TokenResolutionError
+from vercel.workers.exceptions import (
+    MessageNotAvailableError,
+    MessageNotFoundError,
+    TokenResolutionError,
+)
 
 
 class CreateUserPayload(BaseModel):
@@ -414,6 +418,95 @@ class TestWorkerDirectives(unittest.TestCase):
 
         self.assertEqual(status, 200)
         delete_message.assert_called_once_with("q", "c", "m", "receipt")
+        change_visibility.assert_not_called()
+
+    def test_successful_handler_deletes_message(self) -> None:
+        handled: list[Any] = []
+
+        def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            handled.append(message)
+
+        queue_client.subscribe(topic="q")(worker)
+
+        with (
+            patch.object(queue_client.callback, "change_visibility") as change_visibility,
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+        ):
+            status, _headers, body = queue_client.handle_queue_callback(
+                self._raw_callback(),
+                self._environ(),
+            )
+
+        self.assertEqual(handled, [{"ok": True}])
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), {"ok": True})
+        delete_message.assert_called_once_with("q", "c", "m", "receipt")
+        change_visibility.assert_not_called()
+
+    def test_already_settled_message_acks_successfully(self) -> None:
+        """An at-least-once redelivery whose receipt handle was already settled."""
+        handled: list[Any] = []
+
+        def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            handled.append(message)
+
+        queue_client.subscribe(topic="q")(worker)
+
+        with (
+            patch.object(queue_client.callback, "change_visibility") as change_visibility,
+            patch.object(
+                queue_client.callback,
+                "delete_message",
+                side_effect=MessageNotFoundError("m"),
+            ) as delete_message,
+        ):
+            status, _headers, body = queue_client.handle_queue_callback(
+                self._raw_callback(),
+                self._environ(),
+            )
+
+        self.assertEqual(handled, [{"ok": True}])
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), {"ok": True})
+        delete_message.assert_called_once_with("q", "c", "m", "receipt")
+        change_visibility.assert_not_called()
+
+    def test_other_ack_failures_still_surface(self) -> None:
+        def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            return None
+
+        queue_client.subscribe(topic="q")(worker)
+
+        with patch.object(
+            queue_client.callback,
+            "delete_message",
+            side_effect=MessageNotAvailableError("m"),
+        ) as delete_message:
+            status, _headers, _body = queue_client.handle_queue_callback(
+                self._raw_callback(),
+                self._environ(),
+            )
+
+        self.assertEqual(status, 409)
+        delete_message.assert_called_once_with("q", "c", "m", "receipt")
+
+    def test_failing_handler_does_not_ack(self) -> None:
+        def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            raise RuntimeError("boom")
+
+        queue_client.subscribe(topic="q")(worker)
+
+        with (
+            patch.object(queue_client.callback, "change_visibility") as change_visibility,
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+        ):
+            status, _headers, _body = queue_client.handle_queue_callback(
+                self._raw_callback(),
+                self._environ(),
+            )
+
+        self.assertEqual(status, 500)
+        delete_message.assert_not_called()
         change_visibility.assert_not_called()
 
 

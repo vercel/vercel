@@ -31,7 +31,7 @@ from ._queue.types import (
     is_duration,
 )
 from .asgi import ASGI, build_asgi_app
-from .exceptions import VQSError
+from .exceptions import MessageNotFoundError, VQSError
 from .wsgi import (
     WSGI,
     build_wsgi_app,
@@ -115,22 +115,30 @@ def _delete_message_sync(
     receipt_handle: str,
     extender: callback.VisibilityExtender | None,
 ) -> None:
-    if extender is not None:
-        extender.finalize(
-            lambda: callback.delete_message(
+    """
+    Acknowledge a message whose subscribers already completed successfully.
+
+    A 404 here means the message is no longer in the consumer group -- typically an
+    at-least-once redelivery whose receipt handle was already settled by an earlier
+    delivery. That is exactly what the ack was trying to achieve, so treat it as a
+    successful settlement instead of failing a callback that already succeeded.
+    """
+
+    def ack() -> None:
+        try:
+            callback.delete_message(
                 queue_name,
                 consumer_group,
                 message_id,
                 receipt_handle,
-            ),
-        )
+            )
+        except MessageNotFoundError:
+            pass
+
+    if extender is not None:
+        extender.finalize(ack)
     else:
-        callback.delete_message(
-            queue_name,
-            consumer_group,
-            message_id,
-            receipt_handle,
-        )
+        ack()
 
 
 def _prepare_in_process_delivery(
