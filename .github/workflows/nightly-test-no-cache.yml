@@ -30,8 +30,8 @@ jobs:
     name: Chunk Tests
     runs-on: ubuntu-latest
     outputs:
-      unitTests: ${{ steps['set-tests'].outputs['unitTests'] }}
-      e2eTests: ${{ steps['set-tests'].outputs['e2eTests'] }}
+      unit-tests: ${{ steps['set-tests'].outputs['unitTests'] }}
+      e2e-tests: ${{ steps['set-tests'].outputs['e2eTests'] }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,11 +42,31 @@ jobs:
       - name: install turbo@2.10.8
         run: npm i -g turbo@2.10.8
       - id: set-tests
-        # No TURBO_BASE_SHA here on purpose: chunk-tests.js falls back to
-        # the "test-all" strategy, which is exactly what we want nightly.
         run: |
-          UNIT_TESTS_ARRAY=$(TEST_TYPE=unit node utils/chunk-tests.js)
-          E2E_TESTS_ARRAY=$(TEST_TYPE=e2e node utils/chunk-tests.js)
+          set -euo pipefail
+          unit_plan=$(turbo run test-unit --dry=json)
+          unit_tasks=$(printf '%s' "$unit_plan" | jq -c '[
+            .tasks[]
+            | select(
+                (.task == "test-unit")
+                and .command != "<NONEXISTENT>"
+              )
+            | {package, directory, task}
+          ]')
+          e2e_plan=$(turbo run test-e2e test-e2e-node-all-versions test-next-local test-dev --dry=json)
+          e2e_tasks=$(printf '%s' "$e2e_plan" | jq -c '[
+            .tasks[]
+            | select(
+                (.task == "test-e2e"
+                  or .task == "test-e2e-node-all-versions"
+                  or .task == "test-next-local"
+                  or .task == "test-dev")
+                and .command != "<NONEXISTENT>"
+              )
+            | {package, directory, task}
+          ]')
+          UNIT_TESTS_ARRAY=$(TURBO_TASKS="$unit_tasks" node utils/chunk-tests.js)
+          E2E_TESTS_ARRAY=$(TURBO_TASKS="$e2e_tasks" node utils/chunk-tests.js)
           echo "Unit tests to run:"
           echo "$UNIT_TESTS_ARRAY"
           echo "E2E tests to run:"
@@ -61,14 +81,14 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    if: ${{ needs.setup.outputs['unitTests'] != '[]' }}
+    if: ${{ needs.setup.outputs['unit-tests'] != '[]' }}
     needs:
       - setup
     strategy:
       fail-fast: false
       max-parallel: 75
       matrix:
-        include: ${{ fromJson(needs.setup.outputs['unitTests']) }}
+        include: ${{ fromJson(needs.setup.outputs['unit-tests']) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -130,7 +150,7 @@ jobs:
     name: Resolve E2E Artifacts
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    if: ${{ needs.setup.outputs['e2eTests'] != '[]' }}
+    if: ${{ needs.setup.outputs['e2e-tests'] != '[]' }}
     needs:
       - setup
     permissions:
@@ -219,7 +239,7 @@ jobs:
       deployments: read
       id-token: write
       statuses: read
-    if: ${{ needs.setup.outputs['e2eTests'] != '[]' }}
+    if: ${{ needs.setup.outputs['e2e-tests'] != '[]' }}
     needs:
       - setup
       - e2e-artifacts
@@ -230,7 +250,7 @@ jobs:
       fail-fast: false
       max-parallel: 75
       matrix:
-        include: ${{ fromJson(needs.setup.outputs['e2eTests']) }}
+        include: ${{ fromJson(needs.setup.outputs['e2e-tests']) }}
     steps:
       - uses: actions/checkout@v4
         with:

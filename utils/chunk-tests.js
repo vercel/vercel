@@ -2,10 +2,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const testGlob = require('./test-glob');
-const {
-  getAffectedPackages,
-  getAllPackages,
-} = require('./get-affected-packages');
 
 const runnersMap = new Map([
   [
@@ -49,7 +45,7 @@ const runnersMap = new Map([
     {
       min: 1,
       max: 5,
-      runners: ['ubuntu-latest'],
+      runners: ['ubuntu-latest-32-core'],
       testScript: 'test',
       nodeVersions: ['22'],
     },
@@ -65,15 +61,6 @@ const runnersMap = new Map([
   ],
 ]);
 
-// Test type categorization for filtering
-const UNIT_TEST_SCRIPTS = ['test-unit'];
-const E2E_TEST_SCRIPTS = [
-  'test-e2e',
-  'test-e2e-node-all-versions',
-  'test-next-local',
-  'test-dev',
-];
-
 const packageOptionsOverrides = {
   // The vercel CLI has many test files. Passing them as CLI args hits the Windows
   // cmd.exe ~8191 char arg limit, so we route them through the VITEST_TEST_FILES
@@ -88,6 +75,10 @@ const packageOptionsOverrides = {
   // Benchmark (wall clock of the unit-test phase):
   //   max=2 (old): ~22 min    max=4: ~10 min    max=7: ~9 min    max=14: ~8.5 min
   vercel: { max: 7, useEnvPaths: true },
+
+  // Next.js fixture tests create and probe real deployments, so they need
+  // smaller chunks to stay within the per-job timeout.
+  '@vercel/next': { max: 20 },
 
   // `@vercel/container`'s unit tests are pure logic with `spawn`/`fs`/`fetch`
   // fully mocked, so they're OS-independent. Run them on Linux only instead of
@@ -225,9 +216,18 @@ function getScriptTestPatterns(packageJson, scriptName) {
     return globPatterns;
   }
 
-  const pnpmTestPatterns = getPatternsAfterCommand(script, 'pnpm test');
+  const pnpmTestPatterns = /(?:^|[;&]\s*)pnpm test(?:\s|$)/.test(script)
+    ? getPatternsAfterCommand(script, 'pnpm test')
+    : [];
   if (pnpmTestPatterns.length > 0) {
     return pnpmTestPatterns;
+  }
+
+  const pnpmVitestPatterns = /(?:^|[;&]\s*)pnpm vitest-run(?:\s|$)/.test(script)
+    ? getPatternsAfterCommand(script, 'pnpm vitest-run')
+    : [];
+  if (pnpmVitestPatterns.length > 0) {
+    return pnpmVitestPatterns;
   }
 
   if (script === 'pnpm test') {
@@ -394,36 +394,29 @@ function getPackageDisplayName(packageName) {
 }
 
 async function getChunkedTests() {
-  let scripts = [...runnersMap.keys()];
   const rootPath = path.resolve(__dirname, '..');
-
-  // Filter scripts based on TEST_TYPE environment variable
-  const testType = process.env.TEST_TYPE;
-  if (testType === 'unit') {
-    scripts = scripts.filter(s => UNIT_TEST_SCRIPTS.includes(s));
-    console.error('Filtering to unit tests only:', scripts.join(', '));
-  } else if (testType === 'e2e') {
-    scripts = scripts.filter(s => E2E_TEST_SCRIPTS.includes(s));
-    console.error('Filtering to e2e tests only:', scripts.join(', '));
+  const taskEntries = JSON.parse(process.env.TURBO_TASKS || '[]');
+  if (!Array.isArray(taskEntries)) {
+    throw new Error('TURBO_TASKS must be a JSON array');
   }
-
-  // Get affected packages based on git changes
-  const baseSha = process.env.TURBO_BASE_SHA || process.env.GITHUB_BASE_REF;
-  const result = baseSha
-    ? await getAffectedPackages(baseSha)
-    : { result: 'test-all' };
-
-  let affectedPackages = [];
-  if (result.result === 'test-affected' && 'packages' in result) {
-    affectedPackages = result.packages;
-  } else if (result.result === 'test-none') {
-    console.error('Testing strategy: no tests (no packages affected)');
+  if (taskEntries.length === 0) {
+    console.error('No executable affected tasks reported by Turborepo');
     return [];
   }
 
-  console.error(
-    `Testing strategy: ${affectedPackages.length > 0 ? 'affected packages only' : 'all packages'}`
-  );
+  const tasksByPackage = new Map();
+  const packageDirectories = new Map();
+  for (const entry of taskEntries) {
+    if (!entry.package || !entry.directory || !entry.task) {
+      throw new Error(
+        'Each TURBO_TASKS entry must include package, directory, and task'
+      );
+    }
+    packageDirectories.set(entry.package, entry.directory);
+    const packageTasks = tasksByPackage.get(entry.package) || new Set();
+    packageTasks.add(entry.task);
+    tasksByPackage.set(entry.package, packageTasks);
+  }
 
   /**
    * @typedef {string} TestPath
@@ -431,50 +424,41 @@ async function getChunkedTests() {
    */
   const testsToRun = {};
 
-  let packageManifests = (await getAllPackages())
-    .filter(pkg => pkg.name && pkg.name !== '//' && pkg.path)
-    .map(pkg =>
-      readPackageManifest(
-        rootPath,
-        path.join(rootPath, pkg.path, 'package.json')
-      )
-    );
+  let packageManifests = [...packageDirectories.values()].map(directory =>
+    readPackageManifest(
+      rootPath,
+      path.join(rootPath, directory, 'package.json')
+    )
+  );
   // Enrich with transitive toolchain needs via dep-graph walk so consumers
   // like `vercel` CLI (which depends on @vercel/go transitively) get marked.
   packageManifests = finalizeTransitiveNeeds(packageManifests);
-  const affectedPackageSet = new Set(affectedPackages);
-  packageManifests
-    .filter(({ packageName }) => {
-      return (
-        affectedPackageSet.size === 0 || affectedPackageSet.has(packageName)
-      );
-    })
-    .forEach(
-      ({ packageJson, packageName, packagePath, needsRust, needsGo }) => {
-        for (const scriptName of scripts) {
-          const patterns = getScriptTestPatterns(packageJson, scriptName);
-          if (patterns.length === 0) {
-            continue;
-          }
-
-          const testPaths = getTestPathsForPackage(
-            rootPath,
-            packagePath,
-            patterns
-          );
-          if (testPaths.length === 0) {
-            continue;
-          }
-
-          const packagePathAndName = `${packagePath},${packageName}`;
-          testsToRun[packagePathAndName] = testsToRun[packagePathAndName] || {
-            needsRust,
-            needsGo,
-          };
-          testsToRun[packagePathAndName][scriptName] = testPaths;
+  packageManifests.forEach(
+    ({ packageJson, packageName, packagePath, needsRust, needsGo }) => {
+      for (const scriptName of tasksByPackage.get(packageName) || []) {
+        const patterns = getScriptTestPatterns(packageJson, scriptName);
+        if (patterns.length === 0) {
+          continue;
         }
+
+        const testPaths = getTestPathsForPackage(
+          rootPath,
+          packagePath,
+          patterns
+        );
+        if (testPaths.length === 0) {
+          continue;
+        }
+
+        const packagePathAndName = `${packagePath},${packageName}`;
+        testsToRun[packagePathAndName] = testsToRun[packagePathAndName] || {
+          needsRust,
+          needsGo,
+        };
+        testsToRun[packagePathAndName][scriptName] = testPaths;
       }
-    );
+    }
+  );
 
   const chunkedTests = Object.entries(testsToRun).flatMap(
     ([packagePathAndName, scriptNames]) => {

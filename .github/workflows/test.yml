@@ -28,8 +28,7 @@ jobs:
       id-token: write
       statuses: write
     outputs:
-      unitTests: ${{ steps['set-tests'].outputs['unitTests'] }}
-      e2eTests: ${{ steps['set-tests'].outputs['e2eTests'] }}
+      e2e-tests: ${{ steps.e2e-matrix.outputs.e2eTests }}
       baseSha: ${{ steps.pr-context.outputs.baseSha }}
       headSha: ${{ steps.pr-context.outputs.headSha }}
     steps:
@@ -72,18 +71,28 @@ jobs:
           node-version: 22
       - name: install turbo@2.10.8
         run: npm i -g turbo@2.10.8
-      - id: set-tests
-        run: |
-          UNIT_TESTS_ARRAY=$(TEST_TYPE=unit node utils/chunk-tests.js)
-          E2E_TESTS_ARRAY=$(TEST_TYPE=e2e node utils/chunk-tests.js)
-          echo "Unit tests to run:"
-          echo "$UNIT_TESTS_ARRAY"
-          echo "E2E tests to run:"
-          echo "$E2E_TESTS_ARRAY"
-          echo "unitTests=$UNIT_TESTS_ARRAY" >> $GITHUB_OUTPUT
-          echo "e2eTests=$E2E_TESTS_ARRAY" >> $GITHUB_OUTPUT
+      - name: Build E2E test matrix
+        id: e2e-matrix
         env:
-          TURBO_BASE_SHA: ${{ steps.pr-context.outputs.baseSha }}
+          TURBO_SCM_BASE: ${{ steps.pr-context.outputs.baseSha }}
+          TURBO_SCM_HEAD: ${{ steps.pr-context.outputs.headSha }}
+        run: |
+          set -euo pipefail
+          plan=$(turbo run test-e2e test-e2e-node-all-versions test-next-local test-dev --affected --dry=json)
+          tasks=$(printf '%s' "$plan" | jq -c '[
+            .tasks[]
+            | select(
+                (.task == "test-e2e"
+                  or .task == "test-e2e-node-all-versions"
+                  or .task == "test-next-local"
+                  or .task == "test-dev")
+                and .command != "<NONEXISTENT>"
+              )
+            | {package, directory, task}
+          ]')
+          matrix=$(TURBO_TASKS="$tasks" node utils/chunk-tests.js)
+          echo "e2eTests=$matrix" >> "$GITHUB_OUTPUT"
+          echo "$matrix" | jq
 
   unit-test:
     name: Unit / ${{ matrix.label }}
@@ -323,7 +332,7 @@ jobs:
     name: Resolve E2E Artifacts
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    if: ${{ needs.setup.outputs['e2eTests'] != '[]' }}
+    if: ${{ needs.setup.outputs['e2e-tests'] != '[]' }}
     needs:
       - setup
     permissions:
@@ -412,7 +421,7 @@ jobs:
       deployments: read
       id-token: write
       statuses: read
-    if: ${{ needs.setup.outputs['e2eTests'] != '[]' }}
+    if: ${{ needs.setup.outputs['e2e-tests'] != '[]' }}
     needs:
       - setup
       - e2e-artifacts
@@ -423,7 +432,7 @@ jobs:
       fail-fast: false
       max-parallel: 75
       matrix:
-        include: ${{ fromJson(needs.setup.outputs['e2eTests']) }}
+        include: ${{ fromJson(needs.setup.outputs['e2e-tests']) }}
     steps:
       - uses: actions/checkout@v4
         with:
