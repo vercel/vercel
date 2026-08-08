@@ -738,6 +738,12 @@ export const startDevServer: StartDevServer = async opts => {
     typeof config?.handlerFunction === 'string'
       ? config.handlerFunction
       : undefined;
+  // Pyproject queue sidecars may declare a bare module entrypoint (no
+  // handlerFunction); like queue-backed services, they are served through a
+  // dynamically created "app" rather than an object detected in the file.
+  const isPyQueueSidecar =
+    config?.pythonQueueSidecar === 'subscriber' ||
+    config?.pythonQueueSidecar === 'workflow';
 
   let detected: DetectedPythonEntrypoint | null;
   if (isPyprojectEntrypoint) {
@@ -758,7 +764,7 @@ export const startDevServer: StartDevServer = async opts => {
             varName:
               service && isScheduleTriggeredService(service)
                 ? undefined
-                : handlerFunction,
+                : (handlerFunction ?? (isPyQueueSidecar ? 'app' : undefined)),
           }
         : undefined,
       service,

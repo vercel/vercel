@@ -106,6 +106,7 @@ import {
   type SubscriberSubscription,
 } from '../src/subscribers';
 import { getWorkflowOutputPath } from '../src/workflows';
+import { parseBareModuleEntrypoint } from '../src/module-entrypoint';
 import {
   FileBlob,
   FileFsRef,
@@ -3633,6 +3634,188 @@ describe('pyproject subscribers', () => {
     ]);
   });
 
+  it('maps bare module entrypoints to file paths', () => {
+    expect(parseBareModuleEntrypoint('worker')).toEqual({
+      moduleName: 'worker',
+      filePath: 'worker.py',
+    });
+    expect(parseBareModuleEntrypoint('app.workers.orders')).toEqual({
+      moduleName: 'app.workers.orders',
+      filePath: 'app/workers/orders.py',
+    });
+    // Module path segments must be Python identifiers.
+    expect(parseBareModuleEntrypoint('my-worker')).toBeNull();
+    expect(parseBareModuleEntrypoint('worker/tasks')).toBeNull();
+    expect(parseBareModuleEntrypoint('worker:app')).toBeNull();
+    expect(parseBareModuleEntrypoint('')).toBeNull();
+  });
+
+  it('accepts bare module entrypoints for vercel-queue subscribers', async () => {
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'worker.py'),
+      'import vercel.queue\n'
+    );
+    fs.mkdirSync(path.join(mockWorkPath, 'tasks'), { recursive: true });
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'tasks', '__init__.py'),
+      'import vercel.queue\n'
+    );
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        '',
+        '[[tool.vercel.subscribers]]',
+        'entrypoint = "worker"',
+        'topics = ["orders"]',
+        '',
+        '[[tool.vercel.subscribers]]',
+        'entrypoint = "tasks"',
+        '',
+      ].join('\n')
+    );
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: {
+          use: '@vercel/python',
+          src: '<detect>',
+          config: { framework: 'fastapi' },
+        },
+      })
+    ).resolves.toEqual([
+      {
+        name: 'worker',
+        type: 'subscriber',
+        consumer: sanitizeConsumerName(getSubscriberOutputPath('worker')),
+        workspace: '.',
+        framework: 'fastapi',
+        runtime: 'python',
+        builder: {
+          use: '@vercel/python',
+          src: 'worker.py',
+          config: { pythonQueueSidecar: 'subscriber' },
+        },
+        topics: [{ topic: 'orders' }],
+      },
+      {
+        name: 'tasks',
+        type: 'subscriber',
+        consumer: sanitizeConsumerName(getSubscriberOutputPath('tasks')),
+        workspace: '.',
+        framework: 'fastapi',
+        runtime: 'python',
+        builder: {
+          use: '@vercel/python',
+          src: 'tasks/__init__.py',
+          config: { pythonQueueSidecar: 'subscriber' },
+        },
+        topics: [{ topic: '*' }],
+      },
+    ]);
+  });
+
+  it('points file-path entrypoints at the equivalent import path', async () => {
+    for (const [filePath, suggestion] of [
+      ['worker.py', 'worker'],
+      ['tasks/worker.py', 'tasks.worker'],
+      ['pkg/__init__.py', 'pkg'],
+    ] as const) {
+      fs.writeFileSync(
+        path.join(mockWorkPath, 'pyproject.toml'),
+        [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[[tool.vercel.subscribers]]',
+          `entrypoint = "${filePath}"`,
+          '',
+        ].join('\n')
+      );
+
+      await expect(
+        getDevSidecars({
+          workPath: mockWorkPath,
+          build: {
+            use: '@vercel/python',
+            src: '<detect>',
+            config: { framework: 'fastapi' },
+          },
+        })
+      ).rejects.toThrow(
+        `subscriber #1 has invalid entrypoint "${filePath}". ` +
+          `Use an import path, not a file path: "${suggestion}"`
+      );
+    }
+  });
+
+  it('rejects entrypoints that are not import paths', async () => {
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        '',
+        '[[tool.vercel.subscribers]]',
+        'entrypoint = "my-worker"',
+        '',
+      ].join('\n')
+    );
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: {
+          use: '@vercel/python',
+          src: '<detect>',
+          config: { framework: 'fastapi' },
+        },
+      })
+    ).rejects.toThrow(
+      'subscriber #1 has invalid entrypoint "my-worker". ' +
+        'Use "module:object" or a module path like "pkg.module"'
+    );
+  });
+
+  it('rejects bare module entrypoints under the legacy vercel-workers schema', async () => {
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'worker.py'),
+      'from celery import Celery\napp = Celery("worker")\n'
+    );
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        'dependencies = ["vercel-workers"]',
+        '',
+        '[[tool.vercel.subscribers]]',
+        'entrypoint = "worker"',
+        'topics = ["celery"]',
+        '',
+      ].join('\n')
+    );
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: {
+          use: '@vercel/python',
+          src: '<detect>',
+          config: { framework: 'fastapi' },
+        },
+      })
+    ).rejects.toThrow(
+      /subscriber #1 has invalid entrypoint "worker"\. Use "module:object"$/
+    );
+  });
+
   it('lets pyproject services and standalone frameworks contribute dev sidecars', async () => {
     await expect(
       getDevSidecars({
@@ -3833,6 +4016,63 @@ describe('pyproject subscribers', () => {
         consumer: 'celery-workers',
       },
     ]);
+  });
+
+  it('builds a queue Lambda from a bare module subscriber entrypoint', async () => {
+    mockQueueIntrospection([
+      { topic: 'orders', consumer_group: 'order-workers' },
+    ]);
+
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'worker.py': new FileBlob({
+        data: 'import vercel.queue\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "worker"',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: false },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const output = getBuildOutputV2(result).output as any;
+    const worker = output[getSubscriberOutputPath('worker')];
+    expect(worker).toBeDefined();
+    expect(worker.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: 'orders',
+        consumer: 'order-workers',
+      },
+    ]);
+
+    const handler = worker.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('subscriber handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      '"__VC_HANDLER_MODULE_NAME": "_vc_queue_handlers._py_subscribers_worker"'
+    );
+    expect(
+      worker.files?.['_vc_queue_handlers/_py_subscribers_worker.py']
+    ).toBeDefined();
   });
 
   it('emits a legacy worker Lambda when the project depends on vercel-workers', async () => {

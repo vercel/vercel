@@ -11,6 +11,7 @@ import {
 } from '@vercel/build-utils';
 import {
   getModuleEntrypointName,
+  parseBareModuleEntrypoint,
   parseModuleEntrypoint,
   resolveExistingEntrypoint,
   safePathSegment,
@@ -40,7 +41,13 @@ export interface SubscriberDeclaration {
   name: string;
   entrypoint: string;
   moduleName: string;
-  variableName: string;
+  /**
+   * Only present for `module:object` entrypoints. The vercel-queue serving
+   * paths never dereference it (subscriptions register on import and are
+   * served through `vercel.queue.asgi_app()`); the legacy vercel-workers
+   * bootstrap serves the named object directly and requires it.
+   */
+  variableName?: string;
   topicPatterns?: string[];
   /** Present iff parsed under the legacy vercel-workers schema. */
   legacy?: LegacySubscriberConfig;
@@ -429,16 +436,45 @@ export function createQueueHandlerModule(
 async function parseSubscriberEntrypoint(
   workPath: string,
   label: string,
-  entrypointValue: unknown
+  entrypointValue: unknown,
+  { requireVariable }: { requireVariable: boolean }
 ): Promise<Omit<SubscriberDeclaration, 'topicPatterns' | 'legacy'>> {
   if (typeof entrypointValue !== 'string') {
     throw subscriberError(`${label} must define string field "entrypoint"`);
   }
 
-  const entrypoint = parseModuleEntrypoint(entrypointValue);
+  // A `.py` suffix is almost certainly a file path written where an import
+  // path belongs (`tasks.py` would otherwise parse as module `py` in
+  // package `tasks`). Modules named `py` remain reachable as `pkg.py:obj`.
+  if (!requireVariable && /\.py$/i.test(entrypointValue)) {
+    const suggestion = parseBareModuleEntrypoint(
+      entrypointValue
+        .slice(0, -3)
+        .replace(/[\\/]+/g, '.')
+        .replace(/(^|\.)__init__$/, '')
+    );
+    throw subscriberError(
+      `${label} has invalid entrypoint "${entrypointValue}". ` +
+        `Use an import path, not a file path${
+          suggestion ? `: "${suggestion.moduleName}"` : ''
+        }`
+    );
+  }
+
+  // The legacy vercel-workers bootstrap serves the entrypoint object
+  // directly, so it needs `module:object`. vercel-queue subscribers only
+  // need the module imported (subscriptions register globally on import),
+  // so a bare module path works too.
+  const entrypoint =
+    parseModuleEntrypoint(entrypointValue) ??
+    (requireVariable ? null : parseBareModuleEntrypoint(entrypointValue));
   if (!entrypoint) {
     throw subscriberError(
-      `${label} has invalid entrypoint "${entrypointValue}". Use "module:object"`
+      `${label} has invalid entrypoint "${entrypointValue}". Use ${
+        requireVariable
+          ? '"module:object"'
+          : '"module:object" or a module path like "pkg.module"'
+      }`
     );
   }
   const name = getModuleEntrypointName(entrypoint);
@@ -452,11 +488,12 @@ async function parseSubscriberEntrypoint(
     );
   }
 
+  const { variableName } = entrypoint;
   return {
     name,
     entrypoint: existingEntrypoint,
     moduleName: entrypoint.moduleName,
-    variableName: entrypoint.variableName,
+    ...(variableName === undefined ? {} : { variableName }),
   };
 }
 
@@ -479,7 +516,8 @@ async function parseSubscriber(
   const base = await parseSubscriberEntrypoint(
     workPath,
     label,
-    config.entrypoint
+    config.entrypoint,
+    { requireVariable: false }
   );
   return {
     ...base,
@@ -506,7 +544,8 @@ async function parseLegacySubscriber(
   const base = await parseSubscriberEntrypoint(
     workPath,
     label,
-    config.entrypoint
+    config.entrypoint,
+    { requireVariable: true }
   );
   return {
     ...base,

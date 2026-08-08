@@ -216,7 +216,9 @@ export async function getDevSidecars({
           use: build.use,
           src: subscriber.entrypoint,
           config: {
-            handlerFunction: subscriber.variableName,
+            ...(subscriber.variableName === undefined
+              ? {}
+              : { handlerFunction: subscriber.variableName }),
             pythonQueueSidecar: 'subscriber',
           },
         },
@@ -2003,6 +2005,11 @@ export const build: BuildVX = async ({
       const consumer = getSubscriberConsumerName(declaration.name);
       const legacy = declaration.legacy;
       assert(legacy, 'legacy subscriber declarations must carry legacy config');
+      const { variableName } = declaration;
+      assert(
+        variableName,
+        'legacy subscriber declarations must name an entrypoint object'
+      );
       const experimentalTriggers: TriggerEvent[] = legacy.topics.map(topic => ({
         type: 'queue/v2beta',
         topic,
@@ -2018,7 +2025,7 @@ export const build: BuildVX = async ({
               moduleName: declaration.moduleName,
               entrypoint: declaration.entrypoint,
               vendorDir,
-              variableName: declaration.variableName,
+              variableName,
             }),
           }),
         },
