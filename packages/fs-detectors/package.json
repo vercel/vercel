@@ -18,8 +18,7 @@
     "test": "vitest run --config ../../vitest.config.mts",
     "test-unit": "vitest run --config ../../vitest.config.mts test/unit.",
     "test-e2e": "vitest run --config ../../vitest.config.mts test/integration.test.ts",
-    "type-check": "tsc --noEmit",
-    "vitest-e2e": "glob --absolute 'test/integration.test.ts'"
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@vercel/build-utils": "workspace:*",

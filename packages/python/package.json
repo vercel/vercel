@@ -18,8 +18,7 @@
     "type-check": "tsc --noEmit",
     "test": "cross-env VERCEL_FORCE_PYTHON_STREAMING=1 NODE_OPTIONS=--experimental-vm-modules vitest run --config ../../vitest.config.mts",
     "test-unit": "cross-env VERCEL_FORCE_PYTHON_STREAMING=1 NODE_OPTIONS=--experimental-vm-modules vitest run --config ../../vitest.config.mts test/unit",
-    "test-e2e": "cross-env VERCEL_FORCE_PYTHON_STREAMING=1 NODE_OPTIONS=--experimental-vm-modules vitest run --config ../../vitest.config.mts test/integration-*",
-    "vitest-e2e": "glob --absolute 'test/integration-*'"
+    "test-e2e": "cross-env VERCEL_FORCE_PYTHON_STREAMING=1 NODE_OPTIONS=--experimental-vm-modules vitest run --config ../../vitest.config.mts test/integration-"
   },
   "dependencies": {
     "@vercel/python-analysis": "workspace:*"

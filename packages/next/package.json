@@ -11,9 +11,8 @@
     "test-next-local": "vitest run --config ../../vitest.config.mts test/integration/*.test.js test/integration/*.test.ts",
     "test-next-local-legacy": "vitest run --config ../../vitest.config.mts test/integration/legacy/*.test.js",
     "test-next-local:middleware": "vitest run --config ../../vitest.config.mts test/integration/middleware.test.ts",
-    "test-e2e": "rm -f test/builder-info.json; vitest run --config ../../vitest.config.mts test/fixtures/**/*.test.js",
-    "type-check": "tsc --noEmit",
-    "vitest-e2e": "glob --absolute 'test/fixtures/**/*.test.js'"
+    "test-e2e": "rm -f test/builder-info.json; vitest run --config ../../vitest.config.mts test/fixtures/ --exclude test/fixtures/00-bun-runtime/index.test.ts",
+    "type-check": "tsc --noEmit"
   },
   "repository": {
     "type": "git",

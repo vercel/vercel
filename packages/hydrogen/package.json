@@ -13,8 +13,7 @@
     "build": "node ../../utils/build-builder.mjs",
     "test-e2e": "vitest run --config ../../vitest.config.mts test/test.js",
     "test": "vitest run --config ../../vitest.config.mts",
-    "type-check": "tsc --noEmit",
-    "vitest-e2e": "glob --absolute 'test/test.js'"
+    "type-check": "tsc --noEmit"
   },
   "files": [
     "dist",

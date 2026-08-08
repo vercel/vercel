@@ -988,7 +988,7 @@ export const startDevServer: StartDevServer = async opts => {
         const introspected = await introspectDevQueueSubscriptions({
           moduleName: declaration.moduleName,
           subscriberName: declaration.name,
-          variableName: declaration.variableName,
+          variableName: declaration.variableName || 'app',
           pythonBin: spawnCommand,
           cwd: workPath,
           env: introspectionEnv,

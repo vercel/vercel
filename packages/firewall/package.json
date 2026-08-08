@@ -36,7 +36,7 @@
   },
   "scripts": {
     "pretest": "pnpm run build:code",
-    "vitest-e2e": "glob --absolute 'test/e2e/*.test.ts'",
+    "test-e2e": "vitest run --config ../../vitest.config.mts test/e2e/",
     "build": "pnpm run build:code && pnpm run build:docs",
     "build:code": "node ../../utils/build.mjs",
     "build:docs": "typedoc && prettier --write docs/**/*.md docs/*.md",

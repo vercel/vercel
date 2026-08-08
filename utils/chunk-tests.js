@@ -26,15 +26,6 @@ const runnersMap = new Map([
     },
   ],
   [
-    'vitest-e2e',
-    {
-      min: 1,
-      max: 7,
-      testScript: 'test',
-      runners: ['ubuntu-latest'],
-    },
-  ],
-  [
     'test-e2e',
     {
       min: 1,
@@ -77,7 +68,6 @@ const runnersMap = new Map([
 // Test type categorization for filtering
 const UNIT_TEST_SCRIPTS = ['test-unit'];
 const E2E_TEST_SCRIPTS = [
-  'vitest-e2e',
   'test-e2e',
   'test-e2e-node-all-versions',
   'test-next-local',
@@ -246,15 +236,37 @@ function getScriptTestPatterns(packageJson, scriptName) {
 
   const vitestPatterns = getPatternsAfterCommand(script, 'vitest run');
   if (vitestPatterns.length > 0) {
-    return vitestPatterns;
+    return normalizeTestPatterns(scriptName, vitestPatterns);
   }
 
   const nodeRunner = script.match(/^node scripts\/(?:vitest-run|test)\.mjs/);
   if (nodeRunner) {
-    return getPatternsAfterCommand(script, nodeRunner[0]);
+    return normalizeTestPatterns(
+      scriptName,
+      getPatternsAfterCommand(script, nodeRunner[0])
+    );
   }
 
   return [];
+}
+
+function normalizeTestPatterns(scriptName, patterns) {
+  if (scriptName !== 'test-e2e') {
+    return patterns;
+  }
+
+  return patterns.map(pattern => {
+    const isTestFilePattern = DEFAULT_TEST_NAME_PATTERNS.some(name =>
+      pattern.includes(`.${name}.`)
+    );
+    const isTestFile = DEFAULT_TEST_FILE_EXTENSIONS.some(extension =>
+      pattern.endsWith(`.${extension}`)
+    );
+    if (pattern.endsWith('/') || isTestFilePattern || isTestFile) {
+      return pattern;
+    }
+    return `${pattern}*`;
+  });
 }
 
 function getQuotedPatterns(script) {
@@ -282,7 +294,7 @@ function getPatternsAfterCommand(script, command) {
       break;
     }
 
-    if (arg === '--config' || arg === '-c') {
+    if (arg === '--config' || arg === '-c' || arg === '--exclude') {
       index += 1;
       continue;
     }

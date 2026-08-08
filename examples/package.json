@@ -5,8 +5,7 @@
   "scripts": {
     "test-unit": "vitest run --config ../vitest.config.mts __tests__/unit/",
     "test-e2e": "vitest run --config ../vitest.config.mts __tests__/integration/",
-    "test": "vitest run --config ../vitest.config.mts",
-    "vitest-e2e": "glob --absolute '__tests__/integration/'"
+    "test": "vitest run --config ../vitest.config.mts"
   },
   "devDependencies": {
     "@vercel/build-utils": "workspace:*",

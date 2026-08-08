@@ -16,7 +16,7 @@
   "scripts": {
     "build": "node ../../utils/build.mjs",
     "test": "vitest run --config ./vitest.config.mts",
-    "vitest-e2e": "glob --absolute 'tests/integration-*.test.ts'",
+    "test-e2e": "vitest run --config ./vitest.config.mts tests/integration-",
     "type-check": "tsc --noEmit",
     "test-unit": "vitest run --config ./vitest.config.mts tests/unit."
   },

@@ -32,7 +32,7 @@ describe('getScriptTestPatterns', () => {
   it('reads filters from the CLI test wrapper', () => {
     const packageJson = {
       scripts: {
-        'test-unit': 'node scripts/vitest-run.mjs --run test/unit/',
+        'test-unit': 'node scripts/test.mjs --run test/unit/',
       },
     };
 
@@ -50,6 +50,19 @@ describe('getScriptTestPatterns', () => {
 
     expect(getScriptTestPatterns(packageJson, 'test-unit')).toEqual([
       'test/unit/',
+    ]);
+  });
+
+  it('keeps exact E2E files and ignores excluded files', () => {
+    const packageJson = {
+      scripts: {
+        'test-e2e':
+          'vitest run --config ../../vitest.config.mts test/test.js --exclude test/excluded.test.js',
+      },
+    };
+
+    expect(getScriptTestPatterns(packageJson, 'test-e2e')).toEqual([
+      'test/test.js',
     ]);
   });
 

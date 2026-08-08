@@ -27,7 +27,7 @@ const TEST_TASK_NAMES = ['test', 'vitest', 'type-check'];
 /**
  * Task names that indicate a package has e2e tests
  */
-const E2E_TASK_NAMES = ['test-e2e', 'vitest-e2e'];
+const E2E_TASK_NAMES = ['test-e2e'];
 
 async function getAllPackages() {
   const variablesPath = path.resolve(__dirname, 'all-packages-variables.json');
