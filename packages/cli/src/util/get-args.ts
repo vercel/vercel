@@ -136,7 +136,14 @@ export function parseArguments<T extends Spec>(
         flagsOutput[flagKey] = value;
       }
     } else if (token.kind === 'option' && token.value === undefined) {
-      argsOutput.push(token.rawName);
+      // Boolean flags emit a token with no value. If the option is part of the
+      // known specification, record it as a boolean flag. Otherwise (permissive
+      // mode / unknown option) preserve it as a positional argument.
+      if (options[token.name]) {
+        flagsOutput[`--${token.name}`] = true;
+      } else {
+        argsOutput.push(token.rawName);
+      }
     } else if (token.kind === 'positional') {
       argsOutput.push(token.value);
     }
