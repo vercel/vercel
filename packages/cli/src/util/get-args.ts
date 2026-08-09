@@ -76,10 +76,8 @@ export function parseArguments<T extends Spec>(
       const isMultiple = Array.isArray(value);
       const elementType = isMultiple ? value[0] : value;
 
-      const isString =
-        elementType === String || elementType instanceof String;
-      const isNumber =
-        elementType === Number || elementType instanceof Number;
+      const isString = elementType === String || elementType instanceof String;
+      const isNumber = elementType === Number || elementType instanceof Number;
 
       // Any flag that takes a value (String, Number, or an array of those)
       // must be declared as a `'string'` option for `util.parseArgs`.
