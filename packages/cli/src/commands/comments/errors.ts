@@ -18,7 +18,9 @@ export function handleCommentsParseError(
   // parser. Disclose the POSIX escape exactly when someone trips on it.
   if (
     err instanceof Error &&
-    /unknown or unexpected option: -[^-]/.test(err.message)
+    /unknown or unexpected option: -[^-]|Unknown option '-[^-]/.test(
+      err.message
+    )
   ) {
     output.log(
       `An argument starting with "-"? Put it after \`--\`: ${getCommandName(`comments ${subcommandName} -- <arg>`)}`

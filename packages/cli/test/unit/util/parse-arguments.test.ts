@@ -16,6 +16,20 @@ describe('parseArguments', () => {
     });
   });
 
+  it('accepts common flags that are not in the command specification', () => {
+    const args = ['ls', '--scope', 'acme', '--debug', '--limit', '5'];
+    expect(parseArguments(args, { '--limit': Number })).toMatchObject({
+      args: ['ls'],
+      flags: { '--scope': 'acme', '--debug': true, '--limit': 5 },
+    });
+  });
+
+  it('accepts shorthands for common flags', () => {
+    expect(parseArguments(['-S', 'acme'], {})).toMatchObject({
+      flags: { '--scope': 'acme' },
+    });
+  });
+
   it('adds arguments to the args key', () => {
     expect(parseArguments(['some', 'arguments'], {})).toMatchObject({
       args: ['some', 'arguments'],

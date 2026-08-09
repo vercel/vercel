@@ -10,6 +10,30 @@ export interface Spec {
   [key: string]: any;
 }
 
+type Handler = (value: string, name: string, previousValue?: any) => any;
+
+/**
+ * Maps a flags specification to the shape returned under `flags`, mirroring the
+ * type mapping the `arg` package used to provide:
+ *
+ * - `{ '--limit': Number }` → `{ '--limit'?: number }`
+ * - `{ '--attach': [String] }` → `{ '--attach'?: string[] }`
+ * - `{ '-a': '--attach' }` → `{ '-a'?: never }` (aliases are resolved to their
+ *   long form during parsing, so they never appear in the output)
+ *
+ * Every key is optional because a flag is only present when passed.
+ */
+export type ParsedFlags<T extends Spec> = {
+  [K in keyof T]?: T[K] extends Handler
+    ? ReturnType<T[K]>
+    : T[K] extends [Handler]
+      ? Array<ReturnType<T[K][0]>>
+      : never;
+};
+
+/** Specification of the flags every command accepts (`--help`, `--scope`, …). */
+type CommonArgs = ReturnType<typeof getCommonArgs>;
+
 type ArgOptions = {
   permissive?: boolean;
 };
@@ -54,7 +78,7 @@ export function parseArguments<T extends Spec>(
   parserOptions: ArgOptions = {}
 ): {
   args: string[];
-  flags: Record<string, any>;
+  flags: Prettify<ParsedFlags<CommonArgs & T>>;
 } {
   const options: ParseArgsConfigOptions = {
     help: {
@@ -159,6 +183,6 @@ export function parseArguments<T extends Spec>(
 
   return {
     args: argsOutput,
-    flags: flagsOutput as Prettify<typeof flagsOutput>,
+    flags: flagsOutput as Prettify<ParsedFlags<CommonArgs & T>>,
   };
 }
