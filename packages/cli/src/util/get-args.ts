@@ -1,4 +1,4 @@
-import arg from 'arg';
+import parse, { type Spec } from './arg-parser';
 import getCommonArgs from './arg-common';
 import type { Prettify } from './types';
 
@@ -9,12 +9,12 @@ type ArgOptions = {
 /**
  * @deprecated use `parseArguments` instead
  */
-export default function getArgs<T extends arg.Spec>(
+export default function getArgs<T extends Spec>(
   argv: string[],
   argsOptions?: T,
   argOptions: ArgOptions = {}
 ) {
-  return arg(Object.assign({}, getCommonArgs(), argsOptions), {
+  return parse(Object.assign({}, getCommonArgs(), argsOptions), {
     ...argOptions,
     argv,
   });
@@ -39,14 +39,14 @@ type ParserOptions = {
  * - `args` was previously returned under the `_` key
  * - `flags` previously these keys were mixed with the positional arguments
  */
-export function parseArguments<T extends arg.Spec>(
+export function parseArguments<T extends Spec>(
   args: string[],
   flagsSpecification?: T,
   parserOptions: ParserOptions = {}
 ) {
   // currently parseArgument (and arg as a whole) will hang
   // if there are cycles in the flagsSpecification
-  const { _: positional, ...rest } = arg(
+  const { _: positional, ...rest } = parse(
     Object.assign({}, getCommonArgs(), flagsSpecification),
     {
       ...parserOptions,

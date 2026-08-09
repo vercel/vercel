@@ -1,5 +1,5 @@
 import { writeFile } from 'node:fs/promises';
-import type { Spec } from 'arg';
+import type { Spec } from '../../util/arg-parser';
 import chalk from 'chalk';
 import table from '../../util/output/table';
 import type Client from '../../util/client';
@@ -432,7 +432,7 @@ export async function runLeaderboardSubcommand(
 ): Promise<number> {
   let parsedArgs;
   // Over a broad `readonly CommandOption[]` the mapped spec type widens past
-  // what `arg` accepts; the runtime value is the same spec every subcommand
+  // what the arg parser accepts; the runtime value is the same spec every subcommand
   // builds for itself today.
   const flagsSpecification = getFlagsSpecification(subcommand.options) as Spec;
   try {

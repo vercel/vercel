@@ -81,7 +81,7 @@ export async function parseSubcommandArgs(
         },
       ];
 
-      // --ai is a string flag; `arg` errors with "option requires argument: --ai"
+      // --ai is a string flag; the parser errors with "option requires argument: --ai"
       // when the user passes `--ai` with no description. Give a concrete fix.
       const aiIdx = argv.indexOf('--ai');
       const aiMissingValue =
