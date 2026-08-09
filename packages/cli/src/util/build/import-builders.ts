@@ -1,4 +1,3 @@
-import npa from 'npm-package-arg';
 import { satisfies, validRange } from 'semver';
 import { dirname, join } from 'path';
 import { createRequire } from 'module';
