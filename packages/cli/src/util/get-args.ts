@@ -1,6 +1,14 @@
-import arg from 'arg';
+import util from 'node:util';
 import getCommonArgs from './arg-common';
 import type { Prettify } from './types';
+
+type parseArgs = typeof util.parseArgs;
+type ParseArgsConfig = NonNullable<Parameters<parseArgs>[0]>;
+type ParseArgsConfigOptions = NonNullable<ParseArgsConfig['options']>;
+
+export interface Spec {
+  [key: string]: any;
+}
 
 type ArgOptions = {
   permissive?: boolean;
@@ -9,20 +17,21 @@ type ArgOptions = {
 /**
  * @deprecated use `parseArguments` instead
  */
-export default function getArgs<T extends arg.Spec>(
+const getArgs = util.deprecate(function getArgs<T extends Spec>(
   argv: string[],
-  argsOptions?: T,
-  argOptions: ArgOptions = {}
+  flagsSpecification?: T,
+  parserOptions: ArgOptions = {}
 ) {
-  return arg(Object.assign({}, getCommonArgs(), argsOptions), {
-    ...argOptions,
+  return parseArguments(
     argv,
-  });
-}
+    Object.assign({}, getCommonArgs(), flagsSpecification),
+    {
+      ...parserOptions,
+    }
+  );
+}, 'getArgs is deprecated, use parseArguments instead');
 
-type ParserOptions = {
-  permissive?: boolean;
-};
+export default getArgs;
 
 /**
  * Parses command line arguments.
@@ -39,19 +48,66 @@ type ParserOptions = {
  * - `args` was previously returned under the `_` key
  * - `flags` previously these keys were mixed with the positional arguments
  */
-export function parseArguments<T extends arg.Spec>(
+export function parseArguments<T extends Spec>(
   args: string[],
   flagsSpecification?: T,
-  parserOptions: ParserOptions = {}
-) {
-  // currently parseArgument (and arg as a whole) will hang
-  // if there are cycles in the flagsSpecification
-  const { _: positional, ...rest } = arg(
-    Object.assign({}, getCommonArgs(), flagsSpecification),
-    {
-      ...parserOptions,
-      argv: args,
+  parserOptions: ArgOptions = {}
+): {
+  args: string[];
+  flags: Record<string, any>;
+} {
+  const options: ParseArgsConfigOptions = {
+    help: {
+      default: undefined,
+      type: 'boolean',
+      short: 'h',
+    },
+  };
+
+  for (const [rawKey, value] of Object.entries(flagsSpecification ?? {})) {
+    if (/^--\w/.test(rawKey)) {
+      const key = rawKey.replace(/^--/, '');
+      const type =
+        value === String || value instanceof String ? 'string' : 'boolean';
+      options[key] = {
+        type,
+      };
     }
-  );
-  return { args: positional, flags: rest as Prettify<typeof rest> };
+  }
+
+  for (const [rawKey, value] of Object.entries(flagsSpecification ?? {})) {
+    if (/^-\w/.test(rawKey)) {
+      const shortKey = rawKey.replace(/^-/, '');
+      const parentKey = value.replace(/^--/, '');
+      options[parentKey].short ??= shortKey;
+    }
+  }
+
+  const parsed = util.parseArgs({
+    args,
+    allowPositionals: true,
+    options,
+    strict: !parserOptions.permissive,
+    tokens: true,
+  });
+
+  const argsOutput: string[] = [];
+  const flagsOutput: Record<string, any> = {};
+
+  for (const token of parsed.tokens) {
+    if (token.kind === 'option' && token.name === 'help') {
+      flagsOutput[`--${token.name}`] = true;
+    } else if (token.kind === 'option' && token.value !== undefined) {
+      flagsOutput[`--${token.name}`] = token.value;
+    } else if (token.kind === 'option' && token.value === undefined) {
+      argsOutput.push(token.rawName);
+    } else if (token.kind === 'positional') {
+      argsOutput.push(token.value);
+    }
+  }
+
+  return {
+    args: argsOutput,
+    flags: flagsOutput as Prettify<typeof flagsOutput>,
+  };
 }

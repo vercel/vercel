@@ -1,5 +1,4 @@
 import { writeFile } from 'node:fs/promises';
-import type { Spec } from 'arg';
 import chalk from 'chalk';
 import table from '../../util/output/table';
 import type Client from '../../util/client';
@@ -9,6 +8,7 @@ import stamp from '../../util/output/stamp';
 import { isAPIError } from '../../util/errors-ts';
 import { canPrompt } from '../../util/can-prompt';
 import { parseArguments } from '../../util/get-args';
+import type { Spec } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import {

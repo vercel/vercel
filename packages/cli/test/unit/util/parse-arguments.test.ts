@@ -44,7 +44,7 @@ describe('parseArguments', () => {
   it('fails when passing in a flag that is not specified', () => {
     const args = ['--nonsense'];
     expect(() => parseArguments(args, {})).toThrowErrorMatchingInlineSnapshot(
-      `[ArgError: unknown or unexpected option: --nonsense]`
+      `[TypeError: Unknown option '--nonsense'. To specify a positional argument starting with a '-', place it at the end of the command after '--', as in '-- "--nonsense"]`
     );
   });
 
