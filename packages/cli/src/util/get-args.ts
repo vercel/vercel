@@ -64,11 +64,21 @@ export function parseArguments<T extends Spec>(
     },
   };
 
+  // Automatically include the global command options (e.g. `--token`, `--cwd`,
+  // `--scope`, `--debug`, ...) so every caller of `parseArguments` recognizes
+  // them without having to redeclare them. Caller-supplied flags take
+  // precedence in case of collisions.
+  const mergedSpecification: Spec = Object.assign(
+    {},
+    getCommonArgs(),
+    flagsSpecification ?? {}
+  );
+
   // Track which flags should have their string values coerced to numbers,
   // mirroring the behavior of the legacy `arg` parser.
   const numberKeys = new Set<string>();
 
-  for (const [rawKey, value] of Object.entries(flagsSpecification ?? {})) {
+  for (const [rawKey, value] of Object.entries(mergedSpecification)) {
     if (/^--\w/.test(rawKey)) {
       const key = rawKey.replace(/^--/, '');
 
@@ -96,7 +106,7 @@ export function parseArguments<T extends Spec>(
     }
   }
 
-  for (const [rawKey, value] of Object.entries(flagsSpecification ?? {})) {
+  for (const [rawKey, value] of Object.entries(mergedSpecification)) {
     if (/^-\w/.test(rawKey)) {
       const shortKey = rawKey.replace(/^-/, '');
       const parentKey = value.replace(/^--/, '');
