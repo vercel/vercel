@@ -1,6 +1,6 @@
-import type arg from 'arg';
 import type { CommandOption } from '../commands/help';
 import type { Prettify } from './types';
+import type { Spec } from './get-args';
 
 // TS type that inputs a `CommandOption` and outputs a type that is compatible
 // with the `arg` package's `Spec` type. For example:
@@ -24,10 +24,9 @@ type ToArgSpec<T extends CommandOption> = {
 export function getFlagsSpecification<T extends ReadonlyArray<CommandOption>>(
   options: T
 ): Prettify<ToArgSpec<T[number]>> {
-  const flagsSpecification: arg.Spec = {};
+  const flagsSpecification: Spec = {};
 
   for (const option of options) {
-    // @ts-expect-error - TypeScript complains about `readonly` modifier
     flagsSpecification[`--${option.name}`] = option.type;
     if (option.shorthand) {
       flagsSpecification[`-${option.shorthand}`] = `--${option.name}`;

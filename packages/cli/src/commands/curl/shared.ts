@@ -15,12 +15,12 @@ import type {
   ProjectLinked,
 } from '@vercel-internals/types';
 import { parseArguments } from '../../util/get-args';
+import type { Spec } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { help } from '../help';
 import { getCommandName } from '../../util/pkg-name';
 import type { Command } from '../help';
-import type arg from 'arg';
 import getDeployment from '../../util/get-deployment';
 
 export interface DeploymentUrlOptions {
@@ -264,7 +264,7 @@ export function setupCurlLikeCommand(
 
   let parsedArgs = null;
 
-  const flagsSpecification = getFlagsSpecification(command.options) as arg.Spec;
+  const flagsSpecification = getFlagsSpecification(command.options) as Spec;
 
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
