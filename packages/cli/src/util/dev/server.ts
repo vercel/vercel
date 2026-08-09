@@ -20,6 +20,7 @@ import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
 import deepEqual from 'fast-deep-equal';
 import { checkForPort } from './port-utils';
+import npa from 'npm-package-arg';
 import type { ChildProcess } from 'child_process';
 import JSONparse from 'json-parse-better-errors';
 
