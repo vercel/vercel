@@ -64,14 +64,37 @@ export function parseArguments<T extends Spec>(
     },
   };
 
+  // Track which flags should have their string values coerced to numbers,
+  // mirroring the behavior of the legacy `arg` parser.
+  const numberKeys = new Set<string>();
+
   for (const [rawKey, value] of Object.entries(flagsSpecification ?? {})) {
     if (/^--\w/.test(rawKey)) {
       const key = rawKey.replace(/^--/, '');
-      const type =
-        value === String || value instanceof String ? 'string' : 'boolean';
+
+      // Array types (e.g. `[String]` / `[Number]`) accept multiple values.
+      const isMultiple = Array.isArray(value);
+      const elementType = isMultiple ? value[0] : value;
+
+      const isString =
+        elementType === String || elementType instanceof String;
+      const isNumber =
+        elementType === Number || elementType instanceof Number;
+
+      // Any flag that takes a value (String, Number, or an array of those)
+      // must be declared as a `'string'` option for `util.parseArgs`.
+      // Only bare `Boolean` flags remain `'boolean'`.
+      const type: 'string' | 'boolean' =
+        isString || isNumber ? 'string' : 'boolean';
+
       options[key] = {
         type,
+        ...(isMultiple ? { multiple: true } : {}),
       };
+
+      if (isNumber) {
+        numberKeys.add(key);
+      }
     }
   }
 
@@ -98,7 +121,20 @@ export function parseArguments<T extends Spec>(
     if (token.kind === 'option' && token.name === 'help') {
       flagsOutput[`--${token.name}`] = true;
     } else if (token.kind === 'option' && token.value !== undefined) {
-      flagsOutput[`--${token.name}`] = token.value;
+      const flagKey = `--${token.name}`;
+      const value = numberKeys.has(token.name)
+        ? Number(token.value)
+        : token.value;
+      if (options[token.name]?.multiple) {
+        const existing = flagsOutput[flagKey];
+        if (Array.isArray(existing)) {
+          existing.push(value);
+        } else {
+          flagsOutput[flagKey] = [value];
+        }
+      } else {
+        flagsOutput[flagKey] = value;
+      }
     } else if (token.kind === 'option' && token.value === undefined) {
       argsOutput.push(token.rawName);
     } else if (token.kind === 'positional') {
