@@ -2,4 +2,5 @@
 'vercel': minor
 ---
 
-Use Node-native `util.parseArgs` for argument parsing.
+Replace `arg` dependency witht Node-native `util.parseArgs` for CLI argument parsing.
+
