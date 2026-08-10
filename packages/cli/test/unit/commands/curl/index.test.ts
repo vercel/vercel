@@ -227,6 +227,110 @@ describe('curl', () => {
       );
     });
 
+    it('should not forward --cwd to the curl process', async () => {
+      client.setArgv(
+        'curl',
+        '--cwd',
+        '/tmp/some-project',
+        'https://example.com/api/hello',
+        '--protection-bypass',
+        'test-secret',
+        '-X',
+        'POST',
+        '-H',
+        'Content-Type: application/json'
+      );
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        [
+          '--url',
+          'https://example.com/api/hello',
+          '--header',
+          'x-vercel-protection-bypass: test-secret',
+          '-X',
+          'POST',
+          '-H',
+          'Content-Type: application/json',
+        ],
+        expect.any(Object)
+      );
+    });
+
+    it('should not forward --cwd=<dir> to the curl process', async () => {
+      client.setArgv(
+        'curl',
+        '--cwd=/tmp/some-project',
+        'https://example.com/api/hello',
+        '--protection-bypass',
+        'test-secret',
+        '--compressed'
+      );
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        [
+          '--url',
+          'https://example.com/api/hello',
+          '--header',
+          'x-vercel-protection-bypass: test-secret',
+          '--compressed',
+        ],
+        expect.any(Object)
+      );
+    });
+
+    it('should resolve the linked project from --cwd', async () => {
+      await setupLinkedProject();
+      // The root CLI applies `--cwd` to `client.cwd` before dispatching.
+      const cwd = client.cwd;
+      const getLinkedProjectSpy = vi.spyOn(linkModule, 'getLinkedProject');
+
+      client.setArgv(
+        'curl',
+        '--cwd',
+        cwd,
+        '/api/hello',
+        '--protection-bypass',
+        'test-secret',
+        '--silent'
+      );
+      const exitCode = await curl(client);
+
+      expect(exitCode).toEqual(0);
+      expect(getLinkedProjectSpy).toHaveBeenCalledWith(client, { cwd });
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        [
+          '--url',
+          'https://static-project-abc123.vercel.app/api/hello',
+          '--header',
+          'x-vercel-protection-bypass: test-secret',
+          '--silent',
+        ],
+        expect.any(Object)
+      );
+      getLinkedProjectSpy.mockRestore();
+    });
+
+    it('should reject when --cwd is given without a path', async () => {
+      client.setArgv('curl', '--cwd', '/tmp/some-project');
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('requires a URL or API path');
+      expect(spawnMock).not.toHaveBeenCalled();
+    });
+
+    it('should reject when --cwd is missing its value and no path is given', async () => {
+      client.setArgv('curl', '--cwd');
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('requires a URL or API path');
+      expect(spawnMock).not.toHaveBeenCalled();
+    });
+
     it('should accept curl --url as the target', async () => {
       client.setArgv(
         'curl',
@@ -1126,6 +1230,143 @@ describe('parseCurlLikeArgs', () => {
 
     expect(parsed.target).toBe('/api/hello');
     expect(parsed.toolFlags).toEqual(['--scope', 'curl-value', '--team=other']);
+  });
+
+  it('consumes --cwd and its value instead of forwarding them to curl', () => {
+    const spaceForm = parseCurlLikeArgs(
+      ['curl', '--cwd', '/tmp/project', '/api/hello', '--silent'],
+      'curl'
+    );
+    const equalsForm = parseCurlLikeArgs(
+      ['curl', '--cwd=/tmp/project', '/api/hello', '--silent'],
+      'curl'
+    );
+    const beforeCommand = parseCurlLikeArgs(
+      ['--cwd', '/tmp/project', 'curl', '/api/hello', '--silent'],
+      'curl'
+    );
+    const afterTarget = parseCurlLikeArgs(
+      ['curl', '/api/hello', '--cwd', '/tmp/project', '--silent'],
+      'curl'
+    );
+
+    for (const parsed of [spaceForm, equalsForm, beforeCommand, afterTarget]) {
+      expect(parsed.target).toBe('/api/hello');
+      expect(parsed.toolFlags).toEqual(['--silent']);
+    }
+  });
+
+  it('leaves legitimate curl flags untouched alongside --cwd', () => {
+    const parsed = parseCurlLikeArgs(
+      [
+        'curl',
+        '--cwd',
+        '/tmp/project',
+        'https://example.com/api/hello',
+        '-X',
+        'POST',
+        '-H',
+        'Content-Type: application/json',
+        '-d',
+        '{"ok":true}',
+        '--compressed',
+      ],
+      'curl'
+    );
+
+    expect(parsed.target).toBe('https://example.com/api/hello');
+    expect(parsed.toolFlags).toEqual([
+      '-X',
+      'POST',
+      '-H',
+      'Content-Type: application/json',
+      '-d',
+      '{"ok":true}',
+      '--compressed',
+    ]);
+  });
+
+  it('consumes the other global flags the root CLI owns', () => {
+    const parsed = parseCurlLikeArgs(
+      [
+        'curl',
+        '--token',
+        'vc-token',
+        '--local-config',
+        'vercel.json',
+        '--global-config',
+        '/tmp/.vercel',
+        '--api',
+        'https://api.vercel.com',
+        '--debug',
+        '--no-color',
+        '--non-interactive',
+        '/api/hello',
+        '--silent',
+      ],
+      'curl'
+    );
+
+    expect(parsed.target).toBe('/api/hello');
+    expect(parsed.toolFlags).toEqual(['--silent']);
+
+    // The root CLI also accepts `--non-interactive false`.
+    const explicitValue = parseCurlLikeArgs(
+      ['curl', '--non-interactive', 'false', '/api/hello'],
+      'curl'
+    );
+
+    expect(explicitValue.target).toBe('/api/hello');
+    expect(explicitValue.toolFlags).toEqual([]);
+  });
+
+  it('leaves --version for curl, which owns that flag', () => {
+    const parsed = parseCurlLikeArgs(
+      ['curl', '/api/hello', '--version'],
+      'curl'
+    );
+
+    expect(parsed.target).toBe('/api/hello');
+    expect(parsed.toolFlags).toEqual(['--version']);
+  });
+
+  it('passes --cwd through untouched after --', () => {
+    const parsed = parseCurlLikeArgs(
+      ['curl', '/api/hello', '--', '--cwd', 'curl-value'],
+      'curl'
+    );
+
+    expect(parsed.target).toBe('/api/hello');
+    expect(parsed.toolFlags).toEqual(['--cwd', 'curl-value']);
+  });
+
+  it('does not crash on a malformed or missing --cwd value', () => {
+    expect(
+      parseCurlLikeArgs(['curl', '/api/hello', '--cwd'], 'curl')
+    ).toMatchObject({ target: '/api/hello', toolFlags: [] });
+
+    expect(
+      parseCurlLikeArgs(['curl', '--cwd=', '/api/hello'], 'curl')
+    ).toMatchObject({ target: '/api/hello', toolFlags: [] });
+
+    expect(
+      parseCurlLikeArgs(['curl', '--cwd', '--silent', '/api/hello'], 'curl')
+    ).toMatchObject({ target: '/api/hello', toolFlags: ['--silent'] });
+
+    expect(parseCurlLikeArgs(['curl', '--cwd'], 'curl')).toMatchObject({
+      target: undefined,
+      toolFlags: [],
+    });
+  });
+
+  it('is unaffected when --cwd is not provided', () => {
+    const parsed = parseCurlLikeArgs(
+      ['curl', '/api/hello', '-X', 'POST', '--compressed'],
+      'curl'
+    );
+
+    expect(parsed.target).toBe('/api/hello');
+    expect(parsed.toolFlags).toEqual(['-X', 'POST', '--compressed']);
   });
 
   it('uses curl --url as the target', () => {
