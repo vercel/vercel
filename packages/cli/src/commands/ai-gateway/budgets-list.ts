@@ -6,6 +6,10 @@ import { ensureTeam } from '../../util/ai-gateway/ensure-team';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import { ProjectNotFound } from '../../util/errors-ts';
 import getTeamById from '../../util/teams/get-team-by-id';
+import {
+  getTeamMemberByIdentifier,
+  teamMemberLabel,
+} from '../../util/teams/get-team-member';
 import output from '../../output-manager';
 import { AiGatewayBudgetsListTelemetryClient } from '../../util/telemetry/commands/ai-gateway/budgets-list';
 import { budgetsListSubcommand } from './command';
@@ -88,22 +92,37 @@ export default async function list(client: Client, argv: string[]) {
 }
 
 // Budgets carry only the internal scope id; resolve it to a human name for the
-// table (team slug or project name), falling back to the id when the resource
-// can't be resolved. JSON output keeps the raw scopeId as the stable contract.
+// table (team slug, project name, or member handle), falling back to the id when
+// the resource can't be resolved. JSON output keeps the raw scopeId as the stable
+// contract. The api-key scope is handled separately (name comes from the API).
 async function resolveScopeName(
   client: Client,
   budget: Budget
 ): Promise<string> {
   try {
-    if (budget.scopeType === 'team') {
-      const team = await getTeamById(client, budget.scopeId);
-      return team.slug || team.name || budget.scopeId;
+    switch (budget.scopeType) {
+      case 'team': {
+        const team = await getTeamById(client, budget.scopeId);
+        return team.slug || team.name || budget.scopeId;
+      }
+      case 'project': {
+        const project = await getProjectByNameOrId(client, budget.scopeId);
+        return project instanceof ProjectNotFound
+          ? budget.scopeId
+          : project.name || budget.scopeId;
+      }
+      case 'user': {
+        const member = await getTeamMemberByIdentifier(
+          client,
+          client.config.currentTeam as string,
+          budget.scopeId
+        );
+        return member ? teamMemberLabel(member) : budget.scopeId;
+      }
+      default:
+        // api-key rows: name resolution handled separately.
+        return budget.scopeId;
     }
-    const project = await getProjectByNameOrId(client, budget.scopeId);
-    if (project instanceof ProjectNotFound) {
-      return budget.scopeId;
-    }
-    return project.name || budget.scopeId;
   } catch {
     return budget.scopeId;
   }

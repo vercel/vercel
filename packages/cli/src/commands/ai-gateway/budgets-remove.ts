@@ -3,6 +3,10 @@ import type Client from '../../util/client';
 import { removeBudget, parseBudgetScope } from '../../util/ai-gateway/budgets';
 import { ensureTeam } from '../../util/ai-gateway/ensure-team';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
+import {
+  getTeamMemberByIdentifier,
+  teamMemberLabel,
+} from '../../util/teams/get-team-member';
 import { ProjectNotFound } from '../../util/errors-ts';
 import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import output from '../../output-manager';
@@ -59,6 +63,8 @@ export default async function remove(client: Client, argv: string[]) {
   }
 
   let projectId: string | undefined;
+  let userId: string | undefined;
+  let targetName = scope.scopeType === 'team' ? undefined : scope.name;
   if (scope.scopeType === 'project') {
     const resolved = await getProjectByNameOrId(client, scope.name);
     if (resolved instanceof ProjectNotFound) {
@@ -66,12 +72,24 @@ export default async function remove(client: Client, argv: string[]) {
       return 1;
     }
     projectId = resolved.id;
+  } else if (scope.scopeType === 'user') {
+    const member = await getTeamMemberByIdentifier(
+      client,
+      client.config.currentTeam as string,
+      scope.name
+    );
+    if (!member) {
+      output.error(`Team member not found: ${scope.name}`);
+      return 1;
+    }
+    userId = member.uid;
+    targetName = teamMemberLabel(member);
   }
 
   const target =
     scope.scopeType === 'team'
       ? 'the team budget'
-      : `the budget for ${chalk.bold(scope.name)}`;
+      : `the budget for ${chalk.bold(targetName as string)}`;
 
   if (!yes) {
     if (client.nonInteractive) {
@@ -88,7 +106,7 @@ export default async function remove(client: Client, argv: string[]) {
   output.spinner('Removing budget…');
 
   try {
-    await removeBudget(client, scope.scopeType, projectId);
+    await removeBudget(client, scope.scopeType, { projectId, userId });
     output.stopSpinner();
     if (asJson) {
       client.stdout.write(
@@ -96,6 +114,7 @@ export default async function remove(client: Client, argv: string[]) {
           {
             scopeType: scope.scopeType,
             ...(projectId ? { projectId } : {}),
+            ...(userId ? { userId } : {}),
             removed: true,
           },
           null,
@@ -104,7 +123,7 @@ export default async function remove(client: Client, argv: string[]) {
       );
     } else {
       const removedValue =
-        scope.scopeType === 'team' ? 'team budget' : `budget for ${scope.name}`;
+        scope.scopeType === 'team' ? 'team budget' : `budget for ${targetName}`;
       printAlignedLabel('Removed', removedValue, { gutter: '✓' });
     }
     return 0;

@@ -29,6 +29,19 @@ function useSetBudget(response: unknown = teamBudget) {
   return () => body;
 }
 
+const teamMember = {
+  uid: 'usr_member',
+  email: 'teammate@example.com',
+  username: 'teammate',
+  role: 'MEMBER',
+};
+
+function useTeamMembers(teamId: string, members = [teamMember]) {
+  client.scenario.get(`/v2/teams/${teamId}/members`, (_req, res) => {
+    res.json({ members, pagination: { count: members.length, next: null } });
+  });
+}
+
 describe('ai-gateway budgets set', () => {
   describe('--help', () => {
     it('returns exit code 2', async () => {
@@ -161,11 +174,73 @@ describe('ai-gateway budgets set', () => {
   });
 
   it('rejects an unknown scope', async () => {
-    client.setArgv('ai-gateway', 'budgets', 'set', 'user', '--limit', '100');
+    client.setArgv('ai-gateway', 'budgets', 'set', 'org', '--limit', '100');
 
     const exitCodePromise = aiGateway(client);
 
     await expect(client.stderr).toOutput('Unknown scope');
+    expect(await exitCodePromise).toBe(1);
+  });
+
+  it('sets a user budget, resolving the identifier to a user id', async () => {
+    const team = useTeam();
+    useUser();
+    useTeamMembers(team.id);
+    const getBody = useSetBudget({
+      ...teamBudget,
+      quotaEntityId: `api_key_id_${teamMember.uid}`,
+      scopeType: 'user',
+      scopeId: teamMember.uid,
+      limitAmount: 100,
+    });
+    client.config.currentTeam = team.id;
+    client.setArgv(
+      'ai-gateway',
+      'budgets',
+      'set',
+      'user',
+      teamMember.email,
+      '--limit',
+      '100'
+    );
+
+    const exitCode = await aiGateway(client);
+
+    expect(exitCode).toBe(0);
+    expect(getBody()).toMatchObject({
+      scopeType: 'user',
+      userId: teamMember.uid,
+      limitAmount: 100,
+    });
+  });
+
+  it('errors when the user identifier cannot be resolved', async () => {
+    const team = useTeam();
+    useUser();
+    useTeamMembers(team.id, []);
+    client.config.currentTeam = team.id;
+    client.setArgv(
+      'ai-gateway',
+      'budgets',
+      'set',
+      'user',
+      'nobody@example.com',
+      '--limit',
+      '100'
+    );
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput('Team member not found');
+    expect(await exitCodePromise).toBe(1);
+  });
+
+  it('requires a user identifier', async () => {
+    client.setArgv('ai-gateway', 'budgets', 'set', 'user', '--limit', '100');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput('user scope requires');
     expect(await exitCodePromise).toBe(1);
   });
 

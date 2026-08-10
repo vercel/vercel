@@ -1,14 +1,19 @@
 import type Client from '../client';
 
-export type BudgetScopeType = 'team' | 'project';
+export type BudgetScopeType = 'team' | 'project' | 'user';
 
-// Scopes currently accepted as the `budgets set|remove <scope>` positional.
-// `user` and `api-key` scopes are planned follow-ups.
-export const BUDGET_SCOPE_TYPES: BudgetScopeType[] = ['team', 'project'];
+// Scopes accepted as the `budgets set|remove <scope>` positional. The `api-key`
+// scope is set on the key itself (api-keys quota endpoint), not here.
+export const BUDGET_SCOPE_TYPES: BudgetScopeType[] = [
+  'team',
+  'project',
+  'user',
+];
 
 export type ParsedBudgetScope =
   | { scopeType: 'team' }
-  | { scopeType: 'project'; name: string };
+  | { scopeType: 'project'; name: string }
+  | { scopeType: 'user'; name: string };
 
 /**
  * Parses the positional scope for `budgets set|remove`. The team identity stays
@@ -44,19 +49,25 @@ export function parseBudgetScope(
 
   const [name, ...extra] = rest;
   if (!name) {
-    return { error: 'The project scope requires a project name or id.' };
+    return {
+      error:
+        scopeArg === 'project'
+          ? 'The project scope requires a project name or id.'
+          : 'The user scope requires a user email, username, or id.',
+    };
   }
   if (extra.length > 0) {
     return { error: `Unexpected argument "${extra[0]}".` };
   }
-  return { scope: { scopeType: 'project', name } };
+  return { scope: { scopeType: scopeArg as 'project' | 'user', name } };
 }
 
 export type BudgetRefreshPeriod = 'daily' | 'weekly' | 'monthly' | 'none';
 
 export type Budget = {
   quotaEntityId: string;
-  scopeType: BudgetScopeType;
+  // The list endpoint also returns `api-key` rows (explicit or default-covered).
+  scopeType: BudgetScopeType | 'api-key';
   scopeId: string;
   limitAmount: number;
   currentSpend: number;
@@ -72,6 +83,7 @@ export type Budget = {
 export type SetBudgetInput = {
   scopeType: BudgetScopeType;
   projectId?: string;
+  userId?: string;
   limitAmount: number;
   refreshPeriod?: BudgetRefreshPeriod;
   includeByokInQuota?: boolean;
@@ -102,11 +114,14 @@ export async function setBudget(
 export async function removeBudget(
   client: Client,
   scopeType: BudgetScopeType,
-  projectId?: string
+  opts: { projectId?: string; userId?: string } = {}
 ): Promise<void> {
   const params = new URLSearchParams({ scopeType });
-  if (projectId) {
-    params.set('projectId', projectId);
+  if (opts.projectId) {
+    params.set('projectId', opts.projectId);
+  }
+  if (opts.userId) {
+    params.set('userId', opts.userId);
   }
   await client.fetch(`/ai-gateway/budgets?${params.toString()}`, {
     method: 'DELETE',

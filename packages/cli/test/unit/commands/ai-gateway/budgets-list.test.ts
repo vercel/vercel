@@ -28,6 +28,14 @@ const projectBudget = {
   limitAmount: 200,
 };
 
+const userBudget = {
+  ...teamBudget,
+  quotaEntityId: 'api_key_id_usr_member',
+  scopeType: 'user',
+  scopeId: 'usr_member',
+  limitAmount: 100,
+};
+
 function useListBudgets(budgets: unknown[] = [teamBudget, projectBudget]) {
   let query: unknown;
   client.scenario.get('/ai-gateway/budgets/list', (req, res) => {
@@ -35,6 +43,17 @@ function useListBudgets(budgets: unknown[] = [teamBudget, projectBudget]) {
     res.json({ budgets });
   });
   return () => query;
+}
+
+function useTeamMembers(
+  teamId: string,
+  members: unknown[] = [
+    { uid: 'usr_member', email: 'teammate@example.com', username: 'teammate' },
+  ]
+) {
+  client.scenario.get(`/v2/teams/${teamId}/members`, (_req, res) => {
+    res.json({ members, pagination: { count: members.length, next: null } });
+  });
 }
 
 describe('ai-gateway budgets list', () => {
@@ -62,6 +81,20 @@ describe('ai-gateway budgets list', () => {
     const exitCodePromise = aiGateway(client);
 
     await expect(client.stdout).toOutput(defaultProject.name!);
+    expect(await exitCodePromise).toBe(0);
+  });
+
+  it('resolves a user scope id to a member handle', async () => {
+    const team = useTeam();
+    useUser();
+    useTeamMembers(team.id);
+    useListBudgets([userBudget]);
+    client.config.currentTeam = team.id;
+    client.setArgv('ai-gateway', 'budgets', 'list');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stdout).toOutput('teammate');
     expect(await exitCodePromise).toBe(0);
   });
 

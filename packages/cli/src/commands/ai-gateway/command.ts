@@ -521,7 +521,7 @@ export const budgetsSetSubcommand = {
   name: 'set',
   aliases: [],
   description:
-    'Create or update an AI Gateway budget for a scope (team or project <name>)',
+    'Create or update an AI Gateway budget for a scope (team, project <name>, or user <email>)',
   arguments: [
     { name: 'scope', required: true },
     { name: 'name', required: false },
@@ -563,6 +563,10 @@ export const budgetsSetSubcommand = {
       name: 'Set a project budget',
       value: `${packageName} ai-gateway budgets set project my-project --limit 200`,
     },
+    {
+      name: "Set a user's budget",
+      value: `${packageName} ai-gateway budgets set user teammate@example.com --limit 100`,
+    },
   ],
 } as const;
 
@@ -584,7 +588,7 @@ export const budgetsRemoveSubcommand = {
   name: 'remove',
   aliases: ['rm', 'delete'],
   description:
-    'Remove an AI Gateway budget for a scope (team or project <name>)',
+    'Remove an AI Gateway budget for a scope (team, project <name>, or user <email>)',
   arguments: [
     { name: 'scope', required: true },
     { name: 'name', required: false },
@@ -598,6 +602,10 @@ export const budgetsRemoveSubcommand = {
     {
       name: 'Remove a project budget',
       value: `${packageName} ai-gateway budgets rm project my-project`,
+    },
+    {
+      name: "Remove a user's budget",
+      value: `${packageName} ai-gateway budgets rm user teammate@example.com`,
     },
   ],
 } as const;

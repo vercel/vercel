@@ -6,6 +6,10 @@ import {
 } from '../../util/ai-gateway/budgets';
 import { ensureTeam } from '../../util/ai-gateway/ensure-team';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
+import {
+  getTeamMemberByIdentifier,
+  teamMemberLabel,
+} from '../../util/teams/get-team-member';
 import { ProjectNotFound } from '../../util/errors-ts';
 import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import output from '../../output-manager';
@@ -87,6 +91,8 @@ export default async function set(client: Client, argv: string[]) {
   }
 
   let projectId: string | undefined;
+  let userId: string | undefined;
+  let scopeLabel = 'team';
   if (scope.scopeType === 'project') {
     const resolved = await getProjectByNameOrId(client, scope.name);
     if (resolved instanceof ProjectNotFound) {
@@ -94,6 +100,19 @@ export default async function set(client: Client, argv: string[]) {
       return 1;
     }
     projectId = resolved.id;
+    scopeLabel = `project ${scope.name}`;
+  } else if (scope.scopeType === 'user') {
+    const member = await getTeamMemberByIdentifier(
+      client,
+      client.config.currentTeam as string,
+      scope.name
+    );
+    if (!member) {
+      output.error(`Team member not found: ${scope.name}`);
+      return 1;
+    }
+    userId = member.uid;
+    scopeLabel = `user ${teamMemberLabel(member)}`;
   }
 
   output.spinner('Setting budget…');
@@ -102,6 +121,7 @@ export default async function set(client: Client, argv: string[]) {
     const budget = await setBudget(client, {
       scopeType: scope.scopeType,
       ...(projectId ? { projectId } : {}),
+      ...(userId ? { userId } : {}),
       limitAmount: limit,
       ...(refreshPeriod
         ? { refreshPeriod: refreshPeriod as BudgetRefreshPeriod }
@@ -114,8 +134,6 @@ export default async function set(client: Client, argv: string[]) {
     if (asJson) {
       client.stdout.write(`${JSON.stringify(budget, null, 2)}\n`);
     } else {
-      const scopeLabel =
-        scope.scopeType === 'project' ? `project ${scope.name}` : 'team';
       printAlignedLabel('Set budget', scopeLabel, { gutter: '✓' });
       printAlignedLabel('Limit', `$${budget.limitAmount}`);
       printAlignedLabel('Refresh', budget.refreshPeriod);

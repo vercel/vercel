@@ -14,6 +14,19 @@ function useRemoveBudget() {
   return () => query;
 }
 
+const teamMember = {
+  uid: 'usr_member',
+  email: 'teammate@example.com',
+  username: 'teammate',
+  role: 'MEMBER',
+};
+
+function useTeamMembers(teamId: string, members = [teamMember]) {
+  client.scenario.get(`/v2/teams/${teamId}/members`, (_req, res) => {
+    res.json({ members, pagination: { count: members.length, next: null } });
+  });
+}
+
 describe('ai-gateway budgets remove', () => {
   describe('--help', () => {
     it('returns exit code 2', async () => {
@@ -111,11 +124,35 @@ describe('ai-gateway budgets remove', () => {
   });
 
   it('rejects an unknown scope', async () => {
-    client.setArgv('ai-gateway', 'budgets', 'remove', 'user', '--yes');
+    client.setArgv('ai-gateway', 'budgets', 'remove', 'org', '--yes');
 
     const exitCodePromise = aiGateway(client);
 
     await expect(client.stderr).toOutput('Unknown scope');
     expect(await exitCodePromise).toBe(1);
+  });
+
+  it('removes a user budget, resolving the identifier to a user id', async () => {
+    const team = useTeam();
+    useUser();
+    useTeamMembers(team.id);
+    const getQuery = useRemoveBudget();
+    client.config.currentTeam = team.id;
+    client.setArgv(
+      'ai-gateway',
+      'budgets',
+      'rm',
+      'user',
+      teamMember.email,
+      '--yes'
+    );
+
+    const exitCode = await aiGateway(client);
+
+    expect(exitCode).toBe(0);
+    expect(getQuery()).toMatchObject({
+      scopeType: 'user',
+      userId: teamMember.uid,
+    });
   });
 });
