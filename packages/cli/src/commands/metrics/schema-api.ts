@@ -56,6 +56,7 @@ export async function fetchMetricCatalog(
         : client.apiUrl;
     const url = new URL('/v1/metrics', baseUrl);
     url.searchParams.set('limit', String(METRIC_CATALOG_PAGE_SIZE));
+    url.searchParams.set('includeLogs', 'false');
     if (search) {
       url.searchParams.set('search', search);
     }

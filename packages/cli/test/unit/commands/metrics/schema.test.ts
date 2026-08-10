@@ -30,6 +30,7 @@ describe('metrics schema v1', () => {
   it('lists metrics by default', async () => {
     client.scenario.get('/v1/metrics', (req, res) => {
       expect(req.query).toEqual({
+        includeLogs: 'false',
         limit: '250',
         teamId: 'team_dummy',
       });
@@ -68,6 +69,7 @@ describe('metrics schema v1', () => {
     client.scenario.get('/v1/metrics', (req, res) => {
       if (req.query.cursor === 'next_page') {
         expect(req.query).toEqual({
+          includeLogs: 'false',
           limit: '250',
           cursor: 'next_page',
           teamId: 'team_dummy',
@@ -156,6 +158,7 @@ describe('metrics schema v1', () => {
   it('shows prefix detail with a positional metric', async () => {
     client.scenario.get('/v1/metrics', (req, res) => {
       expect(req.query).toEqual({
+        includeLogs: 'false',
         limit: '250',
         search: 'vercel.request',
         teamId: 'team_dummy',
