@@ -4,6 +4,9 @@
   "tasks": {
     "build": {
       "outputs": ["**/*.js", "**/*.d.ts"]
+    },
+    "build:docs": {
+      "dependsOn": ["build", "^build"]
     }
   }
 }

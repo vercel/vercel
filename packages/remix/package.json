@@ -35,7 +35,7 @@
     "@vercel/build-utils": "workspace:*",
     "glob": "10.3.16",
     "semver": "7.5.2",
-    "vitest": "2.0.1"
+    "vitest": "4.1.10"
   },
   "VERCEL_REMIX_RUN_DEV_MAX_VERSION": "2.16.6"
 }

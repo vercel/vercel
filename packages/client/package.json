@@ -31,7 +31,7 @@
     "@types/node": "20.11.0",
     "@types/recursive-readdir": "2.2.0",
     "@types/tar-fs": "1.16.1",
-    "vitest": "2.0.1"
+    "vitest": "4.1.10"
   },
   "dependencies": {
     "@vercel/build-utils": "workspace:*",

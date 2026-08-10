@@ -59,7 +59,7 @@
     "multistream": "2.1.1",
     "semver": "6.3.1",
     "smol-toml": "1.5.2",
-    "vitest": "2.0.1",
+    "vitest": "4.1.10",
     "typescript": "4.9.5",
     "yazl": "2.5.1"
   }

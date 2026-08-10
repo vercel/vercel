@@ -10,6 +10,6 @@
   "devDependencies": {
     "@vercel/build-utils": "workspace:*",
     "@vercel/frameworks": "workspace:*",
-    "vitest": "2.0.3"
+    "vitest": "4.1.10"
   }
 }

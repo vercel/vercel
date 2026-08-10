@@ -21,7 +21,7 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "@types/node": "20.11.0",
-    "@vitest/coverage-v8": "2.1.4",
-    "vitest": "2.1.4"
+    "@vitest/coverage-v8": "4.1.10",
+    "vitest": "4.1.10"
   }
 }

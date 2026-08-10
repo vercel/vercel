@@ -55,7 +55,7 @@
     "typedoc": "0.28.19",
     "typedoc-plugin-markdown": "4.11.0",
     "typedoc-plugin-mdn-links": "5.1.1",
-    "vitest": "2.0.1"
+    "vitest": "4.1.10"
   },
   "peerDependencies": {
     "@aws-sdk/credential-provider-web-identity": "*",

@@ -164,9 +164,10 @@ describe('successful builds', async () => {
 
         const lambda = result.output.index as unknown as NodejsLambda;
 
-        await expect(
-          JSON.stringify(result.routes, null, 2)
-        ).toMatchFileSnapshot(join(fixtureSource, 'routes.json'));
+        const expectedRoutes = JSON.parse(
+          await readFile(join(fixtureSource, 'routes.json'), 'utf-8')
+        );
+        expect(result.routes).toEqual(expectedRoutes);
 
         if (lambda.files) {
           // Assert includeFiles: if files.json exists, every listed file must be in the lambda

@@ -22,6 +22,6 @@
   "devDependencies": {
     "@types/node": "20.11.0",
     "glob": "10.2.3",
-    "vitest": "2.1.4"
+    "vitest": "4.1.10"
   }
 }

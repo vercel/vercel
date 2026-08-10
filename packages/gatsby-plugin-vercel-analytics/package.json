@@ -29,7 +29,7 @@
   ],
   "license": "Apache-2.0",
   "devDependencies": {
-    "vitest": "2.0.3"
+    "vitest": "4.1.10"
   },
   "scripts": {
     "test": "vitest run --config ../../vitest.config.mts"

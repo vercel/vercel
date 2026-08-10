@@ -28,7 +28,7 @@
     "jose": "5.9.6"
   },
   "devDependencies": {
-    "vitest": "2.0.1"
+    "vitest": "4.1.10"
   },
   "engines": {
     "node": ">= 20"

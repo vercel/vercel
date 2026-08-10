@@ -1227,7 +1227,7 @@ describe.skipIf(flakey)('build', () => {
       name: 'Error',
       message:
         'Invalid vercel.json - `rewrites[2]` should NOT have additional property `src`. Did you mean `source`?',
-      stack: expect.stringContaining('at Module.validateConfig'),
+      stack: expect.stringContaining('at validateConfig'),
       hideStackTrace: true,
       code: 'INVALID_VERCEL_CONFIG',
       link: 'https://vercel.com/docs/concepts/projects/project-configuration#rewrites',

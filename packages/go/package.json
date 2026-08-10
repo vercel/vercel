@@ -37,7 +37,7 @@
     "node-fetch": "^2.2.1",
     "string-argv": "0.3.1",
     "tar": "7.5.11",
-    "vitest": "2.0.3",
+    "vitest": "4.1.10",
     "xdg-app-paths": "5.1.0",
     "yauzl-promise": "2.1.3"
   }

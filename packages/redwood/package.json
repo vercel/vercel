@@ -31,6 +31,6 @@
     "@vercel/routing-utils": "workspace:*",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
-    "vitest": "2.0.3"
+    "vitest": "4.1.10"
   }
 }

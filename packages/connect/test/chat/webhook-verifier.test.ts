@@ -8,9 +8,11 @@ vi.mock('@vercel/oidc', () => ({
 
 describe('createConnectWebhookVerifier', () => {
   beforeEach(() => {
-    vi.mocked(verifyVercelOidcToken).mockResolvedValue(
-      {} as Awaited<ReturnType<typeof verifyVercelOidcToken>>
-    );
+    vi.mocked(verifyVercelOidcToken)
+      .mockReset()
+      .mockResolvedValue(
+        {} as Awaited<ReturnType<typeof verifyVercelOidcToken>>
+      );
   });
 
   afterEach(() => {

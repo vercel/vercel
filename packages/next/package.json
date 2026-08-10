@@ -63,7 +63,8 @@
     "source-map": "0.7.4",
     "test-listen": "1.1.0",
     "text-table": "0.2.0",
-    "vitest": "2.0.3",
+    "vite": "6.4.3",
+    "vitest": "4.1.10",
     "webpack-sources": "3.2.3"
   }
 }

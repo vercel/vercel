@@ -29,6 +29,6 @@
     "@types/node-fetch": "2.5.8",
     "@vercel/routing-utils": "workspace:*",
     "ajv": "6.12.3",
-    "vitest": "2.0.3"
+    "vitest": "4.1.10"
   }
 }

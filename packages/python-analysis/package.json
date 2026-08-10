@@ -51,6 +51,6 @@
     "@types/js-yaml": "4.0.9",
     "@types/node": "20.11.0",
     "ts-to-zod": "^3",
-    "vitest": "2.1.4"
+    "vitest": "4.1.10"
   }
 }

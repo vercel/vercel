@@ -54,8 +54,8 @@
     "@types/node": "20.11.0",
     "hono": "4.10.1",
     "tsdown": "0.16.3",
-    "vite": "^5.1.6",
-    "vitest": "^2.0.1"
+    "vite": "^6.4.3",
+    "vitest": "^4.1.10"
   },
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts"
