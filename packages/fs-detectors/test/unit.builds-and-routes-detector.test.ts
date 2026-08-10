@@ -4187,7 +4187,6 @@ describe('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `tra
     expect(getLocation('/api-index')).toBe(null);
     expect(getLocation('/apiuser.index')).toBe(null);
     expect(getLocation('/apiuser-index')).toBe(null);
-    expect(getLocation('/apiuser-index')).toBe(null);
   });
 
   it('works with file and directory placeholder of same name', async () => {

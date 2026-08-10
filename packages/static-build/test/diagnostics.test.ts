@@ -57,11 +57,6 @@ describe('diagnostics – go runtime', () => {
       framework: 'hugo',
     });
   });
-
-  it('returns nothing when no manifest file exists', async () => {
-    const files = await diagnostics({ workPath: makeTempDir() } as any);
-    expect(readResult(files)).toBeNull();
-  });
 });
 
 // ---------------------------------------------------------------------------

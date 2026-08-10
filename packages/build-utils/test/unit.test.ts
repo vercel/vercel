@@ -1,4 +1,3 @@
-import ms from 'ms';
 import path from 'path';
 import fs from 'fs-extra';
 import { strict as assert } from 'assert';
@@ -9,8 +8,6 @@ import {
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
   rename,
-  runNpmInstall,
-  runPackageJsonScript,
   scanParentDirs,
   findPackageJson,
   Prerender,
@@ -1001,33 +998,6 @@ it('should support require by path for legacy builders', () => {
   expect(Lambda2).toBe(index.Lambda);
 });
 
-it(
-  'should have correct $PATH when running `runPackageJsonScript()` with yarn',
-  async () => {
-    if (process.platform === 'win32') {
-      console.log('Skipping test on windows');
-      return;
-    }
-    if (process.platform === 'darwin') {
-      console.log('Skipping test on macOS');
-      return;
-    }
-    if (process.version.split('.')[0] !== 'v16') {
-      console.log(`Skipping test on Node.js ${process.version}`);
-      return;
-    }
-    const fixture = path.join(__dirname, 'fixtures', '19-yarn-v2');
-    await runNpmInstall(fixture);
-    await runPackageJsonScript(fixture, 'env');
-
-    // `yarn` was failing with ENOENT before, so as long as the
-    // script was invoked at all is enough to verify the fix
-    const out = await fs.readFile(path.join(fixture, 'env.txt'), 'utf8');
-    expect(out.trim()).toBeTruthy();
-  },
-  ms('1m')
-);
-
 it('should return cliType "npm" when no lockfile is present', async () => {
   const originalRepoLockfilePath = path.join(
     __dirname,
@@ -1301,28 +1271,6 @@ describe('findPackageJson', () => {
     expect(result.packageJsonPath).toBeUndefined();
     expect(result.packageJson).toBeUndefined();
   });
-});
-
-it('should retry npm install when peer deps invalid and npm@8 on node@16', async () => {
-  const nodeMajor = Number(process.versions.node.split('.')[0]);
-  if (nodeMajor !== 16) {
-    console.log(`Skipping test on node@${nodeMajor}`);
-    return;
-  }
-  if (process.platform === 'win32') {
-    console.log('Skipping test on windows');
-    return;
-  }
-  if (process.platform === 'darwin') {
-    console.log('Skipping test on mac');
-    return;
-  }
-
-  const fixture = path.join(__dirname, 'fixtures', '15-npm-8-legacy-peer-deps');
-  await runNpmInstall(fixture, [], {}, {});
-  expect(warningMessages).toStrictEqual([
-    'Warning: Retrying "Install Command" with `--legacy-peer-deps` which may accept a potentially broken dependency and slow install time.',
-  ]);
 });
 
 describe('rename', () => {

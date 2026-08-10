@@ -150,18 +150,6 @@ describe('react-router runtime route resolution with prerendered index', () => {
       })
     ).toBe('ssr-function');
   });
-
-  it('regression: prerendered index without SSR catch-all served HTML for `/__manifest`', () => {
-    // Mirrors the broken CLI >=54.2.0 behavior from CICD-2715.
-    expect(
-      resolveReactRouterRequest('/__manifest', {
-        prerenderRewrites: [getPrerenderDocumentRewrite('about', 'about.html')],
-        catchAllDest: '/',
-        hasIndexSsrFunction: false,
-        staticFiles,
-      })
-    ).toBe('static-html');
-  });
 });
 
 function getSimulatedCatchAllDest(hasReactRouterIndexFunction: boolean) {

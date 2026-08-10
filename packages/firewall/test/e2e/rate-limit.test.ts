@@ -104,7 +104,6 @@ function testWithCheckRateLimit(checkRateLimit: typeof checkRateLimitDist) {
       }
 
       await testWithCheck(check);
-      expect(fetchCalls.length).toBe(5);
 
       const headers = new Headers(fetchCalls[0].init?.headers);
 

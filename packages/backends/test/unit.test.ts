@@ -4,7 +4,7 @@ import {
   NodejsLambda,
 } from '@vercel/build-utils';
 import { build } from '../src/index';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import execa from 'execa';
 import { describe, expect, it } from 'vitest';
 import { pathToRegexp } from 'path-to-regexp';
@@ -210,25 +210,6 @@ describe('successful builds', async () => {
       50000
     ); // copying fixture and running npm install so it takes a while
   }
-
-  // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
-  it.skip(`builds workflow-server`, async () => {
-    const workPath = resolve(process.env.HOME!, 'code/workflow-server');
-
-    const result = (await build({
-      files: {},
-      workPath,
-      config: defaultConfig,
-      meta,
-      entrypoint: 'package.json',
-      repoRootPath: workPath,
-    })) as BuildResultV2Typical;
-
-    const lambda = result.output.index as unknown as NodejsLambda;
-    const tempDir = await mkdtemp(join(tmpdir(), 'workflow-server-'));
-
-    await extractAndExecuteLambda(lambda, tempDir);
-  }, 20000);
 });
 
 it.skipIf(process.platform === 'win32')(

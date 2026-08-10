@@ -116,14 +116,6 @@ describe('buildFileTree()', () => {
     expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
       normalizeWindowsPaths(fileList).sort()
     );
-
-    const [folderLinkPath, indexLinkPath] = await Promise.all([
-      fs.lstat(join(cwd, 'folder-link')),
-      fs.lstat(join(cwd, 'index-link.txt')),
-    ]);
-    expect(folderLinkPath.isSymbolicLink());
-    expect(folderLinkPath.isDirectory());
-    expect(indexLinkPath.isSymbolicLink());
   });
 
   it('should include the node_modules using `.vercelignore` allowlist', async () => {

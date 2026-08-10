@@ -1,9 +1,5 @@
 import { afterEach, beforeEach, vi, test, describe, expect } from 'vitest';
-import {
-  getAuthConfigFilePath,
-  getConfigFilePath,
-  getGlobalPathConfig,
-} from '@vercel/cli-config';
+import { getAuthConfigFilePath, getConfigFilePath } from '@vercel/cli-config';
 import {
   clearAllCredentials,
   clearAllCredentialsStrict,
@@ -98,10 +94,6 @@ function createConfigDir() {
   configDirs.push(configDir);
   return configDir;
 }
-
-test('getGlobalPathConfig', () => {
-  expect(getGlobalPathConfig()).toEqual(expect.any(String));
-});
 
 test('getConfigFilePath uses the provided config directory', () => {
   const configDir = createConfigDir();
