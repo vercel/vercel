@@ -1,4 +1,8 @@
-const { getScriptTestPatterns, intoChunks } = require('./chunk-tests');
+const {
+  getScriptTestPatterns,
+  intoChunks,
+  sortBySchedulePriority,
+} = require('./chunk-tests');
 
 describe('it should create chunks correctly', () => {
   it('should split chunks correctly less chunks than items', () => {
@@ -76,5 +80,50 @@ describe('getScriptTestPatterns', () => {
     expect(getScriptTestPatterns(packageJson, 'test-unit')).toContain(
       'test/**/*.test.ts'
     );
+  });
+});
+
+describe('sortBySchedulePriority', () => {
+  const cells = [
+    {
+      packageName: '@vercel/node',
+      scriptName: 'test-unit',
+      runner: 'ubuntu-latest',
+      label: 'node',
+    },
+    {
+      packageName: 'vercel',
+      scriptName: 'test-e2e',
+      runner: 'ubuntu-latest',
+      label: 'cli-e2e',
+    },
+    {
+      packageName: 'vercel',
+      scriptName: 'test-unit',
+      runner: 'ubuntu-latest',
+      label: 'cli-linux',
+    },
+    {
+      packageName: '@vercel/next',
+      scriptName: 'test-unit',
+      runner: 'windows-latest',
+      label: 'next-windows',
+    },
+    {
+      packageName: 'vercel',
+      scriptName: 'test-unit',
+      runner: 'windows-latest',
+      label: 'cli-windows',
+    },
+  ];
+
+  it('uses coarse task and runner priorities while preserving stable ties', () => {
+    expect(sortBySchedulePriority(cells).map(cell => cell.label)).toEqual([
+      'cli-windows',
+      'cli-linux',
+      'next-windows',
+      'node',
+      'cli-e2e',
+    ]);
   });
 });

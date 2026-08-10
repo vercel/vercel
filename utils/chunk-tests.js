@@ -74,17 +74,40 @@ const packageOptionsOverrides = {
   // but saves <30s of wall clock, since overhead already dominates test time.
   // Benchmark (wall clock of the unit-test phase):
   //   max=2 (old): ~22 min    max=4: ~10 min    max=7: ~9 min    max=14: ~8.5 min
-  vercel: { max: 7, useEnvPaths: true },
+  // The nightly matrix is capped below its total job count. Prioritize the CLI
+  // cells so these consistently long jobs are not queued behind shorter work.
+  vercel: {
+    max: 7,
+    useEnvPaths: true,
+    schedulePriority: { 'test-unit': 3, 'test-dev': 3 },
+  },
+
+  // Coarse tiers from cold nightly runs. These intentionally avoid pretending
+  // that individual timings are stable while still starting known stragglers
+  // before the bulk of the matrix.
+  '@vercel/build-utils': { schedulePriority: { 'test-e2e': 3 } },
+  examples: { schedulePriority: { 'test-e2e': 2 } },
+  '@vercel/python': { schedulePriority: { 'test-e2e': 1 } },
+  '@vercel/remix-builder': { schedulePriority: { 'test-e2e': 1 } },
+  '@vercel/static-build': { schedulePriority: { 'test-e2e': 1 } },
 
   // Next.js fixture tests create and probe real deployments, so they need
   // smaller chunks to stay within the per-job timeout.
-  '@vercel/next': { max: 20 },
+  '@vercel/next': {
+    max: 20,
+    schedulePriority: { 'test-unit': 2, 'test-next-local': 1 },
+  },
 
   // `@vercel/container`'s unit tests are pure logic with `spawn`/`fs`/`fetch`
   // fully mocked, so they're OS-independent. Run them on Linux only instead of
   // all three runners: the macOS/Windows copies add no coverage and pushed the
   // all-packages unit matrix past GitHub Actions' 256-configuration limit.
   '@vercel/container': { runners: ['ubuntu-latest'] },
+};
+
+const runnerSchedulePriority = {
+  // Windows cells consistently have the highest setup and execution overhead.
+  'windows-latest': 1,
 };
 
 const DEFAULT_TEST_FILE_EXTENSIONS = ['js', 'ts', 'mjs', 'mts'];
@@ -526,7 +549,21 @@ async function getChunkedTests() {
     }
   );
 
-  return chunkedTests;
+  return sortBySchedulePriority(chunkedTests);
+}
+
+function sortBySchedulePriority(testCells) {
+  return testCells
+    .map((cell, index) => ({
+      cell,
+      index,
+      priority:
+        (packageOptionsOverrides[cell.packageName]?.schedulePriority?.[
+          cell.scriptName
+        ] ?? 0) + (runnerSchedulePriority[cell.runner] ?? 0),
+    }))
+    .sort((a, b) => b.priority - a.priority || a.index - b.index)
+    .map(({ cell }) => cell);
 }
 
 /**
@@ -564,4 +601,5 @@ if (module === require.main || !module.parent) {
 module.exports = {
   intoChunks,
   getScriptTestPatterns,
+  sortBySchedulePriority,
 };
