@@ -36,6 +36,14 @@ const userBudget = {
   limitAmount: 100,
 };
 
+const apiKeyBudget = {
+  ...teamBudget,
+  quotaEntityId: 'api_key_id_key_123',
+  scopeType: 'api-key',
+  scopeId: 'key_123',
+  limitAmount: 50,
+};
+
 function useListBudgets(budgets: unknown[] = [teamBudget, projectBudget]) {
   let query: unknown;
   client.scenario.get('/ai-gateway/budgets/list', (req, res) => {
@@ -43,6 +51,12 @@ function useListBudgets(budgets: unknown[] = [teamBudget, projectBudget]) {
     res.json({ budgets });
   });
   return () => query;
+}
+
+function useApiKeys(apiKeys: unknown[]) {
+  client.scenario.get('/v1/api-keys', (_req, res) => {
+    res.json({ apiKeys, pagination: { count: apiKeys.length, next: null } });
+  });
 }
 
 function useTeamMembers(
@@ -95,6 +109,33 @@ describe('ai-gateway budgets list', () => {
     const exitCodePromise = aiGateway(client);
 
     await expect(client.stdout).toOutput('teammate');
+    expect(await exitCodePromise).toBe(0);
+  });
+
+  it('uses the api-provided name for an api-key scope row', async () => {
+    const team = useTeam();
+    useUser();
+    useListBudgets([{ ...apiKeyBudget, name: 'production-key' }]);
+    client.config.currentTeam = team.id;
+    client.setArgv('ai-gateway', 'budgets', 'list');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stdout).toOutput('production-key');
+    expect(await exitCodePromise).toBe(0);
+  });
+
+  it('resolves an api-key scope id from the key roster when unnamed', async () => {
+    const team = useTeam();
+    useUser();
+    useApiKeys([{ id: 'key_123', name: 'roster-key' }]);
+    useListBudgets([apiKeyBudget]);
+    client.config.currentTeam = team.id;
+    client.setArgv('ai-gateway', 'budgets', 'list');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stdout).toOutput('roster-key');
     expect(await exitCodePromise).toBe(0);
   });
 

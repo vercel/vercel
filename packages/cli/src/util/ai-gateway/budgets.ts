@@ -69,6 +69,8 @@ export type Budget = {
   // The list endpoint also returns `api-key` rows (explicit or default-covered).
   scopeType: BudgetScopeType | 'api-key';
   scopeId: string;
+  // Display name the API resolves for the scoped entity (api-key rows).
+  name?: string;
   limitAmount: number;
   currentSpend: number;
   currentByokSpend: number;
