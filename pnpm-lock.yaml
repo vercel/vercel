@@ -1160,7 +1160,7 @@ importers:
         version: 1.5.5(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(vitest@2.1.4(@edge-runtime/vm@3.2.0)(@types/node@24.12.4)(terser@5.48.0))
       eve:
         specifier: 0.24.3
-        version: 0.24.3(@opentelemetry/api@1.9.1)(@vercel/blob@2.4.0)(@vercel/functions@3.7.7(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.21.0))(ai@7.0.26(zod@4.4.3))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(vite@7.1.7(@types/node@24.12.4)(jiti@2.7.0)(terser@5.48.0)(tsx@4.21.0)(yaml@2.9.0))
+        version: 0.24.3(@opentelemetry/api@1.9.1)(@vercel/blob@2.4.0)(@vercel/functions@3.9.0(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.21.0))(ai@7.0.26(zod@4.4.3))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(vite@7.1.7(@types/node@24.12.4)(jiti@2.7.0)(terser@5.48.0)(tsx@4.21.0)(yaml@2.9.0))
       typescript:
         specifier: ^5
         version: 5.9.3
@@ -1764,8 +1764,8 @@ importers:
         version: 1.10.0(rollup@4.60.4)
     devDependencies:
       '@next-community/adapter-vercel':
-        specifier: 0.0.1-beta.24
-        version: 0.0.1-beta.24
+        specifier: 0.0.1-beta.25
+        version: 0.0.1-beta.25
       '@types/aws-lambda':
         specifier: 8.10.19
         version: 8.10.19
@@ -4591,8 +4591,8 @@ packages:
     resolution: {integrity: sha512-r3ZZhRjEcfEdKIZnoB1RusNgvHuaBRqfCzV4Gi+5A9yUX0S4HTws/ASWqt13wL4y4I+0rqsWGdA2w7EQXHi3+Q==}
     engines: {node: '>=19.0.0'}
 
-  '@next-community/adapter-vercel@0.0.1-beta.24':
-    resolution: {integrity: sha512-6c3DfRgVcDocIB2CTpp+7txplXMdrK69/CwyLJMDmcB2mvdjpXjKBOOJwjwa13E8zBPzhvRKnmkBxj+U40UUvw==}
+  '@next-community/adapter-vercel@0.0.1-beta.25':
+    resolution: {integrity: sha512-xDrWwMDC/8Yrz1+J31O+OYQAuJDMfA8ddU8Th2NGG5z2x6oJdJdk46wZs5vEMj16rg0bgxQ3QH+LzlLqiGui5Q==}
     engines: {node: '>= 20.6.0'}
 
   '@next/env@11.1.2':
@@ -6718,8 +6718,8 @@ packages:
     resolution: {integrity: sha512-8erw9uPe0dFg45THkNxmjtvMX143SkZebmjgSVbcM3XCkXu3RIiBaJMcMNG8aaS+rnTuw8+d4De9HVT0M/r3wg==}
     engines: {node: '>= 18'}
 
-  '@vercel/functions@3.7.7':
-    resolution: {integrity: sha512-oy0FzkuXmUIzyRR2pYastP4xH0m9VTK3yP2Vj77eRcxcbX+f4o6x3RMx4RuwJ4j4pjx9USd/h79R/pKbSZV80Q==}
+  '@vercel/functions@3.9.0':
+    resolution: {integrity: sha512-oljr4La9qptN9pmTG82D6L80ZwKMUz2LYQ/TO7Wn01DoGyCaXM77bHsCgxTAOrz7mCCj+dr7EzDQB8e2YjMI7w==}
     engines: {node: '>= 20'}
     peerDependencies:
       '@aws-sdk/credential-provider-web-identity': '*'
@@ -15185,7 +15185,7 @@ snapshots:
 
   '@neondatabase/serverless@1.1.0': {}
 
-  '@next-community/adapter-vercel@0.0.1-beta.24': {}
+  '@next-community/adapter-vercel@0.0.1-beta.25': {}
 
   '@next/env@11.1.2': {}
 
@@ -17169,7 +17169,7 @@ snapshots:
       - encoding
       - supports-color
 
-  '@vercel/functions@3.7.7(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.21.0)':
+  '@vercel/functions@3.9.0(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.21.0)':
     dependencies:
       '@vercel/oidc': 3.8.2
     optionalDependencies:
@@ -19530,10 +19530,10 @@ snapshots:
 
   etag@1.8.1: {}
 
-  eve@0.24.3(@opentelemetry/api@1.9.1)(@vercel/blob@2.4.0)(@vercel/functions@3.7.7(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.21.0))(ai@7.0.26(zod@4.4.3))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(vite@7.1.7(@types/node@24.12.4)(jiti@2.7.0)(terser@5.48.0)(tsx@4.21.0)(yaml@2.9.0)):
+  eve@0.24.3(@opentelemetry/api@1.9.1)(@vercel/blob@2.4.0)(@vercel/functions@3.9.0(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.21.0))(ai@7.0.26(zod@4.4.3))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(vite@7.1.7(@types/node@24.12.4)(jiti@2.7.0)(terser@5.48.0)(tsx@4.21.0)(yaml@2.9.0)):
     dependencies:
       ai: 7.0.26(zod@4.4.3)
-      nitro: 3.0.260610-beta(@vercel/blob@2.4.0)(@vercel/functions@3.7.7(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.21.0))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(vite@7.1.7(@types/node@24.12.4)(jiti@2.7.0)(terser@5.48.0)(tsx@4.21.0)(yaml@2.9.0))
+      nitro: 3.0.260610-beta(@vercel/blob@2.4.0)(@vercel/functions@3.9.0(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.21.0))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(vite@7.1.7(@types/node@24.12.4)(jiti@2.7.0)(terser@5.48.0)(tsx@4.21.0)(yaml@2.9.0))
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
     transitivePeerDependencies:
@@ -21659,7 +21659,7 @@ snapshots:
 
   nice-try@1.0.5: {}
 
-  nitro@3.0.260610-beta(@vercel/blob@2.4.0)(@vercel/functions@3.7.7(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.21.0))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(vite@7.1.7(@types/node@24.12.4)(jiti@2.7.0)(terser@5.48.0)(tsx@4.21.0)(yaml@2.9.0)):
+  nitro@3.0.260610-beta(@vercel/blob@2.4.0)(@vercel/functions@3.9.0(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.21.0))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(vite@7.1.7(@types/node@24.12.4)(jiti@2.7.0)(terser@5.48.0)(tsx@4.21.0)(yaml@2.9.0)):
     dependencies:
       consola: 3.4.2
       crossws: 0.4.6(srvx@0.11.16)
@@ -21674,7 +21674,7 @@ snapshots:
       rolldown: 1.1.0
       srvx: 0.11.16
       unenv: 2.0.0-rc.24
-      unstorage: 2.0.0-alpha.7(@vercel/blob@2.4.0)(@vercel/functions@3.7.7(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.21.0))(chokidar@4.0.3)(db0@0.3.4(mysql2@3.14.2))(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(ofetch@2.0.0-alpha.3)
+      unstorage: 2.0.0-alpha.7(@vercel/blob@2.4.0)(@vercel/functions@3.9.0(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.21.0))(chokidar@4.0.3)(db0@0.3.4(mysql2@3.14.2))(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(ofetch@2.0.0-alpha.3)
     optionalDependencies:
       dotenv: 16.6.1
       jiti: 2.7.0
@@ -24102,10 +24102,10 @@ snapshots:
     dependencies:
       rolldown: 1.0.0-rc.17
 
-  unstorage@2.0.0-alpha.7(@vercel/blob@2.4.0)(@vercel/functions@3.7.7(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.21.0))(chokidar@4.0.3)(db0@0.3.4(mysql2@3.14.2))(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(ofetch@2.0.0-alpha.3):
+  unstorage@2.0.0-alpha.7(@vercel/blob@2.4.0)(@vercel/functions@3.9.0(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.21.0))(chokidar@4.0.3)(db0@0.3.4(mysql2@3.14.2))(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(ofetch@2.0.0-alpha.3):
     optionalDependencies:
       '@vercel/blob': 2.4.0
-      '@vercel/functions': 3.7.7(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.21.0)
+      '@vercel/functions': 3.9.0(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.21.0)
       chokidar: 4.0.3
       db0: 0.3.4(mysql2@3.14.2)
       lru-cache: 11.5.1
