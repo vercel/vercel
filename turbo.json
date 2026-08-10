@@ -3,7 +3,8 @@
   "futureFlags": {
     "affectedUsingTaskInputs": true,
     "strictTaskEntrypointSelection": true,
-    "experimentalObservability": true
+    "experimentalObservability": true,
+    "experimentalTaskCommand": true
   },
   "globalDependencies": [".github/workflows/**", "turbo-cache-key.json"],
   "globalEnv": ["OS", "RUNNER_OS"],

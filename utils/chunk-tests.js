@@ -62,6 +62,19 @@ const runnersMap = new Map([
 ]);
 
 const packageOptionsOverrides = {
+  // Coarse tiers from cold nightly runs. These intentionally avoid pretending
+  // that individual timings are stable while still starting known stragglers
+  // before the bulk of the matrix.
+  // The package's test-e2e task is an aggregate node whose dependencies fan
+  // out to the deployment-heavy groups. Invoke that entrypoint directly
+  // instead of forwarding individual test paths to the generic test task.
+  '@vercel/build-utils': {
+    taskOptions: {
+      'test-e2e': { testScript: 'test-e2e', includeTestPaths: false },
+    },
+    schedulePriority: { 'test-e2e': 3 },
+  },
+
   // The vercel CLI has many test files. Passing them as CLI args hits the Windows
   // cmd.exe ~8191 char arg limit, so we route them through the VITEST_TEST_FILES
   // env var instead. useEnvPaths signals the workflow to set that var and omit
@@ -82,10 +95,6 @@ const packageOptionsOverrides = {
     schedulePriority: { 'test-unit': 3, 'test-dev': 3 },
   },
 
-  // Coarse tiers from cold nightly runs. These intentionally avoid pretending
-  // that individual timings are stable while still starting known stragglers
-  // before the bulk of the matrix.
-  '@vercel/build-utils': { schedulePriority: { 'test-e2e': 3 } },
   examples: { schedulePriority: { 'test-e2e': 2 } },
   '@vercel/python': { schedulePriority: { 'test-e2e': 1 } },
   '@vercel/remix-builder': { schedulePriority: { 'test-e2e': 1 } },
@@ -380,10 +389,13 @@ function getTestPathsForPackage(rootPath, packagePath, patterns) {
 function getRunnerOptions(scriptName, packageName) {
   let runnerOptions = runnersMap.get(scriptName);
   if (packageOptionsOverrides[packageName]) {
+    const { taskOptions = {}, ...packageOptions } =
+      packageOptionsOverrides[packageName];
     runnerOptions = Object.assign(
       {},
       runnerOptions,
-      packageOptionsOverrides[packageName]
+      packageOptions,
+      taskOptions[scriptName]
     );
   }
   if (!runnerOptions) {
@@ -498,6 +510,7 @@ async function getChunkedTests() {
           nodeVersions = ['22'],
           useEnvPaths = false,
           excludeRunnerNodeVersions = {},
+          includeTestPaths = true,
         } = runnerOptions;
 
         const sortedTestPaths = testPaths.sort((a, b) => a.localeCompare(b));
@@ -528,12 +541,14 @@ async function getChunkedTests() {
                   scriptName,
                   testScript,
                   nodeVersion,
-                  testPaths: chunk.map(testFile =>
-                    path.relative(
-                      path.join(__dirname, '../', packagePath),
-                      testFile
-                    )
-                  ),
+                  testPaths: includeTestPaths
+                    ? chunk.map(testFile =>
+                        path.relative(
+                          path.join(__dirname, '../', packagePath),
+                          testFile
+                        )
+                      )
+                    : [],
                   chunkNumber: chunkNumber + 1,
                   allChunksLength: allChunks.length,
                   useEnvPaths,
@@ -599,6 +614,7 @@ if (module === require.main || !module.parent) {
 }
 
 module.exports = {
+  getChunkedTests,
   intoChunks,
   getScriptTestPatterns,
   sortBySchedulePriority,

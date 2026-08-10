@@ -1,4 +1,5 @@
 const {
+  getChunkedTests,
   getScriptTestPatterns,
   intoChunks,
   sortBySchedulePriority,
@@ -80,6 +81,31 @@ describe('getScriptTestPatterns', () => {
     expect(getScriptTestPatterns(packageJson, 'test-unit')).toContain(
       'test/**/*.test.ts'
     );
+  });
+});
+
+describe('getChunkedTests', () => {
+  it('invokes the build-utils E2E aggregate task in one runner cell', async () => {
+    process.env.TURBO_TASKS = JSON.stringify([
+      {
+        package: '@vercel/build-utils',
+        directory: 'packages/build-utils',
+        task: 'test-e2e',
+      },
+    ]);
+
+    try {
+      const chunks = await getChunkedTests();
+
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0]).toMatchObject({
+        packageName: '@vercel/build-utils',
+        testScript: 'test-e2e',
+        testPaths: [],
+      });
+    } finally {
+      delete process.env.TURBO_TASKS;
+    }
   });
 });
 
