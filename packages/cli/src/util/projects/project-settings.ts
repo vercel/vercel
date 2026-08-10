@@ -1,5 +1,6 @@
 import { join } from 'path';
 import { outputJSON, readFile } from 'fs-extra';
+import { normalizePath } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { VERCEL_DIR, VERCEL_DIR_PROJECT } from './link';
 import type { PartialProjectSettings } from '../input/edit-project-settings';
@@ -85,6 +86,21 @@ export async function readProjectSettings(vercelDir: string) {
 
     throw err;
   }
+}
+
+/**
+ * Normalizes a Project's `rootDirectory` setting for the API, which expects a
+ * relative path that does not start with `./`. "Deploy from the repository
+ * root" is expressed by omitting the value, so `.` — how the repository root
+ * is spelled in `repo.json` and in Project Settings — becomes `undefined`.
+ */
+export function normalizeRootDirectory(
+  rootDirectory: Project['rootDirectory']
+): string | undefined {
+  const normalized = normalizePath(rootDirectory ?? '')
+    .replace(/^\.\//, '')
+    .replace(/\/+$/, '');
+  return normalized === '' || normalized === '.' ? undefined : normalized;
 }
 
 export function pickOverrides(
