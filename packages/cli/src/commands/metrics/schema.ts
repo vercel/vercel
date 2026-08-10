@@ -72,6 +72,16 @@ export default async function schema(
       return detailOrExitCode;
     }
 
+    if (detailOrExitCode.length === 0) {
+      const message = `No metrics match "${metric}". Run \`vercel metrics schema\` to see available metrics.`;
+      if (jsonOutput) {
+        client.stdout.write(formatErrorJson('METRIC_NOT_FOUND', message));
+      } else {
+        output.error(message);
+      }
+      return 1;
+    }
+
     if (jsonOutput) {
       client.stdout.write(JSON.stringify(detailOrExitCode, null, 2));
       return 0;

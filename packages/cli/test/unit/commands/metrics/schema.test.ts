@@ -113,7 +113,7 @@ describe('metrics schema v1', () => {
     expect(output).toContain('vercel.request.count');
   });
 
-  it('returns complete v1 descriptors as JSON', async () => {
+  it('returns stable metric fields as JSON', async () => {
     client.scenario.get('/v1/metrics', (_req, res) => {
       res.json({
         metrics: [
@@ -142,17 +142,50 @@ describe('metrics schema v1', () => {
     expect(result).toEqual([
       {
         id: 'vercel.request.count',
-        kind: 'system',
         description: 'Request Count',
         dimensions: ['route', 'httpStatus'],
         unit: 'count',
         aggregations: ['count', 'unique'],
-        derivedFrom: {
-          event: 'vercel.request',
-          input: { kind: 'count' },
-        },
       },
     ]);
+  });
+
+  it('reports an unknown metric prefix', async () => {
+    client.scenario.get('/v1/metrics', (_req, res) => {
+      res.json({
+        metrics: [],
+        pagination: { hasMore: false, nextCursor: null },
+      });
+    });
+    client.setArgv('metrics', 'schema', 'vercel.unknown');
+
+    const exitCode = await schema(client, new MockTelemetry());
+
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'No metrics match "vercel.unknown". Run `vercel metrics schema` to see available metrics.'
+    );
+  });
+
+  it('reports an unknown metric prefix as JSON', async () => {
+    client.scenario.get('/v1/metrics', (_req, res) => {
+      res.json({
+        metrics: [],
+        pagination: { hasMore: false, nextCursor: null },
+      });
+    });
+    client.setArgv('metrics', 'schema', 'vercel.unknown', '--format=json');
+
+    const exitCode = await schema(client, new MockTelemetry());
+
+    expect(exitCode).toBe(1);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      error: {
+        code: 'METRIC_NOT_FOUND',
+        message:
+          'No metrics match "vercel.unknown". Run `vercel metrics schema` to see available metrics.',
+      },
+    });
   });
 
   it('shows prefix detail with a positional metric', async () => {

@@ -67,7 +67,15 @@ export async function fetchMetricCatalog(
     const response = await client.fetch<MetricCatalogResponse>(url.href, {
       accountId,
     });
-    metrics.push(...response.metrics);
+    metrics.push(
+      ...response.metrics.map(metric => ({
+        id: metric.id,
+        description: metric.description,
+        dimensions: metric.dimensions,
+        unit: metric.unit,
+        aggregations: metric.aggregations,
+      }))
+    );
     cursor = response.pagination.hasMore
       ? response.pagination.nextCursor
       : null;
