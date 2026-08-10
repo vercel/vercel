@@ -137,7 +137,7 @@ function formatMetricsTable(metrics: MetricCatalogMetric[]) {
       .filter(dimension => !sharedDimensions.includes(dimension))
       .map(dimension => `+${dimension}`);
 
-    const aggregations = formatAggregations(metric);
+    const aggregations = metric.aggregations.join(', ');
 
     return {
       metric: metric.id,
@@ -184,41 +184,4 @@ function formatMetricsTable(metrics: MetricCatalogMetric[]) {
   return sharedDimensionsLine
     ? `\n${table}\n\n${sharedDimensionsLine}`
     : `\n${table}`;
-}
-
-function formatAggregations(metric: MetricCatalogMetric): string {
-  const values: string[] = [];
-
-  for (const aggregation of metric.aggregations) {
-    values.push(formatAggregationName(aggregation));
-
-    const modifiers = metric.aggregationModifiers?.[aggregation];
-    for (const period of modifiers?.per ?? []) {
-      values.push(`${formatAggregationName(aggregation)} per ${period}`);
-    }
-    for (const normalization of modifiers?.normalize ?? []) {
-      values.push(
-        `${formatAggregationName(aggregation)} as ${normalization} of total`
-      );
-    }
-  }
-
-  return values.join(', ');
-}
-
-function formatAggregationName(aggregation: string): string {
-  switch (aggregation) {
-    case 'avg':
-      return 'average';
-    case 'min':
-      return 'minimum';
-    case 'max':
-      return 'maximum';
-    case 'stddev':
-      return 'standard deviation';
-    case 'unique':
-      return 'unique by dimension';
-    default:
-      return aggregation;
-  }
 }

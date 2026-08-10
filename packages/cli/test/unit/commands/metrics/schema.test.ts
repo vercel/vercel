@@ -43,9 +43,6 @@ describe('metrics schema v1', () => {
             dimensions: ['route'],
             unit: 'count',
             aggregations: ['count', 'unique'],
-            aggregationModifiers: {
-              count: { per: ['second'], normalize: ['percent'] },
-            },
             derivedFrom: {
               event: 'vercel.request',
               input: { kind: 'count' },
@@ -127,9 +124,6 @@ describe('metrics schema v1', () => {
             dimensions: ['route', 'httpStatus'],
             unit: 'count',
             aggregations: ['count', 'unique'],
-            aggregationModifiers: {
-              count: { per: ['second'], normalize: ['percent'] },
-            },
             derivedFrom: {
               event: 'vercel.request',
               input: { kind: 'count' },
@@ -153,9 +147,6 @@ describe('metrics schema v1', () => {
         dimensions: ['route', 'httpStatus'],
         unit: 'count',
         aggregations: ['count', 'unique'],
-        aggregationModifiers: {
-          count: { per: ['second'], normalize: ['percent'] },
-        },
         derivedFrom: {
           event: 'vercel.request',
           input: { kind: 'count' },
@@ -180,9 +171,6 @@ describe('metrics schema v1', () => {
             dimensions: ['route', 'httpStatus'],
             unit: 'count',
             aggregations: ['count', 'unique'],
-            aggregationModifiers: {
-              count: { per: ['second'], normalize: ['percent'] },
-            },
           },
           {
             id: 'vercel.request.route_cpu_duration_ms',
@@ -190,10 +178,6 @@ describe('metrics schema v1', () => {
             dimensions: ['route', 'httpStatus', 'cacheResult'],
             unit: 'milliseconds',
             aggregations: ['count', 'sum', 'avg', 'p95'],
-            aggregationModifiers: {
-              count: { per: ['second'], normalize: ['percent'] },
-              sum: { per: ['second'], normalize: ['percent'] },
-            },
           },
         ],
         pagination: { hasMore: false, nextCursor: null },
@@ -215,15 +199,11 @@ describe('metrics schema v1', () => {
     expect(output).toContain('vercel.request.count');
     expect(output).toContain('Count');
     expect(output).toContain('count');
-    expect(output).toContain(
-      'count, count per second, count as percent of total, unique by dimension'
-    );
+    expect(output).toContain('count, unique');
     expect(output).toContain('vercel.request.route_cpu_duration_ms');
     expect(output).toContain('Request Duration');
     expect(output).toContain('milliseconds');
-    expect(output).toContain(
-      'count, count per second, count as percent of total, sum, sum per second, sum as percent of total, average, p95'
-    );
+    expect(output).toContain('count, sum, avg, p95');
     expect(output).toContain('+cacheResult');
     expect(output).toContain('—');
   });

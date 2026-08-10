@@ -13,15 +13,6 @@ export interface MetricCatalogMetric {
   readonly dimensions: readonly string[];
   readonly unit: string;
   readonly aggregations: readonly string[];
-  readonly aggregationModifiers?: Readonly<
-    Record<
-      string,
-      {
-        readonly per?: readonly string[];
-        readonly normalize?: readonly string[];
-      }
-    >
-  >;
 }
 
 interface MetricCatalogResponse {
