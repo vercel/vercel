@@ -1,7 +1,7 @@
 import type { Team } from '@vercel-internals/types';
 import chalk from 'chalk';
 import output from '../../output-manager';
-import { confirmGatedOperation } from '../../util/ship-session';
+import { confirmGatedOperation } from '../../util/onboard-session';
 import type Client from '../../util/client';
 import { isAPIError } from '../../util/errors-ts';
 import { parseArguments } from '../../util/get-args';

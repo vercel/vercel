@@ -5,7 +5,7 @@ import getProjectByDeployment from '../../util/projects/get-project-by-deploymen
 import ms from 'ms';
 import promoteStatus from './status';
 import output from '../../output-manager';
-import { confirmGatedOperation } from '../../util/ship-session';
+import { confirmGatedOperation } from '../../util/onboard-session';
 
 interface DeploymentCreateResponsePartial {
   inspectorUrl: string;

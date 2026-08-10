@@ -33,7 +33,7 @@ import { printDeploymentStatus } from '../../util/deploy/print-deployment-status
 import {
   confirmGatedOperation,
   recordSessionEvent,
-} from '../../util/ship-session';
+} from '../../util/onboard-session';
 import { isValidArchive } from '../../util/deploy/validate-archive-format';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import { emoji, prependEmoji } from '../../util/emoji';
@@ -1934,7 +1934,7 @@ async function handleDefaultDeploy(
         }
       : deploymentJson;
     client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
-    // Inside a `vercel ship` session, the deployment is journaled from the
+    // Inside a `vercel onboard` session, the deployment is journaled from the
     // typed deployment. This is the main deploy flow's JSON exit — the init
     // flow journals its own copy of this branch — and a session that missed
     // this site reported a deployed, verified app as nothing deployed.

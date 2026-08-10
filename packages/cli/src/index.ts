@@ -1117,6 +1117,10 @@ const main = async () => {
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).microfrontends;
           break;
+        case 'onboard':
+          telemetry.trackCliCommandOnboard(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).onboard;
+          break;
         case 'open':
           telemetry.trackCliCommandOpen(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).open;
@@ -1162,10 +1166,6 @@ const main = async () => {
         case 'sandbox':
           telemetry.trackCliCommandSandbox(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).sandbox;
-          break;
-        case 'ship':
-          telemetry.trackCliCommandShip(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).ship;
           break;
         case 'skills':
           telemetry.trackCliCommandSkills(userSuppliedSubCommand);
@@ -1238,19 +1238,20 @@ const main = async () => {
 
       resolvedCommandForUpdate = targetCommand;
 
-      // Inside a `vercel ship` session every command journals itself into the
-      // session ledger. (Approval gates live inside the command handlers, at
-      // the effect sites, where the command's own parsing has decided what is
-      // about to happen.) Dormant otherwise: the env variable is set by ship.
-      const shipSession = process.env.VERCEL_SHIP_SESSION_DIR
-        ? await import('./util/ship-session')
+      // Inside a `vercel onboard` session every command journals itself into
+      // the session ledger. (Approval gates live inside the command handlers,
+      // at the effect sites, where the command's own parsing has decided what
+      // is about to happen.) Dormant otherwise: the env variable is set by
+      // onboard.
+      const onboardSession = process.env.VERCEL_ONBOARD_SESSION_DIR
+        ? await import('./util/onboard-session')
         : undefined;
 
       const commandStartedAt = Date.now();
       exitCode = await rootSpan
         .child('vc.cli.command', { command: subcommand || 'deploy' })
         .trace(() => func(client));
-      shipSession?.recordSessionEvent({
+      onboardSession?.recordSessionEvent({
         type: 'command',
         command: targetCommand,
         argv: client.argv.slice(2),

@@ -5,7 +5,7 @@ import {
 } from '../../util/integration/post-provision-setup';
 import { addAutoProvision } from './add-auto-provision';
 import output from '../../output-manager';
-import { confirmGatedOperation } from '../../util/ship-session';
+import { confirmGatedOperation } from '../../util/onboard-session';
 import { validateJsonOutput } from '../../util/output-format';
 import {
   buildCommandWithGlobalFlags,

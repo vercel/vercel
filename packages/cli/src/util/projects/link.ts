@@ -24,7 +24,7 @@ import { findProjectsFromPath, getRepoLink } from '../link/repo';
 import { addToGitIgnore } from '../link/add-to-gitignore';
 import type { RepoProjectConfig } from '../link/repo';
 import output from '../../output-manager';
-import { recordSessionEvent } from '../ship-session';
+import { recordSessionEvent } from '../onboard-session';
 import { printAlignedLabel } from '../output/print-aligned-label';
 import pull from '../../commands/env/pull';
 import { resolveProjectCwd } from './find-project-root';

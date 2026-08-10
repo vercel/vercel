@@ -15,7 +15,7 @@ import setCustomSuffix from '../../util/domains/set-custom-suffix';
 import { countProjectsForDomain } from '../../util/projects/find-projects-for-domain';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
-import { confirmGatedOperation } from '../../util/ship-session';
+import { confirmGatedOperation } from '../../util/onboard-session';
 import { DomainsRmTelemetryClient } from '../../util/telemetry/commands/domains/rm';
 import { removeSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';

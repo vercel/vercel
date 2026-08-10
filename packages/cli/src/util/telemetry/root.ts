@@ -383,9 +383,9 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
-  trackCliCommandShip(actual: string) {
+  trackCliCommandOnboard(actual: string) {
     this.trackCliCommand({
-      command: 'ship',
+      command: 'onboard',
       value: actual,
     });
   }

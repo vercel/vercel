@@ -23,7 +23,7 @@ function bareDuration(stamp: string): string {
 /**
  * Prints (to `output`) warnings and errors, if any.
  */
-import { recordSessionEvent } from '../ship-session';
+import { recordSessionEvent } from '../onboard-session';
 
 export async function printDeploymentStatus(
   client: Client,
@@ -73,7 +73,7 @@ export async function printDeploymentStatus(
     return 1;
   }
 
-  // Inside a `vercel ship` session, the deployment is journaled here — from
+  // Inside a `vercel onboard` session, the deployment is journaled here — from
   // the typed deployment, not by scraping this function's own output.
   recordSessionEvent({
     type: 'deployment',

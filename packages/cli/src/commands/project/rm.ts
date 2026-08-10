@@ -9,7 +9,7 @@ import output from '../../output-manager';
 import {
   confirmGatedOperation,
   recordSessionEvent,
-} from '../../util/ship-session';
+} from '../../util/onboard-session';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
