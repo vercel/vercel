@@ -1,5 +1,8 @@
+import { spawn } from 'child_process';
+import { access, mkdtemp, readFile, readdir, rm, writeFile } from 'fs/promises';
 import { createRequire } from 'module';
-import { relative, basename, dirname } from 'path';
+import { tmpdir } from 'os';
+import { relative, basename, dirname, join, resolve } from 'path';
 import { NowBuildError } from '@vercel/build-utils';
 import type _ts from 'typescript';
 
@@ -37,6 +40,7 @@ interface Options {
   compiler?: string;
   ignore?: string[];
   project?: string;
+  rootDir?: string;
   compilerOptions?: _ts.CompilerOptions;
   ignoreDiagnostics?: Array<number | string>;
   readFile?: (path: string) => string | undefined;
@@ -97,7 +101,7 @@ export type Register = (
   code: string,
   fileName: string,
   skipTypeCheck?: boolean
-) => SourceOutput;
+) => SourceOutput | Promise<SourceOutput>;
 
 /**
  * Cached fs operation wrapper.
@@ -115,6 +119,255 @@ function cachedLookup<T>(fn: (arg: string) => T): (arg: string) => T {
 }
 
 const require_ = createRequire(__filename);
+
+function hasLegacyCompilerApi(compiler: unknown): compiler is typeof _ts {
+  if (typeof compiler !== 'object' || compiler === null) return false;
+
+  const ts = compiler as Partial<typeof _ts>;
+  return (
+    ts.sys !== undefined &&
+    typeof ts.transpileModule === 'function' &&
+    typeof ts.createLanguageService === 'function' &&
+    typeof ts.createDocumentRegistry === 'function' &&
+    typeof ts.findConfigFile === 'function' &&
+    typeof ts.readConfigFile === 'function' &&
+    typeof ts.parseJsonConfigFileContent === 'function'
+  );
+}
+
+async function pathExists(path: string) {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function findConfigFile(project: string | undefined, cwd: string) {
+  let current = project ? dirname(resolve(project)) : resolve(cwd);
+
+  while (true) {
+    const configFile = join(current, 'tsconfig.json');
+    if (await pathExists(configFile)) return configFile;
+
+    const parent = dirname(current);
+    if (parent === current) return;
+    current = parent;
+  }
+}
+
+function getDefaultCompilerOptions(nodeVersionMajor = 12) {
+  let target: string;
+  if (nodeVersionMajor >= 16) {
+    target = 'ES2021';
+  } else if (nodeVersionMajor >= 14) {
+    target = 'ES2020';
+  } else {
+    target = 'ES2019';
+  }
+
+  return {
+    target,
+    module: 'NodeNext',
+    moduleResolution: 'NodeNext',
+    strict: false,
+    esModuleInterop: true,
+  };
+}
+
+function registerNativeCompiler(
+  options: Options,
+  cwd: string,
+  compilerVersion: string
+): Register {
+  const resolvePaths = [options.project || cwd];
+  const packageJsonPath = require_.resolve('typescript/package.json', {
+    paths: resolvePaths,
+  });
+  const compilerPath = readFile(packageJsonPath, 'utf8').then(contents => {
+    const packageJson = JSON.parse(contents);
+    const bin =
+      typeof packageJson.bin === 'string'
+        ? packageJson.bin
+        : packageJson.bin?.tsc;
+    if (typeof bin !== 'string') {
+      throw new TypeError(
+        `TypeScript ${compilerVersion} does not provide a compiler executable.`
+      );
+    }
+    return resolve(dirname(packageJsonPath), bin);
+  });
+  const configFile = findConfigFile(options.project, cwd);
+  const rootDir = resolve(options.rootDir || cwd);
+  const inputFiles = new Set<string>();
+  const outputs = new Map<string, SourceOutput>();
+  let pendingEmit: Promise<void> | undefined;
+
+  function runCompiler(compiler: string, tempConfigFile: string) {
+    return new Promise<{
+      status: number | null;
+      stdout: string;
+      stderr: string;
+    }>((resolvePromise, reject) => {
+      const child = spawn(
+        process.execPath,
+        [compiler, '--project', tempConfigFile],
+        {
+          cwd,
+          stdio: ['ignore', 'pipe', 'pipe'],
+        }
+      );
+      const maxBuffer = 10 * 1024 * 1024;
+      let outputSize = 0;
+      let stdout = '';
+      let stderr = '';
+
+      child.stdout.setEncoding('utf8');
+      child.stderr.setEncoding('utf8');
+      child.stdout.on('data', (chunk: string) => {
+        outputSize += Buffer.byteLength(chunk);
+        if (outputSize > maxBuffer) {
+          child.kill();
+          reject(new Error('TypeScript compiler output exceeded 10 MB.'));
+          return;
+        }
+        stdout += chunk;
+      });
+      child.stderr.on('data', (chunk: string) => {
+        outputSize += Buffer.byteLength(chunk);
+        if (outputSize > maxBuffer) {
+          child.kill();
+          reject(new Error('TypeScript compiler output exceeded 10 MB.'));
+          return;
+        }
+        stderr += chunk;
+      });
+      child.on('error', reject);
+      child.on('close', status => {
+        resolvePromise({ status, stdout, stderr });
+      });
+    });
+  }
+
+  async function collectOutputs(directory: string) {
+    await Promise.all(
+      (await readdir(directory, { withFileTypes: true })).map(async entry => {
+        const filePath = join(directory, entry.name);
+        if (entry.isDirectory()) {
+          await collectOutputs(filePath);
+        } else if (entry.name.endsWith('.map')) {
+          const map = await readFile(filePath, 'utf8');
+          const parsedMap = JSON.parse(map) as ParsedSourceMap;
+          const source = parsedMap.sources?.[0];
+          if (typeof source !== 'string') return;
+
+          const sourcePath = resolve(
+            dirname(filePath),
+            parsedMap.sourceRoot || '',
+            source
+          );
+          Object.assign(parsedMap, {
+            file: basename(sourcePath),
+            sources: [sourcePath],
+          });
+          delete parsedMap.sourceRoot;
+          outputs.set(sourcePath, {
+            code: await readFile(filePath.slice(0, -4), 'utf8'),
+            map: parsedMap,
+          });
+        }
+      })
+    );
+  }
+
+  async function emit() {
+    const tempPath = await mkdtemp(join(tmpdir(), 'vercel-typescript-'));
+    const outDir = join(tempPath, 'output');
+    const tempConfigFile = join(tempPath, 'tsconfig.json');
+    const [resolvedCompilerPath, resolvedConfigFile] = await Promise.all([
+      compilerPath,
+      configFile,
+    ]);
+    const compilerOptions = {
+      ...(resolvedConfigFile
+        ? undefined
+        : getDefaultCompilerOptions(options.nodeVersionMajor)),
+      sourceMap: true,
+      inlineSourceMap: false,
+      inlineSources: true,
+      declaration: false,
+      declarationMap: false,
+      emitDeclarationOnly: false,
+      noEmit: false,
+      outDir,
+      rootDir,
+      incremental: false,
+      composite: false,
+      noCheck: !process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS,
+      rewriteRelativeImportExtensions: true,
+    };
+    const config = {
+      ...(resolvedConfigFile ? { extends: resolvedConfigFile } : undefined),
+      compilerOptions,
+      files: Array.from(inputFiles),
+      include: [],
+      exclude: [],
+    };
+
+    try {
+      await writeFile(tempConfigFile, JSON.stringify(config));
+      const result = await runCompiler(resolvedCompilerPath, tempConfigFile);
+      if (await pathExists(outDir)) await collectOutputs(outDir);
+
+      const diagnostics = [result.stdout, result.stderr]
+        .filter(Boolean)
+        .join('\n')
+        .trim();
+      if (result.status !== 0) {
+        if (process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS) {
+          throw new NowBuildError({
+            code: 'NODE_TYPESCRIPT_ERROR',
+            message: diagnostics,
+          });
+        }
+        if (diagnostics) console.error(diagnostics);
+      }
+    } finally {
+      await rm(tempPath, { recursive: true, force: true });
+    }
+  }
+
+  console.log(
+    `Using the TypeScript ${compilerVersion} compiler executable for transpilation.`
+  );
+
+  return async (_code, fileName) => {
+    const sourcePath = resolve(fileName);
+    let output = outputs.get(sourcePath);
+    inputFiles.add(sourcePath);
+
+    let initiatedEmit = false;
+    while (!output) {
+      if (pendingEmit) {
+        await pendingEmit;
+      } else if (!initiatedEmit) {
+        initiatedEmit = true;
+        pendingEmit = emit().finally(() => {
+          pendingEmit = undefined;
+        });
+        await pendingEmit;
+      } else {
+        break;
+      }
+      output = outputs.get(sourcePath);
+    }
+    if (!output) {
+      throw new TypeError(`TypeScript did not emit an output for ${fileName}.`);
+    }
+    return output;
+  };
+}
 
 /**
  * Maps the config path to a build func
@@ -144,14 +397,26 @@ export function register(opts: Options = {}): Register {
   } catch (_e) {
     compiler = 'typescript';
   }
-  const ts: typeof _ts = require_(compiler);
+  const loadedCompiler: unknown = require_(compiler);
+  const loadedVersion =
+    typeof loadedCompiler === 'object' &&
+    loadedCompiler !== null &&
+    'version' in loadedCompiler &&
+    typeof loadedCompiler.version === 'string'
+      ? loadedCompiler.version
+      : 'unknown';
   if (compiler === 'typescript') {
     console.log(
-      `Using built-in TypeScript ${ts.version} since "typescript" is missing from "devDependencies"`
+      `Using built-in TypeScript ${loadedVersion} since "typescript" is missing from "devDependencies"`
     );
   } else {
-    console.log(`Using TypeScript ${ts.version} (local user-provided)`);
+    console.log(`Using TypeScript ${loadedVersion} (local user-provided)`);
   }
+
+  if (!hasLegacyCompilerApi(loadedCompiler)) {
+    return registerNativeCompiler(options, cwd, loadedVersion);
+  }
+  const ts = loadedCompiler;
   const transformers = options.transformers || undefined;
   const readFile = options.readFile || ts.sys.readFile;
   const fileExists = options.fileExists || ts.sys.fileExists;
@@ -194,7 +459,7 @@ export function register(opts: Options = {}): Register {
       return cachedGetOutput;
     }
 
-    const outFiles = new Map<string, SourceOutput>();
+    const outFiles = new Map<string, RawSourceOutput>();
     const config = readConfig(configFileName);
 
     /**
@@ -448,9 +713,9 @@ export function register(opts: Options = {}): Register {
     const configFileName = detectConfig();
     const buildOutput = getBuild(configFileName, skipTypeCheck);
     const { code: value, map: sourceMap } = buildOutput(code, fileName);
-    const output = {
+    const output: SourceOutput = {
       code: value,
-      map: Object.assign(JSON.parse(sourceMap), {
+      map: Object.assign(JSON.parse(sourceMap) as ParsedSourceMap, {
         file: basename(fileName),
         sources: [fileName],
       }),
@@ -462,7 +727,7 @@ export function register(opts: Options = {}): Register {
   return compile;
 }
 
-type GetOutputFunction = (code: string, fileName: string) => SourceOutput;
+type GetOutputFunction = (code: string, fileName: string) => RawSourceOutput;
 
 /**
  * Do post-processing on config options to support `ts-node`.
@@ -518,7 +783,13 @@ export function fixConfig(
 /**
  * Internal source output.
  */
-type SourceOutput = { code: string; map: string };
+type ParsedSourceMap = Record<string, unknown> & {
+  file?: string;
+  sourceRoot?: string;
+  sources?: string[];
+};
+type RawSourceOutput = { code: string; map: string };
+type SourceOutput = { code: string; map: ParsedSourceMap };
 
 /**
  * Filter diagnostics.

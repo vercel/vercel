@@ -190,17 +190,21 @@ async function compile(
   }
 
   let tsCompile: Register;
-  function compileTypeScript(path: string, source: string): string {
+  async function compileTypeScript(
+    path: string,
+    source: string
+  ): Promise<string> {
     const relPath = relative(baseDir, path);
     if (!tsCompile) {
       tsCompile = register({
         basePath: workPath, // The base is the same as root now.json dir
         project: path, // Resolve tsconfig.json from entrypoint dir
+        rootDir: baseDir,
         files: true, // Include all files such as global `.d.ts`
         nodeVersionMajor: nodeVersion.major,
       });
     }
-    const { code, map } = tsCompile(source, path);
+    const { code, map } = await tsCompile(source, path);
     tsCompiled.add(relPath);
     preparedFiles[renameTStoJS(relPath) + '.map'] = new FileBlob({
       data: JSON.stringify(map),
@@ -279,7 +283,7 @@ async function compile(
             fsPath.endsWith('.mts') ||
             fsPath.endsWith('.cts')
           ) {
-            source = compileTypeScript(fsPath, source.toString());
+            source = await compileTypeScript(fsPath, source.toString());
           }
 
           if (!entry) {
