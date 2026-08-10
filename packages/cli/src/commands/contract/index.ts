@@ -52,6 +52,7 @@ export default async function contract(client: Client): Promise<number> {
   const asJson = formatResult.jsonOutput;
 
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
+  telemetry.trackCliFlagJson(parsedArgs.flags['--json']);
 
   let contextName: string;
   let teamId: string | undefined;

@@ -33,6 +33,7 @@ function mockTeamScope(teamSlug = 'my-team') {
     contextName: teamSlug,
     team: { id: 'team_dummy', slug: teamSlug } as any,
     user: { id: 'user_dummy' } as any,
+    app: null,
   });
 }
 

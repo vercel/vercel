@@ -52,8 +52,9 @@ function validateStatus(value: string | undefined) {
 
 async function resolveAuthors(
   client: Client,
-  authors: string[] | undefined
-): Promise<string[] | undefined> {
+  authors: string[] | undefined,
+  jsonOutput: boolean
+): Promise<string[] | number | undefined> {
   if (!authors || authors.length === 0) {
     return undefined;
   }
@@ -61,6 +62,14 @@ async function resolveAuthors(
     return authors;
   }
   const { user } = await getScope(client);
+  if (!user) {
+    return outputError(
+      client,
+      jsonOutput,
+      'USER_REQUIRED',
+      "Can't resolve `--author me` when authenticated as an app. Use an author ID with `--author`, or authenticate with a user token."
+    );
+  }
   return authors.map(author => (author === 'me' ? user.id : author));
 }
 
@@ -332,7 +341,10 @@ export default async function list(
     }
   }
 
-  const authors = await resolveAuthors(client, flags['--author']);
+  const authors = await resolveAuthors(client, flags['--author'], jsonOutput);
+  if (typeof authors === 'number') {
+    return authors;
+  }
 
   const params: ListThreadsParams = {
     projectId: scope.projectId,

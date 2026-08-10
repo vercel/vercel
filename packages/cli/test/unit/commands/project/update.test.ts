@@ -57,7 +57,7 @@ describe('project update', () => {
       expect(helpOutput).toContain('--install-command');
       expect(helpOutput).toContain('--output-directory');
       expect(helpOutput).toContain('--auto-detect');
-      expect(helpOutput).toContain('--format');
+      expect(helpOutput).toContain('--json');
       expect(helpOutput).toContain('omitted settings remain unchanged');
       expect(helpOutput).toContain('Update multiple settings in one command');
       expect(helpOutput).toContain(
@@ -160,8 +160,7 @@ describe('project update', () => {
       'my-project',
       '--framework',
       'vite',
-      '--format',
-      'json'
+      '--json'
     );
     const exitCode = await project(client);
 
@@ -190,8 +189,8 @@ describe('project update', () => {
         value: '[REDACTED]',
       },
       {
-        key: 'option:format',
-        value: 'json',
+        key: 'flag:json',
+        value: 'TRUE',
       },
     ]);
   });
@@ -338,8 +337,7 @@ describe('project update', () => {
       'my-project',
       '--framework',
       'other',
-      '--format',
-      'json'
+      '--json'
     );
     const exitCode = await project(client);
 

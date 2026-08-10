@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { help } from '../help';
 import { whoamiCommand } from './command';
 
-import getScope from '../../util/get-scope';
+import getScope, { type ScopeContext } from '../../util/get-scope';
 import { parseArguments } from '../../util/get-args';
 import type Client from '../../util/client';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -44,7 +44,7 @@ export default async function whoami(client: Client): Promise<number> {
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
   const scope = await getScope(client, { resolveLocalScope: true });
-  const { user, team, globalTeam } = scope;
+  const { user, team, app, globalTeam } = scope;
 
   // A local override exists when the effective team (from the linked project)
   // differs from the globally-selected team (from `vc switch`). We only treat
@@ -58,19 +58,20 @@ export default async function whoami(client: Client): Promise<number> {
       scope.scopeMismatch);
 
   if (asJson) {
-    const jsonOutput: {
-      username: string;
-      email: string;
-      name: string | undefined;
-      team: { id: string; slug: string; name: string } | null;
-      globalTeam?: { id: string; slug: string; name: string } | null;
-      localOverride?: boolean;
-    } = {
-      username: user.username,
-      email: user.email,
-      name: user.name,
+    const jsonOutput: any = {
       team: team ? { id: team.id, slug: team.slug, name: team.name } : null,
     };
+
+    if (user) {
+      jsonOutput.username = user.username;
+      jsonOutput.email = user.email;
+      jsonOutput.name = user.name;
+    }
+
+    if (app) {
+      jsonOutput.app = app;
+    }
+
     if (hasLocalOverride) {
       jsonOutput.localOverride = true;
       jsonOutput.globalTeam = globalTeam
@@ -79,7 +80,8 @@ export default async function whoami(client: Client): Promise<number> {
     }
     client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
   } else if (client.stdout.isTTY) {
-    output.log(`Logged in as ${chalk.bold(user.username)}`);
+    output.log(`Logged in as ${chalk.bold(formatUsername(scope))}`);
+
     if (team) {
       output.log(
         `Active team: ${chalk.bold(team.slug)}${
@@ -105,8 +107,20 @@ export default async function whoami(client: Client): Promise<number> {
     // the output to another file / executable. This preserves the previous
     // behavior for scripts that rely on `vc whoami` printing the logged-in
     // user. Team information is available via `--json`.
-    client.stdout.write(`${user.username}\n`);
+    client.stdout.write(`${formatUsername(scope)}\n`);
   }
 
   return 0;
+}
+
+function formatUsername(scope: ScopeContext): string {
+  if (scope.user) {
+    return scope.user.username;
+  }
+
+  if (scope.app) {
+    return scope.app.id;
+  }
+
+  throw new Error(`Could not format principal identity`);
 }

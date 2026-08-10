@@ -271,6 +271,7 @@ export default async function update(
     flags['--auto-detect'] as [string] | undefined
   );
   telemetry.trackCliOptionFormat(flags['--format']);
+  telemetry.trackCliFlagJson(flags['--json']);
 
   if (args.length > 1) {
     return printUsageError(

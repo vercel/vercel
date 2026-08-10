@@ -53,6 +53,7 @@ import param from './util/output/param';
 import highlight from './util/output/highlight';
 import { parseArguments } from './util/get-args';
 import getUser from './util/get-user';
+import { isAppPrincipalEnabled, resolveAppTokenScope } from './util/app';
 import getTeams from './util/teams/get-teams';
 import Client from './util/client';
 import { setFetchDispatcher } from './util/fetch';
@@ -814,87 +815,99 @@ const main = async () => {
         output.debug(err.stack || err.toString());
       }
 
-      if (isErrnoException(err) && err.code === 'NOT_AUTHORIZED') {
-        output.prettyError({
-          message: `You do not have access to the specified account`,
-          link: 'https://err.sh/vercel/scope-not-accessible',
-        });
+      // App tokens cannot fetch the user; resolve the scope against the
+      // token's own team instead.
+      const appTokenScopeResolved =
+        isErrnoException(err) &&
+        err.code === 'NOT_AUTHORIZED' &&
+        isAppPrincipalEnabled() &&
+        (await resolveAppTokenScope(client, scope));
 
-        trackAgenticErrorTelemetry(err);
-        return finishWithExitCode(1);
-      }
+      if (!appTokenScopeResolved) {
+        if (isErrnoException(err) && err.code === 'NOT_AUTHORIZED') {
+          output.prettyError({
+            message: `You do not have access to the specified account`,
+            link: 'https://err.sh/vercel/scope-not-accessible',
+          });
 
-      output.error(
-        `Not able to load user because of unexpected error: ${errorToString(err)}`
-      );
-      trackAgenticErrorTelemetry(err);
-      return finishWithExitCode(1);
-    }
+          trackAgenticErrorTelemetry(err);
+          return finishWithExitCode(1);
+        }
 
-    const scopeMatchesUserIdentity =
-      user.id === scope || user.email === scope || user.username === scope;
-
-    let teams: Team[] = [];
-
-    try {
-      teams = await getTeams(client);
-    } catch (err: unknown) {
-      // If the scope clearly refers to the user's own identity we don't need
-      // the teams list to resolve it, so swallow any failure and fall through
-      // to personal-account handling. Otherwise the teams list is required, so
-      // surface the error.
-      if (scopeMatchesUserIdentity) {
-        output.debug(
-          `Ignoring failure to load teams; scope matches the current user's identity`
+        output.error(
+          `Not able to load user because of unexpected error: ${errorToString(err)}`
         );
-      } else if (isErrnoException(err) && err.code === 'not_authorized') {
-        output.prettyError({
-          message: `You do not have access to the specified team`,
-          link: 'https://err.sh/vercel/scope-not-accessible',
-        });
-
-        trackAgenticErrorTelemetry(err);
-        return finishWithExitCode(1);
-      } else if (isErrnoException(err) && err.code === 'rate_limited') {
-        output.prettyError({
-          message:
-            'Rate limited. Too many requests to the same endpoint: /teams',
-        });
-
-        trackAgenticErrorTelemetry(err);
-        return finishWithExitCode(1);
-      } else {
-        output.error('Not able to load teams');
         trackAgenticErrorTelemetry(err);
         return finishWithExitCode(1);
       }
     }
 
-    // A scope string can be ambiguous: a Northstar user's username may also be
-    // the slug of a team they own (the team backing their default scope). In
-    // that case the team must win — otherwise the user could never target it by
-    // name, since the personal-account check below would reject it. So resolve
-    // teams first and only fall back to personal-account handling when no team
-    // matches the scope.
-    const related =
-      teams && teams.find(team => team.id === scope || team.slug === scope);
+    if (user) {
+      const scopeMatchesUserIdentity =
+        user.id === scope || user.email === scope || user.username === scope;
 
-    if (related) {
-      client.config.currentTeam = related.id;
-    } else if (scopeMatchesUserIdentity) {
-      if (user.version === 'northstar') {
-        output.error('You cannot set your Personal Account as the scope.');
-        return finishWithExitCode(1);
+      let teams: Team[] = [];
+
+      try {
+        teams = await getTeams(client);
+      } catch (err: unknown) {
+        // If the scope clearly refers to the user's own identity we don't need
+        // the teams list to resolve it, so swallow any failure and fall through
+        // to personal-account handling. Otherwise the teams list is required, so
+        // surface the error.
+        if (scopeMatchesUserIdentity) {
+          output.debug(
+            `Ignoring failure to load teams; scope matches the current user's identity`
+          );
+        } else if (isErrnoException(err) && err.code === 'not_authorized') {
+          output.prettyError({
+            message: `You do not have access to the specified team`,
+            link: 'https://err.sh/vercel/scope-not-accessible',
+          });
+
+          trackAgenticErrorTelemetry(err);
+          return finishWithExitCode(1);
+        } else if (isErrnoException(err) && err.code === 'rate_limited') {
+          output.prettyError({
+            message:
+              'Rate limited. Too many requests to the same endpoint: /teams',
+          });
+
+          trackAgenticErrorTelemetry(err);
+          return finishWithExitCode(1);
+        } else {
+          output.error('Not able to load teams');
+          trackAgenticErrorTelemetry(err);
+          return finishWithExitCode(1);
+        }
       }
 
-      delete client.config.currentTeam;
-    } else {
-      output.prettyError({
-        message: 'The specified scope does not exist',
-        link: 'https://err.sh/vercel/scope-not-existent',
-      });
+      // A scope string can be ambiguous: a Northstar user's username may also be
+      // the slug of a team they own (the team backing their default scope). In
+      // that case the team must win — otherwise the user could never target it by
+      // name, since the personal-account check below would reject it. So resolve
+      // teams first and only fall back to personal-account handling when no team
+      // matches the scope.
+      const related =
+        teams && teams.find(team => team.id === scope || team.slug === scope);
 
-      return finishWithExitCode(1);
+      if (related) {
+        client.config.currentTeam = related.id;
+      } else if (scopeMatchesUserIdentity) {
+        if (user.version === 'northstar') {
+          output.error('You cannot set your Personal Account as the scope.');
+          return finishWithExitCode(1);
+        }
+
+        delete client.config.currentTeam;
+      } else {
+        output.prettyError({
+          message: 'The specified scope does not exist',
+          link: 'https://err.sh/vercel/scope-not-existent',
+        });
+
+        return finishWithExitCode(1);
+      }
     }
   }
 

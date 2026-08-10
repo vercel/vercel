@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { join } from 'path';
 import { outputFile } from 'fs-extra';
 import { client } from '../../../mocks/client';
@@ -6,6 +6,13 @@ import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import whoami from '../../../../src/commands/whoami';
+import { introspectToken } from '../../../../src/util/introspect-token';
+
+vi.mock('../../../../src/util/introspect-token', () => ({
+  introspectToken: vi.fn(),
+}));
+
+const introspectTokenMock = vi.mocked(introspectToken);
 
 describe('whoami', () => {
   describe('--help', () => {
@@ -155,6 +162,57 @@ describe('whoami', () => {
         name: team.name,
       });
       expect(jsonOutput.localOverride).toBeUndefined();
+    });
+  });
+
+  describe('app principal', () => {
+    beforeEach(() => {
+      vi.stubEnv('APP_PRINCIPAL_ENABLED', '1');
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      introspectTokenMock.mockReset();
+    });
+
+    function useAppToken(team: ReturnType<typeof useTeam>) {
+      client.scenario.get('/v2/user', (_req, res) => {
+        res.status(403).json({ error: { message: 'forbidden' } });
+      });
+      introspectTokenMock.mockResolvedValue({
+        active: true,
+        client_id: 'app_dummy',
+        client_name: 'Dummy App',
+        team: { id: team.id, slug: team.slug },
+      });
+    }
+
+    it('should print the app id in non-TTY mode', async () => {
+      const team = useTeam();
+      useAppToken(team);
+      client.stdout.isTTY = false;
+
+      const exitCode = await whoami(client);
+      expect(exitCode).toEqual(0);
+      await expect(client.stdout).toOutput('app_dummy\n');
+    });
+
+    it('outputs the app and team as JSON without user fields', async () => {
+      const team = useTeam();
+      useAppToken(team);
+      client.setArgv('whoami', '--format', 'json');
+
+      const exitCode = await whoami(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.stdout.getFullOutput();
+      const jsonOutput = JSON.parse(output);
+
+      expect(jsonOutput.app).toEqual({ id: 'app_dummy', name: 'Dummy App' });
+      expect(jsonOutput.team).toMatchObject({ id: team.id, slug: team.slug });
+      expect(jsonOutput.username).toBeUndefined();
+      expect(jsonOutput.email).toBeUndefined();
+      expect(jsonOutput.name).toBeUndefined();
     });
   });
 });

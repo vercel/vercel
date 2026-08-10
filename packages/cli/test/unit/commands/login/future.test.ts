@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import login from '../../../../src/commands/login';
 import { performDeviceCodeFlow } from '../../../../src/commands/login/future';
 import { client } from '../../../mocks/client';
@@ -53,8 +53,13 @@ function simulateTokenPolling(pollCount: number, finalResponse: Response) {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.stubEnv('CI', '');
   // `open` is mocked to resolve a process-like object so `.on('error')` is safe.
   vi.mocked(open.default).mockResolvedValue({ on: vi.fn() } as never);
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe('login', () => {

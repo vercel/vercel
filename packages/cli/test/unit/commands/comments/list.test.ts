@@ -305,6 +305,27 @@ describe('comments list', () => {
     expect(requestQuery?.author).toBe('user_dummy');
   });
 
+  it('rejects --author me for an app principal', async () => {
+    mockedGetScope.mockResolvedValue({
+      contextName: 'my-team',
+      team: { id: 'team_dummy', slug: 'my-team' },
+      user: null,
+      app: { id: 'app_dummy', name: 'Dummy App' },
+    } as never);
+
+    client.setArgv('comments', '--author', 'me', '--format', 'json');
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(1);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      error: {
+        code: 'USER_REQUIRED',
+        message:
+          "Can't resolve `--author me` when authenticated as an app. Use an author ID with `--author`, or authenticate with a user token.",
+      },
+    });
+  });
+
   it('discloses the author filter with an ID hint on empty results', async () => {
     client.scenario.get('/toolbar/threads', (_req, res) => {
       res.json({ pagination: {}, threads: [] });

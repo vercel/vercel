@@ -3,17 +3,21 @@ import type Client from './client';
 import type { Org, Team, User } from '@vercel-internals/types';
 import getUser from './get-user';
 import getTeamById from './teams/get-team-by-id';
-import { TeamDeleted } from './errors-ts';
+import { InvalidToken, TeamDeleted } from './errors-ts';
 import { getLinkFromDir, getVercelDirectory } from './projects/link';
 import { getRepoLink, findProjectsFromPath } from './link/repo';
 import type { RepoProjectsConfig } from './link/repo';
 import output from '../output-manager';
+import { introspectToken } from './introspect-token';
+import type { TokenIntrospectionResponse } from './introspect-token';
+import { type App, isAppPrincipalEnabled, resolveAppFromToken } from './app';
 
 export interface ScopeContext {
   org: Org;
   contextName: string;
-  user: User;
+  user: User | null;
   team: Team | null;
+  app: App | null;
   /**
    * The team that's globally selected (via `vc switch` or as the northstar
    * default), before any local project-link overrides are applied. This will
@@ -31,8 +35,15 @@ export interface ScopeContext {
 
 interface BasicScopeContext {
   contextName: string;
-  user: User;
+  user: User | null;
   team: Team | null;
+  app: App | null;
+}
+
+interface Principal {
+  user: User | null;
+  app: App | null;
+  token: TokenIntrospectionResponse | null;
 }
 
 interface GetScopeOptions {
@@ -60,12 +71,22 @@ export default async function getScope(
   client: Client,
   opts: GetScopeOptions = {}
 ): Promise<BasicScopeContext | ScopeContext> {
-  const user = await getUser(client);
-  let contextName = user.username || user.email;
-  let team: Team | null = null;
+  const { user, app, token } = await getPrincipal(client);
+
   const defaultTeamId =
-    user.version === 'northstar' ? user.defaultTeamId : undefined;
-  const currentTeamOrDefaultTeamId = client.config.currentTeam || defaultTeamId;
+    user?.version === 'northstar' ? user.defaultTeamId : undefined;
+  const appTeamId = !user && app ? token?.team?.id : undefined;
+
+  if (!user && app && opts.getTeam === false) {
+    throw new Error(`App principal scope resolution requires a team lookup.`);
+  }
+
+  // App tokens are bound to their introspected team. Make that team the
+  // effective request scope so subsequent API calls include the correct
+  // `teamId`, and so a stale team from the user's global config cannot win.
+  if (!user && app) {
+    client.config.currentTeam = appTeamId;
+  }
 
   // A Northstar user has no usable personal scope, so their default team is the
   // effective scope. The default is only persisted to `currentTeam` at login
@@ -78,131 +99,227 @@ export default async function getScope(
     client.config.currentTeam = defaultTeamId;
   }
 
-  if (currentTeamOrDefaultTeamId && opts.getTeam !== false) {
-    team = await getTeamById(client, currentTeamOrDefaultTeamId);
+  const teamId = client.config.currentTeam || defaultTeamId;
+  const team =
+    teamId && opts.getTeam !== false ? await getTeam(client, teamId) : null;
 
-    if (!team) {
-      throw new TeamDeleted();
-    }
-
-    contextName = team.slug;
+  const contextName = team?.slug || user?.username || user?.email;
+  if (!contextName) {
+    throw new Error(`Unable to determine context name`);
   }
 
   if (!opts.resolveLocalScope) {
-    return { contextName, team, user };
+    return { contextName, team, user, app };
   }
 
+  return resolveLocalScopeContext(client, { user, app, team });
+}
+
+/**
+ * Resolves the authenticated principal: the user for a personal token, or the
+ * app (from token introspection) for an app token. User lookup and token
+ * introspection run concurrently. An introspection failure is never fatal for
+ * a valid user token, and a missing user is only tolerated for the app-token
+ * case (403 from /v2/user); any other `getUser` failure surfaces.
+ */
+async function getPrincipal(client: Client): Promise<Principal> {
+  if (!isAppPrincipalEnabled()) {
+    return { user: await getUser(client), app: null, token: null };
+  }
+
+  const [userResult, tokenResult] = await Promise.allSettled([
+    getUser(client),
+    introspectToken(client),
+  ]);
+
+  const token = tokenResult.status === 'fulfilled' ? tokenResult.value : null;
+  const app = token ? resolveAppFromToken(token) : null;
+
+  if (userResult.status === 'rejected') {
+    const isAppToken = app && userResult.reason instanceof InvalidToken;
+
+    if (!isAppToken) {
+      throw userResult.reason;
+    }
+  }
+
+  const user = userResult.status === 'fulfilled' ? userResult.value : null;
+
+  return { user, app, token };
+}
+
+async function resolveLocalScopeContext(
+  client: Client,
+  { user, app, team }: { user: User | null; app: App | null; team: Team | null }
+): Promise<ScopeContext> {
   const explicitScopeProvided = detectExplicitScope(client);
   const globalTeamId = client.config.currentTeam;
-  const globalTeam = team;
 
-  const cwd = client.cwd;
-  let projectLink: { orgId: string; projectId: string } | null = null;
-  try {
-    projectLink = await getLinkFromDir<{
-      orgId: string;
-      projectId: string;
-    }>(getVercelDirectory(cwd));
-  } catch (_error) {
-    projectLink = null;
-  }
+  const { localOrgId, linkedRepo, isCrossTeamRepo } =
+    await findLocalLink(client);
 
-  let repoLink: Awaited<ReturnType<typeof getRepoLink>> | null = null;
-  try {
-    repoLink = await getRepoLink(client, cwd);
-  } catch (_error) {
-    repoLink = null;
-  }
-
-  let localOrgId: string | undefined;
-  if (projectLink) {
-    localOrgId = projectLink.orgId;
-  } else if (repoLink?.repoConfig) {
-    const repoConfig = repoLink.repoConfig;
-    const projects = findProjectsFromPath(
-      repoConfig.projects,
-      relative(repoLink.rootPath, cwd)
-    );
-    if (projects.length === 1) {
-      localOrgId = projects[0].orgId ?? repoLink.repoConfig.orgId ?? undefined;
-    } else if (projects.length > 1) {
-      const orgIds = new Set(
-        projects.map(p => p.orgId ?? repoConfig.orgId ?? '')
-      );
-      if (orgIds.size === 1) {
-        const [singleOrgId] = orgIds;
-        if (singleOrgId) {
-          localOrgId = singleOrgId;
-        }
-      }
-    }
-  }
-
-  const isCrossTeamRepo = detectCrossTeamRepo(repoLink?.repoConfig);
+  // An app principal is authorized for the team bound to its token. Local
+  // project metadata must not move requests into a different team.
+  const isAppPrincipal = !user && Boolean(app);
+  const effectiveLocalOrgId = isAppPrincipal ? undefined : localOrgId;
 
   const scopeMismatch = Boolean(
-    localOrgId && globalTeamId && globalTeamId !== localOrgId
+    effectiveLocalOrgId && globalTeamId && globalTeamId !== effectiveLocalOrgId
   );
 
-  let resolvedOrg: Org;
-  let resolvedContextName = contextName;
-  let resolvedTeam = team;
-  let linkedRepoResult: ScopeContext['linkedRepo'] = null;
-
-  if (repoLink?.repoConfig) {
-    linkedRepoResult = {
-      repoConfig: repoLink.repoConfig,
-      rootPath: repoLink.rootPath,
-    };
+  if (
+    !isAppPrincipal &&
+    !explicitScopeProvided &&
+    !effectiveLocalOrgId &&
+    isCrossTeamRepo
+  ) {
+    output.warn(
+      `This repository has projects across multiple teams. ` +
+        `Use \`--scope\` to specify which team, or \`cd\` into a project directory.`
+    );
   }
 
-  if (explicitScopeProvided) {
-    resolvedOrg = team
-      ? { type: 'team', id: team.id, slug: team.slug }
-      : { type: 'user', id: user.id, slug: user.username };
-  } else if (localOrgId) {
-    client.config.currentTeam = localOrgId.startsWith('team_')
-      ? localOrgId
-      : undefined;
+  const resolvedTeam =
+    !explicitScopeProvided && effectiveLocalOrgId
+      ? await applyLocalOrg(client, effectiveLocalOrgId)
+      : team;
 
-    const correctedTeam = client.config.currentTeam
-      ? await getTeamById(client, client.config.currentTeam)
-      : null;
-    const correctedUser = await getUser(client);
-    resolvedOrg = correctedTeam
-      ? { type: 'team', id: correctedTeam.id, slug: correctedTeam.slug }
-      : {
-          type: 'user',
-          id: correctedUser.id,
-          slug: correctedUser.username,
-        };
-    resolvedContextName = correctedTeam
-      ? correctedTeam.slug
-      : correctedUser.username || correctedUser.email;
-    resolvedTeam = correctedTeam;
-  } else {
-    if (isCrossTeamRepo) {
-      output.warn(
-        `This repository has projects across multiple teams. ` +
-          `Use \`--scope\` to specify which team, or \`cd\` into a project directory.`
-      );
-    }
-    resolvedOrg = team
-      ? { type: 'team', id: team.id, slug: team.slug }
-      : { type: 'user', id: user.id, slug: user.username };
-  }
+  const { org, contextName } = resolveOrg(resolvedTeam, user);
 
   return {
-    org: resolvedOrg,
-    contextName: resolvedContextName,
+    org,
+    contextName,
     user,
     team: resolvedTeam,
-    globalTeam,
-    linkedRepo: linkedRepoResult,
+    app,
+    globalTeam: team,
+    linkedRepo,
     isCrossTeamRepo,
     scopeMismatch,
     explicitScopeProvided,
-  } satisfies ScopeContext;
+  };
+}
+
+/**
+ * Applies a locally-linked org as the effective scope and returns its team,
+ * or null when the local org is a personal account.
+ */
+async function applyLocalOrg(
+  client: Client,
+  localOrgId: string
+): Promise<Team | null> {
+  client.config.currentTeam = localOrgId.startsWith('team_')
+    ? localOrgId
+    : undefined;
+
+  return client.config.currentTeam
+    ? await getTeamById(client, client.config.currentTeam)
+    : null;
+}
+
+async function getTeam(client: Client, teamId: string): Promise<Team> {
+  const team = await getTeamById(client, teamId);
+
+  if (!team) {
+    throw new TeamDeleted();
+  }
+
+  return team;
+}
+
+function resolveOrg(
+  team: Team | null,
+  user: User | null
+): { org: Org; contextName: string } {
+  if (team) {
+    return {
+      org: { type: 'team', id: team.id, slug: team.slug },
+      contextName: team.slug,
+    };
+  }
+
+  if (user) {
+    return {
+      org: { type: 'user', id: user.id, slug: user.username },
+      contextName: user.username || user.email,
+    };
+  }
+
+  throw new Error(
+    `Unable to determine scope: no team or personal account is available for this token. ` +
+      `Use \`--scope\` to specify a team.`
+  );
+}
+
+interface LocalLink {
+  localOrgId: string | undefined;
+  linkedRepo: ScopeContext['linkedRepo'];
+  isCrossTeamRepo: boolean;
+}
+
+type ProjectLink = { orgId: string; projectId: string };
+type RepoLink = Awaited<ReturnType<typeof getRepoLink>>;
+
+async function findLocalLink(client: Client): Promise<LocalLink> {
+  const [projectLink, repoLink] = await Promise.all([
+    findProjectLink(client),
+    findRepoLink(client),
+  ]);
+
+  return {
+    localOrgId: findLocalOrgId(client.cwd, projectLink, repoLink),
+    linkedRepo: repoLink?.repoConfig
+      ? { repoConfig: repoLink.repoConfig, rootPath: repoLink.rootPath }
+      : null,
+    isCrossTeamRepo: detectCrossTeamRepo(repoLink?.repoConfig),
+  };
+}
+
+async function findProjectLink(client: Client): Promise<ProjectLink | null> {
+  try {
+    return await getLinkFromDir<ProjectLink>(getVercelDirectory(client.cwd));
+  } catch (_error) {
+    return null;
+  }
+}
+
+async function findRepoLink(client: Client): Promise<RepoLink | null> {
+  try {
+    return await getRepoLink(client, client.cwd);
+  } catch (_error) {
+    return null;
+  }
+}
+
+function findLocalOrgId(
+  cwd: string,
+  projectLink: ProjectLink | null,
+  repoLink: RepoLink | null
+): string | undefined {
+  if (projectLink) {
+    return projectLink.orgId;
+  }
+
+  if (repoLink?.repoConfig) {
+    return findRepoOrgId(repoLink.repoConfig, relative(repoLink.rootPath, cwd));
+  }
+
+  return undefined;
+}
+
+function findRepoOrgId(
+  repoConfig: RepoProjectsConfig,
+  pathFromRepoRoot: string
+): string | undefined {
+  const projects = findProjectsFromPath(repoConfig.projects, pathFromRepoRoot);
+  const orgIds = new Set(projects.map(p => p.orgId ?? repoConfig.orgId ?? ''));
+
+  if (orgIds.size !== 1) {
+    return undefined;
+  }
+
+  const [orgId] = orgIds;
+  return orgId || undefined;
 }
 
 export function applyScopeFromLink(client: Client, link: { org: Org }): void {
