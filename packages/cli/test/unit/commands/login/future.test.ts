@@ -154,7 +154,6 @@ describe('login', () => {
     expect(tokenAfter).toBe(tokenResult.access_token);
   });
 
-  it.todo('Authorization request error');
   it.todo('Token request error');
 
   it('sends provided acr values for step-up device authorization requests', async () => {
