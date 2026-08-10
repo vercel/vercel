@@ -1,5 +1,6 @@
 import path from 'path';
 import type { ProjectSettings } from '@vercel-internals/types';
+import { ensureRuntimeAssetOnDisk } from '../runtime-assets';
 
 const NEXT_DEV_WEBSOCKET_SHIM = path.join(
   __dirname,
@@ -9,18 +10,24 @@ const NEXT_DEV_WEBSOCKET_SHIM = path.join(
 export function injectNextDevWebSocketShimIfNeeded(
   env: NodeJS.ProcessEnv,
   command: string,
-  projectSettings?: Pick<ProjectSettings, 'framework'>
+  projectSettings?: Pick<ProjectSettings, 'framework'>,
+  runtimeOptions?: {
+    globalRoot?: string;
+    version?: string;
+  }
 ): string | undefined {
   if (!shouldInjectNextDevWebSocketShim(command, projectSettings)) {
     return undefined;
   }
 
-  env.NODE_OPTIONS = prependNodeRequireOption(
-    env.NODE_OPTIONS,
-    NEXT_DEV_WEBSOCKET_SHIM
+  const shimPath = ensureRuntimeAssetOnDisk(
+    NEXT_DEV_WEBSOCKET_SHIM,
+    runtimeOptions
   );
 
-  return NEXT_DEV_WEBSOCKET_SHIM;
+  env.NODE_OPTIONS = prependNodeRequireOption(env.NODE_OPTIONS, shimPath);
+
+  return shimPath;
 }
 
 export function shouldInjectNextDevWebSocketShim(

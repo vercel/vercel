@@ -1,3 +1,6 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   injectNextDevWebSocketShimIfNeeded,
@@ -32,12 +35,23 @@ describe('Next.js dev WebSocket shim injection', () => {
 
   it('mutates NODE_OPTIONS when injection is needed', () => {
     const env = { NODE_OPTIONS: '--trace-warnings' };
+    const globalRoot = mkdtempSync(join(tmpdir(), 'vc-shim-inject-'));
 
-    const shimPath = injectNextDevWebSocketShimIfNeeded(env, 'pnpm dev', {
-      framework: 'nextjs',
-    });
+    const shimPath = injectNextDevWebSocketShimIfNeeded(
+      env,
+      'pnpm dev',
+      { framework: 'nextjs' },
+      { globalRoot, version: '58.9.1' }
+    );
 
-    expect(shimPath).toContain('next-dev-websocket-shim-preload.cjs');
+    expect(shimPath).toBe(
+      join(
+        globalRoot,
+        'runtime',
+        '58.9.1',
+        'next-dev-websocket-shim-preload.cjs'
+      )
+    );
     expect(env.NODE_OPTIONS).toBe(
       `--require ${JSON.stringify(shimPath)} --trace-warnings`
     );
