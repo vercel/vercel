@@ -332,7 +332,7 @@ describe('ai-gateway coding-agents setup', () => {
           true
         );
         expect(
-          notes.some(n => n.includes('ai-gateway.vercel.sh/v1/cursor'))
+          notes.some(n => n.includes('ai-gateway.vercel.sh/coding-agent/v1'))
         ).toBe(true);
         // The key itself must never appear in notes.
         expect(notes.every(n => !n.includes('vck_DummyKey0002'))).toBe(true);
@@ -363,7 +363,7 @@ describe('ai-gateway coding-agents setup', () => {
       const config = JSON.parse(raw);
       expect(config.provider['openai-compatible'].options).toEqual({
         apiKey: '{env:AI_GATEWAY_API_KEY}',
-        baseURL: 'https://ai-gateway.vercel.sh/v1',
+        baseURL: 'https://ai-gateway.vercel.sh/coding-agent/v1',
       });
       // Kilo substitutes {env:…} itself — the literal key stays out of the file.
       expect(raw).not.toContain('vck_DummyKey0002');
@@ -499,6 +499,9 @@ describe('ai-gateway coding-agents setup', () => {
 
       const raw = readFileSync(join(home, '.hermes', 'config.yaml'), 'utf8');
       expect(raw).toContain('vercel-ai-gateway');
+      expect(raw).toContain(
+        'api: https://ai-gateway.vercel.sh/coding-agent/v1'
+      );
       expect(raw).toContain('key_env: AI_GATEWAY_API_KEY');
       expect(raw).toContain('discover_models: true');
       // Existing provider entries survive the merge.
@@ -530,7 +533,9 @@ describe('ai-gateway coding-agents setup', () => {
       );
       const config = JSON.parse(raw);
       const provider = config.models.providers['vercel-ai-gateway'];
-      expect(provider.baseUrl).toBe('https://ai-gateway.vercel.sh/v1');
+      expect(provider.baseUrl).toBe(
+        'https://ai-gateway.vercel.sh/coding-agent/v1'
+      );
       // biome-ignore lint/suspicious/noTemplateCurlyInString: asserting OpenClaw's literal env-reference syntax
       expect(provider.apiKey).toBe('${AI_GATEWAY_API_KEY}');
       expect(provider.api).toBe('openai-completions');

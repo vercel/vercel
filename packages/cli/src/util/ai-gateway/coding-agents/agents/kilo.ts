@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import type { CodingAgent } from '../types';
 import { mergeJson, pathExists } from '../config-files';
-import { GATEWAY_OPENAI_BASE_URL } from '../gateway';
+import { GATEWAY_CODING_AGENT_BASE_URL } from '../gateway';
 
 /**
  * Kilo Code's CLI reads a global config at `~/.config/kilo/kilo.json[c]`
@@ -39,7 +39,7 @@ export const kilo: CodingAgent = {
 
   buildPlan(ctx) {
     const path = this.configPath(ctx);
-    const baseURL = ctx.baseUrlOverride ?? GATEWAY_OPENAI_BASE_URL;
+    const baseURL = ctx.baseUrlOverride ?? GATEWAY_CODING_AGENT_BASE_URL;
     return {
       fileChanges: [
         {

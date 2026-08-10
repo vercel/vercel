@@ -1,7 +1,10 @@
 import { join } from 'node:path';
 import type { CodingAgent } from '../types';
 import { mergeJson, pathExists } from '../config-files';
-import { GATEWAY_DEFAULT_MODEL, GATEWAY_OPENAI_BASE_URL } from '../gateway';
+import {
+  GATEWAY_CODING_AGENT_BASE_URL,
+  GATEWAY_DEFAULT_MODEL,
+} from '../gateway';
 
 /**
  * OpenClaw reads providers from `~/.openclaw/openclaw.json`. The apiKey field
@@ -36,7 +39,7 @@ export const openclaw: CodingAgent = {
 
   buildPlan(ctx) {
     const path = this.configPath(ctx);
-    const baseUrl = ctx.baseUrlOverride ?? GATEWAY_OPENAI_BASE_URL;
+    const baseUrl = ctx.baseUrlOverride ?? GATEWAY_CODING_AGENT_BASE_URL;
     return {
       fileChanges: [
         {
