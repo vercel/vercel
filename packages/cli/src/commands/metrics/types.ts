@@ -42,11 +42,6 @@ export interface MetricDimension {
   label: string;
 }
 
-export interface MetricListItem {
-  id: string;
-  description: string;
-}
-
 export interface MetricDetail {
   id: string;
   description: string;
@@ -57,10 +52,6 @@ export interface MetricDetail {
 }
 
 export type MetricDetailResponse = MetricDetail[];
-
-export interface MetricListResponse {
-  metrics: MetricListItem[];
-}
 
 export interface MetricsQueryRequest {
   scope: Scope;

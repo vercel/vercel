@@ -6,13 +6,15 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { schemaSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
-import { fetchMetricDetailOrExit, fetchMetricListOrExit } from './schema-api';
+import {
+  fetchMetricCatalogOrExit,
+  type MetricCatalogMetric,
+} from './schema-api';
 import { formatErrorJson } from './output';
 import formatTable from '../../util/format-table';
 import indent from '../../util/output/indent';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
 import getScope from '../../util/get-scope';
-import type { MetricDetail, MetricListItem } from './types';
 
 export default async function schema(
   client: Client,
@@ -58,13 +60,13 @@ export default async function schema(
 
   if (metric) {
     // Metric detail
-    const detailOrExitCode = await fetchMetricDetailOrExit(
+    const detailOrExitCode = await fetchMetricCatalogOrExit(
       client,
       team.id,
-      metric,
-      jsonOutput
+      jsonOutput,
+      metric
     );
-    // fetchMetricDetailOrExit() returns a numeric exit code when it already
+    // The helper returns a numeric exit code when it already
     // handled the error output for us.
     if (typeof detailOrExitCode === 'number') {
       return detailOrExitCode;
@@ -86,12 +88,12 @@ export default async function schema(
   }
 
   // Metric list
-  const metricsOrExitCode = await fetchMetricListOrExit(
+  const metricsOrExitCode = await fetchMetricCatalogOrExit(
     client,
     team.id,
     jsonOutput
   );
-  // fetchMetricListOrExit() returns a numeric exit code when it already
+  // The helper returns a numeric exit code when it already
   // handled the error output for us.
   if (typeof metricsOrExitCode === 'number') {
     return metricsOrExitCode;
@@ -108,7 +110,7 @@ export default async function schema(
   return 0;
 }
 
-function formatMetricListTable(metrics: MetricListItem[]) {
+function formatMetricListTable(metrics: MetricCatalogMetric[]) {
   return indent(
     formatTable(
       ['Metric', 'Description'],
@@ -119,13 +121,11 @@ function formatMetricListTable(metrics: MetricListItem[]) {
   );
 }
 
-function formatMetricsTable(metrics: MetricDetail[]) {
+function formatMetricsTable(metrics: MetricCatalogMetric[]) {
   if (metrics.length === 0) {
     return null;
   }
-  const dimensionsByMetric = metrics.map(metric =>
-    metric.dimensions.map(dimension => dimension.name)
-  );
+  const dimensionsByMetric = metrics.map(metric => metric.dimensions);
   const sharedDimensions = dimensionsByMetric[0]!.filter(dimension =>
     dimensionsByMetric.every(metricDimensions =>
       metricDimensions.includes(dimension)
@@ -134,17 +134,10 @@ function formatMetricsTable(metrics: MetricDetail[]) {
 
   const rows = metrics.map(metric => {
     const extraDimensions = metric.dimensions
-      .map(dimension => dimension.name)
       .filter(dimension => !sharedDimensions.includes(dimension))
       .map(dimension => `+${dimension}`);
 
-    const aggregations = metric.aggregations
-      .map(aggregation =>
-        aggregation === metric.defaultAggregation
-          ? `${aggregation} (default)`
-          : aggregation
-      )
-      .join(', ');
+    const aggregations = metric.aggregations.join(', ');
 
     return {
       metric: metric.id,

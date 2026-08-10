@@ -2,13 +2,26 @@ import type Client from '../../util/client';
 import output from '../../output-manager';
 import { isAPIError } from '../../util/errors-ts';
 import { formatErrorJson, handleApiError } from './output';
-import type {
-  Aggregation,
-  MetricDetail,
-  MetricDetailResponse,
-  MetricListItem,
-  MetricListResponse,
-} from './types';
+import type { Aggregation, MetricDetail, MetricDetailResponse } from './types';
+
+const OBSERVABILITY_API_URL = 'https://observability-api.vercel.sh';
+const METRIC_CATALOG_PAGE_SIZE = 250;
+
+export interface MetricCatalogMetric {
+  readonly id: string;
+  readonly description: string;
+  readonly dimensions: readonly string[];
+  readonly unit: string;
+  readonly aggregations: readonly string[];
+}
+
+interface MetricCatalogResponse {
+  metrics: MetricCatalogMetric[];
+  pagination: {
+    hasMore: boolean;
+    nextCursor: string | null;
+  };
+}
 
 function toMetricDetail(metric: MetricDetailResponse[number]): MetricDetail {
   return {
@@ -21,10 +34,6 @@ function toMetricDetail(metric: MetricDetailResponse[number]): MetricDetail {
   };
 }
 
-export function getMetricIds(metrics: MetricListItem[]): string[] {
-  return metrics.map(metric => metric.id).sort();
-}
-
 export function getDefaultAggregation(
   detail: MetricDetail[],
   metricId: string
@@ -32,15 +41,40 @@ export function getDefaultAggregation(
   return detail.find(metric => metric.id === metricId)?.defaultAggregation;
 }
 
-export async function fetchMetricList(
+export async function fetchMetricCatalog(
   client: Client,
-  accountId: string
-): Promise<MetricListItem[]> {
-  const { metrics } = await client.fetch<MetricListResponse>(
-    '/v2/observability/schema',
-    { accountId }
-  );
-  return metrics;
+  accountId: string,
+  search?: string
+): Promise<MetricCatalogMetric[]> {
+  const metrics: MetricCatalogMetric[] = [];
+  let cursor: string | null = null;
+
+  do {
+    const baseUrl =
+      client.apiUrl === 'https://api.vercel.com'
+        ? OBSERVABILITY_API_URL
+        : client.apiUrl;
+    const url = new URL('/v1/metrics', baseUrl);
+    url.searchParams.set('limit', String(METRIC_CATALOG_PAGE_SIZE));
+    if (search) {
+      url.searchParams.set('search', search);
+    }
+    if (cursor) {
+      url.searchParams.set('cursor', cursor);
+    }
+
+    const response = await client.fetch<MetricCatalogResponse>(url.href, {
+      accountId,
+    });
+    metrics.push(...response.metrics);
+    cursor = response.pagination.hasMore
+      ? response.pagination.nextCursor
+      : null;
+  } while (cursor);
+
+  return metrics
+    .filter(metric => !search || metric.id.startsWith(search))
+    .sort((left, right) => left.id.localeCompare(right.id));
 }
 
 export async function fetchMetricDetail(
@@ -56,13 +90,14 @@ export async function fetchMetricDetail(
   return detail.map(toMetricDetail);
 }
 
-export async function fetchMetricListOrExit(
+export async function fetchMetricCatalogOrExit(
   client: Client,
   accountId: string,
-  jsonOutput: boolean
-): Promise<MetricListItem[] | number> {
+  jsonOutput: boolean,
+  search?: string
+): Promise<MetricCatalogMetric[] | number> {
   try {
-    return await fetchMetricList(client, accountId);
+    return await fetchMetricCatalog(client, accountId, search);
   } catch (err: unknown) {
     if (isAPIError(err)) {
       return handleApiError(err, jsonOutput, client, {
