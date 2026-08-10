@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 14.0.4
+
+### Patch Changes
+
+- 13f81ac: Support pnpm lockfiles containing multiple YAML documents.
+
 ## 14.0.3
 
 ### Patch Changes

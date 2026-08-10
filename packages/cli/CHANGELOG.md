@@ -1,5 +1,48 @@
 # vercel
 
+## 58.9.1
+
+### Patch Changes
+
+- 73b3efd: Support app principal tokens in scope resolution via token introspection
+- ce81015: Document and regression-test horizontal option uniformity across the Vercel CLI.
+- 337f9ed: `vercel ai-gateway coding-agents setup` now points Cursor, Hermes, Kilo Code,
+  and OpenClaw at the gateway's generic coding-agent surface,
+  `https://ai-gateway.vercel.sh/coding-agent/v1`, instead of the generic
+  `/v1` base URL. Claude Code and Codex keep their dedicated compatibility
+  endpoints, and Cline, OpenCode, and Pi are unaffected because they use their
+  native gateway providers rather than a base URL. This also fixes Cursor, whose
+  previous base URL `https://ai-gateway.vercel.sh/v1/cursor` is not a route the
+  gateway serves and returned a 404.
+- 03b264b: Migrate domains REST API calls off `/v4/domains` to the current documented versions: `GET /v5/domains/:domain` (get domain), `GET /v5/domains/:domain/records` (list DNS records), `POST /v7/domains` (add domain), and `GET /v6/domains/:domain/config` (domain config). `vercel domains add` now sends `zone: true` explicitly, preserving the DNS-zone creation that the API only defaults on for v4 and below.
+- Updated dependencies [13f81ac]
+- Updated dependencies [0dd2105]
+- Updated dependencies [4a1b21c]
+- Updated dependencies [92dfd87]
+- Updated dependencies [e829b31]
+  - @vercel/build-utils@14.0.4
+  - @vercel/next@4.21.3
+  - @vercel/cli-config@0.2.3
+  - @vercel/node@5.9.8
+  - @vercel/backends@0.8.35
+  - @vercel/container@0.1.1
+  - @vercel/elysia@0.1.112
+  - @vercel/express@0.1.126
+  - @vercel/fastify@0.1.115
+  - @vercel/go@3.10.4
+  - @vercel/h3@0.1.121
+  - @vercel/hono@0.2.115
+  - @vercel/hydrogen@1.4.1
+  - @vercel/koa@0.1.95
+  - @vercel/nestjs@0.2.116
+  - @vercel/python@6.56.0
+  - @vercel/redwood@2.5.1
+  - @vercel/remix-builder@5.9.2
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.1
+  - @vercel/static-build@2.12.4
+  - @vercel/cli-auth@0.3.3
+
 ## 58.9.0
 
 ### Minor Changes

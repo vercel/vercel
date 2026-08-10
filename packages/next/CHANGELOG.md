@@ -1,5 +1,12 @@
 # @vercel/next
 
+## 4.21.3
+
+### Patch Changes
+
+- 0dd2105: Update to latest Next.js adapter
+- 4a1b21c: Infer `NEXT_DEPLOYMENT_ID` from `VERCEL_DEPLOYMENT_ID` for non-adapter builds when Skew Protection is enabled, so Next.js builds resolved per-service still use the deployment id for skew-protected requests.
+
 ## 4.21.2
 
 ### Patch Changes

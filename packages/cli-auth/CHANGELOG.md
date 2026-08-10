@@ -1,5 +1,12 @@
 # @vercel/cli-auth
 
+## 0.3.3
+
+### Patch Changes
+
+- Updated dependencies [92dfd87]
+  - @vercel/cli-config@0.2.3
+
 ## 0.3.2
 
 ### Patch Changes

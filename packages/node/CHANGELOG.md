@@ -1,5 +1,13 @@
 # @vercel/node
 
+## 5.9.8
+
+### Patch Changes
+
+- e829b31: Fix TypeScript 7 support in the `@vercel/node` builder by using the project-installed compiler.
+- Updated dependencies [13f81ac]
+  - @vercel/build-utils@14.0.4
+
 ## 5.9.7
 
 ### Patch Changes
