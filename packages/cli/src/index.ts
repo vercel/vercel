@@ -71,9 +71,11 @@ import {
   canAutoUpdate,
   hasAutoUpdatePreference,
   isNativeBinaryInstall,
+  isVersionPinned,
   setAutoUpdate,
 } from './util/updates';
 import { getCommandName, getTitleName } from './util/pkg-name';
+import { BUILD_LABEL } from './util/constants';
 import login from './commands/login';
 import type {
   AuthConfig,
@@ -265,9 +267,12 @@ const main = async () => {
 
   // If empty, leave this code here for easy adding of beta commands later
   const betaCommands: string[] = ['api', 'crons', 'curl', 'webhooks'];
+  // Short build label stamped by CI for non-release builds (e.g. "pr-115"
+  // from "pr-115 abc1234"). The full label is shown by `vc --version`.
+  const shortBuildLabel = BUILD_LABEL ? ` (${BUILD_LABEL.split(' ')[0]})` : '';
   const versionBanner = isNativeBinaryInstall()
-    ? `${getTitleName()} CLI ${pkg.version}`
-    : `${getTitleName()} CLI ${pkg.version} (Node.js ${process.versions.node})`;
+    ? `${getTitleName()} CLI ${pkg.version}${shortBuildLabel}`
+    : `${getTitleName()} CLI ${pkg.version}${shortBuildLabel} (Node.js ${process.versions.node})`;
   const msg = betaCommands.includes(targetOrSubcommand)
     ? `${versionBanner} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
     : versionBanner;
@@ -657,6 +662,7 @@ const main = async () => {
     'sandbox',
     'telemetry',
     'upgrade',
+    'version',
     'skills',
     'agent',
   ];
@@ -1211,6 +1217,10 @@ const main = async () => {
           telemetry.trackCliCommandUpgrade(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).upgrade;
           break;
+        case 'version':
+          telemetry.trackCliCommandVersion(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).version;
+          break;
         case 'webhooks':
           telemetry.trackCliCommandWebhooks(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).webhooks;
@@ -1413,7 +1423,13 @@ main()
     // Skip the update notification after `vc upgrade`: the process still has
     // the pre-upgrade version in memory, so it would prompt the user to
     // upgrade again right after the upgrade completed.
-    if (cachedLatest && resolvedCommandForUpdate !== 'upgrade') {
+    // Also skip it entirely while a version is pinned (`vc version use`):
+    // the user explicitly chose this version, so don't nag or auto-update.
+    if (
+      cachedLatest &&
+      resolvedCommandForUpdate !== 'upgrade' &&
+      !(await isVersionPinned())
+    ) {
       const originalExitCode = typeof exitCode === 'number' ? exitCode : 0;
 
       // Await the fresh registry lookup to verify the exact version before

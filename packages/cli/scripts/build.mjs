@@ -29,6 +29,9 @@ function createConstants() {
   const filename = new URL('src/util/constants.ts', repoRoot);
   const contents = `// This file is auto-generated
 export const SENTRY_DSN: string | undefined = ${envToString('SENTRY_DSN')};
+export const BUILD_LABEL: string | undefined = ${envToString(
+    'VERCEL_CLI_BUILD_LABEL'
+  )};
 `;
   writeFileSync(filename, contents, 'utf8');
 }
@@ -176,8 +179,12 @@ copyFileSync(
 );
 copyFileSync(new URL('src/vc.js', repoRoot), new URL('vc.js', distRoot));
 
-// Generate version.mjs for fast --version lookup
+// Generate version.mjs for fast --version lookup. VERCEL_CLI_BUILD_LABEL is
+// stamped by CI for non-release builds (e.g. "pr-115 abc1234") and shown in
+// the `vc --version` banner.
+const buildLabel = process.env.VERCEL_CLI_BUILD_LABEL || '';
 writeFileSync(
   new URL('version.mjs', distRoot),
-  `export const version = ${JSON.stringify(pkg.version)};\n`
+  `export const version = ${JSON.stringify(pkg.version)};\n` +
+    `export const buildLabel = ${JSON.stringify(buildLabel)};\n`
 );

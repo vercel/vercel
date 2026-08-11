@@ -12,5 +12,5 @@
     "resolveJsonModule": true,
     "isolatedModules": true
   },
-  "include": ["examples", "frameworks.ts", "_lib"]
+  "include": ["examples", "frameworks.ts", "pr-binaries-token.ts", "_lib"]
 }

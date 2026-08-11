@@ -110,9 +110,15 @@ importers:
       '@sentry/node':
         specifier: 7.120.1
         version: 7.120.1
+      '@vercel/blob':
+        specifier: 2.4.0
+        version: 2.4.0
       got:
         specifier: 11.8.5
         version: 11.8.5
+      jose:
+        specifier: 5.9.6
+        version: 5.9.6
       node-fetch:
         specifier: 2.6.7
         version: 2.6.7

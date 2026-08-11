@@ -104,9 +104,13 @@ if (
   process.argv.length === 3 &&
   (process.argv[2] === '--version' || process.argv[2] === '-v')
 ) {
-  const { version } = await import('./version.mjs');
-  const binaryLabel = process.env.VERCEL_VC_NATIVE === '1' ? ' (native)' : '';
-  console.error(`Vercel CLI ${version}${binaryLabel}`);
+  const { version, buildLabel } = await import('./version.mjs');
+  const labels = [];
+  if (process.env.VERCEL_VC_NATIVE === '1') labels.push('native');
+  // Optional build metadata stamped by CI (e.g. "pr-115 abc1234").
+  if (buildLabel) labels.push(buildLabel);
+  const suffix = labels.length > 0 ? ` (${labels.join(', ')})` : '';
+  console.error(`Vercel CLI ${version}${suffix}`);
   console.log(version);
   process.exit(0);
 }

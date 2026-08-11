@@ -3,7 +3,7 @@
   "extends": ["//"],
   "tasks": {
     "build": {
-      "outputs": ["**/*.js", "**/*.d.ts"]
+      "outputs": ["**/*.js", "**/*.d.ts", "src/version.ts"]
     },
     "build:docs": {
       "dependsOn": ["build", "^build"]

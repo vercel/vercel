@@ -4,8 +4,20 @@ import type Client from './client';
 import { writeToConfigFile } from './config/files';
 import { isGlobal } from './get-update-command';
 import { isNativeBinaryInstall } from './native-install';
+import { getPinnedVersion } from './native-self-update';
 
 export { isNativeBinaryInstall };
+
+/**
+ * True when update notifications and automatic updates should be suppressed
+ * because the user pinned a version with `vc version use`.
+ */
+export async function isVersionPinned(): Promise<boolean> {
+  if (!isNativeBinaryInstall()) {
+    return false;
+  }
+  return (await getPinnedVersion()) !== undefined;
+}
 
 export function isAutoUpdateEnabled(config: GlobalConfig): boolean {
   return config.updates?.auto === true;

@@ -64,6 +64,7 @@ import { tracesCommand } from '../../../src/commands/traces/command';
 import { upgradeCommand } from '../../../src/commands/upgrade/command';
 import { usageCommand } from '../../../src/commands/usage/command';
 import { vcrCommand } from '../../../src/commands/vcr/command';
+import { versionCommand } from '../../../src/commands/version/command';
 import { webhooksCommand } from '../../../src/commands/webhooks/command';
 import { whoamiCommand } from '../../../src/commands/whoami/command';
 
@@ -131,6 +132,7 @@ const ROOT_COMMANDS = [
   upgradeCommand,
   usageCommand,
   vcrCommand,
+  versionCommand,
   webhooksCommand,
   whoamiCommand,
 ] as const satisfies readonly Command[];

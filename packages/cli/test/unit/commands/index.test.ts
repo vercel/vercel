@@ -85,6 +85,8 @@ describe('index', () => {
         ['telemetry', 'telemetry'],
         ['traces', 'traces'],
         ['upgrade', 'upgrade'],
+        ['version', 'version'],
+        ['versions', 'version'],
         ['webhook', 'webhooks'],
         ['webhooks', 'webhooks'],
         ['usage', 'usage'],

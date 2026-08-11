@@ -60,6 +60,7 @@ import { tracesCommand } from './traces/command';
 import { upgradeCommand } from './upgrade/command';
 import { usageCommand } from './usage/command';
 import { vcrCommand } from './vcr/command';
+import { versionCommand } from './version/command';
 import { whoamiCommand } from './whoami/command';
 import { blobCommand } from './blob/command';
 import { webhooksCommand } from './webhooks/command';
@@ -128,6 +129,7 @@ const commandsStructs = [
   webhooksCommand,
   usageCommand,
   vcrCommand,
+  versionCommand,
   whoamiCommand,
   // added because we don't have a full help command
   { name: 'help', aliases: [] },

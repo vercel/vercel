@@ -30,6 +30,7 @@
     "//#lint:dependencies": {},
     "build": {
       "dependsOn": ["^build"],
+      "env": ["VERCEL_CLI_BUILD_LABEL"],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/utils/build.mjs",
@@ -39,7 +40,7 @@
       "outputs": ["dist/**"]
     },
     "build:docs": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["build", "^build"],
       "inputs": ["$TURBO_DEFAULT$", "!docs/**"],
       "outputLogs": "new-only",
       "outputs": ["docs/**"]
