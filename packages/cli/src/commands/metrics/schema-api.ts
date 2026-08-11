@@ -182,7 +182,7 @@ export function fetchCombinedMetricListOrExit(
       fetchCustomMetricCatalog(client, accountId),
     ]);
     return [
-      ...platformMetrics,
+      ...platformMetrics.filter(metric => metric.id.startsWith('vercel.')),
       ...customMetrics.map(({ id, description }) => ({ id, description })),
     ].sort((left, right) => left.id.localeCompare(right.id));
   });

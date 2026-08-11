@@ -30,7 +30,13 @@ describe('metrics schema', () => {
   it('lists metrics by default', async () => {
     client.scenario.get('/v2/observability/schema', (_req, res) => {
       res.json({
-        metrics: [{ id: 'vercel.request.count', description: 'Count' }],
+        metrics: [
+          { id: 'vercel.request.count', description: 'Count' },
+          {
+            id: 'checkout.duration',
+            description: 'Legacy custom metric entry',
+          },
+        ],
       });
     });
     client.scenario.get('/v1/metrics', (req, res) => {
