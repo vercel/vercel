@@ -15,4 +15,10 @@ export class FlagsRmTelemetryClient extends TelemetryClient {
       this.trackCliFlag('yes');
     }
   }
+
+  trackCliFlagDangerouslyForce(dangerouslyForce: boolean | undefined) {
+    if (dangerouslyForce) {
+      this.trackCliFlag('dangerously-force');
+    }
+  }
 }
