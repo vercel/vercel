@@ -32,6 +32,7 @@ import { inspectCommand } from './inspect/command';
 import { installCommand } from './install/command';
 import { integrationResourceCommand } from './integration-resource/command';
 import { integrationCommand } from './integration/command';
+import { kmsCommand } from './kms/command';
 import { linkCommand } from './link/command';
 import { listCommand } from './list/command';
 import { loginCommand } from './login/command';
@@ -100,6 +101,7 @@ const commandsStructs = [
   installCommand,
   integrationCommand,
   integrationResourceCommand,
+  kmsCommand,
   linkCommand,
   listCommand,
   loginCommand,

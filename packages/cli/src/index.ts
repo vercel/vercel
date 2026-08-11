@@ -259,7 +259,7 @@ const main = async () => {
   const subSubCommand = parsedArgs.args[3];
 
   // If empty, leave this code here for easy adding of beta commands later
-  const betaCommands: string[] = ['api', 'crons', 'curl', 'webhooks'];
+  const betaCommands: string[] = ['api', 'crons', 'curl', 'kms', 'webhooks'];
   const versionBanner = isNativeBinaryInstall()
     ? `${getTitleName()} CLI ${pkg.version}`
     : `${getTitleName()} CLI ${pkg.version} (Node.js ${process.versions.node})`;
@@ -1086,6 +1086,10 @@ const main = async () => {
         case 'integration-resource':
           telemetry.trackCliCommandIntegrationResource(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).integrationResource;
+          break;
+        case 'kms':
+          telemetry.trackCliCommandKms(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).kms;
           break;
         case 'mcp':
           func = (await import('./commands-bulk.js')).mcp;

@@ -264,6 +264,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandKms(actual: string) {
+    this.trackCliCommand({
+      command: 'kms',
+      value: actual,
+    });
+  }
+
   trackCliCommandLink(actual: string) {
     this.trackCliCommand({
       command: 'link',
