@@ -222,7 +222,7 @@ describe('metrics query v2', () => {
       expect(postedBody?.metric).toBe('vercel.request.count');
     });
 
-    it('queries custom metrics through the canonical endpoint', async () => {
+    it('queries custom metrics with bucket-aligned timestamps', async () => {
       mockCustomMetricCatalog();
       mockCanonicalApiSuccess();
       client.setArgv(
@@ -233,7 +233,9 @@ describe('metrics query v2', () => {
         '--filter',
         "source eq 'edge'",
         '--since',
-        '1h',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z',
         '--format=json'
       );
 
@@ -245,6 +247,11 @@ describe('metrics query v2', () => {
           ownerId: 'team_dummy',
           projectIds: ['prj_metricstest'],
         },
+        timeRange: {
+          start: '2026-07-29T09:00:00.000Z',
+          end: '2026-07-29T10:00:00.000Z',
+        },
+        bucketSeconds: 60,
         groupBy: ['source'],
         filter: "source eq 'edge'",
         metrics: {
@@ -262,6 +269,10 @@ describe('metrics query v2', () => {
         },
       });
       const result = JSON.parse(client.stdout.getFullOutput());
+      expect(result.query).toMatchObject({
+        startTime: '2026-07-29T09:00:00.000Z',
+        endTime: '2026-07-29T10:00:00.000Z',
+      });
       expect(result.data).toEqual([
         {
           timestamp: '2026-07-29T10:00:00.000Z',
