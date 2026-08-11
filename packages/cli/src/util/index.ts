@@ -8,7 +8,7 @@ import chalk from 'chalk';
 import ua from './ua';
 import processDeployment from './deploy/process-deployment';
 import { responseError } from './error';
-import { APIError, BuildError } from './errors-ts';
+import { APIError, BuildError, parseRateLimitResetAsMillis } from './errors-ts';
 import printIndications from './print-indications';
 import type { GitMetadata, Org, Project } from '@vercel-internals/types';
 import type { VercelConfig } from './dev/types';
@@ -228,13 +228,23 @@ export default class Now {
 
       let msg = 'You have been creating deployments at a very fast pace. ';
 
-      if (error.limit && error.limit.reset) {
-        const { reset } = error.limit;
-        const difference = reset - Date.now();
+      const resetMs = parseRateLimitResetAsMillis(error.limit);
 
-        msg += `Please retry in ${ms(difference, { long: true })}.`;
-      } else {
+      if (resetMs === undefined) {
         msg += 'Please slow down.';
+      } else {
+        // Print the timestamp the API reported verbatim so the message can't
+        // drift from the actual reset window, and only add the relative hint
+        // when the window is still in the future.
+        const resetAt = new Date(resetMs).toISOString();
+        const difference = resetMs - Date.now();
+
+        msg +=
+          difference > 0
+            ? `Please retry after ${resetAt} (in ${ms(difference, {
+                long: true,
+              })}).`
+            : `Please retry after ${resetAt}.`;
       }
 
       const err: APIError = Object.create(APIError.prototype);
