@@ -20,6 +20,7 @@ describe('backend rewrite behavior warning', () => {
     'django',
     'python',
     'fasthtml',
+    'go',
   ])('warns for an internal rewrite in a %s project', framework => {
     expect(
       hasBackendRewriteBehaviorChange({
@@ -29,11 +30,14 @@ describe('backend rewrite behavior warning', () => {
     ).toBe(true);
   });
 
-  it('does not infer Python from the builder package', () => {
+  it.each([
+    '@vercel/python@canary',
+    '@vercel/go@canary',
+  ])('does not infer the framework from the %s builder package', use => {
     expect(
       hasBackendRewriteBehaviorChange({
         projectRewrites: [{ source: '/old', destination: '/new' }],
-        builders: [builder('other', '@vercel/python@canary')],
+        builders: [builder('other', use)],
       })
     ).toBe(false);
   });

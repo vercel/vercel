@@ -14,6 +14,10 @@ function hasInternalPathRewrite(rewrites: Rewrite[] | undefined): boolean {
   );
 }
 
+function isAffectedFramework(framework: string | null | undefined): boolean {
+  return framework === 'go' || isPythonFramework(framework);
+}
+
 export function hasBackendRewriteBehaviorChange({
   projectRewrites,
   builders,
@@ -24,7 +28,7 @@ export function hasBackendRewriteBehaviorChange({
   return (
     hasInternalPathRewrite(projectRewrites) &&
     (builders ?? []).some(builder =>
-      isPythonFramework(builder.config?.framework)
+      isAffectedFramework(builder.config?.framework)
     )
   );
 }

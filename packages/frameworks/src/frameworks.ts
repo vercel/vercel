@@ -4770,15 +4770,9 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
-    defaultRoutes: [
-      {
-        handle: 'filesystem',
-      },
-      {
-        src: '/(.*)',
-        dest: '/',
-      },
-    ],
+    // No `defaultRoutes`: `@vercel/go` emits its own catch-all, which points at
+    // the Lambda's real output path and carries the `request.path` transform
+    // that makes rewrites visible to the server.
   },
   {
     name: 'Services',
