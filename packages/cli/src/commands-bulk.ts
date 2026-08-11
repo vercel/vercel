@@ -25,6 +25,7 @@ export { default as curl } from './commands/curl';
 export { default as deployHooks } from './commands/deploy-hooks';
 export { default as dns } from './commands/dns';
 export { default as domains } from './commands/domains';
+export { default as drains } from './commands/drains';
 export { default as firewall } from './commands/firewall';
 export { default as globalConfig } from './commands/global-config';
 export { default as flags } from './commands/flags';

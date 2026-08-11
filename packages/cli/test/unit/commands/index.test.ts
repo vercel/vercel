@@ -33,6 +33,7 @@ describe('index', () => {
         ['dns', 'dns'],
         ['domain', 'domains'],
         ['domains', 'domains'],
+        ['drains', 'drains'],
         ['edge-config', 'global-config'],
         ['env', 'env'],
         ['firewall', 'firewall'],

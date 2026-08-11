@@ -173,6 +173,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandDrains(actual: string) {
+    this.trackCliCommand({
+      command: 'drains',
+      value: actual,
+    });
+  }
+
   trackCliCommandEnv(actual: string) {
     this.trackCliCommand({
       command: 'env',

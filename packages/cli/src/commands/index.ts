@@ -20,6 +20,7 @@ import { deployHooksCommand } from './deploy-hooks/command';
 import { devCommand } from './dev/command';
 import { dnsCommand } from './dns/command';
 import { domainsCommand } from './domains/command';
+import { drainsCommand } from './drains/command';
 import { envCommand } from './env/command';
 import { firewallCommand } from './firewall/command';
 import { flagsCommand } from './flags/command';
@@ -89,6 +90,7 @@ const commandsStructs = [
   devCommand,
   dnsCommand,
   domainsCommand,
+  drainsCommand,
   envCommand,
   firewallCommand,
   flagsCommand,

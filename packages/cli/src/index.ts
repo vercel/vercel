@@ -1037,6 +1037,10 @@ const main = async () => {
           telemetry.trackCliCommandDns(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).dns;
           break;
+        case 'drains':
+          telemetry.trackCliCommandDrains(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).drains;
+          break;
         case 'deploy-hooks':
         case 'deploy-hook':
           telemetry.trackCliCommandDeployHooks(userSuppliedSubCommand);
