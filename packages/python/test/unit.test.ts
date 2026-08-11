@@ -90,6 +90,7 @@ import {
   type QueueIntegration,
 } from '../src/conditional-vendoring';
 import {
+  getLocalSdkSourcePaths,
   isLegacyWorkersProject,
   resolveWorkflowServingMode,
 } from '../src/sdk-detection';
@@ -830,6 +831,73 @@ describe('Python SDK generation detection', () => {
         uvLockPath: null,
       })
     ).resolves.toBe('workers');
+  });
+
+  describe('local SDK source override (VERCEL_SDK_PYTHON)', () => {
+    let sdkRoot: string;
+
+    beforeEach(() => {
+      sdkRoot = path.join(mockWorkPath, 'vercel-py');
+      for (const name of [
+        'vercel',
+        'vercel-cache',
+        'vercel-oidc',
+        'vercel-queue',
+        'other',
+      ]) {
+        fs.mkdirSync(path.join(sdkRoot, 'src', name), { recursive: true });
+      }
+    });
+
+    it('is inert when the env override is unset', async () => {
+      await expect(
+        getLocalSdkSourcePaths({
+          pythonPackage: makePackageWithDependencies(['vercel']),
+          env: {},
+        })
+      ).resolves.toEqual([]);
+    });
+
+    it('installs vercel and every vercel-* source package for vercel projects', async () => {
+      await expect(
+        getLocalSdkSourcePaths({
+          pythonPackage: makePackageWithDependencies(['fastapi', 'vercel']),
+          env: { VERCEL_SDK_PYTHON: sdkRoot },
+        })
+      ).resolves.toEqual([
+        path.join(sdkRoot, 'src', 'vercel'),
+        path.join(sdkRoot, 'src', 'vercel-cache'),
+        path.join(sdkRoot, 'src', 'vercel-oidc'),
+        path.join(sdkRoot, 'src', 'vercel-queue'),
+      ]);
+    });
+
+    it('installs every declared vercel-* package', async () => {
+      await expect(
+        getLocalSdkSourcePaths({
+          pythonPackage: makePackageWithDependencies([
+            'fastapi',
+            'vercel-queue>=0.7',
+            'Vercel_Cache',
+            'vercel-oidc[dev]',
+          ]),
+          env: { VERCEL_SDK_PYTHON: sdkRoot },
+        })
+      ).resolves.toEqual([
+        path.join(sdkRoot, 'src', 'vercel-cache'),
+        path.join(sdkRoot, 'src', 'vercel-oidc'),
+        path.join(sdkRoot, 'src', 'vercel-queue'),
+      ]);
+    });
+
+    it('is inert for projects that use neither SDK package', async () => {
+      await expect(
+        getLocalSdkSourcePaths({
+          pythonPackage: makePackageWithDependencies(['fastapi']),
+          env: { VERCEL_SDK_PYTHON: sdkRoot },
+        })
+      ).resolves.toEqual([]);
+    });
   });
 });
 

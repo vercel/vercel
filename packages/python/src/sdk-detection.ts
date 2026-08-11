@@ -84,6 +84,52 @@ export async function hasExplicitVercelSdkDependency(
 }
 
 /**
+ * Local SDK source override, a-la VERCEL_RUNTIME_PYTHON: when
+ * VERCEL_SDK_PYTHON points at a `vercel-py` workspace checkout, return the
+ * workspace member directories to reinstall over the released `vercel` and
+ * `vercel-*` packages. When the project depends on `vercel`, all `vercel-*`
+ * members in the checkout are included; directly declared `vercel-*` packages
+ * are also supported. All matching members install in a single resolution.
+ * Returns an empty list when the override is unset or the project does not
+ * depend on a matching package.
+ */
+export async function getLocalSdkSourcePaths({
+  pythonPackage,
+  env,
+}: {
+  pythonPackage: PythonPackage | undefined;
+  env: NodeJS.ProcessEnv;
+}): Promise<string[]> {
+  const sdkRoot = env.VERCEL_SDK_PYTHON;
+  if (!sdkRoot) {
+    return [];
+  }
+  const names = await getDeclaredDependencyNames(
+    pythonPackage?.manifest?.data?.project?.dependencies
+  );
+  const hasVercelPackage = [...(names ?? [])].some(
+    name => name === 'vercel' || name.startsWith('vercel-')
+  );
+  if (!hasVercelPackage) {
+    return [];
+  }
+
+  const entries = await fs.promises.readdir(join(sdkRoot, 'src'), {
+    withFileTypes: true,
+  });
+  return entries
+    .filter(
+      entry =>
+        entry.isDirectory() &&
+        (entry.name === 'vercel' || entry.name.startsWith('vercel-')) &&
+        (names?.has('vercel') || names?.has(entry.name))
+    )
+    .map(entry => entry.name)
+    .sort()
+    .map(name => join(sdkRoot, 'src', name));
+}
+
+/**
  * Resolve the `vercel` SDK version the project will actually run with.
  * Queries the build venv first (accurate even for custom install commands),
  * then falls back to the resolved version recorded in uv.lock. Returns

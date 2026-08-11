@@ -16,6 +16,7 @@ import {
 } from './package-versions';
 import { getQueueAdapterBootstrap } from './conditional-vendoring';
 import {
+  getLocalSdkSourcePaths,
   isLegacyWorkersProject,
   MIN_QUEUE_WORKFLOW_SDK_VERSION,
   resolveWorkflowServingMode,
@@ -1156,6 +1157,37 @@ export const build: BuildVX = async ({
       venvPath,
       projectDir: join(workPath, entryDirectory),
       pipPlatformArgs,
+    });
+  }
+
+  // Local vercel SDK checkout override (VERCEL_SDK_PYTHON): reinstall the
+  // SDK packages from source before serving-mode resolution and queue
+  // introspection so both observe the overridden install.
+  const localSdkSourcePaths = await getLocalSdkSourcePaths({
+    pythonPackage,
+    env: baseEnv,
+  });
+  if (localSdkSourcePaths.length > 0) {
+    debug(
+      `Installing vercel SDK override from ${baseEnv.VERCEL_SDK_PYTHON}: ` +
+        localSdkSourcePaths.join(', ')
+    );
+    await uv.pip({
+      venvPath,
+      projectDir: join(workPath, entryDirectory),
+      args: [
+        'install',
+        '--link-mode',
+        'copy',
+        // Without --no-sources, uv resolves the checkout's workspace
+        // dependencies as editable .pth installs pointing at the (build
+        // only) checkout mount — invisible to bundling and dangling at
+        // runtime. Explicit paths stay real installs; the remaining
+        // workspace siblings resolve from PyPI.
+        '--no-sources',
+        ...pipPlatformArgs,
+        ...localSdkSourcePaths,
+      ],
     });
   }
 
