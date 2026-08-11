@@ -451,7 +451,7 @@ export const removeGrantSubcommand = {
 
 export const kmsCommand = {
   name: 'kms',
-  aliases: ['kms-issuer'],
+  aliases: [],
   description: 'Manage KMS issuers, signing keys, and project grants',
   arguments: [],
   subcommands: [

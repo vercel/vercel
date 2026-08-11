@@ -849,7 +849,8 @@ exports[`help command > connex help output snapshots > connex create subcommand 
        --icon <PATH>             Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)               
        --json                    Output as JSON                                                                              
   -n,  --name <NAME>             Name of the connector                                                                       
-       --trigger-event <EVENT>   Webhook event to receive. Repeatable.                                                       
+       --trigger-event <EVENT>   Webhook event to receive. Repeatable. Requires --triggers and replaces the provider's       
+                                 default events.                                                                             
        --triggers                Enable webhook triggers for this connector                                                  
 
 

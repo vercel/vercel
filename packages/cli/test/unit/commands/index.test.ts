@@ -48,6 +48,7 @@ describe('index', () => {
         ['integration', 'integration'],
         ['integration-resource', 'integration-resource'],
         ['ir', 'integration-resource'],
+        ['kms', 'kms'],
         ['link', 'link'],
         ['list', 'list'],
         ['ln', 'alias'],
