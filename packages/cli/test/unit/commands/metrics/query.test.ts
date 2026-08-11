@@ -111,6 +111,7 @@ function mockCustomMetricCatalog(
       kind: 'custom',
       limit: '250',
       search: metricId,
+      activeSince: '2026-07-29T09:00:42.123Z',
       teamId: 'team_dummy',
     });
     res.json({
@@ -222,7 +223,7 @@ describe('metrics query v2', () => {
       expect(postedBody?.metric).toBe('vercel.request.count');
     });
 
-    it('queries custom metrics with bucket-aligned timestamps', async () => {
+    it('queries custom metrics with their exact time range', async () => {
       mockCustomMetricCatalog();
       mockCanonicalApiSuccess();
       client.setArgv(
@@ -248,8 +249,8 @@ describe('metrics query v2', () => {
           projectIds: ['prj_metricstest'],
         },
         timeRange: {
-          start: '2026-07-29T09:00:00.000Z',
-          end: '2026-07-29T10:00:00.000Z',
+          start: '2026-07-29T09:00:42.123Z',
+          end: '2026-07-29T10:00:42.123Z',
         },
         bucketSeconds: 60,
         groupBy: ['source'],
@@ -270,8 +271,8 @@ describe('metrics query v2', () => {
       });
       const result = JSON.parse(client.stdout.getFullOutput());
       expect(result.query).toMatchObject({
-        startTime: '2026-07-29T09:00:00.000Z',
-        endTime: '2026-07-29T10:00:00.000Z',
+        startTime: '2026-07-29T09:00:42.123Z',
+        endTime: '2026-07-29T10:00:42.123Z',
       });
       expect(result.data).toEqual([
         {
@@ -289,6 +290,36 @@ describe('metrics query v2', () => {
         dbTimeSeconds: 0.02,
         engineTimeSeconds: 0.025,
         queryTable: 'vercel-main-custom-metrics',
+      });
+    });
+
+    it('queries custom metrics when catalog enrichment fails', async () => {
+      const metric = `checkout.${'x'.repeat(101)}`;
+      client.scenario.get('/v1/metrics', (req, res) => {
+        expect(req.query.search).toBe(metric);
+        res.status(400).json({
+          error: {
+            code: 'invalid_query',
+            message: 'search cannot exceed 100 characters',
+          },
+        });
+      });
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        metric,
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        metrics: { value: { metric, aggregation: 'sum' } },
       });
     });
   });

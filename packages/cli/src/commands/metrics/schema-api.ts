@@ -69,7 +69,8 @@ export async function fetchMetricList(
 export async function fetchCustomMetricCatalog(
   client: Client,
   accountId: string,
-  search?: string
+  search?: string,
+  activeSince?: string
 ): Promise<MetricCatalogMetric[]> {
   const metrics: MetricCatalogMetric[] = [];
   let cursor: string | null = null;
@@ -80,6 +81,9 @@ export async function fetchCustomMetricCatalog(
     url.searchParams.set('kind', 'custom');
     if (search) {
       url.searchParams.set('search', search);
+    }
+    if (activeSince) {
+      url.searchParams.set('activeSince', activeSince);
     }
     if (cursor) {
       url.searchParams.set('cursor', cursor);
@@ -179,7 +183,7 @@ export function fetchCombinedMetricListOrExit(
   return fetchSchemaOrExit(client, jsonOutput, async () => {
     const [platformMetrics, customMetrics] = await Promise.all([
       fetchMetricList(client, accountId),
-      fetchCustomMetricCatalog(client, accountId),
+      fetchCustomMetricCatalog(client, accountId).catch(() => []),
     ]);
     return [
       ...platformMetrics.filter(metric => metric.id.startsWith('vercel.')),

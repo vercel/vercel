@@ -12,7 +12,7 @@ import {
 } from './validation';
 import { validateAllProjectMutualExclusivity } from '../../util/command-validation';
 import {
-  fetchCustomMetricCatalogOrExit,
+  fetchCustomMetricCatalog,
   fetchMetricDetailOrExit,
   getDefaultAggregation,
   getObservabilityApiUrl,
@@ -99,23 +99,6 @@ function toBucketSeconds(granularity: MetricsQueryRequest['granularity']) {
   if ('minutes' in granularity) return granularity.minutes * 60;
   if ('hours' in granularity) return granularity.hours * 60 * 60;
   return granularity.days * 24 * 60 * 60;
-}
-
-function alignTimeRangeToGranularity(
-  startTime: Date,
-  endTime: Date,
-  granularity: MetricsQueryRequest['granularity']
-): { startTime: Date; endTime: Date } {
-  const bucketMs = toBucketSeconds(granularity) * 1000;
-  const alignedEndMs = Math.floor(endTime.getTime() / bucketMs) * bucketMs;
-  const alignedStartMs = Math.min(
-    Math.floor(startTime.getTime() / bucketMs) * bucketMs,
-    alignedEndMs - bucketMs
-  );
-  return {
-    startTime: new Date(alignedStartMs),
-    endTime: new Date(alignedEndMs),
-  };
 }
 
 function toCanonicalMetricSelection(
@@ -444,10 +427,24 @@ export default async function query(
   }
   const { scope, accountId, teamName, projectName } = scopeResult;
 
+  let startTime: Date;
+  let endTime: Date;
+  try {
+    ({ startTime, endTime } = resolveTimeRange(since, until));
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    if (jsonOutput) {
+      client.stdout.write(formatErrorJson('INVALID_TIME', errMsg));
+    } else {
+      output.error(errMsg);
+    }
+    return 1;
+  }
+
   const isPlatformMetric = metric.startsWith('vercel.');
   let metricUnit: string;
   let aggregationInput: string;
-  let customMetricAggregations: readonly string[] = [];
+  let customMetricAggregations: readonly string[] | undefined;
   if (isPlatformMetric) {
     const detailOrExitCode = await fetchMetricDetailOrExit(
       client,
@@ -465,56 +462,25 @@ export default async function query(
     metricUnit =
       detailOrExitCode.find(item => item.id === metric)?.unit ?? 'count';
   } else {
-    const catalogOrExitCode = await fetchCustomMetricCatalogOrExit(
+    const customMetric = await fetchCustomMetricCatalog(
       client,
       accountId,
-      jsonOutput,
-      metric
-    );
-    if (typeof catalogOrExitCode === 'number') {
-      return catalogOrExitCode;
-    }
-    const customMetric = catalogOrExitCode.find(item => item.id === metric);
-    if (!customMetric) {
-      return handleValidationError(
-        {
-          valid: false,
-          code: 'METRIC_NOT_FOUND',
-          message: `Custom metric "${metric}" was not found. Run \`vercel metrics schema\` to see available metrics.`,
-        },
-        jsonOutput,
-        client
-      );
-    }
+      metric,
+      startTime.toISOString()
+    )
+      .then(metrics => metrics.find(item => item.id === metric))
+      .catch(() => undefined);
     aggregationInput = aggregationFlag ?? 'sum';
-    metricUnit = customMetric.unit;
-    customMetricAggregations = customMetric.aggregations;
+    metricUnit = customMetric?.unit ?? 'count';
+    customMetricAggregations = customMetric?.aggregations;
   }
   const aggregation = aggregationInput;
   const orderBy = getRequestOrderBy(metric, aggregation, orderByMode);
-
-  // Resolve time range
-  let startTime: Date;
-  let endTime: Date;
-  try {
-    ({ startTime, endTime } = resolveTimeRange(since, until));
-  } catch (err) {
-    const errMsg = err instanceof Error ? err.message : String(err);
-    if (jsonOutput) {
-      client.stdout.write(formatErrorJson('INVALID_TIME', errMsg));
-    } else {
-      output.error(errMsg);
-    }
-    return 1;
-  }
 
   // Compute granularity — may adjust the user's --granularity upward if it's
   // too fine for the time range (granResult.adjusted will be true in that case).
   const rangeMs = endTime.getTime() - startTime.getTime();
   const granResult = computeGranularity(rangeMs, granularity);
-  const queryTimeRange = isPlatformMetric
-    ? { startTime, endTime }
-    : alignTimeRangeToGranularity(startTime, endTime, granResult.duration);
   if (!jsonOutput && granResult.adjusted && granResult.notice) {
     output.log(`Notice: ${granResult.notice}`);
   }
@@ -525,8 +491,8 @@ export default async function query(
       scope,
       metric,
       aggregation: aggregation as Aggregation,
-      startTime: queryTimeRange.startTime.toISOString(),
-      endTime: queryTimeRange.endTime.toISOString(),
+      startTime: startTime.toISOString(),
+      endTime: endTime.toISOString(),
       granularity: granResult.duration,
       ...(bucketTimezone ? { bucketTimezone } : {}),
       ...(groupBy.length > 0 ? { groupBy } : {}),
@@ -552,7 +518,10 @@ export default async function query(
       return handleValidationError(selection, jsonOutput, client);
     }
     const supportedAggregation = selection.aggregation;
-    if (!customMetricAggregations.includes(supportedAggregation)) {
+    if (
+      customMetricAggregations &&
+      !customMetricAggregations.includes(supportedAggregation)
+    ) {
       return handleValidationError(
         {
           valid: false,
@@ -568,8 +537,8 @@ export default async function query(
       scope,
       metric,
       selection,
-      startTime: queryTimeRange.startTime,
-      endTime: queryTimeRange.endTime,
+      startTime,
+      endTime,
       granularity: granResult.duration,
       groupBy,
       filter,
@@ -637,8 +606,8 @@ export default async function query(
           aggregation: aggregation as Aggregation,
           groupBy,
           filter,
-          startTime: queryTimeRange.startTime.toISOString(),
-          endTime: queryTimeRange.endTime.toISOString(),
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
           granularity: granResult.duration,
           ...(bucketTimezone ? { bucketTimezone } : {}),
           ...(orderByMode ? { orderBy: orderByMode } : {}),
@@ -658,8 +627,8 @@ export default async function query(
         scope,
         projectName,
         teamName,
-        periodStart: queryTimeRange.startTime.toISOString(),
-        periodEnd: queryTimeRange.endTime.toISOString(),
+        periodStart: startTime.toISOString(),
+        periodEnd: endTime.toISOString(),
         granularity: granResult.duration,
         bucketTimezone: bucketTimezone,
         orderBy: orderByMode,

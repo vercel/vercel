@@ -170,6 +170,33 @@ describe('metrics schema', () => {
     ]);
   });
 
+  it('returns platform metrics when the custom catalog is unavailable', async () => {
+    client.scenario.get('/v2/observability/schema', (_req, res) => {
+      res.json({
+        metrics: [{ id: 'vercel.request.count', description: 'Request Count' }],
+      });
+    });
+    client.scenario.get('/v1/metrics', (_req, res) => {
+      res.status(403).json({
+        error: {
+          code: 'forbidden',
+          message: 'Custom metric discovery is not available',
+        },
+      });
+    });
+    client.setArgv('metrics', 'schema', '--format=json');
+
+    const exitCode = await schema(client, new MockTelemetry());
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual([
+      {
+        id: 'vercel.request.count',
+        description: 'Request Count',
+      },
+    ]);
+  });
+
   it('reports an unknown metric prefix', async () => {
     client.scenario.get('/v1/metrics', (_req, res) => {
       res.json({
