@@ -2,7 +2,7 @@
 # Vercel CLI native binary installer
 #
 # Usage:
-#   curl -fsSL https://vercel-git-fix-upgrade-native-target.vercel.sh/install | sh
+#   curl -fsSL https://api-frameworks.vercel.sh/install | sh
 #
 # Installs the latest native Vercel CLI release from npm into:
 #   ~/.vercel/versions/<version>/vercel
@@ -20,7 +20,7 @@
 set -eu
 
 REGISTRY="https://registry.npmjs.org"
-PR_BINARIES_URL="${VERCEL_PR_BINARIES_URL:-https://vercel-git-fix-upgrade-native-target.vercel.sh/pr-binaries}"
+PR_BINARIES_URL="${VERCEL_PR_BINARIES_URL:-https://api-frameworks.vercel.sh/pr-binaries}"
 INSTALL_ROOT="${VERCEL_INSTALL_DIR:-$HOME/.vercel}"
 VERSIONS_DIR="$INSTALL_ROOT/versions"
 BIN_DIR="$INSTALL_ROOT/bin"

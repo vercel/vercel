@@ -46,9 +46,8 @@ async function moveFile(source: string, destination: string): Promise<void> {
   }
 }
 
-// TODO: point at the production domain before landing.
 export const CURL_INSTALL_COMMAND =
-  'curl -fsSL https://vercel-git-fix-upgrade-native-target.vercel.sh/install | sh';
+  'curl -fsSL https://api-frameworks.vercel.sh/install | sh';
 
 /**
  * Platforms the native binary is built for. Keep in sync with
@@ -259,7 +258,7 @@ export async function installAndLinkVersion(version: string): Promise<void> {
  */
 const PR_BINARIES_URL =
   process.env.VERCEL_PR_BINARIES_URL ||
-  'https://vercel-git-fix-upgrade-native-target.vercel.sh/pr-binaries';
+  'https://api-frameworks.vercel.sh/pr-binaries';
 
 /**
  * Parse a PR target like `pr/115` or `pr-115` into a PR number.

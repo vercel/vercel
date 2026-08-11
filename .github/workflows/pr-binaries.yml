@@ -232,8 +232,7 @@ jobs:
         shell: bash
         working-directory: packages/cli
         env:
-          # TODO: point at production (api-frameworks.zeit.sh) before landing.
-          TOKEN_EXCHANGE_URL: https://vercel-git-fix-upgrade-native-target.vercel.sh/api/pr-binaries-token
+          TOKEN_EXCHANGE_URL: https://api-frameworks.vercel.sh/api/pr-binaries-token
           OIDC_AUDIENCE: vercel-cli-pr-binaries
           PR_NUMBER: ${{ github.event.pull_request.number }}
           ASSET: ${{ matrix.asset }}
