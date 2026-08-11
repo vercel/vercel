@@ -5,6 +5,8 @@
 ### Patch Changes
 
 - 4b22527: Improved `vercel upgrade` for native binary installs: the suggested update command now targets the correct install method instead of assuming a package manager, and self-updates are resilient to `/tmp` being on a different filesystem than the install directory.
+- e62af7f: Point native binary installer and PR binary downloads at the production domain (api-frameworks.vercel.sh) instead of a branch preview URL.
+
 
 ## 58.9.2
 
