@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { join } from 'path';
 import { writeFile } from 'fs/promises';
 import { mkdirp, writeJSON } from 'fs-extra';
@@ -14,7 +14,7 @@ import {
   useProject,
   useUnknownProject,
 } from '../../../mocks/project';
-import { useTeams } from '../../../mocks/team';
+import { useTeam, useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 
@@ -761,5 +761,105 @@ describe('getLinkedProject', () => {
       projectName: 'no-link-implicit-name',
     });
     expect(link.status).toEqual('not_linked');
+  });
+});
+
+describe('getLinkedProject with team env vars', () => {
+  function useEnvLinkFixture() {
+    const cwd = setupTmpDir('env-team-link');
+
+    useUser();
+    const team = useTeam('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'env-project',
+      name: 'env-project',
+      accountId: 'team_dummy',
+    });
+
+    process.env.VERCEL_PROJECT_ID = 'env-project';
+
+    return { cwd, team };
+  }
+
+  afterEach(() => {
+    delete process.env.VERCEL_TEAM;
+    delete process.env.VERCEL_ORG_ID;
+    delete process.env.VERCEL_PROJECT_ID;
+  });
+
+  it('links with `VERCEL_TEAM` set to a team ID', async () => {
+    const { cwd } = useEnvLinkFixture();
+    process.env.VERCEL_TEAM = 'team_dummy';
+
+    const link = await getLinkedProject(client, { cwd });
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    expect(link.org.id).toEqual('team_dummy');
+    expect(link.project.id).toEqual('env-project');
+  });
+
+  it('links with `VERCEL_TEAM` set to a team slug', async () => {
+    const { cwd, team } = useEnvLinkFixture();
+    process.env.VERCEL_TEAM = team.slug;
+
+    const link = await getLinkedProject(client, { cwd });
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    expect(link.org.id).toEqual('team_dummy');
+    expect(link.project.id).toEqual('env-project');
+  });
+
+  it('still links with only `VERCEL_ORG_ID` set (back-compat)', async () => {
+    const { cwd } = useEnvLinkFixture();
+    process.env.VERCEL_ORG_ID = 'team_dummy';
+
+    const link = await getLinkedProject(client, { cwd });
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    expect(link.org.id).toEqual('team_dummy');
+    expect(link.project.id).toEqual('env-project');
+  });
+
+  it('prefers `VERCEL_TEAM` when both env vars are set', async () => {
+    const { cwd, team } = useEnvLinkFixture();
+    process.env.VERCEL_TEAM = team.slug;
+    // If this legacy value won, the org lookup would 404 and the result would
+    // be `not_linked` instead.
+    process.env.VERCEL_ORG_ID = 'team_ignored';
+
+    const link = await getLinkedProject(client, { cwd });
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    expect(link.org.id).toEqual('team_dummy');
+  });
+
+  it('errors when `VERCEL_TEAM` resolves to no team', async () => {
+    const { cwd } = useEnvLinkFixture();
+    process.env.VERCEL_TEAM = 'does-not-exist';
+
+    const link = await getLinkedProject(client, { cwd });
+    expect(link).toEqual({ status: 'error', exitCode: 1 });
+    expect(client.stderr.getFullOutput()).toContain(
+      'The team specified by `VERCEL_TEAM` ("does-not-exist") was not found.'
+    );
+  });
+
+  it('reports the env var the user set when the pair is incomplete', async () => {
+    const cwd = setupTmpDir('env-team-missing-project');
+
+    useUser();
+    useTeam('team_dummy');
+    process.env.VERCEL_TEAM = 'team_dummy';
+
+    const link = await getLinkedProject(client, { cwd });
+    expect(link).toEqual({ status: 'error', exitCode: 1 });
+    expect(client.stderr.getFullOutput()).toContain(
+      'You specified `VERCEL_TEAM` but you forgot to specify `VERCEL_PROJECT_ID`'
+    );
   });
 });

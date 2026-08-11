@@ -19,7 +19,7 @@ When adding a durable contract, add a row to `SKILL.md` so agents load it only f
 `vc link` target resolution order:
 
 1. Local link state: already linked, stale link, repo link, env link.
-2. Intended team: the team resolves only from an explicit signal (`--team`/`--scope`, `vercel.json` `scope`, `VERCEL_ORG_ID`), a single available choice, or the `Which team?` prompt. The globally selected team (`vc switch`, login default) is never a signal, and `--yes` does not substitute for one: `--yes` answers confirmations, not data questions, so with multiple teams and no signal a TTY still asks and non-TTY fails with `missing_scope`. `--yes` never triggers cross-team discovery.
+2. Intended team: the team resolves only from an explicit signal (`--team`/`--scope`, `vercel.json` `scope`, `VERCEL_TEAM` — a team slug or ID — or the legacy `VERCEL_ORG_ID`), a single available choice, or the `Which team?` prompt. The globally selected team (`vc switch`, login default) is never a signal, and `--yes` does not substitute for one: `--yes` answers confirmations, not data questions, so with multiple teams and no signal a TTY still asks and non-TTY fails with `missing_scope`. `--yes` never triggers cross-team discovery.
 3. Intended project: explicit `--project`, repo-root match, exact folder-name match, selected existing project, or new project.
 4. Project root: inferred root, selected root, or cwd.
 5. Settings: detected framework/settings, explicit overrides, or defaults.
@@ -40,7 +40,7 @@ Rules:
 - Include teams that require SSO in the explicit team picker. Selecting one may trigger SSO reauthentication on the first scoped project request; automatic cross-team discovery continues to skip those teams.
 - Escape cancels any active direct `vc link` prompt, exits successfully, and prints `Canceled.` without continuing to later prompts or mutations.
 - Without a TTY or in non-interactive mode, a missing team signal fails before any project discovery, project creation, or deletion of the existing local link: `action_required: missing_scope` JSON in non-interactive mode, a plain missing-scope error otherwise. Report missing data (team) before missing consent (`--yes`).
-- When both `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` are set, `vc link` resolves and confirms exactly that pair without prompting and without `--yes`, prints aligned `Directory`/`Source`/`✓ Linked` rows with `Source` naming the env vars, and leaves local link files untouched (the env link itself is what other commands read). An unresolvable pair errors; it never falls back to prompts or guesses.
+- When both `VERCEL_TEAM` (or the legacy `VERCEL_ORG_ID`) and `VERCEL_PROJECT_ID` are set, `vc link` resolves and confirms exactly that pair without prompting and without `--yes`, prints aligned `Directory`/`Source`/`✓ Linked` rows with `Source` naming the env vars, and leaves local link files untouched (the env link itself is what other commands read). An unresolvable pair errors; it never falls back to prompts or guesses.
 - The new-project `Name?` default must be creatable: when the slugified folder name is already a project in the selected team, suggest `<folder-name>-<4-char suffix>` instead of a default that can only fail `Project already exists` validation.
 - Do not ask `Link to existing project?` when no concrete project is shown. Ask `Project?` with `Create new project` and `Link existing project` choices instead.
 - Do not create a project from a user-supplied `--project` value that was not found.
@@ -100,8 +100,8 @@ Link acceptance matrix:
 - monorepo/root-directory selection
 - non-TTY and `--non-interactive`
 - non-TTY/non-interactive with multiple teams and no signal errors `missing_scope` (even with `--yes`), preserving any existing local link
-- non-TTY/non-interactive with a single team, explicit `--team`/`--scope`, `vercel.json` `scope`, or `VERCEL_ORG_ID` proceeds
-- `VERCEL_ORG_ID` + `VERCEL_PROJECT_ID` pair links without prompts or `--yes`, preserving local link files; an unknown pair errors
+- non-TTY/non-interactive with a single team, explicit `--team`/`--scope`, `vercel.json` `scope`, `VERCEL_TEAM`, or `VERCEL_ORG_ID` proceeds
+- `VERCEL_TEAM`/`VERCEL_ORG_ID` + `VERCEL_PROJECT_ID` pair links without prompts or `--yes`, preserving local link files; an unknown pair errors
 - new-project `Name?` default is suffixed when the folder name is taken and plain when available
 - JSON-only stdout
 - `--yes` default path creates no duplicate resources on retry
