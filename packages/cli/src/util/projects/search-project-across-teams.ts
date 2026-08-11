@@ -36,14 +36,10 @@ export default async function searchProjectAcrossTeams(
   projectName: string,
   cwd: string,
   {
-    autoConfirm = false,
-    nonInteractive = false,
     teams,
     skipLimited,
     gitProjectName,
   }: {
-    autoConfirm?: boolean;
-    nonInteractive?: boolean;
     teams?: Team[];
     skipLimited?: boolean;
     gitProjectName?: string;
@@ -85,8 +81,6 @@ export default async function searchProjectAcrossTeams(
     cwd,
     gitProjectName,
     orgs,
-    autoConfirm,
-    nonInteractive,
   });
 
   const slugifiedName = slugify(projectName);
@@ -136,15 +130,11 @@ export async function searchProjectsByRepoRoot({
   cwd,
   gitProjectName,
   orgs,
-  autoConfirm,
-  nonInteractive,
 }: {
   client: Client;
   cwd: string;
   gitProjectName?: string;
   orgs: Org[];
-  autoConfirm: boolean;
-  nonInteractive: boolean;
 }): Promise<CrossTeamMatch[]> {
   const rootPath = await findRepoRoot(cwd);
   if (!rootPath) {
@@ -153,8 +143,14 @@ export async function searchProjectsByRepoRoot({
 
   let remote: ResolvedGitRemote | undefined;
   try {
+    // Suggestion search only decides what to *show* in the project picker.
+    // Never block on remote disambiguation here — pick the default remote
+    // (`origin` when present, else the first) so multi-remote repos can still
+    // create/link a project without answering "Which Git remote should be
+    // used?" before they know what it affects. `--project` used to be the
+    // only escape hatch because it skips this search entirely.
     remote = await resolveGitRemote(client, rootPath, {
-      yes: autoConfirm || nonInteractive,
+      yes: true,
     });
   } catch (error) {
     if (isPromptCanceledError(error)) {

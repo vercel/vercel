@@ -401,8 +401,6 @@ export default async function setupAndLink(
           cwd: path,
           gitProjectName,
           orgs: [org],
-          autoConfirm,
-          nonInteractive,
         });
       } catch (err) {
         if (isPromptCanceledError(err)) {
