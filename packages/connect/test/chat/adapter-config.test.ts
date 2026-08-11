@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  connectDiscordAdapter,
   connectGitHubAdapter,
   connectLinearAdapter,
   connectSlackAdapter,
@@ -16,6 +17,68 @@ describe('Chat SDK adapter config helpers', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+  });
+
+  it('builds Discord config from one app-scoped Connect token response', async () => {
+    fetchMock.mockResolvedValue(
+      jsonTokenResponse('discord_token', {
+        metadata: { applicationId: '123456789' },
+      })
+    );
+
+    const config = connectDiscordAdapter(
+      'discord/acme-discord',
+      { installationId: 'discord-installation' },
+      { vercelToken: 'vercel_token' }
+    );
+
+    expect(config.webhookVerifier).toEqual(expect.any(Function));
+    const [botToken, applicationId] = await Promise.all([
+      resolveToken(config.botToken),
+      resolveToken(config.applicationId),
+    ]);
+    expect(botToken).toBe('discord_token');
+    expect(applicationId).toBe('123456789');
+    expectTokenRequest('discord/acme-discord', {
+      installationId: 'discord-installation',
+      subject: { type: 'app' },
+    });
+  });
+
+  it('retries Discord config resolution after a failed shared request', async () => {
+    fetchMock
+      .mockRejectedValueOnce(new Error('temporary failure'))
+      .mockResolvedValueOnce(
+        jsonTokenResponse('discord_token', {
+          metadata: { applicationId: '123456789' },
+        })
+      );
+
+    const config = connectDiscordAdapter(
+      'discord/retry',
+      {},
+      { vercelToken: 'vercel_token' }
+    );
+
+    await expect(resolveToken(config.botToken)).rejects.toThrow(
+      'temporary failure'
+    );
+    await expect(resolveToken(config.applicationId)).resolves.toBe('123456789');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('fails clearly when Discord application metadata is unavailable', async () => {
+    fetchMock.mockResolvedValue(jsonTokenResponse('discord_token'));
+
+    const config = connectDiscordAdapter(
+      'discord/missing-metadata',
+      {},
+      { vercelToken: 'vercel_token' }
+    );
+
+    await expect(resolveToken(config.applicationId)).rejects.toThrow(
+      'did not return a Discord application id'
+    );
   });
 
   it('builds Slack config backed by an app-scoped Connect token', async () => {
@@ -164,12 +227,16 @@ async function resolveToken(
   return token();
 }
 
-function jsonTokenResponse(token: string): Response {
+function jsonTokenResponse(
+  token: string,
+  overrides: Record<string, unknown> = {}
+): Response {
   return new Response(
     JSON.stringify({
       token,
       expiresAt: Date.now() + 60 * 60 * 1000,
       connector: { id: 'scl_abc', uid: 'oauth/test', type: 'oauth' },
+      ...overrides,
     }),
     { status: 200, headers: { 'Content-Type': 'application/json' } }
   );

@@ -9,6 +9,19 @@ import type { ConnectWebhookVerifier } from './webhook-verifier.js';
 export type ConnectTokenResolver = () => Promise<string>;
 
 /**
+ * Partial Discord adapter config backed by Vercel Connect.
+ *
+ * Structurally matches the `applicationId`, `botToken`, and
+ * `webhookVerifier` options of `createDiscordAdapter` from
+ * `@chat-adapter/discord`.
+ */
+export interface ConnectDiscordAdapterConfig {
+  applicationId: ConnectTokenResolver;
+  botToken: ConnectTokenResolver;
+  webhookVerifier: ConnectWebhookVerifier;
+}
+
+/**
  * Partial GitHub adapter config backed by Vercel Connect.
  *
  * Structurally matches the `installationToken` and `webhookVerifier`
