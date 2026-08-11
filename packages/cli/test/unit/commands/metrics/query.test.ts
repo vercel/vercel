@@ -97,6 +97,42 @@ function mockMetricDetail(
   );
 }
 
+function mockCustomMetricCatalog(
+  metricId = 'checkout.latency',
+  overrides: Partial<{
+    description: string;
+    unit: string;
+    aggregations: string[];
+    dimensions: string[];
+  }> = {}
+) {
+  client.scenario.get('/v1/metrics', (req, res) => {
+    expect(req.query).toEqual({
+      kind: 'custom',
+      limit: '250',
+      search: metricId,
+      teamId: 'team_dummy',
+    });
+    res.json({
+      metrics: [
+        {
+          id: metricId,
+          description: overrides.description ?? 'Checkout latency',
+          unit: overrides.unit ?? 'milliseconds',
+          aggregations: overrides.aggregations ?? [
+            'count',
+            'sum',
+            'avg',
+            'p95',
+          ],
+          dimensions: overrides.dimensions ?? ['source', 'functionRegion'],
+        },
+      ],
+      pagination: { hasMore: false, nextCursor: null },
+    });
+  });
+}
+
 function mockApiSuccess(
   data: Record<string, unknown>[] = [],
   summary: Record<string, unknown>[] = [],
@@ -112,6 +148,41 @@ function mockApiSuccess(
       summary,
       statistics: { rowsRead: 100 },
       ...extra,
+    });
+  });
+}
+
+function mockCanonicalApiSuccess() {
+  client.scenario.post('/v1/metrics', (req, res) => {
+    postedBody =
+      typeof req.body === 'string'
+        ? JSON.parse(req.body)
+        : (req.body as Record<string, unknown>);
+    res.json({
+      series: [
+        {
+          timestamp: '2026-07-29T10:00:00.000Z',
+          dimensions: { source: 'edge' },
+          values: { value: 125 },
+        },
+      ],
+      summary: [
+        {
+          dimensions: { source: 'edge' },
+          values: { value: 125 },
+        },
+      ],
+      queryId: 'query_custom',
+      meta: {
+        outputs: {},
+        sources: [{ id: 'vercel-main-custom-metrics' }],
+        statistics: {
+          elapsedMs: 25,
+          databaseElapsedMs: 20,
+          rowsRead: 100,
+          bytesRead: 2048,
+        },
+      },
     });
   });
 }
@@ -150,20 +221,82 @@ describe('metrics query v2', () => {
       expect(exitCode).toBe(0);
       expect(postedBody?.metric).toBe('vercel.request.count');
     });
+
+    it('queries custom metrics through the canonical endpoint', async () => {
+      mockCustomMetricCatalog();
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'checkout.latency',
+        '--group-by',
+        'source',
+        '--filter',
+        "source eq 'edge'",
+        '--since',
+        '1h',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        scope: {
+          ownerId: 'team_dummy',
+          projectIds: ['prj_metricstest'],
+        },
+        groupBy: ['source'],
+        filter: "source eq 'edge'",
+        metrics: {
+          value: { metric: 'checkout.latency', aggregation: 'sum' },
+          __seriesCount: {
+            metric: 'checkout.latency',
+            aggregation: 'count',
+          },
+        },
+        outputs: ['value'],
+        seriesSelection: {
+          limit: 10,
+          mode: 'exact',
+          rankBy: [{ metric: '__seriesCount', direction: 'desc' }],
+        },
+      });
+      const result = JSON.parse(client.stdout.getFullOutput());
+      expect(result.data).toEqual([
+        {
+          timestamp: '2026-07-29T10:00:00.000Z',
+          source: 'edge',
+          checkout_latency_sum: 125,
+        },
+      ]);
+      expect(result.summary).toEqual([
+        { source: 'edge', checkout_latency_sum: 125 },
+      ]);
+      expect(result.statistics).toEqual({
+        rowsRead: 100,
+        bytesRead: 2048,
+        dbTimeSeconds: 0.02,
+        engineTimeSeconds: 0.025,
+        queryTable: 'vercel-main-custom-metrics',
+      });
+    });
   });
 
   describe('metric validation', () => {
     it('should return error with available metrics', async () => {
-      client.scenario.get('/v2/observability/schema/bogus', (_req, res) => {
-        res.status(400).json({
-          error: {
-            code: 'unknown_metric',
-            message: 'Unknown metric "bogus".',
-            allowedValues: ['vercel.request.count'],
-          },
-        });
-      });
-      client.setArgv('metrics', 'bogus');
+      client.scenario.get(
+        '/v2/observability/schema/vercel.bogus',
+        (_req, res) => {
+          res.status(400).json({
+            error: {
+              code: 'unknown_metric',
+              message: 'Unknown metric "bogus".',
+              allowedValues: ['vercel.request.count'],
+            },
+          });
+        }
+      );
+      client.setArgv('metrics', 'vercel.bogus');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -175,16 +308,19 @@ describe('metrics query v2', () => {
     });
 
     it('should return JSON error with --format=json', async () => {
-      client.scenario.get('/v2/observability/schema/bogus', (_req, res) => {
-        res.status(400).json({
-          error: {
-            code: 'unknown_metric',
-            message: 'Unknown metric "bogus".',
-            allowedValues: ['vercel.request.count'],
-          },
-        });
-      });
-      client.setArgv('metrics', 'bogus', '--format=json');
+      client.scenario.get(
+        '/v2/observability/schema/vercel.bogus',
+        (_req, res) => {
+          res.status(400).json({
+            error: {
+              code: 'unknown_metric',
+              message: 'Unknown metric "bogus".',
+              allowedValues: ['vercel.request.count'],
+            },
+          });
+        }
+      );
+      client.setArgv('metrics', 'vercel.bogus', '--format=json');
 
       const exitCode = await query(client, new MockTelemetry());
 

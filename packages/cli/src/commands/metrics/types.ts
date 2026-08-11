@@ -53,6 +53,15 @@ export interface MetricDetail {
 
 export type MetricDetailResponse = MetricDetail[];
 
+export interface MetricListItem {
+  id: string;
+  description: string;
+}
+
+export interface MetricListResponse {
+  metrics: MetricListItem[];
+}
+
 export interface MetricsQueryRequest {
   scope: Scope;
   metric: string;
@@ -107,6 +116,68 @@ export interface MetricsQueryResponse {
   statistics: MetricsQueryStatistics;
   orderBy?: string;
   orderDirection?: OrderDirection;
+}
+
+export interface CanonicalMetricSelection {
+  metric: string;
+  aggregation:
+    | 'count'
+    | 'sum'
+    | 'avg'
+    | 'min'
+    | 'max'
+    | 'p50'
+    | 'p75'
+    | 'p90'
+    | 'p95'
+    | 'p99'
+    | 'stddev';
+  per?: 'second';
+  normalize?: 'percent';
+  filter?: string;
+}
+
+export interface CanonicalMetricsQueryRequest {
+  scope: {
+    ownerId: string;
+    projectIds?: string[];
+  };
+  timeRange: {
+    start: string;
+    end: string;
+  };
+  bucketSeconds: number;
+  groupBy?: string[];
+  filter?: string;
+  metrics: Record<string, CanonicalMetricSelection>;
+  outputs: string[];
+  seriesSelection?: {
+    limit: number;
+    mode: 'exact';
+    rankBy: Array<{ metric: string; direction: OrderDirection }>;
+  };
+}
+
+export interface CanonicalMetricsQueryResponse {
+  series?: Array<{
+    timestamp: string;
+    dimensions: Record<string, string | null>;
+    values: Record<string, number | null>;
+  }>;
+  summary: Array<{
+    dimensions: Record<string, string | null>;
+    values: Record<string, number | null>;
+  }>;
+  queryId: string;
+  meta: {
+    sources: Array<{ id: string }>;
+    statistics: {
+      elapsedMs: number;
+      databaseElapsedMs: number;
+      rowsRead: number;
+      bytesRead: number;
+    };
+  };
 }
 
 export type ValidationError = {

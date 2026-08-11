@@ -2,4 +2,4 @@
 'vercel': minor
 ---
 
-Return stable semantic metric schema fields from `vc metrics schema` using the Observability API metric catalog, and report unknown metric prefixes.
+List custom metrics from the Observability API catalog and query them through `/v1/metrics`, while preserving the existing schema and query paths for `vercel.*` metrics.

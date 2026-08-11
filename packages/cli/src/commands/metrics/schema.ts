@@ -7,7 +7,9 @@ import output from '../../output-manager';
 import { schemaSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import {
-  fetchMetricCatalogOrExit,
+  fetchCombinedMetricListOrExit,
+  fetchCustomMetricCatalogOrExit,
+  fetchMetricDetailOrExit,
   type MetricCatalogMetric,
 } from './schema-api';
 import { formatErrorJson } from './output';
@@ -15,6 +17,7 @@ import formatTable from '../../util/format-table';
 import indent from '../../util/output/indent';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
 import getScope from '../../util/get-scope';
+import type { MetricDetail, MetricListItem } from './types';
 
 export default async function schema(
   client: Client,
@@ -59,20 +62,29 @@ export default async function schema(
   }
 
   if (metric) {
-    // Metric detail
-    const detailOrExitCode = await fetchMetricCatalogOrExit(
-      client,
-      team.id,
-      jsonOutput,
-      metric
-    );
-    // The helper returns a numeric exit code when it already
-    // handled the error output for us.
-    if (typeof detailOrExitCode === 'number') {
-      return detailOrExitCode;
+    const isPlatformMetric = metric.startsWith('vercel.');
+    let detail: MetricDetail[] | MetricCatalogMetric[];
+    if (isPlatformMetric) {
+      const result = await fetchMetricDetailOrExit(
+        client,
+        team.id,
+        metric,
+        jsonOutput
+      );
+      if (typeof result === 'number') return result;
+      detail = result;
+    } else {
+      const result = await fetchCustomMetricCatalogOrExit(
+        client,
+        team.id,
+        jsonOutput,
+        metric
+      );
+      if (typeof result === 'number') return result;
+      detail = result;
     }
 
-    if (detailOrExitCode.length === 0) {
+    if (detail.length === 0) {
       const message = `No metrics match "${metric}". Run \`vercel metrics schema\` to see available metrics.`;
       if (jsonOutput) {
         client.stdout.write(formatErrorJson('METRIC_NOT_FOUND', message));
@@ -83,12 +95,12 @@ export default async function schema(
     }
 
     if (jsonOutput) {
-      client.stdout.write(JSON.stringify(detailOrExitCode, null, 2));
+      client.stdout.write(JSON.stringify(detail, null, 2));
       return 0;
     }
 
     output.log(`Metric: ${metric}`);
-    const metricsTable = formatMetricsTable(detailOrExitCode);
+    const metricsTable = formatMetricsTable(toDisplayMetrics(detail));
     if (metricsTable) {
       output.print(metricsTable);
       output.print('\n');
@@ -98,7 +110,7 @@ export default async function schema(
   }
 
   // Metric list
-  const metricsOrExitCode = await fetchMetricCatalogOrExit(
+  const metricsOrExitCode = await fetchCombinedMetricListOrExit(
     client,
     team.id,
     jsonOutput
@@ -120,7 +132,7 @@ export default async function schema(
   return 0;
 }
 
-function formatMetricListTable(metrics: MetricCatalogMetric[]) {
+function formatMetricListTable(metrics: MetricListItem[]) {
   return indent(
     formatTable(
       ['Metric', 'Description'],
@@ -131,7 +143,34 @@ function formatMetricListTable(metrics: MetricCatalogMetric[]) {
   );
 }
 
-function formatMetricsTable(metrics: MetricCatalogMetric[]) {
+interface DisplayMetric {
+  readonly id: string;
+  readonly description: string;
+  readonly dimensions: readonly string[];
+  readonly unit: string;
+  readonly aggregations: readonly string[];
+}
+
+function toDisplayMetrics(
+  metrics: readonly (MetricDetail | MetricCatalogMetric)[]
+): DisplayMetric[] {
+  return metrics.map(metric => ({
+    id: metric.id,
+    description: metric.description,
+    dimensions: metric.dimensions.map(dimension =>
+      typeof dimension === 'string' ? dimension : dimension.name
+    ),
+    unit: metric.unit,
+    aggregations: metric.aggregations.map(aggregation =>
+      'defaultAggregation' in metric &&
+      aggregation === metric.defaultAggregation
+        ? `${aggregation} (default)`
+        : aggregation
+    ),
+  }));
+}
+
+function formatMetricsTable(metrics: readonly DisplayMetric[]) {
   if (metrics.length === 0) {
     return null;
   }
