@@ -1,5 +1,36 @@
 # vercel
 
+## 58.9.2
+
+### Patch Changes
+
+- 33cdc9e: Remove CLI tests that do not execute production behavior.
+- b971158: Materialize the Next.js `vc dev` WebSocket preload shim to `~/.vercel/runtime/<version>/` so child Node processes can `--require` it (including native SEA installs whose `/snapshot` paths are not visible to external Node).
+- Updated dependencies [2da7809]
+- Updated dependencies [a8fee66]
+  - @vercel/backends@0.8.36
+  - @vercel/build-utils@14.0.5
+  - @vercel/cli-auth@0.3.4
+  - @vercel/detect-agent@1.2.5
+  - @vercel/go@3.10.5
+  - @vercel/node@5.9.9
+  - @vercel/remix-builder@5.9.3
+  - @vercel/static-build@2.12.5
+  - @vercel/python@6.56.1
+  - @vercel/container@0.1.1
+  - @vercel/elysia@0.1.113
+  - @vercel/express@0.1.127
+  - @vercel/fastify@0.1.116
+  - @vercel/h3@0.1.122
+  - @vercel/hono@0.2.116
+  - @vercel/hydrogen@1.4.1
+  - @vercel/koa@0.1.96
+  - @vercel/nestjs@0.2.117
+  - @vercel/next@4.21.3
+  - @vercel/redwood@2.5.1
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.1
+
 ## 58.9.1
 
 ### Patch Changes

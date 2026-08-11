@@ -1,6 +1,6 @@
 {
   "name": "@vercel/edge",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "license": "Apache-2.0",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

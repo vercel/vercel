@@ -1,5 +1,13 @@
 # @vercel/backends
 
+## 0.8.36
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+- Updated dependencies [2da7809]
+  - @vercel/build-utils@14.0.5
+
 ## 0.8.35
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @vercel/functions
 
+## 3.9.3
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+- Updated dependencies [2da7809]
+  - @vercel/oidc@3.8.4
+
 ## 3.9.2
 
 ### Patch Changes

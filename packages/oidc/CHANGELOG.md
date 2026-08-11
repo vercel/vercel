@@ -1,5 +1,11 @@
 # @vercel/oidc
 
+## 3.8.4
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+
 ## 3.8.3
 
 ### Patch Changes

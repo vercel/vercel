@@ -1,5 +1,13 @@
 # @vercel/build-utils
 
+## 14.0.5
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+- Updated dependencies [2da7809]
+  - @vercel/python-analysis@0.13.2
+
 ## 14.0.4
 
 ### Patch Changes

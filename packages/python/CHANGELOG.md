@@ -1,5 +1,13 @@
 # @vercel/python
 
+## 6.56.1
+
+### Patch Changes
+
+- a8fee66: Install all matching `vercel-*` Python packages from a local SDK checkout.
+- Updated dependencies [2da7809]
+  - @vercel/python-analysis@0.13.2
+
 ## 6.56.0
 
 ### Minor Changes

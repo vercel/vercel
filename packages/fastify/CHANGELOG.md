@@ -1,5 +1,12 @@
 # @vercel/fastify
 
+## 0.1.116
+
+### Patch Changes
+
+- Updated dependencies [2da7809]
+  - @vercel/node@5.9.9
+
 ## 0.1.115
 
 ### Patch Changes

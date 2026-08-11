@@ -1,5 +1,11 @@
 # @vercel/cli-auth
 
+## 0.3.4
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+
 ## 0.3.3
 
 ### Patch Changes

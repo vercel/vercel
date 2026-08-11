@@ -18,7 +18,7 @@
       "require": "./dist/index.js"
     }
   },
-  "version": "3.8.3",
+  "version": "3.8.4",
   "repository": {
     "directory": "packages/oidc",
     "type": "git",

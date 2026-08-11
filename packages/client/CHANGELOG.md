@@ -1,5 +1,13 @@
 # @vercel/client
 
+## 18.2.9
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+- Updated dependencies [2da7809]
+  - @vercel/build-utils@14.0.5
+
 ## 18.2.8
 
 ### Patch Changes

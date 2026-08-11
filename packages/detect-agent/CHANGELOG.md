@@ -1,5 +1,11 @@
 # @vercel/detect-agent
 
+## 1.2.5
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+
 ## 1.2.4
 
 ### Patch Changes

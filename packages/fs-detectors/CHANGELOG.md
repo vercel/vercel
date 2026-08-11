@@ -1,5 +1,13 @@
 # @vercel/fs-detectors
 
+## 6.15.5
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+- Updated dependencies [2da7809]
+  - @vercel/build-utils@14.0.5
+
 ## 6.15.4
 
 ### Patch Changes

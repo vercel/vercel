@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.10.5
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+
 ## 3.10.4
 
 ### Patch Changes

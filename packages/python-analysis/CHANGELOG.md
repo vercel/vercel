@@ -1,5 +1,11 @@
 # @vercel/python-analysis
 
+## 0.13.2
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+
 ## 0.13.1
 
 ### Patch Changes

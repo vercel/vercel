@@ -1,5 +1,17 @@
 # @vercel/connect
 
+## 0.7.0
+
+### Minor Changes
+
+- fff606d: Add `connectDiscordAdapter` for Chat SDK Discord credentials and Connect-verified webhooks.
+
+### Patch Changes
+
+- 52b82cc: Allow authorization callers to pass an OAuth prompt to the connector's authorization server.
+- Updated dependencies [2da7809]
+  - @vercel/oidc@3.8.4
+
 ## 0.6.2
 
 ### Patch Changes

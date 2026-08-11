@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 5.9.3
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+
 ## 5.9.2
 
 ### Patch Changes

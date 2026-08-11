@@ -1,5 +1,12 @@
 # @vercel/static-build
 
+## 2.12.5
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+  - @vercel/gatsby-plugin-vercel-builder@2.2.39
+
 ## 2.12.4
 
 ### Patch Changes
