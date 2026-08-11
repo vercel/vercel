@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 5.9.4
+
+### Patch Changes
+
+- 1b62f2c: Set the `__vdpl` Skew Protection cookie for React Router via a routing-layer header rule instead of `Set-Cookie` on the SSR response, so document responses stay cacheable by the CDN.
+
 ## 5.9.3
 
 ### Patch Changes

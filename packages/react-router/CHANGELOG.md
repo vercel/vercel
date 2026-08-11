@@ -1,5 +1,11 @@
 # @vercel/react-router
 
+## 1.3.3
+
+### Patch Changes
+
+- 1b62f2c: Set the `__vdpl` Skew Protection cookie for React Router via a routing-layer header rule instead of `Set-Cookie` on the SSR response, so document responses stay cacheable by the CDN.
+
 ## 1.3.2
 
 ### Patch Changes

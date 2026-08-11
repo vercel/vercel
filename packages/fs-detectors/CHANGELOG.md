@@ -1,5 +1,12 @@
 # @vercel/fs-detectors
 
+## 6.15.6
+
+### Patch Changes
+
+- Updated dependencies [a7fc7e8]
+  - @vercel/frameworks@3.31.0
+
 ## 6.15.5
 
 ### Patch Changes

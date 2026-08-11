@@ -1,12 +1,23 @@
 # vercel
 
+## 58.9.4
+
+### Patch Changes
+
+- a7fc7e8: Expose the resolved rewrite destination as the request path observed by standalone Go servers, and warn affected Go projects about the behavior change.
+- 22ce405: Do not prompt for a Git remote while gathering project link suggestions; offer "Switch Git remote" in the project picker instead when multiple remotes exist. Ask about connecting a detected Git repository before creating the project (default No).
+- Updated dependencies [a7fc7e8]
+- Updated dependencies [1b62f2c]
+  - @vercel/go@3.11.0
+  - @vercel/remix-builder@5.9.4
+  - @vercel/static-build@2.12.5
+
 ## 58.9.3
 
 ### Patch Changes
 
 - 4b22527: Improved `vercel upgrade` for native binary installs: the suggested update command now targets the correct install method instead of assuming a package manager, and self-updates are resilient to `/tmp` being on a different filesystem than the install directory.
 - e62af7f: Point native binary installer and PR binary downloads at the production domain (api-frameworks.vercel.sh) instead of a branch preview URL.
-
 
 ## 58.9.2
 

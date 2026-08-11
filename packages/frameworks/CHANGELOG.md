@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.31.0
+
+### Minor Changes
+
+- a7fc7e8: Expose the resolved rewrite destination as the request path observed by standalone Go servers, and warn affected Go projects about the behavior change.
+
 ## 3.30.9
 
 ### Patch Changes
