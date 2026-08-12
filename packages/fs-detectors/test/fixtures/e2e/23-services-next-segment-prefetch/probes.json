@@ -1,0 +1,53 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Segment prefetch home"
+    },
+    {
+      "path": "/dynamic",
+      "status": 200,
+      "mustContain": "Segment prefetch dynamic"
+    },
+    {
+      "path": "/dynamic",
+      "status": 200,
+      "headers": { "rsc": "1" },
+      "mustContain": "Segment prefetch dynamic",
+      "mustNotContain": "<!DOCTYPE"
+    },
+    {
+      "path": "/dynamic",
+      "status": 200,
+      "headers": {
+        "rsc": "1",
+        "next-router-prefetch": "1",
+        "next-router-segment-prefetch": "/_tree"
+      },
+      "mustContain": "dynamic",
+      "mustNotContain": "<!DOCTYPE"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "headers": {
+        "rsc": "1",
+        "next-router-prefetch": "1",
+        "next-router-segment-prefetch": "/_tree"
+      },
+      "mustContain": "__PAGE__",
+      "mustNotContain": "<!DOCTYPE"
+    },
+    {
+      "path": "/index.segments/_tree.segment.rsc",
+      "status": 200,
+      "mustContain": "__PAGE__"
+    },
+    {
+      "path": "/dynamic.segments/_tree.segment.rsc",
+      "status": 200,
+      "mustContain": "dynamic"
+    }
+  ]
+}

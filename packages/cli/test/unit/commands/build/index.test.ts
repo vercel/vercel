@@ -1253,6 +1253,88 @@ describe.skipIf(flakey)('build', () => {
     ]);
   });
 
+  it('should not duplicate routes for a service built through the Build Output API', async () => {
+    const serviceRoutes = [
+      {
+        src: '^/(?<path>.+?)(?:/)?$',
+        dest: '/$path.segments/$segmentPath.segment.rsc',
+        has: [
+          {
+            type: 'header',
+            key: 'next-router-segment-prefetch',
+            value: '/(?<segmentPath>.+)',
+          },
+        ],
+        continue: true,
+      },
+      { handle: 'miss' },
+      {
+        src: '^/(?<path>.+)(?<rscSuffix>\\.segments/.+\\.segment\\.rsc)(?:/)?$',
+        dest: '/$path.rsc',
+        check: true,
+      },
+    ];
+    const cwd = await getWriteableDirectory();
+    await fs.ensureDir(join(cwd, '.vercel'));
+    await fs.writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: '.',
+      projectId: '.',
+      settings: {
+        framework: null,
+        installCommand: '',
+      },
+    });
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      services: {
+        web: {
+          root: 'web',
+          framework: 'vite',
+          buildCommand: 'node make-output.mjs',
+        },
+      },
+      rewrites: [{ source: '/(.*)', destination: { service: 'web' } }],
+    });
+    await fs.ensureDir(join(cwd, 'web'));
+    await fs.writeJSON(join(cwd, 'web', 'package.json'), { name: 'web' });
+    await fs.writeFile(
+      join(cwd, 'web', 'make-output.mjs'),
+      [
+        `import fs from 'node:fs';`,
+        `import path from 'node:path';`,
+        `import { fileURLToPath } from 'node:url';`,
+        `const dir = path.dirname(fileURLToPath(import.meta.url));`,
+        `const out = path.join(dir, '.vercel', 'output');`,
+        `fs.mkdirSync(path.join(out, 'static'), { recursive: true });`,
+        `fs.writeFileSync(path.join(out, 'static', 'index.html'), 'hello');`,
+        `fs.writeFileSync(path.join(out, 'config.json'), JSON.stringify({`,
+        `  version: 3,`,
+        `  routes: ${JSON.stringify(serviceRoutes)},`,
+        `}));`,
+      ].join('\n')
+    );
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const output = join(cwd, '.vercel', 'output');
+
+    // Every route from the service's Build Output config appears exactly once.
+    const webConfig = await fs.readJSON(
+      join(output, 'services', 'web', 'config.json')
+    );
+    expect(webConfig.routes).toEqual(serviceRoutes);
+
+    // The service's routes must not leak into the root route table.
+    const rootConfig = await fs.readJSON(join(output, 'config.json'));
+    expect(rootConfig.routes).not.toContainEqual(serviceRoutes[0]);
+    expect(rootConfig.routes).toContainEqual(
+      expect.objectContaining({
+        destination: { type: 'service', service: 'web' },
+      })
+    );
+  });
+
   it('should include legacy cron service type in build output crons', async () => {
     const cwd = fixture('with-services-cron');
     const output = join(cwd, '.vercel', 'output');

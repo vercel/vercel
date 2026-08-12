@@ -2836,6 +2836,19 @@ async function writeServiceConfigs(
       const routes = results.flatMap(result =>
         'routes' in result && Array.isArray(result.routes) ? result.routes : []
       );
+      // A Build Output API service build, e.g. Next.js with the
+      // Vercel adapter writes its `config.json` into `services/<name>/` via
+      // `writeBuildResult`, and that same config is also adopted as the build
+      // result. Treat the on-disk config purely as a fallback for fields
+      // the build results don't carry, because appending both copies would
+      // duplicate every route.
+      const existingRoutes =
+        routes.length > 0 ? undefined : existingConfig?.routes;
+      const existingCrons = results.some(
+        result => 'crons' in result && result.crons?.length
+      )
+        ? undefined
+        : existingConfig?.crons;
       const configuredRoutes = experimentalServicesV2?.[serviceName]
         ? getExperimentalServicesV2Routes(experimentalServicesV2[serviceName])
         : [];
@@ -2855,7 +2868,7 @@ async function writeServiceConfigs(
       const mergedRoutes = appendBuildOutputRouteTables(
         configuredRoutes,
         routes,
-        existingConfig?.routes
+        existingRoutes
       );
 
       const config: BuildOutputConfig = {
@@ -2869,7 +2882,7 @@ async function writeServiceConfigs(
             ? Object.assign({}, existingConfig?.overrides, ...overrides)
             : existingConfig?.overrides,
         framework: framework || existingConfig?.framework,
-        crons: mergeCrons(existingConfig?.crons, results),
+        crons: mergeCrons(existingCrons, results),
         services: undefined,
         experimentalServices: undefined,
         experimentalServicesV2: undefined,
