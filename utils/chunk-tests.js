@@ -122,16 +122,6 @@ const runnerSchedulePriority = {
 const DEFAULT_TEST_FILE_EXTENSIONS = ['js', 'ts', 'mjs', 'mts'];
 const DEFAULT_TEST_NAME_PATTERNS = ['test', 'spec'];
 
-// Packages whose build requires the Rust toolchain (cargo + wasm32-wasip2).
-// @vercel/python-analysis compiles a wasm binary; @vercel/build-utils depends on
-// it and is in turn a dependency of almost every other builder package.
-// We walk the dep graph transitively so CLI and other deep dependents also
-// get the right toolchain flag.
-const RUST_BUILD_ROOTS = new Set([
-  '@vercel/python-analysis',
-  '@vercel/build-utils',
-]);
-
 // Packages whose build requires the Go toolchain.
 // `@vercel-internals/ipc-proxy` compiles cross-arch proxy binaries during its
 // build step; `@vercel/go` depends on it and copies those binaries. The `vercel`
@@ -209,23 +199,19 @@ function readPackageManifest(rootPath, packageJsonPath) {
   const manifest = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   // First pass: direct flag only; transitive enrichment happens after we have
   // the full manifest list (see getPackageManifests / finalizeTransitiveNeeds).
-  const needsRust = directNeeds(manifest, RUST_BUILD_ROOTS);
   const needsGo = directNeeds(manifest, GO_BUILD_ROOTS);
   return {
     packagePath: path.relative(rootPath, path.dirname(packageJsonPath)),
     packageJson: manifest,
     packageName: manifest.name,
-    needsRust,
     needsGo,
   };
 }
 
 function finalizeTransitiveNeeds(manifests) {
   const goNeeded = computeTransitiveNeeds(manifests, GO_BUILD_ROOTS);
-  const rustNeeded = computeTransitiveNeeds(manifests, RUST_BUILD_ROOTS);
   for (const m of manifests) {
     if (goNeeded.has(m.packageName)) m.needsGo = true;
-    if (rustNeeded.has(m.packageName)) m.needsRust = true;
   }
   return manifests;
 }
@@ -469,7 +455,7 @@ async function getChunkedTests() {
   // like `vercel` CLI (which depends on @vercel/go transitively) get marked.
   packageManifests = finalizeTransitiveNeeds(packageManifests);
   packageManifests.forEach(
-    ({ packageJson, packageName, packagePath, needsRust, needsGo }) => {
+    ({ packageJson, packageName, packagePath, needsGo }) => {
       for (const scriptName of tasksByPackage.get(packageName) || []) {
         const patterns = getScriptTestPatterns(packageJson, scriptName);
         if (patterns.length === 0) {
@@ -487,7 +473,6 @@ async function getChunkedTests() {
 
         const packagePathAndName = `${packagePath},${packageName}`;
         testsToRun[packagePathAndName] = testsToRun[packagePathAndName] || {
-          needsRust,
           needsGo,
         };
         testsToRun[packagePathAndName][scriptName] = testPaths;
@@ -498,9 +483,9 @@ async function getChunkedTests() {
   const chunkedTests = Object.entries(testsToRun).flatMap(
     ([packagePathAndName, scriptNames]) => {
       const [packagePath, packageName] = packagePathAndName.split(',');
-      const { needsRust, needsGo } = scriptNames;
+      const { needsGo } = scriptNames;
       return Object.entries(scriptNames).flatMap(([scriptName, testPaths]) => {
-        if (scriptName === 'needsRust' || scriptName === 'needsGo') return [];
+        if (scriptName === 'needsGo') return [];
         const runnerOptions = getRunnerOptions(scriptName, packageName);
         const {
           runners,
@@ -552,7 +537,6 @@ async function getChunkedTests() {
                   chunkNumber: chunkNumber + 1,
                   allChunksLength: allChunks.length,
                   useEnvPaths,
-                  needsRust,
                   needsGo,
                   label,
                 };

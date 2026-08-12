@@ -32,7 +32,7 @@
     "syncpack": "13.0.4",
     "tmp-promise": "1.0.3",
     "ts-eager": "2.0.2",
-    "turbo": "2.10.8",
+    "turbo": "2.10.10-canary.3",
     "typescript": "5.9.3",
     "vite": "6.4.3",
     "vitest": "4.1.10",

@@ -8,6 +8,9 @@ members = [
     "vercel-workers",
 ]
 
+[manifest.dependency-groups]
+dev = [{ name = "ruff", specifier = "~=0.15.1" }]
+
 [[package]]
 name = "amqp"
 version = "5.3.1"

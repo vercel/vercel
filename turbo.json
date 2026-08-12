@@ -4,7 +4,9 @@
     "affectedUsingTaskInputs": true,
     "strictTaskEntrypointSelection": true,
     "experimentalObservability": true,
-    "experimentalTaskCommand": true
+    "experimentalTaskCommand": true,
+    "experimentalCargoWorkspaces": true,
+    "experimentalPythonWorkspaces": true
   },
   "globalDependencies": [".github/workflows/**", "turbo-cache-key.json"],
   "globalEnv": ["OS", "RUNNER_OS"],

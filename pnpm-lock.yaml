@@ -90,8 +90,8 @@ importers:
         specifier: 2.0.2
         version: 2.0.2
       turbo:
-        specifier: 2.10.8
-        version: 2.10.8
+        specifier: 2.10.10-canary.3
+        version: 2.10.10-canary.3
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -6095,33 +6095,33 @@ packages:
   '@tsconfig/node16@1.0.4':
     resolution: {integrity: sha512-vxhUy4J8lyeyinH7Azl1pdd43GJhZH/tP2weN8TntQblOY+A0XbT8DJk1/oCPuOOyg/Ja757rG0CgHcWC8OfMA==}
 
-  '@turbo/darwin-64@2.10.8':
-    resolution: {integrity: sha512-po+7rfJfUnFXjWlcoN2RwhErgzCdRtBc1T26vYPcywHlggmCQiQe1uWaE4j+BibI2uY9/2pDoFzMN0rmSaPFOw==}
+  '@turbo/darwin-64@2.10.10-canary.3':
+    resolution: {integrity: sha512-unwRmHWSHQrWxzks2HKC7827/agXqKlIcOFrL68XX7ltyYsGoEEa0qDO/6pCE6uTZ2HD7zVE2Bkfo43uBIyQUw==}
     cpu: [x64]
     os: [darwin]
 
-  '@turbo/darwin-arm64@2.10.8':
-    resolution: {integrity: sha512-+zB2btDJ00lnPRuqOvpVvgl4x34k/djZQGZTTCfjn7JgNCl8QFY5Njo5+dqkY1g/+9gbbsnAvWm9CmJg9ebcXA==}
+  '@turbo/darwin-arm64@2.10.10-canary.3':
+    resolution: {integrity: sha512-nIPqeBAPhKFMR7vf1jHmwsjFZb84O1kz6b45jmVezsyR9BeXWEteINmG/O61nn7IibHnA6r/acqgUc9sL4QnHw==}
     cpu: [arm64]
     os: [darwin]
 
-  '@turbo/linux-64@2.10.8':
-    resolution: {integrity: sha512-K1dxqiVisyN7cViVsfQLs6xscQbYuI8aO2nbUhFURDACgEDfZRdP/b4CCxeosBJpcMfhYyiibWqJorCnvz9kKg==}
+  '@turbo/linux-64@2.10.10-canary.3':
+    resolution: {integrity: sha512-1HJpJIa90q3Z81Uz5vxaNvCpxzGcbL7T89p0BM4NgCkbfa4u8Yp2Tpz4WOuIX5SfO3Lh+8w3lu9Z4Kmu5iwmmA==}
     cpu: [x64]
     os: [android, linux]
 
-  '@turbo/linux-arm64@2.10.8':
-    resolution: {integrity: sha512-Gi77ibVnrE1fEmvr+/wBD/yvRqhwp/RQuCp2+//lv1U1wNFFyVg0V7Wj8FG9FXPFAw5QHReo8rxc9+wBSDZjzA==}
+  '@turbo/linux-arm64@2.10.10-canary.3':
+    resolution: {integrity: sha512-tJo6xR699i8rwNouQZp3YkyS1EaR9rkw+Xo2n3Sui38w+dVmkOxyPglv0beHNgUyTDyzkLCQUA3WJhFsY2bN2g==}
     cpu: [arm64]
     os: [android, linux]
 
-  '@turbo/windows-64@2.10.8':
-    resolution: {integrity: sha512-znnLO1haJPYTHoKMKwlAvlkjRiYbbhBzME6wIGaMd+fwir23U6jVd1ecaTWWi1fbnRVqxMfgDBKseQ/hLKb83g==}
+  '@turbo/windows-64@2.10.10-canary.3':
+    resolution: {integrity: sha512-tVeonbir1bev3b96aYgVEoBUsVW1Qop8iGR8f10CeoK3/EdDh5BiQRTEPXUZDlMZ2KgT3MLNZE/s9eT1JIM9Ew==}
     cpu: [x64]
     os: [win32]
 
-  '@turbo/windows-arm64@2.10.8':
-    resolution: {integrity: sha512-VN30vh3b3Czh2WzYHNTfF1FE0YMZ5aHsLO8dBMGHJewA6792wX6iJR8ZxlzFW6WdOu0gEAKIvlYhfyT81Wkm4Q==}
+  '@turbo/windows-arm64@2.10.10-canary.3':
+    resolution: {integrity: sha512-t7sK8pFXZXu/EM9xftrL6o+ff/Z/94Cmto/KqQi83Emxl4APKr3cdqwP9Z67TCGH6agZIA6P53t3NMtAui2axw==}
     cpu: [arm64]
     os: [win32]
 
@@ -12295,8 +12295,8 @@ packages:
   turbo-stream@2.4.0:
     resolution: {integrity: sha512-FHncC10WpBd2eOmGwpmQsWLDoK4cqsA/UT/GqNoaKOQnT8uzhtCbg3EoUDMvqpOSAI0S26mr0rkjzbOO6S3v1g==}
 
-  turbo@2.10.8:
-    resolution: {integrity: sha512-9+8YX5QOkGXzZxcIykTHgaooRHGMWO+jfdyRK0o+rN0U7hBIig2MrJ8r/aNzIPDPhdA73SGb0O+tIztaModTMg==}
+  turbo@2.10.10-canary.3:
+    resolution: {integrity: sha512-HFeL5ntEdc0RZol57qPwvyXPSwcMAA2oSXnDNaw+9/of5pGiMVuET1FtkTjiAvCDZzIrgR8wsy5p8hh7HfO6kg==}
     hasBin: true
 
   tweetnacl@0.14.5:
@@ -16314,22 +16314,22 @@ snapshots:
 
   '@tsconfig/node16@1.0.4': {}
 
-  '@turbo/darwin-64@2.10.8':
+  '@turbo/darwin-64@2.10.10-canary.3':
     optional: true
 
-  '@turbo/darwin-arm64@2.10.8':
+  '@turbo/darwin-arm64@2.10.10-canary.3':
     optional: true
 
-  '@turbo/linux-64@2.10.8':
+  '@turbo/linux-64@2.10.10-canary.3':
     optional: true
 
-  '@turbo/linux-arm64@2.10.8':
+  '@turbo/linux-arm64@2.10.10-canary.3':
     optional: true
 
-  '@turbo/windows-64@2.10.8':
+  '@turbo/windows-64@2.10.10-canary.3':
     optional: true
 
-  '@turbo/windows-arm64@2.10.8':
+  '@turbo/windows-arm64@2.10.10-canary.3':
     optional: true
 
   '@tybys/wasm-util@0.10.2':
@@ -23621,14 +23621,14 @@ snapshots:
 
   turbo-stream@2.4.0: {}
 
-  turbo@2.10.8:
+  turbo@2.10.10-canary.3:
     optionalDependencies:
-      '@turbo/darwin-64': 2.10.8
-      '@turbo/darwin-arm64': 2.10.8
-      '@turbo/linux-64': 2.10.8
-      '@turbo/linux-arm64': 2.10.8
-      '@turbo/windows-64': 2.10.8
-      '@turbo/windows-arm64': 2.10.8
+      '@turbo/darwin-64': 2.10.10-canary.3
+      '@turbo/darwin-arm64': 2.10.10-canary.3
+      '@turbo/linux-64': 2.10.10-canary.3
+      '@turbo/linux-arm64': 2.10.10-canary.3
+      '@turbo/windows-64': 2.10.10-canary.3
+      '@turbo/windows-arm64': 2.10.10-canary.3
 
   tweetnacl@0.14.5: {}
 

@@ -38,7 +38,13 @@ async function main() {
 
     const dir = path.join(rootDir, task.directory);
     const packageJsonPath = path.join(dir, 'package.json');
+    if (!(await fs.pathExists(packageJsonPath))) {
+      continue;
+    }
     const originalPackageObj = await fs.readJson(packageJsonPath);
+    if (originalPackageObj.name !== task.package) {
+      continue;
+    }
     const packageObj = await fs.readJson(packageJsonPath);
     packageObj.version += `-${sha.trim()}`;
 
