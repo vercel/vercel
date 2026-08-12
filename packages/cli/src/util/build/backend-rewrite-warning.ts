@@ -15,7 +15,11 @@ function hasInternalPathRewrite(rewrites: Rewrite[] | undefined): boolean {
 }
 
 function isAffectedFramework(framework: string | null | undefined): boolean {
-  return framework === 'go' || isPythonFramework(framework);
+  return (
+    framework === 'go' ||
+    framework === 'container' ||
+    isPythonFramework(framework)
+  );
 }
 
 export function hasBackendRewriteBehaviorChange({
