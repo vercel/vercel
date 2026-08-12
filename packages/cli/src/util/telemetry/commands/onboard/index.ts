@@ -63,6 +63,12 @@ export class OnboardTelemetryClient
     }
   }
 
+  trackCliFlagResume(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('resume');
+    }
+  }
+
   trackCliFlagVerbose(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('verbose');

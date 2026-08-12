@@ -87,6 +87,14 @@ export const onboardCommand = {
         "Print the agent's reasoning in full instead of collapsing it",
     },
     {
+      name: 'resume',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Continue the most recent session in this directory instead of starting one',
+    },
+    {
       name: 'dry-run',
       shorthand: null,
       type: Boolean,
@@ -126,6 +134,10 @@ export const onboardCommand = {
     {
       name: 'Pick a specific agent',
       value: `${packageName} onboard --harness codex`,
+    },
+    {
+      name: 'Continue where the last session left off',
+      value: `${packageName} onboard --resume`,
     },
     {
       name: 'Produce a plan without changing anything',

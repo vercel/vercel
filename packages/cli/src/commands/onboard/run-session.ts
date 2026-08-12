@@ -20,7 +20,14 @@ import {
 } from './install-harness-packages';
 import { HARNESS_SOURCE_ENV_VAR } from './local-harness-source';
 import { installCliShim } from './cli-shim';
-import { createSessionDir, finalizeSessionDir } from './session-storage';
+import {
+  createSessionDir,
+  finalizeSessionDir,
+  openSessionDir,
+  writeSessionRecord,
+  buildResumeState,
+  type ResumableSession,
+} from './session-storage';
 import { FOLLOW_UPS } from './follow-ups';
 import { ActivityIndicator, WORKING_PHRASES } from './activity';
 import { answerAskUser, createAskUserTool, isAskUserTool } from './ask-user';
@@ -46,6 +53,7 @@ import { buildSessionReport } from './session-report';
 import { agentLabel, blankGutter, gutter, GUTTER_WIDTH } from './voice';
 import { textWidth, truncateAnsi, wrapAnsi } from './wrap';
 import type { OnboardProfile } from './profile';
+import type { AbortHandlers } from './report-profile';
 
 /**
  * The agent runtime. It also supplies the local workspace sandbox, which the
@@ -66,6 +74,18 @@ export interface RunSessionOptions {
   verbose: boolean;
   /** Collects where the wall time of this run goes. */
   profile: OnboardProfile;
+  /**
+   * Signal handlers owning the abort path, so session teardown can be hooked
+   * onto it. Optional: callers that do not install handlers simply lose the
+   * guarantee, they do not lose the session.
+   */
+  abortHandlers?: AbortHandlers;
+  /**
+   * A previous session to carry on, found by `--resume`. Its directory is
+   * reopened so the ledger continues in place, and its agent-side id is
+   * handed to the harness so the conversation continues too.
+   */
+  resume?: ResumableSession;
 }
 
 /**
@@ -136,8 +156,17 @@ async function driveSession(
     loader: HarnessLoader;
   }
 ): Promise<number> {
-  const { client, harness, workspace, prompt, runtime, loader, profile } =
-    options;
+  const {
+    client,
+    harness,
+    workspace,
+    prompt,
+    runtime,
+    loader,
+    profile,
+    abortHandlers,
+    resume,
+  } = options;
 
   // Works around adapters that bootstrap with pnpm but ship no pnpm config.
   const endPrepare = profile.start('prepare bootstrap');
@@ -213,7 +242,9 @@ async function driveSession(
   // must be exported before the harness spawns anything. It sits next to the
   // harness's own run data in `.agent-runs/`, and the ledger stays after the
   // session ends — it is the record of what the session did.
-  const storage = await createSessionDir(workspace);
+  const storage = resume
+    ? await openSessionDir(resume.dir)
+    : await createSessionDir(workspace);
   const sessionDir = storage.dir;
   const previousSessionDir = process.env[ONBOARD_SESSION_DIR_ENV];
   process.env[ONBOARD_SESSION_DIR_ENV] = sessionDir;
@@ -243,12 +274,93 @@ async function driveSession(
     await finalizeSessionDir(storage);
   };
 
+  // The harness bridge and the agent CLI beneath it are separate processes
+  // that outlive this one unless they are stopped. `process.exit()` in the
+  // signal handler skips every `finally` below, so the abort path needs its
+  // own route to the same teardown — without it, Ctrl-C strands the bridge.
+  /**
+   * Update the record with the agent's own conversation id.
+   *
+   * Resolved rather than remembered: the id lives in the agent's transcript
+   * store and only appears once a turn has been written, so it cannot be
+   * captured at session start. Called on both exit paths, because a run that
+   * was interrupted is exactly the one someone wants to resume.
+   *
+   * A resumed run keeps the id it resumed and never adopts a newly resolved
+   * one. Resolution can only answer "the newest transcript for this
+   * workspace", so if a resume silently failed and opened a fresh thread,
+   * adopting that answer would replace the pointer to the real conversation
+   * with a pointer to the empty one — and every later resume would land
+   * there, irrecoverably. When the resume worked, the two ids are identical
+   * and keeping the old one costs nothing.
+   */
+  const recordResumePoint = async (): Promise<void> => {
+    const agentSessionId =
+      resume?.record.agentSessionId ??
+      (await resolveSessionId({
+        harnessId: harness.id,
+        workspace,
+        startedAt,
+      }));
+    await writeSessionRecord(sessionDir, {
+      harnessId: harness.id,
+      ...(session?.sessionId ? { harnessSessionId: session.sessionId } : {}),
+      ...(agentSessionId ? { agentSessionId } : {}),
+      workspace,
+      startedAt: resume?.record.startedAt ?? startedAt,
+      updatedAt: Date.now(),
+    });
+  };
+
+  let teardownRan = false;
+  const stopSession = async (): Promise<void> => {
+    if (teardownRan) return;
+    teardownRan = true;
+    // Recorded before the destroy, so a signalled run stays resumable: the
+    // agent's transcript is already on disk by the time a turn has streamed.
+    await recordResumePoint();
+    try {
+      await session?.destroy();
+    } catch (err) {
+      output.debug(
+        `onboard: session teardown failed: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
+    }
+    await cleanupSessionDir();
+  };
+
   const endCreate = profile.start('start agent session', {
     bridgeInstalled: bootstrapped,
   });
   let session: HarnessSession;
   try {
-    session = await agent.createSession();
+    // Resuming needs a lifecycle state, not just a session id: the id only
+    // names the run directory, while `resumeFrom` is what puts the adapter on
+    // its resume path at all. `data.claudeSessionId` then names the exact
+    // conversation, so the agent reopens the thread this record describes
+    // rather than whichever one is newest in the directory.
+    session = await agent.createSession(
+      resume
+        ? {
+            ...(resume.record.harnessSessionId
+              ? { sessionId: resume.record.harnessSessionId }
+              : {}),
+            resumeFrom: buildResumeState(harness.id, resume.record),
+          }
+        : undefined
+    );
+    abortHandlers?.onAbort(stopSession);
+    // Written as soon as there is an id to write, so a session interrupted
+    // one second later is still resumable.
+    await writeSessionRecord(sessionDir, {
+      harnessId: harness.id,
+      ...(session.sessionId ? { harnessSessionId: session.sessionId } : {}),
+      workspace,
+      startedAt: resume?.record.startedAt ?? Date.now(),
+      updatedAt: Date.now(),
+    });
   } catch (err) {
     preparing.stop();
     reportSessionStartFailure(err, harness);
@@ -493,8 +605,12 @@ async function driveSession(
         }`
       );
     } finally {
+      teardownRan = true;
       endDestroy();
     }
+
+    // The resume point, refreshed from the transcript this run just extended.
+    await recordResumePoint();
 
     // Covers the exit paths that never reached a follow-up menu (a thrown
     // turn, a non-interactive run): the result still goes at the end, where it

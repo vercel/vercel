@@ -23,8 +23,14 @@ import { onboardVerify } from './verify';
 import { collectPreflight, formatPreflight, type Preflight } from './preflight';
 import { renderMission, renderMissionFromFile } from './instructions';
 import { runSession } from './run-session';
+import { findResumableSession, type ResumableSession } from './session-storage';
+import { readLedger } from '../../util/onboard-session';
 import { OnboardProfile } from './profile';
-import { reportProfile, reportProfileOnAbort } from './report-profile';
+import {
+  reportProfile,
+  reportProfileOnAbort,
+  type AbortHandlers,
+} from './report-profile';
 
 const DRY_RUN_SUFFIX = `
 
@@ -100,6 +106,7 @@ export default async function onboard(client: Client): Promise<number> {
   const printPrompt = parsedArgs.flags['--print-prompt'] ?? false;
   const promptFile = parsedArgs.flags['--prompt'];
   const dryRun = parsedArgs.flags['--dry-run'] ?? false;
+  const resume = parsedArgs.flags['--resume'] ?? false;
   const verbose = parsedArgs.flags['--verbose'] ?? false;
   const json = parsedArgs.flags['--json'] ?? false;
   const skipConfirmation = parsedArgs.flags['--yes'] ?? false;
@@ -110,20 +117,23 @@ export default async function onboard(client: Client): Promise<number> {
   telemetry.trackCliFlagListHarnesses(listHarnesses);
   telemetry.trackCliFlagPrintPrompt(printPrompt);
   telemetry.trackCliFlagDryRun(dryRun);
+  telemetry.trackCliFlagResume(resume);
   telemetry.trackCliFlagVerbose(verbose);
   telemetry.trackCliFlagJson(json);
   telemetry.trackCliFlagYes(skipConfirmation);
 
   let exitCode = 1;
-  const releaseAbortHandlers = reportProfileOnAbort(profile);
+  const abortHandlers = reportProfileOnAbort(profile);
   try {
     exitCode = await runOnboard(client, {
+      abortHandlers,
       pathArgument,
       harnessFlag,
       listHarnesses,
       printPrompt,
       promptFile,
       dryRun,
+      resume,
       verbose,
       skipConfirmation,
       jsonFlags: parsedArgs.flags,
@@ -134,7 +144,7 @@ export default async function onboard(client: Client): Promise<number> {
     printError(error);
     return 1;
   } finally {
-    releaseAbortHandlers();
+    abortHandlers.release();
     // Reported on every exit path, including a thrown one, since a run that
     // failed slowly is exactly the one worth having numbers for.
     await reportProfile(profile, exitCode);
@@ -148,10 +158,12 @@ interface OnboardOptions {
   printPrompt: boolean;
   promptFile?: string;
   dryRun: boolean;
+  resume: boolean;
   verbose: boolean;
   skipConfirmation: boolean;
   jsonFlags: Record<string, unknown>;
   profile: OnboardProfile;
+  abortHandlers: AbortHandlers;
 }
 
 async function runOnboard(
@@ -173,6 +185,13 @@ async function runOnboard(
     return 1;
   }
   profile.set('workspace', workspace);
+
+  // A resume needs none of what follows — no preflight, no composed mission,
+  // no team decision. All of that is already in the conversation being picked
+  // back up, and recomputing it would both cost seconds and contradict it.
+  if (options.resume) {
+    return resumeSession(client, { workspace, harnesses, options });
+  }
 
   const endPreflight = profile.start('preflight');
   const preflight = await collectPreflight(client, workspace);
@@ -247,8 +266,152 @@ async function runOnboard(
     autoApprove: options.skipConfirmation,
     verbose: options.verbose,
     profile,
+    abortHandlers: options.abortHandlers,
   });
 }
+
+/**
+ * `--resume`: carry on the most recent session in this directory.
+ *
+ * Resuming is not restarting with context. The harness reopens the agent's own
+ * conversation by id, and the ledger continues in the same file, so the second
+ * half of a run is accountable in the same record as the first. What the user
+ * supplies is only the next instruction.
+ *
+ * The harness is taken from the record rather than re-selected: a conversation
+ * belongs to the agent that had it, and resuming it into a different one would
+ * silently start a new session wearing the old session's directory.
+ */
+async function resumeSession(
+  client: Client,
+  context: {
+    workspace: string;
+    harnesses: DetectedHarness[];
+    options: OnboardOptions;
+  }
+): Promise<number> {
+  const { workspace, harnesses, options } = context;
+  const { profile } = options;
+
+  const endFind = profile.start('find resumable session');
+  const resume = await findResumableSession(workspace);
+  endFind({ found: Boolean(resume) });
+
+  if (!resume) {
+    output.error(
+      `No previous session to resume in ${workspace}.\n` +
+        `  Run ${cmd('vercel onboard')} to start one.`
+    );
+    return 1;
+  }
+
+  const harness = harnesses.find(entry => entry.id === resume.record.harnessId);
+  if (!harness || harness.status === 'missing') {
+    output.error(
+      `That session ran on ${resume.record.harnessId}, which is not available ` +
+        `now. Install it, or run ${cmd('vercel onboard')} to start fresh.`
+    );
+    return 1;
+  }
+  if (options.harnessFlag && options.harnessFlag !== harness.id) {
+    output.error(
+      `That session ran on ${harness.id}; --harness ${options.harnessFlag} ` +
+        `would start a new conversation. Omit --harness to resume it.`
+    );
+    return 1;
+  }
+  profile.set('harness', harness.id);
+  profile.set('harnessVersion', harness.version);
+  profile.set('resumedFrom', resume.dir);
+
+  await describeResumedSession(resume, harness);
+
+  const instruction = await readResumeInstruction(client, harness, options);
+  if (instruction === undefined) {
+    output.log('Canceled.');
+    return 0;
+  }
+
+  return runSession({
+    client,
+    harness,
+    workspace,
+    prompt: instruction,
+    autoApprove: options.skipConfirmation,
+    verbose: options.verbose,
+    profile,
+    abortHandlers: options.abortHandlers,
+    resume,
+  });
+}
+
+/**
+ * Say what the session being resumed already did, from its ledger.
+ *
+ * The user is about to hand the agent another instruction, and the useful
+ * context for that is what already exists on their account — not a transcript
+ * they have scrolled past or a session they started yesterday.
+ */
+async function describeResumedSession(
+  resume: ResumableSession,
+  harness: DetectedHarness
+): Promise<void> {
+  const when = new Date(resume.record.updatedAt);
+  const ledger = await readLedger(resume.dir);
+
+  const counts = new Map<string, number>();
+  for (const event of ledger) {
+    if (event.type === 'command' || event.type === 'approval') continue;
+    counts.set(event.type, (counts.get(event.type) ?? 0) + 1);
+  }
+
+  output.print('\n');
+  output.log(
+    `Resuming the ${harness.label} session from ${when.toLocaleString()}.`
+  );
+  if (counts.size > 0) {
+    const summary = [...counts]
+      .map(([type, count]) => `${count} ${type.replace(/-/g, ' ')}`)
+      .join(', ');
+    output.log(chalk.dim(`  That session recorded: ${summary}.`));
+  }
+  output.print('\n');
+}
+
+/**
+ * The instruction the resumed conversation opens on.
+ *
+ * A resume with nothing to say is a resume that wastes a turn, so an empty
+ * line cancels rather than nudging the agent to invent work. Non-interactive
+ * runs get a neutral continuation instead of a prompt they cannot answer.
+ */
+async function readResumeInstruction(
+  client: Client,
+  harness: DetectedHarness,
+  options: OnboardOptions
+): Promise<string | undefined> {
+  if (!client.stdin.isTTY || options.skipConfirmation) {
+    return RESUME_CONTINUE_PROMPT;
+  }
+
+  const endWait = options.profile.start('waiting for your instruction');
+  try {
+    const reply = await client.input.text({
+      message: `What should ${harness.label} do next? (empty cancels)`,
+    });
+    const trimmed = reply.trim();
+    return trimmed ? trimmed : undefined;
+  } catch {
+    return undefined;
+  } finally {
+    endWait();
+  }
+}
+
+/** Sent when a resume cannot ask: pick the thread up without re-planning. */
+const RESUME_CONTINUE_PROMPT =
+  'Continue from where you left off. Re-read your plan and the current state ' +
+  'of the project before acting, and do not repeat work that is already done.';
 
 /**
  * Decide the team the session acts in, before the agent starts.

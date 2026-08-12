@@ -71,6 +71,30 @@ const SIGNAL_EXIT_CODE: Record<string, number> = {
 const ABORT_WRITE_TIMEOUT_MS = 3000;
 
 /**
+ * How long session teardown gets on the abort path.
+ *
+ * Larger than the profile budget because what it buys is larger: the harness
+ * bridge and the agent CLI beneath it are separate processes, and a signal
+ * that exits before they are stopped leaves them running, reparented to init,
+ * with no supervisor to feed them. Observed in the wild — an agent idling for
+ * 37 minutes after its `vercel onboard` was gone.
+ */
+const ABORT_TEARDOWN_TIMEOUT_MS = 5000;
+
+export interface AbortHandlers {
+  /** Remove the signal handlers; the normal exit path owns cleanup instead. */
+  release(): void;
+  /**
+   * Register the work that must happen before a signalled process exits.
+   *
+   * Registered rather than passed in, because the thing worth tearing down —
+   * the harness session — does not exist yet when the handlers are installed,
+   * and the window before it does is exactly when an impatient Ctrl-C lands.
+   */
+  onAbort(teardown: () => Promise<void>): void;
+}
+
+/**
  * Report the profile when the run is interrupted, then exit.
  *
  * Without this, Ctrl-C takes Node's default path and the process is gone before
@@ -83,8 +107,9 @@ const ABORT_WRITE_TIMEOUT_MS = 3000;
  *
  * Returns a function that removes the handlers.
  */
-export function reportProfileOnAbort(profile: OnboardProfile): () => void {
+export function reportProfileOnAbort(profile: OnboardProfile): AbortHandlers {
   let handling = false;
+  let teardown: (() => Promise<void>) | undefined;
 
   const onSignal = (signal: NodeJS.Signals) => {
     const code = SIGNAL_EXIT_CODE[signal] ?? 130;
@@ -96,6 +121,25 @@ export function reportProfileOnAbort(profile: OnboardProfile): () => void {
     profile.set('abortedBy', signal);
 
     void (async () => {
+      // Teardown first, and on its own budget: the profile is a nicety, but a
+      // surviving bridge is a process the user has to hunt down with `ps`.
+      if (teardown) {
+        try {
+          await Promise.race([
+            teardown(),
+            new Promise(resolve => {
+              setTimeout(resolve, ABORT_TEARDOWN_TIMEOUT_MS).unref?.();
+            }),
+          ]);
+        } catch (err) {
+          output.debug(
+            `onboard: could not stop the session on ${signal}: ${
+              err instanceof Error ? err.message : String(err)
+            }`
+          );
+        }
+      }
+
       try {
         await Promise.race([
           reportProfile(profile, code),
@@ -117,8 +161,13 @@ export function reportProfileOnAbort(profile: OnboardProfile): () => void {
   process.on('SIGINT', onSignal);
   process.on('SIGTERM', onSignal);
 
-  return () => {
-    process.off('SIGINT', onSignal);
-    process.off('SIGTERM', onSignal);
+  return {
+    release() {
+      process.off('SIGINT', onSignal);
+      process.off('SIGTERM', onSignal);
+    },
+    onAbort(fn) {
+      teardown = fn;
+    },
   };
 }

@@ -1,5 +1,5 @@
 import { describe, beforeEach, expect, it } from 'vitest';
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
@@ -222,6 +222,87 @@ describe('onboard', () => {
       expect(exitCode).toBe(1);
 
       await expect(client.stderr).toOutput('checks[0]');
+    });
+  });
+
+  describe('--resume', () => {
+    /** The record a finished session leaves behind. */
+    function seedSession(record: Record<string, unknown>): void {
+      const dir = join(cwd, '.agent-runs', 'onboard', '2026-01-01T00-00-00-1');
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, 'session.json'), JSON.stringify(record), 'utf-8');
+    }
+
+    it('returns 1 when there is nothing to resume', async () => {
+      client.setArgv('onboard', '--resume');
+      const exitCode = await onboard(client);
+      expect(exitCode).toBe(1);
+
+      await expect(client.stderr).toOutput('No previous session to resume');
+    });
+
+    it('points at plain `vercel onboard` when there is nothing to resume', async () => {
+      client.setArgv('onboard', '--resume');
+      await onboard(client);
+
+      await expect(client.stderr).toOutput('vercel onboard');
+    });
+
+    it('refuses when the recorded harness is not installed', async () => {
+      seedSession({
+        harnessId: 'deepagents',
+        harnessSessionId: 'sess-1',
+        workspace: cwd,
+        startedAt: 1,
+        updatedAt: 1,
+      });
+
+      client.setArgv('onboard', '--resume');
+      const exitCode = await onboard(client);
+
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('deepagents');
+    });
+
+    it('refuses to resume one conversation into a different agent', async () => {
+      seedSession({
+        harnessId: 'claude-code',
+        harnessSessionId: 'sess-1',
+        workspace: cwd,
+        startedAt: 1,
+        updatedAt: 1,
+      });
+
+      client.setArgv('onboard', '--resume', '--harness', 'codex');
+      const exitCode = await onboard(client);
+
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('would start a new conversation');
+    });
+
+    it('ignores a record left by a different workspace', async () => {
+      seedSession({
+        harnessId: 'claude-code',
+        harnessSessionId: 'sess-1',
+        workspace: '/somewhere/else',
+        startedAt: 1,
+        updatedAt: 1,
+      });
+
+      client.setArgv('onboard', '--resume');
+      const exitCode = await onboard(client);
+
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('No previous session to resume');
+    });
+
+    it('tracks telemetry', async () => {
+      client.setArgv('onboard', '--resume');
+      await onboard(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'flag:resume', value: 'TRUE' },
+      ]);
     });
   });
 
