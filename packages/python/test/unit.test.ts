@@ -2160,6 +2160,40 @@ describe('python version selection from uv.lock and pyproject.toml', () => {
     expect(getBuildOutputV3(result).architecture).toBe('x86_64');
   });
 
+  it('stamps the cold start baseline before any bootstrap work', async () => {
+    const files = {
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const trampoline = handler.data.toString();
+    expect(trampoline).toContain(
+      '"__VC_PY_BOOT_START_MS": str(_vc_boot_start_ms)'
+    );
+    // Monotonic: the runtime subtracts this from a monotonic clock.
+    expect(trampoline).toContain(
+      '_vc_boot_start_ms = int(time.monotonic() * 1000)'
+    );
+    // The stamp is only useful if nothing expensive precedes it.
+    expect(trampoline.indexOf('_vc_boot_start_ms = int(')).toBeLessThan(
+      trampoline.indexOf('site.addsitedir')
+    );
+  });
+
   it('falls back to pyproject.toml requires-python when no uv.lock (build succeeds)', async () => {
     const files = {
       'handler.py': new FileBlob({

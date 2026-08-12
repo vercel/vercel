@@ -79,6 +79,9 @@ type _ASGIApp = Callable[[_ASGIScope, _ASGIReceive, _ASGISend], Awaitable[None]]
 
 _original_stderr = sys.stderr
 
+# Cold start baseline when the trampoline did not set one
+_MODULE_IMPORTED_AT = time.monotonic()
+
 # --- IPC socket & send_message (must be available before _fatal) ----------
 _ipc_sock: socket.socket | None = None
 if "VERCEL_IPC_PATH" in os.environ:
@@ -371,6 +374,69 @@ def flush_init_log_buf_to_stderr() -> None:
 atexit.register(flush_init_log_buf_to_stderr)
 
 
+# --- Cold start phase timings ---------------------------------------------
+_BOOT_START_ENV = "__VC_PY_BOOT_START_MS"
+
+# Contiguous and in bootstrap order, so they sum to initDuration
+_PHASE_BOOTSTRAP = "bootstrap"
+_PHASE_IMPORT_FN = "importFn"
+_PHASE_SERVER_READY = "serverReady"
+
+
+def _boot_started_at() -> float:
+    """Monotonic baseline (seconds): trampoline stamp, else module start."""
+    raw = os.environ.get(_BOOT_START_ENV)
+    if raw:
+        try:
+            return int(raw) / 1000
+        except ValueError:
+            _stderr(f'invalid "{_BOOT_START_ENV}" value: "{raw}"')
+    return _MODULE_IMPORTED_AT
+
+
+_boot_start = _boot_started_at()
+_phase_marks: dict[str, float] = {}
+
+
+def _mark_phase(name: str) -> None:
+    """Record the monotonic time at which a cold start phase completed."""
+    _phase_marks[name] = time.monotonic()
+
+
+def _elapsed_ms(start: float, end: float) -> int:
+    """Milliseconds between two monotonic readings, clamped at zero."""
+    return max(int((end - start) * 1000), 0)
+
+
+def _cold_start_phases(ready_at: float) -> dict[str, int]:
+    """Duration (ms) of each cold start phase."""
+    bootstrap_end = _phase_marks.get(_PHASE_BOOTSTRAP, _boot_start)
+    import_fn_end = _phase_marks.get(_PHASE_IMPORT_FN, bootstrap_end)
+    return {
+        _PHASE_BOOTSTRAP: _elapsed_ms(_boot_start, bootstrap_end),
+        _PHASE_IMPORT_FN: _elapsed_ms(bootstrap_end, import_fn_end),
+        _PHASE_SERVER_READY: _elapsed_ms(import_fn_end, ready_at),
+    }
+
+
+def _send_server_started(http_port: int) -> None:
+    """Complete the runtime handshake and release buffered init logs."""
+    ready_at = time.monotonic()
+    phases = _cold_start_phases(ready_at)
+    send_message(
+        {
+            "type": "server-started",
+            "payload": {
+                "initDuration": _elapsed_ms(_boot_start, ready_at),
+                "httpPort": http_port,
+                "userInitDuration": phases[_PHASE_IMPORT_FN],
+                "phases": phases,
+            },
+        }
+    )
+    _flush_init_log_buf()
+
+
 if _ipc_sock is not None:
     setup_logging(send_message, storage)
 
@@ -490,6 +556,8 @@ _extra_path = os.environ.get("VERCEL_RUNTIME_ENV_PATH_PREPEND")
 if _extra_path:
     os.environ["PATH"] = _extra_path + ":" + os.environ.get("PATH", "")
 
+_mark_phase(_PHASE_BOOTSTRAP)
+
 try:
     prepare_worker_environment()
     # Publish-side activation only: subscriber lambdas do the consuming-side
@@ -521,6 +589,8 @@ if is_cron_service():
         _stderr("Error bootstrapping cron service app:")
         _stderr(traceback.format_exc())
         exit(1)
+
+_mark_phase(_PHASE_IMPORT_FN)
 
 _use_legacy_asyncio = sys.version_info < (3, 10)
 
@@ -715,8 +785,6 @@ class ASGIMiddleware:
 
 
 if "VERCEL_IPC_PATH" in os.environ:
-    start_time = time.time()
-
     # Override urlopen from urllib3 (& requests) to send Request Metrics
     try:
         from urllib.parse import urlparse
@@ -1068,16 +1136,7 @@ if "VERCEL_IPC_PATH" in os.environ:
             )
             server = uvicorn.Server(config)
 
-            send_message(
-                {
-                    "type": "server-started",
-                    "payload": {
-                        "initDuration": int((time.time() - start_time) * 1000),
-                        "httpPort": http_port,
-                    },
-                }
-            )
-            _flush_init_log_buf()
+            _send_server_started(http_port)
 
             # Run the server (blocking)
             server.run()
@@ -1086,16 +1145,7 @@ if "VERCEL_IPC_PATH" in os.environ:
 
     if "Handler" in locals():
         server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)  # type: ignore[assignment]
-        send_message(
-            {
-                "type": "server-started",
-                "payload": {
-                    "initDuration": int((time.time() - start_time) * 1000),
-                    "httpPort": server.server_address[1],  # type: ignore[attr-defined]
-                },
-            }
-        )
-        _flush_init_log_buf()
+        _send_server_started(server.server_address[1])  # type: ignore[attr-defined]
         server.serve_forever()  # type: ignore[attr-defined]
 
 try:

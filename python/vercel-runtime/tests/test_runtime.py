@@ -14,6 +14,7 @@ import socket
 import struct
 import sys
 import tempfile
+import time
 import unittest
 from typing import TYPE_CHECKING, Any
 
@@ -1666,6 +1667,82 @@ class TestLogging(_RuntimeTestCase):
             decoded = base64.b64decode(log.payload.message).decode()
             self.assertIn("ValueError", decoded)
             self.assertIn("with traceback", decoded)
+
+
+class TestColdStartPhases(_RuntimeTestCase):
+    """Tests for the cold start breakdown reported in ``server-started``."""
+
+    async def _server_started(
+        self,
+        extra_env: dict[str, str] | None = None,
+    ) -> ServerStartedMessage:
+        ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env=extra_env,
+        ):
+            return await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+
+    def _phases(self, ss: ServerStartedMessage) -> dict[str, int]:
+        phases = ss.payload.phases
+        if phases is None:
+            self.fail("server-started payload is missing phases")
+        return phases
+
+    async def test_phases_sum_to_init_duration(self) -> None:
+        ss = await self._server_started()
+        phases = self._phases(ss)
+
+        self.assertEqual(
+            sorted(phases), ["bootstrap", "importFn", "serverReady"]
+        )
+        for name, duration in phases.items():
+            self.assertGreaterEqual(duration, 0, name)
+        # Contiguous phases, so they sum to initDuration bar truncation
+        self.assertLessEqual(
+            abs(sum(phases.values()) - ss.payload.init_duration),
+            len(phases),
+        )
+
+    async def test_user_init_duration_is_the_user_import(self) -> None:
+        ss = await self._server_started()
+        self.assertEqual(
+            ss.payload.user_init_duration,
+            self._phases(ss)["importFn"],
+        )
+
+    async def test_boot_stamp_is_attributed_to_bootstrap(self) -> None:
+        # The trampoline stamps in the process it is read from, but
+        # CLOCK_MONOTONIC is system wide, so stamping from here works too.
+        stamped_ms = int(time.monotonic() * 1000) - 5000
+        ss = await self._server_started(
+            extra_env={"__VC_PY_BOOT_START_MS": str(stamped_ms)},
+        )
+
+        self.assertGreaterEqual(self._phases(ss)["bootstrap"], 5000)
+        self.assertGreaterEqual(ss.payload.init_duration, 5000)
+
+    async def test_invalid_boot_stamp_falls_back_to_module_import(self) -> None:
+        ss = await self._server_started(
+            extra_env={"__VC_PY_BOOT_START_MS": "not-a-number"},
+        )
+
+        self.assertGreaterEqual(self._phases(ss)["bootstrap"], 0)
+        self.assertLess(ss.payload.init_duration, 60_000)
+
+    async def test_boot_stamp_in_the_future_does_not_go_negative(self) -> None:
+        stamped_ms = int(time.monotonic() * 1000) + 60_000
+        ss = await self._server_started(
+            extra_env={"__VC_PY_BOOT_START_MS": str(stamped_ms)},
+        )
+
+        self.assertEqual(self._phases(ss)["bootstrap"], 0)
+        self.assertEqual(ss.payload.init_duration, 0)
 
 
 class TestErrorPaths(_RuntimeTestCase):

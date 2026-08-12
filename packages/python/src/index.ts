@@ -488,10 +488,15 @@ import os
 import os.path
 import site
 import sys
+import time
+
+# Cold start baseline, read back by vercel_runtime.vc_init
+_vc_boot_start_ms = int(time.monotonic() * 1000)
 
 _here = os.path.dirname(__file__)
 
 os.environ.update({
+  "__VC_PY_BOOT_START_MS": str(_vc_boot_start_ms),
   "__VC_HANDLER_MODULE_NAME": "${moduleName}",
   "__VC_HANDLER_ENTRYPOINT": "${entrypoint}",
   "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypoint}"),
