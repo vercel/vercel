@@ -1,5 +1,12 @@
 # @vercel/connect
 
+## 0.8.0
+
+### Minor Changes
+
+- 9476255: Add `connectNotionAdapter` for outbound Chat SDK Notion credentials while retaining native webhook verification.
+- 52de67d: Add `connectTelegramAdapter` for outbound Chat SDK Telegram credentials while retaining native webhook verification or polling.
+
 ## 0.7.0
 
 ### Minor Changes

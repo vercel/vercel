@@ -1,5 +1,14 @@
 # vercel
 
+## 58.9.5
+
+### Patch Changes
+
+- 28a2dd0: Expose the resolved rewrite destination as the request path observed by containers, and warn affected container projects about the behavior change.
+- 2fa7e02: Revert the linked deploy optimization that can send an invalid root directory.
+- Updated dependencies [28a2dd0]
+  - @vercel/container@0.2.0
+
 ## 58.9.4
 
 ### Patch Changes
