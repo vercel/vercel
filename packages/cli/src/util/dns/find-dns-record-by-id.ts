@@ -9,9 +9,8 @@ export type DetailedDNSRecord = DNSRecord & {
 };
 
 /**
- * Finds a single DNS record of a domain by its ID using the public
- * list endpoint (GET /v{n}/domains/{domain}/records), paging through
- * results until the record is found or the list is exhausted.
+ * There is no public get-record-by-id endpoint, so this pages through the
+ * public list endpoint until the record is found or the list is exhausted.
  *
  * Returns `DomainNotFound` when the domain does not exist, and `null`
  * when the domain exists but has no record with the given ID.
