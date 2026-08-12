@@ -784,16 +784,6 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
-    describe('project resume help output snapshots', () => {
-      it('project resume help column width 120', () => {
-        expect(
-          help(project.resumeSubcommand, {
-            columns: 120,
-            parent: project.projectCommand,
-          })
-        ).toMatchSnapshot();
-      });
-    });
   });
 
   describe('promote help output snapshots', () => {

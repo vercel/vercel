@@ -649,7 +649,6 @@ export type ExitWithNonInteractiveErrorVariant =
   | 'web-analytics'
   | 'checks'
   | 'pause'
-  | 'resume'
   | 'global-config'
   | 'list';
 
@@ -745,20 +744,15 @@ function buildNextStepsForProjectSubcommands(
                         template: 'project pause <name> --yes' as const,
                         when: 'Pause production traffic by project name (replace <name>)',
                       }
-                    : variant === 'resume'
+                    : variant === 'inspect'
                       ? {
-                          template: 'project resume <name>' as const,
-                          when: 'Resume production traffic by project name (replace <name>)',
+                          template: 'project inspect <name>' as const,
+                          when: 'Inspect a project by name (replace <name>)',
                         }
-                      : variant === 'inspect'
-                        ? {
-                            template: 'project inspect <name>' as const,
-                            when: 'Inspect a project by name (replace <name>)',
-                          }
-                        : {
-                            template: 'project members <name>' as const,
-                            when: 'List members by project name (replace <name>)',
-                          };
+                      : {
+                          template: 'project members <name>' as const,
+                          when: 'List members by project name (replace <name>)',
+                        };
   return [
     {
       command: buildCommandWithGlobalFlags(client.argv, 'link'),

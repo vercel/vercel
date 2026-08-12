@@ -229,33 +229,6 @@ export const pauseSubcommand = {
   ],
 } as const;
 
-export const resumeSubcommand = {
-  name: 'resume',
-  aliases: ['unpause'],
-  description: 'Resume production traffic for a paused project',
-  arguments: [
-    {
-      name: 'project',
-      required: false,
-    },
-  ],
-  options: [formatOption, jsonOption],
-  examples: [
-    {
-      name: 'Resume the linked project',
-      value: `${packageName} project resume`,
-    },
-    {
-      name: 'Resume the project named "my-project"',
-      value: `${packageName} project resume my-project`,
-    },
-    {
-      name: 'Resume a project and print the result as JSON',
-      value: `${packageName} project resume my-project --json`,
-    },
-  ],
-} as const;
-
 export const removeSubcommand = {
   name: 'remove',
   aliases: ['rm'],
@@ -744,7 +717,6 @@ export const projectCommand = {
     webAnalyticsSubcommand,
     speedInsightsSubcommand,
     pauseSubcommand,
-    resumeSubcommand,
     updateSubcommand,
     renameSubcommand,
     removeSubcommand,
