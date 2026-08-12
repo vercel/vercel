@@ -1762,6 +1762,14 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
                             using
                             its  
                             ID   
+  update   id               Upda…
+                            an   
+                            exis…
+                            DNS  
+                            reco…
+                            using
+                            its  
+                            ID   
 
 
   Global Options:
@@ -1863,6 +1871,7 @@ exports[`help command > dns help output snapshots > dns help column width 80 1`]
                             records, or omit the argument to list records
                             across every domain on the scope (default)   
   remove   id               Remove a DNS entry using its ID              
+  update   id               Update an existing DNS record using its ID   
 
 
   Global Options:
@@ -1930,6 +1939,7 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
   list     [domain]         List DNS entries. Pass a domain to list its records, or omit the argument to list    
                             records across every domain on the scope (default)                                   
   remove   id               Remove a DNS entry using its ID                                                      
+  update   id               Update an existing DNS record using its ID                                           
 
 
   Global Options:

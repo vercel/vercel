@@ -34,6 +34,13 @@ export class DnsTelemetryClient
     });
   }
 
+  trackCliSubcommandUpdate(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'update',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandList(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'list',
