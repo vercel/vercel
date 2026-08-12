@@ -239,6 +239,103 @@ export const getSubcommand = {
   examples: [],
 } as const;
 
+export const putImageSubcommand = {
+  name: 'put-image',
+  aliases: [],
+  description:
+    'Optimize an image with Vercel Image Optimization and store the result in the Blob store (requires OIDC credentials)',
+  arguments: [
+    {
+      name: 'pathToFileOrUrl',
+      required: true,
+    },
+  ],
+  options: [
+    accessOption,
+    {
+      name: 'width',
+      shorthand: 'w',
+      type: Number,
+      deprecated: false,
+      description:
+        'Width of the optimized image in pixels, between 1 and 8192 (required)',
+      argument: 'NUMBER',
+    },
+    {
+      name: 'quality',
+      shorthand: 'q',
+      type: Number,
+      deprecated: false,
+      description:
+        'Quality of the optimized image, between 1 and 100 (default: 75)',
+      argument: 'NUMBER',
+    },
+    {
+      name: 'format',
+      shorthand: 'F',
+      type: String,
+      deprecated: false,
+      description:
+        'Output format: jpeg, png, webp, or avif. Keeps the original format when omitted',
+      argument: 'FORMAT',
+      choices: ['jpeg', 'png', 'webp', 'avif'],
+    },
+    {
+      name: 'pathname',
+      shorthand: 'p',
+      type: String,
+      deprecated: false,
+      description:
+        'Pathname to store the optimized image at in the Blob store (required)',
+      argument: 'String',
+    },
+    {
+      name: 'add-random-suffix',
+      shorthand: 'r',
+      type: Boolean,
+      deprecated: false,
+      description: 'Add a random suffix to the file name (default: false)',
+      argument: 'Boolean',
+    },
+    {
+      name: 'cache-control-max-age',
+      shorthand: 'c',
+      type: Number,
+      deprecated: false,
+      description:
+        'Max-age of the cache-control header directive (default: 2592000 = 30 days)',
+      argument: 'Number',
+    },
+    {
+      name: 'allow-overwrite',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Overwrite the file if it already exists (default: false)',
+      argument: 'Boolean',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output the stored blob as JSON',
+    },
+  ],
+  examples: [
+    {
+      name: 'Optimize a local image and upload it',
+      value:
+        'vercel blob put-image photo.png --pathname images/photo.png --width 1200 --access public',
+    },
+    {
+      name: 'Optimize an image from a public URL and convert it to WebP',
+      value:
+        'vercel blob put-image https://example.com/hero.png --pathname images/hero.webp --width 800 --quality 60 --format webp --access public',
+    },
+  ],
+} as const;
+
 export const signedTokenSubcommand = {
   name: 'signed-token',
   aliases: [],
@@ -576,6 +673,7 @@ export const blobCommand = {
   subcommands: [
     listSubcommand,
     putSubcommand,
+    putImageSubcommand,
     getSubcommand,
     delSubcommand,
     copySubcommand,
