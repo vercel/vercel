@@ -186,7 +186,6 @@ export default async function update(
       type: 'http',
       endpoint: endpoint ?? current.endpoint,
       encoding: encoding ?? current.encoding,
-      // --header replaces the entire header set.
       headers:
         headerFlags !== undefined && headerFlags.length > 0
           ? parsedHeaders.headers

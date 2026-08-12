@@ -75,7 +75,6 @@ export default async function add(
   let type = flags['--type'];
   let endpoint = flags['--endpoint'];
 
-  // Validate provided enum/format values before prompting or mutating.
   if (type !== undefined && !isDrainSchemaName(type)) {
     output.error(
       `Invalid --type value: "${type}". Valid types: ${DRAIN_SCHEMA_NAMES.join(', ')}.`
@@ -167,7 +166,6 @@ export default async function add(
     }
   }
 
-  // `type` was validated above or chosen from the select choices.
   const schemaName = type as DrainSchemaName;
 
   const delivery: DrainDeliveryHttp = {
