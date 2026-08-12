@@ -899,6 +899,59 @@ describe('deploy', () => {
     }
   });
 
+  it('does not send a repo root mapping as the Project rootDirectory', async () => {
+    const cwd = setupUnitFixture('commands/deploy/static');
+    await fs.remove(join(cwd, '.vercel'));
+    await fs.outputJSON(join(cwd, '.vercel/repo.json'), {
+      remoteName: 'origin',
+      projects: [
+        {
+          id: 'prj_static',
+          name: 'static',
+          orgId: 'team_dummy',
+          directory: '.',
+        },
+      ],
+    });
+
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      accountId: 'team_dummy',
+      id: 'prj_static',
+      name: 'static',
+      rootDirectory: null,
+    });
+
+    let createBody: Record<string, unknown> | undefined;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      createBody = req.body;
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_local_link',
+        url: 'local-link.vercel.app',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+        target: 'preview',
+      });
+    });
+
+    client.cwd = cwd;
+    client.setArgv('deploy');
+    const exitCode = await deploy(client);
+
+    expect(exitCode).toEqual(0);
+    expect(createBody?.projectSettings).toMatchObject({
+      rootDirectory: null,
+      sourceFilesOutsideRootDirectory: true,
+    });
+  });
+
   it('should deploy a linked project when owner lookup is unavailable', async () => {
     const originalVercelTeamId = process.env.VERCEL_TEAM_ID;
     delete process.env.VERCEL_TEAM_ID;

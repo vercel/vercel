@@ -848,6 +848,62 @@ test('create zero-config deployment', async () => {
   expect(validBuilders).toBe(true);
 });
 
+test('deploys a repo-linked project from the repository root', async () => {
+  const directory = await setupE2EFixture('repo-root-next-js', {
+    removeProjectLink: true,
+  });
+  const projectName = `repo-root-next-js-${session}`;
+
+  const firstDeployment = await execCli(binaryPath, [
+    directory,
+    '--name',
+    projectName,
+    '--force',
+    '--yes',
+  ]);
+  expect(firstDeployment.exitCode, formatOutput(firstDeployment)).toBe(0);
+
+  const projectLink = await fs.readJSON(
+    path.join(directory, '.vercel', 'project.json')
+  );
+  await fs.remove(path.join(directory, '.vercel'));
+  await fs.outputJSON(path.join(directory, '.vercel', 'repo.json'), {
+    remoteName: 'origin',
+    projects: [
+      {
+        id: projectLink.projectId,
+        name: projectName,
+        orgId: projectLink.orgId,
+        directory: '.',
+      },
+    ],
+  });
+
+  try {
+    const subsequentDeployment = await execCli(binaryPath, [
+      directory,
+      '--force',
+      '--yes',
+    ]);
+    expect(
+      subsequentDeployment.exitCode,
+      formatOutput(subsequentDeployment)
+    ).toBe(0);
+
+    const { host } = new URL(subsequentDeployment.stdout);
+    const response = await apiFetch(
+      `/v13/deployments/${encodeURIComponent(host)}`
+    );
+    expect(response.status).toBe(200);
+    const deployment = (await response.json()) as { projectId: string };
+    expect(deployment.projectId).toBe(projectLink.projectId);
+  } finally {
+    await apiFetch(`/v2/projects/${projectLink.projectId}`, {
+      method: 'DELETE',
+    });
+  }
+});
+
 test('next unsupported functions config shows warning link', async () => {
   const fixturePath = await setupE2EFixture(
     'zero-config-next-js-functions-warning'
