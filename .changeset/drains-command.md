@@ -2,4 +2,4 @@
 'vercel': minor
 ---
 
-Add `vercel drains` to list, inspect, add, update, test, remove, pause, and resume observability Drains
+Add `vercel drains` to list and inspect observability Drains
