@@ -42,7 +42,7 @@ export async function confirmGatedOperation(
   );
 
   const argv = process.argv.slice(2);
-  const { verdict, instruction } = await requestApproval(sessionDir, {
+  const { verdict, instruction, auto } = await requestApproval(sessionDir, {
     command: operation.command,
     argv,
     cwd: process.cwd(),
@@ -55,6 +55,9 @@ export async function confirmGatedOperation(
     argv,
     gate: operation.gate,
     verdict,
+    // Recorded, so "approved" in the ledger never silently means "nobody was
+    // asked". The report reads this to say which kind of approval it was.
+    ...(auto ? { auto: true } : {}),
     ...(instruction ? { instruction } : {}),
   });
 

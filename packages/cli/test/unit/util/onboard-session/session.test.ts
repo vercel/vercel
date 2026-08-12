@@ -107,6 +107,45 @@ describe('onboard session', () => {
       }
     });
 
+    it('carries an automatic approval back as such', async () => {
+      const watcher = new ApprovalWatcher(
+        sessionDir,
+        async () => ({ approved: true, auto: true }),
+        20
+      );
+      watcher.start();
+      try {
+        const { verdict, auto } = await requestApproval(sessionDir, operation, {
+          pollMs: 20,
+          timeoutMs: 5_000,
+        });
+        expect(verdict).toBe('approved');
+        // Without this the ledger cannot tell an unattended "yes" from a
+        // human one, and the report would imply oversight that never happened.
+        expect(auto).toBe(true);
+      } finally {
+        watcher.stop();
+      }
+    });
+
+    it('leaves a human approval unmarked', async () => {
+      const watcher = new ApprovalWatcher(
+        sessionDir,
+        async () => ({ approved: true }),
+        20
+      );
+      watcher.start();
+      try {
+        const { auto } = await requestApproval(sessionDir, operation, {
+          pollMs: 20,
+          timeoutMs: 5_000,
+        });
+        expect(auto).toBeUndefined();
+      } finally {
+        watcher.stop();
+      }
+    });
+
     it('denies when the watcher denies, and carries the steering line', async () => {
       const watcher = new ApprovalWatcher(
         sessionDir,

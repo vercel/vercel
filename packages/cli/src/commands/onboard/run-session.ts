@@ -166,6 +166,7 @@ async function driveSession(
     profile,
     abortHandlers,
     resume,
+    autoApprove,
   } = options;
 
   // Works around adapters that bootstrap with pnpm but ship no pnpm config.
@@ -422,7 +423,7 @@ async function driveSession(
   const approvals = new ApprovalWatcher(sessionDir, request =>
     nativeTui.withTerminal(() =>
       handoffKeys.suspendDuring(() =>
-        promptApproval({ client, request, activity, profile })
+        promptApproval({ client, request, activity, profile, autoApprove })
       )
     )
   );
@@ -687,8 +688,9 @@ async function promptApproval(options: {
   request: ApprovalRequest;
   activity: ActivityIndicator;
   profile: OnboardProfile;
+  autoApprove: boolean;
 }): Promise<ApprovalDecision> {
-  const { client, request, activity, profile } = options;
+  const { client, request, activity, profile, autoApprove } = options;
   activity.pause();
   const endApproval = profile.start('waiting for your approval', {
     command: request.command,
@@ -699,6 +701,21 @@ async function promptApproval(options: {
     vercelSays(`${chalk.yellow('Approval needed')}:`);
     vercelSays(chalk.cyan(`vercel ${request.argv.join(' ')}`), true);
     vercelSays(chalk.dim(`${request.description}.`), true);
+
+    // `--yes` answers here, in the process that owns the question, rather than
+    // by weakening the gate in the command that asked it. Every gate still
+    // fires, still prints what it is about to allow, and still journals — an
+    // unattended run stays as auditable as a watched one, which is the whole
+    // point of using it for evals. Printed rather than silent, because the
+    // transcript is the only record an unattended run leaves behind.
+    if (autoApprove) {
+      vercelSays(
+        chalk.dim('Approved automatically by --yes; no one was asked.'),
+        true
+      );
+      output.print('\n');
+      return { approved: true, auto: true };
+    }
 
     if (!client.stdin.isTTY) {
       vercelSays(

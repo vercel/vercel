@@ -41,11 +41,21 @@ export interface ApprovalDecision {
   approved: boolean;
   /** The user's steering ("do X instead"), relayed to the agent verbatim. */
   instruction?: string;
+  /**
+   * Approved by policy rather than by a person — `--yes`.
+   *
+   * Carried back to the requester so the ledger can say which it was. A
+   * session report that cannot tell a human "yes" from an unattended one would
+   * claim oversight that never happened.
+   */
+  auto?: boolean;
 }
 
 export interface ApprovalResult {
   verdict: ApprovalVerdict;
   instruction?: string;
+  /** The approval came from `--yes`, not from a person. */
+  auto?: boolean;
 }
 
 /**
@@ -94,7 +104,10 @@ export async function requestApproval(
         const raw = await readFile(responsePath, 'utf-8');
         const response = JSON.parse(raw);
         if (response.approved === true) {
-          return { verdict: 'approved' };
+          return {
+            verdict: 'approved',
+            ...(response.auto === true ? { auto: true } : {}),
+          };
         }
         return {
           verdict: 'denied',
