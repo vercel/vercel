@@ -2,6 +2,9 @@
   "$schema": "https://turborepo.org/schema.json",
   "extends": ["//"],
   "tasks": {
+    "build": {
+      "dependsOn": ["^build", "vercel-runtime#build", "vercel-workers#build"]
+    },
     "test-e2e": {
       "env": ["VERCEL_RUNTIME_PYTHON", "VERCEL_WORKERS_PYTHON"]
     }
