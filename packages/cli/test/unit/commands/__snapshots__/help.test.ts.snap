@@ -1711,52 +1711,65 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
 
   Commands:
 
-  add     domain details   Add a
-                           new  
-                           DNS  
-                           entry
-                           (see 
-                           below
-                           for  
-                           exam…
-  import  domain zonefile  Impo…
-                           a DNS
-                           zone 
-                           file 
-                           (see 
-                           below
-                           for  
-                           exam…
-  list    [domain]         List 
-                           DNS  
-                           entr…
-                           Pass 
-                           a    
-                           doma…
-                           to   
-                           list 
-                           its  
-                           reco…
-                           or   
-                           omit 
-                           the  
-                           argu…
-                           to   
-                           list 
-                           reco…
-                           acro…
-                           every
-                           doma…
-                           on   
-                           the  
-                           scope
-                           (def…
-  remove  id               Remo…
-                           a DNS
-                           entry
-                           using
-                           its  
-                           ID   
+  add      domain details   Add a
+                            new  
+                            DNS  
+                            entry
+                            (see 
+                            below
+                            for  
+                            exam…
+  import   domain zonefile  Impo…
+                            a DNS
+                            zone 
+                            file 
+                            (see 
+                            below
+                            for  
+                            exam…
+  inspect  domain id        Show 
+                            a DNS
+                            reco…
+                            in   
+                            full 
+  list     [domain]         List 
+                            DNS  
+                            entr…
+                            Pass 
+                            a    
+                            doma…
+                            to   
+                            list 
+                            its  
+                            reco…
+                            or   
+                            omit 
+                            the  
+                            argu…
+                            to   
+                            list 
+                            reco…
+                            acro…
+                            every
+                            doma…
+                            on   
+                            the  
+                            scope
+                            (def…
+  remove   id               Remo…
+                            a DNS
+                            entry
+                            using
+                            its  
+                            ID   
+  update   id               Upda…
+                            an   
+                            exis…
+                            DNS  
+                            reco…
+                            using
+                            its  
+                            ID   
 
 
   Global Options:
@@ -1850,13 +1863,15 @@ exports[`help command > dns help output snapshots > dns help column width 80 1`]
 
   Commands:
 
-  add     domain details   Add a new DNS entry (see below for examples) 
-  import  domain zonefile  Import a DNS zone file (see below for        
-                           examples)                                    
-  list    [domain]         List DNS entries. Pass a domain to list its  
-                           records, or omit the argument to list records
-                           across every domain on the scope (default)   
-  remove  id               Remove a DNS entry using its ID              
+  add      domain details   Add a new DNS entry (see below for examples) 
+  import   domain zonefile  Import a DNS zone file (see below for        
+                            examples)                                    
+  inspect  domain id        Show a DNS record in full                    
+  list     [domain]         List DNS entries. Pass a domain to list its  
+                            records, or omit the argument to list records
+                            across every domain on the scope (default)   
+  remove   id               Remove a DNS entry using its ID              
+  update   id               Update an existing DNS record using its ID   
 
 
   Global Options:
@@ -1918,11 +1933,13 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
 
   Commands:
 
-  add     domain details   Add a new DNS entry (see below for examples)                                         
-  import  domain zonefile  Import a DNS zone file (see below for examples)                                      
-  list    [domain]         List DNS entries. Pass a domain to list its records, or omit the argument to list    
-                           records across every domain on the scope (default)                                   
-  remove  id               Remove a DNS entry using its ID                                                      
+  add      domain details   Add a new DNS entry (see below for examples)                                         
+  import   domain zonefile  Import a DNS zone file (see below for examples)                                      
+  inspect  domain id        Show a DNS record in full                                                            
+  list     [domain]         List DNS entries. Pass a domain to list its records, or omit the argument to list    
+                            records across every domain on the scope (default)                                   
+  remove   id               Remove a DNS entry using its ID                                                      
+  update   id               Update an existing DNS record using its ID                                           
 
 
   Global Options:

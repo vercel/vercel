@@ -3,14 +3,18 @@ import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import add from './add';
 import importZone from './import';
+import inspect from './inspect';
 import ls from './ls';
 import rm from './rm';
+import update from './update';
 import {
   addSubcommand,
   dnsCommand,
   importSubcommand,
+  inspectSubcommand,
   listSubcommand,
   removeSubcommand,
+  updateSubcommand,
 } from './command';
 import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -22,8 +26,10 @@ import { getCommandAliases } from '..';
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   import: getCommandAliases(importSubcommand),
+  inspect: getCommandAliases(inspectSubcommand),
   ls: getCommandAliases(listSubcommand),
   rm: getCommandAliases(removeSubcommand),
+  update: getCommandAliases(updateSubcommand),
 };
 
 export default async function dns(client: Client) {
@@ -82,6 +88,14 @@ export default async function dns(client: Client) {
       }
       telemetry.trackCliSubcommandImport(subcommandOriginal);
       return importZone(client, args);
+    case 'inspect':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('dns', subcommandOriginal);
+        printHelp(inspectSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandInspect(subcommandOriginal);
+      return inspect(client, args);
     case 'rm':
       if (needHelp) {
         telemetry.trackCliFlagHelp('dns', subcommandOriginal);
@@ -90,6 +104,14 @@ export default async function dns(client: Client) {
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, args);
+    case 'update':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('dns', subcommandOriginal);
+        printHelp(updateSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandUpdate(subcommandOriginal);
+      return update(client, args);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('dns', subcommandOriginal);
