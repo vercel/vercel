@@ -1,5 +1,10 @@
 import { client } from './client';
-import type { Drain } from '../../src/util/drains/types';
+import type {
+  CreateDrainRequestBody,
+  Drain,
+  TestDrainRequestBody,
+  UpdateDrainRequestBody,
+} from '../../src/util/drains/types';
 
 export const defaultDrain: Drain = {
   id: 'drn_1',
@@ -34,9 +39,46 @@ export function useDrains(drains: Drain[] = [defaultDrain]) {
       res.json({});
     });
     client.scenario.patch(`/v1/drains/${drain.id}`, (req, res) => {
-      res.json({ ...drain, status: req.body?.status ?? drain.status });
+      // Echo the drain merged with the PATCH body the way the server would:
+      // `projects` is a request-only field and never appears on the resource.
+      const { projects: _projects, ...rest } = (req.body ??
+        {}) as UpdateDrainRequestBody;
+      res.json({ ...drain, ...rest });
     });
   }
 
   return drains;
+}
+
+// Registers a happy-path POST /v1/drains route that echoes the request body
+// back as a created drain. Returns a recorder holding the last request body.
+export function useCreateDrain(id = 'drn_new') {
+  const recorder: { body?: CreateDrainRequestBody } = {};
+  client.scenario.post('/v1/drains', (req, res) => {
+    recorder.body = req.body as CreateDrainRequestBody;
+    const { projects: _projects, ...rest } = recorder.body;
+    res.json({
+      id,
+      createdAt: 1600000000000,
+      updatedAt: 1600000000000,
+      ownerId: 'team_dummy',
+      status: 'enabled',
+      source: { kind: 'self-served' },
+      ...rest,
+    });
+  });
+  return recorder;
+}
+
+// Registers a POST /v1/drains/test route. Pass a failure object to simulate a
+// failed sample delivery ({} means success). Returns a request-body recorder.
+export function useTestDrain(
+  result: { status?: string; error?: string; endpoint?: string } = {}
+) {
+  const recorder: { body?: TestDrainRequestBody } = {};
+  client.scenario.post('/v1/drains/test', (req, res) => {
+    recorder.body = req.body as TestDrainRequestBody;
+    res.json(result);
+  });
+  return recorder;
 }

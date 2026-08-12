@@ -9,6 +9,7 @@ import { handleDrainsError } from '../../util/drains/error';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
+import { validateJsonOutput } from '../../util/output-format';
 import { DrainsTelemetryClient } from '../../util/telemetry/commands/drains';
 import { removeSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
@@ -52,6 +53,14 @@ export default async function rm(
 
   telemetry.trackCliArgumentId(id);
   telemetry.trackCliFlagYes(flags['--yes']);
+  telemetry.trackCliOptionFormat(flags['--format']);
+
+  const formatResult = validateJsonOutput(flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
 
   let drain;
   try {
@@ -95,7 +104,7 @@ export default async function rm(
     return handleDrainsError(err);
   }
 
-  if (flags['--json']) {
+  if (asJson) {
     client.stdout.write(`${JSON.stringify({ removed: true, id }, null, 2)}\n`);
     return 0;
   }
@@ -105,29 +114,12 @@ export default async function rm(
 }
 
 function readConfirmation(client: Client, drain: Drain): Promise<boolean> {
-  return new Promise(resolve => {
-    output.log('The following drain will be removed permanently');
-    output.print(
-      `${table(
-        [
-          [
-            drain.id,
-            drain.name,
-            formatDataType(drain),
-            formatDestination(drain),
-          ],
-        ],
-        { align: ['l', 'l', 'l', 'l'], hsep: 3 }
-      ).replace(/^(.*)/gm, '  $1')}\n`
-    );
-    output.print(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('(y/N) ')}`
-    );
-    client.stdin
-      .on('data', d => {
-        process.stdin.pause();
-        resolve(d.toString().trim().toLowerCase() === 'y');
-      })
-      .resume();
-  });
+  output.log('The following drain will be removed permanently');
+  output.print(
+    `${table(
+      [[drain.id, drain.name, formatDataType(drain), formatDestination(drain)]],
+      { align: ['l', 'l', 'l', 'l'], hsep: 3 }
+    ).replace(/^(.*)/gm, '  $1')}\n`
+  );
+  return client.input.confirm(chalk.red('Are you sure?'), false);
 }

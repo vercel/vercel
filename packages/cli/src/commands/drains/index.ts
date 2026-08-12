@@ -1,18 +1,24 @@
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
+import add from './add';
 import inspect from './inspect';
 import ls from './ls';
 import pause from './pause';
 import resume from './resume';
 import rm from './rm';
+import test from './test';
+import update from './update';
 import {
+  addSubcommand,
   drainsCommand,
   inspectSubcommand,
   listSubcommand,
   pauseSubcommand,
   removeSubcommand,
   resumeSubcommand,
+  testSubcommand,
+  updateSubcommand,
 } from './command';
 import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -24,6 +30,9 @@ import { getCommandAliases } from '..';
 const COMMAND_CONFIG = {
   inspect: getCommandAliases(inspectSubcommand),
   ls: getCommandAliases(listSubcommand),
+  add: getCommandAliases(addSubcommand),
+  update: getCommandAliases(updateSubcommand),
+  test: getCommandAliases(testSubcommand),
   rm: getCommandAliases(removeSubcommand),
   pause: getCommandAliases(pauseSubcommand),
   resume: getCommandAliases(resumeSubcommand),
@@ -77,6 +86,30 @@ export default async function drains(client: Client) {
       }
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
       return inspect(client, args);
+    case 'add':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('drains', subcommandOriginal);
+        printHelp(addSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandAdd(subcommandOriginal);
+      return add(client, args);
+    case 'update':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('drains', subcommandOriginal);
+        printHelp(updateSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandUpdate(subcommandOriginal);
+      return update(client, args);
+    case 'test':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('drains', subcommandOriginal);
+        printHelp(testSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandTest(subcommandOriginal);
+      return test(client, args);
     case 'rm':
       if (needHelp) {
         telemetry.trackCliFlagHelp('drains', subcommandOriginal);

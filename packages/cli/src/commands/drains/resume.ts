@@ -1,10 +1,11 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import setDrainStatus from '../../util/drains/set-drain-status';
+import updateDrain from '../../util/drains/update-drain';
 import { handleDrainsError } from '../../util/drains/error';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
+import { validateJsonOutput } from '../../util/output-format';
 import { DrainsTelemetryClient } from '../../util/telemetry/commands/drains';
 import { resumeSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
@@ -38,16 +39,24 @@ export default async function resume(
   }
 
   telemetry.trackCliArgumentId(id);
+  telemetry.trackCliOptionFormat(flags['--format']);
+
+  const formatResult = validateJsonOutput(flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
 
   const s = stamp();
   let updated;
   try {
-    updated = await setDrainStatus(client, id, 'enabled');
+    updated = await updateDrain(client, id, { status: 'enabled' });
   } catch (err) {
     return handleDrainsError(err);
   }
 
-  if (flags['--json']) {
+  if (asJson) {
     client.stdout.write(
       `${JSON.stringify({ id, status: updated.status }, null, 2)}\n`
     );

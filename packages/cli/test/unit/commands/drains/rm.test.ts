@@ -69,6 +69,16 @@ describe('drains rm', () => {
     await expect(client.stderr).toOutput('User canceled.');
   });
 
+  it('removes the drain and reports JSON with --format json', async () => {
+    useDrains();
+    client.setArgv('drains', 'rm', 'drn_1', '--yes', '--format', 'json');
+    const exitCode = await drains(client);
+    expect(exitCode).toEqual(0);
+
+    const parsed = JSON.parse(client.stdout.getFullOutput());
+    expect(parsed).toEqual({ removed: true, id: 'drn_1' });
+  });
+
   it('requires --yes in non-interactive mode', async () => {
     useDrains();
     vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {

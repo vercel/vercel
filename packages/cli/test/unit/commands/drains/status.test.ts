@@ -52,6 +52,25 @@ describe('drains pause / resume', () => {
     expect(parsed).toEqual({ id: 'drn_1', status: 'disabled' });
   });
 
+  it('reports the new status with --format json', async () => {
+    client.scenario.patch('/v1/drains/drn_1', (_req, res) =>
+      res.json({ ...defaultDrain, status: 'enabled' })
+    );
+    client.setArgv('drains', 'resume', 'drn_1', '--format', 'json');
+    const exitCode = await drains(client);
+    expect(exitCode).toEqual(0);
+
+    const parsed = JSON.parse(client.stdout.getFullOutput());
+    expect(parsed).toEqual({ id: 'drn_1', status: 'enabled' });
+  });
+
+  it('rejects an invalid --format value', async () => {
+    client.setArgv('drains', 'pause', 'drn_1', '--format', 'yaml');
+    const exitCode = await drains(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput('Invalid output format');
+  });
+
   it('cannot resume a drain that Vercel disabled', async () => {
     client.scenario.patch('/v1/drains/drn_1', (_req, res) => {
       res.status(400).json({

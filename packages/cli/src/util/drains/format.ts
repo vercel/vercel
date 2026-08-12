@@ -1,22 +1,8 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from '../output/table';
+import { formatDateWithoutTime } from '../format-date';
 import type { Drain, DrainDelivery } from './types';
-
-const MONTHS = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-];
 
 const HIDDEN = chalk.gray.italic('Hidden');
 
@@ -123,8 +109,8 @@ export function formatDrainDetails(drain: Drain): string {
   }
 
   rows.push(['Source', drain.source.kind]);
-  rows.push(['Created', formatTimestamp(drain.createdAt)]);
-  rows.push(['Updated', formatTimestamp(drain.updatedAt)]);
+  rows.push(['Created', formatDateWithoutTime(drain.createdAt)]);
+  rows.push(['Updated', formatDateWithoutTime(drain.updatedAt)]);
 
   return `${table(rows, { align: ['l', 'l'], hsep: 2 }).replace(/^(.*)/gm, '  $1')}\n`;
 }
@@ -189,10 +175,4 @@ function formatDelivery(delivery: DrainDelivery): string {
 function formatProjects(drain: Drain): string {
   const ids = drain.projectIds ?? drain.projectAccess?.projectIds;
   return ids && ids.length > 0 ? ids.join(', ') : 'all';
-}
-
-function formatTimestamp(timestamp: number): string {
-  const date = new Date(timestamp);
-  const label = `${MONTHS[date.getMonth()]} ${date.getDate()} ${date.getFullYear()}`;
-  return `${label} (${ms(Date.now() - timestamp)} ago)`;
 }
