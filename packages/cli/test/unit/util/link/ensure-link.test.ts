@@ -72,22 +72,6 @@ describe('ensureLink', () => {
     );
   });
 
-  it('passes skipRemoteLookup when explicitly enabled', async () => {
-    const linked = {
-      status: 'linked' as const,
-      org: { id: 'o1', slug: 'team', type: 'team' as const },
-      project: { id: 'p1', name: 'proj' },
-    };
-    vi.mocked(getLinkedProject).mockResolvedValue(linked);
-
-    const result = await ensureLink('deploy', client, '/cwd', {
-      skipRemoteLookup: true,
-    });
-
-    expect(result).toEqual(linked);
-    expect(getLinkedProject.mock.calls[0][1].skipRemoteLookup).toBe(true);
-  });
-
   it('returns action_required payload when not linked and setupAndLink returns action_required', async () => {
     const actionRequiredPayload = {
       status: 'action_required' as const,

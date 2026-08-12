@@ -22,8 +22,6 @@ interface EnsureLinkOptions extends SetupAndLinkOptions {
    * project but cannot fetch the owner user/team resource.
    */
   allowOwnerLookupFallback?: boolean;
-  /** Uses local link metadata without fetching the owner or project. */
-  skipRemoteLookup?: boolean;
 }
 
 /**
@@ -71,7 +69,6 @@ export async function ensureLink(
         projectNameIsExplicit: Boolean(opts.projectName && opts.failIfNotFound),
         scopeIsExplicit: detectExplicitScope(client),
         allowOwnerLookupFallback: opts.allowOwnerLookupFallback,
-        skipRemoteLookup: opts.skipRemoteLookup,
       });
     }
     opts.link = link;

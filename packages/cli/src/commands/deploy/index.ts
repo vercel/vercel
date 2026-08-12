@@ -90,10 +90,7 @@ import parseTarget from '../../util/parse-target';
 import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
-import {
-  isOrgSlugUnavailableLink,
-  isOwnerLookupUnavailableLink,
-} from '../../util/projects/link';
+import { isOwnerLookupUnavailableLink } from '../../util/projects/link';
 import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
 import { displayBuildLogsUntilFinalError } from '../../util/logs';
 import { determineAgent } from '@vercel/detect-agent';
@@ -1143,7 +1140,6 @@ async function handleDefaultDeploy(
     failIfNotFound: !!projectNameOrId,
     requireExistingLink: parsedArguments.flags['--dry'],
     allowOwnerLookupFallback: true,
-    skipRemoteLookup: !parsedArguments.flags['--dry'],
     v0: isV0,
   });
   if (typeof link === 'number') {
@@ -1215,8 +1211,7 @@ async function handleDefaultDeploy(
   }
   // #endregion
 
-  const orgSlug = isOrgSlugUnavailableLink(link) ? undefined : org.slug;
-  const contextName = orgSlug ?? 'the linked scope';
+  const contextName = org.slug;
   const currentTeam =
     isOwnerLookupUnavailableLink(link) || org.type !== 'team'
       ? undefined
@@ -1228,8 +1223,8 @@ async function handleDefaultDeploy(
     (await validateRootDirectory(
       cwd,
       join(cwd, rootDirectory),
-      project && orgSlug
-        ? `To change your Project Settings, go to https://vercel.com/${orgSlug}/${project.name}/settings`
+      project
+        ? `To change your Project Settings, go to https://vercel.com/${org?.slug}/${project.name}/settings`
         : ''
     )) === false
   ) {
@@ -1401,7 +1396,6 @@ async function handleDefaultDeploy(
 
     const createArgs: CreateOptions = {
       name,
-      project: project.id,
       env: deploymentEnv as Dictionary<string>,
       build: { env: deploymentBuildEnv as Dictionary<string> },
       forceNew: parsedArguments.flags['--force'],
@@ -1426,7 +1420,6 @@ async function handleDefaultDeploy(
       agentName: client.agentName,
       jsonOutput: asJson,
       linkedProject: project,
-      linkedProjectIsPartial: isOrgSlugUnavailableLink(link),
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
