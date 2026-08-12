@@ -42,3 +42,14 @@ export interface ConnectLinearAdapterConfig {
   accessToken: ConnectTokenResolver;
   webhookVerifier: ConnectWebhookVerifier;
 }
+
+/**
+ * Partial Notion adapter config backed by Vercel Connect.
+ *
+ * Structurally matches the `token` option of `createNotionAdapter` from
+ * `@chat-adapter/notion`. Notion webhooks continue to use native HMAC
+ * verification and are not part of this config fragment.
+ */
+export interface ConnectNotionAdapterConfig {
+  token: ConnectTokenResolver;
+}

@@ -3,6 +3,7 @@ import {
   connectDiscordAdapter,
   connectGitHubAdapter,
   connectLinearAdapter,
+  connectNotionAdapter,
   connectSlackAdapter,
 } from '../../src/chat/index.js';
 
@@ -79,6 +80,41 @@ describe('Chat SDK adapter config helpers', () => {
     await expect(resolveToken(config.applicationId)).rejects.toThrow(
       'did not return a Discord application id'
     );
+  });
+
+  it('builds token-only Notion config with app-scoped parameters', async () => {
+    fetchMock.mockResolvedValue(jsonTokenResponse('notion_token'));
+
+    const config = connectNotionAdapter(
+      'notion/acme-notion',
+      {
+        installationId: 'notion-installation',
+        scopes: ['read'],
+        validityBufferMs: 60_000,
+      },
+      { vercelToken: 'vercel_token' }
+    );
+
+    expect(config.token).toEqual(expect.any(Function));
+    expect(config).not.toHaveProperty('webhookVerifier');
+    await expect(resolveToken(config.token)).resolves.toBe('notion_token');
+    expectTokenRequest('notion/acme-notion', {
+      installationId: 'notion-installation',
+      scopes: ['read'],
+      validityBufferMs: 60_000,
+      subject: { type: 'app' },
+    });
+  });
+
+  it('defaults Notion params to the app subject', async () => {
+    fetchMock.mockResolvedValue(jsonTokenResponse('notion_token'));
+
+    const config = connectNotionAdapter('notion/acme-notion', undefined, {
+      vercelToken: 'vercel_token',
+    });
+
+    await resolveToken(config.token);
+    expectTokenRequest('notion/acme-notion', { subject: { type: 'app' } });
   });
 
   it('builds Slack config backed by an app-scoped Connect token', async () => {

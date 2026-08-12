@@ -30,6 +30,7 @@ export type {
   ConnectDiscordAdapterConfig,
   ConnectGitHubAdapterConfig,
   ConnectLinearAdapterConfig,
+  ConnectNotionAdapterConfig,
   ConnectTokenResolver,
 } from './types.js';
 
@@ -50,3 +51,7 @@ export {
   connectLinearAdapter,
   type ConnectLinearAdapterParams,
 } from './linear-adapter.js';
+export {
+  connectNotionAdapter,
+  type ConnectNotionAdapterParams,
+} from './notion-adapter.js';

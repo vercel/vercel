@@ -2,16 +2,16 @@
 
 `@vercel/connect/chat` adapts Vercel Connect to the [Chat SDK](https://chat-sdk.dev)
 (`chat`) platform adapters. Each helper returns a config fragment you spread into
-the matching `create*Adapter` factory, wiring a Connect connector for both
-directions of traffic:
+the matching `create*Adapter` factory, wiring a Connect connector for outbound
+credentials and, where the provider supports Connect triggers, inbound traffic:
 
 - **Outbound** (your bot calls the provider API) — function-form credential
   fields (`botToken` / `applicationId` / `installationToken` / `accessToken`)
   backed by Connect with `subject: { type: 'app' }`. The adapter invokes token
   resolvers per API call, so rotation, refresh, and tenancy stay delegated to
   Vercel Connect.
-- **Inbound** (the provider calls your bot) — a `webhookVerifier` that validates
-  the Vercel OIDC token Connect attaches to
+- **Inbound** (the provider calls your bot) — trigger-capable helpers include a
+  `webhookVerifier` that validates the Vercel OIDC token Connect attaches to
   [trigger-forwarded](https://vercel.com/docs/connect/concepts/triggers)
   webhooks, replacing the provider's native signature check.
 
@@ -26,6 +26,7 @@ types, so installing it never pulls in the Chat SDK.
 | `connectDiscordAdapter` | `@chat-adapter/discord` | `botToken`, `applicationId` | `discord/acme-discord` |
 | `connectGitHubAdapter`  | `@chat-adapter/github`  | `installationToken`         | `github/acme-github`   |
 | `connectLinearAdapter`  | `@chat-adapter/linear`  | `accessToken`               | `linear/acme-linear`   |
+| `connectNotionAdapter`  | `@chat-adapter/notion`  | `token`                     | `notion/acme-notion`   |
 
 Each helper has the signature `(connector, params?, options?)`:
 
@@ -36,6 +37,10 @@ Each helper has the signature `(connector, params?, options?)`:
   runtimes).
 
 ## Setup
+
+The trigger-forwarding steps below apply to Slack, Discord, GitHub, and Linear.
+Notion Connect is outbound-only: create and attach the connector without
+triggers, then configure the webhook directly in Notion.
 
 ### 1. Create a connector with triggers
 
@@ -150,10 +155,28 @@ createLinearAdapter({
 
 Use `mode: 'agent-sessions'` for app-actor installs.
 
+### Notion
+
+```ts
+import { createNotionAdapter } from '@chat-adapter/notion';
+import { connectNotionAdapter } from '@vercel/connect/chat';
+
+createNotionAdapter({
+  ...connectNotionAdapter('notion/acme-notion'),
+  verificationToken: process.env.NOTION_VERIFICATION_TOKEN,
+});
+```
+
+The helper supplies only the outbound `token`; it does not include a
+`webhookVerifier`. Connect does not forward Notion triggers, so configure the
+webhook subscription directly in Notion and retain
+`NOTION_VERIFICATION_TOKEN` for native HMAC verification. Omit
+`NOTION_TOKEN` when using this helper.
+
 ## Custom webhook verification
 
-The platform helpers attach a default verifier that matches the deployment's
-project and environment automatically (`projectId` defaults to
+Trigger-capable platform helpers attach a default verifier that matches the
+deployment's project and environment automatically (`projectId` defaults to
 `VERCEL_PROJECT_ID`, `environment` to `VERCEL_TARGET_ENV` then `VERCEL_ENV`), so
 production, preview, and development each accept only their own tokens. You only
 need to build a custom verifier to add extra constraints — for example to accept
