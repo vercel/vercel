@@ -55,6 +55,7 @@ export interface CreateOptions {
   manual?: boolean;
   jsonOutput?: boolean;
   linkedProject?: Project;
+  linkedProjectIsPartial?: boolean;
 }
 
 export interface RemoveOptions {
@@ -132,6 +133,7 @@ export default class Now {
       manual,
       jsonOutput = false,
       linkedProject,
+      linkedProjectIsPartial,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
@@ -182,6 +184,7 @@ export default class Now {
       manual,
       jsonOutput,
       linkedProject,
+      linkedProjectIsPartial,
     });
 
     if (deployment && deployment.warnings) {

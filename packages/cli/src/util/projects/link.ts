@@ -51,6 +51,17 @@ export function isOwnerLookupUnavailableLink(
   );
 }
 
+export interface RemoteLookupSkippedProjectLinked extends ProjectLinked {
+  org: Org & { slug: '' };
+  remoteLookupSkipped: true;
+}
+
+export function isRemoteLookupSkippedLink(
+  link: ProjectLinked
+): link is RemoteLookupSkippedProjectLinked {
+  return 'remoteLookupSkipped' in link && link.remoteLookupSkipped === true;
+}
+
 function isOwnerLookupUnavailableError(error: unknown): boolean {
   return (
     isAPIError(error) &&
@@ -202,6 +213,7 @@ async function getProjectLinkFromRepoLink(
       repoRoot: repoLink.rootPath,
       orgId,
       projectId: project.id,
+      projectName: project.name,
       projectRootDirectory: project.directory,
     };
   }
@@ -317,6 +329,8 @@ export interface GetLinkedProjectOptions {
    * linked project, but cannot fetch the owning user/team.
    */
   allowOwnerLookupFallback?: boolean;
+  /** Uses local link metadata without fetching the owner or project. */
+  skipRemoteLookup?: boolean;
 }
 
 export type ProjectLinkResultWithOrgId = ProjectLinkResult & {
@@ -425,6 +439,44 @@ export async function getLinkedProject(
 
   if (!link) {
     return { status: 'not_linked', org: null, project: null, orgId };
+  }
+
+  if (options.skipRemoteLookup && link.projectName) {
+    const settings = (link as ProjectLink & { settings?: Partial<Project> })
+      .settings;
+    // Repository links use "." to mean the repository root. The Project API
+    // represents that same setting as null, so never forward the local marker.
+    const localRootDirectory =
+      link.projectRootDirectory ?? settings?.rootDirectory ?? null;
+    const rootDirectory =
+      localRootDirectory === '.' ? null : localRootDirectory;
+    const project: Project = {
+      ...settings,
+      id: link.projectId,
+      accountId: link.orgId,
+      name: link.projectName,
+      createdAt: settings?.createdAt ?? 0,
+      updatedAt: settings?.updatedAt ?? settings?.createdAt ?? 0,
+      rootDirectory,
+    };
+
+    const localProjectLink: RemoteLookupSkippedProjectLinked = {
+      status: 'linked',
+      org: {
+        type: link.orgId.startsWith('team_') ? 'team' : 'user',
+        id: link.orgId,
+        slug: '',
+      },
+      project,
+      repoRoot: link.repoRoot,
+      remoteLookupSkipped: true,
+    };
+
+    return {
+      ...localProjectLink,
+      projectRootDirectory: link.projectRootDirectory,
+      orgId: link.orgId,
+    };
   }
 
   output.spinner('Retrieving project…', 1000);
