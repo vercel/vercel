@@ -2,10 +2,6 @@ import { isAPIError } from '../errors-ts';
 import { printError } from '../error';
 import output from '../../output-manager';
 
-/**
- * Maps API errors for single-DNS-record operations (inspect/update)
- * to user-facing messages. Returns the exit code.
- */
 export function handleDNSRecordError(err: unknown): number {
   if (isAPIError(err)) {
     switch (err.status) {
