@@ -1,4 +1,3 @@
-import chalk from 'chalk';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -65,8 +64,6 @@ function handleValidationError(
 const PRODUCTION_ENVIRONMENT_FILTER = "environment eq 'production'";
 const CUSTOM_METRIC_VALUE_ALIAS = 'value';
 const CUSTOM_METRIC_COUNT_ALIAS = '__seriesCount';
-const FILTER_DEPRECATION_WARNING =
-  'OData support in --filter is deprecated and will be removed soon. KQL will be the only supported filter syntax.';
 
 function combineFilters(
   filters: string[] | undefined,
@@ -382,9 +379,6 @@ export default async function query(
       ? flags['--order'].trim().toLowerCase()
       : undefined;
   const filters = flags['--filter'];
-  if (filters !== undefined) {
-    output.print(`${chalk.yellow('!')} ${FILTER_DEPRECATION_WARNING}\n`);
-  }
   const prod = flags['--prod'];
   const filter = combineFilters(filters, prod);
   const since = flags['--since'];
