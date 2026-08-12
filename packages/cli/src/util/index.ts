@@ -34,6 +34,7 @@ export interface CreateOptions {
   name: string;
   project?: string;
   prebuilt?: boolean;
+  anonymous?: boolean;
   vercelOutputDir?: string;
   rootDirectory?: string | null;
   meta: Dictionary<string>;
@@ -113,6 +114,7 @@ export default class Now {
       name,
       project,
       prebuilt = false,
+      anonymous = false,
       vercelOutputDir,
       rootDirectory,
       meta,
@@ -176,6 +178,7 @@ export default class Now {
       archive,
       skipAutoDetectionConfirmation,
       prebuilt,
+      anonymous,
       vercelOutputDir,
       rootDirectory,
       noWait,

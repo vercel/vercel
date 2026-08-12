@@ -126,6 +126,8 @@ Rules:
 - Validate local path/config/target before first remote mutation.
 - If project is not linked, setup/link, then continue deployment.
 - Running `vc` is deployment intent; do not ask `Set up and deploy "<path>"?`.
+- Eligible unauthenticated `vc` and `vc deploy` runs ask `Deploy temporarily without logging in?` before creating the first temporary deployment. `--yes` skips this prompt, and a valid `.vercel/anonymous.json` records prior confirmation for subsequent deploys.
+- Unauthenticated non-interactive runs without `--yes` return `action_required: confirmation_required` with the exact `--yes` retry command. CI requires credentials even with `--yes`.
 - Do not upload until team, project, root, target, and project settings are resolved.
 - `vc <path>` and `vc deploy <path>` should produce equivalent output after routing.
 - `--prod` prints `▲ Production`; preview prints `Preview` without `▲`.
@@ -155,6 +157,7 @@ Deploy output map:
 Deploy acceptance matrix:
 
 - bare `vc` and `vc deploy` route equivalence
+- unauthenticated `vc` and `vc deploy` first-deploy confirmation, valid-state reuse, `--yes` bypass, non-interactive action payload, and CI credential requirement
 - explicit deploy path
 - linked project deploy without setup prompts
 - unlinked project setup/link/create, then deploy

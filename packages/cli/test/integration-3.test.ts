@@ -1060,26 +1060,6 @@ test('should pass through exit code for CLI extension', async () => {
   expect(output.exitCode).toEqual(6);
 });
 
-test('default command should prompt login with empty credentials', async () => {
-  const globalConfigDir = getNewTmpDir();
-  await fs.writeJson(path.join(globalConfigDir, 'config.json'), {
-    credStorage: 'file',
-  });
-
-  const output = await execCli(binaryPath, ['-Q', globalConfigDir], {
-    // execCli passes the token automatically, undo that functionality for this test
-    token: false,
-    env: {
-      // Unset VERCEL_TOKEN so the env var doesn't bypass the login prompt
-      VERCEL_TOKEN: '',
-    },
-  });
-  expect(output.stderr, formatOutput(output)).toBeTruthy();
-  expect(output.stderr).toContain(
-    'Error: No existing credentials found. Please run `vercel login` or pass "--token"'
-  );
-});
-
 test('invalid credStorage should fail with a config error', async () => {
   const globalConfigDir = getNewTmpDir();
   await fs.writeJson(path.join(globalConfigDir, 'config.json'), {

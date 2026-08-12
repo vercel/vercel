@@ -43,6 +43,7 @@ export default async function processDeployment({
   skipAutoDetectionConfirmation,
   noWait,
   withFullLogs,
+  anonymous,
   manual,
   jsonOutput,
   linkedProject,
@@ -65,6 +66,7 @@ export default async function processDeployment({
   rootDirectory?: string | null;
   noWait?: boolean;
   withFullLogs?: boolean;
+  anonymous?: boolean;
   bulkRedirectsPath?: string | null;
   manual?: boolean;
   jsonOutput?: boolean;
@@ -243,33 +245,38 @@ export default async function processDeployment({
 
         stopSpinner();
 
-        printInspectUrl(deployment.inspectorUrl);
+        // Anonymous deployment URLs sit behind the pool team's auth wall;
+        // the production alias printed on `alias-assigned` is the only
+        // reachable URL.
+        if (!anonymous) {
+          printInspectUrl(deployment.inspectorUrl);
 
-        const isProdDeployment = deployment.target === 'production';
-        const previewUrl = `https://${deployment.url}`;
+          const isProdDeployment = deployment.target === 'production';
+          const previewUrl = `https://${deployment.url}`;
 
-        // When the user did not explicitly request a production deployment
-        // (no `--prod` / `--target=production`) but the API returned one
-        // anyway, surface a notice. This happens on a project's first
-        // deployment because the API assigns it to production when no prior
-        // production deployment exists.
-        if (isProdDeployment && !requestBody.target) {
-          indications.push({
-            type: 'notice',
-            payload:
-              'This is your project\u2019s first deployment, so it was assigned to production. Future deployments will be preview deployments unless you use --prod.',
-            link: 'https://vercel.com/docs/deployments/environments',
-          });
-        }
+          // When the user did not explicitly request a production deployment
+          // (no `--prod` / `--target=production`) but the API returned one
+          // anyway, surface a notice. This happens on a project's first
+          // deployment because the API assigns it to production when no prior
+          // production deployment exists.
+          if (isProdDeployment && !requestBody.target) {
+            indications.push({
+              type: 'notice',
+              payload:
+                'This is your project\u2019s first deployment, so it was assigned to production. Future deployments will be preview deployments unless you use --prod.',
+              link: 'https://vercel.com/docs/deployments/environments',
+            });
+          }
 
-        printAlignedLabel(
-          isProdDeployment ? 'Production' : 'Preview',
-          chalk.cyan(previewUrl),
-          isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
-        );
+          printAlignedLabel(
+            isProdDeployment ? 'Production' : 'Preview',
+            chalk.cyan(previewUrl),
+            isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
+          );
 
-        if (!jsonOutput && (quiet || process.env.FORCE_TTY === '1')) {
-          process.stdout.write(`https://${event.payload.url}`);
+          if (!jsonOutput && (quiet || process.env.FORCE_TTY === '1')) {
+            process.stdout.write(`https://${event.payload.url}`);
+          }
         }
 
         if (noWait) {
@@ -282,7 +289,7 @@ export default async function processDeployment({
         latestLogMessage =
           deployment.readyState === 'QUEUED' ? 'Queued…' : 'Building…';
 
-        if (withFullLogs) {
+        if (withFullLogs && !anonymous) {
           let promise: Promise<void>;
           ({ abortController, promise } = displayBuildLogs(
             client,
@@ -293,7 +300,7 @@ export default async function processDeployment({
           promise.catch(error =>
             output.warn(`Failed to read build logs: ${error}`)
           );
-        } else {
+        } else if (!anonymous) {
           abortController = new AbortController();
           const promise = printEvents(
             client,
@@ -355,14 +362,16 @@ export default async function processDeployment({
 
         // Keep the event stream open while polling waits for alias assignment.
         output.stopSpinner();
-        process.stderr.write(eraseLines(2));
-        const isProdDeployment = event.payload.target === 'production';
-        const previewUrl = `https://${event.payload.url}`;
-        printAlignedLabel(
-          isProdDeployment ? 'Production' : 'Preview',
-          chalk.cyan(previewUrl),
-          isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
-        );
+        if (!anonymous) {
+          process.stderr.write(eraseLines(2));
+          const isProdDeployment = event.payload.target === 'production';
+          const previewUrl = `https://${event.payload.url}`;
+          printAlignedLabel(
+            isProdDeployment ? 'Production' : 'Preview',
+            chalk.cyan(previewUrl),
+            isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
+          );
+        }
 
         if (v1ChecksPending || v2ChecksPending) {
           output.spinner('Running Checks…', 0);
@@ -424,7 +433,24 @@ export default async function processDeployment({
         ) {
           const primaryDomain = event.payload.alias[0];
           const prodUrl = `https://${primaryDomain}`;
-          printAlignedLabel('Aliased', chalk.cyan(prodUrl), { gutter: '▲' });
+          if (anonymous) {
+            // Separates the URL from whatever the local build just printed.
+            output.print('\n');
+          }
+          printAlignedLabel(
+            anonymous ? 'Temporary' : 'Aliased',
+            chalk.cyan(prodUrl),
+            {
+              gutter: '▲',
+            }
+          );
+          if (
+            anonymous &&
+            !jsonOutput &&
+            (quiet || process.env.FORCE_TTY === '1')
+          ) {
+            process.stdout.write(prodUrl);
+          }
         }
 
         event.payload.indications = indications;

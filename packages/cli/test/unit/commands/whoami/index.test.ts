@@ -38,6 +38,17 @@ describe('whoami', () => {
     expect(result).toBe(1);
   });
 
+  it('should report being logged out instead of starting a login flow', async () => {
+    client.authConfig = {};
+
+    const exitCode = await whoami(client);
+
+    expect(exitCode).toEqual(1);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain('Logged out.');
+    expect(stderr).toContain('deploy without an account and claim it later');
+  });
+
   it('should print the Vercel username on personal scope', async () => {
     const user = useUser();
     const exitCode = await whoami(client);

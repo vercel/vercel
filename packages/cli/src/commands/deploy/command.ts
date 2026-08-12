@@ -161,7 +161,7 @@ export const deployCommand = {
   name: 'deploy',
   aliases: [],
   description:
-    'Deploy your project to Vercel. The `deploy` command is the default command for the Vercel CLI, and can be omitted (`vc deploy my-app` equals `vc my-app`). Use `--dry` to inspect the detected framework preset and source files without deploying.',
+    'Deploy your project to Vercel. You can create a temporary deployment without logging in. The `deploy` command is the default command for the Vercel CLI, and can be omitted (`vc deploy my-app` equals `vc my-app`). Use `--dry` to inspect the detected framework preset and source files without deploying.',
   arguments: [
     {
       name: 'project-path',

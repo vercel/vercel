@@ -10,6 +10,7 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { WhoamiTelemetryClient } from '../../util/telemetry/commands/whoami';
 import { validateJsonOutput } from '../../util/output-format';
+import { getCommandName } from '../../util/pkg-name';
 
 export default async function whoami(client: Client): Promise<number> {
   let parsedArgs = null;
@@ -42,6 +43,18 @@ export default async function whoami(client: Client): Promise<number> {
   }
   const asJson = formatResult.jsonOutput;
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
+
+  if (!client.authConfig.token) {
+    if (asJson) {
+      client.stdout.write(`${JSON.stringify({ loggedIn: false }, null, 2)}\n`);
+    } else {
+      output.log('Logged out.');
+      output.log(
+        `Run ${getCommandName('deploy')} to deploy without an account and claim it later. Alternatively you can login with ${getCommandName('login')}.`
+      );
+    }
+    return 1;
+  }
 
   const scope = await getScope(client, { resolveLocalScope: true });
   const { user, team, app, globalTeam } = scope;
