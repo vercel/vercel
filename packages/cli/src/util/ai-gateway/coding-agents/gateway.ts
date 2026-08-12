@@ -3,6 +3,8 @@ export const GATEWAY_ANTHROPIC_BASE_URL = 'https://ai-gateway.vercel.sh';
 export const GATEWAY_CODING_AGENT_BASE_URL =
   'https://ai-gateway.vercel.sh/coding-agent/v1';
 
+export const GATEWAY_CURSOR_BASE_URL = 'https://ai-gateway.vercel.sh/cursor/v1';
+
 export const GATEWAY_CODEX_BASE_URL = 'https://ai-gateway.vercel.sh/codex/v1';
 
 export const GATEWAY_CLAUDE_CODE_BASE_URL =

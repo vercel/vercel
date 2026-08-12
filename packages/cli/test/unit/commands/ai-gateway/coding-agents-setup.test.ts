@@ -332,7 +332,7 @@ describe('ai-gateway coding-agents setup', () => {
           true
         );
         expect(
-          notes.some(n => n.includes('ai-gateway.vercel.sh/coding-agent/v1'))
+          notes.some(n => n.includes('ai-gateway.vercel.sh/cursor/v1'))
         ).toBe(true);
         // The key itself must never appear in notes.
         expect(notes.every(n => !n.includes('vck_DummyKey0002'))).toBe(true);

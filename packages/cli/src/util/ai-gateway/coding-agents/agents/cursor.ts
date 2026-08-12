@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import type { CodingAgent } from '../types';
 import { pathExists } from '../config-files';
-import { GATEWAY_CODING_AGENT_BASE_URL } from '../gateway';
+import { GATEWAY_CURSOR_BASE_URL } from '../gateway';
 
 /**
  * Cursor keeps BYOK settings in its account-synced store, so there is no
@@ -30,7 +30,7 @@ export const cursor: CodingAgent = {
       notes: [
         'Cursor keeps its API-key settings in the app itself, so finish the setup there:',
         '1. Open Cursor → Settings (Cmd+Shift+J) → Models.',
-        `2. Under OpenAI API Key: paste your gateway key, then enable "Override OpenAI Base URL" and set it to ${ctx.baseUrlOverride ?? GATEWAY_CODING_AGENT_BASE_URL}`,
+        `2. Under OpenAI API Key: paste your gateway key, then enable "Override OpenAI Base URL" and set it to ${ctx.baseUrlOverride ?? GATEWAY_CURSOR_BASE_URL}`,
         '3. Copy the key from a new terminal without echoing it: printf %s "$AI_GATEWAY_API_KEY" | pbcopy',
         '4. Use "Add model" to add gateway model ids you want in the picker (e.g. anthropic/claude-fable-5, openai/gpt-5.6-sol).',
         "While the override is on, Cursor's built-in non-OpenAI models stop working — use gateway model ids for everything, or toggle the override off to go back.",
