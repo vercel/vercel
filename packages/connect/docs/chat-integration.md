@@ -20,13 +20,14 @@ types, so installing it never pulls in the Chat SDK.
 
 ## Helpers
 
-| Helper                  | Adapter                 | Outbound fields             | Connector example      |
-| ----------------------- | ----------------------- | --------------------------- | ---------------------- |
-| `connectSlackAdapter`   | `@chat-adapter/slack`   | `botToken`                  | `slack/acme-slack`     |
-| `connectDiscordAdapter` | `@chat-adapter/discord` | `botToken`, `applicationId` | `discord/acme-discord` |
-| `connectGitHubAdapter`  | `@chat-adapter/github`  | `installationToken`         | `github/acme-github`   |
-| `connectLinearAdapter`  | `@chat-adapter/linear`  | `accessToken`               | `linear/acme-linear`   |
-| `connectNotionAdapter`  | `@chat-adapter/notion`  | `token`                     | `notion/acme-notion`   |
+| Helper                   | Adapter                  | Outbound fields             | Connector example        |
+| ------------------------ | ------------------------ | --------------------------- | ------------------------ |
+| `connectSlackAdapter`    | `@chat-adapter/slack`    | `botToken`                  | `slack/acme-slack`       |
+| `connectDiscordAdapter`  | `@chat-adapter/discord`  | `botToken`, `applicationId` | `discord/acme-discord`   |
+| `connectGitHubAdapter`   | `@chat-adapter/github`   | `installationToken`         | `github/acme-github`     |
+| `connectLinearAdapter`   | `@chat-adapter/linear`   | `accessToken`               | `linear/acme-linear`     |
+| `connectNotionAdapter`   | `@chat-adapter/notion`   | `token`                     | `notion/acme-notion`     |
+| `connectTelegramAdapter` | `@chat-adapter/telegram` | `botToken`                  | `telegram/acme-telegram` |
 
 Each helper has the signature `(connector, params?, options?)`:
 
@@ -39,8 +40,9 @@ Each helper has the signature `(connector, params?, options?)`:
 ## Setup
 
 The trigger-forwarding steps below apply to Slack, Discord, GitHub, and Linear.
-Notion Connect is outbound-only: create and attach the connector without
-triggers, then configure the webhook directly in Notion.
+Notion and Telegram Connect are outbound-only: create and attach the connector
+without triggers, then use each provider's native webhook verification or
+polling.
 
 ### 1. Create a connector with triggers
 
@@ -172,6 +174,23 @@ The helper supplies only the outbound `token`; it does not include a
 webhook subscription directly in Notion and retain
 `NOTION_VERIFICATION_TOKEN` for native HMAC verification. Omit
 `NOTION_TOKEN` when using this helper.
+
+### Telegram
+
+```ts
+import { createTelegramAdapter } from '@chat-adapter/telegram';
+import { connectTelegramAdapter } from '@vercel/connect/chat';
+
+createTelegramAdapter({
+  ...connectTelegramAdapter('telegram/acme-telegram'),
+  secretToken: process.env.TELEGRAM_WEBHOOK_SECRET_TOKEN,
+});
+```
+
+The helper supplies only the outbound `botToken`; it does not include a
+`webhookVerifier`. Connect does not forward Telegram triggers, so keep
+`TELEGRAM_WEBHOOK_SECRET_TOKEN` for native webhook verification or use polling
+mode. Omit `TELEGRAM_BOT_TOKEN` when using this helper.
 
 ## Custom webhook verification
 

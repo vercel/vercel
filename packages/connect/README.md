@@ -5,7 +5,7 @@ SDK for obtaining scoped tokens for third-party services on behalf of apps or us
 Seven entrypoints, all ESM:
 
 - `@vercel/connect` — core token / authorization SDK
-- `@vercel/connect/chat` — adapter helpers for the [Chat SDK](https://chat-sdk.dev) (`chat`): `connectSlackAdapter`, `connectDiscordAdapter`, `connectGitHubAdapter`, `connectLinearAdapter`, `connectNotionAdapter` (no Chat SDK dependency — returns structural config)
+- `@vercel/connect/chat` — adapter helpers for the [Chat SDK](https://chat-sdk.dev) (`chat`): `connectSlackAdapter`, `connectDiscordAdapter`, `connectGitHubAdapter`, `connectLinearAdapter`, `connectNotionAdapter`, `connectTelegramAdapter` (no Chat SDK dependency — returns structural config)
 - `@vercel/connect/ai-sdk` — [Vercel AI SDK](https://ai-sdk.dev) glue: re-exports `connectAuthProvider` for MCP transports (optional peers: `ai`, `@ai-sdk/mcp`)
 - `@vercel/connect/mcp` — canonical MCP-spec `OAuthClientProvider` for any MCP client (optional peer: `@ai-sdk/mcp`)
 - `@vercel/connect/eve` — adapter helpers for [Eve](https://github.com/vercel/eve) connections (optional peer: `eve`)
@@ -66,7 +66,8 @@ createSlackAdapter({
 `connectGitHubAdapter` (`installationToken`), and `connectLinearAdapter`
 (`accessToken`) follow the same shape. `connectNotionAdapter` supplies only the
 outbound `token`; native Notion webhooks still require
-`NOTION_VERIFICATION_TOKEN`. See the
+`NOTION_VERIFICATION_TOKEN`. `connectTelegramAdapter` supplies only
+`botToken`; Telegram retains native webhook verification or polling. See the
 [Chat SDK integration guide](https://github.com/vercel/vercel/blob/main/packages/connect/docs/chat-integration.md)
 for connector setup, trigger forwarding, and per-platform examples.
 

@@ -5,6 +5,7 @@ import {
   connectLinearAdapter,
   connectNotionAdapter,
   connectSlackAdapter,
+  connectTelegramAdapter,
 } from '../../src/chat/index.js';
 
 describe('Chat SDK adapter config helpers', () => {
@@ -115,6 +116,41 @@ describe('Chat SDK adapter config helpers', () => {
 
     await resolveToken(config.token);
     expectTokenRequest('notion/acme-notion', { subject: { type: 'app' } });
+  });
+
+  it('builds token-only Telegram config with app-scoped parameters', async () => {
+    fetchMock.mockResolvedValue(jsonTokenResponse('telegram_token'));
+
+    const config = connectTelegramAdapter(
+      'telegram/acme-telegram',
+      {
+        installationId: 'telegram-installation',
+        scopes: ['read'],
+        validityBufferMs: 60_000,
+      },
+      { vercelToken: 'vercel_token' }
+    );
+
+    expect(config.botToken).toEqual(expect.any(Function));
+    expect(config).not.toHaveProperty('webhookVerifier');
+    await expect(resolveToken(config.botToken)).resolves.toBe('telegram_token');
+    expectTokenRequest('telegram/acme-telegram', {
+      installationId: 'telegram-installation',
+      scopes: ['read'],
+      validityBufferMs: 60_000,
+      subject: { type: 'app' },
+    });
+  });
+
+  it('defaults Telegram params to the app subject', async () => {
+    fetchMock.mockResolvedValue(jsonTokenResponse('telegram_token'));
+
+    const config = connectTelegramAdapter('telegram/acme-telegram', undefined, {
+      vercelToken: 'vercel_token',
+    });
+
+    await resolveToken(config.botToken);
+    expectTokenRequest('telegram/acme-telegram', { subject: { type: 'app' } });
   });
 
   it('builds Slack config backed by an app-scoped Connect token', async () => {

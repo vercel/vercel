@@ -31,6 +31,7 @@ export type {
   ConnectGitHubAdapterConfig,
   ConnectLinearAdapterConfig,
   ConnectNotionAdapterConfig,
+  ConnectTelegramAdapterConfig,
   ConnectTokenResolver,
 } from './types.js';
 
@@ -55,3 +56,7 @@ export {
   connectNotionAdapter,
   type ConnectNotionAdapterParams,
 } from './notion-adapter.js';
+export {
+  connectTelegramAdapter,
+  type ConnectTelegramAdapterParams,
+} from './telegram-adapter.js';

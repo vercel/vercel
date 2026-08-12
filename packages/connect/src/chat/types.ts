@@ -53,3 +53,14 @@ export interface ConnectLinearAdapterConfig {
 export interface ConnectNotionAdapterConfig {
   token: ConnectTokenResolver;
 }
+
+/**
+ * Partial Telegram adapter config backed by Vercel Connect.
+ *
+ * Structurally matches the `botToken` option of `createTelegramAdapter` from
+ * `@chat-adapter/telegram`. Telegram webhooks continue to use native secret
+ * token verification and are not part of this config fragment.
+ */
+export interface ConnectTelegramAdapterConfig {
+  botToken: ConnectTokenResolver;
+}
