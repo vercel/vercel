@@ -205,6 +205,8 @@ describe('connex create', () => {
     });
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'subcommand:create', value: 'create' },
+      { key: 'argument:service', value: 'github' },
+      { key: 'option:name', value: '[REDACTED]' },
       { key: 'flag:triggers', value: 'TRUE' },
       { key: 'option:trigger-path', value: '[REDACTED]' },
       { key: 'option:trigger-branch', value: '[REDACTED]' },
@@ -261,6 +263,8 @@ describe('connex create', () => {
     });
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'subcommand:create', value: 'create' },
+      { key: 'argument:service', value: 'github' },
+      { key: 'option:name', value: '[REDACTED]' },
       { key: 'flag:triggers', value: 'TRUE' },
       { key: 'option:trigger-project', value: '[REDACTED]' },
       { key: 'option:trigger-environment', value: '[REDACTED]' },
@@ -1021,6 +1025,8 @@ describe('connex create', () => {
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'subcommand:create', value: 'create' },
+      { key: 'argument:service', value: 'slack' },
+      { key: 'option:name', value: '[REDACTED]' },
       { key: 'option:background-color', value: '[REDACTED]' },
       { key: 'option:accent-color', value: '#ff0066' },
     ]);

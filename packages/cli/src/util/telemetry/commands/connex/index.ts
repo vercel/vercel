@@ -1,6 +1,7 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
 import type { connexCommand } from '../../../../commands/connex/command';
+import { serviceTelemetryValue } from '../../../connex/service-telemetry-value';
 import { isValidHexColor } from '../../../connex/validate-hex';
 
 export class ConnexTelemetryClient
@@ -83,6 +84,59 @@ export class ConnexTelemetryClient
     if (v) {
       this.trackCliArgument({
         arg: 'id',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliArgumentService(v: string | undefined) {
+    if (v) {
+      // Either a service slug (e.g. `slack`, `github`) or the host of an
+      // OAuth/MCP server (e.g. `mcp.linear.app`), both of which we want. Keep
+      // only the host so credentials embedded in a URL's userinfo or query
+      // string are never recorded.
+      const value = serviceTelemetryValue(v);
+      this.trackCliArgument({
+        arg: 'service',
+        value: value ?? this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionName(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'name',
+        // User-authored connector name can carry team/product names, hence redact.
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionSubject(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'subject',
+        // Closed enum. Emit raw when valid so the `user` vs `app` token split
+        // is visible; redact anything else
+        value: v === 'user' || v === 'app' ? v : this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionInstallationId(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'installation-id',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionScopes(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'scopes',
         value: this.redactedValue,
       });
     }

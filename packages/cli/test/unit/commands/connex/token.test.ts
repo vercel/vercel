@@ -431,4 +431,46 @@ describe('connex token', () => {
     await expect(client.stderr).toOutput('Something went wrong');
     expect(exitCode).toBe(1);
   });
+
+  it('should track the id argument and options in telemetry', async () => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
+      res.json({ token: 'xoxb-app-token', expiresAt: 1712345678 });
+    });
+
+    client.setArgv(
+      'connect',
+      'token',
+      'scl_abc123',
+      '--subject',
+      'app',
+      '--installation-id',
+      'inst_42',
+      '--scopes',
+      'chat:write,channels:read'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:token', value: 'token' },
+      { key: 'argument:id', value: '[REDACTED]' },
+      // Closed enum, so safe to emit raw — this is the user-vs-app token split.
+      { key: 'option:subject', value: 'app' },
+      { key: 'option:installation-id', value: '[REDACTED]' },
+      { key: 'option:scopes', value: '[REDACTED]' },
+    ]);
+  });
+
+  it('should redact an invalid --subject value', async () => {
+    client.setArgv('connect', 'token', 'scl_abc123', '--subject', 'nonsense');
+
+    await connect(client);
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:token', value: 'token' },
+      { key: 'argument:id', value: '[REDACTED]' },
+      { key: 'option:subject', value: '[REDACTED]' },
+    ]);
+  });
 });

@@ -1251,6 +1251,8 @@ describe('connex create connection methods', () => {
     expect(await connect(client)).toBe(0);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'subcommand:create', value: 'create' },
+      { key: 'argument:service', value: 'notion' },
+      { key: 'option:name', value: '[REDACTED]' },
       { key: 'option:connection-method', value: 'mcp' },
       { key: 'option:target', value: 'mcp' },
       { key: 'flag:yes', value: 'TRUE' },
