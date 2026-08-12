@@ -5741,6 +5741,13 @@ exports[`help command > project help output snapshots > project help column widt
                                    …
                                    …
                                    …
+  resume          [project]        …
+                                   …
+                                   …
+                                   …
+                                   a
+                                   …
+                                   …
   update          [name]           …
                                    …
                                    …
@@ -5844,6 +5851,8 @@ exports[`help command > project help output snapshots > project help column widt
   speed-insights  [name]           Enable Speed Insights for a project      
   pause           [project]        Pause production traffic for a project   
                                    (visitors will see an error page)        
+  resume          [project]        Resume production traffic for a paused   
+                                   project                                  
   update          [name]           Update one or more project settings;     
                                    omitted settings remain unchanged        
   rename          name new-name    Rename a project                         
@@ -5892,6 +5901,7 @@ exports[`help command > project help output snapshots > project help column widt
   web-analytics   [name]           Enable Web Analytics for a project                                               
   speed-insights  [name]           Enable Speed Insights for a project                                              
   pause           [project]        Pause production traffic for a project (visitors will see an error page)         
+  resume          [project]        Resume production traffic for a paused project                                   
   update          [name]           Update one or more project settings; omitted settings remain unchanged           
   rename          name new-name    Rename a project                                                                 
   remove          name             Delete a project                                                                 
@@ -6092,6 +6102,49 @@ exports[`help command > project help output snapshots > project rename help outp
   - Rename a project
 
     $ vercel project rename my-project my-renamed-project
+
+"
+`;
+
+exports[`help command > project help output snapshots > project resume help output snapshots > project resume help column width 120 1`] = `
+"
+  ▲ vercel project resume [project] [options]
+
+  Resume production traffic for a paused project                                                                        
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Resume the linked project
+
+    $ vercel project resume
+
+  - Resume the project named "my-project"
+
+    $ vercel project resume my-project
+
+  - Resume a project and print the result as JSON
+
+    $ vercel project resume my-project --json
 
 "
 `;
