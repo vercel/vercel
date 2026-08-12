@@ -1,5 +1,17 @@
 # vercel-runtime
 
+## 0.20.0
+
+### Minor Changes
+
+- 15e0a8e: Report a cold start phase breakdown from the Python runtime.
+
+  The `server-started` handshake now includes `userInitDuration` and a `phases`
+  breakdown (`bootstrap`, `importFn`, `serverReady`), and `initDuration` is
+  measured from a timestamp stamped by the generated handler before it does any
+  work, so it covers the `vercel_runtime` import chain and the user code import
+  instead of starting after them.
+
 ## 0.19.0
 
 ### Minor Changes

@@ -1,5 +1,25 @@
 # vercel
 
+## 58.10.0
+
+### Minor Changes
+
+- 3df8e01: Add `vercel blob put-image <file-or-url>`. The command runs an image through Vercel Image Optimization and stores only the optimized output in the Blob store, printing the resulting blob URL (or the full result with `--json`). It accepts a local file or a public http(s) URL as the source, with `--width` (required), `--quality` (default 75), and `--format` (jpeg/png/webp/avif, original preserved when omitted) controlling the transformation and `--pathname` (required) setting where the result is stored. The command warns when the optimizer kept the original image because the optimized output would have been larger. Requires OIDC credentials (`--oidc-token` + `--store-id`, or `VERCEL_OIDC_TOKEN` + `BLOB_STORE_ID`). Uses the new `putImage` method from `@vercel/blob` 2.8.0; the stored content type always comes from the optimizer output, so there is no `--content-type` flag.
+- da6b94c: Support multiple middlewares in vc dev.
+
+### Patch Changes
+
+- e570d3c: Remove duplicate Blob command tests.
+- cb76527: Remove ineffective and obsolete CLI integration test code.
+- 7d1c33b: `vercel ai-gateway coding-agents setup` no longer treats Cline, Cursor, Hermes, Kilo Code, and OpenClaw as experimental. They now appear in the interactive agent picker, are pre-selected when detected, and are included by `--all` and by the detected-agents default, alongside Claude Code, Codex, OpenCode, and Pi. Selecting them explicitly with `--agent <id>` already worked and is unchanged.
+- 4cc87f8: Emit `connect` as the telemetry command name for `vercel connect`, and track the previously-missing `create` service argument, `--name` and `--format`, plus all `token` arguments and options.
+- 59d5225: The Cursor guidance in `ai-gateway coding-agents setup` points at the dedicated `/cursor/v1` gateway endpoint. Cursor's request format is rejected by the generic `/coding-agent/v1` surface; the dedicated endpoint normalizes it.
+- Updated dependencies [7846a8c]
+- Updated dependencies [962d043]
+- Updated dependencies [15e0a8e]
+  - @vercel/python@6.56.2
+  - @vercel/rust@1.4.2
+
 ## 58.9.5
 
 ### Patch Changes

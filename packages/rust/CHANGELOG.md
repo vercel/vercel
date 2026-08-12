@@ -1,5 +1,11 @@
 # @vercel/rust
 
+## 1.4.2
+
+### Patch Changes
+
+- 7846a8c: Connect the JavaScript runtime builds to their native Python and Rust build tasks.
+
 ## 1.4.1
 
 ### Patch Changes

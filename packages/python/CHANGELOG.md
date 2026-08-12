@@ -1,5 +1,19 @@
 # @vercel/python
 
+## 6.56.2
+
+### Patch Changes
+
+- 7846a8c: Connect the JavaScript runtime builds to their native Python and Rust build tasks.
+- 962d043: Report the full function footprint (source + venv + runtime-install tooling) as `python.bundle.totalSizeBytes`, and the shipped zip size as `python.bundle.shippedSizeBytes`.
+- 15e0a8e: Report a cold start phase breakdown from the Python runtime.
+
+  The `server-started` handshake now includes `userInitDuration` and a `phases`
+  breakdown (`bootstrap`, `importFn`, `serverReady`), and `initDuration` is
+  measured from a timestamp stamped by the generated handler before it does any
+  work, so it covers the `vercel_runtime` import chain and the user code import
+  instead of starting after them.
+
 ## 6.56.1
 
 ### Patch Changes
