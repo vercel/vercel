@@ -214,6 +214,42 @@ jobs:
 
           turbo run test-unit --affected --filter=!vercel --summarize --log-order=stream --continue=always
 
+  python-test:
+    name: Python / ${{ matrix.pythonVersion }}
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        pythonVersion: ['3.12', '3.13', '3.14']
+    env:
+      TURBO_SCM_BASE: ${{ needs.setup.outputs.baseSha }}
+      TURBO_SCM_HEAD: ${{ needs.setup.outputs.headSha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.setup.outputs.headSha }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.pythonVersion }}
+      - uses: ./.github/actions/setup-uv
+        with:
+          version: '0.10.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Turbo needs Cargo to discover the root workspace before selecting the
+      # affected Python tasks.
+      - name: Setup Rust toolchain for Turbo graph discovery
+        uses: ./.github/actions/setup-rust
+        with:
+          toolchain: '1.96.1'
+      - name: install turbo@2.10.10-canary.3
+        run: npm i -g turbo@2.10.10-canary.3
+      - run: turbo run test --affected --filter='vercel-python-workspace...' --filter='!@vercel/*' -- -v --tb=short
+
   cli-unit-test:
     name: CLI Unit / ${{ matrix.runner }}/node${{ matrix.nodeVersion }} / ${{ matrix.shard }}/7
     needs: setup
@@ -679,6 +715,7 @@ jobs:
     needs:
       - setup
       - unit-test
+      - python-test
       - cli-unit-test
       - e2e-artifacts
       - e2e-test
