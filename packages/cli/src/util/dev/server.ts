@@ -112,7 +112,11 @@ import {
   toOrchestratorService,
 } from './dev-sidecars';
 import { injectNextDevWebSocketShimIfNeeded } from './next-dev-websocket-shim-injection';
-import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
+import {
+  applyChainResponseHeader,
+  applyOverriddenHeaders,
+  nodeHeadersToFetchHeaders,
+} from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
 import {
   errorToString,
@@ -2358,18 +2362,20 @@ export default class DevServer {
     let statusCode: number | undefined;
     let prevUrl = req.url;
     let prevHeaders: HttpHeadersConfig = {};
-    let middlewarePid: number | undefined;
     const requestTransforms: Transform[] = [];
     let responseTransforms: Transform[] | undefined;
 
-    // Run the middleware file, if present, and apply any
-    // mutations to the incoming request based on the
-    // result of the middleware invocation.
-    const middleware = [...this.buildMatches.values()].find(
+    // Run the ordered chain of middleware files, if present, and apply any
+    // mutations to the incoming request based on each middleware's
+    // response, before serving the app. A `null` result from
+    // `startDevServer()` means the matcher missed. The loop skips that
+    // middleware and continues to the next one in declared order.
+    const middlewares = [...this.buildMatches.values()].filter(
       m => m.config?.middleware === true
     );
-    if (middleware) {
+    for (const middleware of middlewares) {
       let startMiddlewareResult: StartDevServerResult | undefined;
+      let middlewarePid: number | undefined;
       // TODO: can we add some caching to prevent (re-)starting
       // the middleware server for every HTTP request?
       const { envConfigs, files, devCacheDir, cwd: workPath } = this;
@@ -2397,6 +2403,8 @@ export default class DevServer {
           middlewarePid = pid;
           this.shutdownCallbacks.set(pid, shutdown);
 
+          debug(`Invoking middleware "${middleware.src}" (port=${port})`);
+
           const middlewareReqHeaders = nodeHeadersToFetchHeaders(req.headers);
 
           // Add the Vercel platform proxy request headers
@@ -2405,8 +2413,13 @@ export default class DevServer {
             middlewareReqHeaders.set(name, value);
           }
 
+          // Recompute the request path on every iteration. An earlier
+          // middleware may have rewritten `req.url`. This middleware must
+          // see that rewritten path.
+          const middlewareReqPath = url.parse(req.url || '/').path || '/';
+
           const middlewareRes = await directFetch(
-            `http://127.0.0.1:${port}${parsed.path}`,
+            `http://127.0.0.1:${port}${middlewareReqPath}`,
             {
               headers: middlewareReqHeaders,
               method: req.method,
@@ -2458,7 +2471,7 @@ export default class DevServer {
               // Any other kind of response header should be included
               // on both the incoming HTTP request (for when proxying
               // to another function) and the outgoing HTTP response.
-              res.setHeader(name, value);
+              applyChainResponseHeader(res, name, value);
               req.headers[name] = value;
             }
           }
