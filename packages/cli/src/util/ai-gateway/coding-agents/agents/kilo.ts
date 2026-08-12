@@ -25,7 +25,6 @@ function kiloConfigDir(home: string): string {
 export const kilo: CodingAgent = {
   id: 'kilo',
   displayName: 'Kilo Code',
-  experimental: true,
 
   async detect(home) {
     return pathExists(kiloConfigDir(home));

@@ -1030,6 +1030,22 @@ describe('ai-gateway coding-agents setup', () => {
       expect(await aiGateway(client)).toBe(1);
       await expect(client.stderr).toOutput('No coding agents detected');
     });
+
+    // Cline, Cursor, Hermes, Kilo Code and OpenClaw are no longer experimental,
+    // so detection reaches them without an explicit --agent.
+    it('selects a formerly experimental agent when detected', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      mkdirSync(join(home, '.cline'), { recursive: true });
+      client.setArgv('ai-gateway', 'coding-agents', 'setup', '--yes');
+
+      expect(await aiGateway(client)).toBe(0);
+      expect(
+        existsSync(join(home, '.cline', 'data', 'settings', 'providers.json'))
+      ).toBe(true);
+    });
   });
 
   describe('non-interactive agent selection', () => {

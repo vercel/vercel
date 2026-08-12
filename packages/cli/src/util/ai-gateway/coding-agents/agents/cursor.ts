@@ -13,7 +13,6 @@ import { GATEWAY_CURSOR_BASE_URL } from '../gateway';
 export const cursor: CodingAgent = {
   id: 'cursor',
   displayName: 'Cursor',
-  experimental: true,
 
   async detect(home) {
     return pathExists(join(home, '.cursor'));

@@ -13,7 +13,6 @@ import { GATEWAY_DEFAULT_MODEL } from '../gateway';
 export const cline: CodingAgent = {
   id: 'cline',
   displayName: 'Cline',
-  experimental: true,
 
   async detect(home) {
     return pathExists(join(home, '.cline'));

@@ -28,5 +28,4 @@ export function getAgentById(id: string): CodingAgent | undefined {
 }
 
 // Agents we deliberately do not support, with the reason shown to users.
-// (Cursor graduated to an experimental guided setup — see agents/cursor.ts.)
 export const UNSUPPORTED_AGENTS: Record<string, string> = {};

@@ -24,7 +24,6 @@ const STARTER_MODELS = [
 export const openclaw: CodingAgent = {
   id: 'openclaw',
   displayName: 'OpenClaw',
-  experimental: true,
 
   async detect(home) {
     return pathExists(join(home, '.openclaw'));
