@@ -223,7 +223,7 @@ describe('metrics query v2', () => {
       expect(postedBody?.metric).toBe('vercel.request.count');
     });
 
-    it('queries custom metrics with their exact time range', async () => {
+    it('queries custom metrics with a complete bucket range', async () => {
       mockCustomMetricCatalog();
       mockCanonicalApiSuccess();
       client.setArgv(
@@ -249,8 +249,8 @@ describe('metrics query v2', () => {
           projectIds: ['prj_metricstest'],
         },
         timeRange: {
-          start: '2026-07-29T09:00:42.123Z',
-          end: '2026-07-29T10:00:42.123Z',
+          start: '2026-07-29T09:00:00.000Z',
+          end: '2026-07-29T10:01:00.000Z',
         },
         bucketSeconds: 60,
         groupBy: ['source'],
@@ -271,8 +271,8 @@ describe('metrics query v2', () => {
       });
       const result = JSON.parse(client.stdout.getFullOutput());
       expect(result.query).toMatchObject({
-        startTime: '2026-07-29T09:00:42.123Z',
-        endTime: '2026-07-29T10:00:42.123Z',
+        startTime: '2026-07-29T09:00:00.000Z',
+        endTime: '2026-07-29T10:01:00.000Z',
       });
       expect(result.data).toEqual([
         {
@@ -290,6 +290,30 @@ describe('metrics query v2', () => {
         dbTimeSeconds: 0.02,
         engineTimeSeconds: 0.025,
         queryTable: 'vercel-main-custom-metrics',
+      });
+    });
+
+    it('expands a short custom metric range to one complete bucket', async () => {
+      mockCustomMetricCatalog();
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'checkout.latency',
+        '--since',
+        '2026-07-29T10:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:45.456Z',
+        '--granularity',
+        '1m',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.timeRange).toEqual({
+        start: '2026-07-29T10:00:00.000Z',
+        end: '2026-07-29T10:01:00.000Z',
       });
     });
 
@@ -1594,7 +1618,7 @@ describe('metrics query v2', () => {
       expect(postedBody?.orderDirection).toBeUndefined();
     });
 
-    it('should send the requested time bounds without rounding them', async () => {
+    it('should preserve exact time bounds for platform metrics', async () => {
       mockMetricDetail();
       mockApiSuccess();
       client.setArgv(

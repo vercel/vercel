@@ -101,6 +101,18 @@ function toBucketSeconds(granularity: MetricsQueryRequest['granularity']) {
   return granularity.days * 24 * 60 * 60;
 }
 
+function alignTimeRangeToGranularity(
+  startTime: Date,
+  endTime: Date,
+  granularity: MetricsQueryRequest['granularity']
+): { startTime: Date; endTime: Date } {
+  const bucketMs = toBucketSeconds(granularity) * 1000;
+  return {
+    startTime: new Date(Math.floor(startTime.getTime() / bucketMs) * bucketMs),
+    endTime: new Date(Math.ceil(endTime.getTime() / bucketMs) * bucketMs),
+  };
+}
+
 function toCanonicalMetricSelection(
   metric: string,
   aggregation: string
@@ -481,6 +493,9 @@ export default async function query(
   // too fine for the time range (granResult.adjusted will be true in that case).
   const rangeMs = endTime.getTime() - startTime.getTime();
   const granResult = computeGranularity(rangeMs, granularity);
+  const queryTimeRange = isPlatformMetric
+    ? { startTime, endTime }
+    : alignTimeRangeToGranularity(startTime, endTime, granResult.duration);
   if (!jsonOutput && granResult.adjusted && granResult.notice) {
     output.log(`Notice: ${granResult.notice}`);
   }
@@ -537,8 +552,8 @@ export default async function query(
       scope,
       metric,
       selection,
-      startTime,
-      endTime,
+      startTime: queryTimeRange.startTime,
+      endTime: queryTimeRange.endTime,
       granularity: granResult.duration,
       groupBy,
       filter,
@@ -606,8 +621,8 @@ export default async function query(
           aggregation: aggregation as Aggregation,
           groupBy,
           filter,
-          startTime: startTime.toISOString(),
-          endTime: endTime.toISOString(),
+          startTime: queryTimeRange.startTime.toISOString(),
+          endTime: queryTimeRange.endTime.toISOString(),
           granularity: granResult.duration,
           ...(bucketTimezone ? { bucketTimezone } : {}),
           ...(orderByMode ? { orderBy: orderByMode } : {}),
@@ -627,8 +642,8 @@ export default async function query(
         scope,
         projectName,
         teamName,
-        periodStart: startTime.toISOString(),
-        periodEnd: endTime.toISOString(),
+        periodStart: queryTimeRange.startTime.toISOString(),
+        periodEnd: queryTimeRange.endTime.toISOString(),
         granularity: granResult.duration,
         bucketTimezone: bucketTimezone,
         orderBy: orderByMode,
