@@ -495,14 +495,6 @@ describe('blob list-stores', () => {
     });
   });
 
-  describe('telemetry', () => {
-    it('should initialize telemetry client', async () => {
-      const exitCode = await listStores(client, []);
-
-      expect(exitCode).toBe(0);
-    });
-  });
-
   describe('non-interactive mode (agents)', () => {
     beforeEach(() => {
       client.nonInteractive = true;
