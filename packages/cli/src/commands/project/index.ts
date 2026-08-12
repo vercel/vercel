@@ -13,6 +13,8 @@ import accessGroups from './access-groups';
 import rename from './rename';
 import update from './update';
 import rm from './rm';
+import pause from './pause';
+import resume from './resume';
 import getOidcToken from './token';
 import speedInsights from './speed-insights';
 import webAnalytics from './web-analytics';
@@ -25,10 +27,12 @@ import {
   inspectSubcommand,
   listSubcommand,
   membersSubcommand,
+  pauseSubcommand,
   projectCommand,
   protectionSubcommand,
   renameSubcommand,
   removeSubcommand,
+  resumeSubcommand,
   speedInsightsSubcommand,
   tokenSubcommand,
   updateSubcommand,
@@ -58,6 +62,8 @@ const COMMAND_CONFIG = {
   token: getCommandAliases(tokenSubcommand),
   speedInsights: getCommandAliases(speedInsightsSubcommand),
   webAnalytics: getCommandAliases(webAnalyticsSubcommand),
+  pause: getCommandAliases(pauseSubcommand),
+  resume: getCommandAliases(resumeSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -196,6 +202,22 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandSpeedInsights(subcommandOriginal);
       exitCode = await speedInsights(client, args);
+      break;
+    case 'pause':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(pauseSubcommand);
+      }
+      telemetry.trackCliSubcommandPause(subcommandOriginal);
+      exitCode = await pause(client, args);
+      break;
+    case 'resume':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(resumeSubcommand);
+      }
+      telemetry.trackCliSubcommandResume(subcommandOriginal);
+      exitCode = await resume(client, args);
       break;
     case 'token':
       if (needHelp) {

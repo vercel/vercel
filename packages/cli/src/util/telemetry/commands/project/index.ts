@@ -103,4 +103,18 @@ export class ProjectTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandPause(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'pause',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandResume(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'resume',
+      value: actual,
+    });
+  }
 }

@@ -194,6 +194,68 @@ export const listSubcommand = {
   ],
 } as const;
 
+export const pauseSubcommand = {
+  name: 'pause',
+  aliases: [],
+  description:
+    'Pause production traffic for a project (visitors will see an error page)',
+  arguments: [
+    {
+      name: 'project',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when pausing a project',
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Pause the linked project',
+      value: `${packageName} project pause`,
+    },
+    {
+      name: 'Pause the project named "my-project" without confirmation',
+      value: `${packageName} project pause my-project --yes`,
+    },
+    {
+      name: 'Pause a project and print the result as JSON',
+      value: `${packageName} project pause my-project --yes --json`,
+    },
+  ],
+} as const;
+
+export const resumeSubcommand = {
+  name: 'resume',
+  aliases: ['unpause'],
+  description: 'Resume production traffic for a paused project',
+  arguments: [
+    {
+      name: 'project',
+      required: false,
+    },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Resume the linked project',
+      value: `${packageName} project resume`,
+    },
+    {
+      name: 'Resume the project named "my-project"',
+      value: `${packageName} project resume my-project`,
+    },
+    {
+      name: 'Resume a project and print the result as JSON',
+      value: `${packageName} project resume my-project --json`,
+    },
+  ],
+} as const;
+
 export const removeSubcommand = {
   name: 'remove',
   aliases: ['rm'],
@@ -681,6 +743,8 @@ export const projectCommand = {
     protectionSubcommand,
     webAnalyticsSubcommand,
     speedInsightsSubcommand,
+    pauseSubcommand,
+    resumeSubcommand,
     updateSubcommand,
     renameSubcommand,
     removeSubcommand,
