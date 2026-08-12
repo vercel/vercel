@@ -2049,6 +2049,29 @@ describe('bundle optimization telemetry', () => {
     }
   });
 
+  it('reports the function footprint separately from the shipped zip size', async () => {
+    const { events, logSpy } = await buildWithBytecode({
+      payloadSize: 218.5 * MB,
+      pycSize: MB,
+    });
+
+    try {
+      const bundleSpan = events.find(
+        event => event.name === 'vc.builder.python.bundle'
+      );
+      const total = Number(bundleSpan.tags['python.bundle.totalSizeBytes']);
+      const shipped = Number(bundleSpan.tags['python.bundle.shippedSizeBytes']);
+      // The footprint excludes bytecode fill padding.
+      expect(total).toBeGreaterThanOrEqual(218.5 * MB);
+      expect(total).toBeLessThan(219 * MB);
+      // The shipped size includes the single 1 MB .pyc that fit.
+      expect(shipped).toBe(total + MB);
+      expect(bundleSpan.tags['python.bundle.packingMode']).toBe('standard');
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
   it('does not report or trace optimization when bytecode fits', async () => {
     const { events, logSpy } = await buildWithBytecode({
       payloadSize: 0,

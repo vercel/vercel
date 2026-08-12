@@ -1559,8 +1559,8 @@ export const build: BuildVX = async ({
       // size-limit enforcement that may throw) so the span is tagged even
       // for oversized bundles that subsequently fail the build. On
       // successful builds the attribute is overwritten at the end of this
-      // span with the final bundle size (including compiled bytecode and
-      // runtime-install tooling).
+      // span with the same footprint plus the runtime-install tooling
+      // shipped in the zip.
       const depAnalysis = await depExternalizer.analyze(files, {
         onSized: ({ totalSizeBytes, runtimeInstallEnabled }) => {
           bundleSpan.setAttributes({
@@ -1873,6 +1873,10 @@ export const build: BuildVX = async ({
       // - hive:            large functions; everything in the zip
       let packingMode: 'standard' | 'runtime-install' | 'hive';
 
+      // Runtime-install tooling shipped in the zip; 0 for standard and
+      // hive bundles.
+      let runtimeToolingBytes = 0;
+
       if (depAnalysis.runtimeInstallEnabled) {
         // Pack the zip and defer the rest to runtime install. If it can't be
         // made to fit, generateBundle bundles everything for the large
@@ -1885,6 +1889,7 @@ export const build: BuildVX = async ({
         const bundleResult = await depExternalizer.generateBundle(files, {
           bytecodeFirst,
         });
+        runtimeToolingBytes = bundleResult.runtimeToolingBytes ?? 0;
         if (bundleResult.fellBackToFullBundle) {
           packingMode = 'hive';
           announceLargeFunction();
@@ -1945,13 +1950,15 @@ export const build: BuildVX = async ({
         }
       }
 
-      // Final span attributes: overwrite the source-only size recorded by
-      // onSized with the shipped bundle size (now including compiled
-      // bytecode and runtime-install tooling). Cheap: calculateBundleSize
-      // memoizes stat results on the FileFsRefs, and every file has been
-      // through at least one sizing pass by this point.
+      // Final span attributes: totalSizeBytes is the full function
+      // footprint (source + venv + runtime-install tooling), independent
+      // of packing mode and bytecode fill; shippedSizeBytes is the zip
+      // size that counts toward the platform size limits.
       bundleSpan.setAttributes({
         'python.bundle.totalSizeBytes': String(
+          depAnalysis.totalBundleSize + runtimeToolingBytes
+        ),
+        'python.bundle.shippedSizeBytes': String(
           await calculateBundleSize(files)
         ),
         'python.bundle.packingMode': packingMode,
