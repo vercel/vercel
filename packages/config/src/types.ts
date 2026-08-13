@@ -90,6 +90,10 @@ export interface FunctionConfig {
    */
   maxDuration?: number | 'max';
   /**
+   * The maximum number of requests that one instance of your Serverless Function can process concurrently.
+   */
+  maxConcurrency?: number;
+  /**
    * An integer defining the memory your Serverless Function should be provided with (between 128 and 10240).
    */
   memory?: number;
