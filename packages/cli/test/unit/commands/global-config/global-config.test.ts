@@ -523,6 +523,107 @@ describe('global-config', () => {
     await expect(client.stderr).toOutput('`--patch` must be');
   });
 
+  describe('schema get', () => {
+    it('gets a schema in human output', async () => {
+      client.scenario.get('/v1/global-config', (_req, res) => {
+        res.json([{ id: 'ecfg_schema_get', slug: 'my-store' }]);
+      });
+      client.scenario.get(
+        '/v1/global-config/ecfg_schema_get/schema',
+        (req, res) => {
+          expect(req.query.teamId).toBe('team_ec_test');
+          res.json({
+            definition: {
+              type: 'object',
+              properties: { greeting: { type: 'string' } },
+            },
+          });
+        }
+      );
+
+      client.setArgv('global-config', 'schema', 'get', 'my-store');
+      const exitCode = await globalConfig(client);
+      expect(exitCode).toBe(0);
+      const out = client.stderr.getFullOutput();
+      expect(out).toContain('greeting');
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:schema', value: 'schema' },
+        { key: 'argument:action', value: 'get' },
+        { key: 'argument:id-or-slug', value: 'my-store' },
+      ]);
+    });
+
+    it('gets a schema as pure JSON on stdout', async () => {
+      client.scenario.get('/v1/global-config', (_req, res) => {
+        res.json([{ id: 'ecfg_schema_json', slug: 'my-store' }]);
+      });
+      client.scenario.get(
+        '/v1/global-config/ecfg_schema_json/schema',
+        (req, res) => {
+          expect(req.query.teamId).toBe('team_ec_test');
+          res.json({ definition: { type: 'object' } });
+        }
+      );
+
+      client.setArgv(
+        'global-config',
+        'schema',
+        'get',
+        'my-store',
+        '--format',
+        'json'
+      );
+      const exitCode = await globalConfig(client);
+      expect(exitCode).toBe(0);
+      const raw = client.stdout.getFullOutput();
+      // stdout must be parseable JSON with no human prose mixed in
+      const out = JSON.parse(raw.trim());
+      expect(out).toEqual({ definition: { type: 'object' } });
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:schema', value: 'schema' },
+        { key: 'argument:action', value: 'get' },
+        { key: 'argument:id-or-slug', value: 'my-store' },
+        { key: 'option:format', value: 'json' },
+      ]);
+    });
+
+    it('reports when no schema is set (human) and emits null (JSON)', async () => {
+      client.scenario.get('/v1/global-config', (_req, res) => {
+        res.json([{ id: 'ecfg_schema_none', slug: 'my-store' }]);
+      });
+      client.scenario.get(
+        '/v1/global-config/ecfg_schema_none/schema',
+        (_req, res) => {
+          res.json(null);
+        }
+      );
+
+      client.setArgv('global-config', 'schema', 'get', 'my-store', '--json');
+      const exitCode = await globalConfig(client);
+      expect(exitCode).toBe(0);
+      const out = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(out).toBeNull();
+    });
+
+    it('errors on an unknown action', async () => {
+      client.setArgv('global-config', 'schema', 'bogus', 'my-store');
+      const exitCode = await globalConfig(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('Unknown action');
+    });
+
+    it('errors when the store cannot be resolved', async () => {
+      client.scenario.get('/v1/global-config', (_req, res) => {
+        res.json([]);
+      });
+
+      client.setArgv('global-config', 'schema', 'get', 'missing-store');
+      const exitCode = await globalConfig(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('No Global Config matches');
+    });
+  });
+
   describe('linked project scope', () => {
     it('uses the linked project team instead of the globally configured team', async () => {
       // Globally we are scoped to a different team. The linked project's

@@ -110,6 +110,33 @@ export const removeSubcommand = {
   examples: [],
 } as const;
 
+export const schemaSubcommand = {
+  name: 'schema',
+  aliases: [],
+  description: "Get a Global Config store's JSON Schema",
+  arguments: [
+    {
+      name: 'action',
+      required: true,
+    },
+    {
+      name: 'id-or-slug',
+      required: true,
+    },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Get the schema for a Global Config',
+      value: `${packageName} global-config schema get my-store`,
+    },
+    {
+      name: 'Get the schema as JSON',
+      value: `${packageName} global-config schema get my-store --json`,
+    },
+  ],
+} as const;
+
 export const itemsSubcommand = {
   name: 'items',
   aliases: [],
@@ -249,6 +276,7 @@ export const globalConfigCommand = {
     getSubcommand,
     updateSubcommand,
     removeSubcommand,
+    schemaSubcommand,
     itemsSubcommand,
     tokensSubcommand,
     backupsSubcommand,

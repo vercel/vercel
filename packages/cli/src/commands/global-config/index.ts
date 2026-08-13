@@ -7,6 +7,7 @@ import addCmd from './add';
 import getCmd from './get';
 import updateCmd from './update';
 import removeCmd from './remove';
+import schemaCmd from './schema';
 import itemsCmd from './items';
 import tokensCmd from './tokens';
 import backupsCmd from './backups';
@@ -17,6 +18,7 @@ import {
   getSubcommand as getSubcommandDef,
   updateSubcommand,
   removeSubcommand,
+  schemaSubcommand,
   itemsSubcommand,
   tokensSubcommand,
   backupsSubcommand,
@@ -33,6 +35,7 @@ const COMMAND_CONFIG = {
   get: ['get', 'inspect'],
   update: ['update'],
   remove: ['remove', 'rm', 'delete'],
+  schema: ['schema'],
   items: ['items'],
   tokens: ['tokens'],
   backups: ['backups'],
@@ -119,6 +122,13 @@ export default async function main(client: Client): Promise<number> {
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return removeCmd(client, args);
+    case 'schema':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('global-config', subcommandOriginal);
+        return printHelp(schemaSubcommand);
+      }
+      telemetry.trackCliSubcommandSchema(subcommandOriginal);
+      return schemaCmd(client, args);
     case 'items':
       if (needHelp) {
         telemetry.trackCliFlagHelp('global-config', subcommandOriginal);

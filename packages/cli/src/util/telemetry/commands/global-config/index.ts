@@ -26,6 +26,10 @@ export class GlobalConfigTelemetryClient
     this.trackCliSubcommand({ subcommand: 'remove', value: actual });
   }
 
+  trackCliSubcommandSchema(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'schema', value: actual });
+  }
+
   trackCliSubcommandItems(actual: string) {
     this.trackCliSubcommand({ subcommand: 'items', value: actual });
   }
