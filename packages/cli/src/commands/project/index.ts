@@ -194,7 +194,13 @@ export default async function main(client: Client) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(speedInsightsSubcommand);
       }
-      telemetry.trackCliSubcommandSpeedInsights(subcommandOriginal);
+      telemetry.trackCliSubcommandSpeedInsights(
+        args[0] === 'enable'
+          ? 'speed-insights enable'
+          : args[0] === 'disable'
+            ? 'speed-insights disable'
+            : subcommandOriginal
+      );
       exitCode = await speedInsights(client, args);
       break;
     case 'token':

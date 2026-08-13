@@ -641,12 +641,10 @@ export const webAnalyticsSubcommand = {
 export const speedInsightsSubcommand = {
   name: 'speed-insights',
   aliases: [],
-  description: 'Enable Speed Insights for a project',
+  description: 'Enable or disable Speed Insights for a project',
   arguments: [
-    {
-      name: 'name',
-      required: false,
-    },
+    { name: 'action', required: false },
+    { name: 'name', required: false },
   ],
   options: [formatOption, jsonOption],
   examples: [
@@ -656,7 +654,11 @@ export const speedInsightsSubcommand = {
     },
     {
       name: 'Enable Speed Insights for a named project',
-      value: `${packageName} project speed-insights my-project`,
+      value: `${packageName} project speed-insights enable my-project`,
+    },
+    {
+      name: 'Disable Speed Insights for a named project',
+      value: `${packageName} project speed-insights disable my-project`,
     },
     {
       name: 'Confirm enablement as JSON (non-interactive / agents)',

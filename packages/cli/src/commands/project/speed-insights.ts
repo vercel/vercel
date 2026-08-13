@@ -15,6 +15,15 @@ interface ToggleResponse {
   value: boolean;
 }
 
+const SPEED_INSIGHTS_ACTIONS = ['enable', 'disable'] as const;
+type SpeedInsightsAction = (typeof SPEED_INSIGHTS_ACTIONS)[number];
+
+function isSpeedInsightsAction(
+  v: string | undefined
+): v is SpeedInsightsAction {
+  return !!v && (SPEED_INSIGHTS_ACTIONS as readonly string[]).includes(v);
+}
+
 export default async function speedInsights(
   client: Client,
   argv: string[]
@@ -41,9 +50,16 @@ export default async function speedInsights(
     return 1;
   }
 
-  if (parsedArgs.args.length > 1) {
+  const actionArg = parsedArgs.args[0];
+  const action = isSpeedInsightsAction(actionArg) ? actionArg : undefined;
+  const projectNameOrId = action ? parsedArgs.args[1] : parsedArgs.args[0];
+
+  const maxArgs = action ? 2 : 1;
+  if (parsedArgs.args.length > maxArgs) {
     output.error(
-      'Invalid number of arguments. Usage: `vercel project speed-insights [name]`'
+      `Invalid number of arguments. Usage: \`vercel project speed-insights ${
+        action ? `${action} ` : ''
+      }[name]\``
     );
     return 2;
   }
@@ -55,11 +71,13 @@ export default async function speedInsights(
   }
   const asJson = formatResult.jsonOutput;
 
+  const value = action !== 'disable';
+
   try {
     const project = await getProjectByCwdOrLink({
       client,
       commandName: 'project speed-insights',
-      projectNameOrId: parsedArgs.args[0],
+      projectNameOrId,
       forReadOnlyCommand: true,
     });
 
@@ -69,7 +87,7 @@ export default async function speedInsights(
       {
         method: 'POST',
         json: true,
-        body: { value: true },
+        body: { value },
       }
     );
 
@@ -88,7 +106,9 @@ export default async function speedInsights(
       return 0;
     }
 
-    output.log(`Speed Insights is enabled for ${project.name}.`);
+    output.log(
+      `Speed Insights is ${result.value ? 'enabled' : 'disabled'} for ${project.name}.`
+    );
     return 0;
   } catch (err: unknown) {
     exitWithNonInteractiveError(client, err, 1, {

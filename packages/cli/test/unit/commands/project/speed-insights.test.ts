@@ -1,10 +1,18 @@
 import { mkdtempSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import { outputFile } from 'fs-extra';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import project from '../../../../src/commands/project';
-import { defaultProject, useProject } from '../../../mocks/project';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
+import {
+  defaultProject,
+  useProject,
+  useUnknownProject,
+} from '../../../mocks/project';
+import { useTeam } from '../../../mocks/team';
+import { useUser } from '../../../mocks/user';
 
 describe('project speed-insights', () => {
   it('enables Speed Insights for a named project', async () => {
@@ -30,6 +38,139 @@ describe('project speed-insights', () => {
         value: 'speed-insights',
       },
     ]);
+  });
+
+  it('enables Speed Insights with the explicit `enable` action', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.scenario.post('/speed-insights/toggle', (req, res) => {
+      expect(req.query.projectId).toBe('prj_123');
+      expect(req.body).toEqual({ value: true });
+      res.json({ value: true });
+    });
+
+    client.setArgv('project', 'speed-insights', 'enable', 'my-project');
+    const exitCode = await project(client);
+    expect(exitCode).toBe(0);
+    await expect(client.stderr).toOutput('Speed Insights is enabled');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:speed-insights',
+        value: 'speed-insights enable',
+      },
+    ]);
+  });
+
+  it('disables Speed Insights for a named project', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.scenario.post('/speed-insights/toggle', (req, res) => {
+      expect(req.query.projectId).toBe('prj_123');
+      expect(req.body).toEqual({ value: false });
+      res.json({ value: false });
+    });
+
+    client.setArgv('project', 'speed-insights', 'disable', 'my-project');
+    const exitCode = await project(client);
+    expect(exitCode).toBe(0);
+    await expect(client.stderr).toOutput('Speed Insights is disabled');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:speed-insights',
+        value: 'speed-insights disable',
+      },
+    ]);
+  });
+
+  it('outputs JSON when disabling with --format json', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.scenario.post('/speed-insights/toggle', (req, res) => {
+      expect(req.body).toEqual({ value: false });
+      res.json({ value: false });
+    });
+
+    client.setArgv(
+      'project',
+      'speed-insights',
+      'disable',
+      'my-project',
+      '--format',
+      'json'
+    );
+    const exitCode = await project(client);
+    expect(exitCode).toBe(0);
+
+    const jsonOutput = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(jsonOutput).toEqual({
+      enabled: false,
+      projectId: 'prj_123',
+      projectName: 'my-project',
+    });
+  });
+
+  it('disables Speed Insights for the linked project', async () => {
+    const team = useTeam('team_linked');
+    useUser();
+    useProject({
+      ...defaultProject,
+      id: 'prj_linked',
+      name: 'linked-project',
+      accountId: team.id,
+    });
+
+    const cwd = setupTmpDir();
+    await outputFile(
+      join(cwd, '.vercel', 'project.json'),
+      JSON.stringify({ orgId: team.id, projectId: 'prj_linked' })
+    );
+    const prevCwd = client.cwd;
+    client.cwd = cwd;
+
+    let requestQuery: unknown;
+    let requestBody: unknown;
+    client.scenario.post('/speed-insights/toggle', (req, res) => {
+      requestQuery = req.query;
+      requestBody = req.body;
+      res.json({ value: false });
+    });
+
+    client.setArgv('project', 'speed-insights', 'disable');
+    try {
+      const exitCode = await project(client);
+      expect(exitCode).toBe(0);
+      expect(requestQuery).toMatchObject({ projectId: 'prj_linked' });
+      expect(requestBody).toEqual({ value: false });
+      await expect(client.stderr).toOutput('Speed Insights is disabled');
+    } finally {
+      client.cwd = prevCwd;
+    }
+  });
+
+  it('returns 1 when the project is not found', async () => {
+    useUser();
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+    useUnknownProject();
+
+    client.setArgv('project', 'speed-insights', 'disable', 'does-not-exist');
+    const exitCode = await project(client);
+    expect(exitCode).toBe(1);
   });
 
   it('outputs JSON with --format json', async () => {
