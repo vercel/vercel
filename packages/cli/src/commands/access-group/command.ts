@@ -1,5 +1,14 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, jsonOption } from '../../util/arg-common';
+import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
+
+const nameOption = {
+  name: 'name',
+  shorthand: null,
+  type: String,
+  argument: 'NAME',
+  description: 'The new name for the access group',
+  deprecated: false,
+} as const;
 
 export const listSubcommand = {
   name: 'list',
@@ -35,12 +44,75 @@ export const inspectSubcommand = {
   ],
 } as const;
 
+export const addSubcommand = {
+  name: 'add',
+  aliases: [],
+  description: 'Create an access group',
+  arguments: [
+    {
+      name: 'name',
+      required: true,
+    },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Create an access group',
+      value: `${packageName} access-group add my-access-group`,
+    },
+  ],
+} as const;
+
+export const updateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description: 'Update an access group',
+  arguments: [
+    {
+      name: 'idOrName',
+      required: true,
+    },
+  ],
+  options: [nameOption, formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Rename an access group',
+      value: `${packageName} access-group update my-access-group --name renamed-group`,
+    },
+  ],
+} as const;
+
+export const removeSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Remove an access group',
+  arguments: [
+    {
+      name: 'idOrName',
+      required: true,
+    },
+  ],
+  options: [yesOption],
+  examples: [
+    {
+      name: 'Remove an access group',
+      value: `${packageName} access-group rm my-access-group`,
+    },
+  ],
+} as const;
+
 export const accessGroupCommand = {
   name: 'access-group',
   aliases: ['access-groups'],
   description: 'Manage team Access Groups and their members and projects',
   arguments: [],
-  subcommands: [listSubcommand, inspectSubcommand],
+  subcommands: [
+    listSubcommand,
+    inspectSubcommand,
+    addSubcommand,
+    updateSubcommand,
+    removeSubcommand,
+  ],
   options: [],
   examples: [
     {

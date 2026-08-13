@@ -129,6 +129,36 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('access-group add help output snapshots', () => {
+      it('access-group add help column width 120', () => {
+        expect(
+          help(accessGroup.addSubcommand, {
+            columns: 120,
+            parent: accessGroup.accessGroupCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('access-group update help output snapshots', () => {
+      it('access-group update help column width 120', () => {
+        expect(
+          help(accessGroup.updateSubcommand, {
+            columns: 120,
+            parent: accessGroup.accessGroupCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('access-group remove help output snapshots', () => {
+      it('access-group remove help column width 120', () => {
+        expect(
+          help(accessGroup.removeSubcommand, {
+            columns: 120,
+            parent: accessGroup.accessGroupCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('alias help output snapshots', () => {

@@ -20,12 +20,57 @@ export class AccessGroupTelemetryClient
     });
   }
 
+  trackCliSubcommandAdd(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'add',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandUpdate(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'update',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRemove(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'remove',
+      value: actual,
+    });
+  }
+
   trackCliArgumentIdOrName(idOrName: string | undefined) {
     if (idOrName) {
       this.trackCliArgument({
         arg: 'idOrName',
         value: this.redactedValue,
       });
+    }
+  }
+
+  trackCliArgumentName(name: string | undefined) {
+    if (name) {
+      this.trackCliArgument({
+        arg: 'name',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionName(name: string | undefined) {
+    if (name) {
+      this.trackCliOption({
+        option: 'name',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliFlagYes(yes: boolean | undefined) {
+    if (yes) {
+      this.trackCliFlag('yes');
     }
   }
 }

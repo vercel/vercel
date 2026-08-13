@@ -3,10 +3,16 @@ import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import inspect from './inspect';
 import ls from './ls';
+import add from './add';
+import update from './update';
+import rm from './rm';
 import {
   accessGroupCommand,
   inspectSubcommand,
   listSubcommand,
+  addSubcommand,
+  updateSubcommand,
+  removeSubcommand,
 } from './command';
 import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -18,6 +24,9 @@ import { getCommandAliases } from '..';
 const COMMAND_CONFIG = {
   inspect: getCommandAliases(inspectSubcommand),
   ls: getCommandAliases(listSubcommand),
+  add: getCommandAliases(addSubcommand),
+  update: getCommandAliases(updateSubcommand),
+  rm: getCommandAliases(removeSubcommand),
 };
 
 export default async function accessGroup(client: Client) {
@@ -71,6 +80,30 @@ export default async function accessGroup(client: Client) {
       }
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
       return inspect(client, args);
+    case 'add':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('access-group', subcommandOriginal);
+        printHelp(addSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandAdd(subcommandOriginal);
+      return add(client, args);
+    case 'update':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('access-group', subcommandOriginal);
+        printHelp(updateSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandUpdate(subcommandOriginal);
+      return update(client, args);
+    case 'rm':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('access-group', subcommandOriginal);
+        printHelp(removeSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandRemove(subcommandOriginal);
+      return rm(client, args);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('access-group', subcommandOriginal);
