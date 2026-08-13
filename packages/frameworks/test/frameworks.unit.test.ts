@@ -2,7 +2,6 @@ import Ajv from 'ajv';
 import assert from 'assert';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { isString } from 'util';
 import nodeFetch from 'node-fetch';
 import { URL } from 'url';
 import frameworkList from '../src/frameworks';
@@ -11,6 +10,7 @@ import frameworkList from '../src/frameworks';
 vi.setConfig({ testTimeout: 15 * 1000, hookTimeout: 15 * 1000 });
 
 const logoPrefix = 'https://api-frameworks.vercel.sh/framework-logos/';
+const isString = (value: unknown): value is string => typeof value === 'string';
 
 const SchemaFrameworkDetectionItem = {
   type: 'array',
@@ -254,8 +254,7 @@ describe('frameworks', () => {
     expect(services?.experimental).toBeUndefined();
   });
 
-  // biome-ignore lint/suspicious/noSkippedTests: util.isString is unavailable on Node.js 24.
-  it.skip('ensure there is an example for every framework', async () => {
+  it('ensure there is an example for every framework', async () => {
     const root = join(__dirname, '..', '..', '..');
     const getExample = (name: string) => join(root, 'examples', name);
 
@@ -312,8 +311,7 @@ describe('frameworks', () => {
     expect(invalid).toEqual([]);
   });
 
-  // biome-ignore lint/suspicious/noSkippedTests: util.isString is unavailable on Node.js 24.
-  it.skip('ensure logo file exists in ./packages/frameworks/logos/', async () => {
+  it('ensure logo file exists in ./packages/frameworks/logos/', async () => {
     const missing = frameworkList
       .flatMap(f => [
         f.logo,
