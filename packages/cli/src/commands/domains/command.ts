@@ -314,33 +314,6 @@ export const renewSubcommand = {
   ],
 } as const;
 
-export const autoRenewSubcommand = {
-  name: 'auto-renew',
-  aliases: [],
-  description: 'Turn automatic renewal on or off for a registered domain',
-  arguments: [
-    {
-      name: 'domain',
-      required: true,
-    },
-    {
-      name: 'state',
-      required: true,
-    },
-  ],
-  options: [],
-  examples: [
-    {
-      name: 'Turn automatic renewal on',
-      value: `${packageName} domains auto-renew example.com on`,
-    },
-    {
-      name: 'Turn automatic renewal off',
-      value: `${packageName} domains auto-renew example.com off`,
-    },
-  ],
-} as const;
-
 export const verifySubcommand = {
   name: 'verify',
   aliases: [],
@@ -402,7 +375,6 @@ export const domainsCommand = {
     transferInSubcommand,
     removeSubcommand,
     renewSubcommand,
-    autoRenewSubcommand,
     verifySubcommand,
   ],
   options: [],
