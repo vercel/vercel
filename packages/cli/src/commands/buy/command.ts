@@ -63,21 +63,9 @@ export const creditsSubcommand = {
 } as const;
 
 export const SUPPORTED_ADDON_ALIASES = [
-  'siem',
   'customEnvironment',
   'observabilityPlus',
 ] as const;
-export type AddonAlias = (typeof SUPPORTED_ADDON_ALIASES)[number];
-export type BillingBuyAddonAlias = Exclude<
-  AddonAlias,
-  'customEnvironment' | 'observabilityPlus'
->;
-
-export const ADDON_LABELS: Record<AddonAlias, string> = {
-  siem: 'SIEM',
-  customEnvironment: 'Custom Environment',
-  observabilityPlus: 'Observability Plus',
-};
 
 export const addonSubcommand = {
   name: 'addon',
@@ -102,10 +90,6 @@ export const addonSubcommand = {
     projectOption,
   ],
   examples: [
-    {
-      name: 'Purchase 1 SIEM addon',
-      value: `${packageName} buy addon siem 1`,
-    },
     {
       name: 'Purchase Observability Plus',
       value: `${packageName} buy addon observabilityPlus`,
@@ -181,10 +165,6 @@ export const buyCommand = {
     {
       name: 'Purchase $100 of v0 credits',
       value: `${packageName} buy credits v0 100`,
-    },
-    {
-      name: 'Purchase the SIEM addon',
-      value: `${packageName} buy addon siem 1`,
     },
     {
       name: 'Purchase Observability Plus',
