@@ -197,30 +197,6 @@ export const updateSubcommand = {
       description: 'New URL slug for the team; this changes the team URL',
       deprecated: false,
     },
-    {
-      name: 'preview-suffix',
-      shorthand: null,
-      type: String,
-      description:
-        'Domain suffix for preview deployment URLs; pass an empty string to clear it',
-      deprecated: false,
-    },
-    {
-      name: 'toolbar',
-      shorthand: null,
-      type: String,
-      description:
-        'Vercel Toolbar on preview deployments: one of on, off, or default',
-      deprecated: false,
-    },
-    {
-      name: 'default-build-machine',
-      shorthand: null,
-      type: String,
-      description:
-        'Default build machine for new builds: one of basic, standard, enhanced, turbo, or elastic',
-      deprecated: false,
-    },
     yesOption,
   ],
   examples: [
@@ -234,7 +210,7 @@ export const updateSubcommand = {
     },
     {
       name: 'Update a specific team by slug',
-      value: `${packageName} teams update acme --default-build-machine enhanced`,
+      value: `${packageName} teams update acme --name "Acme Corp"`,
     },
   ],
 } as const;

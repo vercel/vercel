@@ -7471,12 +7471,9 @@ exports[`help command > teams help output snapshots > teams update help output s
 
   Options:
 
-       --default-build-machine  Default build machine for new builds: one of basic, standard, enhanced, turbo, or elastic    
-       --name                   New display name for the team                                                                
-       --preview-suffix         Domain suffix for preview deployment URLs; pass an empty string to clear it                  
-       --slug                   New URL slug for the team; this changes the team URL                                         
-       --toolbar                Vercel Toolbar on preview deployments: one of on, off, or default                            
-  -y,  --yes                    Accept default value for all prompts                                                         
+       --name  New display name for the team                                                                             
+       --slug  New URL slug for the team; this changes the team URL                                                      
+  -y,  --yes   Accept default value for all prompts                                                                      
 
 
   Global Options:
@@ -7505,7 +7502,7 @@ exports[`help command > teams help output snapshots > teams update help output s
 
   - Update a specific team by slug
 
-    $ vercel teams update acme --default-build-machine enhanced
+    $ vercel teams update acme --name "Acme Corp"
 
 "
 `;

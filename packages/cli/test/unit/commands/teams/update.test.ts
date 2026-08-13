@@ -53,65 +53,6 @@ describe('teams update', () => {
     ]);
   });
 
-  it('updates multiple settings in one call and records enum telemetry', async () => {
-    let patchBody: Record<string, unknown> | undefined;
-    client.scenario.patch(`/teams/${team.id}`, (req, res) => {
-      patchBody = req.body as Record<string, unknown>;
-      return res.json(team);
-    });
-
-    client.setArgv(
-      'teams',
-      'update',
-      '--toolbar',
-      'on',
-      '--default-build-machine',
-      'enhanced'
-    );
-    const exitCode = await teams(client);
-
-    expect(exitCode).toBe(0);
-    expect(patchBody).toEqual({
-      enablePreviewFeedback: 'on',
-      resourceConfig: { buildMachine: { default: 'enhanced' } },
-    });
-
-    expect(client.telemetryEventStore).toHaveTelemetryEvents([
-      { key: 'subcommand:update', value: 'update' },
-      { key: 'option:toolbar', value: 'on' },
-      { key: 'option:default-build-machine', value: 'enhanced' },
-    ]);
-  });
-
-  it('clears the preview suffix when passed an empty string', async () => {
-    let patchBody: Record<string, unknown> | undefined;
-    client.scenario.patch(`/teams/${team.id}`, (req, res) => {
-      patchBody = req.body as Record<string, unknown>;
-      return res.json(team);
-    });
-
-    client.setArgv('teams', 'update', '--preview-suffix', '');
-    const exitCode = await teams(client);
-
-    expect(exitCode).toBe(0);
-    expect(patchBody).toEqual({ previewDeploymentSuffix: null });
-  });
-
-  it('rejects an invalid --toolbar value before calling the API', async () => {
-    let called = false;
-    client.scenario.patch(`/teams/${team.id}`, (_req, res) => {
-      called = true;
-      return res.json(team);
-    });
-
-    client.setArgv('teams', 'update', '--toolbar', 'bogus');
-    const exitCode = await teams(client);
-
-    expect(exitCode).toBe(1);
-    expect(called).toBe(false);
-    await expect(client.stderr).toOutput('must be one of on, off, default');
-  });
-
   it('errors when no settings are provided', async () => {
     client.setArgv('teams', 'update');
     const exitCode = await teams(client);
@@ -248,25 +189,5 @@ describe('teams update', () => {
       exitSpy.mockRestore();
     });
 
-    it('outputs error JSON for an invalid enum value', async () => {
-      client.nonInteractive = true;
-      const logSpy = vi
-        .spyOn(console, 'log')
-        .mockImplementation(() => undefined as unknown as void);
-      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
-        throw new Error('exit');
-      }) as () => never);
-
-      client.setArgv('teams', 'update', '--default-build-machine', 'nope');
-      await expect(teams(client)).rejects.toThrow('exit');
-
-      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
-      expect(payload.status).toBe('error');
-      expect(payload.reason).toBe('invalid_default_build_machine');
-      expect(payload.message).toContain('default-build-machine');
-
-      logSpy.mockRestore();
-      exitSpy.mockRestore();
-    });
   });
 });

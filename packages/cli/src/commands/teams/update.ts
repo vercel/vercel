@@ -24,15 +24,6 @@ import {
 import { updateSubcommand } from './command';
 import { TeamsUpdateTelemetryClient } from '../../util/telemetry/commands/teams/update';
 
-const TOOLBAR_VALUES = ['on', 'off', 'default'] as const;
-const BUILD_MACHINE_VALUES = [
-  'basic',
-  'standard',
-  'enhanced',
-  'turbo',
-  'elastic',
-] as const;
-
 const validateSlug = (value: string) => /^[a-z]+[a-z0-9_-]*$/.test(value);
 
 export default async function update(
@@ -68,17 +59,11 @@ export default async function update(
 
   const nameFlag = flags['--name'];
   const slugFlag = flags['--slug'];
-  const previewSuffixFlag = flags['--preview-suffix'];
-  const toolbarFlag = flags['--toolbar'];
-  const buildMachineFlag = flags['--default-build-machine'];
   const yes = Boolean(flags['--yes']);
 
   telemetry.trackCliArgumentTeamSlug(teamSlugArg);
   telemetry.trackCliOptionName(nameFlag);
   telemetry.trackCliOptionSlug(slugFlag);
-  telemetry.trackCliOptionPreviewSuffix(previewSuffixFlag);
-  telemetry.trackCliOptionToolbar(toolbarFlag);
-  telemetry.trackCliOptionDefaultBuildMachine(buildMachineFlag);
   telemetry.trackCliFlagYes(yes);
 
   if (args.length > 1) {
@@ -125,40 +110,6 @@ export default async function update(
     }
     payload.slug = slug;
     changes.push(['Slug', slug]);
-  }
-
-  if (previewSuffixFlag !== undefined) {
-    const suffix = previewSuffixFlag.trim();
-    payload.previewDeploymentSuffix = suffix === '' ? null : suffix;
-    changes.push(['Preview Suffix', suffix === '' ? '(cleared)' : suffix]);
-  }
-
-  if (toolbarFlag !== undefined) {
-    if (!TOOLBAR_VALUES.includes(toolbarFlag as (typeof TOOLBAR_VALUES)[number])) {
-      return invalidValue(
-        client,
-        'invalid_toolbar',
-        `Invalid ${param('--toolbar')}: must be one of ${TOOLBAR_VALUES.join(', ')}`
-      );
-    }
-    payload.enablePreviewFeedback = toolbarFlag;
-    changes.push(['Toolbar', toolbarFlag]);
-  }
-
-  if (buildMachineFlag !== undefined) {
-    if (
-      !BUILD_MACHINE_VALUES.includes(
-        buildMachineFlag as (typeof BUILD_MACHINE_VALUES)[number]
-      )
-    ) {
-      return invalidValue(
-        client,
-        'invalid_default_build_machine',
-        `Invalid ${param('--default-build-machine')}: must be one of ${BUILD_MACHINE_VALUES.join(', ')}`
-      );
-    }
-    payload.resourceConfig = { buildMachine: { default: buildMachineFlag } };
-    changes.push(['Build Machine', buildMachineFlag]);
   }
 
   if (Object.keys(payload).length === 0) {
