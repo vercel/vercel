@@ -210,6 +210,14 @@ describe('help command', () => {
           })
         ).toMatchSnapshot();
       });
+      it('access-group projects add help column width 120', () => {
+        expect(
+          help(accessGroup.projectsAddSubcommand, {
+            columns: 120,
+            parent: accessGroup.projectsSubcommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 
