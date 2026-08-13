@@ -9,6 +9,7 @@ import {
 } from '../../util/agent-output';
 import { AGENT_REASON } from '../../util/agent-output-constants';
 import { protectionSubcommand } from './command';
+import { projectProtectionTrustedIps } from './protection-trusted-ips';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
@@ -80,6 +81,11 @@ export default async function protection(
   client: Client,
   argv: string[]
 ): Promise<number> {
+  // Nested subcommand: `project protection trusted-ips get|set|disable`.
+  if (argv[0] === 'trusted-ips') {
+    return projectProtectionTrustedIps(client, argv.slice(1));
+  }
+
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(
     protectionSubcommand.options

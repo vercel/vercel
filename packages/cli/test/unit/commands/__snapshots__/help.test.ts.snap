@@ -5985,6 +5985,60 @@ exports[`help command > project help output snapshots > project list help output
 "
 `;
 
+exports[`help command > project help output snapshots > project protection trusted-ips help output snapshots > project protection trusted-ips help column width 120 1`] = `
+"
+  ▲ vercel project protection trusted-ips [action] [name] [options]
+
+  Show, set, or clear the Trusted IPs allowlist for deployment protection                                               
+
+  Options:
+
+       --deployment-type <TYPE>  Deployment target the allowlist applies to: all, preview, production,                       
+                                 prod_deployment_urls_and_all_previews, all_except_custom_domains                            
+  -F,  --format <FORMAT>         Specify the output format (json)                                                            
+       --ip <IP>                 IPv4 address or CIDR to allowlist (repeatable). Append an optional note with "=", e.g.      
+                                 203.0.113.4=office. IPv6 is not supported.                                                  
+       --json                    Output as JSON                                                                              
+       --mode <MODE>             Protection mode: additional (IP must match plus another protection) or exclusive (IP match  
+                                 alone bypasses protection)                                                                  
+  -y,  --yes                     Accept default value for all prompts                                                        
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Show the Trusted IPs allowlist for the linked project
+
+    $ vercel project protection trusted-ips get
+
+  - Allowlist IPs for all deployments in additional mode
+
+    $ vercel project protection trusted-ips set my-app --ip 203.0.113.4 --ip 198.51.100.0/24 --deployment-type all --mode additional
+
+  - Allowlist an IP with a note
+
+    $ vercel project protection trusted-ips set --ip "203.0.113.4=office VPN" --deployment-type production --mode exclusive
+
+  - Clear the Trusted IPs allowlist
+
+    $ vercel project protection trusted-ips disable my-app --yes
+
+"
+`;
+
 exports[`help command > project help output snapshots > project remove help output snapshots > project remove help column width 120 1`] = `
 "
   ▲ vercel project remove name

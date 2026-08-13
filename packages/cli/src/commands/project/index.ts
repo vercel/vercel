@@ -31,6 +31,7 @@ import {
   removeSubcommand,
   speedInsightsSubcommand,
   tokenSubcommand,
+  trustedIpsSubcommand,
   updateSubcommand,
   webAnalyticsSubcommand,
 } from './command';
@@ -169,15 +170,21 @@ export default async function main(client: Client) {
       break;
     case 'protection':
       if (needHelp) {
+        if (args[0] === 'trusted-ips') {
+          telemetry.trackCliFlagHelp('project', 'protection trusted-ips');
+          return printHelp(trustedIpsSubcommand);
+        }
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(protectionSubcommand);
       }
       telemetry.trackCliSubcommandProtection(
-        args[0] === 'enable'
-          ? 'protection enable'
-          : args[0] === 'disable'
-            ? 'protection disable'
-            : subcommandOriginal
+        args[0] === 'trusted-ips'
+          ? 'protection trusted-ips'
+          : args[0] === 'enable'
+            ? 'protection enable'
+            : args[0] === 'disable'
+              ? 'protection disable'
+              : subcommandOriginal
       );
       exitCode = await protection(client, args);
       break;

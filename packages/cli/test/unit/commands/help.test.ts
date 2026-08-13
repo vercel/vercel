@@ -774,6 +774,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('project protection trusted-ips help output snapshots', () => {
+      it('project protection trusted-ips help column width 120', () => {
+        expect(
+          help(project.trustedIpsSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('promote help output snapshots', () => {
