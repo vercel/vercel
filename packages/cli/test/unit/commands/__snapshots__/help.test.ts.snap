@@ -5989,19 +5989,12 @@ exports[`help command > project help output snapshots > project protection trust
 "
   ▲ vercel project protection trusted-ips [action] [name] [options]
 
-  Show, set, or clear the Trusted IPs allowlist for deployment protection                                               
+  Show the Trusted IPs allowlist for deployment protection                                                              
 
   Options:
 
-       --deployment-type <TYPE>  Deployment target the allowlist applies to: all, preview, production,                       
-                                 prod_deployment_urls_and_all_previews, all_except_custom_domains                            
-  -F,  --format <FORMAT>         Specify the output format (json)                                                            
-       --ip <IP>                 IPv4 address or CIDR to allowlist (repeatable). Append an optional note with "=", e.g.      
-                                 203.0.113.4=office. IPv6 is not supported.                                                  
-       --json                    Output as JSON                                                                              
-       --mode <MODE>             Protection mode: additional (IP must match plus another protection) or exclusive (IP match  
-                                 alone bypasses protection)                                                                  
-  -y,  --yes                     Accept default value for all prompts                                                        
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
 
 
   Global Options:
@@ -6024,17 +6017,9 @@ exports[`help command > project help output snapshots > project protection trust
 
     $ vercel project protection trusted-ips get
 
-  - Allowlist IPs for all deployments in additional mode
+  - Show the allowlist for a named project as JSON
 
-    $ vercel project protection trusted-ips set my-app --ip 203.0.113.4 --ip 198.51.100.0/24 --deployment-type all --mode additional
-
-  - Allowlist an IP with a note
-
-    $ vercel project protection trusted-ips set --ip "203.0.113.4=office VPN" --deployment-type production --mode exclusive
-
-  - Clear the Trusted IPs allowlist
-
-    $ vercel project protection trusted-ips disable my-app --yes
+    $ vercel project protection trusted-ips get my-app --json
 
 "
 `;

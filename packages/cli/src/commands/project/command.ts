@@ -571,7 +571,7 @@ export const protectionSubcommand = {
 } as const;
 
 /**
- * `vercel project protection trusted-ips get|set|disable`.
+ * `vercel project protection trusted-ips get`.
  *
  * Nested under `project protection`; the name embeds the middle segment so the
  * help synopsis renders `vercel project protection trusted-ips` with
@@ -581,60 +581,20 @@ export const protectionSubcommand = {
 export const trustedIpsSubcommand = {
   name: 'protection trusted-ips',
   aliases: [],
-  description:
-    'Show, set, or clear the Trusted IPs allowlist for deployment protection',
+  description: 'Show the Trusted IPs allowlist for deployment protection',
   arguments: [
     { name: 'action', required: false },
     { name: 'name', required: false },
   ],
-  options: [
-    formatOption,
-    jsonOption,
-    yesOption,
-    {
-      name: 'ip',
-      shorthand: null,
-      type: [String],
-      argument: 'IP',
-      description:
-        'IPv4 address or CIDR to allowlist (repeatable). Append an optional note with "=", e.g. 203.0.113.4=office. IPv6 is not supported.',
-      deprecated: false,
-    },
-    {
-      name: 'deployment-type',
-      shorthand: null,
-      type: String,
-      argument: 'TYPE',
-      description:
-        'Deployment target the allowlist applies to: all, preview, production, prod_deployment_urls_and_all_previews, all_except_custom_domains',
-      deprecated: false,
-    },
-    {
-      name: 'mode',
-      shorthand: null,
-      type: String,
-      argument: 'MODE',
-      description:
-        'Protection mode: additional (IP must match plus another protection) or exclusive (IP match alone bypasses protection)',
-      deprecated: false,
-    },
-  ],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Show the Trusted IPs allowlist for the linked project',
       value: `${packageName} project protection trusted-ips get`,
     },
     {
-      name: 'Allowlist IPs for all deployments in additional mode',
-      value: `${packageName} project protection trusted-ips set my-app --ip 203.0.113.4 --ip 198.51.100.0/24 --deployment-type all --mode additional`,
-    },
-    {
-      name: 'Allowlist an IP with a note',
-      value: `${packageName} project protection trusted-ips set --ip "203.0.113.4=office VPN" --deployment-type production --mode exclusive`,
-    },
-    {
-      name: 'Clear the Trusted IPs allowlist',
-      value: `${packageName} project protection trusted-ips disable my-app --yes`,
+      name: 'Show the allowlist for a named project as JSON',
+      value: `${packageName} project protection trusted-ips get my-app --json`,
     },
   ],
 } as const;
