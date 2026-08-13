@@ -12,6 +12,7 @@ import { membersSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
+import { membersAdd } from './members-add';
 
 interface ProjectMember {
   uid: string;
@@ -31,6 +32,10 @@ export default async function members(
   client: Client,
   argv: string[]
 ): Promise<number> {
+  if (argv[0] === 'add') {
+    return membersAdd(client, argv.slice(1));
+  }
+
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(membersSubcommand.options);
   try {

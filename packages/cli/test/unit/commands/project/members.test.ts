@@ -150,4 +150,114 @@ describe('project members', () => {
       }
     });
   });
+
+  describe('add', () => {
+    it('adds a member by email and sends the expected request body', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'prj_123',
+        name: 'my-project',
+      });
+
+      let received: Record<string, unknown> | undefined;
+      client.scenario.post('/v1/projects/:idOrName/members', (req, res) => {
+        expect(req.params.idOrName).toBe('prj_123');
+        received = req.body;
+        res.json({ id: 'prj_123' });
+      });
+
+      client.setArgv(
+        'project',
+        'members',
+        'add',
+        'my-project',
+        'user@example.com',
+        '--role',
+        'PROJECT_VIEWER'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(0);
+      expect(received).toEqual({
+        email: 'user@example.com',
+        role: 'PROJECT_VIEWER',
+      });
+      await expect(client.stderr).toOutput(
+        'Added user@example.com to my-project as PROJECT_VIEWER.'
+      );
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:members', value: 'members add' },
+        { key: 'argument:project', value: '[REDACTED]' },
+        { key: 'argument:member', value: '[REDACTED]' },
+        { key: 'option:role', value: 'PROJECT_VIEWER' },
+      ]);
+    });
+
+    it('sends a username field for a non-email, non-uid identifier', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'prj_123',
+        name: 'my-project',
+      });
+
+      let received: Record<string, unknown> | undefined;
+      client.scenario.post('/v1/projects/:idOrName/members', (_req, res) => {
+        received = _req.body;
+        res.json({ id: 'prj_123' });
+      });
+
+      client.setArgv(
+        'project',
+        'members',
+        'add',
+        'my-project',
+        'octocat',
+        '--role',
+        'admin'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(0);
+      expect(received).toEqual({ username: 'octocat', role: 'ADMIN' });
+    });
+
+    it('rejects an invalid role without calling the API', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'prj_123',
+        name: 'my-project',
+      });
+
+      client.setArgv(
+        'project',
+        'members',
+        'add',
+        'my-project',
+        'user@example.com',
+        '--role',
+        'OWNER'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('`--role` must be one of:');
+    });
+
+    it('requires a role', async () => {
+      client.setArgv(
+        'project',
+        'members',
+        'add',
+        'my-project',
+        'user@example.com'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('`--role` is required.');
+    });
+
+    it('errors when arguments are missing', async () => {
+      client.setArgv('project', 'members', 'add', 'my-project');
+      const exitCode = await project(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('Invalid number of arguments.');
+    });
+  });
 });

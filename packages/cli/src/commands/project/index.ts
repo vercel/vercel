@@ -156,7 +156,9 @@ export default async function main(client: Client) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(membersSubcommand);
       }
-      telemetry.trackCliSubcommandMembers(subcommandOriginal);
+      telemetry.trackCliSubcommandMembers(
+        args[0] === 'add' ? 'members add' : subcommandOriginal
+      );
       exitCode = await members(client, args);
       break;
     case 'accessGroups':

@@ -1,6 +1,9 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { projectCommand } from '../../../../commands/project/command';
+import {
+  PROJECT_MEMBER_ROLES,
+  type projectCommand,
+} from '../../../../commands/project/command';
 
 export class ProjectTelemetryClient
   extends TelemetryClient
@@ -74,6 +77,38 @@ export class ProjectTelemetryClient
       subcommand: 'members',
       value: actual,
     });
+  }
+
+  /** Project name/id argument for `members add`/`members remove` (redacted). */
+  trackCliArgumentProject(project: string | undefined) {
+    if (project) {
+      this.trackCliArgument({
+        arg: 'project',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  /** Member identifier (email/username/uid) for `members add`/`remove` (redacted). */
+  trackCliArgumentMember(member: string | undefined) {
+    if (member) {
+      this.trackCliArgument({
+        arg: 'member',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  /** Records the `--role` value verbatim when it is a known enum, else redacts. */
+  trackCliOptionRole(role: string | undefined) {
+    if (role) {
+      this.trackCliOption({
+        option: 'role',
+        value: (PROJECT_MEMBER_ROLES as readonly string[]).includes(role)
+          ? role
+          : this.redactedValue,
+      });
+    }
   }
 
   trackCliSubcommandAccessGroups(actual: string) {

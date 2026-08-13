@@ -379,10 +379,35 @@ export const accessSummarySubcommand = {
   ],
 } as const;
 
+/** Project roles accepted by the add-member API (`POST /v1/projects/:id/members`). */
+export const PROJECT_MEMBER_ROLES = [
+  'ADMIN',
+  'PROJECT_DEVELOPER',
+  'PROJECT_VIEWER',
+  'PROJECT_GUEST',
+] as const;
+
+/** `--role` for `project members add` (request body role, verbatim API enum). */
+const memberRoleOption = {
+  name: 'role',
+  shorthand: null,
+  type: String,
+  argument: 'ROLE',
+  description: `Project role when adding a member: ${PROJECT_MEMBER_ROLES.join(', ')}`,
+  deprecated: false,
+} as const;
+
+/** Flags for `vercel project members add` (also merged into `members` help). */
+export const membersAddFlags = [
+  formatOption,
+  jsonOption,
+  memberRoleOption,
+] as const;
+
 export const membersSubcommand = {
   name: 'members',
   aliases: ['member'],
-  description: 'List project members for a project',
+  description: 'List or add project members for a project',
   arguments: [
     {
       name: 'name',
@@ -406,6 +431,7 @@ export const membersSubcommand = {
       description: 'Limit number of project members returned (1-100)',
       deprecated: false,
     },
+    memberRoleOption,
   ],
   examples: [
     {
@@ -415,6 +441,10 @@ export const membersSubcommand = {
     {
       name: 'List members for a named project as JSON',
       value: `${packageName} project members my-project --json`,
+    },
+    {
+      name: 'Add a member to a project by email with a role',
+      value: `${packageName} project members add my-project user@example.com --role PROJECT_VIEWER`,
     },
   ],
 } as const;

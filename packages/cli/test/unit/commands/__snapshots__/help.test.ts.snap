@@ -849,7 +849,8 @@ exports[`help command > connex help output snapshots > connex create subcommand 
        --icon <PATH>             Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)               
        --json                    Output as JSON                                                                              
   -n,  --name <NAME>             Name of the connector                                                                       
-       --trigger-event <EVENT>   Webhook event to receive. Repeatable.                                                       
+       --trigger-event <EVENT>   Webhook event to receive. Repeatable. Requires --triggers and replaces the provider's       
+                                 default events.                                                                             
        --triggers                Enable webhook triggers for this connector                                                  
 
 
@@ -5700,6 +5701,8 @@ exports[`help command > project help output snapshots > project help column widt
                                    …
                                    …
                                    …
+                                   …
+                                   …
                                    a
                                    …
   access-groups   [name]           …
@@ -5824,7 +5827,7 @@ exports[`help command > project help output snapshots > project help column widt
   inspect         [name]           Displays information related to a project
   list                             Show all projects in the selected scope  
                                    (default)                                
-  members         [name]           List project members for a project       
+  members         [name]           List or add project members for a project
   access-groups   [name]           List access groups for a project         
   protection      [action] [name]  Show or toggle deployment protection     
                                    settings for a project                   
@@ -5872,7 +5875,7 @@ exports[`help command > project help output snapshots > project help column widt
                                    /v2/projects/.../checks)                                                         
   inspect         [name]           Displays information related to a project                                        
   list                             Show all projects in the selected scope (default)                                
-  members         [name]           List project members for a project                                               
+  members         [name]           List or add project members for a project                                        
   access-groups   [name]           List access groups for a project                                                 
   protection      [action] [name]  Show or toggle deployment protection settings for a project                      
   web-analytics   [name]           Enable Web Analytics for a project                                               
