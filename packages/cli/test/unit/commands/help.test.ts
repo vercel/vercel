@@ -431,6 +431,14 @@ describe('help command', () => {
           })
         ).toMatchSnapshot();
       });
+      it('env shared update help column width 120', () => {
+        expect(
+          help(env.sharedUpdateSubcommand, {
+            columns: 120,
+            parent: env.sharedSubcommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 

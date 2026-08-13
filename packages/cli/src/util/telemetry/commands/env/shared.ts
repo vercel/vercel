@@ -26,4 +26,11 @@ export class EnvSharedTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandUpdate(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'update',
+      value: actual,
+    });
+  }
 }

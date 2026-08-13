@@ -514,6 +514,83 @@ export const sharedAddSubcommand = {
   ],
 } as const;
 
+export const sharedUpdateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description: 'Update a team Shared Environment Variable',
+  arguments: [
+    {
+      name: 'name-or-id',
+      required: true,
+    },
+    {
+      name: 'value',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      name: 'environment',
+      description:
+        'Replace the target environments: production, preview, or development (repeatable)',
+      shorthand: 'e',
+      type: [String],
+      argument: 'TARGET',
+      deprecated: false,
+    },
+    {
+      name: 'link-project',
+      description: 'Link the variable to a project by ID (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'ID',
+      deprecated: false,
+    },
+    {
+      name: 'unlink-project',
+      description: 'Unlink the variable from a project by ID (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'ID',
+      deprecated: false,
+    },
+    {
+      name: 'sensitive',
+      description:
+        'Update the variable to sensitive so it cannot be read later',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'comment',
+      description: 'Update the comment describing the variable',
+      shorthand: null,
+      type: String,
+      argument: 'TEXT',
+      deprecated: false,
+    },
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when updating the variable',
+    },
+  ],
+  examples: [
+    {
+      name: 'Update the value of a Shared Environment Variable',
+      value: `${packageName} env shared update API_URL "<value>"`,
+    },
+    {
+      name: 'Replace the target environments',
+      value: `${packageName} env shared update API_URL -e production -e preview`,
+    },
+    {
+      name: 'Link and unlink projects without deleting the variable',
+      value: `${packageName} env shared update API_URL --link-project new-project --unlink-project old-project`,
+    },
+  ],
+} as const;
+
 export const sharedSubcommand = {
   name: 'shared',
   aliases: [],
@@ -523,6 +600,7 @@ export const sharedSubcommand = {
     sharedListSubcommand,
     sharedInspectSubcommand,
     sharedAddSubcommand,
+    sharedUpdateSubcommand,
   ],
   options: [],
   examples: [
