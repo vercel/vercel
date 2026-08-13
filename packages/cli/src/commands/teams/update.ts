@@ -6,6 +6,7 @@ import output from '../../output-manager';
 import getScope from '../../util/get-scope';
 import getTeams from '../../util/teams/get-teams';
 import updateTeam, {
+  type DeploymentPolicyRules,
   type TeamUpdatePayload,
 } from '../../util/teams/update-team';
 import { parseArguments } from '../../util/get-args';
@@ -24,7 +25,7 @@ import {
 import { updateSubcommand } from './command';
 import { TeamsUpdateTelemetryClient } from '../../util/telemetry/commands/teams/update';
 
-const TOOLBAR_VALUES = ['on', 'off', 'default'] as const;
+const ON_OFF_DEFAULT_VALUES = ['on', 'off', 'default'] as const;
 const BUILD_MACHINE_VALUES = [
   'basic',
   'standard',
@@ -32,8 +33,53 @@ const BUILD_MACHINE_VALUES = [
   'turbo',
   'elastic',
 ] as const;
+const ON_OFF_VALUES = ['on', 'off'] as const;
+type OnOff = (typeof ON_OFF_VALUES)[number];
 
 const validateSlug = (value: string) => /^[a-z]+[a-z0-9_-]*$/.test(value);
+
+/** Sentinel returned by parsePolicyRules for values that fail validation. */
+const INVALID_POLICY = Symbol('invalid-policy');
+
+/**
+ * Parses a deployment-policy flag value: the literal `null` clears the rule
+ * list; otherwise the value must be a JSON array whose entries are objects
+ * with `enabled`, `environments`, and `sources`. Rule internals (environment
+ * scopes, source enums) are validated by the API.
+ */
+function parsePolicyRules(
+  value: string
+): DeploymentPolicyRules | typeof INVALID_POLICY {
+  const trimmed = value.trim();
+  if (trimmed === 'null') {
+    return null;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    return INVALID_POLICY;
+  }
+  if (parsed === null) {
+    return null;
+  }
+  if (!Array.isArray(parsed)) {
+    return INVALID_POLICY;
+  }
+  for (const rule of parsed) {
+    if (
+      typeof rule !== 'object' ||
+      rule === null ||
+      Array.isArray(rule) ||
+      typeof rule.enabled !== 'boolean' ||
+      !Array.isArray(rule.environments) ||
+      !Array.isArray(rule.sources)
+    ) {
+      return INVALID_POLICY;
+    }
+  }
+  return parsed as DeploymentPolicyRules;
+}
 
 export default async function update(
   client: Client,
@@ -71,6 +117,11 @@ export default async function update(
   const previewSuffixFlag = flags['--preview-suffix'];
   const toolbarFlag = flags['--toolbar'];
   const buildMachineFlag = flags['--default-build-machine'];
+  const verifiedCommitsFlag = flags['--require-verified-commits'];
+  const sensitiveEnvPolicyFlag = flags['--sensitive-env-policy'];
+  const ipVisibilityFlag = flags['--ip-visibility'];
+  const gitSourcePolicyFlag = flags['--git-source-policy'];
+  const deploymentSourcePolicyFlag = flags['--deployment-source-policy'];
   const yes = Boolean(flags['--yes']);
 
   telemetry.trackCliArgumentTeamSlug(teamSlugArg);
@@ -79,6 +130,11 @@ export default async function update(
   telemetry.trackCliOptionPreviewSuffix(previewSuffixFlag);
   telemetry.trackCliOptionToolbar(toolbarFlag);
   telemetry.trackCliOptionDefaultBuildMachine(buildMachineFlag);
+  telemetry.trackCliOptionRequireVerifiedCommits(verifiedCommitsFlag);
+  telemetry.trackCliOptionSensitiveEnvPolicy(sensitiveEnvPolicyFlag);
+  telemetry.trackCliOptionIpVisibility(ipVisibilityFlag);
+  telemetry.trackCliOptionGitSourcePolicy(gitSourcePolicyFlag);
+  telemetry.trackCliOptionDeploymentSourcePolicy(deploymentSourcePolicyFlag);
   telemetry.trackCliFlagYes(yes);
 
   if (args.length > 1) {
@@ -134,11 +190,11 @@ export default async function update(
   }
 
   if (toolbarFlag !== undefined) {
-    if (!TOOLBAR_VALUES.includes(toolbarFlag as (typeof TOOLBAR_VALUES)[number])) {
+    if (!ON_OFF_DEFAULT_VALUES.includes(toolbarFlag as (typeof ON_OFF_DEFAULT_VALUES)[number])) {
       return invalidValue(
         client,
         'invalid_toolbar',
-        `Invalid ${param('--toolbar')}: must be one of ${TOOLBAR_VALUES.join(', ')}`
+        `Invalid ${param('--toolbar')}: must be one of ${ON_OFF_DEFAULT_VALUES.join(', ')}`
       );
     }
     payload.enablePreviewFeedback = toolbarFlag;
@@ -159,6 +215,81 @@ export default async function update(
     }
     payload.resourceConfig = { buildMachine: { default: buildMachineFlag } };
     changes.push(['Build Machine', buildMachineFlag]);
+  }
+
+  if (verifiedCommitsFlag !== undefined) {
+    if (!ON_OFF_VALUES.includes(verifiedCommitsFlag as OnOff)) {
+      return invalidValue(
+        client,
+        'invalid_require_verified_commits',
+        `Invalid ${param('--require-verified-commits')}: must be one of ${ON_OFF_VALUES.join(', ')}`
+      );
+    }
+    payload.requireVerifiedCommits = verifiedCommitsFlag === 'on';
+    changes.push(['Verified Commits', verifiedCommitsFlag]);
+  }
+
+  if (sensitiveEnvPolicyFlag !== undefined) {
+    if (!ON_OFF_DEFAULT_VALUES.includes(sensitiveEnvPolicyFlag as (typeof ON_OFF_DEFAULT_VALUES)[number])) {
+      return invalidValue(
+        client,
+        'invalid_sensitive_env_policy',
+        `Invalid ${param('--sensitive-env-policy')}: must be one of ${ON_OFF_DEFAULT_VALUES.join(', ')}`
+      );
+    }
+    payload.sensitiveEnvironmentVariablePolicy = sensitiveEnvPolicyFlag;
+    changes.push(['Sensitive Env Policy', sensitiveEnvPolicyFlag]);
+  }
+
+  if (ipVisibilityFlag !== undefined) {
+    if (!ON_OFF_VALUES.includes(ipVisibilityFlag as OnOff)) {
+      return invalidValue(
+        client,
+        'invalid_ip_visibility',
+        `Invalid ${param('--ip-visibility')}: must be one of ${ON_OFF_VALUES.join(', ')}`
+      );
+    }
+    // The API field is inverted: `hideIpAddresses: true` hides them.
+    payload.hideIpAddresses = ipVisibilityFlag === 'off';
+    changes.push(['IP Visibility', ipVisibilityFlag]);
+  }
+
+  if (gitSourcePolicyFlag !== undefined) {
+    const rules = parsePolicyRules(gitSourcePolicyFlag);
+    if (rules === INVALID_POLICY) {
+      return invalidValue(
+        client,
+        'invalid_git_source_policy',
+        `Invalid ${param('--git-source-policy')}: must be a JSON array of rules (each with enabled, environments, and sources) or null`
+      );
+    }
+    payload.deploymentPolicy = {
+      ...payload.deploymentPolicy,
+      gitSources: rules,
+    };
+    changes.push([
+      'Git Sources',
+      rules === null ? '(cleared)' : `${rules.length} rule${rules.length === 1 ? '' : 's'}`,
+    ]);
+  }
+
+  if (deploymentSourcePolicyFlag !== undefined) {
+    const rules = parsePolicyRules(deploymentSourcePolicyFlag);
+    if (rules === INVALID_POLICY) {
+      return invalidValue(
+        client,
+        'invalid_deployment_source_policy',
+        `Invalid ${param('--deployment-source-policy')}: must be a JSON array of rules (each with enabled, environments, and sources) or null`
+      );
+    }
+    payload.deploymentPolicy = {
+      ...payload.deploymentPolicy,
+      deploymentSources: rules,
+    };
+    changes.push([
+      'Deploy Sources',
+      rules === null ? '(cleared)' : `${rules.length} rule${rules.length === 1 ? '' : 's'}`,
+    ]);
   }
 
   if (Object.keys(payload).length === 0) {

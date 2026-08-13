@@ -269,4 +269,143 @@ describe('teams update', () => {
       exitSpy.mockRestore();
     });
   });
+
+  describe('policy flags', () => {
+    it('maps --require-verified-commits and --sensitive-env-policy', async () => {
+      let patchBody: Record<string, unknown> | undefined;
+      client.scenario.patch(`/teams/${team.id}`, (req, res) => {
+        patchBody = req.body as Record<string, unknown>;
+        return res.json(team);
+      });
+
+      client.setArgv(
+        'teams',
+        'update',
+        '--require-verified-commits',
+        'on',
+        '--sensitive-env-policy',
+        'default'
+      );
+      const exitCode = await teams(client);
+
+      expect(exitCode).toBe(0);
+      expect(patchBody).toEqual({
+        requireVerifiedCommits: true,
+        sensitiveEnvironmentVariablePolicy: 'default',
+      });
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:update', value: 'update' },
+        { key: 'option:require-verified-commits', value: 'on' },
+        { key: 'option:sensitive-env-policy', value: 'default' },
+      ]);
+    });
+
+    it('inverts --ip-visibility into hideIpAddresses', async () => {
+      let patchBody: Record<string, unknown> | undefined;
+      client.scenario.patch(`/teams/${team.id}`, (req, res) => {
+        patchBody = req.body as Record<string, unknown>;
+        return res.json(team);
+      });
+
+      client.setArgv('teams', 'update', '--ip-visibility', 'off');
+      const exitCode = await teams(client);
+
+      expect(exitCode).toBe(0);
+      expect(patchBody).toEqual({ hideIpAddresses: true });
+    });
+
+    it('sends deploymentPolicy rules from JSON policy flags', async () => {
+      let patchBody: Record<string, unknown> | undefined;
+      client.scenario.patch(`/teams/${team.id}`, (req, res) => {
+        patchBody = req.body as Record<string, unknown>;
+        return res.json(team);
+      });
+
+      const rule = {
+        enabled: true,
+        environments: [{ type: 'system', target: 'production' }],
+        sources: ['git', 'cli'],
+      };
+      client.setArgv(
+        'teams',
+        'update',
+        '--deployment-source-policy',
+        JSON.stringify([rule]),
+        '--git-source-policy',
+        'null'
+      );
+      const exitCode = await teams(client);
+
+      expect(exitCode).toBe(0);
+      expect(patchBody).toEqual({
+        deploymentPolicy: {
+          gitSources: null,
+          deploymentSources: [rule],
+        },
+      });
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:update', value: 'update' },
+        { key: 'option:git-source-policy', value: '[REDACTED]' },
+        { key: 'option:deployment-source-policy', value: '[REDACTED]' },
+      ]);
+    });
+
+    it('rejects malformed policy JSON before calling the API', async () => {
+      let called = false;
+      client.scenario.patch(`/teams/${team.id}`, (_req, res) => {
+        called = true;
+        return res.json(team);
+      });
+
+      client.setArgv('teams', 'update', '--git-source-policy', '{not json');
+      const exitCode = await teams(client);
+
+      expect(exitCode).toBe(1);
+      expect(called).toBe(false);
+      await expect(client.stderr).toOutput('must be a JSON array of rules');
+    });
+
+    it('rejects policy rules missing required fields', async () => {
+      client.setArgv(
+        'teams',
+        'update',
+        '--deployment-source-policy',
+        JSON.stringify([{ enabled: true }])
+      );
+      const exitCode = await teams(client);
+
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('must be a JSON array of rules');
+    });
+
+    it('rejects an invalid --require-verified-commits value', async () => {
+      client.setArgv('teams', 'update', '--require-verified-commits', 'yes');
+      const exitCode = await teams(client);
+
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('must be one of on, off');
+    });
+
+    it('outputs error JSON for invalid --ip-visibility in non-interactive mode', async () => {
+      client.nonInteractive = true;
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv('teams', 'update', '--ip-visibility', 'visible');
+      await expect(teams(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('invalid_ip_visibility');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+    });
+  });
 });

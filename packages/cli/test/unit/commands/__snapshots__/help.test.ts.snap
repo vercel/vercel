@@ -7471,12 +7471,17 @@ exports[`help command > teams help output snapshots > teams update help output s
 
   Options:
 
-       --default-build-machine  Default build machine for new builds: one of basic, standard, enhanced, turbo, or elastic    
-       --name                   New display name for the team                                                                
-       --preview-suffix         Domain suffix for preview deployment URLs; pass an empty string to clear it                  
-       --slug                   New URL slug for the team; this changes the team URL                                         
-       --toolbar                Vercel Toolbar on preview deployments: one of on, off, or default                            
-  -y,  --yes                    Accept default value for all prompts                                                         
+       --default-build-machine     Default build machine for new builds: one of basic, standard, enhanced, turbo, or elastic 
+       --deployment-source-policy  Deployment policy deployment-source rules as a JSON array, or null to clear them          
+       --git-source-policy         Deployment policy git-source rules as a JSON array, or null to clear them                 
+       --ip-visibility             Show or hide IP addresses in Monitoring queries: one of on or off                         
+       --name                      New display name for the team                                                             
+       --preview-suffix            Domain suffix for preview deployment URLs; pass an empty string to clear it               
+       --require-verified-commits  Require signed and verified commits before deployments: one of on or off                  
+       --sensitive-env-policy      Policy for creating Environment Variables as sensitive: one of on, off, or default        
+       --slug                      New URL slug for the team; this changes the team URL                                      
+       --toolbar                   Vercel Toolbar on preview deployments: one of on, off, or default                         
+  -y,  --yes                       Accept default value for all prompts                                                      
 
 
   Global Options:
@@ -7506,6 +7511,14 @@ exports[`help command > teams help output snapshots > teams update help output s
   - Update a specific team by slug
 
     $ vercel teams update acme --default-build-machine enhanced
+
+  - Require verified commits and sensitive Environment Variables
+
+    $ vercel teams update --require-verified-commits on --sensitive-env-policy on
+
+  - Restrict deployment sources to git and CLI
+
+    $ vercel teams update --deployment-source-policy '[{"enabled":true,"environments":[{"type":"system","target":"production"}],"sources":["git","cli"]}]'
 
 "
 `;

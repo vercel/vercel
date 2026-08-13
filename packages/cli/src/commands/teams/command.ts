@@ -221,6 +221,46 @@ export const updateSubcommand = {
         'Default build machine for new builds: one of basic, standard, enhanced, turbo, or elastic',
       deprecated: false,
     },
+    {
+      name: 'require-verified-commits',
+      shorthand: null,
+      type: String,
+      description:
+        'Require signed and verified commits before deployments: one of on or off',
+      deprecated: false,
+    },
+    {
+      name: 'sensitive-env-policy',
+      shorthand: null,
+      type: String,
+      description:
+        'Policy for creating Environment Variables as sensitive: one of on, off, or default',
+      deprecated: false,
+    },
+    {
+      name: 'ip-visibility',
+      shorthand: null,
+      type: String,
+      description:
+        'Show or hide IP addresses in Monitoring queries: one of on or off',
+      deprecated: false,
+    },
+    {
+      name: 'git-source-policy',
+      shorthand: null,
+      type: String,
+      description:
+        'Deployment policy git-source rules as a JSON array, or null to clear them',
+      deprecated: false,
+    },
+    {
+      name: 'deployment-source-policy',
+      shorthand: null,
+      type: String,
+      description:
+        'Deployment policy deployment-source rules as a JSON array, or null to clear them',
+      deprecated: false,
+    },
     yesOption,
   ],
   examples: [
@@ -235,6 +275,14 @@ export const updateSubcommand = {
     {
       name: 'Update a specific team by slug',
       value: `${packageName} teams update acme --default-build-machine enhanced`,
+    },
+    {
+      name: 'Require verified commits and sensitive Environment Variables',
+      value: `${packageName} teams update --require-verified-commits on --sensitive-env-policy on`,
+    },
+    {
+      name: 'Restrict deployment sources to git and CLI',
+      value: `${packageName} teams update --deployment-source-policy '[{"enabled":true,"environments":[{"type":"system","target":"production"}],"sources":["git","cli"]}]'`,
     },
   ],
 } as const;
