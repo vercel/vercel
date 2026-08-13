@@ -55,6 +55,7 @@ import { rollbackCommand } from '../../../src/commands/rollback/command';
 import { rollingReleaseCommand } from '../../../src/commands/rolling-release/command';
 import { routesCommand } from '../../../src/commands/routes/command';
 import { sandboxCommand } from '../../../src/commands/sandbox/command';
+import { securityCommand } from '../../../src/commands/security/command';
 import { skillsCommand } from '../../../src/commands/skills/command';
 import { targetCommand } from '../../../src/commands/target/command';
 import { teamsCommand } from '../../../src/commands/teams/command';
@@ -123,6 +124,7 @@ const ROOT_COMMANDS = [
   rollingReleaseCommand,
   routesCommand,
   sandboxCommand,
+  securityCommand,
   skillsCommand,
   targetCommand,
   teamsCommand,

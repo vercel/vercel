@@ -1162,6 +1162,10 @@ const main = async () => {
           telemetry.trackCliCommandSandbox(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).sandbox;
           break;
+        case 'security':
+          telemetry.trackCliCommandSecurity(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).security;
+          break;
         case 'skills':
           telemetry.trackCliCommandSkills(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).skills;
