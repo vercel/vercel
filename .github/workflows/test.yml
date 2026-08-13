@@ -346,26 +346,12 @@ jobs:
           DD_PROFILING_ENABLED: 'false'
           DD_NATIVE_METRICS: 'false'
         run: |
-          attempt=1
-          max_attempts=2
           export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
           if [ -n "$TURBO_EXPERIMENTAL_OTEL_ENDPOINT" ]; then
             export TURBO_EXPERIMENTAL_OTEL_HEADERS="Authorization=Bearer ${TURBO_TOKEN}"
           fi
 
-          while [ "$attempt" -le "$max_attempts" ]; do
-            if turbo run test-unit --affected --filter=vercel; then
-              exit 0
-            fi
-
-            if [ "$attempt" -eq "$max_attempts" ]; then
-              echo "Tests failed after $max_attempts attempts."
-              exit 1
-            fi
-
-            echo "Tests failed; retrying once."
-            attempt=$((attempt + 1))
-          done
+          turbo run test-unit --affected --filter=vercel
 
   e2e-artifacts:
     name: Resolve E2E Artifacts
