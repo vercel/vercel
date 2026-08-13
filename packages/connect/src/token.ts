@@ -36,6 +36,15 @@ export interface ConnectTokenExchangeSubject {
 
 export interface ConnectTokenParams {
   subject: ConnectTokenSubject;
+  /**
+   * Resolve this connector to the temporary connector for the current preview
+   * branch. Production requests continue to use the source connector.
+   *
+   * The SDK supplies the current Vercel deployment ID to the dedicated branch
+   * endpoint; Connect validates the deployment against the caller's project
+   * OIDC token and derives the branch server-side.
+   */
+  branch?: boolean;
   installationId?: string;
   audience?: string[];
   /**
@@ -159,7 +168,10 @@ export async function getTokenResponse(
   options?: ConnectOptions
 ): Promise<ConnectTokenResponse> {
   const bufferMs = params.validityBufferMs ?? DEFAULT_VALIDITY_BUFFER_MS;
-  const cacheKey = tokenCacheKey(connector, params);
+  const branchDeploymentId = params.branch
+    ? readRequiredDeploymentId(process.env.VERCEL_DEPLOYMENT_ID)
+    : undefined;
+  const cacheKey = tokenCacheKey(connector, params, branchDeploymentId);
 
   if (options?.forceRefresh) {
     cache.delete(cacheKey);
@@ -176,8 +188,10 @@ export async function getTokenResponse(
   }
 
   const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
-
-  const endpoint = `https://api.vercel.com/v1/connect/token/${encodeURIComponent(connector)}`;
+  const { branch, ...tokenParams } = params;
+  const endpoint = branch
+    ? `https://api.vercel.com/v1/connect/token/${encodeURIComponent(connector)}/branch`
+    : `https://api.vercel.com/v1/connect/token/${encodeURIComponent(connector)}`;
 
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -186,7 +200,10 @@ export async function getTokenResponse(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${vercelToken}`,
     },
-    body: JSON.stringify(params),
+    body: JSON.stringify({
+      ...tokenParams,
+      ...(branchDeploymentId ? { deploymentId: branchDeploymentId } : {}),
+    }),
   });
 
   if (!response.ok) {
@@ -255,7 +272,21 @@ export function deleteTokenCacheEntry(
   connector: string,
   params: ConnectTokenParams
 ): void {
-  cache.delete(tokenCacheKey(connector, params));
+  const branchDeploymentId = params.branch
+    ? readRequiredDeploymentId(process.env.VERCEL_DEPLOYMENT_ID)
+    : undefined;
+  cache.delete(tokenCacheKey(connector, params, branchDeploymentId));
+}
+
+function readRequiredDeploymentId(value: string | undefined): string {
+  const deploymentId = value?.trim();
+  if (!deploymentId) {
+    throw new ConnectError(
+      'Branch connector resolution requires VERCEL_DEPLOYMENT_ID',
+      { code: 'branch_deployment_unavailable' }
+    );
+  }
+  return deploymentId;
 }
 
 const DEFAULT_VALIDITY_BUFFER_MS = 30_000;
@@ -273,8 +304,12 @@ const cache = new Map<string, CacheEntry>();
  * equal arguments so {@link getTokenResponse} and
  * {@link deleteTokenCacheEntry} address the same entry.
  */
-function tokenCacheKey(connector: string, params: ConnectTokenParams): string {
-  return JSON.stringify({ connector, ...params });
+function tokenCacheKey(
+  connector: string,
+  params: ConnectTokenParams,
+  branchDeploymentId?: string
+): string {
+  return JSON.stringify({ connector, ...params, branchDeploymentId });
 }
 
 function evictLru(): void {
