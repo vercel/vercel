@@ -174,6 +174,18 @@ test(
 );
 
 test(
+  '[vercel dev] Explicit `proxy` entrypoint that returns a 200 response',
+  testFixtureStdio(
+    'proxy-response',
+    async (testPath: any) => {
+      await testPath(200, '/', 'hi from proxy');
+      await testPath(200, '/another', 'hi from proxy');
+    },
+    { skipDeploy: true }
+  )
+);
+
+test(
   '[vercel dev] Middleware that has no response',
   testFixtureStdio('middleware-no-response', async (testPath: any) => {
     await testPath(200, '/api/hello', 'hello from a serverless function');

@@ -824,6 +824,37 @@ describe('[vercel dev] experimentalServicesV2 service bindings', () => {
   });
 });
 
+describe('[vercel dev] services with a top-level proxy', () => {
+  test('[vercel dev] proxy runs ahead of service rewrites', async () => {
+    const dir = fixture('services-proxy');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      { skipNpmInstall: true },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      // The proxy responds directly for its own path.
+      const proxied = await nodeFetch(`http://localhost:${port}/from-proxy`);
+      expect(proxied.status).toBe(200);
+      expect(await proxied.text()).toBe('hi from proxy');
+
+      // Everything else falls through the proxy to the routed service.
+      const web = await nodeFetch(`http://localhost:${port}/`);
+      expect(web.status).toBe(200);
+      expect(await web.text()).toBe('web: /');
+
+      const webPath = await nodeFetch(`http://localhost:${port}/some/path`);
+      expect(webPath.status).toBe(200);
+      expect(await webPath.text()).toBe('web: /some/path');
+    } finally {
+      await dev.kill();
+    }
+  });
+});
+
 describe('[vercel dev] Pyproject queue subscribers', () => {
   const resultsDir = join(
     __dirname,

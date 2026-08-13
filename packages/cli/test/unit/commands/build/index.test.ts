@@ -2989,6 +2989,68 @@ createServer((_req, res) => {
     expect(await fs.pathExists(join(output, 'functions'))).toBe(false);
   });
 
+  it('should build a top-level `proxy` alongside services', async () => {
+    const cwd = await getWriteableDirectory();
+    const output = join(cwd, '.vercel', 'output');
+    await fs.ensureDir(join(cwd, '.vercel'));
+    await fs.writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: '.',
+      projectId: '.',
+      settings: {
+        framework: null,
+        installCommand: '',
+      },
+    });
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      private: true,
+    });
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      services: {
+        ui: { root: '.', entrypoint: 'ui.js', runtime: 'node' },
+      },
+      rewrites: [{ source: '/(.*)', destination: { service: 'ui' } }],
+      proxy: { entrypoint: 'proxy.js' },
+    });
+    await fs.outputFile(
+      join(cwd, 'ui.js'),
+      `
+const { createServer } = require('node:http');
+
+createServer((_req, res) => {
+  res.statusCode = 200;
+  res.end('ok');
+}).listen(3000);
+`
+    );
+    await fs.outputFile(
+      join(cwd, 'proxy.js'),
+      `module.exports = function proxy() { return new Response('proxy'); };\n`
+    );
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    // The proxy is a project-level function, not a service.
+    expect(await fs.readdir(join(output, 'functions'))).toEqual(['proxy.func']);
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.services).toEqual([
+      expect.objectContaining({
+        schema: 'experimentalServicesV2',
+        name: 'ui',
+      }),
+    ]);
+    // The proxy runs before the filesystem phase, so it sees requests ahead of
+    // the rewrites that hand traffic to a service.
+    expect(config.routes).toEqual([
+      expect.objectContaining({ middlewarePath: 'proxy', continue: true }),
+      { handle: 'filesystem' },
+      expect.objectContaining({
+        destination: { service: 'ui', type: 'service' },
+      }),
+    ]);
+  });
+
   it('should apply per-service `functions` config to the service lambda', async () => {
     const cwd = await getWriteableDirectory();
     const output = join(cwd, '.vercel', 'output');

@@ -759,6 +759,10 @@ export default class DevServer {
       this.readJsonFile<VercelConfig>(configPath),
     ]);
 
+    // Validate what the user actually wrote. Everything below turns
+    // `vercelConfig` into a derived build plan (zero-config builders, the
+    // `proxy` builder, transformed routes), and those derived fields must not
+    // be fed back through a validator whose rules are about authored config.
     await this.validateVercelConfig(vercelConfig);
 
     this.projectSettings = {
@@ -912,8 +916,6 @@ export default class DevServer {
       // since it might catch all other requests
       vercelConfig.builds.sort(sortBuilders);
     }
-
-    await this.validateVercelConfig(vercelConfig);
 
     // TODO: temporarily strip and warn since `has` is not implemented yet
     vercelConfig.routes = (vercelConfig.routes || []).filter(route => {
