@@ -415,14 +415,6 @@ describe('help command', () => {
           })
         ).toMatchSnapshot();
       });
-      it('env shared inspect help column width 120', () => {
-        expect(
-          help(env.sharedInspectSubcommand, {
-            columns: 120,
-            parent: env.sharedSubcommand,
-          })
-        ).toMatchSnapshot();
-      });
     });
   });
 

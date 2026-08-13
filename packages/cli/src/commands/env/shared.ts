@@ -5,13 +5,7 @@ import getSubcommand from '../../util/get-subcommand';
 import { type Command, help } from '../help';
 import { printError } from '../../util/error';
 import ls from './shared-ls';
-import inspect from './shared-inspect';
-import {
-  envCommand,
-  sharedSubcommand,
-  sharedListSubcommand,
-  sharedInspectSubcommand,
-} from './command';
+import { envCommand, sharedSubcommand, sharedListSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
@@ -19,7 +13,6 @@ import { EnvSharedTelemetryClient } from '../../util/telemetry/commands/env/shar
 
 const COMMAND_CONFIG = {
   ls: getCommandAliases(sharedListSubcommand),
-  inspect: getCommandAliases(sharedInspectSubcommand),
 };
 
 export default async function shared(client: Client): Promise<number> {
@@ -77,14 +70,6 @@ export default async function shared(client: Client): Promise<number> {
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return ls(client, args);
-    case 'inspect':
-      if (needHelp) {
-        telemetry.trackCliFlagHelp('env shared', subcommandOriginal);
-        printHelp(sharedInspectSubcommand);
-        return 2;
-      }
-      telemetry.trackCliSubcommandInspect(subcommandOriginal);
-      return inspect(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(

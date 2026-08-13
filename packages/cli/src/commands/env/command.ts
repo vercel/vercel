@@ -423,44 +423,17 @@ export const sharedListSubcommand = {
   ],
 } as const;
 
-export const sharedInspectSubcommand = {
-  name: 'inspect',
-  aliases: [],
-  description: 'Show a team Shared Environment Variable in full',
-  arguments: [
-    {
-      name: 'name-or-id',
-      required: true,
-    },
-  ],
-  options: [formatOption, jsonOption],
-  examples: [
-    {
-      name: 'Inspect a Shared Environment Variable by name',
-      value: `${packageName} env shared inspect API_URL`,
-    },
-    {
-      name: 'Inspect a Shared Environment Variable by ID',
-      value: `${packageName} env shared inspect env_XCG7t7AIHuO2SBA8667zNUiM`,
-    },
-  ],
-} as const;
-
 export const sharedSubcommand = {
   name: 'shared',
   aliases: [],
   description: 'Manage team Shared Environment Variables',
   arguments: [],
-  subcommands: [sharedListSubcommand, sharedInspectSubcommand],
+  subcommands: [sharedListSubcommand],
   options: [],
   examples: [
     {
       name: 'List team Shared Environment Variables',
       value: `${packageName} env shared ls`,
-    },
-    {
-      name: 'Inspect a team Shared Environment Variable',
-      value: `${packageName} env shared inspect API_URL`,
     },
   ],
 } as const;

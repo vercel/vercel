@@ -3119,8 +3119,7 @@ exports[`help command > env help output snapshots > env shared help output snaps
 
   Commands:
 
-  list                 List team Shared Environment Variables                                                   
-  inspect  name-or-id  Show a team Shared Environment Variable in full                                          
+  list    List team Shared Environment Variables                                                                
 
 
   Global Options:
@@ -3142,49 +3141,6 @@ exports[`help command > env help output snapshots > env shared help output snaps
   - List team Shared Environment Variables
 
     $ vercel env shared ls
-
-  - Inspect a team Shared Environment Variable
-
-    $ vercel env shared inspect API_URL
-
-"
-`;
-
-exports[`help command > env help output snapshots > env shared help output snapshots > env shared inspect help column width 120 1`] = `
-"
-  ▲ vercel shared inspect name-or-id [options]
-
-  Show a team Shared Environment Variable in full                                                                       
-
-  Options:
-
-  -F,  --format <FORMAT>  Specify the output format (json)                                                              
-       --json             Output as JSON                                                                                
-
-
-  Global Options:
-
-       --cwd <DIR>            Sets the current working directory for a single run of a command                          
-  -d,  --debug                Debug mode (default off)                                                                  
-  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
-  -h,  --help                 Output usage information                                                                  
-  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
-       --no-color             No color mode (default off)                                                               
-       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
-  -S,  --scope                Set a custom scope                                                                        
-  -t,  --token <TOKEN>        Login token                                                                               
-  -v,  --version              Output the version number                                                                 
-
-
-  Examples:
-
-  - Inspect a Shared Environment Variable by name
-
-    $ vercel env shared inspect API_URL
-
-  - Inspect a Shared Environment Variable by ID
-
-    $ vercel env shared inspect env_XCG7t7AIHuO2SBA8667zNUiM
 
 "
 `;
