@@ -1,4 +1,3 @@
-import type { JSONObject } from '@vercel-internals/types';
 import type Client from '../client';
 import output from '../../output-manager';
 import type {
@@ -46,45 +45,5 @@ export async function createSharedEnvRecord(
       ...(target && target.length ? { target } : {}),
       ...(projectId && projectId.length ? { projectId } : {}),
     },
-  });
-}
-
-export interface SharedEnvUpdate {
-  key?: string;
-  value?: string;
-  comment?: string;
-  target?: SharedEnvTarget[];
-  type?: SharedEnvType;
-  projectId?: string[];
-  projectIdUpdates?: {
-    link?: string[];
-    unlink?: string[];
-  };
-}
-
-interface UpdateSharedEnvResponse {
-  updated: SharedEnvVariable[];
-  failed: SharedEnvFailure[];
-}
-
-/**
- * Applies a sparse update to a team Shared Environment Variable via
- * `PATCH /v1/env`. Only the provided fields are changed. The plaintext value,
- * when present, is sent in the request body only and is never logged.
- */
-export async function updateSharedEnvRecord(
-  client: Client,
-  id: string,
-  update: SharedEnvUpdate
-): Promise<UpdateSharedEnvResponse> {
-  output.debug(`Updating Shared Environment Variable ${id}`);
-
-  return client.fetch<UpdateSharedEnvResponse>('/v1/env', {
-    method: 'PATCH',
-    body: {
-      updates: {
-        [id]: update,
-      },
-    } as unknown as JSONObject,
   });
 }
