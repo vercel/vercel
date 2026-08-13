@@ -76,7 +76,9 @@ export default async function inspect(
       // Resolve via the list endpoint (never the get-by-id endpoint) so the
       // decrypted secret value is never fetched, decrypted, or at risk of being
       // printed. All displayed metadata is present on the list record.
-      isId ? { ids: nameOrId, limit: 100 } : { search: nameOrId, limit: 100 }
+      // 50 matches the server's MAX_EV_IDS_COUNT clamp; a larger limit would
+      // be silently reduced to 50 anyway.
+      isId ? { ids: nameOrId, limit: 50 } : { search: nameOrId, limit: 50 }
     );
     records = data.data;
   } catch (err) {
