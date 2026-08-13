@@ -4,6 +4,8 @@ import {
   forceOption,
   formatOption,
   jsonOption,
+  limitOption,
+  nextOption,
   projectOption,
   yesOption,
 } from '../../util/arg-common';
@@ -394,6 +396,75 @@ export const updateSubcommand = {
   ],
 } as const;
 
+export const sharedListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List team Shared Environment Variables',
+  arguments: [],
+  options: [
+    formatOption,
+    jsonOption,
+    limitOption,
+    nextOption,
+    {
+      ...projectOption,
+      description: 'Filter to variables linked to a project (name or ID)',
+    },
+  ],
+  examples: [
+    {
+      name: 'List all Shared Environment Variables for the team',
+      value: `${packageName} env shared ls`,
+    },
+    {
+      name: 'List Shared Environment Variables linked to a project',
+      value: `${packageName} env shared ls --project my-project`,
+    },
+  ],
+} as const;
+
+export const sharedInspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description: 'Show a team Shared Environment Variable in full',
+  arguments: [
+    {
+      name: 'name-or-id',
+      required: true,
+    },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Inspect a Shared Environment Variable by name',
+      value: `${packageName} env shared inspect API_URL`,
+    },
+    {
+      name: 'Inspect a Shared Environment Variable by ID',
+      value: `${packageName} env shared inspect env_XCG7t7AIHuO2SBA8667zNUiM`,
+    },
+  ],
+} as const;
+
+export const sharedSubcommand = {
+  name: 'shared',
+  aliases: [],
+  description: 'Manage team Shared Environment Variables',
+  arguments: [],
+  subcommands: [sharedListSubcommand, sharedInspectSubcommand],
+  options: [],
+  examples: [
+    {
+      name: 'List team Shared Environment Variables',
+      value: `${packageName} env shared ls`,
+    },
+    {
+      name: 'Inspect a team Shared Environment Variable',
+      value: `${packageName} env shared inspect API_URL`,
+    },
+  ],
+} as const;
+
 export const envCommand = {
   name: 'env',
   aliases: [],
@@ -405,6 +476,7 @@ export const envCommand = {
     pullSubcommand,
     removeSubcommand,
     runSubcommand,
+    sharedSubcommand,
     updateSubcommand,
   ],
   options: [],

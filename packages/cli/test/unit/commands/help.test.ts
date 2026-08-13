@@ -401,6 +401,29 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('env shared help output snapshots', () => {
+      it('env shared help column width 120', () => {
+        expect(
+          help(env.sharedSubcommand, { columns: 120, parent: env.envCommand })
+        ).toMatchSnapshot();
+      });
+      it('env shared list help column width 120', () => {
+        expect(
+          help(env.sharedListSubcommand, {
+            columns: 120,
+            parent: env.sharedSubcommand,
+          })
+        ).toMatchSnapshot();
+      });
+      it('env shared inspect help column width 120', () => {
+        expect(
+          help(env.sharedInspectSubcommand, {
+            columns: 120,
+            parent: env.sharedSubcommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('git help output snapshots', () => {

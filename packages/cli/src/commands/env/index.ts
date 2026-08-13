@@ -9,6 +9,7 @@ import ls from './ls';
 import pull from './pull';
 import rm from './rm';
 import run, { needsHelpForRun } from './run';
+import shared from './shared';
 import update from './update';
 import {
   envCommand,
@@ -17,6 +18,7 @@ import {
   pullSubcommand,
   removeSubcommand,
   runSubcommand,
+  sharedSubcommand,
   updateSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -31,6 +33,7 @@ const COMMAND_CONFIG = {
   rm: getCommandAliases(removeSubcommand),
   pull: getCommandAliases(pullSubcommand),
   run: getCommandAliases(runSubcommand),
+  shared: getCommandAliases(sharedSubcommand),
   update: getCommandAliases(updateSubcommand),
 };
 
@@ -135,6 +138,10 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandUpdate(subcommandOriginal);
       exitCode = await update(client, args);
+      break;
+    case 'shared':
+      telemetry.trackCliSubcommandShared(subcommandOriginal);
+      exitCode = await shared(client);
       break;
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));

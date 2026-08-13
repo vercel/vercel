@@ -849,7 +849,8 @@ exports[`help command > connex help output snapshots > connex create subcommand 
        --icon <PATH>             Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)               
        --json                    Output as JSON                                                                              
   -n,  --name <NAME>             Name of the connector                                                                       
-       --trigger-event <EVENT>   Webhook event to receive. Repeatable.                                                       
+       --trigger-event <EVENT>   Webhook event to receive. Repeatable. Requires --triggers and replaces the provider's       
+                                 default events.                                                                             
        --triggers                Enable webhook triggers for this connector                                                  
 
 
@@ -2810,6 +2811,11 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
                                            …
                                            …
                                            …
+  shared                                   …
+                                           …
+                                           …
+                                           …
+                                           …
   update  name [environment]               …
                                            …
                                            …
@@ -2903,6 +2909,8 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
   run     command                          Run a command with environment  
                                            variables from the linked Vercel
                                            project                         
+  shared                                   Manage team Shared Environment  
+                                           Variables                       
   update  name [environment]               Update the value of an existing 
                                            Environment Variable (see       
                                            examples below)                 
@@ -2951,6 +2959,7 @@ exports[`help command > env help output snapshots > env help column width 120 1`
                                            file [.env.local]                                                       
   remove  name [environment]               Remove an Environment Variable (see examples below)                     
   run     command                          Run a command with environment variables from the linked Vercel project 
+  shared                                   Manage team Shared Environment Variables                                
   update  name [environment]               Update the value of an existing Environment Variable (see examples      
                                            below)                                                                  
 
@@ -3098,6 +3107,126 @@ exports[`help command > env help output snapshots > env remove help output snaps
 
     $ vercel env rm <name> <production | preview | development> <gitbranch>
     $ vercel env rm NPM_RC preview feat1
+
+"
+`;
+
+exports[`help command > env help output snapshots > env shared help output snapshots > env shared help column width 120 1`] = `
+"
+  ▲ vercel env shared command
+
+  Manage team Shared Environment Variables                                                                              
+
+  Commands:
+
+  list                 List team Shared Environment Variables                                                   
+  inspect  name-or-id  Show a team Shared Environment Variable in full                                          
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - List team Shared Environment Variables
+
+    $ vercel env shared ls
+
+  - Inspect a team Shared Environment Variable
+
+    $ vercel env shared inspect API_URL
+
+"
+`;
+
+exports[`help command > env help output snapshots > env shared help output snapshots > env shared inspect help column width 120 1`] = `
+"
+  ▲ vercel shared inspect name-or-id [options]
+
+  Show a team Shared Environment Variable in full                                                                       
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Inspect a Shared Environment Variable by name
+
+    $ vercel env shared inspect API_URL
+
+  - Inspect a Shared Environment Variable by ID
+
+    $ vercel env shared inspect env_XCG7t7AIHuO2SBA8667zNUiM
+
+"
+`;
+
+exports[`help command > env help output snapshots > env shared help output snapshots > env shared list help column width 120 1`] = `
+"
+  ▲ vercel shared list [options]
+
+  List team Shared Environment Variables                                                                                
+
+  Options:
+
+  -F,  --format <FORMAT>       Specify the output format (json)                                                              
+       --json                  Output as JSON                                                                                
+       --limit <NUMBER>        Number of results to return per page (default: 20, max: 100)                                  
+  -N,  --next <MS>             Show next page of results                                                                     
+       --project <NAME_OR_ID>  Filter to variables linked to a project (name or ID)                                          
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - List all Shared Environment Variables for the team
+
+    $ vercel env shared ls
+
+  - List Shared Environment Variables linked to a project
+
+    $ vercel env shared ls --project my-project
 
 "
 `;
