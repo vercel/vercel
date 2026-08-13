@@ -30,7 +30,9 @@ jobs:
     name: Chunk Tests
     runs-on: ubuntu-latest
     outputs:
-      unit-tests: ${{ steps['set-tests'].outputs['unitTests'] }}
+      unit-tests-node20: ${{ steps['set-tests'].outputs['unitTestsNode20'] }}
+      unit-tests-node22: ${{ steps['set-tests'].outputs['unitTestsNode22'] }}
+      unit-tests-node24: ${{ steps['set-tests'].outputs['unitTestsNode24'] }}
       e2e-tests: ${{ steps['set-tests'].outputs['e2eTests'] }}
     steps:
       - uses: actions/checkout@v4
@@ -72,85 +74,60 @@ jobs:
             | {package, directory, task}
           ]')
           UNIT_TESTS_ARRAY=$(TURBO_TASKS="$unit_tasks" node utils/chunk-tests.js)
+          UNIT_TESTS_NODE20=$(printf '%s' "$UNIT_TESTS_ARRAY" | jq -c '[.[] | select(.nodeVersion == "20")]')
+          UNIT_TESTS_NODE22=$(printf '%s' "$UNIT_TESTS_ARRAY" | jq -c '[.[] | select(.nodeVersion == "22")]')
+          UNIT_TESTS_NODE24=$(printf '%s' "$UNIT_TESTS_ARRAY" | jq -c '[.[] | select(.nodeVersion == "24")]')
           E2E_TESTS_ARRAY=$(TURBO_TASKS="$e2e_tasks" node utils/chunk-tests.js)
           echo "Unit tests to run:"
           echo "$UNIT_TESTS_ARRAY"
           echo "E2E tests to run:"
           echo "$E2E_TESTS_ARRAY"
-          echo "unitTests=$UNIT_TESTS_ARRAY" >> $GITHUB_OUTPUT
+          echo "unitTestsNode20=$UNIT_TESTS_NODE20" >> $GITHUB_OUTPUT
+          echo "unitTestsNode22=$UNIT_TESTS_NODE22" >> $GITHUB_OUTPUT
+          echo "unitTestsNode24=$UNIT_TESTS_NODE24" >> $GITHUB_OUTPUT
           echo "e2eTests=$E2E_TESTS_ARRAY" >> $GITHUB_OUTPUT
 
-  unit-test:
-    timeout-minutes: 120
-    runs-on: ${{ matrix.runner }}
-    name: Unit / ${{ matrix.label }}
+  unit-test-node20:
+    name: Unit / Node 20
+    if: ${{ needs.setup.outputs['unit-tests-node20'] != '[]' }}
+    needs: setup
     permissions:
       contents: read
       id-token: write
-    if: ${{ needs.setup.outputs['unit-tests'] != '[]' }}
-    needs:
-      - setup
-    strategy:
-      fail-fast: false
-      max-parallel: 75
-      matrix:
-        include: ${{ fromJson(needs.setup.outputs['unit-tests']) }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.nodeVersion }}
+    uses: ./.github/workflows/nightly-unit-test.yml
+    with:
+      matrix-json: ${{ needs.setup.outputs['unit-tests-node20'] }}
+    secrets:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
 
-      - name: Setup Go toolchain
-        if: ${{ matrix.needsGo == true }}
-        uses: actions/setup-go@v6
-        with:
-          go-version: '1.23.12'
-          cache: false
+  unit-test-node22:
+    name: Unit / Node 22
+    if: ${{ needs.setup.outputs['unit-tests-node22'] != '[]' }}
+    needs: setup
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/nightly-unit-test.yml
+    with:
+      matrix-json: ${{ needs.setup.outputs['unit-tests-node22'] }}
+    secrets:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
 
-      # Every Turbo invocation needs Cargo for native workspace discovery.
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
-        with:
-          toolchain: '1.96.1'
-          targets: wasm32-wasip2
-
-      # yarn 1.22.21 introduced a Corepack bug when running tests.
-      # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
-      - name: install yarn@1.22.19
-        run: npm i -g yarn@1.22.19
-
-      - name: install pnpm@10.29.3
-        run: npm i -g pnpm@10.29.3
-
-      - name: install uv@0.10.11
-        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
-        with:
-          version: '0.10.11'
-
-      - run: pnpm install
-
-      - name: Test ${{matrix.packageName}}
-        timeout-minutes: 30
-        run: |
-          echo "Running tests (no turbo cache): ${{matrix.testScript}} ${{matrix.packageName}}"
-
-          # When VITEST_TEST_FILES is set, the test script reads paths from that env var
-          # instead of CLI args, avoiding the Windows cmd.exe ~8191 char arg limit.
-          if [ -n "$VITEST_TEST_FILES" ]; then
-            node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --force --summarize --cache-dir='.turbo' --log-order=stream --filter=${{matrix.packageName}}
-          else
-            node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --force --summarize --cache-dir='.turbo' --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}
-          fi
-        shell: bash
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
-          CARGO_NET_GIT_FETCH_WITH_CLI: 'true'
-          FORCE_COLOR: '1'
-          VITEST_TEST_FILES: ${{ matrix.useEnvPaths == true && join(matrix.testPaths, ' ') || '' }}
+  unit-test-node24:
+    name: Unit / Node 24
+    if: ${{ needs.setup.outputs['unit-tests-node24'] != '[]' }}
+    needs: setup
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/nightly-unit-test.yml
+    with:
+      matrix-json: ${{ needs.setup.outputs['unit-tests-node24'] }}
+    secrets:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
 
   e2e-artifacts:
     name: Resolve E2E Artifacts
@@ -344,7 +321,9 @@ jobs:
     if: always()
     needs:
       - setup
-      - unit-test
+      - unit-test-node20
+      - unit-test-node22
+      - unit-test-node24
       - e2e-artifacts
       - e2e-test
     permissions:

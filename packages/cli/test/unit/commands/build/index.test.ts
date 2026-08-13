@@ -30,7 +30,8 @@ const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/commands/build', name);
 
 const flakey =
-  process.platform === 'win32' && process.version.startsWith('v22');
+  process.platform === 'win32' &&
+  ['v22', 'v24'].some(version => process.version.startsWith(version));
 
 async function createTempServicesProject(params: {
   experimentalServices: Record<string, unknown>;

@@ -1,0 +1,90 @@
+name: Nightly Unit Tests
+
+on:
+  workflow_call:
+    inputs:
+      matrix-json:
+        required: true
+        type: string
+    secrets:
+      VERCEL_TOKEN:
+        required: true
+      VERCEL_TEAM_ID:
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  VERCEL_TELEMETRY_DISABLED: '1'
+  TURBO_FORCE: 'true'
+
+jobs:
+  unit-test:
+    timeout-minutes: 120
+    runs-on: ${{ matrix.runner }}
+    name: Unit / ${{ matrix.label }}
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      max-parallel: 75
+      matrix:
+        include: ${{ fromJson(inputs['matrix-json']) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.nodeVersion }}
+
+      - name: Setup Go toolchain
+        if: ${{ matrix.needsGo == true }}
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.23.12'
+          cache: false
+
+      - name: Setup Rust toolchain
+        if: ${{ matrix.needsRust == true }}
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+        with:
+          toolchain: '1.96.1'
+          targets: wasm32-wasip2
+
+      # yarn 1.22.21 introduced a Corepack bug when running tests.
+      # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
+      - name: install yarn@1.22.19
+        run: npm i -g yarn@1.22.19
+
+      - name: install pnpm@10.29.3
+        run: npm i -g pnpm@10.29.3
+
+      - name: install uv@0.10.11
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          version: '0.10.11'
+
+      - run: pnpm install
+
+      - name: Test ${{ matrix.packageName }}
+        timeout-minutes: 30
+        run: |
+          echo "Running tests (no turbo cache): ${{ matrix.testScript }} ${{ matrix.packageName }}"
+
+          # When VITEST_TEST_FILES is set, the test script reads paths from that env var
+          # instead of CLI args, avoiding the Windows cmd.exe ~8191 char arg limit.
+          if [ -n "$VITEST_TEST_FILES" ]; then
+            node utils/gen.js && node_modules/.bin/turbo run ${{ matrix.testScript }} --force --summarize --cache-dir='.turbo' --log-order=stream --filter=${{ matrix.packageName }}
+          else
+            node utils/gen.js && node_modules/.bin/turbo run ${{ matrix.testScript }} --force --summarize --cache-dir='.turbo' --log-order=stream --filter=${{ matrix.packageName }} -- ${{ join(matrix.testPaths, ' ') }}
+          fi
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          CARGO_NET_GIT_FETCH_WITH_CLI: 'true'
+          FORCE_COLOR: '1'
+          VITEST_TEST_FILES: ${{ matrix.useEnvPaths == true && join(matrix.testPaths, ' ') || '' }}

@@ -11,7 +11,7 @@ const runnersMap = new Map([
       max: 1,
       testScript: 'test',
       runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
-      nodeVersions: ['20', '22'],
+      nodeVersions: ['20', '22', '24'],
       // Skip Node 20 on Windows: it's the slowest runner with the highest
       // per-job overhead and the oldest supported Node, so the Windows/Node 20
       // unit cells are the lowest-value coverage. Node 20 still runs on Linux

@@ -121,15 +121,27 @@ jobs:
           - runner: ubuntu-latest
             nodeVersion: 22
             label: linux/node22
+          - runner: ubuntu-latest
+            nodeVersion: 24
+            concurrency: 2
+            label: linux/node24
           - runner: macos-14
             nodeVersion: 20
             label: mac/node20
           - runner: macos-14
             nodeVersion: 22
             label: mac/node22
+          - runner: macos-14
+            nodeVersion: 24
+            concurrency: 2
+            label: mac/node24
           - runner: windows-latest-8-core
             nodeVersion: 22
             label: win/node22
+          - runner: windows-latest-8-core
+            nodeVersion: 24
+            concurrency: 1
+            label: win/node24
     env:
       TURBO_SCM_BASE: ${{ needs.setup.outputs.baseSha }}
       TURBO_SCM_HEAD: ${{ needs.setup.outputs.headSha }}
@@ -265,7 +277,7 @@ jobs:
       fail-fast: false
       matrix:
         runner: [ubuntu-latest, macos-14, windows-latest]
-        nodeVersion: [20, 22]
+        nodeVersion: [20, 22, 24]
         shard: [1, 2, 3, 4, 5, 6, 7]
         exclude:
           - runner: windows-latest
