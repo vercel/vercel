@@ -2,7 +2,10 @@ import { describe, beforeEach, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import accessGroup from '../../../../src/commands/access-group';
 import { useUser } from '../../../mocks/user';
-import { useAccessGroupMembers } from '../../../mocks/access-group';
+import {
+  useAccessGroupMembers,
+  defaultMember,
+} from '../../../mocks/access-group';
 
 describe('access-group members list', () => {
   beforeEach(() => {
@@ -83,5 +86,31 @@ describe('access-group members list', () => {
     const parsed = JSON.parse(client.stdout.getFullOutput());
     expect(parsed.members).toHaveLength(1);
     expect(parsed.members[0].uid).toEqual('usr_1');
+  });
+
+  it('paginates across cursors', async () => {
+    let call = 0;
+    client.scenario.get('/v1/access-groups/ag_1/members', (req, res) => {
+      call += 1;
+      if (call === 1) {
+        res.json({
+          members: [defaultMember],
+          pagination: { count: 1, next: 'cursor2' },
+        });
+      } else {
+        expect(req.query.next).toEqual('cursor2');
+        res.json({
+          members: [{ ...defaultMember, uid: 'usr_2', username: 'john' }],
+          pagination: { count: 1, next: null },
+        });
+      }
+    });
+    client.setArgv('access-group', 'members', 'ls', 'ag_1', '--json');
+    const exitCode = await accessGroup(client);
+    expect(exitCode).toEqual(0);
+
+    const parsed = JSON.parse(client.stdout.getFullOutput());
+    expect(parsed.members).toHaveLength(2);
+    expect(call).toEqual(2);
   });
 });
