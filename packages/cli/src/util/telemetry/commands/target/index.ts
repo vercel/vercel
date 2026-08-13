@@ -12,4 +12,11 @@ export class TargetTelemetryClient
       value: subcommandActual,
     });
   }
+
+  trackCliSubcommandInspect(subcommandActual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'inspect',
+      value: subcommandActual,
+    });
+  }
 }

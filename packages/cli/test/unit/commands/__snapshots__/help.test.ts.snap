@@ -6998,9 +6998,12 @@ exports[`help command > target help output snapshots > target help column width 
 
   Commands:
 
-  list    List targets defined  
-          for the current       
-          Project               
+  list           List targets   
+                 defined for the
+                 current Project
+  inspect  name  Show a custom  
+                 environment in 
+                 full           
 
 
   Global Options:
@@ -7062,7 +7065,8 @@ exports[`help command > target help output snapshots > target help column width 
 
   Commands:
 
-  list    List targets defined for the current Project                  
+  list           List targets defined for the current Project           
+  inspect  name  Show a custom environment in full                      
 
 
   Global Options:
@@ -7092,7 +7096,8 @@ exports[`help command > target help output snapshots > target help column width 
 
   Commands:
 
-  list    List targets defined for the current Project                                                          
+  list           List targets defined for the current Project                                                   
+  inspect  name  Show a custom environment in full                                                              
 
 
   Global Options:
