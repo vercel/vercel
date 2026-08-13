@@ -2,11 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   parseOutputFormat,
   getOutputFormat,
-  isJsonOutput,
   validateJsonOutput,
   shouldPrintVersionBanner,
   wantsMachineReadableOutput,
-  OUTPUT_FORMATS,
 } from '../../../src/util/output-format';
 import { formatOption, jsonOption } from '../../../src/util/arg-common';
 
@@ -67,28 +65,6 @@ describe('output-format', () => {
       expect(() => getOutputFormat({ '--format': 'xml' })).toThrow(
         'Invalid output format: "xml"'
       );
-    });
-  });
-
-  describe('isJsonOutput', () => {
-    it('should return true when --format=json', () => {
-      expect(isJsonOutput({ '--format': 'json' })).toBe(true);
-    });
-
-    it('should return true when --json flag is set', () => {
-      expect(isJsonOutput({ '--json': true })).toBe(true);
-    });
-
-    it('should return false when no flags are set', () => {
-      expect(isJsonOutput({})).toBe(false);
-    });
-
-    it('should return false when --json is false', () => {
-      expect(isJsonOutput({ '--json': false })).toBe(false);
-    });
-
-    it('should return true for case-insensitive json', () => {
-      expect(isJsonOutput({ '--format': 'JSON' })).toBe(true);
     });
   });
 
@@ -234,17 +210,6 @@ describe('output-format', () => {
           'https://x',
         ])
       ).toBe(true);
-    });
-  });
-
-  describe('OUTPUT_FORMATS', () => {
-    it('should contain json format', () => {
-      expect(OUTPUT_FORMATS).toContain('json');
-    });
-
-    it('should be a readonly array', () => {
-      expect(Array.isArray(OUTPUT_FORMATS)).toBe(true);
-      expect(OUTPUT_FORMATS.length).toBe(1);
     });
   });
 

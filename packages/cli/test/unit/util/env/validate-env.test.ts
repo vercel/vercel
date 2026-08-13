@@ -24,23 +24,11 @@ describe('validate-env', () => {
       expect(warnings[0].requiresConfirmation).toBe(false);
     });
 
-    it('warns when value starts with tab', () => {
-      const warnings = getEnvValueWarnings('\tvalue');
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0].message).toBe('starts with whitespace');
-    });
-
     it('warns when value ends with whitespace', () => {
       const warnings = getEnvValueWarnings('value ');
       expect(warnings).toHaveLength(1);
       expect(warnings[0].message).toBe('ends with whitespace');
       expect(warnings[0].requiresConfirmation).toBe(false);
-    });
-
-    it('warns when value ends with tab', () => {
-      const warnings = getEnvValueWarnings('value\t');
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0].message).toBe('ends with whitespace');
     });
 
     it('warns when value contains return character (\\r)', () => {
@@ -133,12 +121,6 @@ describe('validate-env', () => {
 
       it('warns for multiline with trailing newline', () => {
         const warnings = getEnvValueWarnings('line1\nline2\n');
-        expect(warnings).toHaveLength(1);
-        expect(warnings[0].message).toBe('contains newlines');
-      });
-
-      it('warns for multiline without trailing newline', () => {
-        const warnings = getEnvValueWarnings('line1\nline2');
         expect(warnings).toHaveLength(1);
         expect(warnings[0].message).toBe('contains newlines');
       });

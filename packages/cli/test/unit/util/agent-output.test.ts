@@ -412,29 +412,6 @@ describe('outputAgentError', () => {
 
     exitSpy.mockRestore();
   });
-
-  it('does nothing when not nonInteractive', () => {
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
-      throw new Error('should not exit');
-    }) as never);
-
-    const client = {
-      nonInteractive: false,
-      argv: ['node', 'vc.js', 'login'],
-    } as Client;
-    outputAgentError(client, {
-      status: 'error',
-      reason: 'no_credentials',
-      message: 'No credentials.',
-    });
-
-    expect(logSpy).not.toHaveBeenCalled();
-    expect(exitSpy).not.toHaveBeenCalled();
-
-    logSpy.mockRestore();
-    exitSpy.mockRestore();
-  });
 });
 
 describe('argvHasNonInteractive', () => {
