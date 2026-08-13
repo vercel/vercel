@@ -40,6 +40,168 @@ describe('project protection settings subcommands', () => {
     vi.restoreAllMocks();
   });
 
+  describe('options-allowlist', () => {
+    it('shows the allowlist as JSON on get', async () => {
+      setupProject({ optionsAllowlist: { paths: [{ value: '/api/.*' }] } });
+      client.setArgv(
+        'project',
+        'protection',
+        'options-allowlist',
+        'get',
+        'my-project',
+        '--json'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(0);
+      const out = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(out).toMatchObject({
+        projectId: 'prj_123',
+        optionsAllowlist: { paths: [{ value: '/api/.*' }] },
+      });
+    });
+
+    it('replaces the allowlist via PATCH on set', async () => {
+      let body: unknown;
+      setupProject({}, b => {
+        body = b;
+      });
+      client.setArgv(
+        'project',
+        'protection',
+        'options-allowlist',
+        'set',
+        'my-project',
+        '--path',
+        '/api/.*',
+        '--path',
+        '/webhooks/stripe'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(0);
+      expect(body).toEqual({
+        optionsAllowlist: {
+          paths: [{ value: '/api/.*' }, { value: '/webhooks/stripe' }],
+        },
+      });
+    });
+
+    it('rejects paths not starting with "/" before any HTTP request', async () => {
+      let patched = false;
+      setupProject({}, () => {
+        patched = true;
+      });
+      client.setArgv(
+        'project',
+        'protection',
+        'options-allowlist',
+        'set',
+        'my-project',
+        '--path',
+        'api/foo'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(1);
+      expect(patched).toBe(false);
+      await expect(client.stderr).toOutput('must start with "/"');
+    });
+
+    it('rejects duplicate paths', async () => {
+      setupProject();
+      client.setArgv(
+        'project',
+        'protection',
+        'options-allowlist',
+        'set',
+        'my-project',
+        '--path',
+        '/api',
+        '--path',
+        '/api'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('Duplicate path');
+    });
+
+    it('requires at least one --path on set', async () => {
+      setupProject();
+      client.setArgv(
+        'project',
+        'protection',
+        'options-allowlist',
+        'set',
+        'my-project'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('At least one');
+    });
+
+    it('rejects more than 5 paths before any HTTP request', async () => {
+      let patched = false;
+      setupProject({}, () => {
+        patched = true;
+      });
+      const pathFlags = Array.from({ length: 6 }, (_, i) => [
+        '--path',
+        `/route-${i}`,
+      ]).flat();
+      client.setArgv(
+        'project',
+        'protection',
+        'options-allowlist',
+        'set',
+        'my-project',
+        ...pathFlags
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(1);
+      expect(patched).toBe(false);
+      await expect(client.stderr).toOutput(
+        'Too many paths (6); the maximum is 5'
+      );
+    });
+
+    it('clears the allowlist (null) on disable --yes', async () => {
+      let body: unknown;
+      setupProject({}, b => {
+        body = b;
+      });
+      client.setArgv(
+        'project',
+        'protection',
+        'options-allowlist',
+        'disable',
+        'my-project',
+        '--yes'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(0);
+      expect(body).toEqual({ optionsAllowlist: null });
+    });
+
+    it('redacts --path values in telemetry', async () => {
+      setupProject({}, () => {});
+      client.setArgv(
+        'project',
+        'protection',
+        'options-allowlist',
+        'set',
+        'my-project',
+        '--path',
+        '/internal/secret-route'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(0);
+      const events = client.telemetryEventStore.readonlyEvents;
+      const pathEvent = events.find(e => e.key === 'option:path');
+      expect(pathEvent?.value).toBe('[REDACTED]');
+      expect(events.every(e => !String(e.value).includes('secret-route'))).toBe(
+        true
+      );
+    });
+  });
+
   describe('trusted-sources', () => {
     it('shows the config on get', async () => {
       setupProject({
@@ -206,7 +368,7 @@ describe('project protection settings subcommands', () => {
       client.setArgv(
         'project',
         'protection',
-        'trusted-sources',
+        'options-allowlist',
         'disable',
         'my-project'
       );
@@ -242,7 +404,7 @@ describe('project protection settings subcommands', () => {
     client.setArgv(
       'project',
       'protection',
-      'trusted-sources',
+      'options-allowlist',
       'frobnicate',
       'my-project'
     );
@@ -254,6 +416,7 @@ describe('project protection settings subcommands', () => {
   describe('--help', () => {
     it.each([
       'trusted-sources',
+      'options-allowlist',
     ])('prints help and tracks telemetry for %s', async slug => {
       client.setArgv('project', 'protection', slug, '--help');
       const exitCode = await project(client);

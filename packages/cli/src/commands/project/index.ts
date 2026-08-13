@@ -27,6 +27,7 @@ import {
   membersSubcommand,
   projectCommand,
   protectionSubcommand,
+  optionsAllowlistSubcommand,
   renameSubcommand,
   removeSubcommand,
   speedInsightsSubcommand,
@@ -173,6 +174,7 @@ export default async function main(client: Client) {
       const nestedProtectionHelp: Record<string, Command> = {
         'trusted-ips': trustedIpsSubcommand,
         'trusted-sources': trustedSourcesSubcommand,
+        'options-allowlist': optionsAllowlistSubcommand,
       };
       const nested = args[0] ? nestedProtectionHelp[args[0]] : undefined;
       if (needHelp) {

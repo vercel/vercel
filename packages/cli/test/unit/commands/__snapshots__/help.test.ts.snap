@@ -5985,6 +5985,50 @@ exports[`help command > project help output snapshots > project list help output
 "
 `;
 
+exports[`help command > project help output snapshots > project protection options-allowlist help output snapshots > project protection options-allowlist help column width 120 1`] = `
+"
+  ▲ vercel project protection options-allowlist [action] [name] [options]
+
+  Show, set, or clear paths exempt from Deployment Protection for CORS preflight (OPTIONS) requests                     
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
+       --path <PATH>      Regex path that should not be protected (repeatable, must start with "/")                     
+  -y,  --yes              Accept default value for all prompts                                                          
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Show the OPTIONS allowlist for the linked project
+
+    $ vercel project protection options-allowlist get
+
+  - Allow CORS preflight on API paths
+
+    $ vercel project protection options-allowlist set my-app --path /api/.* --path /webhooks/stripe
+
+  - Clear the OPTIONS allowlist
+
+    $ vercel project protection options-allowlist disable my-app --yes
+
+"
+`;
 
 
 exports[`help command > project help output snapshots > project protection trusted-ips help output snapshots > project protection trusted-ips help column width 120 1`] = `

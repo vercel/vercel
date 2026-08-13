@@ -794,6 +794,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('project protection options-allowlist help output snapshots', () => {
+      it('project protection options-allowlist help column width 120', () => {
+        expect(
+          help(project.optionsAllowlistSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('promote help output snapshots', () => {
