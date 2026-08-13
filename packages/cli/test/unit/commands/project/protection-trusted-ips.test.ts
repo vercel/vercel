@@ -214,6 +214,33 @@ describe('project protection trusted-ips', () => {
       await expect(client.stderr).toOutput('Invalid --ip');
     });
 
+    it.each([
+      ['leading-zero octet', '01.2.3.4'],
+      ['too few octets', '1.2.3'],
+      ['negative CIDR prefix', '10.0.0.0/-1'],
+    ])('rejects %s before any HTTP request', async (_name, ip) => {
+      let patched = false;
+      setupProject(null, () => {
+        patched = true;
+      });
+      client.setArgv(
+        'project',
+        'protection',
+        'trusted-ips',
+        'set',
+        '--ip',
+        ip,
+        '--deployment-type',
+        'all',
+        '--mode',
+        'additional'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(1);
+      expect(patched).toBe(false);
+      await expect(client.stderr).toOutput('Invalid --ip');
+    });
+
     it('rejects IPv6 addresses', async () => {
       setupProject(null);
       client.setArgv(
@@ -405,6 +432,31 @@ describe('project protection trusted-ips', () => {
     const exitCode = await project(client);
     expect(exitCode).toBe(2);
     await expect(client.stderr).toOutput('Invalid action');
+  });
+
+  it.each([
+    ['get', ['--ip', '203.0.113.4'] as string[]],
+    ['get', ['--deployment-type', 'all'] as string[]],
+    ['disable', ['--mode', 'additional', '--yes'] as string[]],
+  ])('rejects set-only flags with %s (exit 2, no mutation)', async (action, flags) => {
+    let patched = false;
+    setupProject(null, () => {
+      patched = true;
+    });
+    client.setArgv(
+      'project',
+      'protection',
+      'trusted-ips',
+      action,
+      'my-project',
+      ...flags
+    );
+    const exitCode = await project(client);
+    expect(exitCode).toBe(2);
+    expect(patched).toBe(false);
+    await expect(client.stderr).toOutput(
+      'can only be used with `project protection trusted-ips set`'
+    );
   });
 
   describe('--help', () => {
