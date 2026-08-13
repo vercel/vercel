@@ -27,11 +27,14 @@ import {
   membersSubcommand,
   projectCommand,
   protectionSubcommand,
+  optionsAllowlistSubcommand,
+  protectedSourcemapsSubcommand,
   renameSubcommand,
   removeSubcommand,
   speedInsightsSubcommand,
   tokenSubcommand,
   trustedIpsSubcommand,
+  trustedSourcesSubcommand,
   updateSubcommand,
   webAnalyticsSubcommand,
 } from './command';
@@ -168,18 +171,25 @@ export default async function main(client: Client) {
       telemetry.trackCliSubcommandAccessGroups(subcommandOriginal);
       exitCode = await accessGroups(client, args);
       break;
-    case 'protection':
+    case 'protection': {
+      const nestedProtectionHelp: Record<string, Command> = {
+        'trusted-ips': trustedIpsSubcommand,
+        'trusted-sources': trustedSourcesSubcommand,
+        'options-allowlist': optionsAllowlistSubcommand,
+        'protected-sourcemaps': protectedSourcemapsSubcommand,
+      };
+      const nested = args[0] ? nestedProtectionHelp[args[0]] : undefined;
       if (needHelp) {
-        if (args[0] === 'trusted-ips') {
-          telemetry.trackCliFlagHelp('project', 'protection trusted-ips');
-          return printHelp(trustedIpsSubcommand);
+        if (nested) {
+          telemetry.trackCliFlagHelp('project', `protection ${args[0]}`);
+          return printHelp(nested);
         }
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(protectionSubcommand);
       }
       telemetry.trackCliSubcommandProtection(
-        args[0] === 'trusted-ips'
-          ? 'protection trusted-ips'
+        nested
+          ? `protection ${args[0]}`
           : args[0] === 'enable'
             ? 'protection enable'
             : args[0] === 'disable'
@@ -188,6 +198,7 @@ export default async function main(client: Client) {
       );
       exitCode = await protection(client, args);
       break;
+    }
     case 'webAnalytics':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);

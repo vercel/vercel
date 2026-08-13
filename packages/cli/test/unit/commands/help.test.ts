@@ -784,6 +784,36 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('project protection trusted-sources help output snapshots', () => {
+      it('project protection trusted-sources help column width 120', () => {
+        expect(
+          help(project.trustedSourcesSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('project protection options-allowlist help output snapshots', () => {
+      it('project protection options-allowlist help column width 120', () => {
+        expect(
+          help(project.optionsAllowlistSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('project protection protected-sourcemaps help output snapshots', () => {
+      it('project protection protected-sourcemaps help column width 120', () => {
+        expect(
+          help(project.protectedSourcemapsSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('promote help output snapshots', () => {

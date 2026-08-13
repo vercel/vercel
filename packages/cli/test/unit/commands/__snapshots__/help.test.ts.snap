@@ -5985,6 +5985,95 @@ exports[`help command > project help output snapshots > project list help output
 "
 `;
 
+exports[`help command > project help output snapshots > project protection options-allowlist help output snapshots > project protection options-allowlist help column width 120 1`] = `
+"
+  ▲ vercel project protection options-allowlist [action] [name] [options]
+
+  Show, set, or clear paths exempt from Deployment Protection for CORS preflight (OPTIONS) requests                     
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
+       --path <PATH>      Regex path that should not be protected (repeatable, must start with "/")                     
+  -y,  --yes              Accept default value for all prompts                                                          
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Show the OPTIONS allowlist for the linked project
+
+    $ vercel project protection options-allowlist get
+
+  - Allow CORS preflight on API paths
+
+    $ vercel project protection options-allowlist set my-app --path /api/.* --path /webhooks/stripe
+
+  - Clear the OPTIONS allowlist
+
+    $ vercel project protection options-allowlist disable my-app --yes
+
+"
+`;
+
+exports[`help command > project help output snapshots > project protection protected-sourcemaps help output snapshots > project protection protected-sourcemaps help column width 120 1`] = `
+"
+  ▲ vercel project protection protected-sourcemaps [action] [name] [options]
+
+  Show or toggle whether sourcemaps require authentication to access                                                    
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
+  -y,  --yes              Accept default value for all prompts                                                          
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Show the Protected Sourcemaps setting for the linked project
+
+    $ vercel project protection protected-sourcemaps get
+
+  - Protect sourcemaps behind authentication
+
+    $ vercel project protection protected-sourcemaps set my-app
+
+  - Disable sourcemap protection
+
+    $ vercel project protection protected-sourcemaps disable my-app --yes
+
+"
+`;
+
 exports[`help command > project help output snapshots > project protection trusted-ips help output snapshots > project protection trusted-ips help column width 120 1`] = `
 "
   ▲ vercel project protection trusted-ips [action] [name] [options]
@@ -6035,6 +6124,52 @@ exports[`help command > project help output snapshots > project protection trust
   - Clear the Trusted IPs allowlist
 
     $ vercel project protection trusted-ips disable my-app --yes
+
+"
+`;
+
+exports[`help command > project help output snapshots > project protection trusted-sources help output snapshots > project protection trusted-sources help column width 120 1`] = `
+"
+  ▲ vercel project protection trusted-sources [action] [name] [options]
+
+  Show, set, or clear the Trusted Sources deployment protection config                                                  
+
+  Options:
+
+       --file <FILE>      Path to a JSON file with the Trusted Sources config (\`projects\` and/or \`oidcProviders\` keys,  
+                          per the public project PATCH schema)                                                          
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
+  -y,  --yes              Accept default value for all prompts                                                          
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Show the Trusted Sources config for the linked project
+
+    $ vercel project protection trusted-sources get
+
+  - Replace the Trusted Sources config from a JSON file
+
+    $ vercel project protection trusted-sources set my-app --file ./trusted-sources.json
+
+  - Clear the Trusted Sources config
+
+    $ vercel project protection trusted-sources disable my-app --yes
 
 "
 `;

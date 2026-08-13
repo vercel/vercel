@@ -10,6 +10,10 @@ import {
 import { AGENT_REASON } from '../../util/agent-output-constants';
 import { protectionSubcommand } from './command';
 import { projectProtectionTrustedIps } from './protection-trusted-ips';
+import {
+  getProtectionSettingSpec,
+  projectProtectionSetting,
+} from './protection-settings';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
@@ -84,6 +88,13 @@ export default async function protection(
   // Nested subcommand: `project protection trusted-ips get|set|disable`.
   if (argv[0] === 'trusted-ips') {
     return projectProtectionTrustedIps(client, argv.slice(1));
+  }
+
+  // Nested subcommands: trusted-sources, options-allowlist,
+  // protected-sourcemaps — each with get|set|disable.
+  const settingSpec = argv[0] ? getProtectionSettingSpec(argv[0]) : null;
+  if (settingSpec) {
+    return projectProtectionSetting(client, settingSpec, argv.slice(1));
   }
 
   let parsedArgs;

@@ -639,6 +639,120 @@ export const trustedIpsSubcommand = {
   ],
 } as const;
 
+/**
+ * `vercel project protection trusted-sources get|set|disable`.
+ * Same nesting pattern as `protection trusted-ips`.
+ */
+export const trustedSourcesSubcommand = {
+  name: 'protection trusted-sources',
+  aliases: [],
+  description:
+    'Show, set, or clear the Trusted Sources deployment protection config',
+  arguments: [
+    { name: 'action', required: false },
+    { name: 'name', required: false },
+  ],
+  options: [
+    formatOption,
+    jsonOption,
+    yesOption,
+    {
+      name: 'file',
+      shorthand: null,
+      type: String,
+      argument: 'FILE',
+      description:
+        'Path to a JSON file with the Trusted Sources config (`projects` and/or `oidcProviders` keys, per the public project PATCH schema)',
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'Show the Trusted Sources config for the linked project',
+      value: `${packageName} project protection trusted-sources get`,
+    },
+    {
+      name: 'Replace the Trusted Sources config from a JSON file',
+      value: `${packageName} project protection trusted-sources set my-app --file ./trusted-sources.json`,
+    },
+    {
+      name: 'Clear the Trusted Sources config',
+      value: `${packageName} project protection trusted-sources disable my-app --yes`,
+    },
+  ],
+} as const;
+
+/**
+ * `vercel project protection options-allowlist get|set|disable`.
+ */
+export const optionsAllowlistSubcommand = {
+  name: 'protection options-allowlist',
+  aliases: [],
+  description:
+    'Show, set, or clear paths exempt from Deployment Protection for CORS preflight (OPTIONS) requests',
+  arguments: [
+    { name: 'action', required: false },
+    { name: 'name', required: false },
+  ],
+  options: [
+    formatOption,
+    jsonOption,
+    yesOption,
+    {
+      name: 'path',
+      shorthand: null,
+      type: [String],
+      argument: 'PATH',
+      description:
+        'Regex path that should not be protected (repeatable, must start with "/")',
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'Show the OPTIONS allowlist for the linked project',
+      value: `${packageName} project protection options-allowlist get`,
+    },
+    {
+      name: 'Allow CORS preflight on API paths',
+      value: `${packageName} project protection options-allowlist set my-app --path /api/.* --path /webhooks/stripe`,
+    },
+    {
+      name: 'Clear the OPTIONS allowlist',
+      value: `${packageName} project protection options-allowlist disable my-app --yes`,
+    },
+  ],
+} as const;
+
+/**
+ * `vercel project protection protected-sourcemaps get|set|disable`.
+ */
+export const protectedSourcemapsSubcommand = {
+  name: 'protection protected-sourcemaps',
+  aliases: [],
+  description:
+    'Show or toggle whether sourcemaps require authentication to access',
+  arguments: [
+    { name: 'action', required: false },
+    { name: 'name', required: false },
+  ],
+  options: [formatOption, jsonOption, yesOption],
+  examples: [
+    {
+      name: 'Show the Protected Sourcemaps setting for the linked project',
+      value: `${packageName} project protection protected-sourcemaps get`,
+    },
+    {
+      name: 'Protect sourcemaps behind authentication',
+      value: `${packageName} project protection protected-sourcemaps set my-app`,
+    },
+    {
+      name: 'Disable sourcemap protection',
+      value: `${packageName} project protection protected-sourcemaps disable my-app --yes`,
+    },
+  ],
+} as const;
+
 export const accessGroupsSubcommand = {
   name: 'access-groups',
   aliases: ['accessgroups'],
