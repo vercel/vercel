@@ -219,7 +219,7 @@ export default async function renew(client: Client, argv: string[]) {
     return 0;
   }
 
-  if (order.error?.code === 'payment_failed') {
+  if (order.error?.code === 'payment-failed') {
     output.error('Your card was declined.');
     return 1;
   }
