@@ -120,7 +120,6 @@ describe('remove', () => {
     });
 
     it('when using --yes', async () => {
-      let deleteAPIWasCalled = false;
       const user = useUser();
 
       const project = useProject({
@@ -136,14 +135,12 @@ describe('remove', () => {
       });
 
       client.scenario.delete('/now/deployments/:id', (req, res) => {
-        deleteAPIWasCalled = true;
         res.json({});
       });
 
       client.setArgv('remove', deployment.url, '--yes');
       await remove(client);
 
-      expect(deleteAPIWasCalled);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'argument:nameOrDeploymentId', value: 'ONE' },
         { key: 'flag:yes', value: 'TRUE' },

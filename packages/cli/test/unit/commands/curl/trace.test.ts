@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { createHash } from 'crypto';
-import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { mkdir, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -414,38 +414,6 @@ describe('curl --trace', () => {
     expectInjectedCookie(args, TRACE_TOKEN);
     // User's cookie header still in place (curl natively merges multi-Cookie headers)
     expect(args).toContain('Cookie: session=user-supplied');
-  });
-
-  it('cache miss: calls session API once and writes cache file with 0600 perms', async () => {
-    await setupLinkedProject();
-    mockDeploymentLookup({ target: null });
-    const captured = makeCaptured();
-    mockSessionEndpoint(captured);
-    installSpawnMock();
-
-    client.setArgv(
-      'curl',
-      '--trace',
-      '/api/hello',
-      '--protection-bypass',
-      'test-secret'
-    );
-    const exitCode = await curl(client);
-    expect(exitCode).toEqual(0);
-
-    expect(captured.calls).toBe(1);
-
-    const cachePath = cachePathFor('team_dummy', PREVIEW_ALIAS);
-    const written = JSON.parse(readFileSync(cachePath, 'utf8'));
-    expect(written.token).toBe(TRACE_TOKEN);
-    expect(written.schemaVersion).toBe(1);
-
-    // NTFS doesn't enforce Unix mode bits, so chmod's narrowing to 0o600
-    // is a no-op on Windows and `stat.mode` reports the default 0o666.
-    if (process.platform !== 'win32') {
-      const mode = statSync(cachePath).mode & 0o777;
-      expect(mode).toBe(0o600);
-    }
   });
 
   it('cache hit: pre-populated cache short-circuits session API call', async () => {

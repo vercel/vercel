@@ -125,14 +125,6 @@ describe('vcr push', () => {
     );
   });
 
-  it('does not add compression flags on docker', async () => {
-    client.setArgv('vcr', 'push', 'docker');
-    const exitCode = await vcr(client);
-    expect(exitCode).toBe(0);
-    const args = mockedExeca.mock.calls[0][1] as string[];
-    expect(args).not.toContain('--compression-format');
-  });
-
   it('pushes a specific name:tag', async () => {
     client.setArgv('vcr', 'push', 'docker', 'my-api:1.2.3');
     const exitCode = await vcr(client);

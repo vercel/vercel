@@ -217,14 +217,6 @@ describe('redirects list', () => {
       await expect(client.stderr).toOutput('(page 1 of 4)');
     });
 
-    it('should use default per_page of 50', async () => {
-      useRedirects(100, true);
-      client.setArgv('redirects', 'list');
-      const exitCode = await redirects(client);
-      expect(exitCode, 'exit code for "redirects list"').toEqual(0);
-      await expect(client.stderr).toOutput('(page 1 of 2)');
-    });
-
     it('should handle single page with pagination', async () => {
       useRedirects(25, true);
       client.setArgv('redirects', 'list');

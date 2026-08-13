@@ -175,34 +175,6 @@ describe('project protection (SSO)', () => {
 });
 
 describe('project protection (password)', () => {
-  it('shows protection settings by default', async () => {
-    useProject({
-      ...defaultProject,
-      id: 'prj_123',
-      name: 'my-project',
-    });
-
-    client.setArgv('project', 'protection', 'my-project');
-    const exitCode = await project(client);
-
-    expect(exitCode).toBe(0);
-    await expect(client.stderr).toOutput('Protection settings');
-  });
-
-  it('requires --password for action mode', async () => {
-    useProject({
-      ...defaultProject,
-      id: 'prj_123',
-      name: 'my-project',
-    });
-
-    client.setArgv('project', 'protection', 'enable', 'my-project');
-    const exitCode = await project(client);
-
-    expect(exitCode).toBe(2);
-    await expect(client.stderr).toOutput('No protection selected');
-  });
-
   it('disables password protection when --password is set', async () => {
     useProject({
       ...defaultProject,
@@ -381,34 +353,6 @@ describe('project protection (password)', () => {
 });
 
 describe('project protection (customer support code visibility)', () => {
-  it('shows protection settings by default', async () => {
-    useProject({
-      ...defaultProject,
-      id: 'prj_123',
-      name: 'my-project',
-    });
-
-    client.setArgv('project', 'protection', 'my-project');
-    const exitCode = await project(client);
-
-    expect(exitCode).toBe(0);
-    await expect(client.stderr).toOutput('Protection settings');
-  });
-
-  it('requires flag for action mode', async () => {
-    useProject({
-      ...defaultProject,
-      id: 'prj_123',
-      name: 'my-project',
-    });
-
-    client.setArgv('project', 'protection', 'enable', 'my-project');
-    const exitCode = await project(client);
-
-    expect(exitCode).toBe(2);
-    await expect(client.stderr).toOutput('No protection selected');
-  });
-
   it('sets customerSupportCodeVisibility', async () => {
     useProject({
       ...defaultProject,
@@ -444,34 +388,6 @@ describe('project protection (customer support code visibility)', () => {
 });
 
 describe('project protection (skew)', () => {
-  it('shows protection settings by default', async () => {
-    useProject({
-      ...defaultProject,
-      id: 'prj_123',
-      name: 'my-project',
-    });
-
-    client.setArgv('project', 'protection', 'my-project');
-    const exitCode = await project(client);
-
-    expect(exitCode).toBe(0);
-    await expect(client.stderr).toOutput('Protection settings');
-  });
-
-  it('requires --skew for action mode', async () => {
-    useProject({
-      ...defaultProject,
-      id: 'prj_123',
-      name: 'my-project',
-    });
-
-    client.setArgv('project', 'protection', 'enable', 'my-project');
-    const exitCode = await project(client);
-
-    expect(exitCode).toBe(2);
-    await expect(client.stderr).toOutput('No protection selected');
-  });
-
   it('includes skewProtectionMaxAge when listing project protection as JSON', async () => {
     const projectWithSkew = {
       ...defaultProject,
