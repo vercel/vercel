@@ -42,3 +42,31 @@ export interface ListAccessGroupMembersResponse {
   members: AccessGroupMember[];
   pagination?: AccessGroupsPagination;
 }
+
+export const ACCESS_GROUP_PROJECT_ROLES = [
+  'ADMIN',
+  'PROJECT_VIEWER',
+  'PROJECT_DEVELOPER',
+  'PROJECT_GUEST',
+] as const;
+
+export type AccessGroupProjectRole =
+  (typeof ACCESS_GROUP_PROJECT_ROLES)[number];
+
+export interface AccessGroupProject {
+  projectId: string;
+  role: AccessGroupProjectRole;
+  createdAt?: string;
+  updatedAt?: string;
+  project?: {
+    id?: string;
+    name?: string;
+    framework?: string | null;
+    latestDeploymentId?: string;
+  };
+}
+
+export interface ListAccessGroupProjectsResponse {
+  projects: AccessGroupProject[];
+  pagination?: AccessGroupsPagination;
+}

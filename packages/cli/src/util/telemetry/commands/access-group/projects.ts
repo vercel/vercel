@@ -1,21 +1,15 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { accessGroupCommand } from '../../../../commands/access-group/command';
+import type { projectsSubcommand } from '../../../../commands/access-group/command';
+import { ACCESS_GROUP_PROJECT_ROLES } from '../../../access-group/types';
 
-export class AccessGroupTelemetryClient
+export class AccessGroupProjectsTelemetryClient
   extends TelemetryClient
-  implements TelemetryMethods<typeof accessGroupCommand>
+  implements TelemetryMethods<typeof projectsSubcommand>
 {
   trackCliSubcommandList(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'list',
-      value: actual,
-    });
-  }
-
-  trackCliSubcommandInspect(actual: string) {
-    this.trackCliSubcommand({
-      subcommand: 'inspect',
       value: actual,
     });
   }
@@ -41,43 +35,32 @@ export class AccessGroupTelemetryClient
     });
   }
 
-  trackCliSubcommandMembers(actual: string) {
-    this.trackCliSubcommand({
-      subcommand: 'members',
-      value: actual,
-    });
-  }
-
-  trackCliSubcommandProjects(actual: string) {
-    this.trackCliSubcommand({
-      subcommand: 'projects',
-      value: actual,
-    });
-  }
-
-  trackCliArgumentIdOrName(idOrName: string | undefined) {
-    if (idOrName) {
+  trackCliArgumentGroup(group: string | undefined) {
+    if (group) {
       this.trackCliArgument({
-        arg: 'idOrName',
+        arg: 'group',
         value: this.redactedValue,
       });
     }
   }
 
-  trackCliArgumentName(name: string | undefined) {
-    if (name) {
+  trackCliArgumentProject(project: string | undefined) {
+    if (project) {
       this.trackCliArgument({
-        arg: 'name',
+        arg: 'project',
         value: this.redactedValue,
       });
     }
   }
 
-  trackCliOptionName(name: string | undefined) {
-    if (name) {
+  trackCliOptionRole(role: string | undefined) {
+    if (role) {
+      const known = (ACCESS_GROUP_PROJECT_ROLES as readonly string[]).includes(
+        role
+      );
       this.trackCliOption({
-        option: 'name',
-        value: this.redactedValue,
+        option: 'role',
+        value: known ? role : this.redactedValue,
       });
     }
   }

@@ -193,6 +193,48 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('access-group projects help output snapshots', () => {
+      it('access-group projects help column width 120', () => {
+        expect(
+          help(accessGroup.projectsSubcommand, {
+            columns: 120,
+            parent: accessGroup.accessGroupCommand,
+          })
+        ).toMatchSnapshot();
+      });
+      it('access-group projects list help column width 120', () => {
+        expect(
+          help(accessGroup.projectsListSubcommand, {
+            columns: 120,
+            parent: accessGroup.projectsSubcommand,
+          })
+        ).toMatchSnapshot();
+      });
+      it('access-group projects add help column width 120', () => {
+        expect(
+          help(accessGroup.projectsAddSubcommand, {
+            columns: 120,
+            parent: accessGroup.projectsSubcommand,
+          })
+        ).toMatchSnapshot();
+      });
+      it('access-group projects update help column width 120', () => {
+        expect(
+          help(accessGroup.projectsUpdateSubcommand, {
+            columns: 120,
+            parent: accessGroup.projectsSubcommand,
+          })
+        ).toMatchSnapshot();
+      });
+      it('access-group projects remove help column width 120', () => {
+        expect(
+          help(accessGroup.projectsRemoveSubcommand, {
+            columns: 120,
+            parent: accessGroup.projectsSubcommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('alias help output snapshots', () => {

@@ -10,6 +10,16 @@ const nameOption = {
   deprecated: false,
 } as const;
 
+const roleOption = {
+  name: 'role',
+  shorthand: null,
+  type: String,
+  argument: 'ROLE',
+  description:
+    'The project role: ADMIN, PROJECT_VIEWER, PROJECT_DEVELOPER, or PROJECT_GUEST',
+  deprecated: false,
+} as const;
+
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
@@ -186,6 +196,115 @@ export const membersSubcommand = {
   ],
 } as const;
 
+export const projectsListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List the projects of an access group',
+  default: true,
+  arguments: [
+    {
+      name: 'group',
+      required: true,
+    },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'List the projects of an access group',
+      value: `${packageName} access-group projects ls my-access-group`,
+    },
+  ],
+} as const;
+
+export const projectsAddSubcommand = {
+  name: 'add',
+  aliases: [],
+  description: 'Add a project to an access group',
+  arguments: [
+    {
+      name: 'group',
+      required: true,
+    },
+    {
+      name: 'project',
+      required: true,
+    },
+  ],
+  options: [roleOption],
+  examples: [
+    {
+      name: 'Add a project to an access group with a role',
+      value: `${packageName} access-group projects add my-access-group my-project --role PROJECT_VIEWER`,
+    },
+  ],
+} as const;
+
+export const projectsUpdateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description: 'Update the role of a project in an access group',
+  arguments: [
+    {
+      name: 'group',
+      required: true,
+    },
+    {
+      name: 'project',
+      required: true,
+    },
+  ],
+  options: [roleOption],
+  examples: [
+    {
+      name: "Change a project's role in an access group",
+      value: `${packageName} access-group projects update my-access-group my-project --role ADMIN`,
+    },
+  ],
+} as const;
+
+export const projectsRemoveSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Remove a project from an access group',
+  arguments: [
+    {
+      name: 'group',
+      required: true,
+    },
+    {
+      name: 'project',
+      required: true,
+    },
+  ],
+  options: [yesOption],
+  examples: [
+    {
+      name: 'Remove a project from an access group',
+      value: `${packageName} access-group projects rm my-access-group my-project`,
+    },
+  ],
+} as const;
+
+export const projectsSubcommand = {
+  name: 'projects',
+  aliases: [],
+  description: 'Manage the projects of an access group',
+  arguments: [],
+  subcommands: [
+    projectsListSubcommand,
+    projectsAddSubcommand,
+    projectsUpdateSubcommand,
+    projectsRemoveSubcommand,
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'List the projects of an access group',
+      value: `${packageName} access-group projects ls my-access-group`,
+    },
+  ],
+} as const;
+
 export const accessGroupCommand = {
   name: 'access-group',
   aliases: ['access-groups'],
@@ -198,6 +317,7 @@ export const accessGroupCommand = {
     updateSubcommand,
     removeSubcommand,
     membersSubcommand,
+    projectsSubcommand,
   ],
   options: [],
   examples: [

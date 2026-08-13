@@ -2,6 +2,7 @@ import { client } from './client';
 import type {
   AccessGroup,
   AccessGroupMember,
+  AccessGroupProject,
 } from '../../src/util/access-group/types';
 
 export const defaultAccessGroup: AccessGroup = {
@@ -62,4 +63,26 @@ export function useAccessGroupMembers(
     res.json({ members, pagination: { count: members.length, next: null } });
   });
   return members;
+}
+
+export const defaultAccessGroupProject: AccessGroupProject = {
+  projectId: 'prj_1',
+  role: 'PROJECT_VIEWER',
+  createdAt: '1600000000000',
+  updatedAt: '1600000000000',
+  project: {
+    id: 'prj_1',
+    name: 'my-project',
+    framework: 'nextjs',
+  },
+};
+
+export function useAccessGroupProjects(
+  group: string,
+  projects: AccessGroupProject[] = [defaultAccessGroupProject]
+) {
+  client.scenario.get(`/v1/access-groups/${group}/projects`, (_req, res) => {
+    res.json({ projects, pagination: { count: projects.length, next: null } });
+  });
+  return projects;
 }
