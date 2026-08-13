@@ -1218,7 +1218,6 @@ describe('project update', () => {
         {
           // @ts-expect-error feedback flags are not modeled on the CLI Project type
           enablePreviewFeedback: true,
-          // @ts-expect-error feedback flags are not modeled on the CLI Project type
           enableProductionFeedback: false,
         },
         body => {
