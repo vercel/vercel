@@ -16,6 +16,7 @@ import rm from './rm';
 import getOidcToken from './token';
 import speedInsights from './speed-insights';
 import webAnalytics from './web-analytics';
+import observability from './observability';
 import protection from './protection';
 import {
   accessGroupsSubcommand,
@@ -30,6 +31,7 @@ import {
   renameSubcommand,
   removeSubcommand,
   speedInsightsSubcommand,
+  observabilitySubcommand,
   tokenSubcommand,
   updateSubcommand,
   webAnalyticsSubcommand,
@@ -58,6 +60,7 @@ const COMMAND_CONFIG = {
   token: getCommandAliases(tokenSubcommand),
   speedInsights: getCommandAliases(speedInsightsSubcommand),
   webAnalytics: getCommandAliases(webAnalyticsSubcommand),
+  observability: getCommandAliases(observabilitySubcommand),
 };
 
 export default async function main(client: Client) {
@@ -196,6 +199,20 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandSpeedInsights(subcommandOriginal);
       exitCode = await speedInsights(client, args);
+      break;
+    case 'observability':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(observabilitySubcommand);
+      }
+      telemetry.trackCliSubcommandObservability(
+        args[0] === 'enable'
+          ? 'observability enable'
+          : args[0] === 'disable'
+            ? 'observability disable'
+            : subcommandOriginal
+      );
+      exitCode = await observability(client, args);
       break;
     case 'token':
       if (needHelp) {

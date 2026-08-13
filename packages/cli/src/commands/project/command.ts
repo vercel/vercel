@@ -665,6 +665,37 @@ export const speedInsightsSubcommand = {
   ],
 } as const;
 
+export const observabilitySubcommand = {
+  name: 'observability',
+  aliases: [],
+  description: 'Enable or disable Observability Plus for a project',
+  arguments: [
+    {
+      name: 'action',
+      required: true,
+    },
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Enable Observability Plus for the linked project',
+      value: `${packageName} project observability enable`,
+    },
+    {
+      name: 'Disable Observability Plus for a named project',
+      value: `${packageName} project observability disable my-project`,
+    },
+    {
+      name: 'Confirm the change as JSON (non-interactive / agents)',
+      value: `${packageName} project observability enable --json`,
+    },
+  ],
+} as const;
+
 export const projectCommand = {
   name: 'project',
   aliases: ['projects'],
@@ -681,6 +712,7 @@ export const projectCommand = {
     protectionSubcommand,
     webAnalyticsSubcommand,
     speedInsightsSubcommand,
+    observabilitySubcommand,
     updateSubcommand,
     renameSubcommand,
     removeSubcommand,

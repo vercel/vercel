@@ -103,4 +103,11 @@ export class ProjectTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandObservability(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'observability',
+      value: actual,
+    });
+  }
 }
