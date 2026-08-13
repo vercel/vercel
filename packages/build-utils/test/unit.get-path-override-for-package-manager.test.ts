@@ -1,6 +1,7 @@
 import {
   getPathOverrideForPackageManager,
   PNPM_10_PREFERRED_AT,
+  PNPM_11_PREFERRED_AT,
 } from '../src/fs/run-user-scripts';
 import {
   describe,
@@ -80,6 +81,23 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
           detectedPackageManager: 'pnpm@10.x',
           path: '/pnpm10/node_modules/.bin',
           pnpmVersionRange: '10.x',
+        });
+      });
+
+      test('should return pnpm@11 for projects created after PNPM_11_PREFFERRED_AT', () => {
+        const result = getPathOverrideForPackageManager({
+          cliType: 'pnpm',
+          lockfileVersion: 9.0,
+          corepackPackageManager: 'pnpm@10.5.0',
+          nodeVersion: getNodeVersionByMajor(22),
+          corepackEnabled: false,
+          projectCreatedAt: PNPM_11_PREFERRED_AT.getTime() + 1000,
+        });
+        expect(result).toStrictEqual({
+          detectedLockfile: 'pnpm-lock.yaml',
+          detectedPackageManager: 'pnpm@11.x',
+          path: '/pnpm11/node_modules/.bin',
+          pnpmVersionRange: '11.x',
         });
       });
     });
@@ -195,6 +213,42 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
             detectedPackageManager: 'pnpm@10.x',
             path: '/pnpm10/node_modules/.bin',
             pnpmVersionRange: '10.x',
+          });
+        });
+      });
+
+      describe('with detected pnpm 11', () => {
+        test('should throw engines error if not using package.json#packageManager', () => {
+          expect(() => {
+            getPathOverrideForPackageManager({
+              cliType: 'pnpm',
+              lockfileVersion: 9.0,
+              nodeVersion: getNodeVersionByMajor(22),
+              corepackEnabled: false,
+              corepackPackageManager: undefined,
+              packageJsonEngines: { pnpm: '10.x' },
+              projectCreatedAt: PNPM_11_PREFERRED_AT.getTime() + 1000,
+            });
+          }).toThrow(
+            'Detected pnpm "11.x" is not compatible with the engines.pnpm "10.x" in your package.json. Either enable corepack with a valid package.json#packageManager value (https://vercel.com/docs/deployments/configure-a-build#corepack) or remove your package.json#engines.pnpm.'
+          );
+        });
+
+        test('should not throw error if using package.json#packageManager', () => {
+          const result = getPathOverrideForPackageManager({
+            cliType: 'pnpm',
+            lockfileVersion: 9.0,
+            nodeVersion: getNodeVersionByMajor(22),
+            corepackEnabled: false,
+            packageJsonEngines: { pnpm: '10.x' },
+            corepackPackageManager: 'pnpm@10.5.0',
+            projectCreatedAt: PNPM_11_PREFERRED_AT.getTime() + 1000,
+          });
+          expect(result).toStrictEqual({
+            detectedLockfile: 'pnpm-lock.yaml',
+            detectedPackageManager: 'pnpm@11.x',
+            path: '/pnpm11/node_modules/.bin',
+            pnpmVersionRange: '11.x',
           });
         });
       });
