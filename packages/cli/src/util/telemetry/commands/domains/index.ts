@@ -90,6 +90,13 @@ export class DomainsTelemetryClient
     });
   }
 
+  trackCliSubcommandAuthCode(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'auth-code',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandList(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'list',

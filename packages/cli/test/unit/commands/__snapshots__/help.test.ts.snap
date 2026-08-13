@@ -2270,6 +2270,16 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    a   
                                    reg…
                                    dom…
+  auth-code    domain              Pri…
+                                   the 
+                                   tra…
+                                   auth
+                                   code
+                                   for 
+                                   a   
+                                   reg…
+                                   dom…
+                                   (se…
   verify       domain              Che…
                                    a   
                                    dom…
@@ -2368,6 +2378,8 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    registered domain                           
   nameservers  domain              Show or change the nameservers for a        
                                    registered domain                           
+  auth-code    domain              Print the transfer-out auth code for a      
+                                   registered domain (sensitive)               
   verify       domain              Check a domain's DNS configuration and      
                                    explain what to fix when it is misconfigured
                                    or unverified                               
@@ -2413,6 +2425,7 @@ exports[`help command > domains help output snapshots > domains help column widt
   renew        domain              Renew a registered domain before it expires (charges your account)                  
   auto-renew   domain state        Turn automatic renewal on or off for a registered domain                            
   nameservers  domain              Show or change the nameservers for a registered domain                              
+  auth-code    domain              Print the transfer-out auth code for a registered domain (sensitive)                
   verify       domain              Check a domain's DNS configuration and explain what to fix when it is misconfigured 
                                    or unverified                                                                       
 
