@@ -30,6 +30,31 @@ function useBuyEndpoint(handler?: (req: any, res: any) => void) {
   });
 }
 
+function useObservabilityPlusEndpoint(
+  handler?: (req: any, res: any) => void,
+  configurationHandler?: (req: any, res: any) => void
+) {
+  client.scenario.get('/v1/observability/manage/configuration', (req, res) => {
+    if (configurationHandler) {
+      configurationHandler(req, res);
+    } else {
+      res.json({
+        observabilityPlus: { enabled: false, subscribed: false },
+      });
+    }
+  });
+  client.scenario.patch(
+    '/v1/observability/manage/configuration',
+    (req, res) => {
+      if (handler) {
+        handler(req, res);
+      } else {
+        res.json({ teamEnabled: true });
+      }
+    }
+  );
+}
+
 function setupTeam() {
   useUser();
   const team = useTeam();
@@ -223,6 +248,184 @@ describe('buy addon', () => {
     });
   });
 
+  describe('Observability Plus', () => {
+    it('rejects --project because Observability Plus is team-scoped', async () => {
+      setupTeam();
+      client.setArgv(
+        'buy',
+        'addon',
+        'observabilityPlus',
+        '--project',
+        'project-on-another-team',
+        '--yes'
+      );
+
+      expect(await buy(client)).toBe(1);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain(
+        "--project isn't supported for Observability Plus"
+      );
+      expect(stderr).toContain('Use --scope <team>');
+    });
+
+    it('enables Observability Plus through the configuration endpoint', async () => {
+      const team = setupTeam();
+      useObservabilityPlusEndpoint((req, res) => {
+        const body =
+          typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        expect(body).toEqual({ teamEnabled: true });
+        res.json({ teamEnabled: true });
+      });
+
+      client.setArgv('buy', 'addon', 'observabilityPlus', '--yes');
+      const exitCode = await buy(client);
+      const stderr = client.stderr.getFullOutput();
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toContain('Enabled');
+      expect(stderr).toContain('Observability Plus');
+      expect(stderr).toContain(team.slug);
+      expect(stderr).toContain('Billed as accrued');
+      expect(stderr).not.toContain('Base fee');
+    });
+
+    it.each([
+      'observability',
+      'observability-plus',
+      'observability_plus',
+    ])('accepts the %s alias', async alias => {
+      setupTeam();
+      useObservabilityPlusEndpoint();
+      client.setArgv('buy', 'addon', alias, '--yes');
+
+      expect(await buy(client)).toBe(0);
+    });
+
+    it('shows the resolved team before confirmation', async () => {
+      const team = setupTeam();
+      useObservabilityPlusEndpoint();
+      client.setArgv('buy', 'addon', 'observabilityPlus');
+
+      const exitCodePromise = buy(client);
+      await expect(client.stderr).toOutput('Add-on');
+      await expect(client.stderr).toOutput(team.slug);
+      await expect(client.stderr).toOutput('Enable this add-on?');
+      client.stdin.write('y\n');
+
+      expect(await exitCodePromise).toBe(0);
+    });
+
+    it('does not prompt in non-TTY mode', async () => {
+      setupTeam();
+      useObservabilityPlusEndpoint();
+      client.setArgv('buy', 'addon', 'observabilityPlus');
+      (client.stdin as any).isTTY = false;
+
+      const exitCode = await buy(client);
+
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('Use --yes');
+    });
+
+    it('does not prompt in non-interactive mode', async () => {
+      setupTeam();
+      useObservabilityPlusEndpoint();
+      client.nonInteractive = true;
+      client.setArgv('buy', 'addon', 'observabilityPlus');
+
+      const exitCode = await buy(client);
+
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('Use --yes');
+    });
+
+    it('routes Hobby teams to a Pro upgrade', async () => {
+      const team = setupTeam();
+      (team as any).billing = { plan: 'hobby' };
+      client.setArgv('buy', 'addon', 'observabilityPlus', '--yes');
+
+      const exitCode = await buy(client);
+
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput(
+        'requires an active Pro or Enterprise plan'
+      );
+      await expect(client.stderr).toOutput('buy pro');
+    });
+
+    it('fails when the API does not confirm access', async () => {
+      setupTeam();
+      useObservabilityPlusEndpoint((_req, res) => {
+        res.json({ teamEnabled: false });
+      });
+      client.setArgv('buy', 'addon', 'observabilityPlus', '--yes');
+
+      const exitCode = await buy(client);
+
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput(
+        'did not confirm Observability Plus access'
+      );
+    });
+
+    it('explains the owner permission requirement', async () => {
+      setupTeam();
+      useObservabilityPlusEndpoint((_req, res) => {
+        res.status(403).json({
+          error: {
+            code: 'forbidden',
+            message: 'Not authorized',
+          },
+        });
+      });
+      client.setArgv('buy', 'addon', 'observabilityPlus', '--yes');
+
+      const exitCode = await buy(client);
+
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput(
+        'Only team owners can purchase Observability Plus'
+      );
+    });
+
+    it('reports an already-enabled team', async () => {
+      const team = setupTeam();
+      useObservabilityPlusEndpoint(undefined, (_req, res) => {
+        res.json({
+          observabilityPlus: { enabled: true, subscribed: true },
+        });
+      });
+      client.setArgv('buy', 'addon', 'observabilityPlus', '--yes');
+
+      expect(await buy(client)).toBe(0);
+      await expect(client.stderr).toOutput('Already enabled');
+      await expect(client.stderr).toOutput(team.slug);
+    });
+
+    it('outputs JSON on success', async () => {
+      const team = setupTeam();
+      useObservabilityPlusEndpoint();
+      client.setArgv('buy', 'addon', 'observabilityPlus', '--yes', '--json');
+
+      const exitCode = await buy(client);
+      const stdout = client.stdout.getFullOutput();
+      const stderr = client.stderr.getFullOutput();
+      const parsed = JSON.parse(stdout);
+
+      expect(exitCode).toBe(0);
+      expect(parsed).toEqual({
+        productAlias: 'observabilityPlus',
+        quantity: 1,
+        team: team.slug,
+        teamEnabled: true,
+      });
+      expect(stdout).not.toContain('Checking Observability Plus status');
+      expect(stdout).not.toContain('Enabling Observability Plus');
+      expect(stderr).not.toContain('Checking Observability Plus status');
+      expect(stderr).not.toContain('Enabling Observability Plus');
+    });
+  });
+
   describe('--yes', () => {
     it('skips confirmation and purchases successfully', async () => {
       setupTeam();
@@ -242,6 +445,24 @@ describe('buy addon', () => {
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('Use --yes');
     });
+  });
+
+  it('rejects --project for SIEM because it is team-scoped', async () => {
+    setupTeam();
+    client.setArgv(
+      'buy',
+      'addon',
+      'siem',
+      '1',
+      '--project',
+      'another-project',
+      '--yes'
+    );
+
+    expect(await buy(client)).toBe(1);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain("--project isn't supported for SIEM");
+    expect(stderr).toContain('Use --scope <team>');
   });
 
   describe('confirmation prompt', () => {
@@ -362,7 +583,11 @@ describe('buy addon', () => {
     it('shows help and returns 2', async () => {
       client.setArgv('buy', 'addon', '--help');
       const exitCode = await buy(client);
+      const stderr = client.stderr.getFullOutput();
+
       expect(exitCode).toBe(2);
+      expect(stderr).toContain('observabilityPlus');
+      expect(stderr).not.toContain('observabilityPlus 1');
     });
 
     it('tracks telemetry', async () => {

@@ -8,6 +8,7 @@ import {
   SUPPORTED_ADDON_ALIASES,
   ADDON_LABELS,
   type AddonAlias,
+  type BillingBuyAddonAlias,
 } from './command';
 import output from '../../output-manager';
 import getScope from '../../util/get-scope';
@@ -21,6 +22,8 @@ import {
   validateCustomEnvironmentPacks,
 } from '../../util/buy/purchase-custom-environment-capacity';
 import { validateJsonOutput } from '../../util/output-format';
+import { isObservabilityPlusAddonAlias } from '../../util/buy/observability-plus-addon';
+import { purchaseObservabilityPlus } from '../../util/buy/purchase-observability-plus';
 
 export default async function addon(client: Client, argv: string[]) {
   const flagsSpecification = getFlagsSpecification(addonSubcommand.options);
@@ -54,6 +57,33 @@ export default async function addon(client: Client, argv: string[]) {
     });
   }
 
+  if (addonName && isObservabilityPlusAddonAlias(addonName)) {
+    if (flags['--project'] !== undefined) {
+      output.error(
+        "--project isn't supported for Observability Plus because it is enabled for a team. Use --scope <team> to select the team."
+      );
+      return 1;
+    }
+
+    if (quantityStr !== undefined) {
+      output.error(
+        `Observability Plus does not accept a quantity. Run ${getCommandName('buy addon observabilityPlus')} without one.`
+      );
+      return 1;
+    }
+
+    const formatResult = validateJsonOutput(parsedArgs.flags);
+    if (!formatResult.valid) {
+      output.error(formatResult.error);
+      return 1;
+    }
+
+    return purchaseObservabilityPlus(client, {
+      yes: Boolean(flags['--yes']),
+      asJson: formatResult.jsonOutput,
+    });
+  }
+
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
@@ -73,6 +103,13 @@ export default async function addon(client: Client, argv: string[]) {
   if (!SUPPORTED_ADDON_ALIASES.includes(addonName as AddonAlias)) {
     output.error(
       `Invalid addon "${addonName}". Supported addons: ${SUPPORTED_ADDON_ALIASES.join(', ')}.`
+    );
+    return 1;
+  }
+
+  if (flags['--project'] !== undefined) {
+    output.error(
+      "--project isn't supported for SIEM because it is enabled for a team. Use --scope <team> to select the team."
     );
     return 1;
   }
@@ -108,7 +145,7 @@ export default async function addon(client: Client, argv: string[]) {
     return 1;
   }
 
-  const typedAddonAlias = addonName as AddonAlias;
+  const typedAddonAlias = addonName as BillingBuyAddonAlias;
   const label = ADDON_LABELS[typedAddonAlias];
   const yes = parsedArgs.flags['--yes'];
 

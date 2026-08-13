@@ -62,18 +62,27 @@ export const creditsSubcommand = {
   ],
 } as const;
 
-export const SUPPORTED_ADDON_ALIASES = ['siem', 'customEnvironment'] as const;
+export const SUPPORTED_ADDON_ALIASES = [
+  'siem',
+  'customEnvironment',
+  'observabilityPlus',
+] as const;
 export type AddonAlias = (typeof SUPPORTED_ADDON_ALIASES)[number];
+export type BillingBuyAddonAlias = Exclude<
+  AddonAlias,
+  'customEnvironment' | 'observabilityPlus'
+>;
 
 export const ADDON_LABELS: Record<AddonAlias, string> = {
   siem: 'SIEM',
   customEnvironment: 'Custom Environment',
+  observabilityPlus: 'Observability Plus',
 };
 
 export const addonSubcommand = {
   name: 'addon',
   aliases: ['addons', 'add-on'],
-  description: `Purchase a Vercel addon for your team. Supported addons: ${SUPPORTED_ADDON_ALIASES.join(', ')}. Custom environment purchases are per project and use packs (each pack adds ${CUSTOM_ENVIRONMENTS_PER_PACK} environments).`,
+  description: `Purchase a Vercel addon for your team. Supported addons: ${SUPPORTED_ADDON_ALIASES.join(', ')}. Observability Plus does not accept a quantity. Custom environment purchases are per project and use packs (each pack adds ${CUSTOM_ENVIRONMENTS_PER_PACK} environments).`,
   arguments: [
     {
       name: 'addon-name',
@@ -81,7 +90,7 @@ export const addonSubcommand = {
     },
     {
       name: 'quantity',
-      required: true,
+      required: false,
     },
   ],
   options: [
@@ -96,6 +105,10 @@ export const addonSubcommand = {
     {
       name: 'Purchase 1 SIEM addon',
       value: `${packageName} buy addon siem 1`,
+    },
+    {
+      name: 'Purchase Observability Plus',
+      value: `${packageName} buy addon observabilityPlus`,
     },
     {
       name: `Purchase ${CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT} custom environment packs (${EXAMPLE_CUSTOM_ENVIRONMENT_COUNT} environments) for a project`,
@@ -172,6 +185,10 @@ export const buyCommand = {
     {
       name: 'Purchase the SIEM addon',
       value: `${packageName} buy addon siem 1`,
+    },
+    {
+      name: 'Purchase Observability Plus',
+      value: `${packageName} buy addon observabilityPlus`,
     },
     {
       name: 'Upgrade to Pro',
