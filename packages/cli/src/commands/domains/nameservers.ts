@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { parse } from 'tldts';
 import { errorToString } from '@vercel/error-utils';
 import * as ERRORS from '../../util/errors-ts';
 import getDomainByName from '../../util/domains/get-domain-by-name';
@@ -17,11 +18,47 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 
-function parseNameserverList(value: string): string[] {
-  return value
+// One RFC 1035 label: 1-63 chars, alphanumeric at both ends, hyphens inside.
+const NS_LABEL_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
+
+/**
+ * Normalizes and validates one nameserver hostname to the same rules as the
+ * public registrar `Nameserver` schema: trimmed, lowercased, trailing dot
+ * removed, RFC 1035 labels, a public-suffix TLD, and not an IP address.
+ * Returns the normalized hostname, or `null` when invalid.
+ */
+function normalizeNameserver(input: string): string | null {
+  const trimmed = input.trim().toLowerCase();
+  const normalized = trimmed.endsWith('.') ? trimmed.slice(0, -1) : trimmed;
+  if (
+    normalized.length === 0 ||
+    !normalized.split('.').every(label => NS_LABEL_RE.test(label))
+  ) {
+    return null;
+  }
+  const parsed = parse(normalized);
+  if (!parsed.isIp && parsed.domain && parsed.hostname === normalized) {
+    return normalized;
+  }
+  return null;
+}
+
+function parseNameserverList(
+  value: string
+): { ok: true; nameservers: string[] } | { ok: false; invalid: string } {
+  const entries = value
     .split(',')
     .map(ns => ns.trim())
     .filter(ns => ns.length > 0);
+  const nameservers: string[] = [];
+  for (const entry of entries) {
+    const normalized = normalizeNameserver(entry);
+    if (normalized === null) {
+      return { ok: false, invalid: entry };
+    }
+    nameservers.push(normalized);
+  }
+  return { ok: true, nameservers };
 }
 
 export default async function nameservers(client: Client, argv: string[]) {
@@ -85,7 +122,19 @@ export default async function nameservers(client: Client, argv: string[]) {
 
   // Mutation path: change or restore the nameservers.
   if (setValue !== undefined || restore) {
-    const nextNameservers = restore ? [] : parseNameserverList(setValue ?? '');
+    let nextNameservers: string[] = [];
+    if (!restore) {
+      const parsed = parseNameserverList(setValue ?? '');
+      if (!parsed.ok) {
+        output.error(
+          `Invalid nameserver "${parsed.invalid}". Nameservers must be valid hostnames like ${chalk.bold(
+            'ns1.example.com'
+          )}.`
+        );
+        return 1;
+      }
+      nextNameservers = parsed.nameservers;
+    }
 
     if (!restore && nextNameservers.length === 0) {
       output.error(

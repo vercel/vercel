@@ -189,6 +189,59 @@ describe('domains nameservers', () => {
       await expect(client.stderr).toOutput('No nameservers provided');
       await expect(exitCodePromise).resolves.toEqual(1);
     });
+
+    it('rejects an invalid nameserver hostname before prompting or mutating', async () => {
+      useUser();
+      let called = false;
+      client.scenario.patch(
+        '/v1/registrar/domains/example.com/nameservers',
+        (_req, res) => {
+          called = true;
+          res.status(204).end();
+        }
+      );
+
+      client.setArgv(
+        'domains',
+        'nameservers',
+        'example.com',
+        '--set',
+        'ns1.example.com,not_a!hostname',
+        '--yes'
+      );
+      const exitCodePromise = domains(client);
+      await expect(client.stderr).toOutput(
+        'Invalid nameserver "not_a!hostname"'
+      );
+      await expect(exitCodePromise).resolves.toEqual(1);
+      expect(called).toBe(false);
+    });
+
+    it('normalizes nameservers (case, trailing dot) before sending', async () => {
+      useUser();
+      let body: Record<string, unknown> | undefined;
+      client.scenario.patch(
+        '/v1/registrar/domains/example.com/nameservers',
+        (req, res) => {
+          body = req.body;
+          res.status(204).end();
+        }
+      );
+
+      client.setArgv(
+        'domains',
+        'nameservers',
+        'example.com',
+        '--set',
+        'NS1.Example.COM.,ns2.example.com',
+        '--yes'
+      );
+      const exitCodePromise = domains(client);
+      await expect(exitCodePromise).resolves.toEqual(0);
+      expect(body).toEqual({
+        nameservers: ['ns1.example.com', 'ns2.example.com'],
+      });
+    });
   });
 
   describe('--restore', () => {
