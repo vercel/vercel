@@ -11,6 +11,10 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
+import {
+  outputActionRequired,
+  buildCommandWithYes,
+} from '../../util/agent-output';
 import { EnvSharedUnlinkTelemetryClient } from '../../util/telemetry/commands/env/shared-unlink';
 import { sharedUnlinkSubcommand } from './command';
 
@@ -96,7 +100,19 @@ export default async function unlink(
 
   const record = resolved.record;
 
-  if (!flags['--yes'] && !client.nonInteractive) {
+  if (!flags['--yes']) {
+    if (client.nonInteractive) {
+      outputActionRequired(
+        client,
+        {
+          status: 'action_required',
+          reason: 'confirmation_required',
+          message: `Unlinking project ${project} from Shared Environment Variable ${record.key ?? record.id}. Use --yes to confirm.`,
+          next: [{ command: buildCommandWithYes(client.argv) }],
+        },
+        1
+      );
+    }
     const confirmed = await client.input.confirm(
       `Unlink project ${chalk.bold(project)} from Shared Environment Variable ${chalk.bold(
         record.key ?? record.id

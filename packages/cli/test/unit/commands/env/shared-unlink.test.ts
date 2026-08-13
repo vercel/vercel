@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import env from '../../../../src/commands/env';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
@@ -67,6 +67,78 @@ describe('env shared unlink', () => {
     expect(mock.wasCalled()).toBe(true);
     expect(mock.getPath()).toContain('/v1/env/env_1/unlink/my-project');
     await expect(client.stderr).toOutput('Unlinked');
+  });
+
+  it('cancels when the confirmation is declined and does not unlink', async () => {
+    useResolve();
+    const mock = useUnlink();
+    client.setArgv(
+      'env',
+      'shared',
+      'unlink',
+      'API_URL',
+      '--project',
+      'my-project'
+    );
+
+    const exitCodePromise = env(client);
+    await expect(client.stderr).toOutput('Unlink project');
+    client.stdin.write('n\n');
+
+    await expect(client.stderr).toOutput('Canceled');
+    expect(await exitCodePromise).toEqual(0);
+    expect(mock.wasCalled()).toBe(false);
+  });
+
+  it('emits confirmation_required and exits 1 in non-interactive mode', async () => {
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('exit');
+    }) as never);
+
+    useResolve();
+    const mock = useUnlink();
+    client.nonInteractive = true;
+    client.setArgv(
+      'env',
+      'shared',
+      'unlink',
+      'API_URL',
+      '--project',
+      'my-project',
+      '--non-interactive'
+    );
+
+    await expect(env(client)).rejects.toThrow('exit');
+    expect(mock.wasCalled()).toBe(false);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    expect(payload.reason).toEqual('confirmation_required');
+
+    exitSpy.mockRestore();
+  });
+
+  it('errors when multiple variables share the name', async () => {
+    useResolve([
+      { ...record, id: 'env_1' },
+      { ...record, id: 'env_2' },
+    ]);
+    const mock = useUnlink();
+    client.setArgv(
+      'env',
+      'shared',
+      'unlink',
+      'API_URL',
+      '--project',
+      'my-project',
+      '--yes'
+    );
+
+    const exitCode = await env(client);
+    expect(exitCode).toEqual(1);
+    expect(mock.wasCalled()).toBe(false);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain('Multiple Shared Environment Variables');
+    expect(stderr).toContain('env_1');
+    expect(stderr).toContain('env_2');
   });
 
   it('requires the --project flag', async () => {
