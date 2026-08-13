@@ -174,6 +174,11 @@ export { defaultCachePathGlob } from './default-cache-path-glob';
 export { generateNodeBuilderFunctions } from './generate-node-builder-functions';
 
 export {
+  getRegExpFromMatchers,
+  resolveMiddlewareMatcher,
+} from './middleware-matcher';
+
+export {
   BACKEND_FRAMEWORKS,
   BACKEND_BUILDERS,
   UNIFIED_BACKEND_BUILDER,
