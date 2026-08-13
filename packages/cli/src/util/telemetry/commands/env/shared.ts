@@ -12,4 +12,11 @@ export class EnvSharedTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandInspect(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'inspect',
+      value: actual,
+    });
+  }
 }
