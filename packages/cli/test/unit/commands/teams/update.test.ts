@@ -83,6 +83,20 @@ describe('teams update', () => {
     ]);
   });
 
+  it('forwards a non-empty preview suffix in the request body', async () => {
+    let patchBody: Record<string, unknown> | undefined;
+    client.scenario.patch(`/teams/${team.id}`, (req, res) => {
+      patchBody = req.body as Record<string, unknown>;
+      return res.json(team);
+    });
+
+    client.setArgv('teams', 'update', '--preview-suffix', 'example.dev');
+    const exitCode = await teams(client);
+
+    expect(exitCode).toBe(0);
+    expect(patchBody).toEqual({ previewDeploymentSuffix: 'example.dev' });
+  });
+
   it('clears the preview suffix when passed an empty string', async () => {
     let patchBody: Record<string, unknown> | undefined;
     client.scenario.patch(`/teams/${team.id}`, (req, res) => {
