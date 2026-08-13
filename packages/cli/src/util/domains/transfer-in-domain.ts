@@ -57,7 +57,7 @@ export default async function transferInDomain(
       }
     }
 
-    if (order.error?.code === 'payment_failed') {
+    if (order.error?.code === 'payment-failed') {
       return new ERRORS.DomainPaymentError();
     }
 
