@@ -328,6 +328,37 @@ export const updateSubcommand = {
   ],
 } as const;
 
+export const avatarSubcommand = {
+  name: 'avatar',
+  aliases: [],
+  description: 'Manage a project avatar',
+  arguments: [
+    {
+      name: 'action',
+      required: true,
+    },
+    {
+      name: 'project',
+      required: true,
+    },
+    {
+      name: 'file',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'Set a project avatar from a PNG file',
+      value: `${packageName} project avatar set my-project ./avatar.png`,
+    },
+    {
+      name: 'Set a project avatar from an SVG file',
+      value: `${packageName} project avatar set my-project ./avatar.svg`,
+    },
+  ],
+} as const;
+
 export const tokenSubcommand = {
   name: 'token',
   aliases: [],
@@ -673,6 +704,7 @@ export const projectCommand = {
   subcommands: [
     addSubcommand,
     accessSummarySubcommand,
+    avatarSubcommand,
     checksSubcommand,
     inspectSubcommand,
     listSubcommand,

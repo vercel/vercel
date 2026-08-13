@@ -5,6 +5,7 @@ import { printError } from '../../util/error';
 import { type Command, help } from '../help';
 import add from './add';
 import accessSummary from './access-summary';
+import avatar from './avatar';
 import checks from './checks';
 import inspect from './inspect';
 import list from './list';
@@ -21,6 +22,7 @@ import {
   accessGroupsSubcommand,
   addSubcommand,
   accessSummarySubcommand,
+  avatarSubcommand,
   checksSubcommand,
   inspectSubcommand,
   listSubcommand,
@@ -50,6 +52,7 @@ const COMMAND_CONFIG = {
   accessGroups: getCommandAliases(accessGroupsSubcommand),
   add: getCommandAliases(addSubcommand),
   'access-summary': getCommandAliases(accessSummarySubcommand),
+  avatar: getCommandAliases(avatarSubcommand),
   checks: getCommandAliases(checksSubcommand),
   protection: getCommandAliases(protectionSubcommand),
   update: getCommandAliases(updateSubcommand),
@@ -128,6 +131,16 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       exitCode = await add(client, args);
+      break;
+    case 'avatar':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(avatarSubcommand);
+      }
+      telemetry.trackCliSubcommandAvatar(
+        args[0] === 'set' ? 'avatar set' : subcommandOriginal
+      );
+      exitCode = await avatar(client, args);
       break;
     case 'access-summary':
       if (needHelp) {

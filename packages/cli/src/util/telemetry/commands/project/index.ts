@@ -27,6 +27,13 @@ export class ProjectTelemetryClient
     });
   }
 
+  trackCliSubcommandAvatar(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'avatar',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandAccessSummary(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'access-summary',
