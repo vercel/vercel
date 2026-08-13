@@ -5,7 +5,11 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { outputAgentError } from '../../util/agent-output';
-import { membersSubcommand, updateMemberSubcommand } from './command';
+import {
+  membersSubcommand,
+  updateMemberSubcommand,
+  removeMemberSubcommand,
+} from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import { packageName } from '../../util/pkg-name';
 import getCommandFlags from '../../util/get-command-flags';
@@ -16,6 +20,7 @@ import getSubcommand from '../../util/get-subcommand';
 import { getCommandAliases } from '..';
 import { TeamsMembersTelemetryClient } from '../../util/telemetry/commands/teams/members';
 import membersUpdate from './members-update';
+import membersRemove from './members-remove';
 
 interface TeamMember {
   uid: string;
@@ -35,6 +40,7 @@ interface TeamMembersResponse {
 
 const COMMAND_CONFIG = {
   update: getCommandAliases(updateMemberSubcommand),
+  remove: getCommandAliases(removeMemberSubcommand),
 };
 
 export default async function members(
@@ -56,6 +62,9 @@ export default async function members(
     case 'update':
       telemetry.trackCliSubcommandUpdate(subcommandOriginal);
       return membersUpdate(client, args, telemetry);
+    case 'remove':
+      telemetry.trackCliSubcommandRemove(subcommandOriginal);
+      return membersRemove(client, args, telemetry);
     default:
       return membersList(client, argv);
   }

@@ -4,6 +4,7 @@ import {
   jsonOption,
   limitOption,
   nextOption,
+  yesOption,
 } from '../../util/arg-common';
 
 // Team roles accepted by the public API's `PATCH /v1/teams/{teamId}/members/{uid}`
@@ -196,13 +197,36 @@ export const updateMemberSubcommand = {
   ],
 } as const;
 
+export const removeMemberSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Remove a member from the currently scoped team',
+  arguments: [
+    {
+      name: 'member',
+      required: true,
+    },
+  ],
+  options: [yesOption],
+  examples: [
+    {
+      name: 'Remove a member by email',
+      value: `${packageName} teams members remove user@example.com`,
+    },
+    {
+      name: 'Remove a member by username without confirmation',
+      value: `${packageName} teams members remove my-username --yes`,
+    },
+  ],
+} as const;
+
 export const membersSubcommand = {
   name: 'members',
   aliases: ['member'],
   description: 'List and manage members for the currently scoped team',
   arguments: [],
   options: [nextOption, limitOption, formatOption, jsonOption],
-  subcommands: [updateMemberSubcommand],
+  subcommands: [updateMemberSubcommand, removeMemberSubcommand],
   examples: [
     {
       name: 'List team members',
@@ -219,6 +243,10 @@ export const membersSubcommand = {
     {
       name: "Update a member's role",
       value: `${packageName} teams members update user@example.com --role MEMBER`,
+    },
+    {
+      name: 'Remove a member',
+      value: `${packageName} teams members remove user@example.com`,
     },
   ],
 } as const;
