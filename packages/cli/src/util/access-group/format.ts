@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from '../output/table';
 import { formatDateWithoutTime } from '../format-date';
-import type { AccessGroup } from './types';
+import type { AccessGroup, AccessGroupMember } from './types';
 
 function age(createdAt: string): string {
   const created = Number(createdAt);
@@ -56,4 +56,20 @@ export function formatAccessGroupDetails(accessGroup: AccessGroup): string {
   rows.push(['Updated', formatDateWithoutTime(Number(accessGroup.updatedAt))]);
 
   return `${table(rows, { align: ['l', 'l'], hsep: 2 }).replace(/^(.*)/gm, '  $1')}\n`;
+}
+
+export function formatAccessGroupMembersTable(
+  members: AccessGroupMember[]
+): string {
+  return `${table(
+    [
+      ['uid', 'identity', 'team role'].map(header => chalk.dim(header)),
+      ...members.map(member => [
+        member.uid,
+        member.username || member.email || '—',
+        member.teamRole || '—',
+      ]),
+    ],
+    { align: ['l', 'l', 'l'], hsep: 2 }
+  ).replace(/^(.*)/gm, '  $1')}\n`;
 }

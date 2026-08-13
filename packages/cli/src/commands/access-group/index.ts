@@ -6,6 +6,7 @@ import ls from './ls';
 import add from './add';
 import update from './update';
 import rm from './rm';
+import members from './members';
 import {
   accessGroupCommand,
   inspectSubcommand,
@@ -13,6 +14,7 @@ import {
   addSubcommand,
   updateSubcommand,
   removeSubcommand,
+  membersSubcommand,
 } from './command';
 import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -27,6 +29,7 @@ const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   update: getCommandAliases(updateSubcommand),
   rm: getCommandAliases(removeSubcommand),
+  members: getCommandAliases(membersSubcommand),
 };
 
 export default async function accessGroup(client: Client) {
@@ -104,6 +107,9 @@ export default async function accessGroup(client: Client) {
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, args);
+    case 'members':
+      telemetry.trackCliSubcommandMembers(subcommandOriginal);
+      return members(client);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('access-group', subcommandOriginal);

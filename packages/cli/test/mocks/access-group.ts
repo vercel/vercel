@@ -1,5 +1,8 @@
 import { client } from './client';
-import type { AccessGroup } from '../../src/util/access-group/types';
+import type {
+  AccessGroup,
+  AccessGroupMember,
+} from '../../src/util/access-group/types';
 
 export const defaultAccessGroup: AccessGroup = {
   accessGroupId: 'ag_1',
@@ -41,4 +44,22 @@ export function useAccessGroups(
   }
 
   return accessGroups;
+}
+
+export const defaultMember: AccessGroupMember = {
+  uid: 'usr_1',
+  email: 'jane@example.com',
+  username: 'jane',
+  name: 'Jane Doe',
+  teamRole: 'MEMBER',
+};
+
+export function useAccessGroupMembers(
+  group: string,
+  members: AccessGroupMember[] = [defaultMember]
+) {
+  client.scenario.get(`/v1/access-groups/${group}/members`, (_req, res) => {
+    res.json({ members, pagination: { count: members.length, next: null } });
+  });
+  return members;
 }

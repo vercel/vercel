@@ -159,6 +159,40 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('access-group members help output snapshots', () => {
+      it('access-group members help column width 120', () => {
+        expect(
+          help(accessGroup.membersSubcommand, {
+            columns: 120,
+            parent: accessGroup.accessGroupCommand,
+          })
+        ).toMatchSnapshot();
+      });
+      it('access-group members list help column width 120', () => {
+        expect(
+          help(accessGroup.membersListSubcommand, {
+            columns: 120,
+            parent: accessGroup.membersSubcommand,
+          })
+        ).toMatchSnapshot();
+      });
+      it('access-group members add help column width 120', () => {
+        expect(
+          help(accessGroup.membersAddSubcommand, {
+            columns: 120,
+            parent: accessGroup.membersSubcommand,
+          })
+        ).toMatchSnapshot();
+      });
+      it('access-group members remove help column width 120', () => {
+        expect(
+          help(accessGroup.membersRemoveSubcommand, {
+            columns: 120,
+            parent: accessGroup.membersSubcommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('alias help output snapshots', () => {

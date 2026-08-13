@@ -28,3 +28,17 @@ export interface ListAccessGroupsResponse {
   accessGroups: AccessGroup[];
   pagination?: AccessGroupsPagination;
 }
+
+export interface AccessGroupMember {
+  uid: string;
+  email?: string;
+  username?: string;
+  name?: string;
+  teamRole?: string;
+  createdAt?: string;
+}
+
+export interface ListAccessGroupMembersResponse {
+  members: AccessGroupMember[];
+  pagination?: AccessGroupsPagination;
+}

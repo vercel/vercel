@@ -41,6 +41,13 @@ export class AccessGroupTelemetryClient
     });
   }
 
+  trackCliSubcommandMembers(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'members',
+      value: actual,
+    });
+  }
+
   trackCliArgumentIdOrName(idOrName: string | undefined) {
     if (idOrName) {
       this.trackCliArgument({

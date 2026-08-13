@@ -101,6 +101,91 @@ export const removeSubcommand = {
   ],
 } as const;
 
+export const membersListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List the members of an access group',
+  default: true,
+  arguments: [
+    {
+      name: 'group',
+      required: true,
+    },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'List the members of an access group',
+      value: `${packageName} access-group members ls my-access-group`,
+    },
+  ],
+} as const;
+
+export const membersAddSubcommand = {
+  name: 'add',
+  aliases: [],
+  description: 'Add a member to an access group',
+  arguments: [
+    {
+      name: 'group',
+      required: true,
+    },
+    {
+      name: 'member',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'Add a member (by id, email, or username) to an access group',
+      value: `${packageName} access-group members add my-access-group user@example.com`,
+    },
+  ],
+} as const;
+
+export const membersRemoveSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Remove a member from an access group',
+  arguments: [
+    {
+      name: 'group',
+      required: true,
+    },
+    {
+      name: 'member',
+      required: true,
+    },
+  ],
+  options: [yesOption],
+  examples: [
+    {
+      name: 'Remove a member (by id, email, or username) from an access group',
+      value: `${packageName} access-group members rm my-access-group user@example.com`,
+    },
+  ],
+} as const;
+
+export const membersSubcommand = {
+  name: 'members',
+  aliases: [],
+  description: 'Manage the members of an access group',
+  arguments: [],
+  subcommands: [
+    membersListSubcommand,
+    membersAddSubcommand,
+    membersRemoveSubcommand,
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'List the members of an access group',
+      value: `${packageName} access-group members ls my-access-group`,
+    },
+  ],
+} as const;
+
 export const accessGroupCommand = {
   name: 'access-group',
   aliases: ['access-groups'],
@@ -112,6 +197,7 @@ export const accessGroupCommand = {
     addSubcommand,
     updateSubcommand,
     removeSubcommand,
+    membersSubcommand,
   ],
   options: [],
   examples: [
