@@ -779,6 +779,28 @@ describe('global-config', () => {
       expect(deleted).toBe(true);
     });
 
+    it('cancels without deleting when the confirmation is declined', async () => {
+      client.scenario.get('/v1/global-config', (_req, res) => {
+        res.json([{ id: 'ecfg_rm_decline', slug: 'my-store' }]);
+      });
+      let deleted = false;
+      client.scenario.delete(
+        '/v1/global-config/ecfg_rm_decline/schema',
+        (_req, res) => {
+          deleted = true;
+          res.status(204).end();
+        }
+      );
+
+      client.setArgv('global-config', 'schema', 'remove', 'my-store');
+      const exitCodePromise = globalConfig(client);
+      await expect(client.stderr).toOutput('Remove the schema');
+      client.stdin.write('n\n');
+      await expect(exitCodePromise).resolves.toBe(0);
+      expect(deleted).toBe(false);
+      await expect(client.stderr).toOutput('Canceled');
+    });
+
     it('removes a schema with --yes and emits JSON', async () => {
       client.scenario.get('/v1/global-config', (_req, res) => {
         res.json([{ id: 'ecfg_rm_yes', slug: 'my-store' }]);
