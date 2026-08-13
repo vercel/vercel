@@ -570,6 +570,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('connex networks remove subcommand', () => {
+      it('connex networks remove subcommand help column width 120', () => {
+        expect(
+          help(connex.networksRemoveSubcommand, {
+            columns: 120,
+            parent: connex.networksSubcommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('integration help output snapshots', () => {

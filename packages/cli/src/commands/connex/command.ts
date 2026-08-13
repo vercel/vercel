@@ -789,6 +789,40 @@ export const networksUpdateSubcommand = {
   ],
 } as const;
 
+export const networksRemoveSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Delete a Secure Compute network',
+  arguments: [
+    {
+      name: 'id',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when deleting a network',
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Delete a network by ID',
+      value: `${packageName} connect networks remove ntw_abc123`,
+    },
+    {
+      name: 'Skip the confirmation prompt',
+      value: `${packageName} connect networks remove ntw_abc123 --yes`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} connect networks remove ntw_abc123 --json --yes`,
+    },
+  ],
+} as const;
+
 export const networksSubcommand = {
   name: 'networks',
   aliases: [],
@@ -799,6 +833,7 @@ export const networksSubcommand = {
     networksInspectSubcommand,
     networksCreateSubcommand,
     networksUpdateSubcommand,
+    networksRemoveSubcommand,
   ],
   options: [],
   examples: [

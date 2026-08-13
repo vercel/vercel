@@ -1231,6 +1231,50 @@ exports[`help command > connex help output snapshots > connex networks list subc
 "
 `;
 
+exports[`help command > connex help output snapshots > connex networks remove subcommand > connex networks remove subcommand help column width 120 1`] = `
+"
+  ▲ vercel networks remove id [options]
+
+  Delete a Secure Compute network                                                                                       
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
+  -y,  --yes              Skip the confirmation prompt when deleting a network                                          
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Delete a network by ID
+
+    $ vercel connect networks remove ntw_abc123
+
+  - Skip the confirmation prompt
+
+    $ vercel connect networks remove ntw_abc123 --yes
+
+  - Output as JSON
+
+    $ vercel connect networks remove ntw_abc123 --json --yes
+
+"
+`;
+
 exports[`help command > connex help output snapshots > connex networks subcommand > connex networks subcommand help column width 120 1`] = `
 "
   ▲ vercel connect networks command
@@ -1243,6 +1287,7 @@ exports[`help command > connex help output snapshots > connex networks subcomman
   inspect  id  Show details for a single Secure Compute network                                                 
   create       Create a Secure Compute network                                                                  
   update   id  Update a Secure Compute network                                                                  
+  remove   id  Delete a Secure Compute network                                                                  
 
 
   Global Options:

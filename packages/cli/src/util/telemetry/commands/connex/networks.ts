@@ -29,6 +29,19 @@ export class ConnexNetworksTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliSubcommandRemove(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'remove',
+      value: actual,
+    });
+  }
+
+  trackCliFlagYes(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('yes');
+    }
+  }
+
   trackCliOptionName(v: string | undefined) {
     if (v) {
       this.trackCliOption({

@@ -15,17 +15,20 @@ import {
   networksInspectSubcommand,
   networksCreateSubcommand,
   networksUpdateSubcommand,
+  networksRemoveSubcommand,
 } from './command';
 import { networksList } from './networks-list';
 import { networksInspect } from './networks-inspect';
 import { networksCreate } from './networks-create';
 import { networksUpdate } from './networks-update';
+import { networksRemove } from './networks-remove';
 
 const COMMAND_CONFIG = {
   list: getCommandAliases(networksListSubcommand),
   inspect: getCommandAliases(networksInspectSubcommand),
   create: getCommandAliases(networksCreateSubcommand),
   update: getCommandAliases(networksUpdateSubcommand),
+  remove: getCommandAliases(networksRemoveSubcommand),
 };
 
 export async function networks(client: Client): Promise<number> {
@@ -151,6 +154,27 @@ export async function networks(client: Client): Promise<number> {
           client,
           updateParsedArgs.args,
           updateParsedArgs.flags
+        );
+      }
+      case 'remove': {
+        if (needHelp) {
+          telemetry.trackCliFlagHelp('connex networks', subcommandOriginal);
+          printHelp(networksRemoveSubcommand);
+          return 0;
+        }
+        telemetry.trackCliSubcommandRemove(subcommandOriginal);
+
+        const removeFlagsSpec = getFlagsSpecification(
+          networksRemoveSubcommand.options
+        );
+        const removeParsedArgs = parseArguments(args, removeFlagsSpec);
+        telemetry.trackCliArgumentId(removeParsedArgs.args[0]);
+        telemetry.trackCliFlagYes(removeParsedArgs.flags['--yes']);
+        telemetry.trackCliOptionFormat(removeParsedArgs.flags['--format']);
+        return await networksRemove(
+          client,
+          removeParsedArgs.args,
+          removeParsedArgs.flags
         );
       }
       default: {
