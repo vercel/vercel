@@ -10,15 +10,6 @@ export class TeamsMembersTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliSubcommandRemove(actual: string) {
-    if (actual) {
-      this.trackCliSubcommand({
-        subcommand: 'remove',
-        value: actual,
-      });
-    }
-  }
-
   trackCliArgumentMember(member: string | undefined) {
     if (member) {
       this.trackCliArgument({
@@ -36,12 +27,6 @@ export class TeamsMembersTelemetryClient extends TelemetryClient {
         option: 'role',
         value: role,
       });
-    }
-  }
-
-  trackCliFlagYes(yes: boolean | undefined) {
-    if (yes) {
-      this.trackCliFlag('yes');
     }
   }
 }
