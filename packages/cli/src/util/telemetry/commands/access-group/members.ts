@@ -20,13 +20,6 @@ export class AccessGroupMembersTelemetryClient
     });
   }
 
-  trackCliSubcommandRemove(actual: string) {
-    this.trackCliSubcommand({
-      subcommand: 'remove',
-      value: actual,
-    });
-  }
-
   trackCliArgumentGroup(group: string | undefined) {
     if (group) {
       this.trackCliArgument({
@@ -42,12 +35,6 @@ export class AccessGroupMembersTelemetryClient
         arg: 'member',
         value: this.redactedValue,
       });
-    }
-  }
-
-  trackCliFlagYes(yes: boolean | undefined) {
-    if (yes) {
-      this.trackCliFlag('yes');
     }
   }
 }

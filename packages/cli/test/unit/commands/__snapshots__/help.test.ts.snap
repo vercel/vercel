@@ -326,9 +326,8 @@ exports[`help command > access-group help output snapshots > access-group member
 
   Commands:
 
-  list    group         List the members of an access group (default)                                           
-  add     group member  Add a member to an access group                                                         
-  remove  group member  Remove a member from an access group                                                    
+  list  group         List the members of an access group (default)                                              
+  add   group member  Add a member to an access group                                                            
 
 
   Global Options:
@@ -385,40 +384,6 @@ exports[`help command > access-group help output snapshots > access-group member
   - List the members of an access group
 
     $ vercel access-group members ls my-access-group
-
-"
-`;
-
-exports[`help command > access-group help output snapshots > access-group members help output snapshots > access-group members remove help column width 120 1`] = `
-"
-  ▲ vercel members remove group member [options]
-
-  Remove a member from an access group                                                                                  
-
-  Options:
-
-  -y,  --yes  Accept default value for all prompts                                                                      
-
-
-  Global Options:
-
-       --cwd <DIR>            Sets the current working directory for a single run of a command                          
-  -d,  --debug                Debug mode (default off)                                                                  
-  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
-  -h,  --help                 Output usage information                                                                  
-  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
-       --no-color             No color mode (default off)                                                               
-       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
-  -S,  --scope                Set a custom scope                                                                        
-  -t,  --token <TOKEN>        Login token                                                                               
-  -v,  --version              Output the version number                                                                 
-
-
-  Examples:
-
-  - Remove a member (by id, email, or username) from an access group
-
-    $ vercel access-group members rm my-access-group user@example.com
 
 "
 `;

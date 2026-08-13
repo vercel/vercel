@@ -144,39 +144,12 @@ export const membersAddSubcommand = {
   ],
 } as const;
 
-export const membersRemoveSubcommand = {
-  name: 'remove',
-  aliases: ['rm'],
-  description: 'Remove a member from an access group',
-  arguments: [
-    {
-      name: 'group',
-      required: true,
-    },
-    {
-      name: 'member',
-      required: true,
-    },
-  ],
-  options: [yesOption],
-  examples: [
-    {
-      name: 'Remove a member (by id, email, or username) from an access group',
-      value: `${packageName} access-group members rm my-access-group user@example.com`,
-    },
-  ],
-} as const;
-
 export const membersSubcommand = {
   name: 'members',
   aliases: [],
   description: 'Manage the members of an access group',
   arguments: [],
-  subcommands: [
-    membersListSubcommand,
-    membersAddSubcommand,
-    membersRemoveSubcommand,
-  ],
+  subcommands: [membersListSubcommand, membersAddSubcommand],
   options: [],
   examples: [
     {
