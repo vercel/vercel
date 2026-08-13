@@ -70,6 +70,13 @@ export class ConnexTelemetryClient
     });
   }
 
+  trackCliSubcommandNetworks(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'networks',
+      value: actual,
+    });
+  }
+
   trackCliArgumentClient(v: string | undefined) {
     if (v) {
       this.trackCliArgument({

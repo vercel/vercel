@@ -17,6 +17,7 @@ import {
   removeSubcommand,
   revokeTokensSubcommand,
   openSubcommand,
+  networksSubcommand,
   connexCommand,
 } from './command';
 import { create } from './create';
@@ -28,6 +29,7 @@ import { detach } from './detach';
 import { remove } from './remove';
 import { revokeTokens } from './revoke-tokens';
 import { openClient } from './open';
+import { networks } from './networks';
 import {
   buildCommandWithGlobalFlags,
   outputAgentError,
@@ -45,6 +47,7 @@ const COMMAND_CONFIG = {
   remove: getCommandAliases(removeSubcommand),
   'revoke-tokens': getCommandAliases(revokeTokensSubcommand),
   open: getCommandAliases(openSubcommand),
+  networks: getCommandAliases(networksSubcommand),
 };
 
 export default async function connex(client: Client): Promise<number> {
@@ -303,6 +306,10 @@ export default async function connex(client: Client): Promise<number> {
           openParsedArgs.args,
           openParsedArgs.flags
         );
+      }
+      case 'networks': {
+        telemetry.trackCliSubcommandNetworks(subcommandOriginal);
+        return await networks(client);
       }
       default: {
         const validSubcommands = Object.keys(COMMAND_CONFIG).join(' | ');

@@ -640,6 +640,81 @@ export const detachSubcommand = {
   ],
 } as const;
 
+export const networksListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List Secure Compute networks on the current team',
+  arguments: [],
+  options: [
+    {
+      name: 'search',
+      shorthand: null,
+      type: String,
+      argument: 'TEXT',
+      deprecated: false,
+      description: 'Filter networks by name',
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'List networks on the current team',
+      value: `${packageName} connect networks list`,
+    },
+    {
+      name: 'Filter networks by name',
+      value: `${packageName} connect networks list --search prod`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} connect networks list --json`,
+    },
+  ],
+} as const;
+
+export const networksInspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description: 'Show details for a single Secure Compute network',
+  arguments: [
+    {
+      name: 'id',
+      required: true,
+    },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Inspect a network by ID',
+      value: `${packageName} connect networks inspect ntw_abc123`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} connect networks inspect ntw_abc123 --json`,
+    },
+  ],
+} as const;
+
+export const networksSubcommand = {
+  name: 'networks',
+  aliases: [],
+  description: 'Manage Secure Compute networks',
+  arguments: [],
+  subcommands: [networksListSubcommand, networksInspectSubcommand],
+  options: [],
+  examples: [
+    {
+      name: 'List networks on the current team',
+      value: `${packageName} connect networks list`,
+    },
+    {
+      name: 'Inspect a network by ID',
+      value: `${packageName} connect networks inspect ntw_abc123`,
+    },
+  ],
+} as const;
+
 export const connexCommand = {
   name: 'connect',
   aliases: [],
@@ -657,6 +732,7 @@ export const connexCommand = {
     removeSubcommand,
     revokeTokensSubcommand,
     openSubcommand,
+    networksSubcommand,
   ],
   examples: [
     {

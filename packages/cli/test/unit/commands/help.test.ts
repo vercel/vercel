@@ -520,6 +520,36 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('connex networks subcommand', () => {
+      it('connex networks subcommand help column width 120', () => {
+        expect(
+          help(connex.networksSubcommand, {
+            columns: 120,
+            parent: connex.connexCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('connex networks list subcommand', () => {
+      it('connex networks list subcommand help column width 120', () => {
+        expect(
+          help(connex.networksListSubcommand, {
+            columns: 120,
+            parent: connex.networksSubcommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('connex networks inspect subcommand', () => {
+      it('connex networks inspect subcommand help column width 120', () => {
+        expect(
+          help(connex.networksInspectSubcommand, {
+            columns: 120,
+            parent: connex.networksSubcommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('integration help output snapshots', () => {

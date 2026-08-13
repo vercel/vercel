@@ -978,6 +978,7 @@ exports[`help command > connex help output snapshots > connex help column width 
   remove         connector  Delete a connector                          
   revoke-tokens  connector  Revoke tokens issued from a connector       
   open           id         Open a connector in the Vercel dashboard    
+  networks                  Manage Secure Compute networks              
 
 
   Global Options:
@@ -1095,6 +1096,128 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
   - Output as JSON
 
     $ vercel connect list --json
+
+"
+`;
+
+exports[`help command > connex help output snapshots > connex networks inspect subcommand > connex networks inspect subcommand help column width 120 1`] = `
+"
+  ▲ vercel networks inspect id [options]
+
+  Show details for a single Secure Compute network                                                                      
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Inspect a network by ID
+
+    $ vercel connect networks inspect ntw_abc123
+
+  - Output as JSON
+
+    $ vercel connect networks inspect ntw_abc123 --json
+
+"
+`;
+
+exports[`help command > connex help output snapshots > connex networks list subcommand > connex networks list subcommand help column width 120 1`] = `
+"
+  ▲ vercel networks list [options]
+
+  List Secure Compute networks on the current team                                                                      
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
+       --search <TEXT>    Filter networks by name                                                                       
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - List networks on the current team
+
+    $ vercel connect networks list
+
+  - Filter networks by name
+
+    $ vercel connect networks list --search prod
+
+  - Output as JSON
+
+    $ vercel connect networks list --json
+
+"
+`;
+
+exports[`help command > connex help output snapshots > connex networks subcommand > connex networks subcommand help column width 120 1`] = `
+"
+  ▲ vercel connect networks command
+
+  Manage Secure Compute networks                                                                                        
+
+  Commands:
+
+  list         List Secure Compute networks on the current team                                                 
+  inspect  id  Show details for a single Secure Compute network                                                 
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - List networks on the current team
+
+    $ vercel connect networks list
+
+  - Inspect a network by ID
+
+    $ vercel connect networks inspect ntw_abc123
 
 "
 `;
