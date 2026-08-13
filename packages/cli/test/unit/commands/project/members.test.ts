@@ -226,6 +226,12 @@ describe('project members', () => {
         name: 'my-project',
       });
 
+      let posted = false;
+      client.scenario.post('/v1/projects/:idOrName/members', (_req, res) => {
+        posted = true;
+        res.json({ id: 'prj_123' });
+      });
+
       client.setArgv(
         'project',
         'members',
@@ -238,6 +244,7 @@ describe('project members', () => {
       const exitCode = await project(client);
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('`--role` must be one of:');
+      expect(posted).toBe(false);
     });
 
     it('requires a role', async () => {
