@@ -17,6 +17,7 @@ import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
 import { updateOidcTokenContents } from '../../util/env/update-oidc-token-contents';
 import { isErrnoException } from '@vercel/error-utils';
 import { addToGitIgnore } from '../../util/link/add-to-gitignore';
+import { ensureLink } from '../../util/link/ensure-link';
 import JSONparse from 'json-parse-better-errors';
 import { formatProject } from '../../util/projects/format-project';
 import type { ProjectLinked } from '@vercel-internals/types';
@@ -148,7 +149,7 @@ export default async function pull(
   telemetryClient.trackCliOptionId(opts['--id']);
   telemetryClient.trackCliOptionProject(opts['--project']);
 
-  const link = await resolveProjectContext({
+  let link = await resolveProjectContext({
     client,
     projectNameOrId: opts['--project'],
   });
@@ -180,12 +181,27 @@ export default async function pull(
         1
       );
     }
-    output.error(
-      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
-        'link'
-      )} to begin.`
-    );
-    return 1;
+
+    // In an interactive session, offer the shared linking flow inline instead
+    // of requiring a separate `vercel link` run followed by `vercel env pull`.
+    if (!client.nonInteractive && client.stdin.isTTY && !skipConfirmation) {
+      const ensuredLink = await ensureLink('env pull', client, client.cwd, {
+        link,
+        // The env vars are pulled below, so don't offer to pull them twice.
+        pullEnv: false,
+      });
+      if (typeof ensuredLink === 'number') {
+        return ensuredLink;
+      }
+      link = ensuredLink;
+    } else {
+      output.error(
+        `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
+          'link'
+        )} to begin.`
+      );
+      return 1;
+    }
   }
   client.config.currentTeam =
     link.org.type === 'team' ? link.org.id : undefined;
