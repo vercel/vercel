@@ -647,6 +647,7 @@ export type ExitWithNonInteractiveErrorVariant =
   | 'update'
   | 'speed-insights'
   | 'web-analytics'
+  | 'passport'
   | 'checks'
   | 'global-config'
   | 'list';
@@ -733,20 +734,26 @@ function buildNextStepsForProjectSubcommands(
                     template: 'project web-analytics <name>' as const,
                     when: 'Enable Web Analytics by project name (replace <name>)',
                   }
-                : variant === 'checks'
+                : variant === 'passport'
                   ? {
-                      template: 'project checks add <name>' as const,
-                      when: 'Create a deployment check by project name (replace <name>)',
+                      template:
+                        'project passport set <name> --connector <id>' as const,
+                      when: 'Assign a Passport application by project name (replace <name> and <id>)',
                     }
-                  : variant === 'inspect'
+                  : variant === 'checks'
                     ? {
-                        template: 'project inspect <name>' as const,
-                        when: 'Inspect a project by name (replace <name>)',
+                        template: 'project checks add <name>' as const,
+                        when: 'Create a deployment check by project name (replace <name>)',
                       }
-                    : {
-                        template: 'project members <name>' as const,
-                        when: 'List members by project name (replace <name>)',
-                      };
+                    : variant === 'inspect'
+                      ? {
+                          template: 'project inspect <name>' as const,
+                          when: 'Inspect a project by name (replace <name>)',
+                        }
+                      : {
+                          template: 'project members <name>' as const,
+                          when: 'List members by project name (replace <name>)',
+                        };
   return [
     {
       command: buildCommandWithGlobalFlags(client.argv, 'link'),

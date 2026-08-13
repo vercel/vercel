@@ -103,4 +103,20 @@ export class ProjectTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandPassport(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'passport',
+      value: actual,
+    });
+  }
+
+  trackCliOptionConnector(connector: string | undefined) {
+    if (connector) {
+      this.trackCliOption({
+        option: 'connector',
+        value: this.redactedValue,
+      });
+    }
+  }
 }

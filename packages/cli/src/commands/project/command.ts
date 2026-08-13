@@ -665,6 +665,47 @@ export const speedInsightsSubcommand = {
   ],
 } as const;
 
+export const connectorOption = {
+  name: 'connector',
+  shorthand: null,
+  type: String,
+  argument: 'ID',
+  description:
+    'Connect identity-provider application (connector) ID to assign to Passport (required for `set`)',
+  deprecated: false,
+} as const;
+
+export const passportSubcommand = {
+  name: 'passport',
+  aliases: [],
+  description: 'Assign or disable Passport access protection for a project',
+  arguments: [
+    {
+      name: 'action',
+      required: true,
+    },
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [connectorOption, yesOption, formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Assign a Passport application to the linked project',
+      value: `${packageName} project passport set --connector con_123`,
+    },
+    {
+      name: 'Assign a Passport application to a named project',
+      value: `${packageName} project passport set my-project --connector con_123`,
+    },
+    {
+      name: 'Disable Passport for a named project (skipping confirmation)',
+      value: `${packageName} project passport disable my-project --yes`,
+    },
+  ],
+} as const;
+
 export const projectCommand = {
   name: 'project',
   aliases: ['projects'],
@@ -681,6 +722,7 @@ export const projectCommand = {
     protectionSubcommand,
     webAnalyticsSubcommand,
     speedInsightsSubcommand,
+    passportSubcommand,
     updateSubcommand,
     renameSubcommand,
     removeSubcommand,

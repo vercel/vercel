@@ -16,6 +16,7 @@ import rm from './rm';
 import getOidcToken from './token';
 import speedInsights from './speed-insights';
 import webAnalytics from './web-analytics';
+import passport from './passport';
 import protection from './protection';
 import {
   accessGroupsSubcommand,
@@ -25,6 +26,7 @@ import {
   inspectSubcommand,
   listSubcommand,
   membersSubcommand,
+  passportSubcommand,
   projectCommand,
   protectionSubcommand,
   renameSubcommand,
@@ -58,6 +60,7 @@ const COMMAND_CONFIG = {
   token: getCommandAliases(tokenSubcommand),
   speedInsights: getCommandAliases(speedInsightsSubcommand),
   webAnalytics: getCommandAliases(webAnalyticsSubcommand),
+  passport: getCommandAliases(passportSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -196,6 +199,20 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandSpeedInsights(subcommandOriginal);
       exitCode = await speedInsights(client, args);
+      break;
+    case 'passport':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(passportSubcommand);
+      }
+      telemetry.trackCliSubcommandPassport(
+        args[0] === 'set'
+          ? 'passport set'
+          : args[0] === 'disable'
+            ? 'passport disable'
+            : subcommandOriginal
+      );
+      exitCode = await passport(client, args);
       break;
     case 'token':
       if (needHelp) {
