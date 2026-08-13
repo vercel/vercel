@@ -603,6 +603,25 @@ describe('project update', () => {
       expect(exitCode).toBe(0);
     });
 
+    it('dedupes repeated function regions before the request', async () => {
+      useSettingsProject({}, body => {
+        expect(body).toEqual({
+          resourceConfig: { functionDefaultRegions: ['iad1', 'sfo1'] },
+        });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--function-region',
+        'iad1,sfo1,iad1'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
     it('sets the function CPU tier', async () => {
       useSettingsProject({}, body => {
         expect(body).toEqual({

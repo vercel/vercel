@@ -325,10 +325,15 @@ const advancedSettingDefinitions: readonly AdvancedSettingDefinition[] = [
     flag: '--function-region',
     label: 'Function Regions',
     parse: raw => {
-      const regions = raw
-        .split(',')
-        .map(region => region.trim())
-        .filter(region => region.length > 0);
+      // The public schema requires unique items, so drop duplicates locally.
+      const regions = [
+        ...new Set(
+          raw
+            .split(',')
+            .map(region => region.trim())
+            .filter(region => region.length > 0)
+        ),
+      ];
       if (regions.length === 0) {
         return {
           ok: false,
