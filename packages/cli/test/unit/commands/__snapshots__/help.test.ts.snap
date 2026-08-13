@@ -849,7 +849,8 @@ exports[`help command > connex help output snapshots > connex create subcommand 
        --icon <PATH>             Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)               
        --json                    Output as JSON                                                                              
   -n,  --name <NAME>             Name of the connector                                                                       
-       --trigger-event <EVENT>   Webhook event to receive. Repeatable.                                                       
+       --trigger-event <EVENT>   Webhook event to receive. Repeatable. Requires --triggers and replaces the provider's       
+                                 default events.                                                                             
        --triggers                Enable webhook triggers for this connector                                                  
 
 
@@ -2240,6 +2241,26 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    a   
                                    Ver…
                                    Team
+  renew        domain              Ren…
+                                   a   
+                                   reg…
+                                   dom…
+                                   bef…
+                                   it  
+                                   exp…
+                                   (ch…
+                                   your
+                                   acc…
+  auto-renew   domain state        Turn
+                                   aut…
+                                   ren…
+                                   on  
+                                   or  
+                                   off 
+                                   for 
+                                   a   
+                                   reg…
+                                   dom…
   verify       domain              Che…
                                    a   
                                    dom…
@@ -2332,6 +2353,10 @@ exports[`help command > domains help output snapshots > domains help column widt
   transfer-in  domain              Transfer in a domain name to Vercel         
   remove       domain              Remove ownership of a domain name from a    
                                    Vercel Team                                 
+  renew        domain              Renew a registered domain before it expires 
+                                   (charges your account)                      
+  auto-renew   domain state        Turn automatic renewal on or off for a      
+                                   registered domain                           
   verify       domain              Check a domain's DNS configuration and      
                                    explain what to fix when it is misconfigured
                                    or unverified                               
@@ -2374,6 +2399,8 @@ exports[`help command > domains help output snapshots > domains help column widt
   search       query               Discover domain-name candidates from a keyword or fragment                          
   transfer-in  domain              Transfer in a domain name to Vercel                                                 
   remove       domain              Remove ownership of a domain name from a Vercel Team                                
+  renew        domain              Renew a registered domain before it expires (charges your account)                  
+  auto-renew   domain state        Turn automatic renewal on or off for a registered domain                            
   verify       domain              Check a domain's DNS configuration and explain what to fix when it is misconfigured 
                                    or unverified                                                                       
 

@@ -285,6 +285,62 @@ export const transferInSubcommand = {
   examples: [],
 } as const;
 
+export const renewSubcommand = {
+  name: 'renew',
+  aliases: [],
+  description:
+    'Renew a registered domain before it expires (charges your account)',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt and renew now',
+    },
+  ],
+  examples: [
+    {
+      name: 'Renew a domain (shows the renewal price and asks to confirm)',
+      value: `${packageName} domains renew example.com`,
+    },
+    {
+      name: 'Renew a domain without a confirmation prompt',
+      value: `${packageName} domains renew example.com --yes`,
+    },
+  ],
+} as const;
+
+export const autoRenewSubcommand = {
+  name: 'auto-renew',
+  aliases: [],
+  description: 'Turn automatic renewal on or off for a registered domain',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+    {
+      name: 'state',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'Turn automatic renewal on',
+      value: `${packageName} domains auto-renew example.com on`,
+    },
+    {
+      name: 'Turn automatic renewal off',
+      value: `${packageName} domains auto-renew example.com off`,
+    },
+  ],
+} as const;
+
 export const verifySubcommand = {
   name: 'verify',
   aliases: [],
@@ -345,6 +401,8 @@ export const domainsCommand = {
     searchSubcommand,
     transferInSubcommand,
     removeSubcommand,
+    renewSubcommand,
+    autoRenewSubcommand,
     verifySubcommand,
   ],
   options: [],
