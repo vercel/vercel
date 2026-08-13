@@ -614,25 +614,27 @@ export const accessGroupsSubcommand = {
 export const webAnalyticsSubcommand = {
   name: 'web-analytics',
   aliases: [],
-  description: 'Enable Web Analytics for a project',
+  description: 'Enable or disable Web Analytics for a project',
   arguments: [
-    {
-      name: 'name',
-      required: false,
-    },
+    { name: 'action', required: false },
+    { name: 'name', required: false },
   ],
   options: [formatOption, jsonOption],
   examples: [
     {
-      name: 'Enable Web Analytics for the linked project',
+      name: 'Enable Web Analytics for the linked project (omitting the action defaults to enable)',
       value: `${packageName} project web-analytics`,
     },
     {
       name: 'Enable Web Analytics for a named project',
-      value: `${packageName} project web-analytics my-project`,
+      value: `${packageName} project web-analytics enable my-project`,
     },
     {
-      name: 'Confirm enablement as JSON (non-interactive / agents)',
+      name: 'Disable Web Analytics for a named project',
+      value: `${packageName} project web-analytics disable my-project`,
+    },
+    {
+      name: 'Confirm the result as JSON (non-interactive / agents)',
       value: `${packageName} project web-analytics --json`,
     },
   ],

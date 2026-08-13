@@ -15,6 +15,13 @@ interface ToggleResponse {
   value: boolean;
 }
 
+const WEB_ANALYTICS_ACTIONS = ['enable', 'disable'] as const;
+type WebAnalyticsAction = (typeof WEB_ANALYTICS_ACTIONS)[number];
+
+function isWebAnalyticsAction(v: string | undefined): v is WebAnalyticsAction {
+  return !!v && (WEB_ANALYTICS_ACTIONS as readonly string[]).includes(v);
+}
+
 export default async function webAnalytics(
   client: Client,
   argv: string[]
@@ -41,9 +48,22 @@ export default async function webAnalytics(
     return 1;
   }
 
-  if (parsedArgs.args.length > 1) {
+  const actionArg = parsedArgs.args[0];
+  const action = isWebAnalyticsAction(actionArg) ? actionArg : undefined;
+  // Back-compat: with no explicit action, the first argument is the project
+  // name and the command enables Web Analytics, exactly as before.
+  const projectNameOrId = action ? parsedArgs.args[1] : parsedArgs.args[0];
+  const enable = action !== 'disable';
+
+  if (!action && parsedArgs.args.length > 1) {
     output.error(
       'Invalid number of arguments. Usage: `vercel project web-analytics [name]`'
+    );
+    return 2;
+  }
+  if (action && parsedArgs.args.length > 2) {
+    output.error(
+      `Invalid number of arguments. Usage: \`vercel project web-analytics ${action} [name]\``
     );
     return 2;
   }
@@ -59,7 +79,7 @@ export default async function webAnalytics(
     const project = await getProjectByCwdOrLink({
       client,
       commandName: 'project web-analytics',
-      projectNameOrId: parsedArgs.args[0],
+      projectNameOrId,
       forReadOnlyCommand: true,
     });
 
@@ -69,7 +89,7 @@ export default async function webAnalytics(
       {
         method: 'POST',
         json: true,
-        body: { value: true },
+        body: { value: enable },
       }
     );
 
@@ -88,7 +108,11 @@ export default async function webAnalytics(
       return 0;
     }
 
-    output.log(`Web Analytics is enabled for ${project.name}.`);
+    output.log(
+      result.value
+        ? `Web Analytics is enabled for ${project.name}.`
+        : `Web Analytics is disabled for ${project.name}.`
+    );
     return 0;
   } catch (err: unknown) {
     exitWithNonInteractiveError(client, err, 1, {

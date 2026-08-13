@@ -5717,7 +5717,9 @@ exports[`help command > project help output snapshots > project help column widt
                                    …
                                    a
                                    …
-  web-analytics   [name]           …
+  web-analytics   [action] [name]  …
+                                   …
+                                   …
                                    …
                                    …
                                    …
@@ -5814,28 +5816,30 @@ exports[`help command > project help output snapshots > project help column widt
 
   Commands:
 
-  add             name             Add a new project                        
-  access-summary  [name]           Show member counts by team role for      
-                                   project access (requires access groups   
-                                   entitlement)                             
-  checks          [name]           List, add, or remove deployment checks   
-                                   for a project (GET/POST/DELETE           
-                                   /v2/projects/.../checks)                 
-  inspect         [name]           Displays information related to a project
-  list                             Show all projects in the selected scope  
-                                   (default)                                
-  members         [name]           List project members for a project       
-  access-groups   [name]           List access groups for a project         
-  protection      [action] [name]  Show or toggle deployment protection     
-                                   settings for a project                   
-  web-analytics   [name]           Enable Web Analytics for a project       
-  speed-insights  [name]           Enable Speed Insights for a project      
-  update          [name]           Update one or more project settings;     
-                                   omitted settings remain unchanged        
-  rename          name new-name    Rename a project                         
-  remove          name             Delete a project                         
-  token           [name]           Get a development OIDC token for a       
-                                   project                                  
+  add             name             Add a new project                     
+  access-summary  [name]           Show member counts by team role for   
+                                   project access (requires access groups
+                                   entitlement)                          
+  checks          [name]           List, add, or remove deployment checks
+                                   for a project (GET/POST/DELETE        
+                                   /v2/projects/.../checks)              
+  inspect         [name]           Displays information related to a     
+                                   project                               
+  list                             Show all projects in the selected     
+                                   scope (default)                       
+  members         [name]           List project members for a project    
+  access-groups   [name]           List access groups for a project      
+  protection      [action] [name]  Show or toggle deployment protection  
+                                   settings for a project                
+  web-analytics   [action] [name]  Enable or disable Web Analytics for a 
+                                   project                               
+  speed-insights  [name]           Enable Speed Insights for a project   
+  update          [name]           Update one or more project settings;  
+                                   omitted settings remain unchanged     
+  rename          name new-name    Rename a project                      
+  remove          name             Delete a project                      
+  token           [name]           Get a development OIDC token for a    
+                                   project                               
 
 
   Global Options:
@@ -5865,22 +5869,22 @@ exports[`help command > project help output snapshots > project help column widt
 
   Commands:
 
-  add             name             Add a new project                                                                
-  access-summary  [name]           Show member counts by team role for project access (requires access groups       
-                                   entitlement)                                                                     
-  checks          [name]           List, add, or remove deployment checks for a project (GET/POST/DELETE            
-                                   /v2/projects/.../checks)                                                         
-  inspect         [name]           Displays information related to a project                                        
-  list                             Show all projects in the selected scope (default)                                
-  members         [name]           List project members for a project                                               
-  access-groups   [name]           List access groups for a project                                                 
-  protection      [action] [name]  Show or toggle deployment protection settings for a project                      
-  web-analytics   [name]           Enable Web Analytics for a project                                               
-  speed-insights  [name]           Enable Speed Insights for a project                                              
-  update          [name]           Update one or more project settings; omitted settings remain unchanged           
-  rename          name new-name    Rename a project                                                                 
-  remove          name             Delete a project                                                                 
-  token           [name]           Get a development OIDC token for a project                                       
+  add             name             Add a new project                                                             
+  access-summary  [name]           Show member counts by team role for project access (requires access groups    
+                                   entitlement)                                                                  
+  checks          [name]           List, add, or remove deployment checks for a project (GET/POST/DELETE         
+                                   /v2/projects/.../checks)                                                      
+  inspect         [name]           Displays information related to a project                                     
+  list                             Show all projects in the selected scope (default)                             
+  members         [name]           List project members for a project                                            
+  access-groups   [name]           List access groups for a project                                              
+  protection      [action] [name]  Show or toggle deployment protection settings for a project                   
+  web-analytics   [action] [name]  Enable or disable Web Analytics for a project                                 
+  speed-insights  [name]           Enable Speed Insights for a project                                           
+  update          [name]           Update one or more project settings; omitted settings remain unchanged        
+  rename          name new-name    Rename a project                                                              
+  remove          name             Delete a project                                                              
+  token           [name]           Get a development OIDC token for a project                                    
 
 
   Global Options:

@@ -186,7 +186,13 @@ export default async function main(client: Client) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(webAnalyticsSubcommand);
       }
-      telemetry.trackCliSubcommandWebAnalytics(subcommandOriginal);
+      telemetry.trackCliSubcommandWebAnalytics(
+        args[0] === 'enable'
+          ? 'web-analytics enable'
+          : args[0] === 'disable'
+            ? 'web-analytics disable'
+            : subcommandOriginal
+      );
       exitCode = await webAnalytics(client, args);
       break;
     case 'speedInsights':
