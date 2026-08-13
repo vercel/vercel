@@ -41,6 +41,13 @@ export class ProjectTelemetryClient
     });
   }
 
+  trackCliSubcommandDomains(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'domains',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'remove',

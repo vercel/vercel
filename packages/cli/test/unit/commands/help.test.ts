@@ -734,6 +734,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('project domains help output snapshots', () => {
+      it('project domains help column width 120', () => {
+        expect(
+          help(project.domainsSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
     describe('project inspect help output snapshots', () => {
       it('project inspect help column width 120', () => {
         expect(

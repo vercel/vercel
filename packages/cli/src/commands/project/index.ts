@@ -6,6 +6,7 @@ import { type Command, help } from '../help';
 import add from './add';
 import accessSummary from './access-summary';
 import checks from './checks';
+import domains from './domains';
 import inspect from './inspect';
 import list from './list';
 import members from './members';
@@ -22,6 +23,7 @@ import {
   addSubcommand,
   accessSummarySubcommand,
   checksSubcommand,
+  domainsSubcommand,
   inspectSubcommand,
   listSubcommand,
   membersSubcommand,
@@ -51,6 +53,7 @@ const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   'access-summary': getCommandAliases(accessSummarySubcommand),
   checks: getCommandAliases(checksSubcommand),
+  domains: getCommandAliases(domainsSubcommand),
   protection: getCommandAliases(protectionSubcommand),
   update: getCommandAliases(updateSubcommand),
   rename: getCommandAliases(renameSubcommand),
@@ -150,6 +153,18 @@ export default async function main(client: Client) {
             : subcommandOriginal
       );
       exitCode = await checks(client, args);
+      break;
+    case 'domains':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(domainsSubcommand);
+      }
+      telemetry.trackCliSubcommandDomains(
+        args[0] === 'update' || args[0] === 'set'
+          ? 'domains update'
+          : subcommandOriginal
+      );
+      exitCode = await domains(client, args);
       break;
     case 'members':
       if (needHelp) {

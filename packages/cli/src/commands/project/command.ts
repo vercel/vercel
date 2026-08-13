@@ -128,6 +128,105 @@ export const checksSubcommand = {
   ],
 } as const;
 
+/** Flags for `vercel project domains update <domain>`. */
+export const domainsUpdateFlags = [
+  {
+    name: 'git-branch',
+    shorthand: null,
+    type: String,
+    argument: 'BRANCH',
+    description:
+      'Link the domain to a git branch for preview deployments; pass "" to clear',
+    deprecated: false,
+  },
+  {
+    name: 'environment',
+    shorthand: null,
+    type: String,
+    argument: 'ENV',
+    description:
+      'Attach the domain to a custom environment by id or slug; pass "" to clear',
+    deprecated: false,
+  },
+  {
+    name: 'redirect',
+    shorthand: null,
+    type: String,
+    argument: 'TARGET',
+    description:
+      'Redirect the domain to another domain on the project; pass "" to clear',
+    deprecated: false,
+  },
+  {
+    name: 'redirect-status',
+    shorthand: null,
+    type: String,
+    argument: 'CODE',
+    description:
+      'HTTP status code for the redirect: 301, 302, 307, or 308; pass "" to clear',
+    deprecated: false,
+  },
+  formatOption,
+  jsonOption,
+] as const;
+
+export const domainsUpdateSubcommand = {
+  name: 'update',
+  aliases: ['set'],
+  description:
+    'Update git branch, custom environment, or redirect for a project domain; omitted settings remain unchanged',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+  ],
+  options: [...domainsUpdateFlags],
+  examples: [
+    {
+      name: 'Assign a preview git branch to a project domain',
+      value: `${packageName} project domains update preview.example.com --git-branch feat/login`,
+    },
+    {
+      name: 'Redirect a project domain with a 308',
+      value: `${packageName} project domains update old.example.com --redirect example.com --redirect-status 308`,
+    },
+    {
+      name: 'Attach a project domain to a custom environment',
+      value: `${packageName} project domains update staging.example.com --environment staging`,
+    },
+    {
+      name: 'Clear a redirect on a project domain',
+      value: `${packageName} project domains update old.example.com --redirect ""`,
+    },
+  ],
+} as const;
+
+export const domainsSubcommand = {
+  name: 'domains',
+  aliases: ['domain'],
+  description: 'Manage domains attached to a project (currently: `update`)',
+  arguments: [
+    { name: 'action', required: false },
+    { name: 'domain', required: false },
+  ],
+  options: [...domainsUpdateFlags],
+  examples: [
+    {
+      name: 'Assign a preview git branch to a project domain',
+      value: `${packageName} project domains update preview.example.com --git-branch feat/login`,
+    },
+    {
+      name: 'Redirect a project domain with a 308',
+      value: `${packageName} project domains update old.example.com --redirect example.com --redirect-status 308`,
+    },
+    {
+      name: 'Update a domain on a named project',
+      value: `${packageName} project domains update staging.example.com my-project --environment staging`,
+    },
+  ],
+} as const;
+
 export const inspectSubcommand = {
   name: 'inspect',
   aliases: [],
@@ -674,6 +773,7 @@ export const projectCommand = {
     addSubcommand,
     accessSummarySubcommand,
     checksSubcommand,
+    domainsSubcommand,
     inspectSubcommand,
     listSubcommand,
     membersSubcommand,
