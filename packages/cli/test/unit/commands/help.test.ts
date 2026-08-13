@@ -447,6 +447,14 @@ describe('help command', () => {
           })
         ).toMatchSnapshot();
       });
+      it('env shared unlink help column width 120', () => {
+        expect(
+          help(env.sharedUnlinkSubcommand, {
+            columns: 120,
+            parent: env.sharedSubcommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 

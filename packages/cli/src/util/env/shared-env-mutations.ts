@@ -108,3 +108,25 @@ export async function deleteSharedEnvRecord(
     body: { ids: [id] },
   });
 }
+
+/**
+ * Removes a project link from a Shared Environment Variable without deleting
+ * the variable, via `PATCH /v1/env/:id/unlink/:projectId`. The project is
+ * resolved by name or ID server-side.
+ */
+export async function unlinkSharedEnvProject(
+  client: Client,
+  id: string,
+  projectIdOrName: string
+): Promise<{ id: string }> {
+  output.debug(`Unlinking project ${projectIdOrName} from ${id}`);
+
+  return client.fetch<{ id: string }>(
+    `/v1/env/${encodeURIComponent(id)}/unlink/${encodeURIComponent(
+      projectIdOrName
+    )}`,
+    {
+      method: 'PATCH',
+    }
+  );
+}

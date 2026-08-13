@@ -9,6 +9,7 @@ import inspect from './shared-inspect';
 import add from './shared-add';
 import update from './shared-update';
 import remove from './shared-remove';
+import unlink from './shared-unlink';
 import {
   envCommand,
   sharedSubcommand,
@@ -17,6 +18,7 @@ import {
   sharedAddSubcommand,
   sharedUpdateSubcommand,
   sharedRemoveSubcommand,
+  sharedUnlinkSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
@@ -29,6 +31,7 @@ const COMMAND_CONFIG = {
   add: getCommandAliases(sharedAddSubcommand),
   update: getCommandAliases(sharedUpdateSubcommand),
   rm: getCommandAliases(sharedRemoveSubcommand),
+  unlink: getCommandAliases(sharedUnlinkSubcommand),
 };
 
 export default async function shared(client: Client): Promise<number> {
@@ -118,6 +121,14 @@ export default async function shared(client: Client): Promise<number> {
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return remove(client, args);
+    case 'unlink':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('env shared', subcommandOriginal);
+        printHelp(sharedUnlinkSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandUnlink(subcommandOriginal);
+      return unlink(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(

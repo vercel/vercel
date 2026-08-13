@@ -40,4 +40,11 @@ export class EnvSharedTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandUnlink(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'unlink',
+      value: actual,
+    });
+  }
 }
