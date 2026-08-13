@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Add `vercel access-group members` subcommands: list and add
+Add `vercel access-group members list` subcommand

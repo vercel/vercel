@@ -13,26 +13,10 @@ export class AccessGroupMembersTelemetryClient
     });
   }
 
-  trackCliSubcommandAdd(actual: string) {
-    this.trackCliSubcommand({
-      subcommand: 'add',
-      value: actual,
-    });
-  }
-
   trackCliArgumentGroup(group: string | undefined) {
     if (group) {
       this.trackCliArgument({
         arg: 'group',
-        value: this.redactedValue,
-      });
-    }
-  }
-
-  trackCliArgumentMember(member: string | undefined) {
-    if (member) {
-      this.trackCliArgument({
-        arg: 'member',
         value: this.redactedValue,
       });
     }

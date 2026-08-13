@@ -4,7 +4,6 @@ import type { AccessGroup } from './types';
 
 export interface UpdateAccessGroupBody {
   name?: string;
-  membersToAdd?: string[];
 }
 
 export default async function updateAccessGroup(
