@@ -13,9 +13,11 @@ import move from './move';
 import price from './price';
 import search from './search';
 import renew from './renew';
+import autoRenew from './auto-renew';
 import verify from './verify';
 import {
   addSubcommand,
+  autoRenewSubcommand,
   buySubcommand,
   checkSubcommand,
   domainsCommand,
@@ -46,6 +48,7 @@ const COMMAND_CONFIG = {
   rm: ['rm', 'remove'],
   transferIn: ['transfer-in'],
   renew: ['renew'],
+  autoRenew: ['auto-renew'],
   verify: ['verify'],
 };
 
@@ -158,6 +161,13 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandRenew(subcommandOriginal);
       return renew(client, args);
+    case 'autoRenew':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(autoRenewSubcommand);
+      }
+      telemetry.trackCliSubcommandAutoRenew(subcommandOriginal);
+      return autoRenew(client, args);
     case 'verify':
       if (needHelp) {
         telemetry.trackCliFlagHelp('domains', subcommandOriginal);

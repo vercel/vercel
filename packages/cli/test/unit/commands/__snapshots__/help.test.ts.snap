@@ -2251,6 +2251,16 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    (ch…
                                    your
                                    acc…
+  auto-renew   domain state        Turn
+                                   aut…
+                                   ren…
+                                   on  
+                                   or  
+                                   off 
+                                   for 
+                                   a   
+                                   reg…
+                                   dom…
   verify       domain              Che…
                                    a   
                                    dom…
@@ -2345,6 +2355,8 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    Vercel Team                                 
   renew        domain              Renew a registered domain before it expires 
                                    (charges your account)                      
+  auto-renew   domain state        Turn automatic renewal on or off for a      
+                                   registered domain                           
   verify       domain              Check a domain's DNS configuration and      
                                    explain what to fix when it is misconfigured
                                    or unverified                               
@@ -2388,6 +2400,7 @@ exports[`help command > domains help output snapshots > domains help column widt
   transfer-in  domain              Transfer in a domain name to Vercel                                                 
   remove       domain              Remove ownership of a domain name from a Vercel Team                                
   renew        domain              Renew a registered domain before it expires (charges your account)                  
+  auto-renew   domain state        Turn automatic renewal on or off for a registered domain                            
   verify       domain              Check a domain's DNS configuration and explain what to fix when it is misconfigured 
                                    or unverified                                                                       
 
