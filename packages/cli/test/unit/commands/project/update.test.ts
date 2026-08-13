@@ -57,6 +57,14 @@ describe('project update', () => {
       expect(helpOutput).toContain('--install-command');
       expect(helpOutput).toContain('--output-directory');
       expect(helpOutput).toContain('--auto-detect');
+      expect(helpOutput).toContain('--fluid-compute');
+      expect(helpOutput).toContain('--function-region');
+      expect(helpOutput).toContain('--function-cpu');
+      expect(helpOutput).toContain('--function-timeout');
+      expect(helpOutput).toContain('--sandbox-region');
+      expect(helpOutput).toContain('--build-machine');
+      expect(helpOutput).toContain('--elastic-concurrency');
+      expect(helpOutput).toContain('--node-version');
       expect(helpOutput).toContain('--format');
       expect(helpOutput).toContain('omitted settings remain unchanged');
       expect(helpOutput).toContain('Update multiple settings in one command');
@@ -534,6 +542,394 @@ describe('project update', () => {
         )
       ).toBe(true);
       expect(client.stderr.getFullOutput()).toBe('');
+    });
+  });
+
+  describe('compute and functions flags', () => {
+    it('enables Fluid compute via resourceConfig', async () => {
+      useSettingsProject({}, body => {
+        expect(body).toEqual({ resourceConfig: { fluid: true } });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--fluid-compute',
+        'on'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+      expect(client.stderr.getFullOutput()).toContain('Fluid Compute');
+      expect(client.stderr.getFullOutput()).toContain('on');
+    });
+
+    it('disables elastic concurrency via resourceConfig', async () => {
+      useSettingsProject({}, body => {
+        expect(body).toEqual({
+          resourceConfig: { elasticConcurrencyEnabled: false },
+        });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--elastic-concurrency',
+        'off'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
+    it('sets the default function region(s)', async () => {
+      useSettingsProject({}, body => {
+        expect(body).toEqual({
+          resourceConfig: { functionDefaultRegions: ['iad1', 'sfo1'] },
+        });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--function-region',
+        'iad1,sfo1'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
+    it('sets the function CPU tier', async () => {
+      useSettingsProject({}, body => {
+        expect(body).toEqual({
+          resourceConfig: { functionDefaultMemoryType: 'performance' },
+        });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--function-cpu',
+        'performance'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
+    it('sets the function timeout as an integer', async () => {
+      useSettingsProject({}, body => {
+        expect(body).toEqual({
+          resourceConfig: { functionDefaultTimeout: 30 },
+        });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--function-timeout',
+        '30'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
+    it('sets the build machine type', async () => {
+      useSettingsProject({}, body => {
+        expect(body).toEqual({
+          resourceConfig: { buildMachineType: 'enhanced' },
+        });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--build-machine',
+        'enhanced'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
+    it('sets the Node.js version at the top level', async () => {
+      const currentProject = useSettingsProject({}, body => {
+        expect(body).toEqual({ nodeVersion: '20.x' });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--node-version',
+        '20.x'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+      expect(currentProject.nodeVersion).toBe('20.x');
+    });
+
+    it('merges sandbox region with existing failover regions', async () => {
+      useSettingsProject(
+        {
+          // @ts-expect-error sandbox is not modeled on the CLI Project type
+          sandbox: { region: 'iad1', failoverRegions: ['sfo1'] },
+        },
+        body => {
+          expect(body).toEqual({
+            sandbox: { region: 'cle1', failoverRegions: ['sfo1'] },
+          });
+        }
+      );
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--sandbox-region',
+        'cle1'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
+    it('combines multiple compute flags into one sparse PATCH', async () => {
+      useSettingsProject({}, body => {
+        expect(body).toEqual({
+          resourceConfig: {
+            fluid: true,
+            functionDefaultTimeout: 60,
+            functionDefaultMemoryType: 'performance_xl',
+          },
+          nodeVersion: '22.x',
+        });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--fluid-compute',
+        'on',
+        '--function-timeout',
+        '60',
+        '--function-cpu',
+        'performance_xl',
+        '--node-version',
+        '22.x'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
+    it('preserves existing framework behavior alongside compute flags', async () => {
+      const currentProject = useSettingsProject({ framework: 'vite' }, body => {
+        expect(body).toEqual({
+          framework: 'nextjs',
+          resourceConfig: { fluid: true },
+        });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--framework',
+        'nextjs',
+        '--fluid-compute',
+        'on'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+      expect(currentProject.framework).toBe('nextjs');
+    });
+
+    it('does not send a PATCH when the compute value is unchanged', async () => {
+      const currentProject: Project = {
+        ...defaultProject,
+        id: 'prj_123',
+        name: 'my-project',
+        nodeVersion: '20.x',
+      };
+      client.scenario.get('/v9/projects/my-project', (_req, res) => {
+        res.json(currentProject);
+      });
+      const fetchSpy = vi.spyOn(client, 'fetch');
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--node-version',
+        '20.x',
+        '--format',
+        'json'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+      const patchCall = fetchSpy.mock.calls.find(
+        ([, options]) => options?.method === 'PATCH'
+      );
+      expect(patchCall).toBeUndefined();
+      expect(JSON.parse(client.stdout.getFullOutput().trim())).toEqual({
+        changed: false,
+        changedSettings: [],
+        projectId: 'prj_123',
+        projectName: 'my-project',
+        settings: { nodeVersion: '20.x' },
+      });
+    });
+
+    it('returns advanced settings in JSON output', async () => {
+      useSettingsProject({});
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--fluid-compute',
+        'on',
+        '--node-version',
+        '20.x',
+        '--format',
+        'json'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload.changed).toBe(true);
+      expect(payload.changedSettings).toEqual(
+        expect.arrayContaining(['fluid', 'nodeVersion'])
+      );
+      expect(payload.settings).toMatchObject({
+        fluid: true,
+        nodeVersion: '20.x',
+      });
+      expect(client.stderr.getFullOutput()).toBe('');
+    });
+
+    it('records enum and boolean values but redacts regions in telemetry', async () => {
+      useSettingsProject({});
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--fluid-compute',
+        'on',
+        '--function-cpu',
+        'performance',
+        '--function-region',
+        'iad1',
+        '--node-version',
+        '20.x'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:update', value: 'update' },
+        { key: 'argument:name', value: '[REDACTED]' },
+        { key: 'option:fluid-compute', value: 'on' },
+        { key: 'option:function-region', value: '[REDACTED]' },
+        { key: 'option:function-cpu', value: 'performance' },
+        { key: 'option:node-version', value: '20.x' },
+      ]);
+    });
+
+    it('rejects an invalid node version before resolving a project', async () => {
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--node-version',
+        '19.x'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Node.js version must be one of'
+      );
+      expect(client.stdout.getFullOutput()).toBe('');
+    });
+
+    it('rejects an invalid function CPU tier before resolving a project', async () => {
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--function-cpu',
+        'mega'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Function CPU must be one of'
+      );
+    });
+
+    it('rejects a non on/off boolean value before resolving a project', async () => {
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--fluid-compute',
+        'yes'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        '--fluid-compute must be "on" or "off".'
+      );
+    });
+
+    it('rejects a non-integer function timeout before resolving a project', async () => {
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--function-timeout',
+        '30.5'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Function timeout must be an integer between 1 and 900 seconds.'
+      );
+    });
+
+    it('rejects a function timeout outside the allowed range', async () => {
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--function-timeout',
+        '1000'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Function timeout must be between 1 and 900 seconds.'
+      );
     });
   });
 });

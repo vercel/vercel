@@ -62,6 +62,92 @@ export class ProjectUpdateTelemetryClient
     }
   }
 
+  trackCliOptionFluidCompute(value: string | undefined) {
+    this.trackOnOffOption('fluid-compute', value);
+  }
+
+  trackCliOptionFunctionRegion(value: string | undefined) {
+    // Region identifiers are free-form input, so redact the value.
+    if (value !== undefined) {
+      this.trackCliOption({
+        option: 'function-region',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionFunctionCpu(value: string | undefined) {
+    this.trackEnumOption('function-cpu', value, [
+      'standard_legacy',
+      'standard',
+      'performance',
+      'performance_xl',
+    ]);
+  }
+
+  trackCliOptionFunctionTimeout(value: string | undefined) {
+    if (value !== undefined) {
+      const trimmed = value.trim();
+      this.trackCliOption({
+        option: 'function-timeout',
+        value: /^\d+$/.test(trimmed) ? trimmed : this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionSandboxRegion(value: string | undefined) {
+    this.trackEnumOption('sandbox-region', value, ['iad1', 'sfo1', 'cle1']);
+  }
+
+  trackCliOptionBuildMachine(value: string | undefined) {
+    this.trackEnumOption('build-machine', value, [
+      'basic',
+      'standard',
+      'enhanced',
+      'turbo',
+      'elastic',
+    ]);
+  }
+
+  trackCliOptionElasticConcurrency(value: string | undefined) {
+    this.trackOnOffOption('elastic-concurrency', value);
+  }
+
+  trackCliOptionNodeVersion(value: string | undefined) {
+    this.trackEnumOption('node-version', value, [
+      '24.x',
+      '22.x',
+      '20.x',
+      '18.x',
+      '16.x',
+      '14.x',
+      '12.x',
+      '10.x',
+    ]);
+  }
+
+  private trackOnOffOption(option: string, value: string | undefined) {
+    if (value !== undefined) {
+      this.trackCliOption({
+        option,
+        value: value === 'on' || value === 'off' ? value : this.redactedValue,
+      });
+    }
+  }
+
+  private trackEnumOption(
+    option: string,
+    value: string | undefined,
+    allowed: readonly string[]
+  ) {
+    if (value !== undefined) {
+      this.trackCliOption({
+        option,
+        value: allowed.includes(value) ? value : this.redactedValue,
+      });
+    }
+  }
+
   trackCliFlagJson(json: boolean | undefined) {
     if (json) {
       this.trackCliFlag('json');

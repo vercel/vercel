@@ -301,6 +301,74 @@ export const updateSubcommand = {
         'Reset a setting to automatic detection; repeat for build-command, dev-command, install-command, output-directory, or root-directory',
       deprecated: false,
     },
+    {
+      name: 'fluid-compute',
+      shorthand: null,
+      type: String,
+      argument: 'on|off',
+      description: 'Enable or disable Fluid compute',
+      deprecated: false,
+    },
+    {
+      name: 'function-region',
+      shorthand: null,
+      type: String,
+      argument: 'REGION',
+      description:
+        'Set the default Vercel Functions region(s); comma-separated for multiple (e.g. iad1,sfo1)',
+      deprecated: false,
+    },
+    {
+      name: 'function-cpu',
+      shorthand: null,
+      type: String,
+      argument: 'TIER',
+      description:
+        'Set the default function CPU/memory tier: standard_legacy, standard, performance, or performance_xl',
+      deprecated: false,
+    },
+    {
+      name: 'function-timeout',
+      shorthand: null,
+      type: String,
+      argument: 'SECONDS',
+      description: 'Set the default function max duration in seconds (1-900)',
+      deprecated: false,
+    },
+    {
+      name: 'sandbox-region',
+      shorthand: null,
+      type: String,
+      argument: 'REGION',
+      description: 'Set the default sandbox region: iad1, sfo1, or cle1',
+      deprecated: false,
+    },
+    {
+      name: 'build-machine',
+      shorthand: null,
+      type: String,
+      argument: 'TYPE',
+      description:
+        'Set the build machine type: basic, standard, enhanced, turbo, or elastic',
+      deprecated: false,
+    },
+    {
+      name: 'elastic-concurrency',
+      shorthand: null,
+      type: String,
+      argument: 'on|off',
+      description: 'Enable or disable elastic concurrency for builds',
+      deprecated: false,
+    },
+    {
+      name: 'node-version',
+      shorthand: null,
+      type: String,
+      argument: 'VERSION',
+      description:
+        'Set the Node.js version: 24.x, 22.x, 20.x, 18.x, 16.x, 14.x, 12.x, or 10.x',
+      deprecated: false,
+    },
     formatOption,
     jsonOption,
   ],
@@ -320,6 +388,14 @@ export const updateSubcommand = {
     {
       name: 'Reset individual settings to automatic detection',
       value: `${packageName} project update my-project --auto-detect build-command --auto-detect output-directory`,
+    },
+    {
+      name: 'Enable Fluid compute and set the function CPU tier',
+      value: `${packageName} project update my-project --fluid-compute on --function-cpu performance`,
+    },
+    {
+      name: 'Pin the Node.js version and default function region',
+      value: `${packageName} project update my-project --node-version 20.x --function-region iad1`,
     },
     {
       name: 'Clear the framework preset and return JSON',

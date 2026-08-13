@@ -176,18 +176,319 @@ function parseAutoDetectSettings(inputs: string[]): string[] {
   return inputs.flatMap(input => input.split(',')).map(input => input.trim());
 }
 
+// --- Advanced project settings (compute / functions) ---
+//
+// These flags map to the nested `resourceConfig` and `sandbox` objects and to
+// top-level project fields on the public project PATCH schema. Each definition
+// parses and validates its flag value locally before any request, reads the
+// current value for change detection and preview, and applies the change to a
+// sparse PATCH body so only the fields the user provided are sent.
+const NODE_VERSIONS = [
+  '24.x',
+  '22.x',
+  '20.x',
+  '18.x',
+  '16.x',
+  '14.x',
+  '12.x',
+  '10.x',
+] as const;
+const FUNCTION_CPU_TIERS = [
+  'standard_legacy',
+  'standard',
+  'performance',
+  'performance_xl',
+] as const;
+const BUILD_MACHINE_TYPES = [
+  'basic',
+  'standard',
+  'enhanced',
+  'turbo',
+  'elastic',
+] as const;
+const SANDBOX_REGIONS = ['iad1', 'sfo1', 'cle1'] as const;
+const MIN_FUNCTION_TIMEOUT = 1;
+const MAX_FUNCTION_TIMEOUT = 900;
+
+type AdvancedValue = string | number | boolean | string[];
+type PatchBody = Record<string, unknown>;
+type AdvancedParseResult =
+  | { ok: true; value: AdvancedValue }
+  | { ok: false; message: string };
+
+// Subset of project fields the advanced flags read for change detection and
+// merge. These exist on the API response but are not modeled on the CLI
+// `Project` type, so they are read through this narrow view.
+interface AdvancedProjectFields {
+  resourceConfig?: {
+    fluid?: boolean;
+    functionDefaultRegions?: string[];
+    functionDefaultMemoryType?: string;
+    functionDefaultTimeout?: number;
+    elasticConcurrencyEnabled?: boolean;
+    buildMachineType?: string;
+  } | null;
+  sandbox?: { region?: string; failoverRegions?: string[] } | null;
+}
+
+interface AdvancedSettingDefinition {
+  key: string;
+  flag: string;
+  label: string;
+  parse: (raw: string) => AdvancedParseResult;
+  read: (project: Project) => AdvancedValue | null | undefined;
+  apply: (body: PatchBody, value: AdvancedValue, project: Project) => void;
+  display: (value: AdvancedValue | null | undefined) => string;
+}
+
+interface AdvancedPreviewRow {
+  label: string;
+  previous: string;
+  next: string;
+  changed: boolean;
+}
+
+interface ProvidedAdvancedSetting {
+  definition: AdvancedSettingDefinition;
+  value: AdvancedValue;
+}
+
+function getAdvancedFields(project: Project): AdvancedProjectFields {
+  return project as Project & AdvancedProjectFields;
+}
+
+function ensureResourceConfig(body: PatchBody): Record<string, unknown> {
+  const resourceConfig =
+    (body.resourceConfig as Record<string, unknown> | undefined) ?? {};
+  body.resourceConfig = resourceConfig;
+  return resourceConfig;
+}
+
+function parseOnOff(flag: string, raw: string): AdvancedParseResult {
+  if (raw === 'on') {
+    return { ok: true, value: true };
+  }
+  if (raw === 'off') {
+    return { ok: true, value: false };
+  }
+  return { ok: false, message: `${flag} must be "on" or "off".` };
+}
+
+function parseEnumValue(
+  label: string,
+  raw: string,
+  allowed: readonly string[]
+): AdvancedParseResult {
+  if (allowed.includes(raw)) {
+    return { ok: true, value: raw };
+  }
+  return {
+    ok: false,
+    message: `${label} must be one of: ${allowed.join(', ')}.`,
+  };
+}
+
+function displayOnOff(value: AdvancedValue | null | undefined): string {
+  if (value === true) {
+    return 'on';
+  }
+  if (value === false) {
+    return 'off';
+  }
+  return 'Auto';
+}
+
+function displayValue(value: AdvancedValue | null | undefined): string {
+  if (value === null || value === undefined) {
+    return 'Auto';
+  }
+  if (Array.isArray(value)) {
+    return value.join(', ');
+  }
+  return String(value);
+}
+
+const advancedSettingDefinitions: readonly AdvancedSettingDefinition[] = [
+  {
+    key: 'fluid',
+    flag: '--fluid-compute',
+    label: 'Fluid Compute',
+    parse: raw => parseOnOff('--fluid-compute', raw),
+    read: project => getAdvancedFields(project).resourceConfig?.fluid,
+    apply: (body, value) => {
+      ensureResourceConfig(body).fluid = value as boolean;
+    },
+    display: displayOnOff,
+  },
+  {
+    key: 'functionDefaultRegions',
+    flag: '--function-region',
+    label: 'Function Regions',
+    parse: raw => {
+      const regions = raw
+        .split(',')
+        .map(region => region.trim())
+        .filter(region => region.length > 0);
+      if (regions.length === 0) {
+        return {
+          ok: false,
+          message: '--function-region requires at least one region.',
+        };
+      }
+      for (const region of regions) {
+        if (region.length < 3 || region.length > 4) {
+          return {
+            ok: false,
+            message: `Function region "${region}" must be a 3-4 character region such as "iad1".`,
+          };
+        }
+      }
+      return { ok: true, value: regions };
+    },
+    read: project =>
+      getAdvancedFields(project).resourceConfig?.functionDefaultRegions,
+    apply: (body, value) => {
+      ensureResourceConfig(body).functionDefaultRegions = value as string[];
+    },
+    display: displayValue,
+  },
+  {
+    key: 'functionDefaultMemoryType',
+    flag: '--function-cpu',
+    label: 'Function CPU',
+    parse: raw => parseEnumValue('Function CPU', raw, FUNCTION_CPU_TIERS),
+    read: project =>
+      getAdvancedFields(project).resourceConfig?.functionDefaultMemoryType,
+    apply: (body, value) => {
+      ensureResourceConfig(body).functionDefaultMemoryType = value as string;
+    },
+    display: displayValue,
+  },
+  {
+    key: 'functionDefaultTimeout',
+    flag: '--function-timeout',
+    label: 'Function Timeout',
+    parse: raw => {
+      const trimmed = raw.trim();
+      if (!/^\d+$/.test(trimmed)) {
+        return {
+          ok: false,
+          message: `Function timeout must be an integer between ${MIN_FUNCTION_TIMEOUT} and ${MAX_FUNCTION_TIMEOUT} seconds.`,
+        };
+      }
+      const seconds = Number(trimmed);
+      if (seconds < MIN_FUNCTION_TIMEOUT || seconds > MAX_FUNCTION_TIMEOUT) {
+        return {
+          ok: false,
+          message: `Function timeout must be between ${MIN_FUNCTION_TIMEOUT} and ${MAX_FUNCTION_TIMEOUT} seconds.`,
+        };
+      }
+      return { ok: true, value: seconds };
+    },
+    read: project =>
+      getAdvancedFields(project).resourceConfig?.functionDefaultTimeout,
+    apply: (body, value) => {
+      ensureResourceConfig(body).functionDefaultTimeout = value as number;
+    },
+    display: value => (typeof value === 'number' ? `${value}s` : 'Auto'),
+  },
+  {
+    key: 'sandboxRegion',
+    flag: '--sandbox-region',
+    label: 'Sandbox Region',
+    parse: raw => parseEnumValue('Sandbox region', raw, SANDBOX_REGIONS),
+    read: project => getAdvancedFields(project).sandbox?.region,
+    apply: (body, value, project) => {
+      body.sandbox = {
+        ...(getAdvancedFields(project).sandbox ?? {}),
+        region: value as string,
+      };
+    },
+    display: displayValue,
+  },
+  {
+    key: 'buildMachineType',
+    flag: '--build-machine',
+    label: 'Build Machine',
+    parse: raw => parseEnumValue('Build machine', raw, BUILD_MACHINE_TYPES),
+    read: project =>
+      getAdvancedFields(project).resourceConfig?.buildMachineType,
+    apply: (body, value) => {
+      ensureResourceConfig(body).buildMachineType = value as string;
+    },
+    display: displayValue,
+  },
+  {
+    key: 'elasticConcurrencyEnabled',
+    flag: '--elastic-concurrency',
+    label: 'Elastic Concurrency',
+    parse: raw => parseOnOff('--elastic-concurrency', raw),
+    read: project =>
+      getAdvancedFields(project).resourceConfig?.elasticConcurrencyEnabled,
+    apply: (body, value) => {
+      ensureResourceConfig(body).elasticConcurrencyEnabled = value as boolean;
+    },
+    display: displayOnOff,
+  },
+  {
+    key: 'nodeVersion',
+    flag: '--node-version',
+    label: 'Node.js Version',
+    parse: raw => parseEnumValue('Node.js version', raw, NODE_VERSIONS),
+    read: project => project.nodeVersion,
+    apply: (body, value) => {
+      body.nodeVersion = value as string;
+    },
+    display: displayValue,
+  },
+];
+
+function advancedValuesEqual(
+  a: AdvancedValue | null | undefined,
+  b: AdvancedValue | null | undefined
+): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((item, index) => item === b[index]);
+  }
+  return a === b;
+}
+
+function collectAdvancedSettings(
+  flags: Record<string, unknown>
+):
+  | { ok: true; provided: ProvidedAdvancedSetting[] }
+  | { ok: false; flag: string; message: string } {
+  const provided: ProvidedAdvancedSetting[] = [];
+  for (const definition of advancedSettingDefinitions) {
+    const raw = flags[definition.flag] as string | undefined;
+    if (raw === undefined) {
+      continue;
+    }
+    const result = definition.parse(raw);
+    if (!result.ok) {
+      return { ok: false, flag: definition.flag, message: result.message };
+    }
+    provided.push({ definition, value: result.value });
+  }
+  return { ok: true, provided };
+}
+
 function writeResult({
   changedSettings,
   project,
   previousSettings,
   requestedSettings,
+  advancedRows,
+  advancedSettings,
   asJson,
   client,
 }: {
-  changedSettings: ProjectSettingKey[];
+  changedSettings: string[];
   project: Project;
   previousSettings: ProjectSettingsUpdate;
   requestedSettings: ProjectSettingsUpdate;
+  advancedRows: AdvancedPreviewRow[];
+  advancedSettings: Record<string, AdvancedValue>;
   asJson: boolean;
   client: Client;
 }) {
@@ -200,7 +501,7 @@ function writeResult({
           changedSettings,
           projectId: project.id,
           projectName: project.name,
-          settings: requestedSettings,
+          settings: { ...requestedSettings, ...advancedSettings },
         },
         null,
         2
@@ -223,6 +524,10 @@ function writeResult({
       ? `${formatSettingValue(key, previous)} → ${formatSettingValue(key, next)}`
       : formatSettingValue(key, next);
     printAlignedLabel(settingLabels[key], value);
+  }
+  for (const row of advancedRows) {
+    const value = row.changed ? `${row.previous} → ${row.next}` : row.next;
+    printAlignedLabel(row.label, value);
   }
 }
 
@@ -271,6 +576,14 @@ export default async function update(
     flags['--auto-detect'] as [string] | undefined
   );
   telemetry.trackCliOptionFormat(flags['--format']);
+  telemetry.trackCliOptionFluidCompute(flags['--fluid-compute']);
+  telemetry.trackCliOptionFunctionRegion(flags['--function-region']);
+  telemetry.trackCliOptionFunctionCpu(flags['--function-cpu']);
+  telemetry.trackCliOptionFunctionTimeout(flags['--function-timeout']);
+  telemetry.trackCliOptionSandboxRegion(flags['--sandbox-region']);
+  telemetry.trackCliOptionBuildMachine(flags['--build-machine']);
+  telemetry.trackCliOptionElasticConcurrency(flags['--elastic-concurrency']);
+  telemetry.trackCliOptionNodeVersion(flags['--node-version']);
 
   if (args.length > 1) {
     return printUsageError(
@@ -361,10 +674,25 @@ export default async function update(
     }
   }
 
-  if (settingOrder.every(key => !hasSetting(requestedSettings, key))) {
+  const advancedResult = collectAdvancedSettings(flags);
+  if (!advancedResult.ok) {
     return printUsageError(
       client,
-      'Provide at least one setting option: --framework, --build-command, --dev-command, --install-command, --output-directory, --root-directory, or --auto-detect.',
+      advancedResult.message,
+      1,
+      'invalid_arguments',
+      `project update <name> ${advancedResult.flag} <value>`
+    );
+  }
+  const providedAdvanced = advancedResult.provided;
+
+  if (
+    settingOrder.every(key => !hasSetting(requestedSettings, key)) &&
+    providedAdvanced.length === 0
+  ) {
+    return printUsageError(
+      client,
+      'Provide at least one setting option. Run "vercel project update --help" to see every available option.',
       2,
       'missing_arguments'
     );
@@ -385,7 +713,7 @@ export default async function update(
   }
 
   const previousSettings: ProjectSettingsUpdate = {};
-  const changedSettings: ProjectSettingKey[] = [];
+  const changedSettings: string[] = [];
   const changedUpdates: ProjectSettingsUpdate = {};
   for (const key of settingOrder) {
     if (!hasSetting(requestedSettings, key)) {
@@ -400,6 +728,25 @@ export default async function update(
     }
   }
 
+  const body: PatchBody = { ...changedUpdates };
+  const advancedRows: AdvancedPreviewRow[] = [];
+  const advancedSettings: Record<string, AdvancedValue> = {};
+  for (const { definition, value } of providedAdvanced) {
+    const previous = definition.read(project);
+    const changed = !advancedValuesEqual(previous, value);
+    advancedSettings[definition.key] = value;
+    advancedRows.push({
+      label: definition.label,
+      previous: definition.display(previous),
+      next: definition.display(value),
+      changed,
+    });
+    if (changed) {
+      changedSettings.push(definition.key);
+      definition.apply(body, value, project);
+    }
+  }
+
   let updatedProject = project;
   if (changedSettings.length > 0) {
     try {
@@ -407,7 +754,7 @@ export default async function update(
         `/v9/projects/${encodeURIComponent(project.id)}`,
         {
           method: 'PATCH',
-          body: changedUpdates as JSONObject,
+          body: body as JSONObject,
         }
       );
     } catch (error) {
@@ -422,6 +769,8 @@ export default async function update(
     project: updatedProject,
     previousSettings,
     requestedSettings,
+    advancedRows,
+    advancedSettings,
     asJson: formatResult.jsonOutput,
     client,
   });
