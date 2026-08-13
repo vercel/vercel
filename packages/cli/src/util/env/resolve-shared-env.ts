@@ -22,7 +22,9 @@ export default async function resolveSharedEnvVariable(
   const isId = nameOrId.startsWith(ID_PREFIX);
   const { data } = await getSharedEnvRecords(
     client,
-    isId ? { ids: nameOrId, limit: 100 } : { search: nameOrId, limit: 100 }
+    // 50 matches the server's MAX_EV_IDS_COUNT clamp; a larger limit would be
+    // silently reduced to 50 anyway.
+    isId ? { ids: nameOrId, limit: 50 } : { search: nameOrId, limit: 50 }
   );
 
   const matches = isId

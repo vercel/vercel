@@ -75,6 +75,33 @@ describe('env shared add', () => {
     expect(stderr).not.toContain(SECRET);
   });
 
+  it('ingests the value from piped stdin and strips the trailing newline', async () => {
+    const mock = useCreateSharedEnv();
+    client.stdin.isTTY = false;
+    client.setArgv(
+      'env',
+      'shared',
+      'add',
+      'API_URL',
+      '-e',
+      'production',
+      '--yes'
+    );
+
+    const exitCodePromise = env(client);
+    setImmediate(() => client.stdin.emit('data', `${SECRET}\n`));
+
+    expect(await exitCodePromise).toEqual(0);
+    expect(mock.wasCalled()).toBe(true);
+    const body = mock.getBody() as { evs: { key: string; value: string }[] };
+    expect(body.evs[0].value).toEqual(SECRET);
+
+    const stdout = client.stdout.getFullOutput();
+    const stderr = client.stderr.getFullOutput();
+    expect(stdout).not.toContain(SECRET);
+    expect(stderr).not.toContain(SECRET);
+  });
+
   it('marks the variable sensitive with --sensitive and stores a comment', async () => {
     const mock = useCreateSharedEnv();
     client.setArgv(

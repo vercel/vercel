@@ -77,6 +77,28 @@ describe('env shared update', () => {
     expect(stderr).not.toContain(SECRET);
   });
 
+  it('ingests the new value from piped stdin and strips the trailing newline', async () => {
+    useResolve();
+    const patch = usePatch();
+    client.stdin.isTTY = false;
+    client.setArgv('env', 'shared', 'update', 'API_URL', '--yes');
+
+    const exitCodePromise = env(client);
+    setImmediate(() => client.stdin.emit('data', `${SECRET}\n`));
+
+    expect(await exitCodePromise).toEqual(0);
+    expect(patch.wasCalled()).toBe(true);
+    const body = patch.getBody() as {
+      updates: Record<string, { value?: string }>;
+    };
+    expect(body.updates.env_1.value).toEqual(SECRET);
+
+    const stdout = client.stdout.getFullOutput();
+    const stderr = client.stderr.getFullOutput();
+    expect(stdout).not.toContain(SECRET);
+    expect(stderr).not.toContain(SECRET);
+  });
+
   it('resolves an id via the ids filter', async () => {
     const getQuery = useResolve();
     usePatch();
