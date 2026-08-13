@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
+import { formatOption, jsonOption } from '../../util/arg-common';
 
 const nameOption = {
   name: 'name',
@@ -82,25 +82,6 @@ export const updateSubcommand = {
   ],
 } as const;
 
-export const removeSubcommand = {
-  name: 'remove',
-  aliases: ['rm'],
-  description: 'Remove an access group',
-  arguments: [
-    {
-      name: 'idOrName',
-      required: true,
-    },
-  ],
-  options: [yesOption],
-  examples: [
-    {
-      name: 'Remove an access group',
-      value: `${packageName} access-group rm my-access-group`,
-    },
-  ],
-} as const;
-
 export const accessGroupCommand = {
   name: 'access-group',
   aliases: ['access-groups'],
@@ -111,7 +92,6 @@ export const accessGroupCommand = {
     inspectSubcommand,
     addSubcommand,
     updateSubcommand,
-    removeSubcommand,
   ],
   options: [],
   examples: [

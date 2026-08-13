@@ -34,13 +34,6 @@ export class AccessGroupTelemetryClient
     });
   }
 
-  trackCliSubcommandRemove(actual: string) {
-    this.trackCliSubcommand({
-      subcommand: 'remove',
-      value: actual,
-    });
-  }
-
   trackCliArgumentIdOrName(idOrName: string | undefined) {
     if (idOrName) {
       this.trackCliArgument({
@@ -65,12 +58,6 @@ export class AccessGroupTelemetryClient
         option: 'name',
         value: this.redactedValue,
       });
-    }
-  }
-
-  trackCliFlagYes(yes: boolean | undefined) {
-    if (yes) {
-      this.trackCliFlag('yes');
     }
   }
 }

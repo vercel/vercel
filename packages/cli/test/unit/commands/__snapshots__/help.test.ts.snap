@@ -60,9 +60,6 @@ exports[`help command > access-group help output snapshots > access-group help c
   update   idOrName  Update an  
                      access     
                      group      
-  remove   idOrName  Remove an  
-                     access     
-                     group      
 
 
   Global Options:
@@ -139,7 +136,6 @@ exports[`help command > access-group help output snapshots > access-group help c
   inspect  idOrName  Show an access group in full                       
   add      name      Create an access group                             
   update   idOrName  Update an access group                             
-  remove   idOrName  Remove an access group                             
 
 
   Global Options:
@@ -183,7 +179,6 @@ exports[`help command > access-group help output snapshots > access-group help c
   inspect  idOrName  Show an access group in full                                                               
   add      name      Create an access group                                                                     
   update   idOrName  Update an access group                                                                     
-  remove   idOrName  Remove an access group                                                                     
 
 
   Global Options:
@@ -279,40 +274,6 @@ exports[`help command > access-group help output snapshots > access-group list h
   - List all access groups on the current team
 
     $ vercel access-group ls
-
-"
-`;
-
-exports[`help command > access-group help output snapshots > access-group remove help output snapshots > access-group remove help column width 120 1`] = `
-"
-  ▲ vercel access-group remove idOrName [options]
-
-  Remove an access group                                                                                                
-
-  Options:
-
-  -y,  --yes  Accept default value for all prompts                                                                      
-
-
-  Global Options:
-
-       --cwd <DIR>            Sets the current working directory for a single run of a command                          
-  -d,  --debug                Debug mode (default off)                                                                  
-  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
-  -h,  --help                 Output usage information                                                                  
-  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
-       --no-color             No color mode (default off)                                                               
-       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
-  -S,  --scope                Set a custom scope                                                                        
-  -t,  --token <TOKEN>        Login token                                                                               
-  -v,  --version              Output the version number                                                                 
-
-
-  Examples:
-
-  - Remove an access group
-
-    $ vercel access-group rm my-access-group
 
 "
 `;
