@@ -24,8 +24,9 @@ import type { JSONObject, Project } from '@vercel-internals/types';
 const ACTIONS = ['get', 'set', 'disable'] as const;
 type Action = (typeof ACTIONS)[number];
 
-// Schema: optionsAllowlist.paths is limited server-side; mirror a sane cap.
-const MAX_OPTIONS_ALLOWLIST_PATHS = 100;
+// Schema: optionsAllowlist.paths maxItems — mirror the API's LIMIT (5) so
+// the user gets a clean local error instead of a remote validation failure.
+const MAX_OPTIONS_ALLOWLIST_PATHS = 5;
 
 interface SettingSpec {
   /** Project PATCH body field, verbatim from the public schema. */

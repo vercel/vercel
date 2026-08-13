@@ -137,6 +137,31 @@ describe('project protection settings subcommands', () => {
       await expect(client.stderr).toOutput('At least one');
     });
 
+    it('rejects more than 5 paths before any HTTP request', async () => {
+      let patched = false;
+      setupProject({}, () => {
+        patched = true;
+      });
+      const pathFlags = Array.from({ length: 6 }, (_, i) => [
+        '--path',
+        `/route-${i}`,
+      ]).flat();
+      client.setArgv(
+        'project',
+        'protection',
+        'options-allowlist',
+        'set',
+        'my-project',
+        ...pathFlags
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(1);
+      expect(patched).toBe(false);
+      await expect(client.stderr).toOutput(
+        'Too many paths (6); the maximum is 5'
+      );
+    });
+
     it('clears the allowlist (null) on disable --yes', async () => {
       let body: unknown;
       setupProject({}, b => {
@@ -316,6 +341,37 @@ describe('project protection settings subcommands', () => {
         expect(exitCode).toBe(1);
         expect(patched).toBe(false);
         await expect(client.stderr).toOutput('unknown key');
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    it.each([
+      ['malformed JSON', '{ not json', 'expected a JSON object'],
+      ['an empty object', '{}', 'at least one of'],
+      ['a JSON array', '[]', 'expected a JSON object'],
+    ])('rejects %s in --file before any HTTP request', async (_name, contents, expected) => {
+      let patched = false;
+      setupProject({}, () => {
+        patched = true;
+      });
+      const dir = mkdtempSync(join(tmpdir(), 'vc-cli-ts-invalid-'));
+      const filePath = join(dir, 'config.json');
+      writeFileSync(filePath, contents);
+      try {
+        client.setArgv(
+          'project',
+          'protection',
+          'trusted-sources',
+          'set',
+          'my-project',
+          '--file',
+          filePath
+        );
+        const exitCode = await project(client);
+        expect(exitCode).toBe(1);
+        expect(patched).toBe(false);
+        await expect(client.stderr).toOutput(expected);
       } finally {
         rmSync(dir, { recursive: true, force: true });
       }
