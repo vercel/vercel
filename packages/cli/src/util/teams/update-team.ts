@@ -8,6 +8,13 @@ import type Client from '../client';
 export type TeamUpdatePayload = {
   name?: string;
   slug?: string;
+  previewDeploymentSuffix?: string | null;
+  enablePreviewFeedback?: string;
+  resourceConfig?: {
+    buildMachine: {
+      default: string;
+    };
+  };
 };
 
 export default async function updateTeam(
