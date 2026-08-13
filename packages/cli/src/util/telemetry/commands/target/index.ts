@@ -26,4 +26,11 @@ export class TargetTelemetryClient
       value: subcommandActual,
     });
   }
+
+  trackCliSubcommandUpdate(subcommandActual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'update',
+      value: subcommandActual,
+    });
+  }
 }

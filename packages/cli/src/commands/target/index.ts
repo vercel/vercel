@@ -5,11 +5,13 @@ import { type Command, help } from '../help';
 import list from './list';
 import inspect from './inspect';
 import add from './add';
+import update from './update';
 import {
   addSubcommand,
   inspectSubcommand,
   listSubcommand,
   targetCommand,
+  updateSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
@@ -21,6 +23,7 @@ const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
   inspect: getCommandAliases(inspectSubcommand),
   add: getCommandAliases(addSubcommand),
+  update: getCommandAliases(updateSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -86,6 +89,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAdd(subcommand);
       return await add(client, args);
+    case 'update':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('target', 'update');
+        printHelp(updateSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandUpdate(subcommand);
+      return await update(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(targetCommand, { columns: client.stderr.columns }));
