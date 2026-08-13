@@ -1,5 +1,11 @@
 # @vercel/cervel
 
+## 0.1.45
+
+### Patch Changes
+
+- @vercel/backends@0.8.37
+
 ## 0.1.44
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # @vercel/node
 
+## 5.10.0
+
+### Minor Changes
+
+- 852e1a0: Move middleware matcher utils from node builder to general build utils.
+
+### Patch Changes
+
+- Updated dependencies [852e1a0]
+  - @vercel/build-utils@14.1.0
+
 ## 5.9.9
 
 ### Patch Changes

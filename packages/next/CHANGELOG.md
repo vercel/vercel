@@ -1,5 +1,12 @@
 # @vercel/next
 
+## 4.21.4
+
+### Patch Changes
+
+- 7ddf258: Remove obsolete shared-lambda size coverage for an unsupported dependency stack.
+- b517588: Update the Next.js adapter to 0.0.1-beta.26.
+
 ## 4.21.3
 
 ### Patch Changes

@@ -1,5 +1,46 @@
 # vercel
 
+## 59.0.0
+
+### Major Changes
+
+- d7760a7: Removed CLI purchase support for the deprecated SIEM add-on.
+
+### Minor Changes
+
+- d87479d: Advertise kebab-case names for the Custom Environment and Observability Plus add-ons while continuing to accept their camelCase aliases.
+- a44c461: Add support for purchasing Observability Plus with `vercel buy addon observabilityPlus`.
+
+### Patch Changes
+
+- 466716e: Remove duplicate Blob command tests.
+- 466716e: Remove duplicate and mutation-insensitive CLI command tests.
+- 466716e: Remove ineffective and obsolete CLI integration test code.
+- 9980fab: Remove duplicate CLI utility test equivalence classes.
+- Updated dependencies [7ddf258]
+- Updated dependencies [852e1a0]
+- Updated dependencies [b517588]
+  - @vercel/next@4.21.4
+  - @vercel/build-utils@14.1.0
+  - @vercel/node@5.10.0
+  - @vercel/redwood@2.5.1
+  - @vercel/rust@1.4.2
+  - @vercel/static-build@2.12.6
+  - @vercel/backends@0.8.37
+  - @vercel/container@0.2.0
+  - @vercel/elysia@0.1.114
+  - @vercel/express@0.1.128
+  - @vercel/fastify@0.1.117
+  - @vercel/go@3.11.0
+  - @vercel/h3@0.1.123
+  - @vercel/hono@0.2.117
+  - @vercel/hydrogen@1.4.1
+  - @vercel/koa@0.1.97
+  - @vercel/nestjs@0.2.118
+  - @vercel/python@6.56.2
+  - @vercel/remix-builder@5.9.4
+  - @vercel/ruby@2.5.1
+
 ## 58.11.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 14.1.0
+
+### Minor Changes
+
+- 852e1a0: Move middleware matcher utils from node builder to general build utils.
+
 ## 14.0.5
 
 ### Patch Changes
