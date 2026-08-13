@@ -6,8 +6,13 @@ import { isErrnoException } from '@vercel/error-utils';
 import ms from 'ms';
 import requestRollback from './request-rollback';
 import rollbackStatus from './status';
+import describe from './describe';
 import { help } from '../help';
-import { rollbackCommand, statusSubcommand } from './command';
+import {
+  describeSubcommand,
+  rollbackCommand,
+  statusSubcommand,
+} from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { RollbackTelemetryClient } from '../../util/telemetry/commands/rollback';
 import output from '../../output-manager';
@@ -23,8 +28,21 @@ export default async (client: Client): Promise<number> => {
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
-    printError(error);
-    return 1;
+    // the `describe` subcommand has options the parent parser does not know
+    // about; re-parse permissively so they reach the subcommand parser, and
+    // keep the original strict error for every other path
+    try {
+      parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification, {
+        permissive: true,
+      });
+    } catch (permissiveError) {
+      printError(permissiveError);
+      return 1;
+    }
+    if (parsedArgs.args[1] !== 'describe') {
+      printError(error);
+      return 1;
+    }
   }
 
   const telemetry = new RollbackTelemetryClient({
@@ -78,6 +96,21 @@ export default async (client: Client): Promise<number> => {
         project,
         timeout,
       });
+    }
+
+    if (actionOrDeployId === 'describe') {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('rollback', 'describe');
+        output.print(
+          help(describeSubcommand, {
+            columns: client.stderr.columns,
+            parent: rollbackCommand,
+          })
+        );
+        return 2;
+      }
+      telemetry.trackCliSubcommandDescribe(actionOrDeployId);
+      return await describe(client, parsedArgs.args.slice(2));
     }
 
     return await requestRollback({

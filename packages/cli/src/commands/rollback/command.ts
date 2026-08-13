@@ -10,6 +10,15 @@ const timeoutOption = {
   deprecated: false,
 } as const;
 
+const descriptionOption = {
+  name: 'description',
+  description: 'The reason for the rollback',
+  argument: 'TEXT',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+} as const;
+
 export const statusSubcommand = {
   name: 'status',
   aliases: [],
@@ -33,6 +42,25 @@ export const statusSubcommand = {
   ],
 } as const;
 
+export const describeSubcommand = {
+  name: 'describe',
+  aliases: [],
+  description: 'Edit the description attached to an existing rollback',
+  arguments: [
+    {
+      name: 'url|deploymentId',
+      required: true,
+    },
+  ],
+  options: [descriptionOption],
+  examples: [
+    {
+      name: 'Edit the description attached to a rollback',
+      value: `${packageName} rollback describe <deployment id/url> --description "Reverting checkout regression"`,
+    },
+  ],
+} as const;
+
 export const rollbackCommand = {
   name: 'rollback',
   aliases: [],
@@ -43,7 +71,7 @@ export const rollbackCommand = {
       required: true,
     },
   ],
-  subcommands: [statusSubcommand],
+  subcommands: [statusSubcommand, describeSubcommand],
   options: [timeoutOption, yesOption],
   examples: [
     {

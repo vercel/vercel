@@ -42,6 +42,19 @@ describe('rollback', () => {
     });
   });
 
+  it('should error if an unknown option is used', async () => {
+    const { cwd, previousDeployment } = initRollbackTest();
+    client.cwd = cwd;
+    client.setArgv('rollback', previousDeployment.id, '--bogus');
+    const exitCodePromise = rollback(client);
+
+    await expect(client.stderr).toOutput(
+      'Error: unknown or unexpected option: --bogus'
+    );
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "rollback"').toEqual(1);
+  });
+
   it('should error if timeout is invalid', async () => {
     const { cwd } = initRollbackTest();
     client.cwd = cwd;

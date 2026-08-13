@@ -22,6 +22,13 @@ export class RollbackTelemetryClient
     });
   }
 
+  trackCliSubcommandDescribe(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'describe',
+      value: actual,
+    });
+  }
+
   trackCliOptionTimeout(time: string | undefined) {
     if (time) {
       this.trackCliOption({

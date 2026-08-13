@@ -6798,11 +6798,22 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
   Commands:
 
-  status  [project]  Show the   
-                     status of  
-                     any current
-                     pending    
-                     rollbacks  
+  status    [project]         S…
+                              t…
+                              s…
+                              of
+                              a…
+                              c…
+                              p…
+                              r…
+  describe  url|deploymentId  E…
+                              t…
+                              d…
+                              a…
+                              to
+                              an
+                              e…
+                              r…
 
 
   Options:
@@ -6879,7 +6890,10 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
   Commands:
 
-  status  [project]  Show the status of any current pending rollbacks   
+  status    [project]         Show the status of any current pending    
+                              rollbacks                                 
+  describe  url|deploymentId  Edit the description attached to an       
+                              existing rollback                         
 
 
   Options:
@@ -6921,7 +6935,8 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
   Commands:
 
-  status  [project]  Show the status of any current pending rollbacks                                           
+  status    [project]         Show the status of any current pending rollbacks                                  
+  describe  url|deploymentId  Edit the description attached to an existing rollback                             
 
 
   Options:
