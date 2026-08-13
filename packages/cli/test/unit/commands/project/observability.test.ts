@@ -128,6 +128,24 @@ describe('project observability', () => {
     );
   });
 
+  it('returns 2 when the action is not enable or disable', async () => {
+    client.setArgv('project', 'observability', 'bogus');
+    const exitCode = await project(client);
+    expect(exitCode).toBe(2);
+    await expect(client.stderr).toOutput(
+      'Usage: `vercel project observability enable|disable [name]`'
+    );
+  });
+
+  it('returns 2 when too many arguments are passed', async () => {
+    client.setArgv('project', 'observability', 'enable', 'a', 'b');
+    const exitCode = await project(client);
+    expect(exitCode).toBe(2);
+    await expect(client.stderr).toOutput(
+      'Usage: `vercel project observability enable [name]`'
+    );
+  });
+
   it('returns 1 when the project is not found', async () => {
     useUnknownProject();
 
