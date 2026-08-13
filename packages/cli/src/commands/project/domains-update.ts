@@ -134,11 +134,20 @@ export async function domainsUpdate(
           `Invalid --redirect-status "${redirectStatusFlag}". Use one of: ${REDIRECT_STATUS_CODES.join(
             ', '
           )}.`,
-          1
+          2
         );
       }
       redirectStatusCodeInput = parsed;
     }
+  }
+
+  // A domain cannot have both a git branch and a redirect; reject the
+  // explicit flag conflict locally before any remote work.
+  if (gitBranchFlag && redirectFlag) {
+    return usageError(
+      `Cannot set both a git branch and a redirect for the domain "${domain}".`,
+      2
+    );
   }
 
   let project;
@@ -196,16 +205,21 @@ export async function domainsUpdate(
 
   const gitBranch = resolveStringField(gitBranchFlag, current.gitBranch);
   const redirect = resolveStringField(redirectFlag, current.redirect);
+  // A cleared redirect cannot keep a status code, so clear both together.
   const redirectStatusCode =
-    redirectStatusCodeInput === undefined
-      ? (current.redirectStatusCode ?? null)
-      : redirectStatusCodeInput;
+    redirect === null
+      ? null
+      : redirectStatusCodeInput === undefined
+        ? (current.redirectStatusCode ?? null)
+        : redirectStatusCodeInput;
 
+  // Merge-derived conflict: the provided flag collides with a value already
+  // set on the domain.
   if (gitBranch && redirect) {
-    return usageError(
-      `Cannot set both a git branch and a redirect for the domain "${domain}".`,
-      1
+    output.error(
+      `Cannot set both a git branch and a redirect for the domain "${domain}". Clear the other setting with --git-branch "" or --redirect "".`
     );
+    return 1;
   }
 
   const body: DomainPatchBody = {
