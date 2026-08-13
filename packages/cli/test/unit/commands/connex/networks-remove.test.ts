@@ -119,4 +119,31 @@ describe('connex networks remove', () => {
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain('--json requires --yes');
   });
+
+  it('should output { id, removed: true } for --json --yes', async () => {
+    let deleteCalled = false;
+    client.scenario.get('/v1/connect/networks/:id', (_req, res) => {
+      res.json(network());
+    });
+    client.scenario.delete('/v1/connect/networks/:id', (_req, res) => {
+      deleteCalled = true;
+      res.statusCode = 204;
+      res.end();
+    });
+
+    client.setArgv(
+      'connect',
+      'networks',
+      'remove',
+      'ntw_abc123',
+      '--json',
+      '--yes'
+    );
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(deleteCalled).toBe(true);
+    const parsed = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(parsed).toEqual({ id: 'ntw_abc123', removed: true });
+  });
 });
