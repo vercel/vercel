@@ -329,6 +329,34 @@ describe('teams update', () => {
       expect(patchBody).toEqual({ hideIpAddresses: true });
     });
 
+    it('maps --ip-visibility on to hideIpAddresses false', async () => {
+      let patchBody: Record<string, unknown> | undefined;
+      client.scenario.patch(`/teams/${team.id}`, (req, res) => {
+        patchBody = req.body as Record<string, unknown>;
+        return res.json(team);
+      });
+
+      client.setArgv('teams', 'update', '--ip-visibility', 'on');
+      const exitCode = await teams(client);
+
+      expect(exitCode).toBe(0);
+      expect(patchBody).toEqual({ hideIpAddresses: false });
+    });
+
+    it('maps --require-verified-commits off to false', async () => {
+      let patchBody: Record<string, unknown> | undefined;
+      client.scenario.patch(`/teams/${team.id}`, (req, res) => {
+        patchBody = req.body as Record<string, unknown>;
+        return res.json(team);
+      });
+
+      client.setArgv('teams', 'update', '--require-verified-commits', 'off');
+      const exitCode = await teams(client);
+
+      expect(exitCode).toBe(0);
+      expect(patchBody).toEqual({ requireVerifiedCommits: false });
+    });
+
     it('sends deploymentPolicy rules from JSON policy flags', async () => {
       let patchBody: Record<string, unknown> | undefined;
       client.scenario.patch(`/teams/${team.id}`, (req, res) => {
