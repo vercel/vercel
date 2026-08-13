@@ -7009,10 +7009,6 @@ exports[`help command > target help output snapshots > target help column width 
                  environment to 
                  the current    
                  Project        
-  update   name  Update a custom
-                 environment on 
-                 the current    
-                 Project        
 
 
   Global Options:
@@ -7077,7 +7073,6 @@ exports[`help command > target help output snapshots > target help column width 
   list           List targets defined for the current Project           
   inspect  name  Show a custom environment in full                      
   add      name  Add a new custom environment to the current Project    
-  update   name  Update a custom environment on the current Project     
 
 
   Global Options:
@@ -7110,7 +7105,6 @@ exports[`help command > target help output snapshots > target help column width 
   list           List targets defined for the current Project                                                   
   inspect  name  Show a custom environment in full                                                              
   add      name  Add a new custom environment to the current Project                                            
-  update   name  Update a custom environment on the current Project                                             
 
 
   Global Options:

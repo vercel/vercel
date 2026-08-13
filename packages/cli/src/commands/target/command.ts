@@ -131,58 +131,12 @@ export const addSubcommand = {
   ],
 } as const;
 
-export const updateSubcommand = {
-  name: 'update',
-  aliases: [],
-  description: 'Update a custom environment on the current Project',
-  arguments: [
-    {
-      name: 'name',
-      required: true,
-    },
-  ],
-  options: [
-    {
-      name: 'slug',
-      shorthand: null,
-      type: String,
-      argument: 'SLUG',
-      description: 'New name (slug) for the custom environment',
-      deprecated: false,
-    },
-    descriptionOption,
-    branchMatcherTypeOption,
-    branchMatcherPatternOption,
-    projectOption,
-    {
-      ...yesOption,
-      description:
-        'Skip confirmation when linking is required (e.g. in non-interactive mode)',
-    },
-  ],
-  examples: [
-    {
-      name: "Update a custom environment's branch matcher",
-      value: `${packageName} target update staging --branch-matcher-type equals --branch-matcher-pattern staging`,
-    },
-    {
-      name: 'Rename a custom environment',
-      value: `${packageName} target update staging --slug preprod`,
-    },
-  ],
-} as const;
-
 export const targetCommand = {
   name: 'target',
   aliases: ['targets'],
   description: 'Manage your Vercel Project\'s "targets" (custom environments).',
   arguments: [],
-  subcommands: [
-    listSubcommand,
-    inspectSubcommand,
-    addSubcommand,
-    updateSubcommand,
-  ],
+  subcommands: [listSubcommand, inspectSubcommand, addSubcommand],
   options: [],
   examples: [],
 } as const;
