@@ -61,12 +61,128 @@ export const inspectSubcommand = {
   ],
 } as const;
 
+const descriptionOption = {
+  name: 'description',
+  shorthand: null,
+  type: String,
+  argument: 'TEXT',
+  description: 'Description of the custom environment',
+  deprecated: false,
+} as const;
+
+const branchMatcherTypeOption = {
+  name: 'branch-matcher-type',
+  shorthand: null,
+  type: String,
+  argument: 'TYPE',
+  description:
+    'Branch matcher type; one of "equals", "startsWith", or "endsWith"',
+  deprecated: false,
+} as const;
+
+const branchMatcherPatternOption = {
+  name: 'branch-matcher-pattern',
+  shorthand: null,
+  type: String,
+  argument: 'PATTERN',
+  description: 'Git branch name or portion thereof to match',
+  deprecated: false,
+} as const;
+
+export const addSubcommand = {
+  name: 'add',
+  aliases: [],
+  description: 'Add a new custom environment to the current Project',
+  arguments: [
+    {
+      name: 'name',
+      required: true,
+    },
+  ],
+  options: [
+    descriptionOption,
+    branchMatcherTypeOption,
+    branchMatcherPatternOption,
+    {
+      name: 'copy-env-vars-from',
+      shorthand: null,
+      type: String,
+      argument: 'ENV',
+      description:
+        'Custom environment to copy environment variables from (name or ID)',
+      deprecated: false,
+    },
+    projectOption,
+    {
+      ...yesOption,
+      description:
+        'Skip confirmation when linking is required (e.g. in non-interactive mode)',
+    },
+  ],
+  examples: [
+    {
+      name: 'Add a custom environment',
+      value: `${packageName} target add staging`,
+    },
+    {
+      name: 'Add a custom environment that tracks branches starting with "staging"',
+      value: `${packageName} target add staging --branch-matcher-type startsWith --branch-matcher-pattern staging`,
+    },
+  ],
+} as const;
+
+export const updateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description: 'Update a custom environment on the current Project',
+  arguments: [
+    {
+      name: 'name',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'slug',
+      shorthand: null,
+      type: String,
+      argument: 'SLUG',
+      description: 'New name (slug) for the custom environment',
+      deprecated: false,
+    },
+    descriptionOption,
+    branchMatcherTypeOption,
+    branchMatcherPatternOption,
+    projectOption,
+    {
+      ...yesOption,
+      description:
+        'Skip confirmation when linking is required (e.g. in non-interactive mode)',
+    },
+  ],
+  examples: [
+    {
+      name: "Update a custom environment's branch matcher",
+      value: `${packageName} target update staging --branch-matcher-type equals --branch-matcher-pattern staging`,
+    },
+    {
+      name: 'Rename a custom environment',
+      value: `${packageName} target update staging --slug preprod`,
+    },
+  ],
+} as const;
+
 export const targetCommand = {
   name: 'target',
   aliases: ['targets'],
   description: 'Manage your Vercel Project\'s "targets" (custom environments).',
   arguments: [],
-  subcommands: [listSubcommand, inspectSubcommand],
+  subcommands: [
+    listSubcommand,
+    inspectSubcommand,
+    addSubcommand,
+    updateSubcommand,
+  ],
   options: [],
   examples: [],
 } as const;
