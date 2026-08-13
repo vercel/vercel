@@ -10,16 +10,6 @@ const nameOption = {
   deprecated: false,
 } as const;
 
-const roleOption = {
-  name: 'role',
-  shorthand: null,
-  type: String,
-  argument: 'ROLE',
-  description:
-    'The project role: ADMIN, PROJECT_VIEWER, PROJECT_DEVELOPER, or PROJECT_GUEST',
-  deprecated: false,
-} as const;
-
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
@@ -216,35 +206,12 @@ export const projectsListSubcommand = {
   ],
 } as const;
 
-export const projectsAddSubcommand = {
-  name: 'add',
-  aliases: [],
-  description: 'Add a project to an access group',
-  arguments: [
-    {
-      name: 'group',
-      required: true,
-    },
-    {
-      name: 'project',
-      required: true,
-    },
-  ],
-  options: [roleOption],
-  examples: [
-    {
-      name: 'Add a project to an access group with a role',
-      value: `${packageName} access-group projects add my-access-group my-project --role PROJECT_VIEWER`,
-    },
-  ],
-} as const;
-
 export const projectsSubcommand = {
   name: 'projects',
   aliases: [],
   description: 'Manage the projects of an access group',
   arguments: [],
-  subcommands: [projectsListSubcommand, projectsAddSubcommand],
+  subcommands: [projectsListSubcommand],
   options: [],
   examples: [
     {

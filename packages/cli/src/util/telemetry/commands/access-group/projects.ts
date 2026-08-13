@@ -1,7 +1,6 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
 import type { projectsSubcommand } from '../../../../commands/access-group/command';
-import { ACCESS_GROUP_PROJECT_ROLES } from '../../../access-group/types';
 
 export class AccessGroupProjectsTelemetryClient
   extends TelemetryClient
@@ -14,39 +13,11 @@ export class AccessGroupProjectsTelemetryClient
     });
   }
 
-  trackCliSubcommandAdd(actual: string) {
-    this.trackCliSubcommand({
-      subcommand: 'add',
-      value: actual,
-    });
-  }
-
   trackCliArgumentGroup(group: string | undefined) {
     if (group) {
       this.trackCliArgument({
         arg: 'group',
         value: this.redactedValue,
-      });
-    }
-  }
-
-  trackCliArgumentProject(project: string | undefined) {
-    if (project) {
-      this.trackCliArgument({
-        arg: 'project',
-        value: this.redactedValue,
-      });
-    }
-  }
-
-  trackCliOptionRole(role: string | undefined) {
-    if (role) {
-      const known = (ACCESS_GROUP_PROJECT_ROLES as readonly string[]).includes(
-        role
-      );
-      this.trackCliOption({
-        option: 'role',
-        value: known ? role : this.redactedValue,
       });
     }
   }
