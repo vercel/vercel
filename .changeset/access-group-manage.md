@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Add `vercel access-group add`, `update`, and `remove` subcommands
+Add `vercel access-group add` and `update` subcommands
