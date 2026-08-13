@@ -16,6 +16,21 @@ export class GlobalConfigSchemaTelemetryClient
     this.trackCliArgument({ arg: 'id-or-slug', value });
   }
 
+  trackCliArgumentFile(value: string | undefined) {
+    // A file path can reveal local filesystem structure, so record only that
+    // one was provided, never its value. Schema contents are never recorded.
+    this.trackCliArgument({
+      arg: 'file',
+      value: value ? this.redactedValue : undefined,
+    });
+  }
+
+  trackCliFlagYes(yes: boolean | undefined) {
+    if (yes) {
+      this.trackCliFlag('yes');
+    }
+  }
+
   trackCliOptionFormat(format: string | undefined) {
     if (format) {
       this.trackCliOption({

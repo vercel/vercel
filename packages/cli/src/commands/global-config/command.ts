@@ -113,7 +113,7 @@ export const removeSubcommand = {
 export const schemaSubcommand = {
   name: 'schema',
   aliases: [],
-  description: "Get a Global Config store's JSON Schema",
+  description: "Get, set, or remove a Global Config store's JSON Schema",
   arguments: [
     {
       name: 'action',
@@ -123,16 +123,28 @@ export const schemaSubcommand = {
       name: 'id-or-slug',
       required: true,
     },
+    {
+      name: 'file',
+      required: false,
+    },
   ],
-  options: [formatOption, jsonOption],
+  options: [formatOption, jsonOption, yesOption],
   examples: [
     {
       name: 'Get the schema for a Global Config',
       value: `${packageName} global-config schema get my-store`,
     },
     {
-      name: 'Get the schema as JSON',
-      value: `${packageName} global-config schema get my-store --json`,
+      name: 'Set the schema from a file',
+      value: `${packageName} global-config schema set my-store ./schema.json`,
+    },
+    {
+      name: 'Set the schema from stdin',
+      value: `cat schema.json | ${packageName} global-config schema set my-store`,
+    },
+    {
+      name: 'Remove the schema without a prompt',
+      value: `${packageName} global-config schema remove my-store --yes`,
     },
   ],
 } as const;

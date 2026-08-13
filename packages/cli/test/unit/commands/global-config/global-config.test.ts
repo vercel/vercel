@@ -1,4 +1,7 @@
 import { describe, expect, it, beforeEach, vi, afterEach } from 'vitest';
+import { mkdtempSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeams } from '../../../mocks/team';
@@ -621,6 +624,225 @@ describe('global-config', () => {
       const exitCode = await globalConfig(client);
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('No Global Config matches');
+    });
+  });
+
+  describe('schema set', () => {
+    it('sets a schema from a file and posts { definition }', async () => {
+      client.scenario.get('/v1/global-config', (_req, res) => {
+        res.json([{ id: 'ecfg_set_file', slug: 'my-store' }]);
+      });
+      let posted: { definition?: unknown } | undefined;
+      client.scenario.post(
+        '/v1/global-config/ecfg_set_file/schema',
+        (req, res) => {
+          expect(req.query.teamId).toBe('team_ec_test');
+          posted = req.body;
+          res.json({ definition: req.body.definition });
+        }
+      );
+
+      const dir = mkdtempSync(join(tmpdir(), 'gc-schema-'));
+      const file = join(dir, 'schema.json');
+      const schema = {
+        type: 'object',
+        properties: { greeting: { type: 'string' } },
+      };
+      writeFileSync(file, JSON.stringify(schema));
+
+      client.setArgv(
+        'global-config',
+        'schema',
+        'set',
+        'my-store',
+        file,
+        '--format',
+        'json'
+      );
+      const exitCode = await globalConfig(client);
+      expect(exitCode).toBe(0);
+      expect(posted).toEqual({ definition: schema });
+      const out = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(out).toEqual({ definition: schema });
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:schema', value: 'schema' },
+        { key: 'argument:action', value: 'set' },
+        { key: 'argument:id-or-slug', value: 'my-store' },
+        { key: 'argument:file', value: '[REDACTED]' },
+        { key: 'option:format', value: 'json' },
+      ]);
+    });
+
+    it('sets a schema from stdin', async () => {
+      client.scenario.get('/v1/global-config', (_req, res) => {
+        res.json([{ id: 'ecfg_set_stdin', slug: 'my-store' }]);
+      });
+      let posted: { definition?: unknown } | undefined;
+      client.scenario.post(
+        '/v1/global-config/ecfg_set_stdin/schema',
+        (req, res) => {
+          posted = req.body;
+          res.json({ definition: req.body.definition });
+        }
+      );
+
+      // Buffer the piped input so delivery does not race the listener that
+      // `readStandardInput` attaches after the command's async setup.
+      client.stdin.isTTY = false;
+      client.stdin.write(JSON.stringify({ type: 'object' }));
+      client.setArgv(
+        'global-config',
+        'schema',
+        'set',
+        'my-store',
+        '--format',
+        'json'
+      );
+      const exitCode = await globalConfig(client);
+      expect(exitCode).toBe(0);
+      expect(posted).toEqual({ definition: { type: 'object' } });
+    });
+
+    it('unwraps a { definition } wrapper so `get` output round-trips into `set`', async () => {
+      client.scenario.get('/v1/global-config', (_req, res) => {
+        res.json([{ id: 'ecfg_set_wrap', slug: 'my-store' }]);
+      });
+      let posted: { definition?: unknown } | undefined;
+      client.scenario.post(
+        '/v1/global-config/ecfg_set_wrap/schema',
+        (req, res) => {
+          posted = req.body;
+          res.json({ definition: req.body.definition });
+        }
+      );
+
+      const dir = mkdtempSync(join(tmpdir(), 'gc-schema-'));
+      const file = join(dir, 'schema.json');
+      writeFileSync(file, JSON.stringify({ definition: { type: 'object' } }));
+
+      client.setArgv('global-config', 'schema', 'set', 'my-store', file);
+      const exitCode = await globalConfig(client);
+      expect(exitCode).toBe(0);
+      expect(posted).toEqual({ definition: { type: 'object' } });
+    });
+
+    it('rejects invalid JSON before any remote mutation', async () => {
+      client.scenario.get('/v1/global-config', (_req, res) => {
+        res.json([{ id: 'ecfg_set_bad', slug: 'my-store' }]);
+      });
+      let posted = false;
+      client.scenario.post(
+        '/v1/global-config/ecfg_set_bad/schema',
+        (_req, res) => {
+          posted = true;
+          res.json({});
+        }
+      );
+
+      const dir = mkdtempSync(join(tmpdir(), 'gc-schema-'));
+      const file = join(dir, 'bad.json');
+      writeFileSync(file, '{ not valid json ');
+
+      client.setArgv('global-config', 'schema', 'set', 'my-store', file);
+      const exitCode = await globalConfig(client);
+      expect(exitCode).toBe(1);
+      expect(posted).toBe(false);
+      await expect(client.stderr).toOutput('Schema must be valid JSON');
+    });
+  });
+
+  describe('schema remove', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+      client.nonInteractive = false;
+    });
+
+    it('removes a schema after confirmation', async () => {
+      client.scenario.get('/v1/global-config', (_req, res) => {
+        res.json([{ id: 'ecfg_rm_schema', slug: 'my-store' }]);
+      });
+      let deleted = false;
+      client.scenario.delete(
+        '/v1/global-config/ecfg_rm_schema/schema',
+        (req, res) => {
+          expect(req.query.teamId).toBe('team_ec_test');
+          deleted = true;
+          res.status(204).end();
+        }
+      );
+
+      client.setArgv('global-config', 'schema', 'remove', 'my-store');
+      const exitCodePromise = globalConfig(client);
+      await expect(client.stderr).toOutput('Remove the schema');
+      client.stdin.write('y\n');
+      await expect(exitCodePromise).resolves.toBe(0);
+      expect(deleted).toBe(true);
+    });
+
+    it('removes a schema with --yes and emits JSON', async () => {
+      client.scenario.get('/v1/global-config', (_req, res) => {
+        res.json([{ id: 'ecfg_rm_yes', slug: 'my-store' }]);
+      });
+      let deleted = false;
+      client.scenario.delete(
+        '/v1/global-config/ecfg_rm_yes/schema',
+        (_req, res) => {
+          deleted = true;
+          res.status(204).end();
+        }
+      );
+
+      client.setArgv(
+        'global-config',
+        'schema',
+        'remove',
+        'my-store',
+        '--yes',
+        '--format',
+        'json'
+      );
+      const exitCode = await globalConfig(client);
+      expect(exitCode).toBe(0);
+      expect(deleted).toBe(true);
+      const out = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(out).toEqual({
+        status: 'ok',
+        id: 'ecfg_rm_yes',
+        message: 'Schema removed for Global Config ecfg_rm_yes.',
+      });
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:schema', value: 'schema' },
+        { key: 'argument:action', value: 'remove' },
+        { key: 'argument:id-or-slug', value: 'my-store' },
+        { key: 'flag:yes', value: 'TRUE' },
+        { key: 'option:format', value: 'json' },
+      ]);
+    });
+
+    it('exits 1 with a confirmation error when removing non-interactively without --yes', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+
+      client.scenario.get('/v1/global-config', (_req, res) => {
+        res.json([{ id: 'ecfg_rm_ni', slug: 'my-store' }]);
+      });
+
+      client.nonInteractive = true;
+      client.setArgv(
+        'global-config',
+        'schema',
+        'remove',
+        'my-store',
+        '--non-interactive'
+      );
+
+      await expect(globalConfig(client)).rejects.toThrow('exit:1');
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'confirmation_required',
+      });
     });
   });
 
