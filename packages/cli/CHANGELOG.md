@@ -1,5 +1,17 @@
 # vercel
 
+## 58.11.0
+
+### Minor Changes
+
+- 299d5cd: `vercel deploy` without credentials can create a temporary anonymous project and deploy prebuilt output to it, running `vercel build` locally first when needed. Interactive users confirm before the first deployment, while `--yes` skips the prompt and non-interactive use requires it until `.vercel/anonymous.json` records the temporary project. The anonymous credential is reused until it expires, and each deploy prints a claim URL to keep the deployment by signing in. When anonymous deployments are unavailable, the previous login behavior applies.
+- 9daa87d: Add `vc security check` for reading the team security report from the terminal.
+
+### Patch Changes
+
+- 65ba1e0: Start linked deployments before project lookups finish without sending the repository root marker as the Root Directory.
+- 1b8d228: Fix duplicated route tables for services built through the Build Output API.
+
 ## 58.10.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # @vercel/router-sdk
 
+## 0.6.0
+
+### Minor Changes
+
+- d72c4fe: Add `maxConcurrency` to the per-function configuration type.
+
 ## 0.5.6
 
 ### Patch Changes
