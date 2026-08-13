@@ -5,13 +5,22 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { outputAgentError } from '../../util/agent-output';
-import { membersSubcommand } from './command';
+import {
+  membersSubcommand,
+  updateMemberSubcommand,
+  removeMemberSubcommand,
+} from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import { packageName } from '../../util/pkg-name';
 import getCommandFlags from '../../util/get-command-flags';
 import cmd from '../../util/output/cmd';
 import output from '../../output-manager';
 import { getPaginationOpts } from '../../util/get-pagination-opts';
+import getSubcommand from '../../util/get-subcommand';
+import { getCommandAliases } from '..';
+import { TeamsMembersTelemetryClient } from '../../util/telemetry/commands/teams/members';
+import membersUpdate from './members-update';
+import membersRemove from './members-remove';
 
 interface TeamMember {
   uid: string;
@@ -29,10 +38,39 @@ interface TeamMembersResponse {
   };
 }
 
+const COMMAND_CONFIG = {
+  update: getCommandAliases(updateMemberSubcommand),
+  remove: getCommandAliases(removeMemberSubcommand),
+};
+
 export default async function members(
   client: Client,
   argv: string[]
 ): Promise<number> {
+  const { subcommand, args, subcommandOriginal } = getSubcommand(
+    argv,
+    COMMAND_CONFIG
+  );
+
+  const telemetry = new TeamsMembersTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
+  switch (subcommand) {
+    case 'update':
+      telemetry.trackCliSubcommandUpdate(subcommandOriginal);
+      return membersUpdate(client, args, telemetry);
+    case 'remove':
+      telemetry.trackCliSubcommandRemove(subcommandOriginal);
+      return membersRemove(client, args, telemetry);
+    default:
+      return membersList(client, argv);
+  }
+}
+
+async function membersList(client: Client, argv: string[]): Promise<number> {
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(membersSubcommand.options);
   try {

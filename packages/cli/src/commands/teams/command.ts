@@ -4,7 +4,24 @@ import {
   jsonOption,
   limitOption,
   nextOption,
+  yesOption,
 } from '../../util/arg-common';
+
+// Team roles accepted by the public API's `PATCH /v1/teams/{teamId}/members/{uid}`
+// endpoint (sorted by priority, most powerful first). Kept verbatim from the
+// API's role enum so the CLI validates the same set the dashboard uses.
+export const teamRoles = [
+  'OWNER',
+  'MEMBER',
+  'DEVELOPER',
+  'SECURITY',
+  'BILLING',
+  'VIEWER',
+  'VIEWER_FOR_PLUS',
+  'CONTRIBUTOR',
+] as const;
+
+export type TeamRole = (typeof teamRoles)[number];
 
 export const requestSubcommand = {
   name: 'request',
@@ -149,12 +166,67 @@ export const ssoSubcommand = {
   ],
 } as const;
 
+export const updateMemberSubcommand = {
+  name: 'update',
+  aliases: [],
+  description: "Update a team member's role on the currently scoped team",
+  arguments: [
+    {
+      name: 'member',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'role',
+      shorthand: null,
+      type: String,
+      description: `New team role for the member (one of: ${teamRoles.join(', ')})`,
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: "Update a member's role by email",
+      value: `${packageName} teams members update user@example.com --role MEMBER`,
+    },
+    {
+      name: "Update a member's role by username",
+      value: `${packageName} teams members update my-username --role DEVELOPER`,
+    },
+  ],
+} as const;
+
+export const removeMemberSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Remove a member from the currently scoped team',
+  arguments: [
+    {
+      name: 'member',
+      required: true,
+    },
+  ],
+  options: [yesOption],
+  examples: [
+    {
+      name: 'Remove a member by email',
+      value: `${packageName} teams members remove user@example.com`,
+    },
+    {
+      name: 'Remove a member by username without confirmation',
+      value: `${packageName} teams members remove my-username --yes`,
+    },
+  ],
+} as const;
+
 export const membersSubcommand = {
   name: 'members',
   aliases: ['member'],
-  description: 'List members for the currently scoped team',
+  description: 'List and manage members for the currently scoped team',
   arguments: [],
   options: [nextOption, limitOption, formatOption, jsonOption],
+  subcommands: [updateMemberSubcommand, removeMemberSubcommand],
   examples: [
     {
       name: 'List team members',
@@ -167,6 +239,14 @@ export const membersSubcommand = {
     {
       name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch',
       value: `${packageName} teams members --next 1584722256178`,
+    },
+    {
+      name: "Update a member's role",
+      value: `${packageName} teams members update user@example.com --role MEMBER`,
+    },
+    {
+      name: 'Remove a member',
+      value: `${packageName} teams members remove user@example.com`,
     },
   ],
 } as const;
