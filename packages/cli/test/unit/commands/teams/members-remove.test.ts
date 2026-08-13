@@ -85,6 +85,36 @@ describe('teams members remove', () => {
     ]);
   });
 
+  it('cancels without removing when the prompt is declined', async () => {
+    useUser();
+    const team = useTeam('team_123');
+    client.config.currentTeam = 'team_123';
+    useMembers('team_123');
+
+    let deleted = false;
+    client.scenario.delete(
+      '/v1/teams/team_123/members/user_ada',
+      (_req, res) => {
+        deleted = true;
+        res.json({ id: 'team_123' });
+      }
+    );
+
+    client.setArgv('teams', 'members', 'remove', 'ada');
+    const exitCodePromise = teams(client);
+
+    await expect(client.stderr).toOutput(
+      `The member ada will be removed from ${team.name}.`
+    );
+    client.stdin.write('n\n');
+
+    await expect(client.stderr).toOutput('Canceled');
+
+    const exitCode = await exitCodePromise;
+    expect(exitCode).toBe(0);
+    expect(deleted).toBe(false);
+  });
+
   it('exits in non-interactive mode without --yes', async () => {
     useUser();
     useTeam('team_123');
