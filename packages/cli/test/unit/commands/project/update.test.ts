@@ -71,6 +71,13 @@ describe('project update', () => {
       expect(helpOutput).toContain('--git-lfs');
       expect(helpOutput).toContain('--git-comment-on-pr');
       expect(helpOutput).toContain('--git-comment-on-commit');
+      expect(helpOutput).toContain('--oidc-issuer-mode');
+      expect(helpOutput).toContain('--directory-listing');
+      expect(helpOutput).toContain('--source-protection');
+      expect(helpOutput).toContain('--preview-suffix');
+      expect(helpOutput).toContain('--toolbar');
+      expect(helpOutput).toContain('--expose-system-envs');
+      expect(helpOutput).toContain('--auto-assign-custom-domains');
       expect(helpOutput).toContain('--format');
       expect(helpOutput).toContain('omitted settings remain unchanged');
       expect(helpOutput).toContain('Update multiple settings in one command');
@@ -1116,6 +1123,231 @@ describe('project update', () => {
       expect(exitCode).toBe(1);
       expect(client.stderr.getFullOutput()).toContain(
         '--git-lfs must be "on" or "off".'
+      );
+    });
+  });
+
+  describe('remaining settings flags', () => {
+    it('sets the OIDC issuer mode via oidcTokenConfig', async () => {
+      useSettingsProject({}, body => {
+        expect(body).toEqual({ oidcTokenConfig: { issuerMode: 'global' } });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--oidc-issuer-mode',
+        'global'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+      expect(client.stderr.getFullOutput()).toContain('OIDC Issuer Mode');
+    });
+
+    it('toggles directory listing', async () => {
+      useSettingsProject({}, body => {
+        expect(body).toEqual({ directoryListing: true });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--directory-listing',
+        'on'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
+    it('maps source protection to protectedSourcemaps', async () => {
+      useSettingsProject({}, body => {
+        expect(body).toEqual({ protectedSourcemaps: true });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--source-protection',
+        'on'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
+    it('sets the preview deployment suffix', async () => {
+      useSettingsProject({}, body => {
+        expect(body).toEqual({
+          previewDeploymentSuffix: 'preview.example.com',
+        });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--preview-suffix',
+        'preview.example.com'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
+    it('enables the Vercel Toolbar for preview and production together', async () => {
+      useSettingsProject({}, body => {
+        expect(body).toEqual({
+          enablePreviewFeedback: true,
+          enableProductionFeedback: true,
+        });
+      });
+
+      client.setArgv('project', 'update', 'my-project', '--toolbar', 'on');
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
+    it('detects a toolbar change when only one feedback field differs', async () => {
+      useSettingsProject(
+        {
+          // @ts-expect-error feedback flags are not modeled on the CLI Project type
+          enablePreviewFeedback: true,
+          // @ts-expect-error feedback flags are not modeled on the CLI Project type
+          enableProductionFeedback: false,
+        },
+        body => {
+          expect(body).toEqual({
+            enablePreviewFeedback: true,
+            enableProductionFeedback: true,
+          });
+        }
+      );
+
+      client.setArgv('project', 'update', 'my-project', '--toolbar', 'on');
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
+    it('exposes system environment variables', async () => {
+      const currentProject = useSettingsProject({}, body => {
+        expect(body).toEqual({ autoExposeSystemEnvs: true });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--expose-system-envs',
+        'on'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+      expect(currentProject.autoExposeSystemEnvs).toBe(true);
+    });
+
+    it('toggles auto-assign custom domains', async () => {
+      useSettingsProject({}, body => {
+        expect(body).toEqual({ autoAssignCustomDomains: false });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--auto-assign-custom-domains',
+        'off'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
+    it('combines misc flags into one sparse PATCH', async () => {
+      useSettingsProject({}, body => {
+        expect(body).toEqual({
+          oidcTokenConfig: { issuerMode: 'team' },
+          directoryListing: true,
+          autoExposeSystemEnvs: true,
+        });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--oidc-issuer-mode',
+        'team',
+        '--directory-listing',
+        'on',
+        '--expose-system-envs',
+        'on'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
+    it('records enum and boolean values but redacts the preview suffix', async () => {
+      useSettingsProject({});
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--oidc-issuer-mode',
+        'global',
+        '--toolbar',
+        'on',
+        '--preview-suffix',
+        'preview.example.com',
+        '--expose-system-envs',
+        'off'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:update', value: 'update' },
+        { key: 'argument:name', value: '[REDACTED]' },
+        { key: 'option:oidc-issuer-mode', value: 'global' },
+        { key: 'option:preview-suffix', value: '[REDACTED]' },
+        { key: 'option:toolbar', value: 'on' },
+        { key: 'option:expose-system-envs', value: 'off' },
+      ]);
+    });
+
+    it('rejects an invalid OIDC issuer mode before resolving a project', async () => {
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--oidc-issuer-mode',
+        'personal'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'OIDC issuer mode must be one of: team, global.'
+      );
+      expect(client.stdout.getFullOutput()).toBe('');
+    });
+
+    it('rejects a non on/off value for a misc toggle before resolving a project', async () => {
+      client.setArgv('project', 'update', 'my-project', '--toolbar', 'enabled');
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        '--toolbar must be "on" or "off".'
       );
     });
   });

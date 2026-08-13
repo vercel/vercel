@@ -156,6 +156,40 @@ export class ProjectUpdateTelemetryClient
     this.trackOnOffOption('git-comment-on-commit', value);
   }
 
+  trackCliOptionOidcIssuerMode(value: string | undefined) {
+    this.trackEnumOption('oidc-issuer-mode', value, ['team', 'global']);
+  }
+
+  trackCliOptionDirectoryListing(value: string | undefined) {
+    this.trackOnOffOption('directory-listing', value);
+  }
+
+  trackCliOptionSourceProtection(value: string | undefined) {
+    this.trackOnOffOption('source-protection', value);
+  }
+
+  trackCliOptionPreviewSuffix(value: string | undefined) {
+    // Preview suffixes are free-form domains, so redact the value.
+    if (value !== undefined) {
+      this.trackCliOption({
+        option: 'preview-suffix',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionToolbar(value: string | undefined) {
+    this.trackOnOffOption('toolbar', value);
+  }
+
+  trackCliOptionExposeSystemEnvs(value: string | undefined) {
+    this.trackOnOffOption('expose-system-envs', value);
+  }
+
+  trackCliOptionAutoAssignCustomDomains(value: string | undefined) {
+    this.trackOnOffOption('auto-assign-custom-domains', value);
+  }
+
   private trackOnOffOption(option: string, value: string | undefined) {
     if (value !== undefined) {
       this.trackCliOption({

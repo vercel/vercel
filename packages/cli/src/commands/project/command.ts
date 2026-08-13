@@ -420,6 +420,65 @@ export const updateSubcommand = {
       description: 'Enable or disable Vercel comments on commits',
       deprecated: false,
     },
+    {
+      name: 'oidc-issuer-mode',
+      shorthand: null,
+      type: String,
+      argument: 'MODE',
+      description: 'Set the OIDC token issuer mode: team or global',
+      deprecated: false,
+    },
+    {
+      name: 'directory-listing',
+      shorthand: null,
+      type: String,
+      argument: 'on|off',
+      description: 'Enable or disable directory listing for this project',
+      deprecated: false,
+    },
+    {
+      name: 'source-protection',
+      shorthand: null,
+      type: String,
+      argument: 'on|off',
+      description:
+        'Enable or disable protected source maps (authentication required to access)',
+      deprecated: false,
+    },
+    {
+      name: 'preview-suffix',
+      shorthand: null,
+      type: String,
+      argument: 'DOMAIN',
+      description: 'Set the custom domain suffix for preview deployments',
+      deprecated: false,
+    },
+    {
+      name: 'toolbar',
+      shorthand: null,
+      type: String,
+      argument: 'on|off',
+      description:
+        'Enable or disable the Vercel Toolbar for preview and production',
+      deprecated: false,
+    },
+    {
+      name: 'expose-system-envs',
+      shorthand: null,
+      type: String,
+      argument: 'on|off',
+      description: 'Automatically expose System Environment Variables',
+      deprecated: false,
+    },
+    {
+      name: 'auto-assign-custom-domains',
+      shorthand: null,
+      type: String,
+      argument: 'on|off',
+      description:
+        'Automatically assign custom production domains to new production deployments',
+      deprecated: false,
+    },
     formatOption,
     jsonOption,
   ],
@@ -451,6 +510,10 @@ export const updateSubcommand = {
     {
       name: 'Toggle Git behavior: LFS on and PR comments off',
       value: `${packageName} project update my-project --git-lfs on --git-comment-on-pr off`,
+    },
+    {
+      name: 'Set the OIDC issuer mode and enable the Vercel Toolbar',
+      value: `${packageName} project update my-project --oidc-issuer-mode global --toolbar on`,
     },
     {
       name: 'Clear the framework preset and return JSON',

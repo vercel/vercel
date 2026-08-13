@@ -234,6 +234,13 @@ interface AdvancedProjectFields {
   enableAffectedProjectsDeployments?: boolean;
   gitLFS?: boolean;
   commandForIgnoringBuildStep?: string | null;
+  oidcTokenConfig?: { enabled?: boolean; issuerMode?: string } | null;
+  directoryListing?: boolean;
+  protectedSourcemaps?: boolean;
+  previewDeploymentSuffix?: string | null;
+  enablePreviewFeedback?: boolean | null;
+  enableProductionFeedback?: boolean | null;
+  autoAssignCustomDomains?: boolean;
 }
 
 interface AdvancedSettingDefinition {
@@ -244,6 +251,9 @@ interface AdvancedSettingDefinition {
   read: (project: Project) => AdvancedValue | null | undefined;
   apply: (body: PatchBody, value: AdvancedValue, project: Project) => void;
   display: (value: AdvancedValue | null | undefined) => string;
+  // Optional override when a single flag maps to more than one project field
+  // (for example `--toolbar` toggling both preview and production feedback).
+  changed?: (project: Project, value: AdvancedValue) => boolean;
 }
 
 interface AdvancedPreviewRow {
@@ -546,6 +556,108 @@ const advancedSettingDefinitions: readonly AdvancedSettingDefinition[] = [
     },
     display: displayOnOff,
   },
+  {
+    key: 'oidcIssuerMode',
+    flag: '--oidc-issuer-mode',
+    label: 'OIDC Issuer Mode',
+    parse: raw => parseEnumValue('OIDC issuer mode', raw, ['team', 'global']),
+    read: project => getAdvancedFields(project).oidcTokenConfig?.issuerMode,
+    apply: (body, value) => {
+      body.oidcTokenConfig = { issuerMode: value as string };
+    },
+    display: displayValue,
+  },
+  {
+    key: 'directoryListing',
+    flag: '--directory-listing',
+    label: 'Directory Listing',
+    parse: raw => parseOnOff('--directory-listing', raw),
+    read: project => getAdvancedFields(project).directoryListing,
+    apply: (body, value) => {
+      body.directoryListing = value as boolean;
+    },
+    display: displayOnOff,
+  },
+  {
+    key: 'protectedSourcemaps',
+    flag: '--source-protection',
+    label: 'Source Protection',
+    parse: raw => parseOnOff('--source-protection', raw),
+    read: project => getAdvancedFields(project).protectedSourcemaps,
+    apply: (body, value) => {
+      body.protectedSourcemaps = value as boolean;
+    },
+    display: displayOnOff,
+  },
+  {
+    key: 'previewDeploymentSuffix',
+    flag: '--preview-suffix',
+    label: 'Preview Suffix',
+    parse: raw => {
+      if (raw.length > 253) {
+        return {
+          ok: false,
+          message: 'Preview suffix must be 253 characters or fewer.',
+        };
+      }
+      if (CONTROL_CHARACTERS.test(raw)) {
+        return {
+          ok: false,
+          message: "Preview suffix can't contain control characters.",
+        };
+      }
+      return { ok: true, value: raw };
+    },
+    read: project => getAdvancedFields(project).previewDeploymentSuffix,
+    apply: (body, value) => {
+      body.previewDeploymentSuffix = value as string;
+    },
+    display: value => (value === '' ? '""' : displayValue(value)),
+  },
+  {
+    key: 'toolbar',
+    flag: '--toolbar',
+    label: 'Vercel Toolbar',
+    parse: raw => parseOnOff('--toolbar', raw),
+    read: project =>
+      getAdvancedFields(project).enablePreviewFeedback ??
+      getAdvancedFields(project).enableProductionFeedback ??
+      undefined,
+    apply: (body, value) => {
+      body.enablePreviewFeedback = value as boolean;
+      body.enableProductionFeedback = value as boolean;
+    },
+    display: displayOnOff,
+    changed: (project, value) => {
+      const fields = getAdvancedFields(project);
+      return (
+        (fields.enablePreviewFeedback ?? undefined) !== value ||
+        (fields.enableProductionFeedback ?? undefined) !== value
+      );
+    },
+  },
+  {
+    key: 'autoExposeSystemEnvs',
+    flag: '--expose-system-envs',
+    label: 'Expose System Envs',
+    parse: raw => parseOnOff('--expose-system-envs', raw),
+    read: project => project.autoExposeSystemEnvs,
+    apply: (body, value) => {
+      body.autoExposeSystemEnvs = value as boolean;
+    },
+    display: displayOnOff,
+  },
+  {
+    key: 'autoAssignCustomDomains',
+    flag: '--auto-assign-custom-domains',
+    label: 'Auto-assign Domains',
+    parse: raw => parseOnOff('--auto-assign-custom-domains', raw),
+    read: project => getAdvancedFields(project).autoAssignCustomDomains,
+    apply: (body, value) => {
+      body.autoAssignCustomDomains = value as boolean;
+    },
+    display: displayOnOff,
+  },
 ];
 
 function advancedValuesEqual(
@@ -697,6 +809,15 @@ export default async function update(
   telemetry.trackCliOptionGitLfs(flags['--git-lfs']);
   telemetry.trackCliOptionGitCommentOnPr(flags['--git-comment-on-pr']);
   telemetry.trackCliOptionGitCommentOnCommit(flags['--git-comment-on-commit']);
+  telemetry.trackCliOptionOidcIssuerMode(flags['--oidc-issuer-mode']);
+  telemetry.trackCliOptionDirectoryListing(flags['--directory-listing']);
+  telemetry.trackCliOptionSourceProtection(flags['--source-protection']);
+  telemetry.trackCliOptionPreviewSuffix(flags['--preview-suffix']);
+  telemetry.trackCliOptionToolbar(flags['--toolbar']);
+  telemetry.trackCliOptionExposeSystemEnvs(flags['--expose-system-envs']);
+  telemetry.trackCliOptionAutoAssignCustomDomains(
+    flags['--auto-assign-custom-domains']
+  );
 
   if (args.length > 1) {
     return printUsageError(
@@ -846,7 +967,9 @@ export default async function update(
   const advancedSettings: Record<string, AdvancedValue> = {};
   for (const { definition, value } of providedAdvanced) {
     const previous = definition.read(project);
-    const changed = !advancedValuesEqual(previous, value);
+    const changed = definition.changed
+      ? definition.changed(project, value)
+      : !advancedValuesEqual(previous, value);
     advancedSettings[definition.key] = value;
     advancedRows.push({
       label: definition.label,
