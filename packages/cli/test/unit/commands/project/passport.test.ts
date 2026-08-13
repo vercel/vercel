@@ -123,6 +123,15 @@ describe('project passport', () => {
     );
   });
 
+  it('returns 2 when too many arguments are passed', async () => {
+    client.setArgv('project', 'passport', 'set', 'a', 'b');
+    const exitCode = await project(client);
+    expect(exitCode).toBe(2);
+    await expect(client.stderr).toOutput(
+      'Usage: `vercel project passport set [name]`'
+    );
+  });
+
   it('disables Passport after confirmation', async () => {
     usePassportProject();
 
