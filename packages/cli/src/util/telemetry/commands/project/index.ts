@@ -105,7 +105,7 @@ export class ProjectTelemetryClient
   }
 
   /**
-   * `project protection trusted-ips` action (get). Verbatim: these
+   * `project protection trusted-ips` action (get/set/disable). Verbatim: these
    * are a closed, non-sensitive set.
    */
   trackCliArgumentAction(action: string | undefined) {
@@ -113,5 +113,55 @@ export class ProjectTelemetryClient
       arg: 'action',
       value: action,
     });
+  }
+
+  /**
+   * `--deployment-type` deployment target. Value is an allowlisted enum, so it
+   * is safe to record verbatim; anything unexpected is redacted.
+   */
+  trackCliOptionDeploymentType(value: string | undefined) {
+    if (!value) return;
+    const allowed = [
+      'all',
+      'preview',
+      'production',
+      'prod_deployment_urls_and_all_previews',
+      'all_except_custom_domains',
+    ];
+    this.trackCliOption({
+      option: 'deployment-type',
+      value: allowed.includes(value) ? value : this.redactedValue,
+    });
+  }
+
+  /**
+   * `--mode` protection mode. Allowlisted enum recorded verbatim; anything
+   * unexpected is redacted.
+   */
+  trackCliOptionMode(value: string | undefined) {
+    if (!value) return;
+    const allowed = ['additional', 'exclusive'];
+    this.trackCliOption({
+      option: 'mode',
+      value: allowed.includes(value) ? value : this.redactedValue,
+    });
+  }
+
+  /**
+   * `--ip` allowlist entries. IP addresses and their notes are sensitive infra
+   * data, so only the redacted presence is recorded.
+   */
+  trackCliOptionIp(values: string[] | undefined) {
+    if (!values || values.length === 0) return;
+    this.trackCliOption({
+      option: 'ip',
+      value: this.redactedValue,
+    });
+  }
+
+  trackCliFlagYes(present: boolean | undefined) {
+    if (present) {
+      this.trackCliFlag('yes');
+    }
   }
 }
