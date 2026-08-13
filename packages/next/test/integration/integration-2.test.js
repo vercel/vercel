@@ -181,57 +181,6 @@ it.skip('Should not exceed function limit for large dependencies (server build)'
   expect(logs).toContain('node_modules/chrome-aws-lambda/bin');
 });
 
-// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
-it.skip('Should not exceed function limit for large dependencies (shared lambda)', async () => {
-  let logs = '';
-
-  const origLog = console.log;
-
-  console.log = function (...args) {
-    logs += args.join(' ');
-    origLog(...args);
-  };
-
-  const {
-    buildResult: { output },
-  } = await runBuildLambda(
-    path.join(__dirname, '../fixtures/00-test-limit-shared-lambdas')
-  );
-  console.log = origLog;
-
-  expect(output['index']).toBeDefined();
-  expect(output['__NEXT_API_LAMBDA_0']).toBeDefined();
-  expect(output['__NEXT_API_LAMBDA_1']).toBeDefined();
-  expect(output['__NEXT_API_LAMBDA_2']).not.toBeDefined();
-  expect(output['__NEXT_PAGE_LAMBDA_0']).toBeDefined();
-  expect(output['__NEXT_PAGE_LAMBDA_1']).not.toBeDefined();
-
-  const filePaths = Object.keys(output);
-
-  const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
-    filePath.match(/static.*\/pages\/_app-.*\.js$/)
-  );
-  const hasUnderScoreErrorStaticFile = filePaths.some(filePath =>
-    filePath.match(/static.*\/pages\/_error-.*\.js$/)
-  );
-  expect(hasUnderScoreAppStaticFile).toBeTruthy();
-  expect(hasUnderScoreErrorStaticFile).toBeTruthy();
-
-  const lambdas = new Set();
-
-  filePaths.forEach(filePath => {
-    if (output[filePath].type === 'Lambda') {
-      lambdas.add(output[filePath]);
-    }
-  });
-  expect(lambdas.size).toBe(3);
-
-  expect(logs).toContain(
-    'Warning: Max serverless function size of 50 MB compressed or 250 MB uncompressed almost reached'
-  );
-  expect(logs).toContain('node_modules/chrome-aws-lambda/bin');
-});
-
 it('Should provide lambda info when limit is hit (server build)', async () => {
   let logs = '';
 
