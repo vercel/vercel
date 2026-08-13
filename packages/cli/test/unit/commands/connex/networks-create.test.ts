@@ -106,7 +106,9 @@ describe('connex networks create', () => {
     const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain('private address range');
+    expect(client.stderr.getFullOutput()).toContain(
+      'private (RFC 1918) address range'
+    );
   });
 
   it('should reject a prefix length outside /16 through /24', async () => {
