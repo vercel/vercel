@@ -44,7 +44,11 @@ describe('buy addon', () => {
       client.setArgv('buy', 'addon');
       const exitCode = await buy(client);
       expect(exitCode).toBe(1);
-      await expect(client.stderr).toOutput('Missing addon name');
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('Missing addon name');
+      expect(stderr).toContain('custom-environment, observability-plus');
+      expect(stderr).not.toContain('customEnvironment');
+      expect(stderr).not.toContain('observabilityPlus');
     });
 
     it('errors when addon name is invalid', async () => {
@@ -54,14 +58,17 @@ describe('buy addon', () => {
       await expect(client.stderr).toOutput('Invalid addon "invalid"');
     });
 
-    it('errors when customEnvironment packs are missing', async () => {
-      client.setArgv('buy', 'addon', 'customEnvironment');
+    it('errors when custom environment packs are missing', async () => {
+      client.setArgv('buy', 'addon', 'custom-environment');
       const exitCode = await buy(client);
       expect(exitCode).toBe(1);
-      await expect(client.stderr).toOutput('Missing packs');
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('Missing packs');
+      expect(stderr).toContain('buy addon custom-environment 2');
+      expect(stderr).not.toContain('customEnvironment');
     });
 
-    it('purchases customEnvironment packs for the linked project', async () => {
+    it('purchases custom environment packs using the kebab-case name', async () => {
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -93,7 +100,7 @@ describe('buy addon', () => {
         }
       );
 
-      client.setArgv('buy', 'addon', 'customEnvironment', '2', '--yes');
+      client.setArgv('buy', 'addon', 'custom-environment', '2', '--yes');
       const exitCode = await buy(client);
       expect(exitCode).toBe(0);
       await expect(client.stderr).toOutput(
@@ -180,7 +187,7 @@ describe('buy addon', () => {
       client.setArgv('buy', 'add-on', '--help');
       const exitCode = await buy(client);
       expect(exitCode).toBe(2);
-      await expect(client.stderr).toOutput('customEnvironment');
+      await expect(client.stderr).toOutput('custom-environment');
     });
   });
 
@@ -213,7 +220,7 @@ describe('buy addon', () => {
         res.json({ teamEnabled: true });
       });
 
-      client.setArgv('buy', 'addon', 'observabilityPlus', '--yes');
+      client.setArgv('buy', 'addon', 'observability-plus', '--yes');
       const exitCode = await buy(client);
       const stderr = client.stderr.getFullOutput();
 
@@ -227,7 +234,7 @@ describe('buy addon', () => {
 
     it.each([
       'observability',
-      'observability-plus',
+      'observabilityPlus',
       'observability_plus',
     ])('accepts the %s alias', async alias => {
       setupTeam();
@@ -369,8 +376,10 @@ describe('buy addon', () => {
       const stderr = client.stderr.getFullOutput();
 
       expect(exitCode).toBe(2);
-      expect(stderr).toContain('observabilityPlus');
-      expect(stderr).not.toContain('observabilityPlus 1');
+      expect(stderr).toContain('custom-environment');
+      expect(stderr).toContain('observability-plus');
+      expect(stderr).not.toContain('customEnvironment');
+      expect(stderr).not.toContain('observabilityPlus');
     });
 
     it('tracks telemetry', async () => {

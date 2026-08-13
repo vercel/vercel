@@ -2,7 +2,7 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { addonSubcommand, SUPPORTED_ADDON_ALIASES } from './command';
+import { addonSubcommand, SUPPORTED_ADDON_NAMES } from './command';
 import output from '../../output-manager';
 import { getCommandName } from '../../util/pkg-name';
 import { isCustomEnvironmentAddonAlias } from '../../util/buy/custom-environment-addon';
@@ -56,7 +56,7 @@ export default async function addon(client: Client, argv: string[]) {
 
     if (quantityStr !== undefined) {
       output.error(
-        `Observability Plus does not accept a quantity. Run ${getCommandName('buy addon observabilityPlus')} without one.`
+        `Observability Plus does not accept a quantity. Run ${getCommandName('buy addon observability-plus')} without one.`
       );
       return 1;
     }
@@ -75,14 +75,14 @@ export default async function addon(client: Client, argv: string[]) {
 
   if (!addonName) {
     output.error(
-      `Missing addon name. Supported addons: ${SUPPORTED_ADDON_ALIASES.join(', ')}`
+      `Missing addon name. Supported addons: ${SUPPORTED_ADDON_NAMES.join(', ')}`
     );
     output.log(`Run ${getCommandName('buy addon --help')} for usage.`);
     return 1;
   }
 
   output.error(
-    `Invalid addon "${addonName}". Supported addons: ${SUPPORTED_ADDON_ALIASES.join(', ')}.`
+    `Invalid addon "${addonName}". Supported addons: ${SUPPORTED_ADDON_NAMES.join(', ')}.`
   );
   return 1;
 }

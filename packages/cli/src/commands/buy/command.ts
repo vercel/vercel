@@ -62,15 +62,15 @@ export const creditsSubcommand = {
   ],
 } as const;
 
-export const SUPPORTED_ADDON_ALIASES = [
-  'customEnvironment',
-  'observabilityPlus',
+export const SUPPORTED_ADDON_NAMES = [
+  'custom-environment',
+  'observability-plus',
 ] as const;
 
 export const addonSubcommand = {
   name: 'addon',
   aliases: ['addons', 'add-on'],
-  description: `Purchase a Vercel addon for your team. Supported addons: ${SUPPORTED_ADDON_ALIASES.join(', ')}. Observability Plus does not accept a quantity. Custom environment purchases are per project and use packs (each pack adds ${CUSTOM_ENVIRONMENTS_PER_PACK} environments).`,
+  description: `Purchase a Vercel addon for your team. Supported addons: ${SUPPORTED_ADDON_NAMES.join(', ')}. Observability Plus does not accept a quantity. Custom environment purchases are per project and use packs (each pack adds ${CUSTOM_ENVIRONMENTS_PER_PACK} environments).`,
   arguments: [
     {
       name: 'addon-name',
@@ -92,15 +92,15 @@ export const addonSubcommand = {
   examples: [
     {
       name: 'Purchase Observability Plus',
-      value: `${packageName} buy addon observabilityPlus`,
+      value: `${packageName} buy addon observability-plus`,
     },
     {
       name: `Purchase ${CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT} custom environment packs (${EXAMPLE_CUSTOM_ENVIRONMENT_COUNT} environments) for a project`,
-      value: `${packageName} buy addon customEnvironment ${CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT} --project my-app`,
+      value: `${packageName} buy addon custom-environment ${CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT} --project my-app`,
     },
     {
       name: 'Remove purchased custom environment capacity',
-      value: `${packageName} buy addon customEnvironment 0 --project my-app --yes`,
+      value: `${packageName} buy addon custom-environment 0 --project my-app --yes`,
     },
   ],
 } as const;
@@ -168,7 +168,7 @@ export const buyCommand = {
     },
     {
       name: 'Purchase Observability Plus',
-      value: `${packageName} buy addon observabilityPlus`,
+      value: `${packageName} buy addon observability-plus`,
     },
     {
       name: 'Upgrade to Pro',
