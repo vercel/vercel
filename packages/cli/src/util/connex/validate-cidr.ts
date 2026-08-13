@@ -1,8 +1,12 @@
 /**
- * Validate an IPv4 CIDR block for Secure Compute networks, mirroring the
- * server-side rules so obviously-invalid input is rejected before any remote
- * call: it must parse as IPv4 CIDR, sit within a private address range, and
+ * Validate an IPv4 CIDR block for Secure Compute networks before any remote
+ * call: it must parse as IPv4 CIDR, sit within an RFC 1918 private range, and
  * use a prefix length between /16 and /24 (inclusive).
+ *
+ * The private-range check is a deliberately stricter CLI-side guardrail than
+ * the server's: the server accepts any address `ip.isPrivate()` allows
+ * (including loopback and link-local), but those are nonsensical VPC CIDRs,
+ * so the CLI only accepts the RFC 1918 ranges.
  *
  * Throws an Error with a user-facing message when invalid.
  */
@@ -25,7 +29,9 @@ export function validateNetworkCidr(cidr: string): void {
   }
 
   if (!isPrivateIpv4(octets)) {
-    throw new Error('The provided CIDR block must be a private address range.');
+    throw new Error(
+      'The provided CIDR block must be within a private (RFC 1918) address range.'
+    );
   }
 }
 

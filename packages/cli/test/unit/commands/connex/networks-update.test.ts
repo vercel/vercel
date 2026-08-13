@@ -35,6 +35,87 @@ describe('connex networks update', () => {
     expect(client.stderr.getFullOutput()).toContain('Specify a new name');
   });
 
+  it('should reject an empty --name and skip the request', async () => {
+    let patched = false;
+    client.scenario.patch('/v1/connect/networks/:id', (_req, res) => {
+      patched = true;
+      res.json({});
+    });
+
+    client.setArgv(
+      'connect',
+      'networks',
+      'update',
+      'ntw_abc123',
+      '--name',
+      '   '
+    );
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(1);
+    expect(patched).toBe(false);
+    expect(client.stderr.getFullOutput()).toContain('cannot be empty');
+  });
+
+  it('should reject a name over 255 characters and skip the request', async () => {
+    let patched = false;
+    client.scenario.patch('/v1/connect/networks/:id', (_req, res) => {
+      patched = true;
+      res.json({});
+    });
+
+    client.setArgv(
+      'connect',
+      'networks',
+      'update',
+      'ntw_abc123',
+      '--name',
+      'x'.repeat(256)
+    );
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(1);
+    expect(patched).toBe(false);
+    expect(client.stderr.getFullOutput()).toContain('255 characters or fewer');
+  });
+
+  it('should output the updated network as JSON', async () => {
+    client.scenario.patch('/v1/connect/networks/:id', (_req, res) => {
+      res.json({
+        id: 'ntw_abc123',
+        name: 'staging',
+        cidr: '10.0.0.0/16',
+        status: 'ready',
+        region: 'iad1',
+        awsRegion: 'us-east-1',
+        awsAccountId: '1234567890',
+        createdAt: 1_700_000_000_000,
+        teamId: 'team_test',
+        teamPrincipalRoleArn: 'arn:aws:iam::123:role/secret',
+      });
+    });
+
+    client.setArgv(
+      'connect',
+      'networks',
+      'update',
+      'ntw_abc123',
+      '--name',
+      'staging',
+      '--json'
+    );
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    const parsed = JSON.parse(stdout.trim());
+    expect(parsed.id).toBe('ntw_abc123');
+    expect(parsed.name).toBe('staging');
+    expect(parsed.status).toBe('ready');
+    expect(parsed).not.toHaveProperty('teamPrincipalRoleArn');
+    expect(stdout).not.toContain('secret');
+  });
+
   it('should PATCH the new name', async () => {
     let body: Record<string, unknown> = {};
     let requestUrl = '';
