@@ -149,6 +149,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('access-group remove help output snapshots', () => {
+      it('access-group remove help column width 120', () => {
+        expect(
+          help(accessGroup.removeSubcommand, {
+            columns: 120,
+            parent: accessGroup.accessGroupCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('alias help output snapshots', () => {
