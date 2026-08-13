@@ -19,4 +19,18 @@ export class EnvSharedTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandAdd(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'add',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandUpdate(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'update',
+      value: actual,
+    });
+  }
 }
