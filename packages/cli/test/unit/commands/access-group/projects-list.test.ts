@@ -2,7 +2,10 @@ import { describe, beforeEach, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import accessGroup from '../../../../src/commands/access-group';
 import { useUser } from '../../../mocks/user';
-import { useAccessGroupProjects } from '../../../mocks/access-group';
+import {
+  useAccessGroupProjects,
+  defaultAccessGroupProject,
+} from '../../../mocks/access-group';
 
 describe('access-group projects list', () => {
   beforeEach(() => {
@@ -84,5 +87,37 @@ describe('access-group projects list', () => {
     const parsed = JSON.parse(client.stdout.getFullOutput());
     expect(parsed.projects).toHaveLength(1);
     expect(parsed.projects[0].projectId).toEqual('prj_1');
+  });
+
+  it('paginates across cursors', async () => {
+    let call = 0;
+    client.scenario.get('/v1/access-groups/ag_1/projects', (req, res) => {
+      call += 1;
+      if (call === 1) {
+        res.json({
+          projects: [defaultAccessGroupProject],
+          pagination: { count: 1, next: 'cursor2' },
+        });
+      } else {
+        expect(req.query.next).toEqual('cursor2');
+        res.json({
+          projects: [
+            {
+              ...defaultAccessGroupProject,
+              projectId: 'prj_2',
+              project: { id: 'prj_2', name: 'other-project' },
+            },
+          ],
+          pagination: { count: 1, next: null },
+        });
+      }
+    });
+    client.setArgv('access-group', 'projects', 'ls', 'ag_1', '--json');
+    const exitCode = await accessGroup(client);
+    expect(exitCode).toEqual(0);
+
+    const parsed = JSON.parse(client.stdout.getFullOutput());
+    expect(parsed.projects).toHaveLength(2);
+    expect(call).toEqual(2);
   });
 });
