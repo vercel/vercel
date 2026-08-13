@@ -1,7 +1,19 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import domains from '../../../../src/commands/domains';
+import renewDomain from '../../../../src/util/domains/renew-domain';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
+
+// Wrap the renew util so individual tests can simulate order-polling
+// timeouts without waiting for the real 10s poll window. By default the
+// real implementation runs.
+vi.mock('../../../../src/util/domains/renew-domain', async importOriginal => {
+  const mod =
+    await importOriginal<
+      typeof import('../../../../src/util/domains/renew-domain')
+    >();
+  return { ...mod, default: vi.fn(mod.default) };
+});
 
 function useRenewalPrice(
   domain: string,
@@ -68,6 +80,14 @@ describe('domains renew', () => {
     it('shows the renewal price and cancels on decline (exit 0)', async () => {
       useUser();
       useRenewalPrice('example.com');
+      let called = false;
+      client.scenario.post(
+        '/v1/registrar/domains/example.com/renew',
+        (_req, res) => {
+          called = true;
+          res.json({ orderId: 'order_never' });
+        }
+      );
 
       client.setArgv('domains', 'renew', 'example.com');
       const exitCodePromise = domains(client);
@@ -76,6 +96,7 @@ describe('domains renew', () => {
       );
       client.stdin.write('n\n');
       await expect(exitCodePromise).resolves.toEqual(0);
+      expect(called).toBe(false);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -131,6 +152,41 @@ describe('domains renew', () => {
           value: 'TRUE',
         },
       ]);
+    });
+
+    it('reports a declined card when the order fails with payment-failed (exit 1)', async () => {
+      useUser();
+      useRenewalPrice('example.com');
+      client.scenario.post(
+        '/v1/registrar/domains/example.com/renew',
+        (_req, res) => {
+          res.json({ orderId: 'order_pay' });
+        }
+      );
+      client.scenario.get('/v1/registrar/orders/order_pay', (_req, res) => {
+        res.json({
+          orderId: 'order_pay',
+          domains: [{ domainName: 'example.com', status: 'failed' }],
+          status: 'failed',
+          error: { code: 'payment-failed' },
+        });
+      });
+
+      client.setArgv('domains', 'renew', 'example.com', '--yes');
+      const exitCodePromise = domains(client);
+      await expect(client.stderr).toOutput('Your card was declined.');
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
+
+    it('warns and exits 0 when order polling times out', async () => {
+      useUser();
+      useRenewalPrice('example.com');
+      vi.mocked(renewDomain).mockResolvedValueOnce(null);
+
+      client.setArgv('domains', 'renew', 'example.com', '--yes');
+      const exitCodePromise = domains(client);
+      await expect(client.stderr).toOutput('still processing');
+      await expect(exitCodePromise).resolves.toEqual(0);
     });
 
     it('maps expected_price_mismatch to a friendly error (exit 1)', async () => {
