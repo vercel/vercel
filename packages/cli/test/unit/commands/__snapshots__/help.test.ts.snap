@@ -471,10 +471,8 @@ exports[`help command > access-group help output snapshots > access-group projec
 
   Commands:
 
-  list    group          List the projects of an access group (default)                                         
-  add     group project  Add a project to an access group                                                       
-  update  group project  Update the role of a project in an access group                                        
-  remove  group project  Remove a project from an access group                                                  
+  list  group          List the projects of an access group (default)                                            
+  add   group project  Add a project to an access group                                                          
 
 
   Global Options:
@@ -531,74 +529,6 @@ exports[`help command > access-group help output snapshots > access-group projec
   - List the projects of an access group
 
     $ vercel access-group projects ls my-access-group
-
-"
-`;
-
-exports[`help command > access-group help output snapshots > access-group projects help output snapshots > access-group projects remove help column width 120 1`] = `
-"
-  ▲ vercel projects remove group project [options]
-
-  Remove a project from an access group                                                                                 
-
-  Options:
-
-  -y,  --yes  Accept default value for all prompts                                                                      
-
-
-  Global Options:
-
-       --cwd <DIR>            Sets the current working directory for a single run of a command                          
-  -d,  --debug                Debug mode (default off)                                                                  
-  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
-  -h,  --help                 Output usage information                                                                  
-  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
-       --no-color             No color mode (default off)                                                               
-       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
-  -S,  --scope                Set a custom scope                                                                        
-  -t,  --token <TOKEN>        Login token                                                                               
-  -v,  --version              Output the version number                                                                 
-
-
-  Examples:
-
-  - Remove a project from an access group
-
-    $ vercel access-group projects rm my-access-group my-project
-
-"
-`;
-
-exports[`help command > access-group help output snapshots > access-group projects help output snapshots > access-group projects update help column width 120 1`] = `
-"
-  ▲ vercel projects update group project [options]
-
-  Update the role of a project in an access group                                                                       
-
-  Options:
-
-   --role <ROLE>  The project role: ADMIN, PROJECT_VIEWER, PROJECT_DEVELOPER, or PROJECT_GUEST                           
-
-
-  Global Options:
-
-       --cwd <DIR>            Sets the current working directory for a single run of a command                          
-  -d,  --debug                Debug mode (default off)                                                                  
-  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
-  -h,  --help                 Output usage information                                                                  
-  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
-       --no-color             No color mode (default off)                                                               
-       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
-  -S,  --scope                Set a custom scope                                                                        
-  -t,  --token <TOKEN>        Login token                                                                               
-  -v,  --version              Output the version number                                                                 
-
-
-  Examples:
-
-  - Change a project's role in an access group
-
-    $ vercel access-group projects update my-access-group my-project --role ADMIN
 
 "
 `;
