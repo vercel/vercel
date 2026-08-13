@@ -391,26 +391,6 @@ export const nameserversSubcommand = {
   ],
 } as const;
 
-export const authCodeSubcommand = {
-  name: 'auth-code',
-  aliases: [],
-  description:
-    'Print the transfer-out auth code for a registered domain (sensitive)',
-  arguments: [
-    {
-      name: 'domain',
-      required: true,
-    },
-  ],
-  options: [],
-  examples: [
-    {
-      name: 'Print the transfer-out auth code for a domain',
-      value: `${packageName} domains auth-code example.com`,
-    },
-  ],
-} as const;
-
 export const verifySubcommand = {
   name: 'verify',
   aliases: [],
@@ -474,7 +454,6 @@ export const domainsCommand = {
     renewSubcommand,
     autoRenewSubcommand,
     nameserversSubcommand,
-    authCodeSubcommand,
     verifySubcommand,
   ],
   options: [],
