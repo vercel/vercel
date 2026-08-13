@@ -4,10 +4,14 @@ import getSubcommand from '../../util/get-subcommand';
 import { type Command, help } from '../help';
 import list from './projects-list';
 import add from './projects-add';
+import update from './projects-update';
+import rm from './projects-remove';
 import {
   projectsSubcommand,
   projectsListSubcommand,
   projectsAddSubcommand,
+  projectsUpdateSubcommand,
+  projectsRemoveSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
@@ -18,6 +22,8 @@ import { printError } from '../../util/error';
 const COMMAND_CONFIG = {
   list: getCommandAliases(projectsListSubcommand),
   add: getCommandAliases(projectsAddSubcommand),
+  update: getCommandAliases(projectsUpdateSubcommand),
+  rm: getCommandAliases(projectsRemoveSubcommand),
 };
 
 export default async function projects(client: Client): Promise<number> {
@@ -68,6 +74,22 @@ export default async function projects(client: Client): Promise<number> {
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
+    case 'update':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('access-group projects', subcommandOriginal);
+        printHelp(projectsUpdateSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandUpdate(subcommandOriginal);
+      return update(client, args);
+    case 'rm':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('access-group projects', subcommandOriginal);
+        printHelp(projectsRemoveSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandRemove(subcommandOriginal);
+      return rm(client, args);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('access-group projects', subcommandOriginal);

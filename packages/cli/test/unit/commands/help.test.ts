@@ -218,6 +218,22 @@ describe('help command', () => {
           })
         ).toMatchSnapshot();
       });
+      it('access-group projects update help column width 120', () => {
+        expect(
+          help(accessGroup.projectsUpdateSubcommand, {
+            columns: 120,
+            parent: accessGroup.projectsSubcommand,
+          })
+        ).toMatchSnapshot();
+      });
+      it('access-group projects remove help column width 120', () => {
+        expect(
+          help(accessGroup.projectsRemoveSubcommand, {
+            columns: 120,
+            parent: accessGroup.projectsSubcommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 
