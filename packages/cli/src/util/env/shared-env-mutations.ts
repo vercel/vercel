@@ -88,3 +88,45 @@ export async function updateSharedEnvRecord(
     } as unknown as JSONObject,
   });
 }
+
+interface DeleteSharedEnvResponse {
+  deleted: string[];
+  failed: SharedEnvFailure[];
+}
+
+/**
+ * Deletes a single team Shared Environment Variable via `DELETE /v1/env`.
+ */
+export async function deleteSharedEnvRecord(
+  client: Client,
+  id: string
+): Promise<DeleteSharedEnvResponse> {
+  output.debug(`Deleting Shared Environment Variable ${id}`);
+
+  return client.fetch<DeleteSharedEnvResponse>('/v1/env', {
+    method: 'DELETE',
+    body: { ids: [id] },
+  });
+}
+
+/**
+ * Removes a project link from a Shared Environment Variable without deleting
+ * the variable, via `PATCH /v1/env/:id/unlink/:projectId`. The project is
+ * resolved by name or ID server-side.
+ */
+export async function unlinkSharedEnvProject(
+  client: Client,
+  id: string,
+  projectIdOrName: string
+): Promise<{ id: string }> {
+  output.debug(`Unlinking project ${projectIdOrName} from ${id}`);
+
+  return client.fetch<{ id: string }>(
+    `/v1/env/${encodeURIComponent(id)}/unlink/${encodeURIComponent(
+      projectIdOrName
+    )}`,
+    {
+      method: 'PATCH',
+    }
+  );
+}

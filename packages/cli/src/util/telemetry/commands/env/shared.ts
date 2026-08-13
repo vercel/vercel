@@ -33,4 +33,18 @@ export class EnvSharedTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandRemove(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rm',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandUnlink(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'unlink',
+      value: actual,
+    });
+  }
 }
