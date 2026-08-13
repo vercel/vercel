@@ -65,6 +65,12 @@ describe('project update', () => {
       expect(helpOutput).toContain('--build-machine');
       expect(helpOutput).toContain('--elastic-concurrency');
       expect(helpOutput).toContain('--node-version');
+      expect(helpOutput).toContain('--ignore-build-command');
+      expect(helpOutput).toContain('--include-files-outside-root');
+      expect(helpOutput).toContain('--affected-projects');
+      expect(helpOutput).toContain('--git-lfs');
+      expect(helpOutput).toContain('--git-comment-on-pr');
+      expect(helpOutput).toContain('--git-comment-on-commit');
       expect(helpOutput).toContain('--format');
       expect(helpOutput).toContain('omitted settings remain unchanged');
       expect(helpOutput).toContain('Update multiple settings in one command');
@@ -929,6 +935,187 @@ describe('project update', () => {
       expect(exitCode).toBe(1);
       expect(client.stderr.getFullOutput()).toContain(
         'Function timeout must be between 1 and 900 seconds.'
+      );
+    });
+  });
+
+  describe('build and Git flags', () => {
+    it('enables Git LFS at the top level', async () => {
+      const currentProject = useSettingsProject({}, body => {
+        expect(body).toEqual({ gitLFS: true });
+      });
+
+      client.setArgv('project', 'update', 'my-project', '--git-lfs', 'on');
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+      // @ts-expect-error gitLFS is not modeled on the CLI Project type
+      expect(currentProject.gitLFS).toBe(true);
+      expect(client.stderr.getFullOutput()).toContain('Git LFS');
+    });
+
+    it('disables affected-projects deployments', async () => {
+      useSettingsProject({}, body => {
+        expect(body).toEqual({ enableAffectedProjectsDeployments: false });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--affected-projects',
+        'off'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
+    it('includes source files outside the root directory', async () => {
+      useSettingsProject({}, body => {
+        expect(body).toEqual({ sourceFilesOutsideRootDirectory: true });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--include-files-outside-root',
+        'on'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
+    it('sets the ignored build step command', async () => {
+      useSettingsProject({}, body => {
+        expect(body).toEqual({ commandForIgnoringBuildStep: 'exit 0' });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--ignore-build-command',
+        'exit 0'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
+    it('merges git-comment-on-pr with the existing commit setting', async () => {
+      useSettingsProject(
+        {
+          // @ts-expect-error gitComments is not modeled on the CLI Project type
+          gitComments: { onPullRequest: false, onCommit: true },
+        },
+        body => {
+          expect(body).toEqual({
+            gitComments: { onPullRequest: true, onCommit: true },
+          });
+        }
+      );
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--git-comment-on-pr',
+        'on'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
+    it('sends both git comment fields when only one is provided and none exist', async () => {
+      useSettingsProject({}, body => {
+        expect(body).toEqual({
+          gitComments: { onPullRequest: false, onCommit: false },
+        });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--git-comment-on-commit',
+        'off'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
+    it('combines both git comment flags into one gitComments object', async () => {
+      useSettingsProject({}, body => {
+        expect(body).toEqual({
+          gitComments: { onPullRequest: true, onCommit: false },
+        });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--git-comment-on-pr',
+        'on',
+        '--git-comment-on-commit',
+        'off'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+    });
+
+    it('records boolean values but redacts the ignored build command', async () => {
+      useSettingsProject({});
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--git-lfs',
+        'on',
+        '--ignore-build-command',
+        'exit 0'
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:update', value: 'update' },
+        { key: 'argument:name', value: '[REDACTED]' },
+        { key: 'option:ignore-build-command', value: '[REDACTED]' },
+        { key: 'option:git-lfs', value: 'on' },
+      ]);
+    });
+
+    it('rejects an ignored build command that is too long', async () => {
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--ignore-build-command',
+        'x'.repeat(257)
+      );
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Ignored Build Step command must be 256 characters or fewer.'
+      );
+    });
+
+    it('rejects a non on/off value for a Git toggle before resolving a project', async () => {
+      client.setArgv('project', 'update', 'my-project', '--git-lfs', 'true');
+      const exitCode = await project(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        '--git-lfs must be "on" or "off".'
       );
     });
   });

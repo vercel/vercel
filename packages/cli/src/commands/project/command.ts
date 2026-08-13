@@ -369,6 +369,57 @@ export const updateSubcommand = {
         'Set the Node.js version: 24.x, 22.x, 20.x, 18.x, 16.x, 14.x, 12.x, or 10.x',
       deprecated: false,
     },
+    {
+      name: 'ignore-build-command',
+      shorthand: null,
+      type: String,
+      argument: 'COMMAND',
+      description:
+        'Set the command that decides whether to skip a build (Ignored Build Step)',
+      deprecated: false,
+    },
+    {
+      name: 'include-files-outside-root',
+      shorthand: null,
+      type: String,
+      argument: 'on|off',
+      description:
+        'Include source files outside of the root directory in the build',
+      deprecated: false,
+    },
+    {
+      name: 'affected-projects',
+      shorthand: null,
+      type: String,
+      argument: 'on|off',
+      description:
+        'Skip deployments when the root directory and its dependencies are unchanged',
+      deprecated: false,
+    },
+    {
+      name: 'git-lfs',
+      shorthand: null,
+      type: String,
+      argument: 'on|off',
+      description: 'Enable or disable Git LFS for this project',
+      deprecated: false,
+    },
+    {
+      name: 'git-comment-on-pr',
+      shorthand: null,
+      type: String,
+      argument: 'on|off',
+      description: 'Enable or disable Vercel comments on pull requests',
+      deprecated: false,
+    },
+    {
+      name: 'git-comment-on-commit',
+      shorthand: null,
+      type: String,
+      argument: 'on|off',
+      description: 'Enable or disable Vercel comments on commits',
+      deprecated: false,
+    },
     formatOption,
     jsonOption,
   ],
@@ -396,6 +447,10 @@ export const updateSubcommand = {
     {
       name: 'Pin the Node.js version and default function region',
       value: `${packageName} project update my-project --node-version 20.x --function-region iad1`,
+    },
+    {
+      name: 'Toggle Git behavior: LFS on and PR comments off',
+      value: `${packageName} project update my-project --git-lfs on --git-comment-on-pr off`,
     },
     {
       name: 'Clear the framework preset and return JSON',

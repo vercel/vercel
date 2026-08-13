@@ -126,6 +126,36 @@ export class ProjectUpdateTelemetryClient
     ]);
   }
 
+  trackCliOptionIgnoreBuildCommand(value: string | undefined) {
+    // The ignored-build-step command is free-form input, so redact the value.
+    if (value !== undefined) {
+      this.trackCliOption({
+        option: 'ignore-build-command',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionIncludeFilesOutsideRoot(value: string | undefined) {
+    this.trackOnOffOption('include-files-outside-root', value);
+  }
+
+  trackCliOptionAffectedProjects(value: string | undefined) {
+    this.trackOnOffOption('affected-projects', value);
+  }
+
+  trackCliOptionGitLfs(value: string | undefined) {
+    this.trackOnOffOption('git-lfs', value);
+  }
+
+  trackCliOptionGitCommentOnPr(value: string | undefined) {
+    this.trackOnOffOption('git-comment-on-pr', value);
+  }
+
+  trackCliOptionGitCommentOnCommit(value: string | undefined) {
+    this.trackOnOffOption('git-comment-on-commit', value);
+  }
+
   private trackOnOffOption(option: string, value: string | undefined) {
     if (value !== undefined) {
       this.trackCliOption({

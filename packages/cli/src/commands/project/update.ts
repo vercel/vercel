@@ -229,6 +229,11 @@ interface AdvancedProjectFields {
     buildMachineType?: string;
   } | null;
   sandbox?: { region?: string; failoverRegions?: string[] } | null;
+  gitComments?: { onPullRequest?: boolean; onCommit?: boolean } | null;
+  sourceFilesOutsideRootDirectory?: boolean;
+  enableAffectedProjectsDeployments?: boolean;
+  gitLFS?: boolean;
+  commandForIgnoringBuildStep?: string | null;
 }
 
 interface AdvancedSettingDefinition {
@@ -262,6 +267,24 @@ function ensureResourceConfig(body: PatchBody): Record<string, unknown> {
     (body.resourceConfig as Record<string, unknown> | undefined) ?? {};
   body.resourceConfig = resourceConfig;
   return resourceConfig;
+}
+
+// The public schema requires both `onPullRequest` and `onCommit` whenever
+// `gitComments` is sent, so seed the object from the current project (both
+// flags share it) and let each flag override only the field it targets.
+function ensureGitComments(
+  body: PatchBody,
+  project: Project
+): { onPullRequest: boolean; onCommit: boolean } {
+  const current = getAdvancedFields(project).gitComments;
+  const gitComments = (body.gitComments as
+    | { onPullRequest: boolean; onCommit: boolean }
+    | undefined) ?? {
+    onPullRequest: current?.onPullRequest ?? false,
+    onCommit: current?.onCommit ?? false,
+  };
+  body.gitComments = gitComments;
+  return gitComments;
 }
 
 function parseOnOff(flag: string, raw: string): AdvancedParseResult {
@@ -441,6 +464,88 @@ const advancedSettingDefinitions: readonly AdvancedSettingDefinition[] = [
     },
     display: displayValue,
   },
+  {
+    key: 'commandForIgnoringBuildStep',
+    flag: '--ignore-build-command',
+    label: 'Ignored Build Step',
+    parse: raw => {
+      if (raw.length > MAX_SETTING_LENGTH) {
+        return {
+          ok: false,
+          message: `Ignored Build Step command must be ${MAX_SETTING_LENGTH} characters or fewer.`,
+        };
+      }
+      if (CONTROL_CHARACTERS.test(raw)) {
+        return {
+          ok: false,
+          message:
+            "Ignored Build Step command can't contain control characters.",
+        };
+      }
+      return { ok: true, value: raw };
+    },
+    read: project => getAdvancedFields(project).commandForIgnoringBuildStep,
+    apply: (body, value) => {
+      body.commandForIgnoringBuildStep = value as string;
+    },
+    display: value => (value === '' ? '""' : displayValue(value)),
+  },
+  {
+    key: 'sourceFilesOutsideRootDirectory',
+    flag: '--include-files-outside-root',
+    label: 'Files Outside Root',
+    parse: raw => parseOnOff('--include-files-outside-root', raw),
+    read: project => getAdvancedFields(project).sourceFilesOutsideRootDirectory,
+    apply: (body, value) => {
+      body.sourceFilesOutsideRootDirectory = value as boolean;
+    },
+    display: displayOnOff,
+  },
+  {
+    key: 'enableAffectedProjectsDeployments',
+    flag: '--affected-projects',
+    label: 'Affected Projects',
+    parse: raw => parseOnOff('--affected-projects', raw),
+    read: project =>
+      getAdvancedFields(project).enableAffectedProjectsDeployments,
+    apply: (body, value) => {
+      body.enableAffectedProjectsDeployments = value as boolean;
+    },
+    display: displayOnOff,
+  },
+  {
+    key: 'gitLFS',
+    flag: '--git-lfs',
+    label: 'Git LFS',
+    parse: raw => parseOnOff('--git-lfs', raw),
+    read: project => getAdvancedFields(project).gitLFS,
+    apply: (body, value) => {
+      body.gitLFS = value as boolean;
+    },
+    display: displayOnOff,
+  },
+  {
+    key: 'gitCommentOnPullRequest',
+    flag: '--git-comment-on-pr',
+    label: 'Git Comments on PR',
+    parse: raw => parseOnOff('--git-comment-on-pr', raw),
+    read: project => getAdvancedFields(project).gitComments?.onPullRequest,
+    apply: (body, value, project) => {
+      ensureGitComments(body, project).onPullRequest = value as boolean;
+    },
+    display: displayOnOff,
+  },
+  {
+    key: 'gitCommentOnCommit',
+    flag: '--git-comment-on-commit',
+    label: 'Git Comments on Commit',
+    parse: raw => parseOnOff('--git-comment-on-commit', raw),
+    read: project => getAdvancedFields(project).gitComments?.onCommit,
+    apply: (body, value, project) => {
+      ensureGitComments(body, project).onCommit = value as boolean;
+    },
+    display: displayOnOff,
+  },
 ];
 
 function advancedValuesEqual(
@@ -584,6 +689,14 @@ export default async function update(
   telemetry.trackCliOptionBuildMachine(flags['--build-machine']);
   telemetry.trackCliOptionElasticConcurrency(flags['--elastic-concurrency']);
   telemetry.trackCliOptionNodeVersion(flags['--node-version']);
+  telemetry.trackCliOptionIgnoreBuildCommand(flags['--ignore-build-command']);
+  telemetry.trackCliOptionIncludeFilesOutsideRoot(
+    flags['--include-files-outside-root']
+  );
+  telemetry.trackCliOptionAffectedProjects(flags['--affected-projects']);
+  telemetry.trackCliOptionGitLfs(flags['--git-lfs']);
+  telemetry.trackCliOptionGitCommentOnPr(flags['--git-comment-on-pr']);
+  telemetry.trackCliOptionGitCommentOnCommit(flags['--git-comment-on-commit']);
 
   if (args.length > 1) {
     return printUsageError(
