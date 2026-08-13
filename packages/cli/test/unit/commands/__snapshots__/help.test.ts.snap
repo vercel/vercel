@@ -289,6 +289,35 @@ exports[`help command > access-group help output snapshots > access-group list h
 "
 `;
 
+exports[`help command > access-group help output snapshots > access-group members help output snapshots > access-group members add help column width 120 1`] = `
+"
+  ▲ vercel members add group member
+
+  Add a member to an access group                                                                                       
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Add a member (by id, email, or username) to an access group
+
+    $ vercel access-group members add my-access-group user@example.com
+
+"
+`;
+
 exports[`help command > access-group help output snapshots > access-group members help output snapshots > access-group members help column width 120 1`] = `
 "
   ▲ vercel access-group members [command]
@@ -297,7 +326,8 @@ exports[`help command > access-group help output snapshots > access-group member
 
   Commands:
 
-  list  group  List the members of an access group (default)                                                    
+  list  group         List the members of an access group (default)                                              
+  add   group member  Add a member to an access group                                                            
 
 
   Global Options:

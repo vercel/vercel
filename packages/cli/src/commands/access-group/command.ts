@@ -121,12 +121,35 @@ export const membersListSubcommand = {
   ],
 } as const;
 
+export const membersAddSubcommand = {
+  name: 'add',
+  aliases: [],
+  description: 'Add a member to an access group',
+  arguments: [
+    {
+      name: 'group',
+      required: true,
+    },
+    {
+      name: 'member',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'Add a member (by id, email, or username) to an access group',
+      value: `${packageName} access-group members add my-access-group user@example.com`,
+    },
+  ],
+} as const;
+
 export const membersSubcommand = {
   name: 'members',
   aliases: [],
   description: 'Manage the members of an access group',
   arguments: [],
-  subcommands: [membersListSubcommand],
+  subcommands: [membersListSubcommand, membersAddSubcommand],
   options: [],
   examples: [
     {

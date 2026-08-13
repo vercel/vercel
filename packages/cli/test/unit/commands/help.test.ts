@@ -176,6 +176,14 @@ describe('help command', () => {
           })
         ).toMatchSnapshot();
       });
+      it('access-group members add help column width 120', () => {
+        expect(
+          help(accessGroup.membersAddSubcommand, {
+            columns: 120,
+            parent: accessGroup.membersSubcommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 
