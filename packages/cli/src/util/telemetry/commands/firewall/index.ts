@@ -34,6 +34,13 @@ export class FirewallTelemetryClient
     });
   }
 
+  trackCliSubcommandRestore(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'restore',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandRules(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'rules',

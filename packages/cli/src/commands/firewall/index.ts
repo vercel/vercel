@@ -8,6 +8,7 @@ import overview from './overview';
 import diff from './diff';
 import publish from './publish';
 import discard from './discard';
+import restore from './restore';
 import systemBypass from './system-bypass';
 import attackMode from './attack-mode';
 import systemMitigations from './system-mitigations';
@@ -19,6 +20,7 @@ import {
   diffSubcommand,
   publishSubcommand,
   discardSubcommand,
+  restoreSubcommand,
   rulesSubcommand,
   ipBlocksSubcommand,
   systemBypassSubcommand,
@@ -37,6 +39,7 @@ const COMMAND_CONFIG = {
   diff: getCommandAliases(diffSubcommand),
   publish: getCommandAliases(publishSubcommand),
   discard: getCommandAliases(discardSubcommand),
+  restore: getCommandAliases(restoreSubcommand),
   'ip-blocks': getCommandAliases(ipBlocksSubcommand),
   'system-bypass': getCommandAliases(systemBypassSubcommand),
   'attack-mode': getCommandAliases(attackModeSubcommand),
@@ -121,6 +124,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandDiscard(subcommandOriginal);
       return discard(client, args);
+    case 'restore':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
+        printHelp(restoreSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandRestore(subcommandOriginal);
+      return restore(client, args);
     case 'rules': {
       telemetry.trackCliSubcommandRules(subcommandOriginal);
       const nestedArgs = needHelp ? [...args, '--help'] : args;

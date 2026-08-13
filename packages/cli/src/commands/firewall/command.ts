@@ -87,6 +87,25 @@ export const discardSubcommand = {
   ],
 } as const;
 
+export const restoreSubcommand = {
+  name: 'restore',
+  aliases: [],
+  description:
+    'Restore a previously published firewall configuration version, making it live in production',
+  arguments: [{ name: 'config-version', required: true }],
+  options: [projectOption, yesOption],
+  examples: [
+    {
+      name: 'Restore a previously published configuration version',
+      value: `${packageName} firewall restore 42`,
+    },
+    {
+      name: 'Restore without confirmation',
+      value: `${packageName} firewall restore 42 --yes`,
+    },
+  ],
+} as const;
+
 // System Bypass subcommands
 export const systemBypassListSubcommand = {
   name: 'list',
@@ -947,6 +966,7 @@ export const firewallCommand = {
     diffSubcommand,
     publishSubcommand,
     discardSubcommand,
+    restoreSubcommand,
     ipBlocksSubcommand,
     rulesSubcommand,
     systemBypassSubcommand,

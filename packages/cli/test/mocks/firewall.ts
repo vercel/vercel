@@ -197,6 +197,24 @@ export function useListFirewallConfigs(
   });
 }
 
+export function useGetFirewallConfig(
+  config: FirewallConfigResponse | null = null,
+  statusCode = 404
+) {
+  client.scenario.get(
+    '/v1/security/firewall/config/:version',
+    (req: any, res: any) => {
+      if (!config) {
+        res.status(statusCode).json({
+          error: { code: 'not_found', message: 'Config not found' },
+        });
+        return;
+      }
+      res.json({ ...config, version: Number(req.params.version) });
+    }
+  );
+}
+
 export function useGetBypass(bypass: BypassRule[] = []) {
   client.scenario.get('/v1/security/firewall/bypass', (_req: any, res: any) => {
     const response: BypassListResponse = {
