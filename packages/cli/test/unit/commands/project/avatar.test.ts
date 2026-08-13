@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { describe, it, expect, afterEach } from 'vitest';
@@ -16,6 +16,16 @@ const PNG_BYTES = Uint8Array.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
 ]);
 const PNG_BASE64 = Buffer.from(PNG_BYTES).toString('base64');
+
+// First 3 bytes are the JPEG signature; the rest is filler.
+const JPEG_BYTES = Uint8Array.from([
+  0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
+]);
+
+// UTF-8 BOM plus leading whitespace before `<svg` exercises the sniffing
+// branch that trims the decoded head before matching.
+const SVG_WITH_BOM =
+  '\uFEFF\n  <svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>';
 
 let tmpDir: string | undefined;
 
@@ -95,6 +105,77 @@ describe('project avatar', () => {
       await expect(client.stderr).toOutput(
         'Success! Avatar set for project test-project'
       );
+    });
+
+    it('uploads a JPEG with content type image/jpeg', async () => {
+      useUser();
+      useProject({
+        ...defaultProject,
+        id: 'test-project',
+        name: 'test-project',
+      });
+      const captured = captureAvatarUpload('test-project');
+
+      const filePath = writeFixture('avatar.jpg', JPEG_BYTES);
+
+      client.setArgv('project', 'avatar', 'set', 'test-project', filePath);
+      const exitCode = await projects(client);
+
+      expect(exitCode).toEqual(0);
+      expect(captured.contentType).toEqual('image/jpeg');
+      expect(captured.bodyBase64).toEqual(
+        Buffer.from(JPEG_BYTES).toString('base64')
+      );
+      await expect(client.stderr).toOutput(
+        'Success! Avatar set for project test-project'
+      );
+    });
+
+    it('uploads an SVG with a BOM and leading whitespace as image/svg+xml', async () => {
+      useUser();
+      useProject({
+        ...defaultProject,
+        id: 'test-project',
+        name: 'test-project',
+      });
+      const captured = captureAvatarUpload('test-project');
+
+      const filePath = writeFixture('avatar.svg', SVG_WITH_BOM);
+
+      client.setArgv('project', 'avatar', 'set', 'test-project', filePath);
+      const exitCode = await projects(client);
+
+      expect(exitCode).toEqual(0);
+      expect(captured.contentType).toEqual('image/svg+xml');
+      expect(captured.bodyBase64).toEqual(
+        Buffer.from(SVG_WITH_BOM).toString('base64')
+      );
+      await expect(client.stderr).toOutput(
+        'Success! Avatar set for project test-project'
+      );
+    });
+
+    it('errors when the path is a directory and makes no remote call', async () => {
+      useUser();
+      useProject({
+        ...defaultProject,
+        id: 'test-project',
+        name: 'test-project',
+      });
+      const captured = captureAvatarUpload('test-project');
+
+      // Materialize the fixture dir, then point the command at a directory.
+      writeFixture('placeholder.png', PNG_BYTES);
+      const dirPath = join(tmpDir!, 'a-directory');
+      mkdirSync(dirPath);
+
+      client.setArgv('project', 'avatar', 'set', 'test-project', dirPath);
+      const exitCode = await projects(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Not a file');
+      // Local validation failed, so the upload endpoint was never hit.
+      expect(captured.contentType).toBeUndefined();
     });
 
     it('tracks telemetry with redacted project and file', async () => {
