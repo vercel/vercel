@@ -10,8 +10,13 @@ import {
   setupUnitFixture,
 } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
-import { defaultProject, envs, useProject } from '../../../mocks/project';
-import { useTeams } from '../../../mocks/team';
+import {
+  defaultProject,
+  envs,
+  useProject,
+  useUnknownProject,
+} from '../../../mocks/project';
+import { useTeams, type Team } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { performDeviceCodeFlow } from '../../../../src/commands/login/future';
 import { VERCEL_OIDC_TOKEN } from '../../../../src/util/env/constants';
@@ -1101,6 +1106,77 @@ describe('env pull', () => {
 
       exitSpy.mockRestore();
       logSpy.mockRestore();
+    });
+  });
+
+  describe('unlinked project', () => {
+    it('links the directory inline and pulls in the same invocation', async () => {
+      useUser({ version: 'northstar' });
+      const cwd = setupTmpDir();
+      const [team] = useTeams('team_dummy') as Team[];
+      const { project } = useProject({
+        ...defaultProject,
+        id: path.basename(cwd),
+        name: path.basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('env', 'pull');
+      const exitCodePromise = env(client);
+
+      // Single team auto-selects, so the project picker is the first prompt.
+      await expect(client.stderr).toOutput('Which project?');
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput(
+        `✓ Linked          ${team.slug}/${project.name}`
+      );
+      await expect(client.stderr).toOutput(
+        'Downloading `development` environment variables for'
+      );
+      await expect(client.stderr).toOutput('Created         .env.local file');
+      await expect(exitCodePromise).resolves.toEqual(0);
+
+      expect(
+        await fs.readJSON(path.join(cwd, '.vercel', 'project.json'))
+      ).toMatchObject({
+        orgId: team.id,
+        projectId: project.id,
+      });
+
+      const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+      expect(parse(rawDevEnv)).toMatchObject({ SPECIAL_FLAG: '1' });
+
+      // `env pull` downloads the variables itself, so linking must not offer to.
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Pull development environment variables into .env.local?'
+      );
+    });
+
+    it('errors without prompting when there is no TTY', async () => {
+      useUser();
+      useTeams('team_dummy');
+      client.cwd = setupTmpDir();
+      client.stdin.isTTY = false;
+      client.setArgv('env', 'pull');
+
+      await expect(env(client)).resolves.toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Your codebase isn’t linked to a project on Vercel. Run `vercel link` to begin.'
+      );
+    });
+
+    it('errors without prompting when `--yes` is passed', async () => {
+      useUser();
+      useTeams('team_dummy');
+      client.cwd = setupTmpDir();
+      client.setArgv('env', 'pull', '--yes');
+
+      await expect(env(client)).resolves.toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Your codebase isn’t linked to a project on Vercel. Run `vercel link` to begin.'
+      );
     });
   });
 
