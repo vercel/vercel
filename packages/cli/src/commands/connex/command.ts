@@ -696,12 +696,110 @@ export const networksInspectSubcommand = {
   ],
 } as const;
 
+export const networksCreateSubcommand = {
+  name: 'create',
+  aliases: [],
+  description: 'Create a Secure Compute network',
+  arguments: [],
+  options: [
+    {
+      name: 'name',
+      shorthand: 'n',
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+      description: 'Name of the network',
+    },
+    {
+      name: 'region',
+      shorthand: null,
+      type: String,
+      argument: 'REGION',
+      deprecated: false,
+      description: 'Vercel region where the network is created (e.g. iad1)',
+    },
+    {
+      name: 'cidr',
+      shorthand: null,
+      type: String,
+      argument: 'CIDR',
+      deprecated: false,
+      description:
+        'Private CIDR block for the network (/16 through /24, e.g. 10.0.0.0/16)',
+    },
+    {
+      name: 'availability-zone-id',
+      shorthand: null,
+      type: [String],
+      argument: 'ID',
+      deprecated: false,
+      description:
+        'AWS Availability Zone ID to place the network in. Repeatable; provide exactly two when specified (e.g. use1-az1).',
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Create a network',
+      value: `${packageName} connect networks create --name prod --region iad1 --cidr 10.0.0.0/16`,
+    },
+    {
+      name: 'Create a network pinned to two Availability Zones',
+      value: `${packageName} connect networks create --name prod --region iad1 --cidr 10.0.0.0/16 --availability-zone-id use1-az1 --availability-zone-id use1-az2`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} connect networks create --name prod --region iad1 --cidr 10.0.0.0/16 --json`,
+    },
+  ],
+} as const;
+
+export const networksUpdateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description: 'Update a Secure Compute network',
+  arguments: [
+    {
+      name: 'id',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'name',
+      shorthand: 'n',
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+      description: 'New name for the network',
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Rename a network',
+      value: `${packageName} connect networks update ntw_abc123 --name staging`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} connect networks update ntw_abc123 --name staging --json`,
+    },
+  ],
+} as const;
+
 export const networksSubcommand = {
   name: 'networks',
   aliases: [],
   description: 'Manage Secure Compute networks',
   arguments: [],
-  subcommands: [networksListSubcommand, networksInspectSubcommand],
+  subcommands: [
+    networksListSubcommand,
+    networksInspectSubcommand,
+    networksCreateSubcommand,
+    networksUpdateSubcommand,
+  ],
   options: [],
   examples: [
     {

@@ -1100,6 +1100,54 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
 "
 `;
 
+exports[`help command > connex help output snapshots > connex networks create subcommand > connex networks create subcommand help column width 120 1`] = `
+"
+  ▲ vercel networks create [options]
+
+  Create a Secure Compute network                                                                                       
+
+  Options:
+
+       --availability-zone-id <ID>  AWS Availability Zone ID to place the network in. Repeatable; provide exactly two when   
+                                    specified (e.g. use1-az1).                                                               
+       --cidr <CIDR>                Private CIDR block for the network (/16 through /24, e.g. 10.0.0.0/16)                   
+  -F,  --format <FORMAT>            Specify the output format (json)                                                         
+       --json                       Output as JSON                                                                           
+  -n,  --name <NAME>                Name of the network                                                                      
+       --region <REGION>            Vercel region where the network is created (e.g. iad1)                                   
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Create a network
+
+    $ vercel connect networks create --name prod --region iad1 --cidr 10.0.0.0/16
+
+  - Create a network pinned to two Availability Zones
+
+    $ vercel connect networks create --name prod --region iad1 --cidr 10.0.0.0/16 --availability-zone-id use1-az1 --availability-zone-id use1-az2
+
+  - Output as JSON
+
+    $ vercel connect networks create --name prod --region iad1 --cidr 10.0.0.0/16 --json
+
+"
+`;
+
 exports[`help command > connex help output snapshots > connex networks inspect subcommand > connex networks inspect subcommand help column width 120 1`] = `
 "
   ▲ vercel networks inspect id [options]
@@ -1193,6 +1241,8 @@ exports[`help command > connex help output snapshots > connex networks subcomman
 
   list         List Secure Compute networks on the current team                                                 
   inspect  id  Show details for a single Secure Compute network                                                 
+  create       Create a Secure Compute network                                                                  
+  update   id  Update a Secure Compute network                                                                  
 
 
   Global Options:
@@ -1218,6 +1268,46 @@ exports[`help command > connex help output snapshots > connex networks subcomman
   - Inspect a network by ID
 
     $ vercel connect networks inspect ntw_abc123
+
+"
+`;
+
+exports[`help command > connex help output snapshots > connex networks update subcommand > connex networks update subcommand help column width 120 1`] = `
+"
+  ▲ vercel networks update id [options]
+
+  Update a Secure Compute network                                                                                       
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
+  -n,  --name <NAME>      New name for the network                                                                      
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Rename a network
+
+    $ vercel connect networks update ntw_abc123 --name staging
+
+  - Output as JSON
+
+    $ vercel connect networks update ntw_abc123 --name staging --json
 
 "
 `;

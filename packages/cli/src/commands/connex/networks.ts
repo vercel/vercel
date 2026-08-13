@@ -13,13 +13,19 @@ import {
   networksSubcommand,
   networksListSubcommand,
   networksInspectSubcommand,
+  networksCreateSubcommand,
+  networksUpdateSubcommand,
 } from './command';
 import { networksList } from './networks-list';
 import { networksInspect } from './networks-inspect';
+import { networksCreate } from './networks-create';
+import { networksUpdate } from './networks-update';
 
 const COMMAND_CONFIG = {
   list: getCommandAliases(networksListSubcommand),
   inspect: getCommandAliases(networksInspectSubcommand),
+  create: getCommandAliases(networksCreateSubcommand),
+  update: getCommandAliases(networksUpdateSubcommand),
 };
 
 export async function networks(client: Client): Promise<number> {
@@ -103,6 +109,48 @@ export async function networks(client: Client): Promise<number> {
           client,
           inspectParsedArgs.args,
           inspectParsedArgs.flags
+        );
+      }
+      case 'create': {
+        if (needHelp) {
+          telemetry.trackCliFlagHelp('connex networks', subcommandOriginal);
+          printHelp(networksCreateSubcommand);
+          return 0;
+        }
+        telemetry.trackCliSubcommandCreate(subcommandOriginal);
+
+        const createFlagsSpec = getFlagsSpecification(
+          networksCreateSubcommand.options
+        );
+        const createParsedArgs = parseArguments(args, createFlagsSpec);
+        telemetry.trackCliOptionName(createParsedArgs.flags['--name']);
+        telemetry.trackCliOptionRegion(createParsedArgs.flags['--region']);
+        telemetry.trackCliOptionCidr(createParsedArgs.flags['--cidr']);
+        telemetry.trackCliOptionAvailabilityZoneId(
+          createParsedArgs.flags['--availability-zone-id']
+        );
+        telemetry.trackCliOptionFormat(createParsedArgs.flags['--format']);
+        return await networksCreate(client, createParsedArgs.flags);
+      }
+      case 'update': {
+        if (needHelp) {
+          telemetry.trackCliFlagHelp('connex networks', subcommandOriginal);
+          printHelp(networksUpdateSubcommand);
+          return 0;
+        }
+        telemetry.trackCliSubcommandUpdate(subcommandOriginal);
+
+        const updateFlagsSpec = getFlagsSpecification(
+          networksUpdateSubcommand.options
+        );
+        const updateParsedArgs = parseArguments(args, updateFlagsSpec);
+        telemetry.trackCliArgumentId(updateParsedArgs.args[0]);
+        telemetry.trackCliOptionName(updateParsedArgs.flags['--name']);
+        telemetry.trackCliOptionFormat(updateParsedArgs.flags['--format']);
+        return await networksUpdate(
+          client,
+          updateParsedArgs.args,
+          updateParsedArgs.flags
         );
       }
       default: {
