@@ -4,6 +4,7 @@ import {
   jsonOption,
   limitOption,
   nextOption,
+  yesOption,
 } from '../../util/arg-common';
 
 export const requestSubcommand = {
@@ -171,6 +172,73 @@ export const membersSubcommand = {
   ],
 } as const;
 
+export const updateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description: 'Update settings for a team',
+  arguments: [
+    {
+      name: 'team-slug',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      name: 'name',
+      shorthand: null,
+      type: String,
+      description: 'New display name for the team',
+      deprecated: false,
+    },
+    {
+      name: 'slug',
+      shorthand: null,
+      type: String,
+      description: 'New URL slug for the team; this changes the team URL',
+      deprecated: false,
+    },
+    {
+      name: 'preview-suffix',
+      shorthand: null,
+      type: String,
+      description:
+        'Domain suffix for preview deployment URLs; pass an empty string to clear it',
+      deprecated: false,
+    },
+    {
+      name: 'toolbar',
+      shorthand: null,
+      type: String,
+      description:
+        'Vercel Toolbar on preview deployments: one of on, off, or default',
+      deprecated: false,
+    },
+    {
+      name: 'default-build-machine',
+      shorthand: null,
+      type: String,
+      description:
+        'Default build machine for new builds: one of basic, standard, enhanced, turbo, or elastic',
+      deprecated: false,
+    },
+    yesOption,
+  ],
+  examples: [
+    {
+      name: 'Rename the current team',
+      value: `${packageName} teams update --name "Acme Corp"`,
+    },
+    {
+      name: 'Change the team URL slug (asks for confirmation)',
+      value: `${packageName} teams update --slug acme`,
+    },
+    {
+      name: 'Update a specific team by slug',
+      value: `${packageName} teams update acme --default-build-machine enhanced`,
+    },
+  ],
+} as const;
+
 export const teamsCommand = {
   name: 'teams',
   aliases: ['switch', 'team'],
@@ -184,6 +252,7 @@ export const teamsCommand = {
     switchSubcommand,
     ssoSubcommand,
     membersSubcommand,
+    updateSubcommand,
   ],
   options: [],
   examples: [],

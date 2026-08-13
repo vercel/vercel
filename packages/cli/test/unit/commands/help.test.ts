@@ -930,6 +930,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('teams update help output snapshots', () => {
+      it('teams update help column width 120', () => {
+        expect(
+          help(teams.updateSubcommand, {
+            columns: 120,
+            parent: teams.teamsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('telemetry help output snapshots', () => {

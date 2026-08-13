@@ -5,6 +5,7 @@ import invite from './invite';
 import request from './request';
 import members from './members';
 import sso from './sso';
+import update from './update';
 import { parseArguments } from '../../util/get-args';
 import {
   addSubcommand,
@@ -15,6 +16,7 @@ import {
   ssoSubcommand,
   switchSubcommand,
   teamsCommand,
+  updateSubcommand,
 } from './command';
 import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -35,6 +37,7 @@ const COMMAND_CONFIG = {
   request: ['request', 'access-request'],
   sso: ['sso'],
   members: ['members', 'member'],
+  update: ['update'],
 };
 
 export default async function teams(client: Client) {
@@ -153,6 +156,15 @@ export default async function teams(client: Client) {
       telemetry.trackCliSubcommandMembers(subcommandOriginal);
       return members(client, args);
     }
+    case 'update': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('teams', subcommandOriginal);
+        printHelp(updateSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandUpdate(subcommandOriginal);
+      return update(client, args);
+    }
     default: {
       const fallback = await tryOpenApiFallback(
         client,
@@ -163,7 +175,7 @@ export default async function teams(client: Client) {
         return fallback;
       }
       output.error(
-        'Please specify a valid subcommand: add | ls | switch | invite | request | sso | members'
+        'Please specify a valid subcommand: add | ls | switch | invite | request | sso | members | update'
       );
       output.print(help(teamsCommand, { columns: client.stderr.columns }));
       return 2;

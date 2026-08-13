@@ -7197,38 +7197,47 @@ exports[`help command > teams help output snapshots > teams help column width 40
 
   Commands:
 
-  add                Create a   
-                     new team   
-  invite   email     Invite a   
-                     new member 
-                     to a team  
-  list               Show all   
-                     teams that 
-                     you're a   
-                     member of  
-  request  [userId]  Show       
-                     join-reque…
-                     status for 
-                     the current
-                     team       
-                     (defaults  
-                     to the     
-                     authentica…
-                     user)      
-  switch   [name]    Switch to a
-                     different  
-                     team       
-  sso                Show SAML /
-                     SSO        
-                     configurat…
-                     for the    
-                     current    
-                     team       
-  members            List       
-                     members for
-                     the        
-                     currently  
-                     scoped team
+  add                   Create a 
+                        new team 
+  invite   email        Invite a 
+                        new      
+                        member to
+                        a team   
+  list                  Show all 
+                        teams    
+                        that     
+                        you're a 
+                        member of
+  request  [userId]     Show     
+                        join-req…
+                        status   
+                        for the  
+                        current  
+                        team     
+                        (defaults
+                        to the   
+                        authenti…
+                        user)    
+  switch   [name]       Switch to
+                        a        
+                        different
+                        team     
+  sso                   Show SAML
+                        / SSO    
+                        configur…
+                        for the  
+                        current  
+                        team     
+  members               List     
+                        members  
+                        for the  
+                        currently
+                        scoped   
+                        team     
+  update   [team-slug]  Update   
+                        settings 
+                        for a    
+                        team     
 
 
   Global Options:
@@ -7290,14 +7299,16 @@ exports[`help command > teams help output snapshots > teams help column width 80
 
   Commands:
 
-  add                Create a new team                                  
-  invite   email     Invite a new member to a team                      
-  list               Show all teams that you're a member of             
-  request  [userId]  Show join-request status for the current team      
-                     (defaults to the authenticated user)               
-  switch   [name]    Switch to a different team                         
-  sso                Show SAML / SSO configuration for the current team 
-  members            List members for the currently scoped team         
+  add                   Create a new team                                
+  invite   email        Invite a new member to a team                    
+  list                  Show all teams that you're a member of           
+  request  [userId]     Show join-request status for the current team    
+                        (defaults to the authenticated user)             
+  switch   [name]       Switch to a different team                       
+  sso                   Show SAML / SSO configuration for the current    
+                        team                                             
+  members               List members for the currently scoped team       
+  update   [team-slug]  Update settings for a team                       
 
 
   Global Options:
@@ -7327,13 +7338,14 @@ exports[`help command > teams help output snapshots > teams help column width 12
 
   Commands:
 
-  add                Create a new team                                                                          
-  invite   email     Invite a new member to a team                                                              
-  list               Show all teams that you're a member of                                                     
-  request  [userId]  Show join-request status for the current team (defaults to the authenticated user)         
-  switch   [name]    Switch to a different team                                                                 
-  sso                Show SAML / SSO configuration for the current team                                         
-  members            List members for the currently scoped team                                                 
+  add                   Create a new team                                                                        
+  invite   email        Invite a new member to a team                                                            
+  list                  Show all teams that you're a member of                                                   
+  request  [userId]     Show join-request status for the current team (defaults to the authenticated user)       
+  switch   [name]       Switch to a different team                                                               
+  sso                   Show SAML / SSO configuration for the current team                                       
+  members               List members for the currently scoped team                                               
+  update   [team-slug]  Update settings for a team                                                               
 
 
   Global Options:
@@ -7447,6 +7459,53 @@ exports[`help command > teams help output snapshots > teams switch help output s
   - Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively
 
     $ vercel teams switch <slug>
+
+"
+`;
+
+exports[`help command > teams help output snapshots > teams update help output snapshots > teams update help column width 120 1`] = `
+"
+  ▲ vercel teams update [team-slug] [options]
+
+  Update settings for a team                                                                                            
+
+  Options:
+
+       --default-build-machine  Default build machine for new builds: one of basic, standard, enhanced, turbo, or elastic    
+       --name                   New display name for the team                                                                
+       --preview-suffix         Domain suffix for preview deployment URLs; pass an empty string to clear it                  
+       --slug                   New URL slug for the team; this changes the team URL                                         
+       --toolbar                Vercel Toolbar on preview deployments: one of on, off, or default                            
+  -y,  --yes                    Accept default value for all prompts                                                         
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Rename the current team
+
+    $ vercel teams update --name "Acme Corp"
+
+  - Change the team URL slug (asks for confirmation)
+
+    $ vercel teams update --slug acme
+
+  - Update a specific team by slug
+
+    $ vercel teams update acme --default-build-machine enhanced
 
 "
 `;
