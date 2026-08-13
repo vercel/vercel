@@ -186,6 +186,37 @@ describe('project web-analytics', () => {
     expect(exitCode).toBe(1);
   });
 
+  it('targets a project literally named "disable" by its project ID', async () => {
+    // A bare `disable` argument is always the action word (see the linked
+    // project test above), so a project named "disable" or "enable" must be
+    // targeted by its project ID instead.
+    useProject({
+      ...defaultProject,
+      id: 'prj_shadowed_123',
+      name: 'disable',
+    });
+
+    client.scenario.post('/web/insights/toggle', (req, res) => {
+      expect(req.query.projectId).toBe('prj_shadowed_123');
+      expect(req.body).toEqual({ value: false });
+      res.json({ value: false });
+    });
+
+    client.setArgv('project', 'web-analytics', 'disable', 'prj_shadowed_123');
+    const exitCode = await project(client);
+    expect(exitCode).toBe(0);
+    await expect(client.stderr).toOutput('Web Analytics is disabled');
+  });
+
+  it('returns 2 when the action form is given too many arguments', async () => {
+    client.setArgv('project', 'web-analytics', 'enable', 'a', 'b');
+    const exitCode = await project(client);
+    expect(exitCode).toBe(2);
+    await expect(client.stderr).toOutput(
+      'Invalid number of arguments. Usage: `vercel project web-analytics enable [name]`'
+    );
+  });
+
   describe('--non-interactive', () => {
     afterEach(() => {
       vi.restoreAllMocks();
