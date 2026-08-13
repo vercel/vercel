@@ -804,16 +804,6 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
-    describe('project protection protected-sourcemaps help output snapshots', () => {
-      it('project protection protected-sourcemaps help column width 120', () => {
-        expect(
-          help(project.protectedSourcemapsSubcommand, {
-            columns: 120,
-            parent: project.projectCommand,
-          })
-        ).toMatchSnapshot();
-      });
-    });
   });
 
   describe('promote help output snapshots', () => {

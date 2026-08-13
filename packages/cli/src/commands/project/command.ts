@@ -724,35 +724,6 @@ export const optionsAllowlistSubcommand = {
   ],
 } as const;
 
-/**
- * `vercel project protection protected-sourcemaps get|set|disable`.
- */
-export const protectedSourcemapsSubcommand = {
-  name: 'protection protected-sourcemaps',
-  aliases: [],
-  description:
-    'Show or toggle whether sourcemaps require authentication to access',
-  arguments: [
-    { name: 'action', required: false },
-    { name: 'name', required: false },
-  ],
-  options: [formatOption, jsonOption, yesOption],
-  examples: [
-    {
-      name: 'Show the Protected Sourcemaps setting for the linked project',
-      value: `${packageName} project protection protected-sourcemaps get`,
-    },
-    {
-      name: 'Protect sourcemaps behind authentication',
-      value: `${packageName} project protection protected-sourcemaps set my-app`,
-    },
-    {
-      name: 'Disable sourcemap protection',
-      value: `${packageName} project protection protected-sourcemaps disable my-app --yes`,
-    },
-  ],
-} as const;
-
 export const accessGroupsSubcommand = {
   name: 'access-groups',
   aliases: ['accessgroups'],

@@ -28,7 +28,6 @@ import {
   projectCommand,
   protectionSubcommand,
   optionsAllowlistSubcommand,
-  protectedSourcemapsSubcommand,
   renameSubcommand,
   removeSubcommand,
   speedInsightsSubcommand,
@@ -176,7 +175,6 @@ export default async function main(client: Client) {
         'trusted-ips': trustedIpsSubcommand,
         'trusted-sources': trustedSourcesSubcommand,
         'options-allowlist': optionsAllowlistSubcommand,
-        'protected-sourcemaps': protectedSourcemapsSubcommand,
       };
       const nested = args[0] ? nestedProtectionHelp[args[0]] : undefined;
       if (needHelp) {
