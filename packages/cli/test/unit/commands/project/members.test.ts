@@ -260,4 +260,140 @@ describe('project members', () => {
       await expect(client.stderr).toOutput('Invalid number of arguments.');
     });
   });
+
+  describe('remove', () => {
+    function useMembersList(members: unknown[]) {
+      client.scenario.get('/v1/projects/:idOrName/members', (_req, res) => {
+        res.json({ members, pagination: {} });
+      });
+    }
+
+    it('removes a member by uid after resolving via the members listing', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'prj_123',
+        name: 'my-project',
+      });
+      useMembersList([
+        { uid: 'user_1', username: 'octocat', email: 'octocat@example.com' },
+      ]);
+
+      let deletedUid: string | undefined;
+      client.scenario.delete(
+        '/v1/projects/:idOrName/members/:uid',
+        (req, res) => {
+          expect(req.params.idOrName).toBe('prj_123');
+          deletedUid = req.params.uid;
+          res.json({ id: 'prj_123' });
+        }
+      );
+
+      client.setArgv(
+        'project',
+        'members',
+        'remove',
+        'my-project',
+        'octocat@example.com',
+        '--yes'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(0);
+      expect(deletedUid).toBe('user_1');
+      await expect(client.stderr).toOutput('Removed octocat from my-project.');
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:members', value: 'members remove' },
+        { key: 'argument:project', value: '[REDACTED]' },
+        { key: 'argument:member', value: '[REDACTED]' },
+        { key: 'flag:yes', value: 'TRUE' },
+      ]);
+    });
+
+    it('removes a member after interactive confirmation', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'prj_123',
+        name: 'my-project',
+      });
+      useMembersList([{ uid: 'user_1', username: 'octocat' }]);
+      client.scenario.delete(
+        '/v1/projects/:idOrName/members/:uid',
+        (_req, res) => {
+          res.json({ id: 'prj_123' });
+        }
+      );
+
+      client.setArgv('project', 'members', 'remove', 'my-project', 'octocat');
+      const pending = project(client);
+      await expect(client.stderr).toOutput('Remove');
+      client.stdin.write('y\n');
+      const exitCode = await pending;
+      expect(exitCode).toBe(0);
+    });
+
+    it('errors when the member is not part of the project', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'prj_123',
+        name: 'my-project',
+      });
+      useMembersList([{ uid: 'user_1', username: 'octocat' }]);
+
+      client.setArgv(
+        'project',
+        'members',
+        'remove',
+        'my-project',
+        'nobody@example.com',
+        '--yes'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('is not a member of my-project.');
+    });
+
+    it('errors when arguments are missing', async () => {
+      client.setArgv('project', 'members', 'remove', 'my-project');
+      const exitCode = await project(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('Invalid number of arguments.');
+    });
+
+    describe('--non-interactive', () => {
+      afterEach(() => {
+        vi.restoreAllMocks();
+        client.nonInteractive = false;
+      });
+
+      it('requires --yes and outputs confirmation_required JSON', async () => {
+        useProject({
+          ...defaultProject,
+          id: 'prj_123',
+          name: 'my-project',
+        });
+        useMembersList([{ uid: 'user_1', username: 'octocat' }]);
+
+        vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+          throw new Error(`exit:${code ?? 0}`);
+        }) as () => never);
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'project',
+          'members',
+          'remove',
+          'my-project',
+          'octocat',
+          '--non-interactive'
+        );
+
+        await expect(project(client)).rejects.toThrow('exit:1');
+
+        const payload = JSON.parse(client.stdout.getFullOutput().trim());
+        expect(payload).toMatchObject({
+          status: 'action_required',
+          reason: 'confirmation_required',
+        });
+      });
+    });
+  });
 });

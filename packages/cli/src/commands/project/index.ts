@@ -157,7 +157,11 @@ export default async function main(client: Client) {
         return printHelp(membersSubcommand);
       }
       telemetry.trackCliSubcommandMembers(
-        args[0] === 'add' ? 'members add' : subcommandOriginal
+        args[0] === 'add'
+          ? 'members add'
+          : args[0] === 'remove' || args[0] === 'rm'
+            ? 'members remove'
+            : subcommandOriginal
       );
       exitCode = await members(client, args);
       break;

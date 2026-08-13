@@ -13,6 +13,7 @@ import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
 import { membersAdd } from './members-add';
+import { membersRemove } from './members-remove';
 
 interface ProjectMember {
   uid: string;
@@ -34,6 +35,10 @@ export default async function members(
 ): Promise<number> {
   if (argv[0] === 'add') {
     return membersAdd(client, argv.slice(1));
+  }
+
+  if (argv[0] === 'remove' || argv[0] === 'rm') {
+    return membersRemove(client, argv.slice(1));
   }
 
   let parsedArgs;

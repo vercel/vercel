@@ -404,10 +404,17 @@ export const membersAddFlags = [
   memberRoleOption,
 ] as const;
 
+/** Flags for `vercel project members remove` / `rm`. */
+export const membersRemoveFlags = [
+  formatOption,
+  jsonOption,
+  yesOption,
+] as const;
+
 export const membersSubcommand = {
   name: 'members',
   aliases: ['member'],
-  description: 'List or add project members for a project',
+  description: 'List, add, or remove project members for a project',
   arguments: [
     {
       name: 'name',
@@ -432,6 +439,7 @@ export const membersSubcommand = {
       deprecated: false,
     },
     memberRoleOption,
+    yesOption,
   ],
   examples: [
     {
@@ -445,6 +453,10 @@ export const membersSubcommand = {
     {
       name: 'Add a member to a project by email with a role',
       value: `${packageName} project members add my-project user@example.com --role PROJECT_VIEWER`,
+    },
+    {
+      name: 'Remove a member from a project',
+      value: `${packageName} project members remove my-project user@example.com --yes`,
     },
   ],
 } as const;

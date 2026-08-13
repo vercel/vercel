@@ -5703,6 +5703,7 @@ exports[`help command > project help output snapshots > project help column widt
                                    …
                                    …
                                    …
+                                   …
                                    a
                                    …
   access-groups   [name]           …
@@ -5827,7 +5828,8 @@ exports[`help command > project help output snapshots > project help column widt
   inspect         [name]           Displays information related to a project
   list                             Show all projects in the selected scope  
                                    (default)                                
-  members         [name]           List or add project members for a project
+  members         [name]           List, add, or remove project members for 
+                                   a project                                
   access-groups   [name]           List access groups for a project         
   protection      [action] [name]  Show or toggle deployment protection     
                                    settings for a project                   
@@ -5875,7 +5877,7 @@ exports[`help command > project help output snapshots > project help column widt
                                    /v2/projects/.../checks)                                                         
   inspect         [name]           Displays information related to a project                                        
   list                             Show all projects in the selected scope (default)                                
-  members         [name]           List or add project members for a project                                        
+  members         [name]           List, add, or remove project members for a project                               
   access-groups   [name]           List access groups for a project                                                 
   protection      [action] [name]  Show or toggle deployment protection settings for a project                      
   web-analytics   [name]           Enable Web Analytics for a project                                               

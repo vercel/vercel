@@ -111,6 +111,13 @@ export class ProjectTelemetryClient
     }
   }
 
+  /** `--yes` confirmation-skip flag for `members remove`. */
+  trackCliFlagYes(yes: boolean | undefined) {
+    if (yes) {
+      this.trackCliFlag('yes');
+    }
+  }
+
   trackCliSubcommandAccessGroups(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'access-groups',
