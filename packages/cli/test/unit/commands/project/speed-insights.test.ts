@@ -159,6 +159,24 @@ describe('project speed-insights', () => {
     }
   });
 
+  it('returns 2 when an action is passed with too many arguments', async () => {
+    client.setArgv('project', 'speed-insights', 'enable', 'a', 'b');
+    const exitCode = await project(client);
+    expect(exitCode).toBe(2);
+    await expect(client.stderr).toOutput(
+      'Invalid number of arguments. Usage: `vercel project speed-insights enable [name]`'
+    );
+  });
+
+  it('returns 2 when too many arguments are passed without an action', async () => {
+    client.setArgv('project', 'speed-insights', 'a', 'b');
+    const exitCode = await project(client);
+    expect(exitCode).toBe(2);
+    await expect(client.stderr).toOutput(
+      'Invalid number of arguments. Usage: `vercel project speed-insights [name]`'
+    );
+  });
+
   it('returns 1 when the project is not found', async () => {
     useUser();
     useProject({
