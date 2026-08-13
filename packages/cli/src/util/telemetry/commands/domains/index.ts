@@ -83,6 +83,20 @@ export class DomainsTelemetryClient
     });
   }
 
+  trackCliSubcommandNameservers(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'nameservers',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandAuthCode(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'auth-code',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandList(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'list',

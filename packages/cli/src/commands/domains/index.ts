@@ -14,9 +14,12 @@ import price from './price';
 import search from './search';
 import renew from './renew';
 import autoRenew from './auto-renew';
+import nameservers from './nameservers';
+import authCode from './auth-code';
 import verify from './verify';
 import {
   addSubcommand,
+  authCodeSubcommand,
   autoRenewSubcommand,
   buySubcommand,
   checkSubcommand,
@@ -24,6 +27,7 @@ import {
   inspectSubcommand,
   listSubcommand,
   moveSubcommand,
+  nameserversSubcommand,
   priceSubcommand,
   removeSubcommand,
   renewSubcommand,
@@ -49,6 +53,8 @@ const COMMAND_CONFIG = {
   transferIn: ['transfer-in'],
   renew: ['renew'],
   autoRenew: ['auto-renew'],
+  nameservers: ['nameservers', 'ns'],
+  authCode: ['auth-code'],
   verify: ['verify'],
 };
 
@@ -168,6 +174,20 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAutoRenew(subcommandOriginal);
       return autoRenew(client, args);
+    case 'nameservers':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(nameserversSubcommand);
+      }
+      telemetry.trackCliSubcommandNameservers(subcommandOriginal);
+      return nameservers(client, args);
+    case 'authCode':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(authCodeSubcommand);
+      }
+      telemetry.trackCliSubcommandAuthCode(subcommandOriginal);
+      return authCode(client, args);
     case 'verify':
       if (needHelp) {
         telemetry.trackCliFlagHelp('domains', subcommandOriginal);

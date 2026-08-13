@@ -341,6 +341,76 @@ export const autoRenewSubcommand = {
   ],
 } as const;
 
+export const nameserversSubcommand = {
+  name: 'nameservers',
+  aliases: ['ns'],
+  description: 'Show or change the nameservers for a registered domain',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'set',
+      shorthand: null,
+      type: String,
+      argument: 'NS',
+      description:
+        'Set custom nameservers (comma-separated, e.g. ns1.example.com,ns2.example.com)',
+      deprecated: false,
+    },
+    {
+      name: 'restore',
+      shorthand: null,
+      type: Boolean,
+      description: "Restore Vercel's default nameservers",
+      deprecated: false,
+    },
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when changing nameservers',
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Show the current nameservers for a domain',
+      value: `${packageName} domains nameservers example.com`,
+    },
+    {
+      name: 'Set custom nameservers',
+      value: `${packageName} domains nameservers example.com --set ns1.example.com,ns2.example.com`,
+    },
+    {
+      name: "Restore Vercel's default nameservers",
+      value: `${packageName} domains nameservers example.com --restore`,
+    },
+  ],
+} as const;
+
+export const authCodeSubcommand = {
+  name: 'auth-code',
+  aliases: [],
+  description:
+    'Print the transfer-out auth code for a registered domain (sensitive)',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'Print the transfer-out auth code for a domain',
+      value: `${packageName} domains auth-code example.com`,
+    },
+  ],
+} as const;
+
 export const verifySubcommand = {
   name: 'verify',
   aliases: [],
@@ -403,6 +473,8 @@ export const domainsCommand = {
     removeSubcommand,
     renewSubcommand,
     autoRenewSubcommand,
+    nameserversSubcommand,
+    authCodeSubcommand,
     verifySubcommand,
   ],
   options: [],
