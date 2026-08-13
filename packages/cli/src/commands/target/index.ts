@@ -6,10 +6,12 @@ import list from './list';
 import inspect from './inspect';
 import add from './add';
 import update from './update';
+import rm from './rm';
 import {
   addSubcommand,
   inspectSubcommand,
   listSubcommand,
+  removeSubcommand,
   targetCommand,
   updateSubcommand,
 } from './command';
@@ -24,6 +26,7 @@ const COMMAND_CONFIG = {
   inspect: getCommandAliases(inspectSubcommand),
   add: getCommandAliases(addSubcommand),
   update: getCommandAliases(updateSubcommand),
+  rm: getCommandAliases(removeSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -97,6 +100,15 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandUpdate(subcommand);
       return await update(client, args);
+    case 'rm':
+    case 'remove':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('target', 'remove');
+        printHelp(removeSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandRemove(subcommand);
+      return await rm(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(targetCommand, { columns: client.stderr.columns }));

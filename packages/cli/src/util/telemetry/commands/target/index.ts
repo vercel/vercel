@@ -33,4 +33,11 @@ export class TargetTelemetryClient
       value: subcommandActual,
     });
   }
+
+  trackCliSubcommandRemove(subcommandActual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'remove',
+      value: subcommandActual,
+    });
+  }
 }

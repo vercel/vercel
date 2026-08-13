@@ -172,6 +172,36 @@ export const updateSubcommand = {
   ],
 } as const;
 
+export const removeSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Remove a custom environment from the current Project',
+  arguments: [
+    {
+      name: 'name',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'delete-unassigned-env-vars',
+      shorthand: null,
+      type: Boolean,
+      description:
+        'Also delete environment variables that are not assigned to any environment',
+      deprecated: false,
+    },
+    projectOption,
+    yesOption,
+  ],
+  examples: [
+    {
+      name: 'Remove a custom environment',
+      value: `${packageName} target remove staging`,
+    },
+  ],
+} as const;
+
 export const targetCommand = {
   name: 'target',
   aliases: ['targets'],
@@ -182,6 +212,7 @@ export const targetCommand = {
     inspectSubcommand,
     addSubcommand,
     updateSubcommand,
+    removeSubcommand,
   ],
   options: [],
   examples: [],
