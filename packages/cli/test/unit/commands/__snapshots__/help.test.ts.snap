@@ -3170,7 +3170,6 @@ exports[`help command > env help output snapshots > env shared help output snaps
   add      name [value]        Add a team Shared Environment Variable                                            
   update   name-or-id [value]  Update a team Shared Environment Variable                                         
   remove   name-or-id          Remove a team Shared Environment Variable                                         
-  unlink   name-or-id          Unlink a project from a team Shared Environment Variable without deleting it      
 
 
   Global Options:
@@ -3315,41 +3314,6 @@ exports[`help command > env help output snapshots > env shared help output snaps
   - Remove a Shared Environment Variable without confirmation
 
     $ vercel env shared rm env_XCG7t7AIHuO2SBA8667zNUiM --yes
-
-"
-`;
-
-exports[`help command > env help output snapshots > env shared help output snapshots > env shared unlink help column width 120 1`] = `
-"
-  ▲ vercel shared unlink name-or-id [options]
-
-  Unlink a project from a team Shared Environment Variable without deleting it                                          
-
-  Options:
-
-       --project <NAME_OR_ID>  Project to unlink by name or ID (required)                                                    
-  -y,  --yes                   Skip the confirmation prompt when unlinking the project                                       
-
-
-  Global Options:
-
-       --cwd <DIR>            Sets the current working directory for a single run of a command                          
-  -d,  --debug                Debug mode (default off)                                                                  
-  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
-  -h,  --help                 Output usage information                                                                  
-  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
-       --no-color             No color mode (default off)                                                               
-       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
-  -S,  --scope                Set a custom scope                                                                        
-  -t,  --token <TOKEN>        Login token                                                                               
-  -v,  --version              Output the version number                                                                 
-
-
-  Examples:
-
-  - Unlink a project from a Shared Environment Variable
-
-    $ vercel env shared unlink API_URL --project my-project
 
 "
 `;

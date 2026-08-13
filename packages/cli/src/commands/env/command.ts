@@ -619,39 +619,6 @@ export const sharedRemoveSubcommand = {
   ],
 } as const;
 
-export const sharedUnlinkSubcommand = {
-  name: 'unlink',
-  aliases: [],
-  description:
-    'Unlink a project from a team Shared Environment Variable without deleting it',
-  arguments: [
-    {
-      name: 'name-or-id',
-      required: true,
-    },
-  ],
-  options: [
-    {
-      name: 'project',
-      description: 'Project to unlink by name or ID (required)',
-      shorthand: null,
-      type: String,
-      argument: 'NAME_OR_ID',
-      deprecated: false,
-    },
-    {
-      ...yesOption,
-      description: 'Skip the confirmation prompt when unlinking the project',
-    },
-  ],
-  examples: [
-    {
-      name: 'Unlink a project from a Shared Environment Variable',
-      value: `${packageName} env shared unlink API_URL --project my-project`,
-    },
-  ],
-} as const;
-
 export const sharedSubcommand = {
   name: 'shared',
   aliases: [],
@@ -663,7 +630,6 @@ export const sharedSubcommand = {
     sharedAddSubcommand,
     sharedUpdateSubcommand,
     sharedRemoveSubcommand,
-    sharedUnlinkSubcommand,
   ],
   options: [],
   examples: [
