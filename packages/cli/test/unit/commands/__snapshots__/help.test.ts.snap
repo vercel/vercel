@@ -3165,10 +3165,9 @@ exports[`help command > env help output snapshots > env shared help output snaps
 
   Commands:
 
-  list                         List team Shared Environment Variables                                            
-  inspect  name-or-id          Show a team Shared Environment Variable in full                                   
-  add      name [value]        Add a team Shared Environment Variable                                            
-  update   name-or-id [value]  Update a team Shared Environment Variable                                         
+  list                   List team Shared Environment Variables                                                   
+  inspect  name-or-id    Show a team Shared Environment Variable in full                                          
+  add      name [value]  Add a team Shared Environment Variable                                                   
 
 
   Global Options:
@@ -3275,53 +3274,6 @@ exports[`help command > env help output snapshots > env shared help output snaps
   - List Shared Environment Variables linked to a project
 
     $ vercel env shared ls --project my-project
-
-"
-`;
-
-exports[`help command > env help output snapshots > env shared help output snapshots > env shared update help column width 120 1`] = `
-"
-  ▲ vercel shared update name-or-id [value] [options]
-
-  Update a team Shared Environment Variable                                                                             
-
-  Options:
-
-       --comment <TEXT>        Update the comment describing the variable                                               
-  -e,  --environment <TARGET>  Replace the target environments: production, preview, or development (repeatable)        
-       --link-project <ID>     Link the variable to a project by ID (repeatable)                                        
-       --sensitive             Update the variable to sensitive so it cannot be read later                              
-       --unlink-project <ID>   Unlink the variable from a project by ID (repeatable)                                    
-  -y,  --yes                   Skip the confirmation prompt when updating the variable                                  
-
-
-  Global Options:
-
-       --cwd <DIR>            Sets the current working directory for a single run of a command                          
-  -d,  --debug                Debug mode (default off)                                                                  
-  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
-  -h,  --help                 Output usage information                                                                  
-  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
-       --no-color             No color mode (default off)                                                               
-       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
-  -S,  --scope                Set a custom scope                                                                        
-  -t,  --token <TOKEN>        Login token                                                                               
-  -v,  --version              Output the version number                                                                 
-
-
-  Examples:
-
-  - Update the value of a Shared Environment Variable
-
-    $ vercel env shared update API_URL "<value>"
-
-  - Replace the target environments
-
-    $ vercel env shared update API_URL -e production -e preview
-
-  - Link and unlink projects without deleting the variable
-
-    $ vercel env shared update API_URL --link-project new-project --unlink-project old-project
 
 "
 `;
