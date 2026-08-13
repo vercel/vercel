@@ -10,10 +10,7 @@ import {
   outputAgentError,
 } from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
-import {
-  optionsAllowlistSubcommand,
-  trustedSourcesSubcommand,
-} from './command';
+import { trustedSourcesSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
@@ -23,21 +20,15 @@ import type { JSONObject, Project } from '@vercel-internals/types';
 const ACTIONS = ['get', 'set', 'disable'] as const;
 type Action = (typeof ACTIONS)[number];
 
-// Schema: optionsAllowlist.paths maxItems — mirror the API's LIMIT (5) so
-// the user gets a clean local error instead of a remote validation failure.
-const MAX_OPTIONS_ALLOWLIST_PATHS = 5;
-
 interface SettingSpec {
   /** Project PATCH body field, verbatim from the public schema. */
-  field: 'trustedSources' | 'optionsAllowlist';
+  field: 'trustedSources';
   /** CLI segment, e.g. `trusted-sources`. */
   slug: string;
   /** Human label used in output. */
   label: string;
   commandName: string;
-  subcommand:
-    | typeof trustedSourcesSubcommand
-    | typeof optionsAllowlistSubcommand;
+  subcommand: typeof trustedSourcesSubcommand;
   /**
    * Build the PATCH value for `set` from parsed flags. Returns an error
    * message when local validation fails (nothing is sent remotely).
@@ -115,46 +106,8 @@ const TRUSTED_SOURCES: SettingSpec = {
   disableValue: null,
 };
 
-const OPTIONS_ALLOWLIST: SettingSpec = {
-  field: 'optionsAllowlist',
-  slug: 'options-allowlist',
-  label: 'OPTIONS Allowlist',
-  commandName: 'project protection options-allowlist',
-  subcommand: optionsAllowlistSubcommand,
-  buildSetValue(flags) {
-    const paths = (flags['--path'] as string[] | undefined) ?? [];
-    if (paths.length === 0) {
-      return fail('At least one `--path </path>` is required for set.');
-    }
-    if (paths.length > MAX_OPTIONS_ALLOWLIST_PATHS) {
-      return fail(
-        `Too many paths (${paths.length}); the maximum is ${MAX_OPTIONS_ALLOWLIST_PATHS}.`
-      );
-    }
-    const seen = new Set<string>();
-    const entries: Array<{ value: string }> = [];
-    for (const raw of paths) {
-      const value = raw.trim();
-      // Schema: pattern '^/.*' — every path must start with '/'.
-      if (!value.startsWith('/')) {
-        return fail(
-          `Invalid --path "${value}": paths must start with "/" (regex paths are allowed, e.g. /api/.*).`
-        );
-      }
-      if (seen.has(value)) {
-        return fail(`Duplicate path "${value}" in --path.`);
-      }
-      seen.add(value);
-      entries.push({ value });
-    }
-    return { ok: true, value: { paths: entries } };
-  },
-  disableValue: null,
-};
-
 const SPECS: Record<string, SettingSpec> = {
   'trusted-sources': TRUSTED_SOURCES,
-  'options-allowlist': OPTIONS_ALLOWLIST,
 };
 
 export function getProtectionSettingSpec(slug: string): SettingSpec | null {
@@ -235,7 +188,6 @@ export async function projectProtectionSetting(
 
   const skipConfirmation = Boolean(parsedArgs.flags['--yes']);
   telemetry.trackCliArgumentAction(action);
-  telemetry.trackCliOptionPath(parsedArgs.flags['--path'] as string[]);
   telemetry.trackCliOptionFile(parsedArgs.flags['--file'] as string);
   telemetry.trackCliFlagYes(skipConfirmation);
 

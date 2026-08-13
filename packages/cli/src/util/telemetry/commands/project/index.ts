@@ -166,18 +166,6 @@ export class ProjectTelemetryClient
   }
 
   /**
-   * `--path` allowlist entries. Paths are sensitive infra data, so only the
-   * redacted presence is recorded.
-   */
-  trackCliOptionPath(values: string[] | undefined) {
-    if (!values || values.length === 0) return;
-    this.trackCliOption({
-      option: 'path',
-      value: this.redactedValue,
-    });
-  }
-
-  /**
    * `--file` config file path. File paths and contents are never recorded;
    * only the redacted presence is tracked.
    */

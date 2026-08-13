@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Add `vercel project protection trusted-sources|options-allowlist` subcommands with get/set/disable actions to manage deployment-protection settings via the public project PATCH endpoint.
+Add `vercel project protection trusted-sources get|set|disable` to manage the Trusted Sources deployment-protection config via the public project PATCH endpoint.

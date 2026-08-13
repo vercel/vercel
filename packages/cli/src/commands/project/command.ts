@@ -682,48 +682,6 @@ export const trustedSourcesSubcommand = {
   ],
 } as const;
 
-/**
- * `vercel project protection options-allowlist get|set|disable`.
- */
-export const optionsAllowlistSubcommand = {
-  name: 'protection options-allowlist',
-  aliases: [],
-  description:
-    'Show, set, or clear paths exempt from Deployment Protection for CORS preflight (OPTIONS) requests',
-  arguments: [
-    { name: 'action', required: false },
-    { name: 'name', required: false },
-  ],
-  options: [
-    formatOption,
-    jsonOption,
-    yesOption,
-    {
-      name: 'path',
-      shorthand: null,
-      type: [String],
-      argument: 'PATH',
-      description:
-        'Regex path that should not be protected (repeatable, must start with "/")',
-      deprecated: false,
-    },
-  ],
-  examples: [
-    {
-      name: 'Show the OPTIONS allowlist for the linked project',
-      value: `${packageName} project protection options-allowlist get`,
-    },
-    {
-      name: 'Allow CORS preflight on API paths',
-      value: `${packageName} project protection options-allowlist set my-app --path /api/.* --path /webhooks/stripe`,
-    },
-    {
-      name: 'Clear the OPTIONS allowlist',
-      value: `${packageName} project protection options-allowlist disable my-app --yes`,
-    },
-  ],
-} as const;
-
 export const accessGroupsSubcommand = {
   name: 'access-groups',
   aliases: ['accessgroups'],
