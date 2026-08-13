@@ -5,6 +5,7 @@ import {
   outputArrayToString,
 } from '../../../src/commands/help';
 import { deployCommand } from '../../../src/commands/deploy/command';
+import * as accessGroup from '../../../src/commands/access-group/command';
 import * as alias from '../../../src/commands/alias/command';
 import { bisectCommand } from '../../../src/commands/bisect/command';
 import * as certs from '../../../src/commands/certs/command';
@@ -89,6 +90,44 @@ describe('help command', () => {
     });
     it('deploy help column width 120', () => {
       expect(help(deployCommand, { columns: 120 })).toMatchSnapshot();
+    });
+  });
+
+  describe('access-group help output snapshots', () => {
+    it('access-group help column width 40', () => {
+      expect(
+        help(accessGroup.accessGroupCommand, { columns: 40 })
+      ).toMatchSnapshot();
+    });
+    it('access-group help column width 80', () => {
+      expect(
+        help(accessGroup.accessGroupCommand, { columns: 80 })
+      ).toMatchSnapshot();
+    });
+    it('access-group help column width 120', () => {
+      expect(
+        help(accessGroup.accessGroupCommand, { columns: 120 })
+      ).toMatchSnapshot();
+    });
+    describe('access-group list help output snapshots', () => {
+      it('access-group list help column width 120', () => {
+        expect(
+          help(accessGroup.listSubcommand, {
+            columns: 120,
+            parent: accessGroup.accessGroupCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('access-group inspect help output snapshots', () => {
+      it('access-group inspect help column width 120', () => {
+        expect(
+          help(accessGroup.inspectSubcommand, {
+            columns: 120,
+            parent: accessGroup.accessGroupCommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 

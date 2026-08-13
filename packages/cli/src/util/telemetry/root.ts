@@ -12,6 +12,13 @@ export class RootTelemetryClient extends TelemetryClient {
     }
   }
 
+  trackCliCommandAccessGroup(actual: string) {
+    this.trackCliCommand({
+      command: 'access-group',
+      value: actual,
+    });
+  }
+
   trackCliCommandAgent(actual: string) {
     this.trackCliCommand({
       command: 'agent',

@@ -5,6 +5,7 @@
  */
 
 // Non-priority commands - bundled together
+export { default as accessGroup } from './commands/access-group';
 export { default as agent } from './commands/agent';
 export { default as agentRuns } from './commands/agent-runs';
 export { default as activity } from './commands/activity';

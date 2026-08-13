@@ -1,3 +1,4 @@
+import { accessGroupCommand } from './access-group/command';
 import { agentCommand } from './agent/command';
 import { agentRunsCommand } from './agent-runs/command';
 import { activityCommand } from './activity/command';
@@ -67,6 +68,7 @@ import type { Command } from './help';
 import output from '../output-manager';
 
 const commandsStructs = [
+  accessGroupCommand,
   agentCommand,
   agentRunsCommand,
   aiGatewayCommand,

@@ -960,6 +960,11 @@ const main = async () => {
           break;
 
         // Non-priority commands - loaded from bulk bundle
+        case 'access-group':
+        case 'access-groups':
+          telemetry.trackCliCommandAccessGroup(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).accessGroup;
+          break;
         case 'agent':
           telemetry.trackCliCommandAgent(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).agent;
