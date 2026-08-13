@@ -337,6 +337,70 @@ describe('project members', () => {
       expect(exitCode).toBe(0);
     });
 
+    it('does not delete when the confirmation is declined', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'prj_123',
+        name: 'my-project',
+      });
+      useMembersList([{ uid: 'user_1', username: 'octocat' }]);
+
+      let deleted = false;
+      client.scenario.delete(
+        '/v1/projects/:idOrName/members/:uid',
+        (_req, res) => {
+          deleted = true;
+          res.json({ id: 'prj_123' });
+        }
+      );
+
+      client.setArgv('project', 'members', 'remove', 'my-project', 'octocat');
+      const pending = project(client);
+      await expect(client.stderr).toOutput('Remove');
+      client.stdin.write('n\n');
+      const exitCode = await pending;
+      expect(exitCode).toBe(0);
+      await expect(client.stderr).toOutput('Canceled.');
+      expect(deleted).toBe(false);
+    });
+
+    it('supports the rm alias and tracks members remove telemetry', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'prj_123',
+        name: 'my-project',
+      });
+      useMembersList([{ uid: 'user_1', username: 'octocat' }]);
+
+      let deleted = false;
+      client.scenario.delete(
+        '/v1/projects/:idOrName/members/:uid',
+        (req, res) => {
+          deleted = true;
+          expect(req.params.uid).toBe('user_1');
+          res.json({ id: 'prj_123' });
+        }
+      );
+
+      client.setArgv(
+        'project',
+        'members',
+        'rm',
+        'my-project',
+        'octocat',
+        '--yes'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(0);
+      expect(deleted).toBe(true);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:members', value: 'members remove' },
+        { key: 'argument:project', value: '[REDACTED]' },
+        { key: 'argument:member', value: '[REDACTED]' },
+        { key: 'flag:yes', value: 'TRUE' },
+      ]);
+    });
+
     it('errors when the member is not part of the project', async () => {
       useProject({
         ...defaultProject,
