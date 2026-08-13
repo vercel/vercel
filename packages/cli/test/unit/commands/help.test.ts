@@ -184,6 +184,14 @@ describe('help command', () => {
           })
         ).toMatchSnapshot();
       });
+      it('access-group members remove help column width 120', () => {
+        expect(
+          help(accessGroup.membersRemoveSubcommand, {
+            columns: 120,
+            parent: accessGroup.membersSubcommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 

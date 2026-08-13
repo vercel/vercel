@@ -4,10 +4,12 @@ import getSubcommand from '../../util/get-subcommand';
 import { type Command, help } from '../help';
 import list from './members-list';
 import add from './members-add';
+import rm from './members-remove';
 import {
   membersSubcommand,
   membersListSubcommand,
   membersAddSubcommand,
+  membersRemoveSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
@@ -18,6 +20,7 @@ import { printError } from '../../util/error';
 const COMMAND_CONFIG = {
   list: getCommandAliases(membersListSubcommand),
   add: getCommandAliases(membersAddSubcommand),
+  rm: getCommandAliases(membersRemoveSubcommand),
 };
 
 export default async function members(client: Client): Promise<number> {
@@ -68,6 +71,14 @@ export default async function members(client: Client): Promise<number> {
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
+    case 'rm':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('access-group members', subcommandOriginal);
+        printHelp(membersRemoveSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandRemove(subcommandOriginal);
+      return rm(client, args);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('access-group members', subcommandOriginal);
