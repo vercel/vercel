@@ -12,6 +12,7 @@ import {
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import {
   optionsAllowlistSubcommand,
+  protectedSourcemapsSubcommand,
   trustedSourcesSubcommand,
 } from './command';
 import { validateJsonOutput } from '../../util/output-format';
@@ -29,7 +30,7 @@ const MAX_OPTIONS_ALLOWLIST_PATHS = 5;
 
 interface SettingSpec {
   /** Project PATCH body field, verbatim from the public schema. */
-  field: 'trustedSources' | 'optionsAllowlist';
+  field: 'trustedSources' | 'optionsAllowlist' | 'protectedSourcemaps';
   /** CLI segment, e.g. `trusted-sources`. */
   slug: string;
   /** Human label used in output. */
@@ -37,7 +38,8 @@ interface SettingSpec {
   commandName: string;
   subcommand:
     | typeof trustedSourcesSubcommand
-    | typeof optionsAllowlistSubcommand;
+    | typeof optionsAllowlistSubcommand
+    | typeof protectedSourcemapsSubcommand;
   /**
    * Build the PATCH value for `set` from parsed flags. Returns an error
    * message when local validation fails (nothing is sent remotely).
@@ -152,9 +154,23 @@ const OPTIONS_ALLOWLIST: SettingSpec = {
   disableValue: null,
 };
 
+const PROTECTED_SOURCEMAPS: SettingSpec = {
+  field: 'protectedSourcemaps',
+  slug: 'protected-sourcemaps',
+  label: 'Protected Sourcemaps',
+  commandName: 'project protection protected-sourcemaps',
+  subcommand: protectedSourcemapsSubcommand,
+  // Boolean setting: `set` turns it on, `disable` turns it off.
+  buildSetValue() {
+    return { ok: true, value: true };
+  },
+  disableValue: false,
+};
+
 const SPECS: Record<string, SettingSpec> = {
   'trusted-sources': TRUSTED_SOURCES,
   'options-allowlist': OPTIONS_ALLOWLIST,
+  'protected-sourcemaps': PROTECTED_SOURCEMAPS,
 };
 
 export function getProtectionSettingSpec(slug: string): SettingSpec | null {

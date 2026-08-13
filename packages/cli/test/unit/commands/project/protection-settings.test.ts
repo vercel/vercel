@@ -202,6 +202,62 @@ describe('project protection settings subcommands', () => {
     });
   });
 
+  describe('protected-sourcemaps', () => {
+    it('shows the current setting on get', async () => {
+      setupProject({ protectedSourcemaps: true });
+      client.setArgv(
+        'project',
+        'protection',
+        'protected-sourcemaps',
+        'get',
+        'my-project',
+        '--json'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(0);
+      const out = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(out).toMatchObject({
+        projectId: 'prj_123',
+        protectedSourcemaps: true,
+      });
+    });
+
+    it('sends true on set', async () => {
+      let body: unknown;
+      setupProject({}, b => {
+        body = b;
+      });
+      client.setArgv(
+        'project',
+        'protection',
+        'protected-sourcemaps',
+        'set',
+        'my-project'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(0);
+      expect(body).toEqual({ protectedSourcemaps: true });
+    });
+
+    it('sends false on disable --yes', async () => {
+      let body: unknown;
+      setupProject({}, b => {
+        body = b;
+      });
+      client.setArgv(
+        'project',
+        'protection',
+        'protected-sourcemaps',
+        'disable',
+        'my-project',
+        '--yes'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(0);
+      expect(body).toEqual({ protectedSourcemaps: false });
+    });
+  });
+
   describe('trusted-sources', () => {
     it('shows the config on get', async () => {
       setupProject({
@@ -417,6 +473,7 @@ describe('project protection settings subcommands', () => {
     it.each([
       'trusted-sources',
       'options-allowlist',
+      'protected-sourcemaps',
     ])('prints help and tracks telemetry for %s', async slug => {
       client.setArgv('project', 'protection', slug, '--help');
       const exitCode = await project(client);
