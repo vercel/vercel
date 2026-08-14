@@ -1807,8 +1807,8 @@ importers:
         version: 1.10.0(rollup@4.62.4)
     devDependencies:
       '@next-community/adapter-vercel':
-        specifier: 0.0.1-beta.26
-        version: 0.0.1-beta.26
+        specifier: 0.0.1-beta.27
+        version: 0.0.1-beta.27
       '@types/aws-lambda':
         specifier: 8.10.19
         version: 8.10.19
@@ -4518,8 +4518,8 @@ packages:
     resolution: {integrity: sha512-r3ZZhRjEcfEdKIZnoB1RusNgvHuaBRqfCzV4Gi+5A9yUX0S4HTws/ASWqt13wL4y4I+0rqsWGdA2w7EQXHi3+Q==}
     engines: {node: '>=19.0.0'}
 
-  '@next-community/adapter-vercel@0.0.1-beta.26':
-    resolution: {integrity: sha512-gMR0Sj1JmBWxVjmYVeMMxzhypesc+g/6Yn5M0kx67+0lpZDIMVXrqPLQox8kSlzOFiK12qT4f/OiynEpvaMFdA==}
+  '@next-community/adapter-vercel@0.0.1-beta.27':
+    resolution: {integrity: sha512-UH+GpkSh3WLXRlcZKpCNixCmUcL5I2KQIekviUB6wyYgnkJoXkQSYxzB6zsjTTslMCyZRSFETUQZSQbPtwf7zA==}
     engines: {node: '>= 20.6.0'}
 
   '@next/env@11.1.2':
@@ -15049,7 +15049,7 @@ snapshots:
 
   '@neondatabase/serverless@1.1.0': {}
 
-  '@next-community/adapter-vercel@0.0.1-beta.26': {}
+  '@next-community/adapter-vercel@0.0.1-beta.27': {}
 
   '@next/env@11.1.2': {}
 
