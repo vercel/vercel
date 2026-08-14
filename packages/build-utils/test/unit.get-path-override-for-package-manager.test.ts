@@ -11,7 +11,10 @@ import {
   MockInstance,
   afterEach,
 } from 'vitest';
-import { getNodeVersionByMajor } from '../src/fs/node-version';
+import {
+  getNodeVersionByMajor,
+  getSupportedBunVersion,
+} from '../src/fs/node-version';
 
 describe('Test `getPathOverrideForPackageManager()`', () => {
   describe('with no corepack package manger', () => {
@@ -27,6 +30,24 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
         detectedPackageManager: 'pnpm@9.x',
         path: '/pnpm9/node_modules/.bin',
         pnpmVersionRange: '9.x',
+      });
+    });
+
+    test.each([
+      ['1.x', '/bun1'],
+      ['1.4.x', '/bun1.4'],
+    ])('should select Bun %s from %s', (range, expectedPath) => {
+      const result = getPathOverrideForPackageManager({
+        cliType: 'bun',
+        lockfileVersion: 1,
+        corepackPackageManager: undefined,
+        nodeVersion: getSupportedBunVersion(range),
+      });
+
+      expect(result).toStrictEqual({
+        detectedLockfile: 'bun.lock',
+        detectedPackageManager: `bun@${range}`,
+        path: expectedPath,
       });
     });
   });

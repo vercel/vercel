@@ -1021,6 +1021,7 @@ export function getEnvForPackageManager({
   cliType,
   lockfileVersion,
   packageJsonPackageManager,
+  nodeVersion,
   env,
   packageJsonEngines,
   turboSupportsCorepackHome,
@@ -1029,6 +1030,7 @@ export function getEnvForPackageManager({
   cliType: CliType;
   lockfileVersion: number | undefined;
   packageJsonPackageManager?: string | undefined;
+  nodeVersion?: NodeVersion | BunVersion;
   env: { [x: string]: string | undefined };
   packageJsonEngines?: PackageJson.Engines;
   turboSupportsCorepackHome?: boolean | undefined;
@@ -1049,6 +1051,7 @@ export function getEnvForPackageManager({
     lockfileVersion,
     corepackPackageManager: packageJsonPackageManager,
     corepackEnabled,
+    nodeVersion,
     packageJsonEngines,
     projectCreatedAt,
   });
@@ -1067,18 +1070,47 @@ export function getEnvForPackageManager({
     ...env,
   };
 
+  const bunRuntimePath =
+    nodeVersion && isBunVersion(nodeVersion)
+      ? `/bun${nodeVersion.major}${
+          nodeVersion.minor === undefined ? '' : `.${nodeVersion.minor}`
+        }`
+      : undefined;
+
   const alreadyInPath = (newPath: string) => {
     const oldPath = env.PATH ?? '';
     return oldPath.split(path.delimiter).includes(newPath);
   };
 
-  if (newPath && !alreadyInPath(newPath)) {
+  const hasSelectedBunPath =
+    cliType === 'bun' &&
+    nodeVersion === undefined &&
+    (env.PATH ?? '')
+      .split(path.delimiter)
+      .some(segment => /^\/bun\d+(?:\.\d+)?$/.test(segment));
+
+  const pathsToPrepend = Array.from(
+    new Set(
+      [newPath, bunRuntimePath].filter((value): value is string => !!value)
+    )
+  ).filter(
+    value => !alreadyInPath(value) && !(hasSelectedBunPath && value === newPath)
+  );
+
+  if (pathsToPrepend.length > 0) {
     // Ensure that the binaries of the detected package manager are at the
     // beginning of the `$PATH`.
     const oldPath = env.PATH + '';
-    newEnv.PATH = `${newPath}${path.delimiter}${oldPath}`;
+    newEnv.PATH = `${pathsToPrepend.join(path.delimiter)}${
+      oldPath ? path.delimiter : ''
+    }${oldPath}`;
 
-    if (detectedLockfile && detectedPackageManager) {
+    if (
+      newPath &&
+      pathsToPrepend.includes(newPath) &&
+      detectedLockfile &&
+      detectedPackageManager
+    ) {
       const detectedV9PnpmLockfile =
         detectedLockfile === 'pnpm-lock.yaml' && lockfileVersion === 9;
       const pnpm10UsingPackageJsonPackageManager =
@@ -1210,6 +1242,7 @@ export function getPathOverrideForPackageManager({
   lockfileVersion,
   corepackPackageManager,
   corepackEnabled = true,
+  nodeVersion,
   packageJsonEngines,
   projectCreatedAt,
 }: {
@@ -1217,6 +1250,7 @@ export function getPathOverrideForPackageManager({
   lockfileVersion: number | undefined;
   corepackPackageManager: string | undefined;
   corepackEnabled?: boolean;
+  nodeVersion?: NodeVersion | BunVersion;
   packageJsonEngines?: PackageJson.Engines;
   projectCreatedAt?: number;
 }): {
@@ -1265,6 +1299,20 @@ export function getPathOverrideForPackageManager({
         detectedPackageManger
       );
     }
+  }
+
+  if (
+    cliType === 'bun' &&
+    detectedPackageManger &&
+    nodeVersion &&
+    isBunVersion(nodeVersion)
+  ) {
+    const minor = nodeVersion.minor;
+    return {
+      ...detectedPackageManger,
+      path: `/bun${nodeVersion.major}${minor === undefined ? '' : `.${minor}`}`,
+      detectedPackageManager: `bun@${nodeVersion.range}`,
+    };
   }
 
   return detectedPackageManger ?? NO_OVERRIDE;

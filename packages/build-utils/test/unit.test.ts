@@ -153,10 +153,36 @@ it('should ignore node version in vercel dev getNodeVersion()', async () => {
   ).toHaveProperty('runtime', 'nodejs');
 });
 
-it('should resolve to the provided bunVersion when its valid', async () => {
+it.each([
+  '1',
+  '1.x',
+  '^1',
+  '>=1',
+])('should resolve broad Bun range %s to bun1.x', async bunVersion => {
   await expect(
-    getNodeVersion('/tmp', undefined, { bunVersion: '1.x' }, { isDev: false })
-  ).resolves.toHaveProperty('runtime', 'bun1.x');
+    getNodeVersion('/tmp', undefined, { bunVersion }, { isDev: false })
+  ).resolves.toMatchObject({
+    range: '1.x',
+    runtime: 'bun1.x',
+  });
+});
+
+it.each([
+  '1.4',
+  '1.4.x',
+  '~1.4',
+  '^1.4',
+  '>=1.4',
+  '1.4.0',
+])('should resolve explicit Bun 1.4 range %s', async bunVersion => {
+  await expect(
+    getNodeVersion('/tmp', undefined, { bunVersion }, { isDev: false })
+  ).resolves.toMatchObject({
+    major: 1,
+    minor: 4,
+    range: '1.4.x',
+    runtime: 'bun1.4.x',
+  });
 });
 
 it('should resolve to the provided bunVersion on dev', async () => {

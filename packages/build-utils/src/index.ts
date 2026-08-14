@@ -57,6 +57,7 @@ import {
   getSupportedBunVersion,
 } from './fs/node-version';
 import streamToBuffer, { streamToBufferChunks } from './fs/stream-to-buffer';
+import { getOrCreateBunBinary } from './fs/bun-helpers';
 import debug from './debug';
 import getIgnoreFilter from './get-ignore-filter';
 import { getPlatformEnv } from './get-platform-env';
@@ -98,6 +99,7 @@ export {
   getSupportedNodeVersion,
   isBunVersion,
   getSupportedBunVersion,
+  getOrCreateBunBinary,
   detectPackageManager,
   runNpmInstall,
   NpmInstallOutput,

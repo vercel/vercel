@@ -801,6 +801,7 @@ export default class DevServer {
 
       const detectedBuilders = await detectBuilders(files, pkg, {
         tag: 'latest',
+        bunVersion: vercelConfig.bunVersion,
         functions: vercelConfig.functions,
         projectSettings: projectSettings || this.projectSettings,
         featHandleMiss,
@@ -1389,10 +1390,7 @@ export default class DevServer {
       const pathname = url.parse(req.url || '/').pathname || '/';
       for (const match of this.buildMatches.values()) {
         const { builder } = match.builderWithPkg;
-        if (
-          (builder.version === 3 || builder.version === -1) &&
-          typeof builder.startDevServer === 'function'
-        ) {
+        if (typeof builder.startDevServer === 'function') {
           try {
             const result = await builder.startDevServer({
               files: this.files,

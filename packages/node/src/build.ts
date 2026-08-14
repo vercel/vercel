@@ -96,6 +96,7 @@ async function downloadInstallAndBundle({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
+    nodeVersion,
     env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,

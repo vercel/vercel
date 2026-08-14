@@ -67,6 +67,42 @@ afterEach(async () => {
 });
 
 describe('startDevServer', () => {
+  it('serves a Bun.serve entrypoint with Bun', async () => {
+    const workPath = await mkdtemp(join(tmpdir(), 'backends-bun-dev-'));
+    workPaths.add(workPath);
+
+    const serverPath = join(workPath, 'server.ts');
+    await writeFile(
+      serverPath,
+      `Bun.serve({
+        fetch() {
+          return Response.json({ version: Bun.version });
+        },
+      });`
+    );
+
+    const result = await startDevServer({
+      files: filesFor(serverPath),
+      entrypoint: 'package.json',
+      workPath,
+      repoRootPath: workPath,
+      config: { bunVersion: '1.x' },
+      meta: {},
+      onStdout: () => {},
+      onStderr: () => {},
+    });
+
+    expect(result).not.toBeNull();
+    if (!result) throw new Error('Expected Bun server to start');
+    if (result.shutdown) shutdowns.add(result.shutdown);
+
+    const response = await fetch(`http://127.0.0.1:${result.port}/`);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      version: expect.stringMatching(/^1\./),
+    });
+  });
+
   it('serves, reuses, reloads, and shuts down a package-less TypeScript server', async () => {
     const workPath = await mkdtemp(join(tmpdir(), 'backends-srvx-dev-'));
     workPaths.add(workPath);

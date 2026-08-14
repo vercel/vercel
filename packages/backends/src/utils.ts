@@ -6,6 +6,7 @@ import {
   runPackageJsonScript,
   execCommand,
   getEnvForPackageManager,
+  getNodeVersion,
   scanParentDirs,
   getNodeBinPaths,
 } from '@vercel/build-utils';
@@ -21,11 +22,13 @@ export async function downloadInstallAndBundle(
   cliType: Awaited<ReturnType<typeof scanParentDirs>>['cliType'];
   lockfilePath: string | undefined;
   lockfileVersion: number | undefined;
+  nodeVersion: Awaited<ReturnType<typeof getNodeVersion>>;
 }> {
   const { entrypoint, files, workPath, meta, config, repoRootPath } = args;
   await download(files, workPath, meta);
 
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
+  const nodeVersion = await getNodeVersion(workPath, undefined, config, meta);
 
   const {
     cliType,
@@ -39,6 +42,7 @@ export async function downloadInstallAndBundle(
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
+    nodeVersion,
     env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -72,6 +76,7 @@ export async function downloadInstallAndBundle(
     cliType,
     lockfilePath,
     lockfileVersion,
+    nodeVersion,
   };
 }
 
