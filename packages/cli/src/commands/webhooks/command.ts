@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, yesOption } from '../../util/arg-common';
+import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
 
 export const listSubcommand = {
   name: 'list',
@@ -7,11 +7,11 @@ export const listSubcommand = {
   description: 'Show all webhooks',
   default: true,
   arguments: [],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'List all webhooks as JSON',
-      value: `${packageName} webhooks ls --format json`,
+      value: `${packageName} webhooks ls --json`,
     },
   ],
 } as const;
@@ -26,7 +26,7 @@ export const getSubcommand = {
       required: true,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [],
 } as const;
 

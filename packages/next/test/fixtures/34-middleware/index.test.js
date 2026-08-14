@@ -4,7 +4,7 @@ const { deployAndTest } = require('../../utils');
 const fixturePath = path.resolve('test/integration/middleware');
 
 // TODO: remove after middleware deploy time is fixed
-jest.setTimeout(360000);
+vi.setConfig({ testTimeout: 360000, hookTimeout: 360000 });
 
 describe.skip(`${__dirname.split(path.sep).pop()}`, () => {
   it('should deploy and pass probe checks', async () => {

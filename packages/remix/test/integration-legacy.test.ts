@@ -30,12 +30,10 @@ const skipped: string[] = [
   '14-node-linker-hoisted',
 ];
 
-// eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
   if (skipped.includes(fixture)) {
     continue;
   }
-  // eslint-disable-next-line no-loop-func
   it(`should build ${fixture}`, async () => {
     await expect(
       testDeployment(join(fixturesPath, fixture))

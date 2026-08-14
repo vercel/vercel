@@ -2,6 +2,7 @@ import assert from 'assert';
 import Ajv from 'ajv';
 import {
   Route,
+  RouteInput,
   normalizeRoutes,
   isHandler,
   routesSchema,
@@ -10,6 +11,7 @@ import {
   headersSchema,
   cleanUrlsSchema,
   trailingSlashSchema,
+  compilePathToRegexpTemplate,
   getTransformedRoutes,
   hasSchema,
 } from '../src';
@@ -119,6 +121,476 @@ describe('normalizeRoutes', () => {
     assert.deepStrictEqual(normalized.routes, routes);
   });
 
+  test('accepts and preserves service `destination` dispatch routes', () => {
+    const routes: Route[] = [
+      {
+        src: '^/api/health$',
+        destination: { type: 'service', service: 'web', path: '/api/health' },
+      },
+      {
+        src: '^/api(?:/(.*))?$',
+        destination: { type: 'service', service: 'api', path: '/$1' },
+      },
+      {
+        src: '^/(.*)$',
+        destination: { type: 'service', service: 'web', path: '/$1' },
+      },
+    ];
+
+    assertValid(routes);
+
+    const normalized = normalizeRoutes(routes);
+    assert.equal(normalized.error, null);
+    // The object `destination` is preserved, not folded into `dest`.
+    assert.deepStrictEqual(normalized.routes, routes);
+  });
+
+  test('accepts an explicit service `destination` with type and service', () => {
+    const routes: Route[] = [
+      { src: '^/(.*)$', destination: { type: 'service', service: 'web' } },
+    ];
+
+    assertValid(routes);
+
+    const normalized = normalizeRoutes(routes);
+    assert.equal(normalized.error, null);
+    assert.deepStrictEqual(normalized.routes, routes);
+  });
+
+  test('accepts and preserves short service `destination` routes', () => {
+    const routes: Route[] = [
+      { src: '^/api/health$', destination: { service: 'web' } },
+      { src: '^/api(?:/(.*))?$', destination: { service: 'api', path: '/$1' } },
+    ];
+
+    assertValid(routes);
+
+    const normalized = normalizeRoutes(routes);
+    assert.equal(normalized.error, null);
+    assert.deepStrictEqual(normalized.routes, [
+      {
+        src: '^/api/health$',
+        destination: { type: 'service', service: 'web' },
+      },
+      {
+        src: '^/api(?:/(.*))?$',
+        destination: { type: 'service', service: 'api', path: '/$1' },
+      },
+    ]);
+  });
+
+  test('accepts short service `destination` in hand-written routes config', () => {
+    const routes: RouteInput[] = [
+      {
+        source: '/api/(.*)',
+        destination: { service: 'api', path: '/api/$1' },
+      },
+    ];
+
+    assertValid(routes);
+
+    const normalized = normalizeRoutes(routes);
+    assert.equal(normalized.error, null);
+    assert.deepStrictEqual(normalized.routes, [
+      {
+        src: '^/api/(.*)$',
+        destination: { type: 'service', service: 'api', path: '/api/$1' },
+      },
+    ]);
+  });
+
+  test('validates service `destination` names like service config names', () => {
+    const validate = ajv.compile(routesSchema);
+
+    for (const service of ['web', 'my_backend', 'my-backend', 'a1']) {
+      assert.equal(
+        validate([
+          { src: '^/(.*)$', destination: { type: 'service', service } },
+        ]),
+        true
+      );
+    }
+
+    for (const service of [
+      '',
+      ' my-backend',
+      'my backend',
+      'my/backend',
+      '1backend',
+      'backend-',
+      'backend_',
+      'a'.repeat(65),
+    ]) {
+      assert.equal(
+        validate([
+          { src: '^/(.*)$', destination: { type: 'service', service } },
+        ]),
+        false
+      );
+    }
+  });
+
+  test('still folds a string `destination` alias into `dest`', () => {
+    const input: RouteInput[] = [{ src: '^/a$', destination: '/b' }];
+
+    const { error, routes } = normalizeRoutes(input);
+    assert.equal(error, null);
+    assert.ok(routes);
+    if (routes) {
+      const [route] = routes;
+      assert.equal(isHandler(route), false);
+      if (!isHandler(route)) {
+        assert.equal(route.dest, '/b');
+        assert.equal(route.destination, undefined);
+      }
+    }
+  });
+
+  test('rejects a service `destination` missing `service`', () => {
+    const validate = ajv.compile(routesSchema);
+    assert.equal(
+      validate([{ src: '^/(.*)$', destination: { type: 'service' } }]),
+      false
+    );
+  });
+
+  test('rejects a service rewrite `destination` missing `service`', () => {
+    const validate = ajv.compile(rewritesSchema);
+    assert.equal(
+      validate([
+        {
+          source: '/api/:path*',
+          destination: { type: 'service', path: '/api/$1' },
+        },
+      ]),
+      false
+    );
+  });
+
+  test('rejects a service `destination` with an unknown property', () => {
+    const validate = ajv.compile(routesSchema);
+    assert.equal(
+      validate([
+        {
+          src: '^/(.*)$',
+          destination: { type: 'service', service: 'web', dest: '/x' },
+        },
+      ]),
+      false
+    );
+  });
+
+  test('rejects `continue: true` with a service `destination`', () => {
+    const { error } = normalizeRoutes([
+      {
+        src: '^/api/(.*)$',
+        destination: { type: 'service', service: 'api' },
+        continue: true,
+      },
+    ]);
+
+    assert.ok(error, 'expected a validation error');
+    assert.ok(
+      error?.errors?.some(e => e.includes('service `destination`')),
+      'expected a terminal-handoff error message'
+    );
+  });
+
+  test('allows a service `destination` without `continue`', () => {
+    const routes: Route[] = [
+      { src: '^/api/(.*)$', destination: { type: 'service', service: 'api' } },
+    ];
+
+    const { error } = normalizeRoutes(routes);
+    assert.equal(error, null);
+  });
+
+  test('lowers a service-targeted rewrite into a `destination` route', () => {
+    const { error, routes } = getTransformedRoutes({
+      rewrites: [
+        {
+          source: '/api/v1/:path*',
+          destination: {
+            service: 'my_backend',
+            path: '/:path*',
+          },
+        },
+      ],
+    });
+
+    assert.equal(error, null);
+    assert.ok(routes);
+    const serviceRoute = routes?.find(
+      r => !isHandler(r) && typeof r.destination === 'object'
+    );
+    assert.ok(serviceRoute, 'expected a service-targeted route');
+    if (serviceRoute && !isHandler(serviceRoute)) {
+      // `path` is interpolated like a string dest: `:path*` -> `$1`.
+      assert.deepStrictEqual(serviceRoute.destination, {
+        type: 'service',
+        service: 'my_backend',
+        path: '/$1',
+      });
+      // Terminal handoff: no filesystem re-check is added.
+      assert.equal(serviceRoute.check, undefined);
+    }
+  });
+
+  test('compiles request.path parameters on service rewrites', () => {
+    const rewrite = {
+      source: '/api/v1/:path*',
+      destination: {
+        type: 'service' as const,
+        service: 'my_backend',
+        path: '/:path*',
+      },
+      transforms: [
+        {
+          type: 'request.path' as const,
+          op: 'set' as const,
+          args: '/:path*',
+        },
+      ],
+    };
+
+    assertValid([rewrite], rewritesSchema);
+
+    const { error, routes } = getTransformedRoutes({
+      rewrites: [rewrite],
+    });
+
+    assert.equal(error, null);
+    const serviceRoute = routes?.find(
+      r => !isHandler(r) && typeof r.destination === 'object'
+    );
+    assert.ok(serviceRoute, 'expected a service-targeted route');
+    if (serviceRoute && !isHandler(serviceRoute)) {
+      assert.deepStrictEqual(serviceRoute.destination, {
+        type: 'service',
+        service: 'my_backend',
+        path: '/$1',
+      });
+      assert.deepStrictEqual(serviceRoute.transforms, [
+        {
+          type: 'request.path',
+          op: 'set',
+          args: '/$1',
+        },
+      ]);
+    }
+  });
+
+  test('only accepts request.path transforms on high-level rewrites', () => {
+    const validate = ajv.compile(rewritesSchema);
+    const valid = validate([
+      {
+        source: '/api/:path*',
+        destination: '/internal/:path*',
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'set',
+            target: { key: 'x-path' },
+            args: ':path',
+          },
+        ],
+      },
+    ]);
+
+    assert.equal(valid, false);
+  });
+
+  test('lowers every request.path transform while preserving env references and order', () => {
+    const { error, routes } = getTransformedRoutes({
+      rewrites: [
+        {
+          source: '/org/:orgSlug/api/:path*',
+          destination: {
+            type: 'service',
+            service: 'my_backend',
+          },
+          transforms: [
+            {
+              type: 'request.path',
+              op: 'set',
+              args: '/$LOCALE/:path*',
+              env: ['LOCALE'],
+            },
+            {
+              type: 'request.path',
+              op: 'set',
+              args: '/tenants/:orgSlug/:path*',
+            },
+          ],
+        },
+      ],
+    });
+
+    assert.equal(error, null);
+    const route = routes?.find(r => !isHandler(r) && r.transforms);
+    assert.ok(route && !isHandler(route));
+    if (route && !isHandler(route)) {
+      assert.deepStrictEqual(route.transforms, [
+        {
+          type: 'request.path',
+          op: 'set',
+          args: '/$LOCALE/$2',
+          env: ['LOCALE'],
+        },
+        {
+          type: 'request.path',
+          op: 'set',
+          args: '/tenants/$1/$2',
+        },
+      ]);
+    }
+  });
+
+  test('lowers named has captures in request.path transforms', () => {
+    assert.equal(
+      compilePathToRegexpTemplate('/api/:path*', '/:tenant/:path*', [
+        {
+          type: 'host',
+          value: '(?<tenant>[^.]+)\\..+',
+        },
+      ]),
+      '/$tenant/$1'
+    );
+  });
+
+  test('rejects request.path transforms referencing an unknown segment', () => {
+    const { error } = getTransformedRoutes({
+      rewrites: [
+        {
+          source: '/api/:path*',
+          destination: {
+            type: 'service',
+            service: 'my_backend',
+          },
+          transforms: [
+            {
+              type: 'request.path',
+              op: 'set',
+              args: '/:unknown*',
+            },
+          ],
+        },
+      ],
+    });
+
+    assert.ok(error, 'expected a validation error');
+    assert.equal(error?.code, 'invalid_rewrite');
+    assert.match(error?.message || '', /request\.path/);
+  });
+
+  test('rejects low-level named capture syntax for a high-level source parameter', () => {
+    const { error } = getTransformedRoutes({
+      rewrites: [
+        {
+          source: '/api/:path*',
+          destination: {
+            type: 'service',
+            service: 'my_backend',
+          },
+          transforms: [
+            {
+              type: 'request.path',
+              op: 'set',
+              args: '/$path',
+            },
+          ],
+        },
+      ],
+    });
+
+    assert.ok(error, 'expected a validation error');
+    assert.equal(error?.code, 'invalid_rewrite');
+    assert.match(error?.message || '', /Use `:path`/);
+  });
+
+  test('preserves an explicitly allowlisted env var that matches a source parameter name', () => {
+    const { error, routes } = getTransformedRoutes({
+      rewrites: [
+        {
+          source: '/api/:path*',
+          destination: {
+            type: 'service',
+            service: 'my_backend',
+          },
+          transforms: [
+            {
+              type: 'request.path',
+              op: 'set',
+              args: '/$path',
+              env: ['path'],
+            },
+          ],
+        },
+      ],
+    });
+
+    assert.equal(error, null);
+    const route = routes?.find(r => !isHandler(r) && r.transforms);
+    assert.ok(route && !isHandler(route));
+    if (route && !isHandler(route)) {
+      assert.deepStrictEqual(route.transforms, [
+        {
+          type: 'request.path',
+          op: 'set',
+          args: '/$path',
+          env: ['path'],
+        },
+      ]);
+    }
+  });
+
+  test('interpolates path and query segments in a service `destination`', () => {
+    const { error, routes } = getTransformedRoutes({
+      rewrites: [
+        {
+          source: '/org/:orgSlug/api/:path*',
+          destination: {
+            type: 'service',
+            service: 'my_backend',
+            path: '/:path*?org=:orgSlug',
+          },
+        },
+      ],
+    });
+
+    assert.equal(error, null);
+    const serviceRoute = routes?.find(
+      r => !isHandler(r) && typeof r.destination === 'object'
+    );
+    assert.ok(serviceRoute, 'expected a service-targeted route');
+    if (serviceRoute && !isHandler(serviceRoute)) {
+      // orgSlug is capture $1, path is capture $2.
+      assert.deepStrictEqual(serviceRoute.destination, {
+        type: 'service',
+        service: 'my_backend',
+        path: '/$2?org=$1',
+      });
+    }
+  });
+
+  test('rejects a service `destination.path` referencing an unknown segment', () => {
+    const { error } = getTransformedRoutes({
+      rewrites: [
+        {
+          source: '/api/:path*',
+          destination: {
+            type: 'service',
+            service: 'my_backend',
+            path: '/:unknown*',
+          },
+        },
+      ],
+    });
+
+    assert.ok(error, 'expected a validation error');
+    assert.equal(error?.code, 'invalid_rewrite');
+  });
+
   test('normalizes src', () => {
     const expected = '^/about$';
     const sources = [
@@ -149,6 +621,125 @@ describe('normalizeRoutes', () => {
           assert.strictEqual(route.src, expected);
         }
       });
+    }
+  });
+
+  test('accepts routes with source alias', () => {
+    const input = [
+      { source: '/about', destination: '/about.html' },
+      { source: '/blog/:slug', destination: '/posts/:slug', statusCode: 200 },
+    ];
+    assertValid(input);
+  });
+
+  test('converts source to src in normalizeRoutes', () => {
+    const input: RouteInput[] = [
+      { source: '/about', destination: '/about.html' },
+    ];
+    const { error, routes } = normalizeRoutes(input);
+
+    assert.strictEqual(error, null);
+    assert.notStrictEqual(routes, null);
+
+    if (routes) {
+      const route = routes[0] as any;
+      assert.strictEqual(route.src, '^/about$');
+      assert.strictEqual(route.dest, '/about.html');
+      assert.strictEqual(route.source, undefined);
+      assert.strictEqual(route.destination, undefined);
+    }
+  });
+
+  test('converts statusCode to status in normalizeRoutes', () => {
+    const input: RouteInput[] = [
+      { source: '/old', destination: '/new', statusCode: 301 },
+    ];
+    const { error, routes } = normalizeRoutes(input);
+
+    assert.strictEqual(error, null);
+    assert.notStrictEqual(routes, null);
+
+    if (routes) {
+      const route = routes[0] as any;
+      assert.strictEqual(route.src, '^/old$');
+      assert.strictEqual(route.dest, '/new');
+      assert.strictEqual(route.status, 301);
+      assert.strictEqual(route.source, undefined);
+      assert.strictEqual(route.destination, undefined);
+      assert.strictEqual(route.statusCode, undefined);
+    }
+  });
+
+  test('fails if both src and source are defined', () => {
+    const input = [{ src: '/about', source: '/about' }] as RouteInput[];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error?.code, 'invalid_route');
+    assert.deepEqual(
+      error?.message,
+      'Route at index 0 cannot define both `src` and `source`. Please use only one.'
+    );
+  });
+
+  test('fails if both dest and destination are defined', () => {
+    const input: RouteInput[] = [
+      { src: '/about', dest: '/about.html', destination: '/about.html' },
+    ];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error?.code, 'invalid_route');
+    assert.deepEqual(
+      error?.message,
+      'Route at index 0 cannot define both `dest` and `destination`. Please use only one.'
+    );
+  });
+
+  test('fails if both status and statusCode are defined', () => {
+    const input: RouteInput[] = [
+      { src: '/old', dest: '/new', status: 301, statusCode: 301 },
+    ];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error?.code, 'invalid_route');
+    assert.deepEqual(
+      error?.message,
+      'Route at index 0 cannot define both `status` and `statusCode`. Please use only one.'
+    );
+  });
+
+  test('getTransformedRoutes accepts schema-derived route types', () => {
+    const config: {
+      routes: Array<
+        | { src: string; source?: string; dest?: string; destination?: string }
+        | { src?: string; source: string; dest?: string; destination?: string }
+      >;
+    } = {
+      routes: [
+        { source: '/about', dest: '/about.html' },
+        { src: '/blog', destination: '/blog.html' },
+      ],
+    };
+
+    const { error } = getTransformedRoutes(config);
+    assert.strictEqual(error, null);
+  });
+
+  test('getTransformedRoutes accepts routes with source alias', () => {
+    const { error, routes } = getTransformedRoutes({
+      routes: [
+        { source: '/about', destination: '/about.html' },
+        { src: '/blog', dest: '/blog.html' },
+      ],
+    });
+
+    assert.strictEqual(error, null);
+    assert.notStrictEqual(routes, null);
+
+    if (routes) {
+      const first = routes[0];
+      assert.strictEqual(first.src, '^/about$');
+      assert.strictEqual(first.dest, '/about.html');
+      assert.strictEqual((first as any).source, undefined);
     }
   });
 
@@ -210,11 +801,11 @@ describe('normalizeRoutes', () => {
     assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
       error?.message,
-      'Route at index 0 has invalid `src` regular expression "^/(broken]$".'
+      'Route at index 0 has invalid `src`/`source` regular expression "^/(broken]$".'
     );
   });
 
-  test('fails if route does not define `handle` or `src` property', () => {
+  test('fails if route does not define `src` or `source` property', () => {
     // @ts-expect-error - intentionally passing invalid property
     const input: Route[] = [{ fake: 'foo' }];
     const { error } = normalizeRoutes(input);
@@ -222,7 +813,7 @@ describe('normalizeRoutes', () => {
     assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
       error?.message,
-      'Route at index 0 must define either `handle` or `src` property.'
+      'Route at index 0 must define either `src` or `source` property.'
     );
   });
 
@@ -269,11 +860,58 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
+          keyword: 'type',
+          dataPath: '[0].dest',
+          schemaPath: '#/items/anyOf/0/properties/dest/type',
+          params: { type: 'string' },
+          message: 'should be string',
+        },
+        {
+          keyword: 'additionalProperties',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+          params: { additionalProperty: 'dest' },
+          message: 'should NOT have additional properties',
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
+        },
+      ]
+    );
+  });
+
+  test('fails if route has dest but missing src or source', () => {
+    assertError(
+      [
+        {
+          dest: '/foo',
+        },
+      ],
+      [
+        {
           keyword: 'required',
           dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
+          schemaPath: '#/items/anyOf/0/anyOf/0/required',
+          params: { missingProperty: '.src' },
+          message: "should have required property '.src'",
+        },
+        {
+          keyword: 'required',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/0/anyOf/1/required',
+          params: { missingProperty: '.source' },
+          message: "should have required property '.source'",
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/0/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
         },
         {
           keyword: 'additionalProperties',
@@ -303,11 +941,11 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
+          keyword: 'type',
+          dataPath: '[0].methods',
+          schemaPath: '#/items/anyOf/0/properties/methods/type',
+          params: { type: 'array' },
+          message: 'should be array',
         },
         {
           keyword: 'additionalProperties',
@@ -337,11 +975,11 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
+          keyword: 'type',
+          dataPath: '[0].methods[0]',
+          schemaPath: '#/items/anyOf/0/properties/methods/items/type',
+          params: { type: 'string' },
+          message: 'should be string',
         },
         {
           keyword: 'additionalProperties',
@@ -371,11 +1009,11 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
+          keyword: 'type',
+          dataPath: '[0].headers',
+          schemaPath: '#/items/anyOf/0/properties/headers/type',
+          params: { type: 'object' },
+          message: 'should be object',
         },
         {
           keyword: 'additionalProperties',
@@ -407,11 +1045,12 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
+          keyword: 'type',
+          dataPath: "[0].headers['test']",
+          schemaPath:
+            '#/items/anyOf/0/properties/headers/patternProperties/%5E.%7B1%2C256%7D%24/type',
+          params: { type: 'string' },
+          message: 'should be string',
         },
         {
           keyword: 'additionalProperties',
@@ -475,11 +1114,11 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
+          keyword: 'type',
+          dataPath: '[0].continue',
+          schemaPath: '#/items/anyOf/0/properties/continue/type',
+          params: { type: 'boolean' },
+          message: 'should be boolean',
         },
         {
           keyword: 'additionalProperties',
@@ -509,11 +1148,11 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
+          keyword: 'type',
+          dataPath: '[0].check',
+          schemaPath: '#/items/anyOf/0/properties/check/type',
+          params: { type: 'boolean' },
+          message: 'should be boolean',
         },
         {
           keyword: 'additionalProperties',
@@ -543,11 +1182,11 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
+          keyword: 'type',
+          dataPath: '[0].status',
+          schemaPath: '#/items/anyOf/0/properties/status/type',
+          params: { type: 'integer' },
+          message: 'should be integer',
         },
         {
           keyword: 'additionalProperties',
@@ -664,7 +1303,7 @@ describe('normalizeRoutes', () => {
     assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
       error?.message,
-      'Route at index 1 cannot define `dest` after `handle: hit`.'
+      'Route at index 1 cannot define `dest`/`destination` after `handle: hit`.'
     );
   });
 
@@ -703,7 +1342,7 @@ describe('normalizeRoutes', () => {
     assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
       error?.message,
-      'Route at index 1 cannot define `status` after `handle: hit`.'
+      'Route at index 1 cannot define `status`/`statusCode` after `handle: hit`.'
     );
   });
 
@@ -948,20 +1587,67 @@ describe('getTransformedRoutes', () => {
     assertValid(actual.routes);
   });
 
-  test('should error when routes is defined and cleanUrls is true', () => {
+  test('should allow routes alongside cleanUrls', () => {
     const vercelConfig = {
       cleanUrls: true,
       routes: [{ src: '/page', dest: '/file.html' }],
     };
-    const { error } = getTransformedRoutes(vercelConfig);
-    assert.notEqual(error, null);
-    assert.equal(error?.code, 'invalid_mixed_routes');
-    assert.equal(
-      error?.message,
-      'If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` are used, then `routes` cannot be present.'
-    );
-    assert.ok(error?.link);
-    assert.ok(error?.action);
+    const { error, routes } = getTransformedRoutes(vercelConfig);
+    assert.equal(error, null);
+    assert.notEqual(routes, null);
+    if (routes) {
+      const userRouteIndex = routes.findIndex(
+        r => !isHandler(r) && (r as any).dest === '/file.html'
+      );
+      assert.ok(
+        userRouteIndex > 0,
+        'user routes should come after cleanUrls routes'
+      );
+    }
+  });
+
+  test('should allow routes alongside redirects and headers', () => {
+    const vercelConfig = {
+      routes: [{ src: '/api/(.*)', dest: '/api/$1' }],
+      redirects: [{ source: '/old', destination: '/new' }],
+      headers: [
+        {
+          source: '/(.*)',
+          headers: [{ key: 'x-custom', value: 'true' }],
+        },
+      ],
+    };
+    const { error, routes } = getTransformedRoutes(vercelConfig);
+    assert.equal(error, null);
+    assert.notEqual(routes, null);
+  });
+
+  test('should insert routes after cleanUrls/trailingSlash but before redirects', () => {
+    const vercelConfig = {
+      trailingSlash: false,
+      routes: [{ src: '/api/(.*)', dest: '/api/$1' }],
+      redirects: [{ source: '/old', destination: '/new', permanent: true }],
+    };
+    const { error, routes } = getTransformedRoutes(vercelConfig);
+    assert.equal(error, null);
+    assert.notEqual(routes, null);
+    if (routes) {
+      const userRouteIndex = routes.findIndex(
+        r => !isHandler(r) && (r as any).dest === '/api/$1'
+      );
+      const redirectRouteIndex = routes.findIndex(
+        r =>
+          !isHandler(r) &&
+          (r as any).headers &&
+          (r as any).headers.Location === '/new'
+      );
+      assert.ok(userRouteIndex >= 0, 'user route should exist');
+      assert.ok(redirectRouteIndex >= 0, 'redirect route should exist');
+      assert.ok(
+        userRouteIndex < redirectRouteIndex,
+        'user routes should come before redirects'
+      );
+    }
   });
 
   test('should error when redirects is invalid regex', () => {
@@ -1607,6 +2293,126 @@ describe('getTransformedRoutes', () => {
     assertValid(routes, routesSchema);
   });
 
+  test('should validate request path transforms', () => {
+    const routes: Route[] = [
+      {
+        src: '^/api/v1/(.*)$',
+        dest: '/api/$1',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$1',
+          },
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$runtimePath',
+            env: ['runtimePath'],
+          },
+        ],
+      },
+    ];
+
+    assertValid(routes, routesSchema);
+  });
+
+  test('should reject invalid request path transforms', () => {
+    const invalidRoutes: unknown[] = [
+      {
+        src: '^/api/(.*)$',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'append',
+            args: '/users',
+          },
+        ],
+      },
+      {
+        src: '^/api/(.*)$',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: ['/users'],
+          },
+        ],
+      },
+      {
+        src: '^/api/(.*)$',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: 'users',
+          },
+        ],
+      },
+      {
+        src: '^/api/(.*)$',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '//users',
+          },
+        ],
+      },
+      {
+        src: '^/api/(.*)$',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/users?debug=1',
+          },
+        ],
+      },
+      {
+        src: '^/api/(.*)$',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/users#profile',
+          },
+        ],
+      },
+      {
+        src: '^/api/(.*)$',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/user path',
+          },
+        ],
+      },
+      {
+        src: '^/api/(.*)$',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/users',
+            target: {
+              key: 'path',
+            },
+          },
+        ],
+      },
+    ];
+
+    for (const route of invalidRoutes) {
+      const validate = ajv.compile(routesSchema);
+      const valid = validate([route]);
+
+      if (valid) console.log(route);
+      assert.equal(valid, false);
+    }
+  });
+
   test('should fail validation for transforms with regex property', () => {
     const routes: Route[] = [
       {
@@ -2038,9 +2844,17 @@ describe('getTransformedRoutes', () => {
       {
         dataPath: '[0].transforms[0]',
         keyword: 'required',
-        message: "should have required property 'target'",
-        params: { missingProperty: 'target' },
-        schemaPath: '#/items/anyOf/0/properties/transforms/items/required',
+        message: "should have required property '.target'",
+        params: { missingProperty: '.target' },
+        schemaPath:
+          '#/items/anyOf/0/properties/transforms/items/allOf/2/then/required',
+      },
+      {
+        dataPath: '[0].transforms[0]',
+        keyword: 'if',
+        message: 'should match "then" schema',
+        params: { failingKeyword: 'then' },
+        schemaPath: '#/items/anyOf/0/properties/transforms/items/allOf/2/if',
       },
       {
         dataPath: '[0]',
@@ -2129,6 +2943,7 @@ describe('getTransformedRoutes', () => {
             'request.headers',
             'request.query',
             'response.headers',
+            'request.path',
           ],
         },
         schemaPath:

@@ -1,9 +1,9 @@
 import ms from 'ms';
 import path from 'path';
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
-import frameworks, { Framework } from '@vercel/frameworks';
+import { frameworkList as frameworks, Framework } from '@vercel/frameworks';
 import {
   spawn,
   spawnSync,
@@ -13,9 +13,13 @@ import {
 import { existsSync, readFileSync, statSync, readdirSync, mkdirSync } from 'fs';
 import { cpus } from 'os';
 import {
+  BuildOptions,
   BuildV2,
-  Files,
+  BunVersion,
+  CliType,
   Config,
+  Files,
+  NodeVersion,
   PackageJson,
   PrepareCache,
   glob,
@@ -30,6 +34,12 @@ import {
   runPipInstall,
   runPackageJsonScript,
   runShellScript,
+  generateProjectManifest,
+  generateRubyProjectManifest,
+  writeProjectManifest,
+  MANIFEST_VERSION,
+  createDiagnostics,
+  getReportedServiceType,
   getNodeVersion,
   debug,
   NowBuildError,
@@ -87,7 +97,7 @@ function validateDistDir(distDir: string, workPath: string) {
       try {
         const vercelJson = JSON.parse(readFileSync(vercelJsonPath, 'utf8'));
         buildCommandExists = vercelJson.buildCommand !== undefined;
-      } catch (e) {
+      } catch (_e) {
         // Ignore JSON parse errors, fallback to default messaging
       }
     }
@@ -294,7 +304,7 @@ async function fetchBinary(
   version: string,
   dest = '/usr/local/bin'
 ) {
-  const res = await fetch(url);
+  const res = await nodeFetch(url);
   if (res.status === 404) {
     throw new NowBuildError({
       code: 'STATIC_BUILD_BINARY_NOT_FOUND',
@@ -352,11 +362,27 @@ export const build: BuildV2 = async ({
   repoRootPath,
   config,
   meta = {},
+  service,
 }) => {
   await download(files, workPath, meta);
 
-  const mountpoint = path.dirname(entrypoint);
-  const entrypointDir = path.join(workPath, mountpoint);
+  // Use routePrefix as mountpoint for services to mount static files at the correct path
+  // e.g., routePrefix="/admin" mounts files at "admin/" so they're served at /admin/*
+  // Strip leading slash from routePrefix to create valid mountpoint
+  const routePrefix = config.routePrefix as string | undefined;
+  if (routePrefix) {
+    const mountpointCandidate = routePrefix.replace(/^\//, '') || '.';
+    if (mountpointCandidate.split(/[/\\]/).some(segment => segment === '..')) {
+      throw new NowBuildError({
+        code: 'STATIC_BUILD_UNSAFE_ROUTE_PREFIX',
+        message: `Invalid routePrefix "${routePrefix}": path traversal segments are not allowed.`,
+      });
+    }
+  }
+  const mountpoint = routePrefix
+    ? routePrefix.replace(/^\//, '') || '.'
+    : path.dirname(entrypoint);
+  const entrypointDir = path.join(workPath, path.dirname(entrypoint));
 
   let distPath = path.join(
     workPath,
@@ -488,6 +514,7 @@ export const build: BuildV2 = async ({
 
     const {
       cliType,
+      lockfilePath,
       lockfileVersion,
       packageJsonPackageManager,
       turboSupportsCorepackHome,
@@ -663,6 +690,16 @@ export const build: BuildV2 = async ({
       );
     }
 
+    await generateStaticBuildManifest({
+      framework,
+      service,
+      entrypointDir,
+      nodeVersion,
+      cliType,
+      lockfilePath,
+      lockfileVersion,
+    });
+
     const cliEnv = {
       ...process.env,
       PATH: pathList.join(path.delimiter),
@@ -706,7 +743,7 @@ export const build: BuildV2 = async ({
         // for this builder.
         try {
           await checkForPort(devPort, DEV_SERVER_PORT_BIND_TIMEOUT);
-        } catch (err) {
+        } catch (_err) {
           throw new Error(
             `Failed to detect a server running on port ${devPort}.\nDetails: https://err.sh/vercel/vercel/now-static-build-failed-to-detect-a-server`
           );
@@ -930,3 +967,127 @@ export const prepareCache: PrepareCache = async ({
 
   return cacheFiles;
 };
+
+// Manifest storage slot for this builder. Language builders (@vercel/go,
+// @vercel/rust, @vercel/ruby) write to 'go', 'rust', and 'ruby' slots
+// respectively, so using 'static-build' keeps our manifests in a separate
+// directory and prevents overwrites when both builders run in the same project
+// (e.g. Hugo + api/*.go). This value only appears as a directory name on disk
+// (.vercel/static-build/package-manifest.json) and never in the output
+// manifests, whose keys are derived from the builder name and workspace.
+const STATIC_BUILD_MANIFEST_RUNTIME = 'static-build' as const;
+
+async function generateStaticBuildManifest({
+  framework,
+  service,
+  entrypointDir,
+  nodeVersion,
+  cliType,
+  lockfilePath,
+  lockfileVersion,
+}: {
+  framework?: Framework;
+  service?: BuildOptions['service'];
+  entrypointDir: string;
+  nodeVersion: NodeVersion | BunVersion;
+  cliType: CliType;
+  lockfilePath?: string;
+  lockfileVersion?: number;
+}): Promise<void> {
+  if (framework?.slug === 'hugo') {
+    try {
+      const hugoVersionOut = spawnSync('hugo', ['version'], {
+        encoding: 'utf8',
+      });
+      const hugoResolved =
+        hugoVersionOut.status === 0 && typeof hugoVersionOut.stdout === 'string'
+          ? (hugoVersionOut.stdout.match(/v(\d+(?:\.\d+)*)/)?.[1] ??
+            process.env.HUGO_VERSION ??
+            '0.58.2')
+          : process.env.HUGO_VERSION || '0.58.2';
+      await writeProjectManifest(
+        {
+          version: MANIFEST_VERSION,
+          runtime: 'go',
+          framework: framework.slug,
+          serviceType: service ? getReportedServiceType(service) : undefined,
+          dependencies: [
+            {
+              name: 'hugo',
+              type: 'direct',
+              scopes: ['prod'],
+              resolved: hugoResolved,
+            },
+          ],
+        },
+        entrypointDir,
+        STATIC_BUILD_MANIFEST_RUNTIME
+      );
+    } catch (err) {
+      debug(
+        `Failed to write hugo manifest: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  } else if (framework?.slug === 'zola') {
+    try {
+      const zolaVersionOut = spawnSync('zola', ['--version'], {
+        encoding: 'utf8',
+      });
+      const zolaResolved =
+        zolaVersionOut.status === 0 && typeof zolaVersionOut.stdout === 'string'
+          ? (zolaVersionOut.stdout.trim().split(' ')[1] ??
+            process.env.ZOLA_VERSION ??
+            '')
+          : (process.env.ZOLA_VERSION ?? '');
+      await writeProjectManifest(
+        {
+          version: MANIFEST_VERSION,
+          runtime: 'rust',
+          framework: framework.slug,
+          serviceType: service ? getReportedServiceType(service) : undefined,
+          dependencies: [
+            {
+              name: 'zola',
+              type: 'direct',
+              scopes: ['prod'],
+              resolved: zolaResolved,
+            },
+          ],
+        },
+        entrypointDir,
+        STATIC_BUILD_MANIFEST_RUNTIME
+      );
+    } catch (err) {
+      debug(
+        `Failed to write zola manifest: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  } else if (framework?.slug === 'jekyll' || framework?.slug === 'middleman') {
+    await generateRubyProjectManifest({
+      workPath: entrypointDir,
+      gemfileLockPath: path.join(entrypointDir, 'Gemfile.lock'),
+      framework: framework.slug,
+      serviceType: service ? getReportedServiceType(service) : undefined,
+      outputRuntime: STATIC_BUILD_MANIFEST_RUNTIME,
+    });
+  } else if (framework?.slug) {
+    try {
+      await generateProjectManifest({
+        workPath: entrypointDir,
+        nodeVersion,
+        cliType,
+        lockfilePath,
+        lockfileVersion,
+        framework: framework.slug,
+        serviceType: service ? getReportedServiceType(service) : undefined,
+        outputRuntime: STATIC_BUILD_MANIFEST_RUNTIME,
+      });
+    } catch (err) {
+      debug(
+        `Failed to write static-build manifest: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+}
+
+export const diagnostics = createDiagnostics(STATIC_BUILD_MANIFEST_RUNTIME);

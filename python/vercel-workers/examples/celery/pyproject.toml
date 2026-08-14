@@ -1,0 +1,17 @@
+[project]
+name = "celery-example"
+version = "0.1.0"
+description = "Celery example using vercel-workers + Vercel Queues"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "celery>=5.3.0",
+    "vercel-workers",
+]
+
+[tool.uv.sources]
+vercel-workers = { workspace = true }
+
+[tool.setuptools]
+py-modules = ["worker", "main", "tasks"]

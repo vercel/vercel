@@ -162,5 +162,10 @@
       "status": 200,
       "mustContain": "index page"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

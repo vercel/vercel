@@ -16,5 +16,10 @@
       "status": 404,
       "mustContain": "This Is The Not Found Page"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

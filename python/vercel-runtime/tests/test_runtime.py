@@ -1,0 +1,1917 @@
+"""Integration tests for vc_init.py."""
+
+from __future__ import annotations
+
+import asyncio
+import base64
+import contextlib
+import http.client
+import json
+import os
+import pathlib
+import shutil
+import socket
+import struct
+import sys
+import tempfile
+import unittest
+from typing import TYPE_CHECKING, Any
+
+from tests._dist import PROJECT_ROOT
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+from tests._n1_mock import (
+    EndMessage,
+    HandlerStartedMessage,
+    LogMessage,
+    N1Mock,
+    ServerStartedMessage,
+    UnrecoverableErrorMessage,
+    create_n1_mock,
+)
+
+_VC_INIT = PROJECT_ROOT / "src" / "vercel_runtime" / "vc_init.py"
+_TEST_ROOT = pathlib.Path(__file__).parent
+_COV_WRAPPER = _TEST_ROOT / "_cov_wrapper.py"
+_LAMBDA_INVOKER = _TEST_ROOT / "fixtures" / "lambda_invoke.py"
+_FIXTURES = _TEST_ROOT / "fixtures"
+
+
+def _make_entrypoint(
+    fixture_name: str,
+    tmp_path: pathlib.Path,
+) -> tuple[pathlib.Path, str, str]:
+    src = _FIXTURES / fixture_name
+    dst = tmp_path / fixture_name
+    shutil.copy2(src, dst)
+    return dst, fixture_name, fixture_name.removesuffix(".py")
+
+
+def _coverage_active() -> bool:
+    """Check if coverage collection is active in this process."""
+    try:
+        from coverage import Coverage
+
+        c = Coverage.current()
+        if c is not None:
+            return True
+    except ImportError:
+        pass
+    return "COV_CORE_DATAFILE" in os.environ
+
+
+def _base_env() -> dict[str, str]:
+    """Return a clean env without stale ``__VC_*`` vars."""
+    return {k: v for k, v in os.environ.items() if not k.startswith("__VC_")}
+
+
+@contextlib.asynccontextmanager
+async def _run_runtime(
+    *,
+    entrypoint_abs: pathlib.Path,
+    entrypoint_rel: str,
+    module_name: str,
+    ipc_socket_path: str,
+    variable_name: str = "app",
+    extra_env: dict[str, str] | None = None,
+) -> AsyncIterator[asyncio.subprocess.Process]:
+    env = {
+        **_base_env(),
+        "__VC_HANDLER_ENTRYPOINT": entrypoint_rel,
+        "__VC_HANDLER_ENTRYPOINT_ABS": str(entrypoint_abs),
+        "__VC_HANDLER_MODULE_NAME": module_name,
+        "__VC_HANDLER_VARIABLE_NAME": variable_name,
+        "VERCEL_IPC_PATH": ipc_socket_path,
+    }
+    if extra_env:
+        env.update(extra_env)
+    cmd = [sys.executable]
+    if _coverage_active():
+        cmd.append(str(_COV_WRAPPER))
+    cmd.append(str(_VC_INIT))
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        env=env,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    try:
+        yield proc
+    finally:
+        if proc.returncode is None:
+            proc.terminate()
+            try:
+                async with asyncio.timeout(3.0):
+                    await proc.wait()
+            except TimeoutError:
+                proc.kill()
+                await proc.wait()
+
+
+def _lambda_event(
+    method: str,
+    path: str,
+    headers: dict[str, str | list[str]] | None = None,
+    body: str | None = None,
+    encoding: str | None = None,
+) -> dict[str, Any]:
+    """Build a Lambda event dict for vc_handler."""
+    payload: dict[str, Any] = {
+        "method": method,
+        "path": path,
+        "headers": headers or {},
+    }
+    if body is not None:
+        payload["body"] = body
+    if encoding is not None:
+        payload["encoding"] = encoding
+    return {"body": json.dumps(payload)}
+
+
+async def _invoke_lambda(
+    *,
+    entrypoint_abs: pathlib.Path,
+    entrypoint_rel: str,
+    module_name: str,
+    event: dict[str, Any],
+    variable_name: str = "app",
+) -> dict[str, Any]:
+    """Run vc_init.py in legacy mode and call vc_handler.
+
+    Uses an extra pipe (fd 3) so vc_init.py's own print()
+    calls don't pollute the JSON result.
+    """
+    env = {
+        **_base_env(),
+        "__VC_HANDLER_ENTRYPOINT": entrypoint_rel,
+        "__VC_HANDLER_ENTRYPOINT_ABS": str(entrypoint_abs),
+        "__VC_HANDLER_MODULE_NAME": module_name,
+        "__VC_HANDLER_VARIABLE_NAME": variable_name,
+    }
+    env.pop("VERCEL_IPC_PATH", None)
+
+    result_r, result_w = os.pipe()
+    env["_RESULT_FD"] = str(result_w)
+
+    cmd = [sys.executable]
+    if _coverage_active():
+        cmd.append(str(_COV_WRAPPER))
+    cmd.extend([str(_LAMBDA_INVOKER), str(_VC_INIT)])
+
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        env=env,
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        pass_fds=(result_w,),
+    )
+    os.close(result_w)
+
+    try:
+        assert proc.stdin is not None
+        proc.stdin.write(json.dumps(event).encode())
+        proc.stdin.close()
+
+        loop = asyncio.get_running_loop()
+        result_data, _ = await asyncio.wait_for(
+            asyncio.gather(
+                loop.run_in_executor(
+                    None,
+                    lambda: os.read(result_r, 1_000_000),
+                ),
+                proc.wait(),
+            ),
+            timeout=10.0,
+        )
+    finally:
+        os.close(result_r)
+
+    if proc.returncode != 0:
+        assert proc.stderr is not None
+        stderr_text = (await proc.stderr.read()).decode()
+        raise RuntimeError(
+            f"Lambda invoke failed (rc={proc.returncode}):\n{stderr_text}"
+        )
+    result: dict[str, Any] = json.loads(result_data)
+    return result
+
+
+def _http_request(
+    port: int,
+    method: str = "GET",
+    path: str = "/",
+    body: bytes | None = None,
+    headers: dict[str, str] | None = None,
+) -> http.client.HTTPResponse:
+    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+    all_headers = {
+        "x-vercel-internal-invocation-id": "test-inv-1",
+        "x-vercel-internal-request-id": "42",
+        "x-vercel-internal-span-id": "span-1",
+        "x-vercel-internal-trace-id": "trace-1",
+        **(headers or {}),
+    }
+    conn.request(method, path, body=body, headers=all_headers)
+    return conn.getresponse()
+
+
+async def _http_get(
+    port: int,
+    path: str = "/",
+    headers: dict[str, str] | None = None,
+) -> http.client.HTTPResponse:
+    return await asyncio.to_thread(
+        _http_request, port, "GET", path, None, headers
+    )
+
+
+async def _http_post(
+    port: int,
+    path: str = "/",
+    body: bytes = b"",
+    headers: dict[str, str] | None = None,
+) -> http.client.HTTPResponse:
+    return await asyncio.to_thread(
+        _http_request, port, "POST", path, body, headers
+    )
+
+
+class _SocketBuffer:
+    def __init__(self, sock: socket.socket) -> None:
+        self._sock = sock
+        self._buffer = bytearray()
+
+    def read_until(self, marker: bytes) -> bytes:
+        while marker not in self._buffer:
+            chunk = self._sock.recv(4096)
+            if not chunk:
+                raise ConnectionError("socket closed before expected data")
+            self._buffer.extend(chunk)
+
+        end = self._buffer.index(marker) + len(marker)
+        data = bytes(self._buffer[:end])
+        del self._buffer[:end]
+        return data
+
+    def read_exact(self, size: int) -> bytes:
+        while len(self._buffer) < size:
+            chunk = self._sock.recv(4096)
+            if not chunk:
+                raise ConnectionError("socket closed before expected data")
+            self._buffer.extend(chunk)
+
+        data = bytes(self._buffer[:size])
+        del self._buffer[:size]
+        return data
+
+
+def _encode_client_ws_frame(opcode: int, payload: bytes = b"") -> bytes:
+    frame = bytearray([0x80 | opcode])
+    payload_length = len(payload)
+
+    if payload_length < 126:
+        frame.append(0x80 | payload_length)
+    elif payload_length < 1 << 16:
+        frame.append(0x80 | 126)
+        frame.extend(struct.pack("!H", payload_length))
+    else:
+        frame.append(0x80 | 127)
+        frame.extend(struct.pack("!Q", payload_length))
+
+    mask = os.urandom(4)
+    frame.extend(mask)
+    frame.extend(byte ^ mask[index % 4] for index, byte in enumerate(payload))
+    return bytes(frame)
+
+
+def _read_ws_frame(reader: _SocketBuffer) -> tuple[int, bytes]:
+    first, second = reader.read_exact(2)
+    opcode = first & 0x0F
+    payload_length = second & 0x7F
+    has_mask = bool(second & 0x80)
+
+    if payload_length == 126:
+        payload_length = struct.unpack("!H", reader.read_exact(2))[0]
+    elif payload_length == 127:
+        payload_length = struct.unpack("!Q", reader.read_exact(8))[0]
+
+    mask = reader.read_exact(4) if has_mask else b""
+    payload = reader.read_exact(payload_length) if payload_length else b""
+
+    if has_mask:
+        payload = bytes(
+            byte ^ mask[index % 4] for index, byte in enumerate(payload)
+        )
+
+    return opcode, payload
+
+
+def _build_websocket_request(
+    port: int,
+    path: str = "/ws",
+    headers: dict[str, str] | None = None,
+) -> bytes:
+    key = base64.b64encode(os.urandom(16)).decode("ascii")
+    request_headers = {
+        "Host": f"127.0.0.1:{port}",
+        "Upgrade": "websocket",
+        "Connection": "Upgrade",
+        "Sec-WebSocket-Key": key,
+        "Sec-WebSocket-Version": "13",
+        **(headers or {}),
+    }
+
+    request_lines = [f"GET {path} HTTP/1.1"]
+    request_lines.extend(
+        f"{name}: {value}" for name, value in request_headers.items()
+    )
+    return ("\r\n".join([*request_lines, "", ""])).encode("ascii")
+
+
+class _WebSocketClient:
+    def __init__(self, sock: socket.socket, reader: _SocketBuffer) -> None:
+        self._sock = sock
+        self._reader = reader
+
+    @classmethod
+    def connect(
+        cls,
+        port: int,
+        path: str = "/ws",
+        headers: dict[str, str] | None = None,
+    ) -> tuple[_WebSocketClient, str]:
+        sock = socket.create_connection(("127.0.0.1", port), timeout=5)
+        sock.settimeout(5)
+        reader = _SocketBuffer(sock)
+
+        try:
+            sock.sendall(_build_websocket_request(port, path, headers))
+
+            response = reader.read_until(b"\r\n\r\n")
+            if b"sec-websocket-accept:" not in response.lower():
+                raise AssertionError(
+                    "websocket upgrade response missing accept header"
+                )
+
+            status_line = response.split(b"\r\n", maxsplit=1)[0].decode("ascii")
+            return cls(sock, reader), status_line
+        except Exception:
+            sock.close()
+            raise
+
+    def read_text(self) -> str:
+        opcode, payload = _read_ws_frame(self._reader)
+        if opcode != 0x1:
+            raise AssertionError(f"expected text frame, got opcode {opcode}")
+        return payload.decode("utf-8")
+
+    def send_text(self, text: str) -> None:
+        self._sock.sendall(_encode_client_ws_frame(0x1, text.encode("utf-8")))
+
+    def close(self) -> None:
+        if self._sock.fileno() == -1:
+            return
+
+        with contextlib.suppress(OSError):
+            self._sock.sendall(
+                _encode_client_ws_frame(0x8, struct.pack("!H", 1000))
+            )
+
+        with contextlib.suppress(ConnectionError, OSError, socket.timeout):
+            _read_ws_frame(self._reader)
+
+        with contextlib.suppress(OSError):
+            self._sock.close()
+
+
+def _dechunk(data: bytes) -> bytes:
+    out = b""
+    while data:
+        size_line, _, rest = data.partition(b"\r\n")
+        size = int(size_line.split(b";")[0], 16)
+        if size == 0:
+            break
+        out += rest[:size]
+        data = rest[size + 2 :]
+    return out
+
+
+def _raw_chunked_post(
+    port: int,
+    path: str,
+    body: bytes,
+    headers: dict[str, str] | None = None,
+) -> tuple[int, bytes]:
+    """Send a POST with a chunked body and NO Content-Length over a raw socket.
+
+    ``http.client`` always adds a Content-Length (or does its own chunking),
+    so to reproduce the proxy behaviour we write the raw HTTP/1.1 request.
+    Returns ``(status_code, response_body)``.
+    """
+    hdrs = {
+        "Host": "lambda",
+        "x-vercel-internal-invocation-id": "test-inv-1",
+        "x-vercel-internal-request-id": "42",
+        "x-vercel-internal-span-id": "span-1",
+        "x-vercel-internal-trace-id": "trace-1",
+        "Content-Type": "application/json",
+        "Transfer-Encoding": "chunked",
+        **(headers or {}),
+    }
+    request_line = f"POST {path} HTTP/1.1\r\n"
+    header_block = "".join(f"{k}: {v}\r\n" for k, v in hdrs.items())
+    chunk = f"{len(body):x}\r\n".encode() + body + b"\r\n0\r\n\r\n"
+    raw = request_line.encode() + header_block.encode() + b"\r\n" + chunk
+
+    with socket.create_connection(("127.0.0.1", port), timeout=10) as sock:
+        sock.sendall(raw)
+        sock.shutdown(socket.SHUT_WR)
+        buf = b""
+        while True:
+            part = sock.recv(65536)
+            if not part:
+                break
+            buf += part
+
+    head, _, resp_body = buf.partition(b"\r\n\r\n")
+    status_line = head.split(b"\r\n", 1)[0]
+    status_code = int(status_line.split(b" ")[1])
+    # If the response itself is chunked, strip framing for the assertion.
+    if b"transfer-encoding: chunked" in head.lower():
+        resp_body = _dechunk(resp_body)
+    return status_code, resp_body
+
+
+async def _read_stderr(
+    proc: asyncio.subprocess.Process,
+) -> str:
+    assert proc.stderr is not None
+    return (await proc.stderr.read()).decode()
+
+
+class _RuntimeTestCase(unittest.IsolatedAsyncioTestCase):
+    """Base providing ``self.tmp_path`` and ``self.n1``."""
+
+    tmp_path: pathlib.Path
+    n1: N1Mock
+    _tmp_dir: tempfile.TemporaryDirectory[str]
+    _n1_ctx: contextlib.AsyncExitStack
+
+    def setUp(self) -> None:
+        self._tmp_dir = tempfile.TemporaryDirectory()
+        self.tmp_path = pathlib.Path(self._tmp_dir.name)
+
+    async def asyncSetUp(self) -> None:
+        self._n1_ctx = contextlib.AsyncExitStack()
+        self.n1 = await self._n1_ctx.enter_async_context(
+            create_n1_mock(self.tmp_path)
+        )
+
+    async def asyncTearDown(self) -> None:
+        await self._n1_ctx.aclose()
+
+    def tearDown(self) -> None:
+        self._tmp_dir.cleanup()
+
+
+class TestHTTPHandler(_RuntimeTestCase):
+    """Tests for BaseHTTPRequestHandler entrypoints."""
+
+    async def test_server_started_get_post_ping_lifecycle(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+            self.assertIsInstance(port, int)
+            self.assertGreater(port, 0)
+            self.assertIsNotNone(ss.payload.init_duration)
+
+            resp = await _http_get(port, "/hello")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "GET /hello")
+
+            hs = await self.n1.wait_for_message(
+                HandlerStartedMessage, timeout=5.0
+            )
+            self.assertGreater(hs.payload.handler_started_at, 0)
+            end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
+            self.assertIsNotNone(end.payload.context.invocation_id)
+
+            resp = await _http_post(port, "/submit", body=b"test-data")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(
+                resp.read().decode(),
+                "POST /submit body=test-data",
+            )
+
+            await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+
+            conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+            conn.request("GET", "/_vercel/ping")
+            resp = conn.getresponse()
+            self.assertEqual(resp.status, 200)
+
+    async def test_unsupported_method_returns_501(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            # http_handler.py only has do_GET and do_POST
+            resp = await asyncio.to_thread(_http_request, port, "DELETE", "/x")
+            self.assertEqual(resp.status, 501)
+            resp.read()
+
+    async def test_oidc_header_uses_environment_fallback(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
+            extra_env={"VERCEL_OIDC_TOKEN": "env-token"},
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/oidc")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "env-token")
+
+    async def test_malformed_request_line(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            # Send garbage — covers parse_request() failure
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect(("127.0.0.1", port))
+            sock.sendall(b"NOT-HTTP\r\n\r\n")
+            data = sock.recv(4096)
+            sock.close()
+            self.assertIn(b"400", data)
+
+    async def test_sc_headers_stripped_per_no_leak_flag(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            # Without x-vercel-sc-no-header-leak most headers are passed down
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            self.assertNotIn("x-vercel-sc-runtime-cache", seen)
+            self.assertIn("x-vercel-sc-headers", seen)
+            self.assertIn("x-vercel-sc-host", seen)
+            self.assertIn("x-vercel-sc-basepath", seen)
+            self.assertIn("x-vercel-sc-protocol", seen)
+
+            # With x-vercel-sc-no-header-leak every header is stripped
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-no-header-leak": "1",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            for sc_header in (
+                "x-vercel-sc-headers",
+                "x-vercel-sc-host",
+                "x-vercel-sc-basepath",
+                "x-vercel-sc-protocol",
+                "x-vercel-sc-no-header-leak",
+                "x-vercel-sc-runtime-cache",
+            ):
+                self.assertNotIn(sc_header, seen)
+
+
+class TestWSGIApp(_RuntimeTestCase):
+    """Tests for WSGI app entrypoints."""
+
+    async def test_wsgi_requests_and_lifecycle(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/hello")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "GET /hello")
+
+            await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+
+            resp = await _http_get(port, "/search?q=test")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(
+                resp.read().decode(),
+                "GET /search?q=test",
+            )
+
+    async def test_wsgi_chunked_post_without_content_length(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wsgi_echo_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            body = json.dumps({"message": "hello"}).encode()
+            status, resp = await asyncio.to_thread(
+                _raw_chunked_post, port, "/api/test", body
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(
+                json.loads(resp.decode()),
+                {"received": body.decode(), "path": "/api/test"},
+            )
+
+    async def test_wsgi_closeable_response(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wsgi_closeable_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/close-test")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "GET /close-test")
+
+    async def test_oidc_header_uses_environment_fallback(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={"VERCEL_OIDC_TOKEN": "env-token"},
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/oidc")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "env-token")
+
+    async def test_sc_headers_stripped_per_no_leak_flag(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            self.assertNotIn("x-vercel-sc-runtime-cache", seen)
+            self.assertIn("x-vercel-sc-headers", seen)
+            self.assertIn("x-vercel-sc-host", seen)
+
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-no-header-leak": "1",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            for sc_header in (
+                "x-vercel-sc-headers",
+                "x-vercel-sc-host",
+                "x-vercel-sc-basepath",
+                "x-vercel-sc-protocol",
+                "x-vercel-sc-no-header-leak",
+                "x-vercel-sc-runtime-cache",
+            ):
+                self.assertNotIn(sc_header, seen)
+
+    async def test_wsgi_websocket_ends_request_after_handshake(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wsgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            client: _WebSocketClient | None = None
+            try:
+                client, status_line = await asyncio.to_thread(
+                    _WebSocketClient.connect,
+                    port,
+                    "/ws",
+                    {
+                        "x-vercel-internal-invocation-id": "test-inv-ws",
+                        "x-vercel-internal-request-id": "42",
+                        "x-vercel-internal-span-id": "span-ws",
+                        "x-vercel-internal-trace-id": "trace-ws",
+                    },
+                )
+                self.assertEqual(
+                    status_line, "HTTP/1.1 101 Switching Protocols"
+                )
+                assert client is not None
+
+                hs = await self.n1.wait_for_message(
+                    HandlerStartedMessage, timeout=5.0
+                )
+                self.assertEqual(
+                    hs.payload.context.invocation_id, "test-inv-ws"
+                )
+                self.assertEqual(hs.payload.context.request_id, 42)
+
+                # The "end" message must arrive right after the 101 handshake,
+                # before the (still open) connection echoes any frames.
+                end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
+                self.assertEqual(
+                    end.payload.context.invocation_id, "test-inv-ws"
+                )
+                self.assertEqual(end.payload.context.request_id, 42)
+
+                # The upgraded socket remains fully usable past the end.
+                await asyncio.to_thread(client.send_text, "ping")
+                self.assertEqual(
+                    await asyncio.to_thread(client.read_text), "echo:ping"
+                )
+                await asyncio.to_thread(client.send_text, "again")
+                self.assertEqual(
+                    await asyncio.to_thread(client.read_text), "echo:again"
+                )
+            finally:
+                if client is not None:
+                    await asyncio.to_thread(client.close)
+
+    async def test_wsgi_websocket_emits_single_end_message(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wsgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            client, _status_line = await asyncio.to_thread(
+                _WebSocketClient.connect,
+                port,
+                "/ws",
+                {"x-vercel-internal-invocation-id": "test-inv-single"},
+            )
+            try:
+                await self.n1.wait_for_message(EndMessage, timeout=5.0)
+            finally:
+                await asyncio.to_thread(client.close)
+
+            # Closing the connection (WSGI app returns) must not emit a second
+            # "end" message via the handle_one_request finally block.
+            with self.assertRaises(TimeoutError):
+                await self.n1.wait_for_message(EndMessage, timeout=1.0)
+
+    async def test_wsgi_non_upgrade_request_still_works(self) -> None:
+        # A regular request to a WebSocket-capable app must take the normal
+        # WSGI path and emit exactly one "end" message via the finally block.
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wsgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/plain")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "not a websocket")
+
+            await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+
+
+class TestASGIApp(_RuntimeTestCase):
+    """Tests for ASGI app entrypoints."""
+
+    async def test_asgi_requests_ping_and_lifecycle(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+            self.assertIsNotNone(ss.payload.init_duration)
+
+            resp = await _http_get(port, "/hello")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "GET /hello")
+
+            hs = await self.n1.wait_for_message(
+                HandlerStartedMessage, timeout=5.0
+            )
+            self.assertGreater(hs.payload.handler_started_at, 0)
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+
+            conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+            conn.request("GET", "/_vercel/ping")
+            resp = conn.getresponse()
+            self.assertEqual(resp.status, 200)
+
+    async def test_invalid_utf8_header(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            # Send raw request with invalid UTF-8 in a header
+            # value — covers _b2s() decode failure path
+            raw = (
+                b"GET /hello HTTP/1.1\r\n"
+                b"Host: 127.0.0.1\r\n"
+                b"x-vercel-internal-invocation-id: inv\r\n"
+                b"x-vercel-internal-request-id: 1\r\n"
+                b"x-vercel-internal-span-id: s\r\n"
+                b"x-vercel-internal-trace-id: t\r\n"
+                b"x-bad: \xff\xfe\r\n"
+                b"\r\n"
+            )
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect(("127.0.0.1", port))
+            sock.sendall(raw)
+            data = sock.recv(4096)
+            sock.close()
+            self.assertIn(b"200", data)
+
+    async def test_oidc_header_uses_environment_fallback(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={"VERCEL_OIDC_TOKEN": "env-token"},
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/oidc")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "env-token")
+
+    async def test_sc_headers_stripped_per_no_leak_flag(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            self.assertNotIn("x-vercel-sc-runtime-cache", seen)
+            self.assertIn("x-vercel-sc-headers", seen)
+            self.assertIn("x-vercel-sc-host", seen)
+
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-no-header-leak": "1",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            for sc_header in (
+                "x-vercel-sc-headers",
+                "x-vercel-sc-host",
+                "x-vercel-sc-basepath",
+                "x-vercel-sc-protocol",
+                "x-vercel-sc-no-header-leak",
+                "x-vercel-sc-runtime-cache",
+            ):
+                self.assertNotIn(sc_header, seen)
+
+    async def test_asgi_websocket_ends_request_after_handshake(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_ROUTE_PREFIX_STRIP": "1",
+                "VERCEL_SERVICE_ROUTE_PREFIX": "/_svc/backend",
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            client: _WebSocketClient | None = None
+            try:
+                client, status_line = await asyncio.to_thread(
+                    _WebSocketClient.connect,
+                    port,
+                    "/_svc/backend/ws",
+                    {
+                        "x-vercel-internal-invocation-id": "test-inv-1",
+                        "x-vercel-internal-request-id": "42",
+                        "x-vercel-internal-span-id": "span-1",
+                        "x-vercel-internal-trace-id": "trace-1",
+                        "x-vercel-internal-oidc-token": "oidc-secret",
+                    },
+                )
+
+                self.assertEqual(
+                    status_line, "HTTP/1.1 101 Switching Protocols"
+                )
+                assert client is not None
+
+                scope_data = json.loads(
+                    await asyncio.to_thread(client.read_text)
+                )
+                self.assertEqual(scope_data["path"], "/ws")
+                self.assertEqual(scope_data["root_path"], "/_svc/backend")
+                self.assertFalse(scope_data["has_internal_invocation_id"])
+                self.assertFalse(scope_data["has_internal_request_id"])
+                self.assertFalse(scope_data["has_internal_span_id"])
+                self.assertFalse(scope_data["has_internal_trace_id"])
+                self.assertEqual(scope_data["oidc_token"], "oidc-secret")
+
+                hs = await self.n1.wait_for_message(
+                    HandlerStartedMessage, timeout=5.0
+                )
+                self.assertGreater(hs.payload.handler_started_at, 0)
+                self.assertEqual(hs.payload.context.invocation_id, "test-inv-1")
+                self.assertEqual(hs.payload.context.request_id, 42)
+
+                end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
+                self.assertEqual(
+                    end.payload.context.invocation_id, "test-inv-1"
+                )
+                self.assertEqual(end.payload.context.request_id, 42)
+
+                # The request should be complete at the 101 upgrade boundary
+                # while the upgraded socket remains fully usable.
+                await asyncio.to_thread(client.send_text, "ping")
+                self.assertEqual(
+                    await asyncio.to_thread(client.read_text), "echo:ping"
+                )
+            finally:
+                if client is not None:
+                    await asyncio.to_thread(client.close)
+
+    async def test_asgi_websocket_server_close_ends_request(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            client: _WebSocketClient | None = None
+            try:
+                client, status_line = await asyncio.to_thread(
+                    _WebSocketClient.connect,
+                    port,
+                    "/server-close",
+                    {
+                        "x-vercel-internal-invocation-id": "test-inv-sc",
+                        "x-vercel-internal-request-id": "99",
+                        "x-vercel-internal-span-id": "span-sc",
+                        "x-vercel-internal-trace-id": "trace-sc",
+                    },
+                )
+                self.assertEqual(
+                    status_line, "HTTP/1.1 101 Switching Protocols"
+                )
+                assert client is not None
+
+                # Server sends close frame immediately after accept.
+                # Read the close frame (opcode 0x8).
+                opcode, _payload = await asyncio.to_thread(
+                    _read_ws_frame, client._reader
+                )
+                self.assertEqual(opcode, 0x8)
+
+                # The IPC end message should still be emitted via the
+                # websocket.close path in send_wrapper.
+                end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
+                self.assertEqual(
+                    end.payload.context.invocation_id, "test-inv-sc"
+                )
+            finally:
+                if client is not None:
+                    await asyncio.to_thread(client.close)
+
+    async def test_asgi_websocket_reject_ends_request(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            # Attempt a WebSocket upgrade to /reject; the app responds
+            # with an HTTP 403 via websocket.http.response.{start,body}.
+            sock = socket.create_connection(("127.0.0.1", port), timeout=5)
+            try:
+                sock.sendall(
+                    _build_websocket_request(
+                        port,
+                        "/reject",
+                        {
+                            "x-vercel-internal-invocation-id": "test-inv-rej",
+                            "x-vercel-internal-request-id": "77",
+                            "x-vercel-internal-span-id": "span-rej",
+                            "x-vercel-internal-trace-id": "trace-rej",
+                        },
+                    )
+                )
+                sock.settimeout(5)
+                buf = b""
+                status_line = ""
+                body = b""
+                while True:
+                    chunk = await asyncio.to_thread(sock.recv, 4096)
+                    if not chunk:
+                        break
+                    buf += chunk
+                    if b"\r\n\r\n" in buf:
+                        head, _, body = buf.partition(b"\r\n\r\n")
+                        status_line = head.split(b"\r\n", 1)[0].decode()
+                        if b"transfer-encoding: chunked" in head.lower():
+                            body = _dechunk(body)
+                        if body:
+                            break
+
+                self.assertIn("403", status_line)
+                self.assertEqual(body, b"forbidden")
+            finally:
+                sock.close()
+
+            # The IPC end message should be emitted via the
+            # websocket.http.response.body path in send_wrapper.
+            end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
+            self.assertEqual(end.payload.context.invocation_id, "test-inv-rej")
+
+
+class TestCronService(_RuntimeTestCase):
+    """Tests for cron service bootstrap behavior."""
+
+    async def test_cron_secret_is_enforced_by_wrapper(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "cron_dunder_main.py", self.tmp_path
+        )
+        cron_path = "/_svc/cleanup/crons/cron_dunder_main"
+        marker_path = self.tmp_path / "cron-auth.marker"
+        routes = json.dumps({cron_path: mod})
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_SECRET": "super-secret",
+                "CRON_MARKER_FILE": str(marker_path),
+                "__VC_CRON_ROUTES": routes,
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, cron_path)
+            self.assertEqual(resp.status, 401)
+            self.assertEqual(resp.read().decode(), '{"error":"unauthorized"}')
+
+            resp = await _http_get(
+                port,
+                cron_path,
+                headers={"authorization": "Bearer super-secret"},
+            )
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), '{"ok":true}')
+            self.assertTrue(marker_path.exists())
+            self.assertEqual(marker_path.read_text(), "ran")
+
+    async def test_bootstraps_dunder_main_entrypoint_for_cron_service(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "cron_dunder_main.py", self.tmp_path
+        )
+        cron_path = "/_svc/cleanup/crons/cron_dunder_main"
+        marker_path = self.tmp_path / "cron-dunder-main.marker"
+        routes = json.dumps({cron_path: mod})
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_MARKER_FILE": str(marker_path),
+                "__VC_CRON_ROUTES": routes,
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, cron_path)
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), '{"ok":true}')
+            self.assertTrue(marker_path.exists())
+            self.assertEqual(marker_path.read_text(), "ran")
+
+    async def test_bootstraps_dunder_main_entrypoint_for_schedule_job_service(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "cron_dunder_main.py", self.tmp_path
+        )
+        cron_path = "/_svc/cleanup/crons/cron_dunder_main"
+        marker_path = self.tmp_path / "schedule-job-dunder-main.marker"
+        routes = json.dumps({cron_path: mod})
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "job",
+                "VERCEL_SERVICE_TRIGGER": "schedule",
+                "CRON_MARKER_FILE": str(marker_path),
+                "__VC_CRON_ROUTES": routes,
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, cron_path)
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), '{"ok":true}')
+            self.assertTrue(marker_path.exists())
+            self.assertEqual(marker_path.read_text(), "ran")
+
+    async def test_bootstraps_sync_handler_function_for_cron_service(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "cron_sync_handler.py",
+            self.tmp_path,
+        )
+        cron_path = "/_svc/cleanup/crons/cron_sync_handler/sync_handler"
+        marker_path = self.tmp_path / "cron-sync-handler.marker"
+        routes = json.dumps({cron_path: f"{mod}:sync_handler"})
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_MARKER_FILE": str(marker_path),
+                "__VC_CRON_ROUTES": routes,
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage,
+                timeout=10.0,
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, cron_path)
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), '{"ok":true}')
+            self.assertTrue(marker_path.exists())
+            self.assertEqual(marker_path.read_text(), "ran-sync")
+
+    async def test_bootstraps_async_handler_function_for_cron_service(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "cron_async_handler.py",
+            self.tmp_path,
+        )
+        cron_path = "/_svc/cleanup/crons/cron_async_handler/async_handler"
+        marker_path = self.tmp_path / "cron-async-handler.marker"
+        routes = json.dumps({cron_path: f"{mod}:async_handler"})
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_MARKER_FILE": str(marker_path),
+                "__VC_CRON_ROUTES": routes,
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage,
+                timeout=10.0,
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, cron_path)
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), '{"ok":true}')
+            self.assertTrue(marker_path.exists())
+            self.assertEqual(marker_path.read_text(), "ran-async")
+
+    async def test_multi_cron_routes_dispatches_by_path(self) -> None:
+        # Copy both fixture modules to tmp_path so importlib can find them
+        ep_abs_a, ep_rel_a, _ = _make_entrypoint(
+            "cron_multi_handler_a.py", self.tmp_path
+        )
+        _make_entrypoint("cron_multi_handler_b.py", self.tmp_path)
+        marker_a = self.tmp_path / "multi-a.marker"
+        marker_b = self.tmp_path / "multi-b.marker"
+        routes = {
+            "/_svc/svc/crons/a/handler_a": "cron_multi_handler_a:handler_a",
+            "/_svc/svc/crons/b/handler_b": "cron_multi_handler_b:handler_b",
+        }
+        async with _run_runtime(
+            entrypoint_abs=ep_abs_a,
+            entrypoint_rel=ep_rel_a,
+            module_name="cron_multi_handler_a",
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_MARKER_FILE_A": str(marker_a),
+                "CRON_MARKER_FILE_B": str(marker_b),
+                "__VC_CRON_ROUTES": json.dumps(routes),
+                "PYTHONPATH": str(self.tmp_path),
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            # Trigger handler A
+            resp = await _http_post(port, "/_svc/svc/crons/a/handler_a")
+            self.assertEqual(resp.status, 200)
+            resp.read()
+            self.assertEqual(marker_a.read_text(), "ran-a")
+            self.assertFalse(marker_b.exists())
+
+            # Trigger handler B
+            resp = await _http_post(port, "/_svc/svc/crons/b/handler_b")
+            self.assertEqual(resp.status, 200)
+            resp.read()
+            self.assertEqual(marker_b.read_text(), "ran-b")
+
+    async def test_multi_cron_routes_returns_404_for_unknown_path(self) -> None:
+        ep_abs, ep_rel, _ = _make_entrypoint(
+            "cron_multi_handler_a.py", self.tmp_path
+        )
+        routes = {
+            "/_svc/svc/crons/a/handler_a": "cron_multi_handler_a:handler_a",
+        }
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name="cron_multi_handler_a",
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "__VC_CRON_ROUTES": json.dumps(routes),
+                "PYTHONPATH": str(self.tmp_path),
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_post(port, "/unknown/path")
+            self.assertEqual(resp.status, 404)
+
+    async def test_multi_cron_routes_enforces_cron_secret(self) -> None:
+        ep_abs, ep_rel, _ = _make_entrypoint(
+            "cron_multi_handler_a.py", self.tmp_path
+        )
+        marker = self.tmp_path / "multi-auth.marker"
+        routes = {
+            "/_svc/svc/crons/a/handler_a": "cron_multi_handler_a:handler_a",
+        }
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name="cron_multi_handler_a",
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_MARKER_FILE_A": str(marker),
+                "CRON_SECRET": "test-secret",
+                "__VC_CRON_ROUTES": json.dumps(routes),
+                "PYTHONPATH": str(self.tmp_path),
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            # No auth header -> 401
+            resp = await _http_post(port, "/_svc/svc/crons/a/handler_a")
+            self.assertEqual(resp.status, 401)
+            resp.read()
+            self.assertFalse(marker.exists())
+
+            # Correct auth header -> 200
+            resp = await _http_post(
+                port,
+                "/_svc/svc/crons/a/handler_a",
+                headers={"Authorization": "Bearer test-secret"},
+            )
+            self.assertEqual(resp.status, 200)
+            resp.read()
+            self.assertEqual(marker.read_text(), "ran-a")
+
+
+class TestLogging(_RuntimeTestCase):
+    """Tests for IPC log message forwarding."""
+
+    async def test_log_levels_and_print(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("logging_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/log-info")
+            self.assertEqual(resp.status, 200)
+            resp.read()
+            log = await self.n1.wait_for_message(LogMessage, timeout=5.0)
+            self.assertTrue(log.payload.message)
+            self.assertEqual(log.payload.level, "info")
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+
+            resp = await _http_get(port, "/log-warning")
+            self.assertEqual(resp.status, 200)
+            resp.read()
+            log = await self.n1.wait_for_message(LogMessage, timeout=5.0)
+            self.assertEqual(log.payload.level, "warn")
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+
+            resp = await _http_get(port, "/log-error")
+            self.assertEqual(resp.status, 200)
+            resp.read()
+            log = await self.n1.wait_for_message(LogMessage, timeout=5.0)
+            self.assertEqual(log.payload.level, "error")
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+
+            resp = await _http_get(port, "/log-critical")
+            self.assertEqual(resp.status, 200)
+            resp.read()
+            log = await self.n1.wait_for_message(LogMessage, timeout=5.0)
+            self.assertEqual(log.payload.level, "fatal")
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+
+            resp = await _http_get(port, "/print-stdout")
+            self.assertEqual(resp.status, 200)
+            resp.read()
+            log = await self.n1.wait_for_message(LogMessage, timeout=5.0)
+            self.assertTrue(log.payload.message)
+            self.assertEqual(log.payload.stream, "stdout")
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+
+            # logger.error with exc_info=True (covers traceback formatting)
+            resp = await _http_get(port, "/log-exc-info")
+            self.assertEqual(resp.status, 200)
+            resp.read()
+            log = await self.n1.wait_for_message(LogMessage, timeout=5.0)
+            self.assertEqual(log.payload.level, "error")
+            # Message should contain the traceback
+            decoded = base64.b64decode(log.payload.message).decode()
+            self.assertIn("ValueError", decoded)
+            self.assertIn("with traceback", decoded)
+
+
+class TestErrorPaths(_RuntimeTestCase):
+    """Tests for error handling in vc_init.py."""
+
+    async def test_missing_handler_exits(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "missing_export.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ) as proc:
+            msg = await self.n1.wait_for_message(
+                UnrecoverableErrorMessage, timeout=10.0
+            )
+            self.assertEqual(msg.payload.exit_code, 1)
+            self.assertIn("missing variable", msg.payload.message)
+            async with asyncio.timeout(10.0):
+                returncode = await proc.wait()
+            self.assertEqual(returncode, 1)
+
+    async def test_missing_cron_entrypoint_exits(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "missing_export.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={"VERCEL_SERVICE_TYPE": "cron"},
+        ) as proc:
+            async with asyncio.timeout(10.0):
+                returncode = await proc.wait()
+            self.assertEqual(returncode, 1)
+            stderr = await _read_stderr(proc)
+            self.assertIn("Error bootstrapping cron service app:", stderr)
+
+    async def test_bad_handler_subclass_exits(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("bad_handler.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
+        ) as proc:
+            msg = await self.n1.wait_for_message(
+                UnrecoverableErrorMessage, timeout=10.0
+            )
+            self.assertEqual(msg.payload.exit_code, 1)
+            self.assertIn(
+                "Could not determine the application interface",
+                msg.payload.message,
+            )
+            async with asyncio.timeout(10.0):
+                returncode = await proc.wait()
+            self.assertEqual(returncode, 1)
+            stderr = await _read_stderr(proc)
+            self.assertIn(
+                "Could not determine the application interface",
+                stderr,
+            )
+
+    async def test_missing_env_var_exits(self) -> None:
+        env = _base_env()
+        env["VERCEL_IPC_PATH"] = str(self.tmp_path / "n1.sock")
+
+        proc = await asyncio.create_subprocess_exec(
+            sys.executable,
+            str(_VC_INIT),
+            env=env,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        async with asyncio.timeout(10.0):
+            returncode = await proc.wait()
+        self.assertEqual(returncode, 1)
+        stderr = await _read_stderr(proc)
+        self.assertIn("is not set", stderr)
+
+    async def test_import_error_exits(self) -> None:
+        bad_path = self.tmp_path / "nonexistent.py"
+        async with _run_runtime(
+            entrypoint_abs=bad_path,
+            entrypoint_rel="nonexistent.py",
+            module_name="nonexistent",
+            ipc_socket_path=self.n1.socket_path,
+        ) as proc:
+            msg = await self.n1.wait_for_message(
+                UnrecoverableErrorMessage, timeout=10.0
+            )
+            self.assertEqual(msg.payload.exit_code, 1)
+            self.assertIn("could not import", msg.payload.message)
+            self.assertIn("nonexistent.py", msg.payload.message)
+            async with asyncio.timeout(10.0):
+                returncode = await proc.wait()
+            self.assertEqual(returncode, 1)
+            stderr = await _read_stderr(proc)
+            self.assertIn("could not import", stderr)
+
+
+class _LambdaTestCase(unittest.IsolatedAsyncioTestCase):
+    """Base for Lambda handler tests (no N1 mock needed)."""
+
+    tmp_path: pathlib.Path
+    _tmp_dir: tempfile.TemporaryDirectory[str]
+
+    def setUp(self) -> None:
+        self._tmp_dir = tempfile.TemporaryDirectory()
+        self.tmp_path = pathlib.Path(self._tmp_dir.name)
+
+    def tearDown(self) -> None:
+        self._tmp_dir.cleanup()
+
+
+class TestLambdaHTTPHandler(_LambdaTestCase):
+    """Legacy Lambda mode with BaseHTTPRequestHandler."""
+
+    async def test_get_request(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event("GET", "/hello"),
+            variable_name="handler",
+        )
+        self.assertEqual(result["statusCode"], 200)
+        self.assertIn("GET /hello", result["body"])
+
+    async def test_post_with_base64_body(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event(
+                "POST",
+                "/submit",
+                body=base64.b64encode(b"encoded").decode(),
+                encoding="base64",
+            ),
+            variable_name="handler",
+        )
+        self.assertEqual(result["statusCode"], 200)
+        self.assertIn("encoded", result["body"])
+
+    async def test_binary_response_base64_encoded(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "binary_handler.py", self.tmp_path
+        )
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event("GET", "/"),
+            variable_name="handler",
+        )
+        self.assertEqual(result["statusCode"], 200)
+        self.assertEqual(result["encoding"], "base64")
+        data = base64.b64decode(result["body"])
+        self.assertEqual(data, bytes(range(128, 256)))
+
+
+class TestLambdaWSGI(_LambdaTestCase):
+    """Legacy Lambda mode with WSGI app."""
+
+    async def test_get_request(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event("GET", "/hello"),
+        )
+        self.assertEqual(result["statusCode"], 200)
+        body = base64.b64decode(result["body"]).decode()
+        self.assertEqual(body, "GET /hello")
+
+    async def test_query_string(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event("GET", "/search?q=test"),
+        )
+        self.assertEqual(result["statusCode"], 200)
+        body = base64.b64decode(result["body"]).decode()
+        self.assertEqual(body, "GET /search?q=test")
+
+    async def test_post_with_base64_body(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event(
+                "POST",
+                "/data",
+                body=base64.b64encode(b"bin").decode(),
+                encoding="base64",
+            ),
+        )
+        self.assertEqual(result["statusCode"], 200)
+
+
+class TestLambdaASGI(_LambdaTestCase):
+    """Legacy Lambda mode with ASGI app."""
+
+    async def test_get_request(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event("GET", "/hello"),
+        )
+        self.assertEqual(result["statusCode"], 200)
+        body = base64.b64decode(result["body"]).decode()
+        self.assertEqual(body, "GET /hello")
+
+    async def test_base64_body(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event(
+                "POST",
+                "/data",
+                body=base64.b64encode(b"bin").decode(),
+                encoding="base64",
+            ),
+        )
+        self.assertEqual(result["statusCode"], 200)
+
+    async def test_repeated_headers(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_repeated_headers.py",
+            self.tmp_path,
+        )
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event(
+                "GET",
+                "/headers",
+                headers={
+                    "accept": ["text/html", "application/json"],
+                },
+            ),
+        )
+        self.assertEqual(result["statusCode"], 200)
+        body = base64.b64decode(result["body"]).decode()
+        self.assertEqual(body, "text/html,application/json")
+
+
+class TestLambdaASGILifespan(_LambdaTestCase):
+    """Lambda mode with ASGI lifespan protocol."""
+
+    async def test_lifespan_startup_runs_before_request(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_lifespan_app.py", self.tmp_path
+        )
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event("GET", "/"),
+        )
+        # The app returns 200 only if lifespan startup ran.
+        self.assertEqual(result["statusCode"], 200)
+        body = base64.b64decode(result["body"]).decode()
+        self.assertEqual(body, "started")
+
+
+class TestLambdaErrorPaths(_LambdaTestCase):
+    """Legacy Lambda mode error paths."""
+
+    async def test_missing_handler_exits(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "missing_export.py", self.tmp_path
+        )
+        with self.assertRaises(RuntimeError):
+            await _invoke_lambda(
+                entrypoint_abs=ep_abs,
+                entrypoint_rel=ep_rel,
+                module_name=mod,
+                event=_lambda_event("GET", "/"),
+            )
+
+    async def test_bad_handler_exits(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("bad_handler.py", self.tmp_path)
+        with self.assertRaises(RuntimeError):
+            await _invoke_lambda(
+                entrypoint_abs=ep_abs,
+                entrypoint_rel=ep_rel,
+                module_name=mod,
+                event=_lambda_event("GET", "/"),
+                variable_name="handler",
+            )
+
+    async def test_asgi_bad_start_message(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_bad_start.py", self.tmp_path
+        )
+        with self.assertRaises(RuntimeError):
+            await _invoke_lambda(
+                entrypoint_abs=ep_abs,
+                entrypoint_rel=ep_rel,
+                module_name=mod,
+                event=_lambda_event("GET", "/"),
+            )
+
+    async def test_asgi_bad_body_message(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_bad_body.py", self.tmp_path
+        )
+        with self.assertRaises(RuntimeError):
+            await _invoke_lambda(
+                entrypoint_abs=ep_abs,
+                entrypoint_rel=ep_rel,
+                module_name=mod,
+                event=_lambda_event("GET", "/"),
+            )
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

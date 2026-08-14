@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { yesOption } from '../../util/arg-common';
+import { projectOption, yesOption } from '../../util/arg-common';
 
 export const listSubcommand = {
   name: 'list',
@@ -8,6 +8,7 @@ export const listSubcommand = {
     'List all redirects for the current project. These redirects apply to all deployments and environments. There may also be redirects defined in a deployment that are not listed here.',
   arguments: [],
   options: [
+    projectOption,
     {
       name: 'search',
       description: 'Search for redirects by source or destination',
@@ -73,7 +74,7 @@ export const listVersionsSubcommand = {
   aliases: ['ls-versions'],
   description: 'List all versions of redirects',
   arguments: [],
-  options: [],
+  options: [projectOption],
   examples: [
     {
       name: 'List all redirect versions',
@@ -97,6 +98,7 @@ export const addSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'status',
       description: 'HTTP status code (301, 302, 307, or 308)',
@@ -163,6 +165,7 @@ export const uploadSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip confirmation prompt',
@@ -206,6 +209,7 @@ export const removeSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when removing a redirect',
@@ -230,6 +234,7 @@ export const promoteSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when promoting',
@@ -254,6 +259,7 @@ export const restoreSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when restoring',

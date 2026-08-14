@@ -1,6 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import env from '../../../../src/commands/env';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
@@ -49,6 +52,79 @@ describe('env rm', () => {
           value: `${command}:${subcommand}`,
         },
       ]);
+    });
+  });
+
+  it('removes a variable from the project selected by --project', async () => {
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject(
+      {
+        ...defaultProject,
+        id: 'explicit-env-rm',
+        name: 'explicit-env-rm',
+        accountId: 'team_dummy',
+      },
+      [
+        {
+          type: 'encrypted',
+          id: 'explicit-env',
+          key: 'ENVIRONMENT_NAME',
+          value: 'value',
+          target: ['development'],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+      ]
+    );
+    client.setArgv(
+      'env',
+      'rm',
+      'ENVIRONMENT_NAME',
+      'development',
+      '--yes',
+      '--project',
+      'explicit-env-rm'
+    );
+
+    await expect(env(client)).resolves.toEqual(0);
+  });
+
+  describe('non-interactive', () => {
+    it('outputs action_required with missing_name when name not provided', async () => {
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('exit');
+      });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      client.nonInteractive = true;
+      client.setArgv(
+        'env',
+        'rm',
+        '--non-interactive',
+        '--cwd=../../../test-custom-deployment-id'
+      );
+      const exitCodePromise = env(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload).toMatchObject({
+        status: 'action_required',
+        reason: 'missing_name',
+        message: expect.stringMatching(/name|Example/),
+        next: expect.any(Array),
+      });
+      expect(payload.next[0].command).toMatch(/env rm/);
+      expect(payload.next[0].command).toContain('--yes');
+      expect(payload.next[0].command).toContain('--non-interactive');
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
     });
   });
 

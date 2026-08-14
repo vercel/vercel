@@ -14,7 +14,7 @@ export async function getCustomCertsForDomain(
 ) {
   try {
     const { certs } = await client.fetch<Response>(
-      `/v5/now/certs?${stringify({ domain, custom: true })}`
+      `/v5/certs?${stringify({ domain, custom: true })}`
     );
     return certs;
   } catch (err: unknown) {

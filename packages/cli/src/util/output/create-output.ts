@@ -111,7 +111,7 @@ export class Output {
 
     this.print(
       chalk.yellow(
-        chalk.bold('WARN! ') +
+        chalk.bold('WARNING! ') +
           str +
           (details ? `\n${action}: ${renderLink(details)}` : '')
       )

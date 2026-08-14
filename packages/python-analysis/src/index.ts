@@ -8,12 +8,48 @@
  */
 
 // =============================================================================
+// AST Analysis (WASM-based Python parser using ruff_python_ast)
+// =============================================================================
+
+export {
+  findAppOrHandler,
+  containsTopLevelCallable,
+  getStringConstant,
+} from './semantic/entrypoints';
+
+// =============================================================================
+// Static import-graph analysis (WASM-based extraction + module resolution)
+// =============================================================================
+
+export { collectImportClosure, extractImports } from './semantic/import-graph';
+
+export type {
+  ImportClosureOptions,
+  ImportClosureResult,
+  ImportStmt,
+} from './semantic/import-graph';
+
+// =============================================================================
+// Installed package analysis (WASM-based .dist-info parsing)
+// =============================================================================
+
+export type {
+  Distribution,
+  DistributionIndex,
+  PackagePath,
+  DirectUrlInfo,
+} from './manifest/dist-metadata';
+
+export { extendDistRecord, scanDistributions } from './manifest/dist-metadata';
+
+// =============================================================================
 // Package discovery (runtime + types)
 // =============================================================================
 
 export type {
   PythonConfig,
   PythonConfigs,
+  PythonLockFile,
   PythonManifest,
   PythonManifestOrigin,
   PythonPackage,
@@ -23,16 +59,56 @@ export type {
 export {
   discoverPythonPackage,
   PythonConfigKind,
+  PythonLockFileKind,
   PythonManifestConvertedKind,
   PythonManifestKind,
 } from './manifest/package';
 
 // =============================================================================
+// Manifest serialization utilities
+// =============================================================================
+
+export {
+  createMinimalManifest,
+  stringifyManifest,
+  type CreateMinimalManifestOptions,
+} from './manifest/serialize';
+
+// =============================================================================
+// uv.lock parsing and package classification
+// =============================================================================
+
+export type {
+  ClassifyPackagesOptions,
+  PackageClassification,
+  UvLockFile,
+  UvLockPackage,
+  UvLockPackageSource,
+  UvLockWheel,
+} from './manifest/uv-lock-parser';
+
+export {
+  classifyPackages,
+  isPrivatePackageSource,
+  normalizePackageName,
+  parseUvLock,
+} from './manifest/uv-lock-parser';
+
+// =============================================================================
+// Wheel compatibility checking
+// =============================================================================
+
+export { evaluateMarker, isWheelCompatible } from './manifest/wheel-compat';
+
+// =============================================================================
 // Python selection (runtime + types)
 // =============================================================================
 
-export type { PythonSelectionResult } from './manifest/python-selector';
-export { selectPython } from './manifest/python-selector';
+export type {
+  PythonSelectionResult,
+  PythonVersionSelectionResult,
+} from './manifest/python-selector';
+export { selectPython, selectPythonVersion } from './manifest/python-selector';
 
 // =============================================================================
 // Errors
@@ -56,10 +132,15 @@ export {
   PyProjectTomlSchema,
   ReadmeObjectSchema,
   ReadmeSchema,
+  PyProjectToolVercelFastapiSectionSchema,
+  PyProjectToolVercelFastapiStaticSectionSchema,
+  PyProjectToolVercelSectionSchema,
 } from './manifest/pyproject/schema';
 
 // PyProject types (from source of truth)
 export type {
+  DependencyGroupEntry,
+  DependencyGroupInclude,
   License,
   LicenseObject,
   Person,
@@ -70,6 +151,9 @@ export type {
   PyProjectToolSection,
   Readme,
   ReadmeObject,
+  PyProjectToolVercelFastapiSection,
+  PyProjectToolVercelFastapiStaticSection,
+  PyProjectToolVercelSection,
 } from './manifest/pyproject/types';
 
 // UV config schemas
@@ -119,6 +203,9 @@ export type {
   HashDigest,
   NormalizedRequirement,
 } from './manifest/requirement/types';
+
+// PEP 508 parsing and formatting
+export { parsePep508 } from './manifest/pep508';
 
 // =============================================================================
 // Python specifier types (no schemas - internal types)

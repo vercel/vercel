@@ -1,0 +1,15 @@
+{
+  "probes": [
+    {
+      "logMustContain": "optimizing dependencies"
+    },
+    {
+      "path": "/",
+      "mustContain": "\"all_dependencies_ok\":true"
+    },
+    {
+      "path": "/",
+      "mustContain": "\"my_private_pkg\""
+    }
+  ]
+}

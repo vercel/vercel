@@ -7,6 +7,26 @@ export default defineConfig([
   },
   // Introspection loaders
   {
+    entry: 'src/rolldown/index.ts',
+    outDir: 'dist/rolldown',
+    format: 'esm',
+  },
+  {
+    entry: 'src/rolldown/esm.ts',
+    outDir: 'dist/rolldown',
+    format: 'esm',
+  },
+  {
+    entry: 'src/rolldown/hooks.ts',
+    outDir: 'dist/rolldown',
+    format: 'esm',
+  },
+  {
+    entry: 'src/rolldown/cjs-hooks.ts',
+    outDir: 'dist/rolldown',
+    format: 'cjs',
+  },
+  {
     entry: 'src/introspection/loaders/cjs.ts',
     outDir: 'dist/introspection/loaders',
     format: 'cjs',
@@ -40,6 +60,12 @@ export default defineConfig([
   {
     entry: 'src/introspection/hono.ts',
     outDir: 'dist/introspection',
+    format: 'esm',
+  },
+  // Dev-mode HTTP host spawned by startDevServer.
+  {
+    entry: 'src/dev/cron-host.ts',
+    outDir: 'dist/dev',
     format: 'esm',
   },
 ]);

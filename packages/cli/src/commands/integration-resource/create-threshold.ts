@@ -18,7 +18,7 @@ import type {
 } from '../../util/integration/types';
 import type { Resource } from '../../util/integration-resource/types';
 
-export async function createThreshold(client: Client) {
+export async function createThreshold(client: Client, argv: string[]) {
   const telemetry = new IntegrationResourceCreateThresholdTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -31,7 +31,7 @@ export async function createThreshold(client: Client) {
   );
 
   try {
-    parsedArguments = parseArguments(client.argv.slice(3), flagsSpecification);
+    parsedArguments = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
     return 1;
@@ -58,10 +58,11 @@ export async function createThreshold(client: Client) {
     output.error('Team not found.');
     return 1;
   }
+  client.config.currentTeam = team.id;
 
   // Fetch Resource
   output.spinner('Retrieving resource…', 500);
-  const resources = await getResources(client, team.id);
+  const resources = await getResources(client);
   const targetedResource = resources.find(
     resource => resource.name === resourceName
   );
@@ -69,8 +70,8 @@ export async function createThreshold(client: Client) {
 
   // Assert resource is valid
   if (!targetedResource) {
-    output.log(`The resource ${chalk.bold(resourceName)} was not found.`);
-    return 0;
+    output.error(`The resource ${chalk.bold(resourceName)} was not found.`);
+    return 1;
   }
 
   if (!targetedResource.product?.integrationConfigurationId) {
@@ -112,8 +113,7 @@ export async function createThreshold(client: Client) {
   // Fetch prepayment info
   const prepaymentInfo = await getBalanceInformation(
     client,
-    targetedResource.product.integrationConfigurationId,
-    team
+    targetedResource.product.integrationConfigurationId
   );
   if (prepaymentInfo === undefined) {
     return 1;
@@ -150,14 +150,14 @@ function parseCreateThresholdArguments(
   passedArgs: string[],
   telemetry: IntegrationResourceCreateThresholdTelemetryClient
 ) {
-  if (passedArgs.length < 5) {
+  if (passedArgs.length < 4) {
     throw new Error('Missing arguments. See `--help` for details.');
   }
-  if (passedArgs.length > 5) {
+  if (passedArgs.length > 4) {
     throw new Error('Too many arguments. See `--help` for details.');
   }
 
-  const args = passedArgs.slice(1, 5);
+  const args = passedArgs.slice(0, 4);
 
   telemetry.trackCliArgumentResource(args[0]);
   telemetry.trackCliArgumentMinimum(args[1]);
@@ -165,12 +165,12 @@ function parseCreateThresholdArguments(
   telemetry.trackCliArgumentLimit(args[3]);
 
   const resourceName = args[0];
-  const minimum = Number.parseFloat(args[1]) * 100;
-  const spend = Number.parseInt(args[2]) * 100;
-  const limit = Number.parseInt(args[3]) * 100;
+  const minimum = Math.round(Number.parseFloat(args[1]) * 100);
+  const spend = Math.round(Number.parseFloat(args[2]) * 100);
+  const limit = Math.round(Number.parseFloat(args[3]) * 100);
   if (isNaN(minimum)) {
     throw new Error(
-      'Minimum is an invalid number format. Spend must be a positive number (ex. "5.75")'
+      'Minimum is an invalid number format. Minimum must be a positive number (ex. "5.75")'
     );
   }
   if (isNaN(spend)) {
@@ -287,6 +287,13 @@ async function handleUpdateThreshold(props: {
       `The resource ${chalk.bold(props.resource.name)} does not have an integration configuration.`
     );
     return 0;
+  }
+
+  if (!props.skipConfirmWithYes && !props.client.stdin.isTTY) {
+    output.error(
+      'Confirmation required. Use `--yes` to skip the confirmation prompt.'
+    );
+    return 1;
   }
 
   const entityTextReference = props.isInstallationLevel

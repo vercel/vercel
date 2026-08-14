@@ -1,0 +1,14 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "version:go1.21"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "<strong>hello</strong>"
+    }
+  ]
+}

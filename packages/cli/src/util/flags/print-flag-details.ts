@@ -1,0 +1,221 @@
+import chalk from 'chalk';
+import output from '../../output-manager';
+import formatDate from '../format-date';
+import { getFlagDashboardUrl } from './dashboard-url';
+import {
+  formatFlagCondition,
+  resolveTargetingLabel,
+} from './format-flag-details';
+import {
+  formatFlagOutcome,
+  formatFlagSplitWeights,
+  formatFlagVariantSummary,
+} from './format-flag-outcome';
+import { formatVariantListSummary } from './resolve-variant';
+import type { Flag, FlagEnvironmentConfig, FlagSettings } from './types';
+
+interface PrintFlagDetailsOptions {
+  flag: Flag;
+  settings?: FlagSettings;
+  projectSlugLink: string;
+  orgSlug: string;
+  projectName: string;
+  showTimestamps?: boolean;
+}
+
+export function printFlagDetails({
+  flag,
+  settings,
+  projectSlugLink,
+  orgSlug,
+  projectName,
+  showTimestamps = true,
+}: PrintFlagDetailsOptions) {
+  const dashboardUrl = getFlagDashboardUrl(orgSlug, projectName, flag.slug);
+
+  output.log(
+    `\nFeature flag ${chalk.bold(flag.slug)} for ${projectSlugLink}\n`
+  );
+  output.print(`  ${chalk.cyan(dashboardUrl)}\n\n`);
+
+  output.print(`  ${chalk.dim('ID:')}           ${flag.id}\n`);
+  output.print(`  ${chalk.dim('Kind:')}         ${flag.kind}\n`);
+  output.print(
+    `  ${chalk.dim('State:')}        ${flag.state === 'active' ? chalk.green(flag.state) : chalk.gray(flag.state)}\n`
+  );
+
+  if (flag.description) {
+    output.print(`  ${chalk.dim('Description:')}  ${flag.description}\n`);
+  }
+
+  if (showTimestamps) {
+    output.print(
+      `  ${chalk.dim('Created:')}      ${formatDate(flag.createdAt)}\n`
+    );
+    output.print(
+      `  ${chalk.dim('Updated:')}      ${formatDate(flag.updatedAt)}\n`
+    );
+  }
+
+  output.print(`\n  ${chalk.dim('Variants:')}\n`);
+  for (const [index, variant] of flag.variants.entries()) {
+    output.print(`    ${formatVariantListSummary(variant)}\n`);
+    output.print(`      ${chalk.dim(`id: ${variant.id}`)}\n`);
+    if (index < flag.variants.length - 1) {
+      output.print('\n');
+    }
+  }
+
+  printFlagEnvironmentDetails(flag, settings);
+}
+
+export function printFlagEnvironmentDetails(
+  flag: Flag,
+  settings?: FlagSettings,
+  environments?: string[]
+) {
+  const sortedEnvs = getSortedEnvironmentEntries(flag, environments);
+
+  output.print(`\n  ${chalk.dim('Environments:')}\n`);
+  for (const [envName, envConfig] of sortedEnvs) {
+    if (envConfig.reuse?.active) {
+      output.print(
+        `    ${chalk.bold(envName)}: reuses ${chalk.cyan(envConfig.reuse.environment)} environment\n`
+      );
+      continue;
+    }
+
+    if (envConfig.active) {
+      const hasCustomConfiguration = hasCustomConfigurationEnabled(envConfig);
+      const envSummary = hasCustomConfiguration
+        ? 'custom'
+        : formatFlagOutcome(envConfig.fallthrough, flag.variants);
+
+      output.print(`    ${chalk.bold(envName)}: ${envSummary}\n`);
+
+      if (envConfig.targets && Object.keys(envConfig.targets).length > 0) {
+        output.print(`      ${chalk.dim('Targeting:')}\n`);
+        for (const [variantId, entityKinds] of Object.entries(
+          envConfig.targets
+        )) {
+          const variant = flag.variants.find(v => v.id === variantId);
+          const variantSummary = formatFlagVariantSummary(variant, variantId);
+          for (const [entityKind, attributes] of Object.entries(entityKinds)) {
+            for (const [attribute, values] of Object.entries(attributes)) {
+              const valueList = values
+                .map(v => {
+                  const label = resolveTargetingLabel(
+                    settings,
+                    entityKind,
+                    attribute,
+                    v.value
+                  );
+                  return label ? `${v.value} ${chalk.gray(label)}` : v.value;
+                })
+                .join(', ');
+              output.print(
+                `        ${chalk.dim(`${entityKind}.${attribute}:`)} ${valueList} ${chalk.dim('→')} ${variantSummary}\n`
+              );
+            }
+          }
+        }
+      }
+
+      if (envConfig.rules && envConfig.rules.length > 0) {
+        output.print(`      ${chalk.dim('Rules:')}\n`);
+        for (const rule of envConfig.rules) {
+          const outcome = formatFlagOutcome(rule.outcome, flag.variants);
+          output.print(`        ${chalk.dim('→')} ${outcome}\n`);
+          for (const condition of rule.conditions) {
+            const { text, listItems } = formatFlagCondition(
+              condition,
+              settings
+            );
+            output.print(`          ${chalk.dim('if')} ${text}\n`);
+            if (listItems && listItems.length > 0) {
+              for (const item of listItems) {
+                output.print(`             ${chalk.dim('-')} ${item}\n`);
+              }
+            }
+          }
+        }
+      }
+
+      if (hasCustomConfiguration && envConfig.fallthrough) {
+        const fallthrough = envConfig.fallthrough;
+        if (fallthrough.type === 'variant') {
+          const defaultVariant = flag.variants.find(
+            v => v.id === fallthrough.variantId
+          );
+          const defaultSummary = formatFlagVariantSummary(
+            defaultVariant,
+            fallthrough.variantId
+          );
+          output.print(`      ${chalk.dim('Default:')} ${defaultSummary}\n`);
+        } else if (fallthrough.type === 'split') {
+          const weights = formatFlagSplitWeights(
+            fallthrough.weights,
+            flag.variants
+          );
+          output.print(`      ${chalk.dim('Default split:')} ${weights}\n`);
+        } else if (fallthrough.type === 'rollout') {
+          output.print(
+            `      ${chalk.dim('Rollout:')} ${formatFlagOutcome(
+              fallthrough,
+              flag.variants
+            )}\n`
+          );
+        }
+      }
+    } else {
+      const pausedVariant = flag.variants.find(
+        v => v.id === envConfig.pausedOutcome?.variantId
+      );
+      const pausedSummary = formatFlagVariantSummary(
+        pausedVariant,
+        envConfig.pausedOutcome?.variantId || 'paused'
+      );
+      output.print(`    ${chalk.bold(envName)}: ${pausedSummary}\n`);
+    }
+  }
+
+  output.print('\n');
+}
+
+function getSortedEnvironmentEntries(
+  flag: Flag,
+  environments?: string[]
+): [string, FlagEnvironmentConfig][] {
+  const envOrder = ['production', 'preview', 'development'];
+  const selectedEnvironments = environments ? new Set(environments) : undefined;
+
+  return Object.entries(flag.environments)
+    .filter(([envName]) =>
+      selectedEnvironments ? selectedEnvironments.has(envName) : true
+    )
+    .sort(([a], [b]) => {
+      const aIndex = envOrder.indexOf(a);
+      const bIndex = envOrder.indexOf(b);
+
+      if (aIndex === -1 && bIndex === -1) {
+        return a.localeCompare(b);
+      }
+      if (aIndex === -1) {
+        return 1;
+      }
+      if (bIndex === -1) {
+        return -1;
+      }
+      return aIndex - bIndex;
+    });
+}
+function hasCustomConfigurationEnabled(
+  envConfig: FlagEnvironmentConfig
+): boolean {
+  return (
+    Boolean(envConfig.targets && Object.keys(envConfig.targets).length > 0) ||
+    envConfig.rules.length > 0 ||
+    envConfig.fallthrough.type === 'split' ||
+    envConfig.fallthrough.type === 'rollout'
+  );
+}

@@ -6,6 +6,12 @@ export class ListTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof listCommand>
 {
+  trackCliFlagAll(all: boolean | undefined) {
+    if (all) {
+      this.trackCliFlag('all');
+    }
+  }
+
   trackCliOptionMeta(meta: string[] | undefined) {
     if (meta && meta.length > 0) {
       this.trackCliOption({
@@ -37,6 +43,15 @@ export class ListTelemetryClient
     if (next) {
       this.trackCliOption({
         option: 'next',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionLimit(limit: number | undefined) {
+    if (limit) {
+      this.trackCliOption({
+        option: 'limit',
         value: this.redactedValue,
       });
     }
@@ -75,6 +90,12 @@ export class ListTelemetryClient
         arg: 'app',
         value: this.redactedValue,
       });
+    }
+  }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
     }
   }
 }

@@ -13,6 +13,7 @@ export interface Resource {
   };
   projectsMetadata?: ResourceConnection[];
   billingPlan?: BillingPlan;
+  ownership?: 'sandbox' | 'owned' | 'linked';
 }
 
 export interface ResourceConnection {

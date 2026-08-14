@@ -4,7 +4,7 @@
     "moduleResolution": "NodeNext",
     "target": "ES2022",
     "outDir": "./dist",
-    "types": ["node", "jest"]
+    "types": ["node", "vitest/globals"]
   },
   "extends": "../../tsconfig.base.json",
   "include": ["src/**/*"],

@@ -32,5 +32,10 @@
       "status": 200,
       "mustContain": "[...slug] page"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

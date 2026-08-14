@@ -40,10 +40,17 @@ async function createEventHandler(
   const runtime = staticConfig?.runtime;
   validateConfiguredRuntime(runtime, entrypoint);
 
-  const { maxDuration } = await getLambdaOptionsFromFunction({
-    sourceFile: entrypoint,
-    config,
-  });
+  const { maxDuration: configMaxDuration } = await getLambdaOptionsFromFunction(
+    {
+      sourceFile: entrypoint,
+      config,
+    }
+  );
+
+  // In the dev server, 'max' can't be resolved to the plan's actual limit,
+  // so fall back to undefined to let the downstream default (WAIT_UNTIL_TIMEOUT) apply.
+  const maxDuration =
+    typeof configMaxDuration === 'number' ? configMaxDuration : undefined;
 
   const isMiddleware = config.middleware === true;
 
@@ -104,7 +111,8 @@ async function main() {
   );
 
   const proxyServer = createServer(onDevRequest);
-  await listen(proxyServer, { host: '127.0.0.1', port: 0 });
+  const requestedPort = Number(process.env.VERCEL_DEV_PORT) || 0;
+  await listen(proxyServer, { host: '127.0.0.1', port: requestedPort });
 
   try {
     const result = await createEventHandler(entrypoint!, config, {

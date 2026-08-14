@@ -30,7 +30,7 @@ export async function readPackageJson(entryPath: string): Promise<PackageJson> {
 
   try {
     return JSON.parse(await fs.readFile(packagePath, 'utf8'));
-  } catch (err) {
+  } catch (_err) {
     return {};
   }
 }

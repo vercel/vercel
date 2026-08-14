@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { spawn } from 'child_process';
 import type Client from '../../util/client';
 import { httpstatCommand } from './command';
@@ -25,6 +24,7 @@ export default async function httpstat(client: Client): Promise<number> {
   const result = await getDeploymentUrlAndToken(client, 'httpstat', path, {
     deploymentFlag,
     protectionBypassFlag,
+    autoConfirm: setup.yes,
   });
 
   if (typeof result === 'number') {

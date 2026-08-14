@@ -1,0 +1,161 @@
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import flags from '../../../../src/commands/flags';
+import * as ls from '../../../../src/commands/flags/ls';
+import * as openFlag from '../../../../src/commands/flags/open';
+import * as evaluationsFlag from '../../../../src/commands/flags/evaluations';
+import * as rolloutFlag from '../../../../src/commands/flags/rollout';
+import * as segmentsFlag from '../../../../src/commands/flags/segments';
+import * as splitFlag from '../../../../src/commands/flags/split';
+import * as updateFlag from '../../../../src/commands/flags/update';
+import * as versionsFlag from '../../../../src/commands/flags/versions';
+import * as unarchiveFlag from '../../../../src/commands/flags/unarchive';
+import { client } from '../../../mocks/client';
+
+describe('flags', () => {
+  const lsSpy = vi.spyOn(ls, 'default').mockResolvedValue(0);
+  const openSpy = vi.spyOn(openFlag, 'default').mockResolvedValue(0);
+  const evaluationsSpy = vi
+    .spyOn(evaluationsFlag, 'default')
+    .mockResolvedValue(0);
+  const rolloutSpy = vi.spyOn(rolloutFlag, 'default').mockResolvedValue(0);
+  const segmentsSpy = vi.spyOn(segmentsFlag, 'segments').mockResolvedValue(0);
+  const splitSpy = vi.spyOn(splitFlag, 'default').mockResolvedValue(0);
+  const updateSpy = vi.spyOn(updateFlag, 'default').mockResolvedValue(0);
+  const versionsSpy = vi.spyOn(versionsFlag, 'default').mockResolvedValue(0);
+  const unarchiveSpy = vi.spyOn(unarchiveFlag, 'default').mockResolvedValue(0);
+
+  afterEach(() => {
+    lsSpy.mockClear();
+    openSpy.mockClear();
+    evaluationsSpy.mockClear();
+    rolloutSpy.mockClear();
+    segmentsSpy.mockClear();
+    splitSpy.mockClear();
+    updateSpy.mockClear();
+    versionsSpy.mockClear();
+    unarchiveSpy.mockClear();
+  });
+
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'flags';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = flags(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
+  it('routes to ls subcommand', async () => {
+    const args: string[] = [];
+
+    client.setArgv('flags', ...args);
+    await flags(client);
+    expect(lsSpy).toHaveBeenCalledWith(client, args);
+  });
+
+  describe('unrecognized subcommand', () => {
+    it('routes to ls', async () => {
+      const args: string[] = ['not-a-command'];
+
+      client.setArgv('flags', ...args);
+      await flags(client);
+      expect(lsSpy).toHaveBeenCalledWith(client, args);
+    });
+  });
+
+  it('routes to open subcommand', async () => {
+    const args: string[] = ['my-feature'];
+
+    client.setArgv('flags', 'open', ...args);
+    await flags(client);
+    expect(openSpy).toHaveBeenCalledWith(client, args);
+  });
+
+  it('routes to evaluations subcommand', async () => {
+    const args: string[] = ['my-feature', '--since', '1h'];
+
+    client.setArgv('flags', 'evaluations', ...args);
+    await flags(client);
+    expect(evaluationsSpy).toHaveBeenCalledWith(client, args);
+  });
+
+  it('routes to update subcommand', async () => {
+    const args: string[] = [
+      'my-feature',
+      '--variant',
+      'control',
+      '--value',
+      'welcome',
+    ];
+
+    client.setArgv('flags', 'update', ...args);
+    await flags(client);
+    expect(updateSpy).toHaveBeenCalledWith(client, args);
+  });
+
+  it('routes to versions subcommand', async () => {
+    const args: string[] = ['my-feature', '--limit', '10'];
+
+    client.setArgv('flags', 'versions', ...args);
+    await flags(client);
+    expect(versionsSpy).toHaveBeenCalledWith(client, args);
+  });
+
+  it('routes to rollout subcommand', async () => {
+    const args: string[] = [
+      'my-feature',
+      '--environment',
+      'production',
+      '--by',
+      'user.userId',
+      '--stage',
+      '5,6h',
+    ];
+
+    client.setArgv('flags', 'rollout', ...args);
+    await flags(client);
+    expect(rolloutSpy).toHaveBeenCalledWith(client, args);
+  });
+
+  it('routes to split subcommand', async () => {
+    const args: string[] = [
+      'my-feature',
+      '--environment',
+      'production',
+      '--by',
+      'user.userId',
+      '--weight',
+      'off=95',
+      '--weight',
+      'on=5',
+    ];
+
+    client.setArgv('flags', 'split', ...args);
+    await flags(client);
+    expect(splitSpy).toHaveBeenCalledWith(client, args);
+  });
+
+  it('routes to segments subcommand', async () => {
+    const args: string[] = ['ls'];
+
+    client.setArgv('flags', 'segments', ...args);
+    await flags(client);
+    expect(segmentsSpy).toHaveBeenCalledWith(client);
+  });
+
+  it('routes to unarchive subcommand', async () => {
+    const args: string[] = ['my-feature', '--yes'];
+
+    client.setArgv('flags', 'unarchive', ...args);
+    await flags(client);
+    expect(unarchiveSpy).toHaveBeenCalledWith(client, args);
+  });
+});

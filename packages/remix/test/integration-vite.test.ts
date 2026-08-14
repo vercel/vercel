@@ -16,13 +16,11 @@ const skipped: string[] = [
   // PLACE TEST FIXTURE NAMES HERE TO SKIP THEM
 ];
 
-// eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
   if (skipped.includes(fixture)) {
     // this is currently failing due to the remix artifact being pruned
     continue;
   }
-  // eslint-disable-next-line no-loop-func
   it(`should build ${fixture}`, async () => {
     await expect(
       testDeployment(join(fixturesPath, fixture))

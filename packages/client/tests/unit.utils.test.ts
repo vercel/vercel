@@ -1,7 +1,12 @@
 import { join, resolve } from 'path';
 import fs from 'fs-extra';
-import { buildFileTree } from '../src/utils';
-import { describe, expect, it } from 'vitest';
+import {
+  buildFileTree,
+  prepareFiles,
+  shouldInlineStaticFiles,
+} from '../src/utils';
+import type { FilesMap } from '../src/utils/hashes';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const fixture = (name: string) => resolve(__dirname, 'fixtures', name);
 const noop = () => {};
@@ -15,6 +20,55 @@ const normalizeWindowsPaths = (files: string[]) => {
 
 const toAbsolutePaths = (cwd: string, files: string[]) =>
   files.map(p => join(cwd, p));
+
+describe('instant static file preparation', () => {
+  const createFiles = (mode: number): FilesMap => {
+    const data = Buffer.from('<html></html>');
+    return new Map([
+      [
+        'abc123',
+        {
+          names: ['/project/index.html'],
+          data,
+          mode,
+          size: data.byteLength,
+        },
+      ],
+    ]);
+  };
+
+  it('inlines regular static files and preserves their mode', () => {
+    const files = createFiles(0o100644);
+
+    expect(shouldInlineStaticFiles(files)).toBe(true);
+    expect(
+      prepareFiles(files, { isDirectory: true, path: '/project' })
+    ).toEqual([
+      {
+        file: 'index.html',
+        data: Buffer.from('<html></html>').toString('base64'),
+        encoding: 'base64',
+        mode: 0o100644,
+      },
+    ]);
+  });
+
+  it('keeps symlinks on the SHA upload path', () => {
+    const files = createFiles(0o120777);
+
+    expect(shouldInlineStaticFiles(files)).toBe(false);
+    expect(
+      prepareFiles(files, { isDirectory: true, path: '/project' })
+    ).toEqual([
+      {
+        file: 'index.html',
+        sha: 'abc123',
+        size: Buffer.byteLength('<html></html>'),
+        mode: 0o120777,
+      },
+    ]);
+  });
+});
 
 describe('buildFileTree()', () => {
   it('should exclude files using `.nowignore` blocklist', async () => {
@@ -146,6 +200,52 @@ describe('buildFileTree()', () => {
     );
   });
 
+  it('should not re-add `.vercelignore`d files through `filePathMap` when prebuilt=true', async () => {
+    const cwd = fixture('prebuilt-filepathmap-ignore');
+    const { fileList } = await buildFileTree(
+      cwd,
+      {
+        isDirectory: true,
+        prebuilt: true,
+        vercelOutputDir: join(cwd, '.vercel/output'),
+      },
+      noop
+    );
+
+    // `safe-handler.js` is not ignored and must still be included
+    expect(normalizeWindowsPaths(fileList)).toContain(
+      normalizeWindowsPaths([join(cwd, 'safe-handler.js')])[0]
+    );
+    expect(normalizeWindowsPaths(fileList)).toContain(
+      normalizeWindowsPaths([
+        join(cwd, '.vercel/output/functions/api/example.func/.vc-config.json'),
+      ])[0]
+    );
+
+    // `.env` is excluded by `.vercelignore` and must not be re-added
+    // through `filePathMap`
+    expect(normalizeWindowsPaths(fileList)).not.toContain(
+      normalizeWindowsPaths([join(cwd, '.env')])[0]
+    );
+  });
+
+  it('should reject `filePathMap` entries that escape the deployment root when prebuilt=true', async () => {
+    const cwd = fixture('prebuilt-filepathmap-ignore');
+    const { fileList } = await buildFileTree(
+      cwd,
+      {
+        isDirectory: true,
+        prebuilt: true,
+        vercelOutputDir: join(cwd, '.vercel/output'),
+      },
+      noop
+    );
+
+    expect(
+      normalizeWindowsPaths(fileList).some(f => f.endsWith('outside.txt'))
+    ).toBe(false);
+  });
+
   it('monorepo - should find root files but ignore `.vercel/output` files when prebuilt=false', async () => {
     const cwd = fixture('monorepo-boa');
     const { fileList, ignoreList } = await buildFileTree(
@@ -267,5 +367,84 @@ describe('buildFileTree()', () => {
     expect(normalizeWindowsPaths(fileList)).toContain(
       normalizeWindowsPaths(bulkRedirectsFile)[0]
     );
+  });
+
+  it('should include all files from bulkRedirectsPath directory when prebuilt=true', async () => {
+    const cwd = fixture('bulk-redirects-dir');
+    const { fileList } = await buildFileTree(
+      cwd,
+      {
+        isDirectory: true,
+        prebuilt: true,
+        vercelOutputDir: join(cwd, '.vercel/output'),
+        bulkRedirectsPath: 'redirects',
+      },
+      noop
+    );
+
+    const expectedFiles = toAbsolutePaths(cwd, [
+      'redirects/redirects1.json',
+      'redirects/redirects2.json',
+    ]);
+    const normalizedFileList = normalizeWindowsPaths(fileList);
+    for (const expectedFile of normalizeWindowsPaths(expectedFiles)) {
+      expect(normalizedFileList).toContain(expectedFile);
+    }
+  });
+
+  describe('Rust `target/` directory', () => {
+    // The `target/` directory is `.gitignore`d repo-wide, so it can't be
+    // committed as a fixture. Create it at runtime instead.
+    const rustFixtures = ['rust-target', 'rust-target-with-ignore'];
+
+    beforeEach(async () => {
+      for (const name of rustFixtures) {
+        const cwd = fixture(name);
+        await fs.mkdirp(join(cwd, 'target', 'debug'));
+        await fs.mkdirp(join(cwd, 'target', 'release'));
+        await fs.writeFile(join(cwd, 'target', 'debug', 'binary'), 'debug');
+        await fs.writeFile(join(cwd, 'target', 'release', 'binary'), 'release');
+      }
+    });
+
+    afterEach(async () => {
+      for (const name of rustFixtures) {
+        await fs.remove(join(fixture(name), 'target'));
+      }
+    });
+
+    it('should exclude `target/` by default for Rust projects', async () => {
+      const cwd = fixture('rust-target');
+      const { fileList, ignoreList } = await buildFileTree(
+        cwd,
+        { isDirectory: true },
+        noop
+      );
+
+      const expectedFileList = toAbsolutePaths(cwd, [
+        'Cargo.toml',
+        'src/main.rs',
+      ]);
+      expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
+        normalizeWindowsPaths(fileList).sort()
+      );
+
+      expect(normalizeWindowsPaths(ignoreList)).toContain('target');
+    });
+
+    it('should allow re-including `target/` via `.vercelignore`', async () => {
+      const cwd = fixture('rust-target-with-ignore');
+      const { fileList } = await buildFileTree(
+        cwd,
+        { isDirectory: true },
+        noop
+      );
+
+      const normalized = normalizeWindowsPaths(fileList);
+      const expected = normalizeWindowsPaths(
+        toAbsolutePaths(cwd, ['target/debug/binary'])
+      )[0];
+      expect(normalized).toContain(expected);
+    });
   });
 });

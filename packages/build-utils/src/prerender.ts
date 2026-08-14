@@ -1,6 +1,21 @@
 import type { File, HasField, Chain } from './types';
 import { Lambda } from './lambda';
 
+/**
+ * The framework's own description of what it prerendered, mirroring the
+ * Next.js prerender taxonomy rather than re-deriving it from build artifacts.
+ */
+export interface PrerenderClassification {
+  /** What kind of entry this is within its route group. */
+  routeType: 'route' | 'page' | 'shell' | 'fallback';
+  /** How much of the response the prerender contains. */
+  response: 'empty' | 'initial' | 'complete';
+  /** What has to happen at request time to finish the response. */
+  compute: 'blocking' | 'resuming' | 'static';
+  /** Byte size of the prerendered HTML shell, when the entry has one. */
+  htmlSize?: number;
+}
+
 interface PrerenderOptions {
   expiration: number | false;
   staleExpiration?: number;
@@ -17,6 +32,9 @@ interface PrerenderOptions {
   experimentalBypassFor?: HasField;
   experimentalStreamingLambdaPath?: string;
   chain?: Chain;
+  exposeErrBody?: boolean;
+  partialFallback?: boolean;
+  prerenderClassification?: PrerenderClassification;
 }
 
 export class Prerender {
@@ -45,6 +63,14 @@ export class Prerender {
   public experimentalBypassFor?: HasField;
   public experimentalStreamingLambdaPath?: string;
   public chain?: Chain;
+  public exposeErrBody?: boolean;
+  public partialFallback?: boolean;
+  /**
+   * The framework's classification of this prerender. `undefined` when the
+   * framework did not provide one, which is legitimate: not-found routes and
+   * Pages Router `fallback: false` templates have no classification.
+   */
+  public prerenderClassification?: PrerenderClassification;
 
   constructor({
     expiration,
@@ -62,11 +88,19 @@ export class Prerender {
     experimentalBypassFor,
     experimentalStreamingLambdaPath,
     chain,
+    exposeErrBody,
+    partialFallback,
+    prerenderClassification,
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
     this.staleExpiration = staleExpiration;
     this.sourcePath = sourcePath;
+    // Deliberately unvalidated: producers in this repo are trusted, and a
+    // taxonomy value added by a future Next.js release must not hard-fail a
+    // deploy. Untrusted input — a `.prerender-config.json` supplied by
+    // `vercel deploy --prebuilt` — is sanitized by the platform instead.
+    this.prerenderClassification = prerenderClassification;
 
     this.lambda = lambda;
     if (this.lambda) {
@@ -229,6 +263,28 @@ export class Prerender {
       }
 
       this.chain = chain;
+    }
+
+    if (exposeErrBody === true) {
+      this.exposeErrBody = true;
+    } else if (
+      typeof exposeErrBody !== 'boolean' &&
+      typeof exposeErrBody !== 'undefined'
+    ) {
+      throw new Error(
+        `The \`exposeErrBody\` argument for \`Prerender\` must be a boolean.`
+      );
+    }
+
+    if (partialFallback === true) {
+      this.partialFallback = true;
+    } else if (
+      typeof partialFallback !== 'boolean' &&
+      typeof partialFallback !== 'undefined'
+    ) {
+      throw new Error(
+        `The \`partialFallback\` argument for \`Prerender\` must be a boolean.`
+      );
     }
   }
 }

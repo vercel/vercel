@@ -1,22 +1,25 @@
 import chalk from 'chalk';
+import type { CustomEnvironment, ProjectLinked } from '@vercel-internals/types';
 import type Client from '../../util/client';
-import stamp from '../../util/output/stamp';
 import addEnvRecord from '../../util/env/add-env-record';
 import getEnvRecords from '../../util/env/get-env-records';
 import {
   getEnvTargetPlaceholder,
   envTargetChoices,
+  isValidEnvTarget,
+  parseEnvTargetArg,
 } from '../../util/env/env-target';
 import readStandardInput from '../../util/input/read-standard-input';
+import { CHECKBOX_INSTRUCTIONS } from '../../util/input/checkbox-instructions';
 import param from '../../util/output/param';
-import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import {
   getEnvKeyWarnings,
+  normalizeStdinEnvValue,
   removePublicPrefix,
   validateEnvValue,
 } from '../../util/env/validate-env';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
 import { getCustomEnvironments } from '../../util/target/get-custom-environments';
 import output from '../../output-manager';
@@ -25,9 +28,243 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { addSubcommand } from './command';
-import { getLinkedProject } from '../../util/projects/link';
+import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import { determineAgent } from '@vercel/detect-agent';
 import { suggestNextCommands } from '../../util/suggest-next-commands';
+import getTeamById from '../../util/teams/get-team-by-id';
+import { printAlignedLabel } from '../../util/output/print-aligned-label';
+import {
+  outputActionRequired,
+  outputAgentError,
+  buildCommandWithYes,
+  buildEnvAddCommandWithPreservedArgs,
+  getPreservedArgsForEnvAdd,
+} from '../../util/agent-output';
+import {
+  isEnvVarConfigSecretUiEnabled,
+  resolveEnvVarVisibility,
+  shouldEnforceSensitiveEnvVarPolicy,
+  type EnvVariableVisibility,
+  formatVisibilityLabel,
+} from '../../util/env/env-var-config-secret-ui';
+
+type EnvType = 'encrypted' | 'sensitive';
+
+type EnvChoice = {
+  name: string;
+  value: string;
+  checked?: boolean;
+  disabled?: boolean | string;
+};
+
+const SENSITIVE_VALUE_HINT = 'Sensitive values cannot be read later';
+const SENSITIVE_SECRET_PROMPT = `Store as sensitive? ${chalk.dim(
+  SENSITIVE_VALUE_HINT
+)}`;
+function filterEnvChoicesForSensitivity(
+  choices: EnvChoice[],
+  opts: {
+    isSensitive: boolean;
+    policyOn: boolean;
+  }
+): EnvChoice[] {
+  if (opts.isSensitive) {
+    return choices.filter(c => c.value !== 'development');
+  }
+  if (opts.policyOn) {
+    return choices.filter(c => c.value === 'development');
+  }
+  return choices;
+}
+
+function getTargetCompatibilityError(
+  envTargets: string[],
+  isSensitive: boolean,
+  policyOn: boolean
+): string | null {
+  const hasDevelopment = envTargets.includes('development');
+  const hasSensitiveCapable = envTargets.some(t => t !== 'development');
+
+  if (isSensitive && hasDevelopment) {
+    return `Sensitive Environment Variables are not supported on the Development Environment. Add --no-sensitive to store a non-sensitive value for all selected Environments, or run ${getCommandName(
+      'env add'
+    )} separately for Development.`;
+  }
+
+  if (!isSensitive && policyOn && hasSensitiveCapable) {
+    return `Your team requires sensitive Environment Variables for Production and Preview. To add a non-sensitive value, target the Development Environment only. Run ${getCommandName(
+      'env add'
+    )} with the development target instead.`;
+  }
+
+  return null;
+}
+
+function resolveFinalType(
+  envTargets: string[],
+  isSensitive: boolean,
+  opts: {
+    forceSensitive: boolean;
+    forceEncrypted: boolean;
+    policyOn: boolean;
+  }
+): EnvType {
+  const hasDevelopment = envTargets.includes('development');
+  if (hasDevelopment) {
+    return 'encrypted';
+  }
+  if (opts.forceEncrypted && !opts.policyOn) {
+    return 'encrypted';
+  }
+  if (isSensitive || opts.forceSensitive || opts.policyOn) {
+    return 'sensitive';
+  }
+  return 'encrypted';
+}
+
+/**
+ * Replaces safe placeholders in an env add command template. Secret values stay
+ * as placeholders so suggested commands never echo them.
+ */
+function fillEnvAddTemplate(
+  template: string,
+  opts: {
+    envName?: string;
+    envTargetArg?: string;
+    envGitBranch?: string;
+  }
+): string {
+  const targetPlaceholder = getEnvTargetPlaceholder();
+  const out = template
+    .replace(/<name>/g, opts.envName ?? '<name>')
+    .split(targetPlaceholder)
+    .join(opts.envTargetArg ?? targetPlaceholder)
+    .replace(/<gitbranch>/g, opts.envGitBranch ?? '<gitbranch>');
+  return out.replace(/<value>/g, '<value>');
+}
+
+function redactEnvValueArgs(argv: string[]): string[] {
+  const redacted = [...argv];
+  for (let i = 0; i < redacted.length; i++) {
+    if (redacted[i] === '--value' && i + 1 < redacted.length) {
+      redacted[i + 1] = '"<value>"';
+      i++;
+    } else if (redacted[i].startsWith('--value=')) {
+      redacted[i] = '--value="<value>"';
+    }
+  }
+  return redacted;
+}
+
+function multiTargetSuggestion(
+  argv: string[],
+  envName: string,
+  targets: string[],
+  addNoSensitive: boolean
+): { command: string; when: string } {
+  const flag = addNoSensitive ? ' --no-sensitive' : '';
+  return {
+    command: buildEnvAddCommandWithPreservedArgs(
+      argv,
+      `env add ${envName} ${targets.join(',')} --value "<value>"${flag} --yes`
+    ),
+    when: addNoSensitive
+      ? 'Add one non-sensitive variable to all listed environments'
+      : 'Add one variable to multiple environments',
+  };
+}
+
+function filterSensitiveMultiTargetSuggestionTargets(
+  targets: string[],
+  opts: {
+    forceSensitive: boolean;
+    policyOn: boolean;
+  }
+): string[] {
+  const excludeDevelopment = opts.forceSensitive || opts.policyOn;
+
+  return excludeDevelopment
+    ? targets.filter(target => target !== 'development')
+    : targets;
+}
+
+function projectLabel(link: ProjectLinked): string {
+  return `${link.org.slug}/${link.project.name}`;
+}
+
+function formatEnvironmentTarget(
+  target: string,
+  customEnvironments: CustomEnvironment[]
+): string {
+  const standardTarget = envTargetChoices.find(
+    choice => choice.value === target
+  );
+  if (standardTarget) {
+    return standardTarget.name;
+  }
+  const customEnvironment = customEnvironments.find(
+    env => env.id === target || env.slug === target
+  );
+  return customEnvironment?.slug ?? target;
+}
+
+function formatEnvironmentTargets(
+  envTargets: string[],
+  customEnvironments: CustomEnvironment[]
+): string {
+  return envTargets
+    .map(target => formatEnvironmentTarget(target, customEnvironments))
+    .join(', ');
+}
+
+function typeLabel(type: EnvType): 'Non-sensitive' | 'Sensitive' {
+  return type === 'sensitive' ? 'Sensitive' : 'Non-sensitive';
+}
+
+function printEnvAddResult(
+  link: ProjectLinked,
+  envName: string,
+  envTargets: string[],
+  envGitBranch: string | undefined,
+  customEnvironments: CustomEnvironment[],
+  finalType: EnvType,
+  force: boolean,
+  visibility?: EnvVariableVisibility
+): void {
+  output.print('\n');
+  printAlignedLabel(force ? 'Overrode' : 'Added', envName, { gutter: '✓' });
+  printAlignedLabel('Project', projectLabel(link));
+  printAlignedLabel(
+    'Environments',
+    formatEnvironmentTargets(envTargets, customEnvironments)
+  );
+  if (envGitBranch) {
+    printAlignedLabel('Branch', envGitBranch);
+  }
+  printAlignedLabel('Type', typeLabel(finalType));
+  if (isEnvVarConfigSecretUiEnabled()) {
+    const visibilityLabel = formatVisibilityLabel(visibility, finalType);
+    if (visibilityLabel) {
+      printAlignedLabel('Visibility', visibilityLabel);
+    }
+  }
+}
+
+function printEnvAddWarning(message: string): void {
+  output.print(`${chalk.yellow('!')} ${message}\n`);
+}
+
+function promptEnvValue(
+  client: Client,
+  opts: { isSensitive: boolean }
+): Promise<string> {
+  return client.input.text({
+    message: `Value?`,
+    ...(opts.isSensitive
+      ? { transformer: (value: string) => '*'.repeat(value.length) }
+      : {}),
+  });
+}
 
 export default async function add(client: Client, argv: string[]) {
   let parsedArgs;
@@ -35,14 +272,27 @@ export default async function add(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: err instanceof Error ? err.message : String(err),
+        },
+        1
+      );
+    }
     printError(err);
     return 1;
   }
 
   const { args, flags: opts } = parsedArgs;
+  const configSecretUiEnabled = isEnvVarConfigSecretUiEnabled();
 
   const stdInput = await readStandardInput(client.stdin);
-  // eslint-disable-next-line prefer-const
+  const valueFromFlag =
+    typeof opts['--value'] === 'string' ? opts['--value'] : undefined;
   let [envName, envTargetArg, envGitBranch] = args;
 
   const telemetryClient = new EnvAddTelemetryClient({
@@ -53,10 +303,18 @@ export default async function add(client: Client, argv: string[]) {
   telemetryClient.trackCliArgumentName(envName);
   telemetryClient.trackCliArgumentEnvironment(envTargetArg);
   telemetryClient.trackCliArgumentGitBranch(envGitBranch);
+  telemetryClient.trackCliOptionValue(
+    valueFromFlag === undefined ? undefined : '<redacted>'
+  );
   telemetryClient.trackCliFlagSensitive(opts['--sensitive']);
+  telemetryClient.trackCliFlagNoSensitive(opts['--no-sensitive']);
   telemetryClient.trackCliFlagForce(opts['--force']);
   telemetryClient.trackCliFlagGuidance(opts['--guidance']);
   telemetryClient.trackCliFlagYes(opts['--yes']);
+  telemetryClient.trackCliOptionVisibility(
+    typeof opts['--visibility'] === 'string' ? opts['--visibility'] : undefined
+  );
+  telemetryClient.trackCliOptionProject(opts['--project']);
 
   if (args.length > 3) {
     output.error(
@@ -76,20 +334,224 @@ export default async function add(client: Client, argv: string[]) {
     return 1;
   }
 
-  let envTargets: string[] = [];
-  if (envTargetArg) {
-    envTargets.push(envTargetArg);
+  let envTargets: string[] = envTargetArg
+    ? parseEnvTargetArg(envTargetArg)
+    : [];
+
+  // Non-interactive: resolve link and choices once, then report all missing requirements in a single JSON (no iteration)
+  if (client.nonInteractive) {
+    const link = await resolveProjectContext({
+      client,
+      projectNameOrId: opts['--project'],
+    });
+    if (link.status === 'error') {
+      return link.exitCode;
+    }
+    if (link.status === 'not_linked') {
+      const preserved = getPreservedArgsForEnvAdd(client.argv);
+      const linkPreserved = preserved.filter((a, i) => {
+        if (a === '--value') return false;
+        if (a.startsWith('--value=')) return false;
+        if (i > 0 && preserved[i - 1] === '--value') return false;
+        return true;
+      });
+      const linkArgv = [
+        ...client.argv.slice(0, 2),
+        'link',
+        '--scope',
+        '<scope>',
+        ...linkPreserved,
+      ];
+      let envAddRetryArgv = redactEnvValueArgs(client.argv);
+      if (envTargetArg === 'preview' && envGitBranch === undefined) {
+        const argvArgs = client.argv.slice(2);
+        const addIdx = argvArgs.indexOf('add');
+        if (addIdx !== -1) {
+          let pos = addIdx + 1;
+          let positionals = 0;
+          while (
+            pos < argvArgs.length &&
+            positionals < 3 &&
+            !argvArgs[pos].startsWith('-')
+          ) {
+            positionals++;
+            pos++;
+          }
+          const insertAt = 2 + pos;
+          envAddRetryArgv = redactEnvValueArgs([
+            ...client.argv.slice(0, insertAt),
+            '<gitbranch>',
+            ...client.argv.slice(insertAt),
+          ]);
+        }
+      }
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_linked',
+          message: `Your codebase isn't linked to a project on Vercel. Run ${getCommandNamePlain(
+            'link'
+          )} to begin. Use --yes for non-interactive; use --scope or --project to specify team or project. Then run your env add command.`,
+          next: [
+            { command: buildCommandWithYes(linkArgv) },
+            { command: buildCommandWithYes(envAddRetryArgv) },
+          ],
+        },
+        1
+      );
+    }
+    if (link.status !== 'linked') return 1;
+    const { project } = link;
+    const org = link.org;
+    client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+    const [{ envs }, customEnvironments] = await Promise.all([
+      getEnvRecords(client, project.id, 'vercel-cli:env:add'),
+      getCustomEnvironments(client, project.id),
+    ]);
+    const matchingEnvs = envs.filter(r => r.key === envName);
+    const existingTargets = new Set<string>();
+    const existingCustomEnvs = new Set<string>();
+    for (const env of matchingEnvs) {
+      if (typeof env.target === 'string') {
+        existingTargets.add(env.target);
+      } else if (Array.isArray(env.target)) {
+        for (const target of env.target) {
+          existingTargets.add(target);
+        }
+      }
+      if (env.customEnvironmentIds) {
+        for (const customEnvId of env.customEnvironmentIds) {
+          existingCustomEnvs.add(customEnvId);
+        }
+      }
+    }
+    const choices = [
+      ...envTargetChoices.filter(c => !existingTargets.has(c.value)),
+      ...customEnvironments
+        .filter(c => !existingCustomEnvs.has(c.id))
+        .map(c => ({
+          name: c.slug,
+          value: c.id,
+        })),
+    ];
+    const missing: string[] = [];
+    if (!envName) missing.push('missing_name');
+    if (valueFromFlag === undefined && !stdInput) missing.push('missing_value');
+    if (!envTargetArg && choices.length > 0)
+      missing.push('missing_environment');
+    // When nonInteractive and exactly two positionals (name, preview), treat as "all Preview branches"; otherwise require branch
+    if (
+      envTargetArg === 'preview' &&
+      envGitBranch === undefined &&
+      !(client.nonInteractive && args.length === 2)
+    ) {
+      missing.push('git_branch_required');
+    }
+    if (missing.length > 0) {
+      const parts = missing.map(m => {
+        if (m === 'missing_name') return 'variable name';
+        if (m === 'missing_value') return '--value or stdin';
+        if (m === 'missing_environment')
+          return 'environment (production, preview, development, or a comma-separated list)';
+        if (m === 'git_branch_required')
+          return 'third argument <gitbranch> for Preview, or omit for all Preview branches';
+        return m;
+      });
+      const fullTemplate = `env add <name> ${getEnvTargetPlaceholder()} <gitbranch> --value "<value>" --yes`;
+      const filledTemplate = fillEnvAddTemplate(fullTemplate, {
+        envName,
+        envTargetArg,
+        envGitBranch,
+      });
+      const next: Array<{ command: string; when?: string }> = [];
+      // Only suggest the full template when something other than git_branch is missing (that command would fail again if only git_branch is missing)
+      const onlyGitBranchMissing =
+        missing.length === 1 && missing[0] === 'git_branch_required';
+      if (!onlyGitBranchMissing) {
+        next.push({
+          command: buildEnvAddCommandWithPreservedArgs(
+            client.argv,
+            filledTemplate
+          ),
+        });
+      }
+      if (
+        missing.includes('git_branch_required') &&
+        envName &&
+        (valueFromFlag !== undefined || stdInput)
+      ) {
+        const branchSpecific = fillEnvAddTemplate(
+          'env add <name> preview <gitbranch> --value "<value>" --yes',
+          { envName, envTargetArg: 'preview' }
+        );
+        const branchAll = fillEnvAddTemplate(
+          'env add <name> preview --value "<value>" --yes',
+          { envName, envTargetArg: 'preview' }
+        );
+        next.push(
+          {
+            command: buildEnvAddCommandWithPreservedArgs(
+              client.argv,
+              branchSpecific
+            ),
+            when: 'Add to a specific Git branch',
+          },
+          {
+            command: buildEnvAddCommandWithPreservedArgs(
+              client.argv,
+              branchAll
+            ),
+            when: 'Add to all Preview branches',
+          }
+        );
+      }
+      if (missing.includes('missing_environment')) {
+        const standardAvailable = choices
+          .map(c => c.value)
+          .filter(v => isValidEnvTarget(v));
+        const multiTargets = filterSensitiveMultiTargetSuggestionTargets(
+          standardAvailable,
+          {
+            forceSensitive: Boolean(opts['--sensitive']),
+            policyOn: false,
+          }
+        );
+        if (multiTargets.length > 1) {
+          next.push(
+            multiTargetSuggestion(
+              client.argv,
+              envName || '<name>',
+              multiTargets,
+              multiTargets.includes('development') && !opts['--no-sensitive']
+            )
+          );
+        }
+      }
+      outputActionRequired(
+        client,
+        {
+          status: 'action_required',
+          reason: 'missing_requirements',
+          missing,
+          message: `Provide all required inputs for non-interactive mode: ${parts.join('; ')}. Example: ${filledTemplate}`,
+          next,
+        },
+        1
+      );
+    }
   }
 
   if (!envName) {
     envName = await client.input.text({
-      message: `What's the name of the variable?`,
+      message: `Name?`,
       validate: val => (val ? true : 'Name cannot be empty'),
     });
   }
 
   // Validate key name early (before value entry) with re-entry option
-  const skipConfirm = opts['--yes'] || !!stdInput;
+  const skipConfirm =
+    opts['--yes'] || !!stdInput || valueFromFlag !== undefined;
   if (!skipConfirm) {
     let keyAccepted = false;
     while (!keyAccepted) {
@@ -99,26 +561,55 @@ export default async function add(client: Client, argv: string[]) {
       if (!sensitiveWarning) {
         // Non-sensitive public prefix: just show info, no action needed
         for (const w of keyWarnings) {
-          output.warn(w.message);
+          printEnvAddWarning(w.message);
         }
         keyAccepted = true;
         break;
       }
 
+      if (client.nonInteractive) {
+        const nameWithoutPrefix = removePublicPrefix(envName);
+        outputActionRequired(client, {
+          status: 'action_required',
+          reason: 'env_key_sensitive',
+          message: `Key ${envName} may expose sensitive data (public prefix). Use --yes to keep as is, or rename to ${nameWithoutPrefix}.`,
+          choices: [
+            { id: 'keep', name: 'Leave as is (use --yes)' },
+            { id: 'rename', name: `Rename to ${nameWithoutPrefix}` },
+          ],
+          next: [
+            {
+              command: buildEnvAddCommandWithPreservedArgs(
+                client.argv,
+                `env add ${envName} ${getEnvTargetPlaceholder()} --value "<value>" --yes`
+              ),
+              when: 'Leave as is',
+            },
+            {
+              command: buildEnvAddCommandWithPreservedArgs(
+                client.argv,
+                `env add ${nameWithoutPrefix} ${getEnvTargetPlaceholder()} --value "<value>" --yes`
+              ),
+              when: 'Rename',
+            },
+          ],
+        });
+      }
+
       // Sensitive public variable: show all warnings then options
       for (const w of keyWarnings) {
-        output.warn(w.message);
+        printEnvAddWarning(w.message);
       }
 
       const nameWithoutPrefix = removePublicPrefix(envName);
       const choices = [
-        { name: 'Leave as is', value: 'c' },
+        { name: `Keep ${envName}`, value: 'c' },
         { name: `Rename to ${nameWithoutPrefix}`, value: 'p' },
-        { name: 'Re-enter', value: 'r' },
+        { name: 'Re-enter name', value: 'r' },
       ];
 
       const action = await client.input.select({
-        message: 'How to proceed?',
+        message: 'Variable name?',
         choices,
       });
 
@@ -130,7 +621,7 @@ export default async function add(client: Client, argv: string[]) {
         // Loop back to re-validate (might have nested prefix)
       } else {
         envName = await client.input.text({
-          message: `What's the name of the variable?`,
+          message: `Name?`,
           validate: val => (val ? true : 'Name cannot be empty'),
         });
       }
@@ -139,19 +630,77 @@ export default async function add(client: Client, argv: string[]) {
     // Non-interactive: just show warnings
     const keyWarnings = getEnvKeyWarnings(envName);
     for (const w of keyWarnings) {
-      output.warn(w.message);
+      printEnvAddWarning(w.message);
     }
   }
 
-  const link = await getLinkedProject(client);
+  const link = await resolveProjectContext({
+    client,
+    projectNameOrId: opts['--project'],
+  });
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
-    output.error(
-      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
-        'link'
-      )} to begin.`
-    );
+    if (client.nonInteractive) {
+      const preserved = getPreservedArgsForEnvAdd(client.argv);
+      const linkPreserved = preserved.filter((a, i) => {
+        if (a === '--value') return false;
+        if (a.startsWith('--value=')) return false;
+        if (i > 0 && preserved[i - 1] === '--value') return false;
+        return true;
+      });
+      // Only add scope/project placeholders when project is not linked
+      const linkArgv = [
+        ...client.argv.slice(0, 2),
+        'link',
+        ...(link.status === 'not_linked' ? ['--scope', '<scope>'] : []),
+        ...linkPreserved,
+      ];
+      let envAddRetryArgv = redactEnvValueArgs(client.argv);
+      if (envTargetArg === 'preview' && envGitBranch === undefined) {
+        const argvArgs = client.argv.slice(2);
+        const addIdx = argvArgs.indexOf('add');
+        if (addIdx !== -1) {
+          let pos = addIdx + 1;
+          let positionals = 0;
+          while (
+            pos < argvArgs.length &&
+            positionals < 3 &&
+            !argvArgs[pos].startsWith('-')
+          ) {
+            positionals++;
+            pos++;
+          }
+          const insertAt = 2 + pos;
+          envAddRetryArgv = redactEnvValueArgs([
+            ...client.argv.slice(0, insertAt),
+            '<gitbranch>',
+            ...client.argv.slice(insertAt),
+          ]);
+        }
+      }
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_linked',
+          message: `Your codebase isn't linked to a project on Vercel. Run ${getCommandNamePlain(
+            'link'
+          )} to begin. Use --yes for non-interactive; use --scope or --project to specify team or project. Then run your env add command.`,
+          next: [
+            { command: buildCommandWithYes(linkArgv) },
+            { command: buildCommandWithYes(envAddRetryArgv) },
+          ],
+        },
+        1
+      );
+    } else {
+      output.error(
+        `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
+          'link'
+        )} to begin.`
+      );
+    }
     return 1;
   }
   client.config.currentTeam =
@@ -161,6 +710,61 @@ export default async function add(client: Client, argv: string[]) {
     getEnvRecords(client, project.id, 'vercel-cli:env:add'),
     getCustomEnvironments(client, project.id),
   ]);
+
+  if (envTargets.length > 0) {
+    const resolved: string[] = [];
+    const invalid: string[] = [];
+    for (const target of envTargets) {
+      if (isValidEnvTarget(target)) {
+        resolved.push(target);
+        continue;
+      }
+      const custom = customEnvironments.find(
+        c => c.id === target || c.slug === target
+      );
+      if (custom) {
+        resolved.push(custom.id);
+      } else {
+        invalid.push(target);
+      }
+    }
+    if (invalid.length > 0) {
+      const valid = [
+        ...envTargetChoices.map(c => c.value),
+        ...customEnvironments.map(c => c.slug),
+      ];
+      const message = `Invalid environment: ${invalid.join(
+        ', '
+      )}. Valid environments: ${valid.join(
+        ', '
+      )}. Separate multiple environments with commas.`;
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          { status: 'error', reason: 'invalid_environment', message },
+          1
+        );
+      }
+      output.error(message);
+      return 1;
+    }
+    envTargets = resolved;
+  }
+
+  if (envGitBranch && envTargets.length > 1) {
+    const message =
+      'A Git branch can only be set when Preview is the only selected environment.';
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        { status: 'error', reason: 'branch_requires_preview_only', message },
+        1
+      );
+    }
+    output.error(message);
+    return 1;
+  }
+
   const matchingEnvs = envs.filter(r => r.key === envName);
   const existingTargets = new Set<string>();
   const existingCustomEnvs = new Set<string>();
@@ -178,69 +782,315 @@ export default async function add(client: Client, argv: string[]) {
       }
     }
   }
-  const choices = [
-    ...envTargetChoices.filter(c => !existingTargets.has(c.value)),
+  const choices: EnvChoice[] = [
+    ...envTargetChoices
+      .filter(c => !existingTargets.has(c.value))
+      .map(c => ({ name: c.name, value: c.value })),
     ...customEnvironments
       .filter(c => !existingCustomEnvs.has(c.id))
-      .map(c => ({
-        name: c.slug,
-        value: c.id,
-      })),
+      .map(c => ({ name: c.slug, value: c.id })),
   ];
 
   if (!envGitBranch && choices.length === 0 && !opts['--force']) {
+    const projectFlag = opts['--project']
+      ? ` --project ${opts['--project']}`
+      : '';
     output.error(
       `The variable ${param(
         envName
       )} has already been added to all Environments. To remove, run ${getCommandName(
-        `env rm ${envName}`
+        `env rm ${envName}${projectFlag}`
       )}.`
     );
     return 1;
   }
 
-  let type: 'encrypted' | 'sensitive' = opts['--sensitive']
-    ? 'sensitive'
-    : 'encrypted';
+  const forceSensitive = Boolean(opts['--sensitive']);
+  const forceEncrypted = Boolean(opts['--no-sensitive']);
+
+  if (forceSensitive && forceEncrypted) {
+    output.error(
+      `--sensitive and --no-sensitive cannot be used together. Pick one.`
+    );
+    return 1;
+  }
+
+  const explicitVisibility =
+    typeof opts['--visibility'] === 'string' ? opts['--visibility'] : undefined;
+  if (explicitVisibility === 'secret' && forceEncrypted) {
+    output.error(
+      '`--visibility secret` cannot be used with `--no-sensitive`. Pick one.'
+    );
+    return 1;
+  }
+  if (explicitVisibility === 'config' && forceSensitive) {
+    output.error(
+      '`--visibility config` cannot be used with `--sensitive`. Pick one.'
+    );
+    return 1;
+  }
+
+  // Detect team-level sensitive env var policy. Reads from the team object
+  // (cached). Only relevant when the linked org is a team.
+  let policyOn = false;
+  let teamSensitivePolicyOn = false;
+  if (link.org.type === 'team') {
+    try {
+      const team = await getTeamById(client, link.org.id);
+      teamSensitivePolicyOn = team?.sensitiveEnvironmentVariablePolicy === 'on';
+      policyOn = shouldEnforceSensitiveEnvVarPolicy(teamSensitivePolicyOn);
+    } catch {
+      // Non-fatal — policy detection is best-effort.
+    }
+  }
+
+  const isDevelopmentOnlyTarget =
+    envTargets.length === 1 && envTargets[0] === 'development';
+  const userWasExplicit = forceSensitive || forceEncrypted;
+  const skipSensitivePrompt =
+    userWasExplicit ||
+    client.nonInteractive ||
+    skipConfirm ||
+    isDevelopmentOnlyTarget;
+
+  let isSensitive: boolean;
+  if (forceSensitive) {
+    isSensitive = true;
+  } else if (forceEncrypted) {
+    isSensitive = false;
+  } else if (isDevelopmentOnlyTarget) {
+    isSensitive = false;
+  } else if (skipSensitivePrompt) {
+    isSensitive = true;
+  } else {
+    isSensitive = await client.input.confirm(SENSITIVE_SECRET_PROMPT, true);
+    if (policyOn && !isSensitive) {
+      output.print(
+        `  ${chalk.dim(
+          'Team policy limits non-sensitive values to Development.'
+        )}\n`
+      );
+    }
+  }
+
+  if (
+    !client.nonInteractive &&
+    skipSensitivePrompt &&
+    policyOn &&
+    !isSensitive &&
+    envTargets.length === 0
+  ) {
+    output.print(
+      `  ${chalk.dim(
+        'Team policy limits non-sensitive values to Development.'
+      )}\n`
+    );
+  }
+
+  if (forceSensitive && envTargets.includes('development')) {
+    const msg = `--sensitive is not allowed with the Development Environment. Sensitive Environment Variables are only supported on Production and Preview.`;
+    if (client.nonInteractive) {
+      const nonDev = envTargets.filter(t => t !== 'development');
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'sensitive_not_allowed_on_development',
+          message: msg,
+          ...(nonDev.length > 0
+            ? {
+                next: [
+                  {
+                    command: buildEnvAddCommandWithPreservedArgs(
+                      client.argv,
+                      `env add ${envName} ${nonDev.join(',')} --value "<value>" --yes`
+                    ),
+                    when: 'Keep sensitive and skip Development',
+                  },
+                ],
+              }
+            : {}),
+        },
+        1
+      );
+    }
+    output.error(msg);
+    return 1;
+  }
+
+  if (envTargets.length > 0) {
+    const compatibilityError = getTargetCompatibilityError(
+      envTargets,
+      isSensitive,
+      policyOn
+    );
+    if (compatibilityError) {
+      if (client.nonInteractive) {
+        const next: Array<{ command: string; when?: string }> = [];
+        if (isSensitive) {
+          if (!policyOn) {
+            next.push(
+              multiTargetSuggestion(client.argv, envName, envTargets, true)
+            );
+          }
+          const nonDev = envTargets.filter(t => t !== 'development');
+          if (nonDev.length > 0) {
+            next.push({
+              command: buildEnvAddCommandWithPreservedArgs(
+                client.argv,
+                `env add ${envName} ${nonDev.join(',')} --value "<value>" --yes`
+              ),
+              when: 'Keep sensitive and skip Development',
+            });
+          }
+        } else {
+          next.push({
+            command: buildEnvAddCommandWithPreservedArgs(
+              client.argv,
+              `env add ${envName} development --value "<value>" --yes`
+            ),
+            when: 'Add as non-sensitive to Development only',
+          });
+        }
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: isSensitive
+              ? 'sensitive_not_allowed_on_development'
+              : 'non_sensitive_not_allowed_on_production_preview',
+            message: compatibilityError,
+            ...(next.length > 0 ? { next } : {}),
+          },
+          1
+        );
+      }
+      output.error(compatibilityError);
+      return 1;
+    }
+  }
+
+  const envChoices = filterEnvChoicesForSensitivity(choices, {
+    isSensitive,
+    policyOn,
+  });
+
+  if (policyOn && isSensitive) {
+    for (const choice of envChoices) {
+      if (choice.value === 'production' || choice.value === 'preview') {
+        choice.checked = true;
+      }
+    }
+  } else if (envChoices.length === 1) {
+    envChoices[0].checked = true;
+  }
+
+  if (
+    !envGitBranch &&
+    envChoices.length === 0 &&
+    envTargets.length === 0 &&
+    !opts['--force']
+  ) {
+    output.error(
+      `No Environments are available for this variable with the selected sensitivity. ${
+        isSensitive
+          ? 'Sensitive Environment Variables cannot be added to Development.'
+          : 'Your team requires sensitive Environment Variables for Production and Preview.'
+      }`
+    );
+    return 1;
+  }
+
   let envValue: string;
 
   if (stdInput) {
-    envValue = stdInput;
-  } else {
-    if (type === 'encrypted') {
-      const isSensitive = await client.input.confirm(
-        `Your value will be encrypted. Mark as sensitive?`,
-        false
-      );
-      if (isSensitive) {
-        type = 'sensitive';
-      }
+    const normalizedStdinValue = normalizeStdinEnvValue(stdInput);
+    envValue = normalizedStdinValue.value;
+    if (normalizedStdinValue.strippedTrailingNewline) {
+      output.log('Removed trailing newline from stdin input');
     }
-    envValue = await client.input.password({
-      message: `What's the value of ${envName}?`,
-      mask: true,
-    });
+  } else if (valueFromFlag !== undefined) {
+    envValue = valueFromFlag;
+  } else {
+    if (client.nonInteractive) {
+      outputActionRequired(client, {
+        status: 'action_required',
+        reason: 'missing_value',
+        message:
+          'In non-interactive mode provide the value via --value or stdin. Example: vercel env add <name> <environment> --value "<value>" --yes',
+        next: [
+          {
+            command: buildEnvAddCommandWithPreservedArgs(
+              client.argv,
+              `env add <name> ${getEnvTargetPlaceholder()} --value "<value>" --yes`
+            ),
+          },
+        ],
+      });
+    }
+    envValue = await promptEnvValue(client, { isSensitive });
   }
 
   const { finalValue } = await validateEnvValue({
     envName,
     initialValue: envValue,
     skipConfirm,
-    promptForValue: () =>
-      client.input.password({
-        message: `What's the value of ${envName}?`,
-        mask: true,
-      }),
+    promptForValue: () => promptEnvValue(client, { isSensitive }),
     selectAction: choices =>
-      client.input.select({ message: 'How to proceed?', choices }),
-    showWarning: msg => output.warn(msg),
+      client.input.select({ message: 'Value?', choices }),
+    showWarning: msg => printEnvAddWarning(msg),
     showLog: msg => output.log(msg),
   });
 
   while (envTargets.length === 0) {
+    if (client.nonInteractive && envChoices.length > 0) {
+      const standardAvailable = choices
+        .map(c => c.value)
+        .filter(v => isValidEnvTarget(v));
+      const multiTargets = filterSensitiveMultiTargetSuggestionTargets(
+        standardAvailable,
+        {
+          forceSensitive,
+          policyOn,
+        }
+      );
+      const next: Array<{ command: string; when?: string }> = [];
+      if (multiTargets.length > 1) {
+        next.push(
+          multiTargetSuggestion(
+            client.argv,
+            envName,
+            multiTargets,
+            multiTargets.includes('development') && !forceEncrypted
+          )
+        );
+      }
+      next.push(
+        ...envChoices.slice(0, 5).map(c => ({
+          command: buildEnvAddCommandWithPreservedArgs(
+            client.argv,
+            `env add ${envName} ${c.value} --value "<value>" --yes`
+          ),
+        }))
+      );
+      outputActionRequired(client, {
+        status: 'action_required',
+        reason: 'missing_environment',
+        message: `Specify one or more environments (comma-separated). Add as argument or use: ${buildEnvAddCommandWithPreservedArgs(
+          client.argv,
+          `env add ${envName} <environment>[,<environment>] --value "<value>" --yes`
+        )}`,
+        choices: envChoices.map(c => ({
+          id: c.value,
+          name: typeof c.name === 'string' ? c.name : c.value,
+        })),
+        next,
+      });
+    }
     envTargets = await client.input.checkbox({
-      message: `Add ${envName} to which Environments (select multiple)?`,
-      choices,
+      message: `Environments?`,
+      instructions: CHECKBOX_INSTRUCTIONS,
+      choices: envChoices,
     });
 
     if (envTargets.length === 0) {
@@ -248,33 +1098,133 @@ export default async function add(client: Client, argv: string[]) {
     }
   }
 
+  const postSelectionError = getTargetCompatibilityError(
+    envTargets,
+    isSensitive,
+    policyOn
+  );
+  if (postSelectionError) {
+    output.error(postSelectionError);
+    return 1;
+  }
+
   if (
-    !stdInput &&
-    !envGitBranch &&
+    envGitBranch === undefined &&
     envTargets.length === 1 &&
-    envTargets[0] === 'preview'
+    envTargets[0] === 'preview' &&
+    !(client.nonInteractive && args.length === 2)
   ) {
-    envGitBranch = await client.input.text({
-      message: `Add ${envName} to which Git branch? (leave empty for all Preview branches)?`,
-    });
+    if (client.nonInteractive) {
+      outputActionRequired(
+        client,
+        {
+          status: 'action_required',
+          reason: 'git_branch_required',
+          message: `Add ${envName} to which Git branch for Preview? Pass branch as third argument, or omit for all Preview branches.`,
+          next: [
+            {
+              command: buildEnvAddCommandWithPreservedArgs(
+                client.argv,
+                `env add ${envName} preview <gitbranch> --value "<value>" --yes`
+              ),
+              when: 'Add to a specific Git branch',
+            },
+            {
+              command: buildEnvAddCommandWithPreservedArgs(
+                client.argv,
+                `env add ${envName} preview --value "<value>" --yes`
+              ),
+              when: 'Add to all Preview branches',
+            },
+          ],
+        },
+        1
+      );
+    } else {
+      output.print(
+        `  ${chalk.dim('Leave empty to apply to all Preview branches.')}\n`
+      );
+      envGitBranch = await client.input.text({
+        message: `Git branch?`,
+      });
+    }
+  }
+
+  const hasDevelopment = envTargets.includes('development');
+
+  let finalType = resolveFinalType(envTargets, isSensitive, {
+    forceSensitive,
+    forceEncrypted,
+    policyOn,
+  });
+
+  if (policyOn && !hasDevelopment) {
+    if (forceEncrypted) {
+      // User asked for encrypted on Production/Preview, but the team policy
+      // will promote it to sensitive server-side regardless. Surface that so
+      // the user isn't surprised later.
+      printEnvAddWarning(
+        `--no-sensitive is ignored: your team enforces sensitive Environment Variables for Production and Preview.`
+      );
+      finalType = 'sensitive';
+    }
   }
 
   const upsert = opts['--force'] ? 'true' : '';
+  const { visibility, error: visibilityError } = resolveEnvVarVisibility({
+    configSecretUiEnabled,
+    explicitVisibility,
+    type: finalType,
+    key: envName,
+    envTargets,
+    teamSensitivePolicyOn,
+  });
+  if (visibilityError) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_visibility',
+          message: visibilityError,
+        },
+        1
+      );
+    }
+    output.error(visibilityError);
+    return 1;
+  }
 
-  const addStamp = stamp();
   try {
-    output.spinner('Saving');
+    output.spinner('Saving…');
     await addEnvRecord(
       client,
       project.id,
       upsert,
-      type,
+      finalType,
       envName,
       finalValue,
       envTargets,
-      envGitBranch
+      envGitBranch,
+      visibility
     );
   } catch (err: unknown) {
+    if (client.nonInteractive && isAPIError(err)) {
+      const reason =
+        (err as { slug?: string }).slug ||
+        (err.serverMessage?.toLowerCase().includes('branch')
+          ? 'branch_not_found'
+          : 'api_error');
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason,
+          message: err.serverMessage,
+        },
+        1
+      );
+    }
     if (isAPIError(err) && isKnownError(err)) {
       output.error(err.serverMessage);
       return 1;
@@ -282,22 +1232,28 @@ export default async function add(client: Client, argv: string[]) {
     throw err;
   }
 
-  output.print(
-    `${prependEmoji(
-      `${
-        opts['--force'] ? 'Overrode' : 'Added'
-      } Environment Variable ${chalk.bold(envName)} to Project ${chalk.bold(
-        project.name
-      )} ${chalk.gray(addStamp())}`,
-      emoji('success')
-    )}\n`
+  printEnvAddResult(
+    link,
+    envName,
+    envTargets,
+    envGitBranch,
+    customEnvironments,
+    finalType,
+    Boolean(opts['--force']),
+    visibility
   );
 
   const { isAgent } = await determineAgent();
   const guidanceMode = parsedArgs.flags['--guidance'] ?? isAgent;
 
   if (guidanceMode) {
-    suggestNextCommands([getCommandName(`env ls`), getCommandName(`env pull`)]);
+    const projectFlag = opts['--project']
+      ? ` --project ${opts['--project']}`
+      : '';
+    suggestNextCommands([
+      getCommandName(`env ls${projectFlag}`),
+      getCommandName(`env pull${projectFlag}`),
+    ]);
   }
 
   return 0;

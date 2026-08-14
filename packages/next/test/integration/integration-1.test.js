@@ -1,3 +1,4 @@
+process.env.NEXT_BUILDER_INTEGRATION = '1';
 process.env.NEXT_TELEMETRY_DISABLED = '1';
 
 const path = require('path');
@@ -6,7 +7,7 @@ const builder = require('../../');
 const {
   createRunBuildLambda,
 } = require('../../../../test/lib/run-build-lambda');
-const { duplicateWithConfig } = require('../utils');
+const { duplicateWithConfig } = await import('../utils');
 const { streamToBuffer } = require('@vercel/build-utils');
 const { createHash } = require('crypto');
 
@@ -19,7 +20,7 @@ const SIMPLE_PROJECT = path.resolve(
   '00-middleware'
 );
 
-jest.setTimeout(360000);
+vi.setConfig({ testTimeout: 360000, hookTimeout: 360000 });
 
 function sharedTests(ctx) {
   it('worker uses `middleware` or `middlewarePath` keyword as route path', async () => {
@@ -281,17 +282,20 @@ it('should build using server build', async () => {
   expect(output['index'].allowQuery).toBe(undefined);
   expect(output['index'].memory).toBe(512);
   expect(output['index'].maxDuration).toBe(5);
+  expect(output['index'].maxConcurrency).toBe(2);
   expect(output['index'].operationType).toBe('Page');
 
   expect(output['another'].type).toBe('Lambda');
   expect(output['another'].memory).toBe(512);
   expect(output['another'].maxDuration).toBe(5);
+  expect(output['another'].maxConcurrency).toBe(undefined);
   expect(output['another'].allowQuery).toBe(undefined);
   expect(output['another'].operationType).toBe('Page');
 
   expect(output['dynamic/[slug]'].type).toBe('Lambda');
   expect(output['dynamic/[slug]'].memory).toBe(undefined);
   expect(output['dynamic/[slug]'].maxDuration).toBe(5);
+  expect(output['dynamic/[slug]'].maxConcurrency).toBe(4);
   expect(output['dynamic/[slug]'].operationType).toBe('Page');
 
   expect(output['fallback/[slug]'].type).toBe('Prerender');
@@ -299,14 +303,14 @@ it('should build using server build', async () => {
   expect(output['fallback/[slug]'].lambda.operationType).toBe('ISR');
   expect(output['fallback/[slug]'].sourcePath).toBe(undefined);
 
-  expect(output['_next/data/testing-build-id/fallback/[slug].json'].type).toBe(
-    'Prerender'
-  );
   expect(
-    output['_next/data/testing-build-id/fallback/[slug].json'].allowQuery
+    output['_next/data/build-TfctsWXpff2fKS/fallback/[slug].json'].type
+  ).toBe('Prerender');
+  expect(
+    output['_next/data/build-TfctsWXpff2fKS/fallback/[slug].json'].allowQuery
   ).toEqual(['nxtPslug']);
   expect(
-    output['_next/data/testing-build-id/fallback/[slug].json'].lambda
+    output['_next/data/build-TfctsWXpff2fKS/fallback/[slug].json'].lambda
       .operationType
   ).toBe('ISR');
 
@@ -315,14 +319,14 @@ it('should build using server build', async () => {
   expect(output['fallback/first'].lambda.operationType).toBe('ISR');
   expect(output['fallback/first'].sourcePath).toBe('/fallback/[slug]');
 
-  expect(output['_next/data/testing-build-id/fallback/first.json'].type).toBe(
-    'Prerender'
-  );
   expect(
-    output['_next/data/testing-build-id/fallback/first.json'].allowQuery
+    output['_next/data/build-TfctsWXpff2fKS/fallback/first.json'].type
+  ).toBe('Prerender');
+  expect(
+    output['_next/data/build-TfctsWXpff2fKS/fallback/first.json'].allowQuery
   ).toEqual([]);
   expect(
-    output['_next/data/testing-build-id/fallback/first.json'].lambda
+    output['_next/data/build-TfctsWXpff2fKS/fallback/first.json'].lambda
       .operationType
   ).toBe('ISR');
 
@@ -330,14 +334,17 @@ it('should build using server build', async () => {
   expect(output['api'].allowQuery).toBe(undefined);
   expect(output['api'].memory).toBe(128);
   expect(output['api'].maxDuration).toBe(5);
+  expect(output['api'].maxConcurrency).toBe(6);
   expect(output['api'].operationType).toBe('API');
 
   expect(output['api/another'].type).toBe('Lambda');
   expect(output['api/another'].allowQuery).toBe(undefined);
+  expect(output['api/another'].maxConcurrency).toBe(undefined);
   expect(output['api/another'].operationType).toBe('API');
 
   expect(output['api/blog/[slug]'].type).toBe('Lambda');
   expect(output['api/blog/[slug]'].allowQuery).toBe(undefined);
+  expect(output['api/blog/[slug]'].maxConcurrency).toBe(undefined);
   expect(output['api/blog/[slug]'].operationType).toBe('API');
 
   expect(output['static'].type).toBe('FileFsRef');
@@ -349,12 +356,12 @@ it('should build using server build', async () => {
   expect(output['ssg'].lambda.operationType).toBe('ISR');
   expect(output['ssg'].sourcePath).toBe(undefined);
 
-  expect(output['index'] === output['another']).toBe(true);
+  expect(output['index']).not.toBe(output['another']);
   expect(output['dynamic/[slug]'] !== output['fallback/[slug]'].lambda).toBe(
     true
   );
   expect(output['index'] !== output['dynamic/[slug]']).toBe(true);
-  expect(output['api/another'] === output['api/blog/[slug]']).toBe(true);
+  expect(output['api/another']).toBe(output['api/blog/[slug]']);
   expect(output['api'] !== output['api/another']).toBe(true);
   expect(
     caughtLogs.some(log =>
@@ -374,7 +381,7 @@ it('should build using server build', async () => {
       totalLambdas += 1;
     }
   }
-  expect(lambdas.size).toBe(5);
+  expect(lambdas.size).toBe(7);
   expect(lambdas.size).toBeLessThan(totalLambdas);
 });
 
@@ -426,21 +433,21 @@ it('Should build the 404-getstaticprops-i18n example', async () => {
   expect(output['en/404']).toBeDefined();
   expect(output['en/404'].type).toBe('FileFsRef');
   expect(output['en/404'].allowQuery).toBe(undefined);
-  expect(output['_next/data/testing-build-id/en/404.json']).toBeDefined();
-  expect(output['_next/data/testing-build-id/en/404.json'].type).toBe(
+  expect(output['_next/data/build-TfctsWXpff2fKS/en/404.json']).toBeDefined();
+  expect(output['_next/data/build-TfctsWXpff2fKS/en/404.json'].type).toBe(
     'FileFsRef'
   );
-  expect(output['_next/data/testing-build-id/en/404.json'].allowQuery).toBe(
+  expect(output['_next/data/build-TfctsWXpff2fKS/en/404.json'].allowQuery).toBe(
     undefined
   );
   expect(output['fr/404']).toBeDefined();
   expect(output['fr/404'].type).toBe('FileFsRef');
   expect(output['fr/404'].allowQuery).toBe(undefined);
-  expect(output['_next/data/testing-build-id/fr/404.json']).toBeDefined();
-  expect(output['_next/data/testing-build-id/fr/404.json'].type).toBe(
+  expect(output['_next/data/build-TfctsWXpff2fKS/fr/404.json']).toBeDefined();
+  expect(output['_next/data/build-TfctsWXpff2fKS/fr/404.json'].type).toBe(
     'FileFsRef'
   );
-  expect(output['_next/data/testing-build-id/fr/404.json'].allowQuery).toBe(
+  expect(output['_next/data/build-TfctsWXpff2fKS/fr/404.json'].allowQuery).toBe(
     undefined
   );
   const filePaths = Object.keys(output);
@@ -469,8 +476,10 @@ it('Should build the gip-gsp-404 example', async () => {
   });
   expect(output['404']).toBeDefined();
   expect(output['404'].type).toBe('Prerender');
-  expect(output['_next/data/testing-build-id/404.json']).toBeDefined();
-  expect(output['_next/data/testing-build-id/404.json'].type).toBe('Prerender');
+  expect(output['_next/data/build-TfctsWXpff2fKS/404.json']).toBeDefined();
+  expect(output['_next/data/build-TfctsWXpff2fKS/404.json'].type).toBe(
+    'Prerender'
+  );
   const filePaths = Object.keys(output);
   const serverlessError = filePaths.some(filePath => filePath.match(/_error/));
   const hasUnderScoreAppStaticFile = filePaths.some(filePath =>

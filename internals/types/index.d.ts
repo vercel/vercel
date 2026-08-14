@@ -26,34 +26,9 @@ export interface JSONObject {
   [key: string]: JSONValue;
 }
 
-interface AuthConfig {
-  '// Note'?: string;
-  '// Docs'?: string;
-  skipWrite?: boolean;
-  /** An `access_token` obtained using the OAuth Device Authorization flow.  */
-  token?: string;
-  /** A `refresh_token` obtained using the OAuth Device Authorization flow. */
-  refreshToken?: string;
-  /**
-   * The absolute time (seconds) when the {@link AuthConfig.token} expires.
-   * Used to optimistically check if the token is still valid.
-   */
-  expiresAt?: number;
-}
+export type AuthConfig = import('@vercel/cli-config').AuthConfig;
 
-export interface GlobalConfig {
-  '// Note'?: string;
-  '// Docs'?: string;
-  currentTeam?: string;
-  api?: string;
-
-  telemetry?: {
-    enabled?: boolean;
-  };
-  guidance?: {
-    enabled?: boolean;
-  };
-}
+export type GlobalConfig = import('@vercel/cli-config').GlobalConfig;
 
 type Billing = {
   addons: string[];
@@ -61,6 +36,7 @@ type Billing = {
   period: { start: number; end: number };
   plan: string;
   platform: string;
+  status: 'active' | 'trialing' | 'overdue' | 'canceled' | 'expired';
   trial: { start: number; end: number };
 };
 
@@ -93,6 +69,12 @@ export interface Team {
       state: string;
     };
   };
+  /**
+   * Team-wide policy for enforcing sensitive Environment Variables.
+   * When set to "on", the API silently promotes `encrypted` Production and
+   * Preview Environment Variables to `sensitive` on create.
+   */
+  sensitiveEnvironmentVariablePolicy?: 'default' | 'on' | 'off';
 }
 
 export type Domain = {
@@ -176,6 +158,14 @@ export type Deployment = {
   buildErrorAt?: number;
   buildingAt: number;
   canceledAt?: number;
+  checks?: Record<
+    string,
+    {
+      state: 'pending' | 'succeeded' | 'failed';
+      startedAt?: string;
+      completedAt?: string;
+    }
+  >;
   checksState?: 'completed' | 'registered' | 'running';
   checksConclusion?: 'canceled' | 'failed' | 'skipped' | 'succeeded';
   createdAt: number;
@@ -332,6 +322,7 @@ export interface ProjectEnvVariable {
   key: string;
   value: string;
   type: ProjectEnvType;
+  visibility?: 'config' | 'secret';
   configurationId?: string | null;
   createdAt?: number;
   updatedAt?: number;
@@ -530,6 +521,11 @@ export interface GitMetadata {
   commitSha?: string | undefined;
   dirty?: boolean | undefined;
   remoteUrl?: string;
+  /**
+   * Path of the deployed directory relative to the detected git repository
+   * root. Empty string when deploying from the repository root.
+   */
+  rootDirectory?: string;
 }
 
 /**

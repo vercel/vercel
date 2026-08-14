@@ -399,5 +399,10 @@
       "mustContain": ":{",
       "mustNotContain": "<html"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

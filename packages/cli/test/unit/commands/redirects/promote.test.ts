@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import redirects from '../../../../src/commands/redirects';
 import { useUser } from '../../../mocks/user';
@@ -65,6 +65,34 @@ describe('redirects promote', () => {
       await expect(exitCodePromise).resolves.toEqual(0);
     });
 
+    it('should output action_required JSON when --yes not provided in non-interactive mode', async () => {
+      mockGetVersions({ isStaging: true });
+      mockGetRedirects();
+
+      client.nonInteractive = true;
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv('redirects', 'promote', 'version-1');
+      await expect(redirects(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('confirmation_required');
+      expect(payload.message).toContain('--yes to confirm promote');
+      expect(payload.next[0].command).toContain('redirects promote');
+      expect(payload.next[0].command).toContain('version-1');
+      expect(payload.next[0].command).toContain('--yes');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
+    });
+
     it('should skip confirmation with --yes flag', async () => {
       mockGetVersions({ isStaging: true });
       mockGetRedirects();
@@ -78,6 +106,22 @@ describe('redirects promote', () => {
       await expect(client.stderr).toOutput('Version version-1 promoted');
 
       await expect(exitCodePromise).resolves.toEqual(0);
+    });
+
+    it('should skip confirmation with --yes when non-interactive', async () => {
+      mockGetVersions({ isStaging: true });
+      mockGetRedirects();
+      mockPromoteVersion();
+
+      client.nonInteractive = true;
+      client.setArgv('redirects', 'promote', 'version-1', '--yes');
+      const exitCodePromise = redirects(client);
+
+      await expect(client.stderr).toOutput('Promoting version version-1');
+      await expect(client.stderr).toOutput('Version version-1 promoted');
+      await expect(exitCodePromise).resolves.toEqual(0);
+
+      client.nonInteractive = false;
     });
 
     it('should cancel on no', async () => {

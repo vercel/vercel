@@ -1,5 +1,143 @@
 # @vercel/functions
 
+## 3.7.6
+
+### Patch Changes
+
+- @vercel/oidc@3.8.1
+
+## 3.7.5
+
+### Patch Changes
+
+- Updated dependencies [d29a8f9]
+  - @vercel/oidc@3.8.0
+
+## 3.7.4
+
+### Patch Changes
+
+- Updated dependencies [fb93ff6]
+  - @vercel/oidc@3.7.1
+
+## 3.7.3
+
+### Patch Changes
+
+- Updated dependencies [415fde0]
+  - @vercel/oidc@3.7.0
+
+## 3.7.2
+
+### Patch Changes
+
+- 071569d: Add a `maxPayload` option to `experimental_upgradeWebSocket()`, defaulting to 256 KiB.
+  - @vercel/oidc@3.6.2
+
+## 3.7.1
+
+### Patch Changes
+
+- a7f1f7c: Make `ws` an optional peer dependency
+
+## 3.7.0
+
+### Minor Changes
+
+- 3f3ef14: Add `experimental_upgradeWebSocket()` API
+
+## 3.6.3
+
+### Patch Changes
+
+- Updated dependencies [01cf6c2]
+  - @vercel/oidc@3.6.1
+
+## 3.6.2
+
+### Patch Changes
+
+- Updated dependencies [fddeb55]
+  - @vercel/oidc@3.6.0
+
+## 3.6.1
+
+### Patch Changes
+
+- Updated dependencies [5a700dc]
+  - @vercel/oidc@3.5.0
+
+## 3.6.0
+
+### Minor Changes
+
+- 102f82b: `getCache().set()` now defaults `options.name` to the provided `key` when omitted, so cache entries get a human-readable label in o11y by default. Pass `name: ''` to suppress this behavior and use the hashed key.
+
+## 3.5.1
+
+### Patch Changes
+
+- ae20217: Upgrade to TypeScript 5.9
+- Updated dependencies [ae20217]
+  - @vercel/oidc@3.4.1
+
+## 3.5.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/oidc@3.4.0
+
+## 3.4.6
+
+### Patch Changes
+
+- Updated dependencies [bf07448]
+  - @vercel/oidc@3.3.1
+
+## 3.4.5
+
+### Patch Changes
+
+- 56c9f89: add missing prettier dev dependency
+- Updated dependencies [24686d0]
+- Updated dependencies [56c9f89]
+  - @vercel/oidc@3.3.0
+
+## 3.4.4
+
+### Patch Changes
+
+- Pin `typedoc-plugin-markdown` to `3.15.2` and `typedoc-plugin-mdn-links` to `3.0.3` to match the version used by `@vercel/edge`. The previous `4.1.2` version requires `typedoc@0.26.x` as a peer dependency but was paired with `typedoc@0.24.6`, which caused CI failures whenever pnpm hoisted the 4.x plugin (the plugin calls `app.internationalization.addTranslations`, which does not exist in typedoc 0.24). The choice of which plugin version got hoisted was non-deterministic, which is why the failure appeared as flaky `Build @vercel/<pkg>` steps in CI. ([#16072](https://github.com/vercel/vercel/pull/16072))
+
+- Updated dependencies [[`2aa78415831fe89d1b21dd89704706bd1ad5e78d`](https://github.com/vercel/vercel/commit/2aa78415831fe89d1b21dd89704706bd1ad5e78d)]:
+  - @vercel/oidc@3.2.1
+
+## 3.4.3
+
+### Patch Changes
+
+- [functions] Revert "[functions] URL encode cache tags" ([#15213](https://github.com/vercel/vercel/pull/15213))
+
+## 3.4.2
+
+### Patch Changes
+
+- Updated dependencies [[`3760ea1e97fdc45dae36c64138023e1b1a075467`](https://github.com/vercel/vercel/commit/3760ea1e97fdc45dae36c64138023e1b1a075467)]:
+  - @vercel/oidc@3.2.0
+
+## 3.4.1
+
+### Patch Changes
+
+- Fix InMemoryCache to use JSON serialization for consistency with RuntimeCache ([#14751](https://github.com/vercel/vercel/pull/14751))
+
+  InMemoryCache now serializes values with `JSON.stringify()` on set and deserializes with `JSON.parse()` on get, matching the behavior of RuntimeCache. This ensures consistent behavior when switching between cache implementations (e.g., in-memory for development, remote for production), particularly for types that don't survive JSON round-trips like `Date`, `Map`, `Set`, and `undefined`.
+
 ## 3.4.0
 
 ### Minor Changes

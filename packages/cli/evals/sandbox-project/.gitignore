@@ -1,0 +1,4 @@
+!.vercel
+!.vercel/project.json
+.env
+.env*.local

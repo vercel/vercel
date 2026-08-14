@@ -18,12 +18,14 @@ import {
   walkParentDirs,
   cloneEnv,
   FileBlob,
+  getReportedServiceType,
   type GlobOptions,
   type Files,
   type BuildV3,
   type ShouldServe,
 } from '@vercel/build-utils';
 import { installBundler } from './install-ruby';
+import { generateProjectManifest } from './diagnostics';
 
 async function matchPaths(
   configPatterns: string | string[] | undefined,
@@ -169,6 +171,7 @@ export const build: BuildV3 = async ({
   entrypoint,
   config,
   meta = {},
+  service,
 }) => {
   await download(files, workPath, meta);
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
@@ -240,12 +243,14 @@ export const build: BuildV3 = async ({
   // try to remove gem cache to slim bundle size
   try {
     await remove(join(vendorDir, 'cache'));
-  } catch (e) {
+  } catch (_e) {
     // don't do anything here
   }
 
   const originalRbPath = join(__dirname, '..', 'vc_init.rb');
   const originalHandlerRbContents = await readFile(originalRbPath, 'utf8');
+  const originalUtilsRbPath = join(__dirname, '..', 'vc_utils.rb');
+  const originalUtilsRbContents = await readFile(originalUtilsRbPath, 'utf8');
 
   // will be used on `require_relative '$here'` or for loading rack config.ru file
   // for example, `require_relative 'api/users'`
@@ -259,6 +264,7 @@ export const build: BuildV3 = async ({
   // in order to allow the user to have `server.rb`, we need our `server.rb` to be called
   // something else
   const handlerRbFilename = 'vc__handler__ruby';
+  const utilsRbFilename = 'vc__utils__ruby.rb';
 
   // Apply predefined default excludes similar to Python runtime
   const predefinedExcludes = [
@@ -281,6 +287,9 @@ export const build: BuildV3 = async ({
   outputFiles[`${handlerRbFilename}.rb`] = new FileBlob({
     data: nowHandlerRbContents,
   });
+  outputFiles[utilsRbFilename] = new FileBlob({
+    data: originalUtilsRbContents,
+  });
 
   // static analysis is impossible with ruby.
   // instead, provide `includeFiles` and `excludeFiles` config options to reduce bundle size.
@@ -298,7 +307,10 @@ export const build: BuildV3 = async ({
       }
 
       // whitelist handler
-      if (excludedPaths[i] === `${handlerRbFilename}.rb`) {
+      if (
+        excludedPaths[i] === `${handlerRbFilename}.rb` ||
+        excludedPaths[i] === utilsRbFilename
+      ) {
         continue;
       }
 
@@ -318,10 +330,23 @@ export const build: BuildV3 = async ({
     environment: {},
   });
 
+  try {
+    // We ensure the lockfile is up to date in bundleLock, so we are sure it's up to date.
+    await generateProjectManifest({
+      workPath,
+      gemfileLockPath: join(dirname(gemfilePath), 'Gemfile.lock'),
+      framework: config?.framework ?? undefined,
+      serviceType: service ? getReportedServiceType(service) : undefined,
+    });
+  } catch (err) {
+    debug(`Failed to write ruby manifest: ${String(err)}`);
+  }
+
   return { output };
 };
 
 export { startDevServer } from './start-dev-server';
+export { diagnostics } from './diagnostics';
 
 // Route all requests to the Ruby dev server during `vercel dev`
 export const shouldServe: ShouldServe = () => true;

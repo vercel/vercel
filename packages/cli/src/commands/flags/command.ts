@@ -1,0 +1,1681 @@
+import { projectOption, yesOption } from '../../util/arg-common';
+import { formatFlagConditionComparatorList } from '../../util/flags/comparators';
+import { packageName } from '../../util/pkg-name';
+import { FLAG_EVALUATIONS_GRANULARITIES } from './evaluations-config';
+
+const segmentRuleOperatorDescription = `Valid operators: ${formatFlagConditionComparatorList()}`;
+
+export const listSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List all feature flags for the current project',
+  default: true,
+  arguments: [],
+  options: [
+    projectOption,
+    {
+      name: 'state',
+      shorthand: 's',
+      type: String,
+      deprecated: false,
+      description: 'Filter flags by state (active or archived)',
+      argument: 'STATE',
+    },
+    {
+      name: 'tag',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description: 'Filter flags by tag (repeatable; all must match)',
+      argument: 'TAG',
+    },
+    {
+      name: 'created-by',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Filter flags by the id of the user or team that created them',
+      argument: 'ID',
+    },
+    {
+      name: 'maintainer-id',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description:
+        'Filter flags by maintainer user id (repeatable; any may match)',
+      argument: 'ID',
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description:
+        'Return a single page of at most NUMBER flags (1-100) instead of all',
+      argument: 'NUMBER',
+    },
+    {
+      name: 'next',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Pagination cursor from a previous list response',
+      argument: 'CURSOR',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'List all active flags',
+      value: `${packageName} flags ls`,
+    },
+    {
+      name: 'List archived flags',
+      value: `${packageName} flags ls --state archived`,
+    },
+    {
+      name: 'Filter flags by tag, creator, and maintainer',
+      value: `${packageName} flags ls --tag checkout --created-by user_123 --maintainer-id user_456`,
+    },
+    {
+      name: 'List the first page of 10 flags',
+      value: `${packageName} flags ls --limit 10`,
+    },
+    {
+      name: 'List the next page using the cursor from the previous page',
+      value: `${packageName} flags ls --limit 10 --next <cursor>`,
+    },
+    {
+      name: 'List flags as JSON',
+      value: `${packageName} flags ls --json`,
+    },
+  ],
+} as const;
+
+export const inspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description: 'Display information about a feature flag',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [projectOption],
+  examples: [
+    {
+      name: 'Show details of a feature flag',
+      value: `${packageName} flags inspect my-feature-flag`,
+    },
+  ],
+} as const;
+
+export const versionsListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  default: true,
+  description: 'List version history for a feature flag',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description: 'Filter versions by changed environment',
+      argument: 'ENV',
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Return at most NUMBER versions (1-100)',
+      argument: 'NUMBER',
+    },
+    {
+      name: 'cursor',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Pagination cursor from a previous versions response',
+      argument: 'CURSOR',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'List version history for a feature flag',
+      value: `${packageName} flags versions my-feature-flag`,
+    },
+    {
+      name: 'List version history using the explicit list subcommand',
+      value: `${packageName} flags versions list my-feature-flag`,
+    },
+    {
+      name: 'List production version history',
+      value: `${packageName} flags versions my-feature-flag --environment production`,
+    },
+    {
+      name: 'List the next page of version history',
+      value: `${packageName} flags versions my-feature-flag --limit 10 --cursor <cursor>`,
+    },
+    {
+      name: 'List version history as JSON',
+      value: `${packageName} flags versions my-feature-flag --json`,
+    },
+  ],
+} as const;
+
+export const versionsDiffSubcommand = {
+  name: 'diff',
+  aliases: [],
+  description: 'Show changes introduced by a feature flag version',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'revision',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Revision number to compare with the previous revision',
+      argument: 'NUMBER',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output the diff in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'Show what changed in a revision',
+      value: `${packageName} flags versions diff my-feature-flag --revision 4`,
+    },
+    {
+      name: 'Show the revision diff as JSON',
+      value: `${packageName} flags versions diff my-feature-flag --revision 4 --json`,
+    },
+  ],
+} as const;
+
+export const versionsSubcommand = {
+  name: 'versions',
+  aliases: [],
+  description: 'List and compare version history for a feature flag',
+  arguments: [],
+  subcommands: [versionsListSubcommand, versionsDiffSubcommand],
+  options: [],
+  examples: [
+    {
+      name: 'List version history for a feature flag',
+      value: `${packageName} flags versions my-feature-flag`,
+    },
+    {
+      name: 'Show what changed in a revision',
+      value: `${packageName} flags versions diff my-feature-flag --revision 4`,
+    },
+  ],
+} as const;
+
+export const evaluationsSubcommand = {
+  name: 'evaluations',
+  aliases: [],
+  description: 'Display evaluation metrics for a feature flag',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'since',
+      shorthand: 's',
+      type: String,
+      deprecated: false,
+      description:
+        'Start time: relative (1h, 30m, 2d) or ISO date (default: 1h)',
+      argument: 'TIME',
+    },
+    {
+      name: 'until',
+      shorthand: 'u',
+      type: String,
+      deprecated: false,
+      description: 'End time (default: now)',
+      argument: 'TIME',
+    },
+    {
+      name: 'granularity',
+      shorthand: 'g',
+      type: String,
+      deprecated: false,
+      description: `Time bucket size: ${FLAG_EVALUATIONS_GRANULARITIES.join(', ')} (default: auto)`,
+      argument: 'SIZE',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'Show evaluations by variant for the last hour',
+      value: `${packageName} flags evaluations my-feature`,
+    },
+    {
+      name: 'Show evaluation metrics as JSON',
+      value: `${packageName} flags evaluations my-feature --since 24h --json`,
+    },
+  ],
+} as const;
+
+export const createSubcommand = {
+  name: 'create',
+  aliases: ['add'],
+  description: 'Create a new feature flag',
+  arguments: [
+    {
+      name: 'slug',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'kind',
+      shorthand: 'k',
+      type: String,
+      deprecated: false,
+      description:
+        'The type of the flag value (boolean, string, number, or json)',
+      argument: 'KIND',
+    },
+    {
+      name: 'description',
+      shorthand: 'd',
+      type: String,
+      deprecated: false,
+      description: 'Description of the feature flag',
+      argument: 'TEXT',
+    },
+    {
+      name: 'variant',
+      shorthand: 'v',
+      type: [String],
+      deprecated: false,
+      description:
+        'Variant definition as VALUE[=LABEL] (can be repeated for string, number, and json flags)',
+      argument: 'VALUE[=LABEL]',
+    },
+  ],
+  examples: [
+    {
+      name: 'Create a boolean feature flag',
+      value: `${packageName} flags create my-feature`,
+    },
+    {
+      name: 'Create a string feature flag with description',
+      value: `${packageName} flags create my-feature --kind string --description "My feature flag"`,
+    },
+    {
+      name: 'Create a string feature flag with explicit variants',
+      value: `${packageName} flags add my-feature --kind string --variant control="Welcome back" --variant treatment="New onboarding"`,
+    },
+    {
+      name: 'Create a JSON feature flag with explicit variants',
+      value: `${packageName} flags add layout-config --kind json --variant '{"theme":"light"}'=Light --variant '{"theme":"dark","sidebar":true}'=Dark`,
+    },
+  ],
+} as const;
+
+export const openSubcommand = {
+  name: 'open',
+  aliases: [],
+  description: 'Open feature flags in the Vercel dashboard',
+  arguments: [
+    {
+      name: 'flag',
+      required: false,
+    },
+  ],
+  options: [projectOption],
+  examples: [
+    {
+      name: 'Open the project feature flags dashboard',
+      value: `${packageName} flags open`,
+    },
+    {
+      name: 'Open a specific feature flag',
+      value: `${packageName} flags open my-feature-flag`,
+    },
+  ],
+} as const;
+
+export const updateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description: 'Update an existing feature flag',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'variant',
+      shorthand: 'v',
+      type: String,
+      deprecated: false,
+      description: 'Variant ID or value to update',
+      argument: 'VARIANT',
+    },
+    {
+      name: 'value',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'New variant value',
+      argument: 'VALUE',
+    },
+    {
+      name: 'label',
+      shorthand: 'l',
+      type: String,
+      deprecated: false,
+      description: 'New variant label',
+      argument: 'LABEL',
+    },
+    {
+      name: 'add-variant',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description:
+        'Add a variant as VALUE[=LABEL] (repeatable for string, number, and json flags)',
+      argument: 'VALUE[=LABEL]',
+    },
+    {
+      name: 'remove-variant',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description: 'Remove a variant by ID or value (repeatable)',
+      argument: 'VARIANT',
+    },
+    {
+      name: 'message',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Optional revision message for the update',
+      argument: 'TEXT',
+    },
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when removing a variant',
+    },
+  ],
+  examples: [
+    {
+      name: 'Update a string variant value and label',
+      value: `${packageName} flags update my-feature --variant control --value welcome-back --label "Welcome back"`,
+    },
+    {
+      name: 'Update a variant with a revision message',
+      value: `${packageName} flags update my-feature --variant control --label "Control" --message "Rename control variant"`,
+    },
+    {
+      name: 'Rename a boolean variant label',
+      value: `${packageName} flags update my-feature --variant false --label "Disabled"`,
+    },
+    {
+      name: 'Add a new variant',
+      value: `${packageName} flags update my-feature --add-variant treatment="New onboarding"`,
+    },
+    {
+      name: 'Remove variants by value or ID',
+      value: `${packageName} flags update my-feature --remove-variant control --remove-variant var_123 --yes`,
+    },
+  ],
+} as const;
+
+export const setSubcommand = {
+  name: 'set',
+  aliases: [],
+  description: 'Set the served variant for a feature flag in an environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment to set the variant in (production, preview, or development)',
+      argument: 'ENV',
+    },
+    {
+      name: 'variant',
+      shorthand: 'v',
+      type: String,
+      deprecated: false,
+      description: 'The variant ID or value to serve',
+      argument: 'VARIANT',
+    },
+    {
+      name: 'message',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Optional revision message for the update',
+      argument: 'TEXT',
+    },
+  ],
+  examples: [
+    {
+      name: 'Set a string variant in production',
+      value: `${packageName} flags set welcome-message --environment production --variant control`,
+    },
+    {
+      name: 'Set a number variant in preview',
+      value: `${packageName} flags set bucket-size -e preview --variant 20`,
+    },
+    {
+      name: 'Set a boolean flag to true in development',
+      value: `${packageName} flags set my-feature -e development --variant true`,
+    },
+  ],
+} as const;
+
+export const splitSubcommand = {
+  name: 'split',
+  aliases: [],
+  description:
+    'Configure a weighted split for a feature flag in an environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment to configure (production, preview, or development)',
+      argument: 'ENV',
+    },
+    {
+      name: 'by',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Entity attribute used for bucketing, in the form entity.attribute',
+      argument: 'ENTITY.ATTRIBUTE',
+    },
+    {
+      name: 'weight',
+      shorthand: 'w',
+      type: [String],
+      deprecated: false,
+      description:
+        'Variant weight ratio as VARIANT=WEIGHT. Repeat for each variant; values are normalized and 0 receives no traffic.',
+      argument: 'VARIANT=WEIGHT',
+    },
+    {
+      name: 'default-variant',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'The fallback variant to serve when the split attribute is unavailable',
+      argument: 'VARIANT',
+    },
+    {
+      name: 'message',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Optional revision message for the update',
+      argument: 'TEXT',
+    },
+  ],
+  examples: [
+    {
+      name: 'Split a boolean flag in production',
+      value: `${packageName} flags split redesigned-checkout --environment production --by user.userId --weight off=95 --weight on=5`,
+    },
+    {
+      name: 'Split a string flag with a fallback variant',
+      value: `${packageName} flags split welcome-message -e production --by user.userId --default-variant control --weight control=90 --weight treatment=10`,
+    },
+    {
+      name: 'Exclude a variant from the split',
+      value: `${packageName} flags split checkout-copy -e preview --by user.userId --default-variant control --weight control=50 --weight treatment=50 --weight legacy=0`,
+    },
+  ],
+} as const;
+
+export const rolloutSubcommand = {
+  name: 'rollout',
+  aliases: [],
+  description:
+    'Configure a progressive rollout for a feature flag in an environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment to configure (production, preview, or development)',
+      argument: 'ENV',
+    },
+    {
+      name: 'from-variant',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'The variant to roll away from (defaults to false for boolean flags)',
+      argument: 'VARIANT',
+    },
+    {
+      name: 'to-variant',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'The variant to roll towards (defaults to true for boolean flags)',
+      argument: 'VARIANT',
+    },
+    {
+      name: 'default-variant',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'The fallback variant to serve when the rollout attribute is unavailable',
+      argument: 'VARIANT',
+    },
+    {
+      name: 'by',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Entity attribute used for bucketing, in the form entity.attribute',
+      argument: 'ENTITY.ATTRIBUTE',
+    },
+    {
+      name: 'stage',
+      shorthand: 's',
+      type: [String],
+      deprecated: false,
+      description:
+        'Add a rollout stage as PERCENTAGE,DURATION (e.g. "5,6h"). Can be specified multiple times. 100% is implied at the end.',
+      argument: 'PERCENTAGE,DURATION',
+    },
+    {
+      name: 'start',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'When the rollout should start: "now", a future relative time like "1h", or an ISO 8601 datetime',
+      argument: 'TIME',
+    },
+    {
+      name: 'message',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Optional revision message for the update',
+      argument: 'TEXT',
+    },
+  ],
+  examples: [
+    {
+      name: 'Start a progressive boolean rollout in production',
+      value: `${packageName} flags rollout redesigned-checkout --environment production --by user.userId --stage 5,6h --stage 10,6h --stage 25,12h --stage 50,1d`,
+    },
+    {
+      name: 'Schedule a string-flag rollout for later',
+      value: `${packageName} flags rollout welcome-message -e production --by user.userId --from-variant control --to-variant treatment --default-variant control --stage 10,2h --stage 50,12h --start 2026-04-16T09:00:00Z`,
+    },
+    {
+      name: 'Update only the rollout schedule while keeping current variants',
+      value: `${packageName} flags rollout redesigned-checkout -e production --stage 5,30m --stage 25,2h --stage 50,8h`,
+    },
+  ],
+} as const;
+
+const ruleConditionDescription = `Rule condition as ENTITY.ATTRIBUTE:OPERATOR:VALUE or segment:OPERATOR:SEGMENT. Repeatable; semicolon-separated conditions are also supported. ${segmentRuleOperatorDescription}`;
+
+const ruleOutcomeOptions = [
+  {
+    name: 'variant',
+    shorthand: 'v',
+    type: String,
+    deprecated: false,
+    description: 'Variant ID or value to serve when the rule matches',
+    argument: 'VARIANT',
+  },
+  {
+    name: 'by',
+    shorthand: null,
+    type: String,
+    deprecated: false,
+    description:
+      'Entity attribute used for split or rollout bucketing, in the form entity.attribute',
+    argument: 'ENTITY.ATTRIBUTE',
+  },
+  {
+    name: 'weight',
+    shorthand: 'w',
+    type: [String],
+    deprecated: false,
+    description:
+      'Split weight ratio as VARIANT=WEIGHT. Repeat for each variant.',
+    argument: 'VARIANT=WEIGHT',
+  },
+  {
+    name: 'default-variant',
+    shorthand: null,
+    type: String,
+    deprecated: false,
+    description:
+      'Fallback variant for split or rollout outcomes when the bucketing attribute is unavailable',
+    argument: 'VARIANT',
+  },
+  {
+    name: 'from-variant',
+    shorthand: null,
+    type: String,
+    deprecated: false,
+    description: 'Variant to roll away from for rollout outcomes',
+    argument: 'VARIANT',
+  },
+  {
+    name: 'to-variant',
+    shorthand: null,
+    type: String,
+    deprecated: false,
+    description: 'Variant to roll towards for rollout outcomes',
+    argument: 'VARIANT',
+  },
+  {
+    name: 'stage',
+    shorthand: 's',
+    type: [String],
+    deprecated: false,
+    description:
+      'Add a rollout stage as PERCENTAGE,DURATION. Can be specified multiple times.',
+    argument: 'PERCENTAGE,DURATION',
+  },
+  {
+    name: 'start',
+    shorthand: null,
+    type: String,
+    deprecated: false,
+    description:
+      'When the rollout should start: "now", a relative time like "1h", or an ISO 8601 datetime',
+    argument: 'TIME',
+  },
+] as const;
+
+const ruleMessageOption = {
+  name: 'message',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description: 'Optional revision message for the update',
+  argument: 'TEXT',
+} as const;
+
+export const rulesListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List conditional rules for a feature flag environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment to list rules for (production, preview, or development)',
+      argument: 'ENV',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'List production rules for a flag',
+      value: `${packageName} flags rules ls my-feature --environment production`,
+    },
+    {
+      name: 'List rules as JSON',
+      value: `${packageName} flags rules ls my-feature -e production --json`,
+    },
+  ],
+} as const;
+
+export const rulesAddSubcommand = {
+  name: 'add',
+  aliases: [],
+  description: 'Add a conditional rule to a feature flag environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment to add the rule to (production, preview, or development)',
+      argument: 'ENV',
+    },
+    {
+      name: 'condition',
+      shorthand: 'c',
+      type: [String],
+      deprecated: false,
+      description: ruleConditionDescription,
+      argument: 'CONDITION',
+    },
+    ...ruleOutcomeOptions,
+    {
+      name: 'position',
+      shorthand: 'p',
+      type: Number,
+      deprecated: false,
+      description: '1-based position for the new rule (defaults to last)',
+      argument: 'N',
+    },
+    ruleMessageOption,
+  ],
+  examples: [
+    {
+      name: 'Add a variant rule',
+      value: `${packageName} flags rules add my-feature --environment production --condition user.plan:eq:pro --variant on`,
+    },
+    {
+      name: 'Add a segment rule',
+      value: `${packageName} flags rules add my-feature -e production --condition segment:eq:seg_beta123 --variant on`,
+    },
+    {
+      name: 'Add a split rule at the top',
+      value: `${packageName} flags rules add my-feature -e production --condition user.plan:eq:pro --by user.userId --weight off=90 --weight on=10 --position 1`,
+    },
+  ],
+} as const;
+
+export const rulesUpdateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description: 'Update a conditional rule in a feature flag environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+    {
+      name: 'rule',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment containing the rule (production, preview, or development)',
+      argument: 'ENV',
+    },
+    {
+      name: 'condition',
+      shorthand: 'c',
+      type: [String],
+      deprecated: false,
+      description: 'Replace rule conditions. ' + ruleConditionDescription,
+      argument: 'CONDITION',
+    },
+    ...ruleOutcomeOptions,
+    ruleMessageOption,
+  ],
+  examples: [
+    {
+      name: 'Replace rule conditions',
+      value: `${packageName} flags rules update my-feature rule_123 --environment production --condition user.plan:eq:enterprise`,
+    },
+    {
+      name: 'Update a rule outcome',
+      value: `${packageName} flags rules update my-feature rule_123 -e production --variant off`,
+    },
+  ],
+} as const;
+
+export const rulesRemoveSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Remove a conditional rule from a feature flag environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+    {
+      name: 'rule',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment containing the rule (production, preview, or development)',
+      argument: 'ENV',
+    },
+    ruleMessageOption,
+  ],
+  examples: [
+    {
+      name: 'Remove a rule',
+      value: `${packageName} flags rules rm my-feature rule_123 --environment production`,
+    },
+  ],
+} as const;
+
+export const rulesMoveSubcommand = {
+  name: 'move',
+  aliases: [],
+  description: 'Move a conditional rule within a feature flag environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+    {
+      name: 'rule',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment containing the rule (production, preview, or development)',
+      argument: 'ENV',
+    },
+    {
+      name: 'position',
+      shorthand: 'p',
+      type: Number,
+      deprecated: false,
+      description: '1-based destination position for the rule',
+      argument: 'N',
+    },
+    ruleMessageOption,
+  ],
+  examples: [
+    {
+      name: 'Move a rule to the top',
+      value: `${packageName} flags rules move my-feature rule_123 --environment production --position 1`,
+    },
+  ],
+} as const;
+
+export const rulesSubcommand = {
+  name: 'rules',
+  aliases: [],
+  description: 'Manage conditional rules for feature flags',
+  arguments: [],
+  subcommands: [
+    rulesListSubcommand,
+    rulesAddSubcommand,
+    rulesUpdateSubcommand,
+    rulesRemoveSubcommand,
+    rulesMoveSubcommand,
+  ],
+  options: [],
+  examples: [],
+} as const;
+
+export const removeSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Delete a feature flag',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when deleting a flag',
+    },
+  ],
+  examples: [
+    {
+      name: 'Delete a feature flag',
+      value: `${packageName} flags rm my-feature-flag`,
+    },
+    {
+      name: 'Delete without confirmation',
+      value: `${packageName} flags rm my-feature-flag --yes`,
+    },
+  ],
+} as const;
+
+export const archiveSubcommand = {
+  name: 'archive',
+  aliases: [],
+  description: 'Archive a feature flag',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when archiving a flag',
+    },
+  ],
+  examples: [
+    {
+      name: 'Archive a feature flag',
+      value: `${packageName} flags archive my-feature-flag`,
+    },
+    {
+      name: 'Archive without confirmation',
+      value: `${packageName} flags archive my-feature-flag --yes`,
+    },
+  ],
+} as const;
+
+export const unarchiveSubcommand = {
+  name: 'unarchive',
+  aliases: [],
+  description: 'Unarchive a feature flag',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when unarchiving a flag',
+    },
+  ],
+  examples: [
+    {
+      name: 'Unarchive a feature flag',
+      value: `${packageName} flags unarchive my-feature-flag`,
+    },
+    {
+      name: 'Unarchive without confirmation',
+      value: `${packageName} flags unarchive my-feature-flag --yes`,
+    },
+  ],
+} as const;
+
+export const disableSubcommand = {
+  name: 'disable',
+  aliases: [],
+  description:
+    'Shortcut to serve the false variant of a boolean feature flag in an environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment to disable the flag in (production, preview, or development)',
+      argument: 'ENV',
+    },
+    {
+      name: 'variant',
+      shorthand: 'v',
+      type: String,
+      deprecated: false,
+      description:
+        'The variant ID or value to serve while the flag is disabled',
+      argument: 'VARIANT',
+    },
+    {
+      name: 'message',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Optional revision message for the update',
+      argument: 'TEXT',
+    },
+  ],
+  examples: [
+    {
+      name: 'Disable a flag in production',
+      value: `${packageName} flags disable my-feature --environment production`,
+    },
+    {
+      name: 'Disable a flag with a specific variant',
+      value: `${packageName} flags disable my-feature -e production --variant false`,
+    },
+    {
+      name: 'Disable a flag with a revision message',
+      value: `${packageName} flags disable my-feature -e production --message "Pause rollout in production"`,
+    },
+  ],
+} as const;
+
+export const enableSubcommand = {
+  name: 'enable',
+  aliases: [],
+  description:
+    'Shortcut to serve the true variant of a boolean feature flag in an environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment to enable the flag in (production, preview, or development)',
+      argument: 'ENV',
+    },
+    {
+      name: 'message',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Optional revision message for the update',
+      argument: 'TEXT',
+    },
+  ],
+  examples: [
+    {
+      name: 'Enable a flag in production',
+      value: `${packageName} flags enable my-feature --environment production`,
+    },
+    {
+      name: 'Enable a flag with a revision message',
+      value: `${packageName} flags enable my-feature --environment production --message "Resume production rollout"`,
+    },
+  ],
+} as const;
+
+export const segmentsListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List all feature flag segments for the current project',
+  arguments: [],
+  options: [
+    projectOption,
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'List all segments',
+      value: `${packageName} flags segments ls`,
+    },
+    {
+      name: 'List segments as JSON',
+      value: `${packageName} flags segments ls --json`,
+    },
+  ],
+} as const;
+
+export const segmentsInspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description: 'Display information about a feature flag segment',
+  arguments: [
+    {
+      name: 'segment',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'Show details of a segment',
+      value: `${packageName} flags segments inspect beta-users`,
+    },
+    {
+      name: 'Show segment data as JSON',
+      value: `${packageName} flags segments inspect beta-users --json`,
+    },
+  ],
+} as const;
+
+export const segmentsCreateSubcommand = {
+  name: 'create',
+  aliases: ['add'],
+  description: 'Create a feature flag segment',
+  arguments: [
+    {
+      name: 'slug',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'label',
+      shorthand: 'l',
+      type: String,
+      deprecated: false,
+      description: 'Human-readable label for the segment',
+      argument: 'LABEL',
+    },
+    {
+      name: 'description',
+      shorthand: 'd',
+      type: String,
+      deprecated: false,
+      description: 'Description of the segment',
+      argument: 'TEXT',
+    },
+    {
+      name: 'hint',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Hint describing who belongs in the segment',
+      argument: 'TEXT',
+    },
+    {
+      name: 'data',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Full segment data JSON with rules, include, and exclude fields',
+      argument: 'JSON',
+    },
+    {
+      name: 'add',
+      shorthand: 'a',
+      type: [String],
+      deprecated: false,
+      description: `Add include:ENTITY.ATTRIBUTE=VALUE, exclude:ENTITY.ATTRIBUTE=VALUE, or rule:ENTITY.ATTRIBUTE:OPERATOR:VALUE; repeatable. ${segmentRuleOperatorDescription}`,
+      argument: 'TARGET',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output the created segment as JSON',
+    },
+  ],
+  examples: [
+    {
+      name: 'Create a segment with included users',
+      value: `${packageName} flags segments create beta-users --label "Beta users" --add include:user.id=user_123 --add include:user.id=user_456`,
+    },
+    {
+      name: 'Create a segment from rules',
+      value: `${packageName} flags segments create enterprise-users --label "Enterprise users" --add rule:user.plan:eq:enterprise`,
+    },
+    {
+      name: 'Create a segment from full JSON data',
+      value: `${packageName} flags segments create staff --label Staff --data '{"rules":[],"include":{"user":{"email":[{"value":"me@company.com"}]}},"exclude":{}}'`,
+    },
+  ],
+} as const;
+
+export const segmentsUpdateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description: 'Update a feature flag segment',
+  arguments: [
+    {
+      name: 'segment',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'label',
+      shorthand: 'l',
+      type: String,
+      deprecated: false,
+      description: 'New human-readable label for the segment',
+      argument: 'LABEL',
+    },
+    {
+      name: 'description',
+      shorthand: 'd',
+      type: String,
+      deprecated: false,
+      description: 'New description for the segment',
+      argument: 'TEXT',
+    },
+    {
+      name: 'hint',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'New hint for the segment',
+      argument: 'TEXT',
+    },
+    {
+      name: 'data',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Replace the full segment data JSON with rules, include, and exclude fields',
+      argument: 'JSON',
+    },
+    {
+      name: 'add',
+      shorthand: 'a',
+      type: [String],
+      deprecated: false,
+      description: `Add include:ENTITY.ATTRIBUTE=VALUE, exclude:ENTITY.ATTRIBUTE=VALUE, or rule:ENTITY.ATTRIBUTE:OPERATOR:VALUE; repeatable. ${segmentRuleOperatorDescription}`,
+      argument: 'TARGET',
+    },
+    {
+      name: 'remove',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description: `Remove include:ENTITY.ATTRIBUTE=VALUE, exclude:ENTITY.ATTRIBUTE=VALUE, rule:ENTITY.ATTRIBUTE:OPERATOR:VALUE, or rule:RULE_ID; repeatable. ${segmentRuleOperatorDescription}`,
+      argument: 'TARGET',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output the updated segment as JSON',
+    },
+  ],
+  examples: [
+    {
+      name: 'Rename a segment',
+      value: `${packageName} flags segments update beta-users --label "Early access users"`,
+    },
+    {
+      name: 'Add and remove included users',
+      value: `${packageName} flags segments update beta-users --add include:user.id=user_789 --remove include:user.id=user_123`,
+    },
+    {
+      name: 'Add and remove rules',
+      value: `${packageName} flags segments update enterprise-users --add rule:user.email:ends-with:@company.com --remove rule:user.plan:eq:pro`,
+    },
+  ],
+} as const;
+
+export const segmentsRemoveSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Delete a feature flag segment',
+  arguments: [
+    {
+      name: 'segment',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when deleting a segment',
+    },
+  ],
+  examples: [
+    {
+      name: 'Delete a segment',
+      value: `${packageName} flags segments rm beta-users`,
+    },
+    {
+      name: 'Delete without confirmation',
+      value: `${packageName} flags segments rm beta-users --yes`,
+    },
+  ],
+} as const;
+
+export const segmentsSubcommand = {
+  name: 'segments',
+  aliases: [],
+  description: 'Manage feature flag segments',
+  arguments: [],
+  subcommands: [
+    segmentsListSubcommand,
+    segmentsInspectSubcommand,
+    segmentsCreateSubcommand,
+    segmentsUpdateSubcommand,
+    segmentsRemoveSubcommand,
+  ],
+  options: [],
+  examples: [],
+} as const;
+
+// SDK Keys subcommands
+export const sdkKeysListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List all SDK keys for the current project',
+  arguments: [],
+  options: [
+    projectOption,
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'List all SDK keys',
+      value: `${packageName} flags sdk-keys ls`,
+    },
+    {
+      name: 'List SDK keys as JSON',
+      value: `${packageName} flags sdk-keys ls --json`,
+    },
+  ],
+} as const;
+
+export const sdkKeysAddSubcommand = {
+  name: 'add',
+  aliases: [],
+  description: 'Create a new SDK key',
+  arguments: [],
+  options: [
+    projectOption,
+    {
+      name: 'type',
+      // No shorthand: `-t` is already used globally for `--token`
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'The type of SDK key (server, client, or mobile)',
+      argument: 'TYPE',
+    },
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description: 'The environment for the SDK key',
+      argument: 'ENV',
+    },
+    {
+      name: 'label',
+      shorthand: 'l',
+      type: String,
+      deprecated: false,
+      description: 'Optional label for the SDK key',
+      argument: 'LABEL',
+    },
+  ],
+  examples: [
+    {
+      name: 'Create a server SDK key for production',
+      value: `${packageName} flags sdk-keys add --type server --environment production`,
+    },
+    {
+      name: 'Create a client SDK key with a label',
+      value: `${packageName} flags sdk-keys add --type client -e preview --label "Preview App"`,
+    },
+  ],
+} as const;
+
+export const sdkKeysRemoveSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Delete an SDK key',
+  arguments: [
+    {
+      name: 'key',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when deleting an SDK key',
+    },
+  ],
+  examples: [
+    {
+      name: 'Delete an SDK key',
+      value: `${packageName} flags sdk-keys rm <hash-key>`,
+    },
+  ],
+} as const;
+
+export const sdkKeysSubcommand = {
+  name: 'sdk-keys',
+  aliases: [],
+  description: 'Manage SDK keys for feature flags',
+  arguments: [],
+  subcommands: [
+    sdkKeysListSubcommand,
+    sdkKeysAddSubcommand,
+    sdkKeysRemoveSubcommand,
+  ],
+  options: [],
+  examples: [],
+} as const;
+
+export const prepareSubcommand = {
+  name: 'prepare',
+  aliases: [],
+  description: 'Prepare flag definition fallbacks for the build',
+  arguments: [],
+  options: [],
+  examples: [],
+} as const;
+
+export const overrideSubcommand = {
+  name: 'override',
+  aliases: [],
+  description:
+    'Encrypt flag overrides into a secure token for the vercel-flag-overrides cookie',
+  arguments: [
+    {
+      name: 'flag=value',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      name: 'expiration',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Expiration time for the encrypted token (default: 1y)',
+      argument: 'TIME',
+    },
+    {
+      name: 'decrypt',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Decrypt an encrypted override token and print the JSON',
+      argument: 'TOKEN',
+    },
+  ],
+  examples: [
+    {
+      name: 'Encrypt a single flag override',
+      value: `${packageName} flags override my-flag=true`,
+    },
+    {
+      name: 'Encrypt multiple flag overrides',
+      value: `${packageName} flags override flag-a=true flag-b=hello`,
+    },
+    {
+      name: 'Set a custom expiration',
+      value: `${packageName} flags override my-flag=42 --expiration 30d`,
+    },
+    {
+      name: 'Decrypt an override token',
+      value: `${packageName} flags override --decrypt <token>`,
+    },
+  ],
+} as const;
+
+export const flagsCommand = {
+  name: 'flags',
+  aliases: [],
+  description: 'Manage feature flags for a Vercel project',
+  arguments: [],
+  subcommands: [
+    listSubcommand,
+    inspectSubcommand,
+    versionsSubcommand,
+    evaluationsSubcommand,
+    createSubcommand,
+    openSubcommand,
+    updateSubcommand,
+    setSubcommand,
+    splitSubcommand,
+    rolloutSubcommand,
+    removeSubcommand,
+    archiveSubcommand,
+    unarchiveSubcommand,
+    disableSubcommand,
+    enableSubcommand,
+    rulesSubcommand,
+    segmentsSubcommand,
+    sdkKeysSubcommand,
+    prepareSubcommand,
+    overrideSubcommand,
+  ],
+  options: [],
+  examples: [],
+} as const;

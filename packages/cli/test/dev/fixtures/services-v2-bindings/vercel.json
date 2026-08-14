@@ -1,0 +1,62 @@
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "gateway"
+      }
+    }
+  ],
+  "experimentalServicesV2": {
+    "gateway": {
+      "root": "gateway",
+      "entrypoint": "server.js",
+      "devCommand": "node server.js",
+      "bindings": [
+        {
+          "type": "service",
+          "service": "node_api",
+          "format": "url",
+          "env": "NODE_API_URL"
+        },
+        {
+          "type": "service",
+          "service": "py_api",
+          "format": "url",
+          "env": "PY_API_URL"
+        },
+        {
+          "type": "service",
+          "service": "go_api",
+          "format": "url",
+          "env": "GO_API_URL"
+        },
+        {
+          "type": "service",
+          "service": "ruby_api",
+          "format": "url",
+          "env": "RUBY_API_URL"
+        }
+      ]
+    },
+    "node_api": {
+      "root": "node-api",
+      "entrypoint": "server.js",
+      "devCommand": "node server.js"
+    },
+    "py_api": {
+      "root": "py-api",
+      "framework": "fastapi",
+      "entrypoint": "server.py"
+    },
+    "go_api": {
+      "root": "go-api",
+      "entrypoint": "main.go"
+    },
+    "ruby_api": {
+      "root": "ruby-api",
+      "entrypoint": "app.ru"
+    }
+  }
+}

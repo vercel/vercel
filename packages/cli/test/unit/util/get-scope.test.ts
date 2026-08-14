@@ -57,6 +57,24 @@ describe('getScope', () => {
       await expect(contextName).toEqual(mockTeam.slug);
     });
 
+    it('should apply the default team as the effective request scope', async () => {
+      // Regression test: without this, a Northstar user with no persisted
+      // `currentTeam` resolves the default team for display but sends API
+      // requests with no `teamId`, silently scoping to the resource-less
+      // personal account (e.g. `vc projects ls` reporting "No projects found"
+      // for a user whose default team has projects).
+      expect(client.config.currentTeam).toBeUndefined();
+      await getScope(client);
+      expect(client.config.currentTeam).toEqual(mockTeam.id);
+    });
+
+    it('should not override an explicitly selected team with the default', async () => {
+      const otherTeam = useTeam();
+      client.config.currentTeam = otherTeam.id;
+      await getScope(client);
+      expect(client.config.currentTeam).toEqual(otherTeam.id);
+    });
+
     it('should not return default team if getTeam is false', async () => {
       const { contextName, team, user } = await getScope(client, {
         getTeam: false,

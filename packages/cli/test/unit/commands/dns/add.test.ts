@@ -1,4 +1,4 @@
-import { describe, beforeEach, expect, it } from 'vitest';
+import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import dns from '../../../../src/commands/dns';
 import { useUser } from '../../../mocks/user';
@@ -25,6 +25,45 @@ describe('dns add', () => {
           value: `${command}:${subcommand}`,
         },
       ]);
+    });
+  });
+
+  describe('non-interactive mode', () => {
+    it('errors when only domain is provided (no record details)', async () => {
+      client.nonInteractive = true;
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv('dns', 'add', 'example.com');
+      await expect(dns(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('missing_arguments');
+      expect(payload.message).toContain('full record details');
+      expect(payload.next[0].command).toContain('dns add');
+      expect(payload.next[0].command).toContain('<domain>');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
+    });
+
+    it('succeeds when full record details are provided', async () => {
+      client.nonInteractive = true;
+      client.scenario.post(`/v3/domains/:domain?/records`, (_req, res) => {
+        res.json({ uid: 'rec_123' });
+      });
+      client.setArgv('dns', 'add', 'example.com', 'www', 'A', '1.2.3.4');
+      const exitCode = await dns(client);
+      expect(exitCode).toBe(0);
+      await expect(client.stderr).toOutput(
+        'Success! DNS record for domain example.com (rec_123) created'
+      );
     });
   });
 

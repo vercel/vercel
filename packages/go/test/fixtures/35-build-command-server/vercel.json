@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "buildCommand": "go build -o server .",
+  "projectSettings": {
+    "framework": "go"
+  }
+}

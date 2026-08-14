@@ -1,4 +1,3 @@
-import Ajv from 'ajv';
 import {
   routesSchema,
   cleanUrlsSchema,
@@ -9,12 +8,15 @@ import {
 } from '@vercel/routing-utils';
 import type { VercelConfig } from './dev/types';
 import {
-  functionsSchema,
+  getFunctionsSchema,
   buildsSchema,
+  getMaxDurationSchema,
   NowBuildError,
   getPrettyError,
 } from '@vercel/build-utils';
 import { fileNameSymbol } from '@vercel/client';
+import { validateProxyConfig } from '@vercel/fs-detectors';
+import { getConfigValidator } from './config-validator';
 
 const imagesSchema = {
   type: 'object',
@@ -155,131 +157,313 @@ const cronsSchema = {
   },
 };
 
-const customErrorPageSchema = {
+const experimentalServicesMountSchema = {
   oneOf: [
-    { type: 'string', minLength: 1 },
+    {
+      type: 'string',
+      minLength: 1,
+      maxLength: 512,
+    },
     {
       type: 'object',
       additionalProperties: false,
-      minProperties: 1,
       properties: {
-        default5xx: {
+        path: {
           type: 'string',
           minLength: 1,
+          maxLength: 512,
         },
-        default4xx: {
+        subdomain: {
           type: 'string',
           minLength: 1,
+          maxLength: 63,
         },
       },
+      anyOf: [{ required: ['path'] }, { required: ['subdomain'] }],
     },
   ],
 };
 
-const serviceConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    type: {
-      enum: ['web', 'cron', 'worker'],
-    },
-    entrypoint: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 512,
-    },
-    workspace: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 512,
-    },
-    routePrefix: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 512,
-    },
-    framework: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 256,
-    },
-    builder: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 256,
-    },
-    runtime: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 256,
-    },
-    buildCommand: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 2048,
-    },
-    installCommand: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 2048,
-    },
-    memory: {
-      type: 'integer',
-      minimum: 128,
-      maximum: 10240,
-    },
-    maxDuration: {
-      type: 'integer',
-      minimum: 1,
-      maximum: 900,
-    },
-    includeFiles: {
-      oneOf: [
-        { type: 'string', minLength: 1 },
-        {
-          type: 'array',
-          items: { type: 'string', minLength: 1 },
-        },
-      ],
-    },
-    excludeFiles: {
-      oneOf: [
-        { type: 'string', minLength: 1 },
-        {
-          type: 'array',
-          items: { type: 'string', minLength: 1 },
-        },
-      ],
-    },
-    // Cron-specific
-    schedule: {
+const staticExperimentalServiceScheduleSchema = {
+  type: 'string',
+  minLength: 9,
+  maxLength: 256,
+  not: { const: '<dynamic>' },
+};
+
+const experimentalServiceScheduleSchema = {
+  oneOf: [
+    {
       type: 'string',
       minLength: 9,
       maxLength: 256,
     },
-    // Worker-specific
+    {
+      type: 'array',
+      minItems: 1,
+      items: staticExperimentalServiceScheduleSchema,
+    },
+  ],
+};
+
+const experimentalServiceQueueTopicSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['topic'],
+  properties: {
     topic: {
       type: 'string',
       minLength: 1,
       maxLength: 256,
     },
-    consumer: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 256,
+    retryAfterSeconds: {
+      type: 'integer',
+      minimum: 1,
+      maximum: 86400,
+    },
+    initialDelaySeconds: {
+      type: 'integer',
+      minimum: 0,
+      maximum: 86400,
     },
   },
 };
+
+const experimentalServiceTopicsSchema = {
+  oneOf: [
+    {
+      type: 'array',
+      minItems: 1,
+      items: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 256,
+      },
+    },
+    {
+      type: 'array',
+      minItems: 1,
+      items: experimentalServiceQueueTopicSchema,
+    },
+  ],
+};
+
+const envVarNamesSchema = {
+  pattern: '^[A-Za-z_][A-Za-z0-9_]*$',
+  maxLength: 256,
+};
+
+const getExperimentalServicesCommonProperties = () => ({
+  entrypoint: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 512,
+  },
+  root: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 512,
+  },
+  workspace: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 512,
+  },
+  framework: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 256,
+  },
+  builder: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 256,
+  },
+  runtime: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 256,
+  },
+  buildCommand: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 2048,
+  },
+  installCommand: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 2048,
+  },
+  preDeployCommand: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 2048,
+  },
+  command: {
+    oneOf: [
+      { type: 'string', minLength: 1, maxLength: 2048 },
+      {
+        type: 'array',
+        minItems: 1,
+        items: { type: 'string', minLength: 1, maxLength: 2048 },
+      },
+    ],
+  },
+  memory: {
+    type: 'integer',
+    minimum: 128,
+    maximum: 10240,
+  },
+  maxDuration: getMaxDurationSchema(),
+  includeFiles: {
+    oneOf: [
+      { type: 'string', minLength: 1 },
+      {
+        type: 'array',
+        items: { type: 'string', minLength: 1 },
+      },
+    ],
+  },
+  excludeFiles: {
+    oneOf: [
+      { type: 'string', minLength: 1 },
+      {
+        type: 'array',
+        items: { type: 'string', minLength: 1 },
+      },
+    ],
+  },
+});
+
+const experimentalServicesRoutableProperties = {
+  mount: experimentalServicesMountSchema,
+  routePrefix: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 512,
+  },
+  subdomain: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 63,
+  },
+};
+
+const getExperimentalServicesServiceConfigSchema = () => ({
+  oneOf: [
+    {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        ...getExperimentalServicesCommonProperties(),
+        ...experimentalServicesRoutableProperties,
+        type: {
+          enum: ['web'],
+        },
+      },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['type', 'trigger', 'schedule'],
+      properties: {
+        ...getExperimentalServicesCommonProperties(),
+        type: {
+          const: 'job',
+        },
+        trigger: {
+          const: 'schedule',
+        },
+        schedule: experimentalServiceScheduleSchema,
+      },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['type', 'trigger', 'topics'],
+      properties: {
+        ...getExperimentalServicesCommonProperties(),
+        type: {
+          const: 'job',
+        },
+        trigger: {
+          const: 'queue',
+        },
+        topics: experimentalServiceTopicsSchema,
+        consumer: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 256,
+        },
+      },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['type', 'trigger', 'entrypoint'],
+      properties: {
+        ...getExperimentalServicesCommonProperties(),
+        type: {
+          const: 'job',
+        },
+        trigger: {
+          const: 'workflow',
+        },
+      },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['type'],
+      properties: {
+        ...getExperimentalServicesCommonProperties(),
+        type: {
+          const: 'worker',
+        },
+        topics: {
+          type: 'array',
+          items: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 256,
+          },
+          minItems: 1,
+        },
+        consumer: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 256,
+        },
+      },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['type', 'schedule'],
+      properties: {
+        ...getExperimentalServicesCommonProperties(),
+        type: {
+          const: 'cron',
+        },
+        schedule: experimentalServiceScheduleSchema,
+      },
+    },
+  ],
+});
 
 /**
  * Schema for experimental services configuration.
  * Map of service name to service configuration.
  * @experimental This feature is experimental and may change.
  */
-const experimentalServicesSchema = {
+const getExperimentalServicesSchema = () => ({
   type: 'object',
-  additionalProperties: serviceConfigSchema,
-};
+  propertyNames: {
+    pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+    maxLength: 64,
+  },
+  additionalProperties: getExperimentalServicesServiceConfigSchema(),
+});
 
 /**
  * Schema for experimental service groups configuration.
@@ -289,6 +473,10 @@ const experimentalServicesSchema = {
  */
 const experimentalServiceGroupsSchema = {
   type: 'object',
+  propertyNames: {
+    pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+    maxLength: 64,
+  },
   additionalProperties: {
     type: 'array',
     items: {
@@ -299,33 +487,152 @@ const experimentalServiceGroupsSchema = {
   },
 };
 
-const vercelConfigSchema = {
+const servicesPathSchema = {
+  type: 'string',
+  minLength: 1,
+  maxLength: 512,
+};
+
+const servicesCommandSchema = {
+  type: 'string',
+  minLength: 1,
+  maxLength: 2048,
+};
+
+const servicesServiceNamePattern = '^[a-z]([a-z_-]*[a-z])?$';
+
+const servicesBindingSchema = {
   type: 'object',
-  // These are not all possibilities because `vc dev`
-  // doesn't need to know about `regions`, `public`, etc.
-  additionalProperties: true,
+  additionalProperties: false,
+  required: ['service', 'format', 'env'],
   properties: {
-    builds: buildsSchema,
-    routes: routesSchema,
-    cleanUrls: cleanUrlsSchema,
-    headers: headersSchema,
-    redirects: redirectsSchema,
-    rewrites: rewritesSchema,
-    trailingSlash: trailingSlashSchema,
-    functions: functionsSchema,
-    images: imagesSchema,
-    crons: cronsSchema,
-    customErrorPage: customErrorPageSchema,
-    bunVersion: { type: 'string' },
-    experimentalServices: experimentalServicesSchema,
-    experimentalServiceGroups: experimentalServiceGroupsSchema,
+    type: {
+      description:
+        'Optional binding type marker. Currently the only supported type is `service`. When present this must be `service`.',
+      const: 'service',
+    },
+    service: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 64,
+      pattern: servicesServiceNamePattern,
+    },
+    format: { const: 'url' },
+    env: {
+      type: 'string',
+      ...envVarNamesSchema,
+    },
   },
 };
 
-const ajv = new Ajv();
-const validate = ajv.compile(vercelConfigSchema);
+const servicesBindingsSchema = {
+  type: 'array',
+  maxItems: 100,
+  items: servicesBindingSchema,
+};
+
+const getServicesServiceConfigSchema = () => ({
+  type: 'object',
+  additionalProperties: false,
+  required: ['root'],
+  properties: {
+    root: servicesPathSchema,
+    framework: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 256,
+    },
+    runtime: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 256,
+    },
+    entrypoint: servicesPathSchema,
+    command: {
+      oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
+    },
+    installCommand: servicesCommandSchema,
+    buildCommand: servicesCommandSchema,
+    devCommand: servicesCommandSchema,
+    ignoreCommand: servicesCommandSchema,
+    outputDirectory: servicesPathSchema,
+    bindings: servicesBindingsSchema,
+    functions: getFunctionsSchema(),
+    headers: headersSchema,
+    redirects: redirectsSchema,
+    rewrites: rewritesSchema,
+    routes: routesSchema,
+    cleanUrls: cleanUrlsSchema,
+    trailingSlash: trailingSlashSchema,
+  },
+});
+
+const getServicesSchema = () => ({
+  type: 'object',
+  propertyNames: {
+    pattern: servicesServiceNamePattern,
+    maxLength: 64,
+  },
+  additionalProperties: getServicesServiceConfigSchema(),
+});
+
+const proxySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['entrypoint'],
+  properties: {
+    entrypoint: {
+      type: 'string',
+      minLength: 1,
+    },
+    matcher: {
+      oneOf: [
+        {
+          type: 'string',
+          minLength: 1,
+        },
+        {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'string',
+            minLength: 1,
+          },
+        },
+      ],
+    },
+  },
+};
+
+export function buildVercelConfigSchema() {
+  return {
+    type: 'object',
+    // These are not all possibilities because `vc dev`
+    // doesn't need to know about `regions`, `public`, etc.
+    additionalProperties: true,
+    properties: {
+      builds: buildsSchema,
+      routes: routesSchema,
+      cleanUrls: cleanUrlsSchema,
+      headers: headersSchema,
+      redirects: redirectsSchema,
+      rewrites: rewritesSchema,
+      trailingSlash: trailingSlashSchema,
+      functions: getFunctionsSchema(),
+      images: imagesSchema,
+      crons: cronsSchema,
+      bunVersion: { type: 'string' },
+      proxy: proxySchema,
+      experimentalServices: getExperimentalServicesSchema(),
+      experimentalServiceGroups: experimentalServiceGroupsSchema,
+      services: getServicesSchema(),
+      experimentalServicesV2: getServicesSchema(),
+    },
+  };
+}
 
 export function validateConfig(config: VercelConfig): NowBuildError | null {
+  const validate = getConfigValidator(buildVercelConfigSchema);
   if (!validate(config)) {
     if (validate.errors && validate.errors[0]) {
       const error = validate.errors[0];
@@ -333,6 +640,16 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
       const niceError = getPrettyError(error);
       niceError.message = `Invalid ${fileName} - ${niceError.message}`;
       return niceError;
+    }
+  }
+
+  if (config.proxy) {
+    const proxyError = validateProxyConfig(config.proxy);
+    if (proxyError) {
+      return new NowBuildError({
+        code: proxyError.code.toUpperCase(),
+        message: proxyError.message,
+      });
     }
   }
 
@@ -345,17 +662,27 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
     });
   }
 
-  if (config.experimentalServices && config.builds) {
+  if (config.proxy && config.builds) {
     return new NowBuildError({
-      code: 'SERVICES_AND_BUILDS',
+      code: 'PROXY_AND_BUILDS',
+      message:
+        'The `proxy` property cannot be used with the `builds` property. Remove `builds` to use an explicit proxy entrypoint.',
+    });
+  }
+
+  const hasExperimentalServices = Boolean(config.experimentalServices);
+
+  if (hasExperimentalServices && config.builds) {
+    return new NowBuildError({
+      code: 'EXPERIMENTAL_SERVICES_AND_BUILDS',
       message:
         'The `experimentalServices` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
     });
   }
 
-  if (config.experimentalServices && config.functions) {
+  if (hasExperimentalServices && config.functions) {
     return new NowBuildError({
-      code: 'SERVICES_AND_FUNCTIONS',
+      code: 'EXPERIMENTAL_SERVICES_AND_FUNCTIONS',
       message:
         'The `experimentalServices` property cannot be used in conjunction with the `functions` property. Please remove one of them.',
     });
@@ -367,6 +694,91 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
       message:
         'The `experimentalServiceGroups` property requires `experimentalServices` to be defined. Service groups reference services by name.',
     });
+  }
+
+  const hasServices = config.services != null;
+  const hasExperimentalServicesV2 = config.experimentalServicesV2 != null;
+
+  if (hasServices && hasExperimentalServicesV2) {
+    return new NowBuildError({
+      code: 'SERVICES_AND_EXPERIMENTAL_SERVICES_V2',
+      message:
+        'The `services` property cannot be used in conjunction with its deprecated alias `experimentalServicesV2`. Please use only `services`.',
+    });
+  }
+
+  const servicesConfig = config.services ?? config.experimentalServicesV2;
+  const servicesConfigKey = hasServices ? 'services' : 'experimentalServicesV2';
+  const servicesErrorCodePrefix = hasServices
+    ? 'SERVICES'
+    : 'EXPERIMENTAL_SERVICES_V2';
+
+  if (servicesConfig && hasExperimentalServices) {
+    return new NowBuildError({
+      code: `${servicesErrorCodePrefix}_AND_EXPERIMENTAL_SERVICES`,
+      message: `The \`${servicesConfigKey}\` property cannot be used in conjunction with the \`experimentalServices\` property. Please use only one services configuration.`,
+    });
+  }
+
+  if (servicesConfig && config.builds) {
+    return new NowBuildError({
+      code: `${servicesErrorCodePrefix}_AND_BUILDS`,
+      message: `The \`${servicesConfigKey}\` property cannot be used in conjunction with the \`builds\` property. Please remove one of them.`,
+    });
+  }
+
+  // In services mode some fields can be present only in service declarations.
+  if (servicesConfig) {
+    const ambiguousTopLevel: string[] = [];
+    if (config.functions != null) {
+      ambiguousTopLevel.push('functions');
+    }
+    if (config.installCommand != null) {
+      ambiguousTopLevel.push('installCommand');
+    }
+    if (config.buildCommand != null) {
+      ambiguousTopLevel.push('buildCommand');
+    }
+    if (config.devCommand != null) {
+      ambiguousTopLevel.push('devCommand');
+    }
+    if (config.ignoreCommand != null) {
+      ambiguousTopLevel.push('ignoreCommand');
+    }
+    if (config.outputDirectory != null) {
+      ambiguousTopLevel.push('outputDirectory');
+    }
+    if (config.framework != null) {
+      ambiguousTopLevel.push('framework');
+    }
+
+    if (ambiguousTopLevel.length > 0) {
+      const count = ambiguousTopLevel.length;
+      const fields = ambiguousTopLevel.map(field => `\`${field}\``).join(', ');
+      return new NowBuildError({
+        code: `${servicesErrorCodePrefix}_AND_TOP_LEVEL_BUILD_SETTINGS`,
+        message:
+          `The top-level ${count > 1 ? 'properties' : 'property'} ${fields} cannot be used with \`${servicesConfigKey}\` ` +
+          `because the owning service is ambiguous. ` +
+          `Move ${count > 1 ? 'them' : 'it'} under the relevant service in \`${servicesConfigKey}\`.`,
+      });
+    }
+  }
+
+  if (servicesConfig) {
+    const serviceNames = new Set(Object.keys(servicesConfig));
+    for (const [serviceName, serviceConfig] of Object.entries(servicesConfig)) {
+      for (const binding of serviceConfig.bindings ?? []) {
+        if (!serviceNames.has(binding.service)) {
+          return new NowBuildError({
+            code: `${servicesErrorCodePrefix}_BINDING_UNKNOWN_SERVICE`,
+            message:
+              `Service "${serviceName}" declares a binding to unknown service "${binding.service}". ` +
+              `Add "${binding.service}" to \`${servicesConfigKey}\` or fix the binding.`,
+          });
+        }
+      }
+    }
   }
 
   return null;

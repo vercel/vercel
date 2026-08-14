@@ -1,0 +1,18 @@
+# Stubbed uv-distribution-types: provides Requirement, UnresolvedRequirement,
+# and UnresolvedRequirementSpecification for uv-requirements-txt.
+[package]
+name = "uv-distribution-types"
+version = "0.0.20"
+edition.workspace = true
+rust-version.workspace = true
+license = "Apache-2.0 OR MIT"
+
+[lib]
+doctest = false
+
+[dependencies]
+percent-encoding = "2.3.1"
+thiserror.workspace = true
+url.workspace = true
+uv-pep508.workspace = true
+uv-pypi-types.workspace = true

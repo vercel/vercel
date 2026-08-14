@@ -1,4 +1,4 @@
-import fetch, { type Response } from 'node-fetch';
+import fetch, { type Response } from './fetch';
 import ua from './ua';
 import { hostname } from 'os';
 
@@ -96,17 +96,30 @@ async function processDiscoveryEndpointResponse(
  *
  * @see https://datatracker.ietf.org/doc/html/rfc8628#section-3.1
  */
-export async function deviceAuthorizationRequest(): Promise<Response> {
+export async function deviceAuthorizationRequest(options?: {
+  refresh_token?: string;
+  acr_values?: string;
+}): Promise<Response> {
+  const body = new URLSearchParams({
+    client_id: VERCEL_CLI_CLIENT_ID,
+  });
+
+  if (options?.refresh_token) {
+    body.set('refresh_token', options.refresh_token);
+    if (options.acr_values) {
+      body.set('acr_values', options.acr_values);
+    }
+  } else {
+    body.set('scope', 'openid offline_access');
+  }
+
   return await fetch((await as()).device_authorization_endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       'user-agent': userAgent,
     },
-    body: new URLSearchParams({
-      client_id: VERCEL_CLI_CLIENT_ID,
-      scope: 'openid offline_access',
-    }),
+    body,
   });
 }
 
@@ -215,9 +228,6 @@ export async function deviceAccessTokenRequest(options: {
           grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
           ...options,
         }),
-        // TODO: Drop `node-fetch` and just use `signal`
-        timeout: 10 * 1000,
-        // @ts-expect-error: Signal is part of `fetch` spec, should drop `node-fetch`
         signal: AbortSignal.timeout(10 * 1000),
       }),
     ];

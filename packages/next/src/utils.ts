@@ -18,6 +18,7 @@ import {
   File,
   FlagDefinitions,
   Chain,
+  PrerenderClassification,
 } from '@vercel/build-utils';
 import { NodeFileTraceReasons } from '@vercel/nft';
 import type {
@@ -51,6 +52,7 @@ import {
   LAMBDA_RESERVED_UNCOMPRESSED_SIZE,
   DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE,
   DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE_BUN,
+  DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE,
   INTERNAL_PAGES,
 } from './constants';
 import {
@@ -78,6 +80,36 @@ export function getMaxUncompressedLambdaSize(runtime: string): number {
   return runtime.startsWith('bun')
     ? DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE_BUN
     : DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE;
+}
+
+/**
+ * Internal env var enabling experimental large functions: an over-budget route
+ * is emitted as its own function under the higher
+ * {@link DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE} ceiling instead of being
+ * bundled. Read at call time (not module load) so the build environment can
+ * toggle it without a CLI upgrade, like `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT`.
+ *
+ * TODO: drop the gate and make this unconditional once the upstream build
+ * system fully supports functions above {@link DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE}.
+ */
+export const LARGE_FUNCTIONS_ENV = 'NEXT_EXPERIMENTAL_LARGE_FUNCTIONS';
+
+/** Whether large functions are enabled via {@link LARGE_FUNCTIONS_ENV}. */
+export function isLargeFunctionsEnabled(): boolean {
+  return Boolean(process.env[LARGE_FUNCTIONS_ENV]);
+}
+
+/**
+ * The uncompressed size ceiling for a lambda group: the higher large-function
+ * limit for large groups, otherwise the default per-runtime limit.
+ */
+export function getGroupMaxUncompressedLambdaSize(
+  runtime: string,
+  isLargeFunctions: boolean | undefined
+): number {
+  return isLargeFunctions
+    ? DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE
+    : getMaxUncompressedLambdaSize(runtime);
 }
 
 const skipDefaultLocaleRewrite = Boolean(
@@ -217,7 +249,10 @@ function normalizePage(page: string): string {
   return page;
 }
 
-export type Redirect = Rewrite & {
+export type Redirect = Omit<Rewrite, 'destination'> & {
+  // Redirects can't target a service, so `destination` stays a plain string
+  // (unlike `Rewrite['destination']`, which is `string | ServiceDestination`).
+  destination: string;
   statusCode?: number;
   permanent?: boolean;
 };
@@ -263,6 +298,7 @@ type RoutesManifestOld = {
         fallback: (Rewrite & RoutesManifestRegex)[];
       };
   headers?: (Header & RoutesManifestRegex)[];
+  onMatchHeaders?: (Header & RoutesManifestRegex)[];
   dynamicRoutes: RoutesManifestRoute[];
   staticRoutes: RoutesManifestRoute[];
   version: 1 | 2 | 3;
@@ -676,7 +712,7 @@ export async function getDynamicRoutes({
     if (typeof getRouteRegex !== 'function') {
       getRouteRegex = undefined;
     }
-  } catch (_) {} // eslint-disable-line no-empty
+  } catch (_) {}
 
   if (!getRouteRegex || !getSortedRoutes) {
     try {
@@ -688,7 +724,7 @@ export async function getDynamicRoutes({
       if (typeof getRouteRegex !== 'function') {
         getRouteRegex = undefined;
       }
-    } catch (_) {} // eslint-disable-line no-empty
+    } catch (_) {}
   }
 
   if (!getRouteRegex || !getSortedRoutes) {
@@ -1118,6 +1154,9 @@ export async function createLambdaFromPseudoLayers({
 // https://github.com/vercel/next.js/blob/6169e786020b63e101cc09285e1277e278cd34b8/packages/next/src/server/config-shared.ts#L1588
 export type NextConfigRuntime = {
   pageExtensions: string[];
+  // experimental.cacheComponents has been moved out of experimental
+  // at https://github.com/vercel/next.js/pull/85035
+  cacheComponents?: boolean;
   experimental?: {
     cacheComponents?: boolean;
     clientParamParsingOrigins?: string[];
@@ -1138,7 +1177,7 @@ export type NextRequiredServerFilesManifest = {
 /**
  * The rendering mode for a route.
  */
-export const enum RenderingMode {
+export enum RenderingMode {
   /**
    * `STATIC` rendering mode will output a fully static HTML page or error if
    * anything dynamic is used.
@@ -1153,11 +1192,41 @@ export const enum RenderingMode {
   PARTIALLY_STATIC = 'PARTIALLY_STATIC',
 }
 
+/**
+ * The prerender taxonomy as it appears on a v4 prerender-manifest entry, where
+ * each field is independently optional because older Next.js versions omit the
+ * group entirely.
+ */
+type RawPrerenderClassification = Partial<PrerenderClassification>;
+
+/**
+ * Read the prerender taxonomy off a manifest entry, but only when Next.js
+ * supplied the complete group: it throws an `InvariantError` on a partial one,
+ * and absence is legitimate (`notFoundRoutes`, Pages Router `fallback: false`).
+ * Values are carried through verbatim — Next.js owns this vocabulary, and one
+ * it adds later must reach the platform rather than fail the build.
+ */
+function toPrerenderClassification(
+  entry: RawPrerenderClassification
+): PrerenderClassification | undefined {
+  const { routeType, response, compute, htmlSize } = entry;
+  if (!routeType || !response || !compute) {
+    return undefined;
+  }
+  return {
+    routeType,
+    response,
+    compute,
+    ...(htmlSize !== undefined ? { htmlSize } : {}),
+  };
+}
+
 export type NextPrerenderedRoutes = {
   bypassToken: string | null;
 
   staticRoutes: {
     [route: string]: {
+      prerenderClassification?: PrerenderClassification;
       initialRevalidate: number | false;
       initialExpire?: number;
       dataRoute: string | null;
@@ -1173,6 +1242,7 @@ export type NextPrerenderedRoutes = {
 
   blockingFallbackRoutes: {
     [route: string]: {
+      prerenderClassification?: PrerenderClassification;
       routeRegex: string;
       dataRoute: string | null;
       fallback: string | boolean | null;
@@ -1188,6 +1258,7 @@ export type NextPrerenderedRoutes = {
 
   fallbackRoutes: {
     [route: string]: {
+      prerenderClassification?: PrerenderClassification;
       fallback: string;
       fallbackStatus?: number;
       fallbackHeaders?: Record<string, string>;
@@ -1212,6 +1283,7 @@ export type NextPrerenderedRoutes = {
    */
   omittedRoutes: {
     [route: string]: {
+      prerenderClassification?: PrerenderClassification;
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
@@ -1411,7 +1483,7 @@ export async function getPrerenderManifest(
     | {
         version: 4;
         routes: {
-          [route: string]: {
+          [route: string]: RawPrerenderClassification & {
             initialRevalidateSeconds: number | false;
             initialExpireSeconds?: number;
             srcRoute: string | null;
@@ -1426,7 +1498,7 @@ export async function getPrerenderManifest(
           };
         };
         dynamicRoutes: {
-          [route: string]: {
+          [route: string]: RawPrerenderClassification & {
             routeRegex: string;
             fallback: string | false;
             fallbackStatus?: number;
@@ -1546,8 +1618,12 @@ export async function getPrerenderManifest(
         let prefetchDataRoute: undefined | string | null;
         let allowHeader: undefined | string[];
         let renderingMode: RenderingMode;
+        let prerenderClassification: PrerenderClassification | undefined;
 
         if (manifest.version === 4) {
+          prerenderClassification = toPrerenderClassification(
+            manifest.routes[route]
+          );
           initialExpireSeconds = manifest.routes[route].initialExpireSeconds;
           initialStatus = manifest.routes[route].initialStatus;
           initialHeaders = manifest.routes[route].initialHeaders;
@@ -1565,6 +1641,7 @@ export async function getPrerenderManifest(
         }
 
         ret.staticRoutes[route] = {
+          prerenderClassification,
           initialRevalidate:
             initialRevalidateSeconds === false
               ? false
@@ -1595,7 +1672,11 @@ export async function getPrerenderManifest(
         let fallbackRootParams: undefined | string[];
         let allowHeader: undefined | string[];
         let fallbackSourceRoute: undefined | string;
+        let prerenderClassification: PrerenderClassification | undefined;
         if (manifest.version === 4) {
+          prerenderClassification = toPrerenderClassification(
+            manifest.dynamicRoutes[lazyRoute]
+          );
           experimentalBypassFor =
             manifest.dynamicRoutes[lazyRoute].experimentalBypassFor;
           prefetchDataRoute =
@@ -1623,6 +1704,7 @@ export async function getPrerenderManifest(
 
         if (typeof fallback === 'string') {
           ret.fallbackRoutes[lazyRoute] = {
+            prerenderClassification,
             experimentalBypassFor,
             routeRegex,
             fallback,
@@ -1641,6 +1723,7 @@ export async function getPrerenderManifest(
           };
         } else if (fallback === null) {
           ret.blockingFallbackRoutes[lazyRoute] = {
+            prerenderClassification,
             experimentalBypassFor,
             routeRegex,
             dataRoute,
@@ -1654,6 +1737,7 @@ export async function getPrerenderManifest(
           };
         } else {
           ret.omittedRoutes[lazyRoute] = {
+            prerenderClassification,
             experimentalBypassFor,
             routeRegex,
             dataRoute,
@@ -1871,7 +1955,10 @@ export function addLocaleOrDefault(
 export type LambdaGroup = {
   pages: string[];
   memory?: number;
-  maxDuration?: number;
+  maxDuration?: number | 'max';
+  maxConcurrency?: number;
+  regions?: string[];
+  functionFailoverRegions?: string[];
   supportsCancellation?: boolean;
   isAppRouter?: boolean;
   isAppRouteHandler?: boolean;
@@ -1881,11 +1968,29 @@ export type LambdaGroup = {
   isActionLambda?: boolean;
   isPages?: boolean;
   isApiLambda: boolean;
+  /**
+   * Whether this group is a single over-budget route emitted on its own and
+   * measured against {@link DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE}. Only
+   * set when large functions are enabled (see {@link isLargeFunctionsEnabled}).
+   */
+  isLargeFunctions?: boolean;
   pseudoLayer: PseudoLayer;
   pseudoLayerBytes: number;
   pseudoLayerUncompressedBytes: number;
   experimentalTriggers?: NodejsLambda['experimentalTriggers'];
 };
+
+function compareRegions(
+  a: string[] | undefined,
+  b: string[] | undefined
+): boolean {
+  if (a === undefined && b === undefined) return true;
+  if (a === undefined || b === undefined) return false;
+  if (a.length !== b.length) return false;
+  const sortedA = [...a].sort();
+  const sortedB = [...b].sort();
+  return sortedA.every((val, idx) => val === sortedB[idx]);
+}
 
 export async function getPageLambdaGroups({
   entryPath,
@@ -1933,6 +2038,8 @@ export async function getPageLambdaGroups({
 }) {
   const groups: Array<LambdaGroup> = [];
 
+  const largeFunctionsEnabled = isLargeFunctionsEnabled();
+
   for (const page of pages) {
     const newPages = [...internalPages, page];
     const routeName = normalizePage(page.replace(/\.js$/, ''));
@@ -1942,7 +2049,10 @@ export async function getPageLambdaGroups({
     let opts: {
       architecture?: NodejsLambda['architecture'];
       memory?: number;
-      maxDuration?: number;
+      maxDuration?: number | 'max';
+      maxConcurrency?: number;
+      regions?: string[];
+      functionFailoverRegions?: string[];
       experimentalTriggers?: NodejsLambda['experimentalTriggers'];
       supportsCancellation?: boolean;
     } = {};
@@ -1951,7 +2061,12 @@ export async function getPageLambdaGroups({
       functionsConfigManifest &&
       functionsConfigManifest.functions[routeName]
     ) {
-      opts = functionsConfigManifest.functions[routeName];
+      // Exclude `regions` from the manifest. Next.js outputs `preferredRegion`
+      // as `regions` in the manifest, but for Node.js lambdas we only support
+      // regions via vercel.json functions config, not route-level config.
+      const { regions: _regions, ...manifestOpts } =
+        functionsConfigManifest.functions[routeName];
+      opts = manifestOpts;
     }
 
     if (config && config.functions) {
@@ -2016,12 +2131,60 @@ export async function getPageLambdaGroups({
       }
     }
 
-    let matchingGroup = experimentalAllowBundling
+    // A route is "large" when its own uncompressed size (shared base layer plus
+    // its traced files and the page) doesn't fit the per-runtime packing budget
+    // — the limit minus the headroom reserved for post-grouping files (launcher,
+    // manifests, etc.), so it can't be guaranteed to fit a normal function.
+    // `experimentalAllowBundling` defers bundling upstream, so the split is moot.
+    let isLargeFunction = false;
+    if (largeFunctionsEnabled && !experimentalAllowBundling) {
+      let standaloneUncompressedSize = initialPseudoLayerUncompressed;
+      const countedFiles = new Set<string>(
+        Object.keys(initialPseudoLayer.pseudoLayer)
+      );
+
+      for (const newPage of newPages) {
+        for (const file of Object.keys(pageTraces[newPage] || {})) {
+          if (!countedFiles.has(file)) {
+            countedFiles.add(file);
+            const item = tracedPseudoLayer[file] as PseudoFile;
+            standaloneUncompressedSize += item?.uncompressedSize || 0;
+          }
+        }
+        standaloneUncompressedSize += compressedPages[newPage].uncompressedSize;
+      }
+
+      // Mirrors the normal-pool merge check below (`< limit - reserved`): a
+      // route that would not fit that budget even on its own is large.
+      const normalBudget =
+        getMaxUncompressedLambdaSize(nodeVersion.runtime) -
+        LAMBDA_RESERVED_UNCOMPRESSED_SIZE;
+      isLargeFunction = standaloneUncompressedSize >= normalBudget;
+    }
+
+    // Customer-configured concurrency relies on one logical route per physical
+    // function so runtime admission can use the incoming request's limit without
+    // retaining cross-request configuration state. Never bundle a configured
+    // route, even with another route that has the same limit.
+    const skipGroupBundling =
+      experimentalAllowBundling ||
+      isLargeFunction ||
+      opts.maxConcurrency !== undefined;
+
+    let matchingGroup = skipGroupBundling
       ? undefined
       : groups.find(group => {
           const matches =
+            // Never merge a normal route into a large (single-route) group.
+            (group.isLargeFunctions ?? false) === isLargeFunction &&
             group.maxDuration === opts.maxDuration &&
+            group.maxConcurrency === opts.maxConcurrency &&
             group.memory === opts.memory &&
+            compareRegions(group.regions, opts.regions) &&
+            compareRegions(
+              group.functionFailoverRegions,
+              opts.functionFailoverRegions
+            ) &&
             group.isPrerenders === isPrerenderRoute &&
             group.isExperimentalPPR === isExperimentalPPR &&
             JSON.stringify(group.experimentalTriggers) ===
@@ -2044,8 +2207,9 @@ export async function getPageLambdaGroups({
                 compressedPages[newPage].uncompressedSize;
             }
 
-            const maxLambdaSize = getMaxUncompressedLambdaSize(
-              nodeVersion.runtime
+            const maxLambdaSize = getGroupMaxUncompressedLambdaSize(
+              nodeVersion.runtime,
+              isLargeFunction
             );
             const underUncompressedLimit =
               newTracedFilesUncompressedSize <
@@ -2064,6 +2228,7 @@ export async function getPageLambdaGroups({
         ...opts,
         isPrerenders: isPrerenderRoute,
         isExperimentalPPR,
+        isLargeFunctions: isLargeFunction,
         isApiLambda: !!isApiPage(page) || !!isRouteHandlers,
         pseudoLayerBytes: initialPseudoLayer.pseudoLayerBytes,
         pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
@@ -2229,9 +2394,9 @@ export const detectLambdaLimitExceeding = async (
   },
   runtime: string
 ) => {
+  // Default limit for the headline message; each group is checked against its
+  // own ceiling below (large groups use the higher large-function limit).
   const maxLambdaSize = getMaxUncompressedLambdaSize(runtime);
-  // show debug info if within 5 MB of exceeding the limit
-  const UNCOMPRESSED_SIZE_LIMIT_CLOSE = maxLambdaSize - 5 * MIB;
 
   let numExceededLimit = 0;
   let numCloseToLimit = 0;
@@ -2240,10 +2405,17 @@ export const detectLambdaLimitExceeding = async (
   // pre-iterate to see if we are going to exceed the limit
   // or only get close so our first log line can be correct
   const filteredGroups = lambdaGroups.filter(group => {
-    const exceededLimit = group.pseudoLayerUncompressedBytes > maxLambdaSize;
+    const groupMaxLambdaSize = getGroupMaxUncompressedLambdaSize(
+      runtime,
+      group.isLargeFunctions
+    );
+    // show debug info if within 5 MB of exceeding the limit
+    const groupCloseLimit = groupMaxLambdaSize - 5 * MIB;
 
-    const closeToLimit =
-      group.pseudoLayerUncompressedBytes > UNCOMPRESSED_SIZE_LIMIT_CLOSE;
+    const exceededLimit =
+      group.pseudoLayerUncompressedBytes > groupMaxLambdaSize;
+
+    const closeToLimit = group.pseudoLayerUncompressedBytes > groupCloseLimit;
 
     if (
       closeToLimit ||
@@ -2519,11 +2691,15 @@ export const onPrerenderRoute =
     let experimentalBypassFor: HasField | undefined;
     let renderingMode: RenderingMode;
     let allowHeader: string[] | undefined;
+    // Next.js' own description of what it prerendered, read off the manifest
+    // rather than inferred from the emitted build artifacts.
+    let prerenderClassification: PrerenderClassification | undefined;
 
     if (isFallback || isBlocking) {
       const pr = isFallback
         ? prerenderManifest.fallbackRoutes[routeKey]
         : prerenderManifest.blockingFallbackRoutes[routeKey];
+      prerenderClassification = pr.prerenderClassification;
       initialRevalidate = 1; // TODO: should Next.js provide this default?
       // @ts-ignore
       if (initialRevalidate === false) {
@@ -2540,6 +2716,8 @@ export const onPrerenderRoute =
       renderingMode = pr.renderingMode;
       prefetchDataRoute = pr.prefetchDataRoute;
     } else if (isOmitted) {
+      prerenderClassification =
+        prerenderManifest.omittedRoutes[routeKey].prerenderClassification;
       initialRevalidate = false;
       srcRoute = routeKey;
       dataRoute = prerenderManifest.omittedRoutes[routeKey].dataRoute;
@@ -2551,6 +2729,7 @@ export const onPrerenderRoute =
         prerenderManifest.omittedRoutes[routeKey].prefetchDataRoute;
     } else {
       const pr = prerenderManifest.staticRoutes[routeKey];
+      prerenderClassification = pr.prerenderClassification;
       ({
         initialRevalidate,
         initialExpire,
@@ -3041,6 +3220,12 @@ export const onPrerenderRoute =
         }
       }
 
+      const partialFallback =
+        isAppPathRoute &&
+        renderingMode === RenderingMode.PARTIALLY_STATIC &&
+        isFallback &&
+        Boolean(postponedState);
+
       // If this is a static metadata file that should output FileRef instead of Prerender
       const staticMetadataFile = getSourceFileRefOfStaticMetadata(
         routeKey,
@@ -3071,6 +3256,12 @@ export const onPrerenderRoute =
           experimentalStreamingLambdaPath,
           chain,
           allowHeader,
+          partialFallback: partialFallback || undefined,
+          // The classification goes on the primary output only, so each route
+          // group has exactly one classified entry; the sibling data and
+          // segment prerenders below are grouped back to it by `sourcePath`
+          // downstream.
+          prerenderClassification,
 
           ...(isNotFound
             ? {
@@ -3120,6 +3311,7 @@ export const onPrerenderRoute =
           bypassToken: prerenderManifest.bypassToken,
           experimentalBypassFor,
           allowHeader,
+          partialFallback: undefined,
 
           ...(isNotFound
             ? {
@@ -3224,6 +3416,7 @@ export const onPrerenderRoute =
               bypassToken: prerenderManifest.bypassToken,
               experimentalBypassFor,
               allowHeader,
+              partialFallback: undefined,
               chain: {
                 outputPath: normalizePathData(outputPathData),
                 headers: routesManifest.ppr.chain.headers,
@@ -3351,6 +3544,7 @@ export const onPrerenderRoute =
                 // Use the same prerender group as the JSON/data prerender.
                 group: prerenderGroup,
                 allowHeader,
+                partialFallback: undefined,
 
                 // These routes are always only static, so they should not
                 // permit any bypass unless it's for preview
@@ -3609,7 +3803,7 @@ export {
   normalizePackageJson,
   getNextConfig,
   getImagesConfig,
-  stringMap,
+  type stringMap,
   normalizePage,
   isDynamicRoute,
   getSourceFilePathFromPage,
@@ -3620,7 +3814,8 @@ export type FunctionsConfigManifestV1 = {
   functions: Record<
     string,
     {
-      maxDuration?: number | undefined;
+      maxDuration?: number | 'max' | undefined;
+      regions?: string[];
       runtime?: 'nodejs';
       matchers?: Array<{
         regexp: string;
@@ -3786,6 +3981,7 @@ export async function getNodeMiddleware({
   isCorrectMiddlewareOrder,
   functionsConfigManifest,
   requiredServerFilesManifest,
+  instrumentationHookBuildTrace,
 }: {
   config: Config;
   baseDir: string;
@@ -3802,6 +3998,7 @@ export async function getNodeMiddleware({
   routesManifest: RoutesManifest;
   functionsConfigManifest?: FunctionsConfigManifestV1;
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
+  instrumentationHookBuildTrace: any | undefined;
 }): Promise<null | {
   lambdas: Record<string, NodejsLambda>;
   routes: RouteWithSrc[];
@@ -3886,6 +4083,26 @@ export async function getNodeMiddleware({
       console.log('outside base dir', absolutePath);
     }
   });
+  if (instrumentationHookBuildTrace) {
+    // Node.js instrumentation exists
+    // For regular functions, this is added via required-server-files.json#files. But that isn't
+    // read for middleware (because the various files in there aren't actually needed).
+    instrumentationHookBuildTrace.files.map((file: string) => {
+      fileList.push(
+        path.relative(
+          baseDir,
+          path.join(entryPath, outputDirectory, 'server', file)
+        )
+      );
+    });
+    fileList.push(
+      path.relative(
+        baseDir,
+        path.join(entryPath, outputDirectory, 'server', 'instrumentation.js')
+      )
+    );
+  }
+
   const reasons = new Map();
 
   const tracedFiles: {
@@ -4649,7 +4866,7 @@ export async function getServerActionMetaRoutes(
     }
 
     return routes;
-  } catch (error) {
+  } catch (_error) {
     // If manifest doesn't exist or can't be read, return empty routes
     return [];
   }

@@ -6,6 +6,15 @@ export class BlobCopyTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof copySubcommand>
 {
+  trackCliOptionAccess(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'access',
+        value,
+      });
+    }
+  }
+
   trackCliArgumentFromUrlOrPathname(value: string | undefined) {
     if (value) {
       this.trackCliArgument({
@@ -44,6 +53,15 @@ export class BlobCopyTelemetryClient
       this.trackCliOption({
         option: 'cache-control-max-age',
         value: String(value),
+      });
+    }
+  }
+
+  trackCliOptionIfMatch(ifMatch: string | undefined) {
+    if (ifMatch) {
+      this.trackCliOption({
+        option: 'if-match',
+        value: this.redactedValue,
       });
     }
   }

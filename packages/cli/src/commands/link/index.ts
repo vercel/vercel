@@ -1,27 +1,85 @@
 import type Client from '../../util/client';
+import chalk from 'chalk';
 import { parseArguments } from '../../util/get-args';
+import getSubcommand from '../../util/get-subcommand';
 import cmd from '../../util/output/cmd';
 import { ensureLink } from '../../util/link/ensure-link';
-import { ensureRepoLink } from '../../util/link/repo';
-import { help } from '../help';
-import { linkCommand } from './command';
+import { addRepoLink, ensureRepoLink } from '../../util/link/repo';
+import { type Command, help } from '../help';
+import { addSubcommand, linkCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
+import { getCommandAliases } from '..';
+import getScope, { detectExplicitScope } from '../../util/get-scope';
+import { isPromptCanceledError } from '../../util/input/prompt-cancellation';
+import pull from '../env/pull';
+import { resolveProjectCwd } from '../../util/projects/find-project-root';
+
+const COMMAND_CONFIG = {
+  add: getCommandAliases(addSubcommand),
+};
+
+function warnOidcRefreshFailed(): void {
+  output.print(
+    `${chalk.yellow('!')} Linked project, but failed to refresh VERCEL_OIDC_TOKEN in .env.local. Rerun the link command to retry.\n`
+  );
+}
+
+async function refreshOidcTokenAfterLink(
+  client: Client,
+  cwd: string
+): Promise<void> {
+  const originalCwd = client.cwd;
+  try {
+    client.cwd = await resolveProjectCwd(cwd);
+    output.print('\n');
+    const exitCode = await pull(client, ['--yes'], 'vercel-cli:link', {
+      oidcTokenOnly: true,
+    });
+
+    if (exitCode !== 0) {
+      warnOidcRefreshFailed();
+    }
+  } catch (_error) {
+    warnOidcRefreshFailed();
+  } finally {
+    client.cwd = originalCwd;
+  }
+}
 
 export default async function link(client: Client) {
+  try {
+    return await client.withEscapePromptCancellation(() => linkProject(client));
+  } catch (error) {
+    if (isPromptCanceledError(error)) {
+      output.print('  Canceled.\n');
+      return 0;
+    }
+    throw error;
+  }
+}
+
+async function linkProject(client: Client) {
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(linkCommand.options);
 
-  // Parse CLI args
+  // Parse CLI args (permissive to allow subcommand flags to pass through)
   try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification, {
+      permissive: true,
+    });
   } catch (error) {
     printError(error);
     return 1;
   }
+
+  const { subcommand, subcommandOriginal } = getSubcommand(
+    parsedArgs.args.slice(1),
+    COMMAND_CONFIG
+  );
 
   const telemetry = new LinkTelemetryClient({
     opts: {
@@ -29,10 +87,51 @@ export default async function link(client: Client) {
     },
   });
 
+  function printHelp(command: Command) {
+    output.print(
+      help(command, { parent: linkCommand, columns: client.stderr.columns })
+    );
+  }
+
+  if (subcommand === 'add') {
+    // `vc link add` subcommand
+    // `--yes` is shared with the parent and already parsed by the permissive parse
+    if (parsedArgs.flags['--help']) {
+      telemetry.trackCliFlagHelp('link', subcommandOriginal);
+      printHelp(addSubcommand);
+      return 2;
+    }
+
+    telemetry.trackCliSubcommandAdd(subcommandOriginal);
+
+    const yes = !!parsedArgs.flags['--yes'];
+
+    try {
+      await addRepoLink(client, client.cwd, { yes });
+    } catch (err) {
+      if (isPromptCanceledError(err)) {
+        throw err;
+      }
+      output.prettyError(err);
+      return 1;
+    }
+
+    return 0;
+  }
+
+  // Default behavior (no subcommand) - original `vc link` flow
+  // Re-parse strictly now that we know there's no subcommand
+  try {
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+  } catch (error) {
+    printError(error);
+    return 1;
+  }
+
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('link');
     output.print(help(linkCommand, { columns: client.stderr.columns }));
-    return 0;
+    return 2;
   }
 
   telemetry.trackCliFlagRepo(parsedArgs.flags['--repo']);
@@ -64,20 +163,37 @@ export default async function link(client: Client) {
     try {
       await ensureRepoLink(client, cwd, { yes, overwrite: true });
     } catch (err) {
+      if (isPromptCanceledError(err)) {
+        throw err;
+      }
       output.prettyError(err);
       return 1;
     }
   } else {
+    const explicitScopeProvided = detectExplicitScope(client);
+    const selectedOrg = explicitScopeProvided
+      ? (await getScope(client, { resolveLocalScope: true })).org
+      : undefined;
+
+    // Non-interactive when flag is passed or when agent (e.g. no TTY) so JSON is output when confirmation needed
+    const linkNonInteractive =
+      client.nonInteractive || client.argv.includes('--non-interactive');
+
     const link = await ensureLink('link', client, cwd, {
       autoConfirm: yes,
       forceDelete: true,
+      selectedOrg,
       projectName: parsedArgs.flags['--project'],
       successEmoji: 'success',
+      nonInteractive: linkNonInteractive,
+      pullEnv: false,
     });
 
     if (typeof link === 'number') {
       return link;
     }
+
+    await refreshOidcTokenAfterLink(client, cwd);
   }
 
   return 0;

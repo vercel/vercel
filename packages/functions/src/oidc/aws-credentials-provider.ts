@@ -60,7 +60,7 @@ export interface AwsCredentialsProviderInit // eslint-disable-line @typescript-e
 async function loadAwsCredentialProviderWebIdentity() {
   try {
     return await import('@aws-sdk/credential-provider-web-identity');
-  } catch (err) {
+  } catch (_err) {
     throw new Error(
       "package '@aws-sdk/credential-provider-web-identity' not found"
     );

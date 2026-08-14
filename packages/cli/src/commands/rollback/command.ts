@@ -1,6 +1,15 @@
 import { packageName } from '../../util/pkg-name';
 import { yesOption } from '../../util/arg-common';
 
+const timeoutOption = {
+  name: 'timeout',
+  description: 'Time to wait for rollback completion [3m]',
+  argument: 'TIME',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+} as const;
+
 export const statusSubcommand = {
   name: 'status',
   aliases: [],
@@ -11,7 +20,7 @@ export const statusSubcommand = {
       required: false,
     },
   ],
-  options: [],
+  options: [timeoutOption],
   examples: [
     {
       name: 'Show the status of any current pending rollbacks',
@@ -35,17 +44,7 @@ export const rollbackCommand = {
     },
   ],
   subcommands: [statusSubcommand],
-  options: [
-    {
-      name: 'timeout',
-      description: 'Time to wait for rollback completion [3m]',
-      argument: 'TIME',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-    },
-    yesOption,
-  ],
+  options: [timeoutOption, yesOption],
   examples: [
     {
       name: 'Rollback a deployment using id or url',

@@ -1,6 +1,9 @@
 import assert from 'assert';
+import fs from 'fs-extra';
 import { isIP } from 'net';
-import { exec, fixture, testFixture, testFixtureStdio } from './utils';
+import { join } from 'path';
+import nodeFetch from '../../src/util/fetch';
+import { exec, fixture, sleep, testFixture, testFixtureStdio } from './utils';
 
 test('[vercel dev] validate redirects', async () => {
   const directory = fixture('invalid-redirects');
@@ -20,17 +23,6 @@ test('[vercel dev] validate headers', async () => {
   expect(output.stderr).toMatch(
     /Invalid vercel\.json - `headers\[0\].headers\[0\].value` should be string/m
   );
-});
-
-test('[vercel dev] validate mixed routes and rewrites', async () => {
-  const directory = fixture('invalid-mixed-routes-rewrites');
-  const output = await exec(directory);
-
-  expect(output.exitCode).toBe(1);
-  expect(output.stderr).toMatch(
-    /If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` are used, then `routes` cannot be present./m
-  );
-  expect(output.stderr).toMatch(/vercel\.link\/mix-routing-props/m);
 });
 
 test('[vercel dev] validate env var names', async () => {
@@ -195,6 +187,82 @@ test(
 );
 
 test(
+  '[vercel dev] Should support Go standalone server mode',
+  testFixtureStdio('go-standalone', async (testPath: any) => {
+    await testPath(200, `/`, 'Standalone Go: /');
+    await testPath(
+      200,
+      `/some/nested/path`,
+      'Standalone Go: /some/nested/path'
+    );
+  })
+);
+
+test(
+  '[vercel dev] Should persist and reload Node standalone servers without package.json',
+  testFixtureStdio('node-standalone', async (_: unknown, port: number) => {
+    interface NodeStandaloneResponse {
+      instanceId: string;
+      marker: string;
+      pid: number;
+      requestCount: number;
+      url: string;
+    }
+
+    const requestDev = async (path: string) => {
+      const response = await nodeFetch(`http://localhost:${port}${path}`);
+      expect(response.status).toBe(200);
+      return (await response.json()) as NodeStandaloneResponse;
+    };
+
+    const devInstance = await requestDev('/');
+    expect(devInstance.url).toBe('/');
+    expect(devInstance.marker).toBe('initial');
+
+    const secondResponse = await requestDev('/some/nested/path');
+    expect(secondResponse.url).toBe('/some/nested/path');
+    expect(secondResponse.marker).toBe('initial');
+    expect(secondResponse.instanceId).toBe(devInstance.instanceId);
+    expect(secondResponse.pid).toBe(devInstance.pid);
+    expect(secondResponse.requestCount).toBe(devInstance.requestCount + 1);
+
+    const serverPath = join(fixture('node-standalone'), 'server.ts');
+    const originalSource = await fs.readFile(serverPath, 'utf8');
+
+    try {
+      await fs.writeFile(
+        serverPath,
+        originalSource.replace(
+          "const marker = 'initial';",
+          "const marker = 'updated';"
+        )
+      );
+
+      const deadline = Date.now() + 15_000;
+      let updatedResponse: NodeStandaloneResponse | undefined;
+      while (Date.now() < deadline) {
+        try {
+          const response = await requestDev('/reloaded');
+          if (response.marker === 'updated') {
+            updatedResponse = response;
+            break;
+          }
+        } catch {
+          // The previous server may be shutting down between polling requests.
+        }
+        await sleep(100);
+      }
+
+      expect(updatedResponse?.url).toBe('/reloaded');
+      expect(updatedResponse?.instanceId).not.toBe(devInstance.instanceId);
+      expect(updatedResponse?.requestCount).toBe(1);
+    } finally {
+      await fs.writeFile(serverPath, originalSource);
+    }
+  })
+);
+
+test(
   '[vercel dev] Should support `*.go` API serverless functions with external modules',
   testFixtureStdio('go-external-module', async (testPath: any) => {
     await testPath(200, `/api`, 'hello from go!');
@@ -211,7 +279,6 @@ test(
 );
 
 // Skipping because it doesn't run yet on Node 22
-// eslint-disable-next-line jest/no-disabled-tests
 test.skip(
   '[vercel dev] Should set the `ts-node` "target" to match Node.js version',
   testFixtureStdio('node-ts-node-target', async (testPath: any) => {

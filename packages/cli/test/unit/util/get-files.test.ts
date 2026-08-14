@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { join, sep } from 'path';
+import os from 'os';
+import fs from 'fs-extra';
 // @ts-ignore - Missing types for "alpha-sort"
 import { asc as alpha } from 'alpha-sort';
 import { staticFiles as getStaticFiles_ } from '../../../src/util/get-files';
@@ -53,5 +55,46 @@ describe('staticFiles', () => {
     expect(base(files[3])).toEqual(`${path}/build/sub/c.js`);
     expect(base(files[4])).toEqual(`${path}/c.js`);
     expect(base(files[5])).toEqual(`${path}/package.json`);
+  });
+
+  describe('when a directory is removed mid-scan', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('should skip the removed directory instead of throwing', async () => {
+      const dir = await fs.mkdtemp(join(os.tmpdir(), 'vc-get-files-'));
+      try {
+        await fs.mkdirp(join(dir, 'keep'));
+        await fs.writeFile(join(dir, 'keep', 'a.js'), '');
+        await fs.mkdirp(join(dir, 'gone'));
+        await fs.writeFile(join(dir, 'gone', 'b.js'), '');
+
+        // Simulate a directory (e.g. cargo's `target/`) being deleted between
+        // the `stat()` and `readdir()` calls during the recursive scan.
+        const realReaddir = fs.readdir.bind(fs);
+        vi.spyOn(fs, 'readdir').mockImplementation(((
+          p: string,
+          ...rest: any[]
+        ) => {
+          if (typeof p === 'string' && p.endsWith(`${sep}gone`)) {
+            const err: NodeJS.ErrnoException = new Error(
+              `ENOENT: no such file or directory, scandir '${p}'`
+            );
+            err.code = 'ENOENT';
+            return Promise.reject(err);
+          }
+          return realReaddir(p, ...rest);
+        }) as unknown as typeof fs.readdir);
+
+        const files = normalizeWindowsPaths(await getStaticFiles_(dir, {}));
+        const names = files.map(f => f.replace(/\\/g, '/'));
+
+        expect(names.some(f => f.endsWith('/keep/a.js'))).toBe(true);
+        expect(names.some(f => f.endsWith('/gone/b.js'))).toBe(false);
+      } finally {
+        await fs.remove(dir);
+      }
+    });
   });
 });

@@ -1,15 +1,34 @@
 import type Client from '../client';
 import setupAndLink from '../link/setup-and-link';
 import param from '../output/param';
-import { getCommandName } from '../pkg-name';
-import { getLinkedProject } from '../projects/link';
+import { getCommandName, getCommandNamePlain } from '../pkg-name';
+import {
+  getLinkedProject,
+  type ProjectLinkResultWithOrgId,
+} from '../projects/link';
+import { resolveProjectCwd } from '../projects/find-project-root';
 import type { SetupAndLinkOptions } from '../link/setup-and-link';
 import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
+import { outputActionRequired, buildCommandWithYes } from '../agent-output';
+import { printProjectNotFoundError } from '../projects/project-not-found-error';
+import { detectExplicitScope } from '../get-scope';
+
+interface EnsureLinkOptions extends SetupAndLinkOptions {
+  /** When true, fail instead of setting up a project that is not linked. */
+  requireExistingLink?: boolean;
+  /**
+   * Deploy-only fallback for project-scoped tokens that can fetch the linked
+   * project but cannot fetch the owner user/team resource.
+   */
+  allowOwnerLookupFallback?: boolean;
+}
 
 /**
  * Checks if a project is already linked and if not, links the project and
- * validates the link response.
+ * validates the link response. When non-interactive and an error occurs,
+ * exits (process.exit); otherwise returns the linked project or a numeric
+ * exit code (0 for user abort, non-zero for error).
  *
  * @param commandName - The name of the current command to print in the
  * event of an error
@@ -19,18 +38,39 @@ import output from '../../output-manager';
  * directory
  * @param opts.projectName - The project name to use when linking, otherwise
  * the current directory
- * @returns {Promise<ProjectLinked|number>} Returns a numeric exit code when aborted or
- * error, otherwise an object containing the org an project
+ * @returns {Promise<ProjectLinked | number>} The linked project or exit code (or process exits when nonInteractive and error)
  */
 export async function ensureLink(
   commandName: string,
   client: Client,
   cwd: string,
-  opts: SetupAndLinkOptions = {}
+  opts: EnsureLinkOptions = {}
 ): Promise<ProjectLinked | number> {
-  let { link } = opts;
+  cwd = await resolveProjectCwd(cwd);
+
+  let link: ProjectLinkResultWithOrgId | undefined = opts.link;
+  // All commands respect global --non-interactive; link can override via opts
+  const nonInteractive = opts.nonInteractive ?? client.nonInteractive ?? false;
+  opts.nonInteractive = nonInteractive;
   if (!link) {
-    link = await getLinkedProject(client, cwd);
+    if (opts.forceDelete) {
+      // When `forceDelete` is enabled we will always run the interactive
+      // setup/link flow. Avoid an eager `getLinkedProject()` call, since it can
+      // trigger additional prompts (for example when `.vercel/repo.json` exists
+      // and the repo-linked project is ambiguous).
+      link = { status: 'not_linked', org: null, project: null };
+    } else {
+      // `failIfNotFound` doubles as the opt-in for API-based name/ID
+      // resolution: both behaviors only apply when `projectName` came from
+      // an explicit user flag.
+      link = await getLinkedProject(client, {
+        cwd,
+        projectName: opts.projectName,
+        projectNameIsExplicit: Boolean(opts.projectName && opts.failIfNotFound),
+        scopeIsExplicit: detectExplicitScope(client),
+        allowOwnerLookupFallback: opts.allowOwnerLookupFallback,
+      });
+    }
     opts.link = link;
   }
 
@@ -38,6 +78,29 @@ export async function ensureLink(
     (link.status === 'linked' && opts.forceDelete) ||
     link.status === 'not_linked'
   ) {
+    // Explicit `--project` was provided but could not be resolved; bail out
+    // before `setupAndLink` would offer to create a new project for a typo.
+    if (
+      link.status === 'not_linked' &&
+      opts.failIfNotFound &&
+      opts.projectName
+    ) {
+      await printProjectNotFoundError(
+        client,
+        opts.projectName,
+        commandName,
+        link.orgId
+      );
+      return 1;
+    }
+
+    if (link.status === 'not_linked' && opts.requireExistingLink) {
+      output.error(
+        `Project is not linked. Run ${getCommandName('link')} first.`
+      );
+      return 1;
+    }
+
     link = await setupAndLink(client, cwd, opts);
 
     if (link.status === 'not_linked') {
@@ -48,11 +111,32 @@ export async function ensureLink(
 
   if (link.status === 'error') {
     if (link.reason === 'HEADLESS') {
-      output.error(
-        `Command ${getCommandName(
-          commandName
-        )} requires confirmation. Use option ${param('--yes')} to confirm.`
-      );
+      if (nonInteractive) {
+        outputActionRequired(
+          client,
+          {
+            status: 'action_required',
+            reason: 'confirmation_required',
+            message: `Command ${getCommandNamePlain(commandName)} requires confirmation. Use option --yes to confirm.`,
+            next: [
+              {
+                command: buildCommandWithYes(client.argv),
+                when: 'Confirm and run',
+              },
+            ],
+          },
+          link.exitCode
+        );
+      } else {
+        output.error(
+          `Command ${getCommandName(
+            commandName
+          )} requires confirmation. Use option ${param('--yes')} to confirm.`
+        );
+      }
+    }
+    if (nonInteractive) {
+      process.exit(link.exitCode);
     }
     return link.exitCode;
   }

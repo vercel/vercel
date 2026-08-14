@@ -1,4 +1,4 @@
-import { yesOption } from '../../util/arg-common';
+import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const removeSubcommand = {
@@ -24,6 +24,8 @@ export const removeSubcommand = {
       ...yesOption,
       description: 'Skip the confirmation prompt when deleting a resource',
     },
+    formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -41,13 +43,17 @@ export const removeSubcommand = {
         `${packageName} integration-resource remove my-acme-resource -a`,
       ],
     },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} integration-resource remove my-acme-resource --json --yes`,
+    },
   ],
 } as const;
 
 export const disconnectSubcommand = {
   name: 'disconnect',
   aliases: [],
-  description: 'Disconnect a resource from a project, or the current project',
+  description: 'Disconnect a marketplace resource from a project',
   arguments: [
     {
       name: 'resource',
@@ -70,10 +76,12 @@ export const disconnectSubcommand = {
       ...yesOption,
       description: 'Skip the confirmation prompt when disconnecting a resource',
     },
+    formatOption,
+    jsonOption,
   ],
   examples: [
     {
-      name: 'Disconnect a resource from the current projecct',
+      name: 'Disconnect a resource from the current project',
       value: [
         `${packageName} integration-resource disconnect <resource>`,
         `${packageName} integration-resource disconnect my-acme-resource`,
@@ -82,7 +90,7 @@ export const disconnectSubcommand = {
     {
       name: 'Disconnect all projects from a resource',
       value: [
-        `${packageName} integration-resource disconnect <resource> --unlink-all`,
+        `${packageName} integration-resource disconnect <resource> --all`,
         `${packageName} integration-resource disconnect my-acme-resource --all`,
         `${packageName} integration-resource disconnect my-acme-resource -a`,
       ],
@@ -93,6 +101,83 @@ export const disconnectSubcommand = {
         `${packageName} integration-resource disconnect <resource> <project>`,
         `${packageName} integration-resource disconnect my-acme-resource my-project`,
       ],
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} integration-resource disconnect my-acme-resource --json --yes`,
+    },
+  ],
+} as const;
+
+export const connectSubcommand = {
+  name: 'connect',
+  aliases: [],
+  description: 'Connect a marketplace resource to a project',
+  arguments: [
+    {
+      name: 'resource',
+      required: true,
+    },
+    {
+      name: 'project',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: [String],
+      argument: 'ENV',
+      deprecated: false,
+      description:
+        'Environment to connect (can be repeated: production, preview, development). Defaults to all.',
+    },
+    {
+      name: 'prefix',
+      shorthand: null,
+      type: String,
+      argument: 'PREFIX',
+      deprecated: false,
+      description:
+        'Prefix for environment variable names (e.g., --prefix NEON2_ creates NEON2_DATABASE_URL instead of DATABASE_URL)',
+    },
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when connecting a resource',
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Connect a resource to the current project',
+      value: [
+        `${packageName} integration resource connect <resource>`,
+        `${packageName} integration resource connect my-acme-resource`,
+      ],
+    },
+    {
+      name: 'Connect a resource to a specified project',
+      value: [
+        `${packageName} integration resource connect <resource> <project>`,
+        `${packageName} integration resource connect my-acme-resource my-project`,
+      ],
+    },
+    {
+      name: 'Connect only to specific environments',
+      value: [
+        `${packageName} integration resource connect my-acme-resource -e production`,
+        `${packageName} integration resource connect my-acme-resource -e production -e preview`,
+      ],
+    },
+    {
+      name: 'Connect with a prefix for environment variable names',
+      value: `${packageName} integration resource connect my-acme-resource --prefix NEON2_`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} integration resource connect my-acme-resource --json --yes`,
     },
   ],
 } as const;
@@ -131,9 +216,87 @@ export const createThresholdSubcommand = {
       name: 'create threshold',
       value: [
         `${packageName} integration-resource create-threshold <resource> <minimum> <spend> <limit> [options]`,
-        `${packageName} integration-resource create-threshold my-acme-resource 100 50 2000`,
-        `${packageName} integration-resource create-threshold my-acme-resource 100 50 2000 --yes`,
+        `${packageName} integration-resource create-threshold my-acme-resource 50 100 2000`,
+        `${packageName} integration-resource create-threshold my-acme-resource 50 100 2000 --yes`,
       ],
+    },
+  ],
+} as const;
+
+export const claimSubcommand = {
+  name: 'claim',
+  aliases: [],
+  description:
+    'Claim a sandbox marketplace resource (e.g. Stripe, Shopify) by opening the provider claim URL in your browser',
+  arguments: [
+    {
+      name: 'resource',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description:
+        'Skip the confirmation prompt when claiming a single sandbox resource',
+    },
+    {
+      name: 'no-wait',
+      description:
+        'Print the claim URL and exit without polling for completion',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Claim a sandbox resource by name',
+      value: [
+        `${packageName} integration-resource claim <resource>`,
+        `${packageName} integration-resource claim my-stripe`,
+      ],
+    },
+    {
+      name: 'Pick a sandbox resource interactively (current team)',
+      value: `${packageName} integration-resource claim`,
+    },
+    {
+      name: 'Print the claim URL as JSON without waiting',
+      value: `${packageName} integration-resource claim my-stripe --json --no-wait`,
+    },
+  ],
+} as const;
+
+export const inspectSubcommand = {
+  name: 'inspect',
+  aliases: ['status'],
+  description:
+    'Show live details and status for a marketplace integration resource, fetched fresh from the provider',
+  arguments: [
+    {
+      name: 'resource',
+      required: true,
+    },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Show live details and status for a resource',
+      value: [
+        `${packageName} integration resource inspect <resource>`,
+        `${packageName} integration resource inspect my-acme-resource`,
+      ],
+    },
+    {
+      name: 'Show live status for a resource (alias)',
+      value: `${packageName} integration resource status my-acme-resource`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} integration resource inspect my-acme-resource --json`,
     },
   ],
 } as const;
@@ -141,9 +304,17 @@ export const createThresholdSubcommand = {
 export const integrationResourceCommand = {
   name: 'integration-resource',
   aliases: ['ir'],
-  description: 'Manage marketplace integration resources',
+  description:
+    'Manage marketplace integration resources (alias for `vercel integration resource`)',
   options: [],
   arguments: [],
-  subcommands: [disconnectSubcommand, removeSubcommand],
+  subcommands: [
+    connectSubcommand,
+    createThresholdSubcommand,
+    disconnectSubcommand,
+    removeSubcommand,
+    claimSubcommand,
+    inspectSubcommand,
+  ],
   examples: [],
 } as const;

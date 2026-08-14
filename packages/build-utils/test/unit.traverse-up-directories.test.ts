@@ -40,12 +40,13 @@ describe('traverseUpDirectories()', () => {
             expected: ['/foo/bar/baz/another', '/foo/bar/baz', '/foo/bar'],
           },
         ]
-  )(
-    'should traverse start="$start", base="$base"',
-    ({ start, base, expected }) => {
-      expect(Array.from(traverseUpDirectories({ start, base }))).toEqual(
-        expected
-      );
-    }
-  );
+  )('should traverse start="$start", base="$base"', ({
+    start,
+    base,
+    expected,
+  }) => {
+    expect(Array.from(traverseUpDirectories({ start, base }))).toEqual(
+      expected
+    );
+  });
 });

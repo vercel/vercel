@@ -1,60 +1,565 @@
 import { isErrnoException } from '@vercel/error-utils';
+import type { Deployment } from '@vercel-internals/types';
 import chalk from 'chalk';
 import format from 'date-fns/format';
-import { isReady } from '../../util/build-state';
 import type Client from '../../util/client';
-import { isDeploying } from '../../util/deploy/is-deploying';
-import { emoji, prependEmoji } from '../../util/emoji';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
-import getDeployment from '../../util/get-deployment';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import getScope from '../../util/get-scope';
+import getScope, { detectExplicitScope } from '../../util/get-scope';
+import { formatProject } from '../../util/projects/format-project';
+import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
+import { getLinkedProject } from '../../util/projects/link';
+import {
+  DeploymentNotFound,
+  InvalidDeploymentId,
+  ProjectNotFound,
+  isAPIError,
+} from '../../util/errors-ts';
 import { displayRuntimeLogs } from '../../util/logs';
-import { validateJsonOutput } from '../../util/output-format';
-import param from '../../util/output/param';
-import { getCommandName } from '../../util/pkg-name';
+import {
+  fetchAllRequestLogs,
+  type RequestLogEntry,
+  type RequestLogMessage,
+} from '../../util/logs-v2';
+import getDeployment from '../../util/get-deployment';
+import getUser from '../../util/get-user';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { LogsTelemetryClient } from '../../util/telemetry/commands/logs';
 import { help } from '../help';
-import { stateString } from '../list';
 import { logsCommand } from './command';
 import output from '../../output-manager';
 
-const deprecatedFlags = [
-  '--follow',
-  '--limit',
-  '--since',
-  '--until',
-  '--output',
-  '--json',
-];
+interface DeploymentSummary {
+  id: string;
+  url: string;
+}
 
-const DATE_TIME_FORMAT = 'MMM dd HH:mm:ss.SS';
+interface DeploymentResponse {
+  deployments: Array<{ uid: string; url: string }>;
+}
+
+interface ProductionDeploymentResponse {
+  deployment: DeploymentSummary;
+}
+
+type LogsTargetSource = 'deployment' | 'explicit-project' | 'linked-project';
+
+interface LogsTarget {
+  projectId: string;
+  projectSlug: string;
+  orgSlug: string;
+  ownerId: string;
+  deployment?: Deployment;
+  targetSource: LogsTargetSource;
+}
+
+interface ResolveLogsTargetOptions {
+  contextName: string;
+  deploymentOption?: string;
+  projectOption?: string;
+}
+
+type ResolveLogsTargetResult = LogsTarget | { exitCode: number };
+
+async function getLatestDeployment(
+  client: Client,
+  projectId: string,
+  filters: { branch?: string; userId?: string; target?: string } = {}
+): Promise<DeploymentSummary | null> {
+  const query = new URLSearchParams();
+  query.set('projectId', projectId);
+  query.set('limit', '1');
+  query.set('state', 'READY');
+  if (filters.branch) {
+    query.set('branch', filters.branch);
+  }
+  if (filters.userId) {
+    query.set('users', filters.userId);
+  }
+  if (filters.target) {
+    query.set('target', filters.target);
+  }
+
+  const { deployments } = await client.fetch<DeploymentResponse>(
+    `/v6/deployments?${query}`
+  );
+
+  if (deployments.length === 0) {
+    return null;
+  }
+
+  return {
+    id: deployments[0].uid,
+    url: deployments[0].url,
+  };
+}
+
+async function getActiveProductionDeployment(
+  client: Client,
+  projectId: string
+): Promise<DeploymentSummary | null> {
+  try {
+    const { deployment } = await client.fetch<ProductionDeploymentResponse>(
+      `/projects/${encodeURIComponent(projectId)}/production-deployment`
+    );
+    return deployment;
+  } catch (err: unknown) {
+    if (isAPIError(err) && err.status === 404) {
+      return null;
+    }
+    throw err;
+  }
+}
+
+interface ResolveFollowDeploymentOptions {
+  branch?: string;
+  client: Client;
+  environment?: string;
+  logsTarget: LogsTarget;
+}
+
+type ResolveFollowDeploymentResult =
+  | { deploymentId: string; label: string }
+  | { exitCode: number };
+
+async function resolveFollowDeployment({
+  branch,
+  client,
+  environment,
+  logsTarget,
+}: ResolveFollowDeploymentOptions): Promise<ResolveFollowDeploymentResult> {
+  const { deployment, orgSlug, projectId, projectSlug } = logsTarget;
+
+  // 1. Explicit --deployment / positional
+  if (deployment?.id) {
+    return { deploymentId: deployment.id, label: 'deployment' };
+  }
+
+  // 2. Explicit --branch → latest matching READY deployment, else error
+  if (branch) {
+    output.spinner(`Finding latest deployment for branch "${branch}"`, 1000);
+    const branchDeployment = await getLatestDeployment(client, projectId, {
+      branch,
+      target: environment,
+    });
+    output.stopSpinner();
+
+    if (branchDeployment) {
+      output.debug(
+        `Found deployment ${branchDeployment.id} for branch ${branch}`
+      );
+      return {
+        deploymentId: branchDeployment.id,
+        label: `latest deployment on branch "${branch}"`,
+      };
+    }
+
+    const environmentLabel = environment ? ` ${environment}` : '';
+    const deployHint = environment
+      ? `Deploy that branch to ${environment} first`
+      : 'Deploy that branch first';
+    output.error(
+      `No READY${environmentLabel} deployments found for branch "${branch}" in ${formatProject(orgSlug, projectSlug)}. ${deployHint} or specify a deployment with ${chalk.bold('--deployment')}.`
+    );
+    return { exitCode: 1 };
+  }
+
+  // 3. --environment production → active production deployment, else error
+  if (environment === 'production') {
+    output.spinner('Finding production deployment', 1000);
+    const productionDeployment = await getActiveProductionDeployment(
+      client,
+      projectId
+    );
+    output.stopSpinner();
+
+    if (!productionDeployment) {
+      output.error(
+        `No active production deployment found for ${formatProject(orgSlug, projectSlug)}. Deploy or promote to production first, or specify a deployment with ${chalk.bold('--deployment')}.`
+      );
+      return { exitCode: 1 };
+    }
+
+    output.debug(
+      `Found production deployment ${productionDeployment.id} (${productionDeployment.url})`
+    );
+    return {
+      deploymentId: productionDeployment.id,
+      label: 'production deployment',
+    };
+  }
+
+  // 4. --environment preview → your latest READY preview, else error
+  if (environment === 'preview') {
+    const user = await getUser(client);
+    output.spinner('Finding your latest deployment', 1000);
+    const userDeployment = await getLatestDeployment(client, projectId, {
+      userId: user.id,
+      target: 'preview',
+    });
+    output.stopSpinner();
+
+    if (userDeployment) {
+      output.debug(
+        `Found latest deployment ${userDeployment.id} (${userDeployment.url}) created by current user`
+      );
+      return {
+        deploymentId: userDeployment.id,
+        label: 'your latest deployment',
+      };
+    }
+
+    output.error(
+      `No READY preview deployments found for ${formatProject(orgSlug, projectSlug)}. Deploy a preview first or specify a deployment with ${chalk.bold('--deployment')}.`
+    );
+    return { exitCode: 1 };
+  }
+
+  // 5. No environment specified → active production deployment, if found
+  output.spinner('Finding production deployment', 1000);
+  const productionDeployment = await getActiveProductionDeployment(
+    client,
+    projectId
+  );
+  output.stopSpinner();
+
+  if (productionDeployment) {
+    output.debug(
+      `Found production deployment ${productionDeployment.id} (${productionDeployment.url})`
+    );
+    return {
+      deploymentId: productionDeployment.id,
+      label: 'production deployment',
+    };
+  }
+
+  // 6. No active production exists → your latest READY deployment, if found
+  const user = await getUser(client);
+  output.spinner('Finding your latest deployment', 1000);
+  const userDeployment = await getLatestDeployment(client, projectId, {
+    userId: user.id,
+  });
+  output.stopSpinner();
+
+  if (userDeployment) {
+    output.debug(
+      `Found latest deployment ${userDeployment.id} (${userDeployment.url}) created by current user`
+    );
+    return {
+      deploymentId: userDeployment.id,
+      label: 'your latest deployment',
+    };
+  }
+
+  // 7. Otherwise → error
+  output.error(
+    `No READY deployments found for ${formatProject(orgSlug, projectSlug)}. Deploy first or specify a deployment with ${chalk.bold('--deployment')}.`
+  );
+  return { exitCode: 1 };
+}
+
+const TIME_ONLY_FORMAT = 'HH:mm:ss.SS';
+const DATE_TIME_FORMAT = 'MMM DD HH:mm:ss.SS';
+
+interface ColumnDef<T> {
+  label: string;
+  padding?: [number, number];
+  width?: number | 'stretch';
+  getValue: (row: T) => string;
+  format?: (paddedValue: string, row: T) => string;
+}
+
+interface TableOptions<T> {
+  columns: ColumnDef<T>[];
+  rows: T[];
+  tableWidth: number;
+  formatHeader?: (formattedHeader: string) => string;
+  formatRow?: (formattedRow: string, row: T) => string;
+}
+
+function table<T>({
+  columns,
+  rows,
+  tableWidth,
+  formatHeader,
+  formatRow,
+}: TableOptions<T>): { header: string; rows: string[] } {
+  const zeroPad: [number, number] = [0, 0];
+
+  // Calculate max content width for each column
+  const maxWidths = columns.map(col => {
+    const headerWidth = col.label.length;
+    const maxContent = Math.max(
+      headerWidth,
+      ...rows.map(row => col.getValue(row).length)
+    );
+    return maxContent;
+  });
+
+  // Calculate final widths
+  const colPaddings: [number, number][] = columns.map(
+    col => col.padding ?? zeroPad
+  );
+  const finalWidths: number[] = [];
+  let usedWidth = 0;
+  let stretchIndex = -1;
+
+  for (let i = 0; i < columns.length; i++) {
+    const col = columns[i];
+    const padding = colPaddings[i][0] + colPaddings[i][1];
+
+    if (col.width === 'stretch') {
+      stretchIndex = i;
+      finalWidths.push(0);
+    } else if (typeof col.width === 'number') {
+      finalWidths.push(col.width);
+      usedWidth += col.width + padding;
+    } else {
+      finalWidths.push(maxWidths[i]);
+      usedWidth += maxWidths[i] + padding;
+    }
+  }
+
+  // Add separator space between columns (2 spaces)
+  usedWidth += (columns.length - 1) * 2;
+
+  // Fill stretch column
+  if (stretchIndex >= 0) {
+    const stretchPadding =
+      colPaddings[stretchIndex][0] + colPaddings[stretchIndex][1];
+    finalWidths[stretchIndex] = Math.max(
+      10,
+      tableWidth - usedWidth - stretchPadding
+    );
+  }
+
+  // Pad and truncate a value to fit width
+  const pad = (value: string, width: number): string => {
+    if (value.length > width) {
+      return value.slice(0, width - 1) + '…';
+    }
+    return value.padEnd(width);
+  };
+
+  // Build header
+  const headerStr = columns
+    .map((col, i) => {
+      const padded = pad(col.label, finalWidths[i]);
+      return (
+        ' '.repeat(colPaddings[i][0]) + padded + ' '.repeat(colPaddings[i][1])
+      );
+    })
+    .join('  ');
+  const header = formatHeader ? formatHeader(headerStr) : headerStr;
+
+  // Build rows
+  const formattedRows = rows.map(row => {
+    const rowStr = columns
+      .map((col, i) => {
+        const value = col.getValue(row);
+        const padded = pad(value, finalWidths[i]);
+        const formatted = col.format ? col.format(padded, row) : padded;
+        return (
+          ' '.repeat(colPaddings[i][0]) +
+          formatted +
+          ' '.repeat(colPaddings[i][1])
+        );
+      })
+      .join('  ');
+    return formatRow ? formatRow(rowStr, row) : rowStr;
+  });
+
+  return { header, rows: formattedRows };
+}
+
+function logsSpanMultipleDays(logs: RequestLogEntry[]): boolean {
+  if (logs.length === 0) return false;
+  const firstDay = new Date(logs[0].timestamp).toDateString();
+  return logs.some(log => new Date(log.timestamp).toDateString() !== firstDay);
+}
+
+function parseLevels(levels?: string | string[]): string[] {
+  if (!levels) return [];
+  if (typeof levels === 'string') return [levels];
+  return levels;
+}
+
+function parseSources(sources?: string | string[]): string[] {
+  if (!sources) return [];
+  if (typeof sources === 'string') return [sources];
+  return sources;
+}
+
+function isNonLiveTerminalDeployment(deployment: Deployment): boolean {
+  return (
+    deployment.readyState === 'ERROR' || deployment.readyState === 'CANCELED'
+  );
+}
+
+// Both forms wrap the command in backticks. `plain: true` uses literal
+// backticks with no color (suitable for embedding in JSON output); the default
+// uses gray backticks and cyan text for terminal display.
+function getInspectCommand(
+  deployment: Deployment,
+  contextName?: string,
+  { plain = false }: { plain?: boolean } = {}
+): string {
+  const scopeOption = contextName ? ` --scope ${contextName}` : '';
+  const command = `inspect https://${deployment.url}${scopeOption}`;
+  return plain
+    ? `\`${getCommandNamePlain(command)}\``
+    : getCommandName(command);
+}
+
+function printNonLiveDeploymentError(
+  deployment: Deployment,
+  contextName?: string
+): void {
+  const inspectCommand = getInspectCommand(deployment, contextName);
+  output.error(
+    `Logs are unavailable because deployment ${chalk.bold(
+      deployment.id
+    )} never reached READY and ended in ${deployment.readyState}.\n` +
+      `Run ${inspectCommand} for deployment details.`
+  );
+}
+
+async function resolveLogsTarget(
+  client: Client,
+  { contextName, deploymentOption, projectOption }: ResolveLogsTargetOptions
+): Promise<ResolveLogsTargetResult> {
+  if (deploymentOption) {
+    output.spinner(`Resolving deployment "${deploymentOption}"`, 1000);
+    let deployment: Awaited<ReturnType<typeof getDeployment>>;
+    try {
+      deployment = await getDeployment(client, contextName, deploymentOption);
+    } catch (err) {
+      if (err instanceof DeploymentNotFound) {
+        output.error(
+          `Deployment not found: ${deploymentOption} under ${chalk.bold(
+            contextName
+          )}`
+        );
+        return { exitCode: 1 };
+      }
+      if (err instanceof InvalidDeploymentId) {
+        output.error(`Invalid deployment ID: ${deploymentOption}`);
+        return { exitCode: 1 };
+      }
+      throw err;
+    } finally {
+      output.stopSpinner();
+    }
+
+    if (!deployment.projectId) {
+      output.error('Deployment is not associated with a project.');
+      return { exitCode: 1 };
+    }
+
+    // `getDeployment()` already resolved under `client.config.currentTeam` via
+    // `client.fetch()`, and project/log lookups should stay in that same scope.
+    output.spinner(`Fetching project "${deployment.projectId}"`, 1000);
+    const project = await getProjectByIdOrName(client, deployment.projectId);
+    output.stopSpinner();
+
+    if (project instanceof ProjectNotFound) {
+      output.error(
+        `Project not found: ${deployment.projectId} under ${chalk.bold(
+          contextName
+        )}`
+      );
+      return { exitCode: 1 };
+    }
+
+    if (projectOption) {
+      output.spinner(`Fetching project "${projectOption}"`, 1000);
+      const explicitProject = await getProjectByIdOrName(client, projectOption);
+      output.stopSpinner();
+
+      if (explicitProject instanceof ProjectNotFound) {
+        output.error(
+          `Project not found: ${projectOption} under ${chalk.bold(contextName)}`
+        );
+        return { exitCode: 1 };
+      }
+
+      if (explicitProject.id !== project.id) {
+        output.error(
+          `The deployment "${deploymentOption}" does not belong to "${projectOption}" project. Remove either the deployment selection or the ${chalk.bold(
+            '--project'
+          )} option.`
+        );
+        return { exitCode: 1 };
+      }
+    }
+
+    return {
+      projectId: project.id,
+      projectSlug: project.name,
+      orgSlug: contextName,
+      ownerId: project.accountId,
+      deployment,
+      targetSource: 'deployment',
+    };
+  }
+
+  if (projectOption) {
+    output.spinner(`Fetching project "${projectOption}"`, 1000);
+    const project = await getProjectByIdOrName(client, projectOption);
+    output.stopSpinner();
+
+    if (project instanceof ProjectNotFound) {
+      output.error(
+        `Project not found: ${projectOption} under ${chalk.bold(contextName)}`
+      );
+      return { exitCode: 1 };
+    }
+
+    return {
+      projectId: project.id,
+      projectSlug: project.name,
+      orgSlug: contextName,
+      ownerId: project.accountId,
+      targetSource: 'explicit-project',
+    };
+  }
+
+  const link = await getLinkedProject(client);
+  if (link.status === 'error') {
+    return { exitCode: link.exitCode };
+  }
+  if (link.status === 'not_linked') {
+    output.error(
+      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName(
+        'link'
+      )} to begin, or specify a project with ${chalk.bold('--project')}.`
+    );
+    return { exitCode: 1 };
+  }
+
+  client.config.currentTeam =
+    link.org.type === 'team' ? link.org.id : undefined;
+
+  return {
+    projectId: link.project.id,
+    projectSlug: link.project.name,
+    orgSlug: link.org.slug,
+    ownerId: link.org.id,
+    targetSource: 'linked-project',
+  };
+}
 
 export default async function logs(client: Client) {
   let parsedArguments;
   const flagsSpecification = getFlagsSpecification(logsCommand.options);
-  const { print, error, spinner, stopSpinner } = output;
 
   try {
     parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
     printError(err);
+    output.print(help(logsCommand, { columns: client.stderr.columns }));
     return 1;
-  }
-
-  // TODO: This behavior should be centralized in `parseArguments`
-  for (const flag of Object.keys(parsedArguments.flags)) {
-    if (deprecatedFlags.includes(flag)) {
-      print(
-        `${prependEmoji(
-          `The ${param(
-            flag
-          )} option was ignored because it is now deprecated. Please remove it.`,
-          emoji('warning')
-        )}\n`
-      );
-    }
   }
 
   const telemetry = new LogsTelemetryClient({
@@ -65,41 +570,88 @@ export default async function logs(client: Client) {
 
   if (parsedArguments.flags['--help']) {
     telemetry.trackCliFlagHelp('logs');
-    print(help(logsCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(help(logsCommand, { columns: client.stderr.columns }));
+    return 0;
   }
 
-  if (parsedArguments.args[0] === logsCommand.name) {
-    parsedArguments.args.shift();
+  const subArgs = parsedArguments.args.slice(1);
+  const [deploymentArgument] = subArgs;
+
+  const projectOption = parsedArguments.flags['--project'];
+  const deploymentFlag = parsedArguments.flags['--deployment'];
+  const environmentOption = parsedArguments.flags['--environment'];
+
+  let deploymentOption: string | undefined = deploymentFlag;
+  if (deploymentArgument) {
+    let deploymentIdOrHost = deploymentArgument;
+    try {
+      deploymentIdOrHost = new URL(deploymentArgument).hostname;
+    } catch {}
+    deploymentOption = deploymentIdOrHost;
+  }
+  const levelOption = parsedArguments.flags['--level'];
+  const statusCodeOption = parsedArguments.flags['--status-code'];
+  const sourceOption = parsedArguments.flags['--source'];
+  const sinceOption = parsedArguments.flags['--since'];
+  const untilOption = parsedArguments.flags['--until'];
+  const limitOption = parsedArguments.flags['--limit'];
+  const jsonOption = parsedArguments.flags['--json'];
+  const queryOption = parsedArguments.flags['--query'];
+  const searchOption = parsedArguments.flags['--search'];
+  const requestIdOption = parsedArguments.flags['--request-id'];
+  const expandOption = parsedArguments.flags['--expand'];
+  const branchFlagValue = parsedArguments.flags['--branch'];
+  const noBranchFlagValue = parsedArguments.flags['--no-branch'];
+
+  const noFollowFlagValue = parsedArguments.flags['--no-follow'];
+  const followOption = parsedArguments.flags['--follow'];
+
+  telemetry.trackCliArgumentUrlOrDeploymentId(deploymentArgument);
+  telemetry.trackCliOptionProject(projectOption);
+  telemetry.trackCliOptionDeployment(deploymentFlag);
+  telemetry.trackCliOptionEnvironment(environmentOption);
+  telemetry.trackCliOptionLevel(levelOption);
+  telemetry.trackCliOptionStatusCode(statusCodeOption);
+  telemetry.trackCliOptionSource(sourceOption);
+  telemetry.trackCliOptionSince(sinceOption);
+  telemetry.trackCliOptionUntil(untilOption);
+  telemetry.trackCliOptionLimit(limitOption);
+  telemetry.trackCliFlagJson(jsonOption);
+  telemetry.trackCliFlagFollow(followOption);
+  telemetry.trackCliFlagNoFollow(noFollowFlagValue);
+  telemetry.trackCliOptionQuery(queryOption);
+  telemetry.trackCliOptionSearch(searchOption);
+  telemetry.trackCliOptionRequestId(requestIdOption);
+  telemetry.trackCliFlagExpand(expandOption);
+  telemetry.trackCliOptionBranch(branchFlagValue);
+  telemetry.trackCliFlagNoBranch(noBranchFlagValue);
+
+  if (followOption) {
+    const incompatibleFlags = [
+      { flag: '--level', value: levelOption },
+      { flag: '--status-code', value: statusCodeOption },
+      { flag: '--source', value: sourceOption },
+      { flag: '--since', value: sinceOption },
+      { flag: '--until', value: untilOption },
+      { flag: '--limit', value: limitOption },
+      { flag: '--query', value: queryOption },
+      { flag: '--search', value: searchOption },
+      { flag: '--request-id', value: requestIdOption },
+    ];
+
+    const usedIncompatible = incompatibleFlags
+      .filter(f => f.value !== undefined && f.value !== null)
+      .map(f => chalk.bold(f.flag));
+
+    if (usedIncompatible.length > 0) {
+      output.error(
+        `The ${chalk.bold('--follow')} flag does not support filtering. Remove: ${usedIncompatible.join(', ')}`
+      );
+      return 1;
+    }
   }
 
-  const formatResult = validateJsonOutput(parsedArguments.flags);
-  if (!formatResult.valid) {
-    error(formatResult.error);
-    return 1;
-  }
-  const asJson = formatResult.jsonOutput;
-
-  // extract the first parameter
-  let [deploymentIdOrHost] = parsedArguments.args;
-  if (!deploymentIdOrHost) {
-    error(
-      `${getCommandName('logs <deployment>')} expects exactly one argument`
-    );
-    print(help(logsCommand, { columns: client.stderr.columns }));
-    return 1;
-  }
-
-  telemetry.trackCliArgumentUrlOrDeploymentId(deploymentIdOrHost);
-  telemetry.trackCliOptionFormat(parsedArguments.flags['--format']);
-  telemetry.trackCliFlagJson(parsedArguments.flags['--json']);
-  telemetry.trackCliFlagFollow(parsedArguments.flags['--follow']);
-  telemetry.trackCliOptionLimit(parsedArguments.flags['--limit']);
-  telemetry.trackCliOptionSince(parsedArguments.flags['--since']);
-  telemetry.trackCliOptionUntil(parsedArguments.flags['--until']);
-  telemetry.trackCliOptionOutput(parsedArguments.flags['--output']);
-
-  let contextName: string | null = null;
+  let contextName: string;
 
   try {
     ({ contextName } = await getScope(client));
@@ -108,53 +660,342 @@ export default async function logs(client: Client) {
       isErrnoException(err) &&
       (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED')
     ) {
-      error(err.message);
+      output.error(err.message);
       return 1;
     }
-
     throw err;
   }
 
-  try {
-    deploymentIdOrHost = new URL(deploymentIdOrHost).hostname;
-  } catch {}
-  spinner(
-    `Fetching deployment "${deploymentIdOrHost}" in ${chalk.bold(contextName)}`
-  );
-
-  // resolve the deployment, since we might have been given an alias
-  let deployment;
-  try {
-    deployment = await getDeployment(client, contextName, deploymentIdOrHost);
-  } finally {
-    stopSpinner();
+  const logsTarget = await resolveLogsTarget(client, {
+    contextName,
+    deploymentOption,
+    projectOption,
+  });
+  if ('exitCode' in logsTarget) {
+    return logsTarget.exitCode;
   }
 
-  if (!isReady(deployment)) {
-    error(
-      `Deployment not ready. Currently: ${stateString(deployment.readyState)}.`
-    );
-    if (isDeploying(deployment.readyState)) {
-      print(
-        `To follow build logs, run \`vercel inspect --logs --wait ${deploymentIdOrHost}\``
+  const { projectId, projectSlug, orgSlug, ownerId, deployment } = logsTarget;
+  const deploymentId = deployment?.id;
+
+  if (deployment && isNonLiveTerminalDeployment(deployment)) {
+    const inspectContextName = detectExplicitScope(client)
+      ? contextName
+      : undefined;
+    const inspectCommand = getInspectCommand(deployment, inspectContextName, {
+      plain: true,
+    });
+
+    if (jsonOption) {
+      client.stdout.write(
+        `${JSON.stringify({
+          type: 'deployment_error',
+          message: `Logs are unavailable because deployment ${deployment.id} never reached READY and ended in ${deployment.readyState}. Run ${inspectCommand} for deployment details.`,
+        })}\n`
       );
+    } else {
+      printNonLiveDeploymentError(deployment, inspectContextName);
     }
     return 1;
   }
 
-  output.print(
-    `Displaying runtime logs for deployment ${deployment.url} (${chalk.dim(
-      deployment.id
-    )}) starting from ${chalk.bold(format(Date.now(), DATE_TIME_FORMAT))}\n\n`
-  );
-  const abortController = new AbortController();
-  return await displayRuntimeLogs(
-    client,
-    {
-      deploymentId: deployment.id,
-      projectId: deployment.projectId,
-      parse: !asJson,
-    },
-    abortController
-  );
+  const branchOption =
+    typeof branchFlagValue === 'string' ? branchFlagValue : undefined;
+
+  if (
+    environmentOption &&
+    !['production', 'preview'].includes(environmentOption)
+  ) {
+    output.error(
+      `Invalid environment: ${environmentOption}. Must be "production" or "preview".`
+    );
+    return 1;
+  }
+
+  if (followOption) {
+    const followDeployment = await resolveFollowDeployment({
+      branch: branchOption,
+      client,
+      environment: environmentOption,
+      logsTarget,
+    });
+    if ('exitCode' in followDeployment) {
+      return followDeployment.exitCode;
+    }
+
+    if (!jsonOption) {
+      output.print(
+        `Streaming logs for ${followDeployment.label} ${chalk.bold(followDeployment.deploymentId)} starting from ${chalk.bold(format(Date.now(), TIME_ONLY_FORMAT))}\n\n`
+      );
+    }
+    const abortController = new AbortController();
+    return await displayRuntimeLogs(
+      client,
+      {
+        deploymentId: followDeployment.deploymentId,
+        projectId,
+        parse: !jsonOption,
+      },
+      abortController
+    );
+  }
+
+  const validLevels = ['error', 'warning', 'info', 'fatal'];
+  const levels = parseLevels(levelOption);
+  for (const level of levels) {
+    if (!validLevels.includes(level)) {
+      output.error(
+        `Invalid log level: ${level}. Must be one of: ${validLevels.join(', ')}.`
+      );
+      return 1;
+    }
+  }
+
+  const validSources = [
+    'serverless',
+    'edge-function',
+    'edge-middleware',
+    'static',
+  ];
+  const sources = parseSources(sourceOption);
+  for (const source of sources) {
+    if (!validSources.includes(source)) {
+      output.error(
+        `Invalid source: ${source}. Must be one of: ${validSources.join(', ')}.`
+      );
+      return 1;
+    }
+  }
+
+  const limit = limitOption ?? 100;
+
+  output.spinner('Fetching logs...', 1000);
+
+  const terminalWidth = client.stderr.isTTY
+    ? client.stderr.columns || 120
+    : 120;
+
+  // Non-interactive consumers (agents, pipes, CI) get full log messages by
+  // default, as if --expand was passed
+  const expand = expandOption || !client.stderr.isTTY;
+
+  const logs: RequestLogEntry[] = [];
+  try {
+    for await (const log of fetchAllRequestLogs(client, {
+      projectId,
+      ownerId,
+      deploymentId,
+      environment: environmentOption,
+      level: levels.length > 0 ? levels : undefined,
+      statusCode: statusCodeOption,
+      source: sources.length > 0 ? sources : undefined,
+      since: sinceOption,
+      until: untilOption,
+      limit,
+      search: searchOption ?? queryOption,
+      requestId: requestIdOption,
+      branch: branchOption,
+    })) {
+      output.stopSpinner();
+      if (jsonOption) {
+        client.stdout.write(JSON.stringify(log) + '\n');
+      } else {
+        logs.push(log);
+      }
+    }
+  } catch (err) {
+    output.stopSpinner();
+    printError(err);
+    return 1;
+  }
+
+  output.stopSpinner();
+
+  if (!jsonOption) {
+    const branchSuffix = branchOption
+      ? ` on branch ${chalk.cyan(branchOption)}`
+      : '';
+    if (logs.length === 0) {
+      output.print(
+        chalk.dim(
+          `No logs found for ${formatProject(orgSlug, projectSlug)}${branchSuffix}\n`
+        )
+      );
+    } else {
+      const showDate = logsSpanMultipleDays(logs);
+      const timeFormat = showDate ? DATE_TIME_FORMAT : TIME_ONLY_FORMAT;
+
+      // Build row data
+      type RowData = {
+        time: string;
+        host: string;
+        level: string;
+        path: string;
+        status: string;
+        statusCode: number;
+        message: string;
+        messageTruncated?: boolean;
+        logs: RequestLogMessage[];
+      };
+
+      const rowData: RowData[] = logs.map(log => {
+        const statusCode = log.responseStatusCode;
+        return {
+          time: format(log.timestamp, timeFormat),
+          host: log.domain || '',
+          level: log.level,
+          path: `${getSourceIcon(log.source)} ${log.requestMethod} ${log.requestPath}`,
+          status: !statusCode || statusCode <= 0 ? '---' : String(statusCode),
+          statusCode,
+          message: log.message?.replace(/\n/g, ' ').trim() || '',
+          messageTruncated: log.messageTruncated,
+          logs: log.logs,
+        };
+      });
+
+      // Define columns with formatting
+      const baseColumns: ColumnDef<RowData>[] = [
+        {
+          label: 'TIME',
+          getValue: row => row.time,
+          format: padded => chalk.dim(padded),
+        },
+        {
+          label: 'HOST',
+          getValue: row => row.host,
+          format: padded => chalk.dim(padded),
+        },
+        {
+          label: 'LEVEL',
+          getValue: row => row.level,
+          format: (padded, row) => colorizeLevel(padded, row.level),
+        },
+        {
+          label: '',
+          padding: [0, 3],
+          getValue: row => row.path,
+        },
+      ];
+
+      const columns: ColumnDef<RowData>[] = expand
+        ? baseColumns
+        : [
+            ...baseColumns,
+            {
+              label: 'STATUS',
+              getValue: row => row.status,
+              format: (padded, row) =>
+                row.statusCode <= 0
+                  ? chalk.gray(padded)
+                  : colorizeStatus(padded, row.statusCode),
+            },
+            {
+              label: 'MESSAGE',
+              width: 'stretch',
+              getValue: row => row.message || '(no message)',
+              format: (padded, row) =>
+                row.message
+                  ? colorizeMessage(padded, row.level)
+                  : chalk.dim(padded),
+            },
+          ];
+
+      const formatted = table({
+        columns,
+        rows: rowData,
+        tableWidth: terminalWidth,
+        formatHeader: header => chalk.dim(header),
+        formatRow: expand
+          ? (rowStr, row) => {
+              if (row.logs.length > 0) {
+                const renderedLogs = row.logs
+                  .map(log => {
+                    const message = log.message.replace(/\n/g, ' ').trim();
+                    const safeMessage = message || '(no message)';
+                    const truncatedIndicator = log.messageTruncated
+                      ? chalk.gray('…')
+                      : '';
+                    return `${colorizeMessage(safeMessage, log.level)}${truncatedIndicator}`;
+                  })
+                  .join('\n');
+                return `${rowStr}\n${renderedLogs}\n`;
+              }
+              return rowStr + '\n';
+            }
+          : undefined,
+      });
+
+      // Print header
+      output.print(formatted.header + '\n');
+
+      // Print rows
+      for (const row of formatted.rows) {
+        output.print(row + '\n');
+      }
+
+      output.print(
+        chalk.gray(
+          `Fetched ${logs.length} logs for ${formatProject(orgSlug, projectSlug)}${branchSuffix}\n`
+        )
+      );
+    }
+  }
+
+  return 0;
+}
+
+function colorizeLevel(formatted: string, level: string): string {
+  switch (level) {
+    case 'fatal':
+      return chalk.red.bold(formatted);
+    case 'error':
+      return chalk.red(formatted);
+    case 'warning':
+      return chalk.yellow(formatted);
+    default:
+      return chalk.dim(formatted);
+  }
+}
+
+function colorizeStatus(formatted: string, statusCode: number): string {
+  if (statusCode >= 500) {
+    return chalk.red(formatted);
+  } else if (statusCode >= 400) {
+    return chalk.yellow(formatted);
+  } else if (statusCode >= 300) {
+    return chalk.cyan(formatted);
+  } else if (statusCode >= 200) {
+    return chalk.green(formatted);
+  }
+  return chalk.gray(formatted);
+}
+
+function getSourceIcon(source: string): string {
+  switch (source) {
+    case 'serverless':
+    case 'lambda':
+      return 'λ';
+    case 'edge-function':
+    case 'edge-middleware':
+    case 'middleware':
+      return 'ε';
+    case 'static':
+    case 'external':
+    case 'redirect':
+      return '◇';
+    default:
+      return ' ';
+  }
+}
+
+function colorizeMessage(message: string, level: string): string {
+  switch (level) {
+    case 'fatal':
+    case 'error':
+      return chalk.red(message);
+    case 'warning':
+      return chalk.yellow(message);
+    default:
+      return chalk.dim(message);
+  }
 }

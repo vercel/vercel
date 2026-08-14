@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import domains from '../../../../src/commands/domains';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
@@ -45,6 +45,40 @@ describe('domains buy', () => {
           value: `${command}:${subcommand}`,
         },
       ]);
+    });
+  });
+
+  describe('non-interactive mode', () => {
+    it('emits purchase_requires_user and does not prompt', async () => {
+      useUser();
+      client.nonInteractive = true;
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv('domains', 'buy', 'brookedato.tech', '--non-interactive');
+      await expect(domains(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('purchase_requires_user');
+      expect(payload.message).toContain('Agents must not purchase');
+      expect(payload.message).toContain('interactively');
+      expect(
+        payload.next.some(
+          (n: { when?: string }) =>
+            n.when &&
+            n.when.includes('user') &&
+            n.when.includes('interactively')
+        )
+      ).toBe(true);
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
     });
   });
 

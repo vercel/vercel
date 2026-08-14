@@ -14,4 +14,10 @@ export class DnsRmTelemetryClient
       });
     }
   }
+
+  trackCliFlagYes(yes: boolean | undefined) {
+    if (yes) {
+      this.trackCliFlag('yes');
+    }
+  }
 }

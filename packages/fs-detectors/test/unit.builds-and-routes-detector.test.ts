@@ -3,6 +3,9 @@ import type {
   RouteWithHandle as Handler,
   RouteWithSrc as Source,
 } from '@vercel/routing-utils';
+import { join } from 'path';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
 import type { PackageJson } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -92,6 +95,278 @@ function createReplaceLocation(redirectRoutes: Route[] | null) {
 }
 
 describe('Test `detectBuilders`', () => {
+  it('should use services builders when experimentalServices is configured without the services framework', async () => {
+    const workPath = join(
+      __dirname,
+      'fixtures',
+      'e2e',
+      '11-services-python-cron'
+    );
+    const { builders, defaultRoutes, rewriteRoutes, services, errors } =
+      await detectBuilders([], undefined, {
+        experimentalServices: {
+          web: {
+            framework: 'fastapi',
+            entrypoint: 'server.py',
+            routePrefix: '/',
+          },
+          cleanup: {
+            type: 'job',
+            trigger: 'schedule',
+            entrypoint: 'jobs/cleanup.py',
+            schedule: '0 0 * * *',
+          },
+        },
+        projectSettings: {
+          framework: null,
+        },
+        workPath,
+      });
+
+    expect(errors).toBeNull();
+    expect(services).toHaveLength(2);
+    expect(builders).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          src: 'server.py',
+          use: '@vercel/python',
+        }),
+        expect.objectContaining({
+          src: 'jobs/cleanup.py',
+          use: '@vercel/python',
+        }),
+      ])
+    );
+    expect(defaultRoutes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          dest: '/_svc/web/index',
+          check: true,
+        }),
+      ])
+    );
+    expect(rewriteRoutes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          src: '^/_svc/cleanup/crons/.*$',
+          dest: '/_svc/cleanup/index',
+          check: true,
+        }),
+      ])
+    );
+  });
+
+  it('should use services builders when services is configured without the services framework', async () => {
+    const workPath = join(
+      __dirname,
+      'fixtures',
+      'e2e',
+      '11-services-python-cron'
+    );
+    const { builders, services, errors, useImplicitEnvInjection } =
+      await detectBuilders([], undefined, {
+        services: {
+          web: {
+            root: '.',
+            runtime: 'python',
+            entrypoint: 'server.py',
+            rewrites: [{ source: '/(.*)', destination: '/$1' }],
+          },
+          api: {
+            root: '.',
+            runtime: 'python',
+            entrypoint: 'jobs/cleanup.py',
+            rewrites: [{ source: '/api/(.*)', destination: '/$1' }],
+          },
+        },
+        projectSettings: {
+          framework: null,
+        },
+        workPath,
+      });
+
+    expect(errors).toBeNull();
+    expect(useImplicitEnvInjection).toBe(false);
+    expect(services).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'web',
+        }),
+        expect.objectContaining({
+          name: 'api',
+        }),
+      ])
+    );
+    expect(services?.find(service => service.name === 'web')?.routePrefix).toBe(
+      undefined
+    );
+    expect(services?.find(service => service.name === 'api')?.routePrefix).toBe(
+      undefined
+    );
+    expect(builders).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          src: 'server.py',
+          use: '@vercel/python',
+        }),
+        expect.objectContaining({
+          src: 'jobs/cleanup.py',
+          use: '@vercel/python',
+        }),
+      ])
+    );
+  });
+
+  it('should add a top-level proxy builder to a services project', async () => {
+    const workPath = join(
+      __dirname,
+      'fixtures',
+      'e2e',
+      '11-services-python-cron'
+    );
+    const { builders, errors } = await detectBuilders(['proxy.ts'], undefined, {
+      services: {
+        web: {
+          root: '.',
+          runtime: 'python',
+          entrypoint: 'server.py',
+        },
+      },
+      proxy: { entrypoint: 'proxy.ts' },
+      projectSettings: {
+        framework: 'services',
+      },
+      workPath,
+    });
+
+    expect(errors).toBeNull();
+    expect(builders?.[0]).toEqual({
+      src: 'proxy.ts',
+      use: '@vercel/node',
+      config: {
+        zeroConfig: true,
+        middleware: true,
+        middlewareRuntime: 'nodejs',
+      },
+    });
+  });
+
+  it('should error when the services framework is selected without experimentalServices', async () => {
+    const { builders, errors, defaultRoutes, rewriteRoutes } =
+      await detectBuilders(['package.json'], undefined, {
+        projectSettings: {
+          framework: 'services',
+        },
+      });
+
+    expect(builders).toBeNull();
+    expect(defaultRoutes).toBeNull();
+    expect(rewriteRoutes).toBeNull();
+    expect(errors).toEqual([
+      {
+        code: 'MISSING_SERVICES',
+        message:
+          'Project framework is set to "services", but no services are declared. Add `services` to vercel.json with at least one service, or change the project framework setting.',
+      },
+    ]);
+  });
+
+  it('should build experimentalServicesV2 services configured inline', async () => {
+    // `detectBuilders` resolves services against a real filesystem (workPath).
+    // V2 isn't deployable yet, so build using a temp dir
+    const workPath = mkdtempSync(join(tmpdir(), 'vc-services-v2-'));
+    try {
+      mkdirSync(join(workPath, 'api'), { recursive: true });
+      writeFileSync(
+        join(workPath, 'api', 'package.json'),
+        JSON.stringify({ dependencies: { express: '4.0.0' } })
+      );
+      mkdirSync(join(workPath, 'web'), { recursive: true });
+      writeFileSync(
+        join(workPath, 'web', 'package.json'),
+        JSON.stringify({ dependencies: { next: 'latest' } })
+      );
+
+      const { builders, errors, services } = await detectBuilders(
+        [],
+        undefined,
+        {
+          experimentalServicesV2: {
+            api: { root: 'api', framework: 'express' },
+            web: { root: 'web', framework: 'nextjs' },
+          },
+          projectSettings: {
+            framework: null,
+          },
+          workPath,
+        }
+      );
+
+      expect(errors).toBeNull();
+      expect(services).toHaveLength(2);
+      expect(services?.every(s => s.schema === 'experimentalServicesV2')).toBe(
+        true
+      );
+      expect(builders).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            src: 'api/index.js',
+            use: '@vercel/backends',
+          }),
+          expect.objectContaining({ use: '@vercel/next' }),
+        ])
+      );
+    } finally {
+      rmSync(workPath, { recursive: true, force: true });
+    }
+  });
+
+  it('should warn when api/ files exist but no service covers them', async () => {
+    const { warnings } = await detectBuilders(
+      ['api/index.py', 'pages/index.js', 'package.json', 'requirements.txt'],
+      undefined,
+      {
+        experimentalServices: {
+          frontend: {
+            framework: 'nextjs',
+            entrypoint: '.',
+            routePrefix: '/',
+          },
+        },
+        projectSettings: { framework: null },
+      }
+    );
+
+    expect(warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'api_dir_ignored' }),
+      ])
+    );
+  });
+
+  it('should not warn when a service explicitly covers the api/ directory', async () => {
+    const { warnings } = await detectBuilders(
+      ['api/index.py', 'pages/index.js', 'package.json', 'requirements.txt'],
+      undefined,
+      {
+        experimentalServices: {
+          frontend: {
+            framework: 'nextjs',
+            entrypoint: '.',
+            routePrefix: '/',
+          },
+          backend: {
+            entrypoint: 'api/index.py',
+            routePrefix: '/api',
+          },
+        },
+        projectSettings: { framework: null },
+      }
+    );
+
+    expect(warnings.every(w => w.code !== 'api_dir_ignored')).toBe(true);
+  });
+
   it('should never select now.json src', async () => {
     const files = ['docs/index.md', 'mkdocs.yml', 'now.json'];
     const { builders } = await invokeDetectBuildersAndThrow(files, null, {
@@ -241,6 +516,36 @@ describe('Test `detectBuilders`', () => {
     expect(builders[1].use).toBe('@vercel/static');
     expect(builders[1].src).toBe('public/**/*');
     expect(builders.length).toBe(2);
+  });
+
+  it('framework + public with experimental backends', async () => {
+    const previousExperimentalBackends =
+      process.env.VERCEL_EXPERIMENTAL_BACKENDS;
+    process.env.VERCEL_EXPERIMENTAL_BACKENDS = '1';
+
+    try {
+      const files = ['package.json', 'public/logo.svg'];
+      const pkg = {
+        dependencies: { hono: '4.10.1' },
+      };
+
+      const { builders } = await invokeDetectBuildersAndThrow(files, pkg, {
+        projectSettings: {
+          framework: 'hono',
+        },
+      });
+
+      expect(builders.length).toBe(2);
+      expect(builders[0].use).toBe('@vercel/static');
+      expect(builders[0].src).toBe('public/**/*');
+      expect(builders[1].use).toBe('@vercel/backends');
+    } finally {
+      if (previousExperimentalBackends === undefined) {
+        delete process.env.VERCEL_EXPERIMENTAL_BACKENDS;
+      } else {
+        process.env.VERCEL_EXPERIMENTAL_BACKENDS = previousExperimentalBackends;
+      }
+    }
   });
 
   it('api go with test files', async () => {
@@ -473,6 +778,34 @@ describe('Test `detectBuilders`', () => {
     });
   });
 
+  it('passes entrypoint functions config through to Python framework builders', async () => {
+    const functions = {
+      'app/main.py': {
+        memory: 512,
+        maxDuration: 30,
+      },
+    };
+
+    const { builders } = await invokeDetectBuildersAndThrow(
+      ['pyproject.toml', 'app/main.py'],
+      null,
+      {
+        functions,
+        projectSettings: { framework: 'fastapi' },
+      }
+    );
+
+    expect(builders).toContainEqual({
+      src: '<detect>',
+      use: '@vercel/python',
+      config: {
+        zeroConfig: true,
+        framework: 'fastapi',
+        functions,
+      },
+    });
+  });
+
   it('extend with functions', async () => {
     const pkg = {
       scripts: { build: 'next build' },
@@ -554,6 +887,88 @@ describe('Test `detectBuilders`', () => {
     expect(builders).toHaveLength(0);
     expect(errors.length).toBe(1);
     expect(errors[0].code).toBe('invalid_function_duration');
+  });
+
+  it('valid function maxDuration set to "max"', async () => {
+    const pkg = {
+      scripts: { build: 'next build' },
+      dependencies: { next: '9.0.0' },
+    };
+    const functions = {
+      'pages/api/teams/**': { maxDuration: 'max' as const },
+    };
+    const files = [
+      'package.json',
+      'pages/index.js',
+      'pages/api/teams/members.ts',
+    ];
+    const { builders, errors } = await invokeDetectBuilders(files, pkg, {
+      functions,
+    });
+
+    expect(errors).toHaveLength(0);
+    expect(builders.length).toBe(1);
+  });
+
+  it('rejects maxDuration above the default 1800s limit', async () => {
+    const functions = { 'pages/index.ts': { maxDuration: 1900 } };
+    const files = ['pages/index.ts'];
+    const { builders, errors } = await invokeDetectBuilders(files, null, {
+      functions,
+    });
+
+    expect(builders).toHaveLength(0);
+    expect(errors.length).toBe(1);
+    expect(errors[0].code).toBe('invalid_function_duration');
+  });
+
+  describe('with VERCEL_CLI_SKIP_MAX_DURATION_LIMIT=1', () => {
+    beforeEach(() => {
+      process.env.VERCEL_CLI_SKIP_MAX_DURATION_LIMIT = '1';
+    });
+
+    afterEach(() => {
+      delete process.env.VERCEL_CLI_SKIP_MAX_DURATION_LIMIT;
+    });
+
+    it('allows maxDuration above 1800s, deferring to server-side validation', async () => {
+      const pkg = {
+        scripts: { build: 'next build' },
+        dependencies: { next: '9.0.0' },
+      };
+      const functions = { 'pages/api/long.ts': { maxDuration: 1900 } };
+      const files = ['package.json', 'pages/index.js', 'pages/api/long.ts'];
+      const { builders, errors } = await invokeDetectBuilders(files, pkg, {
+        functions,
+      });
+
+      expect(errors).toHaveLength(0);
+      expect(builders.length).toBe(1);
+    });
+
+    it('still rejects a non-integer maxDuration', async () => {
+      const functions = { 'pages/index.ts': { maxDuration: 1.5 } };
+      const files = ['pages/index.ts'];
+      const { builders, errors } = await invokeDetectBuilders(files, null, {
+        functions,
+      });
+
+      expect(builders).toHaveLength(0);
+      expect(errors.length).toBe(1);
+      expect(errors[0].code).toBe('invalid_function_duration');
+    });
+
+    it('still rejects a maxDuration below 1', async () => {
+      const functions = { 'pages/index.ts': { maxDuration: 0 } };
+      const files = ['pages/index.ts'];
+      const { builders, errors } = await invokeDetectBuilders(files, null, {
+        functions,
+      });
+
+      expect(builders).toHaveLength(0);
+      expect(errors.length).toBe(1);
+      expect(errors[0].code).toBe('invalid_function_duration');
+    });
   });
 
   it('invalid function memory', async () => {
@@ -1238,8 +1653,8 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((defaultRoutes[0] as Handler).handle).toBe('miss');
     expect((defaultRoutes[1] as Source).dest).toBe('/api/$1');
     expect(redirectRoutes).toStrictEqual([]);
-    expect(rewriteRoutes.length).toBe(1);
-    expect((rewriteRoutes[0] as Source).status).toBe(404);
+    // Next.js owns /api; we do not add catch-all 404
+    expect(rewriteRoutes.some(r => (r as Source).status === 404)).toBe(false);
     expect(errorRoutes).toStrictEqual([]);
   });
 
@@ -1267,9 +1682,46 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((defaultRoutes[0] as Handler).handle).toBe('miss');
     expect((defaultRoutes[1] as Source).dest).toBe('/api/$1');
     expect(redirectRoutes).toStrictEqual([]);
-    expect(rewriteRoutes.length).toBe(1);
-    expect((rewriteRoutes[0] as Source).status).toBe(404);
+    // Next.js owns /api; we do not add catch-all 404
+    expect(rewriteRoutes.some(r => (r as Source).status === 404)).toBe(false);
     expect(errorRoutes).toStrictEqual([]);
+  });
+
+  it('api + non-Next frontend adds catch-all /api 404', async () => {
+    const pkg = {
+      scripts: { build: 'react-scripts build' },
+      dependencies: {
+        react: '17.0.0',
+        'react-dom': '17.0.0',
+        'react-scripts': '4.0.0',
+      },
+    };
+    const files = ['package.json', 'api/endpoint.js', 'src/index.js'];
+    const projectSettings = {
+      framework: 'create-react-app',
+      buildCommand: 'react-scripts build',
+    };
+
+    const { builders, rewriteRoutes } = await invokeDetectBuildersAndThrow(
+      files,
+      pkg,
+      {
+        projectSettings,
+        featHandleMiss,
+      }
+    );
+
+    expect(builders[0].use).toBe('@vercel/node');
+    expect(builders[0].src).toBe('api/endpoint.js');
+    expect(builders[1].use).toBe('@vercel/static-build');
+    expect(builders[1].config?.framework).toBe('create-react-app');
+    expect(builders.length).toBe(2);
+
+    // Non-Next frontend with root api/ gets catch-all to hide directory listing
+    const catchAll = rewriteRoutes.find(
+      r => (r as Source).src === '^/api(/.*)?$' && (r as Source).status === 404
+    );
+    expect(catchAll).toBeDefined();
   });
 
   it('Using "Create React App" framework with `next` in dependencies should NOT autodetect Next.js for new projects', async () => {
@@ -1483,6 +1935,37 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders.length).toBe(2);
     expect(errorRoutes.length).toBe(1);
     expect((errorRoutes[0] as Source).status).toBe(404);
+  });
+
+  it('framework + public with experimental backends', async () => {
+    const previousExperimentalBackends =
+      process.env.VERCEL_EXPERIMENTAL_BACKENDS;
+    process.env.VERCEL_EXPERIMENTAL_BACKENDS = '1';
+
+    try {
+      const files = ['package.json', 'public/logo.svg'];
+      const pkg = {
+        dependencies: { hono: '4.10.1' },
+      };
+
+      const { builders } = await invokeDetectBuildersAndThrow(files, pkg, {
+        projectSettings: {
+          framework: 'hono',
+        },
+        featHandleMiss,
+      });
+
+      expect(builders.length).toBe(2);
+      expect(builders[0].use).toBe('@vercel/static');
+      expect(builders[0].src).toBe('public/**/*');
+      expect(builders[1].use).toBe('@vercel/backends');
+    } finally {
+      if (previousExperimentalBackends === undefined) {
+        delete process.env.VERCEL_EXPERIMENTAL_BACKENDS;
+      } else {
+        process.env.VERCEL_EXPERIMENTAL_BACKENDS = previousExperimentalBackends;
+      }
+    }
   });
 
   it('api go with test files', async () => {
@@ -2506,6 +2989,185 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders.length).toBe(2);
   });
 
+  it('builds the configured proxy instead of root middleware', async () => {
+    const files = ['proxy.ts', 'middleware.ts', 'index.html'];
+    const { builders, rewriteRoutes } = await invokeDetectBuildersAndThrow(
+      files,
+      null,
+      {
+        featHandleMiss,
+        proxy: { entrypoint: 'proxy.ts', matcher: '/api/:func*' },
+      }
+    );
+
+    expect(rewriteRoutes).toHaveLength(0);
+    expect(builders).toEqual([
+      {
+        src: 'proxy.ts',
+        use: '@vercel/node',
+        config: {
+          middleware: true,
+          middlewareRuntime: 'nodejs',
+          middlewareMatcher: '/api/:func*',
+          zeroConfig: true,
+        },
+      },
+      {
+        src: REGEX_NON_VERCEL_PLATFORM_FILES.replace('}', ',proxy.ts}'),
+        use: '@vercel/static',
+        config: {
+          zeroConfig: true,
+        },
+      },
+    ]);
+  });
+
+  it('builds a nested JavaScript proxy entrypoint', async () => {
+    const files = ['routing/proxy.js', 'index.html'];
+    const { builders } = await invokeDetectBuildersAndThrow(files, null, {
+      featHandleMiss,
+      proxy: { entrypoint: 'routing/proxy.js' },
+    });
+
+    expect(builders[0]).toEqual({
+      src: 'routing/proxy.js',
+      use: '@vercel/node',
+      config: {
+        middleware: true,
+        middlewareRuntime: 'nodejs',
+        zeroConfig: true,
+      },
+    });
+    expect(builders[1].src).toBe(
+      REGEX_NON_VERCEL_PLATFORM_FILES.replace('}', ',routing/proxy.js}')
+    );
+  });
+
+  it('applies functions config targeting the proxy entrypoint', async () => {
+    const { builders } = await invokeDetectBuildersAndThrow(
+      ['proxy.ts'],
+      null,
+      {
+        proxy: { entrypoint: 'proxy.ts' },
+        functions: {
+          'proxy.ts': {
+            maxDuration: 10,
+            memory: 1024,
+          },
+        },
+      }
+    );
+
+    expect(builders[0]).toEqual({
+      src: 'proxy.ts',
+      use: '@vercel/node',
+      config: {
+        functions: {
+          'proxy.ts': {
+            maxDuration: 10,
+            memory: 1024,
+          },
+        },
+        middleware: true,
+        middlewareRuntime: 'nodejs',
+        zeroConfig: true,
+      },
+    });
+  });
+
+  it.each([
+    'proxy.ts',
+    '**/*.ts',
+  ])('uses a functions runtime targeting the proxy through %s', async pattern => {
+    const { builders } = await invokeDetectBuildersAndThrow(
+      ['proxy.ts'],
+      null,
+      {
+        proxy: { entrypoint: 'proxy.ts' },
+        functions: {
+          [pattern]: {
+            runtime: 'some-runtime@1.0.0',
+          },
+        },
+      }
+    );
+
+    expect(builders[0]).toEqual({
+      src: 'proxy.ts',
+      use: 'some-runtime@1.0.0',
+      config: {
+        functions: {
+          [pattern]: {
+            runtime: 'some-runtime@1.0.0',
+          },
+        },
+        middleware: true,
+        zeroConfig: true,
+      },
+    });
+  });
+
+  it('rejects unsupported proxy entrypoint extensions', async () => {
+    const { errors } = await detectBuilders(['proxy.mjs'], null, {
+      proxy: { entrypoint: 'proxy.mjs' },
+    });
+
+    expect(errors).toEqual([
+      {
+        code: 'invalid_proxy_entrypoint',
+        message:
+          'The `proxy.entrypoint` path must end in `.js` or `.ts` and reference an executable file.',
+      },
+    ]);
+  });
+
+  it('rejects an invalid proxy matcher', async () => {
+    const { errors } = await detectBuilders(['proxy.ts'], null, {
+      proxy: { entrypoint: 'proxy.ts', matcher: 'api/:func*' },
+    });
+
+    expect(errors).toEqual([
+      {
+        code: 'invalid_proxy_matcher',
+        message:
+          'The `proxy.matcher` value must be a path matcher starting with `/`, or an array of path matchers starting with `/`.',
+      },
+    ]);
+  });
+
+  it('rejects a proxy entrypoint that does not exist', async () => {
+    const { errors } = await detectBuilders(['index.html'], null, {
+      proxy: { entrypoint: 'proxy.ts' },
+    });
+
+    expect(errors).toEqual([
+      {
+        code: 'proxy_entrypoint_not_found',
+        message:
+          'The proxy entrypoint `proxy.ts` does not exist. Set `proxy.entrypoint` to an existing `.js` or `.ts` file.',
+      },
+    ]);
+  });
+
+  it('rejects proxy configuration for framework-owned middleware', async () => {
+    const { errors } = await detectBuilders(
+      ['proxy.ts', 'package.json'],
+      null,
+      {
+        proxy: { entrypoint: 'proxy.ts' },
+        projectSettings: { framework: 'nextjs' },
+      }
+    );
+
+    expect(errors).toEqual([
+      {
+        code: 'proxy_framework_conflict',
+        message:
+          'The `proxy` property cannot be used with Next.js because the framework builds its own routing middleware.',
+      },
+    ]);
+  });
+
   it('should not add middleware builder when "nextjs" framework is selected', async () => {
     const files = ['package.json', 'pages/index.ts', 'middleware.ts'];
     const projectSettings = {
@@ -2674,9 +3336,8 @@ describe('Test `detectRoutes`', () => {
     const files = ['public/index.html', 'api/[endpoint].js'];
 
     const { defaultRoutes } = await invokeDetectBuildersAndThrow(files, pkg);
-    expect(defaultRoutes[1].status).toBe(404);
-    expect(defaultRoutes[1].src).toBe('^/api(/.*)?$');
-    expect(defaultRoutes.length).toBe(2);
+    // Next.js owns /api; we do not add catch-all 404
+    expect(defaultRoutes.length).toBe(1);
   });
 
   it('works with static files', async () => {
@@ -2935,13 +3596,8 @@ describe('Test `detectRoutes` with `featHandleMiss=true`', () => {
   it('works with static files with api files', async () => {
     const featHandleMiss = true;
     const pkg = {
-      scripts: {
-        build: 'next build',
-      },
-      framework: {
-        slug: 'next',
-        version: '9.0.0',
-      },
+      scripts: { build: 'next build' },
+      devDependencies: { next: '9.0.0' },
     };
 
     const files = ['public/index.html', 'api/[endpoint].js'];
@@ -2961,15 +3617,12 @@ describe('Test `detectRoutes` with `featHandleMiss=true`', () => {
         check: true,
       },
     ]);
+    // Next.js owns /api; we do not add catch-all 404
     expect(rewriteRoutes).toStrictEqual([
       {
         src: '^/api/([^/]+)$',
         dest: '/api/[endpoint]?endpoint=$1',
         check: true,
-      },
-      {
-        status: 404,
-        src: '^/api(/.*)?$',
       },
     ]);
   });
@@ -3371,13 +4024,8 @@ describe('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', () 
 
   it('works with static files with api files', async () => {
     const pkg = {
-      scripts: {
-        build: 'next build',
-      },
-      framework: {
-        slug: 'next',
-        version: '9.0.0',
-      },
+      scripts: { build: 'next build' },
+      devDependencies: { next: '9.0.0' },
     };
 
     const files = ['public/index.html', 'api/[endpoint].js'];
@@ -3386,15 +4034,12 @@ describe('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', () 
       await invokeDetectBuildersAndThrow(files, pkg, options);
     testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([]);
+    // Next.js owns /api; we do not add catch-all 404
     expect(rewriteRoutes).toStrictEqual([
       {
         src: '^/api/([^/]+)$',
         dest: '/api/[endpoint]?endpoint=$1',
         check: true,
-      },
-      {
-        status: 404,
-        src: '^/api(/.*)?$',
       },
     ]);
   });
@@ -3895,5 +4540,140 @@ describe('Test `detectApiExtensions`', () => {
     expect(result.has('.go')).toBe(true);
     expect(result.has('.rb')).toBe(true);
     expect(result.has('.rs')).toBe(true);
+  });
+
+  describe('Node.js entrypoint detection with workPath', () => {
+    const workPath = join(__dirname, 'fixtures', '70-node-api-dir-files');
+
+    beforeEach(() => {
+      process.env.VERCEL_NODE_FILTER_ENTRYPOINTS = '1';
+    });
+
+    afterEach(() => {
+      delete process.env.VERCEL_NODE_FILTER_ENTRYPOINTS;
+    });
+
+    it('should create builders for valid Node.js entrypoints and skip helpers', async () => {
+      const files = [
+        'api/index.ts',
+        'api/helper.ts',
+        'api/get-handler.ts',
+        'api/server.js',
+      ];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const apiBuilders = (builders || []).filter(
+        b => b.src?.startsWith('api/') && b.use === '@vercel/node'
+      );
+
+      const apiSources = apiBuilders.map(b => b.src);
+
+      // Valid entrypoints should get builders
+      expect(apiSources).toContain('api/index.ts');
+      expect(apiSources).toContain('api/get-handler.ts');
+      expect(apiSources).toContain('api/server.js');
+
+      // Helper file should NOT get a builder
+      expect(apiSources).not.toContain('api/helper.ts');
+    });
+
+    it('should skip helpers but still detect api directory', async () => {
+      const files = ['api/index.ts', 'api/helper.ts'];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const apiBuilders = (builders || []).filter(
+        b => b.src?.startsWith('api/') && b.use === '@vercel/node'
+      );
+
+      expect(apiBuilders).toHaveLength(1);
+      expect(apiBuilders[0].src).toBe('api/index.ts');
+    });
+
+    it('should not filter middleware files that export middleware function', async () => {
+      const files = ['api/index.ts', 'middleware.ts'];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const middlewareBuilders = (builders || []).filter(
+        b => b.config?.middleware === true
+      );
+
+      // Middleware file should still get a builder even though it doesn't
+      // match standard API handler export patterns
+      expect(middlewareBuilders).toHaveLength(1);
+      expect(middlewareBuilders[0].src).toBe('middleware.ts');
+    });
+
+    it('should not filter entrypoints when env var is not set', async () => {
+      delete process.env.VERCEL_NODE_FILTER_ENTRYPOINTS;
+
+      const files = ['api/index.ts', 'api/helper.ts'];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const apiBuilders = (builders || []).filter(
+        b => b.src?.startsWith('api/') && b.use === '@vercel/node'
+      );
+
+      // Without the env var, all files get builders (existing behavior)
+      expect(apiBuilders).toHaveLength(2);
+    });
+  });
+
+  describe('Node.js entrypoint detection in monorepo', () => {
+    // Simulates a monorepo where workPath points to a nested workspace
+    // (e.g., apps/web). File paths passed to detectBuilders are always
+    // relative to workPath, mirroring how the CLI resolves them.
+    const workPath = join(
+      __dirname,
+      'fixtures',
+      '71-node-monorepo',
+      'apps',
+      'web'
+    );
+
+    beforeEach(() => {
+      process.env.VERCEL_NODE_FILTER_ENTRYPOINTS = '1';
+    });
+
+    afterEach(() => {
+      delete process.env.VERCEL_NODE_FILTER_ENTRYPOINTS;
+    });
+
+    it('should filter helpers and keep entrypoints in monorepo workspace', async () => {
+      const files = ['api/index.ts', 'api/helper.ts'];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const apiBuilders = (builders || []).filter(
+        b => b.src?.startsWith('api/') && b.use === '@vercel/node'
+      );
+
+      expect(apiBuilders).toHaveLength(1);
+      expect(apiBuilders[0].src).toBe('api/index.ts');
+    });
+
+    it('should not filter middleware in monorepo workspace', async () => {
+      const files = ['api/index.ts', 'api/helper.ts', 'middleware.ts'];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const apiBuilders = (builders || []).filter(
+        b => b.src?.startsWith('api/') && b.use === '@vercel/node'
+      );
+      const middlewareBuilders = (builders || []).filter(
+        b => b.config?.middleware === true
+      );
+
+      // Helper filtered, entrypoint kept
+      expect(apiBuilders).toHaveLength(1);
+      expect(apiBuilders[0].src).toBe('api/index.ts');
+
+      // Middleware preserved
+      expect(middlewareBuilders).toHaveLength(1);
+      expect(middlewareBuilders[0].src).toBe('middleware.ts');
+    });
   });
 });

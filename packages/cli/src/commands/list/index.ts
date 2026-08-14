@@ -12,7 +12,7 @@ import { isValidName } from '../../util/is-valid-name';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 import type Client from '../../util/client';
-import { ensureLink } from '../../util/link/ensure-link';
+import { getLinkedProject } from '../../util/projects/link';
 import getScope from '../../util/get-scope';
 import { ProjectNotFound } from '../../util/errors-ts';
 import { isErrnoException } from '@vercel/error-utils';
@@ -25,8 +25,10 @@ import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name'
 import { formatProject } from '../../util/projects/format-project';
 import { formatEnvironment } from '../../util/target/format-environment';
 import { ListTelemetryClient } from '../../util/telemetry/commands/list';
+import { exitWithNonInteractiveError } from '../../util/agent-output';
 import { validateLsArgs } from '../../util/validate-ls-args';
 import { validateJsonOutput } from '../../util/output-format';
+import { getPaginationOpts } from '../../util/get-pagination-opts';
 import type {
   Deployment,
   PaginationOptions,
@@ -89,11 +91,13 @@ export default async function list(client: Client) {
   }
   const asJson = formatResult.jsonOutput;
 
+  telemetry.trackCliFlagAll(parsedArgs.flags['--all']);
   telemetry.trackCliFlagProd(parsedArgs.flags['--prod']);
   telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
   telemetry.trackCliOptionEnvironment(parsedArgs.flags['--environment']);
   telemetry.trackCliOptionMeta(parsedArgs.flags['--meta']);
   telemetry.trackCliOptionNext(parsedArgs.flags['--next']);
+  telemetry.trackCliOptionLimit(parsedArgs.flags['--limit']);
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
   telemetry.trackCliOptionPolicy(parsedArgs.flags['--policy']);
   telemetry.trackCliOptionStatus(parsedArgs.flags['--status']);
@@ -104,7 +108,6 @@ export default async function list(client: Client) {
     parsedArgs.flags['--yes'] = parsedArgs.flags['--confirm'];
   }
 
-  const autoConfirm = !!parsedArgs.flags['--yes'];
   const meta = parseMeta(parsedArgs.flags['--meta']);
   const policy = parsePolicy(parsedArgs.flags['--policy']);
 
@@ -140,12 +143,20 @@ export default async function list(client: Client) {
     status = statusValues.join(',');
   }
 
-  let project: Project;
+  let project: Project | undefined;
   let pagination: PaginationOptions | undefined;
   let contextName = '';
   let app: string | undefined = parsedArgs.args[1];
   const deployments: Deployment[] = [];
   let singleDeployment = false;
+  const allFlag = parsedArgs.flags['--all'];
+  let showAllProjects = false;
+
+  // Validate that --all and app argument are not used together
+  if (allFlag && app) {
+    error('Cannot use --all flag with a project argument');
+    return 1;
+  }
 
   if (app) {
     if (!isValidName(app)) {
@@ -190,17 +201,30 @@ export default async function list(client: Client) {
     }
     const p = await getProjectByNameOrId(client, app);
     if (p instanceof ProjectNotFound) {
+      exitWithNonInteractiveError(client, p, 1, {
+        variant: 'list',
+        projectName: app,
+      });
       error(`The provided argument "${app}" is not a valid project name`);
       return 1;
     }
     project = p;
+  } else if (allFlag) {
+    // Explicit --all flag: show all deployments
+    showAllProjects = true;
   } else {
-    const link = await ensureLink('list', client, client.cwd, {
-      autoConfirm,
-    });
-    if (typeof link === 'number') return link;
-    project = link.project;
-    client.config.currentTeam = link.org.id;
+    // No app argument and no --all flag: try to get linked project
+    const link = await getLinkedProject(client, { cwd: client.cwd });
+    if (link.status === 'error') {
+      return link.exitCode;
+    }
+    if (link.status === 'linked') {
+      project = link.project;
+      client.config.currentTeam = link.org.id;
+    } else {
+      // Not linked - default to showing all deployments
+      showAllProjects = true;
+    }
   }
 
   if (!contextName) {
@@ -217,14 +241,19 @@ export default async function list(client: Client) {
     }
   }
 
-  const nextTimestamp = parsedArgs.flags['--next'];
-
-  if (Number.isNaN(nextTimestamp)) {
-    error('Please provide a number for flag `--next`');
+  let nextTimestamp;
+  let limitFlag;
+  try {
+    [nextTimestamp, limitFlag] = getPaginationOpts(parsedArgs.flags);
+  } catch (err: unknown) {
+    printError(err);
     return 1;
   }
+  const limit = limitFlag ?? 20;
 
-  const projectSlugLink = formatProject(contextName, project.name);
+  const projectSlugLink = project
+    ? formatProject(contextName, project.name)
+    : null;
 
   if (!singleDeployment) {
     if (!asJson) {
@@ -234,7 +263,10 @@ export default async function list(client: Client) {
 
     debug('Fetching deployments');
 
-    const query = new URLSearchParams({ limit: '20', projectId: project.id });
+    const query = new URLSearchParams({ limit: String(limit) });
+    if (project) {
+      query.set('projectId', project.id);
+    }
     for (const [k, v] of Object.entries(meta)) {
       query.set(`meta-${k}`, v);
     }
@@ -258,33 +290,41 @@ export default async function list(client: Client) {
     }>(`/v6/deployments?${query}`)) {
       deployments.push(...chunk.deployments);
       pagination = chunk.pagination;
-      if (deployments.length >= 20) {
+      if (deployments.length >= limit) {
         break;
       }
     }
+    deployments.length = Math.min(deployments.length, limit);
 
     // we don't output the table headers if we have no deployments
     if (!deployments.length) {
       if (asJson) {
-        const jsonOutput = { deployments: [], pagination };
+        const jsonOutput = { deployments: [], pagination, contextName };
         client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
       } else {
-        log('No deployments found.');
+        log(`No deployments found under ${chalk.bold(contextName)}.`);
       }
       return 0;
     }
 
     if (!asJson) {
-      log(
-        `${
-          target === 'production' ? 'Production deployments' : 'Deployments'
-        } for ${projectSlugLink} ${elapsed(Date.now() - start)}`
-      );
+      const deploymentsLabel =
+        target === 'production' ? 'Production deployments' : 'Deployments';
+      if (showAllProjects) {
+        log(
+          `${deploymentsLabel} under ${chalk.bold(contextName)} ${elapsed(Date.now() - start)}`
+        );
+      } else {
+        log(
+          `${deploymentsLabel} for ${projectSlugLink} ${elapsed(Date.now() - start)}`
+        );
+      }
     }
   }
 
   if (asJson) {
     const jsonOutput = {
+      contextName,
       deployments: deployments.sort(sortByCreatedAt).map(dep => ({
         id: dep.id,
         url: dep.url,
@@ -314,7 +354,7 @@ export default async function list(client: Client) {
     return 0;
   }
 
-  const headers = ['Age', 'Deployment', 'Status', 'Environment'];
+  const headers = ['Age', 'Project', 'Deployment', 'Status', 'Environment'];
   const showPolicy = Object.keys(policy).length > 0;
   // Exclude username & duration if we're showing retention policies so that the table fits more comfortably
   if (!showPolicy) headers.push('Duration', 'Username');
@@ -341,9 +381,10 @@ export default async function list(client: Client) {
             dep.customEnvironment?.id || dep.target || 'preview';
           return [
             chalk.gray(createdAt),
+            formatProject(contextName, dep.name),
             `https://${dep.url}`,
             stateString(dep.readyState || ''),
-            formatEnvironment(contextName, project.name, {
+            formatEnvironment(contextName, dep.name, {
               id: targetSlug,
               slug: targetName,
             }),
@@ -375,6 +416,8 @@ export default async function list(client: Client) {
       )}`
     );
   }
+
+  return 0;
 }
 
 export function getDeploymentDuration(dep: Deployment): string {

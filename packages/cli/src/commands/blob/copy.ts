@@ -7,11 +7,13 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { copySubcommand } from './command';
 import { BlobCopyTelemetryClient } from '../../util/telemetry/commands/blob/copy';
 import { getCommandName } from '../../util/pkg-name';
+import { parseAccessFlag } from '../../util/blob/access';
+import { blobOpts, type BlobRWToken } from '../../util/blob/token';
 
 export default async function copy(
   client: Client,
   argv: string[],
-  rwToken: string
+  auth: BlobRWToken
 ): Promise<number> {
   const telemetryClient = new BlobCopyTelemetryClient({
     opts: {
@@ -41,17 +43,24 @@ export default async function copy(
   const {
     args: [fromUrl, toPathname],
     flags: {
+      '--access': accessFlag,
       '--add-random-suffix': addRandomSuffix,
       '--content-type': contentType,
       '--cache-control-max-age': cacheControlMaxAge,
+      '--if-match': ifMatch,
     },
   } = parsedArgs;
 
+  const access = parseAccessFlag(accessFlag);
+  if (!access) return 1;
+
   telemetryClient.trackCliArgumentFromUrlOrPathname(fromUrl);
   telemetryClient.trackCliArgumentToPathname(toPathname);
+  telemetryClient.trackCliOptionAccess(accessFlag);
   telemetryClient.trackCliFlagAddRandomSuffix(addRandomSuffix);
   telemetryClient.trackCliOptionContentType(contentType);
   telemetryClient.trackCliOptionCacheControlMaxAge(cacheControlMaxAge);
+  telemetryClient.trackCliOptionIfMatch(ifMatch);
 
   let result: blob.PutBlobResult;
   try {
@@ -60,11 +69,12 @@ export default async function copy(
     output.spinner('Copying blob');
 
     result = await blob.copy(fromUrl, toPathname, {
-      token: rwToken,
-      access: 'public',
+      ...blobOpts(auth),
+      access,
       addRandomSuffix: addRandomSuffix ?? false,
       contentType,
       cacheControlMaxAge,
+      ifMatch,
     });
   } catch (err) {
     printError(err);

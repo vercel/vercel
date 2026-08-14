@@ -1,13 +1,27 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
+import {
+  outputActionRequired,
+  outputAgentError,
+  buildCommandWithYes,
+} from '../../util/agent-output';
+import {
+  AGENT_STATUS,
+  AGENT_REASON,
+  AGENT_ACTION,
+} from '../../util/agent-output-constants';
 import { promoteSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
-  validateRequiredArgs,
   confirmAction,
+  getArgsAfterRedirectsSubcommand,
+  getRedirectGlobalFlagsOnly,
+  getRedirectPromoteSuggestionFlags,
 } from './shared';
+import { validateRequiredArguments } from '../../util/command-arguments';
+import { getCommandNamePlain } from '../../util/pkg-name';
 import getRedirectVersions from '../../util/redirects/get-redirect-versions';
 import updateRedirectVersion from '../../util/redirects/update-redirect-version';
 import getRedirects from '../../util/redirects/get-redirects';
@@ -17,13 +31,48 @@ export default async function promote(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, promoteSubcommand);
   if (typeof parsed === 'number') return parsed;
 
-  const error = validateRequiredArgs(parsed.args, ['version-id']);
+  const error = validateRequiredArguments(parsed.args, ['version-id']);
   if (error) {
+    if (client.nonInteractive) {
+      const afterPromote = getArgsAfterRedirectsSubcommand(
+        client.argv.slice(2),
+        'promote'
+      );
+      const listVersionsCmd = getCommandNamePlain(
+        `redirects list-versions ${getRedirectGlobalFlagsOnly(afterPromote).join(' ')}`.trim()
+      );
+      const promoteFlagParts = getRedirectPromoteSuggestionFlags(afterPromote);
+      const promoteCmd = getCommandNamePlain(
+        `redirects promote <version-id> ${promoteFlagParts.join(' ')}`.trim()
+      );
+      outputActionRequired(
+        client,
+        {
+          status: AGENT_STATUS.ACTION_REQUIRED,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
+          action: AGENT_ACTION.MISSING_ARGUMENTS,
+          message: `${error} Run ${listVersionsCmd} to list version IDs and names, then ${promoteCmd} (replace <version-id> with a staging version to promote).`,
+          next: [
+            { command: listVersionsCmd, when: 'To list redirect version IDs' },
+            {
+              command: promoteCmd,
+              when: 'To promote a staging version (substitute version-id)',
+            },
+          ],
+        },
+        1
+      );
+      return 1;
+    }
     output.error(error);
     return 1;
   }
 
-  const link = await ensureProjectLink(client);
+  const link = await requireProjectContext(
+    client,
+    'redirects',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -40,6 +89,31 @@ export default async function promote(client: Client, argv: string[]) {
   );
 
   if (!version) {
+    if (client.nonInteractive) {
+      const afterPromote = getArgsAfterRedirectsSubcommand(
+        client.argv.slice(2),
+        'promote'
+      );
+      const listVersionsCmd = getCommandNamePlain(
+        `redirects list-versions ${getRedirectGlobalFlagsOnly(afterPromote).join(' ')}`.trim()
+      );
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.NOT_FOUND,
+          message: `Version with ID or name "${versionIdentifier}" not found.`,
+          next: [
+            {
+              command: listVersionsCmd,
+              when: 'To see available redirect versions (IDs and names)',
+            },
+          ],
+        },
+        1
+      );
+      return 1;
+    }
     output.error(
       `Version with ID or name "${versionIdentifier}" not found. Run ${chalk.cyan(
         'vercel redirects list-versions'
@@ -49,6 +123,18 @@ export default async function promote(client: Client, argv: string[]) {
   }
 
   if (version.isLive) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: `Version ${version.name || version.id} is already live. Nothing to promote.`,
+        },
+        1
+      );
+      return 1;
+    }
     output.error(
       `Version ${chalk.bold(version.name || version.id)} is already live.`
     );
@@ -56,6 +142,31 @@ export default async function promote(client: Client, argv: string[]) {
   }
 
   if (!version.isStaging) {
+    if (client.nonInteractive) {
+      const afterPromote = getArgsAfterRedirectsSubcommand(
+        client.argv.slice(2),
+        'promote'
+      );
+      const listVersionsCmd = getCommandNamePlain(
+        `redirects list-versions ${getRedirectGlobalFlagsOnly(afterPromote).join(' ')}`.trim()
+      );
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: `Version ${version.name || version.id} is not staged. Only staging versions can be promoted to production.`,
+          next: [
+            {
+              command: listVersionsCmd,
+              when: 'To see which version is currently staged',
+            },
+          ],
+        },
+        1
+      );
+      return 1;
+    }
     output.error(
       `Version ${chalk.bold(
         version.name || version.id
@@ -103,6 +214,22 @@ export default async function promote(client: Client, argv: string[]) {
     output.print(
       `\n${chalk.gray('No changes detected from current production version.')}\n\n`
     );
+  }
+
+  if (client.nonInteractive && !parsed.flags['--yes']) {
+    const cmd = buildCommandWithYes(client.argv);
+    outputActionRequired(
+      client,
+      {
+        status: AGENT_STATUS.ACTION_REQUIRED,
+        reason: AGENT_REASON.CONFIRMATION_REQUIRED,
+        action: AGENT_ACTION.CONFIRMATION_REQUIRED,
+        message: `In non-interactive mode use --yes to confirm promote. Run: ${cmd}`,
+        next: [{ command: cmd, when: 'to confirm promote to production' }],
+      },
+      1
+    );
+    return 1;
   }
 
   const confirmed = await confirmAction(

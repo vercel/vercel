@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import util from 'node:util';
 import {
   isObject,
   isError,
@@ -7,6 +8,8 @@ import {
   normalizeError,
   isSpawnError,
   errorToString,
+  getSystemErrorMessage,
+  errorToStringFriendly,
 } from '../src';
 import { describe, test, expect } from 'vitest';
 
@@ -22,6 +25,16 @@ const SYMBOL = Symbol('');
 const UNDEFINED = undefined;
 
 class CLASS {} // `CLASS` is a function and `new CLASS()` is an Object
+
+function getSystemErrorFixture() {
+  for (const [errno, [code, message]] of util.getSystemErrorMap()) {
+    if (code === 'ENOENT') {
+      return { errno, code, message };
+    }
+  }
+
+  throw new Error('Expected ENOENT to exist in the system error map.');
+}
 
 test('isObject returns true for objects only', () => {
   for (const item of [ARRAY, new CLASS(), OBJECT]) {
@@ -110,6 +123,31 @@ describe('errorToString', () => {
   });
   test('returns default fallback message when first argument is not an error, error like, nor a string, and the second argument is not provided', () => {
     expect(errorToString(null)).toStrictEqual('An unknown error has ocurred.');
+  });
+});
+
+describe('getSystemErrorMessage', () => {
+  test('returns short system error message by errno', () => {
+    const { errno, message } = getSystemErrorFixture();
+
+    expect(getSystemErrorMessage(errno)).toBe(message);
+  });
+});
+
+describe('errorToStringFriendly', () => {
+  test('returns short system error message for errno exceptions', () => {
+    const { errno, code, message } = getSystemErrorFixture();
+    const error = Object.assign(new Error(`${code}: ${message}`), {
+      code,
+      errno,
+    });
+
+    expect(errorToStringFriendly(error)).toBe(message);
+  });
+
+  test('falls back to errorToString for non-errno errors', () => {
+    expect(errorToStringFriendly(new Error('message'))).toBe('message');
+    expect(errorToStringFriendly(null, 'fallback')).toBe('fallback');
   });
 });
 

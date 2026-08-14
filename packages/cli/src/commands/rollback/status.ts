@@ -186,7 +186,7 @@ async function renderJobFailed({
     output.error(
       `Failed to remap all aliases to the requested deployment ${name} (${toDeploymentId})`
     );
-  } catch (e) {
+  } catch (_e) {
     output.error(
       `Failed to remap all aliases to the requested deployment ${toDeploymentId}`
     );

@@ -89,5 +89,10 @@
       "status": 200,
       "mustContain": "hello from my-file"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

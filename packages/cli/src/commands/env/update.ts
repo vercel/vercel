@@ -8,9 +8,12 @@ import readStandardInput from '../../util/input/read-standard-input';
 import param from '../../util/output/param';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
-import { validateEnvValue } from '../../util/env/validate-env';
+import {
+  normalizeStdinEnvValue,
+  validateEnvValue,
+} from '../../util/env/validate-env';
 import formatEnvironments from '../../util/env/format-environments';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
 import { getCustomEnvironments } from '../../util/target/get-custom-environments';
 import output from '../../output-manager';
@@ -19,8 +22,30 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { updateSubcommand } from './command';
-import { getLinkedProject } from '../../util/projects/link';
+import { resolveProjectContext } from '../../util/projects/resolve-project-context';
+import getTeamById from '../../util/teams/get-team-by-id';
 import type { ProjectEnvVariable } from '@vercel-internals/types';
+import { getGlobalFlagsFromArgs } from '../../util/arg-common';
+import { printAlignedLabel } from '../../util/output/print-aligned-label';
+import {
+  isEnvVarConfigSecretUiEnabled,
+  resolveEnvVarVisibility,
+  shouldEnforceSensitiveEnvVarPolicy,
+  formatVisibilityLabel,
+} from '../../util/env/env-var-config-secret-ui';
+
+function selectedEnvTargetsDevelopment(env: ProjectEnvVariable): boolean {
+  if (typeof env.target === 'string') return env.target === 'development';
+  if (Array.isArray(env.target)) return env.target.includes('development');
+  return false;
+}
+import {
+  outputActionRequired,
+  outputAgentError,
+  buildCommandWithYes,
+  buildEnvUpdateCommandWithPreservedArgs,
+  getPreservedArgsForEnvUpdate,
+} from '../../util/agent-output';
 
 export default async function update(client: Client, argv: string[]) {
   let parsedArgs;
@@ -28,14 +53,26 @@ export default async function update(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: err instanceof Error ? err.message : String(err),
+        },
+        1
+      );
+    }
     printError(err);
     return 1;
   }
 
   const { args, flags: opts } = parsedArgs;
 
+  const valueFromFlag =
+    typeof opts['--value'] === 'string' ? opts['--value'] : undefined;
   const stdInput = await readStandardInput(client.stdin);
-  // eslint-disable-next-line prefer-const
   let [envName, envTargetArg, envGitBranch] = args;
 
   const telemetryClient = new EnvUpdateTelemetryClient({
@@ -48,8 +85,25 @@ export default async function update(client: Client, argv: string[]) {
   telemetryClient.trackCliArgumentGitBranch(envGitBranch);
   telemetryClient.trackCliFlagSensitive(opts['--sensitive']);
   telemetryClient.trackCliFlagYes(opts['--yes']);
+  telemetryClient.trackCliOptionValue(valueFromFlag);
+  telemetryClient.trackCliOptionVisibility(
+    typeof opts['--visibility'] === 'string' ? opts['--visibility'] : undefined
+  );
 
   if (args.length > 3) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: `Invalid number of arguments. Usage: ${getCommandNamePlain(
+            `env update <name> ${getEnvTargetPlaceholder()} <gitbranch>`
+          )}`,
+        },
+        1
+      );
+    }
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
         `env update <name> ${getEnvTargetPlaceholder()} <gitbranch>`
@@ -67,22 +121,112 @@ export default async function update(client: Client, argv: string[]) {
     return 1;
   }
 
+  // Non-interactive: report all missing requirements in one shot (like env add)
+  if (client.nonInteractive) {
+    const missing: string[] = [];
+    if (!envName) missing.push('missing_name');
+    if (!stdInput && valueFromFlag === undefined) missing.push('missing_value');
+    if (missing.length > 0) {
+      const parts = missing.map(m =>
+        m === 'missing_name' ? 'name' : '--value or stdin'
+      );
+      // Production does not use branch; only preview/development use optional <gitbranch>
+      const targetPart = envTargetArg || getEnvTargetPlaceholder();
+      const branchPart =
+        envTargetArg === 'preview' || envTargetArg === 'development'
+          ? ' <gitbranch>'
+          : '';
+      const template = `env update ${envName || '<name>'} ${targetPart}${branchPart} --value <value> --yes`;
+      outputActionRequired(
+        client,
+        {
+          status: 'action_required',
+          reason: 'missing_requirements',
+          missing,
+          message: `Provide all required inputs for non-interactive mode: ${parts.join('; ')}. Example: ${getCommandNamePlain(template)}`,
+          next: [
+            {
+              command: buildEnvUpdateCommandWithPreservedArgs(
+                client.argv,
+                template
+              ),
+            },
+          ],
+        },
+        1
+      );
+    }
+  }
+
   const envTargets: string[] = [];
   if (envTargetArg) {
     envTargets.push(envTargetArg);
   }
 
   if (!envName) {
-    envName = await client.input.text({
-      message: `What's the name of the variable to update?`,
-      validate: val => (val ? true : 'Name cannot be empty'),
-    });
+    if (client.nonInteractive) {
+      outputActionRequired(
+        client,
+        {
+          status: 'action_required',
+          reason: 'missing_name',
+          message:
+            'Provide the variable name as an argument. Example: vercel env update <name>',
+          next: [
+            {
+              command: buildEnvUpdateCommandWithPreservedArgs(
+                client.argv,
+                `env update <name> ${getEnvTargetPlaceholder()} --value <value> --yes`
+              ),
+            },
+          ],
+        },
+        1
+      );
+    } else {
+      envName = await client.input.text({
+        message: `What's the name of the variable to update?`,
+        validate: val => (val ? true : 'Name cannot be empty'),
+      });
+    }
   }
 
-  const link = await getLinkedProject(client);
+  telemetryClient.trackCliOptionProject(opts['--project']);
+
+  const link = await resolveProjectContext({
+    client,
+    projectNameOrId: opts['--project'],
+  });
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
+    if (client.nonInteractive) {
+      const preserved = getPreservedArgsForEnvUpdate(client.argv).filter(
+        a => a !== '--yes' && a !== '-y'
+      );
+      const linkArgv = [
+        ...client.argv.slice(0, 2),
+        'link',
+        '--scope',
+        '<scope>',
+        ...preserved,
+      ];
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_linked',
+          message: `Your codebase isn't linked to a project on Vercel. Run ${getCommandNamePlain(
+            'link'
+          )} to begin. Use --yes for non-interactive; use --scope or --project to specify team or project.`,
+          next: [
+            { command: buildCommandWithYes(linkArgv) },
+            { command: buildCommandWithYes(client.argv) },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `Your codebase isn't linked to a project on Vercel. Run ${getCommandName(
         'link'
@@ -97,14 +241,31 @@ export default async function update(client: Client, argv: string[]) {
     getEnvRecords(client, project.id, 'vercel-cli:env:update'),
     getCustomEnvironments(client, project.id),
   ]);
+  const customEnvironment = customEnvironments.find(
+    ({ slug, id }) => slug === envTargetArg || id === envTargetArg
+  );
+  const normalizedEnvTargetArg = customEnvironment?.id || envTargetArg;
 
   const matchingEnvs = envs.filter(r => r.key === envName);
 
   if (matchingEnvs.length === 0) {
+    const listFlags = getGlobalFlagsFromArgs(client.argv.slice(2), {
+      preserveProject: true,
+    });
+    const listArgs = `env ls ${listFlags.join(' ')}`.trim();
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'env_not_found',
+          message: `The variable ${envName} was not found. Run ${getCommandNamePlain(listArgs)} to see all available Environment Variables.`,
+        },
+        1
+      );
+    }
     output.error(
-      `The variable ${param(envName)} was not found. Run ${getCommandName(
-        `env ls`
-      )} to see all available Environment Variables.`
+      `The variable ${param(envName)} was not found. Run ${getCommandName(listArgs)} to see all available Environment Variables.`
     );
     return 1;
   }
@@ -115,17 +276,28 @@ export default async function update(client: Client, argv: string[]) {
   if (envTargetArg || envGitBranch) {
     const filteredEnvs = matchingEnvs.filter(env => {
       const matchesTarget =
-        !envTargetArg ||
+        !normalizedEnvTargetArg ||
         (Array.isArray(env.target)
-          ? env.target.includes(envTargetArg as any)
-          : env.target === envTargetArg) ||
+          ? env.target.includes(normalizedEnvTargetArg as any)
+          : env.target === normalizedEnvTargetArg) ||
         (env.customEnvironmentIds &&
-          env.customEnvironmentIds.includes(envTargetArg));
+          env.customEnvironmentIds.includes(normalizedEnvTargetArg));
       const matchesGitBranch = !envGitBranch || env.gitBranch === envGitBranch;
       return matchesTarget && matchesGitBranch;
     });
 
     if (filteredEnvs.length === 0) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'env_not_found',
+            message: `No Environment Variable ${envName} found matching the specified target/branch.`,
+          },
+          1
+        );
+      }
       output.error(
         `No Environment Variable ${param(envName)} found matching the specified criteria.`
       );
@@ -135,6 +307,25 @@ export default async function update(client: Client, argv: string[]) {
     if (filteredEnvs.length === 1) {
       selectedEnv = filteredEnvs[0];
     } else {
+      if (client.nonInteractive) {
+        outputActionRequired(
+          client,
+          {
+            status: 'action_required',
+            reason: 'multiple_envs',
+            message: `Multiple Environment Variables match ${envName}. Specify target and/or branch to update one.`,
+            next: [
+              {
+                command: buildEnvUpdateCommandWithPreservedArgs(
+                  client.argv,
+                  `env update ${envName} ${getEnvTargetPlaceholder()} <gitbranch>`
+                ),
+              },
+            ],
+          },
+          1
+        );
+      }
       // Multiple matches, let user choose
       const choices = filteredEnvs.map((env, index) => {
         const targets = formatEnvironments(link, env, customEnvironments);
@@ -154,6 +345,25 @@ export default async function update(client: Client, argv: string[]) {
   } else if (matchingEnvs.length === 1) {
     selectedEnv = matchingEnvs[0];
   } else {
+    if (client.nonInteractive) {
+      outputActionRequired(
+        client,
+        {
+          status: 'action_required',
+          reason: 'multiple_envs',
+          message: `Multiple Environment Variables match ${envName}. Specify target and/or branch to update one.`,
+          next: [
+            {
+              command: buildEnvUpdateCommandWithPreservedArgs(
+                client.argv,
+                `env update ${envName} ${getEnvTargetPlaceholder()} <gitbranch>`
+              ),
+            },
+          ],
+        },
+        1
+      );
+    }
     // Multiple environments without specific target, let user choose
     const choices = matchingEnvs.map((env, index) => {
       const targets = formatEnvironments(link, env, customEnvironments);
@@ -171,17 +381,99 @@ export default async function update(client: Client, argv: string[]) {
     selectedEnv = matchingEnvs[selectedIndex];
   }
 
+  // Detect team-level sensitive env var policy. Cached in getTeamById.
+  const configSecretUiEnabled = isEnvVarConfigSecretUiEnabled();
+  let policyOn = false;
+  let teamSensitivePolicyOn = false;
+  if (link.org.type === 'team') {
+    try {
+      const team = await getTeamById(client, link.org.id);
+      teamSensitivePolicyOn = team?.sensitiveEnvironmentVariablePolicy === 'on';
+      policyOn = shouldEnforceSensitiveEnvVarPolicy(teamSensitivePolicyOn);
+    } catch {
+      // Non-fatal — policy detection is best-effort.
+    }
+  }
+
+  const selectedIsDevelopment = selectedEnvTargetsDevelopment(selectedEnv);
+
+  if (policyOn && selectedIsDevelopment) {
+    const msg = `Your team has enabled the Sensitive Environment Variables Policy and the Development Environment does not support sensitive values. https://vercel.com/docs/environment-variables/sensitive-environment-variables#environment-variables-policy`;
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'development_disallowed_by_team_policy',
+          message: msg,
+        },
+        1
+      );
+    }
+    output.error(msg);
+    return 1;
+  }
+
+  if (opts['--sensitive'] && selectedIsDevelopment) {
+    const msg = `--sensitive is not allowed with the Development Environment. Sensitive Environment Variables are only supported on Production and Preview.`;
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'sensitive_not_allowed_on_development',
+          message: msg,
+        },
+        1
+      );
+    }
+    output.error(msg);
+    return 1;
+  }
+
   let envValue: string;
 
   if (stdInput) {
-    envValue = stdInput;
+    const normalizedStdinValue = normalizeStdinEnvValue(stdInput);
+    envValue = normalizedStdinValue.value;
+    if (normalizedStdinValue.strippedTrailingNewline) {
+      output.log('Removed trailing newline from stdin input');
+    }
+  } else if (valueFromFlag !== undefined) {
+    envValue = valueFromFlag;
   } else {
+    if (client.nonInteractive) {
+      const branchPart =
+        envTargetArg === 'preview' || envTargetArg === 'development'
+          ? ' <gitbranch>'
+          : '';
+      const targetPart = envTargetArg || getEnvTargetPlaceholder();
+      outputActionRequired(
+        client,
+        {
+          status: 'action_required',
+          reason: 'missing_value',
+          message:
+            "In non-interactive mode provide the new value via --value or stdin. Example: vercel env update <name> <environment> --value 'value' --yes",
+          next: [
+            {
+              command: buildEnvUpdateCommandWithPreservedArgs(
+                client.argv,
+                `env update ${envName} ${targetPart}${branchPart} --value <value> --yes`
+              ),
+            },
+          ],
+        },
+        1
+      );
+    }
     envValue = await client.input.text({
       message: `What's the new value of ${envName}?`,
     });
   }
 
-  const skipConfirm = opts['--yes'] || !!stdInput;
+  const skipConfirm =
+    opts['--yes'] || !!stdInput || valueFromFlag !== undefined;
   const { finalValue, alreadyConfirmed } = await validateEnvValue({
     envName,
     initialValue: envValue,
@@ -196,6 +488,18 @@ export default async function update(client: Client, argv: string[]) {
 
   // Confirm the update unless --yes flag is provided or already confirmed from validation
   if (!opts['--yes'] && !alreadyConfirmed) {
+    if (client.nonInteractive) {
+      outputActionRequired(
+        client,
+        {
+          status: 'action_required',
+          reason: 'confirmation_required',
+          message: `Updating Environment Variable ${envName}. Use --yes to confirm.`,
+          next: [{ command: buildCommandWithYes(client.argv) }],
+        },
+        1
+      );
+    }
     const currentTargets = formatEnvironments(
       link,
       selectedEnv,
@@ -213,6 +517,14 @@ export default async function update(client: Client, argv: string[]) {
   }
 
   const type = opts['--sensitive'] ? 'sensitive' : selectedEnv.type;
+  const explicitVisibility =
+    typeof opts['--visibility'] === 'string' ? opts['--visibility'] : undefined;
+  if (explicitVisibility === 'config' && opts['--sensitive']) {
+    output.error(
+      '`--visibility config` cannot be used with `--sensitive`. Pick one.'
+    );
+    return 1;
+  }
   const targets = Array.isArray(selectedEnv.target)
     ? selectedEnv.target
     : [selectedEnv.target].filter((r): r is NonNullable<typeof r> =>
@@ -220,20 +532,62 @@ export default async function update(client: Client, argv: string[]) {
       );
   const allTargets = [...targets, ...(selectedEnv.customEnvironmentIds || [])];
 
+  const { visibility, error: visibilityError } = resolveEnvVarVisibility({
+    configSecretUiEnabled,
+    explicitVisibility,
+    type,
+    key: envName,
+    envTargets: allTargets,
+    teamSensitivePolicyOn,
+  });
+  if (visibilityError) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_visibility',
+          message: visibilityError,
+        },
+        1
+      );
+    }
+    output.error(visibilityError);
+    return 1;
+  }
+
   const updateStamp = stamp();
   try {
     output.spinner('Updating');
+    const keyToUpdate = type === 'sensitive' ? undefined : envName;
     await updateEnvRecord(
       client,
       project.id,
       selectedEnv.id,
       type,
-      envName,
+      keyToUpdate,
       finalValue,
       allTargets,
-      selectedEnv.gitBranch || ''
+      selectedEnv.gitBranch || '',
+      visibility
     );
   } catch (err: unknown) {
+    if (client.nonInteractive && isAPIError(err)) {
+      const reason =
+        (err as { slug?: string }).slug ||
+        (err.serverMessage?.toLowerCase().includes('branch')
+          ? 'branch_not_found'
+          : 'api_error');
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason,
+          message: err.serverMessage,
+        },
+        1
+      );
+    }
     if (isAPIError(err) && isKnownError(err)) {
       output.error(err.serverMessage);
       return 1;
@@ -249,6 +603,13 @@ export default async function update(client: Client, argv: string[]) {
       emoji('success')
     )}\n`
   );
+
+  if (configSecretUiEnabled) {
+    const visibilityLabel = formatVisibilityLabel(visibility, type);
+    if (visibilityLabel) {
+      printAlignedLabel('Visibility', visibilityLabel);
+    }
+  }
 
   return 0;
 }

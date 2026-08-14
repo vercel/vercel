@@ -96,7 +96,7 @@ it('should only match supported node versions, otherwise throw an error', async 
 });
 
 // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 it.skip('should match all semver ranges', async () => {
   // See https://docs.npmjs.com/files/package.json#engines
   expect(await getSupportedNodeVersion('16.0.0')).toHaveProperty('major', 16);
@@ -177,6 +177,54 @@ it('should fail if the provided bun version is not valid', async () => {
       { isDev: false }
     )
   ).rejects.toThrow();
+});
+
+it('should resolve to Bun when package.json has engines.bun', async () => {
+  const result = await getNodeVersion(
+    path.join(__dirname, 'pkg-engines-bun'),
+    undefined,
+    {},
+    {}
+  );
+  expect(result).toHaveProperty('runtime', 'bun1.x');
+  expect(result).toHaveProperty('range', '1.x');
+  expect(warningMessages).toStrictEqual([]);
+});
+
+it('should default to Node when both engines.node and engines.bun are set, with a warning', async () => {
+  const result = await getNodeVersion(
+    path.join(__dirname, 'pkg-engines-node-and-bun'),
+    undefined,
+    {},
+    {}
+  );
+  expect(result).toHaveProperty('runtime', 'nodejs22.x');
+  expect(result).toHaveProperty('range', '22.x');
+  expect(warningMessages).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining(
+        'Warning detected "engines": { "node": ..., "bun": ... } in `package.json`. Defaulting to "node".'
+      ),
+    ])
+  );
+});
+
+it('should resolve to Bun when both engines.node and engines.bun are set and config.bunVersion is provided', async () => {
+  const result = await getNodeVersion(
+    path.join(__dirname, 'pkg-engines-node-and-bun'),
+    undefined,
+    { bunVersion: '1.x' },
+    {}
+  );
+  expect(result).toHaveProperty('runtime', 'bun1.x');
+  expect(result).toHaveProperty('range', '1.x');
+  expect(warningMessages).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining(
+        'Warning detected "engines": { "node": ..., "bun": ... } in `package.json`. Since "bunVersion" is set in `vercel.json`, using "bun".'
+      ),
+    ])
+  );
 });
 
 it('should select project setting from config when no package.json is found and fallback undefined', async () => {
@@ -345,6 +393,29 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
       'Error: Node.js version 18.x is deprecated. Deployments created on or after 2025-09-01 will fail to build. Please set "engines": { "node": "24.x" } in your `package.json` file to use Node.js 24.',
       'Error: Node.js version 18.x is deprecated. Deployments created on or after 2025-09-01 will fail to build. Please set Node.js Version to 24.x in your Project Settings to use Node.js 24.',
     ]);
+  } finally {
+    global.Date.now = realDateNow;
+  }
+});
+
+it('should discontinue Node.js 20 on October 1, 2026', async () => {
+  const realDateNow = Date.now;
+  try {
+    global.Date.now = () => new Date('2026-09-30').getTime();
+
+    expect(await getSupportedNodeVersion('20.x', false)).toHaveProperty(
+      'major',
+      20
+    );
+    expect(warningMessages).toStrictEqual([
+      'Error: Node.js version 20.x is deprecated. Deployments created on or after 2026-10-01 will fail to build. Please set "engines": { "node": "24.x" } in your `package.json` file to use Node.js 24.',
+    ]);
+
+    global.Date.now = () => new Date('2026-10-01').getTime();
+
+    await expect(getSupportedNodeVersion('20.x', false)).rejects.toThrow(
+      'Node.js Version "20.x" is discontinued and must be upgraded.'
+    );
   } finally {
     global.Date.now = realDateNow;
   }
@@ -552,6 +623,72 @@ it('should support experimentalBypassFor correctly', async () => {
   );
 });
 
+it('should round-trip prerenderClassification', async () => {
+  const shell = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    prerenderClassification: {
+      routeType: 'shell',
+      response: 'initial',
+      compute: 'resuming',
+      htmlSize: 5491,
+    },
+  });
+  expect(shell.prerenderClassification).toEqual({
+    routeType: 'shell',
+    response: 'initial',
+    compute: 'resuming',
+    htmlSize: 5491,
+  });
+
+  // `htmlSize` is optional within the group — route handlers have no HTML.
+  const route = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    prerenderClassification: {
+      routeType: 'route',
+      response: 'complete',
+      compute: 'static',
+    },
+  });
+  expect(route.prerenderClassification).toEqual({
+    routeType: 'route',
+    response: 'complete',
+    compute: 'static',
+  });
+
+  const unclassified = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+  });
+  expect(unclassified.prerenderClassification).toBeUndefined();
+});
+
+it('should not validate prerenderClassification enum values', async () => {
+  // Deliberately unvalidated: a taxonomy value added by a future Next.js
+  // release must not hard-fail a deploy. Untrusted `.prerender-config.json`
+  // input is sanitized by the platform instead.
+  const future = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    prerenderClassification: {
+      // @ts-expect-error - a value Next.js has not shipped yet
+      routeType: 'something-new',
+      response: 'complete',
+      compute: 'static',
+    },
+  });
+  expect(future.prerenderClassification?.routeType).toBe('something-new');
+});
+
 it('should support passQuery correctly', async () => {
   new Prerender({
     expiration: 1,
@@ -592,6 +729,132 @@ it('should support passQuery correctly', async () => {
     });
   }).toThrowError(
     `The \`passQuery\` argument for \`Prerender\` must be a boolean.`
+  );
+});
+
+it('should support exposeErrBody correctly', async () => {
+  const prerenderWithTrue = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    exposeErrBody: true,
+  });
+  expect(prerenderWithTrue.exposeErrBody).toBe(true);
+
+  const prerenderWithFalse = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    exposeErrBody: false,
+  });
+  expect(prerenderWithFalse.exposeErrBody).toBeUndefined();
+
+  const prerenderWithUndefined = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    exposeErrBody: undefined,
+  });
+  expect(prerenderWithUndefined.exposeErrBody).toBeUndefined();
+
+  const prerenderWithoutProperty = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+  });
+  expect(prerenderWithoutProperty.exposeErrBody).toBeUndefined();
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      exposeErrBody: 'true',
+    });
+  }).toThrowError(
+    `The \`exposeErrBody\` argument for \`Prerender\` must be a boolean.`
+  );
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      exposeErrBody: 1,
+    });
+  }).toThrowError(
+    `The \`exposeErrBody\` argument for \`Prerender\` must be a boolean.`
+  );
+});
+
+it('should support partialFallback correctly', async () => {
+  const prerenderWithTrue = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    partialFallback: true,
+  });
+  expect(prerenderWithTrue.partialFallback).toBe(true);
+
+  const prerenderWithFalse = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    partialFallback: false,
+  });
+  expect(prerenderWithFalse.partialFallback).toBeUndefined();
+
+  const prerenderWithUndefined = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    partialFallback: undefined,
+  });
+  expect(prerenderWithUndefined.partialFallback).toBeUndefined();
+
+  const prerenderWithoutProperty = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+  });
+  expect(prerenderWithoutProperty.partialFallback).toBeUndefined();
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      partialFallback: 'true',
+    });
+  }).toThrowError(
+    `The \`partialFallback\` argument for \`Prerender\` must be a boolean.`
+  );
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      partialFallback: 1,
+    });
+  }).toThrowError(
+    `The \`partialFallback\` argument for \`Prerender\` must be a boolean.`
   );
 });
 
@@ -898,7 +1161,7 @@ it('should detect package.json in nested backend', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
   // There is no lockfile but this test will pick up vercel/vercel/pnpm-lock.yaml
-  expect(result.lockfileVersion).toEqual(6);
+  expect(result.lockfileVersion).toEqual(9);
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
@@ -910,7 +1173,7 @@ it('should detect package.json in nested frontend', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
   // There is no lockfile but this test will pick up vercel/vercel/pnpm-lock.yaml
-  expect(result.lockfileVersion).toEqual(6);
+  expect(result.lockfileVersion).toEqual(9);
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 

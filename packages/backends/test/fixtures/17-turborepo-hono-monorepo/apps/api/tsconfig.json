@@ -1,0 +1,11 @@
+{
+  // Resolves shared options + paths from ../../tsconfig.monorepo-parent.json → tsconfig.monorepo-root.json
+  "extends": "../../tsconfig.monorepo-parent.json",
+  "compilerOptions": {
+    "target": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "outDir": "./dist"
+  },
+  "exclude": ["node_modules"]
+}

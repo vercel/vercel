@@ -22,7 +22,6 @@ if (process.env.NODE_ENV !== 'production' && region !== 'dev1') {
 
 // @preserve pre-next-server-target
 
-// eslint-disable-next-line
 const NextServer = require('__NEXT_SERVER_PATH__').default;
 
 // @preserve next-server-preload-target
@@ -55,7 +54,9 @@ module.exports = serve(nextServer.getRequestHandler());
 // If available, add `getRequestHandlerWithMetadata` to the export if it's
 // required by the configuration.
 if (
-  (conf.experimental?.ppr || conf.experimental?.cacheComponents) &&
+  (conf.experimental?.ppr ||
+    conf.experimental?.cacheComponents ||
+    conf.cacheComponents) &&
   'getRequestHandlerWithMetadata' in nextServer &&
   typeof nextServer.getRequestHandlerWithMetadata === 'function'
 ) {

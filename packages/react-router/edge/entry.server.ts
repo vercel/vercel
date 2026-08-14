@@ -54,7 +54,6 @@ export async function handleRequest(
     );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return new Response(body as any, {
     headers: responseHeaders,
     status: responseStatusCode,

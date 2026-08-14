@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { limitOption, nextOption } from '../../util/arg-common';
+import { limitOption, nextOption, yesOption } from '../../util/arg-common';
 
 export const importSubcommand = {
   name: 'import',
@@ -22,12 +22,13 @@ export const importSubcommand = {
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
-  description: 'List all DNS entries for a domain',
+  description:
+    'List DNS entries. Pass a domain to list its records, or omit the argument to list records across every domain on the scope',
   default: true,
   arguments: [
     {
       name: 'domain',
-      required: true,
+      required: false,
     },
   ],
   options: [limitOption, nextOption],
@@ -62,7 +63,12 @@ export const removeSubcommand = {
       required: true,
     },
   ],
-  options: [],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when removing a DNS record',
+    },
+  ],
   examples: [],
 } as const;
 

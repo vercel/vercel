@@ -31,3 +31,6 @@ export const startDevServer: StartDevServer = async opts => {
     entrypoint,
   });
 };
+
+import { createDiagnostics } from '@vercel/build-utils';
+export const diagnostics = createDiagnostics('node');

@@ -1,5 +1,243 @@
 # @vercel/frameworks
 
+## 3.30.7
+
+### Patch Changes
+
+- fa14ee9: Mark the Services framework preset as stable.
+
+## 3.30.6
+
+### Patch Changes
+
+- 7bc4db0: [frameworks] Add Lovable platform framework and platform attribute
+
+## 3.30.5
+
+### Patch Changes
+
+- 85c897e: Run framework detection during `vc build` (opt-in via `VERCEL_FRAMEWORK_DETECTION=1`): detect the framework on a project's first deployment (`VERCEL_FIRST_DEPLOYMENT=1`) when none is configured and record it as `detectedFramework` in `builds.json`, cross-check the configured framework against the source code in the background without slowing the build, and validate the build output after it is written. Adds a `detectionConfidence` annotation to framework definitions for detections that are commonly incidental (e.g. Storybook as a devDependency) so they are never suggested as a framework override.
+
+## 3.30.4
+
+### Patch Changes
+
+- d19dbc5: Use circle icons for dark mode and light mode for services and containers
+
+## 3.30.3
+
+### Patch Changes
+
+- 02d8bab: Add services logo
+
+## 3.30.2
+
+### Patch Changes
+
+- acddddf: Update the Container framework logo to use the Box icon.
+
+## 3.30.1
+
+### Patch Changes
+
+- 66be3e0: [services] Refine container detection for `services` / `experimentalServicesV2`.
+
+  - A supplied `entrypoint` infers `runtime: "container"` when it names one of the
+    blessed Dockerfile names: `Dockerfile`, `Containerfile`, `Dockerfile.vercel`,
+    or `Containerfile.vercel`. A suffixed name like `Dockerfile.prod` is not a
+    container entrypoint.
+  - `runtime: "container"` without an `entrypoint` auto-detects one of those same
+    four blessed names in the service root, probing `Dockerfile.vercel`,
+    `Containerfile.vercel`, `Dockerfile`, `Containerfile` (in that order, so a
+    `.vercel` opt-in marker takes precedence over a plain `Dockerfile`).
+  - Removed the prebuilt OCI image reference entrypoint: an `entrypoint` must now
+    name a Dockerfile/Containerfile, otherwise the service errors.
+  - `@vercel/container` recognizes the same blessed set (via a shared
+    `isDockerfileRef`), keeping the builder and the services resolver in sync so
+    the configured Dockerfile entrypoint is honored instead of being ignored in
+    favor of a default `Dockerfile` or treated as a prebuilt image reference.
+  - The `container` framework preset is no longer experimental: a project with a
+    `Dockerfile.vercel` / `Containerfile.vercel` marker is detected as a
+    container without `VERCEL_USE_EXPERIMENTAL_FRAMEWORKS`.
+
+## 3.30.0
+
+### Minor Changes
+
+- 09743c6: Support deploying any project as a container via a `Dockerfile.vercel` or `Containerfile.vercel` marker. A new experimental `container` framework preset detects these files and is listed first so it takes precedence over all other frameworks — a project that also looks like (e.g.) a Next.js app will deploy as a container when one of these markers is present. As an experimental framework it is gated behind `VERCEL_USE_EXPERIMENTAL_FRAMEWORKS`. The `@vercel/container` builder now recognizes the `.vercel` markers, auto-discovers them when its entrypoint is `<detect>`, and supports root (non-service) container deploys.
+
+## 3.29.1
+
+### Patch Changes
+
+- 3b273ff: lowercase Eve to eve in framework preset
+
+## 3.29.0
+
+### Minor Changes
+
+- 3d8df16: Add bun preset.
+
+### Patch Changes
+
+- 2fd14e0: Replace placeholder Eve framework logos with the official triangle mark used in Eve docs.
+- 68c2fd7: Graduate Eve from experimental frameworks so detection and deploys no longer require `VERCEL_USE_EXPERIMENTAL_FRAMEWORKS`.
+
+## 3.28.1
+
+### Patch Changes
+
+- 4421ad9: Allow the Node framework preset to work without a `package.json`. The `node`
+  framework is now detected from a `server.*` entrypoint alone, and the
+  `@vercel/backends` builder defaults the module format to ESM (`"module"`) when
+  no `package.json` is present instead of erroring with "Unable to resolve format".
+
+## 3.28.0
+
+### Minor Changes
+
+- 4bd58f2: Add Eve as an experimental framework declaration alongside Ash.
+
+### Patch Changes
+
+- b98053e: Change label for Sanity v2
+
+## 3.27.0
+
+### Minor Changes
+
+- c0f1229: Update Sanity branding (new tagline, dark mode logo, demo URL) and broaden framework detection to cover Sanity v3, v4, and v5 via the `sanity` package. Move the legacy v2 entry to its own `sanity-v2` slug (with the example moved to `examples/sanity-v2`).
+
+### Patch Changes
+
+- Updated dependencies [fddeb55]
+  - @vercel/error-utils@2.2.0
+
+## 3.26.1
+
+### Patch Changes
+
+- 0dbb8e5: Detect TanStack Start projects without requiring a top-level `nitro` dependency by matching Start packages directly.
+
+## 3.26.0
+
+### Minor Changes
+
+- 51785a6: Add Ash framework preset
+
+## 3.25.1
+
+### Patch Changes
+
+- c95a7ca: Move framework import screenshots from Cloudinary (`assets.vercel.com`) to Vercel Blob. The four affected entries (Next.js, Nuxt, SvelteKit, SvelteKit legacy) now point at `https://py8fhxnkzwtsqdo9.public.blob.vercel-storage.com/front/import/*.png`. Same images, different host — consumers see no behavior change.
+
+## 3.25.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/error-utils@2.1.0
+
+## 3.24.2
+
+### Patch Changes
+
+- 09d9000: Fix the frameworks demo URL public-access test to check the public `/_logs` route instead of looking up alias hosts through the deployments API.
+
+## 3.24.1
+
+### Patch Changes
+
+- Add actix framework preset ([#15752](https://github.com/vercel/vercel/pull/15752))
+
+## 3.24.0
+
+### Minor Changes
+
+- Support configuration via vercel.toml ([#15750](https://github.com/vercel/vercel/pull/15750))
+
+### Patch Changes
+
+- remove experimental flag on node preset ([#15628](https://github.com/vercel/vercel/pull/15628))
+
+## 3.23.0
+
+### Minor Changes
+
+- Add Mastra framework preset ([#15076](https://github.com/vercel/vercel/pull/15076))
+
+## 3.22.0
+
+### Minor Changes
+
+- Simplify and streamline python builder logic ([#15696](https://github.com/vercel/vercel/pull/15696))
+
+### Patch Changes
+
+- Switch to using smol-toml for toml parsing ([#15730](https://github.com/vercel/vercel/pull/15730))
+
+## 3.21.1
+
+### Patch Changes
+
+- [go] remove experimental flag on "go" frameworks preset ([#15435](https://github.com/vercel/vercel/pull/15435))
+
+## 3.21.0
+
+### Minor Changes
+
+- Make the generic "python" framework and the Django framework not experimental ([#15429](https://github.com/vercel/vercel/pull/15429))
+
+## 3.20.0
+
+### Minor Changes
+
+- Add a content filter for manage.py for django framework detection. ([#15348](https://github.com/vercel/vercel/pull/15348))
+
+- Detect django framework when manage.py is found. ([#15314](https://github.com/vercel/vercel/pull/15314))
+
+## 3.19.1
+
+### Patch Changes
+
+- Rename fetch to nodeFetch when importing from node-fetch ([#15232](https://github.com/vercel/vercel/pull/15232))
+
+## 3.19.0
+
+### Minor Changes
+
+- Add django experimental framework. ([#15196](https://github.com/vercel/vercel/pull/15196))
+
+## 3.18.0
+
+### Minor Changes
+
+- Make experimental multi-service autodetection work with SvelteKit. ([#15040](https://github.com/vercel/vercel/pull/15040))
+
+## 3.17.1
+
+### Patch Changes
+
+- [services] remove empty detectors ([#14914](https://github.com/vercel/vercel/pull/14914))
+
+## 3.17.0
+
+### Minor Changes
+
+- Add experimental Go runtime framework preset. ([#14865](https://github.com/vercel/vercel/pull/14865))
+
+  This adds support for deploying standalone Go HTTP servers (using `package main` with `func main()`) in addition to the existing serverless function pattern. The preset supports:
+
+  - `main.go` at project root (simple projects)
+  - `cmd/api/main.go` (API servers)
+  - `cmd/server/main.go` (HTTP servers)
+
+  The Go application must listen on the port specified by the `PORT` environment variable.
+
 ## 3.16.1
 
 ### Patch Changes

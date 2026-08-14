@@ -88,6 +88,16 @@ export interface EndpointInfo {
   requestBody?: RequestBody;
 }
 
+export interface VercelCliTableDisplay {
+  /**
+   * Top-level response property whose value is rendered.
+   * Object → key/value card. Array of objects → table with column paths.
+   */
+  displayProperty: string;
+  columnsDefault: string[];
+  columnsWhenLimited?: string[];
+}
+
 export interface BodyField {
   name: string;
   required: boolean;

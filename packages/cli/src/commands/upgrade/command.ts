@@ -15,9 +15,34 @@ export const upgradeCommand = {
       description: 'Show the upgrade command without executing it',
     },
     {
-      ...formatOption,
-      description: 'Specify the output format (json) - implies --dry-run',
+      name: 'enable-auto',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Enable automatic CLI updates for future releases',
     },
+    {
+      name: 'disable-auto',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Disable automatic CLI updates',
+    },
+    {
+      // Internal: opt in/out of the native CLI binary. Undocumented (no
+      // `description`) so it is omitted from `--help`.
+      name: 'enable-binary',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'disable-binary',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    formatOption,
     jsonOption,
   ],
   examples: [
@@ -30,8 +55,12 @@ export const upgradeCommand = {
       value: `${packageName} upgrade --dry-run`,
     },
     {
+      name: 'Enable automatic CLI updates',
+      value: `${packageName} upgrade --enable-auto`,
+    },
+    {
       name: 'Get upgrade information as JSON',
-      value: `${packageName} upgrade --format=json`,
+      value: `${packageName} upgrade --json`,
     },
   ],
 } as const;

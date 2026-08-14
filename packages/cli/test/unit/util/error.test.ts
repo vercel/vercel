@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import fetch from 'node-fetch';
+import nodeFetch from '../../../src/util/fetch';
 import { listen } from 'async-listen';
 import type { IncomingMessage, Server, ServerResponse } from 'http';
 import { createServer } from 'http';
@@ -19,7 +19,6 @@ const send = (res: ServerResponse, statusCode: number, body: JSONValue) => {
 describe('responseError()', () => {
   let url: string;
   let server: Server;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let handler = (_req: IncomingMessage, _res: ServerResponse) => {};
 
   beforeAll(async () => {
@@ -27,16 +26,19 @@ describe('responseError()', () => {
     url = (await listen(server)).toString();
   });
 
-  afterAll(() => {
-    server.close();
-  });
+  afterAll(
+    () =>
+      new Promise<void>(resolve => {
+        server.close(() => resolve());
+      })
+  );
 
   it('should parse 4xx response error with fallback message', async () => {
     handler = (_req: IncomingMessage, res: ServerResponse) => {
       send(res, 404, {});
     };
 
-    const res = await fetch(url);
+    const res = await nodeFetch(url);
     const formatted = await responseError(res, 'Failed to load data');
     expect(formatted.message).toEqual('Failed to load data (404)');
   });
@@ -46,7 +48,7 @@ describe('responseError()', () => {
       send(res, 404, {});
     };
 
-    const res = await fetch(url);
+    const res = await nodeFetch(url);
     const formatted = await responseError(res);
     expect(formatted.message).toEqual('Response Error (404)');
   });
@@ -56,7 +58,7 @@ describe('responseError()', () => {
       send(res, 500, '');
     };
 
-    const res = await fetch(url);
+    const res = await nodeFetch(url);
     const formatted = await responseError(res);
     expect(formatted.message).toEqual('Response Error (500)');
   });
@@ -70,7 +72,7 @@ describe('responseError()', () => {
       });
     };
 
-    const res = await fetch(url);
+    const res = await nodeFetch(url);
     const formatted = await responseError(res);
     expect(formatted.message).toEqual('The request is not correct (400)');
   });
@@ -80,7 +82,7 @@ describe('responseError()', () => {
       send(res, 500, 'This is a malformed error');
     };
 
-    const res = await fetch(url);
+    const res = await nodeFetch(url);
     const formatted = await responseError(res, 'Failed to process data');
     expect(formatted.message).toEqual('Failed to process data (500)');
   });
@@ -92,7 +94,7 @@ describe('responseError()', () => {
       });
     };
 
-    const res = await fetch(url);
+    const res = await nodeFetch(url);
     const formatted = await responseError(res, 'Failed to process data');
     expect(formatted.message).toEqual('Failed to process data (500)');
   });
@@ -102,7 +104,7 @@ describe('responseError()', () => {
       send(res, 403, `32puuuh2332`);
     };
 
-    const res = await fetch(url);
+    const res = await nodeFetch(url);
     const formatted = await responseErrorMessage(res, 'Not authenticated');
     expect(formatted).toEqual('Not authenticated (403)');
   });
@@ -116,7 +118,7 @@ describe('responseError()', () => {
       });
     };
 
-    const res = await fetch(url);
+    const res = await nodeFetch(url);
     const formatted = await responseErrorMessage(res);
     expect(formatted).toEqual('This is a test (403)');
   });
@@ -130,7 +132,7 @@ describe('responseError()', () => {
       });
     };
 
-    const res = await fetch(url);
+    const res = await nodeFetch(url);
     const formatted = await responseErrorMessage(res);
     expect(formatted).toEqual('Response Error (500)');
   });
@@ -140,7 +142,7 @@ describe('responseError()', () => {
       send(res, 403, `122{"sss"`);
     };
 
-    const res = await fetch(url);
+    const res = await nodeFetch(url);
     const formatted = await responseError(res, 'Not authenticated');
     expect(formatted.message).toEqual('Not authenticated (403)');
   });
@@ -155,7 +157,7 @@ describe('responseError()', () => {
       });
     };
 
-    const res = await fetch(url);
+    const res = await nodeFetch(url);
     const formatted = await responseError(res);
     expect(formatted.message).toEqual('The request is not correct (403)');
     expect(formatted.additionalProperty).toEqual('test');
@@ -172,7 +174,7 @@ describe('responseError()', () => {
       });
     };
 
-    const res = await fetch(url);
+    const res = await nodeFetch(url);
     const formatted = await responseError(res);
     expect(formatted.message).toEqual('You were rate limited (429)');
     expect(formatted.retryAfterMs).toEqual(20000);
@@ -187,7 +189,7 @@ describe('responseError()', () => {
       });
     };
 
-    const res = await fetch(url);
+    const res = await nodeFetch(url);
     const formatted = await responseError(res);
     expect(formatted.message).toEqual('You were rate limited (429)');
     // We default to 0 in this case so callers still know to retry

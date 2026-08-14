@@ -30,13 +30,11 @@ const skipFixtures: string[] = [
   '46-yarn-dynamic-require',
 ];
 
-// eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
   if (skipFixtures.includes(fixture)) {
-    continue; // eslint-disable-line no-continue
+    continue;
   }
 
-  // eslint-disable-next-line no-loop-func
   it(`Should build "${fixture}"`, async () => {
     await expect(
       testDeployment(path.join(fixturesPath, fixture))
@@ -48,18 +46,15 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
 
 const buildersToTestWith = ['node'];
 
-// eslint-disable-next-line no-restricted-syntax
 for (const builder of buildersToTestWith) {
   const fixturesPath2 = path.resolve(
     __dirname,
     `../../${builder}/test/fixtures`
   );
 
-  // eslint-disable-next-line no-restricted-syntax
   for (const fixture of fs.readdirSync(fixturesPath2)) {
     // don't run all foreign fixtures, just some
     if (['01-cowsay', '01-cache-headers', '03-env-vars'].includes(fixture)) {
-      // eslint-disable-next-line no-loop-func
       it(`Should build "${builder}/${fixture}"`, async () => {
         await expect(
           testDeployment(path.join(fixturesPath2, fixture))

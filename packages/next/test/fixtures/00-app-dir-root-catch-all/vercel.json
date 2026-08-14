@@ -82,5 +82,10 @@
       "mustNotContain": "<html",
       "mustContain": "catch-all"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

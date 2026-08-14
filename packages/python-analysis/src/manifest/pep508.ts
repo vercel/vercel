@@ -13,6 +13,8 @@
  */
 
 import type { NormalizedRequirement } from './requirement/types';
+import type { ParsedReqEntry } from '#wasm/vercel_python_analysis.js';
+import { importWasmModule } from '../wasm/load';
 
 /**
  * Regular expression to extract extras from a package name.
@@ -119,4 +121,74 @@ export function mergeExtras(
   }
 
   return result.size > 0 ? Array.from(result) : undefined;
+}
+
+/**
+ * Convert a WASM-parsed PEP 508 entry to a NormalizedRequirement.
+ */
+function wasmEntryToRequirement(entry: ParsedReqEntry): NormalizedRequirement {
+  const req: NormalizedRequirement = {
+    name: entry.name || '',
+  };
+
+  if (entry.versionSpec) {
+    req.version = entry.versionSpec;
+  }
+
+  if (entry.extras.length > 0) {
+    req.extras = entry.extras;
+  }
+
+  if (entry.markers) {
+    req.markers = entry.markers;
+  }
+
+  if (entry.url) {
+    req.url = entry.url;
+  }
+
+  return req;
+}
+
+/**
+ * Parse a single PEP 508 dependency string into a NormalizedRequirement.
+ *
+ * Uses the uv-pep508 Rust crate via WASM for spec-compliant parsing.
+ *
+ * @param dep - A PEP 508 dependency string (e.g., "flask[async]>=2.0 ; python_version >= '3.8'")
+ * @returns The parsed requirement, or null if parsing fails
+ */
+export async function parsePep508(
+  dep: string
+): Promise<NormalizedRequirement | null>;
+/**
+ * Parse multiple PEP 508 dependency strings in a single batch.
+ *
+ * Loads the WASM module once and parses all strings synchronously,
+ * avoiding per-item async overhead.
+ *
+ * @param deps - Array of PEP 508 dependency strings
+ * @returns Array of parsed requirements (null for entries that fail to parse)
+ */
+export async function parsePep508(
+  deps: string[]
+): Promise<(NormalizedRequirement | null)[]>;
+export async function parsePep508(
+  depOrDeps: string | string[]
+): Promise<NormalizedRequirement | null | (NormalizedRequirement | null)[]> {
+  const wasm = await importWasmModule();
+  if (Array.isArray(depOrDeps)) {
+    return depOrDeps.map(dep => {
+      try {
+        return wasmEntryToRequirement(wasm.parsePep508(dep));
+      } catch {
+        return null;
+      }
+    });
+  }
+  try {
+    return wasmEntryToRequirement(wasm.parsePep508(depOrDeps));
+  } catch {
+    return null;
+  }
 }

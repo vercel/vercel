@@ -1,6 +1,12 @@
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
-import { forceOption, formatOption, yesOption } from '../../util/arg-common';
+import {
+  forceOption,
+  formatOption,
+  jsonOption,
+  projectOption,
+  yesOption,
+} from '../../util/arg-common';
 
 const targetPlaceholder = getEnvTargetPlaceholder();
 
@@ -20,6 +26,8 @@ export const listSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
+    projectOption,
     {
       name: 'guidance',
       description: 'Receive command suggestions once command is complete',
@@ -34,7 +42,7 @@ export const listSubcommand = {
 export const addSubcommand = {
   name: 'add',
   aliases: [],
-  description: 'Add an Environment Variable (see examples below)',
+  description: 'Add an Environment Variable',
   arguments: [
     {
       name: 'name',
@@ -44,18 +52,39 @@ export const addSubcommand = {
       name: 'environment',
       required: false,
     },
+    {
+      name: 'git-branch',
+      required: false,
+    },
   ],
   options: [
+    projectOption,
     {
       name: 'sensitive',
-      description: 'Add a sensitive Environment Variable',
+      description: 'Store the value as sensitive for Production or Preview',
       shorthand: null,
       type: Boolean,
       deprecated: false,
     },
     {
+      name: 'no-sensitive',
+      description: 'Store the value as non-sensitive when policy allows',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'visibility',
+      description:
+        'Set config/secret visibility (`config` or `secret`). Inferred from type when omitted and VERCEL_ENV_VAR_CONFIG_SECRET_UI is set',
+      shorthand: null,
+      type: String,
+      argument: 'VISIBILITY',
+      deprecated: false,
+    },
+    {
       ...forceOption,
-      description: 'Force overwrites when a command would normally fail',
+      description: 'Overwrite an existing variable for the same target',
       shorthand: null,
     },
     {
@@ -65,15 +94,24 @@ export const addSubcommand = {
     },
     {
       name: 'guidance',
-      description: 'Receive command suggestions once command is complete',
+      description: 'Show command suggestions after completion',
       shorthand: null,
       type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'value',
+      description:
+        'Set the variable value for non-interactive use; otherwise use stdin or the prompt',
+      shorthand: null,
+      type: String,
+      argument: 'VALUE',
       deprecated: false,
     },
   ],
   examples: [
     {
-      name: 'Add a new variable to all Environments',
+      name: 'Add a new variable (prompts for value and Environments)',
       value: [
         `${packageName} env add <name>`,
         `${packageName} env add API_TOKEN`,
@@ -87,17 +125,24 @@ export const addSubcommand = {
       ],
     },
     {
+      name: 'Add one variable to multiple Environments (comma-separated)',
+      value: [
+        `${packageName} env add <name> <environment>[,<environment>]`,
+        `${packageName} env add API_URL production,preview,development`,
+      ],
+    },
+    {
       name: 'Override an existing Environment Variable of same target (production, preview, deployment)',
       value: `${packageName} env add API_TOKEN --force`,
     },
     {
-      name: 'Add a sensitive Environment Variable',
-      value: `${packageName} env add API_TOKEN --sensitive`,
+      name: 'Add a regular (non-sensitive) Environment Variable that remains readable later',
+      value: `${packageName} env add API_TOKEN --no-sensitive`,
     },
     {
       name: 'Add a new Environment Variable for a specific Environment and Git Branch',
       value: [
-        `${packageName} env add <name> ${targetPlaceholder} <git-branch>`,
+        `${packageName} env add <name> ${targetPlaceholder} <gitbranch>`,
         `${packageName} env add DB_PASS preview feat1`,
       ],
     },
@@ -108,6 +153,10 @@ export const addSubcommand = {
         `cat ~/.npmrc | ${packageName} env add NPM_RC preview`,
         `${packageName} env add API_URL production < url.txt`,
       ],
+    },
+    {
+      name: 'Add with --value for non-interactive use',
+      value: `${packageName} env add API_TOKEN production --value "<value>" --yes`,
     },
   ],
 } as const;
@@ -127,6 +176,7 @@ export const removeSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description:
@@ -170,6 +220,7 @@ export const pullSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       description: 'Set the Environment when pulling Environment Variables',
@@ -188,6 +239,15 @@ export const pullSubcommand = {
       deprecated: false,
     },
     {
+      name: 'id',
+      description:
+        'Pull environment variables for a specific deployment (e.g. dpl_xxx)',
+      shorthand: null,
+      type: String,
+      argument: 'ID',
+      deprecated: false,
+    },
+    {
       ...yesOption,
       description:
         'Skip the confirmation prompt when removing an environment variable',
@@ -200,6 +260,10 @@ export const pullSubcommand = {
         `${packageName} env pull <file>`,
         `${packageName} env pull .env.development.local`,
       ],
+    },
+    {
+      name: 'Pull environment variables for a specific deployment',
+      value: `${packageName} env pull --id dpl_xxx`,
     },
   ],
 } as const;
@@ -217,6 +281,7 @@ export const runSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       description:
@@ -264,6 +329,7 @@ export const updateSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'sensitive',
       description: 'Update to a sensitive Environment Variable',
@@ -272,9 +338,27 @@ export const updateSubcommand = {
       deprecated: false,
     },
     {
+      name: 'visibility',
+      description:
+        'Set config/secret visibility (`config` or `secret`). Inferred from type when omitted and VERCEL_ENV_VAR_CONFIG_SECRET_UI is set',
+      shorthand: null,
+      type: String,
+      argument: 'VISIBILITY',
+      deprecated: false,
+    },
+    {
       ...yesOption,
       description:
         'Skip the confirmation prompt when updating an Environment Variable',
+    },
+    {
+      name: 'value',
+      description:
+        'New value for the variable (non-interactive). Otherwise use stdin or you will be prompted.',
+      shorthand: null,
+      type: String,
+      argument: 'VALUE',
+      deprecated: false,
     },
   ],
   examples: [
@@ -324,5 +408,14 @@ export const envCommand = {
     updateSubcommand,
   ],
   options: [],
-  examples: [],
+  examples: [
+    {
+      name: 'Run a command with Environment Variables from the linked Project',
+      value: `${packageName} env run -- <command>`,
+    },
+    {
+      name: 'Add one variable to multiple Environments',
+      value: `${packageName} env add API_URL production,preview,development`,
+    },
+  ],
 } as const;

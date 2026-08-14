@@ -1,6 +1,5 @@
 import { it, expect, describe, beforeEach, vi } from 'vitest';
 import path from 'path';
-import fetch_ from 'node-fetch';
 import { generateNewToken } from './common';
 import { Deployment } from './types';
 import { createDeployment } from '../src/index';
@@ -115,7 +114,7 @@ describe('create v2 deployment', () => {
 
     const url = `https://${deployment.url}/api/index.js`;
     console.log('testing url ' + url);
-    const response = await fetch_(url);
+    const response = await fetch(url);
     const text = await response.text();
     expect(deployment.readyState).toEqual('READY');
     expect(text).toContain('executed bash script');
@@ -152,17 +151,17 @@ describe('create v2 deployment', () => {
     expect(error).toBe(null);
     expect(deployment.readyState).toEqual('READY');
 
-    const index = await fetch_(`https://${deployment.url}`);
+    const index = await fetch(`https://${deployment.url}`);
     expect(index.status).toBe(200);
     expect(await index.text()).toBe('Hello World!');
 
-    const ignore1 = await fetch_(`https://${deployment.url}/ignore.txt`);
+    const ignore1 = await fetch(`https://${deployment.url}/ignore.txt`);
     expect(ignore1.status).toBe(404);
 
-    const ignore2 = await fetch_(`https://${deployment.url}/folder/ignore.txt`);
+    const ignore2 = await fetch(`https://${deployment.url}/folder/ignore.txt`);
     expect(ignore2.status).toBe(404);
 
-    const ignore3 = await fetch_(
+    const ignore3 = await fetch(
       `https://${deployment.url}/node_modules/ignore.txt`
     );
     expect(ignore3.status).toBe(404);

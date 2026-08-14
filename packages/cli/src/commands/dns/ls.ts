@@ -20,20 +20,66 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { validateLsArgs } from '../../util/validate-ls-args';
+import {
+  outputActionRequired,
+  outputAgentError,
+} from '../../util/agent-output';
+import {
+  AGENT_ACTION,
+  AGENT_REASON,
+  AGENT_STATUS,
+} from '../../util/agent-output-constants';
+import { getGlobalFlagsFromArgs } from '../../util/arg-common';
+import { getCommandNamePlain } from '../../util/pkg-name';
 
 export default async function ls(client: Client, argv: string[]) {
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(listSubcommand.options);
   try {
-    parsedArgs = parseArguments(argv, flagsSpecification, { permissive: true });
+    parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: err instanceof Error ? err.message : String(err),
+        },
+        1
+      );
+    }
     printError(err);
     return 1;
   }
   const { args, flags: opts } = parsedArgs;
 
+  if (client.nonInteractive && args.length > 1) {
+    const flags = getGlobalFlagsFromArgs(client.argv.slice(2));
+    const cmd = getCommandNamePlain(
+      `dns ls <domain> ${flags.join(' ')}`.trim()
+    );
+    outputActionRequired(
+      client,
+      {
+        status: AGENT_STATUS.ACTION_REQUIRED,
+        reason: AGENT_REASON.MISSING_ARGUMENTS,
+        action: AGENT_ACTION.MISSING_ARGUMENTS,
+        message: `Invalid number of arguments. Run: ${cmd}`,
+        next: [
+          {
+            command: cmd,
+            when: 'to list DNS records (optional single domain)',
+          },
+        ],
+      },
+      1
+    );
+    return 1;
+  }
+
   const validationResult = validateLsArgs({
-    commandName: 'dns ls [domain]',
+    commandName: 'dns ls <domain>',
     args: args,
     maxArgs: 1,
     exitCode: 1,
@@ -74,6 +120,20 @@ export default async function ls(client: Client, argv: string[]) {
       ...paginationOptions
     );
     if (data instanceof DomainNotFound) {
+      if (client.nonInteractive) {
+        const flags = getGlobalFlagsFromArgs(client.argv.slice(2));
+        const cmd = getCommandNamePlain(`dns ls ${flags.join(' ')}`.trim());
+        outputAgentError(
+          client,
+          {
+            status: AGENT_STATUS.ERROR,
+            reason: AGENT_REASON.DOMAIN_NOT_FOUND,
+            message: `The domain ${domainName} can't be found under ${contextName}.`,
+            next: [{ command: cmd, when: 'to list available DNS records' }],
+          },
+          1
+        );
+      }
       output.error(
         `The domain ${domainName} can't be found under ${chalk.bold(
           contextName
@@ -91,7 +151,7 @@ export default async function ls(client: Client, argv: string[]) {
     );
     client.stdout.write(getDNSRecordsTable([{ domainName, records }]));
 
-    if (pagination && pagination.count === 20) {
+    if (pagination?.next) {
       const flags = getCommandFlags(opts, ['_', '--next']);
       output.log(
         `To display the next page run ${getCommandName(
@@ -115,7 +175,7 @@ export default async function ls(client: Client, argv: string[]) {
     )} ${chalk.gray(lsStamp())}`
   );
   output.log(getDNSRecordsTable(dnsRecords));
-  if (pagination && pagination.count === 20) {
+  if (pagination?.next) {
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
       `To display the next page run ${getCommandName(

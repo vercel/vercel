@@ -80,9 +80,42 @@ export interface PyProjectProject {
 }
 
 /**
- * [dependency-groups].
+ * PEP 735 include-group directive: `{include-group: "other-group"}`.
  */
-export type PyProjectDependencyGroups = Record<string, string[]>;
+export interface DependencyGroupInclude {
+  'include-group': string;
+}
+
+/**
+ * A single entry in a dependency group: either a PEP 508 string or an include directive.
+ */
+export type DependencyGroupEntry = string | DependencyGroupInclude;
+
+/**
+ * [dependency-groups] per PEP 735.
+ */
+export type PyProjectDependencyGroups = Record<string, DependencyGroupEntry[]>;
+
+/**
+ * [tool.vercel] section.
+ */
+export interface PyProjectToolVercelSection {
+  fastapi?: PyProjectToolVercelFastapiSection;
+}
+
+/**
+ * [tool.vercel.fastapi] section.
+ */
+export interface PyProjectToolVercelFastapiSection {
+  static?: PyProjectToolVercelFastapiStaticSection;
+}
+
+/**
+ * [tool.vercel.fastapi.static] section.
+ */
+export interface PyProjectToolVercelFastapiStaticSection {
+  cdn?: boolean;
+}
 
 /**
  * [tool.FOO] section.
@@ -90,6 +123,7 @@ export type PyProjectDependencyGroups = Record<string, string[]>;
  */
 export interface PyProjectToolSection {
   uv?: UvConfig;
+  vercel?: PyProjectToolVercelSection;
 }
 
 /**

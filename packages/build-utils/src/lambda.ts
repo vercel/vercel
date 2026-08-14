@@ -10,10 +10,47 @@ import type {
   Env,
   Files,
   FunctionFramework,
+  MaxDuration,
   TriggerEvent,
+  TriggerEventInput,
 } from './types';
 
-export type { TriggerEvent };
+export type { TriggerEvent, TriggerEventInput };
+
+/**
+ * Encodes a function path into a valid consumer name using mnemonic escapes.
+ * For queue/v2beta triggers, the consumer name is derived from the function path.
+ * This encoding is collision-free (bijective/reversible).
+ *
+ * Encoding scheme:
+ * - `_` → `__` (escape character itself)
+ * - `/` → `_S` (slash)
+ * - `.` → `_D` (dot)
+ * - Other invalid chars → `_XX` (hex code)
+ *
+ * @example
+ * sanitizeConsumerName('api/test.js') // => 'api_Stest_Djs'
+ * sanitizeConsumerName('api/users/handler.ts') // => 'api_Susers_Shandler_Dts'
+ * sanitizeConsumerName('my_func.ts') // => 'my__func_Dts'
+ */
+export function sanitizeConsumerName(functionPath: string): string {
+  let result = '';
+  for (const char of functionPath) {
+    if (char === '_') {
+      result += '__';
+    } else if (char === '/') {
+      result += '_S';
+    } else if (char === '.') {
+      result += '_D';
+    } else if (/[A-Za-z0-9-]/.test(char)) {
+      result += char;
+    } else {
+      result +=
+        '_' + char.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0');
+    }
+  }
+  return result;
+}
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
@@ -26,10 +63,12 @@ export interface LambdaOptionsBase {
   runtimeLanguage?: LambdaExecutableRuntimeLanguages;
   architecture?: LambdaArchitecture;
   memory?: number;
-  maxDuration?: number;
+  maxDuration?: MaxDuration;
+  maxConcurrency?: number;
   environment?: Env;
   allowQuery?: string[];
   regions?: string[];
+  functionFailoverRegions?: string[];
   supportsMultiPayloads?: boolean;
   supportsWrapper?: boolean;
   supportsResponseStreaming?: boolean;
@@ -84,7 +123,7 @@ export interface LambdaOptionsWithZipBuffer extends LambdaOptionsBase {
 
 interface GetLambdaOptionsFromFunctionOptions {
   sourceFile: string;
-  config?: Pick<Config, 'functions'>;
+  config?: Pick<Config, 'functions' | 'serviceName'>;
 }
 
 function getDefaultLambdaArchitecture(
@@ -123,10 +162,13 @@ export class Lambda {
   runtimeLanguage?: LambdaExecutableRuntimeLanguages;
   architecture: LambdaArchitecture;
   memory?: number;
-  maxDuration?: number;
+  maxDuration?: MaxDuration;
+  /** Maximum number of requests that one function instance can process concurrently. */
+  maxConcurrency?: number;
   environment: Env;
   allowQuery?: string[];
   regions?: string[];
+  functionFailoverRegions?: string[];
   /**
    * @deprecated Use `await lambda.createZip()` instead.
    */
@@ -169,11 +211,13 @@ export class Lambda {
       runtime,
       runtimeLanguage,
       maxDuration,
+      maxConcurrency,
       architecture,
       memory,
       environment = {},
       allowQuery,
       regions,
+      functionFailoverRegions,
       supportsMultiPayloads,
       supportsWrapper,
       supportsResponseStreaming,
@@ -223,7 +267,17 @@ export class Lambda {
     }
 
     if (maxDuration !== undefined) {
-      assert(typeof maxDuration === 'number', '"maxDuration" is not a number');
+      assert(
+        typeof maxDuration === 'number' || maxDuration === 'max',
+        '"maxDuration" is not a number or "max"'
+      );
+    }
+
+    if (maxConcurrency !== undefined) {
+      assert(
+        Number.isInteger(maxConcurrency) && maxConcurrency >= 1,
+        '"maxConcurrency" must be an integer greater than or equal to 1'
+      );
     }
 
     if (allowQuery !== undefined) {
@@ -253,6 +307,17 @@ export class Lambda {
       assert(
         regions.every(r => typeof r === 'string'),
         '"regions" is not a string Array'
+      );
+    }
+
+    if (functionFailoverRegions !== undefined) {
+      assert(
+        Array.isArray(functionFailoverRegions),
+        '"functionFailoverRegions" is not an Array'
+      );
+      assert(
+        functionFailoverRegions.every(r => typeof r === 'string'),
+        '"functionFailoverRegions" is not a string Array'
       );
     }
 
@@ -287,8 +352,8 @@ export class Lambda {
 
         // Validate required type
         assert(
-          trigger.type === 'queue/v1beta',
-          `${prefix}.type must be "queue/v1beta"`
+          trigger.type === 'queue/v1beta' || trigger.type === 'queue/v2beta',
+          `${prefix}.type must be "queue/v1beta" or "queue/v2beta"`
         );
 
         // Validate required queue fields
@@ -298,6 +363,7 @@ export class Lambda {
         );
         assert(trigger.topic.length > 0, `${prefix}.topic cannot be empty`);
 
+        // Consumer is always required (populated by getLambdaOptionsFromFunction for v2beta)
         assert(
           typeof trigger.consumer === 'string',
           `${prefix}.consumer is required and must be a string`
@@ -372,9 +438,11 @@ export class Lambda {
     this.architecture = getDefaultLambdaArchitecture(architecture);
     this.memory = memory;
     this.maxDuration = maxDuration;
+    this.maxConcurrency = maxConcurrency;
     this.environment = environment;
     this.allowQuery = allowQuery;
     this.regions = regions;
+    this.functionFailoverRegions = functionFailoverRegions;
     this.zipBuffer = 'zipBuffer' in opts ? opts.zipBuffer : undefined;
     this.supportsMultiPayloads = supportsMultiPayloads;
     this.supportsWrapper = supportsWrapper;
@@ -478,18 +546,58 @@ export async function getLambdaOptionsFromFunction({
     | 'architecture'
     | 'memory'
     | 'maxDuration'
+    | 'maxConcurrency'
+    | 'regions'
+    | 'functionFailoverRegions'
     | 'experimentalTriggers'
     | 'supportsCancellation'
   >
 > {
   if (config?.functions) {
+    // `pattern` is service-root-relative, so two services sharing a function
+    // path would derive the same consumer; scope it by service name.
+    const serviceName =
+      typeof config.serviceName === 'string' && config.serviceName !== ''
+        ? config.serviceName
+        : undefined;
     for (const [pattern, fn] of Object.entries(config.functions)) {
       if (sourceFile === pattern || minimatch(sourceFile, pattern)) {
+        const consumer = sanitizeConsumerName(
+          serviceName ? `${serviceName}~${pattern}` : pattern
+        );
+        const experimentalTriggers: TriggerEvent[] | undefined =
+          fn.experimentalTriggers?.map(
+            (trigger: TriggerEventInput): TriggerEvent => {
+              if (trigger.type === 'queue/v2beta') {
+                return {
+                  ...trigger,
+                  consumer,
+                };
+              }
+              return trigger;
+            }
+          );
+
+        // User-configured functions can only have one v2beta trigger.
+        // Services may attach multiple triggers programmatically.
+        if (
+          experimentalTriggers &&
+          experimentalTriggers.length > 1 &&
+          experimentalTriggers.some(t => t.type === 'queue/v2beta')
+        ) {
+          throw new Error(
+            `functions["${pattern}"].experimentalTriggers can only have one item for queue/v2beta`
+          );
+        }
+
         return {
           architecture: fn.architecture,
           memory: fn.memory,
           maxDuration: fn.maxDuration,
-          experimentalTriggers: fn.experimentalTriggers,
+          maxConcurrency: fn.maxConcurrency,
+          regions: fn.regions,
+          functionFailoverRegions: fn.functionFailoverRegions,
+          experimentalTriggers,
           supportsCancellation: fn.supportsCancellation,
         };
       }

@@ -7,7 +7,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 const fetch = require('./fetch-retry.js');
 const { nowDeploy, fileModeSymbol, fetchWithAuth } = require('./now-deploy.js');
-const { logWithinTest } = require('./log');
+const { handleTransientError } = require('./transient-error.js');
 const {
   scanParentDirs,
   getSupportedNodeVersion,
@@ -20,24 +20,174 @@ async function packAndDeploy(builderPath, shouldUnlink = true) {
   });
   const tarballs = await glob('*.tgz', { cwd: builderPath });
   const tgzPath = path.join(builderPath, tarballs[0]);
-  logWithinTest('tgzPath', tgzPath);
+  console.log('tgzPath', tgzPath);
   const url = await nowDeployIndexTgz(tgzPath);
   await fetchTgzUrl(`https://${url}`);
-  logWithinTest('finished calling the tgz');
+  console.log('finished calling the tgz');
   if (shouldUnlink) {
     fs.unlinkSync(tgzPath);
-    logWithinTest('finished unlinking tgz');
+    console.log('finished unlinking tgz');
   } else {
-    logWithinTest('leaving tgz in place');
+    console.log('leaving tgz in place');
   }
   return url;
 }
 
 const RANDOMNESS_PLACEHOLDER_STRING = 'RANDOMNESS_PLACEHOLDER';
+const DEPLOYMENT_LOG_FETCH_RETRY_DELAY_MS = 2000;
+const DEPLOYMENT_LOG_FETCH_ATTEMPTS = Math.ceil(
+  15000 / DEPLOYMENT_LOG_FETCH_RETRY_DELAY_MS
+);
+
+/**
+ * Run a declarative WebSocket probe against a deployment.
+ *
+ * Probe shape (under the `websocket` key of a probe):
+ *   {
+ *     "path": "/ws",                       // required, the upgrade path
+ *     "send": ["hello", "world"],          // optional, text frames to send
+ *     "receive": ["echo:hello", ...],      // optional, exact ordered replies
+ *     "receiveMustContain": ["partial"],   // optional, substring (ordered)
+ *     "status": 101,                        // optional, expected upgrade status
+ *     "headers": { "x-foo": "bar" },       // optional, extra upgrade headers
+ *     "subprotocols": ["v1"],              // optional
+ *     "timeout": 20000                      // optional, ms
+ *   }
+ *
+ * One of `receive` or `receiveMustContain` should be provided. The probe sends
+ * each `send` frame in order, waiting for a reply between frames, and asserts
+ * the upgrade status and the received frames.
+ */
+async function runWebSocketProbe(spec, deploymentUrl) {
+  // Lazily require so non-WebSocket probes don't load the module.
+  const WebSocket = require('ws');
+
+  assert(spec.path, 'websocket probe must specify a "path"');
+  const send = spec.send || [];
+  const expectExact = spec.receive;
+  const expectContains = spec.receiveMustContain;
+  assert(
+    expectExact || expectContains,
+    'websocket probe must specify "receive" or "receiveMustContain"'
+  );
+  const expectedCount = (expectExact || expectContains).length;
+  const expectedStatus = spec.status || 101;
+  const timeout = spec.timeout || 20000;
+
+  const scheme = deploymentUrl.startsWith('localhost') ? 'ws' : 'wss';
+  const wsUrl = `${scheme}://${deploymentUrl}${spec.path}`;
+  console.log('testing websocket', wsUrl);
+
+  const { received, upgradeStatus } = await new Promise((resolve, reject) => {
+    const socket = new WebSocket(wsUrl, spec.subprotocols || [], {
+      headers: spec.headers || {},
+    });
+    const got = [];
+    let index = 0;
+    let status = 0;
+
+    const timer = setTimeout(() => {
+      try {
+        socket.terminate();
+      } catch (_) {
+        // ignore
+      }
+      reject(
+        new Error(
+          `WebSocket ${wsUrl} timed out after ${timeout}ms ` +
+            `(upgrade status ${status}, received ${JSON.stringify(got)})`
+        )
+      );
+    }, timeout);
+
+    const maybeFinish = () => {
+      if (got.length >= expectedCount) {
+        clearTimeout(timer);
+        try {
+          socket.close();
+        } catch (_) {
+          // ignore
+        }
+        resolve({ received: got, upgradeStatus: status });
+      }
+    };
+
+    socket.on('upgrade', res => {
+      status = res.statusCode;
+    });
+    socket.on('open', () => {
+      if (send.length > 0) {
+        socket.send(send[index]);
+      } else {
+        // No frames to send; wait for server-initiated messages.
+        maybeFinish();
+      }
+    });
+    socket.on('message', data => {
+      got.push(data.toString());
+      index += 1;
+      if (index < send.length) {
+        socket.send(send[index]);
+      }
+      maybeFinish();
+    });
+    socket.on('close', () => {
+      clearTimeout(timer);
+      resolve({ received: got, upgradeStatus: status });
+    });
+    socket.on('unexpected-response', (_req, res) => {
+      clearTimeout(timer);
+      reject(
+        new Error(
+          `WebSocket upgrade failed for ${wsUrl}: HTTP ${res.statusCode}`
+        )
+      );
+    });
+    socket.on('error', err => {
+      clearTimeout(timer);
+      reject(err);
+    });
+  });
+
+  assert.strictEqual(
+    upgradeStatus,
+    expectedStatus,
+    `WebSocket ${wsUrl} expected upgrade status ${expectedStatus}, got ${upgradeStatus}`
+  );
+
+  if (expectExact) {
+    assert.deepStrictEqual(
+      received,
+      expectExact,
+      `WebSocket ${wsUrl} unexpected frames. Expected ${JSON.stringify(
+        expectExact
+      )}, got ${JSON.stringify(received)}`
+    );
+  } else {
+    assert.strictEqual(
+      received.length,
+      expectContains.length,
+      `WebSocket ${wsUrl} expected ${expectContains.length} frames, got ${received.length}: ${JSON.stringify(received)}`
+    );
+    expectContains.forEach((needle, i) => {
+      assert(
+        received[i].includes(needle),
+        `WebSocket ${wsUrl} frame ${i} (${JSON.stringify(received[i])}) does not contain ${JSON.stringify(needle)}`
+      );
+    });
+  }
+
+  console.log('finished testing websocket', wsUrl, JSON.stringify(received));
+}
 
 async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
   if (probe.delay) {
     await new Promise(resolve => setTimeout(resolve, probe.delay));
+    return;
+  }
+
+  if (probe.websocket) {
+    await runWebSocketProbe(probe.websocket, deploymentUrl);
     return;
   }
 
@@ -54,7 +204,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     if (!ctx.deploymentLogs) {
       let lastErr;
 
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < DEPLOYMENT_LOG_FETCH_ATTEMPTS; i++) {
         try {
           const logsRes = await fetchWithAuth(
             `/v1/now/deployments/${deploymentId}/events?limit=-1`
@@ -76,16 +226,19 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
         } catch (err) {
           lastErr = err;
         }
+        const logLineCount = Array.isArray(ctx.deploymentLogs)
+          ? ctx.deploymentLogs.length
+          : typeof ctx.deploymentLogs;
         ctx.deploymentLogs = null;
-        logWithinTest(
+        console.log(
           'Retrying to fetch logs for',
           deploymentId,
-          'in 2 seconds. Read lines:',
-          Array.isArray(ctx.deploymentLogs)
-            ? ctx.deploymentLogs.length
-            : typeof ctx.deploymentLogs
+          `in ${DEPLOYMENT_LOG_FETCH_RETRY_DELAY_MS}ms. Read lines:`,
+          logLineCount
         );
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve =>
+          setTimeout(resolve, DEPLOYMENT_LOG_FETCH_RETRY_DELAY_MS)
+        );
       }
       if (
         !Array.isArray(ctx.deploymentLogs) ||
@@ -117,7 +270,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     }
 
     if (!found && shouldContain) {
-      logWithinTest({
+      console.log({
         deploymentId,
         deploymentUrl,
         deploymentLogs,
@@ -131,7 +284,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
       error.retryDelay = 5000; // ms
       throw error;
     } else {
-      logWithinTest('finished testing', JSON.stringify(probe));
+      console.log('finished testing', JSON.stringify(probe));
       return;
     }
   }
@@ -150,9 +303,9 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     const manifestPrefix = scriptArgs.shift() || '';
 
     if (!ctx.nextBuildManifest) {
-      const manifestUrl = `https://${deploymentUrl}${manifestPrefix}/_next/static/testing-build-id/_buildManifest.js`;
+      const manifestUrl = `https://${deploymentUrl}${manifestPrefix}/_next/static/build-TfctsWXpff2fKS/_buildManifest.js`;
 
-      logWithinTest('fetching buildManifest at', manifestUrl);
+      console.log('fetching buildManifest at', manifestUrl);
       const { text: manifestContent } = await fetchDeploymentUrl(manifestUrl);
 
       // we must eval it since we use devalue to stringify it
@@ -195,7 +348,18 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     if (!isShowingBuildPreviewPage) {
       break;
     } else {
-      result = await fetchDeploymentUrl(probeUrl, fetchOpts);
+      try {
+        result = await fetchDeploymentUrl(probeUrl, fetchOpts);
+      } catch (error) {
+        if (handleTransientError(error, 'preview_page')) {
+          console.log(
+            `Transient error checking preview page for ${probeUrl} (attempt ${retryCount}): ${error.message}`
+          );
+          await new Promise(r => setTimeout(r, 1000));
+          continue;
+        }
+        throw error;
+      }
       isShowingBuildPreviewPage = checkForPreviewPage(result.text);
       if (!isShowingBuildPreviewPage) {
         break;
@@ -209,7 +373,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
 
   const { text, resp } = result;
 
-  logWithinTest('finished testing', JSON.stringify(probe));
+  console.log('finished testing', JSON.stringify(probe));
 
   let hadTest = false;
 
@@ -343,7 +507,7 @@ async function testDeployment(fixturePath, opts = {}) {
     .basename(fixturePath)
     .toLowerCase()
     .replace(/(_|\.)/g, '-');
-  logWithinTest(`testDeployment "${projectName}"`);
+  console.log(`testDeployment "${projectName}"`);
   const globResult = await glob(`${fixturePath}/**`, {
     nodir: true,
     dot: true,
@@ -410,7 +574,9 @@ async function testDeployment(fixturePath, opts = {}) {
     opts.projectSettings.nodeVersion = nodeVersion;
   }
 
-  const probePath = path.resolve(fixturePath, 'probe.js');
+  const cjsProbePath = path.resolve(fixturePath, 'probe.cjs');
+  const jsProbePath = path.resolve(fixturePath, 'probe.js');
+  const probePath = fs.existsSync(cjsProbePath) ? cjsProbePath : jsProbePath;
   let probes = [];
   if ('probes' in nowJson) {
     probes = nowJson.probes;
@@ -420,10 +586,11 @@ async function testDeployment(fixturePath, opts = {}) {
     // we'll run probes after we have the deployment url below
   } else {
     console.warn(
-      `WARNING: Test fixture "${fixturePath}" does not contain probes.json, probe.js, or vercel.json`
+      `WARNING: Test fixture "${fixturePath}" does not contain probes.json, probe.cjs, probe.js, or vercel.json`
     );
   }
   bodies[configName] = Buffer.from(JSON.stringify(nowJson));
+  delete bodies['probe.cjs'];
   delete bodies['probe.js'];
   delete bodies['probes.json'];
 
@@ -442,7 +609,7 @@ async function testDeployment(fixturePath, opts = {}) {
 
   for (const probe of probes) {
     const stringifiedProbe = JSON.stringify(probe);
-    logWithinTest('testing', stringifiedProbe);
+    console.log('testing', stringifiedProbe);
 
     try {
       await runProbe(probe, deploymentId, deploymentUrl, probeCtx);
@@ -455,7 +622,7 @@ async function testDeployment(fixturePath, opts = {}) {
       const retryDelay = Math.max(probe.retryDelay || 0, err.retryDelay || 0);
 
       for (let i = 0; i < retries; i++) {
-        logWithinTest(`re-trying ${i + 1}/${retries}:`, stringifiedProbe);
+        console.log(`re-trying ${i + 1}/${retries}:`, stringifiedProbe);
 
         try {
           await runProbe(probe, deploymentId, deploymentUrl, probeCtx);
@@ -466,7 +633,7 @@ async function testDeployment(fixturePath, opts = {}) {
           }
 
           if (retryDelay) {
-            logWithinTest(`Waiting ${retryDelay}ms before retrying`);
+            console.log(`Waiting ${retryDelay}ms before retrying`);
             await new Promise(resolve => setTimeout(resolve, retryDelay));
           }
         }
@@ -480,7 +647,7 @@ async function testDeployment(fixturePath, opts = {}) {
 async function nowDeployIndexTgz(file) {
   const bodies = {
     'index.tgz': fs.readFileSync(file),
-    'now.json': Buffer.from(JSON.stringify({ version: 2 })),
+    'vercel.json': Buffer.from(JSON.stringify({ version: 2 })),
   };
 
   return (await nowDeploy('pack-n-deploy', bodies)).deploymentUrl;
@@ -488,7 +655,19 @@ async function nowDeployIndexTgz(file) {
 
 async function fetchDeploymentUrl(url, opts) {
   for (let i = 0; i < 50; i += 1) {
-    const resp = await fetch(url, opts);
+    let resp;
+    try {
+      resp = await fetch(url, opts);
+    } catch (error) {
+      if (handleTransientError(error, 'deployment_url')) {
+        console.log(
+          `Transient error fetching deployment url ${url} (attempt ${i}): ${error.message}`
+        );
+        await new Promise(r => setTimeout(r, 1000));
+        continue;
+      }
+      throw error;
+    }
     const text = await resp.text();
     if (typeof text !== 'undefined' && !text.includes('Join Free')) {
       return { resp, text };
@@ -502,7 +681,19 @@ async function fetchDeploymentUrl(url, opts) {
 
 async function fetchTgzUrl(url) {
   for (let i = 0; i < 500; i += 1) {
-    const resp = await fetch(url);
+    let resp;
+    try {
+      resp = await fetch(url);
+    } catch (error) {
+      if (handleTransientError(error, 'tgz_url')) {
+        console.log(
+          `Transient error fetching tgz url ${url} (attempt ${i}): ${error.message}`
+        );
+        await new Promise(r => setTimeout(r, 1000));
+        continue;
+      }
+      throw error;
+    }
     if (resp.status === 200) {
       const buffer = await resp.buffer();
       if (buffer[0] === 0x1f) {
@@ -531,7 +722,7 @@ async function spawnAsync(...args) {
     child.on('error', reject);
     child.on('close', (code, signal) => {
       if (code !== 0) {
-        if (result) logWithinTest(result);
+        if (result) console.log(result);
         reject(new Error(`Exited with ${code || signal}`));
         return;
       }

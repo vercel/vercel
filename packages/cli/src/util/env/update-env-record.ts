@@ -12,10 +12,11 @@ export default async function updateEnvRecord(
   projectId: string,
   envId: string,
   type: ProjectEnvType,
-  key: string,
+  key: string | undefined,
   value: string,
   targets: string[],
-  gitBranch: string
+  gitBranch: string,
+  visibility?: ProjectEnvVariable['visibility']
 ): Promise<void> {
   output.debug(
     `Updating ${type} Environment Variable ${key} in ${targets.length} targets`
@@ -28,15 +29,18 @@ export default async function updateEnvRecord(
       : customEnvironmentIds;
     arr.push(t);
   }
-  const body: Omit<ProjectEnvVariable, 'id'> = {
+  const body: Omit<ProjectEnvVariable, 'id' | 'key'> & { key?: string } = {
     type,
-    key,
     value,
     target,
     customEnvironmentIds:
       customEnvironmentIds.length > 0 ? customEnvironmentIds : undefined,
     gitBranch: gitBranch || undefined,
+    ...(visibility !== undefined ? { visibility } : {}),
   };
+  if (key) {
+    body.key = key;
+  }
   const url = `/v10/projects/${projectId}/env/${envId}`;
   await client.fetch(url, {
     method: 'PATCH',

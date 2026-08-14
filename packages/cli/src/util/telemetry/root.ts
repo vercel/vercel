@@ -12,9 +12,44 @@ export class RootTelemetryClient extends TelemetryClient {
     }
   }
 
+  trackCliCommandAgent(actual: string) {
+    this.trackCliCommand({
+      command: 'agent',
+      value: actual,
+    });
+  }
+
+  trackCliCommandAgentRuns(actual: string) {
+    this.trackCliCommand({
+      command: 'agent-runs',
+      value: actual,
+    });
+  }
+
+  trackCliCommandAiGateway(actual: string) {
+    this.trackCliCommand({
+      command: 'ai-gateway',
+      value: actual,
+    });
+  }
+
   trackCliCommandAlias(actual: string) {
     this.trackCliCommand({
       command: 'alias',
+      value: actual,
+    });
+  }
+
+  trackCliCommandActivity(actual: string) {
+    this.trackCliCommand({
+      command: 'activity',
+      value: actual,
+    });
+  }
+
+  trackCliCommandAlerts(actual: string) {
+    this.trackCliCommand({
+      command: 'alerts',
       value: actual,
     });
   }
@@ -47,6 +82,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandBuy(actual: string) {
+    this.trackCliCommand({
+      command: 'buy',
+      value: actual,
+    });
+  }
+
   trackCliCommandCache(actual: string) {
     this.trackCliCommand({
       command: 'cache',
@@ -61,6 +103,34 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandComments(actual: string) {
+    this.trackCliCommand({
+      command: 'comments',
+      value: actual,
+    });
+  }
+
+  trackCliCommandConnex(actual: string) {
+    this.trackCliCommand({
+      command: 'connex',
+      value: actual,
+    });
+  }
+
+  trackCliCommandContract(actual: string) {
+    this.trackCliCommand({
+      command: 'contract',
+      value: actual,
+    });
+  }
+
+  trackCliCommandCrons(actual: string) {
+    this.trackCliCommand({
+      command: 'crons',
+      value: actual,
+    });
+  }
+
   trackCliCommandCurl(actual: string) {
     this.trackCliCommand({
       command: 'curl',
@@ -71,6 +141,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandDeploy(actual: string) {
     this.trackCliCommand({
       command: 'deploy',
+      value: actual,
+    });
+  }
+
+  trackCliCommandDeployHooks(actual: string) {
+    this.trackCliCommand({
+      command: 'deploy-hooks',
       value: actual,
     });
   }
@@ -103,9 +180,30 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandFirewall(actual: string) {
+    this.trackCliCommand({
+      command: 'firewall',
+      value: actual,
+    });
+  }
+
+  trackCliCommandFlags(actual: string) {
+    this.trackCliCommand({
+      command: 'flags',
+      value: actual,
+    });
+  }
+
   trackCliCommandGit(actual: string) {
     this.trackCliCommand({
       command: 'git',
+      value: actual,
+    });
+  }
+
+  trackCliCommandGlobalConfig(actual: string) {
+    this.trackCliCommand({
+      command: 'global-config',
       value: actual,
     });
   }
@@ -201,9 +299,9 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
-  trackCliCommandLogsv2(actual: string) {
+  trackCliCommandMetrics(actual: string) {
     this.trackCliCommand({
-      command: 'logsv2',
+      command: 'metrics',
       value: actual,
     });
   }
@@ -271,9 +369,30 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandRoutes(actual: string) {
+    this.trackCliCommand({
+      command: 'routes',
+      value: actual,
+    });
+  }
+
   trackCliCommandRemove(actual: string) {
     this.trackCliCommand({
       command: 'remove',
+      value: actual,
+    });
+  }
+
+  trackCliCommandSkills(actual: string) {
+    this.trackCliCommand({
+      command: 'skills',
+      value: actual,
+    });
+  }
+
+  trackCliCommandSandbox(actual: string) {
+    this.trackCliCommand({
+      command: 'sandbox',
       value: actual,
     });
   }
@@ -292,9 +411,23 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandTokens(actual: string) {
+    this.trackCliCommand({
+      command: 'tokens',
+      value: actual,
+    });
+  }
+
   trackCliCommandTelemetry(actual: string) {
     this.trackCliCommand({
       command: 'telemetry',
+      value: actual,
+    });
+  }
+
+  trackCliCommandTraces(actual: string) {
+    this.trackCliCommand({
+      command: 'traces',
       value: actual,
     });
   }
@@ -320,6 +453,20 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandUsage(actual: string) {
+    this.trackCliCommand({
+      command: 'usage',
+      value: actual,
+    });
+  }
+
+  trackCliCommandVcr(actual: string) {
+    this.trackCliCommand({
+      command: 'vcr',
+      value: actual,
+    });
+  }
+
   trackCPUs() {
     super.trackCPUs();
   }
@@ -340,8 +487,52 @@ export class RootTelemetryClient extends TelemetryClient {
     this.trackCI(CiInfo.id);
   }
 
+  trackStdinIsTTY(isTTY: boolean) {
+    super.trackStdinIsTTY(isTTY);
+  }
+
   trackVersion(version: string | undefined) {
     super.trackVersion(version);
+  }
+
+  trackProjectId(projectId: string | undefined) {
+    super.trackProjectId(projectId);
+  }
+
+  trackInvocationId(invocationId: string | undefined) {
+    super.trackInvocationId(invocationId);
+  }
+
+  trackDeviceId(deviceId: string | undefined) {
+    super.trackDeviceId(deviceId);
+  }
+
+  trackVercelPluginActiveSession() {
+    super.trackVercelPluginActiveSession();
+  }
+
+  trackVercelPluginVersion(version: string | undefined) {
+    super.trackVercelPluginVersion(version);
+  }
+
+  trackErrorStatus(status: number | string | undefined) {
+    super.trackErrorStatus(status);
+  }
+
+  trackErrorCode(code: string | undefined) {
+    super.trackErrorCode(code);
+  }
+
+  trackErrorSlug(slug: string | undefined) {
+    super.trackErrorSlug(slug);
+  }
+
+  trackErrorAction(action: string | undefined) {
+    super.trackErrorAction(action);
+  }
+
+  trackErrorServerMessage(serverMessage: string | undefined) {
+    super.trackErrorServerMessage(serverMessage);
   }
 
   trackCliOptionCwd(cwd: string | undefined) {

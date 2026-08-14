@@ -1,84 +1,163 @@
-import type { Route } from '@vercel/routing-utils';
+import type { Rewrite, Route } from '@vercel/routing-utils';
 import type {
+  DetectEntrypointFn,
+  EnvVar,
+  EnvVars,
   ExperimentalServiceConfig,
+  ExperimentalServiceV2Config,
   ExperimentalServiceGroups,
   ExperimentalServices,
+  ExperimentalServicesV2,
+  ExperimentalServiceV2Binding,
+  ServiceBinding,
+  ServiceConfig,
+  Services,
+  ExperimentalService,
+  ExperimentalServiceV2,
   ServiceRuntime,
   ServiceType,
+  ServiceRefEnvVar,
+  Service,
   Builder,
 } from '@vercel/build-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 
 export type {
+  DetectEntrypointFn,
+  EnvVar,
+  EnvVars,
   ExperimentalServiceConfig,
   ExperimentalServiceGroups,
   ExperimentalServices,
+  ExperimentalServiceV2Config,
+  ExperimentalServicesV2,
+  ExperimentalServiceV2Binding,
+  ServiceBinding,
+  ServiceConfig,
+  Services,
+  ExperimentalService,
+  ExperimentalServiceV2,
   ServiceRuntime,
   ServiceType,
+  ServiceRefEnvVar,
+  Service,
   Builder,
 };
 
-export interface ResolvedService {
-  name: string;
-  type: ServiceType;
-  /** Service group name if this service belongs to a group */
-  group?: string;
-  /* build config */
-  workspace: string;
-  entrypoint?: string;
-  framework?: string;
-  builder: Builder;
-  buildCommand?: string;
-  installCommand?: string;
-  runtime?: string;
-  /**
-   * URL path prefix for routing requests to this service.
-   * Required for web services; requests matching this prefix are routed to this service.
-   * Root services use "/" as the catch-all.
-   */
-  routePrefix?: string;
-  /* Cron service config */
-  schedule?: string;
-  /* Worker service config */
-  topic?: string;
-  consumer?: string;
-}
+/**
+ * @deprecated Use `Service` instead
+ */
+export type ResolvedService = Service;
 
 export interface DetectServicesOptions {
   fs: DetectorFilesystem;
+  configuredServices?: ConfiguredServices;
+  configuredServicesType?: ConfiguredServicesType;
   /**
    * Working directory path (relative to fs root).
    * If provided, vercel.json is read from this path.
    */
   workPath?: string;
+  /**
+   * Optional callback that, given a candidate service directory and its
+   * detected framework, returns a normalized entrypoint (file path or
+   * `module:attr` reference). Used to suggested service configs.
+   */
+  detectEntrypoint?: DetectEntrypointFn;
 }
 
 export interface ServicesRoutes {
+  /** Host-based rewrite routes for subdomain-mounted web services */
+  hostRewrites: Route[];
   /** Rewrite routes for non-root web services (prefix-based) */
   rewrites: Route[];
   /** Default routes (catch-all for root web service) */
   defaults: Route[];
+  /** SPA fallback routes for static web services */
+  fallbacks: Route[];
   /**
-   * Internal routes for cron services.
-   * These route `/_svc/{serviceName}/crons/{entry}/{handler}` to the cron function.
-   * TODO: Implement
+   * Internal routes for schedule-triggered job services.
+   * These route `/_svc/{serviceName}/crons/{entry}/{handler}` to the scheduled job function.
    */
   crons: Route[];
   /**
    * Internal routes for worker services.
    * These route `/_svc/{serviceName}/workers/{entry}/{handler}` to the worker function.
-   * TODO: Implement
    */
   workers: Route[];
 }
 
-export interface DetectServicesResult {
-  services: ResolvedService[];
-  /** Routing rules derived from services */
+export type ConfiguredServicesType =
+  | 'experimentalServices'
+  | 'services'
+  | 'experimentalServicesV2';
+export type ConfiguredServices = ExperimentalServices | Services;
+
+/**
+ * A single service entry inferred from project structure.
+ *
+ * This is an intermediate format produced by auto-detection — it carries
+ * the detection results (including `mountPath`, the inferred route mount
+ * point) before they are converted into a concrete config format (V1 or V2).
+ */
+export interface InferredServiceConfig {
+  /** Service root directory relative to the project root. */
+  root: string;
+  /** Framework slug, if detected. */
+  framework?: string;
+  /** Service entrypoint (file path or `module:attr` reference). */
+  entrypoint?: string;
+  /** Runtime identifier (e.g. "python", "node"). */
+  runtime?: string;
+  /** Service type (e.g. "web", "cron", "worker"). */
+  type?: ServiceType;
+  /** Build command override. */
+  buildCommand?: string;
+  /** Pre-deploy command override. */
+  preDeployCommand?: string;
+  /**
+   * Inferred route mount path for this service.
+   * For example, `"/"` for the root frontend, `"/_/backend"` for a backend.
+   */
+  mountPath?: string;
+}
+
+export type InferredServicesConfig = Record<string, InferredServiceConfig>;
+
+export interface ResolvedServicesResult {
+  services: Service[];
+  source: DetectServicesSource;
+  useImplicitEnvInjection: boolean;
   routes: ServicesRoutes;
+  /** Top-level service-targeted rewrites (V2). */
+  rewrites: Rewrite[];
+  /** V2 services config for the build output, so the platform activates V2 routing. */
+  experimentalServicesV2?: Services;
   errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
 }
+
+export interface InferredServicesResult {
+  source: 'layout' | 'procfile' | 'railway' | 'render';
+  config: InferredServicesConfig;
+  services: Service[];
+  warnings: ServiceDetectionWarning[];
+}
+
+export interface DetectServicesResult extends ResolvedServicesResult {
+  /**
+   * Source of service definitions:
+   * - `configured`: loaded from explicit project configuration (`vercel.json#experimentalServices`, `vercel.json#services`, or the deprecated `vercel.json#experimentalServicesV2` alias)
+   * - `auto-detected`: inferred from project structure
+   */
+  // TODO: replace consumption of top-level fields with these nested objects in caller before removal of top-level fields.
+  /* Resolved services used by build/dev flows. */
+  resolved: ResolvedServicesResult;
+  /* Inferred services that can be migrated into project config. */
+  inferred: InferredServicesResult | null;
+}
+
+export type DetectServicesSource = 'configured' | 'auto-detected';
 
 export interface ServiceDetectionWarning {
   code: string;
@@ -93,11 +172,27 @@ export interface ServiceDetectionError {
 }
 
 export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
-  node: '@vercel/node',
+  node: '@vercel/backends',
   python: '@vercel/python',
   go: '@vercel/go',
   rust: '@vercel/rust',
   ruby: '@vercel/ruby',
+  container: '@vercel/container',
+};
+
+export const RUNTIME_MANIFESTS: Partial<Record<ServiceRuntime, string[]>> = {
+  node: ['package.json'],
+  python: [
+    'pyproject.toml',
+    'requirements.txt',
+    'Pipfile',
+    'pylock.yml',
+    'uv.lock',
+    'setup.py',
+  ],
+  go: ['go.mod'],
+  ruby: ['Gemfile'],
+  rust: ['Cargo.toml'],
 };
 
 export const ENTRYPOINT_EXTENSIONS: Record<string, ServiceRuntime> = {
@@ -120,4 +215,21 @@ export const ENTRYPOINT_EXTENSIONS: Record<string, ServiceRuntime> = {
 export const STATIC_BUILDERS = new Set([
   '@vercel/static-build',
   '@vercel/static',
+]);
+
+/**
+ * Builders that produce their own full route table with handle phases
+ * (filesystem, miss, rewrite, hit, error).
+ *
+ * In services mode we generally avoid generating synthetic catch-all routes
+ * for builders that provide their own routing. At service-detection time we
+ * only have the builder "use" string (not the loaded module), so this is an
+ * explicit allow-list for known route-table builders.
+ *
+ * NOTE: This is an explicit positive set because we can't check
+ * `builder.version` at service detection time.
+ */
+export const ROUTE_OWNING_BUILDERS = new Set([
+  '@vercel/next',
+  '@vercel/backends',
 ]);

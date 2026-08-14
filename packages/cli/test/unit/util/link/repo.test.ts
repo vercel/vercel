@@ -1,29 +1,37 @@
 import { describe, expect, it } from 'vitest';
 import { tmpdir } from 'node:os';
-import { join, sep } from 'node:path';
+import { join, normalize, sep } from 'node:path';
 import type { RepoProjectConfig } from '../../../../src/util/link/repo';
 import {
   findProjectsFromPath,
   findRepoRoot,
 } from '../../../../src/util/link/repo';
-import { client } from '../../../mocks/client';
 
 // Root of `vercel/vercel` repo
 const vercelRepoRoot = join(__dirname, '../../../../../..');
 
+/**
+ * Normalizes a path for comparison across platforms.
+ * On Windows, git returns paths with forward slashes, but Node.js uses backslashes.
+ */
+function normalizePath(p: string | undefined): string | undefined {
+  if (p === undefined) return undefined;
+  return normalize(p);
+}
+
 describe('findRepoRoot()', () => {
   it('should find Git repo root from root', async () => {
-    const repoRoot = await findRepoRoot(client, vercelRepoRoot);
-    expect(repoRoot).toEqual(vercelRepoRoot);
+    const repoRoot = await findRepoRoot(vercelRepoRoot);
+    expect(normalizePath(repoRoot)).toEqual(normalizePath(vercelRepoRoot));
   });
 
   it('should find Git repo root sub directory', async () => {
-    const repoRoot = await findRepoRoot(client, __dirname);
-    expect(repoRoot).toEqual(vercelRepoRoot);
+    const repoRoot = await findRepoRoot(__dirname);
+    expect(normalizePath(repoRoot)).toEqual(normalizePath(vercelRepoRoot));
   });
 
   it('should return `undefined` when no Git root found', async () => {
-    const repoRoot = await findRepoRoot(client, tmpdir());
+    const repoRoot = await findRepoRoot(tmpdir());
     expect(repoRoot).toEqual(undefined);
   });
 });

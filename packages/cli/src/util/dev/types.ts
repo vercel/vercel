@@ -15,7 +15,9 @@ import type {
 } from '@vercel/build-utils';
 import { VercelConfig } from '@vercel/client';
 import type { HandleValue, Route } from '@vercel/routing-utils';
+import type { Transform } from './transforms';
 import type { ProjectSettings } from '@vercel-internals/types';
+import type { Service } from '@vercel/fs-detectors';
 import type { BuilderWithPkg } from '../build/import-builders';
 
 export { VercelConfig };
@@ -24,6 +26,10 @@ export interface DevServerOptions {
   projectSettings?: ProjectSettings;
   envValues?: Record<string, string>;
   repoRoot?: string;
+  services?: Service[];
+  useImplicitServicesEnvInjection?: boolean;
+  projectId?: string;
+  orgId?: string;
 }
 
 export interface EnvConfigs {
@@ -53,9 +59,10 @@ export interface BuildMatch extends BuildConfig {
   buildProcess?: ChildProcess;
 }
 
-export interface HttpHandler {
-  (req: http.IncomingMessage, res: http.ServerResponse): void;
-}
+export type HttpHandler = (
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+) => void;
 
 export interface BuilderInputs {
   [path: string]: FileFsRef;
@@ -147,6 +154,10 @@ export interface RouteResult {
   isDestUrl: boolean;
   // the phase that this route is defined in
   phase?: HandleValue | null;
+  // request-time transforms are applied immediately to the request
+  requestTransforms?: Transform[];
+  // deferred response-time transforms
+  responseTransforms?: Transform[];
 }
 
 export interface InvokePayload {

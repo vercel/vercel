@@ -5,7 +5,6 @@ import { isError } from '@vercel/error-utils';
 import type { Team, User } from '@vercel-internals/types';
 
 export default async function reportError(
-  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
   sentry: typeof import('@sentry/node'),
   client: Client,
   error: unknown

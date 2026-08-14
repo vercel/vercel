@@ -27,7 +27,7 @@ type ServerlessFunctionConfig = {
   handler: string;
   runtime: string;
   memory?: number;
-  maxDuration?: number;
+  maxDuration?: number | 'max';
   environment?: Record<string, string>[];
   allowQuery?: string[];
   regions?: string[];

@@ -1,0 +1,7 @@
+{
+  "name": "services-static-docs",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs"
+  }
+}

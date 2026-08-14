@@ -1,5 +1,108 @@
 # @vercel/oidc
 
+## 3.8.1
+
+### Patch Changes
+
+- Updated dependencies [6e29745]
+  - @vercel/cli-config@0.2.1
+
+## 3.8.0
+
+### Minor Changes
+
+- d29a8f9: Cache exchanged OIDC tokens in memory, keyed by a hash of the source token, audience, and jti, so repeated exchanges reuse the result instead of calling the token-exchange endpoint every time. Cached tokens are evicted when the API-provided expiry passes, and the cache is bounded with least-recently-used eviction to avoid unbounded growth. Add a `skipCache` option (surfaced as `skipTokenCache` on `awsCredentialsProvider`) to bypass the cache. `jti` and the cache-skip flags are now only accepted alongside an `audience`, since they only take effect during a token exchange.
+
+## 3.7.1
+
+### Patch Changes
+
+- fb93ff6: Deprecate `getVercelOidcTokenSync` in favor of `getVercelOidcToken`
+
+## 3.7.0
+
+### Minor Changes
+
+- 415fde0: Add optional `audience` and `jti` parameters to exchange Vercel OIDC tokens for use with AWS STS and other providers.
+
+## 3.6.2
+
+### Patch Changes
+
+- Updated dependencies [3f21605]
+  - @vercel/cli-exec@1.0.0
+
+## 3.6.1
+
+### Patch Changes
+
+- 01cf6c2: Add `verifyVercelOidcToken` for verifying Vercel OIDC tokens against Vercel's remote JWKS.
+
+## 3.6.0
+
+### Minor Changes
+
+- fddeb55: Add configurable credentials storage handling across the CLI auth stack. Storage of credentials can be configured by the new `credStorage` key in global `config.json` or the new `VERCEL_TOKEN_STORAGE` environment variable. The environment variable takes precedence over the configuration key. Accepted values are `file` (store credentials in `auth.json`), `keyring` (store credentials in system keyring, e.g macOS Keychain or Secrets Service on Linux), and `auto` (try storing in keyring if available, fall back to `file` if keyring is not available).
+
+  `@vercel/oidc` supports keyring-stored authentication credentials by delegating the OIDC minting to the CLI executable via `@vercel/cli-exec`.
+
+### Patch Changes
+
+- Updated dependencies [fddeb55]
+  - @vercel/cli-config@0.2.0
+
+## 3.5.0
+
+### Minor Changes
+
+- 5a700dc: Add conditional edge-light export to support Edge Runtime
+
+## 3.4.1
+
+### Patch Changes
+
+- ae20217: Upgrade to TypeScript 5.9
+
+## 3.4.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+## 3.3.1
+
+### Patch Changes
+
+- bf07448: Revert "auth: Make it possible to store CLI credentials in OS keychain (#16083)"
+
+## 3.3.0
+
+### Minor Changes
+
+- 24686d0: Add configurable auth token storage with keyring-backed persistence and file fallback support.
+
+### Patch Changes
+
+- 56c9f89: add missing prettier dev dependency
+- Updated dependencies [24686d0]
+- Updated dependencies [d36ee35]
+- Updated dependencies [56c9f89]
+  - @vercel/cli-auth@0.1.0
+
+## 3.2.1
+
+### Patch Changes
+
+- Pin `typedoc-plugin-markdown` to `3.15.2` and `typedoc-plugin-mdn-links` to `3.0.3` to match the version used by `@vercel/edge`. The previous `4.1.2` version requires `typedoc@0.26.x` as a peer dependency but was paired with `typedoc@0.24.6`, which caused CI failures whenever pnpm hoisted the 4.x plugin (the plugin calls `app.internationalization.addTranslations`, which does not exist in typedoc 0.24). The choice of which plugin version got hoisted was non-deterministic, which is why the failure appeared as flaky `Build @vercel/<pkg>` steps in CI. ([#16072](https://github.com/vercel/vercel/pull/16072))
+
+## 3.2.0
+
+### Minor Changes
+
+- - Add optional `team` and `project` parameters to `getVercelOidcToken()` to allow explicit control over token refresh behavior instead of always reading from `.vercel/project.json` ([#14864](https://github.com/vercel/vercel/pull/14864))
+  - Add `expirationBufferMs` option to both `getVercelOidcToken()` and `getVercelToken()` to proactively refresh tokens before they expire (useful for avoiding auth errors mid-request)
+  - Export `getVercelToken()` function with `GetVercelTokenOptions` interface to allow refreshing CLI tokens with configurable expiration buffer
+
 ## 3.1.0
 
 ### Minor Changes

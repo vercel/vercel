@@ -1,0 +1,9 @@
+{
+  "experimentalServices": {
+    "api": {
+      "entrypoint": "index.js",
+      "routePrefix": "/",
+      "preDeployCommand": "node pre-deploy.js"
+    }
+  }
+}

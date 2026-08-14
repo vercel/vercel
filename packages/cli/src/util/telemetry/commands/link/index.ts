@@ -31,12 +31,28 @@ export class LinkTelemetryClient
     }
   }
 
-  trackCliOptionProject(project: string | undefined) {
-    if (project) {
+  trackCliOptionTeam(value: string | undefined) {
+    if (value) {
       this.trackCliOption({
-        option: 'project',
+        option: 'team',
         value: this.redactedValue,
       });
     }
+  }
+
+  trackCliOptionProjectId(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'project-id',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliSubcommandAdd(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'add',
+      value: actual,
+    });
   }
 }

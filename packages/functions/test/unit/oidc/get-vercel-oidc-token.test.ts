@@ -10,7 +10,6 @@ describe('getVercelOidcTokenSync', () => {
       process.env.VERCEL_OIDC_TOKEN = token;
     });
     afterEach(() => {
-      // biome-ignore lint/performance/noDelete: necessary for test cleanup
       delete process.env.VERCEL_OIDC_TOKEN;
     });
 
@@ -63,7 +62,6 @@ describe('getVercelOidcTokenSync', () => {
       };
     });
     afterEach(() => {
-      // biome-ignore lint/performance/noDelete: necessary for test cleanup
       delete process.env.VERCEL_OIDC_TOKEN;
       delete globalThis[
         Symbol.for(

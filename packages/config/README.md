@@ -31,6 +31,12 @@ export const config: VercelConfig = {
       },
     }),
 
+    // Override the path observed by the target runtime. High-level path
+    // parameters use path-to-regexp syntax and compile to low-level captures.
+    routes.rewrite('/api/:path*', '/internal/:path*', {
+      requestPath: '/:path*',
+    }),
+
     // Type-safe path parameters with callback
     routes.rewrite(
       '/users/:userId/posts/:postId',
@@ -65,7 +71,7 @@ export const config: VercelConfig = {
 - **Type-safe path parameters** - Extract `:userId` from patterns with full IntelliSense
 - **Deployment environment variables** - Use `deploymentEnv()` for Vercel project env vars
 - **Readable syntax** - Helper methods like `routes.redirect()`, `routes.rewrite()`, `routes.header()`
-- **Transforms** - Modify request/response headers and query parameters on the fly
+- **Transforms** - Modify request paths, request/response headers, and query parameters on the fly
 - **Conditions** - Advanced routing with `has` and `missing` conditions
 - **CLI tools** - `compile` and `validate` commands for development
 

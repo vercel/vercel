@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import { checkDeploymentStatus } from '@vercel/client';
 import type Client from '../../util/client';
-import { emoji, prependEmoji } from '../../util/emoji';
 import { parseArguments } from '../../util/get-args';
+import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import { getCommandName } from '../../util/pkg-name';
 import { getDeploymentByIdOrURL } from '../../util/deploy/get-deployment-by-id-or-url';
 import getScope from '../../util/get-scope';
@@ -12,6 +12,7 @@ import Now from '../../util';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
 import stamp from '../../util/output/stamp';
 import ua from '../../util/ua';
+import { getFetchDispatcher } from '../../util/fetch';
 import type { VercelClientOptions } from '@vercel/client';
 import { help } from '../help';
 import { redeployCommand } from './command';
@@ -150,20 +151,14 @@ export default async function redeploy(client: Client): Promise<number> {
       isProdDeployment = customEnvironment.type === 'production';
     }
 
-    output.print(
-      `${prependEmoji(
-        `Inspect: ${chalk.bold(deployment.inspectorUrl)} ${deployStamp()}`,
-        emoji('inspect')
-      )}\n`
-    );
+    printAlignedLabel('Inspect', chalk.cyan(deployment.inspectorUrl));
 
-    output.print(
-      prependEmoji(
-        `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
-          previewUrl
-        )} ${deployStamp()}`,
-        emoji('success')
-      ) + `\n`
+    // The ▲ gutter belongs on the Aliased row, which only prints when we
+    // wait for alias assignment — with --no-wait it falls back to Production.
+    printAlignedLabel(
+      isProdDeployment ? 'Production' : 'Preview',
+      chalk.cyan(previewUrl),
+      isProdDeployment && noWait ? { gutter: '▲' } : {}
     );
 
     if (!client.stdout.isTTY) {
@@ -172,7 +167,7 @@ export default async function redeploy(client: Client): Promise<number> {
 
     if (!noWait) {
       output.spinner(
-        deployment.readyState === 'QUEUED' ? 'Queued' : 'Building',
+        deployment.readyState === 'QUEUED' ? 'Queued…' : 'Building…',
         0
       );
       let project: Project | ProjectNotFound | undefined;
@@ -187,11 +182,24 @@ export default async function redeploy(client: Client): Promise<number> {
         deployment.aliasAssigned &&
         !rollingRelease
       ) {
-        output.spinner('Completing', 0);
+        output.spinner('Completing…', 0);
+
+        // The status polling loop is skipped, so render the Aliased row
+        // (and its ▲ gutter) here instead of in the alias-assigned handler.
+        if (
+          deployment.target === 'production' &&
+          deployment.alias &&
+          deployment.alias.length > 0
+        ) {
+          output.stopSpinner();
+          const primaryDomain = deployment.alias[0];
+          const prodUrl = `https://${primaryDomain}`;
+          printAlignedLabel('Aliased', chalk.cyan(prodUrl), { gutter: '▲' });
+        }
       } else {
         try {
           const clientOptions: VercelClientOptions = {
-            agent: client.agent,
+            dispatcher: getFetchDispatcher(),
             apiUrl: client.apiUrl,
             debug: output.debugEnabled,
             path: '', // unused by checkDeploymentStatus()
@@ -205,9 +213,9 @@ export default async function redeploy(client: Client): Promise<number> {
             clientOptions
           )) {
             if (event.type === 'building') {
-              output.spinner('Building', 0);
+              output.spinner('Building…', 0);
             } else if (event.type === 'ready' && rollingRelease) {
-              output.spinner('Releasing', 0);
+              output.spinner('Releasing…', 0);
               output.stopSpinner();
               deployment = event.payload;
               break;
@@ -217,9 +225,9 @@ export default async function redeploy(client: Client): Promise<number> {
                 ? (event.payload as any).checksState === 'completed'
                 : true)
             ) {
-              output.spinner('Completing', 0);
+              output.spinner('Completing…', 0);
             } else if (event.type === 'checks-running') {
-              output.spinner('Running Checks', 0);
+              output.spinner('Running Checks…', 0);
             } else if (
               event.type === 'alias-assigned' ||
               event.type === 'checks-conclusion-failed'
@@ -235,12 +243,9 @@ export default async function redeploy(client: Client): Promise<number> {
               ) {
                 const primaryDomain = event.payload.alias[0];
                 const prodUrl = `https://${primaryDomain}`;
-                output.print(
-                  prependEmoji(
-                    `Aliased: ${chalk.bold(prodUrl)} ${deployStamp()}`,
-                    emoji('link')
-                  ) + '\n'
-                );
+                printAlignedLabel('Aliased', chalk.cyan(prodUrl), {
+                  gutter: '▲',
+                });
               }
 
               deployment = event.payload;
@@ -269,7 +274,13 @@ export default async function redeploy(client: Client): Promise<number> {
       }
     }
 
-    return printDeploymentStatus(deployment, deployStamp, noWait, false);
+    return printDeploymentStatus(
+      client,
+      deployment,
+      deployStamp,
+      noWait,
+      false
+    );
   } catch (err: unknown) {
     output.prettyError(err);
     if (isErrnoException(err) && err.code === 'ERR_INVALID_TEAM') {

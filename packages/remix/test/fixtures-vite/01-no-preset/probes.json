@@ -9,6 +9,13 @@
       "path": "/does-not-exist",
       "status": 404,
       "mustContain": "Not Found"
+    },
+    {
+      "path": "/assets/does-not-exist-abc123.js",
+      "status": 404,
+      "notResponseHeaders": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     }
   ]
 }

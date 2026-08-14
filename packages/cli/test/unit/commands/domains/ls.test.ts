@@ -21,6 +21,13 @@ describe('domains ls', () => {
         },
       ]);
     });
+
+    it('prints help for the list subcommand', async () => {
+      client.setArgv('domains', 'ls', '--help');
+      const exitCodePromise = domains(client);
+      await expect(client.stderr).toOutput('Show all domains in a list');
+      await expect(exitCodePromise).resolves.toEqual(2);
+    });
   });
 
   it('should list up to 20 domains by default', async () => {

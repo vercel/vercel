@@ -1,8 +1,14 @@
+[**@vercel/edge**](../README.md)
+
+---
+
 # Interface: RequestContext
+
+Defined in: [packages/edge/src/request.ts:13](https://github.com/vercel/vercel/blob/main/packages/edge/src/request.ts#L13)
 
 An extension to the standard `Request` object that is passed to every Edge Function.
 
-**`Example`**
+## Example
 
 ```ts
 import type { RequestContext } from '@vercel/edge';
@@ -15,23 +21,31 @@ export default async function handler(
 }
 ```
 
-## Table of contents
-
-### Methods
-
-- [waitUntil](RequestContext.md#waituntil)
-
 ## Methods
 
-### waitUntil
+### waitUntil()
 
-▸ **waitUntil**(`promise`): `void`
+> **waitUntil**(`promise`): `void`
+
+Defined in: [packages/edge/src/request.ts:47](https://github.com/vercel/vercel/blob/main/packages/edge/src/request.ts#L47)
 
 A method that can be used to keep the function running after a response has been sent.
 This is useful when you have an async task that you want to keep running even after the
 response has been sent and the request has ended.
 
-**`Example`**
+#### Parameters
+
+##### promise
+
+[`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<`unknown`\>
+
+A promise that will be kept alive until it resolves or rejects.
+
+#### Returns
+
+`void`
+
+#### Example
 
 <caption>Sending an internal error to an error tracking service</caption>
 
@@ -63,17 +77,3 @@ export async function handleRequest(
   }
 }
 ```
-
-#### Parameters
-
-| Name      | Type                                                                                                              | Description                                                     |
-| :-------- | :---------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------- |
-| `promise` | [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`unknown`\> | A promise that will be kept alive until it resolves or rejects. |
-
-#### Returns
-
-`void`
-
-#### Defined in
-
-[packages/edge/src/request.ts:47](https://github.com/vercel/vercel/blob/main/packages/edge/src/request.ts#L47)

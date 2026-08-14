@@ -1,12 +1,20 @@
 node_modules
+!packages/node/test/unit-fixtures/**/node_modules
+!packages/node/test/unit-fixtures/**/node_modules/**
 dist
+dist-bin
+dist-native
+.pkg-staging
+.node-runtime
 .vscode
+.zed
 npm-debug.log
 yarn-error.log
 .nyc_output
 coverage
 coverage.lcov
 *.swp
+*~
 *.bak
 *.tgz
 packages/cli/src/util/dev/templates/*.ts
@@ -19,6 +27,8 @@ packages/cli/test/dev/fixtures/**/dist
 packages/cli/test/dev/fixtures/**/public
 packages/cli/test/dev/fixtures/**/.now
 packages/cli/test/dev/fixtures/**/.vercel
+packages/cli/test/**/.vercel/builders/package.json
+packages/cli/test/**/.vercel/builders/package-lock.json
 !packages/cli/test/fixtures/unit/commands/build/monorepo-detection/**/yarn.lock
 packages/cli/test/fixtures/integration
 test/lib/deployment/failed-page.txt
@@ -34,3 +44,15 @@ __pycache__
 turbo-cache-key.json
 junit.xml
 **/target/
+.env*.local
+# CLI "target" subcommand (e.g. vercel target list) is source, not build output
+!packages/cli/src/commands/target/
+!packages/cli/src/commands/target/**
+!packages/cli/src/util/telemetry/commands/target/
+!packages/cli/src/util/telemetry/commands/target/**
+# CLI target command tests
+!packages/cli/test/unit/commands/target/
+!packages/cli/test/unit/commands/target/**
+.claude/settings.local.json
+.pnpm-store
+.env*

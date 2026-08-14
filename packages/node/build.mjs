@@ -37,3 +37,8 @@ copyFileSync(
   new URL('src/edge-functions/edge-handler-template.js', import.meta.url),
   new URL('dist/edge-handler-template.js', import.meta.url)
 );
+
+copyFileSync(
+  new URL('src/bundling-handler.js', import.meta.url),
+  new URL('dist/bundling-handler.js', import.meta.url)
+);

@@ -29,6 +29,8 @@ export interface UvIndexEntry {
   default?: boolean;
   /** Mark this index as explicit (must be explicitly referenced per-package) */
   explicit?: boolean;
+  /** Index format: omit for standard (PEP 503), or "flat" for flat indexes (--find-links) */
+  format?: string;
 }
 
 /**
@@ -49,4 +51,9 @@ export interface UvConfig {
    * Workspace configuration.
    */
   workspace?: UvConfigWorkspace;
+  /**
+   * Legacy dev dependencies (pre-PEP 735).
+   * Equivalent to `[dependency-groups].dev`.
+   */
+  'dev-dependencies'?: string[];
 }

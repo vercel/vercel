@@ -9,12 +9,14 @@ import cmd from '../../util/output/cmd';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
+import { outputAgentError } from '../../util/agent-output';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { listSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import { TeamsListTelemetryClient } from '../../util/telemetry/commands/teams/list';
 import { validateLsArgs } from '../../util/validate-ls-args';
+import { getPaginationOpts } from '../../util/get-pagination-opts';
 
 export default async function list(
   client: Client,
@@ -32,6 +34,17 @@ export default async function list(
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: error instanceof Error ? error.message : String(error),
+        },
+        1
+      );
+    }
     printError(error);
     return 1;
   }
@@ -47,6 +60,7 @@ export default async function list(
   }
 
   const next = parsedArgs.flags['--next'];
+  const limit = parsedArgs.flags['--limit'];
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
@@ -55,6 +69,7 @@ export default async function list(
   const asJson = formatResult.jsonOutput;
 
   telemetry.trackCliOptionNext(next);
+  telemetry.trackCliOptionLimit(limit);
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
   telemetry.trackCliOptionCount(parsedArgs.flags['--count']);
   telemetry.trackCliOptionUntil(parsedArgs.flags['--until']);
@@ -64,10 +79,17 @@ export default async function list(
     output.error('Please provide a number for flag `--next`');
     return 1;
   }
+  try {
+    getPaginationOpts(parsedArgs.flags);
+  } catch (error) {
+    output.error(error instanceof Error ? error.message : String(error));
+    return 1;
+  }
 
   output.spinner('Fetching teams');
   const { teams, pagination } = await getTeams(client, {
     next,
+    limit,
     apiVersion: 2,
   });
   let { currentTeam } = config;
@@ -141,7 +163,7 @@ export default async function list(
     );
     client.stderr.write('\n');
 
-    if (pagination?.count === 20) {
+    if (pagination?.next) {
       const flags = getCommandFlags(parsedArgs.flags, [
         '--next',
         '-N',

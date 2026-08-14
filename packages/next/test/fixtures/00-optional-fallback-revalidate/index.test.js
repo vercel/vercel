@@ -1,4 +1,3 @@
-/* eslint-env jest */
 const path = require('path');
 const cheerio = require('cheerio');
 const { check, deployAndTest } = require('../../utils');
@@ -32,7 +31,7 @@ const getProps = async path => {
 
 const getInitialData = async path => {
   return fetch(
-    `${ctx.deploymentUrl}/_next/data/testing-build-id${path}.json`
+    `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS${path}.json`
   ).then(res => res.json());
 };
 

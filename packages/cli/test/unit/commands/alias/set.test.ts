@@ -75,19 +75,25 @@ describe('alias set', () => {
     });
   });
 
-  describe('[deployment url] [custom domain]', () => {
+  describe('[ID or URL] [custom domain]', () => {
     it('tracks arguments', async () => {
       const user = useUser();
       const { url } = useDeployment({ creator: user });
+      let idOrUrl: string | undefined;
+      let aliasTarget: string | undefined;
       client.scenario.post(
         '/:version/deployments/:id/aliases',
         (request, response) => {
+          idOrUrl = request.params.id;
+          aliasTarget = request.body.alias;
           response.json({});
         }
       );
       client.setArgv('alias', 'set', url, 'custom');
       const exitCode = await alias(client);
       expect(exitCode, 'exit code of "alias"').toEqual(0);
+      expect(idOrUrl).toEqual(url);
+      expect(aliasTarget).toEqual('custom');
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -95,7 +101,7 @@ describe('alias set', () => {
           value: 'set',
         },
         {
-          key: `argument:deployment-url`,
+          key: `argument:id-or-url`,
           value: '[REDACTED]',
         },
         {
@@ -103,6 +109,68 @@ describe('alias set', () => {
           value: '[REDACTED]',
         },
       ]);
+    });
+
+    it('passes valid URLs as hosts to the alias endpoint', async () => {
+      useUser();
+      const url = 'https://my-alias.vercel.app';
+      let idOrUrl: string | undefined;
+      client.scenario.post(
+        '/:version/deployments/:id/aliases',
+        (request, response) => {
+          idOrUrl = request.params.id;
+          response.json({});
+        }
+      );
+
+      client.setArgv('alias', 'set', url, 'custom');
+      const exitCode = await alias(client);
+
+      expect(exitCode, 'exit code of "alias"').toEqual(0);
+      expect(idOrUrl).toEqual('my-alias.vercel.app');
+    });
+
+    it('passes IDs unchanged to the alias endpoint', async () => {
+      useUser();
+      const id = 'abc123';
+      let idOrUrl: string | undefined;
+      client.scenario.post(
+        '/:version/deployments/:id/aliases',
+        (request, response) => {
+          idOrUrl = request.params.id;
+          response.json({});
+        }
+      );
+
+      client.setArgv('alias', 'set', id, 'custom');
+      const exitCode = await alias(client);
+
+      expect(exitCode, 'exit code of "alias"').toEqual(0);
+      expect(idOrUrl).toEqual(id);
+    });
+
+    it('outputs the API error for URLs that are not found', async () => {
+      useUser();
+      const url = 'https://missing-alias.vercel.app';
+      const host = 'missing-alias.vercel.app';
+      client.scenario.post(
+        '/:version/deployments/:id/aliases',
+        (request, response) => {
+          expect(request.params.id).toEqual(host);
+          response.status(404).json({
+            error: {
+              code: 'not_found',
+              message: 'Not found',
+            },
+          });
+        }
+      );
+
+      client.setArgv('alias', 'set', url, 'custom');
+      const exitCode = await alias(client);
+
+      expect(exitCode, 'exit code of "alias"').toEqual(1);
+      await expect(client.stderr).toOutput(`Failed to find ID or URL ${host}`);
     });
   });
 });

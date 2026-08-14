@@ -1,19 +1,61 @@
 export {
+  builderToFrameworks,
   detectBuilders,
   detectOutputDirectory,
   detectApiDirectory,
   detectApiExtensions,
+  getProxyBuilder,
+  validateProxyConfig,
   type Options as DetectBuildersOptions,
+  type ProxyConfig,
 } from './detect-builders';
 export {
   detectServices,
   generateServicesRoutes,
 } from './services/detect-services';
+export {
+  resolveAllConfiguredServicesV2,
+  resolveConfiguredServiceV2,
+  validateServiceConfigV2,
+} from './services/resolve-v2';
+export {
+  isExperimentalService,
+  isExperimentalServiceV2,
+} from '@vercel/build-utils';
+export { autoDetectServices } from './services/auto-detect';
+export type {
+  AutoDetectOptions,
+  AutoDetectResult,
+} from './services/auto-detect';
+export {
+  isStaticBuild,
+  isRouteOwningBuilder,
+  INTERNAL_SERVICE_PREFIX,
+  getInternalServiceFunctionPath,
+  getInternalServiceCronPath,
+  getInternalServiceCronPathPrefix,
+  getInternalServiceWorkerPath,
+  getInternalServiceWorkerPathPrefix,
+} from './services/utils';
 export { getServicesBuilders } from './services/get-services-builders';
 export type {
   DetectServicesOptions,
   DetectServicesResult,
+  DetectServicesSource,
+  InferredServiceConfig,
+  InferredServicesConfig,
+  ResolvedServicesResult,
+  InferredServicesResult,
   ResolvedService,
+  Service,
+  ExperimentalService,
+  ExperimentalServiceV2,
+  ExperimentalServiceV2Config,
+  ExperimentalServicesV2,
+  ExperimentalServiceV2Binding,
+  ServiceBinding,
+  ServiceConfig,
+  Services,
   ServicesRoutes,
   ServiceDetectionError,
 } from './services/types';

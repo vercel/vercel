@@ -12,7 +12,6 @@ export function execCli(
   args: string[] = [],
   opts: execa.Options<string> & { token?: string | boolean } = {}
 ): execa.ExecaChildProcess<string> {
-  // eslint-disable-next-line no-console
   console.log(`$ vercel ${args.join(' ')}`);
 
   if (!args.includes('--token') && opts.token !== false) {
@@ -34,9 +33,13 @@ export function execCli(
   combinedOptions.env = combinedOptions.env ?? {};
 
   // Force color to be off. We can test color in unit tests.
+  // Explicitly set FORCE_COLOR=0 to override CI's FORCE_COLOR=1,
+  // which takes precedence over NO_COLOR in chalk.
   combinedOptions.env['NO_COLOR'] = '1';
-  delete combinedOptions.env['FORCE_COLOR'];
-  delete process.env['FORCE_COLOR']; // this is inherited by execa
+  combinedOptions.env['FORCE_COLOR'] = '0';
+  // Disable the update notifier so interactive tests don't hang on the
+  // cache-dependent "Would you like to upgrade now?" prompt.
+  combinedOptions.env['NO_UPDATE_NOTIFIER'] = '1';
 
   return execa(file, args, combinedOptions);
 }

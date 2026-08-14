@@ -34,6 +34,18 @@ describe('getConfig()', () => {
     `);
   });
 
+  it('should parse config with maxDuration set to "max"', () => {
+    const project = new Project();
+    const sourcePath = join(__dirname, 'fixtures/node-max-duration.js');
+    const config = getConfig(project, sourcePath);
+    expect(config).toMatchInlineSnapshot(`
+      {
+        "maxDuration": "max",
+        "runtime": "nodejs",
+      }
+    `);
+  });
+
   it('should return `null` when no config was exported', () => {
     const project = new Project();
     const sourcePath = join(__dirname, 'fixtures/no-config.js');

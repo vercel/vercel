@@ -1,34 +1,55 @@
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
-import getSubcommand from '../../util/get-subcommand';
+import resolveSubcommand from '../../util/get-subcommand';
 import { type Command, help } from '../help';
 import list from './list';
 import {
   blobCommand,
   delSubcommand,
+  getSubcommand,
   listSubcommand,
+  presignSubcommand,
   putSubcommand,
   copySubcommand,
-  storeSubcommand,
+  createStoreSubcommand,
+  deleteStoreSubcommand,
+  getStoreInfoSubcommand,
+  listStoresSubcommand,
+  signedTokenSubcommand,
+  emptyStoreSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import { BlobTelemetryClient } from '../../util/telemetry/commands/blob';
 import put from './put';
+import get from './get';
 import del from './del';
 import copy from './copy';
-import { store } from './store';
+import addStore from './store-add';
+import removeStore from './store-remove';
+import getStore from './store-get';
+import listStores from './store-list';
+import emptyStore from './store-empty';
+import presign from './presign';
+import signedToken from './signed-token';
 import { printError } from '../../util/error';
-import { getBlobRWToken } from '../../util/blob/token';
+import { findFlagValue, getBlobRWToken } from '../../util/blob/token';
 
 const COMMAND_CONFIG = {
   list: getCommandAliases(listSubcommand),
   put: getCommandAliases(putSubcommand),
+  get: getCommandAliases(getSubcommand),
   del: getCommandAliases(delSubcommand),
   copy: getCommandAliases(copySubcommand),
-  store: getCommandAliases(storeSubcommand),
+  'signed-token': getCommandAliases(signedTokenSubcommand),
+  presign: getCommandAliases(presignSubcommand),
+  'create-store': getCommandAliases(createStoreSubcommand),
+  'delete-store': getCommandAliases(deleteStoreSubcommand),
+  'get-store': getCommandAliases(getStoreInfoSubcommand),
+  'list-stores': getCommandAliases(listStoresSubcommand),
+  'empty-store': getCommandAliases(emptyStoreSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -50,7 +71,7 @@ export default async function main(client: Client) {
   }
 
   const subArgs = parsedArgs.args.slice(1);
-  const { subcommand, args, subcommandOriginal } = getSubcommand(
+  const { subcommand, args, subcommandOriginal } = resolveSubcommand(
     subArgs,
     COMMAND_CONFIG
   );
@@ -70,7 +91,9 @@ export default async function main(client: Client) {
   }
 
   const token = await getBlobRWToken(client, client.argv);
-  telemetry.trackCliOptionRwToken();
+  telemetry.trackCliOptionRwToken(findFlagValue(client.argv, '--rw-token'));
+  telemetry.trackCliOptionOidcToken(findFlagValue(client.argv, '--oidc-token'));
+  telemetry.trackCliOptionStoreId(findFlagValue(client.argv, '--store-id'));
 
   switch (subcommand) {
     case 'list':
@@ -87,7 +110,7 @@ export default async function main(client: Client) {
         return 1;
       }
 
-      return list(client, args, token.token);
+      return list(client, args, token);
     case 'put':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
@@ -102,7 +125,22 @@ export default async function main(client: Client) {
         return 1;
       }
 
-      return put(client, args, token.token);
+      return put(client, args, token);
+    case 'get':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('blob', subcommandOriginal);
+        printHelp(getSubcommand);
+        return 2;
+      }
+
+      telemetry.trackCliSubcommandGet(subcommandOriginal);
+
+      if (!token.success) {
+        printError(token.error);
+        return 1;
+      }
+
+      return get(client, args, token);
     case 'del':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
@@ -117,7 +155,7 @@ export default async function main(client: Client) {
         return 1;
       }
 
-      return del(client, args, token.token);
+      return del(client, args, token);
     case 'copy':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
@@ -132,10 +170,92 @@ export default async function main(client: Client) {
         return 1;
       }
 
-      return copy(client, args, token.token);
-    case 'store':
-      telemetry.trackCliSubcommandStore(subcommandOriginal);
-      return store(client, token);
+      return copy(client, args, token);
+    case 'signed-token':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('blob', subcommandOriginal);
+        printHelp(signedTokenSubcommand);
+        return 2;
+      }
+
+      telemetry.trackCliSubcommandSignedToken(subcommandOriginal);
+
+      if (!token.success) {
+        printError(token.error);
+        return 1;
+      }
+
+      return signedToken(client, args, token);
+    case 'presign':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('blob', subcommandOriginal);
+        printHelp(presignSubcommand);
+        return 2;
+      }
+
+      telemetry.trackCliSubcommandPresign(subcommandOriginal);
+
+      if (!token.success) {
+        printError(token.error);
+        return 1;
+      }
+
+      return presign(client, args, token);
+    case 'create-store':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('blob', subcommandOriginal);
+        printHelp(createStoreSubcommand);
+        return 2;
+      }
+
+      telemetry.trackCliSubcommandCreateStore(subcommandOriginal);
+
+      return addStore(client, args);
+    case 'delete-store':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('blob', subcommandOriginal);
+        printHelp(deleteStoreSubcommand);
+        return 2;
+      }
+
+      telemetry.trackCliSubcommandDeleteStore(subcommandOriginal);
+
+      return removeStore(client, args, token);
+    case 'get-store':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('blob', subcommandOriginal);
+        printHelp(getStoreInfoSubcommand);
+        return 2;
+      }
+
+      telemetry.trackCliSubcommandGetStore(subcommandOriginal);
+
+      return getStore(client, args, token);
+    case 'list-stores':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('blob', subcommandOriginal);
+        printHelp(listStoresSubcommand);
+        return 2;
+      }
+
+      telemetry.trackCliSubcommandListStores(subcommandOriginal);
+
+      return listStores(client, args);
+    case 'empty-store':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('blob', subcommandOriginal);
+        printHelp(emptyStoreSubcommand);
+        return 2;
+      }
+
+      telemetry.trackCliSubcommandEmptyStore(subcommandOriginal);
+
+      if (!token.success) {
+        printError(token.error);
+        return 1;
+      }
+
+      return emptyStore(client, args, token);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(blobCommand, { columns: client.stderr.columns }));

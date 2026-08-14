@@ -17,6 +17,9 @@ interface ApiLogEntry {
   statusCode?: number;
   environment?: string;
   domain?: string;
+  cache?: string;
+  cacheReason?: string;
+  pprState?: string;
   logs?: Array<{
     level?: string;
     message?: string;
@@ -62,6 +65,29 @@ describe('logs-v2 utility', () => {
 
       expect(result.logs).toHaveLength(1);
       expect(result.logs[0].id).toEqual('log_123');
+    });
+
+    it('should pass through cache status, cacheReason, and pprState', async () => {
+      const mockLogs = [
+        createMockApiLog({
+          cache: 'BYPASS',
+          cacheReason: 'draft_mode',
+          pprState: 'partially_dynamic',
+        }),
+      ];
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        res.json({ rows: mockLogs, hasMoreRows: false });
+      });
+
+      const result = await fetchRequestLogs(client, {
+        projectId: 'prj_test',
+        ownerId: 'team_test',
+      });
+
+      expect(result.logs).toHaveLength(1);
+      expect(result.logs[0].cache).toEqual('BYPASS');
+      expect(result.logs[0].cacheReason).toEqual('draft_mode');
+      expect(result.logs[0].pprState).toEqual('partially_dynamic');
     });
 
     it('should include deploymentId in query when provided', async () => {
@@ -187,6 +213,66 @@ describe('logs-v2 utility', () => {
         ownerId: 'team_test',
         since: isoDate,
       });
+    });
+
+    it('should include all request logs in the result', async () => {
+      client.scenario.get('/api/logs/request-logs', (_req, res) => {
+        res.json({
+          rows: [
+            createMockApiLog({
+              logs: [
+                { level: 'info', message: 'first message' },
+                { level: 'error', message: 'actual error' },
+              ],
+            }),
+          ],
+          hasMoreRows: false,
+        });
+      });
+
+      const result = await fetchRequestLogs(client, {
+        projectId: 'prj_test',
+        ownerId: 'team_test',
+        level: ['error'],
+      });
+
+      expect(result.logs[0].logs).toEqual([
+        {
+          level: 'info',
+          message: 'first message',
+          messageTruncated: undefined,
+        },
+        {
+          level: 'error',
+          message: 'actual error',
+          messageTruncated: undefined,
+        },
+      ]);
+    });
+
+    it('should use a matching error log as the display log when filtering by level', async () => {
+      client.scenario.get('/api/logs/request-logs', (_req, res) => {
+        res.json({
+          rows: [
+            createMockApiLog({
+              logs: [
+                { level: 'info', message: 'first message' },
+                { level: 'error', message: 'actual error' },
+              ],
+            }),
+          ],
+          hasMoreRows: false,
+        });
+      });
+
+      const result = await fetchRequestLogs(client, {
+        projectId: 'prj_test',
+        ownerId: 'team_test',
+        level: ['error'],
+      });
+
+      expect(result.logs[0].level).toEqual('error');
+      expect(result.logs[0].message).toEqual('actual error');
     });
   });
 

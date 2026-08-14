@@ -1,5 +1,315 @@
 # @vercel/next
 
+## 4.20.5
+
+### Patch Changes
+
+- a69c714: Propagate per-function `maxConcurrency` configuration into build outputs and keep every configured Next.js route in its own Lambda group, including routes with the same limit.
+
+## 4.20.4
+
+### Patch Changes
+
+- 0f67a94: Include instrumentation for Node.js Middleware
+
+## 4.20.3
+
+### Patch Changes
+
+- 6dbc280: [next] Update to latest Next.js adapter
+
+## 4.20.2
+
+### Patch Changes
+
+- e05ed3c: Add support for stable Cache Components without experimental PPR
+
+## 4.20.1
+
+### Patch Changes
+
+- d538795: Revert update to latest Next.js adapter
+
+## 4.20.0
+
+### Minor Changes
+
+- 68ed45c: Add opt-in handling for routes that individually do not fit the default uncompressed function budget.
+
+  When `NEXT_EXPERIMENTAL_LARGE_FUNCTIONS` is set, any route whose own uncompressed size exceeds the default per-runtime packing budget (e.g. 225 MiB on Node) is emitted as its own function under a higher 5 GiB ceiling rather than bundled. Such routes are never bundled together or with normal routes; the default bundling pool is unchanged.
+
+  The gate is read at build time and defaults to off, so behavior is unchanged unless the env var is set. It relies on the upstream build system supporting functions above the default uncompressed limit.
+
+## 4.19.1
+
+### Patch Changes
+
+- bc6f22f: Upgrade to the latest Next.js adapter
+
+## 4.19.0
+
+### Minor Changes
+
+- 01e18e8: Add `hasFallback`, `htmlSize`, and `isDynamicRoute` to `Prerender`
+
+  These optional fields surface per-route PPR shell metadata in the Build Output so consumers can classify prerenders (e.g. full shell vs. empty shell vs. concrete prerender):
+
+  - `hasFallback` — whether a dynamic route template had a static fallback (`undefined` for concrete prerenders)
+  - `htmlSize` — byte size of the prerendered `.html` shell (`0` for an empty shell, `undefined` when there's no `.html`)
+  - `isDynamicRoute` — whether the entry came from a dynamic route template rather than a concrete prerender
+
+## 4.18.0
+
+### Minor Changes
+
+- 78e5d4f: Add project manifest to node frontend builders.
+
+## 4.17.6
+
+### Patch Changes
+
+- 4e849dd: Add a per-route `hasPostponed` signal to `Prerender`.
+
+  `@vercel/build-utils` exposes a new optional `hasPostponed?: boolean` field on `Prerender` / `PrerenderOptions`. It is a tri-state: `true` when the route's `.meta` postponed state is present (React suspended during the build-time prerender), `false` when the framework prerendered a Prerender route without postponing, and `undefined` when the framework did not provide the signal.
+
+  `@vercel/next` populates it for app-router PPR routes (computed from the route's postponed state) and leaves it `undefined` for pages-router and other non-app-router prerenders. This is an additive, finer-grained signal — it does not change the existing `chain` / `experimentalStreamingLambdaPath` behavior — so downstream consumers can distinguish a route that actually postponed from one that has PPR machinery but fully prerendered (e.g. under `cacheComponents: true`).
+
+## 4.17.5
+
+### Patch Changes
+
+- ab0e5aa: Bump @vercel/nft to 1.10.0 and enable moduleSyncCatchall tracing in node, backends, and next builders.
+
+## 4.17.4
+
+### Patch Changes
+
+- c8bce3b: Upgrade to the latest Next.js adapter
+
+## 4.17.3
+
+### Patch Changes
+
+- 79d9508: Update to latest Next.js adapter
+
+## 4.17.2
+
+### Patch Changes
+
+- bb61428: Include framework slug in output/config.json
+
+## 4.17.1
+
+### Patch Changes
+
+- 34e7b09: Update to latest Next.js adapter
+
+## 4.17.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+## 4.16.8
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#15970](https://github.com/vercel/vercel/pull/15970))
+
+## 4.16.7
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#15456](https://github.com/vercel/vercel/pull/15456))
+
+## 4.16.6
+
+### Patch Changes
+
+- Remove the `x-nextjs-data` request header for non-`/_next/data` routes before Next.js data route normalization. ([#15894](https://github.com/vercel/vercel/pull/15894))
+
+## 4.16.5
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#15775](https://github.com/vercel/vercel/pull/15775))
+
+## 4.16.4
+
+### Patch Changes
+
+- Copy post-build public files into V3 build output so they are included in Git-driven deploys ([#15780](https://github.com/vercel/vercel/pull/15780))
+
+## 4.16.3
+
+### Patch Changes
+
+- Bump @vercel/nft to 1.5.0 ([#15683](https://github.com/vercel/vercel/pull/15683))
+
+- fix(next): merge next-minimal-server.js.nft.json into server trace for prebuilt deployments ([#15688](https://github.com/vercel/vercel/pull/15688))
+
+- Update to latest Next.js adapter ([#15695](https://github.com/vercel/vercel/pull/15695))
+
+## 4.16.2
+
+### Patch Changes
+
+- Update @vercel/nft to 1.4.0 across packages ([#15626](https://github.com/vercel/vercel/pull/15626))
+
+## 4.16.1
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#15440](https://github.com/vercel/vercel/pull/15440))
+
+## 4.16.0
+
+### Minor Changes
+
+- Support `maxDuration: 'max'` to allow the backend to resolve the maximum duration based on account plan type ([#15217](https://github.com/vercel/vercel/pull/15217))
+
+## 4.15.42
+
+### Patch Changes
+
+- Revert "[next] vary fallback allowQuery for partial fallback shells" ([#15418](https://github.com/vercel/vercel/pull/15418))
+
+## 4.15.41
+
+### Patch Changes
+
+- Update Next.js adapter version ([#15382](https://github.com/vercel/vercel/pull/15382))
+
+## 4.15.40
+
+### Patch Changes
+
+- vary fallback `allowQuery` by params for partial fallback shells ([#15338](https://github.com/vercel/vercel/pull/15338))
+
+## 4.15.39
+
+### Patch Changes
+
+- Update Next.js adapter version ([#15366](https://github.com/vercel/vercel/pull/15366))
+
+## 4.15.38
+
+### Patch Changes
+
+- Update Next.js adapter version ([#15360](https://github.com/vercel/vercel/pull/15360))
+
+## 4.15.37
+
+### Patch Changes
+
+- add partialFallback flag to prerender output ([#14703](https://github.com/vercel/vercel/pull/14703))
+
+## 4.15.36
+
+### Patch Changes
+
+- Update Next.js adapter version ([#15296](https://github.com/vercel/vercel/pull/15296))
+
+## 4.15.35
+
+### Patch Changes
+
+- Rename fetch to nodeFetch when importing from node-fetch ([#15232](https://github.com/vercel/vercel/pull/15232))
+
+## 4.15.34
+
+### Patch Changes
+
+- Add support for funcitonFailoverRegions in next builder ([#15237](https://github.com/vercel/vercel/pull/15237))
+
+## 4.15.33
+
+### Patch Changes
+
+- Support regions in Next.js builder from vercel.json only ([#15230](https://github.com/vercel/vercel/pull/15230))
+
+## 4.15.32
+
+### Patch Changes
+
+- Revert per function builder support ([#15209](https://github.com/vercel/vercel/pull/15209))
+
+## 4.15.31
+
+### Patch Changes
+
+- Added support for `regions` and `functionFailoverRegions` in per-function configuration from `vercel.json` for Next.js projects. ([#15149](https://github.com/vercel/vercel/pull/15149))
+
+## 4.15.30
+
+### Patch Changes
+
+- Update to latest Next.js adapter version' ([#15124](https://github.com/vercel/vercel/pull/15124))
+
+- Add `NEXT_BUILDER_INTEGRATION` env to all `packages/next` vercel.json fixtures. ([#15124](https://github.com/vercel/vercel/pull/15124))
+
+## 4.15.29
+
+### Patch Changes
+
+- Update to latest Next.js adapter version ([#15088](https://github.com/vercel/vercel/pull/15088))
+
+## 4.15.28
+
+### Patch Changes
+
+- [ppr] Support config.cacheComponents ([#14937](https://github.com/vercel/vercel/pull/14937))
+
+## 4.15.27
+
+### Patch Changes
+
+- Update Next.js adapter version ([#14922](https://github.com/vercel/vercel/pull/14922))
+
+## 4.15.26
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#14909](https://github.com/vercel/vercel/pull/14909))
+
+- Strip routes-manifest.json for determinism more ([#14908](https://github.com/vercel/vercel/pull/14908))
+
+## 4.15.25
+
+### Patch Changes
+
+- [next] Apply routes-manifest onMatchHeaders ([#14903](https://github.com/vercel/vercel/pull/14903))
+
+- Make adapters flag explicit value for opt-in ([#14905](https://github.com/vercel/vercel/pull/14905))
+
+## 4.15.24
+
+### Patch Changes
+
+- Add version gate for adapters opt-in ([#14896](https://github.com/vercel/vercel/pull/14896))
+
+## 4.15.23
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#14888](https://github.com/vercel/vercel/pull/14888))
+
+- Fix pages-manifest.json when using i18n ([#14878](https://github.com/vercel/vercel/pull/14878))
+
+## 4.15.22
+
+### Patch Changes
+
+- Remove 404.html prerenders from serverless function ([#14836](https://github.com/vercel/vercel/pull/14836))
+
+## 4.15.21
+
+### Patch Changes
+
+- Strip routes-manifest.json for determinism ([#14783](https://github.com/vercel/vercel/pull/14783))
+
+- Update Next.js adapter version ([#14801](https://github.com/vercel/vercel/pull/14801))
+
 ## 4.15.20
 
 ### Patch Changes

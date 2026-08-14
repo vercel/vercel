@@ -19,6 +19,11 @@ describe('sortBuilders()', () => {
       output: ['@vercel/remix-builder', '@vercel/python', '@vercel/node'],
     },
     {
+      name: 'should sort @vercel/go as middle priority',
+      input: ['@vercel/node', '@vercel/go', '@vercel/next'],
+      output: ['@vercel/next', '@vercel/go', '@vercel/node'],
+    },
+    {
       name: 'should sort @vercel/redwood from beginning to beginning',
       input: ['@vercel/redwood', '@vercel/python', '@vercel/ruby'],
       output: ['@vercel/redwood', '@vercel/python', '@vercel/ruby'],

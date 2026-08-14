@@ -1,4 +1,9 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, vi } from 'vitest';
+
+vi.mock('@vercel/cli-exec', () => ({
+  execVercelCli: vi.fn(),
+  VercelCliError: class VercelCliError extends Error {},
+}));
 
 import * as DefaultImports from './index';
 import * as BrowserImports from './index-browser';

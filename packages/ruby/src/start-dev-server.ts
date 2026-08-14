@@ -85,13 +85,13 @@ function installGlobalCleanupHandlers() {
     }
   };
 
+  // Do not exit on signals, so other interruption handlers
+  // can perform their cleanup routine.
   process.on('SIGINT', () => {
     killAll();
-    process.exit(130);
   });
   process.on('SIGTERM', () => {
     killAll();
-    process.exit(143);
   });
   process.on('exit', () => {
     killAll();
@@ -106,10 +106,14 @@ function createDevRubyShim(
     const vercelRubyDir = join(workPath, '.vercel', 'ruby');
     mkdirSync(vercelRubyDir, { recursive: true });
     const shimPath = join(vercelRubyDir, `vc_init_dev.rb`);
+    const utilsPath = join(vercelRubyDir, 'vc__utils__ruby.rb');
     const templatePath = join(__dirname, '..', 'vc_init_dev.rb');
+    const utilsTemplatePath = join(__dirname, '..', 'vc_utils.rb');
     const template = readFileSync(templatePath, 'utf8');
+    const utilsTemplate = readFileSync(utilsTemplatePath, 'utf8');
     const shimSource = template.replace(/__VC_DEV_ENTRYPOINT__/g, entrypoint);
     writeFileSync(shimPath, shimSource, 'utf8');
+    writeFileSync(utilsPath, utilsTemplate, 'utf8');
     debug(`Prepared Ruby dev shim at ${shimPath}`);
     return shimPath;
   } catch (err: any) {
@@ -130,7 +134,12 @@ function detectGemfile(workPath: string, entrypoint: string): string | null {
 async function run(
   cmd: string,
   args: string[],
-  opts: { cwd: string; env: NodeJS.ProcessEnv }
+  opts: {
+    cwd: string;
+    env: NodeJS.ProcessEnv;
+    onStdout?: (data: Buffer) => void;
+    onStderr?: (data: Buffer) => void;
+  }
 ) {
   return await new Promise<{
     code: number | null;
@@ -141,8 +150,22 @@ async function run(
       env: opts.env,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
-    child.stdout?.on('data', buf => process.stdout.write(buf));
-    child.stderr?.on('data', buf => process.stderr.write(buf));
+    child.stdout?.on('data', data => {
+      const chunk = Buffer.isBuffer(data) ? data : Buffer.from(data);
+      if (opts.onStdout) {
+        opts.onStdout(chunk);
+      } else {
+        process.stdout.write(chunk.toString());
+      }
+    });
+    child.stderr?.on('data', data => {
+      const chunk = Buffer.isBuffer(data) ? data : Buffer.from(data);
+      if (opts.onStderr) {
+        opts.onStderr(chunk);
+      } else {
+        process.stderr.write(chunk.toString());
+      }
+    });
     child.on('close', (code, signal) => resolve({ code, signal }));
   });
 }
@@ -219,6 +242,9 @@ export const startDevServer: StartDevServer = async opts => {
       const projectDir = gemfile ? dirname(gemfile) : workPath;
       if (gemfile) {
         env.BUNDLE_GEMFILE = gemfile;
+        if (meta.syncDependencies) {
+          env.BUNDLE_PATH = join(workPath, '.vercel', 'ruby', 'bundle');
+        }
       }
 
       const checkDeps = async () => {
@@ -227,10 +253,31 @@ export const startDevServer: StartDevServer = async opts => {
           const check = await run(
             bundlerPath,
             ['check', '--gemfile', gemfile],
-            { cwd: projectDir, env }
+            {
+              cwd: projectDir,
+              env,
+              onStdout: opts.onStdout,
+              onStderr: opts.onStderr,
+            }
           );
           if (check.code !== 0) {
-            return false;
+            if (!meta.syncDependencies) {
+              return false;
+            }
+            const sync = '\x1b[90mSynchronizing dependencies...\x1b[0m\n';
+            if (opts.onStdout) {
+              opts.onStdout(Buffer.from(sync));
+            } else {
+              process.stdout.write(sync);
+            }
+            debug(`Running "bundle install" for ${gemfile}`);
+            const install = await run(bundlerPath, ['install'], {
+              cwd: projectDir,
+              env,
+              onStdout: opts.onStdout,
+              onStderr: opts.onStderr,
+            });
+            return install.code === 0;
           }
         }
         return true;
@@ -259,22 +306,22 @@ export const startDevServer: StartDevServer = async opts => {
           const child = spawn(cmd, args, {
             cwd: workPath,
             env,
-            stdio: ['inherit', 'pipe', 'pipe'],
+            stdio: ['ignore', 'pipe', 'pipe'],
           });
           childProcess = child;
 
           stdoutLogListener = (buf: Buffer) => {
-            const s = buf.toString();
-            for (const line of s.split(/\r?\n/)) {
-              if (line)
-                process.stdout.write(line.endsWith('\n') ? line : line + '\n');
+            if (opts.onStdout) {
+              opts.onStdout(buf);
+            } else {
+              process.stdout.write(buf.toString());
             }
           };
           stderrLogListener = (buf: Buffer) => {
-            const s = buf.toString();
-            for (const line of s.split(/\r?\n/)) {
-              if (line)
-                process.stderr.write(line.endsWith('\n') ? line : line + '\n');
+            if (opts.onStderr) {
+              opts.onStderr(buf);
+            } else {
+              process.stderr.write(buf.toString());
             }
           };
           child.stdout?.on('data', stdoutLogListener);

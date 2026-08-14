@@ -19,7 +19,9 @@ export const BaseFunctionConfigSchema = {
     },
     runtime: { type: 'string' },
     memory: { type: 'number' },
-    maxDuration: { type: 'number' },
+    maxDuration: {
+      oneOf: [{ type: 'number' }, { type: 'string', enum: ['max'] }],
+    },
     supportsCancellation: {
       type: 'boolean',
     },
@@ -36,6 +38,9 @@ export const BaseFunctionConfigSchema = {
     },
     preferredRegion: {
       oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
+    },
+    useWebApi: {
+      type: 'boolean',
     },
   },
 } as const;
@@ -108,7 +113,6 @@ function getObject(obj: ObjectLiteralExpression): unknown {
   const rtn: { [v: string]: unknown } = {};
   for (const prop of obj.getProperties()) {
     if (!Node.isPropertyAssignment(prop)) continue;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [nameNode, _colon, valueNode] = prop.getChildren();
     const name = nameNode.getText();
     rtn[name] = getValue(valueNode);

@@ -1,10 +1,39 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, afterEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import webhooks from '../../../../src/commands/webhooks';
 import { useUser } from '../../../mocks/user';
 import { useWebhook, useWebhookNotFound } from '../../../mocks/webhooks';
 
 describe('webhooks get', () => {
+  describe('non-interactive mode', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+      client.nonInteractive = false;
+    });
+
+    it('emits plain next commands when id is missing', async () => {
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      client.nonInteractive = true;
+      client.setArgv('webhooks', 'get');
+      const exitCodePromise = webhooks(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('missing_id');
+      expect(payload.next[0].command).toBe('vercel webhooks ls');
+      expect(payload.next[1].command).toBe('vercel webhooks get <id>');
+
+      exitSpy.mockRestore();
+    });
+  });
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'webhooks';

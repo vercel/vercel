@@ -1,4 +1,3 @@
-/* eslint-env jest */
 const path = require('path');
 const cheerio = require('cheerio');
 const { check, deployAndTest } = require('../../utils');
@@ -42,7 +41,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should revalidate content properly from /docs', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/docs/_next/data/testing-build-id/index.json`
+      `${ctx.deploymentUrl}/docs/_next/data/build-TfctsWXpff2fKS/index.json`
     );
     expect(dataRes.status).toBe(200);
 
@@ -76,7 +75,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should load content properly from /docs/hello', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/docs/_next/data/testing-build-id/hello.json`
+      `${ctx.deploymentUrl}/docs/_next/data/build-TfctsWXpff2fKS/hello.json`
     );
     expect(dataRes.status).toBe(200);
 
@@ -111,7 +110,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should revalidate content properly from /docs/blog', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/docs/_next/data/testing-build-id/blog.json`
+      `${ctx.deploymentUrl}/docs/_next/data/build-TfctsWXpff2fKS/blog.json`
     );
     expect(dataRes.status).toBe(200);
 
@@ -145,7 +144,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should revalidate content properly from /docs/blog/another', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/docs/_next/data/testing-build-id/blog/another.json`
+      `${ctx.deploymentUrl}/docs/_next/data/build-TfctsWXpff2fKS/blog/another.json`
     );
     expect(dataRes.status).toBe(200);
 

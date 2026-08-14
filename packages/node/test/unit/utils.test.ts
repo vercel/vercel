@@ -11,10 +11,11 @@ describe('entrypointToOutputPath()', () => {
     { entrypoint: 'api/foo.ts', zeroConfig: true, expected: 'api/foo' },
     { entrypoint: 'api/foo.tsx', zeroConfig: true, expected: 'api/foo' },
     { entrypoint: 'api/foo.mts', zeroConfig: true, expected: 'api/foo' },
-  ])(
-    'entrypoint="$entrypoint" zeroConfig=$zeroConfig -> $expected',
-    ({ entrypoint, zeroConfig, expected }) => {
-      expect(entrypointToOutputPath(entrypoint, zeroConfig)).toEqual(expected);
-    }
-  );
+  ])('entrypoint="$entrypoint" zeroConfig=$zeroConfig -> $expected', ({
+    entrypoint,
+    zeroConfig,
+    expected,
+  }) => {
+    expect(entrypointToOutputPath(entrypoint, zeroConfig)).toEqual(expected);
+  });
 });

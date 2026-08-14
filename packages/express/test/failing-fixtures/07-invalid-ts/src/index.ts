@@ -4,7 +4,6 @@ const app = express();
 
 app.get('/', (_req, res) => res.send('Hello World'));
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const a: number = 'string';
+const _a: number = 'string';
 
 export default app;

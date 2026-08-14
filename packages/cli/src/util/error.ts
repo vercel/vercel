@@ -1,4 +1,4 @@
-import type { Response } from 'node-fetch';
+import type { Response } from './fetch';
 import errorOutput from './output/error';
 import bytes from 'bytes';
 import type { APIError } from './errors-ts';
@@ -28,7 +28,7 @@ export async function responseError(
 
     try {
       body = await res.json();
-    } catch (err) {
+    } catch (_err) {
       body = parsedBody;
     }
 
@@ -77,7 +77,7 @@ export async function responseErrorMessage(
 
     try {
       body = await res.json();
-    } catch (err) {
+    } catch (_err) {
       body = {};
     }
 

@@ -13,6 +13,7 @@ export const uvIndexEntrySchema = z.object({
   url: z.string(),
   default: z.boolean().optional(),
   explicit: z.boolean().optional(),
+  format: z.string().optional(),
 });
 
 export const uvConfigSchema = z.object({
@@ -21,4 +22,5 @@ export const uvConfigSchema = z.object({
     .optional(),
   index: z.array(uvIndexEntrySchema).optional(),
   workspace: uvConfigWorkspaceSchema.optional(),
+  'dev-dependencies': z.array(z.string()).optional(),
 });

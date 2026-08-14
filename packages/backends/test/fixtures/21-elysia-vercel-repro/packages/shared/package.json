@@ -1,0 +1,17 @@
+{
+  "name": "@repro/shared",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    "./*": "./src/*"
+  },
+  "scripts": {
+    "lint": "oxlint --type-aware --type-check",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf node_modules tsconfig.tsbuildinfo"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2"
+  }
+}

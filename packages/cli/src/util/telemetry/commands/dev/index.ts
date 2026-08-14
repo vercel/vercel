@@ -39,6 +39,12 @@ export class DevTelemetryClient
     }
   }
 
+  trackCliFlagLocal(local: boolean | undefined) {
+    if (local) {
+      this.trackCliFlag('local');
+    }
+  }
+
   trackCliFlagConfirm(confirm: boolean | undefined) {
     if (confirm) {
       this.trackCliFlag('confirm');

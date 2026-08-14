@@ -34,3 +34,6 @@ export const startDevServer: StartDevServer = async opts => {
     publicDir: 'public',
   });
 };
+
+import { createDiagnostics } from '@vercel/build-utils';
+export const diagnostics = createDiagnostics('node');

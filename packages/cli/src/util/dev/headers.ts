@@ -1,4 +1,4 @@
-import { Headers } from 'node-fetch';
+import { Headers } from '../fetch';
 import type { IncomingHttpHeaders, OutgoingHttpHeaders } from 'http';
 
 export function nodeHeadersToFetchHeaders(
@@ -43,14 +43,21 @@ const NONOVERRIDABLE_HEADERS: Set<string> = new Set([
  * `x-middleware-request-*` is the new value for each header. This can't be
  * omitted, even if the header is not being modified.
  *
+ * Returns a mutable copy of `respHeaders` with the middleware control headers
+ * removed so it can be safely forwarded.
+ *
  */
 export function applyOverriddenHeaders(
   reqHeaders: { [k: string]: string | string[] | undefined },
   respHeaders: Headers
 ) {
-  const overriddenHeaders = respHeaders.get('x-middleware-override-headers');
+  // Headers from a native fetch network response are immutable. Work with a
+  // mutable copy because the middleware control headers must be removed before
+  // the remaining response headers are forwarded to the request and client.
+  const headers = new Headers(respHeaders);
+  const overriddenHeaders = headers.get('x-middleware-override-headers');
   if (!overriddenHeaders) {
-    return;
+    return headers;
   }
 
   const overriddenKeys: Set<string> = new Set();
@@ -58,7 +65,7 @@ export function applyOverriddenHeaders(
     overriddenKeys.add(key.trim());
   }
 
-  respHeaders.delete('x-middleware-override-headers');
+  headers.delete('x-middleware-override-headers');
 
   // Delete headers.
   for (const key of Object.keys(reqHeaders)) {
@@ -74,7 +81,7 @@ export function applyOverriddenHeaders(
     }
 
     const valueKey = 'x-middleware-request-' + key;
-    const newValue = respHeaders.get(valueKey);
+    const newValue = headers.get(valueKey);
     const oldValue = reqHeaders[key];
 
     if (oldValue !== newValue) {
@@ -85,6 +92,8 @@ export function applyOverriddenHeaders(
       }
     }
 
-    respHeaders.delete(valueKey);
+    headers.delete(valueKey);
   }
+
+  return headers;
 }

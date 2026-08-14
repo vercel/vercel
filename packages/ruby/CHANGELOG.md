@@ -1,5 +1,41 @@
 # @vercel/ruby
 
+## 2.5.1
+
+### Patch Changes
+
+- 2158ab6: [vc dev] Add support to `experimentalServicesV2` for bindings in `vc dev`
+
+## 2.5.0
+
+### Minor Changes
+
+- 3afdb18: Emit project manifest for hugo, zola, jekyll, and middleman frameworks.
+
+## 2.4.0
+
+### Minor Changes
+
+- 73dbbe6: Add project manifest to ruby builder.
+
+## 2.3.2
+
+### Patch Changes
+
+- [services] strip services route prefix in ruby runtime by mounting the app at `SCRIPT_NAME` when service route prefix is auto configured ([#15099](https://github.com/vercel/vercel/pull/15099))
+
+## 2.3.1
+
+### Patch Changes
+
+- Forward Go and Ruby dev server output through `startDevServer` stdout/stderr callbacks so service logs are correctly prefixed in multi-service `vercel dev`. ([#14989](https://github.com/vercel/vercel/pull/14989))
+
+## 2.3.0
+
+### Minor Changes
+
+- [services] add a dev lock for `vercel dev` to prevent launching multiple `vercel dev` processes for a multi-service projects. ([#14897](https://github.com/vercel/vercel/pull/14897))
+
 ## 2.2.5
 
 ### Patch Changes

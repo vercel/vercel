@@ -1,3 +1,4 @@
+import { normalizePath } from '@vercel/build-utils';
 import path from 'path';
 import chalk from 'chalk';
 import { validateRootDirectory } from '../validate-paths';
@@ -12,10 +13,9 @@ export async function inputRootDirectory(
     return null;
   }
 
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const rootDirectory = await client.input.text({
-      message: `In which directory is your code located?`,
+      message: `Code directory?`,
       transformer: (input: string) => {
         return `${chalk.dim(`./`)}${input}`;
       },
@@ -43,6 +43,6 @@ export async function inputRootDirectory(
       continue;
     }
 
-    return normal;
+    return normalizePath(normal);
   }
 }

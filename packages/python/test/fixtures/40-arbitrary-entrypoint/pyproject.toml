@@ -7,4 +7,4 @@ dependencies = [
 ]
 
 [project.scripts]
-app = "backend.server.my_server:app"
+app = "backend.server.my_server:test"

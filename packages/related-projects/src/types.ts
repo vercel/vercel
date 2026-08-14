@@ -54,6 +54,13 @@ export interface VercelRelatedProject {
      * @example "my-project-git-feature-branch.vercel.sh"
      */
     branch?: string;
+
+    /**
+     * The alias for preview deployments from a custom environment (e.g. staging).
+     *
+     * @example "my-project-git-staging.vercel.sh"
+     */
+    customEnvironment?: string;
   };
 }
 

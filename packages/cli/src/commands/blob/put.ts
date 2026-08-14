@@ -12,11 +12,13 @@ import { getCommandName } from '../../util/pkg-name';
 import chalk from 'chalk';
 import { BlobPutTelemetryClient } from '../../util/telemetry/commands/blob/put';
 import { printError } from '../../util/error';
+import { parseAccessFlag } from '../../util/blob/access';
+import { blobOpts, type BlobRWToken } from '../../util/blob/token';
 
 export default async function put(
   client: Client,
   argv: string[],
-  rwToken: string
+  auth: BlobRWToken
 ): Promise<number> {
   const telemetryClient = new BlobPutTelemetryClient({
     opts: {
@@ -38,24 +40,31 @@ export default async function put(
     args: [filePath],
   } = parsedArgs;
   const {
+    '--access': accessFlag,
     '--add-random-suffix': addRandomSuffix,
     '--pathname': pathnameFlag,
     '--multipart': multipart,
     '--content-type': contentType,
     '--cache-control-max-age': cacheControlMaxAge,
-    '--force': force,
+    '--allow-overwrite': allowOverwrite,
+    '--if-match': ifMatch,
   } = flags;
+
+  const access = parseAccessFlag(accessFlag);
+  if (!access) return 1;
 
   // Only track file path if one was provided
   if (filePath) {
     telemetryClient.trackCliArgumentPathToFile(filePath);
   }
+  telemetryClient.trackCliOptionAccess(accessFlag);
   telemetryClient.trackCliFlagAddRandomSuffix(addRandomSuffix);
   telemetryClient.trackCliOptionPathname(pathnameFlag);
   telemetryClient.trackCliFlagMultipart(multipart);
   telemetryClient.trackCliOptionContentType(contentType);
   telemetryClient.trackCliOptionCacheControlMaxAge(cacheControlMaxAge);
-  telemetryClient.trackCliFlagForce(force);
+  telemetryClient.trackCliFlagAllowOverwrite(allowOverwrite);
+  telemetryClient.trackCliOptionIfMatch(ifMatch);
 
   // ReadableStream works for both stdin and ReadStream
   let putBody: ReadableStream;
@@ -131,13 +140,14 @@ export default async function put(
     output.spinner('Uploading blob');
 
     result = await blob.put(pathname, putBody, {
-      token: rwToken,
-      access: 'public',
+      ...blobOpts(auth),
+      access,
       addRandomSuffix: addRandomSuffix ?? false,
       multipart: multipart ?? true,
       contentType,
       cacheControlMaxAge,
-      allowOverwrite: force ?? false,
+      allowOverwrite: allowOverwrite ?? false,
+      ifMatch,
     });
   } catch (err) {
     printError(err);

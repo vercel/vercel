@@ -35,8 +35,10 @@ describe('getCache', () => {
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');
-    expect(mockCache.set).toHaveBeenCalledWith('b876d32', 'value');
-    expect(mockCache.get).toHaveBeenCalledWith('b876d32');
+    expect(mockCache.set).toHaveBeenCalledWith('b876d32', 'value', {
+      name: 'key',
+    });
+    expect(mockCache.get).toHaveBeenCalledWith('b876d32', undefined);
   });
 
   test('should return the same cache instance for multiple calls to getCache when no context cache is available', async () => {
@@ -77,7 +79,9 @@ describe('getCache', () => {
     });
     await cache.set('key', 'value');
     expect(customHashFunction).toHaveBeenCalledWith('key');
-    expect(mockCache.set).toHaveBeenCalledWith('custom-key', 'value');
+    expect(mockCache.set).toHaveBeenCalledWith('custom-key', 'value', {
+      name: 'key',
+    });
   });
 
   test('should use the default key hash function if none is provided', async () => {
@@ -85,7 +89,7 @@ describe('getCache', () => {
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');
-    expect(mockCache.get).toHaveBeenCalledWith('b876d32');
+    expect(mockCache.get).toHaveBeenCalledWith('b876d32', undefined);
   });
 
   test('should use the provided namespace and separator', async () => {
@@ -96,8 +100,10 @@ describe('getCache', () => {
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');
-    expect(mockCache.set).toHaveBeenCalledWith('test:b876d32', 'value');
-    expect(mockCache.get).toHaveBeenCalledWith('test:b876d32');
+    expect(mockCache.set).toHaveBeenCalledWith('test:b876d32', 'value', {
+      name: 'key',
+    });
+    expect(mockCache.get).toHaveBeenCalledWith('test:b876d32', undefined);
   });
 
   test('should use the default namespace separator if none is provided', async () => {
@@ -106,38 +112,46 @@ describe('getCache', () => {
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');
-    expect(mockCache.set).toHaveBeenCalledWith(`${namespace}$b876d32`, 'value');
-    expect(mockCache.get).toHaveBeenCalledWith(`${namespace}$b876d32`);
+    expect(mockCache.set).toHaveBeenCalledWith(
+      `${namespace}$b876d32`,
+      'value',
+      {
+        name: 'key',
+      }
+    );
+    expect(mockCache.get).toHaveBeenCalledWith(
+      `${namespace}$b876d32`,
+      undefined
+    );
   });
 
-  test('should URL encode tags in set', async () => {
+  test('should default options.name to the original key when not provided', async () => {
     const cache = getCache();
-    await cache.set('key', 'value', {
-      tags: ['tag with spaces', 'tag&special=chars', 'tag,with,commas'],
+    await cache.set('my-key', 'value');
+    expect(mockCache.set).toHaveBeenCalledWith('57f938ab', 'value', {
+      name: 'my-key',
     });
-    expect(mockCache.set).toHaveBeenCalledWith('b876d32', 'value', {
-      tags: [
-        'tag%20with%20spaces',
-        'tag%26special%3Dchars',
-        'tag%2Cwith%2Ccommas',
-      ],
+  });
+
+  test('should preserve an explicit empty string options.name as a suppression sentinel', async () => {
+    const cache = getCache();
+    await cache.set('my-key', 'value', { name: '' });
+    expect(mockCache.set).toHaveBeenCalledWith('57f938ab', 'value', {
+      name: '',
     });
   });
 
-  test('should URL encode tags in expireTag with string', async () => {
-    vitest.spyOn(mockCache, 'expireTag');
+  test('should preserve explicit options.name when provided', async () => {
     const cache = getCache();
-    await cache.expireTag('tag&special');
-    expect(mockCache.expireTag).toHaveBeenCalledWith('tag%26special');
-  });
-
-  test('should URL encode tags in expireTag with array', async () => {
-    vitest.spyOn(mockCache, 'expireTag');
-    const cache = getCache();
-    await cache.expireTag(['tag one', 'tag&two']);
-    expect(mockCache.expireTag).toHaveBeenCalledWith([
-      'tag%20one',
-      'tag%26two',
-    ]);
+    await cache.set('my-key', 'value', {
+      name: 'explicit-name',
+      tags: ['t1'],
+      ttl: 60,
+    });
+    expect(mockCache.set).toHaveBeenCalledWith('57f938ab', 'value', {
+      name: 'explicit-name',
+      tags: ['t1'],
+      ttl: 60,
+    });
   });
 });

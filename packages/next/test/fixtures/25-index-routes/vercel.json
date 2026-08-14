@@ -38,5 +38,10 @@
       "path": "/api/sub/another",
       "mustContain": "hi from sub id"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

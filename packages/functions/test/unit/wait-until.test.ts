@@ -21,14 +21,15 @@ test.each([
   );
 });
 
-test.each([null, undefined, {}])(
-  'waitUntil does not throw an error when context is %s',
-  input => {
-    const promise = Promise.resolve();
-    globalThis[SYMBOL_FOR_REQ_CONTEXT] = input;
-    expect(() => waitUntil(promise)).not.toThrow();
-  }
-);
+test.each([
+  null,
+  undefined,
+  {},
+])('waitUntil does not throw an error when context is %s', input => {
+  const promise = Promise.resolve();
+  globalThis[SYMBOL_FOR_REQ_CONTEXT] = input;
+  expect(() => waitUntil(promise)).not.toThrow();
+});
 
 test('waitUntil calls ctx.waitUntil when available', async () => {
   const promise = Promise.resolve();

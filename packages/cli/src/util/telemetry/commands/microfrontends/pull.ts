@@ -6,6 +6,12 @@ export class MicrofrontendsPullTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof pullSubcommand>
 {
+  trackCliFlagYes(yes: boolean | undefined) {
+    if (yes) {
+      this.trackCliFlag('yes');
+    }
+  }
+
   trackCliOptionDpl(value: string | undefined) {
     if (value) {
       this.trackCliOption({

@@ -2,7 +2,7 @@ module.exports = {
   async headers() {
     return [
       {
-        source: '/_next/static/testing-build-id/_buildManifest.js',
+        source: '/_next/static/build-TfctsWXpff2fKS/_buildManifest.js',
         headers: [
           {
             key: 'cache-control',
@@ -13,6 +13,6 @@ module.exports = {
     ];
   },
   generateBuildId() {
-    return 'testing-build-id';
+    return 'build-TfctsWXpff2fKS';
   },
 };

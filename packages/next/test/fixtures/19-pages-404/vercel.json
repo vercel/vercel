@@ -34,5 +34,10 @@
       "path": "/404",
       "status": 404
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

@@ -31,7 +31,7 @@ export async function checkRateLimit(
   options?: {
     /** The host name on which the rate limit rules are defined */
     firewallHostForDevelopment?: string;
-    /** The key to use for rate-limiting. If not defined, defaults to the user's IP address. */
+    /** The entity being rate limited. Defaults to the client IP. */
     rateLimitKey?: string;
     /** The headers for the current request. Optional.  */
     headers?:
@@ -85,7 +85,7 @@ export async function checkRateLimit(
     fullRateLimitKey = requestHeaders.get('x-real-ip') || undefined;
     if (!fullRateLimitKey) {
       throw new Error(
-        'Could not determine rate limit key. `rateLimitKey` option is not provided, and `x-real-ip` header is not present in the request.'
+        'Could not determine rate limit key. `rateLimitKey` option is not provided and the client IP is not available.'
       );
     }
   }
@@ -164,7 +164,6 @@ export { checkRateLimit as unstable_checkRateLimit };
 async function hashString(input: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(input);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const subtle = (globalThis as any).crypto.subtle;
   const hashBuffer = await subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));

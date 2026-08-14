@@ -1,0 +1,20 @@
+[project]
+name = "legacy-explicit-workers-subscriber"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "celery>=5.3.0",
+    "vercel",
+    "vercel-workers",
+]
+
+# A released-project regression fixture: the direct vercel-workers dependency
+# opts the whole project into the legacy integration -- the legacy subscriber
+# schema below (declared topics plus trigger tuning), direct entrypoint
+# serving, and worker env markers.
+[[tool.vercel.subscribers]]
+entrypoint = "worker:app"
+topics = ["celery"]
+max_deliveries = 5
+retry_after_seconds = 30

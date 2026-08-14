@@ -1,10 +1,10 @@
 import { TelemetryClient } from '../..';
-import type { getStoreSubcommand } from '../../../../commands/blob/command';
+import type { getStoreInfoSubcommand } from '../../../../commands/blob/command';
 import type { TelemetryMethods } from '../../types';
 
 export class BlobGetStoreTelemetryClient
   extends TelemetryClient
-  implements TelemetryMethods<typeof getStoreSubcommand>
+  implements TelemetryMethods<typeof getStoreInfoSubcommand>
 {
   trackCliArgumentStoreId(value: string | undefined) {
     if (value) {

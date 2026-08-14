@@ -190,7 +190,7 @@ describe('connectGitRepository()', () => {
 
     // Should ask for confirmation
     expect(client.input.confirm).toHaveBeenCalledWith(
-      'Detected a repository. Connect it to this project?',
+      'Connect detected Git repository?',
       true
     );
 

@@ -84,4 +84,34 @@ export class RollingReleaseTelemetryClient
       value: actual,
     });
   }
+
+  trackCliFlagEnable(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('enable');
+    }
+  }
+
+  trackCliFlagDisable(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('disable');
+    }
+  }
+
+  trackCliOptionAdvancementType(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'advancement-type',
+        value,
+      });
+    }
+  }
+
+  trackCliOptionStage(value: string[] | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'stage',
+        value: value.join(','),
+      });
+    }
+  }
 }

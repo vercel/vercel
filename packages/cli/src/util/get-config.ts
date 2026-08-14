@@ -3,7 +3,7 @@ import { fileNameSymbol } from '@vercel/client';
 import {
   CantParseJSONFile,
   CantFindConfig,
-  ConflictingConfigFiles,
+  DeprecatedNowJson,
   WorkingDirectoryDoesNotExist,
 } from './errors-ts';
 import humanizePath from './humanize-path';
@@ -14,7 +14,14 @@ import output from '../output-manager';
 
 let config: VercelConfig;
 
-export default async function getConfig(
+/**
+ * Best-effort early config read for CLI startup. Only reads vercel.json
+ * directly — does NOT handle vercel.ts or vercel.toml (those go
+ * through compileVercelConfig in the per-command path). Used in index.ts for
+ * early error checking and scope resolution; commands that need full config
+ * support should use readConfig() instead.
+ */
+export default async function earlyGetConfig(
   configFile?: string
 ): Promise<VercelConfig | Error> {
   // If config was already read, just return it
@@ -55,19 +62,15 @@ export default async function getConfig(
   const vercelFilePath = path.resolve(localPath, 'vercel.json');
   const nowFilePath = path.resolve(localPath, 'now.json');
 
-  // Try with `vercel.json` or `now.json` in the same directory
   const [vercelConfig, nowConfig] = await Promise.all([
     readJSONFile<VercelConfig>(vercelFilePath),
-    readJSONFile<VercelConfig>(nowFilePath),
+    readJSONFile<unknown>(nowFilePath),
   ]);
   if (vercelConfig instanceof CantParseJSONFile) {
     return vercelConfig;
   }
   if (nowConfig instanceof CantParseJSONFile) {
     return nowConfig;
-  }
-  if (vercelConfig && nowConfig) {
-    return new ConflictingConfigFiles([vercelFilePath, nowFilePath]);
   }
   if (vercelConfig !== null) {
     output.debug(`Found config in file "${vercelFilePath}"`);
@@ -76,12 +79,9 @@ export default async function getConfig(
     return config;
   }
   if (nowConfig !== null) {
-    output.debug(`Found config in file "${nowFilePath}"`);
-    config = nowConfig;
-    config[fileNameSymbol] = 'now.json';
-    return config;
+    return new DeprecatedNowJson(nowFilePath);
   }
 
   // If we couldn't find the config anywhere return error
-  return new CantFindConfig([vercelFilePath, nowFilePath].map(humanizePath));
+  return new CantFindConfig([vercelFilePath].map(humanizePath));
 }

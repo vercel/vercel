@@ -3,6 +3,7 @@ query GetAllPackages {
     length
     items {
       name
+      path
       tasks {
         items {
           name

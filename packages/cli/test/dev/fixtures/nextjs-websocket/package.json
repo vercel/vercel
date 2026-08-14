@@ -1,0 +1,17 @@
+{
+  "name": "nextjs-websocket",
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {
+    "dev": "next",
+    "build": "next build"
+  },
+  "dependencies": {
+    "next": "13.0.4",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "@vercel/functions": "file:../../../../../functions",
+    "ws": "8.18.0"
+  },
+  "ignoreNextjsUpdates": true
+}

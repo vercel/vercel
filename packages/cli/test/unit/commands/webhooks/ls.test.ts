@@ -133,5 +133,19 @@ describe('webhooks ls', () => {
       expect(firstWebhook).toHaveProperty('events');
       expect(firstWebhook).toHaveProperty('createdAt');
     });
+
+    it('emits plain next command for non-interactive JSON', async () => {
+      useUser();
+      useWebhooks(0);
+      client.setArgv('webhooks', 'ls');
+      client.nonInteractive = true;
+      const exitCode = await webhooks(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.stdout.getFullOutput();
+      const jsonOutput = JSON.parse(output);
+      expect(jsonOutput.status).toBe('ok');
+      expect(jsonOutput.next[0].command).toBe('vercel webhooks get <id>');
+    });
   });
 });

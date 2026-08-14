@@ -1,3 +1,4 @@
+import { loadEnvConfig } from '@next/env';
 import execa from 'execa';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
@@ -5,10 +6,11 @@ import { printError } from '../../util/error';
 import { runSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
-import { getLinkedProject } from '../../util/projects/link';
+import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import parseTarget from '../../util/parse-target';
 import { getCommandName } from '../../util/pkg-name';
+import type { EnvTelemetryClient } from '../../util/telemetry/commands/env';
 
 /**
  * Parses argv for the run subcommand, splitting on `--` to separate
@@ -43,7 +45,10 @@ export function needsHelpForRun(client: Client): boolean {
   }
 }
 
-export default async function run(client: Client): Promise<number> {
+export default async function run(
+  client: Client,
+  telemetry: EnvTelemetryClient
+): Promise<number> {
   const { vercelArgs, userCommand } = parseRunArgs(client.argv);
 
   let parsedArgs;
@@ -63,8 +68,14 @@ export default async function run(client: Client): Promise<number> {
     return 1;
   }
 
-  // Get the linked project
-  const link = await getLinkedProject(client);
+  // Resolve the selected project
+  const projectName = parsedArgs.flags['--project'];
+  telemetry.trackCliOptionProject(projectName);
+
+  const link = await resolveProjectContext({
+    client,
+    projectNameOrId: projectName,
+  });
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
@@ -87,7 +98,7 @@ export default async function run(client: Client): Promise<number> {
 
   const gitBranch = parsedArgs.flags['--git-branch'];
 
-  output.spinner(`Downloading \`${environment}\` Environment Variables`);
+  output.spinner(`Downloading \`${environment}\` environment variables`);
 
   const records = await pullEnvRecords(
     client,
@@ -105,14 +116,22 @@ export default async function run(client: Client): Promise<number> {
     `Running command with ${Object.keys(records.env).length} environment variables`
   );
 
+  let localEnv: Record<string, string | undefined> = {};
+  try {
+    localEnv = loadEnvConfig(client.cwd, true).combinedEnv;
+  } catch (err) {
+    output.debug(`Failed to load local env files: ${err}`);
+  }
+
   try {
     const result = await execa(userCommand[0], userCommand.slice(1), {
       cwd: client.cwd,
       stdio: 'inherit',
       reject: false,
       env: {
-        ...process.env,
         ...records.env,
+        ...localEnv,
+        ...process.env,
       },
     });
 

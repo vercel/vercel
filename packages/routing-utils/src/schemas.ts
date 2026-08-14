@@ -12,6 +12,37 @@ const mitigateSchema = {
   },
 } as const;
 
+const serviceNameSchema = {
+  description: 'A service name identifier.',
+  type: 'string',
+  minLength: 1,
+  maxLength: 64,
+  pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+} as const;
+
+const serviceDestinationSchema = {
+  description:
+    'A service-targeted destination that delegates routing into a named service from `services`. Identified by the presence of `service`.',
+  type: 'object',
+  additionalProperties: false,
+  required: ['service'],
+  properties: {
+    type: {
+      description:
+        'Optional explicit format marker. The destination shape is identified by the `service` property, so `type` is no longer required. When present it must be `service`.',
+      type: 'string',
+      enum: ['service'],
+    },
+    service: serviceNameSchema,
+    path: {
+      description:
+        'Routing-only path used to select a route inside the target service. It does not mutate the URL observed by user code.',
+      type: 'string',
+      maxLength: 4096,
+    },
+  },
+} as const;
+
 const matchableValueSchema = {
   description:
     'A value to match against. Can be a string (regex) or a condition operation object',
@@ -139,20 +170,25 @@ export const hasSchema = {
   },
 } as const;
 
-const transformsSchema = {
+export const transformsSchema = {
   description:
-    'A list of transform rules to adjust the query parameters of a request or HTTP headers of request or response',
+    'A list of transform rules to adjust a request path, request query parameters, or request/response headers',
   type: 'array',
   minItems: 1,
   items: {
     type: 'object',
     additionalProperties: false,
-    required: ['type', 'op', 'target'],
+    required: ['type', 'op'],
     properties: {
       type: {
         description: 'The scope of the transform to apply',
         type: 'string',
-        enum: ['request.headers', 'request.query', 'response.headers'],
+        enum: [
+          'request.headers',
+          'request.query',
+          'response.headers',
+          'request.path',
+        ],
       },
       op: {
         description: 'The operation to perform on the target',
@@ -284,6 +320,7 @@ const transformsSchema = {
             },
           },
         },
+        // biome-ignore lint/suspicious/noThenProperty: JSON Schema if/then keyword
         then: {
           required: ['args'],
         },
@@ -307,6 +344,7 @@ const transformsSchema = {
             },
           ],
         },
+        // biome-ignore lint/suspicious/noThenProperty: JSON Schema if/then keyword
         then: {
           properties: {
             target: {
@@ -315,6 +353,7 @@ const transformsSchema = {
                   if: {
                     type: 'string',
                   },
+                  // biome-ignore lint/suspicious/noThenProperty: JSON Schema if/then keyword
                   then: {
                     pattern: '^[a-zA-Z0-9_-]+$',
                   },
@@ -341,7 +380,92 @@ const transformsSchema = {
           },
         },
       },
+      {
+        if: {
+          required: ['type'],
+          properties: {
+            type: {
+              enum: ['request.headers', 'request.query', 'response.headers'],
+            },
+          },
+        },
+        // biome-ignore lint/suspicious/noThenProperty: JSON Schema if/then keyword
+        then: {
+          required: ['target'],
+        },
+      },
+      {
+        if: {
+          required: ['type'],
+          properties: {
+            type: {
+              enum: ['request.path'],
+            },
+          },
+        },
+        // biome-ignore lint/suspicious/noThenProperty: JSON Schema if/then keyword
+        then: {
+          required: ['args'],
+          not: {
+            required: ['target'],
+          },
+          properties: {
+            op: {
+              enum: ['set'],
+            },
+            args: {
+              description:
+                'The runtime-visible request path. Must be an origin-form path without query or fragment.',
+              type: 'string',
+              maxLength: 2048,
+              pattern: '^/(?!/)(?!.*[?#\\s\\x00-\\x1F\\x7F]).*$',
+            },
+          },
+        },
+      },
     ],
+  },
+} as const;
+
+const rewriteTransformsSchema = {
+  description:
+    'A list of request path transforms using path-to-regexp parameters.',
+  type: 'array',
+  minItems: 1,
+  items: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['type', 'op', 'args'],
+    properties: {
+      type: {
+        description: 'The request path to expose to the target runtime',
+        type: 'string',
+        enum: ['request.path'],
+      },
+      op: {
+        description: 'Replace the runtime-visible request path',
+        type: 'string',
+        enum: ['set'],
+      },
+      args: {
+        description:
+          'An origin-form request path. Route parameters use path-to-regexp syntax such as `/:path*`.',
+        type: 'string',
+        maxLength: 2048,
+        pattern: '^/(?!/)(?!.*[?#\\s\\x00-\\x1F\\x7F]).*$',
+      },
+      env: {
+        description:
+          'An array of environment variable names that should be replaced at runtime in the args value',
+        type: 'array',
+        minItems: 1,
+        maxItems: 64,
+        items: {
+          type: 'string',
+          maxLength: 256,
+        },
+      },
+    },
   },
 } as const;
 
@@ -350,7 +474,6 @@ const transformsSchema = {
  */
 export const routesSchema = {
   type: 'array',
-  deprecated: true,
   description:
     'A list of routes objects used to rewrite paths to point towards other internal or external paths',
   example: [{ dest: 'https://docs.example.com', src: '/docs' }],
@@ -358,16 +481,26 @@ export const routesSchema = {
     anyOf: [
       {
         type: 'object',
-        required: ['src'],
+        anyOf: [{ required: ['src'] }, { required: ['source'] }],
         additionalProperties: false,
         properties: {
           src: {
             type: 'string',
             maxLength: 4096,
           },
+          source: {
+            type: 'string',
+            maxLength: 4096,
+          },
           dest: {
             type: 'string',
             maxLength: 4096,
+          },
+          destination: {
+            anyOf: [
+              { type: 'string', maxLength: 4096 },
+              serviceDestinationSchema,
+            ],
           },
           headers: {
             type: 'object',
@@ -393,6 +526,7 @@ export const routesSchema = {
             type: 'boolean',
           },
           important: {
+            deprecated: true,
             type: 'boolean',
           },
           user: {
@@ -402,6 +536,7 @@ export const routesSchema = {
             type: 'boolean',
           },
           override: {
+            deprecated: true,
             type: 'boolean',
           },
           check: {
@@ -411,6 +546,11 @@ export const routesSchema = {
             type: 'boolean',
           },
           status: {
+            type: 'integer',
+            minimum: 100,
+            maximum: 999,
+          },
+          statusCode: {
             type: 'integer',
             minimum: 100,
             maximum: 999,
@@ -482,6 +622,7 @@ export const routesSchema = {
       },
       {
         type: 'object',
+        deprecated: true,
         required: ['handle'],
         additionalProperties: false,
         properties: {
@@ -513,10 +654,10 @@ export const rewritesSchema = {
       },
       destination: {
         description:
-          'An absolute pathname to an existing resource or an external URL.',
-        type: 'string',
-        maxLength: 4096,
+          'An absolute pathname to an existing resource, an external URL, or a service-targeted destination object.',
+        anyOf: [{ type: 'string', maxLength: 4096 }, serviceDestinationSchema],
       },
+      transforms: rewriteTransformsSchema,
       has: hasSchema,
       missing: hasSchema,
       statusCode: {
@@ -558,7 +699,7 @@ export const redirectsSchema = {
     properties: {
       source: {
         description:
-          'A pattern that matches each incoming pathname (excluding querystring).',
+          'A pattern that matches each incoming pathname (excluding querystring) or a full URL including domain.',
         type: 'string',
         maxLength: 4096,
       },
@@ -650,47 +791,4 @@ export const trailingSlashSchema = {
   description:
     'When `false`, visiting a path that ends with a forward slash will respond with a `308` status code and redirect to the path without the trailing slash.',
   type: 'boolean',
-} as const;
-
-export const bulkRedirectsSchema = {
-  type: 'array',
-  description: 'A list of bulk redirect definitions.',
-  items: {
-    type: 'object',
-    additionalProperties: false,
-    required: ['source', 'destination'],
-    properties: {
-      source: {
-        description: 'The exact URL path or pattern to match.',
-        type: 'string',
-        maxLength: 2048,
-      },
-      destination: {
-        description: 'The target URL path where traffic should be redirected.',
-        type: 'string',
-        maxLength: 2048,
-      },
-      permanent: {
-        description:
-          'A boolean to toggle between permanent and temporary redirect. When `true`, the status code is `308`. When `false` the status code is `307`.',
-        type: 'boolean',
-      },
-      statusCode: {
-        description:
-          'An optional integer to define the status code of the redirect.',
-        type: 'integer',
-        enum: [301, 302, 307, 308],
-      },
-      sensitive: {
-        description:
-          'A boolean to toggle between case-sensitive and case-insensitive redirect. When `true`, the redirect is case-sensitive. When `false` the redirect is case-insensitive.',
-        type: 'boolean',
-      },
-      query: {
-        description:
-          'Whether the query string should be preserved by the redirect. The default is `false`.',
-        type: 'boolean',
-      },
-    },
-  },
 } as const;

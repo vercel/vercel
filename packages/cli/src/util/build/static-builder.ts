@@ -1,21 +1,40 @@
 import minimatch from 'minimatch';
 import { shouldServe as defaultShouldServe } from '@vercel/build-utils';
 import type { BuildV2, Files, ShouldServe } from '@vercel/build-utils';
+import { VERCEL_CONFIG_EXTENSIONS } from '../compile-vercel-config';
 
 export const version = 2;
+
+const ALWAYS_EXCLUDED_PREFIXES = ['.git/', 'node_modules/'];
+const ALWAYS_EXCLUDED_FILES = [
+  'vercel.json',
+  'vercel.toml',
+  ...VERCEL_CONFIG_EXTENSIONS.map(ext => `vercel.${ext}`),
+  '.vercelignore',
+  'now.json',
+  '.nowignore',
+];
+
+const DEFAULT_EXCLUDED_FILES = [
+  '.gitignore',
+  'package.json',
+  'package-lock.json',
+  'yarn.lock',
+  'pnpm-lock.yaml',
+  'bun.lock',
+  'bun.lockb',
+  'README.md',
+];
 
 export const build: BuildV2 = async ({ entrypoint, files, config }) => {
   const output: Files = {};
   const outputDirectory = config.zeroConfig ? config.outputDirectory : '';
 
-  // eslint-disable-next-line prefer-const
   for (let [filename, fileFsRef] of Object.entries(files)) {
     if (
-      filename.startsWith('.git/') ||
-      filename === 'vercel.json' ||
-      filename === '.vercelignore' ||
-      filename === 'now.json' ||
-      filename === '.nowignore' ||
+      ALWAYS_EXCLUDED_PREFIXES.some(prefix => filename.startsWith(prefix)) ||
+      ALWAYS_EXCLUDED_FILES.includes(filename) ||
+      DEFAULT_EXCLUDED_FILES.includes(filename) ||
       filename.startsWith('.env')
     ) {
       continue;

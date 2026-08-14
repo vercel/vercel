@@ -33,7 +33,7 @@ export const initCommand = {
     },
     {
       name: 'Initialize example project into specified directory',
-      value: `${packageName} <example> <dir>`,
+      value: `${packageName} init <example> <dir>`,
     },
     {
       name: 'Initialize example project without checking',

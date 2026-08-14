@@ -4,7 +4,6 @@ import { resolve, extname } from 'path';
 import { createServer, request } from 'http';
 import { listen } from 'async-listen';
 import { once } from 'node:events';
-import { fetch } from 'undici';
 import { promisify } from 'util';
 import { setTimeout } from 'timers/promises';
 
@@ -69,7 +68,7 @@ async function withDevServer(
       if (child.pid) {
         try {
           process.kill(child.pid, 'SIGTERM');
-        } catch (err) {
+        } catch (_err) {
           // Process might have already exited
         }
       }

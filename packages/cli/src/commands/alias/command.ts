@@ -1,6 +1,7 @@
 import { packageName } from '../../util/pkg-name';
 import {
   formatOption,
+  jsonOption,
   limitOption,
   nextOption,
   yesOption,
@@ -13,7 +14,7 @@ export const setSubcommand = {
   default: true,
   arguments: [
     {
-      name: 'deployment',
+      name: 'id-or-url',
       required: true,
     },
     {
@@ -30,7 +31,7 @@ export const listSubcommand = {
   aliases: ['ls'],
   description: 'Show all aliases',
   arguments: [],
-  options: [limitOption, nextOption, formatOption],
+  options: [limitOption, nextOption, formatOption, jsonOption],
   examples: [],
 } as const;
 

@@ -1,0 +1,8 @@
+{
+  "projectId": "prj_turborepo_nextjs",
+  "orgId": "team_dummy",
+  "settings": {
+    "framework": "nextjs",
+    "rootDirectory": "apps/web"
+  }
+}

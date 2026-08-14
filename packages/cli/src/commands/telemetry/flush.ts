@@ -1,16 +1,18 @@
+import fetch from '../../util/fetch';
 import type Client from '../../util/client';
 
-export default async function flush(client: Client, args: string[]) {
+export default async function flush(_client: Client, args: string[]) {
   const url =
     process.env.VERCEL_TELEMETRY_BRIDGE_URL ||
     'https://telemetry.vercel.com/api/vercel-cli/v1/events';
   const { headers, body } = JSON.parse(args[0]);
   try {
-    const res = await client.fetch(url, {
+    // Bypass client.fetch because telemetry bridge requests do not use the
+    // authenticated Vercel API client.
+    const res = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
-      json: false,
     });
     const status = res.status;
     const cliTracked = res.headers.get('x-vercel-cli-tracked') || '';

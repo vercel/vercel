@@ -1,13 +1,68 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, nextOption } from '../../util/arg-common';
+import {
+  formatOption,
+  jsonOption,
+  limitOption,
+  nextOption,
+} from '../../util/arg-common';
+
+export const requestSubcommand = {
+  name: 'request',
+  aliases: ['access-request'],
+  description:
+    'Show join-request status for the current team (defaults to the authenticated user)',
+  arguments: [
+    {
+      name: 'userId',
+      required: false,
+    },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Status for your pending request',
+      value: `${packageName} teams request`,
+    },
+    {
+      name: 'Status for another user id',
+      value: `${packageName} teams request user_abc123`,
+    },
+  ],
+} as const;
 
 export const addSubcommand = {
   name: 'add',
   aliases: ['create'],
   description: 'Create a new team',
   arguments: [],
-  options: [],
-  examples: [],
+  options: [
+    {
+      name: 'slug',
+      shorthand: null,
+      type: String,
+      description:
+        'Team URL slug (e.g. acme for vercel.com/acme); required in non-interactive mode',
+      deprecated: false,
+    },
+    {
+      name: 'name',
+      shorthand: null,
+      type: String,
+      description:
+        'Display name for the team; required in non-interactive mode',
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'Create a team (interactive)',
+      value: `${packageName} teams add`,
+    },
+    {
+      name: 'Create a team non-interactively',
+      value: `${packageName} teams add --slug acme --name "Acme Corp"`,
+    },
+  ],
 } as const;
 
 export const listSubcommand = {
@@ -17,7 +72,9 @@ export const listSubcommand = {
   arguments: [],
   options: [
     nextOption,
+    limitOption,
     formatOption,
+    jsonOption,
     { name: 'since', shorthand: null, type: String, deprecated: true },
     { name: 'until', shorthand: null, type: String, deprecated: true },
     { name: 'count', shorthand: 'C', type: Number, deprecated: true },
@@ -47,6 +104,7 @@ export const switchSubcommand = {
       value: `${packageName} teams switch <slug>`,
     },
   ],
+  disabledGlobalOptions: ['token'],
 } as const;
 
 export const inviteSubcommand = {
@@ -67,8 +125,48 @@ export const inviteSubcommand = {
       value: `${packageName} teams invite`,
     },
     {
-      name: 'Invite multiple members simultaneously',
+      name: 'Invite multiple members (required in non-interactive mode)',
       value: `${packageName} teams invite abc@vercel.com xyz@vercel.com`,
+    },
+  ],
+} as const;
+
+export const ssoSubcommand = {
+  name: 'sso',
+  aliases: [],
+  description: 'Show SAML / SSO configuration for the current team',
+  arguments: [],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Human-readable SAML summary',
+      value: `${packageName} teams sso`,
+    },
+    {
+      name: 'JSON',
+      value: `${packageName} teams sso --json`,
+    },
+  ],
+} as const;
+
+export const membersSubcommand = {
+  name: 'members',
+  aliases: ['member'],
+  description: 'List members for the currently scoped team',
+  arguments: [],
+  options: [nextOption, limitOption, formatOption, jsonOption],
+  examples: [
+    {
+      name: 'List team members',
+      value: `${packageName} teams members`,
+    },
+    {
+      name: 'List team members as JSON',
+      value: `${packageName} teams members --json`,
+    },
+    {
+      name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch',
+      value: `${packageName} teams members --next 1584722256178`,
     },
   ],
 } as const;
@@ -82,7 +180,10 @@ export const teamsCommand = {
     addSubcommand,
     inviteSubcommand,
     listSubcommand,
+    requestSubcommand,
     switchSubcommand,
+    ssoSubcommand,
+    membersSubcommand,
   ],
   options: [],
   examples: [],

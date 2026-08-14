@@ -1,18 +1,17 @@
-import { lstatSync } from 'fs-extra';
-import { isAbsolute, join, relative, sep } from 'path';
-import { hash, hashes, mapToObject } from './utils/hashes';
+import { mapToObject } from './utils/hashes';
+import { deploy } from './deploy';
 import { upload } from './upload';
-import { buildFileTree, createDebug } from './utils';
+import { createDebug } from './utils';
 import { DeploymentError } from './errors';
-import { isErrnoException } from '@vercel/error-utils';
 import {
   VercelClientOptions,
   DeploymentOptions,
   DeploymentEventType,
 } from './types';
-import { streamToBufferChunks } from '@vercel/build-utils';
-import tar from 'tar-fs';
-import { createGzip } from 'zlib';
+import {
+  assertDeploymentPath,
+  collectDeploymentFiles,
+} from './collect-deployment-files';
 
 export default function buildCreateDeployment() {
   return async function* createDeployment(
@@ -25,16 +24,7 @@ export default function buildCreateDeployment() {
 
     debug('Creating deployment...');
 
-    if (typeof path !== 'string' && !Array.isArray(path)) {
-      debug(
-        `Error: 'path' is expected to be a string or an array. Received ${typeof path}`
-      );
-
-      throw new DeploymentError({
-        code: 'missing_path',
-        message: 'Path not provided',
-      });
-    }
+    assertDeploymentPath(path, debug);
 
     if (typeof clientOptions.token !== 'string') {
       debug(
@@ -47,34 +37,36 @@ export default function buildCreateDeployment() {
       });
     }
 
-    clientOptions.isDirectory =
-      !Array.isArray(path) && lstatSync(path).isDirectory();
-
-    if (Array.isArray(path)) {
-      for (const filePath of path) {
-        if (!isAbsolute(filePath)) {
-          throw new DeploymentError({
-            code: 'invalid_path',
-            message: `Provided path ${filePath} is not absolute`,
-          });
-        }
+    /**
+     * Manual deployment is an experimental feature that supports only prebuilt
+     * deployments. We could implicitly pass prebuilt=true when hitting the
+     * API but it is more intentional to require the user to set it.
+     */
+    if (clientOptions.manual) {
+      debug('Manual provisioning mode enabled');
+      if (!clientOptions.prebuilt) {
+        throw new DeploymentError({
+          code: 'invalid_options',
+          message: 'The `manual` option requires `prebuilt` to be true',
+        });
       }
-    } else if (!isAbsolute(path)) {
-      throw new DeploymentError({
-        code: 'invalid_path',
-        message: `Provided path ${path} is not absolute`,
-      });
+
+      // Once the feature becomes stable we will use a new body parameter
+      deploymentOptions.build = deploymentOptions.build || {};
+      deploymentOptions.build.env = deploymentOptions.build.env || {};
+      deploymentOptions.build.env.VERCEL_MANUAL_PROVISIONING = '1';
+      deploymentOptions.version = 2;
+
+      debug('Creating deployment with manual provisioning...');
+      yield* deploy(new Map(), clientOptions, deploymentOptions);
+      return;
     }
 
-    if (clientOptions.isDirectory && !Array.isArray(path)) {
-      debug(`Provided 'path' is a directory.`);
-    } else if (Array.isArray(path)) {
-      debug(`Provided 'path' is an array of file paths`);
-    } else {
-      debug(`Provided 'path' is a single file`);
-    }
-
-    const { fileList } = await buildFileTree(path, clientOptions, debug);
+    const { fileList, filesMap: files } = await collectDeploymentFiles(
+      path,
+      clientOptions,
+      debug
+    );
 
     // This is a useful warning because it prevents people
     // from getting confused about a deployment that renders 404.
@@ -84,50 +76,6 @@ export default function buildCreateDeployment() {
         type: 'warning',
         payload: 'There are no files inside your deployment.',
       };
-    }
-
-    // Populate Files -> FileFsRef mapping
-    const workPath = typeof path === 'string' ? path : path[0];
-
-    let files;
-
-    try {
-      if (clientOptions.archive === 'tgz') {
-        debug('Packing tarball');
-        const tarStream = tar
-          .pack(workPath, {
-            entries: fileList.map(file => relative(workPath, file)),
-          })
-          .pipe(createGzip());
-        const chunkedTarBuffers = await streamToBufferChunks(tarStream);
-        debug(`Packed tarball into ${chunkedTarBuffers.length} chunks`);
-        files = new Map(
-          chunkedTarBuffers.map((chunk, index) => [
-            hash(chunk),
-            {
-              names: [join(workPath, `.vercel/source.tgz.part${index + 1}`)],
-              data: chunk,
-              mode: 0o666,
-            },
-          ])
-        );
-      } else {
-        files = await hashes(fileList);
-      }
-    } catch (err: unknown) {
-      if (
-        clientOptions.prebuilt &&
-        isErrnoException(err) &&
-        err.code === 'ENOENT' &&
-        err.path
-      ) {
-        const errPath = relative(workPath, err.path);
-        err.message = `File does not exist: "${relative(workPath, errPath)}"`;
-        if (errPath.split(sep).includes('node_modules')) {
-          err.message = `Please ensure project dependencies have been installed:\n${err.message}`;
-        }
-      }
-      throw err;
     }
 
     debug(`Yielding a 'hashes-calculated' event with ${files.size} hashes`);

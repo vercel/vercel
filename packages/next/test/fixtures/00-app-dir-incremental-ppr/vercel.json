@@ -95,5 +95,10 @@
       "status": 200,
       "mustContain": "sentinel:dynamic"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

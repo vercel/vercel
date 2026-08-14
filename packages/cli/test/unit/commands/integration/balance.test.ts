@@ -12,18 +12,15 @@ import createLineIterator from 'line-async-iterator';
 
 describe('integration', () => {
   describe('balance', () => {
-    beforeEach(() => {
-      useUser();
-    });
-
     describe('--help', () => {
       it('tracks telemetry', async () => {
+        useUser();
         const command = 'integration';
         const subcommand = 'balance';
 
         client.setArgv(command, subcommand, '--help');
         const exitCodePromise = integrationCommand(client);
-        await expect(exitCodePromise).resolves.toEqual(2);
+        await expect(exitCodePromise).resolves.toEqual(0);
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
@@ -37,6 +34,7 @@ describe('integration', () => {
     describe('appropriate usage', () => {
       let team: Team;
       beforeEach(() => {
+        useUser();
         const teams = useTeams('team_dummy');
         team = Array.isArray(teams) ? teams[0] : teams.teams[0];
         client.config.currentTeam = team.id;
@@ -225,8 +223,161 @@ describe('integration', () => {
       });
     });
 
+    describe('without currentTeam (defaultTeamId fallback)', () => {
+      it('sets currentTeam from defaultTeamId and passes teamId to API calls', async () => {
+        useUser({
+          version: 'northstar',
+          defaultTeamId: 'team_dummy',
+        });
+        useTeams('team_dummy');
+        // Explicitly do NOT set client.config.currentTeam
+        useResources();
+
+        // Mock that validates teamId is present in the request
+        client.scenario.get(
+          '/:version/integrations/configurations',
+          (req, res) => {
+            const { teamId, integrationIdOrSlug } = req.query;
+            if (!teamId) {
+              res.status(400).json({ error: 'teamId is required' });
+              return;
+            }
+            if (integrationIdOrSlug === 'acme-prepayment') {
+              res.json([
+                {
+                  id: 'acme-1',
+                  integrationId: 'acme-prepayment',
+                  ownerId: 'team_dummy',
+                  slug: 'acme-prepayment',
+                  teamId: 'team_dummy',
+                  userId: 'user_dummy',
+                  scopes: ['read-write:integration-resource'],
+                  source: 'marketplace',
+                  installationType: 'marketplace',
+                  projects: [],
+                },
+              ]);
+            } else {
+              res.json([]);
+            }
+          }
+        );
+        usePrepayment('acme-prepayment');
+
+        client.setArgv('integration', 'balance', 'acme-prepayment');
+        const exitCodePromise = integrationCommand(client);
+
+        await expect(client.stderr).toOutput('Retrieving installation…');
+        await expect(client.stderr).toOutput('Retrieving balance info…');
+
+        await expect(exitCodePromise).resolves.toEqual(0);
+      });
+    });
+
+    describe('--format=json', () => {
+      let team: Team;
+      beforeEach(() => {
+        useUser();
+        const teams = useTeams('team_dummy');
+        team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+        client.config.currentTeam = team.id;
+        useConfiguration();
+        useResources();
+      });
+
+      it('returns JSON output with balances and thresholds', async () => {
+        usePrepayment('acme-prepayment');
+        client.setArgv(
+          'integration',
+          'balance',
+          'acme-prepayment',
+          '--format=json'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integration"').toEqual(0);
+
+        const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+        expect(jsonOutput).toHaveProperty('integration', 'acme-prepayment');
+        expect(jsonOutput.balances).toHaveLength(1);
+        expect(jsonOutput.balances[0]).toMatchObject({
+          resourceName: 'store_1',
+          amountInCents: 1500,
+          amount: '$15.00',
+        });
+        expect(jsonOutput.thresholds).toHaveLength(1);
+        expect(jsonOutput.thresholds[0]).toMatchObject({
+          resourceName: 'store_1',
+          minimumAmountInCents: 1000,
+          minimumAmount: '$10.00',
+          purchaseAmountInCents: 1000,
+          purchaseAmount: '$10.00',
+        });
+      });
+
+      it('returns JSON output with empty balances and thresholds', async () => {
+        usePrepayment('acme-empty');
+        client.setArgv(
+          'integration',
+          'balance',
+          'acme-prepayment',
+          '--format=json'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integration"').toEqual(0);
+
+        const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+        expect(jsonOutput).toEqual({
+          integration: 'acme-prepayment',
+          balances: [],
+          thresholds: [],
+        });
+      });
+
+      it('should track --format option in telemetry', async () => {
+        usePrepayment('acme-prepayment');
+        client.setArgv(
+          'integration',
+          'balance',
+          'acme-prepayment',
+          '--format=json'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integration"').toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'subcommand:balance',
+            value: 'balance',
+          },
+          {
+            key: 'option:format',
+            value: 'json',
+          },
+          {
+            key: 'argument:name',
+            value: 'acme-prepayment',
+          },
+        ]);
+      });
+
+      it('should error with an invalid format value', async () => {
+        client.setArgv(
+          'integration',
+          'balance',
+          'acme-prepayment',
+          '--format=xml'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integration"').toEqual(1);
+        await expect(client.stderr).toOutput(
+          'Error: Invalid output format: "xml"'
+        );
+      });
+    });
+
     describe('errors', () => {
       it('should error when there is no team', async () => {
+        useUser();
         client.setArgv('integration', 'balance', 'acme');
         const exitCode = await integrationCommand(client);
         expect(exitCode, 'exit code for "integration"').toEqual(1);
@@ -234,6 +385,7 @@ describe('integration', () => {
       });
 
       it('should error when no argument passed', async () => {
+        useUser();
         const teams = useTeams('team_dummy');
         const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
         client.config.currentTeam = team.id;
@@ -247,6 +399,7 @@ describe('integration', () => {
       });
 
       it('should error when multiple arguments passed', async () => {
+        useUser();
         const teams = useTeams('team_dummy');
         const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
         client.config.currentTeam = team.id;

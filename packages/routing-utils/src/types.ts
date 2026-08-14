@@ -39,7 +39,7 @@ export type HasField = Array<
     }
 >;
 
-type Transform = {
+export type HeaderQueryTransform = {
   type: 'request.headers' | 'request.query' | 'response.headers';
   op: 'append' | 'set' | 'delete';
   target: {
@@ -63,15 +63,37 @@ type Transform = {
   env?: string[];
 };
 
+export type PathTransform = {
+  type: 'request.path';
+  op: 'set';
+  args: string;
+  env?: string[];
+};
+
+export type Transform = HeaderQueryTransform | PathTransform;
+
+export type ServiceDestination = {
+  /**
+   * Optional explicit format marker. The destination is identified by the
+   * presence of `service`, so `type` is no longer required.
+   */
+  type?: 'service';
+  service: string;
+  /** Routing-only path used to select a route inside the target service. */
+  path?: string;
+};
+
 export type RouteWithSrc = {
   src: string;
   dest?: string;
   headers?: { [name: string]: string };
   methods?: string[];
   continue?: boolean;
+  /** @deprecated */
   override?: boolean;
   caseSensitive?: boolean;
   check?: boolean;
+  /** @deprecated */
   important?: boolean;
   status?: number;
   has?: HasField;
@@ -85,6 +107,20 @@ export type RouteWithSrc = {
     redirect?: Record<string, string>;
     cookie?: string;
   };
+  /**
+   * Aliases for `src`, `dest`, and `status`. These provide consistency with the
+   * `rewrites`, `redirects`, and `headers` fields which use `source`, `destination`,
+   * and `statusCode`. During normalization, the string forms are converted to
+   * their canonical forms (`src`, `dest`, `status`) and stripped from the route
+   * object.
+   *
+   * `destination` may also be a service-targeted object, in which case routing
+   * is delegated into the named service's internal route table and the object
+   * is preserved as-is (not folded into `dest`).
+   */
+  source?: string;
+  destination?: string | ServiceDestination;
+  statusCode?: number;
   /**
    * A middleware key within the `output` key under the build result.
    * Overrides a `middleware` definition.
@@ -102,6 +138,7 @@ export type RouteWithSrc = {
 };
 
 export type RouteWithHandle = {
+  /** @deprecated Internal use only. Do not use in vercel.json. */
   handle: HandleValue;
   src?: string;
   dest?: string;
@@ -110,13 +147,18 @@ export type RouteWithHandle = {
 
 export type Route = RouteWithSrc | RouteWithHandle;
 
+export type RouteInput =
+  | RouteWithSrc
+  | (Omit<RouteWithSrc, 'src'> & { src?: string; source: string })
+  | RouteWithHandle;
+
 export type NormalizedRoutes = {
   routes: Route[] | null;
   error: RouteApiError | null;
 };
 
 export interface GetRoutesProps {
-  routes?: Route[];
+  routes?: RouteInput[];
   cleanUrls?: boolean;
   rewrites?: Rewrite[];
   redirects?: Redirect[];
@@ -137,7 +179,8 @@ export interface Build {
 
 export interface Rewrite {
   source: string;
-  destination: string;
+  destination: string | ServiceDestination;
+  transforms?: PathTransform[];
   has?: HasField;
   missing?: HasField;
   statusCode?: number;

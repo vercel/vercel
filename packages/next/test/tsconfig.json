@@ -2,7 +2,7 @@
   "compilerOptions": {
     "allowJs": true,
     "sourceMap": true,
-    "types": ["jest"]
+    "types": ["vitest/globals"]
   },
   "extends": "../tsconfig.json",
   "include": ["**/*.test.ts"]

@@ -52,7 +52,12 @@ export default async function createDeploy(
       }
 
       if (err.code === 'builds_rate_limited') {
-        throw new ERRORS_TS.BuildsRateLimited(err.message);
+        throw new ERRORS_TS.BuildsRateLimited(err.message, {
+          ctaLabel: err.ctaLabel,
+          ctaUrl: err.ctaUrl,
+          action: err.action,
+          link: err.link,
+        });
       }
 
       // If the user doesn't have permissions over the domain used as a suffix we fail

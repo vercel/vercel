@@ -1,5 +1,146 @@
 # @vercel/go
 
+## 3.10.2
+
+### Patch Changes
+
+- 62a884e: Simplify isolated `services` and `experimentalServicesV2` runtime outputs by emitting their function at `index` instead of `_svc/<service-name>/index`.
+
+## 3.10.1
+
+### Patch Changes
+
+- 4b90a10: Route requests for named V2 standalone Go services to their internal function.
+
+## 3.10.0
+
+### Minor Changes
+
+- e6759d0: Add WebSocket upgrade support for standalone Go servers.
+
+## 3.9.2
+
+### Patch Changes
+
+- 2158ab6: [vc dev] Add support to `experimentalServicesV2` for bindings in `vc dev`
+
+## 3.9.1
+
+### Patch Changes
+
+- 94671a4: [go] Supervise the user server after startup in standalone server mode. If the user's server process exits after the `server-started` handshake, the bootstrap now reports an `unrecoverable-error` over IPC with the child's exit code, so the platform can recycle the instance instead of leaving it serving 502s while the health check still reports OK.
+- d4547af: Fix `vc dev` for standalone Go server mode:
+  - matching the real Go entrypoint when the framework preset's placeholder src does not exist
+  - serve all request paths
+  - keep a persistent dev server across requests instead of respawning `go run` per request, and wait for the server port to be ready instead of a fixed 2s window
+
+## 3.9.0
+
+### Minor Changes
+
+- 0c4ea01: Refactor: extract the standalone-server IPC proxy into a shared `@vercel-internals/ipc-proxy` package.
+
+  The proxy is now compiled once into prebuilt static binaries (shipped per-architecture) and reused by compiled runtimes, instead of being compiled at deploy time. No change to deployed behavior.
+
+## 3.8.0
+
+### Minor Changes
+
+- baac149: Add project manifest to go builder.
+- b1f766a: Support preDeploy and build commands in go builder.
+
+## 3.7.1
+
+### Patch Changes
+
+- e6dc048: Fix standalone Go server builds failing when user sets Go-version-specific env vars (e.g. GOEXPERIMENT). The bootstrap wrapper now builds with a clean environment, excluding user-provided env vars that may be incompatible with the Go version used for the wrapper. Also moves bootstrap source files to a `bootstrap/` subdirectory and bumps the bootstrap Go version from 1.21 to 1.23.
+
+## 3.7.0
+
+### Minor Changes
+
+- fb0cb8d: Add normalized entrypoint detector for runtime builders.
+
+## 3.6.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+## 3.5.0
+
+### Minor Changes
+
+- Support go apps using vendored dependencies. ([#15907](https://github.com/vercel/vercel/pull/15907))
+
+## 3.4.7
+
+### Patch Changes
+
+- Do not hang if the go process panics on startup. ([#15761](https://github.com/vercel/vercel/pull/15761))
+
+- [go] update `waitForServer` to not ping root endpoint ([#15765](https://github.com/vercel/vercel/pull/15765))
+
+## 3.4.6
+
+### Patch Changes
+
+- Improve Go build failures by including the compiler output in surfaced errors. ([#15651](https://github.com/vercel/vercel/pull/15651))
+
+## 3.4.5
+
+### Patch Changes
+
+- chore(deps-dev): bump tar from 7.5.7 to 7.5.11 ([#15492](https://github.com/vercel/vercel/pull/15492))
+
+## 3.4.4
+
+### Patch Changes
+
+- [go] versions 1.26 + 1.25 ([#15432](https://github.com/vercel/vercel/pull/15432))
+
+## 3.4.3
+
+### Patch Changes
+
+- Rename fetch to nodeFetch in cases where it is an import from node-fetch ([#15234](https://github.com/vercel/vercel/pull/15234))
+
+## 3.4.2
+
+### Patch Changes
+
+- Fix service route-prefix stripping for standalone Go services in services mode. ([#15120](https://github.com/vercel/vercel/pull/15120))
+
+  This updates Go's executable bootstrap to strip generated service route prefixes in production and adds a Go dev wrapper (`vc_init_dev.go`) so standalone Go dev also strips generated service route prefixes before forwarding requests to the user app.
+
+  Update the `09-services-frontend-backend-go-zc` e2e fixture backend from Ruby/Sinatra to Go so it exercises Go services detection and routing in zero-config services mode.
+
+## 3.4.1
+
+### Patch Changes
+
+- Forward Go and Ruby dev server output through `startDevServer` stdout/stderr callbacks so service logs are correctly prefixed in multi-service `vercel dev`. ([#14989](https://github.com/vercel/vercel/pull/14989))
+
+## 3.4.0
+
+### Minor Changes
+
+- Add experimental Go runtime framework preset. ([#14865](https://github.com/vercel/vercel/pull/14865))
+
+  This adds support for deploying standalone Go HTTP servers (using `package main` with `func main()`) in addition to the existing serverless function pattern. The preset supports:
+
+  - `main.go` at project root (simple projects)
+  - `cmd/api/main.go` (API servers)
+  - `cmd/server/main.go` (HTTP servers)
+
+  The Go application must listen on the port specified by the `PORT` environment variable.
+
+## 3.3.5
+
+### Patch Changes
+
+- Update deprecated tar package ([#14877](https://github.com/vercel/vercel/pull/14877))
+
 ## 3.3.4
 
 ### Patch Changes

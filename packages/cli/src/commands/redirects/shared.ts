@@ -1,63 +1,40 @@
 import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import type { Command } from '../help';
+import {
+  parseSubcommandArguments,
+  type ParsedSubcommandArguments,
+} from '../../util/command-arguments';
+import {
+  getGlobalFlagsFromArgs,
+  getSameSubcommandSuggestionFlags,
+} from '../../util/arg-common';
+import { withGlobalFlags as withClientGlobalFlags } from '../../util/agent-output';
 
-export interface ParsedSubcommand {
-  args: string[];
-  flags: { [key: string]: any };
+export function withGlobalFlags(
+  client: Client,
+  commandTemplate: string
+): string {
+  return withClientGlobalFlags(client, commandTemplate, {
+    preserveProject: true,
+  });
 }
 
 export async function parseSubcommandArgs(
   argv: string[],
   command: Command
-): Promise<ParsedSubcommand | number> {
+): Promise<ParsedSubcommandArguments | number> {
   let parsedArgs;
-  const flagsSpecification = getFlagsSpecification(command.options);
 
   try {
-    // @ts-expect-error - TypeScript complains about the flags specification type
-    parsedArgs = parseArguments(argv, flagsSpecification);
+    parsedArgs = parseSubcommandArguments(argv, command);
   } catch (err) {
     printError(err);
     return 1;
   }
 
   return parsedArgs;
-}
-
-export function validateRequiredArgs(
-  args: string[],
-  required: string[]
-): string | null {
-  for (let i = 0; i < required.length; i++) {
-    if (!args[i]) {
-      return `Missing required argument: ${required[i]}`;
-    }
-  }
-  return null;
-}
-
-export async function ensureProjectLink(client: Client) {
-  const link = await getLinkedProject(client);
-
-  if (link.status === 'error') {
-    return link.exitCode;
-  } else if (link.status === 'not_linked') {
-    output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
-    );
-    return 1;
-  }
-
-  client.config.currentTeam =
-    link.org.type === 'team' ? link.org.id : undefined;
-
-  return link;
 }
 
 export async function confirmAction(
@@ -86,4 +63,62 @@ export function isValidUrl(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Slice argv after `vercel` (i.e. client.argv.slice(2)) starting after the
+ * given redirects subcommand name.
+ */
+export function getArgsAfterRedirectsSubcommand(
+  fullArgs: string[],
+  subcommand: string
+): string[] {
+  const idx = fullArgs.indexOf(subcommand);
+  return idx >= 0 ? fullArgs.slice(idx + 1) : [];
+}
+
+/**
+ * Returns only global/safe flags from args after a redirects subcommand.
+ * Use for suggested `redirects list` / `redirects list-versions` commands.
+ */
+export function getRedirectGlobalFlagsOnly(
+  afterSubcommandArgs: string[]
+): string[] {
+  return getGlobalFlagsFromArgs(afterSubcommandArgs, {
+    preserveProject: true,
+  });
+}
+
+/**
+ * Global flags plus --yes for suggested `redirects promote` commands.
+ */
+export function getRedirectPromoteSuggestionFlags(
+  afterSubcommandArgs: string[]
+): string[] {
+  const parts = getRedirectGlobalFlagsOnly(afterSubcommandArgs);
+  if (!parts.some(p => p === '--yes' || p === '-y')) {
+    parts.push('--yes');
+  }
+  return parts;
+}
+
+/**
+ * Builds flag parts for suggested redirects commands (e.g. missing args or confirm).
+ * Uses args after the given subcommand, keeps only flags, and optionally ensures --yes.
+ * Use when building next[] commands like `redirects upload <file> ...` or `redirects add <source> <dest> ...`.
+ */
+export function buildRedirectsSuggestionFlags(
+  fullArgs: string[],
+  subcommand: string,
+  options: { ensureYes?: boolean } = {}
+): string[] {
+  const after = getArgsAfterRedirectsSubcommand(fullArgs, subcommand);
+  const flagParts = getSameSubcommandSuggestionFlags(after);
+  if (
+    options.ensureYes !== false &&
+    !flagParts.some(a => a === '--yes' || a === '-y')
+  ) {
+    flagParts.push('--yes');
+  }
+  return flagParts;
 }

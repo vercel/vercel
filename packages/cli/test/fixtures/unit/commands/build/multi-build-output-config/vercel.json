@@ -1,0 +1,18 @@
+{
+  "builds": [
+    {
+      "src": "first.txt",
+      "use": "boa-builder@0.0.0",
+      "config": {
+        "name": "first"
+      }
+    },
+    {
+      "src": "second.txt",
+      "use": "boa-builder@0.0.0",
+      "config": {
+        "name": "second"
+      }
+    }
+  ]
+}

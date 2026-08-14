@@ -34,5 +34,10 @@
       "status": 200,
       "mustContain": "this is a file"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

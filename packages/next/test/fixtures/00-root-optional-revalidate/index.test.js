@@ -1,4 +1,3 @@
-/* eslint-env jest */
 const path = require('path');
 const cheerio = require('cheerio');
 const { check, deployAndTest } = require('../../utils');

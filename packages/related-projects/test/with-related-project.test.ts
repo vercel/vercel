@@ -1,26 +1,27 @@
 import { withRelatedProject } from '../src/with-related-project';
 import { relatedProjects } from '../src/related-projects';
 import type { VercelRelatedProjects } from '../src/types';
+import type { Mock } from 'vitest';
 
-jest.mock('../src/related-projects', () => ({
-  relatedProjects: jest.fn(),
+vi.mock('../src/related-projects', () => ({
+  relatedProjects: vi.fn(),
 }));
 
 describe('withRelatedProject', () => {
   const mockEnv = process.env;
 
   beforeEach(() => {
-    jest.resetModules();
+    vi.resetModules();
     process.env = { ...mockEnv };
   });
 
   afterEach(() => {
     process.env = mockEnv;
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('returns defaultHost if no related projects are found', () => {
-    (relatedProjects as jest.Mock).mockReturnValue([]);
+    (relatedProjects as Mock).mockReturnValue([]);
 
     expect(
       withRelatedProject({
@@ -38,7 +39,7 @@ describe('withRelatedProject', () => {
         preview: { branch: 'feature-branch' },
       },
     ];
-    (relatedProjects as jest.Mock).mockReturnValue(mockProjects);
+    (relatedProjects as Mock).mockReturnValue(mockProjects);
 
     expect(
       withRelatedProject({
@@ -57,7 +58,7 @@ describe('withRelatedProject', () => {
         preview: { branch: 'feature-branch' },
       },
     ];
-    (relatedProjects as jest.Mock).mockReturnValue(mockProjects);
+    (relatedProjects as Mock).mockReturnValue(mockProjects);
 
     expect(
       withRelatedProject({
@@ -65,6 +66,25 @@ describe('withRelatedProject', () => {
         defaultHost: 'https://default.com',
       })
     ).toBe('https://feature-branch');
+  });
+
+  test('returns defaultHost when VERCEL_ENV is preview but project has no branch or customEnvironment', () => {
+    process.env.VERCEL_ENV = 'preview';
+    const mockProjects: VercelRelatedProjects = [
+      {
+        project: { id: '123', name: 'test-project' },
+        production: { url: 'test-project.vercel.app', alias: 'test.com' },
+        preview: {},
+      },
+    ];
+    (relatedProjects as Mock).mockReturnValue(mockProjects);
+
+    expect(
+      withRelatedProject({
+        projectName: 'test-project',
+        defaultHost: 'https://default.com',
+      })
+    ).toBe('https://default.com');
   });
 
   test('returns production alias URL when VERCEL_ENV is production and alias is present', () => {
@@ -76,7 +96,7 @@ describe('withRelatedProject', () => {
         preview: { branch: 'feature-branch' },
       },
     ];
-    (relatedProjects as jest.Mock).mockReturnValue(mockProjects);
+    (relatedProjects as Mock).mockReturnValue(mockProjects);
 
     expect(
       withRelatedProject({
@@ -95,7 +115,7 @@ describe('withRelatedProject', () => {
         preview: { branch: 'feature-branch' },
       },
     ];
-    (relatedProjects as jest.Mock).mockReturnValue(mockProjects);
+    (relatedProjects as Mock).mockReturnValue(mockProjects);
 
     expect(
       withRelatedProject({
@@ -114,7 +134,7 @@ describe('withRelatedProject', () => {
         preview: { branch: 'feature-branch' },
       },
     ];
-    (relatedProjects as jest.Mock).mockReturnValue(mockProjects);
+    (relatedProjects as Mock).mockReturnValue(mockProjects);
 
     expect(
       withRelatedProject({
@@ -133,7 +153,7 @@ describe('withRelatedProject', () => {
         preview: { branch: 'feature-branch' },
       },
     ];
-    (relatedProjects as jest.Mock).mockReturnValue(mockProjects);
+    (relatedProjects as Mock).mockReturnValue(mockProjects);
 
     expect(
       withRelatedProject({
@@ -141,5 +161,48 @@ describe('withRelatedProject', () => {
         defaultHost: 'https://default.com',
       })
     ).toBe('https://default.com');
+  });
+
+  test('returns preview customEnvironment URL when VERCEL_ENV is preview and customEnvironment is set', () => {
+    process.env.VERCEL_ENV = 'preview';
+    const mockProjects: VercelRelatedProjects = [
+      {
+        project: { id: '123', name: 'test-project' },
+        production: { url: 'test-project.vercel.app', alias: 'test.com' },
+        preview: {
+          customEnvironment: 'my-project-git-staging.vercel.sh',
+        },
+      },
+    ];
+    (relatedProjects as Mock).mockReturnValue(mockProjects);
+
+    expect(
+      withRelatedProject({
+        projectName: 'test-project',
+        defaultHost: 'https://default.com',
+      })
+    ).toBe('https://my-project-git-staging.vercel.sh');
+  });
+
+  test('prefers customEnvironment over branch when both are set in preview', () => {
+    process.env.VERCEL_ENV = 'preview';
+    const mockProjects: VercelRelatedProjects = [
+      {
+        project: { id: '123', name: 'test-project' },
+        production: { url: 'test-project.vercel.app', alias: 'test.com' },
+        preview: {
+          branch: 'feature-branch',
+          customEnvironment: 'my-project-git-staging.vercel.sh',
+        },
+      },
+    ];
+    (relatedProjects as Mock).mockReturnValue(mockProjects);
+
+    expect(
+      withRelatedProject({
+        projectName: 'test-project',
+        defaultHost: 'https://default.com',
+      })
+    ).toBe('https://my-project-git-staging.vercel.sh');
   });
 });

@@ -1,4 +1,3 @@
-/* eslint-env jest */
 const path = require('path');
 const fs = require('fs-extra');
 const { deployAndTest } = require('../../utils');

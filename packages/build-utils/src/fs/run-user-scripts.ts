@@ -117,6 +117,29 @@ export interface SpawnOptionsExtended extends SpawnOptions {
    * the error code, stdout and stderr.
    */
   ignoreNon0Exit?: boolean;
+
+  /**
+   * Writable stream to pipe stdout to (e.g., for prefixing output in multi-service mode).
+   * When provided, stdio is automatically set to 'pipe'.
+   */
+  outputStream?: NodeJS.WritableStream;
+
+  /**
+   * Writable stream to pipe stderr to (e.g., for prefixing output in multi-service mode).
+   * When provided, stdio is automatically set to 'pipe'.
+   */
+  errorStream?: NodeJS.WritableStream;
+}
+
+export interface NpmInstallOutput {
+  /**
+   * Writable stream for stdout (e.g., for prefixing output in multi-service mode)
+   */
+  stdout?: NodeJS.WritableStream;
+  /**
+   * Writable stream for stderr (e.g., for prefixing output in multi-service mode)
+   */
+  stderr?: NodeJS.WritableStream;
 }
 
 export function spawnAsync(
@@ -126,10 +149,24 @@ export function spawnAsync(
 ) {
   return new Promise<void>((resolve, reject) => {
     const stderrLogs: Buffer[] = [];
-    opts = { stdio: 'inherit', ...opts };
+    const hasCustomStreams = opts.outputStream || opts.errorStream;
+
+    if (hasCustomStreams) {
+      opts = { ...opts, stdio: ['inherit', 'pipe', 'pipe'] };
+    } else {
+      opts = { stdio: 'inherit', ...opts };
+    }
+
     const child = spawn(command, args, opts);
 
-    if (opts.stdio === 'pipe' && child.stderr) {
+    if (hasCustomStreams) {
+      if (child.stdout && opts.outputStream) {
+        child.stdout.pipe(opts.outputStream);
+      }
+      if (child.stderr && opts.errorStream) {
+        child.stderr.pipe(opts.errorStream);
+      }
+    } else if (opts.stdio === 'pipe' && child.stderr) {
       child.stderr.on('data', data => stderrLogs.push(data));
     }
 
@@ -146,7 +183,7 @@ export function spawnAsync(
         new NowBuildError({
           code: `BUILD_UTILS_SPAWN_${code || signal}`,
           message:
-            opts.stdio === 'inherit'
+            opts.stdio === 'inherit' || hasCustomStreams
               ? `${cmd} exited with ${code || signal}`
               : stderrLogs.map(line => line.toString()).join(''),
         })
@@ -239,7 +276,7 @@ export function getNodeBinPaths({
 
 async function chmodPlusX(fsPath: string) {
   const s = await fs.stat(fsPath);
-  const newMode = s.mode | 64 | 8 | 1; // eslint-disable-line no-bitwise
+  const newMode = s.mode | 64 | 8 | 1;
   if (s.mode === newMode) return;
   const base8 = newMode.toString(8).slice(-3);
   await fs.chmod(fsPath, base8);
@@ -309,51 +346,104 @@ export async function getNodeVersion(
   meta: Meta = {},
   availableVersions = getAvailableNodeVersions()
 ): Promise<NodeVersion | BunVersion> {
-  if (config.bunVersion) {
-    return getSupportedBunVersion(config.bunVersion);
-  }
-
-  const latestVersion = getLatestNodeVersion(availableVersions);
-  if (meta.isDev) {
-    // Use the system-installed version of `node` in PATH for `vercel dev`
-    latestVersion.runtime = 'nodejs';
-    return latestVersion;
-  }
+  // All the different versions/sources to consider
   const { packageJson } = await findPackageJson(destPath, true);
-  const configuredVersion = config.nodeVersion || fallbackVersion;
+  const packageJsonNodeVersion = packageJson?.engines?.node;
+  const packageJsonBunVersion = packageJson?.engines?.bun;
 
-  const packageJsonVersion = packageJson?.engines?.node;
-  const supportedNodeVersion = await getSupportedNodeVersion(
-    packageJsonVersion || configuredVersion,
-    !packageJsonVersion,
-    availableVersions
-  );
+  const latestNodeVersion = getLatestNodeVersion(availableVersions);
 
-  if (packageJson?.engines?.node) {
-    const { node } = packageJson.engines;
-    if (
-      configuredVersion &&
-      !intersects(configuredVersion, supportedNodeVersion.range)
-    ) {
+  // Determine the target runtime
+  let targetRuntime: 'node' | 'bun';
+  if (packageJsonNodeVersion && packageJsonBunVersion) {
+    // If package.json specifies both Node and Bun
+    if (config.bunVersion) {
+      // if vercel.json specifies a bun version, use bun
+      targetRuntime = 'bun';
       console.warn(
-        `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${configuredVersion}") will not apply, Node.js Version "${supportedNodeVersion.range}" will be used instead. Learn More: https://vercel.link/node-version`
+        `Warning detected "engines": { "node": ..., "bun": ... } in \`package.json\`. Since "bunVersion" is set in \`vercel.json\`, using "bun".`
+      );
+    } else {
+      // otherwise default to node
+      targetRuntime = 'node';
+      console.warn(
+        `Warning detected "engines": { "node": ..., "bun": ... } in \`package.json\`. Defaulting to "node".`
       );
     }
+  } else if (packageJsonNodeVersion) {
+    targetRuntime = 'node';
+    if (config.bunVersion) {
+      console.warn(
+        `Warning detected "engines": { "node": ... } in \`package.json\` and "bunVersion" in \`vercel.json\`. \`package.json\` takes precedence, using "node".`
+      );
+    }
+  } else if (packageJsonBunVersion || config.bunVersion) {
+    targetRuntime = 'bun';
+  } else {
+    // If no target runtime is determined, fallback to the configured node version
+    targetRuntime = 'node';
+  }
 
-    if (coerce(node)?.raw === node) {
-      console.warn(
-        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: https://vercel.link/node-version`
-      );
-    } else if (
-      validRange(node) &&
-      intersects(`${latestVersion.major + 1}.x`, node)
-    ) {
-      console.warn(
-        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: https://vercel.link/node-version`
-      );
+  // For `vercel dev`, return the latest node or bun version
+  if (meta.isDev) {
+    if (targetRuntime === 'node') {
+      // Use the system-installed version of `node` in PATH for `vercel dev`
+      latestNodeVersion.runtime = 'nodejs';
+      return latestNodeVersion;
+    } else {
+      // Hard coded for now...
+      return getSupportedBunVersion('1.x');
     }
   }
-  return supportedNodeVersion;
+
+  // Get the version for the target runtime
+  if (targetRuntime === 'node') {
+    const configuredNodeVersion = config.nodeVersion ?? fallbackVersion;
+
+    const supportedNodeVersion = await getSupportedNodeVersion(
+      packageJsonNodeVersion || configuredNodeVersion,
+      !packageJsonNodeVersion,
+      availableVersions
+    );
+
+    if (packageJson?.engines?.node) {
+      const { node } = packageJson.engines;
+      if (
+        configuredNodeVersion &&
+        !intersects(configuredNodeVersion, supportedNodeVersion.range)
+      ) {
+        console.warn(
+          `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${configuredNodeVersion}") will not apply, Node.js Version "${supportedNodeVersion.range}" will be used instead. Learn More: https://vercel.link/node-version`
+        );
+      }
+
+      if (coerce(node)?.raw === node) {
+        console.warn(
+          `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: https://vercel.link/node-version`
+        );
+      } else if (
+        validRange(node) &&
+        intersects(`${latestNodeVersion.major + 1}.x`, node)
+      ) {
+        console.warn(
+          `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: https://vercel.link/node-version`
+        );
+      }
+    }
+    return supportedNodeVersion;
+  } else {
+    // targetRuntime === 'bun'
+    if (packageJsonBunVersion) {
+      // engines.bun is set
+      return getSupportedBunVersion(packageJsonBunVersion);
+    }
+    if (config.bunVersion) {
+      // bunVersion is set in vercel.json
+      return getSupportedBunVersion(config.bunVersion);
+    }
+    // default to 1.x as a fallback
+    return getSupportedBunVersion('1.x');
+  }
 }
 
 /**
@@ -542,7 +632,7 @@ async function checkTurboSupportsCorepack(
   if (turboConfigPath) {
     try {
       turboJson = json5.parse(await fs.readFile(turboConfigPath, 'utf8'));
-    } catch (err) {
+    } catch (_err) {
       console.warn(
         `WARNING: Failed to parse ${path.basename(turboConfigPath)}`
       );
@@ -639,7 +729,6 @@ export async function walkParentDirs({
   for (const dir of traverseUpDirectories({ start, base })) {
     const fullPath = path.join(dir, filename);
 
-    // eslint-disable-next-line no-await-in-loop
     if (await fs.pathExists(fullPath)) {
       return fullPath;
     }
@@ -731,10 +820,12 @@ async function runInstallCommand({
   packageManager,
   args,
   opts,
+  output,
 }: {
   packageManager: CliType;
   args: string[];
   opts: SpawnOptionsExtended;
+  output?: NpmInstallOutput;
 }) {
   const { commandArguments, prettyCommand } =
     getInstallCommandForPackageManager(packageManager, args);
@@ -743,6 +834,9 @@ async function runInstallCommand({
   if (process.env.NPM_ONLY_PRODUCTION) {
     commandArguments.push('--production');
   }
+
+  opts.outputStream = output?.stdout;
+  opts.errorStream = output?.stderr;
 
   await spawnAsync(packageManager, commandArguments, opts);
 }
@@ -785,7 +879,8 @@ export async function runNpmInstall(
   args: string[] = [],
   spawnOpts?: SpawnOptions,
   meta?: Meta,
-  projectCreatedAt?: number
+  projectCreatedAt?: number,
+  output?: NpmInstallOutput
 ): Promise<boolean> {
   if (meta?.isDev) {
     debug('Skipping dependency installation because dev mode is enabled');
@@ -850,7 +945,11 @@ export async function runNpmInstall(
     }
 
     const installTime = Date.now();
-    console.log('Installing dependencies...');
+    if (output?.stdout) {
+      output.stdout.write('Installing dependencies...\n');
+    } else {
+      console.log('Installing dependencies...');
+    }
     debug(`Installing to ${destPath}`);
 
     const opts: SpawnOptionsExtended = { cwd: destPath, ...spawnOpts };
@@ -881,6 +980,7 @@ export async function runNpmInstall(
       packageManager: cliType,
       args,
       opts,
+      output,
     });
 
     debug(`Install complete [${Date.now() - installTime}ms]`);

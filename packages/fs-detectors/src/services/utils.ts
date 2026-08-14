@@ -2,13 +2,98 @@ import {
   isBackendFramework,
   isPythonFramework,
 } from '@vercel/build-utils/dist/framework-helpers';
+import {
+  INTERNAL_SERVICE_PREFIX,
+  getInternalServiceFunctionPath,
+  getInternalServiceCronPathPrefix,
+  getInternalServiceCronPath,
+} from '@vercel/build-utils';
+import type { Framework } from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
   ServiceRuntime,
   ExperimentalServices,
+  ExperimentalServicesV2,
+  InferredServicesConfig,
+  Services,
   ServiceDetectionError,
+  ServiceDetectionWarning,
+  ResolvedService,
 } from './types';
-import { RUNTIME_BUILDERS, ENTRYPOINT_EXTENSIONS } from './types';
+import {
+  RUNTIME_BUILDERS,
+  ENTRYPOINT_EXTENSIONS,
+  STATIC_BUILDERS,
+  ROUTE_OWNING_BUILDERS,
+} from './types';
+
+// Runtime frameworks, e.g. Python, Node, Ruby, etc. are currently marked experimental,
+// but service auto-detection should still consider them.
+export const DETECTION_FRAMEWORKS = frameworkList.filter(
+  (framework: Framework) =>
+    !framework.experimental || framework.runtimeFramework
+);
+
+export {
+  INTERNAL_SERVICE_PREFIX,
+  getInternalServiceFunctionPath,
+  getInternalServiceCronPathPrefix,
+  getInternalServiceCronPath,
+};
+
+/**
+ * Removes a trailing slash from an already-`posixPath.normalize`d path.
+ *
+ * `posixPath.normalize` preserves trailing slashes (`"frontend/"` stays
+ * `"frontend/"`), which double-prefixes builder paths when the value is later
+ * used as both `builder.config.workspace` and a `posixPath.join` prefix. Strip
+ * it so `"frontend/"` and `"frontend"` resolve identically. An empty result or
+ * a lone `"/"` collapses to `"."` (matching `normalizeServiceEntrypoint`).
+ */
+export function stripTrailingSlash(p: string): string {
+  const stripped = p.replace(/\/+$/, '');
+  return stripped === '' ? '.' : stripped;
+}
+
+export async function hasFile(
+  fs: DetectorFilesystem,
+  filePath: string
+): Promise<boolean> {
+  try {
+    return await fs.isFile(filePath);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Reserved internal namespace used by the dev queue proxy.
+ */
+export const INTERNAL_QUEUES_PREFIX = '/_svc/_queues';
+
+function normalizeInternalServiceEntrypoint(entrypoint: string): string {
+  const normalized = entrypoint
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '')
+    .replace(/\.[^/.]+$/, '');
+  return normalized || 'index';
+}
+
+export function getInternalServiceWorkerPathPrefix(
+  serviceName: string
+): string {
+  return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/workers`;
+}
+
+export function getInternalServiceWorkerPath(
+  serviceName: string,
+  entrypoint: string,
+  handler = 'worker'
+): string {
+  const normalizedEntrypoint = normalizeInternalServiceEntrypoint(entrypoint);
+  return `${getInternalServiceWorkerPathPrefix(serviceName)}/${normalizedEntrypoint}/${handler}`;
+}
 
 export function getBuilderForRuntime(runtime: ServiceRuntime): string {
   const builder = RUNTIME_BUILDERS[runtime];
@@ -18,14 +103,101 @@ export function getBuilderForRuntime(runtime: ServiceRuntime): string {
   return builder;
 }
 
+export function isStaticBuild(service: ResolvedService): boolean {
+  return STATIC_BUILDERS.has(service.builder.use);
+}
+
+/**
+ * Determines if a service uses a "route-owning" builder.
+ *
+ * Route-owning builders (e.g., `@vercel/next`, `@vercel/backends`) produce
+ * their own full route table with handle phases (filesystem, miss, rewrite,
+ * hit, error). The services system should NOT generate synthetic catch-all
+ * rewrites for them — instead, we rely on the builder's own `routes[]`.
+ */
+export function isRouteOwningBuilder(service: ResolvedService): boolean {
+  return ROUTE_OWNING_BUILDERS.has(service.builder.use);
+}
+
+/**
+ * Infer runtime from a framework slug.
+ *
+ * Examples:
+ * - `python` -> `python`
+ * - `fastapi` -> `python`
+ * - `express` -> `node`
+ */
+export function inferRuntimeFromFramework(
+  framework: string | null | undefined
+): ServiceRuntime | undefined {
+  if (!framework) {
+    return undefined;
+  }
+
+  // Runtime framework slug maps directly to runtime name.
+  if (framework in RUNTIME_BUILDERS) {
+    return framework as ServiceRuntime;
+  }
+
+  if (isPythonFramework(framework)) {
+    return 'python';
+  }
+  if (isBackendFramework(framework)) {
+    return 'node';
+  }
+
+  return undefined;
+}
+
+export function isFrontendFramework(
+  framework: string | null | undefined
+): boolean {
+  if (!framework) {
+    return false;
+  }
+  return !inferRuntimeFromFramework(framework);
+}
+
+/**
+ * BFF (Backend-for-Frontend) frameworks have their own server-side API routes
+ * (e.g. Next.js `/api/*`, Nuxt `/api/*`). Backend services mounted alongside
+ * a BFF frontend need a namespaced prefix like `/api/{name}` to avoid
+ * shadowing the frontend's API routes.
+ */
+const BFF_FRAMEWORKS = new Set([
+  'nextjs',
+  'nuxtjs',
+  'sveltekit',
+  'remix',
+  'solidstart',
+]);
+
+export function isBFFFramework(framework: string | null | undefined): boolean {
+  return !!framework && BFF_FRAMEWORKS.has(framework);
+}
+
+export function filterFrameworksByRuntime<T extends { slug?: string | null }>(
+  frameworks: readonly T[],
+  runtime?: ServiceRuntime
+): T[] {
+  if (!runtime) {
+    return [...frameworks];
+  }
+
+  return frameworks.filter(
+    framework => inferRuntimeFromFramework(framework.slug) === runtime
+  );
+}
+
 /**
  * Infer runtime from available service configuration.
  *
  * Priority (highest to lowest):
  * 1. Explicit runtime (user specified in config)
- * 2. Framework detection (fastapi → python, express → node)
- * 3. Builder detection (@vercel/python → python)
- * 4. Entrypoint extension (.py → python, .ts → node)
+ * 2. Runtime framework slug (ruby → ruby, go → go)
+ * 3. Framework detection (fastapi → python, express → node)
+ * 4. Builder detection (@vercel/python → python)
+ * 5. Entrypoint extension (.py → python, .ts → node)
  *
  * @returns The inferred runtime, or undefined if none can be determined.
  */
@@ -40,12 +212,9 @@ export function inferServiceRuntime(config: {
     return config.runtime as ServiceRuntime;
   }
 
-  // Infer from framework
-  if (isPythonFramework(config.framework)) {
-    return 'python';
-  }
-  if (isBackendFramework(config.framework)) {
-    return 'node';
+  const frameworkRuntime = inferRuntimeFromFramework(config.framework);
+  if (frameworkRuntime) {
+    return frameworkRuntime;
   }
 
   // Infer from builder
@@ -59,6 +228,15 @@ export function inferServiceRuntime(config: {
 
   // Infer from entrypoint extension
   if (config.entrypoint) {
+    // "pyproject.toml" is the declared-services entrypoint for Python: the
+    // service builds exactly what `[tool.vercel]` in that file declares
+    // (web entrypoint and/or subscribers), with no auto-detection.
+    if (
+      config.entrypoint === 'pyproject.toml' ||
+      config.entrypoint.endsWith('/pyproject.toml')
+    ) {
+      return 'python';
+    }
     for (const [ext, runtime] of Object.entries(ENTRYPOINT_EXTENSIONS)) {
       if (config.entrypoint.endsWith(ext)) {
         return runtime;
@@ -70,33 +248,139 @@ export function inferServiceRuntime(config: {
 }
 
 export interface ReadVercelConfigResult {
-  config: { experimentalServices?: ExperimentalServices } | null;
+  config: {
+    experimentalServices?: ExperimentalServices;
+    services?: Services;
+    experimentalServicesV2?: ExperimentalServicesV2;
+  } | null;
   error: ServiceDetectionError | null;
 }
 
 /**
- * Read and parse vercel.json from filesystem.
+ * Read and parse vercel.json or vercel.toml from filesystem.
  * Returns the parsed config or an error if the file exists but is invalid.
  */
 export async function readVercelConfig(
   fs: DetectorFilesystem
 ): Promise<ReadVercelConfigResult> {
   const hasVercelJson = await fs.hasPath('vercel.json');
-  if (!hasVercelJson) {
-    return { config: null, error: null };
+  if (hasVercelJson) {
+    try {
+      const content = await fs.readFile('vercel.json');
+      const config = JSON.parse(content.toString());
+      return { config, error: null };
+    } catch {
+      return {
+        config: null,
+        error: {
+          code: 'INVALID_VERCEL_JSON',
+          message:
+            'Failed to parse vercel.json. Ensure it contains valid JSON.',
+        },
+      };
+    }
   }
 
-  try {
-    const content = await fs.readFile('vercel.json');
-    const config = JSON.parse(content.toString());
-    return { config, error: null };
-  } catch {
-    return {
-      config: null,
-      error: {
-        code: 'INVALID_VERCEL_JSON',
-        message: 'Failed to parse vercel.json. Ensure it contains valid JSON.',
-      },
-    };
+  const hasVercelToml = await fs.hasPath('vercel.toml');
+  if (hasVercelToml) {
+    try {
+      const { parse: tomlParse } = await import('smol-toml');
+      const content = await fs.readFile('vercel.toml');
+      const config = tomlParse(content.toString());
+      return { config: config as any, error: null };
+    } catch {
+      return {
+        config: null,
+        error: {
+          code: 'INVALID_VERCEL_TOML',
+          message:
+            'Failed to parse vercel.toml. Ensure it contains valid TOML.',
+        },
+      };
+    }
+  }
+
+  return { config: null, error: null };
+}
+
+/**
+ * Assign mount paths to inferred services.
+ *
+ * A frontend service gets `/`, backend services get `/api/...`:
+ * - If the frontend is a BFF (e.g. Next.js, has its own API routes):
+ *   backends get `/api/{name}/(.*)` to avoid shadowing the frontend's API routes.
+ * - If the frontend is client-only (e.g. Vite):
+ *   backends get `/api/(.*)`.
+ *
+ * A single non-frontend service gets `/`.
+ * If no frontend service found, multiple services get `/api/{name}`.
+ *
+ * Priority for `/`: single service or frontend > name "frontend" or "web" > alphabetical.
+ */
+export function assignMountPaths(
+  services: InferredServicesConfig
+): ServiceDetectionWarning[] {
+  const warnings: ServiceDetectionWarning[] = [];
+  const names = Object.keys(services);
+
+  if (names.length === 1) {
+    services[names[0]].mountPath = '/';
+    return warnings;
+  }
+
+  const frontendNames = names.filter(name =>
+    isFrontendFramework(services[name].framework)
+  );
+
+  let rootName: string | null = null;
+  if (frontendNames.length === 1) {
+    rootName = frontendNames[0];
+  } else if (frontendNames.length > 1) {
+    rootName =
+      frontendNames.find(n => n === 'frontend' || n === 'web') ??
+      frontendNames.sort()[0];
+    warnings.push({
+      code: 'MULTIPLE_FRONTENDS',
+      message: `Multiple frontend services detected (${frontendNames.join(', ')}). "${rootName}" was assigned mount path "/". Adjust manually if a different service should be the root.`,
+    });
+  }
+
+  // BFF frontends (e.g. Next.js) have their own /api routes, so backend
+  // services need a namespaced prefix to avoid conflicts.
+  const rootFramework = rootName ? services[rootName].framework : undefined;
+  const isBFF = rootFramework ? isBFFFramework(rootFramework) : false;
+
+  // Count non-root services to determine if namespacing is needed.
+  const nonRootNames = names.filter(n => n !== rootName);
+  // For client-only frontends with exactly one non-root service, use /api
+  // directly. For BFF frontends or multiple non-root services, namespace
+  // by service name to avoid mount path conflicts.
+  const needsNamespace = isBFF || nonRootNames.length > 1;
+
+  for (const name of names) {
+    if (name === rootName) {
+      services[name].mountPath = '/';
+    } else {
+      services[name].mountPath = needsNamespace ? `/api/${name}` : '/api';
+    }
+  }
+
+  return warnings;
+}
+
+export function combineBuildCommand(
+  buildCommand: string | undefined,
+  preDeployCommand: string | string[] | undefined
+): string | undefined {
+  const preDeploy = Array.isArray(preDeployCommand)
+    ? preDeployCommand.join(' && ')
+    : preDeployCommand;
+
+  if (preDeploy && buildCommand) {
+    return `${buildCommand} && ${preDeploy}`;
+  } else if (preDeploy) {
+    return preDeploy;
+  } else {
+    return buildCommand;
   }
 }

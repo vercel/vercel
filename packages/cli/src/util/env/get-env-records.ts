@@ -2,6 +2,7 @@ import { URLSearchParams } from 'url';
 import type Client from '../client';
 import type { ProjectEnvVariable } from '@vercel-internals/types';
 import output from '../../output-manager';
+import { withEnvChallengeRecovery } from './challenge-recovery';
 
 /** The CLI command that was used that needs the environment variables. */
 export type EnvRecordsSource =
@@ -13,7 +14,10 @@ export type EnvRecordsSource =
   | 'vercel-cli:env:run'
   | 'vercel-cli:dev'
   | 'vercel-cli:pull'
-  | 'vercel-cli:link';
+  | 'vercel-cli:link'
+  | 'vercel-cli:integration:add'
+  | 'vercel-cli:blob:store-add'
+  | 'vercel-cli:blob:store-remove';
 
 export default async function getEnvRecords(
   client: Client,
@@ -57,7 +61,9 @@ export default async function getEnvRecords(
 
   const url = `/v10/projects/${projectId}/env?${query}`;
 
-  return client.fetch<{ envs: ProjectEnvVariable[] }>(url);
+  return withEnvChallengeRecovery(client, () =>
+    client.fetch<{ envs: ProjectEnvVariable[] }>(url)
+  );
 }
 
 interface PullEnvOptions {
@@ -67,21 +73,25 @@ interface PullEnvOptions {
 
 export async function pullEnvRecords(
   client: Client,
-  projectId: string,
+  projectIdOrDeploymentId: string,
   source: EnvRecordsSource,
   { target, gitBranch }: PullEnvOptions = {}
 ) {
   output.debug(
-    `Fetching Environment Variables of project ${projectId} and target ${target}`
+    `Fetching Environment Variables of ${projectIdOrDeploymentId} and target ${target}`
   );
   const query = new URLSearchParams();
 
-  let url = `/v3/env/pull/${projectId}`;
+  let url = `/v3/env/pull/${projectIdOrDeploymentId}`;
 
-  if (target) {
-    url += `/${encodeURIComponent(target)}`;
-    if (gitBranch) {
-      url += `/${encodeURIComponent(gitBranch)}`;
+  // When pulling by deployment ID, target and gitBranch are irrelevant
+  // since the deployment already has its env fully resolved.
+  if (!projectIdOrDeploymentId.startsWith('dpl_')) {
+    if (target) {
+      url += `/${encodeURIComponent(target)}`;
+      if (gitBranch) {
+        url += `/${encodeURIComponent(gitBranch)}`;
+      }
     }
   }
 
@@ -93,8 +103,10 @@ export async function pullEnvRecords(
     url += `?${query}`;
   }
 
-  return client.fetch<{
-    env: Record<string, string>;
-    buildEnv: Record<string, string>;
-  }>(url);
+  return withEnvChallengeRecovery(client, () =>
+    client.fetch<{
+      env: Record<string, string>;
+      buildEnv: Record<string, string>;
+    }>(url)
+  );
 }

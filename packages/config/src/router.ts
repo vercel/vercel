@@ -1,6 +1,34 @@
 import { cacheHeader } from 'pretty-cache-header';
+import {
+  compilePathToRegexpTemplate,
+  sourceToRegex,
+} from '@vercel/routing-utils';
 import { validateRegexPattern, parseCronExpression } from './utils/validation';
-import type { Redirect, Rewrite } from './types';
+import type {
+  Condition,
+  MatchableValueObject,
+  Redirect,
+  Rewrite,
+} from './types';
+
+/**
+ * Convert a destination string from path-to-regexp format to use capture group references.
+ * Replaces :paramName with $index based on the segments array.
+ */
+function convertDestination(destination: string, segments: string[]): string {
+  let result = destination;
+  segments.forEach((segment, index) => {
+    const patterns = [
+      new RegExp(`:${segment}\\*`, 'g'),
+      new RegExp(`:${segment}\\+`, 'g'),
+      new RegExp(`:${segment}(?![a-zA-Z0-9_])`, 'g'),
+    ];
+    for (const pattern of patterns) {
+      result = result.replace(pattern, `$${index + 1}`);
+    }
+  });
+  return result;
+}
 
 /**
  * Type utility to extract path parameter names from a route pattern string.
@@ -151,85 +179,33 @@ export interface CacheOptions {
   staleIfError?: TimeString;
 }
 
-/**
- * Condition type for matching in redirects, headers, and rewrites.
- * - 'header': Match if a specific HTTP header key/value is present (or missing).
- * - 'cookie': Match if a specific cookie is present (or missing).
- * - 'host':   Match if the incoming host matches a given pattern.
- * - 'query':  Match if a query parameter is present (or missing).
- * - 'path':   Match if the path matches a given pattern.
- */
-export type ConditionType = 'header' | 'cookie' | 'host' | 'query' | 'path';
-
-/**
- * Conditional matching operators for has/missing conditions.
- * These can be used with the value field to perform advanced matching.
- */
-export interface ConditionOperators {
-  /** Check equality on a value (exact match) */
-  eq?: string | number;
-  /** Check inequality on a value (not equal) */
-  neq?: string;
-  /** Check inclusion in an array of values (value is one of) */
-  inc?: string[];
-  /** Check non-inclusion in an array of values (value is not one of) */
-  ninc?: string[];
-  /** Check if value starts with a prefix */
-  pre?: string;
-  /** Check if value ends with a suffix */
-  suf?: string;
-  /** Check if value is greater than (numeric comparison) */
-  gt?: number;
-  /** Check if value is greater than or equal to */
-  gte?: number;
-  /** Check if value is less than (numeric comparison) */
-  lt?: number;
-  /** Check if value is less than or equal to */
-  lte?: number;
+function createKeyedConditionHelper(type: 'header' | 'cookie' | 'query') {
+  return (key: string, value?: string | MatchableValueObject): Condition => {
+    if (value === undefined) {
+      return { type, key };
+    }
+    if (typeof value === 'string') {
+      return { type, key, value };
+    }
+    return { type, key, value };
+  };
 }
 
-/**
- * Used to define "has" or "missing" conditions with advanced matching operators.
- *
- * @example
- * // Simple header presence check
- * { type: 'header', key: 'x-api-key' }
- *
- * @example
- * // Header with exact value match
- * { type: 'header', key: 'x-api-version', value: 'v2' }
- *
- * @example
- * // Header with conditional operators
- * { type: 'header', key: 'x-user-role', inc: ['admin', 'moderator'] }
- *
- * @example
- * // Cookie with prefix matching
- * { type: 'cookie', key: 'session', pre: 'prod-' }
- *
- * @example
- * // Host matching
- * { type: 'host', value: 'api.example.com' }
- *
- * @example
- * // Query parameter with numeric comparison
- * { type: 'query', key: 'version', gte: 2 }
- *
- * @example
- * // Path pattern matching
- * { type: 'path', value: '^/api/v[0-9]+/.*' }
- */
-export interface Condition extends ConditionOperators {
-  type: ConditionType;
-  /** The key to match. Not used for 'host' or 'path' types. */
-  key?: string;
-  /**
-   * Simple string/regex pattern to match against.
-   * For 'host' and 'path' types, this is the only matching option.
-   * For other types, you can use value OR the conditional operators (eq, neq, etc).
-   */
-  value?: string;
+function createKeylessConditionHelper(type: 'host') {
+  return (value: string | MatchableValueObject): Condition => {
+    if (typeof value === 'string') {
+      return { type, value };
+    }
+    return { type, value };
+  };
 }
+
+export const matchers = {
+  header: createKeyedConditionHelper('header'),
+  cookie: createKeyedConditionHelper('cookie'),
+  query: createKeyedConditionHelper('query'),
+  host: createKeylessConditionHelper('host'),
+};
 
 /**
  * Transform type specifies the scope of what the transform will apply to.
@@ -286,10 +262,10 @@ export interface TransformTarget {
 }
 
 /**
- * Transform defines a single transformation operation on request or response data.
+ * A transform that targets a specific request/response header or query key.
  * Supports environment variables (e.g., $BEARER_TOKEN) and path parameters (e.g., $userId).
  */
-export interface Transform {
+export interface TargetTransform {
   /** The scope of what the transform will apply to */
   type: TransformType;
   /** The operation to perform */
@@ -303,18 +279,53 @@ export interface Transform {
 }
 
 /**
+ * A transform that overrides the request path observed by the target runtime
+ * (its `req.url`), independent of how the route was selected.
+ *
+ * Unlike header/query transforms there is no `target`/key: the path is a single
+ * scalar value and only the `set` operation is supported. On a low-level
+ * `Route`, capture groups use `$1` or `$name`. High-level rewrites instead use
+ * path-to-regexp parameters such as `/:path*`, which are compiled before the
+ * route is emitted. Environment variables use `$VAR` with an `env` allowlist.
+ *
+ * @example
+ * {
+ *   type: 'request.path',
+ *   op: 'set',
+ *   args: '/$1'
+ * }
+ */
+export interface RequestPathTransform {
+  /** Discriminator. Always `request.path`. */
+  type: 'request.path';
+  /** Only `set` is supported for request path transforms. */
+  op: 'set';
+  /** The runtime-visible request path. Must be an origin-form path (leading `/`, no query or fragment). */
+  args: string;
+  /** List of environment variable names that are used in args (without the $ prefix) */
+  env?: string[];
+}
+
+/**
+ * Transform defines a single transformation operation on request or response data.
+ * It is either a header/query {@link TargetTransform} or a path-rewriting
+ * {@link RequestPathTransform}.
+ */
+export type Transform = TargetTransform | RequestPathTransform;
+
+/**
  * Route defines a routing rule with transforms.
  * This is the newer, more powerful route format that supports transforms.
  *
  * @example
  * {
- *   src: "/users/:userId/posts/:postId",
+ *   src: "^/users/([^/]+)/posts/([^/]+)$",
  *   transforms: [
  *     {
  *       type: "request.headers",
  *       op: "set",
  *       target: { key: "x-user-id" },
- *       args: "$userId"
+ *       args: "$1"
  *     },
  *     {
  *       type: "request.headers",
@@ -326,10 +337,14 @@ export interface Transform {
  * }
  */
 export interface Route {
-  /** Pattern to match request paths using path-to-regexp syntax */
-  src: string;
+  /** Regular expression used by the low-level routes format */
+  src?: string;
+  /** Alias for `src`. A pattern that matches each incoming pathname (excluding querystring). */
+  source?: string;
   /** Optional destination for rewrite/redirect */
   dest?: string;
+  /** Alias for `dest`. An absolute pathname to an existing resource or an external URL. */
+  destination?: string;
   /** Array of HTTP methods to match. If not provided, matches all methods */
   methods?: string[];
   /** Array of transforms to apply */
@@ -340,6 +355,8 @@ export interface Route {
   missing?: Condition[];
   /** Status code for the response */
   status?: number;
+  /** Alias for `status`. An optional integer to override the status code of the response. */
+  statusCode?: number;
   /** Headers to set (alternative to using transforms) */
   headers?: Record<string, string>;
   /** Environment variables referenced in dest or transforms */
@@ -661,9 +678,19 @@ export class Router {
    *    router.rewrite('/admin/(.*)', 'https://admin.example.com/$1', {
    *      has: [{ type: 'header', key: 'x-admin-token' }]
    *    })
+   *
+   *    // Override the path observed by the target runtime
+   *    router.rewrite('/api/:path*', '/internal/:path*', {
+   *      requestPath: '/:path*'
+   *    })
    * @internal Can return Route with transforms internally
    */
-  rewrite<T extends string>(source: T, destination: string): Rewrite | Route;
+  rewrite<T extends string>(source: T, destination: string): Rewrite;
+  /**
+   * The callback form exposes `$param` references for header and query
+   * transforms. Use the object options form for `requestPath`, whose source
+   * parameters use `:param` syntax.
+   */
   rewrite<T extends string>(
     source: T,
     destination: string,
@@ -685,6 +712,7 @@ export class Router {
       requestHeaders?: Record<string, string | string[]>;
       responseHeaders?: Record<string, string | string[]>;
       requestQuery?: Record<string, string | string[]>;
+      requestPath?: string;
       respectOriginCacheControl?: boolean;
     } & Record<never, never> // Make this structurally distinct from functions
   ): Rewrite | Route;
@@ -698,6 +726,7 @@ export class Router {
           requestHeaders?: Record<string, string | string[]>;
           responseHeaders?: Record<string, string | string[]>;
           requestQuery?: Record<string, string | string[]>;
+          requestPath?: string;
           respectOriginCacheControl?: boolean;
         }
       | ((params: PathParams<T>) => {
@@ -718,6 +747,7 @@ export class Router {
           requestHeaders?: Record<string, string | string[]>;
           responseHeaders?: Record<string, string | string[]>;
           requestQuery?: Record<string, string | string[]>;
+          requestPath?: string;
           respectOriginCacheControl?: boolean;
         }
       | undefined;
@@ -739,11 +769,16 @@ export class Router {
       requestHeaders,
       responseHeaders,
       requestQuery,
+      requestPath,
       respectOriginCacheControl,
     } = options || {};
 
     // Check if any transforms were provided
-    const hasTransforms = requestHeaders || responseHeaders || requestQuery;
+    const hasTransforms =
+      requestHeaders ||
+      responseHeaders ||
+      requestQuery ||
+      requestPath !== undefined;
 
     if (hasTransforms) {
       // Build a Route object with transforms
@@ -798,9 +833,26 @@ export class Router {
         }
       }
 
+      if (requestPath !== undefined) {
+        const transform: RequestPathTransform = {
+          type: 'request.path',
+          op: 'set',
+          args: compilePathToRegexpTemplate(source, requestPath, has),
+        };
+        const envVars = extractEnvVars(requestPath, pathParams);
+        if (envVars.length > 0) {
+          transform.env = envVars;
+        }
+        transforms.push(transform);
+      }
+
+      // Convert path-to-regexp patterns to regex for routes format
+      const { src: regexSrc, segments } = sourceToRegex(source);
+      const convertedDest = convertDestination(destination, segments);
+
       const route: Route = {
-        src: source,
-        dest: destination,
+        src: regexSrc,
+        dest: convertedDest,
         transforms,
       };
       if (has) route.has = has;
@@ -817,30 +869,16 @@ export class Router {
       return route;
     }
 
-    // Simple rewrite without transforms - check if destination has env vars
+    // Simple rewrite without transforms
     const pathParams = this.extractPathParams(source);
     const destEnvVars = extractEnvVars(destination, pathParams);
 
-    if (destEnvVars.length > 0) {
-      // Need Route format to include env field
-      const route: Route = {
-        src: source,
-        dest: destination,
-        env: destEnvVars,
-      };
-      if (has) route.has = has;
-      if (missing) route.missing = missing;
-      if (respectOriginCacheControl !== undefined)
-        route.respectOriginCacheControl = respectOriginCacheControl;
-      return route;
-    }
-
-    // Simple rewrite without transforms or env vars
     const rewrite: Rewrite = {
       source,
       destination,
     };
 
+    if (destEnvVars.length > 0) rewrite.env = destEnvVars;
     if (has) rewrite.has = has;
     if (missing) rewrite.missing = missing;
     if (respectOriginCacheControl !== undefined)
@@ -879,10 +917,7 @@ export class Router {
    *    })
    * @internal Can return Route with transforms internally
    */
-  public redirect<T extends string>(
-    source: T,
-    destination: string
-  ): Redirect | Route;
+  public redirect<T extends string>(source: T, destination: string): Redirect;
   public redirect<T extends string>(
     source: T,
     destination: string,
@@ -970,9 +1005,13 @@ export class Router {
         transforms.push(transform);
       }
 
+      // Convert path-to-regexp patterns to regex for routes format
+      const { src: regexSrc, segments } = sourceToRegex(source);
+      const convertedDest = convertDestination(destination, segments);
+
       const route: Route = {
-        src: source,
-        dest: destination,
+        src: regexSrc,
+        dest: convertedDest,
         status: statusCode || (permanent ? 308 : 307),
         transforms,
       };
@@ -988,29 +1027,16 @@ export class Router {
       return route;
     }
 
-    // Simple redirect without transforms - check if destination has env vars
+    // Simple redirect without transforms
     const pathParams = this.extractPathParams(source);
     const destEnvVars = extractEnvVars(destination, pathParams);
 
-    if (destEnvVars.length > 0) {
-      // Need Route format to include env field
-      const route: Route = {
-        src: source,
-        dest: destination,
-        status: statusCode || (permanent ? 308 : 307),
-        env: destEnvVars,
-      };
-      if (has) route.has = has;
-      if (missing) route.missing = missing;
-      return route;
-    }
-
-    // Simple redirect without transforms or env vars
     const redirect: Redirect = {
       source,
       destination,
     };
 
+    if (destEnvVars.length > 0) redirect.env = destEnvVars;
     if (permanent !== undefined) redirect.permanent = permanent;
     if (statusCode !== undefined) redirect.statusCode = statusCode;
     if (has) redirect.has = has;
@@ -1070,19 +1096,20 @@ export class Router {
 
   /**
    * Adds a route with transforms support.
-   * This is the newer, more powerful routing format that supports transforms.
+   * This is the lower-level routes format. Use a regular-expression `src` and
+   * `$1`/`$name` capture references in destinations and transform arguments.
    *
    * @example
    *    // Add a route with transforms for path parameters and environment variables
    *    router.route({
-   *      src: '/users/:userId/posts/:postId',
-   *      dest: 'https://api.example.com/users/$userId/posts/$postId',
+   *      src: '^/users/([^/]+)/posts/([^/]+)$',
+   *      dest: 'https://api.example.com/users/$1/posts/$2',
    *      transforms: [
    *        {
    *          type: 'request.headers',
    *          op: 'set',
    *          target: { key: 'x-user-id' },
-   *          args: '$userId'
+   *          args: '$1'
    *        },
    *        {
    *          type: 'request.headers',
@@ -1092,13 +1119,53 @@ export class Router {
    *        }
    *      ]
    *    });
+   *
+   * @example
+   *    // Override the request path the target runtime observes
+   *    router.route({
+   *      src: '^/api/(.*)$',
+   *      dest: '/internal/$1',
+   *      transforms: [{ type: 'request.path', op: 'set', args: '/$1' }],
+   *    });
    */
   public route(config: Route): this {
-    this.validateSourcePattern(config.src);
+    if (config.src && config.source) {
+      throw new Error(
+        'Route cannot define both `src` and `source`. Use one or the other.'
+      );
+    }
+    if (config.dest && config.destination) {
+      throw new Error(
+        'Route cannot define both `dest` and `destination`. Use one or the other.'
+      );
+    }
+    if (config.status !== undefined && config.statusCode !== undefined) {
+      throw new Error(
+        'Route cannot define both `status` and `statusCode`. Use one or the other.'
+      );
+    }
+
+    const src = config.src ?? config.source;
+    if (!src) {
+      throw new Error('Route must define either `src` or `source`.');
+    }
+    this.validateSourcePattern(src);
+
+    // Normalize aliases to canonical names (src/dest/status)
+    config.src = src;
+    delete config.source;
+    if (config.destination !== undefined) {
+      config.dest = config.destination;
+      delete config.destination;
+    }
+    if (config.statusCode !== undefined) {
+      config.status = config.statusCode;
+      delete config.statusCode;
+    }
 
     // Auto-extract env vars from each transform if not already specified
     if (config.transforms) {
-      const pathParams = this.extractPathParams(config.src);
+      const pathParams = this.extractPathParams(src);
       for (const transform of config.transforms) {
         if (!transform.env && transform.args) {
           const envVars = extractEnvVars(transform.args, pathParams);

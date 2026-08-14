@@ -1,6 +1,6 @@
 import type { Hono } from 'hono';
 import { pathToRegexp } from 'path-to-regexp';
-import { setupCloseHandlers } from './util.js';
+import { setupCloseHandlers } from '../rolldown/util.js';
 import { debug } from '@vercel/build-utils';
 
 const apps: Hono[] = [];
@@ -19,7 +19,7 @@ export const handle = (honoModule: any) => {
 setupCloseHandlers(() => {
   const routes = extractRoutes();
   if (routes.length > 0) {
-    return { frameworkSlug: 'hono', routes };
+    return { routes };
   }
   return undefined;
 });

@@ -1,6 +1,7 @@
-import fs from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
-import toml from '@iarna/toml';
+import { parse as tomlParse } from 'smol-toml';
 import execa from 'execa';
 
 export interface CargoMetadataRoot {
@@ -20,7 +21,7 @@ interface CargoPackage {
   license: string;
   license_file: string;
   description: string;
-  source: unknown;
+  source: string | null;
   dependencies: CargoDependency[];
   targets: CargoTarget[];
   features: CargoFeatures;
@@ -44,7 +45,7 @@ interface CargoDependency {
   name: string;
   source: string;
   req: string;
-  kind: unknown;
+  kind: null | 'dev' | 'build';
   rename: unknown;
   optional: boolean;
   uses_default_features: boolean;
@@ -103,8 +104,8 @@ interface Dep {
 }
 
 interface DepKind {
-  kind: unknown;
-  target: string;
+  kind: null | 'dev' | 'build';
+  target: string | null;
 }
 
 interface CargoMetadata {
@@ -120,15 +121,12 @@ interface Rs2 {
 }
 
 export async function getCargoMetadata(
-  options: execa.Options
+  options: execa.Options,
+  filterPlatform?: string
 ): Promise<CargoMetadataRoot> {
-  const { stdout: cargoMetaData } = await execa(
-    'cargo',
-    ['metadata', '--format-version', '1'],
-
-    options
-  );
-
+  const args = ['metadata', '--format-version', '1'];
+  if (filterPlatform) args.push('--filter-platform', filterPlatform);
+  const { stdout: cargoMetaData } = await execa('cargo', args, options);
   return JSON.parse(cargoMetaData) as CargoMetadataRoot;
 }
 
@@ -163,7 +161,7 @@ export async function findCargoWorkspace(
     root: string;
   };
   return {
-    toml: await toml.parse.stream(fs.createReadStream(projectDescription.root)),
+    toml: tomlParse(await readFile(projectDescription.root, 'utf8')),
     root: projectDescription.root,
   };
 }
@@ -189,11 +187,11 @@ export async function findCargoBuildConfiguration(
     '.cargo/config.toml'
   );
 
-  if (!fs.existsSync(configPath)) {
+  if (!existsSync(configPath)) {
     return null;
   }
 
-  const config = await toml.parse.stream(fs.createReadStream(configPath));
+  const config = tomlParse(await readFile(configPath, 'utf8'));
   return config as unknown as CargoBuildConfiguration;
 }
 

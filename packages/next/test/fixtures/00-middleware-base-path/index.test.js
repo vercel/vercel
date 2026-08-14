@@ -12,8 +12,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   });
 
    // Flaky test - skip until fixed.
-  // eslint-disable-next-line jest/no-disabled-tests
-  it.skip('should revalidate content correctly for middleware rewrite', async () => {
+    it.skip('should revalidate content correctly for middleware rewrite', async () => {
     const propsFromHtml = async () => {
       let res = await fetch(
         `${ctx.deploymentUrl}/docs/rewrite-to-another-site`
@@ -26,7 +25,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(isNaN(props.now)).toBe(false);
 
     const { pageProps: data } = await fetch(
-      `${ctx.deploymentUrl}/docs/_next/data/testing-build-id/rewrite-to-another-site.json`,
+      `${ctx.deploymentUrl}/docs/_next/data/build-TfctsWXpff2fKS/rewrite-to-another-site.json`,
       { headers: { 'x-nextjs-data': '1' } }
     ).then(res => res.json());
 
@@ -55,7 +54,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
     await check(async () => {
       const { pageProps: newData } = await fetch(
-        `${ctx.deploymentUrl}/docs/_next/data/testing-build-id/rewrite-to-another-site.json`,
+        `${ctx.deploymentUrl}/docs/_next/data/build-TfctsWXpff2fKS/rewrite-to-another-site.json`,
         { headers: { 'x-nextjs-data': '1' } }
       ).then(res => res.json());
 
@@ -74,8 +73,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   });
 
   // https://linear.app/vercel/issue/ZERO-3240/unskip-random-test-failures
-  // eslint-disable-next-line jest/no-disabled-tests
-  it.skip('should revalidate content correctly for optional catch-all route', async () => {
+    it.skip('should revalidate content correctly for optional catch-all route', async () => {
     const propsFromHtml = async () => {
       let res = await fetch(`${ctx.deploymentUrl}/docs/financial`);
       let $ = cheerio.load(await res.text());
@@ -86,7 +84,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(isNaN(props.now)).toBe(false);
 
     const { pageProps: data } = await fetch(
-      `${ctx.deploymentUrl}/docs/_next/data/testing-build-id/financial.json?slug=financial`,
+      `${ctx.deploymentUrl}/docs/_next/data/build-TfctsWXpff2fKS/financial.json?slug=financial`,
       { headers: { 'x-nextjs-data': '1' } }
     ).then(res => res.json());
 
@@ -115,7 +113,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
     await check(async () => {
       const { pageProps: newData } = await fetch(
-        `${ctx.deploymentUrl}/docs/_next/data/testing-build-id/financial.json?slug=financial`,
+        `${ctx.deploymentUrl}/docs/_next/data/build-TfctsWXpff2fKS/financial.json?slug=financial`,
         { headers: { 'x-nextjs-data': '1' } }
       ).then(res => res.json());
 

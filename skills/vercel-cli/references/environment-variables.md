@@ -1,0 +1,58 @@
+# Environment Variables
+
+## Scoping
+
+Env vars are scoped to **environments**: production, preview (can be branch-specific), and development.
+
+Variables can be plain text or sensitive (encrypted, not readable after creation).
+
+## Inspecting Env Vars
+
+`vercel env ls` shows configured variable names, targets, and metadata. Plain values may appear in JSON output; sensitive values are not readable after creation.
+
+For metadata-oriented investigations, start with:
+
+```bash
+# Run from a linked project directory
+vercel env ls --format json
+vercel env ls production --format json
+```
+
+If CLI output does not include required metadata, use `vercel api` after checking available endpoints with `vercel api list`. Do not invent unsupported `env ls` scope/project flags; link or switch scope first when the command requires project context.
+
+## Managing Env Vars
+
+```bash
+vercel env add API_KEY production                              # interactive prompt for value
+vercel env add API_KEY production --value "secret" --yes       # non-interactive
+echo "secret" | vercel env add TOKEN production --yes          # pipe value from stdin
+vercel env ls                                                  # list all
+vercel env update API_KEY production --value "new-secret" --yes  # non-interactive update
+vercel env rm API_KEY preview --yes                            # remove from preview
+```
+
+Note: `environment` is a **positional argument**, not a flag.
+
+In non-interactive / agent mode, `env add` and `env update` require the value via `--value` or stdin. Without one of these, the command exits with an `action_required` payload asking you to re-run with `--value <value> --yes`.
+
+## Pulling Locally
+
+```bash
+vercel env pull                   # writes to .env.local
+vercel env pull .env.development  # writes to custom file
+```
+
+The CLI adds `.env*` to `.gitignore` only when writing the default `.env.local`. Before using another filename, verify that source control excludes it.
+
+`vercel pull` instead downloads environment data and project settings under `.vercel/`, including `.vercel/.env.<environment>.local`.
+
+## Running with Env Vars
+
+Inject env vars into a subprocess without writing to a file:
+
+```bash
+vercel env run -- npm test
+vercel env run -e preview -- next dev
+```
+
+The `--` separator is required before the command.
