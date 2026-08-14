@@ -412,7 +412,7 @@ test('deploy with `VERCEL_PROJECT_ID` but without `VERCEL_ORG_ID` should fail', 
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toContain(
-    'You specified `VERCEL_PROJECT_ID` but you forgot to specify `VERCEL_ORG_ID`. You need to specify both to deploy to a custom project.'
+    'You specified `VERCEL_PROJECT_ID` but you forgot to specify `VERCEL_TEAM`. You need to specify both to deploy to a custom project.'
   );
 });
 

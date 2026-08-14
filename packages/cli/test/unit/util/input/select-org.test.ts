@@ -225,6 +225,36 @@ describe('selectOrg', () => {
       }
     });
 
+    it('returns org when VERCEL_TEAM matches a team slug', async () => {
+      process.env.VERCEL_TEAM = firstTeam.slug;
+      try {
+        const result = await selectOrg(client, 'Which scope?', false);
+        expect(result).toEqual({
+          type: 'team',
+          id: firstTeam.id,
+          slug: firstTeam.slug,
+        });
+      } finally {
+        delete process.env.VERCEL_TEAM;
+      }
+    });
+
+    it('prefers VERCEL_TEAM over VERCEL_ORG_ID when both are set', async () => {
+      process.env.VERCEL_TEAM = firstTeam.slug;
+      process.env.VERCEL_ORG_ID = 'team_ignored';
+      try {
+        const result = await selectOrg(client, 'Which scope?', false);
+        expect(result).toEqual({
+          type: 'team',
+          id: firstTeam.id,
+          slug: firstTeam.slug,
+        });
+      } finally {
+        delete process.env.VERCEL_TEAM;
+        delete process.env.VERCEL_ORG_ID;
+      }
+    });
+
     it('returns org when vercel.json scope matches a team', async () => {
       client.localConfig = { ...client.localConfig, scope: firstTeam.slug };
       const result = await selectOrg(client, 'Which scope?', false);

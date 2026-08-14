@@ -54,6 +54,7 @@ import highlight from './util/output/highlight';
 import { parseArguments } from './util/get-args';
 import getUser from './util/get-user';
 import getTeams from './util/teams/get-teams';
+import { getTeamEnv } from './util/teams/team-env';
 import Client from './util/client';
 import { setFetchDispatcher } from './util/fetch';
 import { printError } from './util/error';
@@ -780,10 +781,17 @@ const main = async () => {
 
   let targetCommand =
     typeof subcommand === 'string' ? commands.get(subcommand) : undefined;
+  // `VERCEL_TEAM` selects the scope non-interactively and accepts a team slug
+  // or ID (like Turborepo's `TURBO_TEAM`). Explicit flags and `vercel.json`
+  // still win over it. The legacy `VERCEL_ORG_ID` deliberately stays out of
+  // this chain: it has never set the global scope, only the linked-project
+  // owner, and that behavior must not change.
+  const teamEnv = getTeamEnv();
   const scope =
     parsedArgs.flags['--scope'] ||
     parsedArgs.flags['--team'] ||
-    localConfig?.scope;
+    localConfig?.scope ||
+    teamEnv;
   const separatorIndex = client.argv.indexOf('--');
   const cliArgs =
     separatorIndex === -1 ? client.argv : client.argv.slice(0, separatorIndex);
@@ -883,7 +891,10 @@ const main = async () => {
       delete client.config.currentTeam;
     } else {
       output.prettyError({
-        message: 'The specified scope does not exist',
+        message:
+          scope === teamEnv
+            ? `The team specified by \`VERCEL_TEAM\` ("${scope}") does not exist, or you don't have access to it`
+            : 'The specified scope does not exist',
         link: 'https://err.sh/vercel/scope-not-existent',
       });
 

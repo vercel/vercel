@@ -99,7 +99,7 @@ export const help = () => `
     -d, --debug                    Debug mode [off]
     --no-color                     No color mode [off]
     --non-interactive              Run without interactive prompts (default when agent detected)
-    -S, --scope                    Set a custom scope
+    -S, --scope                    Set a custom scope (or set ${'`VERCEL_TEAM`'} to a team slug or ID)
     -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(
       'TOKEN'
     )}        Login token

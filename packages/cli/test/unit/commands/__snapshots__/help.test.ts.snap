@@ -4989,7 +4989,9 @@ exports[`help command > link help output snapshots > link help column width 40 1
                                  --project
                                  for      
                                  non-inte…
-                                 links    
+                                 links (or
+                                 set      
+                                 VERCEL_T…
   -y,  --yes                     Skip     
                                  questions
                                  when     
@@ -5096,7 +5098,7 @@ exports[`help command > link help output snapshots > link help column width 80 1
   -r,  --repo                    Link multiple projects from the Git repository   
                                  (alpha)                                          
        --team <TEAM_ID_OR_SLUG>  Set the team ID or slug; use with --project for  
-                                 non-interactive links                            
+                                 non-interactive links (or set VERCEL_TEAM)       
   -y,  --yes                     Skip questions when setting up with default team 
                                  and settings                                     
 
@@ -5161,7 +5163,8 @@ exports[`help command > link help output snapshots > link help column width 120 
 
   -p,  --project <NAME_OR_ID>    Set the project name or ID to link; required for non-interactive existing-project links  
   -r,  --repo                    Link multiple projects from the Git repository (alpha)                                   
-       --team <TEAM_ID_OR_SLUG>  Set the team ID or slug; use with --project for non-interactive links                    
+       --team <TEAM_ID_OR_SLUG>  Set the team ID or slug; use with --project for non-interactive links (or set            
+                                 VERCEL_TEAM)                                                                             
   -y,  --yes                     Skip questions when setting up with default team and settings                            
 
 
