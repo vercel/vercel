@@ -97,6 +97,8 @@ import {
 } from './django';
 import {
   runFastAPICollectStatic,
+  fastapiShadowingRoutes,
+  fastapiFallbackRoutes,
   type FastAPICollectStaticResult,
 } from './fastapi';
 import {
@@ -2220,14 +2222,31 @@ export const build: BuildVX = async ({
     src: `/${outputPath}`,
     dest: `/${outputPath}`,
   }));
+  // Static files are served from the CDN by `handle: 'filesystem'`. Two route
+  // sets adjust that for routing precedence: "shadowing" routes emitted before
+  // it divert paths a higher-priority app handler owns to the Lambda (so the app
+  // wins over a colliding CDN file), and "fallback" routes emitted after it serve
+  // a CDN file for otherwise-unmatched paths. See fastapi.ts for how each is
+  // derived.
+  // TODO(cdn-fallback-queue): fallback routes are `check: true`, so mergeRoutes
+  // sorts them ahead of the queue routes — a root fallback would shadow queue
+  // paths. Revisit with queue support.
+  const shadowingRoutes = fastapiStatic
+    ? fastapiShadowingRoutes(fastapiStatic, lambdaPath)
+    : [];
+  const fallbackRoutes = fastapiStatic
+    ? fastapiFallbackRoutes(fastapiStatic)
+    : [];
   const routes =
     isNonWebService || !output
       ? queueRoutes.length > 0
         ? queueRoutes
         : undefined
       : [
+          ...shadowingRoutes,
           { handle: 'filesystem' as const },
           ...queueRoutes,
+          ...fallbackRoutes,
           // This route matches the resolved destination after rewrites. Copy
           // that path into the runtime request before dispatching the shared
           // framework Lambda so application routing observes the rewrite.

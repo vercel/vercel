@@ -34,7 +34,10 @@ module.exports = async ({ deploymentUrl, fetch }) => {
 
   // A bare path that the Lambda answers with a redirect to another form.
   async function expectRedirect(name, path, endsWith) {
-    const res = await fetch(`https://${deploymentUrl}${path}`, { redirect: 'manual' });
+    const res = await fetch(`https://${deploymentUrl}${path}`, {
+      headers: { accept: 'text/html' },
+      redirect: 'manual',
+    });
     if (![307, 308].includes(res.status)) {
       failures.push(`${name}: expected 307/308, got ${res.status}`);
     }
@@ -44,21 +47,35 @@ module.exports = async ({ deploymentUrl, fetch }) => {
     }
   }
 
-  // A StaticFiles mount serves its files from the CDN. HEAD behaves like GET
-  // (200); POST is not GET/HEAD, so the response is 405. html is disabled, so
-  // the bare mount root 307s to the trailing slash and the slash itself 404s
-  // (no directory index).
-  await expectCdnHit('static file', '/static/index.html', { status: 200, contains: 'Hello World' });
-  await expectBody('static HEAD', '/static/index.html', { method: 'HEAD', status: 200 });
-  await expectBody('static POST', '/static/index.html', { method: 'POST', status: 405 });
-  await expectRedirect('static mount root', '/static', '/static/');
-  await expectBody('static mount slash', '/static/', { status: 404 });
+  // The root frontend serves its index and assets from the CDN.
+  await expectCdnHit('root index', '/', { status: 200, contains: 'ROOT_INDEX', headers: { accept: 'text/html' } });
+  await expectCdnHit('asset', '/asset.txt', { status: 200, contains: 'FRONTEND_ASSET' });
 
-  // A frontend serves its files from the CDN.
-  await expectCdnHit('frontend asset', '/frontend/asset.txt', { status: 200, contains: 'FRONTEND_ASSET' });
+  // A route declared before the root frontend owns the exact path; the
+  // low-priority frontend is never consulted, so HEAD (GET-only route) and POST
+  // are method mismatches (405) rather than the frontend file.
+  await expectBody('route wins', '/collision.txt', { status: 200, contains: 'API_ROUTE_WON' });
+  await expectBody('route HEAD', '/collision.txt', { method: 'HEAD', status: 405 });
+  await expectBody('route POST', '/collision.txt', { method: 'POST', status: 405 });
 
-  // A frontend discovered through an included router prefix serves from the CDN.
-  await expectCdnHit('nested router frontend', '/nested/router.txt', { status: 200, contains: 'ROUTER_FRONTEND_FILE' });
+  // A StaticFiles mount outranks the root frontend at the shared CDN path, so
+  // the mount file wins over the frontend's colliding file.
+  await expectCdnHit('mount beats frontend', '/static/collision.txt', { status: 200, contains: 'STATIC_MOUNT_WON' });
+
+  // A nested index directory under the root: the bare form 307s (Lambda), the
+  // slash form and files stay on the CDN.
+  await expectRedirect('subdir bare', '/guide', '/guide/');
+  await expectCdnHit('subdir slash', '/guide/', { status: 200, contains: 'GUIDE_INDEX', headers: { accept: 'text/html' } });
+  await expectCdnHit('subdir file', '/guide/asset.txt', { status: 200, contains: 'GUIDE_ASSET' });
+
+  // A navigation miss anywhere under the root gets the index (the SPA
+  // catch-all).
+  await expectCdnHit('catch-all', '/deep/nested/miss', { status: 200, contains: 'ROOT_INDEX', headers: { accept: 'text/html' } });
+
+  // FastAPI's own routes overlap the root frontend but must still reach the
+  // Lambda rather than being hijacked by the fallback.
+  await expectBody('docs not hijacked', '/docs', { status: 200, contains: 'swagger-ui', headers: { accept: 'text/html' } });
+  await expectBody('openapi not hijacked', '/openapi.json', { status: 200, contains: 'openapi' });
 
   if (failures.length > 0) throw new Error(failures.join('\n'));
 };
