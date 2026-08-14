@@ -1,13 +1,5 @@
+import { rm } from 'node:fs/promises';
 import { tsc, esbuild } from '../../utils/build.mjs';
 
-await Promise.all([
-  tsc(),
-  esbuild().then(() =>
-    esbuild({
-      bundle: true,
-      // Keep @vercel/python-analysis external because its WASM module uses
-      // require.resolve.
-      external: ['@vercel/python-analysis'],
-    })
-  ),
-]);
+await rm(new URL('./dist', import.meta.url), { recursive: true, force: true });
+await Promise.all([tsc(), esbuild().then(() => esbuild({ bundle: true }))]);

@@ -196,7 +196,6 @@ export {
   isPythonFramework,
 } from './framework-helpers';
 
-export * from './python';
 export * from './node-entrypoint';
 export * from './service-path-utils';
 

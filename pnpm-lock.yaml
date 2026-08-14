@@ -351,9 +351,6 @@ importers:
 
   packages/build-utils:
     dependencies:
-      '@vercel/python-analysis':
-        specifier: workspace:*
-        version: link:../python-analysis
       cjs-module-lexer:
         specifier: 1.2.3
         version: 1.2.3
@@ -560,6 +557,9 @@ importers:
       '@vercel/python':
         specifier: workspace:*
         version: link:../python
+      '@vercel/python-analysis':
+        specifier: workspace:*
+        version: link:../python-analysis
       '@vercel/redwood':
         specifier: workspace:*
         version: link:../redwood
@@ -1417,6 +1417,9 @@ importers:
       '@vercel/frameworks':
         specifier: workspace:*
         version: link:../frameworks
+      '@vercel/python-analysis':
+        specifier: workspace:*
+        version: link:../python-analysis
       '@vercel/routing-utils':
         specifier: workspace:*
         version: link:../routing-utils

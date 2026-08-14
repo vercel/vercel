@@ -24,6 +24,7 @@
     "@vercel/build-utils": "workspace:*",
     "@vercel/error-utils": "workspace:*",
     "@vercel/frameworks": "workspace:*",
+    "@vercel/python-analysis": "workspace:*",
     "@vercel/routing-utils": "workspace:*",
     "glob": "8.0.3",
     "js-yaml": "4.1.0",

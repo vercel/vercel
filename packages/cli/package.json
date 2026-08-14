@@ -66,6 +66,7 @@
     "@vercel/node": "workspace:*",
     "@vercel/prepare-flags-definitions": "0.3.0",
     "@vercel/python": "workspace:*",
+    "@vercel/python-analysis": "workspace:*",
     "@vercel/redwood": "workspace:*",
     "@vercel/remix-builder": "workspace:*",
     "@vercel/ruby": "workspace:*",

@@ -16,13 +16,13 @@ import type {
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
 import {
-  isPythonEntrypoint,
   isNodeEntrypoint,
   BACKEND_BUILDERS,
   UNIFIED_BACKEND_BUILDER,
   isExperimentalBackendsEnabled,
   getMaxDurationLimit,
 } from '@vercel/build-utils';
+import { isPythonEntrypoint } from './python';
 import {
   getServicesBuilders,
   warnIgnoredDirectories,
@@ -629,7 +629,7 @@ async function maybeGetApiBuilder(
   // For Python files, verify they are valid entrypoints before creating a builder
   if (fileName.endsWith('.py') && options.workPath) {
     const fsPath = join(options.workPath, fileName);
-    const isEntrypoint = await isPythonEntrypoint({ fsPath });
+    const isEntrypoint = await isPythonEntrypoint(fsPath);
     if (!isEntrypoint) {
       return null;
     }

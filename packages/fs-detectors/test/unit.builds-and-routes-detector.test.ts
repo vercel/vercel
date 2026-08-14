@@ -4541,6 +4541,72 @@ describe('Test `detectApiExtensions`', () => {
     expect(result.has('.rs')).toBe(true);
   });
 
+  describe('Python entrypoint detection with workPath', () => {
+    let workPath: string;
+
+    beforeEach(() => {
+      workPath = mkdtempSync(join(tmpdir(), 'vc-python-entrypoints-'));
+      mkdirSync(join(workPath, 'api'));
+    });
+
+    afterEach(() => {
+      rmSync(workPath, { recursive: true, force: true });
+    });
+
+    it('creates builders only for supported Python entrypoints', async () => {
+      writeFileSync(
+        join(workPath, 'api', 'app.py'),
+        'from fastapi import FastAPI\napp = FastAPI()\n'
+      );
+      writeFileSync(
+        join(workPath, 'api', 'django.py'),
+        'from django.core.wsgi import get_wsgi_application\napplication = get_wsgi_application()\n'
+      );
+      writeFileSync(
+        join(workPath, 'api', 'handler.py'),
+        'from http.server import BaseHTTPRequestHandler\nclass handler(BaseHTTPRequestHandler):\n    pass\n'
+      );
+      writeFileSync(
+        join(workPath, 'api', 'helper.py'),
+        'def helper():\n    return True\n'
+      );
+
+      const { builders } = await detectBuilders(
+        ['api/app.py', 'api/django.py', 'api/handler.py', 'api/helper.py'],
+        null,
+        { workPath }
+      );
+      const pythonSources = (builders || [])
+        .filter(builder => builder.use === '@vercel/python')
+        .map(builder => builder.src);
+
+      expect(pythonSources).toEqual([
+        'api/app.py',
+        'api/django.py',
+        'api/handler.py',
+      ]);
+    });
+
+    it('omits unreadable Python files without throwing', async () => {
+      const { builders } = await detectBuilders(['api/missing.py'], null, {
+        workPath,
+      });
+
+      expect(builders).toBeNull();
+    });
+
+    it('preserves unfiltered detection without workPath', async () => {
+      const { builders } = await detectBuilders(['api/helper.py'], null);
+
+      expect(builders).toEqual([
+        expect.objectContaining({
+          src: 'api/helper.py',
+          use: '@vercel/python',
+        }),
+      ]);
+    });
+  });
+
   describe('Node.js entrypoint detection with workPath', () => {
     const workPath = join(__dirname, 'fixtures', '70-node-api-dir-files');
 

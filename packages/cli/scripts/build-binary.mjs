@@ -32,6 +32,7 @@ const binaryRuntimePackageNames = [
   '@vercel/detect-agent',
   '@vercel/fun',
   '@vercel/prepare-flags-definitions',
+  '@vercel/python-analysis',
   'chokidar',
   'esbuild',
   'jose',
