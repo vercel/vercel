@@ -102,6 +102,27 @@ from the root of the project.
 
 If any test fails, make sure to fix it along with your changes. See [Interpreting test errors](#Interpreting-test-errors) for more information about how the tests are executed, especially the integration tests.
 
+#### Reproducing affected builds and type-checks
+
+CI compares the pull request head with the base and head commits recorded by GitHub. To inspect the same affected Turborepo task plan locally, commit your changes, check out the pull request head, and set the explicit SCM range:
+
+```bash
+export TURBO_SCM_BASE=$(gh pr view --json baseRefOid --jq .baseRefOid)
+export TURBO_SCM_HEAD=$(gh pr view --json headRefOid --jq .headRefOid)
+git fetch origin "$TURBO_SCM_BASE" "$TURBO_SCM_HEAD"
+test "$(git rev-parse HEAD)" = "$TURBO_SCM_HEAD"
+node utils/gen.js
+pnpm exec turbo run ci:checks --affected --dry=json
+```
+
+To execute the selected tasks as CI does, replace the final command with:
+
+```bash
+pnpm exec turbo run ci:checks --affected --output-logs=errors-only --summarize --continue
+```
+
+Both commits must be available in the local clone; CI uses a full-history checkout and fails rather than treating a missing commit as an empty change. Lint, formatting, dependency checks, and generated asset validation remain repository-wide.
+
 ### Pull Request Process
 
 Once you are confident that your changes work properly, open a pull request on the main repository.

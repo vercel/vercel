@@ -30,6 +30,12 @@
     "//#format:check": {},
     "//#lint": {},
     "//#lint:dependencies": {},
+    "ci:checks": {
+      "dependsOn": ["build", "type-check"]
+    },
+    "//#ci:checks": {
+      "dependsOn": ["format:check", "lint", "lint:dependencies"]
+    },
     "build": {
       "dependsOn": ["^build"],
       "env": ["VERCEL_CLI_BUILD_LABEL"],
@@ -133,7 +139,8 @@
       "outputLogs": "new-only"
     },
     "type-check": {
-      "dependsOn": ["build", "source"]
+      "dependsOn": ["build", "source"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.base.json"]
     },
     "source": {
       "dependsOn": ["^source"]

@@ -716,17 +716,22 @@ jobs:
 
   lint:
     name: Lint
+    needs: setup
     timeout-minutes: 20
     runs-on: ubuntu-latest
     if: github.event.pull_request.title != 'Version Packages'
     permissions:
       contents: read
       id-token: write
+    env:
+      TURBO_SCM_BASE: ${{ needs.setup.outputs.baseSha }}
+      TURBO_SCM_HEAD: ${{ needs.setup.outputs.headSha }}
     steps:
       - uses: actions/checkout@v4
         with:
           # Check out the PR commit directly instead of a merge commit.
-          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          ref: ${{ needs.setup.outputs.headSha }}
       - name: Setup Turborepo Remote Cache
         uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
         with:
@@ -749,8 +754,10 @@ jobs:
       - name: install pnpm@10.29.3
         run: npm i -g pnpm@10.29.3
       - run: pnpm install
-      - name: Lint, build, and type-check
-        run: node utils/gen.js && turbo run lint format:check lint:dependencies build type-check --output-logs=errors-only --summarize --continue
+      - name: Generate Turborepo cache key
+        run: node utils/gen.js
+      - name: Lint, build, and type-check affected packages
+        run: turbo run ci:checks --affected --output-logs=errors-only --summarize --continue
       - name: Ensure clean git workspace
         run: git diff --name-only --exit-code
 
