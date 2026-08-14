@@ -21,6 +21,7 @@
 /examples/nextjs                         @vercel/ci-cd @ijjk @ztanner @huozhi
 /packages/node                           @vercel/ci-cd
 /packages/related-projects               @vercel/ci-cd @mknichel
+/packages/kms                            @vercel/ci-cd @vercel/identity-and-access-management
 /packages/oidc                           @vercel/ci-cd @vercel/identity-and-access-management
 /packages/oidc-aws-credentials-provider  @vercel/ci-cd @vercel/identity-and-access-management
 /packages/config                         @vercel/ci-cd @MatthewStanciu
