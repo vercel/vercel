@@ -16,6 +16,9 @@ import { createConfigValidatorPlugin } from './precompile-config-validator.mjs';
 const repoRoot = new URL('../', import.meta.url);
 const cwd = process.cwd();
 const pkg = JSON.parse(readFileSync(new URL('package.json', repoRoot), 'utf8'));
+const runtimeAssetManifest = JSON.parse(
+  readFileSync(new URL('src/runtime-assets/manifest.json', repoRoot), 'utf8')
+);
 
 // Priority commands get their own entry points for fast loading
 // This list needs to be fairly short and targeted -- we can't add everything
@@ -165,10 +168,26 @@ copyFileSync(
   new URL('src/util/dev/builder-worker.cjs', repoRoot),
   new URL('commands/dev/builder-worker.cjs', distRoot)
 );
-copyFileSync(
-  new URL('src/util/dev/next-dev-websocket-shim-preload.cjs', repoRoot),
-  new URL('commands/dev/next-dev-websocket-shim-preload.cjs', distRoot)
-);
+for (const [id, asset] of Object.entries(runtimeAssetManifest)) {
+  for (const field of ['source', 'destination']) {
+    const value = asset[field];
+    if (
+      typeof value !== 'string' ||
+      value === '' ||
+      path.isAbsolute(value) ||
+      value.split(/[\\/]/).includes('..')
+    ) {
+      throw new Error(
+        `Runtime asset "${id}" has an invalid ${field} path: ${JSON.stringify(value)}`
+      );
+    }
+  }
+
+  const source = new URL(`src/runtime-assets/${asset.source}`, repoRoot);
+  const destination = new URL(`runtime-assets/${asset.destination}`, distRoot);
+  mkdirSync(new URL('./', destination), { recursive: true });
+  copyFileSync(source, destination);
+}
 copyFileSync(
   new URL('src/util/get-latest-version/get-latest-worker.cjs', repoRoot),
   new URL('get-latest-worker.cjs', distRoot)

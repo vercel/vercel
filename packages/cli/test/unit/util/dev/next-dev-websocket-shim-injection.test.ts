@@ -47,9 +47,10 @@ describe('Next.js dev WebSocket shim injection', () => {
     expect(shimPath).toBe(
       join(
         globalRoot,
-        'runtime',
+        'runtime-assets',
         '58.9.1',
-        'next-dev-websocket-shim-preload.cjs'
+        'node-preloads',
+        'next-dev-websocket.cjs'
       )
     );
     expect(env.NODE_OPTIONS).toBe(

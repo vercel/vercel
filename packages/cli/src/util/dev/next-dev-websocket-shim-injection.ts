@@ -1,27 +1,21 @@
-import path from 'path';
 import type { ProjectSettings } from '@vercel-internals/types';
-import { ensureRuntimeAssetOnDisk } from '../runtime-assets';
-
-const NEXT_DEV_WEBSOCKET_SHIM = path.join(
-  __dirname,
-  'next-dev-websocket-shim-preload.cjs'
-);
+import {
+  materializeRuntimeAsset,
+  type RuntimeAssetOptions,
+} from '../runtime-assets';
 
 export function injectNextDevWebSocketShimIfNeeded(
   env: NodeJS.ProcessEnv,
   command: string,
   projectSettings?: Pick<ProjectSettings, 'framework'>,
-  runtimeOptions?: {
-    globalRoot?: string;
-    version?: string;
-  }
+  runtimeOptions?: RuntimeAssetOptions
 ): string | undefined {
   if (!shouldInjectNextDevWebSocketShim(command, projectSettings)) {
     return undefined;
   }
 
-  const shimPath = ensureRuntimeAssetOnDisk(
-    NEXT_DEV_WEBSOCKET_SHIM,
+  const shimPath = materializeRuntimeAsset(
+    'nextDevWebSocketPreload',
     runtimeOptions
   );
 
