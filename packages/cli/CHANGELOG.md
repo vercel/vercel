@@ -1,5 +1,16 @@
 # vercel
 
+## 59.1.0
+
+### Minor Changes
+
+- 90124c0: Add `vercel kms` (beta) for managing KMS issuers, signing keys, and project grants. Issuers can be listed, inspected, created, imported, renamed, and deleted; signing keys can be added, imported, activated, and revoked; and project grants can be added, updated, and removed.
+- aad793c: List custom metrics and their observed attributes from the Observability API catalog and query them through the `/metrics/v1` API proxy, while preserving the existing schema and query paths for `vercel.*` metrics.
+
+### Patch Changes
+
+- c43803d: Use unit-aware default aggregations for custom metrics and human-readable values for all metrics.
+
 ## 59.0.1
 
 ### Patch Changes
