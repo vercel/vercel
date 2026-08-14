@@ -124,6 +124,7 @@ function mockCustomMetricCatalog(
             'count',
             'sum',
             'avg',
+            'p75',
             'p95',
           ],
           dimensions: overrides.dimensions ?? ['source', 'functionRegion'],
@@ -223,6 +224,33 @@ describe('metrics query v2', () => {
       expect(postedBody?.metric).toBe('vercel.request.count');
     });
 
+    it('formats platform metric values using the schema unit', async () => {
+      mockMetricDetail('vercel.request.route_cpu_duration_ms', {
+        unit: 'milliseconds',
+        aggregations: ['p75'],
+        defaultAggregation: 'p75',
+      });
+      mockApiSuccess([
+        {
+          timestamp: '2026-07-29T10:00:00.000Z',
+          vercel_request_route_cpu_duration_ms_p75: 1_500,
+        },
+      ]);
+      client.setArgv(
+        'metrics',
+        'vercel.request.route_cpu_duration_ms',
+        '--since',
+        '2026-07-29T09:00:00.000Z',
+        '--until',
+        '2026-07-29T10:01:00.000Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(client.stdout.getFullOutput()).toContain('1.5s');
+    });
+
     it('queries custom metrics with a complete bucket range', async () => {
       mockCustomMetricCatalog();
       mockCanonicalApiSuccess();
@@ -256,7 +284,7 @@ describe('metrics query v2', () => {
         groupBy: ['source'],
         filter: "source eq 'edge'",
         metrics: {
-          value: { metric: 'checkout.latency', aggregation: 'sum' },
+          value: { metric: 'checkout.latency', aggregation: 'p75' },
           __seriesCount: {
             metric: 'checkout.latency',
             aggregation: 'count',
@@ -278,11 +306,11 @@ describe('metrics query v2', () => {
         {
           timestamp: '2026-07-29T10:00:00.000Z',
           source: 'edge',
-          checkout_latency_sum: 125,
+          checkout_latency_p75: 125,
         },
       ]);
       expect(result.summary).toEqual([
-        { source: 'edge', checkout_latency_sum: 125 },
+        { source: 'edge', checkout_latency_p75: 125 },
       ]);
       expect(result.statistics).toEqual({
         rowsRead: 100,
@@ -291,6 +319,24 @@ describe('metrics query v2', () => {
         engineTimeSeconds: 0.025,
         queryTable: 'vercel-main-custom-metrics',
       });
+    });
+
+    it('formats custom metric values using the catalog unit', async () => {
+      mockCustomMetricCatalog();
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'checkout.latency',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(client.stdout.getFullOutput()).toContain('125ms');
     });
 
     it('expands a short custom metric range to one complete bucket', async () => {

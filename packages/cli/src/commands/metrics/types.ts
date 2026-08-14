@@ -17,6 +17,27 @@ export const AGGREGATIONS = [
 
 export type Aggregation = (typeof AGGREGATIONS)[number];
 
+export const CANONICAL_AGGREGATIONS = [
+  'count',
+  'sum',
+  'avg',
+  'min',
+  'max',
+  'p50',
+  'p75',
+  'p90',
+  'p95',
+  'p99',
+] as const satisfies readonly Aggregation[];
+
+export type CanonicalAggregation = (typeof CANONICAL_AGGREGATIONS)[number];
+
+export function isCanonicalAggregation(
+  aggregation: string
+): aggregation is CanonicalAggregation {
+  return (CANONICAL_AGGREGATIONS as readonly string[]).includes(aggregation);
+}
+
 export type OrderDirection = 'asc' | 'desc';
 export type OrderBy = 'value' | 'count';
 
@@ -121,17 +142,7 @@ export interface MetricsQueryResponse {
 
 export interface CanonicalMetricSelection {
   metric: string;
-  aggregation:
-    | 'count'
-    | 'sum'
-    | 'avg'
-    | 'min'
-    | 'max'
-    | 'p50'
-    | 'p75'
-    | 'p90'
-    | 'p95'
-    | 'p99';
+  aggregation: CanonicalAggregation;
   per?: 'second';
   normalize?: 'percent';
   filter?: string;

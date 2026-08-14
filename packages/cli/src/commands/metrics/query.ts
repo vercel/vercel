@@ -23,10 +23,12 @@ import {
   getRollupColumnName,
   handleApiError,
 } from './output';
+import { getDefaultCustomMetricAggregation } from './metric-units';
 import { formatText } from './text-output';
 import { computeGranularity } from './time-utils';
 import { resolveTimeRange } from '../../util/time-utils';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
+import { isCanonicalAggregation } from './types';
 import type {
   Aggregation,
   CanonicalMetricSelection,
@@ -131,18 +133,7 @@ function toCanonicalMetricSelection(
         'The unique aggregation for custom metrics requires an explicit distinct dimension, which vc metrics does not support yet.',
     };
   }
-  if (
-    aggregation === 'count' ||
-    aggregation === 'sum' ||
-    aggregation === 'avg' ||
-    aggregation === 'min' ||
-    aggregation === 'max' ||
-    aggregation === 'p50' ||
-    aggregation === 'p75' ||
-    aggregation === 'p90' ||
-    aggregation === 'p95' ||
-    aggregation === 'p99'
-  ) {
+  if (isCanonicalAggregation(aggregation)) {
     return { metric, aggregation };
   }
   return {
@@ -481,14 +472,11 @@ export default async function query(
     )
       .then(metrics => metrics.find(item => item.id === metric))
       .catch(() => undefined);
-    metricUnit = customMetric?.unit ?? 'count';
+    metricUnit = customMetric?.unit ?? 'units';
     customMetricAggregations = customMetric?.aggregations;
     aggregationInput =
       aggregationFlag ??
-      (customMetricAggregations?.includes('sum')
-        ? 'sum'
-        : customMetricAggregations?.[0]) ??
-      'sum';
+      getDefaultCustomMetricAggregation(metricUnit, customMetricAggregations);
   }
   const aggregation = aggregationInput;
   const orderBy = getRequestOrderBy(metric, aggregation, orderByMode);

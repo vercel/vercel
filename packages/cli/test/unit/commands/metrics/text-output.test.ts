@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import {
-  getMeasureType,
-  getEffectiveDisplay,
   formatCount,
   formatDecimal,
   formatMinMaxTimestamp,
@@ -13,6 +11,7 @@ import {
   generateSparkline,
   formatMetadataHeader,
   formatSparklineSection,
+  formatMetricValue,
   formatText,
 } from '../../../../src/commands/metrics/text-output';
 import { ellipsizeMiddle } from '../../../../src/util/output/truncate';
@@ -30,17 +29,6 @@ const projectScope: Scope = {
 
 describe('text-output', () => {
   describe('number formatting', () => {
-    it('should classify measure types from schema units and fallback units', () => {
-      expect(getMeasureType('count')).toBe('count');
-      expect(getMeasureType('unknown_unit')).toBe('ratio');
-      expect(getMeasureType('US dollars')).toBe('count');
-      expect(getMeasureType('milliseconds')).toBe('duration');
-      expect(getMeasureType('bytes')).toBe('bytes');
-      expect(getMeasureType('gigabyte hours')).toBe('bytes');
-      expect(getMeasureType('ratio')).toBe('ratio');
-      expect(getMeasureType('percent')).toBe('ratio');
-    });
-
     it('should format count values with grouping', () => {
       expect(formatCount(0)).toBe('0');
       expect(formatCount(42)).toBe('42');
@@ -57,79 +45,68 @@ describe('text-output', () => {
       expect(formatDecimal(0.042)).toBe('0.042');
       expect(formatDecimal(0.003)).toBe('0.003');
     });
+
+    it('should format metric duration units', () => {
+      expect(formatMetricValue(250, 'milliseconds', 'avg')).toBe('250ms');
+      expect(formatMetricValue(1.5, 'seconds', 'avg')).toBe('1.5s');
+      expect(formatMetricValue(1, 'minutes', 'avg')).toBe('1m');
+      expect(formatMetricValue(1_250, 'microseconds', 'avg')).toBe('1,250 µs');
+    });
+
+    it('should format scaled metric byte units', () => {
+      expect(formatMetricValue(1, 'kilobytes', 'sum')).toBe('1 KB');
+      expect(formatMetricValue(1, 'gigabytes', 'sum')).toBe('1 GB');
+      expect(formatMetricValue(1_000, 'bytes', 'persecond')).toBe('1 KB/s');
+    });
+
+    it('should format metric percentages and rates', () => {
+      expect(formatMetricValue(12.34, 'percent', 'avg')).toBe('12.3%');
+      expect(formatMetricValue(2.5, 'gigabyte_hour', 'avg')).toBe('2.5 GB-hrs');
+      expect(formatMetricValue(3, 'units', 'persecond')).toBe('3/s');
+    });
+
+    it('should preserve unrecognized metric units', () => {
+      expect(formatMetricValue(1_200, 'widgets', 'sum')).toBe('1.2K widgets');
+      expect(formatMetricValue(1_200, 'widgets', 'persecond')).toBe(
+        '1.2K widgets/s'
+      );
+    });
   });
 
-  describe('getEffectiveDisplay', () => {
-    it('should return percent display for percent aggregation', () => {
-      expect(getEffectiveDisplay('bytes', 'percent')).toEqual({
-        displayUnit: '%',
-        measureType: 'ratio',
-      });
-      expect(getEffectiveDisplay('count', 'percent')).toEqual({
-        displayUnit: '%',
-        measureType: 'ratio',
-      });
-      expect(getEffectiveDisplay('milliseconds', 'percent')).toEqual({
-        displayUnit: '%',
-        measureType: 'ratio',
-      });
-    });
+  it('should format metric values inline without a redundant unit header', () => {
+    const output = stripAnsi(
+      formatText(
+        {
+          data: [
+            {
+              timestamp: '2026-02-19T10:00:00.000Z',
+              checkout_latency_p75: 250,
+            },
+            {
+              timestamp: '2026-02-19T10:05:00.000Z',
+              checkout_latency_p75: 1_500,
+            },
+          ],
+          summary: [],
+          statistics: {},
+        },
+        {
+          metric: 'checkout.latency',
+          metricUnit: 'milliseconds',
+          aggregation: 'p75',
+          groupBy: [],
+          scope: projectScope,
+          periodStart: '2026-02-19T10:00:00.000Z',
+          periodEnd: '2026-02-19T10:10:00.000Z',
+          granularity: { minutes: 5 },
+        }
+      )
+    );
 
-    it('should return rate display for persecond aggregation', () => {
-      expect(getEffectiveDisplay('bytes', 'persecond')).toEqual({
-        displayUnit: 'bytes/s',
-        measureType: 'bytes',
-      });
-      expect(getEffectiveDisplay('count', 'persecond')).toEqual({
-        displayUnit: 'count/s',
-        measureType: 'count',
-      });
-      expect(getEffectiveDisplay('milliseconds', 'persecond')).toEqual({
-        displayUnit: 'ms/s',
-        measureType: 'duration',
-      });
-    });
-
-    it('should return count display with hidden unit for an aggregation with a dimension', () => {
-      expect(
-        getEffectiveDisplay('count', 'unique/visitor_id' as Aggregation)
-      ).toEqual({
-        displayUnit: undefined,
-        measureType: 'count',
-      });
-      expect(
-        getEffectiveDisplay('bytes', 'unique/device_id' as Aggregation)
-      ).toEqual({
-        displayUnit: undefined,
-        measureType: 'count',
-      });
-    });
-
-    it('should return count display with hidden unit for count aggregation', () => {
-      expect(getEffectiveDisplay('milliseconds', 'count')).toEqual({
-        displayUnit: undefined,
-        measureType: 'count',
-      });
-    });
-
-    it('should pass through base unit for standard aggregations', () => {
-      expect(getEffectiveDisplay('bytes', 'sum')).toEqual({
-        displayUnit: 'bytes',
-        measureType: 'bytes',
-      });
-      expect(getEffectiveDisplay('milliseconds', 'avg')).toEqual({
-        displayUnit: 'milliseconds',
-        measureType: 'duration',
-      });
-      expect(getEffectiveDisplay('count', 'sum')).toEqual({
-        displayUnit: 'count',
-        measureType: 'count',
-      });
-      expect(getEffectiveDisplay(undefined, 'avg')).toEqual({
-        displayUnit: undefined,
-        measureType: 'ratio',
-      });
-    });
+    expect(output).toContain('875ms');
+    expect(output).toContain('250ms at 10:00');
+    expect(output).toContain('1.5s at 10:05');
+    expect(output).not.toContain('Units:');
   });
 
   describe('ellipsizeMiddle', () => {
@@ -363,7 +340,6 @@ describe('text-output', () => {
         orderBy: 'count',
         orderDirection: 'desc',
         scope: projectScope,
-        unit: 'milliseconds',
         groupCount: 2,
         projectName: 'my-project',
         teamName: 'my-team',
@@ -377,7 +353,6 @@ describe('text-output', () => {
       expect(metadata).toContain('Order By:');
       expect(stripAnsi(metadata)).toContain('Order By: count desc (default)');
       expect(metadata).toContain('Project:');
-      expect(metadata).toContain('Units:');
       expect(metadata).toContain('Groups:');
       // Sub-day intervals are timezone-independent, so no zone is shown.
       expect(metadata).not.toContain('Timezone:');
@@ -526,7 +501,7 @@ describe('text-output', () => {
       `);
     });
 
-    it('should render grouped duration output with units and raw values', () => {
+    it('should render grouped duration output with inline units', () => {
       const response: MetricsQueryResponse = {
         data: [
           {
@@ -575,8 +550,8 @@ describe('text-output', () => {
         granularity: { minutes: 5 },
       });
 
-      expect(output).toContain('Units:');
-      expect(output).toContain('ms');
+      expect(output).toContain('200ms');
+      expect(output).toContain('10ms at 10:00');
       expect(output).toContain('Groups:');
       expect(output).toContain('2');
       expect(output).toContain('projectName');
@@ -728,7 +703,7 @@ describe('text-output', () => {
       expect(output).not.toContain('sparklines:');
     });
 
-    it('should show Units: % and no total for percent aggregation with bytes measure', () => {
+    it('should format percent values inline and omit total', () => {
       const response: MetricsQueryResponse = {
         data: [
           {
@@ -766,15 +741,14 @@ describe('text-output', () => {
         .map(line => stripAnsi(line).trimEnd())
         .join('\n');
 
-      expect(normalized).toContain('Units: %');
-      expect(normalized).not.toContain('Units: bytes');
+      expect(normalized).toContain('33.3%');
       expect(normalized).not.toContain('total');
       expect(normalized).toContain('avg');
       expect(normalized).toContain('min');
       expect(normalized).toContain('max');
     });
 
-    it('should show Units: bytes/s for persecond aggregation with bytes measure', () => {
+    it('should format byte rates inline', () => {
       const output = formatText(
         {
           data: [
@@ -807,11 +781,12 @@ describe('text-output', () => {
         .map(line => stripAnsi(line).trimEnd())
         .join('\n');
 
-      expect(normalized).toContain('Units: bytes/s');
+      expect(normalized).toContain('2 KB/s');
+      expect(normalized).toContain('1 KB/s at 10:00');
       expect(normalized).not.toContain('total');
     });
 
-    it('should hide Units line for unique aggregation', () => {
+    it('should omit total for unique aggregation', () => {
       const output = formatText(
         {
           data: [
@@ -844,7 +819,6 @@ describe('text-output', () => {
         .map(line => stripAnsi(line).trimEnd())
         .join('\n');
 
-      expect(normalized).not.toContain('Units:');
       expect(normalized).not.toContain('total');
     });
 
@@ -882,8 +856,8 @@ describe('text-output', () => {
       // Values must resolve from the slash-flattened column instead of
       // rendering as all-missing placeholders.
       expect(normalized).not.toContain('--');
-      expect(normalized).toContain('35998.0');
-      expect(normalized).toContain('39430.0');
+      expect(normalized).toContain('35,998');
+      expect(normalized).toContain('39,430');
       expect(normalized).toContain('█');
       // The whole-period deduplicated count comes from the API summary, since
       // per-bucket uniques cannot be summed into a period total.
@@ -950,7 +924,7 @@ describe('text-output', () => {
         .map(line => stripAnsi(line).trimEnd())
         .join('\n');
 
-      expect(normalized).toContain('Units: ms');
+      expect(normalized).toContain('800ms');
       expect(normalized).toContain('total');
     });
   });
