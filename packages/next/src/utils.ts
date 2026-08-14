@@ -2831,8 +2831,10 @@ export const onPrerenderRoute =
         initialHeaders ??= {};
 
         if (postponedState) {
-          initialHeaders['content-type'] =
-            `application/x-nextjs-pre-render; state-length=${postponedState.length}; origin="text/html; charset=utf-8"`;
+          initialHeaders['content-type'] = getPostponedStateContentType(
+            postponedState,
+            'text/html; charset=utf-8'
+          );
 
           postponedPrerender = postponedState + html;
           didPostpone = true;
@@ -3391,9 +3393,10 @@ export const onPrerenderRoute =
           } else {
             let contentType = rscContentTypeHeader;
             if (postponedState) {
-              contentType = `application/x-nextjs-pre-render; state-length=${postponedState.length}; origin=${JSON.stringify(
+              contentType = getPostponedStateContentType(
+                postponedState,
                 rscContentTypeHeader
-              )}`;
+              );
             }
 
             // If client param parsing is enabled, we follow the same logic as the
@@ -4785,6 +4788,26 @@ export function normalizePrefetches(prefetches: Record<string, FileFsRef>) {
   }
 
   return updatedPrefetches;
+}
+
+/**
+ * Build the content type for a partially prerendered output, whose body is the
+ * postponed state followed by the prerendered content.
+ *
+ * `state-length` is where the CDN cuts the body back into those two halves. The
+ * body is written as UTF-8, so the offset counts encoded bytes.
+ *
+ * @param postponedState - The serialized postponed state.
+ * @param originContentType - The content type of the prerendered content.
+ * @returns The content type for the partially prerendered output.
+ */
+function getPostponedStateContentType(
+  postponedState: string,
+  originContentType: string
+): string {
+  return `application/x-nextjs-pre-render; state-length=${Buffer.byteLength(
+    postponedState
+  )}; origin=${JSON.stringify(originContentType)}`;
 }
 
 /**
