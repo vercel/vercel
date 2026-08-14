@@ -61,6 +61,15 @@ export class FlagsVersionsTelemetryClient
     }
   }
 
+  trackCliOptionNext(next: string | undefined) {
+    if (next) {
+      this.trackCliOption({
+        option: 'next',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionCursor(cursor: string | undefined) {
     if (cursor) {
       this.trackCliOption({

@@ -1,6 +1,6 @@
 {
   "name": "dashboard",
   "scripts": {
-    "build": "mkdir -p dist && echo dashboard > dist/index.txt"
+    "build": "node -e \"require('node:fs').mkdirSync('dist', { recursive: true })\" && echo dashboard > dist/index.txt"
   }
 }

@@ -65,11 +65,19 @@ export const listSubcommand = {
       description: 'Search Agent Runs by title',
     },
     {
+      name: 'next',
+      shorthand: null,
+      type: Number,
+      argument: 'NUMBER',
+      deprecated: false,
+      description: 'Continue from a previous response',
+    },
+    {
       name: 'page',
       shorthand: null,
       type: Number,
       argument: 'N',
-      deprecated: false,
+      deprecated: true,
       description: '1-based page number (default: 1)',
     },
     {

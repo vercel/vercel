@@ -133,6 +133,15 @@ export class VcrTelemetryClient
     }
   }
 
+  trackCliOptionNext(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'next',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionCursor(value: string | undefined) {
     if (value) {
       this.trackCliOption({

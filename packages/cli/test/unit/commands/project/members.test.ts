@@ -84,6 +84,42 @@ describe('project members', () => {
     );
   });
 
+  it('continues from --next and prints the next command', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.scenario.get('/v1/projects/:idOrName/members', (req, res) => {
+      expect(req.query.limit).toBe('5');
+      expect(req.query.until).toBe('1584722256178');
+      expect(req.query.next).toBeUndefined();
+      res.json({
+        members: [],
+        pagination: { next: 1584722257000 },
+      });
+    });
+
+    client.setArgv(
+      'project',
+      'members',
+      'my-project',
+      '--limit',
+      '5',
+      '--search',
+      'Jane Doe',
+      '--next',
+      '1584722256178'
+    );
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(0);
+    await expect(client.stderr).toOutput(
+      "project members my-project --limit 5 --search 'Jane Doe' --next 1584722257000"
+    );
+  });
+
   describe('--non-interactive', () => {
     afterEach(() => {
       vi.restoreAllMocks();

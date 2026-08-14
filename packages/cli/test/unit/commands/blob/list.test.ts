@@ -97,7 +97,7 @@ describe('blob list', () => {
         'list',
         '--limit',
         '20',
-        '--cursor',
+        '--next',
         'cursor_123',
         '--prefix',
         'folder/',
@@ -110,7 +110,7 @@ describe('blob list', () => {
         [
           '--limit',
           '20',
-          '--cursor',
+          '--next',
           'cursor_123',
           '--prefix',
           'folder/',
@@ -135,7 +135,7 @@ describe('blob list', () => {
           value: '20',
         },
         {
-          key: 'option:cursor',
+          key: 'option:next',
           value: 'cursor_123',
         },
         {
@@ -244,7 +244,7 @@ describe('blob list', () => {
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.log).toHaveBeenCalledWith(
-        'To display the next page run `vercel blob list --limit 5 --cursor next_cursor_123`'
+        'To display the next page run `vercel blob list --limit 5 --next next_cursor_123`'
       );
     });
 
@@ -289,7 +289,7 @@ describe('blob list', () => {
       expect(exitCode).toBe(0);
       expect(mockedOutput.log).toHaveBeenCalledWith(
         expect.stringContaining(
-          '--limit 10 --prefix test/ --mode folded --cursor paginated_cursor'
+          '--limit 10 --prefix test/ --mode folded --next paginated_cursor'
         )
       );
     });

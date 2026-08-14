@@ -151,6 +151,21 @@ describe('vcr permissions ls', () => {
     expect(limit).toBe('5');
   });
 
+  it.each([
+    '--next',
+    '--cursor',
+  ])('passes pagination through with %s', async flag => {
+    client.scenario.get('/v1/vcr/repository/my-app/permissions', (req, res) => {
+      expect(req.query.cursor).toBe('next_page');
+      res.json({ permissions: [] });
+    });
+
+    client.setArgv('vcr', 'permissions', 'my-app', 'ls', flag, 'next_page');
+    const exitCode = await vcr(client);
+
+    expect(exitCode).toBe(0);
+  });
+
   it('errors when the API returns a 404', async () => {
     client.scenario.get(
       '/v1/vcr/repository/my-app/permissions',

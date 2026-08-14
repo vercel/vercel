@@ -346,6 +346,28 @@ describe('horizontal command option uniformity', () => {
     expectAllowlist(deviations, PROJECT_SHAPE_EXCEPTIONS);
   });
 
+  it('keeps legacy pagination flags hidden behind canonical replacements', () => {
+    const legacyNames = new Set(['cursor', 'page', 'per-page']);
+
+    for (const { command, path } of COMMANDS) {
+      for (const option of command.options) {
+        if (!legacyNames.has(option.name)) continue;
+
+        expect(option.deprecated, `${path} --${option.name}`).toBe(true);
+        if (option.name === 'cursor') {
+          expect(optionFor(command, 'next'), path).toBeDefined();
+        } else if (option.name === 'per-page') {
+          expect(optionFor(command, 'limit'), path).toBeDefined();
+        } else {
+          expect(
+            optionFor(command, 'next') ?? optionFor(command, 'page-path'),
+            path
+          ).toBeDefined();
+        }
+      }
+    }
+  });
+
   it('keeps every existing --yes flag Boolean, documented, and available as -y', () => {
     for (const { command, path } of COMMANDS) {
       const option = optionFor(command, 'yes');
