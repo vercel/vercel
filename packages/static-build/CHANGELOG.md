@@ -1,5 +1,12 @@
 # @vercel/static-build
 
+## 2.12.7
+
+### Patch Changes
+
+- b4f09c1: Support selecting Bun 1.4.x as an explicit runtime and build-time package manager, including local Bun servers.
+  - @vercel/gatsby-plugin-vercel-builder@2.2.41
+
 ## 2.12.6
 
 ### Patch Changes

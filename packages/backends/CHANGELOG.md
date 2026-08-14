@@ -1,5 +1,13 @@
 # @vercel/backends
 
+## 0.8.38
+
+### Patch Changes
+
+- b4f09c1: Support selecting Bun 1.4.x as an explicit runtime and build-time package manager, including local Bun servers.
+- Updated dependencies [b4f09c1]
+  - @vercel/build-utils@14.1.1
+
 ## 0.8.37
 
 ### Patch Changes

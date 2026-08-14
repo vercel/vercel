@@ -1,5 +1,37 @@
 # vercel
 
+## 59.0.1
+
+### Patch Changes
+
+- d5bac31: Standardize list pagination on `--limit` and `--next` while preserving existing pagination flags as compatibility aliases.
+- 4f83283: Fix `vercel dev` failing with `PROXY_AND_BUILDS` for any project that configures `proxy` in `vercel.json`. The dev server synthesizes the proxy build into its in-memory config and then re-ran the authored-config validator over that derived plan, which rejected the pairing it had just created itself.
+- 6673559: Offer to link the project inline when `vercel env pull` runs in an unlinked directory, then continue pulling environment variables in the same invocation.
+- 98941c0: Move anonymous deployment orchestration out of the deploy command entrypoint.
+- b4f09c1: Support selecting Bun 1.4.x as an explicit runtime and build-time package manager, including local Bun servers.
+- Updated dependencies [de992e6]
+- Updated dependencies [b4f09c1]
+  - @vercel/python@6.57.0
+  - @vercel/build-utils@14.1.1
+  - @vercel/backends@0.8.38
+  - @vercel/hydrogen@1.4.2
+  - @vercel/next@4.21.5
+  - @vercel/node@5.10.1
+  - @vercel/redwood@2.5.2
+  - @vercel/remix-builder@5.9.5
+  - @vercel/static-build@2.12.7
+  - @vercel/container@0.2.0
+  - @vercel/elysia@0.1.115
+  - @vercel/express@0.1.129
+  - @vercel/fastify@0.1.118
+  - @vercel/go@3.11.0
+  - @vercel/h3@0.1.124
+  - @vercel/hono@0.2.118
+  - @vercel/koa@0.1.98
+  - @vercel/nestjs@0.2.119
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.2
+
 ## 59.0.0
 
 ### Major Changes

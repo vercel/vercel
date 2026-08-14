@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.21.5
+
+### Patch Changes
+
+- b4f09c1: Support selecting Bun 1.4.x as an explicit runtime and build-time package manager, including local Bun servers.
+
 ## 4.21.4
 
 ### Patch Changes

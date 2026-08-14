@@ -1,5 +1,11 @@
 # @vercel/redwood
 
+## 2.5.2
+
+### Patch Changes
+
+- b4f09c1: Support selecting Bun 1.4.x as an explicit runtime and build-time package manager, including local Bun servers.
+
 ## 2.5.1
 
 ### Patch Changes

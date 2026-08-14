@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.57.0
+
+### Minor Changes
+
+- de992e6: Fix FastAPI static/frontend route precedence on the CDN.
+
 ## 6.56.2
 
 ### Patch Changes
