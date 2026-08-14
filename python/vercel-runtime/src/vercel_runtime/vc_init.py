@@ -13,6 +13,7 @@ import logging
 import os
 import socket
 import sys
+import threading
 import time
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -377,10 +378,16 @@ atexit.register(flush_init_log_buf_to_stderr)
 # --- Cold start phase timings ---------------------------------------------
 _BOOT_START_ENV = "__VC_PY_BOOT_START_MS"
 
-# Contiguous and in bootstrap order, so they sum to initDuration
+# Contiguous and in bootstrap order, so they sum to initDuration. Named as the
+# node bridge names them, since they share a metric per phase.
 _PHASE_BOOTSTRAP = "bootstrap"
-_PHASE_IMPORT_FN = "importFn"
-_PHASE_SERVER_READY = "serverReady"
+_PHASE_IMPORT_FN = "import-fn"
+_PHASE_SERVER_READY = "server-ready"
+
+_SERVER_TIMING_HEADER = "x-vercel-internal-timing"
+
+# Readiness probe, answered without invoking user code.
+_PING_PATH = "/_vercel/ping"
 
 
 def _boot_started_at() -> float:
@@ -419,10 +426,58 @@ def _cold_start_phases(ready_at: float) -> dict[str, int]:
     }
 
 
+# The cold start phases as a `Server-Timing` value, awaiting the first response.
+# `None` once emitted, so warm responses carry nothing.
+_pending_server_timing: str | None = None
+_pending_server_timing_lock = threading.Lock()
+
+
+def _format_server_timing(phases: dict[str, int]) -> str:
+    """Format phases the way the node bridge formats its own timings.
+
+    Durations are contiguous, so each offset is the sum of the phases before it.
+    """
+    entries: list[str] = []
+    offset = 0
+    for name, duration in phases.items():
+        entries.append(
+            f'{name};dur={duration};desc="{name}_{offset}+{duration}"'
+            f";offset={offset}"
+        )
+        offset += duration
+    return ",".join(entries)
+
+
+def _take_cold_start_timing() -> str | None:
+    """The cold start timings, for the first response to ask for them."""
+    global _pending_server_timing  # noqa: PLW0603
+    # Warm responses skip the lock entirely.
+    if _pending_server_timing is None:
+        return None
+    with _pending_server_timing_lock:
+        value = _pending_server_timing
+        _pending_server_timing = None
+    return value
+
+
+def _add_cold_start_timing_asgi(message: dict[str, Any]) -> None:
+    """Attach the cold start timings to an ASGI `http.response.start`."""
+    value = _take_cold_start_timing()
+    if value is None:
+        return
+    headers: list[tuple[bytes, bytes]] = list(message.get("headers") or [])
+    headers.append((_SERVER_TIMING_HEADER.encode(), value.encode()))
+    message["headers"] = headers
+
+
 def _send_server_started(http_port: int) -> None:
     """Complete the runtime handshake and release buffered init logs."""
+    global _pending_server_timing  # noqa: PLW0603
     ready_at = time.monotonic()
     phases = _cold_start_phases(ready_at)
+    # The platform reads the breakdown off the first response, so it is only
+    # the user-attributable share that the handshake has to carry.
+    _pending_server_timing = _format_server_timing(phases)
     send_message(
         {
             "type": "server-started",
@@ -430,7 +485,6 @@ def _send_server_started(http_port: int) -> None:
                 "initDuration": _elapsed_ms(_boot_start, ready_at),
                 "httpPort": http_port,
                 "userInitDuration": phases[_PHASE_IMPORT_FN],
-                "phases": phases,
             },
         }
     )
@@ -635,7 +689,7 @@ class ASGIMiddleware:
             await self.app(scope, receive, send)
             return
 
-        if scope_type == "http" and scope.get("path") == "/_vercel/ping":
+        if scope_type == "http" and scope.get("path") == _PING_PATH:
             await send(
                 {
                     "type": "http.response.start",
@@ -756,6 +810,14 @@ class ASGIMiddleware:
                 )
 
         async def send_wrapper(message: dict[str, Any]) -> None:
+            # Cheapest check first: after the first response there is nothing to
+            # report, so the message never has to be inspected.
+            if (
+                _pending_server_timing is not None
+                and message.get("type") == "http.response.start"
+            ):
+                _add_cold_start_timing_asgi(message)
+
             await send(message)
 
             if scope_type != "websocket":
@@ -842,6 +904,19 @@ if "VERCEL_IPC_PATH" in os.environ:
         pass
 
     class BaseHandler(BaseHTTPRequestHandler):
+        def end_headers(self) -> None:
+            # Only the first response reports timings, so every response after
+            # it pays one `is not None` and nothing more.
+            if _pending_server_timing is not None:
+                # The readiness ping is not an invocation, so it must not
+                # consume the timings the first real response reports.
+                path = split_request_target(getattr(self, "path", ""))[0]
+                if path != _PING_PATH:
+                    value = _take_cold_start_timing()
+                    if value is not None:
+                        self.send_header(_SERVER_TIMING_HEADER, value)
+            super().end_headers()
+
         # Re-implementation of BaseHTTPRequestHandler's log_message method to
         # log to stdout instead of stderr.
         def log_message(self, format: str, *args: Any) -> None:
@@ -899,7 +974,7 @@ if "VERCEL_IPC_PATH" in os.environ:
             if not self.parse_request():
                 return
 
-            if split_request_target(self.path)[0] == "/_vercel/ping":
+            if split_request_target(self.path)[0] == _PING_PATH:
                 self.send_response(200)
                 self.end_headers()
                 return

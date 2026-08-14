@@ -30,7 +30,6 @@ class ServerStartedPayload:
     init_duration: int
     http_port: int
     user_init_duration: int | None = attrs.field(default=None)
-    phases: dict[str, int] | None = attrs.field(default=None)
 
 
 @attrs.frozen
@@ -156,7 +155,6 @@ def _parse_message(raw: dict[str, Any]) -> N1Message:
                 init_duration=payload["initDuration"],
                 http_port=payload["httpPort"],
                 user_init_duration=payload.get("userInitDuration"),
-                phases=payload.get("phases"),
             ),
         )
 
