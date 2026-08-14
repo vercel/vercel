@@ -266,7 +266,7 @@ const main = async () => {
   const subSubCommand = parsedArgs.args[3];
 
   // If empty, leave this code here for easy adding of beta commands later
-  const betaCommands: string[] = ['api', 'crons', 'curl', 'webhooks'];
+  const betaCommands: string[] = ['api', 'crons', 'curl', 'kms', 'webhooks'];
   // Short build label stamped by CI for non-release builds (e.g. "pr-115"
   // from "pr-115 abc1234"). The full label is shown by `vc --version`.
   const shortBuildLabel = BUILD_LABEL ? ` (${BUILD_LABEL.split(' ')[0]})` : '';
@@ -1085,6 +1085,10 @@ const main = async () => {
         case 'integration-resource':
           telemetry.trackCliCommandIntegrationResource(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).integrationResource;
+          break;
+        case 'kms':
+          telemetry.trackCliCommandKms(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).kms;
           break;
         case 'mcp':
           func = (await import('./commands-bulk.js')).mcp;

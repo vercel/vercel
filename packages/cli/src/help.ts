@@ -62,6 +62,7 @@ export const help = () => `
       flags                [cmd]       Manage feature flags for a Vercel project
       global-config        [cmd]       Manage Global Config stores
       httpstat             path        Visualize HTTP timing statistics for deployments
+      kms                  [cmd]       Manage KMS issuers, signing keys, and project grants [beta]
       logs                 [url]       Displays the logs for a deployment
       metrics              <metric>    Queries observability metrics for your project or team
       mcp                              Set up MCP agents and configuration

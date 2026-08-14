@@ -36,6 +36,7 @@ import { inspectCommand } from '../../../src/commands/inspect/command';
 import { installCommand } from '../../../src/commands/install/command';
 import { integrationCommand } from '../../../src/commands/integration/command';
 import { integrationResourceCommand } from '../../../src/commands/integration-resource/command';
+import { kmsCommand } from '../../../src/commands/kms/command';
 import { linkCommand } from '../../../src/commands/link/command';
 import { listCommand } from '../../../src/commands/list/command';
 import { loginCommand } from '../../../src/commands/login/command';
@@ -105,6 +106,7 @@ const ROOT_COMMANDS = [
   installCommand,
   integrationCommand,
   integrationResourceCommand,
+  kmsCommand,
   linkCommand,
   listCommand,
   loginCommand,
