@@ -20,8 +20,16 @@ const pythonWheelPackages = getPythonPackages(rootDir).map(
   })
 );
 
+function getTarballBaseUrl(): string {
+  if (process.env.VERCEL_TARBALL_BASE_URL) {
+    return process.env.VERCEL_TARBALL_BASE_URL.replace(/\/$/, '');
+  }
+  return `https://${process.env.VERCEL_URL}/tarballs`;
+}
+
 async function main() {
   const sha = await getSha();
+  const tarballBaseUrl = getTarballBaseUrl();
 
   const { stdout: turboStdout } = await execa(
     'turbo',
@@ -53,7 +61,7 @@ async function main() {
         const name = dependency.split('#')[0];
         // pnpm 8 fails to install dependencies with @ in the URL
         const escapedName = name.replace('@', '%40');
-        const tarballUrl = `https://${process.env.VERCEL_URL}/tarballs/${escapedName}.tgz`;
+        const tarballUrl = `${tarballBaseUrl}/${escapedName}.tgz`;
         if (packageObj.dependencies && name in packageObj.dependencies) {
           packageObj.dependencies[name] = tarballUrl;
         }

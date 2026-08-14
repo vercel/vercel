@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { join, sep } from 'path';
 import {
   getInstallRoot,
+  getPrBinaryBaseUrl,
   isCurlInstall,
   parsePrTarget,
 } from '../../../src/util/native-self-update';
@@ -101,6 +102,14 @@ describe('getInstallRoot', () => {
   it('returns an absolute default when VERCEL_INSTALL_DIR is unset', () => {
     delete process.env.VERCEL_INSTALL_DIR;
     expect(isAbsolute(getInstallRoot())).toBe(true);
+  });
+});
+
+describe('getPrBinaryBaseUrl', () => {
+  it('uses the commit-scoped binary directory', () => {
+    expect(getPrBinaryBaseUrl(115, 'a'.repeat(40))).toBe(
+      `https://api-frameworks.vercel.sh/pr-binaries/115/shas/${'a'.repeat(40)}`
+    );
   });
 });
 

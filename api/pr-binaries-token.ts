@@ -11,7 +11,7 @@ import { errorHandler } from './_lib/util/error-handler';
  *
  * POST /api/pr-binaries-token
  *   Authorization: Bearer <GitHub Actions OIDC JWT>
- *   { "pathname": "pr-binaries/<pr-number>/<asset-name>" }
+ *   { "pathname": "pr-binaries/<pr-number>/<artifact-path>" }
  *
  * Returns: { "token": "<blob client token>" }
  */
@@ -19,7 +19,8 @@ import { errorHandler } from './_lib/util/error-handler';
 const GITHUB_OIDC_ISSUER = 'https://token.actions.githubusercontent.com';
 const EXPECTED_AUDIENCE = 'vercel-cli-pr-binaries';
 const ALLOWED_REPOSITORIES = ['vercel/vercel-internal', 'vercel/vercel'];
-const PATHNAME_PATTERN = /^pr-binaries\/\d+\/[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
+const PATHNAME_PATTERN =
+  /^pr-binaries\/\d+\/(?:shas\/[0-9a-f]{40}\/(?:[a-zA-Z0-9][a-zA-Z0-9._-]*|tarballs\/(?:%40[a-zA-Z0-9._-]+\/)?[a-zA-Z0-9][a-zA-Z0-9._-]*\.tgz)|current-sha)$/;
 const TOKEN_TTL_MS = 10 * 60 * 1000; // 10 minutes
 // Compiled CLI binaries are ~100 MB; this is a guardrail on the token
 // grant, not an expected size.
@@ -83,7 +84,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res,
       400,
       'invalid_pathname',
-      'Expected `pathname` matching pr-binaries/<pr-number>/<asset-name>.'
+      'Expected a SHA-scoped PR artifact pathname or current-sha pointer.'
     );
   }
 

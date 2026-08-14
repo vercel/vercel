@@ -93,7 +93,7 @@ pkg_name="@vercel/$pkg_suffix"
 
 if [ -n "$pr_number" ]; then
   asset="vercel-$platform-$cpu"
-  base_url="$PR_BINARIES_URL/$pr_number"
+  pr_url="$PR_BINARIES_URL/$pr_number"
   version_dir="$VERSIONS_DIR/pr-$pr_number"
   binary_path="$version_dir/vercel"
 
@@ -101,6 +101,13 @@ if [ -n "$pr_number" ]; then
   trap 'rm -rf "$tmp_dir"' EXIT
 
   step "fetching build info for PR #$pr_number..."
+  current_sha="$(curl -fsSL "$pr_url/current-sha")" ||
+    error "could not fetch the current build SHA for PR #$pr_number"
+  case "$current_sha" in
+    [0-9a-f][0-9a-f][0-9a-f][0-9a-f]*) : ;;
+    *) error "unexpected build SHA format for PR #$pr_number" ;;
+  esac
+  base_url="$pr_url/shas/$current_sha"
   # Distinguish "no build for this PR" (404) from network/server failures so
   # transient errors aren't misreported as a missing build.
   http_code="$(curl -sSL -o "$tmp_dir/remote.sha256" -w '%{http_code}' "$base_url/$asset.sha256")" ||

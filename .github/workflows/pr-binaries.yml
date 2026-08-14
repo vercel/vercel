@@ -18,6 +18,7 @@ on:
   pull_request:
     branches:
       - main
+      - 'stack/**'
 
 permissions:
   contents: read
@@ -35,22 +36,20 @@ jobs:
     name: ${{ matrix.asset }}
     permissions:
       contents: read
+      deployments: read
       id-token: write
+      statuses: read
     strategy:
       fail-fast: false
-      # Intentionally incomplete matrix: macOS + Linux only, so the binaries
-      # are testable by internal users. Windows
-      # (win32-x64) will need to be added before any external rollout, along
-      # with its own signing story.
+      # Intentionally incomplete matrix: Apple Silicon macOS + Linux only, so
+      # the binaries are testable by internal users. Intel macOS and Windows
+      # will need to be added before any external rollout, along with Windows'
+      # own signing story.
       matrix:
         include:
           - runs-on: macos-15-xlarge
             target: node24.14.1-macos-arm64
             asset: vercel-darwin-arm64
-            sign: true
-          - runs-on: macos-15-large
-            target: node24.14.1-macos-x64
-            asset: vercel-darwin-x64
             sign: true
           - runs-on: ubuntu-latest-32-core-arm
             target: node24.14.1-linux-arm64
@@ -124,12 +123,69 @@ jobs:
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
+      # The workspace build above runs immediately while Vercel builds the
+      # preview deployment. Wait only when build-binary.mjs needs its tarballs.
+      - name: Wait for deployment tarballs
+        id: deployment
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          validate_deployment_url() {
+            local url="${1%/}"
+            [[ -n "$url" ]] || return 1
+            if curl --connect-timeout 5 --max-time 15 -fsI "$url/tarballs/vercel.tgz" >/dev/null; then
+              echo "url=$url" >> "$GITHUB_OUTPUT"
+              echo "Deployment tarballs are ready at $url/tarballs"
+              return 0
+            fi
+            return 1
+          }
+
+          get_candidate_urls() {
+            local deployment_ids
+            deployment_ids=$(gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${HEAD_SHA}&per_page=20" --jq '.[].id') || return 1
+            while IFS= read -r deployment_id; do
+              [[ -n "$deployment_id" ]] || continue
+              gh api "repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses" \
+                --jq '.[] | select(.state == "success" and .environment_url != null and .environment_url != "") | .environment_url' || return 1
+            done <<< "$deployment_ids"
+            gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/status" \
+              --jq '.statuses[] | select(.state == "success" and .target_url != null and .target_url != "") | .target_url'
+          }
+
+          api_failures=0
+          for attempt in {1..120}; do
+            if ! candidate_urls=$(get_candidate_urls); then
+              api_failures=$((api_failures + 1))
+              echo "Failed to query deployment URLs (attempt $api_failures/3)."
+              [[ "$api_failures" -lt 3 ]] || exit 1
+              sleep 10
+              continue
+            fi
+            api_failures=0
+            while IFS= read -r candidate_url; do
+              if validate_deployment_url "$candidate_url"; then
+                exit 0
+              fi
+            done < <(printf '%s\n' "$candidate_urls" | sort -u)
+            echo "Deployment tarballs are not ready yet (attempt $attempt/120)."
+            sleep 10
+          done
+
+          echo "::error::Timed out waiting for deployment tarballs" >&2
+          exit 1
+
       # No VERCEL_CLI_BINARY_NODE_PATH: build-binary.mjs downloads the
       # prebuilt pkg Node base instead of compiling a custom runtime.
       - name: Build binary
         working-directory: packages/cli
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          VERCEL_CLI_PREVIEW_TARBALL_BASE_URL: ${{ steps.deployment.outputs.url }}/tarballs
         run: node scripts/build-binary.mjs --target ${{ matrix.target }} --compress Brotli --output ./dist-bin/${{ matrix.asset }}
 
       # Imports the Developer ID cert into a throwaway keychain so the
@@ -299,9 +355,10 @@ jobs:
         shell: bash
         working-directory: packages/cli
         env:
-          TOKEN_EXCHANGE_URL: https://api-frameworks.vercel.sh/api/pr-binaries-token
+          TOKEN_EXCHANGE_URL: ${{ steps.deployment.outputs.url }}/api/pr-binaries-token
           OIDC_AUDIENCE: vercel-cli-pr-binaries
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           ASSET: ${{ matrix.asset }}
         run: |
           set -euo pipefail
@@ -324,25 +381,35 @@ jobs:
             local file="$1"
             local pathname="$2"
             local content_type="$3"
-            local client_token response
+            local client_token
             client_token=$(exchange "$pathname") || return 1
             if [[ -z "$client_token" || "$client_token" == "null" ]]; then
               return 1
             fi
-            if ! response=$(curl -sS --fail-with-body -X PUT \
-              "https://blob.vercel-storage.com/$pathname" \
-              -H "authorization: Bearer $client_token" \
-              -H "x-api-version: 7" \
-              -H "x-content-type: $content_type" \
-              --data-binary "@$file"); then
-              echo "::error::Blob upload failed for $pathname: $response" >&2
-              return 1
-            fi
-            echo "$response" | jq -r '.url'
+            BLOB_CLIENT_TOKEN="$client_token" \
+              BLOB_FILE="$file" \
+              BLOB_PATHNAME="$pathname" \
+              BLOB_CONTENT_TYPE="$content_type" \
+              node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          import { put } from '@vercel/blob/client';
+
+          const blob = await put(
+            process.env.BLOB_PATHNAME,
+            await readFile(process.env.BLOB_FILE),
+            {
+              access: 'public',
+              contentType: process.env.BLOB_CONTENT_TYPE,
+              token: process.env.BLOB_CLIENT_TOKEN,
+            }
+          );
+          console.log(blob.url);
+          NODE
           }
 
-          bin_url=$(upload "dist-bin/$ASSET" "pr-binaries/$PR_NUMBER/$ASSET" "application/octet-stream")
-          sha_url=$(upload "dist-bin/$ASSET.sha256" "pr-binaries/$PR_NUMBER/$ASSET.sha256" "text/plain")
+          artifact_root="pr-binaries/$PR_NUMBER/shas/$HEAD_SHA"
+          bin_url=$(upload "dist-bin/$ASSET" "$artifact_root/$ASSET" "application/octet-stream")
+          sha_url=$(upload "dist-bin/$ASSET.sha256" "$artifact_root/$ASSET.sha256" "text/plain")
 
           echo "Uploaded: $bin_url"
           echo "Uploaded: $sha_url"
@@ -352,3 +419,44 @@ jobs:
             echo "- [$ASSET]($bin_url)"
             echo "- [$ASSET.sha256]($sha_url)"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  publish-current-sha:
+    name: Publish current SHA
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Upload current SHA pointer
+        shell: bash
+        env:
+          TOKEN_EXCHANGE_URL: https://vercel-621t2dro1.vercel.sh/api/pr-binaries-token
+          OIDC_AUDIENCE: vercel-cli-pr-binaries
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          pathname="pr-binaries/$PR_NUMBER/current-sha"
+          oidc_token=$(curl -sS --fail \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$OIDC_AUDIENCE" \
+            | jq -r '.value')
+          client_token=$(curl -sS --fail-with-body -X POST "$TOKEN_EXCHANGE_URL" \
+            -H "Authorization: Bearer $oidc_token" \
+            -H "Content-Type: application/json" \
+            -d "{\"pathname\":\"$pathname\"}" | jq -r '.token')
+          store_id=$(cut -d_ -f4 <<< "$client_token")
+          encoded_pathname=$(jq -rn --arg value "$pathname" '$value | @uri')
+          request_id="$store_id:$(date +%s%3N):$RANDOM"
+          response=$(curl -sS --fail-with-body -X PUT \
+            "https://vercel.com/api/blob/?pathname=$encoded_pathname" \
+            -H "authorization: Bearer $client_token" \
+            -H "x-vercel-blob-store-id: $store_id" \
+            -H "x-api-version: 12" \
+            -H "x-api-blob-request-id: $request_id" \
+            -H "x-api-blob-request-attempt: 0" \
+            -H "x-vercel-blob-access: public" \
+            -H "x-content-type: text/plain" \
+            --data-binary "$HEAD_SHA")
+          echo "Uploaded: $(echo "$response" | jq -r '.url')"

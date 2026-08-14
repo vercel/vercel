@@ -252,9 +252,8 @@ export async function installAndLinkVersion(version: string): Promise<void> {
 
 /**
  * Base URL for PR-built binaries published by the `pr-binaries` workflow.
- * Each push to a PR overwrites `pr-binaries/<pr>/vercel-<platform>` and its
- * `.sha256` companion, so PR installs re-check the remote checksum on every
- * switch instead of trusting a local copy.
+ * Each successful workflow publishes immutable artifacts under
+ * `pr-binaries/<pr>/shas/<commit>` and then updates `current-sha`.
  */
 const PR_BINARIES_URL =
   process.env.VERCEL_PR_BINARIES_URL ||
@@ -284,8 +283,33 @@ function isPrVersionName(name: string): boolean {
   return /^pr-\d+$/.test(name);
 }
 
-async function fetchPrChecksum(pr: number): Promise<string> {
-  const url = `${PR_BINARIES_URL}/${pr}/vercel-${platformTarget()}.sha256`;
+async function fetchPrBuildSha(pr: number): Promise<string> {
+  const url = `${PR_BINARIES_URL}/${pr}/current-sha`;
+  const res = await fetch(url);
+  if (res.status === 404) {
+    throw new Error(
+      `No binary found for PR #${pr}. ` +
+        `The PR may not have a build yet, or the build may still be running.`
+    );
+  }
+  if (!res.ok) {
+    throw new Error(
+      `Failed to fetch current build for PR #${pr} (HTTP ${res.status})`
+    );
+  }
+  const sha = (await res.text()).trim().toLowerCase();
+  if (!/^[0-9a-f]{40}$/.test(sha)) {
+    throw new Error(`Unexpected build SHA format for PR #${pr}`);
+  }
+  return sha;
+}
+
+export function getPrBinaryBaseUrl(pr: number, buildSha: string): string {
+  return `${PR_BINARIES_URL}/${pr}/shas/${buildSha}`;
+}
+
+async function fetchPrChecksum(pr: number, buildSha: string): Promise<string> {
+  const url = `${getPrBinaryBaseUrl(pr, buildSha)}/vercel-${platformTarget()}.sha256`;
   const res = await fetch(url);
   if (res.status === 404) {
     throw new Error(
@@ -309,6 +333,7 @@ async function fetchPrChecksum(pr: number): Promise<string> {
 
 async function downloadPrBinary(
   pr: number,
+  buildSha: string,
   expectedSha: string,
   destination: string
 ): Promise<void> {
@@ -316,7 +341,7 @@ async function downloadPrBinary(
     throw new Error(unsupportedPlatformMessage());
   }
 
-  const url = `${PR_BINARIES_URL}/${pr}/vercel-${platformTarget()}`;
+  const url = `${getPrBinaryBaseUrl(pr, buildSha)}/vercel-${platformTarget()}`;
   const res = await fetch(url);
   if (res.status === 404) {
     throw new Error(
@@ -372,7 +397,8 @@ export async function installAndLinkPrBinary(
   const shaPath = join(versionDir, 'vercel.sha256');
 
   output.spinner(`Checking latest build for PR #${pr}…`, 0);
-  const remoteSha = await fetchPrChecksum(pr);
+  const buildSha = await fetchPrBuildSha(pr);
+  const remoteSha = await fetchPrChecksum(pr, buildSha);
 
   const existing = await stat(binaryPath).catch(() => null);
   const localSha = existing?.isFile()
@@ -385,7 +411,7 @@ export async function installAndLinkPrBinary(
   }
 
   output.spinner(`Downloading Vercel CLI build for PR #${pr}…`, 0);
-  await downloadPrBinary(pr, remoteSha, versionDir);
+  await downloadPrBinary(pr, buildSha, remoteSha, versionDir);
   await linkVersion(prVersionDirName(pr));
   return { updated: true, sha: remoteSha };
 }
