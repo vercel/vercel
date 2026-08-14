@@ -11,7 +11,12 @@ import {
   validateRequiredMetric,
 } from './validation';
 import { validateAllProjectMutualExclusivity } from '../../util/command-validation';
-import { fetchMetricDetailOrExit, getDefaultAggregation } from './schema-api';
+import {
+  fetchCustomMetricCatalog,
+  fetchMetricDetailOrExit,
+  getDefaultAggregation,
+  OBSERVABILITY_METRICS_PATH,
+} from './schema-api';
 import {
   formatErrorJson,
   formatQueryJson,
@@ -24,6 +29,9 @@ import { resolveTimeRange } from '../../util/time-utils';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
 import type {
   Aggregation,
+  CanonicalMetricSelection,
+  CanonicalMetricsQueryRequest,
+  CanonicalMetricsQueryResponse,
   Scope,
   ValidationError,
   MetricsQueryRequest,
@@ -54,6 +62,8 @@ function handleValidationError(
 }
 
 const PRODUCTION_ENVIRONMENT_FILTER = "environment eq 'production'";
+const CUSTOM_METRIC_VALUE_ALIAS = 'value';
+const CUSTOM_METRIC_COUNT_ALIAS = '__seriesCount';
 
 function combineFilters(
   filters: string[] | undefined,
@@ -83,6 +93,162 @@ function getRequestOrderBy(
   return orderBy === 'value'
     ? getRollupColumnName(metric, aggregation)
     : undefined;
+}
+
+function toBucketSeconds(granularity: MetricsQueryRequest['granularity']) {
+  if ('minutes' in granularity) return granularity.minutes * 60;
+  if ('hours' in granularity) return granularity.hours * 60 * 60;
+  return granularity.days * 24 * 60 * 60;
+}
+
+function alignTimeRangeToGranularity(
+  startTime: Date,
+  endTime: Date,
+  granularity: MetricsQueryRequest['granularity']
+): { startTime: Date; endTime: Date } {
+  const bucketMs = toBucketSeconds(granularity) * 1000;
+  return {
+    startTime: new Date(Math.floor(startTime.getTime() / bucketMs) * bucketMs),
+    endTime: new Date(Math.ceil(endTime.getTime() / bucketMs) * bucketMs),
+  };
+}
+
+function toCanonicalMetricSelection(
+  metric: string,
+  aggregation: string
+): CanonicalMetricSelection | ValidationError {
+  if (aggregation === 'persecond') {
+    return { metric, aggregation: 'sum', per: 'second' };
+  }
+  if (aggregation === 'percent') {
+    return { metric, aggregation: 'sum', normalize: 'percent' };
+  }
+  if (aggregation === 'unique') {
+    return {
+      valid: false,
+      code: 'UNSUPPORTED_AGGREGATION',
+      message:
+        'The unique aggregation for custom metrics requires an explicit distinct dimension, which vc metrics does not support yet.',
+    };
+  }
+  if (
+    aggregation === 'count' ||
+    aggregation === 'sum' ||
+    aggregation === 'avg' ||
+    aggregation === 'min' ||
+    aggregation === 'max' ||
+    aggregation === 'p50' ||
+    aggregation === 'p75' ||
+    aggregation === 'p90' ||
+    aggregation === 'p95' ||
+    aggregation === 'p99'
+  ) {
+    return { metric, aggregation };
+  }
+  return {
+    valid: false,
+    code: 'INVALID_AGGREGATION',
+    message: `Aggregation "${aggregation}" is not supported for custom metrics.`,
+  };
+}
+
+function createCanonicalMetricsRequest(options: {
+  scope: Scope;
+  metric: string;
+  selection: CanonicalMetricSelection;
+  startTime: Date;
+  endTime: Date;
+  granularity: MetricsQueryRequest['granularity'];
+  groupBy: string[];
+  filter: string | undefined;
+  limit: number;
+  orderBy: OrderBy | undefined;
+  orderDirection: 'asc' | 'desc' | undefined;
+}): CanonicalMetricsQueryRequest {
+  const metrics: Record<string, CanonicalMetricSelection> = {
+    [CUSTOM_METRIC_VALUE_ALIAS]: options.selection,
+  };
+  let rankMetric = CUSTOM_METRIC_VALUE_ALIAS;
+  if (
+    options.groupBy.length > 0 &&
+    options.orderBy !== 'value' &&
+    options.selection.aggregation !== 'count'
+  ) {
+    metrics[CUSTOM_METRIC_COUNT_ALIAS] = {
+      metric: options.metric,
+      aggregation: 'count',
+    };
+    rankMetric = CUSTOM_METRIC_COUNT_ALIAS;
+  }
+
+  return {
+    scope: {
+      ownerId: options.scope.ownerId,
+      ...(options.scope.type === 'project'
+        ? { projectIds: options.scope.projectIds }
+        : {}),
+    },
+    timeRange: {
+      start: options.startTime.toISOString(),
+      end: options.endTime.toISOString(),
+    },
+    bucketSeconds: toBucketSeconds(options.granularity),
+    ...(options.groupBy.length > 0 ? { groupBy: options.groupBy } : {}),
+    ...(options.filter ? { filter: options.filter } : {}),
+    metrics,
+    outputs: [CUSTOM_METRIC_VALUE_ALIAS],
+    ...(options.groupBy.length > 0
+      ? {
+          seriesSelection: {
+            limit: options.limit,
+            mode: 'exact',
+            rankBy: [
+              {
+                metric: rankMetric,
+                direction: options.orderDirection ?? 'desc',
+              },
+            ],
+          },
+        }
+      : {}),
+  };
+}
+
+function canonicalResponseToMetricsResponse(
+  response: CanonicalMetricsQueryResponse,
+  rollupColumn: string,
+  orderBy: OrderBy | undefined,
+  orderDirection: 'asc' | 'desc' | undefined
+): MetricsQueryResponse {
+  const toRow = (point: {
+    dimensions: Record<string, string | null>;
+    values: Record<string, number | null>;
+  }) => ({
+    ...point.dimensions,
+    [rollupColumn]: point.values[CUSTOM_METRIC_VALUE_ALIAS] ?? null,
+  });
+  return {
+    ...(response.series
+      ? {
+          data: response.series.map(point => ({
+            timestamp: point.timestamp,
+            ...toRow(point),
+          })),
+        }
+      : {}),
+    summary: response.summary.map(toRow),
+    statistics: {
+      rowsRead: response.meta.statistics.rowsRead,
+      bytesRead: response.meta.statistics.bytesRead,
+      dbTimeSeconds: response.meta.statistics.databaseElapsedMs / 1_000,
+      engineTimeSeconds: response.meta.statistics.elapsedMs / 1_000,
+      queryTable: [...new Set(response.meta.sources.map(source => source.id))]
+        .sort()
+        .join(','),
+    },
+    ...(orderBy ? { orderBy } : {}),
+    ...(orderDirection ? { orderDirection } : {}),
+  };
 }
 
 async function resolveQueryScope(
@@ -272,24 +438,6 @@ export default async function query(
   }
   const { scope, accountId, teamName, projectName } = scopeResult;
 
-  const detailOrExitCode = await fetchMetricDetailOrExit(
-    client,
-    accountId,
-    metric,
-    jsonOutput
-  );
-  // fetchMetricDetailOrExit() returns a numeric exit code when it already
-  // handled the error output for us.
-  if (typeof detailOrExitCode === 'number') {
-    return detailOrExitCode;
-  }
-
-  const aggregationInput =
-    aggregationFlag ?? getDefaultAggregation(detailOrExitCode, metric) ?? 'sum';
-  const aggregation = aggregationInput;
-  const orderBy = getRequestOrderBy(metric, aggregation, orderByMode);
-
-  // Resolve time range
   let startTime: Date;
   let endTime: Date;
   try {
@@ -304,45 +452,156 @@ export default async function query(
     return 1;
   }
 
+  const isPlatformMetric = metric.startsWith('vercel.');
+  let metricUnit: string;
+  let aggregationInput: string;
+  let customMetricAggregations: readonly string[] | undefined;
+  if (isPlatformMetric) {
+    const detailOrExitCode = await fetchMetricDetailOrExit(
+      client,
+      accountId,
+      metric,
+      jsonOutput
+    );
+    if (typeof detailOrExitCode === 'number') {
+      return detailOrExitCode;
+    }
+    aggregationInput =
+      aggregationFlag ??
+      getDefaultAggregation(detailOrExitCode, metric) ??
+      'sum';
+    metricUnit =
+      detailOrExitCode.find(item => item.id === metric)?.unit ?? 'count';
+  } else {
+    const customMetric = await fetchCustomMetricCatalog(
+      client,
+      accountId,
+      metric,
+      startTime.toISOString()
+    )
+      .then(metrics => metrics.find(item => item.id === metric))
+      .catch(() => undefined);
+    metricUnit = customMetric?.unit ?? 'count';
+    customMetricAggregations = customMetric?.aggregations;
+    aggregationInput =
+      aggregationFlag ??
+      (customMetricAggregations?.includes('sum')
+        ? 'sum'
+        : customMetricAggregations?.[0]) ??
+      'sum';
+  }
+  const aggregation = aggregationInput;
+  const orderBy = getRequestOrderBy(metric, aggregation, orderByMode);
+
   // Compute granularity — may adjust the user's --granularity upward if it's
   // too fine for the time range (granResult.adjusted will be true in that case).
   const rangeMs = endTime.getTime() - startTime.getTime();
   const granResult = computeGranularity(rangeMs, granularity);
+  const queryTimeRange = isPlatformMetric
+    ? { startTime, endTime }
+    : alignTimeRangeToGranularity(startTime, endTime, granResult.duration);
   if (!jsonOutput && granResult.adjusted && granResult.notice) {
     output.log(`Notice: ${granResult.notice}`);
   }
 
-  // Build request body
-  const body: MetricsQueryRequest = {
-    scope,
-    metric,
-    aggregation: aggregation as Aggregation,
-    startTime: startTime.toISOString(),
-    endTime: endTime.toISOString(),
-    granularity: granResult.duration,
-    ...(bucketTimezone ? { bucketTimezone } : {}),
-    ...(groupBy.length > 0 ? { groupBy } : {}),
-    ...(filter ? { filter } : {}),
-    limit: limit ?? 10,
-    ...(orderBy ? { orderBy } : {}),
-    ...(orderDirection ? { orderDirection } : {}),
-  };
+  let body: MetricsQueryRequest | CanonicalMetricsQueryRequest;
+  if (isPlatformMetric) {
+    body = {
+      scope,
+      metric,
+      aggregation: aggregation as Aggregation,
+      startTime: startTime.toISOString(),
+      endTime: endTime.toISOString(),
+      granularity: granResult.duration,
+      ...(bucketTimezone ? { bucketTimezone } : {}),
+      ...(groupBy.length > 0 ? { groupBy } : {}),
+      ...(filter ? { filter } : {}),
+      limit: limit ?? 10,
+      ...(orderBy ? { orderBy } : {}),
+      ...(orderDirection ? { orderDirection } : {}),
+    };
+  } else {
+    if (bucketTimezone) {
+      return handleValidationError(
+        {
+          valid: false,
+          code: 'UNSUPPORTED_BUCKET_TIMEZONE',
+          message: '--bucket-timezone is not supported for custom metrics yet.',
+        },
+        jsonOutput,
+        client
+      );
+    }
+    const selection = toCanonicalMetricSelection(metric, aggregation);
+    if ('valid' in selection) {
+      return handleValidationError(selection, jsonOutput, client);
+    }
+    const supportedAggregation = selection.aggregation;
+    if (
+      customMetricAggregations &&
+      !customMetricAggregations.includes(supportedAggregation)
+    ) {
+      return handleValidationError(
+        {
+          valid: false,
+          code: 'INVALID_AGGREGATION',
+          message: `Aggregation "${aggregation}" is not valid for custom metric "${metric}".`,
+          allowedValues: [...customMetricAggregations],
+        },
+        jsonOutput,
+        client
+      );
+    }
+    body = createCanonicalMetricsRequest({
+      scope,
+      metric,
+      selection,
+      startTime: queryTimeRange.startTime,
+      endTime: queryTimeRange.endTime,
+      granularity: granResult.duration,
+      groupBy,
+      filter,
+      limit: limit ?? 10,
+      orderBy: orderByMode,
+      orderDirection,
+    });
+  }
 
   if (!jsonOutput) {
     output.spinner('Querying metrics...');
   }
   let response: MetricsQueryResponse;
   try {
-    response = await client.fetch<MetricsQueryResponse>(
-      '/v2/observability/query',
-      {
-        method: 'POST',
-        body: JSON.stringify(body),
-        headers: { 'Content-Type': 'application/json' },
-        accountId,
-        bailOn429: true,
-      }
-    );
+    if (isPlatformMetric) {
+      response = await client.fetch<MetricsQueryResponse>(
+        '/v2/observability/query',
+        {
+          method: 'POST',
+          body: JSON.stringify(body),
+          headers: { 'Content-Type': 'application/json' },
+          accountId,
+          bailOn429: true,
+        }
+      );
+    } else {
+      const canonicalResponse =
+        await client.fetch<CanonicalMetricsQueryResponse>(
+          OBSERVABILITY_METRICS_PATH,
+          {
+            method: 'POST',
+            body: JSON.stringify(body),
+            headers: { 'Content-Type': 'application/json' },
+            accountId,
+            bailOn429: true,
+          }
+        );
+      response = canonicalResponseToMetricsResponse(
+        canonicalResponse,
+        getRollupColumnName(metric, aggregation),
+        groupBy.length > 0 ? (orderByMode ?? 'count') : undefined,
+        groupBy.length > 0 ? (orderDirection ?? 'desc') : undefined
+      );
+    }
   } catch (err: unknown) {
     if (isAPIError(err)) {
       return handleApiError(err, jsonOutput, client);
@@ -368,8 +627,8 @@ export default async function query(
           aggregation: aggregation as Aggregation,
           groupBy,
           filter,
-          startTime: startTime.toISOString(),
-          endTime: endTime.toISOString(),
+          startTime: queryTimeRange.startTime.toISOString(),
+          endTime: queryTimeRange.endTime.toISOString(),
           granularity: granResult.duration,
           ...(bucketTimezone ? { bucketTimezone } : {}),
           ...(orderByMode ? { orderBy: orderByMode } : {}),
@@ -382,16 +641,15 @@ export default async function query(
     client.stdout.write(
       formatText(response, {
         metric,
-        metricUnit:
-          detailOrExitCode.find(item => item.id === metric)?.unit ?? 'count',
+        metricUnit,
         aggregation: aggregation as Aggregation,
         groupBy,
         filter,
         scope,
         projectName,
         teamName,
-        periodStart: startTime.toISOString(),
-        periodEnd: endTime.toISOString(),
+        periodStart: queryTimeRange.startTime.toISOString(),
+        periodEnd: queryTimeRange.endTime.toISOString(),
         granularity: granResult.duration,
         bucketTimezone: bucketTimezone,
         orderBy: orderByMode,

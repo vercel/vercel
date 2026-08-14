@@ -202,6 +202,7 @@ function formatUnitLabel(unit: string): string {
 
 /**
  * Returns true only for total-count style output:
+ * - `aggregation=count` -> integer display
  * - `measureType=count` and `aggregation=sum` -> integer display
  * - everything else (`persecond`, `percent`, durations, ratios, bytes) -> decimal
  */
@@ -209,15 +210,18 @@ function isCountIntegerDisplay(
   measureType: MeasureType,
   aggregation: Aggregation
 ): boolean {
-  // Count + sum should read like totals (integers), while count-persecond /
-  // count-percent stay decimal.
-  return measureType === 'count' && aggregation === 'sum';
+  // Counts and count-unit sums should read like totals (integers), while
+  // count-persecond / count-percent stay decimal.
+  return (
+    aggregation === 'count' ||
+    (measureType === 'count' && aggregation === 'sum')
+  );
 }
 
 /**
  * Formats numbers by measure/aggregation with an optional override for count averages.
  * Default behavior:
- * - count+sum -> integer formatting via `formatCount()`
+ * - count aggregation or count+sum -> integer formatting via `formatCount()`
  * - everything else -> decimal formatting via `formatDecimal()`
  *
  * When `preserveFractionalCountSum` is true, count+sum values like `1.5`
@@ -240,7 +244,7 @@ function formatNumber(
 
 /** Chooses summary statistic columns based on aggregation. */
 function getStatColumns(aggregation: Aggregation): StatColumn[] {
-  if (aggregation === 'sum') {
+  if (aggregation === 'sum' || aggregation === 'count') {
     return ['total', 'avg', 'min', 'max'];
   }
   return ['avg', 'min', 'max'];
@@ -867,6 +871,7 @@ export function formatSparklineSection(
  * aggregation. Certain aggregations transform the output semantics:
  * - an aggregation with a dimension (e.g. `unique/visitor_id`) → values are
  *   distinct counts, unit is hidden
+ * - `count` → values are counts regardless of the metric's base unit
  * - `percent` → values are 0-100 percentages regardless of base unit
  * - `persecond` → values are rates in base unit per second
  * - all others → values stay in the original unit
@@ -879,6 +884,8 @@ export function getEffectiveDisplay(
     return { displayUnit: undefined, measureType: 'count' };
   }
   switch (aggregation) {
+    case 'count':
+      return { displayUnit: undefined, measureType: 'count' };
     case 'percent':
       return { displayUnit: '%', measureType: 'ratio' };
     case 'persecond': {

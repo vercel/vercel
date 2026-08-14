@@ -105,6 +105,13 @@ describe('text-output', () => {
       });
     });
 
+    it('should return count display with hidden unit for count aggregation', () => {
+      expect(getEffectiveDisplay('milliseconds', 'count')).toEqual({
+        displayUnit: undefined,
+        measureType: 'count',
+      });
+    });
+
     it('should pass through base unit for standard aggregations', () => {
       expect(getEffectiveDisplay('bytes', 'sum')).toEqual({
         displayUnit: 'bytes',
@@ -660,6 +667,41 @@ describe('text-output', () => {
       );
 
       expect(output).toContain('1.5');
+    });
+
+    it('should render count aggregation with an integer period total', () => {
+      const output = stripAnsi(
+        formatText(
+          {
+            data: [
+              {
+                timestamp: '2026-02-19T10:00:00.000Z',
+                browser_api_browser_launch_total_count: 1_000,
+              },
+              {
+                timestamp: '2026-02-19T10:05:00.000Z',
+                browser_api_browser_launch_total_count: 2_001,
+              },
+            ],
+            summary: [],
+            statistics: {},
+          },
+          {
+            metric: 'browser_api.browser.launch_total',
+            metricUnit: 'count',
+            aggregation: 'count',
+            groupBy: [],
+            scope: projectScope,
+            periodStart: '2026-02-19T10:00:00.000Z',
+            periodEnd: '2026-02-19T10:10:00.000Z',
+            granularity: { minutes: 5 },
+          }
+        )
+      );
+
+      expect(output).toContain('total');
+      expect(output).toContain('3,001');
+      expect(output).toContain('1500.5');
     });
 
     it('should show no-data output when response has no rows', () => {
