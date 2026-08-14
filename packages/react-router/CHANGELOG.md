@@ -1,5 +1,11 @@
 # @vercel/react-router
 
+## 1.3.4
+
+### Patch Changes
+
+- 9a9a6f8: Restrict KV session operations to adapter-generated session keys.
+
 ## 1.3.3
 
 ### Patch Changes

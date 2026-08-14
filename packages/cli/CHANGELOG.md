@@ -1,5 +1,20 @@
 # vercel
 
+## 59.1.1
+
+### Patch Changes
+
+- e1aa02b: Native binary builds now embed a pinned `builders` manifest in the staged package.json. Previously the binary shipped without any `builders` pins, so `importBuilders` installed builders from npm `latest` instead of the versions the CLI was released with.
+
+  The native binary now resolves Builders exclusively from the Builders directory (no fallback to CLI-bundled dependencies), and the directory is configurable via `VERCEL_BUILDERS_DIR` (default: `.vercel/builders` in the project). Builder installs respect project and user npm settings, including minimum release age. If npm rejects a CLI-pinned Builder version, the CLI warns and retries the original bare Builder spec so npm can select an allowed version.
+
+- 20f1ba4: `vc security check --findings` lists every stored finding by paging the findings endpoint, instead of the first 100 samples.
+- 36dead1: Publish PR binaries and workspace tarballs under immutable commit-scoped Blob paths.
+- Updated dependencies [bded29c]
+- Updated dependencies [a684b77]
+  - @vercel/next@4.21.6
+  - @vercel/python@6.57.0
+
 ## 59.1.0
 
 ### Minor Changes

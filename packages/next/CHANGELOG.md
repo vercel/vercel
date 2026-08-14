@@ -1,5 +1,12 @@
 # @vercel/next
 
+## 4.21.6
+
+### Patch Changes
+
+- bded29c: Declare the postponed state length of a partially prerendered output in bytes, so the CDN splits the output at the right offset when the state contains a multi-byte character.
+- a684b77: Update `@next-community/adapter-vercel` to `0.0.1-beta.27`, which includes the postponed state byte-length fix for partially prerendered output.
+
 ## 4.21.5
 
 ### Patch Changes
