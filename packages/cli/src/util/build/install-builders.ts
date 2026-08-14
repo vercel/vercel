@@ -59,16 +59,14 @@ async function untracedInstallBuilders(
       ? `@vercel/build-utils@${buildUtilsVersion}`
       : '@vercel/build-utils';
 
+  const installArgs = ['install', buildUtilsSpec, ...buildersToAdd];
+
   try {
-    const { stderr } = await execa(
-      'npm',
-      ['install', buildUtilsSpec, ...buildersToAdd],
-      {
-        cwd: buildersDir,
-        stdio: 'pipe',
-        reject: true,
-      }
-    );
+    const { stderr } = await execa('npm', installArgs, {
+      cwd: buildersDir,
+      stdio: 'pipe',
+      reject: true,
+    });
     stderr
       .split('/\r?\n/')
       .filter(line => line.includes('npm WARN deprecated'))
@@ -86,7 +84,11 @@ async function untracedInstallBuilders(
         const notFound = /GET (.*) - Not found/.exec(message);
         if (notFound) {
           const url = new URL(notFound[1]);
-          const packageName = decodeURIComponent(url.pathname.slice(1));
+          const packagePath = decodeURIComponent(url.pathname);
+          const packageName =
+            /(@[^/]+\/[^/]+)$/.exec(packagePath)?.[1] ??
+            packagePath.split('/').filter(Boolean).at(-1) ??
+            packagePath;
           message = `The package ${code(
             packageName
           )} is not published on the npm registry`;
@@ -145,8 +147,33 @@ export async function installBuilders(
    */
   pinnedSpecs?: Map<string, string>
 ): Promise<Map<string, string>> {
+  const install = async () => {
+    try {
+      return await untracedInstallBuilders(buildersDir, buildersToAdd);
+    } catch (err) {
+      if (!pinnedSpecs?.size) {
+        throw err;
+      }
+
+      const fallbackSpecs = new Set(
+        Array.from(buildersToAdd, spec => {
+          for (const [originalSpec, pinnedSpec] of pinnedSpecs) {
+            if (pinnedSpec === spec) {
+              return originalSpec;
+            }
+          }
+          return spec;
+        })
+      );
+      output.warn(
+        'Could not install the Builder versions pinned by this Vercel CLI release. Retrying with versions allowed by your npm settings.'
+      );
+      return untracedInstallBuilders(buildersDir, fallbackSpecs);
+    }
+  };
+
   if (!span) {
-    return untracedInstallBuilders(buildersDir, buildersToAdd);
+    return install();
   }
   const attributes: Record<string, string> = {
     packages: Array.from(buildersToAdd).join(','),
@@ -163,7 +190,7 @@ export async function installBuilders(
   const installSpan = span.child('vc.installBuilders', attributes);
   return installSpan.trace(async s => {
     try {
-      return await untracedInstallBuilders(buildersDir, buildersToAdd);
+      return await install();
     } catch (err) {
       s.setAttributes({
         error: isError(err) ? err.message : String(err),

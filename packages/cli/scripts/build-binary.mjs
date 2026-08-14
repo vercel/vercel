@@ -7,6 +7,9 @@ import { promisify } from 'node:util';
 
 const require = createRequire(import.meta.url);
 const execFileAsync = promisify(execFile);
+const { getWorkspaceVersions, pinBuilders } = await import(
+  './pin-builders.mjs'
+);
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const stagingRoot = join(packageRoot, '.pkg-staging');
@@ -86,6 +89,19 @@ await fs.copyFile(
   join(packageRoot, 'pkg.config.mjs'),
   join(stagingRoot, 'pkg.config.mjs')
 );
+// Pin the `builders` manifest to exact workspace versions (or keep
+// pre-rewritten entries like preview tarball URLs from utils/pack.ts).
+// getBuilderPins() reads this manifest at runtime via getPackageJSON(),
+// which resolves to this staged package.json inside the binary — without
+// it, importBuilders installs unpinned builders from npm `latest`.
+// pinBuilders throws if any entry cannot be pinned exactly, failing the
+// binary build rather than shipping unpinned builders.
+const { builders: pinnedBuilders } = pinBuilders(
+  packageJson,
+  getWorkspaceVersions(join(packageRoot, '..')),
+  process.env.VERCEL_CLI_PREVIEW_TARBALL_BASE_URL
+);
+
 await fs.writeFile(
   join(stagingRoot, 'package.json'),
   JSON.stringify(
@@ -94,6 +110,7 @@ await fs.writeFile(
       version: packageJson.version,
       type: packageJson.type,
       dependencies: binaryRuntimeDependencies,
+      builders: pinnedBuilders,
     },
     null,
     2

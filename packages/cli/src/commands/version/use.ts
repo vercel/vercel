@@ -58,16 +58,16 @@ export default async function use(args: string[]): Promise<number> {
       return 1;
     }
     try {
-      const { updated, sha } = await installAndLinkPrBinary(pr);
+      const { updated, buildSha } = await installAndLinkPrBinary(pr);
       await setPinnedVersion(`pr-${pr}`);
       output.stopSpinner();
       if (updated) {
         output.success(
-          `Switched to the Vercel CLI build for PR #${pr} (${sha.slice(0, 12)}).`
+          `Switched to the Vercel CLI build for PR #${pr} (${buildSha.slice(0, 12)}).`
         );
       } else {
         output.log(
-          `Already on the latest build for PR #${pr} (${sha.slice(0, 12)}).`
+          `Already on the latest build for PR #${pr} (${buildSha.slice(0, 12)}).`
         );
       }
       output.log(

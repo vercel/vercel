@@ -1,14 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect } from 'vitest';
 import { join } from 'path';
 import { ensureDir, remove, outputJSON, writeFile } from 'fs-extra';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import { client } from '../../../mocks/client';
 import {
   formatResolvedBuilders,
+  getBuildersDir,
   importBuilders,
 } from '../../../../src/util/build/import-builders';
 import * as installBuildersModule from '../../../../src/util/build/install-builders';
-import mockedCliPkg from '../../../../src/util/pkg';
 import vercelNextPkg from '@vercel/next/package.json';
 
 vi.mock('../../../../src/util/build/install-builders', async importOriginal => {
@@ -356,7 +356,11 @@ describe('importBuilders()', () => {
 
   function mockInstallWritingVersion(version: string, name: string = pkgName) {
     vi.mocked(installBuildersModule.installBuilders).mockImplementationOnce(
-      async dir => {
+      async (dir, buildersToAdd) => {
+        const installedSpec = Array.from(buildersToAdd)[0];
+        await outputJSON(join(dir, 'package.json'), {
+          dependencies: { [name]: installedSpec },
+        });
         await outputJSON(join(dir, 'node_modules', name, 'package.json'), {
           name,
           version,
@@ -433,6 +437,9 @@ describe('importBuilders()', () => {
       join(builderModuleDir, 'index.js'),
       `exports.version = 3; exports.build = async function() { return { output: {} }; };`
     );
+    await outputJSON(join(buildersDir, 'package.json'), {
+      dependencies: { [urlPinnedPkgName]: urlPinnedTarball },
+    });
 
     vi.mocked(installBuildersModule.installBuilders).mockClear();
     try {
@@ -527,9 +534,7 @@ describe('importBuilders()', () => {
     }
   });
 
-  it('should reinstall a URL-pinned builder cached from a different preview pack', async () => {
-    // Preview packs stamp `-${sha}` on the CLI and every builder tarball.
-    // A cached builder carrying a different suffix came from another preview.
+  it('should reinstall a URL-pinned builder installed from npm', async () => {
     const spec = urlPinnedPkgName;
     const cwd = await getWriteableDirectory();
     const buildersDir = join(cwd, '.vercel', 'builders');
@@ -538,18 +543,19 @@ describe('importBuilders()', () => {
       'node_modules',
       urlPinnedPkgName
     );
-    const originalVersion = mockedCliPkg.version;
-    (mockedCliPkg as { version?: string }).version = '58.0.0-cafebabe';
 
     await outputJSON(join(builderModuleDir, 'package.json'), {
       name: urlPinnedPkgName,
-      version: '9.9.9-deadbeef',
+      version: '9.9.9',
       main: 'index.js',
     });
     await writeFile(
       join(builderModuleDir, 'index.js'),
       `exports.version = 3; exports.build = async function() { return { output: {} }; };`
     );
+    await outputJSON(join(buildersDir, 'package.json'), {
+      dependencies: { [urlPinnedPkgName]: '^9.9.9' },
+    });
 
     mockInstallWritingVersion('9.9.9-cafebabe', urlPinnedPkgName);
     try {
@@ -563,12 +569,11 @@ describe('importBuilders()', () => {
       );
       expect(builders.get(spec)?.pkg.version).toBe('9.9.9-cafebabe');
     } finally {
-      (mockedCliPkg as { version?: string }).version = originalVersion;
       await remove(cwd);
     }
   });
 
-  it('should keep a URL-pinned builder cached from the same preview pack', async () => {
+  it('should keep a URL-pinned builder installed from the same URL', async () => {
     const spec = urlPinnedPkgName;
     const cwd = await getWriteableDirectory();
     const buildersDir = join(cwd, '.vercel', 'builders');
@@ -577,8 +582,6 @@ describe('importBuilders()', () => {
       'node_modules',
       urlPinnedPkgName
     );
-    const originalVersion = mockedCliPkg.version;
-    (mockedCliPkg as { version?: string }).version = '58.0.0-cafebabe';
 
     await outputJSON(join(builderModuleDir, 'package.json'), {
       name: urlPinnedPkgName,
@@ -589,6 +592,9 @@ describe('importBuilders()', () => {
       join(builderModuleDir, 'index.js'),
       `exports.version = 3; exports.build = async function() { return { output: {} }; };`
     );
+    await outputJSON(join(buildersDir, 'package.json'), {
+      dependencies: { [urlPinnedPkgName]: urlPinnedTarball },
+    });
 
     vi.mocked(installBuildersModule.installBuilders).mockClear();
     try {
@@ -596,7 +602,6 @@ describe('importBuilders()', () => {
       expect(installBuildersModule.installBuilders).not.toHaveBeenCalled();
       expect(builders.get(spec)?.pkg.version).toBe('9.9.9-cafebabe');
     } finally {
-      (mockedCliPkg as { version?: string }).version = originalVersion;
       await remove(cwd);
     }
   });
@@ -720,5 +725,101 @@ describe('importBuilders()', () => {
       `@vercel/node@${vercelNodePkg.version}=${join(repoRoot, 'packages/node')}`
     );
     expect(resolved).toContain('@vercel/static=built-in');
+  });
+
+  describe('getBuildersDir()', () => {
+    // A genuinely absolute path on every platform (drive-letter'd on
+    // Windows, where a bare `/some/project` is not absolute).
+    const projectCwd = join(process.cwd(), 'some-project');
+
+    afterEach(() => {
+      delete process.env.VERCEL_BUILDERS_DIR;
+    });
+
+    it('should default to `.vercel/builders` within the project', () => {
+      expect(getBuildersDir(projectCwd)).toEqual(
+        join(projectCwd, '.vercel', 'builders')
+      );
+    });
+
+    it('should use an absolute `VERCEL_BUILDERS_DIR` as-is', () => {
+      const absoluteDir = join(process.cwd(), 'builders-cache');
+      process.env.VERCEL_BUILDERS_DIR = absoluteDir;
+      expect(getBuildersDir(projectCwd)).toEqual(absoluteDir);
+    });
+
+    it('should resolve a relative `VERCEL_BUILDERS_DIR` against cwd', () => {
+      process.env.VERCEL_BUILDERS_DIR = 'my-builders';
+      expect(getBuildersDir(projectCwd)).toEqual(
+        join(projectCwd, 'my-builders')
+      );
+    });
+  });
+
+  describe('native binary resolution', () => {
+    beforeEach(() => {
+      vi.mocked(installBuildersModule.installBuilders).mockClear();
+    });
+
+    afterEach(() => {
+      delete process.env.VERCEL_VC_NATIVE;
+      delete process.env.VERCEL_BUILDERS_DIR;
+    });
+
+    it('should not fall back to CLI dependencies in the native binary', async () => {
+      process.env.VERCEL_VC_NATIVE = '1';
+      const cwd = await getWriteableDirectory();
+      const buildersDir = join(cwd, '.vercel', 'builders');
+
+      // `@vercel/node` resolves as a CLI dependency in the monorepo, but the
+      // native binary must only look in the Builders directory and install
+      // when missing.
+      mockInstallWritingVersion('9.9.9', '@vercel/node');
+      try {
+        const builders = await importBuilders(new Set(['@vercel/node']), cwd);
+        expect(installBuildersModule.installBuilders).toHaveBeenCalledTimes(1);
+        expect(builders.get('@vercel/node')?.pkgPath).toEqual(
+          join(buildersDir, 'node_modules', '@vercel/node', 'package.json')
+        );
+        expect(builders.get('@vercel/node')?.dynamicallyInstalled).toBe(true);
+      } finally {
+        await remove(cwd);
+      }
+    });
+
+    it('should resolve from `VERCEL_BUILDERS_DIR` when set', async () => {
+      process.env.VERCEL_VC_NATIVE = '1';
+      const cwd = await getWriteableDirectory();
+      const buildersDir = join(cwd, 'custom-builders-cache');
+      process.env.VERCEL_BUILDERS_DIR = buildersDir;
+
+      const builderModuleDir = join(
+        buildersDir,
+        'node_modules',
+        'fake-cached-builder'
+      );
+      await outputJSON(join(builderModuleDir, 'package.json'), {
+        name: 'fake-cached-builder',
+        version: '1.0.0',
+        main: 'index.js',
+      });
+      await writeFile(
+        join(builderModuleDir, 'index.js'),
+        `exports.version = 3; exports.build = async function() { return { output: {} }; };`
+      );
+
+      try {
+        const builders = await importBuilders(
+          new Set(['fake-cached-builder']),
+          cwd
+        );
+        expect(installBuildersModule.installBuilders).not.toHaveBeenCalled();
+        expect(builders.get('fake-cached-builder')?.pkgPath).toEqual(
+          join(builderModuleDir, 'package.json')
+        );
+      } finally {
+        await remove(cwd);
+      }
+    });
   });
 });

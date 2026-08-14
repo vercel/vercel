@@ -1,6 +1,6 @@
 import npa from 'npm-package-arg';
 import { satisfies, valid, validRange } from 'semver';
-import { dirname, join } from 'path';
+import { dirname, isAbsolute, join, resolve } from 'path';
 import { createRequire } from 'module';
 import { readJSON } from 'fs-extra';
 import { isStaticRuntime } from '@vercel/fs-detectors';
@@ -17,6 +17,7 @@ import { isErrnoException } from '@vercel/error-utils';
 import output from '../../output-manager';
 import cliPkg from '../pkg';
 import { installBuilders } from './install-builders';
+import { isNativeBinaryInstall } from '../native-install';
 
 export interface BuilderWithPkg {
   /**
@@ -67,26 +68,6 @@ function isBareSpec(parsed: ReturnType<typeof npa>): boolean {
 }
 
 /**
- * Preview packs (`utils/pack.ts`) append `-${sha}` to every package version
- * — the CLI and its URL-pinned builders alike, from the same commit. The
- * CLI's own version suffix therefore identifies which preview a cached
- * builder must come from. Returns `undefined` outside preview packs
- * (stable versions carry no pack suffix, and URL pins only exist in packs).
- */
-function previewPackSuffix(): string | undefined {
-  const version = (cliPkg as { version?: string }).version;
-  if (typeof version !== 'string') {
-    return undefined;
-  }
-  const idx = version.lastIndexOf('-');
-  if (idx === -1) {
-    return undefined;
-  }
-  const suffix = version.slice(idx + 1);
-  return suffix.length > 0 ? suffix : undefined;
-}
-
-/**
  * Formats resolved Builders as `name@version=<dir>` pairs for trace
  * attributes, so we can tell which installation each Builder loaded from.
  */
@@ -120,15 +101,30 @@ function pinBuilderSpecs(specs: Set<string>): Map<string, string> {
 }
 
 /**
+ * Directory that Builders are installed into and resolved from.
+ * Defaults to `.vercel/builders` within the project, and may be
+ * overridden with `VERCEL_BUILDERS_DIR` (relative paths resolve
+ * against `cwd`). Eventually this will default to a shared cache
+ * location (e.g. under the global `.vercel` or XDG cache dir).
+ */
+export function getBuildersDir(cwd: string): string {
+  const override = process.env.VERCEL_BUILDERS_DIR;
+  if (override) {
+    return isAbsolute(override) ? override : resolve(cwd, override);
+  }
+  return join(cwd, VERCEL_DIR, 'builders');
+}
+
+/**
  * Imports the specified Vercel Builders, installing any missing ones
- * into `.vercel/builders` if necessary.
+ * into the Builders directory (see {@link getBuildersDir}) if necessary.
  */
 export async function importBuilders(
   builderSpecs: Set<string>,
   cwd: string,
   span?: Span
 ): Promise<Map<string, BuilderWithPkg>> {
-  const buildersDir = join(cwd, VERCEL_DIR, 'builders');
+  const buildersDir = getBuildersDir(cwd);
 
   let importResult = await resolveBuilders(buildersDir, builderSpecs);
 
@@ -232,8 +228,9 @@ async function resolveBuilders(
       let builderPkg: PackageJson | undefined;
 
       try {
-        // First try `.vercel/builders`. The package name should always be available
-        // at the top-level of `node_modules` since CLI is installing those directly.
+        // First try the Builders directory. The package name should always be
+        // available at the top-level of `node_modules` since CLI is installing
+        // those directly.
         pkgPath = join(buildersDir, 'node_modules', name, 'package.json');
         builderPkg = await readJSON(pkgPath);
       } catch (error: unknown) {
@@ -244,9 +241,18 @@ async function resolveBuilders(
           throw error;
         }
 
-        // If `pkgPath` wasn't found in `.vercel/builders` then try as a CLI local
-        // dependency. `require.resolve()` will throw if the Builder is not a CLI
-        // dep, in which case we'll install it into `.vercel/builders`.
+        // Builders are not staged into the native binary snapshot. When one
+        // is missing from the Builders directory, install the CLI-pinned spec
+        // instead of falling back to the CLI's local dependencies.
+        if (isNativeBinaryInstall()) {
+          buildersToAdd.add(spec);
+          installReasons.set(spec, 'not-installed');
+          continue;
+        }
+
+        // If `pkgPath` wasn't found in the Builders directory then try as a
+        // CLI local dependency. `require.resolve()` will throw if the Builder
+        // is not a CLI dep, in which case we'll install it.
         pkgPath = require_.resolve(`${name}/package.json`, {
           paths: [__dirname],
         });
@@ -282,24 +288,33 @@ async function resolveBuilders(
         continue;
       }
 
-      // URL pins can't be equality-checked against a version, but preview
-      // packs stamp the same `-${sha}` suffix on the CLI and every builder
-      // tarball. A cached builder without this CLI's suffix came from a
-      // different preview (or npm) — reinstall from the pinned URL.
-      const packSuffix = previewPackSuffix();
+      // URL pins cannot be compared to package.json#version. npm records the
+      // requested URL in the Builders directory's package.json, so compare the
+      // source instead. This catches npm installs and different preview packs,
+      // including native PR binaries whose CLI version has no preview suffix.
       if (
         isBareSpec(parsed) &&
         peerVersion &&
         isRemoteBuilderPin(peerVersion) &&
-        packSuffix &&
-        !builderPkg.version.endsWith(`-${packSuffix}`)
+        pkgPath.startsWith(buildersDir)
       ) {
-        output.debug(
-          `Resolved "${name}@${builderPkg.version}" does not carry preview pack suffix "-${packSuffix}"`
-        );
-        buildersToAdd.add(spec);
-        installReasons.set(spec, 'preview-pack-mismatch');
-        continue;
+        let installedSpec: string | undefined;
+        try {
+          const buildersPkg = await readJSON(join(buildersDir, 'package.json'));
+          installedSpec = buildersPkg.dependencies?.[name];
+        } catch (error: unknown) {
+          if (!isErrnoException(error) || error.code !== 'ENOENT') {
+            throw error;
+          }
+        }
+        if (installedSpec !== peerVersion) {
+          output.debug(
+            `Installed source for "${name}@${builderPkg.version}" is "${installedSpec ?? 'unknown'}", not pin "${peerVersion}"`
+          );
+          buildersToAdd.add(spec);
+          installReasons.set(spec, 'preview-pack-mismatch');
+          continue;
+        }
       }
 
       if (parsed.type === 'version' && parsed.rawSpec !== builderPkg.version) {

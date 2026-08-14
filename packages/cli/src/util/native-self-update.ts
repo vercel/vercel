@@ -390,7 +390,7 @@ async function downloadPrBinary(
  */
 export async function installAndLinkPrBinary(
   pr: number
-): Promise<{ updated: boolean; sha: string }> {
+): Promise<{ updated: boolean; buildSha: string }> {
   const installRoot = getInstallRoot();
   const versionDir = join(installRoot, 'versions', prVersionDirName(pr));
   const binaryPath = join(versionDir, 'vercel');
@@ -407,13 +407,13 @@ export async function installAndLinkPrBinary(
 
   if (existing?.isFile() && localSha === remoteSha) {
     await linkVersion(prVersionDirName(pr));
-    return { updated: false, sha: remoteSha };
+    return { updated: false, buildSha };
   }
 
   output.spinner(`Downloading Vercel CLI build for PR #${pr}…`, 0);
   await downloadPrBinary(pr, buildSha, remoteSha, versionDir);
   await linkVersion(prVersionDirName(pr));
-  return { updated: true, sha: remoteSha };
+  return { updated: true, buildSha };
 }
 
 /**
