@@ -4,6 +4,9 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build", "vercel_runtime#build"]
+    },
+    "test-e2e-independent": {
+      "command": ["pnpm", "run", "test-e2e"]
     }
   }
 }

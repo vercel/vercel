@@ -23,6 +23,19 @@
     "test-e2e": {
       "dependsOn": []
     },
+    "test-e2e-artifacts": {
+      "command": [
+        "node",
+        "scripts/test.mjs",
+        "--run",
+        "test/e2e-curl-deploy.test.ts",
+        "test/e2e-curl-deploy-no-framework.test.ts"
+      ],
+      "dependsOn": []
+    },
+    "test-dev-artifacts": {
+      "command": ["pnpm", "run", "test-dev"]
+    },
     "test-unit": {
       "dependsOn": ["build"]
     }

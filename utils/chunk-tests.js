@@ -31,6 +31,24 @@ const runnersMap = new Map([
     },
   ],
   [
+    'test-e2e-artifacts',
+    {
+      min: 1,
+      max: 7,
+      testScript: 'test',
+      runners: ['ubuntu-latest'],
+    },
+  ],
+  [
+    'test-e2e-independent',
+    {
+      min: 1,
+      max: 7,
+      testScript: 'test',
+      runners: ['ubuntu-latest'],
+    },
+  ],
+  [
     'test-e2e-node-all-versions',
     {
       min: 1,
@@ -59,20 +77,32 @@ const runnersMap = new Map([
       runners: ['ubuntu-latest', 'macos-14'],
     },
   ],
+  [
+    'test-dev-artifacts',
+    {
+      min: 1,
+      max: 7,
+      testScript: 'test',
+      runners: ['ubuntu-latest', 'macos-14'],
+    },
+  ],
 ]);
 
 const packageOptionsOverrides = {
   // Coarse tiers from cold nightly runs. These intentionally avoid pretending
   // that individual timings are stable while still starting known stragglers
   // before the bulk of the matrix.
-  // The package's test-e2e task is an aggregate node whose dependencies fan
+  // The package's artifact task is an aggregate node whose dependencies fan
   // out to the deployment-heavy groups. Invoke that entrypoint directly
   // instead of forwarding individual test paths to the generic test task.
   '@vercel/build-utils': {
     taskOptions: {
-      'test-e2e': { testScript: 'test-e2e', includeTestPaths: false },
+      'test-e2e-artifacts': {
+        testScript: 'test-e2e-artifacts',
+        includeTestPaths: false,
+      },
     },
-    schedulePriority: { 'test-e2e': 3 },
+    schedulePriority: { 'test-e2e-artifacts': 3 },
   },
 
   // The vercel CLI has many test files. Passing them as CLI args hits the Windows
@@ -92,13 +122,17 @@ const packageOptionsOverrides = {
   vercel: {
     max: 7,
     useEnvPaths: true,
-    schedulePriority: { 'test-unit': 3, 'test-dev': 3 },
+    schedulePriority: { 'test-unit': 3, 'test-dev-artifacts': 3 },
   },
 
-  examples: { schedulePriority: { 'test-e2e': 2 } },
-  '@vercel/python': { schedulePriority: { 'test-e2e': 1 } },
-  '@vercel/remix-builder': { schedulePriority: { 'test-e2e': 1 } },
-  '@vercel/static-build': { schedulePriority: { 'test-e2e': 1 } },
+  examples: { schedulePriority: { 'test-e2e-artifacts': 2 } },
+  '@vercel/python': { schedulePriority: { 'test-e2e-artifacts': 1 } },
+  '@vercel/remix-builder': {
+    schedulePriority: { 'test-e2e-artifacts': 1 },
+  },
+  '@vercel/static-build': {
+    schedulePriority: { 'test-e2e-artifacts': 1 },
+  },
 
   // Next.js fixture tests create and probe real deployments, so they need
   // smaller chunks to stay within the per-job timeout.
@@ -216,7 +250,7 @@ function finalizeTransitiveNeeds(manifests) {
   return manifests;
 }
 
-function getScriptTestPatterns(packageJson, scriptName) {
+function getScriptTestPatterns(packageJson, scriptName, taskCommand) {
   const configuredPatterns = packageJson.testing?.[scriptName];
   if (configuredPatterns) {
     return Array.isArray(configuredPatterns)
@@ -224,7 +258,18 @@ function getScriptTestPatterns(packageJson, scriptName) {
       : [configuredPatterns];
   }
 
-  const script = packageJson.scripts?.[scriptName];
+  const pnpmRunScript = taskCommand?.match(/^pnpm run ([^\s]+)$/)?.[1];
+  const fallbackScriptName = scriptName.replace(
+    /-(?:artifacts|independent)$/,
+    ''
+  );
+  const isNoopCommand = /^node -e process\.exit\(0\)$/.test(taskCommand || '');
+  const script = pnpmRunScript
+    ? packageJson.scripts?.[pnpmRunScript]
+    : !taskCommand || isNoopCommand
+      ? packageJson.scripts?.[scriptName] ||
+        packageJson.scripts?.[fallbackScriptName]
+      : taskCommand;
   if (!script) {
     return [];
   }
@@ -269,7 +314,7 @@ function getScriptTestPatterns(packageJson, scriptName) {
 }
 
 function normalizeTestPatterns(scriptName, patterns) {
-  if (scriptName !== 'test-e2e') {
+  if (!scriptName.startsWith('test-e2e')) {
     return patterns;
   }
 
@@ -434,8 +479,8 @@ async function getChunkedTests() {
       );
     }
     packageDirectories.set(entry.package, entry.directory);
-    const packageTasks = tasksByPackage.get(entry.package) || new Set();
-    packageTasks.add(entry.task);
+    const packageTasks = tasksByPackage.get(entry.package) || new Map();
+    packageTasks.set(entry.task, entry.command);
     tasksByPackage.set(entry.package, packageTasks);
   }
 
@@ -456,8 +501,13 @@ async function getChunkedTests() {
   packageManifests = finalizeTransitiveNeeds(packageManifests);
   packageManifests.forEach(
     ({ packageJson, packageName, packagePath, needsGo }) => {
-      for (const scriptName of tasksByPackage.get(packageName) || []) {
-        const patterns = getScriptTestPatterns(packageJson, scriptName);
+      for (const [scriptName, taskCommand] of tasksByPackage.get(packageName) ||
+        []) {
+        const patterns = getScriptTestPatterns(
+          packageJson,
+          scriptName,
+          taskCommand
+        );
         if (patterns.length === 0) {
           continue;
         }
@@ -519,6 +569,14 @@ async function getChunkedTests() {
                     ? ` [${chunkNumber + 1}/${allChunks.length}]`
                     : '';
                 const label = `${packageDisplayName} (${runnerShort}/node${nodeVersion})${chunkSuffix}`;
+                const relativeTestPaths = includeTestPaths
+                  ? chunk.map(testFile =>
+                      path.relative(
+                        path.join(__dirname, '../', packagePath),
+                        testFile
+                      )
+                    )
+                  : [];
                 return {
                   runner,
                   packagePath,
@@ -526,14 +584,7 @@ async function getChunkedTests() {
                   scriptName,
                   testScript,
                   nodeVersion,
-                  testPaths: includeTestPaths
-                    ? chunk.map(testFile =>
-                        path.relative(
-                          path.join(__dirname, '../', packagePath),
-                          testFile
-                        )
-                      )
-                    : [],
+                  testPaths: relativeTestPaths,
                   chunkNumber: chunkNumber + 1,
                   allChunksLength: allChunks.length,
                   useEnvPaths,

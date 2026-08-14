@@ -82,6 +82,30 @@ describe('getScriptTestPatterns', () => {
       'test/**/*.test.ts'
     );
   });
+
+  it('reads filters from a Turbo task command', () => {
+    expect(
+      getScriptTestPatterns(
+        { scripts: {} },
+        'test-e2e-artifacts',
+        'vitest run test/artifact.test.ts'
+      )
+    ).toEqual(['test/artifact.test.ts']);
+  });
+
+  it('resolves a package script referenced by a Turbo task command', () => {
+    expect(
+      getScriptTestPatterns(
+        {
+          scripts: {
+            'test-e2e': 'vitest run test/integration/',
+          },
+        },
+        'test-e2e-artifacts',
+        'pnpm run test-e2e'
+      )
+    ).toEqual(['test/integration/']);
+  });
 });
 
 describe('getChunkedTests', () => {
@@ -90,7 +114,8 @@ describe('getChunkedTests', () => {
       {
         package: '@vercel/build-utils',
         directory: 'packages/build-utils',
-        task: 'test-e2e',
+        task: 'test-e2e-artifacts',
+        command: 'node -e process.exit(0)',
       },
     ]);
 
@@ -100,7 +125,7 @@ describe('getChunkedTests', () => {
       expect(chunks).toHaveLength(1);
       expect(chunks[0]).toMatchObject({
         packageName: '@vercel/build-utils',
-        testScript: 'test-e2e',
+        testScript: 'test-e2e-artifacts',
         testPaths: [],
       });
     } finally {

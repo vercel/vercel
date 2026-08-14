@@ -7,6 +7,10 @@
     },
     "test-e2e": {
       "env": ["VERCEL_RUNTIME_PYTHON", "VERCEL_WORKERS_PYTHON"]
+    },
+    "test-e2e-artifacts": {
+      "command": ["pnpm", "run", "test-e2e"],
+      "env": ["VERCEL_RUNTIME_PYTHON", "VERCEL_WORKERS_PYTHON"]
     }
   }
 }

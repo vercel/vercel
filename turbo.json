@@ -77,7 +77,34 @@
       ],
       "outputLogs": "new-only"
     },
+    "test-dev-artifacts": {
+      "dependsOn": ["build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/test/lib/**",
+        "$TURBO_ROOT$/vitest.config.mts"
+      ],
+      "outputLogs": "new-only"
+    },
     "test-e2e": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/test/lib/**",
+        "$TURBO_ROOT$/vitest.config.mts"
+      ],
+      "outputLogs": "new-only"
+    },
+    "test-e2e-artifacts": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/test/lib/**",
+        "$TURBO_ROOT$/vitest.config.mts"
+      ],
+      "outputLogs": "new-only"
+    },
+    "test-e2e-independent": {
       "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",

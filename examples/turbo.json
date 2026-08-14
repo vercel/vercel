@@ -4,6 +4,9 @@
   "tasks": {
     "test-unit": {
       "dependsOn": []
+    },
+    "test-e2e-artifacts": {
+      "command": ["pnpm", "run", "test-e2e"]
     }
   }
 }

@@ -2,10 +2,7 @@
   "$schema": "https://turborepo.org/schema.json",
   "extends": ["//"],
   "tasks": {
-    "test": {
-      "dependsOn": ["build"]
-    },
-    "test-e2e-artifacts": {
+    "test-e2e-independent": {
       "command": ["pnpm", "run", "test-e2e"]
     }
   }

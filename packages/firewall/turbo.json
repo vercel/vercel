@@ -4,6 +4,10 @@
   "tasks": {
     "test-e2e": {
       "dependsOn": ["build"]
+    },
+    "test-e2e-independent": {
+      "command": ["pnpm", "run", "test-e2e"],
+      "dependsOn": ["build"]
     }
   }
 }
