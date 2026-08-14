@@ -22,6 +22,15 @@ function useReport(
   });
 }
 
+function useFindings(
+  pages: Record<string, { findings: unknown[]; cursor: string | null }>
+) {
+  client.scenario.get('/dashboard/security-dashboard/findings', (req, res) => {
+    const query = new URLSearchParams(req.query as Record<string, string>);
+    res.json(pages[query.get('cursor') ?? '']);
+  });
+}
+
 const passingPosture = {
   violationsCount: 0,
   samples: [],
@@ -73,6 +82,61 @@ describe('security', () => {
       const exitCode = await security(client);
       expect(exitCode).toEqual(0);
       await expect(client.stderr).toOutput('muted');
+    });
+
+    it('pages all stored findings when the check carries computedAt', async () => {
+      useTeamScope();
+      useReport({
+        'pats-no-expiration': {
+          violationsCount: 3,
+          samples: [{ id: 'tok_1', label: 'ci-token' }],
+          computedAt: Date.now(),
+        },
+      });
+      useFindings({
+        '': {
+          findings: [
+            { id: 'tok_1', label: 'ci-token' },
+            { id: 'tok_2', label: 'deploy-token', groupLabel: 'alice' },
+          ],
+          cursor: 'page2',
+        },
+        page2: {
+          findings: [{ id: 'tok_3', label: 'old-token' }],
+          cursor: null,
+        },
+      });
+      client.setArgv('security', 'check', '--findings');
+      const exitCode = await security(client);
+      expect(exitCode).toEqual(0);
+      await expect(client.stderr).toOutput('ci-token');
+      await expect(client.stderr).toOutput('alice / deploy-token');
+      await expect(client.stderr).toOutput('old-token');
+    });
+
+    it('falls back to samples when the findings endpoint is unavailable', async () => {
+      useTeamScope();
+      useReport({
+        'pats-no-expiration': {
+          violationsCount: 2,
+          samples: [
+            { id: 'tok_1', label: 'ci-token' },
+            { id: 'tok_2', label: 'deploy-token' },
+          ],
+          computedAt: Date.now(),
+        },
+      });
+      client.scenario.get(
+        '/dashboard/security-dashboard/findings',
+        (_req, res) => {
+          res.status(404).json({ error: { code: 'not_found' } });
+        }
+      );
+      client.setArgv('security', 'check', '--findings');
+      const exitCode = await security(client);
+      expect(exitCode).toEqual(0);
+      await expect(client.stderr).toOutput('ci-token');
+      await expect(client.stderr).toOutput('deploy-token');
     });
 
     it('lists findings with --findings, including muted ones', async () => {

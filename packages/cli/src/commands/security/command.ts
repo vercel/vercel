@@ -30,7 +30,7 @@ export const checkSubcommand = {
       argument: 'N',
       deprecated: false,
       description:
-        'Max findings returned per check (currently capped at 200 by the API). Violation counts are always exact even when findings are capped',
+        'Max findings listed per check; by default every available finding is listed. Violation counts are always exact even when findings are capped',
     },
     {
       ...projectOption,

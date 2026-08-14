@@ -20,6 +20,7 @@ import { checkSubcommand } from './command';
 import { SECURITY_CHECKS, isKnownCheck } from './catalog';
 import { truncateEnd } from '../../util/output/truncate';
 import type {
+  SecurityFindingsResponse,
   PostureItem,
   PostureSample,
   SecurityDashboardResponse,
@@ -211,7 +212,14 @@ export default async function check(client: Client, argv: string[]) {
   const showFindings = Boolean(opts['--findings']) || checks.length > 0;
   if (showFindings) {
     for (const { check, posture } of rows) {
-      printFindings(check.slug, posture, data.mutes);
+      const allFindings =
+        !project &&
+        posture?.computedAt !== undefined &&
+        !posture.unavailable &&
+        posture.violationsCount > 0
+          ? await fetchAllFindingLabels(client, team.id, check.slug, limit)
+          : null;
+      printFindings(check.slug, posture, data.mutes, allFindings ?? undefined);
     }
   } else if (counts.failing > 0) {
     output.log('Run with --findings to list individual findings.');
@@ -275,6 +283,38 @@ function formatSummaryTable(
   );
 }
 
+async function fetchAllFindingLabels(
+  client: Client,
+  teamId: string,
+  facet: string,
+  limit: number | undefined
+): Promise<string[] | null> {
+  const labels: string[] = [];
+  let cursor: string | undefined;
+  try {
+    do {
+      const params = new URLSearchParams({ teamId, facet, limit: '1000' });
+      if (cursor) params.set('cursor', cursor);
+      const page = await client.fetch<SecurityFindingsResponse>(
+        `/dashboard/security-dashboard/findings?${params}`
+      );
+      for (const finding of page.findings) {
+        if (finding.muted) continue;
+        labels.push(
+          finding.groupLabel
+            ? `${finding.groupLabel} / ${finding.label}`
+            : finding.label
+        );
+        if (limit !== undefined && labels.length >= limit) return labels;
+      }
+      cursor = page.cursor ?? undefined;
+    } while (cursor);
+  } catch {
+    return null;
+  }
+  return labels;
+}
+
 function flattenSamples(samples: PostureSample[]): string[] {
   return samples.flatMap(sample =>
     sample.samples
@@ -286,10 +326,12 @@ function flattenSamples(samples: PostureSample[]): string[] {
 function printFindings(
   slug: string,
   posture: PostureItem | undefined,
-  mutes: SecurityPostureMute[] | undefined
+  mutes: SecurityPostureMute[] | undefined,
+  allFindings?: string[]
 ) {
   const findings =
-    posture && !posture.unavailable ? flattenSamples(posture.samples) : [];
+    allFindings ??
+    (posture && !posture.unavailable ? flattenSamples(posture.samples) : []);
   const mutedFindings = (mutes ?? [])
     .filter(mute => mute.facet === slug && mute.entityId)
     .map(mute => {
