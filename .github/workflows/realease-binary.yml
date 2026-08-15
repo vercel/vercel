@@ -553,11 +553,12 @@ jobs:
             prefix="$(mktemp -d)"
             cache="$(mktemp -d)"
             if npm --cache "$cache" install -g --prefix "$prefix" "@vercel/vc-native@$version" --force --allow-scripts=@vercel/vc-native && [[ -x "$prefix/bin/vercel" ]]; then
-              out="$($prefix/bin/vercel --version)"
-              echo "$out"
-              if [[ "$out" == "$version" ]]; then
-                node packages/cli/scripts/smoke-test-binary.mjs "$prefix/bin/vercel"
-                exit 0
+              if out="$($prefix/bin/vercel --version)"; then
+                echo "$out"
+                if [[ "$out" == "$version" ]]; then
+                  node packages/cli/scripts/smoke-test-binary.mjs "$prefix/bin/vercel"
+                  exit 0
+                fi
               fi
             fi
             echo "Waiting for @vercel/vc-native to become installable ($i/12)..."
