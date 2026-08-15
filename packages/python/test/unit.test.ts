@@ -90,6 +90,7 @@ import {
   type QueueIntegration,
 } from '../src/conditional-vendoring';
 import {
+  getInstalledDistributionVersions,
   getLocalSdkSourcePaths,
   isLegacyWorkersProject,
   resolveWorkflowServingMode,
@@ -144,7 +145,11 @@ function getBuildOutputV3(result: Awaited<ReturnType<typeof build>>) {
 
 function mockQueueIntrospection(
   subscriptions: unknown[] | Record<string, unknown[]>,
-  opts: { sdkVersion?: string; owners?: string[] } = {}
+  opts: {
+    sdkVersion?: string;
+    workflowSdkVersion?: string;
+    owners?: string[];
+  } = {}
 ) {
   vi.mocked(execa).mockImplementation(async (_cmd, args, execaOpts) => {
     if (
@@ -178,8 +183,15 @@ function mockQueueIntrospection(
         } as any;
       }
       if (script.includes('importlib.metadata')) {
+        // Mirrors VERSION_QUERY_SCRIPT: the first installed workflow SDK
+        // distribution wins, and it prints "<distribution> <version>".
         // Empty output means "undeterminable" → legacy workers path.
-        return { stdout: opts.sdkVersion ?? '' } as any;
+        const installed = opts.workflowSdkVersion
+          ? `vercel-workflow ${opts.workflowSdkVersion}`
+          : opts.sdkVersion
+            ? `vercel ${opts.sdkVersion}`
+            : '';
+        return { stdout: installed } as any;
       }
     }
     return { stdout: '' } as any;
@@ -732,14 +744,20 @@ describe('Python SDK generation detection', () => {
   }
 
   function makeUvRunner(versionOutput: string | Error) {
-    return {
-      async run() {
+    const scripts: string[] = [];
+    const uv = {
+      scripts,
+      async run({ args }: { args?: string[] } = {}) {
+        if (args?.[0] === 'python' && args[1] === '-c') {
+          scripts.push(args[2]);
+        }
         if (versionOutput instanceof Error) {
           throw versionOutput;
         }
         return { stdout: versionOutput, stderr: '' };
       },
-    } as any;
+    };
+    return uv as any;
   }
 
   it('detects a direct vercel-workers dependency', async () => {
@@ -759,11 +777,111 @@ describe('Python SDK generation detection', () => {
     await expect(isLegacyWorkersProject(mockWorkPath)).resolves.toBe(false);
   });
 
-  it('serves workflows via vercel-workers without an explicit vercel dependency', async () => {
+  function writeUvLock(packages: { name: string; version: string }[]) {
+    const uvLockPath = path.join(mockWorkPath, 'uv.lock');
+    fs.writeFileSync(
+      uvLockPath,
+      [
+        'version = 1',
+        'requires-python = ">=3.12"',
+        '',
+        ...packages.flatMap(pkg => [
+          '[[package]]',
+          `name = "${pkg.name}"`,
+          `version = "${pkg.version}"`,
+          'source = { registry = "https://pypi.org/simple" }',
+          '',
+        ]),
+      ].join('\n')
+    );
+    return uvLockPath;
+  }
+
+  describe('getInstalledDistributionVersions', () => {
+    it('resolves a single distribution from the venv', async () => {
+      const uv = makeUvRunner('vercel 0.8.3');
+      await expect(
+        getInstalledDistributionVersions({
+          uv,
+          venvPath: mockWorkPath,
+          projectDir: mockWorkPath,
+          uvLockPath: null,
+          distributions: ['vercel'] as const,
+        })
+      ).resolves.toEqual(new Map([['vercel', '0.8.3']]));
+      // A one-element tuple needs the trailing comma, or the generated
+      // `for name in ("vercel")` would iterate the string's characters.
+      expect(uv.scripts[0]).toContain('for name in ("vercel",):');
+    });
+
+    it('reports every requested distribution, not just the first', async () => {
+      await expect(
+        getInstalledDistributionVersions({
+          uv: makeUvRunner('vercel 0.10.1\nvercel-queue 0.4.2\n'),
+          venvPath: mockWorkPath,
+          projectDir: mockWorkPath,
+          uvLockPath: null,
+          distributions: ['vercel', 'vercel-queue'] as const,
+        })
+      ).resolves.toEqual(
+        new Map([
+          ['vercel', '0.10.1'],
+          ['vercel-queue', '0.4.2'],
+        ])
+      );
+    });
+
+    it('resolves a single distribution from uv.lock', async () => {
+      await expect(
+        getInstalledDistributionVersions({
+          uv: makeUvRunner(new Error('boom')),
+          venvPath: mockWorkPath,
+          projectDir: mockWorkPath,
+          uvLockPath: writeUvLock([{ name: 'anyio', version: '4.6.0' }]),
+          distributions: ['anyio'] as const,
+        })
+      ).resolves.toEqual(new Map([['anyio', '4.6.0']]));
+    });
+
+    it('fills only the distributions the venv could not answer from uv.lock', async () => {
+      await expect(
+        getInstalledDistributionVersions({
+          uv: makeUvRunner('vercel 0.10.1'),
+          venvPath: mockWorkPath,
+          projectDir: mockWorkPath,
+          uvLockPath: writeUvLock([
+            { name: 'vercel', version: '0.9.0' },
+            { name: 'vercel-queue', version: '0.4.2' },
+          ]),
+          distributions: ['vercel', 'vercel-queue'] as const,
+        })
+      ).resolves.toEqual(
+        new Map([
+          // The venv wins over the lock for what it did answer.
+          ['vercel', '0.10.1'],
+          ['vercel-queue', '0.4.2'],
+        ])
+      );
+    });
+
+    it('omits distributions that are neither installed nor locked', async () => {
+      await expect(
+        getInstalledDistributionVersions({
+          uv: makeUvRunner('vercel-workflow 0.9.0'),
+          venvPath: mockWorkPath,
+          projectDir: mockWorkPath,
+          uvLockPath: null,
+          distributions: ['vercel'] as const,
+        })
+      ).resolves.toEqual(new Map());
+    });
+  });
+
+  it('serves workflows via vercel-workers without an explicit workflow SDK dependency', async () => {
     await expect(
       resolveWorkflowServingMode({
         pythonPackage: makePackageWithDependencies(['fastapi']),
-        uv: makeUvRunner('0.9.0'),
+        uv: makeUvRunner('vercel-workflow 0.9.0'),
         venvPath: mockWorkPath,
         projectDir: mockWorkPath,
         uvLockPath: null,
@@ -775,7 +893,7 @@ describe('Python SDK generation detection', () => {
     await expect(
       resolveWorkflowServingMode({
         pythonPackage: makePackageWithDependencies(['vercel']),
-        uv: makeUvRunner('0.8.0'),
+        uv: makeUvRunner('vercel 0.8.0'),
         venvPath: mockWorkPath,
         projectDir: mockWorkPath,
         uvLockPath: null,
@@ -787,7 +905,33 @@ describe('Python SDK generation detection', () => {
     await expect(
       resolveWorkflowServingMode({
         pythonPackage: makePackageWithDependencies(['vercel>=0.7']),
-        uv: makeUvRunner('0.7.9'),
+        uv: makeUvRunner('vercel 0.7.9'),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath: null,
+      })
+    ).resolves.toBe('workers');
+  });
+
+  it('serves workflows via vercel-queue for vercel-workflow >= 0.9.0', async () => {
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies(['vercel-workflow']),
+        uv: makeUvRunner('vercel-workflow 0.9.0'),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath: null,
+      })
+    ).resolves.toBe('queue');
+  });
+
+  it('serves workflows via vercel-workers for vercel-workflow < 0.9.0', async () => {
+    // The floor is per-distribution: 0.8.5 clears `vercel`'s 0.8.0 but is
+    // below anything `vercel-workflow` has ever released.
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies(['vercel-workflow']),
+        uv: makeUvRunner('vercel-workflow 0.8.5'),
         venvPath: mockWorkPath,
         projectDir: mockWorkPath,
         uvLockPath: null,
@@ -796,23 +940,61 @@ describe('Python SDK generation detection', () => {
   });
 
   it('falls back to uv.lock when the venv query fails', async () => {
-    const uvLockPath = path.join(mockWorkPath, 'uv.lock');
-    fs.writeFileSync(
-      uvLockPath,
-      [
-        'version = 1',
-        'requires-python = ">=3.12"',
-        '',
-        '[[package]]',
-        'name = "vercel"',
-        'version = "0.8.1"',
-        'source = { registry = "https://pypi.org/simple" }',
-        '',
-      ].join('\n')
-    );
+    const uvLockPath = writeUvLock([{ name: 'vercel', version: '0.8.1' }]);
     await expect(
       resolveWorkflowServingMode({
         pythonPackage: makePackageWithDependencies(['vercel']),
+        uv: makeUvRunner(new Error('boom')),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath,
+      })
+    ).resolves.toBe('queue');
+  });
+
+  it('falls back to uv.lock for vercel-workflow-only projects', async () => {
+    const uvLockPath = writeUvLock([
+      { name: 'vercel-workflow', version: '0.9.0' },
+    ]);
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies(['vercel-workflow']),
+        uv: makeUvRunner(new Error('boom')),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath,
+      })
+    ).resolves.toBe('queue');
+  });
+
+  it('prefers the vercel-workflow runtime over the umbrella vercel version', async () => {
+    // Both installed, umbrella on the old line: the runtime is what serves,
+    // so its version decides. Pinned by test rather than by reading order.
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies([
+          'vercel',
+          'vercel-workflow',
+        ]),
+        uv: makeUvRunner('vercel-workflow 0.9.0\nvercel 0.7.9\n'),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath: null,
+      })
+    ).resolves.toBe('queue');
+  });
+
+  it('prefers the vercel-workflow runtime in the uv.lock fallback too', async () => {
+    const uvLockPath = writeUvLock([
+      { name: 'vercel', version: '0.7.9' },
+      { name: 'vercel-workflow', version: '0.9.0' },
+    ]);
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies([
+          'vercel',
+          'vercel-workflow',
+        ]),
         uv: makeUvRunner(new Error('boom')),
         venvPath: mockWorkPath,
         projectDir: mockWorkPath,
@@ -825,6 +1007,18 @@ describe('Python SDK generation detection', () => {
     await expect(
       resolveWorkflowServingMode({
         pythonPackage: makePackageWithDependencies(['vercel']),
+        uv: makeUvRunner(new Error('boom')),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath: null,
+      })
+    ).resolves.toBe('workers');
+  });
+
+  it('serves workflows via vercel-workers when the vercel-workflow version is undeterminable', async () => {
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies(['vercel-workflow']),
         uv: makeUvRunner(new Error('boom')),
         venvPath: mockWorkPath,
         projectDir: mockWorkPath,
@@ -4937,6 +5131,37 @@ describe('pyproject workflows', () => {
     );
   });
 
+  it('serves workflows through vercel-queue for a vercel-workflow-only project', async () => {
+    // The workflow runtime split out of the umbrella `vercel` distribution,
+    // so declaring it alone must still reach queue serving.
+    mockQueueIntrospection(
+      [{ topic: '__wkf_workflow_*', consumer_group: 'flows-workflows' }],
+      { workflowSdkVersion: '0.9.0' }
+    );
+
+    const result = await buildWorkflowProject(
+      workflowBuildFiles(['dependencies = ["vercel-workflow"]'])
+    );
+
+    const output = getBuildOutputV2(result).output as any;
+    const workflowPath = getWorkflowOutputPath('flows_workflows');
+    const workflow = output[workflowPath];
+    expect(workflow.environment.VERCEL_SERVICE_TYPE).toBeUndefined();
+    expect(workflow.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: '__wkf_workflow_*',
+        consumer: 'flows-workflows',
+      },
+    ]);
+    const handler = workflow.files?.['vc__handler__python.py'];
+    expect(handler.data.toString()).toContain(
+      `"__VC_HANDLER_MODULE_NAME": "${generatedPythonPathToModule(
+        getGeneratedQueueHandlerPath(workflowPath)
+      )}"`
+    );
+  });
+
   it('excludes non-workflow subscriptions from the workflow Lambda triggers', async () => {
     mockQueueIntrospection(
       [
@@ -5004,7 +5229,9 @@ describe('pyproject workflows', () => {
   it('rejects multiple workflow entrypoints when the SDK predates queue namespaces', async () => {
     await expect(
       buildWorkflowProject(multiWorkflowBuildFiles())
-    ).rejects.toThrow(/requires vercel>=0\.8\.0 with a distinct namespace/);
+    ).rejects.toThrow(
+      /requires vercel-workflow>=0\.9\.0 or vercel>=0\.8\.0 with a distinct namespace/
+    );
   });
 
   it('builds multiple workflow entrypoints with distinct namespaces', async () => {

@@ -18,7 +18,7 @@ import { getQueueAdapterBootstrap } from './conditional-vendoring';
 import {
   getLocalSdkSourcePaths,
   isLegacyWorkersProject,
-  MIN_QUEUE_WORKFLOW_SDK_VERSION,
+  QUEUE_WORKFLOW_SDK_REQUIREMENT,
   resolveWorkflowServingMode,
   type WorkflowServingMode,
 } from './sdk-detection';
@@ -1214,7 +1214,7 @@ export const build: BuildVX = async ({
         code: 'PYTHON_INVALID_WORKFLOW_CONFIG',
         message:
           '"tool.vercel.workflows" declares multiple entrypoints, which requires ' +
-          `vercel>=${MIN_QUEUE_WORKFLOW_SDK_VERSION} with a distinct namespace per ` +
+          `${QUEUE_WORKFLOW_SDK_REQUIREMENT} with a distinct namespace per ` +
           'Workflows registry; the installed SDK serves every workflow on the shared __wkf_* topic',
       });
     }

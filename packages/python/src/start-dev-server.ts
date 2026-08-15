@@ -63,8 +63,8 @@ import {
 } from './subscribers';
 import {
   isLegacyWorkersProject,
-  isQueueWorkflowSdkVersion,
-  queryPythonVercelSdkVersion,
+  isQueueWorkflowSdk,
+  queryPythonWorkflowSdkVersion,
 } from './sdk-detection';
 import { getModuleEntrypointName } from './module-entrypoint';
 
@@ -1053,13 +1053,13 @@ export const startDevServer: StartDevServer = async opts => {
     if (queueSidecarKind) {
       let useQueueServing = !legacyProject;
       if (useQueueServing && queueSidecarKind === 'workflow') {
-        const sdkVersion = await queryPythonVercelSdkVersion({
-          pythonBin: spawnCommand,
-          cwd: workPath,
-          env,
-        });
-        useQueueServing =
-          sdkVersion !== undefined && isQueueWorkflowSdkVersion(sdkVersion);
+        useQueueServing = isQueueWorkflowSdk(
+          await queryPythonWorkflowSdkVersion({
+            pythonBin: spawnCommand,
+            cwd: workPath,
+            env,
+          })
+        );
       }
 
       if (useQueueServing) {
