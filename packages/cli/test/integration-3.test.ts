@@ -1060,6 +1060,31 @@ test('should pass through exit code for CLI extension', async () => {
   expect(output.exitCode).toEqual(6);
 });
 
+test.each([
+  { args: [] },
+  { args: ['deploy'] },
+])('deploy should require credentials or --temporary ($args)', async ({
+  args,
+}: {
+  args: string[];
+}) => {
+  const globalConfigDir = getNewTmpDir();
+  await fs.writeJson(path.join(globalConfigDir, 'config.json'), {
+    credStorage: 'file',
+  });
+
+  const output = await execCli(binaryPath, ['-Q', globalConfigDir, ...args], {
+    token: false,
+    scope: false,
+    env: {
+      VERCEL_TOKEN: '',
+    },
+  });
+  expect(output.stderr, formatOutput(output)).toContain(
+    'No existing credentials found. Run `vercel deploy --temporary` to create a temporary deployment you can claim later, or `vercel login` to log in.'
+  );
+});
+
 test('invalid credStorage should fail with a config error', async () => {
   const globalConfigDir = getNewTmpDir();
   await fs.writeJson(path.join(globalConfigDir, 'config.json'), {

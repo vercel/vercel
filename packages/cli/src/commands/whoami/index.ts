@@ -50,7 +50,7 @@ export default async function whoami(client: Client): Promise<number> {
     } else {
       output.log('Logged out.');
       output.log(
-        `Run ${getCommandName('deploy')} to deploy without an account and claim it later. Alternatively you can login with ${getCommandName('login')}.`
+        `Run ${getCommandName('deploy --temporary')} to create a temporary deployment you can claim later, or ${getCommandName('login')} to log in.`
       );
     }
     return 1;

@@ -33,7 +33,7 @@ function mockBootstrap(state: { token: string; expiresAt: number }) {
   return () => calls;
 }
 
-function mockDeploymentEndpoints() {
+function mockDeploymentEndpoints({ checksFailed = false } = {}) {
   const requests: {
     authorization?: string;
     teamId?: string;
@@ -58,10 +58,13 @@ function mockDeploymentEndpoints() {
       id: 'dpl_anon',
       url: 'anon-app-abc.vercel.app',
       readyState: 'READY',
-      aliasAssigned: true,
+      aliasAssigned: !checksFailed,
       alias: ['anon-app.vercel.app'],
       target: 'production',
       creator: { uid: 'anon' },
+      ...(checksFailed
+        ? { checks: { 'deployment-alias': { state: 'failed' } } }
+        : {}),
     });
   });
   return requests;
@@ -71,7 +74,7 @@ describe('deploy [anonymous]', () => {
   it.each([
     { command: 'vc', argv: [] },
     { command: 'vc deploy', argv: ['deploy'] },
-  ])('prompts before temporary deployment with $command', async ({ argv }) => {
+  ])('requires credentials or --temporary with $command', async ({ argv }) => {
     const cwd = setupUnitFixture('commands/deploy/anonymous');
     client.cwd = cwd;
     client.authConfig = {};
@@ -79,94 +82,17 @@ describe('deploy [anonymous]', () => {
       token: 'vcn_test',
       expiresAt: Date.now() + 3600_000,
     });
-    mockDeploymentEndpoints();
-    const confirmMock = vi
-      .spyOn(client.input, 'confirm')
-      .mockResolvedValue(true);
-
     client.setArgv(argv);
-    let exitCode: number;
-    try {
-      exitCode = await deploy(client);
-      expect(confirmMock).toHaveBeenCalledWith(
-        'Deploy temporarily without logging in?',
-        true
-      );
-    } finally {
-      confirmMock.mockRestore();
-    }
+    const exitCode = await deploy(client);
 
-    expect(exitCode).toEqual(0);
-    expect(getBootstrapCalls()).toEqual(1);
-  });
-
-  it('requires --yes instead of prompting in non-interactive mode', async () => {
-    const cwd = setupUnitFixture('commands/deploy/anonymous');
-    client.cwd = cwd;
-    client.authConfig = {};
-    const getBootstrapCalls = mockBootstrap({
-      token: 'vcn_test',
-      expiresAt: Date.now() + 3600_000,
-    });
-    client.nonInteractive = true;
-    const exitSpy = vi
-      .spyOn(process, 'exit')
-      .mockImplementation((() => undefined) as never);
-
-    client.setArgv('deploy', '--non-interactive');
-    let exitCode: number;
-    try {
-      exitCode = await deploy(client);
-    } finally {
-      exitSpy.mockRestore();
-      client.nonInteractive = false;
-    }
-
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toBe(1);
     expect(getBootstrapCalls()).toEqual(0);
-    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
-      status: 'action_required',
-      reason: 'confirmation_required',
-      next: [
-        {
-          command: 'vercel deploy --non-interactive --yes',
-        },
-      ],
-    });
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain('vercel deploy --temporary');
+    expect(stderr).toContain('vercel login');
   });
 
-  it('does not report temporary deployments as unavailable when declined', async () => {
-    const cwd = setupUnitFixture('commands/deploy/anonymous');
-    client.cwd = cwd;
-    client.authConfig = {};
-    const getBootstrapCalls = mockBootstrap({
-      token: 'vcn_test',
-      expiresAt: Date.now() + 3600_000,
-    });
-    const confirmMock = vi
-      .spyOn(client.input, 'confirm')
-      .mockResolvedValue(false);
-
-    client.setArgv('deploy');
-    try {
-      expect(await deploy(client)).toEqual(1);
-    } finally {
-      confirmMock.mockRestore();
-    }
-
-    expect(getBootstrapCalls()).toEqual(0);
-    expect(client.stderr.getFullOutput()).not.toContain(
-      "Temporary deployments aren't available."
-    );
-  });
-
-  it.each([
-    { command: 'vc deploy --yes', argv: ['deploy', '--yes'] },
-    {
-      command: 'vc deploy --prod --yes',
-      argv: ['deploy', '--prod', '--yes'],
-    },
-  ])('runs $command without prompting', async ({ argv }) => {
+  it('deploys temporarily without prompting', async () => {
     const cwd = setupUnitFixture('commands/deploy/anonymous');
     client.cwd = cwd;
     client.authConfig = {};
@@ -180,8 +106,7 @@ describe('deploy [anonymous]', () => {
     });
     const requests = mockDeploymentEndpoints();
     const confirmMock = vi.spyOn(client.input, 'confirm');
-
-    client.setArgv(argv);
+    client.setArgv('deploy', '--temporary');
     let exitCode: number;
     try {
       exitCode = await deploy(client);
@@ -200,6 +125,9 @@ describe('deploy [anonymous]', () => {
     expect(requests[0].authorization).toEqual('Bearer vcn_test');
     expect(requests[0].teamId).toBeUndefined();
     expect(requests[0].skipAutoDetectionConfirmation).toEqual('1');
+    expect(client.telemetryEventStore.readonlyEvents).toContainEqual(
+      expect.objectContaining({ key: 'flag:temporary', value: 'TRUE' })
+    );
     const stderr = client.stderr.getFullOutput();
     expect(stderr).toContain('Deploying anonymously');
     expect(stderr).toContain('https://anon-app.vercel.app');
@@ -234,7 +162,7 @@ describe('deploy [anonymous]', () => {
       expiresAt: Date.now() + 3600_000,
     });
 
-    client.setArgv('deploy', '--dry');
+    client.setArgv('deploy', '--temporary', '--dry');
     const exitCode = await deploy(client);
 
     expect(exitCode).toEqual(1);
@@ -261,7 +189,7 @@ describe('deploy [anonymous]', () => {
       expiresAt: Date.now() + 1800_000,
     });
 
-    client.setArgv('deploy', '--dry');
+    client.setArgv('deploy', '--temporary', '--dry');
     const exitCode = await deploy(client);
 
     expect(exitCode).toEqual(0);
@@ -278,7 +206,7 @@ describe('deploy [anonymous]', () => {
       expiresAt: Date.now() + 3600_000,
     });
 
-    client.setArgv('deploy', '--target', 'preview');
+    client.setArgv('deploy', '--temporary', '--target', 'preview');
     const exitCode = await deploy(client);
 
     expect(exitCode).toEqual(1);
@@ -297,7 +225,7 @@ describe('deploy [anonymous]', () => {
       expiresAt: Date.now() + 3600_000,
     });
 
-    client.setArgv('deploy', '--yes');
+    client.setArgv('deploy', '--temporary');
     const exitCode = await deploy(client);
 
     expect(exitCode).toEqual(1);
@@ -319,7 +247,7 @@ describe('deploy [anonymous]', () => {
     ciInfoMock.isCI = true;
 
     try {
-      client.setArgv('deploy', '--yes');
+      client.setArgv('deploy', '--temporary');
       const exitCode = await deploy(client);
 
       expect(exitCode).toEqual(1);
@@ -346,16 +274,12 @@ describe('deploy [anonymous]', () => {
     process.stdout.isTTY = true;
 
     try {
-      client.setArgv('deploy', '--yes');
+      client.setArgv('deploy', '--temporary');
       const exitCode = await deploy(client);
       expect(exitCode).toEqual(1);
       expect(loginMock).toHaveBeenCalledTimes(1);
-      const stderr = client.stderr.getFullOutput();
-      expect(stderr).toContain("Temporary deployments aren't available.");
-      expect(
-        stderr.indexOf("Temporary deployments aren't available.")
-      ).toBeLessThan(
-        stderr.indexOf('No existing credentials found. Please log in:')
+      expect(client.stderr.getFullOutput()).toContain(
+        'No existing credentials found. Please log in:'
       );
     } finally {
       process.stdout.isTTY = originalIsTTY;
@@ -372,7 +296,7 @@ describe('deploy [anonymous]', () => {
       res.status(500).json({ error: { code: 'internal_server_error' } });
     });
 
-    client.setArgv('deploy', '--yes');
+    client.setArgv('deploy', '--temporary');
     const exitCode = await deploy(client);
 
     expect(exitCode).toEqual(1);
@@ -399,17 +323,10 @@ describe('deploy [anonymous]', () => {
       expiresAt: Date.now() + 1800_000,
     });
 
-    const confirmMock = vi.spyOn(client.input, 'confirm');
-    client.setArgv('deploy');
-    let exitCode: number;
-    try {
-      exitCode = await deploy(client);
-    } finally {
-      confirmMock.mockRestore();
-    }
+    client.setArgv('deploy', '--temporary');
+    const exitCode = await deploy(client);
 
     expect(exitCode).toEqual(0);
-    expect(confirmMock).not.toHaveBeenCalled();
     expect(getBootstrapCalls()).toEqual(0);
     expect(requests[0].authorization).toEqual('Bearer vcn_sticky');
     expect(client.stderr.getFullOutput()).toMatch(
@@ -432,7 +349,7 @@ describe('deploy [anonymous]', () => {
       expiresAt: Date.now() - 1000,
     });
 
-    client.setArgv('deploy', '--yes');
+    client.setArgv('deploy', '--temporary');
     const exitCode = await deploy(client);
 
     expect(exitCode).toEqual(1);
@@ -468,7 +385,7 @@ describe('deploy [anonymous]', () => {
       });
     });
 
-    client.setArgv('deploy', '--yes');
+    client.setArgv('deploy', '--temporary');
     const exitCode = await deploy(client);
 
     expect(exitCode).toEqual(1);
@@ -540,7 +457,7 @@ describe('deploy [anonymous]', () => {
       return 0;
     });
 
-    client.setArgv('deploy', '--yes');
+    client.setArgv('deploy', '--temporary');
     const exitCode = await deploy(client);
 
     expect(exitCode).toEqual(0);
@@ -560,7 +477,7 @@ describe('deploy [anonymous]', () => {
     );
   });
 
-  it('clears a leftover anonymous state file when credentials exist', async () => {
+  it('uses credentials when --temporary is passed while logged in', async () => {
     const user = useUser();
     useTeams('team_dummy');
     useProject({
@@ -595,13 +512,10 @@ describe('deploy [anonymous]', () => {
       });
     });
 
-    const confirmMock = vi.spyOn(client.input, 'confirm');
-    client.setArgv('deploy');
+    client.setArgv('deploy', '--temporary');
     const exitCode = await deploy(client);
 
     expect(exitCode).toEqual(0);
-    expect(confirmMock).not.toHaveBeenCalled();
-    confirmMock.mockRestore();
     expect(await fs.pathExists(join(cwd, ANONYMOUS_FILE))).toEqual(false);
   });
 
@@ -621,7 +535,7 @@ describe('deploy [anonymous]', () => {
     (client as { nonInteractive: boolean }).nonInteractive = true;
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    client.setArgv('deploy');
+    client.setArgv('deploy', '--temporary');
     const exitCode = await deploy(client);
 
     expect(exitCode).toEqual(0);
@@ -641,10 +555,37 @@ describe('deploy [anonymous]', () => {
     );
     const commands = payload.next.map((n: { command: string }) => n.command);
     expect(commands.some((c: string) => c.includes('login'))).toEqual(true);
+    expect(
+      commands.some((c: string) => c.includes('deploy --temporary'))
+    ).toEqual(true);
     expect(commands.some((c: string) => c.includes('inspect'))).toEqual(false);
     expect(commands.some((c: string) => c.includes('--prod'))).toEqual(false);
 
     logSpy.mockRestore();
+    (client as { nonInteractive: boolean }).nonInteractive = false;
+  });
+
+  it('keeps --temporary in check failure retry commands', async () => {
+    const cwd = setupUnitFixture('commands/deploy/anonymous');
+    client.cwd = cwd;
+    client.authConfig = {};
+    mockBootstrap({
+      token: 'vcn_test',
+      expiresAt: Date.now() + 3600_000,
+    });
+    mockDeploymentEndpoints({ checksFailed: true });
+    client.scenario.get('/v2/deployments/dpl_anon/check-runs', (_req, res) => {
+      res.json({ runs: [] });
+    });
+    (client as { nonInteractive: boolean }).nonInteractive = true;
+
+    client.setArgv('deploy', '--temporary');
+    const exitCode = await deploy(client);
+
+    expect(exitCode).toEqual(1);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    expect(payload.next[0].command).toContain('deploy --temporary');
+
     (client as { nonInteractive: boolean }).nonInteractive = false;
   });
 
@@ -673,7 +614,7 @@ describe('deploy [anonymous]', () => {
       return 0;
     });
 
-    client.setArgv('deploy', '--yes');
+    client.setArgv('deploy', '--temporary');
     const exitCode = await deploy(client);
 
     expect(exitCode).toEqual(0);
@@ -699,7 +640,7 @@ describe('deploy [anonymous]', () => {
     const requests = mockDeploymentEndpoints();
     buildMock.mockResolvedValue(1);
 
-    client.setArgv('deploy', '--yes');
+    client.setArgv('deploy', '--temporary');
     const exitCode = await deploy(client);
 
     expect(exitCode).toEqual(1);

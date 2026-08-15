@@ -1257,15 +1257,15 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 "
   ▲ vercel deploy [project-path] [options]
 
-  Deploy your project to Vercel. You    
-  can create a temporary deployment     
-  without logging in. The \`deploy\`      
-  command is the default command for    
-  the Vercel CLI, and can be omitted    
-  (\`vc deploy my-app\` equals \`vc        
-  my-app\`). Use \`--dry\` to inspect the  
-  detected framework preset and source  
-  files without deploying.              
+  Deploy your project to Vercel. Use    
+  \`--temporary\` to create a temporary   
+  deployment without logging in. The    
+  \`deploy\` command is the default       
+  command for the Vercel CLI, and can   
+  be omitted (\`vc deploy my-app\` equals 
+  \`vc my-app\`). Use \`--dry\` to inspect  
+  the detected framework preset and     
+  source files without deploying.       
 
   Options:
 
@@ -1412,6 +1412,12 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 target  
                                 deploym…
                                 environ…
+       --temporary              Create a
+                                tempora…
+                                deploym…
+                                without 
+                                logging 
+                                in      
        --with-cache             Retain  
                                 build   
                                 cache   
@@ -1512,10 +1518,11 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 "
   ▲ vercel deploy [project-path] [options]
 
-  Deploy your project to Vercel. You can create a temporary deployment without  
-  logging in. The \`deploy\` command is the default command for the Vercel CLI,   
-  and can be omitted (\`vc deploy my-app\` equals \`vc my-app\`). Use \`--dry\` to    
-  inspect the detected framework preset and source files without deploying.     
+  Deploy your project to Vercel. Use \`--temporary\` to create a temporary        
+  deployment without logging in. The \`deploy\` command is the default command    
+  for the Vercel CLI, and can be omitted (\`vc deploy my-app\` equals \`vc         
+  my-app\`). Use \`--dry\` to inspect the detected framework preset and source     
+  files without deploying.                                                      
 
   Options:
 
@@ -1551,6 +1558,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 deployment. You can use \`vc promote\` to complete
                                 the domain-assignment process later             
        --target <TARGET>        Specify the target deployment environment       
+       --temporary              Create a temporary deployment without logging in
        --with-cache             Retain build cache when using "--force"         
   -y,  --yes                    Use default options to skip all prompts         
 
@@ -1609,9 +1617,9 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 "
   ▲ vercel deploy [project-path] [options]
 
-  Deploy your project to Vercel. You can create a temporary deployment without logging in. The \`deploy\` command is the  
-  default command for the Vercel CLI, and can be omitted (\`vc deploy my-app\` equals \`vc my-app\`). Use \`--dry\` to        
-  inspect the detected framework preset and source files without deploying.                                             
+  Deploy your project to Vercel. Use \`--temporary\` to create a temporary deployment without logging in. The \`deploy\`    
+  command is the default command for the Vercel CLI, and can be omitted (\`vc deploy my-app\` equals \`vc my-app\`). Use    
+  \`--dry\` to inspect the detected framework preset and source files without deploying.                                  
 
   Options:
 
@@ -1634,6 +1642,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
        --skip-domain            Disable the automatic promotion (aliasing) of the relevant domains to a new production  
                                 deployment. You can use \`vc promote\` to complete the domain-assignment process later    
        --target <TARGET>        Specify the target deployment environment                                               
+       --temporary              Create a temporary deployment without logging in                                        
        --with-cache             Retain build cache when using "--force"                                                 
   -y,  --yes                    Use default options to skip all prompts                                                 
 

@@ -970,6 +970,7 @@ async function handleDefaultDeploy(
   telemetryClient.trackCliFlagYes(parsedArguments.flags['--yes']);
   telemetryClient.trackCliOptionTarget(parsedArguments.flags['--target']);
   telemetryClient.trackCliFlagProd(parsedArguments.flags['--prod']);
+  telemetryClient.trackCliFlagTemporary(parsedArguments.flags['--temporary']);
   telemetryClient.trackCliFlagSkipDomain(
     parsedArguments.flags['--skip-domain']
   );
@@ -1099,7 +1100,16 @@ async function handleDefaultDeploy(
   }
   // #endregion
 
-  let isAnonymous = !client.authConfig.token;
+  let isAnonymous =
+    !client.authConfig.token && Boolean(parsedArguments.flags['--temporary']);
+
+  if (!client.authConfig.token && !isAnonymous) {
+    output.prettyError({
+      message: `No existing credentials found. Run ${getCommandName('deploy --temporary')} to create a temporary deployment you can claim later, or ${getCommandName('login')} to log in.`,
+      link: 'https://err.sh/vercel/no-credentials-found',
+    });
+    return 1;
+  }
 
   let target = parseTarget({
     flagName: 'target',
@@ -1147,7 +1157,6 @@ async function handleDefaultDeploy(
   const anonymousSetup = await setupAnonymousDeployment(client, cwd, {
     isAnonymous,
     dryRun: Boolean(parsedArguments.flags['--dry']),
-    confirmed: Boolean(parsedArguments.flags['--yes']),
   });
   if (typeof anonymousSetup === 'number') {
     return anonymousSetup;
@@ -1175,6 +1184,11 @@ async function handleDefaultDeploy(
   if (typeof link === 'number') {
     return link;
   }
+
+  const redeployCommand = withGlobalFlags(
+    client,
+    isAnonymous ? 'deploy --temporary' : 'deploy'
+  );
 
   const { org, project } = link;
   const rootDirectory = project.rootDirectory;
@@ -1518,7 +1532,7 @@ async function handleDefaultDeploy(
               message: deployment.message,
               next: [
                 {
-                  command: withGlobalFlags(client, 'deploy'),
+                  command: redeployCommand,
                   when: 'retry deploy',
                 },
               ],
@@ -1547,7 +1561,7 @@ async function handleDefaultDeploy(
               message: msg,
               next: [
                 {
-                  command: withGlobalFlags(client, 'deploy'),
+                  command: redeployCommand,
                   when: 'retry deploy',
                 },
               ],
@@ -1587,7 +1601,7 @@ async function handleDefaultDeploy(
               deployment: deploymentJson,
               next: [
                 {
-                  command: withGlobalFlags(client, 'deploy'),
+                  command: redeployCommand,
                   when: 'retry deploy',
                 },
               ],
@@ -1602,7 +1616,7 @@ async function handleDefaultDeploy(
 
     // Deployment Checks: deployment-alias check failed
     if (deployment.checks?.['deployment-alias']?.state === 'failed') {
-      return handleFailedCheckRuns(client, deployment, asJson);
+      return handleFailedCheckRuns(client, deployment, asJson, redeployCommand);
     }
 
     // v1 checks: uses checksConclusion from the deployment object
@@ -1635,7 +1649,7 @@ async function handleDefaultDeploy(
               deployment: deploymentJson,
               next: [
                 {
-                  command: withGlobalFlags(client, 'deploy'),
+                  command: redeployCommand,
                   when: 'retry deploy',
                 },
               ],
@@ -1664,7 +1678,7 @@ async function handleDefaultDeploy(
               message: 'Uploading failed. Please try again.',
               next: [
                 {
-                  command: withGlobalFlags(client, 'deploy'),
+                  command: redeployCommand,
                   when: 'retry deploy',
                 },
               ],
@@ -1706,7 +1720,7 @@ async function handleDefaultDeploy(
               message: err.message,
               next: [
                 {
-                  command: withGlobalFlags(client, 'deploy'),
+                  command: redeployCommand,
                   when: 'retry deploy',
                 },
               ],
@@ -1732,7 +1746,7 @@ async function handleDefaultDeploy(
               message: err.message,
               next: [
                 {
-                  command: withGlobalFlags(client, 'deploy'),
+                  command: redeployCommand,
                   when: 'retry deploy',
                 },
               ],
@@ -1799,7 +1813,7 @@ async function handleDefaultDeploy(
               message: err instanceof Error ? err.message : String(err),
               next: [
                 {
-                  command: withGlobalFlags(client, 'deploy'),
+                  command: redeployCommand,
                   when: 'retry deploy',
                 },
               ],
@@ -1885,7 +1899,7 @@ async function handleDefaultDeploy(
               message,
               next: [
                 {
-                  command: withGlobalFlags(client, 'deploy'),
+                  command: redeployCommand,
                   when: 'retry deploy',
                 },
               ],
@@ -1908,7 +1922,7 @@ async function handleDefaultDeploy(
             message: err instanceof Error ? err.message : String(err),
             next: [
               {
-                command: withGlobalFlags(client, 'deploy'),
+                command: redeployCommand,
                 when: 'retry deploy',
               },
             ],
@@ -1953,7 +1967,7 @@ async function handleDefaultDeploy(
           next: anonymousLink
             ? [
                 {
-                  command: withGlobalFlags(client, 'deploy'),
+                  command: redeployCommand,
                   when: 'Redeploy changes to the same anonymous deployment',
                 },
                 {
@@ -2499,7 +2513,8 @@ async function handleFailedCheckRuns(
     readyState: string;
     target?: string | null;
   },
-  asJson: boolean
+  asJson: boolean,
+  retryCommand = withGlobalFlags(client, 'deploy')
 ): Promise<number> {
   const { runs } = await getDeploymentCheckRuns(client, deployment.id);
 
@@ -2567,7 +2582,7 @@ async function handleFailedCheckRuns(
         failedCheckRuns: failedCheckRunsWithLogs,
         next: [
           {
-            command: withGlobalFlags(client, 'deploy'),
+            command: retryCommand,
             when: 'retry deploy after fixing check failures',
           },
         ],

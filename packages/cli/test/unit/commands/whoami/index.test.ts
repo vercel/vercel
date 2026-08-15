@@ -46,7 +46,7 @@ describe('whoami', () => {
     expect(exitCode).toEqual(1);
     const stderr = client.stderr.getFullOutput();
     expect(stderr).toContain('Logged out.');
-    expect(stderr).toContain('deploy without an account and claim it later');
+    expect(stderr).toContain('vercel deploy --temporary');
   });
 
   it('should print the Vercel username on personal scope', async () => {

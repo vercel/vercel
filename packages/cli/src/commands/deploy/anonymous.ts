@@ -3,15 +3,6 @@ import type * as tty from 'tty';
 import fs from 'fs-extra';
 import type Client from '../../util/client';
 import {
-  buildCommandWithYes,
-  outputActionRequired,
-} from '../../util/agent-output';
-import {
-  AGENT_ACTION,
-  AGENT_REASON,
-  AGENT_STATUS,
-} from '../../util/agent-output-constants';
-import {
   clearAnonymousState,
   ensureAnonymousLink,
   type AnonymousLink,
@@ -20,7 +11,6 @@ import { printError } from '../../util/error';
 import { isAPIError } from '../../util/errors-ts';
 import { ensureLink } from '../../util/link/ensure-link';
 import promptMissingCredentials from '../../util/login/prompt-missing-credentials';
-import code from '../../util/output/code';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
 import {
@@ -49,11 +39,7 @@ export function validateAnonymousTarget(
 export async function setupAnonymousDeployment(
   client: Client,
   cwd: string,
-  {
-    isAnonymous,
-    dryRun,
-    confirmed,
-  }: { isAnonymous: boolean; dryRun: boolean; confirmed: boolean }
+  { isAnonymous, dryRun }: { isAnonymous: boolean; dryRun: boolean }
 ): Promise<
   number | { isAnonymous: boolean; anonymousLink: AnonymousLink | undefined }
 > {
@@ -63,58 +49,10 @@ export async function setupAnonymousDeployment(
 
   let anonymousLink: AnonymousLink | undefined;
   if (isAnonymous) {
-    const anonymousOptions = {
+    const anonymous = await ensureAnonymousLink(client, cwd, {
       requireExistingState: dryRun,
-      confirmed: confirmed || dryRun,
-    };
-    let anonymous = await ensureAnonymousLink(client, cwd, anonymousOptions);
-    let temporaryDeploymentsUnavailable = anonymous === 'refused';
-    if (anonymous === 'confirmation-required') {
-      const command = buildCommandWithYes(client.argv);
-      if (client.nonInteractive) {
-        outputActionRequired(
-          client,
-          {
-            status: AGENT_STATUS.ACTION_REQUIRED,
-            reason: AGENT_REASON.CONFIRMATION_REQUIRED,
-            action: AGENT_ACTION.CONFIRMATION_REQUIRED,
-            message:
-              'Deploying without credentials creates a temporary deployment. Re-run with --yes to confirm.',
-            next: [
-              {
-                command,
-                when: 'Create a temporary deployment',
-              },
-            ],
-          },
-          1
-        );
-        return 1;
-      }
-      if (!client.stdin.isTTY) {
-        output.error(
-          `Temporary deployment requires confirmation. Re-run with ${code(command)}.`
-        );
-        return 1;
-      }
-      const confirmed = await client.input.confirm(
-        'Deploy temporarily without logging in?',
-        true
-      );
-      if (confirmed) {
-        anonymous = await ensureAnonymousLink(client, cwd, {
-          ...anonymousOptions,
-          confirmed: true,
-        });
-        temporaryDeploymentsUnavailable = anonymous === 'refused';
-      } else {
-        anonymous = 'refused';
-      }
-    }
+    });
     if (anonymous === 'refused') {
-      if (temporaryDeploymentsUnavailable) {
-        output.log("Temporary deployments aren't available.");
-      }
       const loginExitCode = await promptMissingCredentials(client);
       if (loginExitCode !== 0) {
         return loginExitCode;
