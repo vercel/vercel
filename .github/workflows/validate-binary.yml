@@ -46,7 +46,7 @@ jobs:
           package-manager-cache: false
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
         with:
           toolchain: stable
           targets: wasm32-wasip2

@@ -34,6 +34,8 @@ concurrency:
 jobs:
   build:
     name: ${{ matrix.asset }}
+    outputs:
+      deployment-url: ${{ steps.deployment.outputs.url }}
     permissions:
       contents: read
       deployments: read
@@ -78,7 +80,7 @@ jobs:
           package-manager-cache: false
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
         with:
           toolchain: stable
           targets: wasm32-wasip2
@@ -431,7 +433,7 @@ jobs:
       - name: Upload current SHA pointer
         shell: bash
         env:
-          TOKEN_EXCHANGE_URL: https://vercel-621t2dro1.vercel.sh/api/pr-binaries-token
+          TOKEN_EXCHANGE_URL: ${{ needs.build.outputs.deployment-url }}/api/pr-binaries-token
           OIDC_AUDIENCE: vercel-cli-pr-binaries
           PR_NUMBER: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
