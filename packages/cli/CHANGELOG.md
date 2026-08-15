@@ -1,5 +1,13 @@
 # vercel
 
+## 59.1.3
+
+### Patch Changes
+
+- 69955f8: Accept the npm-selected Builder version when a CLI-pinned version is unavailable.
+- Updated dependencies [596868c]
+  - @vercel/python@6.57.1
+
 ## 59.1.2
 
 ### Patch Changes

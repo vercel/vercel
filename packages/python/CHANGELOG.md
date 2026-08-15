@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.57.1
+
+### Patch Changes
+
+- 596868c: Recognize the standalone `vercel-workflow` distribution when deciding whether to serve workflows through vercel-queue
+
 ## 6.57.0
 
 ### Minor Changes
