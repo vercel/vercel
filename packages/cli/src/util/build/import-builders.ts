@@ -139,10 +139,14 @@ export async function importBuilders(
       pinnedSpecs
     );
 
+    const allowedPinDriftSpecs = new Set(
+      Array.from(pinnedSpecs.keys()).filter(spec => installResult.has(spec))
+    );
     importResult = await resolveBuilders(
       buildersDir,
       builderSpecs,
-      installResult
+      installResult,
+      allowedPinDriftSpecs
     );
 
     if ('buildersToAdd' in importResult) {
@@ -191,7 +195,8 @@ function missingModuleId(err: Error): string | undefined {
 async function resolveBuilders(
   buildersDir: string,
   builderSpecs: Set<string>,
-  resolvedSpecs?: Map<string, string>
+  resolvedSpecs?: Map<string, string>,
+  allowedPinDriftSpecs?: Set<string>
 ): Promise<ResolveBuildersResult> {
   const builders = new Map<string, BuilderWithPkg>();
   const buildersToAdd = new Set<string>();
@@ -278,7 +283,8 @@ async function resolveBuilders(
         isBareSpec(parsed) &&
         peerVersion &&
         valid(peerVersion) &&
-        builderPkg.version !== peerVersion
+        builderPkg.version !== peerVersion &&
+        !allowedPinDriftSpecs?.has(spec)
       ) {
         output.debug(
           `Resolved "${name}@${builderPkg.version}" does not match pin "${peerVersion}"`

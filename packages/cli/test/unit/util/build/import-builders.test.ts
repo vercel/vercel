@@ -396,6 +396,38 @@ describe('importBuilders()', () => {
     }
   });
 
+  it('should accept an npm-selected version after the pinned install falls back', async () => {
+    const spec = pkgName;
+    const cwd = await getWriteableDirectory();
+
+    vi.mocked(installBuildersModule.installBuilders).mockClear();
+    vi.mocked(installBuildersModule.installBuilders).mockImplementationOnce(
+      async (dir, _buildersToAdd) => {
+        await outputJSON(join(dir, 'package.json'), {
+          dependencies: { [pkgName]: pkgName },
+        });
+        await outputJSON(join(dir, 'node_modules', pkgName, 'package.json'), {
+          name: pkgName,
+          version: '1.0.0',
+          main: 'index.js',
+        });
+        await writeFile(
+          join(dir, 'node_modules', pkgName, 'index.js'),
+          `exports.version = 3; exports.build = async function() { return { output: {} }; };`
+        );
+        return new Map([[spec, spec]]);
+      }
+    );
+
+    try {
+      const builders = await importBuilders(new Set([spec]), cwd);
+      expect(builders.get(spec)?.pkg.version).toBe('1.0.0');
+      expect(installBuildersModule.installBuilders).toHaveBeenCalledTimes(1);
+    } finally {
+      await remove(cwd);
+    }
+  });
+
   it('should install the tarball URL pin for bare specs', async () => {
     const spec = urlPinnedPkgName;
     const cwd = await getWriteableDirectory();

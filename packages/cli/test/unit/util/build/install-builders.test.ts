@@ -51,7 +51,7 @@ describe('installBuilders()', () => {
       })
     );
 
-    await installBuilders(
+    const resolvedSpecs = await installBuilders(
       directory,
       new Set(['@vercel/node@5.0.0']),
       undefined,
@@ -59,6 +59,7 @@ describe('installBuilders()', () => {
       new Map([['@vercel/node', '@vercel/node@5.0.0']])
     );
 
+    expect(resolvedSpecs.get('@vercel/node')).toBe('@vercel/node');
     expect(execa).toHaveBeenNthCalledWith(
       1,
       'npm',

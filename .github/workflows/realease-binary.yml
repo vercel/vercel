@@ -552,7 +552,7 @@ jobs:
           for i in $(seq 1 12); do
             prefix="$(mktemp -d)"
             cache="$(mktemp -d)"
-            if npm --cache "$cache" install -g --prefix "$prefix" "@vercel/vc-native@$version" --force && [[ -x "$prefix/bin/vercel" ]]; then
+            if npm --cache "$cache" install -g --prefix "$prefix" "@vercel/vc-native@$version" --force --allow-scripts=@vercel/vc-native && [[ -x "$prefix/bin/vercel" ]]; then
               out="$($prefix/bin/vercel --version)"
               echo "$out"
               if [[ "$out" == "$version" ]]; then

@@ -168,7 +168,16 @@ export async function installBuilders(
       output.warn(
         'Could not install the Builder versions pinned by this Vercel CLI release. Retrying with versions allowed by your npm settings.'
       );
-      return untracedInstallBuilders(buildersDir, fallbackSpecs);
+      const resolvedSpecs = await untracedInstallBuilders(
+        buildersDir,
+        fallbackSpecs
+      );
+      for (const originalSpec of pinnedSpecs.keys()) {
+        if (fallbackSpecs.has(originalSpec)) {
+          resolvedSpecs.set(originalSpec, originalSpec);
+        }
+      }
+      return resolvedSpecs;
     }
   };
 
