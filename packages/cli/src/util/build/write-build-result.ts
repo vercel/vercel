@@ -654,7 +654,7 @@ async function writeStaticFile(
       // if link fails we continue attempting to copy
     }
   }
-  await downloadFile(file, dest);
+  await downloadFile(file, dest, join(outputDir, 'static'));
 }
 
 /**

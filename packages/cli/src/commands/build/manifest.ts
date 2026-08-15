@@ -95,7 +95,8 @@ export async function writeManifests(
   ops.push(
     downloadFile(
       projectManifestBlob,
-      join(outputDir, 'diagnostics', 'project-manifest.json')
+      join(outputDir, 'diagnostics', 'project-manifest.json'),
+      join(outputDir, 'diagnostics')
     ).then(
       () => undefined,
       err => err
@@ -113,7 +114,8 @@ export async function writeManifests(
   ops.push(
     downloadFile(
       deployManifestBlob,
-      join(outputDir, 'diagnostics', 'deploy-manifest.json')
+      join(outputDir, 'diagnostics', 'deploy-manifest.json'),
+      join(outputDir, 'diagnostics')
     ).then(
       () => undefined,
       err => err
