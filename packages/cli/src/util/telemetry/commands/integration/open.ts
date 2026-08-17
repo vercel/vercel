@@ -21,4 +21,10 @@ export class IntegrationOpenTelemetryClient
       });
     }
   }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
+    }
+  }
 }

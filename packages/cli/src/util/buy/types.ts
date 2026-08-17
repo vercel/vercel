@@ -1,8 +1,7 @@
-import type { CreditType, AddonAlias } from '../../commands/buy/command';
+import type { CreditType } from '../../commands/buy/command';
 
 export type PurchaseItem =
   | { type: 'credits'; creditType: CreditType; amount: number }
-  | { type: 'addon'; productAlias: AddonAlias; quantity: number }
   | { type: 'subscription'; planSlug: 'pro' }
   | { type: 'v0' };
 

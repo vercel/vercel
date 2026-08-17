@@ -1,5 +1,6 @@
 import {
   formatOption,
+  jsonOption,
   projectOption,
   yesOption,
 } from '../../../util/arg-common';
@@ -22,6 +23,15 @@ const scopeOptions = [
   },
 ] as const;
 
+const addScopeOptions = [
+  {
+    ...scopeOptions[0],
+    description:
+      'Target project when the body omits projectId; built-in rules otherwise remain team-wide.',
+  },
+  scopeOptions[1],
+] as const;
+
 export const rulesLsSubcommand = {
   name: 'ls',
   aliases: ['list'],
@@ -39,6 +49,7 @@ export const rulesLsSubcommand = {
         'Filter by alert type. Repeatable and comma-separated (for example --type custom_alert).',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -55,7 +66,44 @@ export const rulesLsSubcommand = {
     },
     {
       name: 'JSON output',
-      value: `${packageName} alerts rules ls --format json`,
+      value: `${packageName} alerts rules ls --json`,
+    },
+  ],
+} as const;
+
+export const rulesSchemaSubcommand = {
+  name: 'schema',
+  aliases: [],
+  description: 'Show alert rule body schema and examples by alert type',
+  arguments: [],
+  options: [
+    {
+      name: 'type',
+      shorthand: null,
+      type: String,
+      argument: 'TYPE',
+      deprecated: false,
+      description:
+        'Alert rule type to describe: usage_anomaly, error_anomaly, or custom_alert.',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'List supported rule types',
+      value: `${packageName} alerts rules schema`,
+    },
+    {
+      name: 'Show error anomaly rule schema',
+      value: `${packageName} alerts rules schema --type error_anomaly`,
+    },
+    {
+      name: 'Show custom alert rule schema',
+      value: `${packageName} alerts rules schema --type custom_alert`,
+    },
+    {
+      name: 'Schema as JSON',
+      value: `${packageName} alerts rules schema --type custom_alert --format json`,
     },
   ],
 } as const;
@@ -66,8 +114,9 @@ export const rulesAddSubcommand = {
   description: 'Create an alert rule from a JSON body file',
   arguments: [],
   options: [
-    ...scopeOptions,
+    ...addScopeOptions,
     formatOption,
+    jsonOption,
     {
       name: 'body',
       shorthand: null,
@@ -96,7 +145,7 @@ export const rulesInspectSubcommand = {
       required: true,
     },
   ],
-  options: [...scopeOptions, formatOption],
+  options: [...scopeOptions, formatOption, jsonOption],
   examples: [
     {
       name: 'Inspect a rule',
@@ -104,7 +153,7 @@ export const rulesInspectSubcommand = {
     },
     {
       name: 'JSON output',
-      value: `${packageName} alerts rules inspect ar_abc123 --format json`,
+      value: `${packageName} alerts rules inspect ar_abc123 --json`,
     },
   ],
 } as const;
@@ -119,7 +168,7 @@ export const rulesRmSubcommand = {
       required: true,
     },
   ],
-  options: [...scopeOptions, formatOption, yesOption],
+  options: [...scopeOptions, formatOption, jsonOption, yesOption],
   examples: [
     {
       name: 'Delete with confirmation',
@@ -145,13 +194,15 @@ export const rulesUpdateSubcommand = {
   options: [
     ...scopeOptions,
     formatOption,
+    jsonOption,
     {
       name: 'body',
       shorthand: null,
       type: String,
       argument: 'PATH',
       deprecated: false,
-      description: 'Path to JSON with fields to update (partial document).',
+      description:
+        'Path to partial JSON. Omitted fields remain unchanged; null clears supported optional fields.',
     },
   ],
   examples: [
@@ -170,6 +221,7 @@ export const rulesAggregateCommand = {
   arguments: [],
   subcommands: [
     rulesLsSubcommand,
+    rulesSchemaSubcommand,
     rulesAddSubcommand,
     rulesInspectSubcommand,
     rulesRmSubcommand,
@@ -182,8 +234,28 @@ export const rulesAggregateCommand = {
       value: `${packageName} alerts rules ls`,
     },
     {
+      name: 'List custom alert rules',
+      value: `${packageName} alerts rules ls --type custom_alert`,
+    },
+    {
+      name: 'Show schema for a rule type',
+      value: `${packageName} alerts rules schema --type custom_alert`,
+    },
+    {
       name: 'Add a rule',
       value: `${packageName} alerts rules add --body ./rule.json`,
+    },
+    {
+      name: 'Inspect a rule',
+      value: `${packageName} alerts rules inspect ar_abc123`,
+    },
+    {
+      name: 'Update a rule',
+      value: `${packageName} alerts rules update ar_abc123 --body ./patch.json`,
+    },
+    {
+      name: 'Delete a rule',
+      value: `${packageName} alerts rules rm ar_abc123`,
     },
   ],
 } as const;

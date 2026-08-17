@@ -230,12 +230,13 @@ function parsePnpmLock(
   lockfileVersion: number | undefined
 ): Map<string, LockEntry> {
   const lockMap = new Map<string, LockEntry>();
-  // pnpm lockfiles may have multiple YAML documents (starts with '---')
+  // pnpm lockfiles may have multiple YAML documents (starts with '---'),
+  // with the workspace lockfile in the final document.
   const docs: Array<Record<string, unknown> | null> = [];
   yaml.safeLoadAll(content, doc =>
     docs.push(doc as Record<string, unknown> | null)
   );
-  const parsedYaml = docs[0];
+  const parsedYaml = docs.at(-1);
   if (!parsedYaml) return lockMap;
 
   const lv =
@@ -435,6 +436,7 @@ export async function generateProjectManifest({
   lockfileVersion,
   framework,
   serviceType,
+  outputRuntime = 'node',
 }: {
   workPath: string;
   nodeVersion: NodeVersion;
@@ -443,6 +445,7 @@ export async function generateProjectManifest({
   lockfileVersion: number | undefined;
   framework?: string;
   serviceType?: string;
+  outputRuntime?: string;
 }): Promise<void> {
   try {
     const pkgJson = await readPackageJson(workPath);
@@ -525,7 +528,7 @@ export async function generateProjectManifest({
       ],
     };
 
-    await writeProjectManifest(manifest, workPath, 'node');
+    await writeProjectManifest(manifest, workPath, outputRuntime);
   } catch (err) {
     debug(
       `generateProjectManifest: ${err instanceof Error ? err.message : String(err)}`

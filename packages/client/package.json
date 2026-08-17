@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "18.2.0",
+  "version": "18.2.12",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -15,11 +15,10 @@
   },
   "scripts": {
     "build": "node ../../utils/build.mjs",
-    "test": "vitest run --config ../../vitest.config.mts",
-    "vitest-run": "vitest -c ./vitest.config.mts",
-    "vitest-unit": "glob --absolute 'tests/unit.*.test.ts'",
-    "vitest-e2e": "glob --absolute 'tests/integration-*.test.ts'",
-    "type-check": "tsc --noEmit"
+    "test": "vitest run --config ./vitest.config.mts",
+    "test-e2e": "vitest run --config ./vitest.config.mts tests/integration-",
+    "type-check": "tsc --noEmit",
+    "test-unit": "vitest run --config ./vitest.config.mts tests/unit."
   },
   "engines": {
     "node": ">= 20"
@@ -32,7 +31,7 @@
     "@types/node": "20.11.0",
     "@types/recursive-readdir": "2.2.0",
     "@types/tar-fs": "1.16.1",
-    "vitest": "2.0.1"
+    "vitest": "4.1.10"
   },
   "dependencies": {
     "@vercel/build-utils": "workspace:*",

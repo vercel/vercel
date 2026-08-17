@@ -1,6 +1,6 @@
 {
   "name": "@vercel/static-config",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "repository": {
@@ -10,11 +10,9 @@
   },
   "scripts": {
     "build": "node ../../utils/build.mjs",
-    "test-unit": "pnpm test",
+    "test-unit": "vitest run --config ../../vitest.config.mts",
     "test": "vitest run --config ../../vitest.config.mts",
-    "type-check": "tsc --noEmit",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/**/*.test.js' 'test/**/*.test.ts' 'test/**/*.test.mjs' 'test/**/*.test.mts' 'tests/**/*.test.js' 'tests/**/*.test.ts'"
+    "type-check": "tsc --noEmit"
   },
   "files": [
     "dist"
@@ -27,6 +25,6 @@
   "devDependencies": {
     "@swc/core": "1.2.182",
     "@types/node": "20.11.0",
-    "vitest": "2.0.3"
+    "vitest": "4.1.10"
   }
 }

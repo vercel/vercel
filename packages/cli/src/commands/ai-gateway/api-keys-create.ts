@@ -49,6 +49,7 @@ export default async function create(client: Client, argv: string[]) {
   const includeByok = opts['--include-byok'] as boolean | undefined;
   const alertThresholdsInput = opts['--alert-thresholds'] as string | undefined;
   const expiration = opts['--expiration'] as string | undefined;
+  const zdrExempt = opts['--zdr-exempt'] as boolean | undefined;
 
   // Track telemetry
   telemetry.trackCliOptionName(name);
@@ -57,6 +58,7 @@ export default async function create(client: Client, argv: string[]) {
   telemetry.trackCliFlagIncludeByok(includeByok);
   telemetry.trackCliOptionAlertThresholds(alertThresholdsInput);
   telemetry.trackCliOptionExpiration(expiration);
+  telemetry.trackCliFlagZdrExempt(zdrExempt);
 
   // Validate --budget if provided
   if (budget !== undefined && budget < 1) {
@@ -186,6 +188,9 @@ export default async function create(client: Client, argv: string[]) {
       name,
       aiGatewayQuota,
       ...(expiresAt !== undefined && { expiresAt }),
+      ...(zdrExempt && {
+        metadata: { zdr: { enableNonZdrModels: true as const } },
+      }),
     });
 
     output.stopSpinner();

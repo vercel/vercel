@@ -14,7 +14,14 @@ import {
 } from '../../../util/agent-output';
 import { AGENT_REASON } from '../../../util/agent-output-constants';
 import { packageName } from '../../../util/pkg-name';
+import { isCustomAlertRule } from '../format';
+import type { AlertRule } from '../types';
 import { rulesAddSubcommand } from './command';
+import {
+  parseCustomAlertQueryBody,
+  resolveCustomAlertProjectName,
+  setMissingCustomAlertProjectScope,
+} from './custom-alert-query';
 import { parseRulesFlagsAndScope } from './parse-scope';
 import {
   emitRulesArgParseError,
@@ -131,14 +138,40 @@ export default async function add(
     return 1;
   }
 
+  const parsedCustomAlertQuery = parseCustomAlertQueryBody(client, body);
+  if (typeof parsedCustomAlertQuery === 'number') {
+    return parsedCustomAlertQuery;
+  }
+
+  const customAlertRule = isCustomAlertRule(body as AlertRule);
+  if (
+    !customAlertRule &&
+    parsedArgs.flags['--project'] &&
+    scope.projectId &&
+    body.projectId === undefined
+  ) {
+    body.projectId = `projectId eq '${scope.projectId}'`;
+  }
+
+  const customAlertProjectId =
+    typeof body.projectId === 'string' ? body.projectId : scope.projectId;
+  if (parsedCustomAlertQuery && customAlertProjectId) {
+    body.projectId ??= customAlertProjectId;
+    const projectName = await resolveCustomAlertProjectName(
+      client,
+      scope,
+      customAlertProjectId
+    );
+    setMissingCustomAlertProjectScope(
+      parsedCustomAlertQuery,
+      scope.teamId,
+      customAlertProjectId,
+      projectName
+    );
+  }
+
   delete body.id;
   delete body.teamId;
-
-  // List with a linked project filters by `projectId`; the API POST only
-  // persisted the JSON body, so attach scope project when the body omits it.
-  if (scope.projectId !== undefined && body.projectId === undefined) {
-    body.projectId = scope.projectId;
-  }
 
   const path = rulesCollectionPath(scope);
   output.spinner('Creating alert rule...');

@@ -16,7 +16,7 @@ class MockTelemetry extends MetricsTelemetryClient {
   }
 }
 
-describe('metrics schema v2', () => {
+describe('metrics schema', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
@@ -30,7 +30,39 @@ describe('metrics schema v2', () => {
   it('lists metrics by default', async () => {
     client.scenario.get('/v2/observability/schema', (_req, res) => {
       res.json({
-        metrics: [{ id: 'vercel.request.count', description: 'Count' }],
+        metrics: [
+          { id: 'vercel.request.count', description: 'Count' },
+          {
+            id: 'checkout.duration',
+            description: 'Legacy custom metric entry',
+          },
+        ],
+      });
+    });
+    client.scenario.get('/metrics/v1', (req, res) => {
+      expect(req.query).toEqual({
+        kind: 'custom',
+        limit: '250',
+        teamId: 'team_dummy',
+      });
+      res.json({
+        metrics: [
+          {
+            id: 'checkout.duration',
+            description: 'Checkout duration',
+            dimensions: ['source'],
+            unit: 'milliseconds',
+            aggregations: ['count', 'sum', 'avg', 'p95'],
+          },
+          {
+            id: 'vercel.accidental.custom',
+            description: 'Must not be listed from the custom catalog',
+            dimensions: [],
+            unit: 'count',
+            aggregations: ['count'],
+          },
+        ],
+        pagination: { hasMore: false, nextCursor: null },
       });
     });
     client.setArgv('metrics', 'schema');
@@ -39,11 +71,168 @@ describe('metrics schema v2', () => {
 
     expect(exitCode).toBe(0);
     const output = client.stderr.getFullOutput();
-    expect(output).toContain('1 Metric found');
+    expect(output).toContain('2 Metrics found');
     expect(output).toContain('Metric');
     expect(output).toContain('Description');
     expect(output).toContain('vercel.request.count');
     expect(output).toContain('Count');
+    expect(output).toContain('checkout.duration');
+    expect(output).toContain('Checkout duration');
+    expect(output).not.toContain('vercel.accidental.custom');
+  });
+
+  it('follows metric catalog pagination', async () => {
+    client.scenario.get('/v2/observability/schema', (_req, res) => {
+      res.json({ metrics: [] });
+    });
+    client.scenario.get('/metrics/v1', (req, res) => {
+      if (req.query.cursor === 'next_page') {
+        expect(req.query).toEqual({
+          kind: 'custom',
+          limit: '250',
+          cursor: 'next_page',
+          teamId: 'team_dummy',
+        });
+        res.json({
+          metrics: [
+            {
+              id: 'checkout.revenue',
+              description: 'Checkout revenue',
+              dimensions: ['source'],
+              unit: 'count',
+              aggregations: ['count', 'sum'],
+            },
+          ],
+          pagination: { hasMore: false, nextCursor: null },
+        });
+        return;
+      }
+
+      res.json({
+        metrics: [
+          {
+            id: 'checkout.duration',
+            description: 'Checkout duration',
+            dimensions: ['source'],
+            unit: 'count',
+            aggregations: ['count', 'unique'],
+          },
+        ],
+        pagination: { hasMore: true, nextCursor: 'next_page' },
+      });
+    });
+    client.setArgv('metrics', 'schema');
+
+    const exitCode = await schema(client, new MockTelemetry());
+
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('2 Metrics found');
+    expect(output).toContain('checkout.duration');
+    expect(output).toContain('checkout.revenue');
+  });
+
+  it('returns the combined legacy list shape as JSON', async () => {
+    client.scenario.get('/v2/observability/schema', (_req, res) => {
+      res.json({
+        metrics: [{ id: 'vercel.request.count', description: 'Request Count' }],
+      });
+    });
+    client.scenario.get('/metrics/v1', (_req, res) => {
+      res.json({
+        metrics: [
+          {
+            id: 'checkout.duration',
+            description: 'Checkout duration',
+            dimensions: ['source'],
+            unit: 'milliseconds',
+            aggregations: ['count', 'sum', 'avg'],
+          },
+        ],
+        pagination: { hasMore: false, nextCursor: null },
+      });
+    });
+    client.setArgv('metrics', 'schema', '--format=json');
+
+    const exitCode = await schema(client, new MockTelemetry());
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(client.stdout.getFullOutput());
+    expect(result).toEqual([
+      {
+        id: 'checkout.duration',
+        description: 'Checkout duration',
+      },
+      {
+        id: 'vercel.request.count',
+        description: 'Request Count',
+      },
+    ]);
+  });
+
+  it('returns platform metrics when the custom catalog is unavailable', async () => {
+    client.scenario.get('/v2/observability/schema', (_req, res) => {
+      res.json({
+        metrics: [{ id: 'vercel.request.count', description: 'Request Count' }],
+      });
+    });
+    client.scenario.get('/metrics/v1', (_req, res) => {
+      res.status(403).json({
+        error: {
+          code: 'forbidden',
+          message: 'Custom metric discovery is not available',
+        },
+      });
+    });
+    client.setArgv('metrics', 'schema', '--format=json');
+
+    const exitCode = await schema(client, new MockTelemetry());
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual([
+      {
+        id: 'vercel.request.count',
+        description: 'Request Count',
+      },
+    ]);
+  });
+
+  it('reports an unknown metric prefix', async () => {
+    client.scenario.get('/metrics/v1', (_req, res) => {
+      res.json({
+        metrics: [],
+        pagination: { hasMore: false, nextCursor: null },
+      });
+    });
+    client.setArgv('metrics', 'schema', 'checkout.unknown');
+
+    const exitCode = await schema(client, new MockTelemetry());
+
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'No metrics match "checkout.unknown". Run `vercel metrics schema` to see available metrics.'
+    );
+  });
+
+  it('reports an unknown metric prefix as JSON', async () => {
+    client.scenario.get('/metrics/v1', (_req, res) => {
+      res.json({
+        metrics: [],
+        pagination: { hasMore: false, nextCursor: null },
+      });
+    });
+    client.setArgv('metrics', 'schema', 'checkout.unknown', '--format=json');
+
+    const exitCode = await schema(client, new MockTelemetry());
+
+    expect(exitCode).toBe(1);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      error: {
+        code: 'METRIC_NOT_FOUND',
+        message:
+          'No metrics match "checkout.unknown". Run `vercel metrics schema` to see available metrics.',
+      },
+    });
   });
 
   it('shows prefix detail with a positional metric', async () => {
@@ -100,6 +289,71 @@ describe('metrics schema v2', () => {
     expect(output).toContain('avg (default), p95');
     expect(output).toContain('+cache_result');
     expect(output).toContain('—');
+  });
+
+  it('reads custom metric dimensions from the v1 catalog', async () => {
+    client.scenario.get('/metrics/v1', (req, res) => {
+      expect(req.query).toEqual({
+        kind: 'custom',
+        limit: '250',
+        search: 'checkout.duration',
+        teamId: 'team_dummy',
+      });
+      res.json({
+        metrics: [
+          {
+            id: 'checkout.duration',
+            description: 'Checkout duration',
+            dimensions: ['source', 'functionRegion', 'event', 'operation'],
+            unit: 'milliseconds',
+            aggregations: ['count', 'sum', 'avg', 'p95'],
+          },
+        ],
+        pagination: { hasMore: false, nextCursor: null },
+      });
+    });
+    client.setArgv('metrics', 'schema', 'checkout.duration');
+
+    const exitCode = await schema(client, new MockTelemetry());
+
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('checkout.duration');
+    expect(output).toContain('Checkout duration');
+    expect(output).toContain('count, sum, avg, p95');
+    expect(output).toContain('Dimensions:');
+    expect(output).toContain('source, functionRegion, event, operation');
+  });
+
+  it('returns custom metric dimensions as JSON', async () => {
+    client.scenario.get('/metrics/v1', (_req, res) => {
+      res.json({
+        metrics: [
+          {
+            id: 'checkout.duration',
+            description: 'Checkout duration',
+            dimensions: ['source', "customer's-region", 'event'],
+            unit: 'milliseconds',
+            aggregations: ['sum', 'avg'],
+          },
+        ],
+        pagination: { hasMore: false, nextCursor: null },
+      });
+    });
+    client.setArgv('metrics', 'schema', 'checkout.duration', '--format=json');
+
+    const exitCode = await schema(client, new MockTelemetry());
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual([
+      {
+        id: 'checkout.duration',
+        description: 'Checkout duration',
+        dimensions: ['source', "customer's-region", 'event'],
+        unit: 'milliseconds',
+        aggregations: ['sum', 'avg'],
+      },
+    ]);
   });
 
   it('omits the dimensions column when no metric has extra dimensions', async () => {
@@ -161,10 +415,7 @@ describe('metrics schema v2', () => {
             {
               id: 'vercel.request.count',
               description: 'Count',
-              dimensions: [
-                { name: 'route', label: 'Route' },
-                { name: 'http_status', label: 'HTTP Status' },
-              ],
+              dimensions: [{ name: 'route', label: 'Route' }],
               unit: 'count',
               aggregations: ['sum'],
               defaultAggregation: 'sum',
@@ -185,6 +436,12 @@ describe('metrics schema v2', () => {
       client.scenario.get('/v2/observability/schema', (_req, res) => {
         res.json({
           metrics: [{ id: 'vercel.request.count', description: 'Count' }],
+        });
+      });
+      client.scenario.get('/metrics/v1', (_req, res) => {
+        res.json({
+          metrics: [],
+          pagination: { hasMore: false, nextCursor: null },
         });
       });
       client.setArgv('metrics', 'schema', '--format=json');

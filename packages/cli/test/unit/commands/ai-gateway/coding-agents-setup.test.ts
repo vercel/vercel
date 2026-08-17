@@ -7,15 +7,17 @@ import {
   vi,
 } from 'vitest';
 
-// Temporarily quarantine this suite on macOS: it is the only file in CLI shard
-// 1/7 that does not complete and times out both the Node 20 and Node 22 jobs.
-const describe = vitestDescribe.skipIf(process.platform === 'darwin');
+// The keychain/clipboard boundaries are fully mocked below, so this suite is
+// deterministic and runs on every platform. It was previously skipped on macOS,
+// where the real-Keychain fallback in the mock would prompt and hang.
+const describe = vitestDescribe;
 import {
   mkdtempSync,
   readFileSync,
   writeFileSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   statSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -44,9 +46,9 @@ import {
   keychainLookup,
 } from '../../../../src/util/ai-gateway/coding-agents/keychain';
 
-// A pass-through mock of the keychain module: tests that set `available` get a
-// fake in-memory keychain (usable on Linux CI); everything else hits the real
-// implementation.
+// Fully in-memory mock of the keychain module so the suite is deterministic and
+// never invokes the real macOS Keychain (which would prompt and hang). Helpers
+// like `keychainLookup` keep their real implementations via the spread.
 const keychainState = vi.hoisted(() => ({
   available: undefined as boolean | undefined,
   stored: [] as string[],
@@ -64,11 +66,13 @@ vi.mock(
       >();
     return {
       ...actual,
-      isKeychainAvailable: () =>
-        keychainState.available ?? actual.isKeychainAvailable(),
+      // Defaults to "unavailable", matching Linux CI; a test opts in with
+      // `keychainState.available = true`.
+      isKeychainAvailable: () => keychainState.available ?? false,
       storeKeyInKeychain: (key: string) => {
-        if (keychainState.available === undefined) {
-          return actual.storeKeyInKeychain(key);
+        // Fails closed when the keychain isn't available.
+        if (keychainState.available !== true) {
+          return false;
         }
         if (keychainState.storeResult) {
           keychainState.stored.push(key);
@@ -82,15 +86,6 @@ vi.mock(
     };
   }
 );
-
-// Desktop-app detection defaults to "not installed" so a developer's real
-// /Applications never leaks warnings into unrelated tests.
-const desktopState = vi.hoisted(() => ({ codex: false }));
-
-vi.mock('../../../../src/util/ai-gateway/coding-agents/desktop-apps', () => ({
-  isMacAppInstalled: (bundleName: string) =>
-    bundleName === 'Codex.app' ? desktopState.codex : false,
-}));
 
 const CREATED_KEY = 'vck_CreatedSecretKey1234';
 const mockApiKeyResponse = {
@@ -124,7 +119,11 @@ function codexConfigPath() {
   return join(home, '.codex', 'config.toml');
 }
 function bashrcPath() {
-  return join(home, '.bashrc');
+  // Mirror detectShellRc: macOS bash login shells read ~/.bash_profile.
+  return join(
+    home,
+    process.platform === 'darwin' ? '.bash_profile' : '.bashrc'
+  );
 }
 function opencodeConfigPath() {
   return join(home, '.config', 'opencode', 'opencode.json');
@@ -139,7 +138,6 @@ beforeEach(() => {
   keychainState.storeResult = true;
   keychainState.copied.length = 0;
   keychainState.copyResult = true;
-  desktopState.codex = false;
   home = mkdtempSync(join(tmpdir(), 'vc-setup-agents-'));
   savedEnv = {
     HOME: process.env.HOME,
@@ -253,6 +251,300 @@ describe('ai-gateway coding-agents setup', () => {
         );
       }
     );
+
+    // Regression: a later setup run for one agent must not clobber env
+    // exports another agent wrote into the managed shell block (this wiped
+    // ANTHROPIC_AUTH_TOKEN on a real machine when a codex-only run followed
+    // a claude-code run).
+    it.skipIf(process.platform === 'win32')(
+      "preserves other agents' env exports across sequential setup runs",
+      async () => {
+        useUser();
+        client.nonInteractive = true;
+        keychainState.available = true;
+        keychainState.storeResult = true;
+        client.setArgv(
+          'ai-gateway',
+          'coding-agents',
+          'setup',
+          '--key',
+          'vck_DummyKey0002',
+          '--agent',
+          'claude-code'
+        );
+        expect(await aiGateway(client)).toBe(0);
+        expect(readFileSync(bashrcPath(), 'utf8')).toContain(
+          'ANTHROPIC_AUTH_TOKEN'
+        );
+
+        client.setArgv(
+          'ai-gateway',
+          'coding-agents',
+          'setup',
+          '--key',
+          'vck_DummyKey0002',
+          '--agent',
+          'codex'
+        );
+        expect(await aiGateway(client)).toBe(0);
+
+        const rc = readFileSync(bashrcPath(), 'utf8');
+        expect(rc).toContain('AI_GATEWAY_API_KEY');
+        // The codex run rewrote the block — claude-code's export survives.
+        expect(rc).toContain('ANTHROPIC_AUTH_TOKEN');
+        // Exactly one managed block.
+        expect(rc.split('# >>> vercel ai-gateway >>>').length).toBe(2);
+      }
+    );
+
+    // Cursor keeps BYOK settings in its own store, so setup is guidance-only:
+    // provision the key into the shell environment and emit manual steps.
+    it.skipIf(process.platform === 'win32')(
+      'configures Cursor with a shell export and manual-steps notes only',
+      async () => {
+        useUser();
+        client.nonInteractive = true;
+        mkdirSync(join(home, '.cursor'), { recursive: true });
+        client.setArgv(
+          'ai-gateway',
+          'coding-agents',
+          'setup',
+          '--key',
+          'vck_DummyKey0002',
+          '--agent',
+          'cursor'
+        );
+
+        const exitCode = await aiGateway(client);
+        expect(exitCode).toBe(0);
+
+        const bashrc = readFileSync(bashrcPath(), 'utf8');
+        expect(bashrc).toContain(
+          "export AI_GATEWAY_API_KEY='vck_DummyKey0002'"
+        );
+        // Guidance-only: nothing is written into Cursor's own directory.
+        expect(readdirSync(join(home, '.cursor'))).toEqual([]);
+
+        const out = JSON.parse(client.stdout.getFullOutput());
+        expect(out.status).toBe('ok');
+        const notes: string[] = out.notes ?? [];
+        expect(notes.some(n => n.includes('Override OpenAI Base URL'))).toBe(
+          true
+        );
+        expect(
+          notes.some(n => n.includes('ai-gateway.vercel.sh/cursor/v1'))
+        ).toBe(true);
+        // The key itself must never appear in notes.
+        expect(notes.every(n => !n.includes('vck_DummyKey0002'))).toBe(true);
+      }
+    );
+
+    it('configures Kilo Code with an env-referenced openai-compatible provider', async () => {
+      useUser();
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.config', 'kilo'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0002',
+        '--agent',
+        'kilo'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const raw = readFileSync(
+        join(home, '.config', 'kilo', 'kilo.json'),
+        'utf8'
+      );
+      const config = JSON.parse(raw);
+      expect(config.provider['openai-compatible'].options).toEqual({
+        apiKey: '{env:AI_GATEWAY_API_KEY}',
+        baseURL: 'https://ai-gateway.vercel.sh/coding-agent/v1',
+      });
+      // Kilo substitutes {env:…} itself — the literal key stays out of the file.
+      expect(raw).not.toContain('vck_DummyKey0002');
+    });
+
+    // XDG_CONFIG_HOME is a unix convention; kiloConfigDir requires an
+    // absolute unix path, so Windows exercises the ~/.config fallback.
+    it.skipIf(process.platform === 'win32')(
+      'honors XDG_CONFIG_HOME for the Kilo config location',
+      async () => {
+        useUser();
+        client.nonInteractive = true;
+        const xdg = join(home, 'xdg-config');
+        const saved = process.env.XDG_CONFIG_HOME;
+        process.env.XDG_CONFIG_HOME = xdg;
+        try {
+          mkdirSync(join(xdg, 'kilo'), { recursive: true });
+          client.setArgv(
+            'ai-gateway',
+            'coding-agents',
+            'setup',
+            '--key',
+            'vck_DummyKey0002',
+            '--agent',
+            'kilo'
+          );
+          expect(await aiGateway(client)).toBe(0);
+          expect(existsSync(join(xdg, 'kilo', 'kilo.json'))).toBe(true);
+        } finally {
+          if (saved === undefined) delete process.env.XDG_CONFIG_HOME;
+          else process.env.XDG_CONFIG_HOME = saved;
+        }
+      }
+    );
+
+    it('configures Cline via its providers.json (0600), version only when new', async () => {
+      useUser();
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.cline'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0002',
+        '--agent',
+        'cline'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const providersPath = join(
+        home,
+        '.cline',
+        'data',
+        'settings',
+        'providers.json'
+      );
+      const config = JSON.parse(readFileSync(providersPath, 'utf8'));
+      expect(config.version).toBe(1);
+      expect(config.lastUsedProvider).toBe('vercel-ai-gateway');
+      expect(config.providers['vercel-ai-gateway'].settings).toMatchObject({
+        provider: 'vercel-ai-gateway',
+        apiKey: 'vck_DummyKey0002',
+      });
+      expect(config.providers['vercel-ai-gateway'].tokenSource).toBe('manual');
+      if (process.platform !== 'win32') {
+        expect(statSync(providersPath).mode & 0o777).toBe(0o600);
+      }
+    });
+
+    it('preserves an existing providers.json schema version for Cline', async () => {
+      useUser();
+      client.nonInteractive = true;
+      const settingsDir = join(home, '.cline', 'data', 'settings');
+      mkdirSync(settingsDir, { recursive: true });
+      writeFileSync(
+        join(settingsDir, 'providers.json'),
+        JSON.stringify({
+          version: 2,
+          lastUsedProvider: 'anthropic',
+          providers: {
+            anthropic: { settings: { provider: 'anthropic' } },
+          },
+        })
+      );
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0002',
+        '--agent',
+        'cline'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const config = JSON.parse(
+        readFileSync(join(settingsDir, 'providers.json'), 'utf8')
+      );
+      // Never downgrade another tool's schema version.
+      expect(config.version).toBe(2);
+      // Existing provider entries survive alongside the new one.
+      expect(config.providers.anthropic).toBeDefined();
+      expect(config.providers['vercel-ai-gateway'].settings.apiKey).toBe(
+        'vck_DummyKey0002'
+      );
+      expect(config.lastUsedProvider).toBe('vercel-ai-gateway');
+    });
+
+    it('configures Hermes via config.yaml with key_env, preserving existing entries', async () => {
+      useUser();
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.hermes'), { recursive: true });
+      writeFileSync(
+        join(home, '.hermes', 'config.yaml'),
+        'providers:\n  work-gpu:\n    api: https://internal.corp/v1\n    key_env: CORP_KEY\n'
+      );
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0002',
+        '--agent',
+        'hermes'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+
+      const raw = readFileSync(join(home, '.hermes', 'config.yaml'), 'utf8');
+      expect(raw).toContain('vercel-ai-gateway');
+      expect(raw).toContain(
+        'api: https://ai-gateway.vercel.sh/coding-agent/v1'
+      );
+      expect(raw).toContain('key_env: AI_GATEWAY_API_KEY');
+      expect(raw).toContain('discover_models: true');
+      // Existing provider entries survive the merge.
+      expect(raw).toContain('work-gpu');
+      expect(raw).toContain('CORP_KEY');
+      // The literal key never lands in the file.
+      expect(raw).not.toContain('vck_DummyKey0002');
+    });
+
+    it('configures OpenClaw with an env-referenced provider and starter models', async () => {
+      useUser();
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.openclaw'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0002',
+        '--agent',
+        'openclaw'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+
+      const raw = readFileSync(
+        join(home, '.openclaw', 'openclaw.json'),
+        'utf8'
+      );
+      const config = JSON.parse(raw);
+      const provider = config.models.providers['vercel-ai-gateway'];
+      expect(provider.baseUrl).toBe(
+        'https://ai-gateway.vercel.sh/coding-agent/v1'
+      );
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: asserting OpenClaw's literal env-reference syntax
+      expect(provider.apiKey).toBe('${AI_GATEWAY_API_KEY}');
+      expect(provider.api).toBe('openai-completions');
+      expect(provider.models.length).toBeGreaterThan(0);
+      expect(config.agents.defaults.model.primary).toBe(
+        'vercel-ai-gateway/anthropic/claude-fable-5'
+      );
+      expect(raw).not.toContain('vck_DummyKey0002');
+    });
 
     it('writes a --base-url override verbatim into the Codex config', async () => {
       useUser();
@@ -738,6 +1030,22 @@ describe('ai-gateway coding-agents setup', () => {
       expect(await aiGateway(client)).toBe(1);
       await expect(client.stderr).toOutput('No coding agents detected');
     });
+
+    // Cline, Cursor, Hermes, Kilo Code and OpenClaw are no longer experimental,
+    // so detection reaches them without an explicit --agent.
+    it('selects a formerly experimental agent when detected', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      mkdirSync(join(home, '.cline'), { recursive: true });
+      client.setArgv('ai-gateway', 'coding-agents', 'setup', '--yes');
+
+      expect(await aiGateway(client)).toBe(0);
+      expect(
+        existsSync(join(home, '.cline', 'data', 'settings', 'providers.json'))
+      ).toBe(true);
+    });
   });
 
   describe('non-interactive agent selection', () => {
@@ -1042,7 +1350,7 @@ describe('ai-gateway coding-agents setup', () => {
       client.stdin.write('\x1b[B\n');
 
       expect(await exitCodePromise).toBe(0);
-      await expect(client.stderr).toOutput('copied to clipboard');
+      await expect(client.stderr).toOutput('Prompt copied');
 
       expect(lastCreateBody).toBeDefined();
       expect(keychainState.stored).toContain(CREATED_KEY);
@@ -1067,7 +1375,7 @@ describe('ai-gateway coding-agents setup', () => {
       client.stdin.write('\x1b[B\n');
 
       expect(await exitCodePromise).toBe(0);
-      await expect(client.stderr).toOutput('prompt printed below');
+      await expect(client.stderr).toOutput('Prompt printed below');
       expect(client.stdout.getFullOutput()).toContain('settings.json');
     });
 
@@ -1337,6 +1645,85 @@ describe('ai-gateway coding-agents setup', () => {
       expect(creates).toBe(2);
       const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
       expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe('vck_Minted20000000');
+    });
+  });
+
+  describe('Codex Desktop session migration', () => {
+    it('prompts or copies without changing config or creating a key', async () => {
+      const id = '019e944c-b55e-7af2-9ed6-013d2e573834';
+      const directory = join(home, '.codex', 'sessions', '2026', '07', '27');
+      const source = join(directory, `rollout-2026-07-27T00-00-00-${id}.jsonl`);
+      const content = `${JSON.stringify({
+        type: 'session_meta',
+        payload: {
+          id,
+          originator: 'Codex Desktop',
+          model_provider: 'openai',
+        },
+      })}\n{"type":"event","payload":"unchanged"}\n`;
+      useUser();
+      useCreateApiKey();
+      client.nonInteractive = true;
+      const run = async (...args: string[]) => {
+        client.setArgv(
+          'ai-gateway',
+          'coding-agents',
+          'setup',
+          '--agent',
+          'codex',
+          '--no-keychain',
+          ...args
+        );
+        return aiGateway(client);
+      };
+      expect(await run('--key', 'vck_ExistingCodexKey')).toBe(0);
+      mkdirSync(directory, { recursive: true });
+      writeFileSync(source, content);
+      const config = readFileSync(codexConfigPath(), 'utf8');
+      // Windows writes no shell rc (env must be set manually), so there's
+      // nothing to preserve there.
+      const shell =
+        process.platform === 'win32'
+          ? null
+          : readFileSync(bashrcPath(), 'utf8');
+      client.config.currentTeam = undefined;
+
+      let offset = client.stdout.getFullOutput().length;
+      expect(await run('--dry-run')).toBe(0);
+      const dryRun = JSON.parse(client.stdout.getFullOutput().slice(offset));
+      expect(dryRun.migrations).toMatchObject([
+        { agent: 'codex', action: 'would_copy', sessions: 1 },
+      ]);
+      offset = client.stdout.getFullOutput().length;
+      expect(
+        await run('--no-session-migration', '--key', 'vck_ExistingCodexKey')
+      ).toBe(0);
+      expect(
+        JSON.parse(client.stdout.getFullOutput().slice(offset)).reason
+      ).toBe('already_configured');
+
+      offset = client.stdout.getFullOutput().length;
+      expect(await run('--apply', 'prompt')).toBe(0);
+      const prompt = JSON.parse(client.stdout.getFullOutput().slice(offset));
+      expect(prompt).toMatchObject({ reason: 'agent_prompt', configured: [] });
+      expect(prompt.prompt).toContain('Never move, edit, delete');
+      expect(readdirSync(directory)).toHaveLength(1);
+
+      offset = client.stdout.getFullOutput().length;
+      expect(await run()).toBe(0);
+      const applied = JSON.parse(client.stdout.getFullOutput().slice(offset));
+      expect(applied).toMatchObject({
+        reason: 'sessions_migrated',
+        configured: [],
+        migrated: [{ agentId: 'codex', copied: 1, skipped: 0 }],
+      });
+      expect(lastCreateBody).toBeUndefined();
+      expect(readFileSync(source, 'utf8')).toBe(content);
+      expect(readFileSync(codexConfigPath(), 'utf8')).toBe(config);
+      if (shell !== null) {
+        expect(readFileSync(bashrcPath(), 'utf8')).toBe(shell);
+      }
+      expect(readdirSync(directory)).toHaveLength(2);
     });
   });
 
@@ -2192,390 +2579,6 @@ describe('ai-gateway coding-agents setup', () => {
         CREATED_KEY
       );
       expect(client.stdout.getFullOutput()).toContain(CREATED_KEY);
-    });
-  });
-
-  describe('desktop-app consent', () => {
-    it('asks before configuring Codex when its desktop app is installed', async () => {
-      useUser();
-      desktopState.codex = true;
-      mkdirSync(join(home, '.codex'), { recursive: true });
-      client.setArgv(
-        'ai-gateway',
-        'coding-agents',
-        'setup',
-        '--key',
-        'vck_DummyKey0020',
-        '--agent',
-        'codex'
-      );
-
-      const exitCodePromise = aiGateway(client);
-      await expect(client.stderr).toOutput(
-        'The Codex desktop app will stop working'
-      );
-      await expect(client.stderr).toOutput('Configure Codex anyway?');
-      client.stdin.write('y\n');
-      await expect(client.stderr).toOutput('Apply these changes?');
-      client.stdin.write('\n');
-
-      expect(await exitCodePromise).toBe(0);
-      const toml = tomlParse(readFileSync(codexConfigPath(), 'utf8')) as any;
-      expect(toml.model_provider).toBe('vercel');
-    });
-
-    it('declining skips the agent and configures the rest', async () => {
-      useUser();
-      desktopState.codex = true;
-      mkdirSync(join(home, '.claude'), { recursive: true });
-      mkdirSync(join(home, '.codex'), { recursive: true });
-      client.setArgv(
-        'ai-gateway',
-        'coding-agents',
-        'setup',
-        '--key',
-        'vck_DummyKey0021',
-        '--agent',
-        'claude-code',
-        '--agent',
-        'codex'
-      );
-
-      const exitCodePromise = aiGateway(client);
-      await expect(client.stderr).toOutput('Configure Codex anyway?');
-      client.stdin.write('\n'); // default No
-      await expect(client.stderr).toOutput('Skipped Codex');
-      await expect(client.stderr).toOutput('Apply these changes?');
-      client.stdin.write('\n');
-
-      expect(await exitCodePromise).toBe(0);
-      expect(existsSync(claudeSettingsPath())).toBe(true);
-      // Codex was left completely untouched.
-      expect(existsSync(codexConfigPath())).toBe(false);
-      expect(existsSync(bashrcPath())).toBe(false);
-    });
-
-    it('declining the only agent ends the run before the key interview even starts', async () => {
-      useTeam();
-      useUser();
-      useCreateApiKey();
-      desktopState.codex = true;
-      mkdirSync(join(home, '.codex'), { recursive: true });
-      client.setArgv(
-        'ai-gateway',
-        'coding-agents',
-        'setup',
-        '--agent',
-        'codex'
-      );
-
-      const exitCodePromise = aiGateway(client);
-      // Consent is the FIRST question — declining costs no setup answers and
-      // no team round trip.
-      await expect(client.stderr).toOutput('Configure Codex anyway?');
-      client.stdin.write('\n'); // default No
-
-      expect(await exitCodePromise).toBe(0);
-      await expect(client.stderr).toOutput('Nothing to configure');
-      const stderr = client.stderr.getFullOutput();
-      expect(stderr).not.toContain('use with your coding agents');
-      expect(stderr).not.toContain('What team should the API key be under?');
-      expect(stderr).not.toContain('Set a spend limit');
-      expect(stderr).not.toContain('Set an expiration');
-      // No key was minted for a run that configured nothing.
-      expect(lastCreateBody).toBeUndefined();
-      expect(existsSync(codexConfigPath())).toBe(false);
-    });
-
-    it('--yes with an explicit --agent consents but still warns', async () => {
-      useUser();
-      desktopState.codex = true;
-      client.setArgv(
-        'ai-gateway',
-        'coding-agents',
-        'setup',
-        '--yes',
-        '--key',
-        'vck_DummyKey0022',
-        '--agent',
-        'codex'
-      );
-
-      expect(await aiGateway(client)).toBe(0);
-      expect(client.stderr.getFullOutput()).toContain(
-        'The Codex desktop app will stop working'
-      );
-      expect(existsSync(codexConfigPath())).toBe(true);
-    });
-
-    it('--yes without naming the agent skips it with a hint', async () => {
-      useUser();
-      desktopState.codex = true;
-      mkdirSync(join(home, '.claude'), { recursive: true });
-      mkdirSync(join(home, '.codex'), { recursive: true });
-      client.setArgv(
-        'ai-gateway',
-        'coding-agents',
-        'setup',
-        '--yes',
-        '--key',
-        'vck_DummyKey0023'
-      );
-
-      expect(await aiGateway(client)).toBe(0);
-      expect(client.stderr.getFullOutput()).toContain(
-        'Pass --agent codex to configure it anyway'
-      );
-      expect(existsSync(claudeSettingsPath())).toBe(true);
-      expect(existsSync(codexConfigPath())).toBe(false);
-    });
-
-    it('emits warnings in the JSON payload for an explicit agent', async () => {
-      useUser();
-      desktopState.codex = true;
-      client.nonInteractive = true;
-      client.setArgv(
-        'ai-gateway',
-        'coding-agents',
-        'setup',
-        '--key',
-        'vck_DummyKey0024',
-        '--agent',
-        'codex'
-      );
-
-      expect(await aiGateway(client)).toBe(0);
-      const out = JSON.parse(client.stdout.getFullOutput());
-      expect(out.status).toBe('ok');
-      expect(out.warnings).toEqual([
-        expect.objectContaining({ agent: 'codex', code: 'desktop_app_breaks' }),
-      ]);
-      expect(out.configured.length).toBeGreaterThan(0);
-    });
-
-    it('fails non-interactively with a self-contained payload when every detected agent needs consent', async () => {
-      useUser();
-      desktopState.codex = true;
-      client.nonInteractive = true;
-      mkdirSync(join(home, '.codex'), { recursive: true });
-      client.setArgv(
-        'ai-gateway',
-        'coding-agents',
-        'setup',
-        '--key',
-        'vck_DummyKey0025'
-      );
-
-      expect(await aiGateway(client)).toBe(1);
-      const out = JSON.parse(client.stdout.getFullOutput());
-      expect(out.status).toBe('error');
-      // Not 'confirmation_required': --yes can't grant consent, so agents that
-      // auto-retry confirmation failures with --yes must not loop here.
-      expect(out.reason).toBe('requires_consent');
-      expect(out.message).toContain('--agent codex');
-      expect(out.warnings).toEqual([
-        expect.objectContaining({ agent: 'codex', code: 'desktop_app_breaks' }),
-      ]);
-      expect(out.skipped).toEqual([
-        expect.objectContaining({
-          target: 'codex',
-          reason: 'requires_consent',
-        }),
-      ]);
-      // The suggested command replays the original invocation — same key
-      // intent (redacted), same flags — with only the consent flags appended.
-      expect(out.next[0].command).toBe(
-        'vercel ai-gateway coding-agents setup --key <key> --agent codex'
-      );
-      // The suggested command must never carry key material.
-      expect(JSON.stringify(out)).not.toContain('vck_');
-      expect(existsSync(codexConfigPath())).toBe(false);
-    });
-
-    it('--all counts as explicit consent', async () => {
-      useUser();
-      desktopState.codex = true;
-      client.nonInteractive = true;
-      mkdirSync(join(home, '.codex'), { recursive: true });
-      client.setArgv(
-        'ai-gateway',
-        'coding-agents',
-        'setup',
-        '--all',
-        '--key',
-        'vck_DummyKey0030'
-      );
-
-      expect(await aiGateway(client)).toBe(0);
-      const out = JSON.parse(client.stdout.getFullOutput());
-      expect(out.status).toBe('ok');
-      expect(out.warnings).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            agent: 'codex',
-            code: 'desktop_app_breaks',
-          }),
-        ])
-      );
-      expect(
-        out.skipped.filter((s: any) => s.reason === 'requires_consent')
-      ).toEqual([]);
-      expect(existsSync(codexConfigPath())).toBe(true);
-    });
-
-    it('skips a detected-but-unnamed agent in JSON mode and configures the rest', async () => {
-      useUser();
-      desktopState.codex = true;
-      client.nonInteractive = true;
-      mkdirSync(join(home, '.claude'), { recursive: true });
-      mkdirSync(join(home, '.codex'), { recursive: true });
-      client.setArgv(
-        'ai-gateway',
-        'coding-agents',
-        'setup',
-        '--key',
-        'vck_DummyKey0026'
-      );
-
-      expect(await aiGateway(client)).toBe(0);
-      const out = JSON.parse(client.stdout.getFullOutput());
-      expect(
-        out.skipped.some(
-          (s: any) => s.target === 'codex' && s.reason === 'requires_consent'
-        )
-      ).toBe(true);
-      // The skipped agent's structured warning code survives on the success
-      // payload — consumers don't have to parse it out of skipped[].message.
-      expect(out.warnings).toEqual([
-        expect.objectContaining({ agent: 'codex', code: 'desktop_app_breaks' }),
-      ]);
-      expect(existsSync(claudeSettingsPath())).toBe(true);
-      expect(existsSync(codexConfigPath())).toBe(false);
-    });
-
-    it('an interactive --yes dry run predicts the failure a real run would hit', async () => {
-      useUser();
-      keychainState.available = false;
-      desktopState.codex = true;
-      mkdirSync(join(home, '.codex'), { recursive: true });
-      client.setArgv(
-        'ai-gateway',
-        'coding-agents',
-        'setup',
-        '--yes',
-        '--dry-run',
-        '--key',
-        'vck_DummyKey0034'
-      );
-
-      expect(await aiGateway(client)).toBe(0);
-      const stderr = client.stderr.getFullOutput();
-      // The preview states the real outcome: a refusal, not a benign skip.
-      expect(stderr).toContain('a real run would fail');
-      expect(stderr).toContain('Pass --agent codex');
-      expect(existsSync(codexConfigPath())).toBe(false);
-    });
-
-    it('carries warnings and consent skips through a JSON dry run', async () => {
-      useUser();
-      desktopState.codex = true;
-      client.nonInteractive = true;
-      client.setArgv(
-        'ai-gateway',
-        'coding-agents',
-        'setup',
-        '--dry-run',
-        '--key',
-        'vck_DummyKey0027',
-        '--agent',
-        'codex'
-      );
-      expect(await aiGateway(client)).toBe(0);
-      const explicitOut = JSON.parse(client.stdout.getFullOutput());
-      expect(explicitOut.reason).toBe('dry_run');
-      expect(explicitOut.warnings).toHaveLength(1);
-
-      const stdoutAfterFirst = client.stdout.getFullOutput().length;
-      mkdirSync(join(home, '.claude'), { recursive: true });
-      mkdirSync(join(home, '.codex'), { recursive: true });
-      client.setArgv(
-        'ai-gateway',
-        'coding-agents',
-        'setup',
-        '--dry-run',
-        '--key',
-        'vck_DummyKey0027'
-      );
-      expect(await aiGateway(client)).toBe(0);
-      const implicitOut = JSON.parse(
-        client.stdout.getFullOutput().slice(stdoutAfterFirst)
-      );
-      expect(
-        implicitOut.skipped.some((s: any) => s.reason === 'requires_consent')
-      ).toBe(true);
-      // The surviving agent's changes are still previewed…
-      expect(implicitOut.changes.length).toBeGreaterThan(0);
-      // …but none of the consent-skipped agent's.
-      expect(
-        implicitOut.changes.every((c: any) => !c.file.includes('.codex'))
-      ).toBe(true);
-    });
-
-    it('warns during an interactive dry run without prompting', async () => {
-      useUser();
-      desktopState.codex = true;
-      mkdirSync(join(home, '.codex'), { recursive: true });
-      client.setArgv(
-        'ai-gateway',
-        'coding-agents',
-        'setup',
-        '--dry-run',
-        '--key',
-        'vck_DummyKey0028',
-        '--agent',
-        'codex'
-      );
-
-      expect(await aiGateway(client)).toBe(0);
-      const stderr = client.stderr.getFullOutput();
-      // The warning reads loss first, then the cause lines, then how to
-      // revert — each cause sentence on its own line.
-      const impactAt = stderr.indexOf(
-        'The Codex desktop app will stop working'
-      );
-      const whyAt = stderr.indexOf('cannot use custom model providers');
-      const whyLine2At = stderr.indexOf('\n  The Codex CLI keeps working.');
-      // The undo instruction names the resolved file, not a bare filename.
-      const undoAt = stderr.indexOf(
-        `To undo: remove the model_provider line from ${codexConfigPath()}`
-      );
-      expect(impactAt).toBeGreaterThanOrEqual(0);
-      expect(whyAt).toBeGreaterThan(impactAt);
-      expect(whyLine2At).toBeGreaterThan(whyAt);
-      expect(undoAt).toBeGreaterThan(whyLine2At);
-      // The old single-paragraph warning is gone.
-      expect(stderr).not.toContain('The Codex desktop app is installed');
-      expect(stderr).not.toContain('Configure Codex anyway?');
-      expect(existsSync(codexConfigPath())).toBe(false);
-    });
-
-    it('stays silent and additive when no desktop app is installed', async () => {
-      useUser();
-      client.nonInteractive = true;
-      client.setArgv(
-        'ai-gateway',
-        'coding-agents',
-        'setup',
-        '--key',
-        'vck_DummyKey0029',
-        '--agent',
-        'codex'
-      );
-
-      expect(await aiGateway(client)).toBe(0);
-      const out = JSON.parse(client.stdout.getFullOutput());
-      expect(out.warnings).toEqual([]);
-      expect(client.stderr.getFullOutput()).not.toContain('desktop app');
     });
   });
 

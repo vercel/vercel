@@ -28,6 +28,12 @@ async function main() {
     { recursive: true, force: true }
   );
 
+  // Static installer script served at /install (see rewrite in vercel.json)
+  await fs.copyFile(
+    join(repoRoot, 'api', '_scripts', 'install.sh'),
+    join(pubDir, 'install.sh')
+  );
+
   const examples = await getExampleList();
   const pathListAll = join(pubDir, 'list-all.json');
   await fs.writeFile(pathListAll, JSON.stringify(examples));

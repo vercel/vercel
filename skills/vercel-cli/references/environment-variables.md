@@ -42,7 +42,9 @@ vercel env pull                   # writes to .env.local
 vercel env pull .env.development  # writes to custom file
 ```
 
-`vercel pull` also downloads env vars along with project config.
+The CLI adds `.env*` to `.gitignore` only when writing the default `.env.local`. Before using another filename, verify that source control excludes it.
+
+`vercel pull` instead downloads environment data and project settings under `.vercel/`, including `.vercel/.env.<environment>.local`.
 
 ## Running with Env Vars
 

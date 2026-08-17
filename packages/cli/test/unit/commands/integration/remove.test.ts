@@ -208,7 +208,7 @@ describe('integration', () => {
         const exitCode = await integrationCommand(client);
         expect(exitCode).toEqual(1);
         await expect(client.stderr).toOutput(
-          'Error: --format=json requires --yes to skip confirmation prompts'
+          'Error: --json requires --yes to skip confirmation prompts'
         );
       });
 
@@ -401,13 +401,13 @@ describe('integration', () => {
             expect.arrayContaining([
               expect.objectContaining({
                 command: expect.stringContaining(
-                  'integration resource remove store-acme-other-project --disconnect-all --yes --format=json'
+                  'integration resource remove store-acme-other-project --disconnect-all --yes --json'
                 ),
                 when: expect.stringMatching(/store-acme-other-project/),
               }),
               expect.objectContaining({
                 command: expect.stringContaining(
-                  'integration resource remove store-acme-no-projects --disconnect-all --yes --format=json'
+                  'integration resource remove store-acme-no-projects --disconnect-all --yes --json'
                 ),
                 when: expect.stringMatching(/store-acme-no-projects/),
               }),
@@ -415,7 +415,7 @@ describe('integration', () => {
           );
           expect(jsonOutput.retry).toEqual(
             expect.stringContaining(
-              `integration remove ${integration} --yes --format=json`
+              `integration remove ${integration} --yes --json`
             )
           );
         });
@@ -455,7 +455,7 @@ describe('integration', () => {
           expect(jsonOutput.retry).toContain(
             `integration remove ${integration} --yes`
           );
-          expect(jsonOutput.retry).not.toContain('--format=json');
+          expect(jsonOutput.retry).not.toContain('--json');
           expect(jsonOutput.next?.[0]?.command).not.toMatch(/--yes.*--yes/);
         });
 

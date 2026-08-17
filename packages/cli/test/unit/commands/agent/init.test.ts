@@ -52,6 +52,7 @@ describe('agent init', () => {
       const content = await fs.readFile(join(cwd, 'AGENTS.md'), 'utf-8');
       expect(content).toContain('<!-- VERCEL BEST PRACTICES START -->');
       expect(content).toContain('## Best practices for developing on Vercel');
+      expect(content).toContain('retry the same URL with `vercel curl <url>`');
       expect(content).toContain('<!-- VERCEL BEST PRACTICES END -->');
     });
 

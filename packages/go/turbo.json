@@ -6,6 +6,9 @@
       "dependsOn": ["^build"],
       "outputLogs": "new-only",
       "outputs": ["dist/**", "bin/**", "bootstrap/utils.go"]
+    },
+    "test-e2e-artifacts": {
+      "command": ["pnpm", "run", "test-e2e"]
     }
   }
 }

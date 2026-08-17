@@ -149,10 +149,18 @@ export const versionsListSubcommand = {
       argument: 'NUMBER',
     },
     {
-      name: 'cursor',
+      name: 'next',
       shorthand: null,
       type: String,
       deprecated: false,
+      description: 'Continue from a previous response',
+      argument: 'CURSOR',
+    },
+    {
+      name: 'cursor',
+      shorthand: null,
+      type: String,
+      deprecated: true,
       description: 'Pagination cursor from a previous versions response',
       argument: 'CURSOR',
     },
@@ -179,7 +187,7 @@ export const versionsListSubcommand = {
     },
     {
       name: 'List the next page of version history',
-      value: `${packageName} flags versions my-feature-flag --limit 10 --cursor <cursor>`,
+      value: `${packageName} flags versions my-feature-flag --limit 10 --next <cursor>`,
     },
     {
       name: 'List version history as JSON',
@@ -423,12 +431,33 @@ export const updateSubcommand = {
       argument: 'LABEL',
     },
     {
+      name: 'add-variant',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description:
+        'Add a variant as VALUE[=LABEL] (repeatable for string, number, and json flags)',
+      argument: 'VALUE[=LABEL]',
+    },
+    {
+      name: 'remove-variant',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description: 'Remove a variant by ID or value (repeatable)',
+      argument: 'VARIANT',
+    },
+    {
       name: 'message',
       shorthand: null,
       type: String,
       deprecated: false,
       description: 'Optional revision message for the update',
       argument: 'TEXT',
+    },
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when removing a variant',
     },
   ],
   examples: [
@@ -443,6 +472,14 @@ export const updateSubcommand = {
     {
       name: 'Rename a boolean variant label',
       value: `${packageName} flags update my-feature --variant false --label "Disabled"`,
+    },
+    {
+      name: 'Add a new variant',
+      value: `${packageName} flags update my-feature --add-variant treatment="New onboarding"`,
+    },
+    {
+      name: 'Remove variants by value or ID',
+      value: `${packageName} flags update my-feature --remove-variant control --remove-variant var_123 --yes`,
     },
   ],
 } as const;
@@ -1056,6 +1093,35 @@ export const archiveSubcommand = {
   ],
 } as const;
 
+export const unarchiveSubcommand = {
+  name: 'unarchive',
+  aliases: [],
+  description: 'Unarchive a feature flag',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when unarchiving a flag',
+    },
+  ],
+  examples: [
+    {
+      name: 'Unarchive a feature flag',
+      value: `${packageName} flags unarchive my-feature-flag`,
+    },
+    {
+      name: 'Unarchive without confirmation',
+      value: `${packageName} flags unarchive my-feature-flag --yes`,
+    },
+  ],
+} as const;
+
 export const disableSubcommand = {
   name: 'disable',
   aliases: [],
@@ -1609,6 +1675,7 @@ export const flagsCommand = {
     rolloutSubcommand,
     removeSubcommand,
     archiveSubcommand,
+    unarchiveSubcommand,
     disableSubcommand,
     enableSubcommand,
     rulesSubcommand,

@@ -1,0 +1,23 @@
+[project]
+name = "services-pyproject-apscheduler"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "apscheduler>=3.10.4,<4",
+  "fastapi",
+  "vercel-cache",
+]
+
+[tool.vercel]
+entrypoint = "app:app"
+
+[[tool.vercel.subscribers]]
+entrypoint = "scheduler:scheduler"
+
+# Previews only activate schedulers on traffic when an idle deadline is
+# configured; it also keeps the chain from outliving the test run. The
+# short deadline is load-bearing: the probes go quiet for 35 seconds and
+# then check that ticks stopped once this deadline lapsed.
+[tool.vercel.apscheduler.previews]
+enabled = true
+idle_timeout = "15s"

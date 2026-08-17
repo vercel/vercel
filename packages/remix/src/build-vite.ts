@@ -26,6 +26,7 @@ import {
   getReactRouterDataPaths,
   getRegExpFromPath,
   getPackageVersion,
+  getSkewProtectionRoute,
   hasScript,
   logNftWarnings,
   shouldRegisterSsrForPrerenderedRoute,
@@ -322,6 +323,7 @@ export const build: BuildV2 = async ({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
+    nodeVersion,
     env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -635,6 +637,19 @@ export const build: BuildV2 = async ({
   // handle so the rewritten path (e.g. `/about.html`) gets resolved by
   // the static lookup.
   routes.unshift(...prerenderRewrites, { handle: 'filesystem' });
+
+  // When Skew Protection is enabled, the routing layer stamps the `__vdpl`
+  // deployment ID cookie onto document responses instead of the rendering
+  // function, so the origin response stays free of `Set-Cookie` and remains
+  // cacheable by the CDN. This must be the first route (before the
+  // filesystem handle) so the cookie is applied to cache HITs and
+  // prerendered static files as well.
+  if (isReactRouter) {
+    const skewProtectionRoute = getSkewProtectionRoute();
+    if (skewProtectionRoute) {
+      routes.unshift(skewProtectionRoute);
+    }
+  }
 
   // For the 404 case, invoke the Function (or serve the static file
   // for `ssr: false` mode) at the `/` path. Remix will serve its 404 route.

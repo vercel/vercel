@@ -16,16 +16,15 @@ import { resolveVcrScope } from './utils/resolve-vcr-scope';
 import { validateVcrJsonOutput, validateVcrChoice } from './utils/validators';
 import { emitVcrArgParseError, handleVcrApiError } from './utils/errors';
 import {
+  AUTH_FAILURE,
   VCR_ENGINES,
   VCR_LOGIN_USERNAME,
   engineLogin,
   isEngineInstalled,
   resolveRegistry,
+  stderrTail,
   type VcrEngine,
-} from './utils/engine-login';
-
-/** stderr signatures that mean the registry rejected our credentials. */
-const AUTH_FAILURE = /denied|forbidden|unauthorized|401|403/i;
+} from './utils/engine';
 
 /**
  * The minted project OIDC token is development-scoped, which the API issues with
@@ -33,11 +32,6 @@ const AUTH_FAILURE = /denied|forbidden|unauthorized|401|403/i;
  * token as a static credential, so the login is only good until it expires.
  */
 const LOGIN_VALID_HOURS = 12;
-
-/** Last few lines of engine stderr, for surfacing an unexpected failure. */
-function stderrTail(stderr: string): string {
-  return stderr.trim().split('\n').slice(-5).join('\n');
-}
 
 export default async function login(
   client: Client,

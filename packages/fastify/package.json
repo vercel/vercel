@@ -1,6 +1,6 @@
 {
   "name": "@vercel/fastify",
-  "version": "0.1.107",
+  "version": "0.1.118",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -14,9 +14,9 @@
   },
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/unit/**/*.test.ts' 'test/unit/**/*.test.mts'",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test-unit": "vitest run --config ../../vitest.config.mts test/unit/",
+    "test": "vitest run --config ../../vitest.config.mts"
   },
   "files": [
     "dist",
@@ -31,7 +31,7 @@
     "@vercel/build-utils": "workspace:*",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
-    "vite": "^5.1.6",
-    "vitest": "^2.0.1"
+    "vite": "^6.4.3",
+    "vitest": "^4.1.10"
   }
 }

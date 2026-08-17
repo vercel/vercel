@@ -175,34 +175,6 @@ describe('project protection (SSO)', () => {
 });
 
 describe('project protection (password)', () => {
-  it('shows protection settings by default', async () => {
-    useProject({
-      ...defaultProject,
-      id: 'prj_123',
-      name: 'my-project',
-    });
-
-    client.setArgv('project', 'protection', 'my-project');
-    const exitCode = await project(client);
-
-    expect(exitCode).toBe(0);
-    await expect(client.stderr).toOutput('Protection settings');
-  });
-
-  it('requires --password for action mode', async () => {
-    useProject({
-      ...defaultProject,
-      id: 'prj_123',
-      name: 'my-project',
-    });
-
-    client.setArgv('project', 'protection', 'enable', 'my-project');
-    const exitCode = await project(client);
-
-    expect(exitCode).toBe(2);
-    await expect(client.stderr).toOutput('No protection selected');
-  });
-
   it('disables password protection when --password is set', async () => {
     useProject({
       ...defaultProject,
@@ -259,37 +231,128 @@ describe('project protection (password)', () => {
       passwordProtection: true,
     });
   });
-});
 
-describe('project protection (customer support code visibility)', () => {
-  it('shows protection settings by default', async () => {
+  it('enables password protection with --protection-password', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
       name: 'my-project',
     });
 
-    client.setArgv('project', 'protection', 'my-project');
+    client.scenario.patch('/v9/projects/prj_123', (req, res) => {
+      expect(req.body).toEqual({
+        passwordProtection: {
+          deploymentType: 'prod_deployment_urls_and_all_previews',
+          password: 's3cret',
+        },
+      });
+      res.json({ id: 'prj_123' });
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--password',
+      '--protection-password',
+      's3cret'
+    );
     const exitCode = await project(client);
 
     expect(exitCode).toBe(0);
-    await expect(client.stderr).toOutput('Protection settings');
+    await expect(client.stderr).toOutput('Deployment protection enabled');
   });
 
-  it('requires flag for action mode', async () => {
+  it('requires --password when --protection-password is set', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
       name: 'my-project',
     });
 
-    client.setArgv('project', 'protection', 'enable', 'my-project');
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--protection-password',
+      's3cret'
+    );
     const exitCode = await project(client);
 
     expect(exitCode).toBe(2);
-    await expect(client.stderr).toOutput('No protection selected');
+    await expect(client.stderr).toOutput('requires `--password`');
   });
 
+  it('rejects --protection-password with disable', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'disable',
+      'my-project',
+      '--password',
+      '--protection-password',
+      's3cret'
+    );
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(2);
+    await expect(client.stderr).toOutput('can only be used with');
+  });
+
+  it('rejects empty --protection-password', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--password',
+      '--protection-password',
+      '   '
+    );
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(1);
+    await expect(client.stderr).toOutput('Invalid --protection-password');
+  });
+
+  it('rejects --protection-password longer than 72 characters', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--password',
+      '--protection-password',
+      'a'.repeat(73)
+    );
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(1);
+    await expect(client.stderr).toOutput('Invalid --protection-password');
+  });
+});
+
+describe('project protection (customer support code visibility)', () => {
   it('sets customerSupportCodeVisibility', async () => {
     useProject({
       ...defaultProject,
@@ -325,34 +388,6 @@ describe('project protection (customer support code visibility)', () => {
 });
 
 describe('project protection (skew)', () => {
-  it('shows protection settings by default', async () => {
-    useProject({
-      ...defaultProject,
-      id: 'prj_123',
-      name: 'my-project',
-    });
-
-    client.setArgv('project', 'protection', 'my-project');
-    const exitCode = await project(client);
-
-    expect(exitCode).toBe(0);
-    await expect(client.stderr).toOutput('Protection settings');
-  });
-
-  it('requires --skew for action mode', async () => {
-    useProject({
-      ...defaultProject,
-      id: 'prj_123',
-      name: 'my-project',
-    });
-
-    client.setArgv('project', 'protection', 'enable', 'my-project');
-    const exitCode = await project(client);
-
-    expect(exitCode).toBe(2);
-    await expect(client.stderr).toOutput('No protection selected');
-  });
-
   it('includes skewProtectionMaxAge when listing project protection as JSON', async () => {
     const projectWithSkew = {
       ...defaultProject,

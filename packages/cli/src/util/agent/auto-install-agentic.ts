@@ -239,7 +239,7 @@ async function isPluginInstalledForTarget(target: string): Promise<boolean> {
 }
 
 async function confirm(client: Client, message: string): Promise<boolean> {
-  if (!client.stdin.isTTY) {
+  if (client.nonInteractive || !client.stdin.isTTY) {
     return false;
   }
   return client.input.confirm(message, true);

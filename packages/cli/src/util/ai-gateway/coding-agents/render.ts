@@ -17,10 +17,16 @@ export function printResolvedState(args: {
   refreshPeriod?: string;
   expiresAt?: number;
   keychain?: boolean;
+  preserveKey?: boolean;
 }): void {
   const { selected, willCreate, name, budget, refreshPeriod, expiresAt } = args;
   output.print(chalk.bold('  Summary\n'));
   printAlignedLabel('Agents', selected.map(a => a.displayName).join(', '));
+  if (args.preserveKey) {
+    printAlignedLabel('API key', 'Existing configuration unchanged');
+    output.print('\n');
+    return;
+  }
   if (!willCreate) {
     printAlignedLabel('API key', 'Using provided key');
     output.print('\n');
@@ -88,7 +94,7 @@ export function printPlan(
     // The write follows the symlink to its target; surface that before approval.
     if (change.symlink) {
       output.print(
-        `    ${chalk.yellow('↳ warning:')} this path is a symlink — the write will follow it to its target\n`
+        `    ${chalk.yellow('↳ warning:')} this path is a symlink; the write will follow it to its target\n`
       );
     }
     // An existing file is copied to `<path>.bak` before it's overwritten;
@@ -103,6 +109,20 @@ export function printPlan(
     if (diff) {
       output.print(`${diff}\n`);
     }
+  }
+  for (const migration of plan.migrations) {
+    output.print(
+      `  ${chalk.green('+')} ${chalk.bold(migration.label)} (copy)  ${chalk.dim(
+        `${migration.itemCount} ${
+          migration.itemCount === 1 ? 'session' : 'sessions'
+        }, ${formatBytes(migration.totalBytes)}`
+      )}\n`
+    );
+    output.print(
+      chalk.dim(
+        `    ↳ copy only from ${migration.sourceRoots.join(', ')} to ${migration.destinationRoots.join(', ')}; originals remain unchanged\n`
+      )
+    );
   }
   output.print('\n');
 }
@@ -155,12 +175,32 @@ export function printKey(
 }
 
 export function buildAgentPrompt(plan: SetupPlan, apiKey: string): string {
-  const sections: string[] = [
-    'Set up the Vercel AI Gateway for my coding agents by applying the file changes below.',
-    'For each file, create it if missing or edit it to match the diff (lines starting with `+` are added, `-` are removed; `⋯` marks skipped unchanged lines).',
-    `Any masked value (e.g. ${maskSecret(apiKey)}) is my AI Gateway API key, stored in my macOS Keychain; the config and shell already reference it with \`${'security find-generic-password'}\`, so leave those lookups as-is and do not ask me to paste the key.`,
-    '',
-  ];
+  const fileChanges = plan.changes.filter(
+    change => change.status === 'create' || change.status === 'update'
+  );
+  const sections: string[] =
+    fileChanges.length > 0
+      ? [
+          'Set up the Vercel AI Gateway for my coding agents by applying the file changes below.',
+          'For each file, create it if missing or edit it to match the diff (lines starting with `+` are added, `-` are removed; `⋯` marks skipped unchanged lines).',
+          `Any masked value (e.g. ${maskSecret(apiKey)}) is my AI Gateway API key, stored in my macOS Keychain; the config and shell already reference it with \`${'security find-generic-password'}\`, so leave those lookups as-is and do not ask me to paste the key.`,
+          '',
+        ]
+      : [];
+  if (plan.migrations.length > 0) {
+    sections.push(
+      '# Existing Codex Desktop sessions',
+      'Before editing the provider configuration, copy the sessions described below. Never move, delete, or overwrite the originals.'
+    );
+    for (const migration of plan.migrations) {
+      sections.push(
+        '',
+        `## ${migration.agent}: ${migration.label}`,
+        ...migration.prompt
+      );
+    }
+    sections.push('');
+  }
   for (const change of plan.changes) {
     if (change.status !== 'create' && change.status !== 'update') {
       continue;
@@ -177,4 +217,10 @@ export function buildAgentPrompt(plan: SetupPlan, apiKey: string): string {
     sections.push('');
   }
   return `${sections.join('\n').trimEnd()}\n`;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KiB`;
+  return `${(bytes / 1024 ** 2).toFixed(1)} MiB`;
 }

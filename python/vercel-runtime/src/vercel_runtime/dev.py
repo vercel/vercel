@@ -18,14 +18,23 @@ from vercel_runtime.routing import (
     apply_service_route_prefix_to_asgi_scope,
     strip_service_route_prefix,
 )
+from vercel_runtime.wait_until import (
+    WaitUntilCollector,
+    begin_wait_until,
+    finish_wait_until,
+    finish_wait_until_async,
+)
 from vercel_runtime.workers import (
+    bootstrap_queue_service_app,
+    install_queue_integrations,
+    is_dev_queue_serving,
     is_worker_service,
     maybe_bootstrap_worker_service_app,
     prepare_worker_environment,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import Awaitable, Callable, Iterable, Iterator
     from wsgiref.types import WSGIApplication
 
     from vercel_runtime.asgi import ASGI
@@ -301,7 +310,37 @@ async def asgi_app(
             pass
 
     assert _asgi_user_app is not None
-    await _asgi_user_app(effective_scope, receive, send)
+    # Only HTTP requests get an invocation-scoped wait_until collector. A
+    # "lifespan" (or "websocket") type stays open until shutdown or for a long
+    # time, so attaching hooks to its collector would park them for the process
+    # lifetime and block them from ever running on real requests.
+    if (
+        effective_scope.get("type") != "http"
+        or effective_scope.get("path") == "/_vercel/ping"
+    ):
+        await _asgi_user_app(effective_scope, receive, send)
+        return
+
+    wait_until = begin_wait_until()
+    try:
+        await _asgi_user_app(effective_scope, receive, send)
+    finally:
+        await finish_wait_until_async(wait_until)
+
+
+def _wait_until_wsgi_result(
+    result: Iterable[bytes],
+    wait_until: WaitUntilCollector,
+) -> Iterator[bytes]:
+    try:
+        yield from result
+    finally:
+        try:
+            close = getattr(result, "close", None)
+            if callable(close):
+                close()
+        finally:
+            finish_wait_until(wait_until)
 
 
 def wsgi_app(
@@ -350,7 +389,16 @@ def wsgi_app(
 
     # Otherwise, delegate to user's WSGI app
     assert _wsgi_user_app is not None
-    return _wsgi_user_app(environ, start_response)
+    if environ.get("PATH_INFO") == "/_vercel/ping":
+        return _wsgi_user_app(environ, start_response)
+
+    wait_until = begin_wait_until()
+    try:
+        user_result = _wsgi_user_app(environ, start_response)
+    except BaseException:
+        finish_wait_until(wait_until)
+        raise
+    return _wait_until_wsgi_result(user_result, wait_until)
 
 
 def _start_wsgi(host: str, port: int) -> None:
@@ -398,6 +446,9 @@ def _setup_apps() -> None:
 
     _setup_server_log_routing()
     prepare_worker_environment()
+    # Publish-side activation only; queue-serving sidecars get the full
+    # consuming-side activation in bootstrap_queue_service_app below.
+    install_queue_integrations(queue_serving=False)
 
     mod = import_module(module_name, entry_abs)
 
@@ -406,6 +457,11 @@ def _setup_apps() -> None:
         return
 
     if is_worker_service():
+        if is_dev_queue_serving():
+            # vercel-queue SDK path: the module's subscriptions registered
+            # on import; serve them through vercel.queue's ASGI app.
+            _asgi_user_app = cast("ASGI", bootstrap_queue_service_app())
+            return
         worker_app = maybe_bootstrap_worker_service_app(mod)
         if worker_app is not None:
             _asgi_user_app = cast("ASGI", worker_app)

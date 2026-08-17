@@ -8,6 +8,7 @@ import {
   getNextConfig,
   getServerlessPages,
   normalizePrefetches,
+  getDefaultNextDeploymentId,
   getMaxUncompressedLambdaSize,
   getGroupMaxUncompressedLambdaSize,
   isLargeFunctionsEnabled,
@@ -495,7 +496,10 @@ function makePseudoFile(uncompressedSize: number): PseudoFile {
  */
 function groupPagesBySize(
   pageSizes: Record<string, number>,
-  runtime = 'nodejs22.x'
+  runtime = 'nodejs22.x',
+  functionsConfigManifest?: Parameters<
+    typeof getPageLambdaGroups
+  >[0]['functionsConfigManifest']
 ) {
   const pages = Object.keys(pageSizes);
   const compressedPages: Record<string, PseudoFile> = {};
@@ -506,7 +510,7 @@ function groupPagesBySize(
   return getPageLambdaGroups({
     entryPath: os.tmpdir(),
     config: {} as Config,
-    functionsConfigManifest: undefined,
+    functionsConfigManifest,
     pages,
     prerenderRoutes: new Set(),
     experimentalPPRRoutes: undefined,
@@ -519,6 +523,41 @@ function groupPagesBySize(
     nodeVersion: { runtime },
   });
 }
+
+describe('getPageLambdaGroups maxConcurrency', () => {
+  it('isolates every configured route, including matching limits', async () => {
+    const groups = await groupPagesBySize(
+      { 'a.js': MiB, 'b.js': MiB },
+      'nodejs22.x',
+      {
+        version: 1,
+        functions: {
+          '/a': { maxConcurrency: 2 },
+          '/b': { maxConcurrency: 2 },
+        },
+      } as Parameters<typeof getPageLambdaGroups>[0]['functionsConfigManifest']
+    );
+
+    expect(groups).toHaveLength(2);
+    expect(groups.map(group => group.maxConcurrency)).toEqual([2, 2]);
+  });
+
+  it('does not add an unconfigured route to a configured group', async () => {
+    const groups = await groupPagesBySize(
+      { 'a.js': MiB, 'b.js': MiB },
+      'nodejs22.x',
+      {
+        version: 1,
+        functions: {
+          '/a': { maxConcurrency: 2 },
+        },
+      } as Parameters<typeof getPageLambdaGroups>[0]['functionsConfigManifest']
+    );
+
+    expect(groups).toHaveLength(2);
+    expect(groups.map(group => group.maxConcurrency)).toEqual([2, undefined]);
+  });
+});
 
 describe('getGroupMaxUncompressedLambdaSize', () => {
   it('returns the default per-runtime limit for normal groups', () => {
@@ -554,6 +593,45 @@ describe('isLargeFunctionsEnabled', () => {
   it('is enabled when the env var is set', () => {
     process.env[LARGE_FUNCTIONS_ENV] = '1';
     expect(isLargeFunctionsEnabled()).toBe(true);
+  });
+});
+
+describe('getDefaultNextDeploymentId', () => {
+  it('defaults from VERCEL_DEPLOYMENT_ID when skew protection is enabled', () => {
+    expect(
+      getDefaultNextDeploymentId({
+        VERCEL_SKEW_PROTECTION_ENABLED: '1',
+        VERCEL_DEPLOYMENT_ID: 'dpl_123',
+      })
+    ).toBe('dpl_123');
+  });
+
+  it('returns undefined when skew protection is not enabled', () => {
+    expect(
+      getDefaultNextDeploymentId({ VERCEL_DEPLOYMENT_ID: 'dpl_123' })
+    ).toBeUndefined();
+    expect(
+      getDefaultNextDeploymentId({
+        VERCEL_SKEW_PROTECTION_ENABLED: '0',
+        VERCEL_DEPLOYMENT_ID: 'dpl_123',
+      })
+    ).toBeUndefined();
+  });
+
+  it('returns undefined when there is no deployment id', () => {
+    expect(
+      getDefaultNextDeploymentId({ VERCEL_SKEW_PROTECTION_ENABLED: '1' })
+    ).toBeUndefined();
+  });
+
+  it('never overrides an explicit NEXT_DEPLOYMENT_ID', () => {
+    expect(
+      getDefaultNextDeploymentId({
+        VERCEL_SKEW_PROTECTION_ENABLED: '1',
+        VERCEL_DEPLOYMENT_ID: 'dpl_123',
+        NEXT_DEPLOYMENT_ID: 'dpl_explicit',
+      })
+    ).toBeUndefined();
   });
 });
 

@@ -1,6 +1,6 @@
 {
   "name": "@vercel/config",
-  "version": "0.5.5",
+  "version": "0.6.1",
   "description": "A TypeScript SDK for programmatically configuring Vercel projects",
   "license": "MIT",
   "homepage": "https://vercel.com/docs/projects/project-configuration",
@@ -36,9 +36,9 @@
   "scripts": {
     "build": "tsc",
     "generate-types": "tsx scripts/generate-types.ts",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'src/**/*.test.ts'",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test-unit": "vitest run --config ../../vitest.config.mts",
+    "test": "vitest run --config ../../vitest.config.mts"
   },
   "dependencies": {
     "@vercel/routing-utils": "workspace:*",
@@ -47,9 +47,9 @@
   },
   "devDependencies": {
     "@types/node": "20.11.0",
-    "tsx": "4.7.0",
-    "vite": "^5.1.6",
-    "vitest": "^2.0.1"
+    "tsx": "4.21.0",
+    "vite": "^6.4.3",
+    "vitest": "^4.1.10"
   },
   "publishConfig": {
     "access": "public"

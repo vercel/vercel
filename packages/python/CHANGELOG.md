@@ -1,5 +1,113 @@
 # @vercel/python
 
+## 6.57.1
+
+### Patch Changes
+
+- 596868c: Recognize the standalone `vercel-workflow` distribution when deciding whether to serve workflows through vercel-queue
+
+## 6.57.0
+
+### Minor Changes
+
+- de992e6: Fix FastAPI static/frontend route precedence on the CDN.
+
+## 6.56.2
+
+### Patch Changes
+
+- 7846a8c: Connect the JavaScript runtime builds to their native Python and Rust build tasks.
+- 962d043: Report the full function footprint (source + venv + runtime-install tooling) as `python.bundle.totalSizeBytes`, and the shipped zip size as `python.bundle.shippedSizeBytes`.
+- 15e0a8e: Report a cold start phase breakdown from the Python runtime.
+
+  The `server-started` handshake now includes `userInitDuration` and a `phases`
+  breakdown (`bootstrap`, `importFn`, `serverReady`), and `initDuration` is
+  measured from a timestamp stamped by the generated handler before it does any
+  work, so it covers the `vercel_runtime` import chain and the user code import
+  instead of starting after them.
+
+## 6.56.1
+
+### Patch Changes
+
+- a8fee66: Install all matching `vercel-*` Python packages from a local SDK checkout.
+- Updated dependencies [2da7809]
+  - @vercel/python-analysis@0.13.2
+
+## 6.56.0
+
+### Minor Changes
+
+- 4e2c621: Discover durable APScheduler subscribers, inject their stable runtime
+  identities, and activate the integration consistently in web and queue
+  Functions. Production schedulers activate on their first request, and
+  opted-in previews use request activity to renew a durable scheduling
+  deadline configured in pyproject.toml.
+
+### Patch Changes
+
+- eee4afc: Only inject and activate the queue adapter when the project declares `[[tool.vercel.subscribers]]`, instead of for any project depending on Celery or Dramatiq.
+- d0f5927: Accept bare module paths as `[[tool.vercel.subscribers]]` entrypoints. vercel-queue subscribers only need their module imported (subscriptions register globally on import), so `entrypoint = "tasks"` or `entrypoint = "pkg.tasks"` now works alongside `entrypoint = "module:object"`. File paths like `tasks.py` are rejected with a pointer to the equivalent import path. The legacy vercel-workers schema still requires `module:object` because it serves the named object directly.
+- bacf4ff: Skip integration ownership probes for subscribers declared with a bare module entrypoint.
+
+## 6.55.3
+
+### Patch Changes
+
+- a61bdfc: Allow multiple `[[tool.vercel.workflows]]` entrypoints with namespaced registries
+  Queue-served workflow Lambdas already attach the topics their registry
+  registers, so namespaced registries (`Workflows(namespace="billing")`) get
+  their `__billing_wkf_*` triggers from introspection with no extra detection
+  step. The builder now recognizes namespaced topics when partitioning
+  subscriptions between subscriber and workflow Lambdas, rejects entrypoints
+  whose topics overlap, and keeps the single-entrypoint requirement only for
+  the legacy vercel-workers serving mode where every consumer shares `__wkf_*`.
+
+## 6.55.2
+
+### Patch Changes
+
+- c446421: Generalize queue adapter injection to per-adapter dependency checks and
+  support installing an integration before the subscriber module imports.
+
+## 6.55.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/python-analysis@0.13.1
+
+## 6.55.0
+
+### Minor Changes
+
+- 08a2618: Rank precompiled bytecode by cold-start value instead of size. On every bytecode fill path (standard, runtime-install knapsack, bytecode-first, large functions), when `.pyc` files overflow the zip's fill capacity, selection is now per file: bytecode for modules the app actually imports at startup first (from a new static AST import closure in `@vercel/python-analysis` — no user code runs at build time), ranked by measured compile cost per byte, then everything else by the same ranking. Compile timings are now measured per file during `compileall`. Falls back to density-only, then per-file size ordering, so no build is worse than the old per-package size knapsack. When all bytecode fits, everything ships with no analysis. The import closure is bounded by a 30s timeout, and setting `VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS=1` disables the closure and timing-based ranking entirely, reverting selection to per-file size ordering.
+
+### Patch Changes
+
+- Updated dependencies [08a2618]
+  - @vercel/python-analysis@0.13.0
+
+## 6.54.1
+
+### Patch Changes
+
+- 5858c35: Validate every configured Python queue subscriber topic against build-time introspected subscriptions. The `topics` field remains optional and, when omitted, all introspected subscriptions are used.
+
+## 6.54.0
+
+### Minor Changes
+
+- 17ee736: Replace the vercel-workers integration for Python queue subscribers and workflows with the new vercel-queue SDK:
+
+  - `[[tool.vercel.subscribers]]` entrypoints are introspected at build time via `vercel.queue.get_subscriptions()` and served through generated `vercel.queue.asgi_app()` handler modules, with `queue/v2beta` triggers carrying the SDK-registered consumer groups and per-subscription tuning.
+  - Celery and Dramatiq projects get the matching `vercel-celery`/`vercel-dramatiq` integration package injected automatically (bundled variant unless `vercel-queue` is an explicit dependency), in builds and in `vercel dev`.
+  - `[[tool.vercel.workflows]]` entrypoints follow the SDK generation: projects on `vercel` >= 0.8.0 are served through vercel-queue like subscribers; older or undeterminable versions keep the legacy vercel-workers serving (worker env markers, injected pinned `vercel-workers`).
+  - Projects that depend on `vercel-workers` directly keep the legacy integration wholesale: legacy subscriber schema, direct entrypoint serving, worker env markers.
+  - `vercel dev` serves queue sidecars through `vercel.queue.asgi_app()` for new-SDK projects, and its queue broker delivers with the SDK-registered consumer groups introspected at sidecar startup (matching production trigger behavior); legacy projects keep the vercel-workers bootstrap.
+  - The CLI no longer injects `config.hasWorkerServices`; the Python builder makes all queue-serving decisions from project metadata.
+
 ## 6.53.0
 
 ### Minor Changes

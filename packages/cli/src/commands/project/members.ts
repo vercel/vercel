@@ -12,6 +12,10 @@ import { membersSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
+import { packageName } from '../../util/pkg-name';
+import getCommandFlags from '../../util/get-command-flags';
+import cmd from '../../util/output/cmd';
+import { quoteArg } from '../../util/flags/quote-arg';
 
 interface ProjectMember {
   uid: string;
@@ -24,7 +28,12 @@ interface ProjectMember {
 
 interface ProjectMembersResponse {
   members: ProjectMember[];
-  pagination?: Record<string, unknown>;
+  pagination?: {
+    count?: number;
+    hasNext?: boolean;
+    next?: number | null;
+    prev?: number | null;
+  };
 }
 
 export default async function members(
@@ -70,6 +79,11 @@ export default async function members(
     output.error('`--limit` must be a number between 1 and 100.');
     return 1;
   }
+  const next = parsedArgs.flags['--next'];
+  if (typeof next !== 'undefined' && !Number.isInteger(next)) {
+    output.error('`--next` must be a number.');
+    return 1;
+  }
 
   let result: ProjectMembersResponse;
   try {
@@ -86,6 +100,9 @@ export default async function members(
     }
     if (typeof limit === 'number') {
       query.set('limit', String(limit));
+    }
+    if (typeof next === 'number') {
+      query.set('until', String(next));
     }
 
     const qs = query.toString();
@@ -118,5 +135,22 @@ export default async function members(
     ]),
   ];
   client.stderr.write(`${table(rows, { hsep: 3 })}\n`);
+
+  if (result.pagination?.next) {
+    const flags = getCommandFlags(parsedArgs.flags, [
+      '_',
+      '--next',
+      '-N',
+      '--search',
+    ]);
+    const projectName = parsedArgs.args[0]
+      ? ` ${quoteArg(parsedArgs.args[0])}`
+      : '';
+    const search = parsedArgs.flags['--search'];
+    const searchFlag = search ? ` --search ${quoteArg(String(search))}` : '';
+    const nextCmd = `${packageName} project members${projectName}${flags}${searchFlag} --next ${result.pagination.next}`;
+    output.log(`To display the next page run ${cmd(nextCmd)}`);
+  }
+
   return 0;
 }

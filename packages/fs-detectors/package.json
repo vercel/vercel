@@ -1,6 +1,6 @@
 {
   "name": "@vercel/fs-detectors",
-  "version": "6.14.0",
+  "version": "6.15.8",
   "description": "Vercel filesystem detectors",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,17 +16,15 @@
   "scripts": {
     "build": "node ../../utils/build.mjs",
     "test": "vitest run --config ../../vitest.config.mts",
-    "test-unit": "pnpm test test/unit.*test.*",
-    "test-e2e": "pnpm test test/integration.test.ts",
-    "type-check": "tsc --noEmit",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/unit.*test.*'",
-    "vitest-e2e": "glob --absolute 'test/integration.test.ts'"
+    "test-unit": "vitest run --config ../../vitest.config.mts test/unit.",
+    "test-e2e": "vitest run --config ../../vitest.config.mts test/integration.test.ts",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@vercel/build-utils": "workspace:*",
     "@vercel/error-utils": "workspace:*",
     "@vercel/frameworks": "workspace:*",
+    "@vercel/python-analysis": "workspace:*",
     "@vercel/routing-utils": "workspace:*",
     "glob": "8.0.3",
     "js-yaml": "4.1.0",
@@ -41,6 +39,6 @@
     "@types/minimatch": "3.0.5",
     "@types/node": "20.11.0",
     "@types/semver": "7.3.10",
-    "vitest": "2.0.3"
+    "vitest": "4.1.10"
   }
 }

@@ -1,5 +1,29 @@
 # @vercel/go
 
+## 3.11.0
+
+### Minor Changes
+
+- a7fc7e8: Expose the resolved rewrite destination as the request path observed by standalone Go servers, and warn affected Go projects about the behavior change.
+
+## 3.10.5
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+
+## 3.10.4
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
+## 3.10.3
+
+### Patch Changes
+
+- 5c33351: Go functions now always target the `provided.al2023` Lambda runtime. Previously the runtime was detected from the build host's `/etc/os-release`, so running `vercel build` on an Amazon Linux 2 machine emitted `provided.al2` and the resulting prebuilt deployment failed at deploy time.
+
 ## 3.10.2
 
 ### Patch Changes

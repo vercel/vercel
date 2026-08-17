@@ -131,7 +131,7 @@ export async function attach(
   const triggerPath = flags['--trigger-path'];
 
   if (asJson && !skipConfirmation) {
-    output.error('--format=json requires --yes to skip confirmation prompts');
+    output.error('--json requires --yes to skip confirmation prompts');
     return 1;
   }
 

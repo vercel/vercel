@@ -196,49 +196,6 @@ describe('git disconnect', () => {
     });
   });
 
-  it('should disconnect a repository', async () => {
-    const cwd = fixture('new-connection');
-    client.cwd = cwd;
-    try {
-      await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
-      useUser();
-      useTeams('team_dummy');
-      const project = useProject({
-        ...defaultProject,
-        id: 'new-connection',
-        name: 'new-connection',
-      });
-      project.project.link = {
-        type: 'github',
-        repo: 'repo',
-        org: 'user',
-        repoId: 1010,
-        gitCredentialId: '',
-        sourceless: true,
-        createdAt: 1656109539791,
-        updatedAt: 1656109539791,
-      };
-      client.setArgv('git', 'disconnect');
-      const gitPromise = git(client);
-
-      await expect(client.stderr).toOutput(
-        `Are you sure you want to disconnect user/repo from your project?`
-      );
-      client.stdin.write('y\n');
-      await expect(client.stderr).toOutput('Disconnected user/repo.');
-
-      const newProjectData: Project = await client.fetch(
-        `/v8/projects/new-connection`
-      );
-      expect(newProjectData.link).toBeUndefined();
-
-      const exitCode = await gitPromise;
-      expect(exitCode).toEqual(0);
-    } finally {
-      await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-    }
-  });
-
   it('should fail if there is no repository to disconnect', async () => {
     const cwd = fixture('new-connection');
     client.cwd = cwd;

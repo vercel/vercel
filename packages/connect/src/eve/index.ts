@@ -25,6 +25,10 @@ export {
 } from './connect-oauth.js';
 
 export {
+  connectDiscordCredentials,
+  type ConnectDiscordCredentialsParams,
+} from './discord-credentials.js';
+export {
   connectGitHubCredentials,
   type ConnectGitHubCredentialsParams,
 } from './github-credentials.js';
@@ -32,6 +36,12 @@ export {
   connectLinearCredentials,
   type ConnectLinearCredentialsParams,
 } from './linear-credentials.js';
+export {
+  connectPhotonCredentials,
+  type ConnectPhotonCredentialProvider,
+  type PhotonCredentials,
+  type ConnectPhotonCredentialsParams,
+} from './photon-credentials.js';
 export {
   connectSlackCredentials,
   type ConnectSlackCredentialsParams,

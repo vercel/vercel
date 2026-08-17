@@ -30,7 +30,7 @@
       "require": "./middleware.js"
     }
   },
-  "version": "3.7.6",
+  "version": "3.9.3",
   "repository": {
     "directory": "packages/functions",
     "type": "git",
@@ -55,7 +55,7 @@
     "typedoc": "0.28.19",
     "typedoc-plugin-markdown": "4.11.0",
     "typedoc-plugin-mdn-links": "5.1.1",
-    "vitest": "2.0.1"
+    "vitest": "4.1.10"
   },
   "peerDependencies": {
     "@aws-sdk/credential-provider-web-identity": "*",
@@ -75,7 +75,7 @@
   "scripts": {
     "pretest": "pnpm run build:code",
     "test": "vitest",
-    "build": "pnpm run build:code && pnpm run build:docs",
+    "build": "pnpm run build:code",
     "build:code": "node ../../utils/build.mjs",
     "build:docs": "typedoc && prettier --write docs/**/*.md docs/*.md"
   },

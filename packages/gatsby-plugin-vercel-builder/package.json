@@ -1,6 +1,6 @@
 {
   "name": "@vercel/gatsby-plugin-vercel-builder",
-  "version": "2.2.30",
+  "version": "2.2.41",
   "main": "dist/index.js",
   "files": [
     "dist",
@@ -15,10 +15,8 @@
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
     "test": "vitest run --config ../../vitest.config.mts",
-    "test-unit": "pnpm test test/unit.*test.*",
-    "type-check": "tsc --noEmit",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/unit.*test.*'"
+    "test-unit": "vitest run --config ../../vitest.config.mts test/unit.",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@sinclair/typebox": "0.25.24",
@@ -33,7 +31,8 @@
     "@types/node": "20.11.0",
     "@types/react": "18.0.26",
     "@vercel/routing-utils": "workspace:*",
-    "vitest": "2.0.3"
+    "vite": "6.4.3",
+    "vitest": "4.1.10"
   },
   "pnpm": {
     "neverBuiltDependencies": []

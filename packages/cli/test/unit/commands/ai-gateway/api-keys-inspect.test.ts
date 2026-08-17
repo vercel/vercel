@@ -89,6 +89,36 @@ describe('ai-gateway api-keys inspect', () => {
     expect(await exitCodePromise).toBe(0);
   });
 
+  it('shows the zdr exemption for an exempt key', async () => {
+    const team = useTeam();
+    useUser();
+    useGetApiKey({
+      ...sampleApiKey,
+      metadata: { zdr: { enableNonZdrModels: true } },
+    });
+    client.config.currentTeam = team.id;
+    client.setArgv('ai-gateway', 'api-keys', 'inspect', 'key_1');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stdout).toOutput('zdr exempt');
+    expect(await exitCodePromise).toBe(0);
+  });
+
+  it('omits the zdr row for a non-exempt key', async () => {
+    const team = useTeam();
+    useUser();
+    useGetApiKey();
+    client.config.currentTeam = team.id;
+    client.setArgv('ai-gateway', 'api-keys', 'inspect', 'key_1');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stdout).toOutput('created by');
+    expect(await exitCodePromise).toBe(0);
+    expect(client.stdout.getFullOutput()).not.toContain('zdr exempt');
+  });
+
   it('requires an id', async () => {
     useUser();
     client.setArgv('ai-gateway', 'api-keys', 'inspect');

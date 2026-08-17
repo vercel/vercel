@@ -322,6 +322,7 @@ export interface ProjectEnvVariable {
   key: string;
   value: string;
   type: ProjectEnvType;
+  visibility?: 'config' | 'secret';
   configurationId?: string | null;
   createdAt?: number;
   updatedAt?: number;
@@ -520,6 +521,11 @@ export interface GitMetadata {
   commitSha?: string | undefined;
   dirty?: boolean | undefined;
   remoteUrl?: string;
+  /**
+   * Path of the deployed directory relative to the detected git repository
+   * root. Empty string when deploying from the repository root.
+   */
+  rootDirectory?: string;
 }
 
 /**

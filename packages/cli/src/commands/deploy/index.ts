@@ -68,11 +68,10 @@ import stamp from '../../util/output/stamp';
 import table from '../../util/output/table';
 import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
-import { withGlobalFlags } from '../../util/agent-output';
-import { getCommandName } from '../../util/pkg-name';
+import { outputAgentError, withGlobalFlags } from '../../util/agent-output';
+import { getCommandName, packageName } from '../../util/pkg-name';
 import { getErrorCta } from '../../util/get-error-cta';
 import link from '../../util/output/link';
-import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS } from '../../util/agent-output-constants';
 import { pickOverrides } from '../../util/projects/project-settings';
 import validatePaths, {
@@ -90,11 +89,20 @@ import parseTarget from '../../util/parse-target';
 import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
-import { isOwnerLookupUnavailableLink } from '../../util/projects/link';
+import {
+  isOwnerLookupUnavailableLink,
+  isRemoteLookupSkippedLink,
+} from '../../util/projects/link';
 import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
 import { displayBuildLogsUntilFinalError } from '../../util/logs';
 import { determineAgent } from '@vercel/detect-agent';
 import { validateJsonOutput } from '../../util/output-format';
+import {
+  handleAnonymousDeploymentError,
+  runImplicitBuild,
+  setupAnonymousDeployment,
+  validateAnonymousTarget,
+} from './anonymous';
 
 const COMMAND_CONFIG = {
   init: getCommandAliases(initSubcommand),
@@ -386,7 +394,12 @@ async function handleInitDeployment(
 
   const meta = Object.assign({}, parseMeta(localConfig.meta), cliMeta);
 
-  const gitMetadata = await createGitMeta(cwd, project);
+  // Observational path of the project dir relative to the git root — not the
+  // project `rootDirectory` setting (though they often resolve to the same path).
+  const gitMetadata = await createGitMeta(
+    join(cwd, project.rootDirectory || ''),
+    project
+  );
 
   const deploymentEnv = Object.assign(
     {},
@@ -957,6 +970,7 @@ async function handleDefaultDeploy(
   telemetryClient.trackCliFlagYes(parsedArguments.flags['--yes']);
   telemetryClient.trackCliOptionTarget(parsedArguments.flags['--target']);
   telemetryClient.trackCliFlagProd(parsedArguments.flags['--prod']);
+  telemetryClient.trackCliFlagTemporary(parsedArguments.flags['--temporary']);
   telemetryClient.trackCliFlagSkipDomain(
     parsedArguments.flags['--skip-domain']
   );
@@ -1086,11 +1100,25 @@ async function handleDefaultDeploy(
   }
   // #endregion
 
-  const target = parseTarget({
+  let isAnonymous =
+    !client.authConfig.token && Boolean(parsedArguments.flags['--temporary']);
+
+  if (!client.authConfig.token && !isAnonymous) {
+    output.prettyError({
+      message: `No existing credentials found. Run ${getCommandName('deploy --temporary')} to create a temporary deployment you can claim later, or ${getCommandName('login')} to log in.`,
+      link: 'https://err.sh/vercel/no-credentials-found',
+    });
+    return 1;
+  }
+
+  let target = parseTarget({
     flagName: 'target',
     flags: parsedArguments.flags,
   });
   telemetryClient.trackTargetEnvironment(target);
+  if (!validateAnonymousTarget(isAnonymous, target)) {
+    return 1;
+  }
 
   // Validate that --skip-domain is only used with production deployments
   const skipDomain = parsedArguments.flags['--skip-domain'];
@@ -1126,20 +1154,41 @@ async function handleDefaultDeploy(
   const cliMeta = parseMeta(parsedArguments.flags['--meta']);
   const isV0 = cliMeta.v0 === 'true';
 
-  const link = await ensureLink('deploy', client, cwd, {
-    autoConfirm,
-    // Only explicit names: the folder-name fallback is derived inside
-    // `setupAndLink`, and passing it would suppress Git-match suggestions.
-    projectName:
-      projectNameOrId ?? parsedArguments.flags['--name'] ?? localConfig?.name,
-    failIfNotFound: !!projectNameOrId,
-    requireExistingLink: parsedArguments.flags['--dry'],
-    allowOwnerLookupFallback: true,
-    v0: isV0,
+  const anonymousSetup = await setupAnonymousDeployment(client, cwd, {
+    isAnonymous,
+    dryRun: Boolean(parsedArguments.flags['--dry']),
   });
+  if (typeof anonymousSetup === 'number') {
+    return anonymousSetup;
+  }
+  isAnonymous = anonymousSetup.isAnonymous;
+  const anonymousLink = anonymousSetup.anonymousLink;
+  if (anonymousLink) {
+    target = 'production';
+  }
+
+  const link =
+    anonymousLink ??
+    (await ensureLink('deploy', client, cwd, {
+      autoConfirm,
+      // Only explicit names: the folder-name fallback is derived inside
+      // `setupAndLink`, and passing it would suppress Git-match suggestions.
+      projectName:
+        projectNameOrId ?? parsedArguments.flags['--name'] ?? localConfig?.name,
+      failIfNotFound: !!projectNameOrId,
+      requireExistingLink: parsedArguments.flags['--dry'],
+      allowOwnerLookupFallback: true,
+      skipRemoteLookup: !parsedArguments.flags['--dry'],
+      v0: isV0,
+    }));
   if (typeof link === 'number') {
     return link;
   }
+
+  const redeployCommand = withGlobalFlags(
+    client,
+    isAnonymous ? 'deploy --temporary' : 'deploy'
+  );
 
   const { org, project } = link;
   const rootDirectory = project.rootDirectory;
@@ -1151,15 +1200,23 @@ async function handleDefaultDeploy(
   }
 
   // #region Build `--prebuilt`
+  const prebuilt = isAnonymous || !!parsedArguments.flags['--prebuilt'];
   let vercelOutputDir: string | undefined;
-  if (parsedArguments.flags['--prebuilt']) {
+  if (prebuilt) {
     vercelOutputDir = join(cwd, '.vercel/output');
 
     if (link.repoRoot && link.project.rootDirectory) {
       vercelOutputDir = join(cwd, link.project.rootDirectory, '.vercel/output');
     }
 
-    const prebuiltExists = await fs.pathExists(vercelOutputDir);
+    let prebuiltExists = await fs.pathExists(vercelOutputDir);
+    if (!prebuiltExists && isAnonymous && !parsedArguments.flags['--dry']) {
+      const buildExitCode = await runImplicitBuild(client, cwd);
+      if (buildExitCode !== 0) {
+        return buildExitCode;
+      }
+      prebuiltExists = await fs.pathExists(vercelOutputDir);
+    }
     if (!prebuiltExists) {
       error(
         `The ${param(
@@ -1206,7 +1263,8 @@ async function handleDefaultDeploy(
   }
   // #endregion
 
-  const contextName = org.slug;
+  const orgSlug = isRemoteLookupSkippedLink(link) ? undefined : org.slug;
+  const contextName = orgSlug ?? 'the linked account';
   const currentTeam =
     isOwnerLookupUnavailableLink(link) || org.type !== 'team'
       ? undefined
@@ -1218,8 +1276,8 @@ async function handleDefaultDeploy(
     (await validateRootDirectory(
       cwd,
       join(cwd, rootDirectory),
-      project
-        ? `To change your Project Settings, go to https://vercel.com/${org?.slug}/${project.name}/settings`
+      project && orgSlug
+        ? `To change your Project Settings, go to https://vercel.com/${orgSlug}/${project.name}/settings`
         : ''
     )) === false
   ) {
@@ -1254,7 +1312,7 @@ async function handleDefaultDeploy(
         path: cwd,
         archive: parsedArchive ? 'tgz' : undefined,
         debug: output.isDebugEnabled(),
-        prebuilt: parsedArguments.flags['--prebuilt'],
+        prebuilt,
         vercelOutputDir,
         projectName: project.name,
         rootDirectory,
@@ -1328,7 +1386,12 @@ async function handleDefaultDeploy(
   // #region Meta
   const meta = Object.assign({}, parseMeta(localConfig.meta), cliMeta);
 
-  const gitMetadata = await createGitMeta(cwd, project);
+  // Observational path of the project dir relative to the git root — not the
+  // project `rootDirectory` setting (though they often resolve to the same path).
+  const gitMetadata = await createGitMeta(
+    join(cwd, project.rootDirectory || ''),
+    project
+  );
   // #endregion
 
   // #region Env vars validation
@@ -1386,11 +1449,13 @@ async function handleDefaultDeploy(
 
     const createArgs: CreateOptions = {
       name,
+      project: project.id,
       env: deploymentEnv as Dictionary<string>,
       build: { env: deploymentBuildEnv as Dictionary<string> },
       forceNew: parsedArguments.flags['--force'],
       withCache: parsedArguments.flags['--with-cache'],
-      prebuilt: parsedArguments.flags['--prebuilt'],
+      prebuilt,
+      anonymous: isAnonymous,
       vercelOutputDir,
       rootDirectory,
       quiet,
@@ -1403,13 +1468,14 @@ async function handleDefaultDeploy(
       gitMetadata,
       deployStamp,
       target,
-      skipAutoDetectionConfirmation: autoConfirm,
+      skipAutoDetectionConfirmation: autoConfirm || isAnonymous,
       noWait,
       withFullLogs,
       autoAssignCustomDomains,
       agentName: client.agentName,
       jsonOutput: asJson,
       linkedProject: project,
+      linkedProjectIsPartial: isRemoteLookupSkippedLink(link),
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
@@ -1466,7 +1532,7 @@ async function handleDefaultDeploy(
               message: deployment.message,
               next: [
                 {
-                  command: withGlobalFlags(client, 'deploy'),
+                  command: redeployCommand,
                   when: 'retry deploy',
                 },
               ],
@@ -1495,7 +1561,7 @@ async function handleDefaultDeploy(
               message: msg,
               next: [
                 {
-                  command: withGlobalFlags(client, 'deploy'),
+                  command: redeployCommand,
                   when: 'retry deploy',
                 },
               ],
@@ -1535,7 +1601,7 @@ async function handleDefaultDeploy(
               deployment: deploymentJson,
               next: [
                 {
-                  command: withGlobalFlags(client, 'deploy'),
+                  command: redeployCommand,
                   when: 'retry deploy',
                 },
               ],
@@ -1550,7 +1616,7 @@ async function handleDefaultDeploy(
 
     // Deployment Checks: deployment-alias check failed
     if (deployment.checks?.['deployment-alias']?.state === 'failed') {
-      return handleFailedCheckRuns(client, deployment, asJson);
+      return handleFailedCheckRuns(client, deployment, asJson, redeployCommand);
     }
 
     // v1 checks: uses checksConclusion from the deployment object
@@ -1583,7 +1649,7 @@ async function handleDefaultDeploy(
               deployment: deploymentJson,
               next: [
                 {
-                  command: withGlobalFlags(client, 'deploy'),
+                  command: redeployCommand,
                   when: 'retry deploy',
                 },
               ],
@@ -1612,7 +1678,7 @@ async function handleDefaultDeploy(
               message: 'Uploading failed. Please try again.',
               next: [
                 {
-                  command: withGlobalFlags(client, 'deploy'),
+                  command: redeployCommand,
                   when: 'retry deploy',
                 },
               ],
@@ -1632,6 +1698,18 @@ async function handleDefaultDeploy(
       debug(`Error: ${err}\n${err.stack}`);
     }
 
+    const anonymousExitCode = await handleAnonymousDeploymentError({
+      client,
+      cwd,
+      error: err,
+      link: anonymousLink,
+      isV0,
+      retry: () => handleDefaultDeploy(client, telemetryClient),
+    });
+    if (anonymousExitCode !== undefined) {
+      return anonymousExitCode;
+    }
+
     if (err instanceof UploadErrorMissingArchive) {
       if (client.nonInteractive) {
         client.stdout.write(
@@ -1642,7 +1720,7 @@ async function handleDefaultDeploy(
               message: err.message,
               next: [
                 {
-                  command: withGlobalFlags(client, 'deploy'),
+                  command: redeployCommand,
                   when: 'retry deploy',
                 },
               ],
@@ -1668,7 +1746,7 @@ async function handleDefaultDeploy(
               message: err.message,
               next: [
                 {
-                  command: withGlobalFlags(client, 'deploy'),
+                  command: redeployCommand,
                   when: 'retry deploy',
                 },
               ],
@@ -1735,7 +1813,7 @@ async function handleDefaultDeploy(
               message: err instanceof Error ? err.message : String(err),
               next: [
                 {
-                  command: withGlobalFlags(client, 'deploy'),
+                  command: redeployCommand,
                   when: 'retry deploy',
                 },
               ],
@@ -1821,7 +1899,7 @@ async function handleDefaultDeploy(
               message,
               next: [
                 {
-                  command: withGlobalFlags(client, 'deploy'),
+                  command: redeployCommand,
                   when: 'retry deploy',
                 },
               ],
@@ -1844,7 +1922,7 @@ async function handleDefaultDeploy(
             message: err instanceof Error ? err.message : String(err),
             next: [
               {
-                command: withGlobalFlags(client, 'deploy'),
+                command: redeployCommand,
                 when: 'retry deploy',
               },
             ],
@@ -1860,32 +1938,61 @@ async function handleDefaultDeploy(
 
   if (asJson) {
     output.stopSpinner();
-    const deploymentJson = getDeploymentOutputJson(deployment, client.apiUrl);
+    const anonymousUrl = anonymousLink ? deployment.alias?.[0] : undefined;
+    const deploymentJson = {
+      ...getDeploymentOutputJson(deployment, client.apiUrl),
+      ...(anonymousLink
+        ? {
+            expiresAt: anonymousLink.expiresAt,
+            claimUrl: anonymousLink.claimUrl,
+          }
+        : {}),
+      ...(anonymousUrl
+        ? { url: `https://${anonymousUrl}`, inspectorUrl: null }
+        : {}),
+    };
     const isImplicitProduction = deployment.target === 'production' && !target;
     const payload = client.nonInteractive
       ? {
           status: AGENT_STATUS.OK,
           deployment: deploymentJson,
-          message: `Deployment ${deployment.url} ready.`,
+          message: anonymousLink
+            ? `Anonymous deployment ${anonymousUrl ?? deployment.url} ready. It expires in ${ms(anonymousLink.expiresAt - Date.now(), { long: true })}. Claim it at ${anonymousLink.claimUrl} to keep it.`
+            : `Deployment ${deployment.url} ready.`,
           ...(isImplicitProduction
             ? {
                 hint: 'This is the project\u2019s first deployment, so it was assigned to production. Future deployments will be preview deployments unless you use --prod.',
               }
             : {}),
-          next: [
-            {
-              command: withGlobalFlags(client, `inspect ${deployment.url}`),
-              when: 'Inspect deployment',
-            },
-            ...(isImplicitProduction
-              ? []
-              : [
-                  {
-                    command: withGlobalFlags(client, 'deploy --prod'),
-                    when: 'Promote to production',
-                  },
-                ]),
-          ],
+          next: anonymousLink
+            ? [
+                {
+                  command: redeployCommand,
+                  when: 'Redeploy changes to the same anonymous deployment',
+                },
+                {
+                  command: withGlobalFlags(client, 'login'),
+                  when: 'Create an account to keep deploying',
+                },
+              ]
+            : [
+                {
+                  command: `${packageName} curl https://${deployment.url}`,
+                  when: 'Verify deployment, including when Deployment Protection is enabled',
+                },
+                {
+                  command: withGlobalFlags(client, `inspect ${deployment.url}`),
+                  when: 'Inspect deployment',
+                },
+                ...(isImplicitProduction
+                  ? []
+                  : [
+                      {
+                        command: withGlobalFlags(client, 'deploy --prod'),
+                        when: 'Promote to production',
+                      },
+                    ]),
+              ],
         }
       : deploymentJson;
     client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
@@ -1893,8 +2000,19 @@ async function handleDefaultDeploy(
   }
 
   const { isAgent } = await determineAgent();
-  const guidanceMode = parsedArguments.flags['--guidance'] ?? isAgent;
-  return printDeploymentStatus(
+  const guidanceMode =
+    (parsedArguments.flags['--guidance'] ?? isAgent) && !anonymousLink;
+  if (anonymousLink) {
+    output.print('\n');
+    log(
+      `This deployment expires in ${ms(anonymousLink.expiresAt - Date.now(), {
+        long: true,
+      })}. Claim it to keep it live (don't share this link): ${chalk.cyan(
+        anonymousLink.claimUrl
+      )}`
+    );
+  }
+  return await printDeploymentStatus(
     client,
     deployment,
     deployStamp,
@@ -2395,7 +2513,8 @@ async function handleFailedCheckRuns(
     readyState: string;
     target?: string | null;
   },
-  asJson: boolean
+  asJson: boolean,
+  retryCommand = withGlobalFlags(client, 'deploy')
 ): Promise<number> {
   const { runs } = await getDeploymentCheckRuns(client, deployment.id);
 
@@ -2463,7 +2582,7 @@ async function handleFailedCheckRuns(
         failedCheckRuns: failedCheckRunsWithLogs,
         next: [
           {
-            command: withGlobalFlags(client, 'deploy'),
+            command: retryCommand,
             when: 'retry deploy after fixing check failures',
           },
         ],

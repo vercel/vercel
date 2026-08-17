@@ -1,5 +1,17 @@
 # @vercel/rust
 
+## 1.4.2
+
+### Patch Changes
+
+- 7846a8c: Connect the JavaScript runtime builds to their native Python and Rust build tasks.
+
+## 1.4.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
 ## 1.4.0
 
 ### Minor Changes

@@ -1,5 +1,26 @@
 # @vercel/cli-auth
 
+## 0.3.4
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+
+## 0.3.3
+
+### Patch Changes
+
+- Updated dependencies [92dfd87]
+  - @vercel/cli-config@0.2.3
+
+## 0.3.2
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/cli-config@0.2.2
+
 ## 0.3.1
 
 ### Patch Changes

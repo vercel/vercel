@@ -1,11 +1,16 @@
 import { writeFile } from 'node:fs/promises';
+import type { Spec } from 'arg';
 import chalk from 'chalk';
 import table from '../../util/output/table';
 import type Client from '../../util/client';
+import type { CommandOption } from '../help';
 import output from '../../output-manager';
 import stamp from '../../util/output/stamp';
 import { isAPIError } from '../../util/errors-ts';
 import { canPrompt } from '../../util/can-prompt';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
 import {
   fetchLeaderboard,
   fetchLeaderboardCsv,
@@ -399,4 +404,56 @@ function printLicense() {
   output.log(
     chalk.gray('Source: AI Gateway Leaderboard data, licensed under CC BY 4.0.')
   );
+}
+
+type LeaderboardVariant =
+  | ({ kind: 'timeseries'; telemetry: TimeseriesTelemetry } & {
+      dataset: 'models' | 'labs';
+      /** Column header for the entity, e.g. `model` or `lab`. */
+      entityLabel: string;
+      label: string;
+    })
+  | ({ kind: 'ranked'; telemetry: RankedTelemetry } & {
+      dataset: 'apps' | 'providers';
+      label: string;
+    });
+
+/**
+ * Single entry point for every leaderboard subcommand: parses argv against the
+ * subcommand's flag spec (with the shared error handling) and dispatches to
+ * the time-series or ranked engine, so the per-subcommand files stay
+ * declarative.
+ */
+export async function runLeaderboardSubcommand(
+  client: Client,
+  argv: string[],
+  subcommand: { options: readonly CommandOption[] },
+  variant: LeaderboardVariant
+): Promise<number> {
+  let parsedArgs;
+  // Over a broad `readonly CommandOption[]` the mapped spec type widens past
+  // what `arg` accepts; the runtime value is the same spec every subcommand
+  // builds for itself today.
+  const flagsSpecification = getFlagsSpecification(subcommand.options) as Spec;
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (error) {
+    printError(error);
+    return 1;
+  }
+  // The generic spec widens the parsed flag types; every leaderboard
+  // subcommand declares (a subset of) these flags.
+  const flags = parsedArgs.flags as LeaderboardFlags;
+
+  if (variant.kind === 'timeseries') {
+    return runTimeseriesLeaderboard(client, flags, variant.telemetry, {
+      dataset: variant.dataset,
+      entityLabel: variant.entityLabel,
+      label: variant.label,
+    });
+  }
+  return runRankedLeaderboard(client, flags, variant.telemetry, {
+    dataset: variant.dataset,
+    label: variant.label,
+  });
 }

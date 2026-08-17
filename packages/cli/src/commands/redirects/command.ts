@@ -18,12 +18,28 @@ export const listSubcommand = {
       deprecated: false,
     },
     {
+      name: 'next',
+      description: 'Continue from a previous response',
+      shorthand: null,
+      type: Number,
+      argument: 'NUMBER',
+      deprecated: false,
+    },
+    {
+      name: 'limit',
+      description: 'Number of redirects per page (default: 50)',
+      shorthand: null,
+      type: Number,
+      argument: 'NUMBER',
+      deprecated: false,
+    },
+    {
       name: 'page',
       description: 'Page number to display',
       shorthand: null,
       type: Number,
       argument: 'NUMBER',
-      deprecated: false,
+      deprecated: true,
     },
     {
       name: 'per-page',
@@ -31,7 +47,7 @@ export const listSubcommand = {
       shorthand: null,
       type: Number,
       argument: 'NUMBER',
-      deprecated: false,
+      deprecated: true,
     },
     {
       name: 'staging',
@@ -60,11 +76,11 @@ export const listSubcommand = {
     },
     {
       name: 'List redirects on page 2',
-      value: `${packageName} redirects list --page 2`,
+      value: `${packageName} redirects list --next 2`,
     },
     {
       name: 'List redirects with custom page size',
-      value: `${packageName} redirects list --per-page 25`,
+      value: `${packageName} redirects list --limit 25`,
     },
   ],
 } as const;

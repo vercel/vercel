@@ -1,6 +1,7 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
 import type { connexCommand } from '../../../../commands/connex/command';
+import { serviceTelemetryValue } from '../../../connex/service-telemetry-value';
 import { isValidHexColor } from '../../../connex/validate-hex';
 
 export class ConnexTelemetryClient
@@ -88,6 +89,59 @@ export class ConnexTelemetryClient
     }
   }
 
+  trackCliArgumentService(v: string | undefined) {
+    if (v) {
+      // Either a service slug (e.g. `slack`, `github`) or the host of an
+      // OAuth/MCP server (e.g. `mcp.linear.app`), both of which we want. Keep
+      // only the host so credentials embedded in a URL's userinfo or query
+      // string are never recorded.
+      const value = serviceTelemetryValue(v);
+      this.trackCliArgument({
+        arg: 'service',
+        value: value ?? this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionName(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'name',
+        // User-authored connector name can carry team/product names, hence redact.
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionSubject(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'subject',
+        // Closed enum. Emit raw when valid so the `user` vs `app` token split
+        // is visible; redact anything else
+        value: v === 'user' || v === 'app' ? v : this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionInstallationId(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'installation-id',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionScopes(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'scopes',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionIcon(v: string | undefined) {
     if (v) {
       this.trackCliOption({
@@ -137,6 +191,38 @@ export class ConnexTelemetryClient
     }
   }
 
+  trackCliOptionConnectionMethod(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'connection-method',
+        // Registry slugs are a finite, non-sensitive set.
+        value: v,
+      });
+    }
+  }
+
+  trackCliOptionTarget(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'target',
+        // Registry target slugs are a finite, non-sensitive set.
+        value: v,
+      });
+    }
+  }
+
+  trackCliOptionParam(v: string[] | undefined) {
+    if (!v || v.length === 0) {
+      return;
+    }
+    // Template values can embed tenant hostnames, so record how many were
+    // passed rather than the keys or values.
+    this.trackCliOption({
+      option: 'param',
+      value: String(v.length),
+    });
+  }
+
   trackCliFlagYes(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('yes');
@@ -152,6 +238,15 @@ export class ConnexTelemetryClient
   trackCliFlagTriggers(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('triggers');
+    }
+  }
+
+  trackCliOptionTriggerEvent(v: string[] | undefined) {
+    if (v && v.length > 0) {
+      this.trackCliOption({
+        option: 'trigger-event',
+        value: String(v.length),
+      });
     }
   }
 
@@ -177,6 +272,15 @@ export class ConnexTelemetryClient
     if (v) {
       this.trackCliOption({
         option: 'trigger-path',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionTriggerProject(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'trigger-project',
         value: this.redactedValue,
       });
     }

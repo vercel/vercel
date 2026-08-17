@@ -6,6 +6,7 @@ import {
   getLinkFromDir,
   getLinkedProject,
   isOwnerLookupUnavailableLink,
+  isRemoteLookupSkippedLink,
 } from '../../../../src/util/projects/link';
 import { client } from '../../../mocks/client';
 
@@ -57,6 +58,84 @@ describe('getLinkFromDir', () => {
 });
 
 describe('getLinkedProject', () => {
+  it('uses project.json settings when the remote lookup is skipped', async () => {
+    const cwd = setupTmpDir('local-project-link');
+    await mkdirp(join(cwd, '.vercel'));
+    await writeJSON(join(cwd, '.vercel/project.json'), {
+      orgId: 'team_local',
+      projectId: 'prj_local',
+      projectName: 'local-project',
+      settings: {
+        createdAt: 123,
+        framework: 'nextjs',
+        rootDirectory: 'app',
+      },
+    });
+
+    const link = await getLinkedProject(client, {
+      cwd,
+      skipRemoteLookup: true,
+    });
+
+    expect(link).toMatchObject({
+      status: 'linked',
+      org: {
+        id: 'team_local',
+        slug: '',
+        type: 'team',
+      },
+      project: {
+        id: 'prj_local',
+        accountId: 'team_local',
+        name: 'local-project',
+        framework: 'nextjs',
+        rootDirectory: 'app',
+      },
+      orgId: 'team_local',
+    });
+    expect(link.status === 'linked' && isRemoteLookupSkippedLink(link)).toBe(
+      true
+    );
+  });
+
+  it.each([
+    { directory: '.', expectedRootDirectory: null },
+    { directory: 'apps/web', expectedRootDirectory: 'apps/web' },
+  ])('maps repo directory $directory to project root $expectedRootDirectory', async ({
+    directory,
+    expectedRootDirectory,
+  }) => {
+    const repoRoot = setupTmpDir(`repo-project-link-${directory}`);
+    const projectCwd = directory === '.' ? repoRoot : join(repoRoot, directory);
+    await mkdirp(projectCwd);
+    await mkdirp(join(repoRoot, '.vercel'));
+    await writeJSON(join(repoRoot, '.vercel/repo.json'), {
+      remoteName: 'origin',
+      projects: [
+        {
+          id: 'prj_repo',
+          name: 'repo-project',
+          orgId: 'team_local',
+          directory,
+        },
+      ],
+    });
+
+    const link = await getLinkedProject(client, {
+      cwd: projectCwd,
+      skipRemoteLookup: true,
+    });
+
+    expect(link).toMatchObject({
+      status: 'linked',
+      project: {
+        id: 'prj_repo',
+        rootDirectory: expectedRootDirectory,
+      },
+      projectRootDirectory: directory,
+    });
+  });
+
   it('should fail to return a link when token is missing', async () => {
     const cwd = fixture('vercel-pull-next');
 

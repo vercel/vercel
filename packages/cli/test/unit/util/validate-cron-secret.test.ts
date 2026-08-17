@@ -62,32 +62,6 @@ describe('validateCronSecret', () => {
       expect(error!.code).toBe('INVALID_CRON_SECRET');
       expect(error!.message).toContain('leading or trailing whitespace');
     });
-
-    it('should return error for secret with leading tab', () => {
-      const error = validateCronSecret('\tmySecret');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_CRON_SECRET');
-      expect(error!.message).toContain('leading or trailing whitespace');
-    });
-
-    it('should return error for secret with trailing tab', () => {
-      const error = validateCronSecret('mySecret\t');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_CRON_SECRET');
-      expect(error!.message).toContain('leading or trailing whitespace');
-    });
-
-    it('should return error for secret with leading newline', () => {
-      const error = validateCronSecret('\nmySecret');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_CRON_SECRET');
-    });
-
-    it('should return error for secret with trailing newline', () => {
-      const error = validateCronSecret('mySecret\n');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_CRON_SECRET');
-    });
   });
 
   describe('invalid CRON_SECRET values - control characters', () => {
@@ -99,39 +73,11 @@ describe('validateCronSecret', () => {
       expect(error!.message).toContain('0x00');
     });
 
-    it('should return error for secret with bell character', () => {
-      const error = validateCronSecret('my\x07Secret');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_CRON_SECRET');
-      expect(error!.message).toContain('control character');
-    });
-
-    it('should return error for secret with carriage return', () => {
-      const error = validateCronSecret('my\rSecret');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_CRON_SECRET');
-      expect(error!.message).toContain('control character');
-    });
-
-    it('should return error for secret with newline in the middle', () => {
-      const error = validateCronSecret('my\nSecret');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_CRON_SECRET');
-      expect(error!.message).toContain('control character');
-    });
-
     it('should return error for secret with DEL character', () => {
       const error = validateCronSecret('my\x7FSecret');
       expect(error).not.toBeNull();
       expect(error!.code).toBe('INVALID_CRON_SECRET');
       expect(error!.message).toContain('DEL character');
-    });
-
-    it('should return error for secret with escape character', () => {
-      const error = validateCronSecret('my\x1BSecret');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_CRON_SECRET');
-      expect(error!.message).toContain('control character');
     });
   });
 

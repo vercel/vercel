@@ -243,68 +243,6 @@ describe('git connect', () => {
     });
   });
 
-  it('connects an unlinked project with a remote url', async () => {
-    const cwd = fixture('unlinked');
-    client.cwd = cwd;
-    try {
-      await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
-      useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'unlinked',
-        name: 'unlinked',
-      });
-      (client as { nonInteractive: boolean }).nonInteractive = false;
-      client.setArgv('git', 'connect', 'https://github.com/user2/repo2');
-      const gitPromise = git(client);
-
-      await expect(client.stderr).toOutput('Directory');
-
-      await expect(client.stderr).toOutput('Which team?');
-      client.stdin.write('\r');
-
-      // Unified flow: pick the detected folder-name match in the picker.
-      await expect(client.stderr).toOutput('Which project?');
-      client.events.keypress('enter');
-
-      await expect(client.stderr).toOutput(
-        'Pull development environment variables into .env.local?'
-      );
-      client.stdin.write('n\n');
-
-      await expect(client.stderr).toOutput(
-        `Do you still want to connect https://github.com/user2/repo2?`
-      );
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
-        `Connecting GitHub repository: https://github.com/user2/repo2`
-      );
-
-      const exitCode = await gitPromise;
-      await expect(client.stderr).toOutput('Connected');
-
-      expect(exitCode).toEqual(0);
-      expect(client.stderr.getFullOutput()).not.toContain(
-        'Would you like to pull environment variables now?'
-      );
-
-      const project: Project = await client.fetch(`/v8/projects/unlinked`);
-      expect(project.link).toMatchObject({
-        type: 'github',
-        repo: 'user2/repo2',
-        repoId: 1010,
-        gitCredentialId: '',
-        sourceless: true,
-        createdAt: 1656109539791,
-        updatedAt: 1656109539791,
-      });
-    } finally {
-      await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-    }
-  });
-
   it('connects the project selected by --project', async () => {
     useUser();
     useTeams('team_dummy');

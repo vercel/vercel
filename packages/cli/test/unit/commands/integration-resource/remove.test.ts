@@ -329,7 +329,7 @@ describe('integration-resource', () => {
         const exitCode = await integrationResourceCommand(client);
         expect(exitCode).toEqual(1);
         await expect(client.stderr).toOutput(
-          'Error: --format=json requires --yes to skip confirmation prompts'
+          'Error: --json requires --yes to skip confirmation prompts'
         );
       });
 

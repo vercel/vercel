@@ -71,6 +71,22 @@ describe('validateConfig', () => {
       );
     });
 
+    it('accepts proxy together with services', () => {
+      expect(
+        validateConfig({
+          services: {
+            web: { root: 'apps/web', framework: 'nextjs' },
+            vr: { root: 'apps/vr' },
+          },
+          rewrites: [
+            { source: '/app/(.*)', destination: { service: 'vr' } },
+            { source: '/(.*)', destination: { service: 'web' } },
+          ],
+          proxy: { entrypoint: 'proxy.ts' },
+        })
+      ).toBeNull();
+    });
+
     it('rejects proxy together with builds', () => {
       const error = validateConfig({
         proxy: { entrypoint: 'proxy.ts' },
@@ -404,7 +420,9 @@ describe('validateConfig', () => {
       rewrites: [{ source: '/help', destination: '/support' }],
       redirects: [{ source: '/kb', destination: 'https://example.com' }],
       trailingSlash: false,
-      functions: { 'api/user.go': { memory: 128, maxDuration: 5 } },
+      functions: {
+        'api/user.go': { memory: 128, maxDuration: 5, maxConcurrency: 8 },
+      },
     };
     const error = validateConfig(config);
     expect(error).toBeNull();
@@ -419,6 +437,16 @@ describe('validateConfig', () => {
     } as unknown as Parameters<typeof validateConfig>[0];
     const error = validateConfig(config);
     expect(error).toBeNull();
+  });
+
+  it.each([
+    0, -1, 1.5,
+  ])('should reject maxConcurrency set to %s', maxConcurrency => {
+    const error = validateConfig({
+      functions: { 'api/user.go': { maxConcurrency } },
+    } as Parameters<typeof validateConfig>[0]);
+    expect(error).not.toBeNull();
+    expect(error?.message).toContain('maxConcurrency');
   });
 
   // Regression test for honoring the env var when it is set *after* this module

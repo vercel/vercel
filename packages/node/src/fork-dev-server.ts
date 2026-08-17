@@ -1,5 +1,5 @@
 import once from '@tootallnate/once';
-import { cloneEnv } from '@vercel/build-utils';
+import { cloneEnv, getOrCreateBunBinary } from '@vercel/build-utils';
 import type { Config, Meta } from '@vercel/build-utils';
 import {
   ChildProcess,
@@ -10,7 +10,6 @@ import {
 } from 'child_process';
 import { pathToFileURL } from 'url';
 import { join } from 'path';
-import { getOrCreateBunBinary } from './bun-helpers';
 
 export async function forkDevServer(options: {
   tsConfig: any;

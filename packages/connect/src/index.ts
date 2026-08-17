@@ -30,3 +30,8 @@ export {
 } from './installation.js';
 
 export type { ConnectAuthorizationDetail } from './authorization-details.js';
+
+export {
+  getConnectorMetadata,
+  type ConnectorMetadata,
+} from './connector.js';

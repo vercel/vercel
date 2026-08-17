@@ -6,6 +6,12 @@
       "dependsOn": ["^build"],
       "outputLogs": "new-only",
       "outputs": ["dist/**", "bin/**"]
+    },
+    "test": {
+      "dependsOn": ["build"]
+    },
+    "test-unit": {
+      "dependsOn": ["build"]
     }
   }
 }

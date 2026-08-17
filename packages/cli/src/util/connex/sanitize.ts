@@ -10,7 +10,7 @@ import stripAnsi from 'strip-ansi';
  * spoofing, or hyperlink spoofing. Run every such value through this helper
  * at the point it is assigned for human-readable output.
  *
- * Do NOT use this for `--format=json` output: JSON consumers expect the raw
+ * Do NOT use this for `--json` output: JSON consumers expect the raw
  * value, and `JSON.stringify` already escapes control characters.
  */
 export function sanitizeForTerminal(value: string): string {

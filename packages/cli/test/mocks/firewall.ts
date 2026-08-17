@@ -210,6 +210,15 @@ export const capturedRequests: {
   activate?: { version: string };
   deleteDraft?: boolean;
   patchDraft?: { action: string; id?: string; value?: unknown };
+  teamConfigQuery?: Record<string, string>;
+  teamActivate?: { version: string; query: Record<string, string> };
+  teamDeleteDraft?: { query: Record<string, string> };
+  teamPatchDraft?: {
+    action: string;
+    id?: string;
+    value?: unknown;
+    query: Record<string, string>;
+  };
   addBypass?: {
     sourceIp?: string;
     allSources?: boolean;
@@ -336,6 +345,101 @@ export function usePatchDraft(
           ...responseOverrides,
         })
       );
+    }
+  );
+}
+
+export function useListTeamFirewallConfigs(
+  active: FirewallConfigResponse | null = null,
+  draft: FirewallConfigResponse | null = null
+) {
+  delete capturedRequests.teamConfigQuery;
+  client.scenario.get(
+    '/v1/security/firewall/team-config',
+    (req: any, res: any) => {
+      capturedRequests.teamConfigQuery = { ...req.query };
+      const response: FirewallConfigListResponse = {
+        active,
+        draft,
+        versions: [],
+      };
+      res.json(response);
+    }
+  );
+}
+
+export function usePatchTeamDraft(
+  responseOverrides: Partial<FirewallConfigResponse> = {}
+) {
+  delete capturedRequests.teamPatchDraft;
+  client.scenario.patch(
+    '/v1/security/firewall/team-config/draft',
+    (req: any, res: any) => {
+      const patch = req.body;
+      capturedRequests.teamPatchDraft = {
+        action: patch.action,
+        id: patch.id,
+        value: patch.value,
+        query: { ...req.query },
+      };
+      res.json(
+        createConfig({
+          id: 'team_config_draft',
+          projectKey: 'v1_sc#draft',
+          changes: [
+            {
+              action: patch.action,
+              id: patch.id || `generated_${Date.now()}`,
+              value: patch.value,
+            },
+          ],
+          ...responseOverrides,
+        })
+      );
+    }
+  );
+}
+
+export function useActivateTeamConfig() {
+  delete capturedRequests.teamActivate;
+  client.scenario.post(
+    '/v1/security/firewall/team-config/:version/activate',
+    (req: any, res: any) => {
+      capturedRequests.teamActivate = {
+        version: req.params.version,
+        query: { ...req.query },
+      };
+      res.json(
+        createConfig({
+          id: 'team_config_new_active',
+          projectKey: 'v1_sc#active',
+          version: 2,
+        })
+      );
+    }
+  );
+}
+
+export function useDeleteTeamDraft() {
+  delete capturedRequests.teamDeleteDraft;
+  client.scenario.delete(
+    '/v1/security/firewall/team-config/draft',
+    (req: any, res: any) => {
+      capturedRequests.teamDeleteDraft = { query: { ...req.query } };
+      res.status(204).end();
+    }
+  );
+}
+
+export function useTeamConfigError(
+  statusCode: number,
+  code: string,
+  message: string
+) {
+  client.scenario.get(
+    '/v1/security/firewall/team-config',
+    (_req: any, res: any) => {
+      res.status(statusCode).json({ error: { code, message } });
     }
   );
 }

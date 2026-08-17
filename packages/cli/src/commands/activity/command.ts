@@ -1,6 +1,7 @@
 import { packageName } from '../../util/pkg-name';
 import {
   formatOption,
+  jsonOption,
   limitOption,
   nextOption,
   projectOption,
@@ -11,7 +12,7 @@ export const typesSubcommand = {
   aliases: [],
   description: 'List available event types with descriptions.',
   arguments: [],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'List all event types',
@@ -19,7 +20,7 @@ export const typesSubcommand = {
     },
     {
       name: 'Output JSON',
-      value: `${packageName} activity types --format json`,
+      value: `${packageName} activity types --json`,
     },
   ],
 } as const;
@@ -87,6 +88,7 @@ export const activityCommand = {
     limitOption,
     nextOption,
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -107,7 +109,7 @@ export const activityCommand = {
     },
     {
       name: 'Output JSON',
-      value: `${packageName} activity --format json | jq '.events[]'`,
+      value: `${packageName} activity --json | jq '.events[]'`,
     },
     {
       name: 'List activity event types',

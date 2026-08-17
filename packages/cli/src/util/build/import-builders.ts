@@ -1,6 +1,6 @@
 import npa from 'npm-package-arg';
-import { satisfies, validRange } from 'semver';
-import { dirname, join } from 'path';
+import { satisfies, valid, validRange } from 'semver';
+import { dirname, isAbsolute, join, resolve } from 'path';
 import { createRequire } from 'module';
 import { readJSON } from 'fs-extra';
 import { isStaticRuntime } from '@vercel/fs-detectors';
@@ -17,6 +17,7 @@ import { isErrnoException } from '@vercel/error-utils';
 import output from '../../output-manager';
 import cliPkg from '../pkg';
 import { installBuilders } from './install-builders';
+import { isNativeBinaryInstall } from '../native-install';
 
 export interface BuilderWithPkg {
   /**
@@ -43,20 +44,20 @@ type ResolveBuildersResult =
 // Get a real `require()` reference that esbuild won't mutate
 const require_ = createRequire(__filename);
 
-// Builder versions this CLI release was published with, from its
-// `peerDependencies` (`workspace:*` in the monorepo, so a no-op in dev)
-let builderPins: Map<string, string> | undefined;
+// Builder versions this CLI release was published with, from its `builders`
+// manifest (`workspace:*` in the monorepo, so a no-op in dev). Preview
+// tarball packs may pin builders to https://…/tarballs/….tgz URLs instead.
+function isRemoteBuilderPin(pin: string): boolean {
+  return /^https?:\/\//i.test(pin);
+}
 
 function getBuilderPins(): Map<string, string> {
-  if (!builderPins) {
-    builderPins = new Map();
-    const peerDependencies: Record<string, string> =
-      (cliPkg as { peerDependencies?: Record<string, string> })
-        .peerDependencies ?? {};
-    for (const [name, version] of Object.entries(peerDependencies)) {
-      if (validRange(version)) {
-        builderPins.set(name, version);
-      }
+  const builderPins = new Map<string, string>();
+  const pins: Record<string, string> =
+    (cliPkg as { builders?: Record<string, string> }).builders ?? {};
+  for (const [name, version] of Object.entries(pins)) {
+    if (validRange(version) || isRemoteBuilderPin(version)) {
+      builderPins.set(name, version);
     }
   }
   return builderPins;
@@ -88,7 +89,11 @@ function pinBuilderSpecs(specs: Set<string>): Map<string, string> {
     if (parsed.name && isBareSpec(parsed)) {
       const version = pins.get(parsed.name);
       if (version) {
-        pinnedSpecs.set(spec, `${parsed.name}@${version}`);
+        // Remote pins install as the URL; version pins as name@version.
+        pinnedSpecs.set(
+          spec,
+          isRemoteBuilderPin(version) ? version : `${parsed.name}@${version}`
+        );
       }
     }
   }
@@ -96,15 +101,30 @@ function pinBuilderSpecs(specs: Set<string>): Map<string, string> {
 }
 
 /**
+ * Directory that Builders are installed into and resolved from.
+ * Defaults to `.vercel/builders` within the project, and may be
+ * overridden with `VERCEL_BUILDERS_DIR` (relative paths resolve
+ * against `cwd`). Eventually this will default to a shared cache
+ * location (e.g. under the global `.vercel` or XDG cache dir).
+ */
+export function getBuildersDir(cwd: string): string {
+  const override = process.env.VERCEL_BUILDERS_DIR;
+  if (override) {
+    return isAbsolute(override) ? override : resolve(cwd, override);
+  }
+  return join(cwd, VERCEL_DIR, 'builders');
+}
+
+/**
  * Imports the specified Vercel Builders, installing any missing ones
- * into `.vercel/builders` if necessary.
+ * into the Builders directory (see {@link getBuildersDir}) if necessary.
  */
 export async function importBuilders(
   builderSpecs: Set<string>,
   cwd: string,
   span?: Span
 ): Promise<Map<string, BuilderWithPkg>> {
-  const buildersDir = join(cwd, VERCEL_DIR, 'builders');
+  const buildersDir = getBuildersDir(cwd);
 
   let importResult = await resolveBuilders(buildersDir, builderSpecs);
 
@@ -115,13 +135,18 @@ export async function importBuilders(
       buildersDir,
       new Set(Array.from(buildersToAdd, spec => pinnedSpecs.get(spec) ?? spec)),
       span,
-      installReasons
+      installReasons,
+      pinnedSpecs
     );
 
+    const allowedPinDriftSpecs = new Set(
+      Array.from(pinnedSpecs.keys()).filter(spec => installResult.has(spec))
+    );
     importResult = await resolveBuilders(
       buildersDir,
       builderSpecs,
-      installResult
+      installResult,
+      allowedPinDriftSpecs
     );
 
     if ('buildersToAdd' in importResult) {
@@ -170,7 +195,8 @@ function missingModuleId(err: Error): string | undefined {
 async function resolveBuilders(
   buildersDir: string,
   builderSpecs: Set<string>,
-  resolvedSpecs?: Map<string, string>
+  resolvedSpecs?: Map<string, string>,
+  allowedPinDriftSpecs?: Set<string>
 ): Promise<ResolveBuildersResult> {
   const builders = new Map<string, BuilderWithPkg>();
   const buildersToAdd = new Set<string>();
@@ -207,8 +233,9 @@ async function resolveBuilders(
       let builderPkg: PackageJson | undefined;
 
       try {
-        // First try `.vercel/builders`. The package name should always be available
-        // at the top-level of `node_modules` since CLI is installing those directly.
+        // First try the Builders directory. The package name should always be
+        // available at the top-level of `node_modules` since CLI is installing
+        // those directly.
         pkgPath = join(buildersDir, 'node_modules', name, 'package.json');
         builderPkg = await readJSON(pkgPath);
       } catch (error: unknown) {
@@ -219,9 +246,18 @@ async function resolveBuilders(
           throw error;
         }
 
-        // If `pkgPath` wasn't found in `.vercel/builders` then try as a CLI local
-        // dependency. `require.resolve()` will throw if the Builder is not a CLI
-        // dep, in which case we'll install it into `.vercel/builders`.
+        // Builders are not staged into the native binary snapshot. When one
+        // is missing from the Builders directory, install the CLI-pinned spec
+        // instead of falling back to the CLI's local dependencies.
+        if (isNativeBinaryInstall()) {
+          buildersToAdd.add(spec);
+          installReasons.set(spec, 'not-installed');
+          continue;
+        }
+
+        // If `pkgPath` wasn't found in the Builders directory then try as a
+        // CLI local dependency. `require.resolve()` will throw if the Builder
+        // is not a CLI dep, in which case we'll install it.
         pkgPath = require_.resolve(`${name}/package.json`, {
           paths: [__dirname],
         });
@@ -239,18 +275,52 @@ async function resolveBuilders(
       }
 
       const peerVersion = getBuilderPins().get(name);
+      // Only exact-version pins enforce equality. Remote (tarball URL) pins
+      // are install targets only — the resolved package version cannot equal
+      // a URL. Range-shaped pins (never produced by pin-builders, which
+      // requires exact versions) must not force a reinstall on every run.
       if (
         isBareSpec(parsed) &&
         peerVersion &&
-        pkgPath.startsWith(buildersDir) &&
-        !satisfies(builderPkg.version, peerVersion)
+        valid(peerVersion) &&
+        builderPkg.version !== peerVersion &&
+        !allowedPinDriftSpecs?.has(spec)
       ) {
         output.debug(
-          `Cached "${name}@${builderPkg.version}" does not satisfy "${peerVersion}"`
+          `Resolved "${name}@${builderPkg.version}" does not match pin "${peerVersion}"`
         );
         buildersToAdd.add(spec);
-        installReasons.set(spec, 'peer-version-mismatch');
+        installReasons.set(spec, 'pin-version-mismatch');
         continue;
+      }
+
+      // URL pins cannot be compared to package.json#version. npm records the
+      // requested URL in the Builders directory's package.json, so compare the
+      // source instead. This catches npm installs and different preview packs,
+      // including native PR binaries whose CLI version has no preview suffix.
+      if (
+        isBareSpec(parsed) &&
+        peerVersion &&
+        isRemoteBuilderPin(peerVersion) &&
+        pkgPath.startsWith(buildersDir)
+      ) {
+        let installedSpec: string | undefined;
+        try {
+          const buildersPkg = await readJSON(join(buildersDir, 'package.json'));
+          installedSpec = buildersPkg.dependencies?.[name];
+        } catch (error: unknown) {
+          if (!isErrnoException(error) || error.code !== 'ENOENT') {
+            throw error;
+          }
+        }
+        if (installedSpec !== peerVersion) {
+          output.debug(
+            `Installed source for "${name}@${builderPkg.version}" is "${installedSpec ?? 'unknown'}", not pin "${peerVersion}"`
+          );
+          buildersToAdd.add(spec);
+          installReasons.set(spec, 'preview-pack-mismatch');
+          continue;
+        }
       }
 
       if (parsed.type === 'version' && parsed.rawSpec !== builderPkg.version) {
@@ -306,10 +376,13 @@ async function resolveBuilders(
       });
       output.debug(`Imported Builder "${name}" from "${dirname(pkgPath)}"`);
     } catch (err: any) {
-      // `resolvedSpecs` is only passed into this function on the 2nd run,
-      // so if MODULE_NOT_FOUND happens in that case then we don't want to
-      // try to install again. Instead just pass through the error to the user
-      if (err.code === 'MODULE_NOT_FOUND' && !resolvedSpecs) {
+      // On the 2nd pass (`resolvedSpecs` set), don't retry install — surface
+      // the error. Treat ENOENT like MODULE_NOT_FOUND for native SEA VFS
+      // ghost paths that would otherwise skip the install fallback.
+      if (
+        (err.code === 'MODULE_NOT_FOUND' || err.code === 'ENOENT') &&
+        !resolvedSpecs
+      ) {
         output.debug(`Failed to import "${name}": ${err}`);
         buildersToAdd.add(spec);
         if (entrypointLoadFailed) {

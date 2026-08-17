@@ -44,6 +44,12 @@ export function createKvSessionStorage<Data = SessionData, FlashData = Data>({
 }: KvSessionStorageOptions) {
   type S = SessionIdStorageStrategy<Data, FlashData>;
 
+  const sessionIdPattern = new RegExp(
+    `^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:` +
+      '[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+  );
+  const isSessionId = (id: string) => sessionIdPattern.test(id);
+
   async function setData(id: string, value: string, expires?: Date) {
     if (expires) {
       await kv.set(id, value, { pxat: expires.getTime() });
@@ -66,10 +72,16 @@ export function createKvSessionStorage<Data = SessionData, FlashData = Data>({
   };
 
   const readData: S['readData'] = async id => {
+    if (!isSessionId(id)) {
+      return null;
+    }
     return (await kv.get(id)) ?? null;
   };
 
   const updateData: S['updateData'] = async (id, data, expires) => {
+    if (!isSessionId(id)) {
+      return;
+    }
     const str = JSON.stringify(data);
     if (str === '{}') {
       // If the data is empty then delete the session key
@@ -79,7 +91,9 @@ export function createKvSessionStorage<Data = SessionData, FlashData = Data>({
   };
 
   const deleteData: S['deleteData'] = async id => {
-    await kv.del(id);
+    if (isSessionId(id)) {
+      await kv.del(id);
+    }
   };
 
   return createSessionStorage<Data, FlashData>({

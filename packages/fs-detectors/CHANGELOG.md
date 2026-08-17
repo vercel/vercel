@@ -1,5 +1,105 @@
 # @vercel/fs-detectors
 
+## 6.15.8
+
+### Patch Changes
+
+- Updated dependencies [b4f09c1]
+  - @vercel/build-utils@14.1.1
+
+## 6.15.7
+
+### Patch Changes
+
+- Updated dependencies [852e1a0]
+  - @vercel/routing-utils@6.5.0
+  - @vercel/build-utils@14.1.0
+  - @vercel/frameworks@3.31.0
+
+## 6.15.6
+
+### Patch Changes
+
+- Updated dependencies [a7fc7e8]
+  - @vercel/frameworks@3.31.0
+
+## 6.15.5
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+- Updated dependencies [2da7809]
+  - @vercel/build-utils@14.0.5
+
+## 6.15.4
+
+### Patch Changes
+
+- Updated dependencies [13f81ac]
+  - @vercel/build-utils@14.0.4
+
+## 6.15.3
+
+### Patch Changes
+
+- Updated dependencies [d72826e]
+  - @vercel/build-utils@14.0.3
+
+## 6.15.2
+
+### Patch Changes
+
+- Updated dependencies [b82e2a8]
+- Updated dependencies [b7ec19b]
+  - @vercel/frameworks@3.30.9
+  - @vercel/build-utils@14.0.2
+
+## 6.15.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/build-utils@14.0.1
+  - @vercel/error-utils@2.2.1
+  - @vercel/frameworks@3.30.8
+  - @vercel/routing-utils@6.4.1
+
+## 6.15.0
+
+### Minor Changes
+
+- 5619873: Fix api dir builds receiving incorrect framework or runtime.
+
+### Patch Changes
+
+- Updated dependencies [b747ab4]
+- Updated dependencies [5c33351]
+- Updated dependencies [5619873]
+  - @vercel/build-utils@14.0.0
+
+## 6.14.3
+
+### Patch Changes
+
+- Updated dependencies [a69c714]
+- Updated dependencies [654e898]
+  - @vercel/build-utils@13.36.3
+
+## 6.14.2
+
+### Patch Changes
+
+- Updated dependencies [2c75803]
+  - @vercel/build-utils@13.36.2
+
+## 6.14.1
+
+### Patch Changes
+
+- Updated dependencies [17ee736]
+  - @vercel/build-utils@13.36.1
+
 ## 6.14.0
 
 ### Minor Changes

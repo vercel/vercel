@@ -7,6 +7,9 @@ import { promisify } from 'node:util';
 
 const require = createRequire(import.meta.url);
 const execFileAsync = promisify(execFile);
+const { getWorkspaceVersions, pinBuilders } = await import(
+  './pin-builders.mjs'
+);
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const stagingRoot = join(packageRoot, '.pkg-staging');
@@ -14,6 +17,12 @@ const pkgBin = require.resolve('@yao-pkg/pkg/lib-es5/bin.js');
 
 const packageJson = JSON.parse(
   await fs.readFile(join(packageRoot, 'package.json'), 'utf8')
+);
+// `package.json#builders` are loaded via importBuilders — never stage them.
+const builderPackageNames = new Set(
+  Object.keys(packageJson.builders ?? {}).filter(
+    name => typeof name === 'string' && name.length > 0
+  )
 );
 const binaryRuntimePackageNames = [
   '@vercel/blob',
@@ -23,6 +32,7 @@ const binaryRuntimePackageNames = [
   '@vercel/detect-agent',
   '@vercel/fun',
   '@vercel/prepare-flags-definitions',
+  '@vercel/python-analysis',
   'chokidar',
   'esbuild',
   'jose',
@@ -30,8 +40,18 @@ const binaryRuntimePackageNames = [
   'sandbox',
   'smol-toml',
   'undici',
+  'uuid',
   'zod',
 ];
+for (const name of binaryRuntimePackageNames) {
+  if (builderPackageNames.has(name)) {
+    throw new Error(
+      `Binary build aborted: "${name}" is listed in both ` +
+        `binaryRuntimePackageNames and package.json#builders. Builders must ` +
+        `not be staged into the native binary.`
+    );
+  }
+}
 const binaryRuntimeDevDependencies = new Map([
   [
     '@vercel/build-utils',
@@ -70,6 +90,19 @@ await fs.copyFile(
   join(packageRoot, 'pkg.config.mjs'),
   join(stagingRoot, 'pkg.config.mjs')
 );
+// Pin the `builders` manifest to exact workspace versions (or keep
+// pre-rewritten entries like preview tarball URLs from utils/pack.ts).
+// getBuilderPins() reads this manifest at runtime via getPackageJSON(),
+// which resolves to this staged package.json inside the binary — without
+// it, importBuilders installs unpinned builders from npm `latest`.
+// pinBuilders throws if any entry cannot be pinned exactly, failing the
+// binary build rather than shipping unpinned builders.
+const { builders: pinnedBuilders } = pinBuilders(
+  packageJson,
+  getWorkspaceVersions(join(packageRoot, '..')),
+  process.env.VERCEL_CLI_PREVIEW_TARBALL_BASE_URL
+);
+
 await fs.writeFile(
   join(stagingRoot, 'package.json'),
   JSON.stringify(
@@ -78,6 +111,7 @@ await fs.writeFile(
       version: packageJson.version,
       type: packageJson.type,
       dependencies: binaryRuntimeDependencies,
+      builders: pinnedBuilders,
     },
     null,
     2
@@ -100,6 +134,7 @@ for (const dependency of directDependencies) {
 const STATIC_CHECK_IGNORE = new Set([]);
 
 await verifyExternalImportsAreStaged();
+await assertNoBuildersStaged();
 
 const args = normalizeOutputArgs(process.argv.slice(2));
 const customNodeRuntimeEnv = await seedCustomNodeRuntime(args);
@@ -144,7 +179,8 @@ async function verifyExternalImportsAreStaged() {
   };
   await walk(distDir);
 
-  const specifierRe = /(?:\bfrom\s*|\brequire\s*\(\s*)["']([^"']+)["']/g;
+  const specifierRe =
+    /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*)["']([^"']+)["']/g;
   const builtins = new Set(builtinModules);
   const imported = new Set();
 
@@ -160,14 +196,27 @@ async function verifyExternalImportsAreStaged() {
         ? segments.slice(0, 2).join('/')
         : segments[0];
       if (!packageName || builtins.has(packageName)) continue;
-      if (!declaredDependencies.has(packageName)) continue;
       imported.add(packageName);
     }
+  }
+
+  const importedBuilders = [...imported]
+    .filter(name => builderPackageNames.has(name))
+    .sort();
+  if (importedBuilders.length > 0) {
+    throw new Error(
+      `Binary build aborted: the CLI bundle statically imports builder ` +
+        `package(s) from package.json#builders. Builders must be loaded via ` +
+        `importBuilders at runtime, not bundled into the native binary:\n` +
+        importedBuilders.map(name => `  - ${name}`).join('\n')
+    );
   }
 
   const missing = [];
   for (const packageName of imported) {
     if (STATIC_CHECK_IGNORE.has(packageName)) continue;
+    if (builderPackageNames.has(packageName)) continue;
+    if (!declaredDependencies.has(packageName)) continue;
     const manifest = join(
       stagedNodeModules,
       ...packageName.split('/'),
@@ -193,11 +242,53 @@ async function verifyExternalImportsAreStaged() {
   }
 
   console.log(
-    `Static check: all ${imported.size} statically-imported dependencies are staged into the binary.`
+    `Static check: all ${imported.size} statically-imported dependencies are staged into the binary` +
+      (builderPackageNames.size
+        ? ` (${builderPackageNames.size} builders excluded)`
+        : '') +
+      `.`
+  );
+}
+
+async function assertNoBuildersStaged() {
+  const stagedBuilders = [];
+  for (const name of builderPackageNames) {
+    const manifest = join(
+      stagedNodeModules,
+      ...name.split('/'),
+      'package.json'
+    );
+    try {
+      await fs.stat(manifest);
+      stagedBuilders.push(name);
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        throw error;
+      }
+    }
+  }
+  if (stagedBuilders.length > 0) {
+    stagedBuilders.sort();
+    throw new Error(
+      `Binary build aborted: builder package(s) from package.json#builders ` +
+        `were staged into the native binary:\n` +
+        stagedBuilders.map(name => `  - ${name}`).join('\n') +
+        `\n\nBuilders must be loaded at runtime via importBuilders.`
+    );
+  }
+  console.log(
+    `Staging check: no package.json#builders packages are present in the binary staging tree.`
   );
 }
 
 async function stagePackage(name, issuerDir = packageRoot, scan = true) {
+  if (builderPackageNames.has(name)) {
+    throw new Error(
+      `Refusing to stage builder package "${name}" into the native binary. ` +
+        `Packages listed in package.json#builders are loaded via importBuilders.`
+    );
+  }
+
   const packageDir = await findPackageDir(name, issuerDir);
   const destination = join(stagedNodeModules, ...name.split('/'));
 
@@ -238,6 +329,9 @@ async function scanPackage(name, issuerDir = packageRoot) {
   }
 
   for (const [dependency, version] of Object.entries(dependencies)) {
+    if (builderPackageNames.has(dependency)) {
+      continue;
+    }
     try {
       await stagePackage(dependency, packageDir);
     } catch (error) {

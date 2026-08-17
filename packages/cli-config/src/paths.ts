@@ -3,7 +3,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { homedir } from 'node:os';
-import XDGAppPaths from 'xdg-app-paths';
+
+type XDGAppPathsFactory = typeof import('xdg-app-paths');
 
 function isReadableDirectory(targetPath: string): boolean {
   try {
@@ -14,6 +15,9 @@ function isReadableDirectory(targetPath: string): boolean {
 }
 
 export function getGlobalPathConfig(): string {
+  // xdg-app-paths infers a default app name when loaded, which requires a
+  // process entrypoint that is not present in every server runtime.
+  const XDGAppPaths = require('xdg-app-paths') as XDGAppPathsFactory;
   const vercelDirectories = XDGAppPaths('com.vercel.cli').dataDirs();
 
   const possibleConfigPaths = [

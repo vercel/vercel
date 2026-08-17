@@ -31,6 +31,7 @@ export interface ListFlags {
   '--branch'?: string[];
   '--all-branches'?: boolean;
   '--status'?: string;
+  '--page-path'?: string[];
   '--page'?: string[];
   '--author'?: string[];
   '--content-id'?: string[];
@@ -52,8 +53,9 @@ function validateStatus(value: string | undefined) {
 
 async function resolveAuthors(
   client: Client,
-  authors: string[] | undefined
-): Promise<string[] | undefined> {
+  authors: string[] | undefined,
+  jsonOutput: boolean
+): Promise<string[] | number | undefined> {
   if (!authors || authors.length === 0) {
     return undefined;
   }
@@ -61,6 +63,14 @@ async function resolveAuthors(
     return authors;
   }
   const { user } = await getScope(client);
+  if (!user) {
+    return outputError(
+      client,
+      jsonOutput,
+      'USER_REQUIRED',
+      "Can't resolve `--author me` when authenticated as an app. Use an author ID with `--author`, or authenticate with a user token."
+    );
+  }
   return authors.map(author => (author === 'me' ? user.id : author));
 }
 
@@ -81,8 +91,9 @@ function printActiveFilters(flags: ListFlags): void {
       `--author ${flags['--author'].join(', ')} (takes a user ID or \`me\` — usernames match nothing)`
     );
   }
-  if (flags['--page']?.length) {
-    parts.push(`--page ${flags['--page'].join(', ')}`);
+  const pagePaths = flags['--page-path'] ?? flags['--page'];
+  if (pagePaths?.length) {
+    parts.push(`--page-path ${pagePaths.join(', ')}`);
   }
   if (flags['--search']) {
     parts.push(`--search ${flags['--search']}`);
@@ -157,7 +168,9 @@ function nextPageFlagsSuffix(client: Client): string {
       }
       continue;
     }
-    out.push(token);
+    out.push(
+      name === '--page' ? token.replace(/^--page(?==|$)/, '--page-path') : token
+    );
     if (
       !token.includes('=') &&
       i + 1 < tokens.length &&
@@ -248,6 +261,7 @@ export default async function list(
     return handleCommentsParseError(err, 'list');
   }
   const flags = parsedArgs.flags as ListFlags;
+  const pagePaths = flags['--page-path'] ?? flags['--page'];
 
   // Strict positional validation: the inherited default-subcommand routing
   // would otherwise make `vercel comments resovle icZ9` silently list.
@@ -270,6 +284,7 @@ export default async function list(
   telemetry.trackCliOptionBranch(flags['--branch']);
   telemetry.trackCliFlagAllBranches(flags['--all-branches']);
   telemetry.trackCliOptionStatus(flags['--status']);
+  telemetry.trackCliOptionPagePath(flags['--page-path']);
   telemetry.trackCliOptionPage(flags['--page']);
   telemetry.trackCliOptionAuthor(flags['--author']);
   telemetry.trackCliOptionContentId(flags['--content-id']);
@@ -331,13 +346,16 @@ export default async function list(
     }
   }
 
-  const authors = await resolveAuthors(client, flags['--author']);
+  const authors = await resolveAuthors(client, flags['--author'], jsonOutput);
+  if (typeof authors === 'number') {
+    return authors;
+  }
 
   const params: ListThreadsParams = {
     projectId: scope.projectId,
     branch: branchFilter,
     status: status === 'all' ? undefined : status,
-    page: flags['--page'],
+    page: pagePaths,
     author: authors,
     contentId: flags['--content-id'],
     search: flags['--search'],

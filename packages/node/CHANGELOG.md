@@ -1,5 +1,95 @@
 # @vercel/node
 
+## 5.10.1
+
+### Patch Changes
+
+- b4f09c1: Support selecting Bun 1.4.x as an explicit runtime and build-time package manager, including local Bun servers.
+- Updated dependencies [b4f09c1]
+  - @vercel/build-utils@14.1.1
+
+## 5.10.0
+
+### Minor Changes
+
+- 852e1a0: Move middleware matcher utils from node builder to general build utils.
+
+### Patch Changes
+
+- Updated dependencies [852e1a0]
+  - @vercel/build-utils@14.1.0
+
+## 5.9.9
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+- Updated dependencies [2da7809]
+  - @vercel/build-utils@14.0.5
+
+## 5.9.8
+
+### Patch Changes
+
+- e829b31: Fix TypeScript 7 support in the `@vercel/node` builder by using the project-installed compiler.
+- Updated dependencies [13f81ac]
+  - @vercel/build-utils@14.0.4
+
+## 5.9.7
+
+### Patch Changes
+
+- Updated dependencies [d72826e]
+  - @vercel/build-utils@14.0.3
+
+## 5.9.6
+
+### Patch Changes
+
+- Updated dependencies [b7ec19b]
+  - @vercel/build-utils@14.0.2
+
+## 5.9.5
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/build-utils@14.0.1
+  - @vercel/error-utils@2.2.1
+  - @vercel/static-config@3.4.1
+
+## 5.9.4
+
+### Patch Changes
+
+- Updated dependencies [b747ab4]
+- Updated dependencies [5c33351]
+- Updated dependencies [5619873]
+  - @vercel/build-utils@14.0.0
+
+## 5.9.3
+
+### Patch Changes
+
+- Updated dependencies [a69c714]
+- Updated dependencies [654e898]
+  - @vercel/build-utils@13.36.3
+
+## 5.9.2
+
+### Patch Changes
+
+- Updated dependencies [2c75803]
+  - @vercel/build-utils@13.36.2
+
+## 5.9.1
+
+### Patch Changes
+
+- Updated dependencies [17ee736]
+  - @vercel/build-utils@13.36.1
+
 ## 5.9.0
 
 ### Minor Changes

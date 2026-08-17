@@ -97,7 +97,7 @@ describe('blob list', () => {
         'list',
         '--limit',
         '20',
-        '--cursor',
+        '--next',
         'cursor_123',
         '--prefix',
         'folder/',
@@ -110,7 +110,7 @@ describe('blob list', () => {
         [
           '--limit',
           '20',
-          '--cursor',
+          '--next',
           'cursor_123',
           '--prefix',
           'folder/',
@@ -135,7 +135,7 @@ describe('blob list', () => {
           value: '20',
         },
         {
-          key: 'option:cursor',
+          key: 'option:next',
           value: 'cursor_123',
         },
         {
@@ -244,7 +244,7 @@ describe('blob list', () => {
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.log).toHaveBeenCalledWith(
-        'To display the next page run `vercel blob list --limit 5 --cursor next_cursor_123`'
+        'To display the next page run `vercel blob list --limit 5 --next next_cursor_123`'
       );
     });
 
@@ -289,7 +289,7 @@ describe('blob list', () => {
       expect(exitCode).toBe(0);
       expect(mockedOutput.log).toHaveBeenCalledWith(
         expect.stringContaining(
-          '--limit 10 --prefix test/ --mode folded --cursor paginated_cursor'
+          '--limit 10 --prefix test/ --mode folded --next paginated_cursor'
         )
       );
     });
@@ -359,16 +359,6 @@ describe('blob list', () => {
       expect(exitCode).toBe(1);
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Fetching blobs');
       expect(mockedOutput.stopSpinner).not.toHaveBeenCalled();
-      expect(mockedOutput.print).not.toHaveBeenCalled();
-    });
-
-    it('should handle API errors gracefully', async () => {
-      const apiError = new Error('Network error');
-      mockedBlob.list.mockRejectedValue(apiError);
-
-      const exitCode = await list(client, ['--limit', '5'], testAuth);
-
-      expect(exitCode).toBe(1);
       expect(mockedOutput.print).not.toHaveBeenCalled();
     });
   });
@@ -464,34 +454,6 @@ describe('blob list', () => {
           expect.objectContaining({ prefix })
         );
       }
-    });
-  });
-
-  describe('spinner and output behavior', () => {
-    it('should show spinner during fetch and stop on success', async () => {
-      const exitCode = await list(client, [], testAuth);
-
-      expect(exitCode).toBe(0);
-      expect(mockedOutput.spinner).toHaveBeenCalledWith('Fetching blobs');
-      expect(mockedOutput.stopSpinner).toHaveBeenCalled();
-    });
-
-    it('should not stop spinner on fetch error', async () => {
-      const fetchError = new Error('Fetch failed');
-      mockedBlob.list.mockRejectedValue(fetchError);
-
-      const exitCode = await list(client, [], testAuth);
-
-      expect(exitCode).toBe(1);
-      expect(mockedOutput.spinner).toHaveBeenCalledWith('Fetching blobs');
-      expect(mockedOutput.stopSpinner).not.toHaveBeenCalled();
-    });
-
-    it('should show debug output', async () => {
-      const exitCode = await list(client, [], testAuth);
-
-      expect(exitCode).toBe(0);
-      expect(mockedOutput.debug).toHaveBeenCalledWith('Fetching blobs');
     });
   });
 

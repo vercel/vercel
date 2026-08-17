@@ -1,0 +1,26 @@
+{
+  "$schema": "https://turborepo.org/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["generate:schemas", "build:wasm", "^build"],
+      "inputs": ["$TURBO_DEFAULT$", "!src/**/schema.zod.ts"],
+      "outputs": ["dist/**", "!dist/wasm/**"]
+    },
+    "generate:schemas": {
+      "inputs": ["$TURBO_DEFAULT$", "!src/**/schema.zod.ts"],
+      "outputs": ["src/**/schema.zod.ts"]
+    },
+    "build:wasm": {
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$", "!src/**/schema.zod.ts"],
+      "outputs": ["dist/wasm/**"]
+    },
+    "test": {
+      "dependsOn": ["build"]
+    },
+    "test-unit": {
+      "dependsOn": ["build"]
+    }
+  }
+}

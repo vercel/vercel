@@ -1,0 +1,18 @@
+{
+  "uploadNowJson": true,
+  "projectSettings": {
+    "framework": "services"
+  },
+  "build": {
+    "env": {
+      "NEXT_ENABLE_ADAPTER": "1"
+    }
+  },
+  "services": {
+    "web": {
+      "root": "web/",
+      "framework": "nextjs"
+    }
+  },
+  "rewrites": [{ "source": "/(.*)", "destination": { "service": "web" } }]
+}

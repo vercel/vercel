@@ -1,6 +1,6 @@
 {
   "name": "@vercel/python-analysis",
-  "version": "0.12.0",
+  "version": "0.13.2",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -29,13 +29,12 @@
     "directory": "packages/python-analysis"
   },
   "scripts": {
-    "build": "pnpm generate:schemas && pnpm build:wasm && node scripts/build.mjs",
+    "build": "node scripts/build.mjs",
     "build:wasm": "node scripts/build-wasm.mjs",
     "generate:schemas": "ts-to-zod --all",
     "test": "vitest run --config ../../vitest.config.mts",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/*.test.ts'",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test-unit": "vitest run --config ../../vitest.config.mts"
   },
   "dependencies": {
     "@bytecodealliance/preview2-shim": "0.17.6",
@@ -52,6 +51,6 @@
     "@types/js-yaml": "4.0.9",
     "@types/node": "20.11.0",
     "ts-to-zod": "^3",
-    "vitest": "2.1.4"
+    "vitest": "4.1.10"
   }
 }

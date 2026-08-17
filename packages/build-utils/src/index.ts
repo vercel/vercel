@@ -8,7 +8,7 @@ import {
   sanitizeConsumerName,
 } from './lambda';
 import { NodejsLambda, type NodejsLambdaOptions } from './nodejs-lambda';
-import { Prerender } from './prerender';
+import { Prerender, type PrerenderClassification } from './prerender';
 import download, {
   downloadFile,
   DownloadedFiles,
@@ -57,6 +57,7 @@ import {
   getSupportedBunVersion,
 } from './fs/node-version';
 import streamToBuffer, { streamToBufferChunks } from './fs/stream-to-buffer';
+import { getOrCreateBunBinary } from './fs/bun-helpers';
 import debug from './debug';
 import getIgnoreFilter from './get-ignore-filter';
 import { getPlatformEnv } from './get-platform-env';
@@ -69,7 +70,7 @@ import { cloneEnv } from './clone-env';
 import { hardLinkDir } from './hard-link-dir';
 import { validateNpmrc } from './validate-npmrc';
 
-export type { NodejsLambdaOptions };
+export type { NodejsLambdaOptions, PrerenderClassification };
 
 export {
   FileBlob,
@@ -98,6 +99,7 @@ export {
   getSupportedNodeVersion,
   isBunVersion,
   getSupportedBunVersion,
+  getOrCreateBunBinary,
   detectPackageManager,
   runNpmInstall,
   NpmInstallOutput,
@@ -142,7 +144,7 @@ export { ContainerImage } from './container-image';
 export type { ContainerImageConfig } from './container-image';
 export { readConfigFile, getPackageJson } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
-export { getOsRelease, getProvidedRuntime } from './os';
+export { getProvidedRuntime } from './provided-runtime';
 
 export * from './should-serve';
 export * from './schemas';
@@ -174,6 +176,11 @@ export { defaultCachePathGlob } from './default-cache-path-glob';
 export { generateNodeBuilderFunctions } from './generate-node-builder-functions';
 
 export {
+  getRegExpFromMatchers,
+  resolveMiddlewareMatcher,
+} from './middleware-matcher';
+
+export {
   BACKEND_FRAMEWORKS,
   BACKEND_BUILDERS,
   UNIFIED_BACKEND_BUILDER,
@@ -189,7 +196,6 @@ export {
   isPythonFramework,
 } from './framework-helpers';
 
-export * from './python';
 export * from './node-entrypoint';
 export * from './service-path-utils';
 

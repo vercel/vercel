@@ -311,6 +311,68 @@ describe('comments list', () => {
     expect(requestQuery?.author).toBe('user_dummy');
   });
 
+  it('filters by recorded page path with --page-path', async () => {
+    let requestQuery: Record<string, unknown> | undefined;
+    client.scenario.get('/toolbar/threads', (req, res) => {
+      requestQuery = req.query;
+      res.json({ pagination: {}, threads: [] });
+    });
+
+    client.setArgv('comments', '--page-path', '/docs/*', '--format', 'json');
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(0);
+    expect(requestQuery?.page).toBe('/docs/*');
+    expect(client.telemetryEventStore.readonlyEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'option:page-path',
+          value: '[REDACTED]',
+        }),
+      ])
+    );
+  });
+
+  it('continues accepting --page as a page-path filter', async () => {
+    let requestQuery: Record<string, unknown> | undefined;
+    client.scenario.get('/toolbar/threads', (req, res) => {
+      requestQuery = req.query;
+      res.json({ pagination: {}, threads: [] });
+    });
+
+    client.setArgv('comments', '--page', '/docs/*', '--format', 'json');
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(0);
+    expect(requestQuery?.page).toBe('/docs/*');
+    expect(client.telemetryEventStore.readonlyEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: 'option:page', value: '[REDACTED]' }),
+      ])
+    );
+  });
+
+  it('rejects --author me for an app principal', async () => {
+    mockedGetScope.mockResolvedValue({
+      contextName: 'my-team',
+      team: { id: 'team_dummy', slug: 'my-team' },
+      user: null,
+      app: { id: 'app_dummy', name: 'Dummy App' },
+    } as never);
+
+    client.setArgv('comments', '--author', 'me', '--format', 'json');
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(1);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      error: {
+        code: 'USER_REQUIRED',
+        message:
+          "Can't resolve `--author me` when authenticated as an app. Use an author ID with `--author`, or authenticate with a user token.",
+      },
+    });
+  });
+
   it('discloses the author filter with an ID hint on empty results', async () => {
     client.scenario.get('/toolbar/threads', (_req, res) => {
       res.json({ pagination: {}, threads: [] });

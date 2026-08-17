@@ -3,6 +3,7 @@ import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 import {
   forceOption,
   formatOption,
+  jsonOption,
   projectOption,
   yesOption,
 } from '../../util/arg-common';
@@ -25,6 +26,7 @@ export const listSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     projectOption,
     {
       name: 'guidance',
@@ -50,13 +52,17 @@ export const addSubcommand = {
       name: 'environment',
       required: false,
     },
-    {
-      name: 'git-branch',
-      required: false,
-    },
   ],
   options: [
     projectOption,
+    {
+      name: 'git-branch',
+      description: 'Set the Git branch for a Preview Environment Variable',
+      shorthand: null,
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+    },
     {
       name: 'sensitive',
       description: 'Store the value as sensitive for Production or Preview',
@@ -72,14 +78,22 @@ export const addSubcommand = {
       deprecated: false,
     },
     {
+      name: 'visibility',
+      description:
+        'Set config/secret visibility (`config` or `secret`). Inferred from type when omitted and VERCEL_ENV_VAR_CONFIG_SECRET_UI is set',
+      shorthand: null,
+      type: String,
+      argument: 'VISIBILITY',
+      deprecated: false,
+    },
+    {
       ...forceOption,
       description: 'Overwrite an existing variable for the same target',
       shorthand: null,
     },
     {
       ...yesOption,
-      description:
-        'Skip the confirmation prompt when adding an Environment Variable',
+      description: 'Accept default choices when adding an Environment Variable',
     },
     {
       name: 'guidance',
@@ -131,8 +145,8 @@ export const addSubcommand = {
     {
       name: 'Add a new Environment Variable for a specific Environment and Git Branch',
       value: [
-        `${packageName} env add <name> ${targetPlaceholder} <gitbranch>`,
-        `${packageName} env add DB_PASS preview feat1`,
+        `${packageName} env add <name> ${targetPlaceholder} --git-branch <name>`,
+        `${packageName} env add DB_PASS preview --git-branch feat1`,
       ],
     },
     {
@@ -324,6 +338,15 @@ export const updateSubcommand = {
       description: 'Update to a sensitive Environment Variable',
       shorthand: null,
       type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'visibility',
+      description:
+        'Set config/secret visibility (`config` or `secret`). Inferred from type when omitted and VERCEL_ENV_VAR_CONFIG_SECRET_UI is set',
+      shorthand: null,
+      type: String,
+      argument: 'VISIBILITY',
       deprecated: false,
     },
     {

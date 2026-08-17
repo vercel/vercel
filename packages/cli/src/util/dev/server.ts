@@ -112,7 +112,11 @@ import {
   toOrchestratorService,
 } from './dev-sidecars';
 import { injectNextDevWebSocketShimIfNeeded } from './next-dev-websocket-shim-injection';
-import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
+import {
+  applyChainResponseHeader,
+  applyOverriddenHeaders,
+  nodeHeadersToFetchHeaders,
+} from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
 import {
   errorToString,
@@ -243,6 +247,7 @@ export default class DevServer {
       VERCEL_HAS_WORKER_SERVICES: '1',
       VERCEL_QUEUE_BASE_URL: `${this.address.origin}/_svc/_queues`,
       VERCEL_QUEUE_TOKEN: 'vc-dev-token',
+      VERCEL_REGION: 'dev1',
     };
   }
 
@@ -281,6 +286,11 @@ export default class DevServer {
       proxyOrigin: this.address.origin,
       useImplicitEnvInjection: false,
       preferServiceBuilder: true,
+      onQueueSubscriptions: (serviceName, subscriptions) =>
+        this.queueBroker?.updateServiceSubscriptions(
+          serviceName,
+          subscriptions
+        ),
     });
 
     const queueBroker = new QueueBroker(services, name =>
@@ -749,6 +759,10 @@ export default class DevServer {
       this.readJsonFile<VercelConfig>(configPath),
     ]);
 
+    // Validate what the user actually wrote. Everything below turns
+    // `vercelConfig` into a derived build plan (zero-config builders, the
+    // `proxy` builder, transformed routes), and those derived fields must not
+    // be fed back through a validator whose rules are about authored config.
     await this.validateVercelConfig(vercelConfig);
 
     this.projectSettings = {
@@ -787,6 +801,7 @@ export default class DevServer {
 
       const detectedBuilders = await detectBuilders(files, pkg, {
         tag: 'latest',
+        bunVersion: vercelConfig.bunVersion,
         functions: vercelConfig.functions,
         projectSettings: projectSettings || this.projectSettings,
         featHandleMiss,
@@ -902,8 +917,6 @@ export default class DevServer {
       // since it might catch all other requests
       vercelConfig.builds.sort(sortBuilders);
     }
-
-    await this.validateVercelConfig(vercelConfig);
 
     // TODO: temporarily strip and warn since `has` is not implemented yet
     vercelConfig.routes = (vercelConfig.routes || []).filter(route => {
@@ -1198,6 +1211,11 @@ export default class DevServer {
         env: this.envConfigs.allEnv,
         proxyOrigin: this.address.origin,
         useImplicitEnvInjection: this.useImplicitServicesEnvInjection,
+        onQueueSubscriptions: (serviceName, subscriptions) =>
+          this.queueBroker?.updateServiceSubscriptions(
+            serviceName,
+            subscriptions
+          ),
       });
       devCommandPromise = this.orchestrator.startAll();
       this.devProcessOrigin = undefined;
@@ -1372,10 +1390,7 @@ export default class DevServer {
       const pathname = url.parse(req.url || '/').pathname || '/';
       for (const match of this.buildMatches.values()) {
         const { builder } = match.builderWithPkg;
-        if (
-          (builder.version === 3 || builder.version === -1) &&
-          typeof builder.startDevServer === 'function'
-        ) {
+        if (typeof builder.startDevServer === 'function') {
           try {
             const result = await builder.startDevServer({
               files: this.files,
@@ -1765,9 +1780,13 @@ export default class DevServer {
     ];
     let responseTransformsToApply = responseTransforms;
 
+    const lookupUrl = `${lookupPath}${parsed.search || ''}`;
+    let rewrittenUrl: string | undefined;
+    let externalDestUrl: string | undefined;
+
     if (serviceRoutes.length > 0) {
       const serviceResult = await devRouter(
-        `${lookupPath}${parsed.search || ''}`,
+        lookupUrl,
         req.method,
         serviceRoutes,
         this,
@@ -1806,6 +1825,27 @@ export default class DevServer {
           res.setHeader(name, value);
         }
       }
+
+      if (serviceResult.dest) {
+        // Mix the service route table's dest query params into the dest path
+        const destParsed = url.parse(serviceResult.dest);
+        const destQuery = parseQueryString(destParsed.search);
+        Object.assign(destQuery, serviceResult.query);
+        destParsed.search = formatQueryString(destQuery);
+        const resolvedDest = url.format(destParsed);
+        if (serviceResult.isDestUrl) {
+          externalDestUrl = resolvedDest;
+        } else if (resolvedDest !== lookupUrl) {
+          rewrittenUrl = resolvedDest;
+        }
+      }
+    }
+
+    // Apply the rewritten path so service-level rewrites reach the service.
+    // This happens before request transforms so that `request.path` transforms
+    // operate on the rewritten path.
+    if (rewrittenUrl !== undefined) {
+      req.url = rewrittenUrl;
     }
 
     for (const [name, value] of Object.entries(proxyHeaders)) {
@@ -1820,7 +1860,15 @@ export default class DevServer {
     );
 
     this.setResponseHeaders(res, requestId);
-    debug(`Delegating to service "${serviceName}": ${origin}`);
+
+    if (externalDestUrl) {
+      debug(
+        `Service "${serviceName}" rewrite to external URL: ${externalDestUrl}`
+      );
+      return proxyPass(req, res, externalDestUrl, this, requestId);
+    }
+
+    debug(`Delegating to service "${serviceName}": ${origin}${req.url}`);
     return proxyPass(req, res, origin, this, requestId, false);
   }
 
@@ -2314,18 +2362,20 @@ export default class DevServer {
     let statusCode: number | undefined;
     let prevUrl = req.url;
     let prevHeaders: HttpHeadersConfig = {};
-    let middlewarePid: number | undefined;
     const requestTransforms: Transform[] = [];
     let responseTransforms: Transform[] | undefined;
 
-    // Run the middleware file, if present, and apply any
-    // mutations to the incoming request based on the
-    // result of the middleware invocation.
-    const middleware = [...this.buildMatches.values()].find(
+    // Run the ordered chain of middleware files, if present, and apply any
+    // mutations to the incoming request based on each middleware's
+    // response, before serving the app. A `null` result from
+    // `startDevServer()` means the matcher missed. The loop skips that
+    // middleware and continues to the next one in declared order.
+    const middlewares = [...this.buildMatches.values()].filter(
       m => m.config?.middleware === true
     );
-    if (middleware) {
+    for (const middleware of middlewares) {
       let startMiddlewareResult: StartDevServerResult | undefined;
+      let middlewarePid: number | undefined;
       // TODO: can we add some caching to prevent (re-)starting
       // the middleware server for every HTTP request?
       const { envConfigs, files, devCacheDir, cwd: workPath } = this;
@@ -2353,6 +2403,8 @@ export default class DevServer {
           middlewarePid = pid;
           this.shutdownCallbacks.set(pid, shutdown);
 
+          debug(`Invoking middleware "${middleware.src}" (port=${port})`);
+
           const middlewareReqHeaders = nodeHeadersToFetchHeaders(req.headers);
 
           // Add the Vercel platform proxy request headers
@@ -2361,8 +2413,13 @@ export default class DevServer {
             middlewareReqHeaders.set(name, value);
           }
 
+          // Recompute the request path on every iteration. An earlier
+          // middleware may have rewritten `req.url`. This middleware must
+          // see that rewritten path.
+          const middlewareReqPath = url.parse(req.url || '/').path || '/';
+
           const middlewareRes = await directFetch(
-            `http://127.0.0.1:${port}${parsed.path}`,
+            `http://127.0.0.1:${port}${middlewareReqPath}`,
             {
               headers: middlewareReqHeaders,
               method: req.method,
@@ -2414,7 +2471,7 @@ export default class DevServer {
               // Any other kind of response header should be included
               // on both the incoming HTTP request (for when proxying
               // to another function) and the outgoing HTTP response.
-              res.setHeader(name, value);
+              applyChainResponseHeader(res, name, value);
               req.headers[name] = value;
             }
           }

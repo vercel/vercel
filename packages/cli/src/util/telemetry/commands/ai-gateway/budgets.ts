@@ -17,4 +17,8 @@ export class AiGatewayBudgetsTelemetryClient
   trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({ subcommand: 'remove', value: actual });
   }
+
+  trackCliSubcommandDefaults(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'defaults', value: actual });
+  }
 }

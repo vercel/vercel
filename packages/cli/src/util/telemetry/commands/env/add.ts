@@ -39,11 +39,32 @@ export class EnvAddTelemetryClient
     }
   }
 
+  trackCliOptionGitBranch(gitBranch: string | undefined) {
+    if (gitBranch) {
+      this.trackCliOption({
+        option: 'git-branch',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionValue(value: string | undefined) {
     if (value) {
       this.trackCliOption({
         option: 'value',
         value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionVisibility(visibility: string | undefined) {
+    if (visibility) {
+      const validVisibilities = ['config', 'secret'];
+      this.trackCliOption({
+        option: 'visibility',
+        value: validVisibilities.includes(visibility)
+          ? visibility
+          : this.redactedValue,
       });
     }
   }

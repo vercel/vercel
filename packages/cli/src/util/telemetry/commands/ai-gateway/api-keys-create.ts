@@ -56,4 +56,10 @@ export class AiGatewayApiKeysCreateTelemetryClient
       });
     }
   }
+
+  trackCliFlagZdrExempt(zdrExempt: boolean | undefined) {
+    if (zdrExempt) {
+      this.trackCliFlag('zdr-exempt');
+    }
+  }
 }

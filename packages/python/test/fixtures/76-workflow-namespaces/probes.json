@@ -1,0 +1,33 @@
+{
+  "probes": [
+    { "path": "/", "status": 200, "mustContain": "workflow" },
+    {
+      "path": "/start",
+      "method": "POST",
+      "body": { "request_id": "RANDOMNESS_PLACEHOLDER", "x": 2, "y": 3 },
+      "status": 200,
+      "mustContain": "RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "path": "/status/RANDOMNESS_PLACEHOLDER",
+      "status": 200,
+      "mustContain": "\"sum\":5",
+      "retries": 10,
+      "retryDelay": 3000
+    },
+    {
+      "path": "/start-multiplication",
+      "method": "POST",
+      "body": { "request_id": "RANDOMNESS_PLACEHOLDER", "x": 4, "y": 5 },
+      "status": 200,
+      "mustContain": "RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "path": "/status-multiplication/RANDOMNESS_PLACEHOLDER",
+      "status": 200,
+      "mustContain": "\"product\":20",
+      "retries": 10,
+      "retryDelay": 3000
+    }
+  ]
+}

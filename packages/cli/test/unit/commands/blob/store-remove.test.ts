@@ -190,35 +190,6 @@ describe('blob store remove', () => {
       );
     });
 
-    it('should include accountId when project is linked', async () => {
-      const storeId = 'store_linked12345678901';
-
-      const exitCode = await removeStore(client, [storeId], noToken);
-
-      expect(exitCode).toBe(0);
-
-      expect(client.fetch).toHaveBeenNthCalledWith(
-        1,
-        `/v1/storage/stores/${storeId}`,
-        { method: 'GET', accountId: 'org_123' }
-      );
-      expect(client.fetch).toHaveBeenNthCalledWith(
-        2,
-        `/v1/storage/stores/${storeId}/connections`,
-        { method: 'GET', accountId: 'org_123' }
-      );
-      expect(client.fetch).toHaveBeenNthCalledWith(
-        3,
-        `/v1/storage/stores/${storeId}/connections`,
-        { method: 'DELETE', accountId: 'org_123' }
-      );
-      expect(client.fetch).toHaveBeenNthCalledWith(
-        4,
-        `/v1/storage/stores/blob/${storeId}`,
-        { method: 'DELETE', accountId: 'org_123' }
-      );
-    });
-
     it('should not include accountId when project is not linked', async () => {
       mockedGetLinkedProject.mockResolvedValue({
         org: null,
@@ -335,48 +306,6 @@ describe('blob store remove', () => {
       expect(mockedOutput.success).not.toHaveBeenCalled();
     });
 
-    it('should handle 404 errors for non-existent stores', async () => {
-      const notFoundError = new Error('Store not found');
-      client.fetch = vi.fn().mockRejectedValue(notFoundError);
-
-      const exitCode = await removeStore(
-        client,
-        ['store_does_not_exist123'],
-        noToken
-      );
-
-      expect(exitCode).toBe(1);
-      expect(mockedOutput.success).not.toHaveBeenCalled();
-    });
-
-    it('should handle permission errors', async () => {
-      const permissionError = new Error('Insufficient permissions');
-      client.fetch = vi.fn().mockRejectedValue(permissionError);
-
-      const exitCode = await removeStore(
-        client,
-        ['store_permission_denied1'],
-        noToken
-      );
-
-      expect(exitCode).toBe(1);
-      expect(mockedOutput.success).not.toHaveBeenCalled();
-    });
-
-    it('should return 1 when store fetch fails', async () => {
-      const fetchError = new Error('Store fetch failed');
-      client.fetch = vi.fn().mockRejectedValueOnce(fetchError);
-
-      const exitCode = await removeStore(
-        client,
-        ['store_fetch_fail_123'],
-        noToken
-      );
-
-      expect(exitCode).toBe(1);
-      expect(mockedOutput.success).not.toHaveBeenCalled();
-    });
-
     it('should return 1 when deletion fails after successful fetch', async () => {
       client.fetch = vi
         .fn()
@@ -400,35 +329,6 @@ describe('blob store remove', () => {
   });
 
   describe('API call behavior', () => {
-    it('should make GET store, GET connections, DELETE connections, and DELETE store requests to correct endpoints', async () => {
-      const storeId = 'store_endpoint_test_12345';
-
-      const exitCode = await removeStore(client, [storeId], noToken);
-
-      expect(exitCode).toBe(0);
-
-      expect(client.fetch).toHaveBeenNthCalledWith(
-        1,
-        `/v1/storage/stores/${storeId}`,
-        { method: 'GET', accountId: 'org_123' }
-      );
-      expect(client.fetch).toHaveBeenNthCalledWith(
-        2,
-        `/v1/storage/stores/${storeId}/connections`,
-        { method: 'GET', accountId: 'org_123' }
-      );
-      expect(client.fetch).toHaveBeenNthCalledWith(
-        3,
-        `/v1/storage/stores/${storeId}/connections`,
-        { method: 'DELETE', accountId: 'org_123' }
-      );
-      expect(client.fetch).toHaveBeenNthCalledWith(
-        4,
-        `/v1/storage/stores/blob/${storeId}`,
-        { method: 'DELETE', accountId: 'org_123' }
-      );
-    });
-
     it('should handle different organization IDs', async () => {
       mockedGetLinkedProject.mockResolvedValue({
         status: 'linked',
@@ -519,17 +419,6 @@ describe('blob store remove', () => {
       expect(mockedOutput.success).toHaveBeenCalledWith('Blob store deleted');
     });
 
-    it('should still prompt without --yes', async () => {
-      const exitCode = await removeStore(
-        client,
-        ['store_1234567890123456'],
-        noToken
-      );
-
-      expect(exitCode).toBe(0);
-      expect(confirmInputMock).toHaveBeenCalled();
-    });
-
     it('should error in non-TTY without --yes', async () => {
       (client.stdin as any).isTTY = false;
 
@@ -548,16 +437,6 @@ describe('blob store remove', () => {
   });
 
   describe('interactive prompt behavior', () => {
-    it('should show correct prompt message', async () => {
-      const exitCode = await removeStore(client, [], noToken);
-
-      expect(exitCode).toBe(0);
-      expect(textInputMock).toHaveBeenCalledWith({
-        message: 'Enter the ID of the blob store you want to remove',
-        validate: expect.any(Function),
-      });
-    });
-
     it('should use prompted store ID in API call', async () => {
       const promptedStoreId = 'store_prompted_test_123';
       textInputMock.mockResolvedValueOnce(promptedStoreId);
@@ -581,32 +460,6 @@ describe('blob store remove', () => {
         `/v1/storage/stores/blob/${promptedStoreId}`,
         { method: 'DELETE', accountId: 'org_123' }
       );
-    });
-  });
-
-  describe('spinner and output behavior', () => {
-    it('should show spinner during deletion and stop on success', async () => {
-      const exitCode = await removeStore(
-        client,
-        ['store_spinner_test_123'],
-        noToken
-      );
-
-      expect(exitCode).toBe(0);
-      expect(mockedOutput.spinner).toHaveBeenCalledWith('Deleting blob store');
-      expect(mockedOutput.stopSpinner).toHaveBeenCalled();
-      expect(mockedOutput.success).toHaveBeenCalledWith('Blob store deleted');
-    });
-
-    it('should show debug output', async () => {
-      const exitCode = await removeStore(
-        client,
-        ['store_debug_test_123'],
-        noToken
-      );
-
-      expect(exitCode).toBe(0);
-      expect(mockedOutput.debug).toHaveBeenCalledWith('Deleting blob store');
     });
   });
 

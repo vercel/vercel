@@ -13,7 +13,7 @@ import {
   type ExperimentalServiceV2,
   type Service,
 } from '@vercel/fs-detectors';
-import type { Cron } from '@vercel/build-utils';
+import type { Cron, DevQueueSubscription } from '@vercel/build-utils';
 import { frameworkList, type Framework } from '@vercel/frameworks';
 import { getNextCronDelay } from './cron';
 import {
@@ -152,6 +152,7 @@ interface ServiceDevProcess {
   workspace: string;
   logger: ServiceLogger;
   crons?: Cron[];
+  queueSubscriptions?: DevQueueSubscription[];
 }
 
 function getServiceRoutePrefixes(service: ExperimentalService): string[] {
@@ -209,6 +210,15 @@ interface ServicesOrchestratorOptions {
   proxyOrigin: string;
   useImplicitEnvInjection: boolean;
   preferServiceBuilder?: boolean;
+  /**
+   * Invoked when a service's dev server reports the queue subscriptions its
+   * code registered, so the dev queue broker can deliver with the
+   * SDK-registered consumer groups.
+   */
+  onQueueSubscriptions?: (
+    serviceName: string,
+    subscriptions: DevQueueSubscription[]
+  ) => void;
 }
 
 // Max time we wait between SIGTERM and SIGKILL when force-stopping a service.
@@ -305,6 +315,10 @@ export class ServicesOrchestrator {
   private hasQueueServices: boolean;
   private useImplicitEnvInjection: boolean;
   private preferServiceBuilder: boolean;
+  private onQueueSubscriptions?: (
+    serviceName: string,
+    subscriptions: DevQueueSubscription[]
+  ) => void;
 
   constructor(options: ServicesOrchestratorOptions) {
     this.services = options.services;
@@ -315,6 +329,7 @@ export class ServicesOrchestrator {
     this.envFilesValues = options.env;
     this.useImplicitEnvInjection = options.useImplicitEnvInjection;
     this.preferServiceBuilder = options.preferServiceBuilder ?? false;
+    this.onQueueSubscriptions = options.onQueueSubscriptions;
     // Python services in one workspace intentionally share a managed virtualenv.
     // Count environments, rather than processes, for the external-venv guard.
     const pythonWorkspaces = options.services
@@ -684,6 +699,7 @@ export class ServicesOrchestrator {
     if (this.hasQueueServices) {
       env.VERCEL_QUEUE_BASE_URL = `${this.proxyOrigin}/_svc/_queues`;
       env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
+      env.VERCEL_REGION = 'dev1';
     }
 
     if (service.routePrefix && service.routePrefix !== '/') {
@@ -761,6 +777,7 @@ export class ServicesOrchestrator {
     if (this.hasQueueServices) {
       env.VERCEL_QUEUE_BASE_URL = `${this.proxyOrigin}/_svc/_queues`;
       env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
+      env.VERCEL_REGION = 'dev1';
     }
 
     const root = service.root || '.';
@@ -849,6 +866,10 @@ export class ServicesOrchestrator {
       const host = await checkForPort(result.port, STARTUP_TIMEOUT);
       output.debug(`Service ${name} started on ${host}:${result.port}`);
 
+      if (result.queueSubscriptions?.length) {
+        this.onQueueSubscriptions?.(name, result.queueSubscriptions);
+      }
+
       return {
         name,
         host,
@@ -859,6 +880,7 @@ export class ServicesOrchestrator {
         workspace: spec.rootLabel,
         logger,
         crons: result.crons,
+        queueSubscriptions: result.queueSubscriptions,
       };
     } catch (err) {
       output.debug(`Failed to use startDevServer for ${name}: ${err}`);

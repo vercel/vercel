@@ -49,6 +49,7 @@ describe('ServicesOrchestrator', () => {
       VERCEL_HAS_WORKER_SERVICES: '1',
       VERCEL_QUEUE_BASE_URL: 'http://localhost:3000/_svc/_queues',
       VERCEL_QUEUE_TOKEN: 'vc-dev-token',
+      VERCEL_REGION: 'dev1',
     });
   });
 });

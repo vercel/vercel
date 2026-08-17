@@ -221,6 +221,24 @@ export class UvRunner {
   }
 
   /**
+   * Run a command through `uv run` inside the active virtual environment.
+   */
+  async run(options: {
+    venvPath: string;
+    projectDir: string;
+    args: string[];
+    env?: Record<string, string>;
+  }): Promise<{ stdout: string; stderr: string }> {
+    const { venvPath, projectDir, args, env } = options;
+    return this.runUvCmdWithOutput(
+      ['run', '--active', '--no-sync', ...args],
+      projectDir,
+      venvPath,
+      env
+    );
+  }
+
+  /**
    * Prune the uv cache for CI: removes pre-built wheels and unzipped source
    * distributions while retaining source-built wheels.
    */
@@ -258,6 +276,37 @@ export class UvRunner {
         `Failed to run "${pretty}": ${err instanceof Error ? err.message : String(err)}`
       );
       // retain code/signal to ensure it's treated as a build error
+      if (err && typeof err === 'object') {
+        if ('code' in err) {
+          error.code = (err as { code: number | string }).code;
+        } else if ('signal' in err) {
+          error.code = (err as { signal: string }).signal;
+        }
+      }
+
+      throw error;
+    }
+  }
+
+  private async runUvCmdWithOutput(
+    args: string[],
+    cwd: string,
+    venvPath: string,
+    env?: Record<string, string>
+  ): Promise<{ stdout: string; stderr: string }> {
+    const pretty = `uv ${args.join(' ')}`;
+    debug(`Running "${pretty}"...`);
+
+    try {
+      const result = await execa(this.uvPath, args, {
+        cwd,
+        env: { ...this.getVenvEnv(venvPath), ...env },
+      });
+      return { stdout: result.stdout, stderr: result.stderr };
+    } catch (err) {
+      const error: Error & { code?: unknown } = new Error(
+        `Failed to run "${pretty}": ${err instanceof Error ? err.message : String(err)}`
+      );
       if (err && typeof err === 'object') {
         if ('code' in err) {
           error.code = (err as { code: number | string }).code;

@@ -1,4 +1,3 @@
-import ms from 'ms';
 import path from 'path';
 import fs from 'fs-extra';
 import { strict as assert } from 'assert';
@@ -9,8 +8,6 @@ import {
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
   rename,
-  runNpmInstall,
-  runPackageJsonScript,
   scanParentDirs,
   findPackageJson,
   Prerender,
@@ -156,10 +153,36 @@ it('should ignore node version in vercel dev getNodeVersion()', async () => {
   ).toHaveProperty('runtime', 'nodejs');
 });
 
-it('should resolve to the provided bunVersion when its valid', async () => {
+it.each([
+  '1',
+  '1.x',
+  '^1',
+  '>=1',
+])('should resolve broad Bun range %s to bun1.x', async bunVersion => {
   await expect(
-    getNodeVersion('/tmp', undefined, { bunVersion: '1.x' }, { isDev: false })
-  ).resolves.toHaveProperty('runtime', 'bun1.x');
+    getNodeVersion('/tmp', undefined, { bunVersion }, { isDev: false })
+  ).resolves.toMatchObject({
+    range: '1.x',
+    runtime: 'bun1.x',
+  });
+});
+
+it.each([
+  '1.4',
+  '1.4.x',
+  '~1.4',
+  '^1.4',
+  '>=1.4',
+  '1.4.0',
+])('should resolve explicit Bun 1.4 range %s', async bunVersion => {
+  await expect(
+    getNodeVersion('/tmp', undefined, { bunVersion }, { isDev: false })
+  ).resolves.toMatchObject({
+    major: 1,
+    minor: 4,
+    range: '1.4.x',
+    runtime: 'bun1.4.x',
+  });
 });
 
 it('should resolve to the provided bunVersion on dev', async () => {
@@ -623,184 +646,70 @@ it('should support experimentalBypassFor correctly', async () => {
   );
 });
 
-it('should round-trip hasPostponed as a tri-state', async () => {
-  // The api repo relies on telling `false` (PPR machinery but fully static)
-  // apart from `undefined` (no signal), so `false` must NOT collapse to
-  // `undefined` the way other boolean options do.
-  const postponed = new Prerender({
+it('should round-trip prerenderClassification', async () => {
+  const shell = new Prerender({
     expiration: 1,
     fallback: null,
     group: 1,
     bypassToken: 'some-long-bypass-token-to-make-it-work',
-    hasPostponed: true,
+    prerenderClassification: {
+      routeType: 'shell',
+      response: 'initial',
+      compute: 'resuming',
+      htmlSize: 5491,
+    },
   });
-  expect(postponed.hasPostponed).toBe(true);
-
-  const notPostponed = new Prerender({
-    expiration: 1,
-    fallback: null,
-    group: 1,
-    bypassToken: 'some-long-bypass-token-to-make-it-work',
-    hasPostponed: false,
-  });
-  expect(notPostponed.hasPostponed).toBe(false);
-
-  const omitted = new Prerender({
-    expiration: 1,
-    fallback: null,
-    group: 1,
-    bypassToken: 'some-long-bypass-token-to-make-it-work',
-  });
-  expect(omitted.hasPostponed).toBeUndefined();
-
-  expect(
-    () =>
-      new Prerender({
-        expiration: 1,
-        fallback: null,
-        group: 1,
-        bypassToken: 'some-long-bypass-token-to-make-it-work',
-        // @ts-expect-error - intentionally invalid to assert validation
-        hasPostponed: 'yes',
-      })
-  ).toThrow('The `hasPostponed` argument for `Prerender` must be a boolean');
-});
-
-it('should round-trip hasFallback as a tri-state', async () => {
-  // Like `hasPostponed`, the api repo needs to tell `false` (blocking/omitted
-  // template, no fallback) apart from `undefined` (concrete prerender, the
-  // concept doesn't apply), so `false` must NOT collapse to `undefined`.
-  const withFallback = new Prerender({
-    expiration: 1,
-    fallback: null,
-    group: 1,
-    bypassToken: 'some-long-bypass-token-to-make-it-work',
-    hasFallback: true,
-  });
-  expect(withFallback.hasFallback).toBe(true);
-
-  const noFallback = new Prerender({
-    expiration: 1,
-    fallback: null,
-    group: 1,
-    bypassToken: 'some-long-bypass-token-to-make-it-work',
-    hasFallback: false,
-  });
-  expect(noFallback.hasFallback).toBe(false);
-
-  const concrete = new Prerender({
-    expiration: 1,
-    fallback: null,
-    group: 1,
-    bypassToken: 'some-long-bypass-token-to-make-it-work',
-  });
-  expect(concrete.hasFallback).toBeUndefined();
-
-  expect(
-    () =>
-      new Prerender({
-        expiration: 1,
-        fallback: null,
-        group: 1,
-        bypassToken: 'some-long-bypass-token-to-make-it-work',
-        // @ts-expect-error - intentionally invalid to assert validation
-        hasFallback: 'yes',
-      })
-  ).toThrow('The `hasFallback` argument for `Prerender` must be a boolean');
-});
-
-it('should round-trip isDynamicRoute as a tri-state', async () => {
-  const dynamic = new Prerender({
-    expiration: 1,
-    fallback: null,
-    group: 1,
-    bypassToken: 'some-long-bypass-token-to-make-it-work',
-    isDynamicRoute: true,
-  });
-  expect(dynamic.isDynamicRoute).toBe(true);
-
-  const concrete = new Prerender({
-    expiration: 1,
-    fallback: null,
-    group: 1,
-    bypassToken: 'some-long-bypass-token-to-make-it-work',
-    isDynamicRoute: false,
-  });
-  expect(concrete.isDynamicRoute).toBe(false);
-
-  const unset = new Prerender({
-    expiration: 1,
-    fallback: null,
-    group: 1,
-    bypassToken: 'some-long-bypass-token-to-make-it-work',
-  });
-  expect(unset.isDynamicRoute).toBeUndefined();
-
-  expect(
-    () =>
-      new Prerender({
-        expiration: 1,
-        fallback: null,
-        group: 1,
-        bypassToken: 'some-long-bypass-token-to-make-it-work',
-        // @ts-expect-error - intentionally invalid to assert validation
-        isDynamicRoute: 'yes',
-      })
-  ).toThrow('The `isDynamicRoute` argument for `Prerender` must be a boolean');
-});
-
-it('should validate htmlSize as a non-negative integer', async () => {
-  const emptyShell = new Prerender({
-    expiration: 1,
-    fallback: null,
-    group: 1,
-    bypassToken: 'some-long-bypass-token-to-make-it-work',
-    htmlSize: 0,
-  });
-  expect(emptyShell.htmlSize).toBe(0);
-
-  const fullShell = new Prerender({
-    expiration: 1,
-    fallback: null,
-    group: 1,
-    bypassToken: 'some-long-bypass-token-to-make-it-work',
+  expect(shell.prerenderClassification).toEqual({
+    routeType: 'shell',
+    response: 'initial',
+    compute: 'resuming',
     htmlSize: 5491,
   });
-  expect(fullShell.htmlSize).toBe(5491);
 
-  const noHtml = new Prerender({
+  // `htmlSize` is optional within the group — route handlers have no HTML.
+  const route = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    prerenderClassification: {
+      routeType: 'route',
+      response: 'complete',
+      compute: 'static',
+    },
+  });
+  expect(route.prerenderClassification).toEqual({
+    routeType: 'route',
+    response: 'complete',
+    compute: 'static',
+  });
+
+  const unclassified = new Prerender({
     expiration: 1,
     fallback: null,
     group: 1,
     bypassToken: 'some-long-bypass-token-to-make-it-work',
   });
-  expect(noHtml.htmlSize).toBeUndefined();
+  expect(unclassified.prerenderClassification).toBeUndefined();
+});
 
-  expect(
-    () =>
-      new Prerender({
-        expiration: 1,
-        fallback: null,
-        group: 1,
-        bypassToken: 'some-long-bypass-token-to-make-it-work',
-        htmlSize: -1,
-      })
-  ).toThrow(
-    'The `htmlSize` argument for `Prerender` must be a non-negative integer'
-  );
-
-  expect(
-    () =>
-      new Prerender({
-        expiration: 1,
-        fallback: null,
-        group: 1,
-        bypassToken: 'some-long-bypass-token-to-make-it-work',
-        htmlSize: 1.5,
-      })
-  ).toThrow(
-    'The `htmlSize` argument for `Prerender` must be a non-negative integer'
-  );
+it('should not validate prerenderClassification enum values', async () => {
+  // Deliberately unvalidated: a taxonomy value added by a future Next.js
+  // release must not hard-fail a deploy. Untrusted `.prerender-config.json`
+  // input is sanitized by the platform instead.
+  const future = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    prerenderClassification: {
+      // @ts-expect-error - a value Next.js has not shipped yet
+      routeType: 'something-new',
+      response: 'complete',
+      compute: 'static',
+    },
+  });
+  expect(future.prerenderClassification?.routeType).toBe('something-new');
 });
 
 it('should support passQuery correctly', async () => {
@@ -1115,33 +1024,6 @@ it('should support require by path for legacy builders', () => {
   expect(Lambda2).toBe(index.Lambda);
 });
 
-it(
-  'should have correct $PATH when running `runPackageJsonScript()` with yarn',
-  async () => {
-    if (process.platform === 'win32') {
-      console.log('Skipping test on windows');
-      return;
-    }
-    if (process.platform === 'darwin') {
-      console.log('Skipping test on macOS');
-      return;
-    }
-    if (process.version.split('.')[0] !== 'v16') {
-      console.log(`Skipping test on Node.js ${process.version}`);
-      return;
-    }
-    const fixture = path.join(__dirname, 'fixtures', '19-yarn-v2');
-    await runNpmInstall(fixture);
-    await runPackageJsonScript(fixture, 'env');
-
-    // `yarn` was failing with ENOENT before, so as long as the
-    // script was invoked at all is enough to verify the fix
-    const out = await fs.readFile(path.join(fixture, 'env.txt'), 'utf8');
-    expect(out.trim()).toBeTruthy();
-  },
-  ms('1m')
-);
-
 it('should return cliType "npm" when no lockfile is present', async () => {
   const originalRepoLockfilePath = path.join(
     __dirname,
@@ -1415,28 +1297,6 @@ describe('findPackageJson', () => {
     expect(result.packageJsonPath).toBeUndefined();
     expect(result.packageJson).toBeUndefined();
   });
-});
-
-it('should retry npm install when peer deps invalid and npm@8 on node@16', async () => {
-  const nodeMajor = Number(process.versions.node.split('.')[0]);
-  if (nodeMajor !== 16) {
-    console.log(`Skipping test on node@${nodeMajor}`);
-    return;
-  }
-  if (process.platform === 'win32') {
-    console.log('Skipping test on windows');
-    return;
-  }
-  if (process.platform === 'darwin') {
-    console.log('Skipping test on mac');
-    return;
-  }
-
-  const fixture = path.join(__dirname, 'fixtures', '15-npm-8-legacy-peer-deps');
-  await runNpmInstall(fixture, [], {}, {});
-  expect(warningMessages).toStrictEqual([
-    'Warning: Retrying "Install Command" with `--legacy-peer-deps` which may accept a potentially broken dependency and slow install time.',
-  ]);
 });
 
 describe('rename', () => {

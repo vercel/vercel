@@ -99,7 +99,7 @@ describe('dns ls', () => {
 
   describe('[domain]', () => {
     it('tracks the use of domain argument', async () => {
-      client.scenario.get('/v4/domains/:domain?/records', (req, res) => {
+      client.scenario.get('/v5/domains/:domain?/records', (req, res) => {
         res.json({
           records: [],
           pagination: { count: 1, total: 1, page: 1, pages: 1 },

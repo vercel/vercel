@@ -16,13 +16,13 @@ import type {
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
 import {
-  isPythonEntrypoint,
   isNodeEntrypoint,
   BACKEND_BUILDERS,
   UNIFIED_BACKEND_BUILDER,
   isExperimentalBackendsEnabled,
   getMaxDurationLimit,
 } from '@vercel/build-utils';
+import { isPythonEntrypoint } from './python';
 import {
   getServicesBuilders,
   warnIgnoredDirectories,
@@ -72,6 +72,25 @@ export const REGEX_NON_VERCEL_PLATFORM_FILES = getStaticFilesPattern();
 const slugToFramework = new Map<string | null, Framework>(
   frameworkList.map(f => [f.slug, f])
 );
+
+/**
+ * Maps each builder name to the frameworks it handles.
+ */
+export const builderToFrameworks: ReadonlyMap<string, readonly Framework[]> =
+  (() => {
+    const map = new Map<string, Framework[]>();
+    for (const f of frameworkList) {
+      if (!f.useRuntime?.use) continue;
+      const builder = f.useRuntime.use;
+      const entry = map.get(builder);
+      if (entry) {
+        entry.push(f);
+      } else {
+        map.set(builder, [f]);
+      }
+    }
+    return map;
+  })();
 
 export interface ErrorResponse {
   code: string;
@@ -610,7 +629,7 @@ async function maybeGetApiBuilder(
   // For Python files, verify they are valid entrypoints before creating a builder
   if (fileName.endsWith('.py') && options.workPath) {
     const fsPath = join(options.workPath, fileName);
-    const isEntrypoint = await isPythonEntrypoint({ fsPath });
+    const isEntrypoint = await isPythonEntrypoint(fsPath);
     if (!isEntrypoint) {
       return null;
     }

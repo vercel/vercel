@@ -20,7 +20,7 @@ const TEST_FILE_NAME_PARTS = ['test', 'spec'];
  * - recursive wildcards, for example all `.test.ts` files under `test/unit`
  */
 function expandTestPattern(packageRoot, pattern, defaultTestPatterns) {
-  const normalizedPattern = pattern.replace(/\\/g, '/').replace(/^\.\//, '');
+  let normalizedPattern = pattern.replace(/\\/g, '/').replace(/^\.\//, '');
   const absolutePattern = path.join(packageRoot, normalizedPattern);
 
   if (fs.existsSync(absolutePattern)) {
@@ -35,6 +35,11 @@ function expandTestPattern(packageRoot, pattern, defaultTestPatterns) {
       );
     }
     return [absolutePattern];
+  }
+
+  // Vitest treats extensionless positional arguments as file path prefixes.
+  if (!hasWildcard(normalizedPattern) && !isTestFile(normalizedPattern)) {
+    normalizedPattern += '*';
   }
 
   const matcher = globPatternToRegExp(normalizedPattern);
@@ -55,16 +60,17 @@ function expandTestPattern(packageRoot, pattern, defaultTestPatterns) {
     matches = matches.filter(isTestFile);
   }
 
-  // Exclude test-named files (*.test.* / *.spec.*) under fixtures/ directories.
-  // These are framework source files (Angular, Aurelia, React, etc.) that use
-  // test naming conventions but are not meant to be run by this package's runner.
-  matches = matches.filter(
-    filePath =>
-      !(
-        filePath.replace(/\\/g, '/').includes('/fixtures/') &&
-        isTestFile(filePath)
-      )
-  );
+  if (!normalizedPattern.includes('/fixtures/')) {
+    // Fixture-owned tests are framework source unless the package script
+    // explicitly targets its fixtures directory.
+    matches = matches.filter(
+      filePath =>
+        !(
+          filePath.replace(/\\/g, '/').includes('/fixtures/') &&
+          isTestFile(filePath)
+        )
+    );
+  }
 
   return matches;
 }

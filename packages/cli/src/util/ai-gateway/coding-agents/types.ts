@@ -7,7 +7,7 @@ export interface SetupContext {
   baseUrlOverride?: string;
 }
 
-export type FileFormat = 'json' | 'toml' | 'shell';
+export type FileFormat = 'json' | 'toml' | 'yaml' | 'shell';
 
 export interface FileChange {
   path: string;
@@ -26,6 +26,26 @@ export interface AgentPlan {
   fileChanges: FileChange[];
   envExports: EnvExport[];
   notes: string[];
+}
+
+export interface SessionMigrationContext {
+  home: string;
+}
+
+export interface SessionMigrationResult {
+  copied: number;
+  skipped: number;
+  errors?: string[];
+}
+
+export interface SessionMigrationPlan {
+  label: string;
+  itemCount: number;
+  totalBytes: number;
+  sourceRoots: string[];
+  destinationRoots: string[];
+  prompt: string[];
+  apply(): Promise<SessionMigrationResult>;
 }
 
 /**
@@ -53,4 +73,7 @@ export interface CodingAgent {
   configPath(ctx: SetupContext): string;
   buildPlan(ctx: SetupContext): AgentPlan;
   warnings?(ctx: WarningContext): Promise<AgentWarning[]>;
+  sessionMigration?: {
+    plan(ctx: SessionMigrationContext): Promise<SessionMigrationPlan | null>;
+  };
 }

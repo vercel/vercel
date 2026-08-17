@@ -1432,6 +1432,7 @@ export async function serverBuild({
         functionFailoverRegions: group.functionFailoverRegions,
         runtime: nodeVersion.runtime,
         maxDuration: group.maxDuration,
+        maxConcurrency: group.maxConcurrency,
         supportsCancellation: group.supportsCancellation,
         isStreaming: group.isStreaming,
         nextVersion,

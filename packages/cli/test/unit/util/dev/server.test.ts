@@ -12,6 +12,7 @@ vi.mock('../../../../src/output-manager', () => ({
     log: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
+    prettyError: vi.fn(),
     time: vi.fn((_label: string, promise: Promise<unknown>) => promise),
   },
 }));
@@ -87,7 +88,11 @@ describe('DevServer build filtering', () => {
     } as any);
     (server as any).sidecars = [];
     (server as any)._address = new URL('http://localhost:3000');
-    (server as any).validateVercelConfig = vi.fn();
+    // Deliberately not stubbing `validateVercelConfig`: the synthesized
+    // `proxy` build used to trip its `proxy` + `builds` rule and exit.
+    (server as any).exit = vi.fn(() => {
+      throw new Error('`vc dev` exited while resolving the config');
+    });
     (server as any).readJsonFile = vi.fn(async (name: string) => {
       if (name === 'package.json') {
         return null;
@@ -120,6 +125,37 @@ describe('DevServer build filtering', () => {
         },
       },
     ]);
+  });
+
+  it('keeps the zero-config proxy build alongside detected builds', async () => {
+    const cwd = join(__dirname, '../../../fixtures/unit/commands/build/proxy');
+    const server = new DevServer(cwd, {} as any);
+    (server as any).sidecars = [];
+    (server as any)._address = new URL('http://localhost:3000');
+    (server as any).exit = vi.fn(() => {
+      throw new Error('`vc dev` exited while resolving the config');
+    });
+    (server as any).readJsonFile = vi.fn(async (name: string) => {
+      if (name === 'package.json') {
+        return null;
+      }
+      return {
+        version: 2,
+        proxy: { entrypoint: 'proxy.ts' },
+      };
+    });
+
+    const config = await server._getVercelConfig();
+
+    expect(config.builds).toContainEqual({
+      src: 'proxy.ts',
+      use: '@vercel/node@latest',
+      config: {
+        zeroConfig: true,
+        middleware: true,
+        middlewareRuntime: 'nodejs',
+      },
+    });
   });
 });
 

@@ -112,7 +112,7 @@ export class RootTelemetryClient extends TelemetryClient {
 
   trackCliCommandConnex(actual: string) {
     this.trackCliCommand({
-      command: 'connex',
+      command: 'connect',
       value: actual,
     });
   }
@@ -173,13 +173,6 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
-  trackCliCommandEdgeConfig(actual: string) {
-    this.trackCliCommand({
-      command: 'edge-config',
-      value: actual,
-    });
-  }
-
   trackCliCommandEnv(actual: string) {
     this.trackCliCommand({
       command: 'env',
@@ -204,6 +197,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandGit(actual: string) {
     this.trackCliCommand({
       command: 'git',
+      value: actual,
+    });
+  }
+
+  trackCliCommandGlobalConfig(actual: string) {
+    this.trackCliCommand({
+      command: 'global-config',
       value: actual,
     });
   }
@@ -260,6 +260,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandIntegrationResource(actual: string) {
     this.trackCliCommand({
       command: 'integration-resource',
+      value: actual,
+    });
+  }
+
+  trackCliCommandKms(actual: string) {
+    this.trackCliCommand({
+      command: 'kms',
       value: actual,
     });
   }
@@ -397,6 +404,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandSecurity(actual: string) {
+    this.trackCliCommand({
+      command: 'security',
+      value: actual,
+    });
+  }
+
   trackCliCommandTarget(actual: string) {
     this.trackCliCommand({
       command: 'target',
@@ -442,6 +456,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandUpgrade(actual: string) {
     this.trackCliCommand({
       command: 'upgrade',
+      value: actual,
+    });
+  }
+
+  trackCliCommandVersion(actual: string) {
+    this.trackCliCommand({
+      command: 'version',
       value: actual,
     });
   }

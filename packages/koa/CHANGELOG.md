@@ -1,5 +1,78 @@
 # @vercel/koa
 
+## 0.1.98
+
+### Patch Changes
+
+- Updated dependencies [b4f09c1]
+  - @vercel/node@5.10.1
+
+## 0.1.97
+
+### Patch Changes
+
+- Updated dependencies [852e1a0]
+  - @vercel/node@5.10.0
+
+## 0.1.96
+
+### Patch Changes
+
+- Updated dependencies [2da7809]
+  - @vercel/node@5.9.9
+
+## 0.1.95
+
+### Patch Changes
+
+- Updated dependencies [e829b31]
+  - @vercel/node@5.9.8
+
+## 0.1.94
+
+### Patch Changes
+
+- @vercel/node@5.9.7
+
+## 0.1.93
+
+### Patch Changes
+
+- @vercel/node@5.9.6
+
+## 0.1.92
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/node@5.9.5
+  - @vercel/static-config@3.4.1
+
+## 0.1.91
+
+### Patch Changes
+
+- @vercel/node@5.9.4
+
+## 0.1.90
+
+### Patch Changes
+
+- @vercel/node@5.9.3
+
+## 0.1.89
+
+### Patch Changes
+
+- @vercel/node@5.9.2
+
+## 0.1.88
+
+### Patch Changes
+
+- @vercel/node@5.9.1
+
 ## 0.1.87
 
 ### Patch Changes

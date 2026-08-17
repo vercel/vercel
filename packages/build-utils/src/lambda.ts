@@ -64,6 +64,7 @@ export interface LambdaOptionsBase {
   architecture?: LambdaArchitecture;
   memory?: number;
   maxDuration?: MaxDuration;
+  maxConcurrency?: number;
   environment?: Env;
   allowQuery?: string[];
   regions?: string[];
@@ -162,6 +163,8 @@ export class Lambda {
   architecture: LambdaArchitecture;
   memory?: number;
   maxDuration?: MaxDuration;
+  /** Maximum number of requests that one function instance can process concurrently. */
+  maxConcurrency?: number;
   environment: Env;
   allowQuery?: string[];
   regions?: string[];
@@ -208,6 +211,7 @@ export class Lambda {
       runtime,
       runtimeLanguage,
       maxDuration,
+      maxConcurrency,
       architecture,
       memory,
       environment = {},
@@ -266,6 +270,13 @@ export class Lambda {
       assert(
         typeof maxDuration === 'number' || maxDuration === 'max',
         '"maxDuration" is not a number or "max"'
+      );
+    }
+
+    if (maxConcurrency !== undefined) {
+      assert(
+        Number.isInteger(maxConcurrency) && maxConcurrency >= 1,
+        '"maxConcurrency" must be an integer greater than or equal to 1'
       );
     }
 
@@ -427,6 +438,7 @@ export class Lambda {
     this.architecture = getDefaultLambdaArchitecture(architecture);
     this.memory = memory;
     this.maxDuration = maxDuration;
+    this.maxConcurrency = maxConcurrency;
     this.environment = environment;
     this.allowQuery = allowQuery;
     this.regions = regions;
@@ -534,6 +546,7 @@ export async function getLambdaOptionsFromFunction({
     | 'architecture'
     | 'memory'
     | 'maxDuration'
+    | 'maxConcurrency'
     | 'regions'
     | 'functionFailoverRegions'
     | 'experimentalTriggers'
@@ -581,6 +594,7 @@ export async function getLambdaOptionsFromFunction({
           architecture: fn.architecture,
           memory: fn.memory,
           maxDuration: fn.maxDuration,
+          maxConcurrency: fn.maxConcurrency,
           regions: fn.regions,
           functionFailoverRegions: fn.functionFailoverRegions,
           experimentalTriggers,

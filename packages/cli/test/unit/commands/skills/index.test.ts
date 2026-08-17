@@ -56,6 +56,8 @@ describe('skills', () => {
     const exitCode = await skills(client);
 
     expect(exitCode).toBe(2);
+    expect(client.stderr.getFullOutput()).toContain('--json');
+    expect(client.stderr.getFullOutput()).not.toContain('--format');
   });
 
   it('direct search with a query displays results', async () => {
