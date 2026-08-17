@@ -1,5 +1,11 @@
 # vercel
 
+## 59.1.4
+
+### Patch Changes
+
+- b8d7cd8: Fix `vercel comments` crashing in the native binary when rendering comment previews.
+
 ## 59.1.3
 
 ### Patch Changes
