@@ -1109,6 +1109,12 @@ describe('connex attach', () => {
           });
         }
       );
+      client.scenario.post(
+        '/v1/connect/connectors/:clientId/projects/:projectId',
+        (_req, res) => {
+          res.json({});
+        }
+      );
       client.scenario.patch(
         '/v1/connect/connectors/:clientId/trigger-destinations',
         (_req, res) => {
