@@ -10,8 +10,7 @@
   "ignore": [
     "api",
     "examples",
-    "@vercel-internals/*",
-    "@vercel/kms"
+    "@vercel-internals/*"
   ],
   "privatePackages": {
     "version": true,

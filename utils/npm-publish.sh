@@ -46,14 +46,6 @@ skipped=0
 while IFS=$'\t' read -r name pkg_path; do
   version=$(jq -r '.version' "$pkg_path/package.json")
 
-  # @vercel/kms does not have npm trusted publishing configured for this
-  # workflow. Keep it out of both stable and canary releases until it does.
-  if [ "$name" = "@vercel/kms" ]; then
-    echo "skip: $name@$version (publishing disabled)"
-    skipped=$((skipped + 1))
-    continue
-  fi
-
   if [ -n "$NPM_TAG" ]; then
     case "$version" in
       *-"$NPM_TAG"-* | *-"$NPM_TAG".*) ;;
