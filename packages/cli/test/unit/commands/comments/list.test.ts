@@ -8,7 +8,6 @@ import {
   makeMessage,
   makeThread,
   mockedGetLinkedProject,
-  mockedGetProjectLink,
   mockedGetScope,
   mockLinkedProject,
   mockTeamScope,
@@ -408,10 +407,7 @@ describe('comments list', () => {
       status: 'linked',
       project: { id: 'prj_other', name: 'other-project' },
       org: { id: 'team_other', slug: 'other-team', type: 'team' },
-    } as never);
-    mockedGetProjectLink.mockResolvedValue({
-      projectId: 'prj_other',
-      orgId: 'team_other',
+      repoRoot: '/repo',
     } as never);
     let requestQuery: Record<string, unknown> | undefined;
     client.scenario.get('/toolbar/threads', (req, res) => {
@@ -433,26 +429,6 @@ describe('comments list', () => {
     expect(requestQuery?.teamId).toBe('team_other');
     expect(requestQuery?.projectId).toBe('prj_other');
     expect(requestQuery?.branch).toBe('feat-x');
-  });
-
-  it('ignores local metadata errors while deciding whether to infer a branch', async () => {
-    mockedGetLinkedProject.mockResolvedValue({
-      status: 'linked',
-      project: { id: 'prj_other', name: 'other-project' },
-      org: { id: 'team_dummy', slug: 'my-team', type: 'team' },
-    } as never);
-    mockedGetProjectLink.mockRejectedValue(new Error('Invalid project link'));
-    let requestQuery: Record<string, unknown> | undefined;
-    client.scenario.get('/toolbar/threads', (req, res) => {
-      requestQuery = req.query;
-      res.json({ pagination: {}, threads: [] });
-    });
-
-    client.setArgv('comments', '--project', 'other-project');
-    const exitCode = await comments(client);
-
-    expect(exitCode).toBe(0);
-    expect(requestQuery?.branch).toBeUndefined();
   });
 
   it('does not infer a branch for an explicit project without matching local metadata', async () => {
@@ -485,10 +461,7 @@ describe('comments list', () => {
       status: 'linked',
       project: { id: 'prj_other', name: 'other-project' },
       org: { id: 'team_other', slug: 'other-team', type: 'team' },
-    } as never);
-    mockedGetProjectLink.mockResolvedValue({
-      projectId: 'prj_other',
-      orgId: 'team_other',
+      repoRoot: '/repo',
     } as never);
     let requestQuery: Record<string, unknown> | undefined;
     client.scenario.get('/toolbar/threads', (req, res) => {
@@ -541,7 +514,7 @@ describe('comments list', () => {
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain('nope');
-    expect(client.stderr.getFullOutput()).toContain('scope "my-team"');
+    expect(client.stderr.getFullOutput()).toContain('(my-team)');
   });
 
   it('preserves the project context exit code in JSON mode', async () => {

@@ -1,10 +1,7 @@
 import { spawnSync } from 'node:child_process';
-import output from '../../output-manager';
 import type Client from '../../util/client';
 import getScope, { detectExplicitScope } from '../../util/get-scope';
-import getOrgById from '../../util/projects/get-org-by-id';
-import { getLinkedProject, getProjectLink } from '../../util/projects/link';
-import { resolveProjectCwd } from '../../util/projects/find-project-root';
+import { getLinkedProject } from '../../util/projects/link';
 import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import { isAPIError } from '../../util/errors-ts';
 import { outputError, writeJsonError } from '../../util/command-validation';
@@ -40,7 +37,7 @@ export async function resolveCommentsScope(
       context = await resolveProjectContext({
         client,
         projectNameOrId: opts.project,
-        projectNotFoundHandling: 'return',
+        projectNotFoundHandling: opts.jsonOutput ? 'return' : 'report',
       });
     } catch (err) {
       if (isAPIError(err)) {
@@ -64,38 +61,11 @@ export async function resolveCommentsScope(
       return context.exitCode;
     }
     if (context.status === 'not_linked') {
-      let scopeName = context.orgId;
-      if (context.orgId) {
-        try {
-          scopeName =
-            (await getOrgById(client, context.orgId))?.slug ?? context.orgId;
-        } catch (err) {
-          output.debug(`Scope lookup failed during project error: ${err}`);
-        }
-      } else {
-        scopeName = (await getScope(client)).contextName;
-      }
       return outputError(
         client,
         opts.jsonOutput,
         'PROJECT_NOT_FOUND',
-        `Project "${opts.project}" was not found${scopeName ? ` in scope "${scopeName}"` : ''}.`
-      );
-    }
-
-    let matchesLocalProject = false;
-    try {
-      const projectCwd = await resolveProjectCwd(client.cwd);
-      const localLink = await getProjectLink(
-        client,
-        projectCwd,
-        context.project.id,
-        true
-      );
-      matchesLocalProject = localLink?.projectId === context.project.id;
-    } catch (err) {
-      output.debug(
-        `Ignoring local project metadata during branch inference: ${err}`
+        `Project "${opts.project}" was not found in the current scope.`
       );
     }
 
@@ -104,7 +74,7 @@ export async function resolveCommentsScope(
       teamSlug: context.org.slug,
       projectId: context.project.id,
       projectName: context.project.name,
-      linked: matchesLocalProject,
+      linked: Boolean(context.repoRoot),
     };
   }
 

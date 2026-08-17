@@ -7,11 +7,9 @@ import type {
 } from '../../../../src/commands/comments/types';
 
 export const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
-export const mockedGetProjectLink = vi.mocked(linkModule.getProjectLink);
 export const mockedGetScope = vi.mocked(getScopeModule.default);
 
 export function mockLinkedProject() {
-  mockedGetProjectLink.mockResolvedValue(null);
   mockedGetLinkedProject.mockResolvedValue({
     status: 'linked',
     project: {
