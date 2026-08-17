@@ -236,6 +236,136 @@ describe('writeBuildResult()', () => {
   });
 });
 
+describe('writeBuildResult() static symlink boundary', () => {
+  // Regression coverage for the `fs.link()` fast-path in `writeStaticFile()`.
+  // That fast-path used to run for every `File` carrying an `fsPath`, which
+  // meant a symlink was hard-linked straight into `.vercel/output/static`
+  // without ever reaching the `basePath` boundary check inside
+  // `downloadFile()`. Symlinks now skip the fast-path so the check applies.
+
+  /** Build a V2 static-only build result for a single output file. */
+  async function writeStatic(
+    workPath: string,
+    outputDir: string,
+    outputPath: string,
+    file: FileFsRef
+  ) {
+    const build = { src: 'index.html', use: '@vercel/static' };
+    const staticBuilder: BuilderV2 = {
+      version: 2,
+      build: async () => {
+        throw new Error('not used by writeBuildResult');
+      },
+    };
+    return writeBuildResult({
+      repoRootPath: workPath,
+      outputDir,
+      buildResult: { output: { [outputPath]: file } },
+      build,
+      builder: staticBuilder,
+      builderPkg: { name: '@vercel/static' },
+      vercelConfig: null,
+      standalone: false,
+      workPath,
+    });
+  }
+
+  /** Create a symlink on disk and wrap it in a `FileFsRef` the way `glob()` does. */
+  async function symlinkRef(fsPath: string, target: string) {
+    await fs.mkdirp(join(fsPath, '..'));
+    await fs.symlink(target, fsPath);
+    // `glob()` uses `lstat`, so the mode carries the symlink type bits.
+    const stat = await fs.lstat(fsPath);
+    return new FileFsRef({ mode: stat.mode, fsPath });
+  }
+
+  it('rejects a relative symlink that escapes the build root', async () => {
+    if (process.platform === 'win32') return;
+    const workPath = await getWriteableDirectory();
+    const outputDir = join(workPath, '.vercel', 'output');
+    // The secret sits outside `.vercel/output/static`, which is the build root
+    // enforced by `downloadFile()`.
+    await fs.writeFile(join(workPath, 'secret.txt'), 'SECRET');
+    // The source symlink is nested one level deeper so that `../../secret.txt`
+    // resolves to a real file *from the source location*. That matters: a
+    // dangling symlink would make `fs.link()` fail with ENOENT and fall
+    // through to the guard on its own, so this test would still pass with the
+    // fast-path bug present and would not be a regression test at all.
+    const file = await symlinkRef(
+      join(workPath, 'dist', 'nested', 'leak.txt'),
+      '../../secret.txt'
+    );
+    expect(await fs.readFile(file.fsPath, 'utf8')).toBe('SECRET');
+
+    await expect(
+      writeStatic(workPath, outputDir, 'leak.txt', file)
+    ).rejects.toThrow(/resolves outside of the build root/);
+
+    // Nothing may be materialized at the destination — in particular the
+    // `fs.link()` fast-path must not have copied the entry in first.
+    expect(
+      await fs.pathExists(join(outputDir, 'static', 'leak.txt'))
+    ).toBe(false);
+
+    await fs.remove(workPath);
+  });
+
+  it('rejects an absolute symlink that escapes the build root', async () => {
+    if (process.platform === 'win32') return;
+    const workPath = await getWriteableDirectory();
+    const outputDir = join(workPath, '.vercel', 'output');
+    const file = await symlinkRef(join(workPath, 'dist', 'passwd'), '/etc/passwd');
+
+    await expect(
+      writeStatic(workPath, outputDir, 'passwd', file)
+    ).rejects.toThrow(/resolves outside of the build root/);
+
+    expect(await fs.pathExists(join(outputDir, 'static', 'passwd'))).toBe(false);
+
+    await fs.remove(workPath);
+  });
+
+  it('still writes a symlink whose target stays inside the build root', async () => {
+    if (process.platform === 'win32') return;
+    const workPath = await getWriteableDirectory();
+    const outputDir = join(workPath, '.vercel', 'output');
+    // Monorepo hoisting legitimately uses `../` links that resolve back
+    // inside the output directory (see #16439) — those must keep working.
+    await fs.mkdirp(join(outputDir, 'static'));
+    await fs.writeFile(join(outputDir, 'static', 'real.txt'), 'in-root');
+    const file = await symlinkRef(join(workPath, 'dist', 'link.txt'), '../real.txt');
+
+    await writeStatic(workPath, outputDir, 'sub/link.txt', file);
+
+    const dest = join(outputDir, 'static', 'sub', 'link.txt');
+    expect((await fs.lstat(dest)).isSymbolicLink()).toBe(true);
+    expect(await fs.readlink(dest)).toBe('../real.txt');
+    expect(await fs.readFile(dest, 'utf8')).toBe('in-root');
+
+    await fs.remove(workPath);
+  });
+
+  it('keeps the hard-link fast-path for regular files', async () => {
+    if (process.platform === 'win32') return;
+    const workPath = await getWriteableDirectory();
+    const outputDir = join(workPath, '.vercel', 'output');
+    const src = join(workPath, 'dist', 'index.html');
+    await fs.mkdirp(join(workPath, 'dist'));
+    await fs.writeFile(src, '<h1>hello</h1>');
+    const file = new FileFsRef({ mode: (await fs.lstat(src)).mode, fsPath: src });
+
+    await writeStatic(workPath, outputDir, 'index.html', file);
+
+    const dest = join(outputDir, 'static', 'index.html');
+    expect(await fs.readFile(dest, 'utf8')).toBe('<h1>hello</h1>');
+    // A hard link shares the inode with the source; this asserts the
+    // optimization was not lost when symlinks were carved out of it.
+    expect((await fs.stat(dest)).ino).toBe((await fs.stat(src)).ino);
+
+    await fs.remove(workPath);
+  });
+});
+
 describe('filesWithoutFsRefs()', () => {
   it('should create `filePathMap` with normalized POSIX paths', async () => {
     const repoRootPath = join(
