@@ -83,23 +83,6 @@ export function getMaxUncompressedLambdaSize(runtime: string): number {
 }
 
 /**
- * Internal env var enabling experimental large functions: an over-budget route
- * is emitted as its own function under the higher
- * {@link DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE} ceiling instead of being
- * bundled. Read at call time (not module load) so the build environment can
- * toggle it without a CLI upgrade, like `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT`.
- *
- * TODO: drop the gate and make this unconditional once the upstream build
- * system fully supports functions above {@link DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE}.
- */
-export const LARGE_FUNCTIONS_ENV = 'NEXT_EXPERIMENTAL_LARGE_FUNCTIONS';
-
-/** Whether large functions are enabled via {@link LARGE_FUNCTIONS_ENV}. */
-export function isLargeFunctionsEnabled(): boolean {
-  return Boolean(process.env[LARGE_FUNCTIONS_ENV]);
-}
-
-/**
  * The uncompressed size ceiling for a lambda group: the higher large-function
  * limit for large groups, otherwise the default per-runtime limit.
  */
@@ -1970,8 +1953,7 @@ export type LambdaGroup = {
   isApiLambda: boolean;
   /**
    * Whether this group is a single over-budget route emitted on its own and
-   * measured against {@link DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE}. Only
-   * set when large functions are enabled (see {@link isLargeFunctionsEnabled}).
+   * measured against {@link DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE}.
    */
   isLargeFunctions?: boolean;
   pseudoLayer: PseudoLayer;
@@ -2037,8 +2019,6 @@ export async function getPageLambdaGroups({
   nodeVersion: { runtime: string };
 }) {
   const groups: Array<LambdaGroup> = [];
-
-  const largeFunctionsEnabled = isLargeFunctionsEnabled();
 
   for (const page of pages) {
     const newPages = [...internalPages, page];
@@ -2137,7 +2117,7 @@ export async function getPageLambdaGroups({
     // manifests, etc.), so it can't be guaranteed to fit a normal function.
     // `experimentalAllowBundling` defers bundling upstream, so the split is moot.
     let isLargeFunction = false;
-    if (largeFunctionsEnabled && !experimentalAllowBundling) {
+    if (!experimentalAllowBundling) {
       let standaloneUncompressedSize = initialPseudoLayerUncompressed;
       const countedFiles = new Set<string>(
         Object.keys(initialPseudoLayer.pseudoLayer)
