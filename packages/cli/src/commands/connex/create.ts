@@ -36,6 +36,7 @@ export async function create(
     '--format'?: string;
     '--json'?: boolean;
     '--triggers'?: boolean;
+    '--trigger-event'?: string[];
     '--icon'?: string;
     '--background-color'?: string;
     '--accent-color'?: string;
@@ -53,6 +54,11 @@ export async function create(
   const serviceType = args[0];
   if (!serviceType) {
     output.error('Missing service type. Usage: vercel connect create <type>');
+    return 1;
+  }
+
+  if (flags['--trigger-event'] && !flags['--triggers']) {
+    output.error('The --trigger-event flag requires --triggers.');
     return 1;
   }
 
@@ -171,6 +177,9 @@ export async function create(
     body.projectId = link.projectId;
   }
   body.triggers = { enabled: flags['--triggers'] === true };
+  if (flags['--trigger-event'] !== undefined) {
+    body.events = flags['--trigger-event'];
+  }
   if (iconSha) {
     body.icon = iconSha;
   }

@@ -116,6 +116,63 @@ describe('connex create', () => {
     await expect(client.stderr).toOutput('scl_direct1 (UID uid_direct1)');
   });
 
+  it('requires --triggers when selecting trigger events', async () => {
+    let requestMade = false;
+    client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
+      requestMade = true;
+      res.json(fakeConnexClient());
+    });
+
+    client.setArgv(
+      'connect',
+      'create',
+      'linear',
+      '--name',
+      'linear',
+      '--trigger-event',
+      'Issue'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(1);
+    expect(requestMade).toBe(false);
+    await expect(client.stderr).toOutput(
+      'The --trigger-event flag requires --triggers.'
+    );
+  });
+
+  it('forwards selected trigger events to managed connector creation', async () => {
+    let postBody: any;
+    client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
+      postBody = req.body;
+      res.json(fakeConnexClient({ type: 'linear', name: 'linear' }));
+    });
+
+    client.setArgv(
+      'connect',
+      'create',
+      'linear',
+      '--name',
+      'linear',
+      '--triggers',
+      '--trigger-event',
+      'Issue',
+      '--trigger-event',
+      'Comment',
+      '--trigger-event',
+      'Project'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(postBody).toMatchObject({
+      triggers: { enabled: true },
+      events: ['Issue', 'Comment', 'Project'],
+    });
+  });
+
   it('should pass any type to the server without validation', async () => {
     let postBody: any;
     client.scenario.post('/v1/connect/connectors/managed', (req, res) => {

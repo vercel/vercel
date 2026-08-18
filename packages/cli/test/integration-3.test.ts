@@ -334,7 +334,9 @@ test('ensure we render a prompt when deploying home directory', async () => {
 });
 
 test('ensure the `scope` property works with email', async () => {
-  const directory = await setupE2EFixture('config-scope-property-email');
+  const directory = await setupE2EFixture('config-scope-property-email', {
+    removeProjectLink: true,
+  });
 
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     directory,
@@ -363,7 +365,9 @@ test('ensure the `scope` property works with email', async () => {
 
 test('ensure the `scope` property works with username', async () => {
   const team = await teamPromise;
-  const directory = await setupE2EFixture('config-scope-property-username');
+  const directory = await setupE2EFixture('config-scope-property-username', {
+    removeProjectLink: true,
+  });
 
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     directory,
@@ -442,7 +446,9 @@ test('try to create a builds deployments with wrong `build.env` property', async
 });
 
 test('create a builds deployments with no actual builds', async () => {
-  const directory = await setupE2EFixture('builds-no-list');
+  const directory = await setupE2EFixture('builds-no-list', {
+    removeProjectLink: true,
+  });
 
   const { exitCode, stdout, stderr } = await execCli(binaryPath, [
     directory,
@@ -850,7 +856,7 @@ test('next unsupported functions config shows warning link', async () => {
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toMatch(
-    /Ignoring function property `runtime`\. When using Next\.js, only `memory` and `maxDuration` can be used\./gm
+    /Ignoring function property `runtime`\. When using Next\.js, only `memory`, `maxDuration`, and `maxConcurrency` can be used\./gm
   );
   expect(output.stderr).toMatch(
     /Learn More: https:\/\/vercel\.link\/functions-property-next/gm

@@ -1,5 +1,6 @@
 import {
   formatOption,
+  jsonOption,
   limitOption,
   projectOption,
 } from '../../../util/arg-common';
@@ -56,6 +57,7 @@ export const tagsLsSubcommand = {
     limitOption,
     cursorOption,
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -79,7 +81,7 @@ export const tagsInspectSubcommand = {
       required: true,
     },
   ],
-  options: [projectScopeOption, formatOption],
+  options: [projectScopeOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Inspect a tag by name',

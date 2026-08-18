@@ -12,4 +12,25 @@ export class AiGatewayApiKeysTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandList(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'list',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandInspect(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'inspect',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRemove(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'remove',
+      value: actual,
+    });
+  }
 }

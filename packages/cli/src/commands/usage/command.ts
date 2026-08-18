@@ -72,7 +72,7 @@ export const usageCommand = {
     },
     {
       name: 'Output usage data as JSON',
-      value: `${packageName} usage --format json`,
+      value: `${packageName} usage --json`,
     },
   ],
 } as const;

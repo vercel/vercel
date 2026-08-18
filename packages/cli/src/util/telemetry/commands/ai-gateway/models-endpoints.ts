@@ -17,4 +17,10 @@ export class AiGatewayModelsEndpointsTelemetryClient
       this.trackCliOption({ option: 'format', value: format });
     }
   }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
+    }
+  }
 }

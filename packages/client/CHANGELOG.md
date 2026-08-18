@@ -1,5 +1,39 @@
 # @vercel/client
 
+## 18.2.3
+
+### Patch Changes
+
+- 682bf8b: Fix `vercel deploy --prebuilt` re-adding `.vercelignore`d files through `filePathMap`. Source paths referenced by `.vc-config.json` `filePathMap` entries are now re-checked against the project's `.vercelignore`/`.nowignore` rules and rejected when they resolve outside the deployment root, so a tampered or lower-trust build artifact can no longer reintroduce ignored files (e.g. `.env`) into the deployment upload set.
+- Updated dependencies [a69c714]
+- Updated dependencies [654e898]
+  - @vercel/build-utils@13.36.3
+
+## 18.2.2
+
+### Patch Changes
+
+- Updated dependencies [2c75803]
+  - @vercel/build-utils@13.36.2
+
+## 18.2.1
+
+### Patch Changes
+
+- Updated dependencies [17ee736]
+  - @vercel/build-utils@13.36.1
+
+## 18.2.0
+
+### Minor Changes
+
+- 4502520: Support Node.js Routing Middleware entrypoints through `proxy.entrypoint`, with optional path matching through `proxy.matcher`. The matcher may be configured in the entrypoint source or `vercel.json`, but not both.
+
+### Patch Changes
+
+- Updated dependencies [4502520]
+  - @vercel/build-utils@13.36.0
+
 ## 18.1.1
 
 ### Patch Changes

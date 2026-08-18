@@ -1430,9 +1430,6 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Customize settings?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Customize advanced settings?');
-    client.stdin.write('\n');
-
     await expect(client.stderr).toOutput(
       `✓ Created         ${user.username}/awesome-app`
     );
@@ -1453,9 +1450,8 @@ describe('link', () => {
     expect(plainOutput).toMatch(
       /Code directory\?.*\n\n\s{0,2}Detected Next\.js/
     );
-    expect(plainOutput).toMatch(
-      /Customize advanced settings\?.*\n\n✓ Created\s+/
-    );
+    expect(plainOutput).toMatch(/Customize settings\?.*\n\n✓ Created\s+/);
+    expect(plainOutput).not.toContain('Customize advanced settings?');
     // Old: `Set up and deploy "${path}"?`
     expect(fullOutput).not.toMatch(/Set up and deploy "[^"]+"\?/);
     // Old inquirer prefix: `? Set up and deploy ...`
@@ -1529,9 +1525,6 @@ describe('link', () => {
     );
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Customize advanced settings?');
-    client.stdin.write('\n');
-
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
 
@@ -1598,9 +1591,6 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Customize settings?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Customize advanced settings?');
-    client.stdin.write('\n');
-
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
 
@@ -1655,9 +1645,6 @@ describe('link', () => {
 
     await expect(client.stderr).toOutput('Detected FastAPI');
     await expect(client.stderr).toOutput('Customize settings?');
-    client.stdin.write('\n');
-
-    await expect(client.stderr).toOutput('Customize advanced settings?');
     client.stdin.write('\n');
 
     const exitCode = await exitCodePromise;
@@ -1739,9 +1726,6 @@ describe('link', () => {
     );
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Customize advanced settings?');
-    client.stdin.write('\n');
-
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
 
@@ -1816,9 +1800,6 @@ describe('link', () => {
     );
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Customize advanced settings?');
-    client.stdin.write('\n');
-
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
 
@@ -1876,9 +1857,6 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Code directory? ./');
     client.stdin.write('apps/web\n');
 
-    await expect(client.stderr).toOutput('Customize advanced settings?');
-    client.stdin.write('\n');
-
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
 
@@ -1927,8 +1905,6 @@ describe('link', () => {
     await expect(client.stderr).toOutput(
       'Multiple services were detected, but your existing project config uses `builds`. To deploy multiple services in one project, see Services (https://vercel.com/docs/services).'
     );
-    await expect(client.stderr).toOutput('Customize advanced settings?');
-    client.stdin.write('\n');
 
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
@@ -2638,9 +2614,6 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Code directory?');
       client.stdin.write('\n');
       await expect(client.stderr).toOutput('Customize settings?');
-      client.stdin.write('\n');
-
-      await expect(client.stderr).toOutput('Customize advanced settings?');
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('✓ Created         ');

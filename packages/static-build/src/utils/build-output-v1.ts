@@ -210,6 +210,7 @@ async function readFunctionsConfig({ workPath }: { workPath: string }) {
     {
       memory?: number;
       maxDuration?: number | 'max';
+      maxConcurrency?: number;
       runtime?: string;
       handler?: string;
       regions?: string[];
@@ -237,6 +238,7 @@ function parseFunctionConfig(data: Record<string, unknown>) {
   const config: {
     memory?: number;
     maxDuration?: number | 'max';
+    maxConcurrency?: number;
     runtime?: string;
     handler?: string;
     regions?: string[];
@@ -249,6 +251,14 @@ function parseFunctionConfig(data: Record<string, unknown>) {
 
   if (typeof data.maxDuration === 'number' || data.maxDuration === 'max') {
     config.maxDuration = data.maxDuration;
+  }
+
+  if (
+    typeof data.maxConcurrency === 'number' &&
+    Number.isInteger(data.maxConcurrency) &&
+    data.maxConcurrency >= 1
+  ) {
+    config.maxConcurrency = data.maxConcurrency;
   }
 
   // In case of a custom runtime, a custom handler has to be provided.

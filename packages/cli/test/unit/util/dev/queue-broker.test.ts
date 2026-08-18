@@ -289,6 +289,68 @@ describe('QueueBroker', () => {
       expect(headers['content-type']).toBe('application/json');
     });
 
+    it('delivers with introspected consumer groups after an update', async () => {
+      broker = new QueueBroker(
+        [
+          {
+            ...makeWorkerService('celery-worker', ['*']),
+            consumer: 'synthesized-name',
+          },
+        ],
+        getServiceOrigin
+      );
+
+      broker.updateServiceSubscriptions('celery-worker', [
+        { topic: 'tasks', consumer: 'sdk-tasks-group' },
+        { topic: 'audit-*', consumer: 'sdk-audit-group', retryAfterSeconds: 5 },
+      ]);
+
+      broker.enqueue('tasks', Buffer.from('{}'), 'application/json');
+      await vi.advanceTimersByTimeAsync(0);
+
+      // The synthesized match-all group was replaced: one delivery, carrying
+      // the SDK-registered consumer group.
+      expect(mockFetch).toHaveBeenCalledOnce();
+      expect(getServiceOrigin).toHaveBeenCalledWith('celery-worker');
+      expect(callHeaders()['ce-vqsconsumergroup']).toBe('sdk-tasks-group');
+
+      mockFetch.mockClear();
+      broker.enqueue('audit-login', Buffer.from('{}'), 'application/json');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mockFetch).toHaveBeenCalledOnce();
+      expect(callHeaders()['ce-vqsconsumergroup']).toBe('sdk-audit-group');
+
+      mockFetch.mockClear();
+      broker.enqueue('unrelated', Buffer.from('{}'), 'application/json');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('keeps other services intact when updating one service', async () => {
+      broker = new QueueBroker(
+        [
+          makeWorkerService('worker-a', ['orders']),
+          makeWorkerService('worker-b', ['orders']),
+        ],
+        getServiceOrigin
+      );
+
+      broker.updateServiceSubscriptions('worker-a', [
+        { topic: 'orders', consumer: 'sdk-orders-group' },
+      ]);
+
+      broker.enqueue('orders', Buffer.from('{}'), 'application/json');
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      const consumers = mockFetch.mock.calls.map(
+        call => (call[1] as any).headers['ce-vqsconsumergroup']
+      );
+      expect(consumers).toEqual(
+        expect.arrayContaining(['sdk-orders-group', 'worker-b'])
+      );
+    });
+
     it('routes by service name while identifying its queue consumer', async () => {
       broker = new QueueBroker(
         [

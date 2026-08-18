@@ -1,4 +1,4 @@
-import { formatOption, projectOption } from '../../util/arg-common';
+import { formatOption, jsonOption, projectOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const schemaSubcommand = {
@@ -6,7 +6,7 @@ export const schemaSubcommand = {
   aliases: [],
   description: 'List available metrics or inspect a specific metric.',
   arguments: [{ name: 'metric-or-prefix', required: false }],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'List all metrics',
@@ -18,7 +18,7 @@ export const schemaSubcommand = {
     },
     {
       name: 'Schema as JSON for agents',
-      value: `${packageName} metrics schema vercel.request.count --format=json`,
+      value: `${packageName} metrics schema vercel.request.count --json`,
     },
   ],
 } as const;
@@ -148,6 +148,7 @@ export const metricsCommand = {
       description: 'Query across all projects for the team',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {

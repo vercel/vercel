@@ -100,7 +100,7 @@ export async function parseOperationKeyValuePairs(
     }
 
     throw new Error(
-      `Unknown option "${key}" for operation ${endpoint.operationId}. Check the API docs or run \`vercel api ls --format json\`.`
+      `Unknown option "${key}" for operation ${endpoint.operationId}. Check the API docs or run \`vercel api ls --json\`.`
     );
   }
 

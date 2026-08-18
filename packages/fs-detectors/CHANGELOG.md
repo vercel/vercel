@@ -1,5 +1,39 @@
 # @vercel/fs-detectors
 
+## 6.14.3
+
+### Patch Changes
+
+- Updated dependencies [a69c714]
+- Updated dependencies [654e898]
+  - @vercel/build-utils@13.36.3
+
+## 6.14.2
+
+### Patch Changes
+
+- Updated dependencies [2c75803]
+  - @vercel/build-utils@13.36.2
+
+## 6.14.1
+
+### Patch Changes
+
+- Updated dependencies [17ee736]
+  - @vercel/build-utils@13.36.1
+
+## 6.14.0
+
+### Minor Changes
+
+- 4502520: Support Node.js Routing Middleware entrypoints through `proxy.entrypoint`, with optional path matching through `proxy.matcher`. The matcher may be configured in the entrypoint source or `vercel.json`, but not both.
+- 506487b: Removed the `VERCEL_TOML_CONFIG_ENABLED` feature flag. `vercel.toml` configuration file support is now always enabled.
+
+### Patch Changes
+
+- Updated dependencies [4502520]
+  - @vercel/build-utils@13.36.0
+
 ## 6.13.3
 
 ### Patch Changes

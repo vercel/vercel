@@ -739,7 +739,7 @@ describe('domains verify', () => {
         when: 'List teams to find the scope that owns the domain',
       },
       {
-        command: `vercel domains verify ${DOMAIN} --project my-site --format=json --scope <team>`,
+        command: `vercel domains verify ${DOMAIN} --project my-site --json --scope <team>`,
         when: 'Replace <team> with the owning team and retry',
       },
     ]);

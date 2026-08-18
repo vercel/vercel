@@ -1,5 +1,11 @@
 # @vercel/passport
 
+## 1.0.0
+
+### Major Changes
+
+- 96e1bb1: Promote `@vercel/passport` to a stable 1.0.0 release.
+
 ## 0.1.3
 
 ### Patch Changes

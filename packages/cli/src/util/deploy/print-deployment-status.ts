@@ -116,6 +116,7 @@ export async function printDeploymentStatus(
     output.print('\n');
     suggestNextCommands(
       [
+        readyState === 'READY' ? getCommandName(`curl https://${url}`) : false,
         getCommandName(`inspect ${url} --logs`),
         getCommandName(`redeploy ${url}`),
         target !== 'production' ? getCommandName(`deploy --prod`) : false,

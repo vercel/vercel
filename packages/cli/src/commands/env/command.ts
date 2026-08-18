@@ -3,6 +3,7 @@ import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 import {
   forceOption,
   formatOption,
+  jsonOption,
   projectOption,
   yesOption,
 } from '../../util/arg-common';
@@ -25,6 +26,7 @@ export const listSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     projectOption,
     {
       name: 'guidance',
@@ -69,6 +71,15 @@ export const addSubcommand = {
       description: 'Store the value as non-sensitive when policy allows',
       shorthand: null,
       type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'visibility',
+      description:
+        'Set config/secret visibility (`config` or `secret`). Inferred from type when omitted and VERCEL_ENV_VAR_CONFIG_SECRET_UI is set',
+      shorthand: null,
+      type: String,
+      argument: 'VISIBILITY',
       deprecated: false,
     },
     {
@@ -324,6 +335,15 @@ export const updateSubcommand = {
       description: 'Update to a sensitive Environment Variable',
       shorthand: null,
       type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'visibility',
+      description:
+        'Set config/secret visibility (`config` or `secret`). Inferred from type when omitted and VERCEL_ENV_VAR_CONFIG_SECRET_UI is set',
+      shorthand: null,
+      type: String,
+      argument: 'VISIBILITY',
       deprecated: false,
     },
     {

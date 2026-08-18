@@ -1,7 +1,10 @@
 import { join } from 'node:path';
 import type { CodingAgent, EnvExport } from '../types';
 import { mergeJson, pathExists } from '../config-files';
-import { GATEWAY_ANTHROPIC_BASE_URL } from '../gateway';
+import {
+  GATEWAY_CLAUDE_CODE_BASE_URL,
+  resolveGatewayBaseUrl,
+} from '../gateway';
 
 /**
  * Claude Code reads env vars from the `env` object in `~/.claude/settings.json`.
@@ -40,8 +43,12 @@ export const claudeCode: CodingAgent = {
   buildPlan(ctx) {
     const path = this.configPath(ctx);
     const env: Record<string, string> = {
-      ANTHROPIC_BASE_URL: GATEWAY_ANTHROPIC_BASE_URL,
+      ANTHROPIC_BASE_URL: resolveGatewayBaseUrl(
+        ctx.baseUrlOverride,
+        GATEWAY_CLAUDE_CODE_BASE_URL
+      ),
       ANTHROPIC_API_KEY: '',
+      CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY: '1',
     };
     const envExports: EnvExport[] = [];
     if (ctx.useKeychain) {

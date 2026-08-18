@@ -97,7 +97,7 @@ describe('deploy', () => {
 
       const helpOutput = client.stderr.getFullOutput();
       expect(helpOutput).toContain('--dry');
-      expect(helpOutput).toContain('vercel deploy --dry --format=json');
+      expect(helpOutput).toContain('vercel deploy --dry --json');
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
@@ -2043,9 +2043,6 @@ describe('deploy', () => {
         await expect(client.stderr).toOutput('Customize settings?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Customize advanced settings?');
-        client.stdin.write('\n');
-
         const exitCode = await exitCodePromise;
         expect(exitCode).toEqual(0);
         const output = client.stderr.getFullOutput();
@@ -2083,9 +2080,6 @@ describe('deploy', () => {
         await expect(client.stderr).toOutput('Code directory?');
         client.stdin.write('\n');
         await expect(client.stderr).toOutput('Customize settings?');
-        client.stdin.write('\n');
-
-        await expect(client.stderr).toOutput('Customize advanced settings?');
         client.stdin.write('\n');
 
         const exitCode = await exitCodePromise;
@@ -3425,6 +3419,10 @@ describe('deploy', () => {
       expect(payload.next).toContainEqual(
         expect.objectContaining({ when: 'Inspect deployment' })
       );
+      expect(payload.next).toContainEqual({
+        command: `vercel curl https://${deploymentUrl}`,
+        when: 'Verify deployment, including when Deployment Protection is enabled',
+      });
       (client as { nonInteractive: boolean }).nonInteractive = false;
     });
 

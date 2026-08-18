@@ -42,6 +42,14 @@ vercel flags list --limit 25                               # first page of 25
 vercel flags list --limit 25 --next <cursor>              # next page
 ```
 
+## Version History
+
+```bash
+vercel flags versions my-feature                         # list version history
+vercel flags versions my-feature --environment production --json
+vercel flags versions diff my-feature --revision 4       # compare with the previous revision
+```
+
 ## Opening in Dashboard
 
 ```bash

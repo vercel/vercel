@@ -495,7 +495,10 @@ function makePseudoFile(uncompressedSize: number): PseudoFile {
  */
 function groupPagesBySize(
   pageSizes: Record<string, number>,
-  runtime = 'nodejs22.x'
+  runtime = 'nodejs22.x',
+  functionsConfigManifest?: Parameters<
+    typeof getPageLambdaGroups
+  >[0]['functionsConfigManifest']
 ) {
   const pages = Object.keys(pageSizes);
   const compressedPages: Record<string, PseudoFile> = {};
@@ -506,7 +509,7 @@ function groupPagesBySize(
   return getPageLambdaGroups({
     entryPath: os.tmpdir(),
     config: {} as Config,
-    functionsConfigManifest: undefined,
+    functionsConfigManifest,
     pages,
     prerenderRoutes: new Set(),
     experimentalPPRRoutes: undefined,
@@ -519,6 +522,41 @@ function groupPagesBySize(
     nodeVersion: { runtime },
   });
 }
+
+describe('getPageLambdaGroups maxConcurrency', () => {
+  it('isolates every configured route, including matching limits', async () => {
+    const groups = await groupPagesBySize(
+      { 'a.js': MiB, 'b.js': MiB },
+      'nodejs22.x',
+      {
+        version: 1,
+        functions: {
+          '/a': { maxConcurrency: 2 },
+          '/b': { maxConcurrency: 2 },
+        },
+      } as Parameters<typeof getPageLambdaGroups>[0]['functionsConfigManifest']
+    );
+
+    expect(groups).toHaveLength(2);
+    expect(groups.map(group => group.maxConcurrency)).toEqual([2, 2]);
+  });
+
+  it('does not add an unconfigured route to a configured group', async () => {
+    const groups = await groupPagesBySize(
+      { 'a.js': MiB, 'b.js': MiB },
+      'nodejs22.x',
+      {
+        version: 1,
+        functions: {
+          '/a': { maxConcurrency: 2 },
+        },
+      } as Parameters<typeof getPageLambdaGroups>[0]['functionsConfigManifest']
+    );
+
+    expect(groups).toHaveLength(2);
+    expect(groups.map(group => group.maxConcurrency)).toEqual([2, undefined]);
+  });
+});
 
 describe('getGroupMaxUncompressedLambdaSize', () => {
   it('returns the default per-runtime limit for normal groups', () => {

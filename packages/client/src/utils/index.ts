@@ -1,5 +1,5 @@
 import { FilesMap } from './hashes';
-import { join, sep, relative, basename } from 'path';
+import { join, sep, relative, basename, isAbsolute } from 'path';
 import { Readable } from 'stream';
 import { URL } from 'url';
 import ignore from 'ignore';
@@ -81,6 +81,31 @@ const maybeRead = async function <T>(path: string, default_: T) {
   }
 };
 
+/**
+ * Reads the project's `.vercelignore` / `.nowignore` file (if any) and
+ * returns an `Ignore` instance containing only the user-provided rules.
+ * Returns `null` when no ignore file is present.
+ */
+async function getUserIgnore(cwd: string): Promise<Ignore | null> {
+  const [vercelignore, nowignore] = await Promise.all([
+    maybeRead(join(cwd, '.vercelignore'), ''),
+    maybeRead(join(cwd, '.nowignore'), ''),
+  ]);
+  if (vercelignore && nowignore) {
+    throw new NowBuildError({
+      code: 'CONFLICTING_IGNORE_FILES',
+      message:
+        'Cannot use both a `.vercelignore` and `.nowignore` file. Please delete the `.nowignore` file.',
+      link: 'https://vercel.link/combining-old-and-new-config',
+    });
+  }
+  const ignoreFile = vercelignore || nowignore;
+  if (!ignoreFile) {
+    return null;
+  }
+  return ignore().add(clearRelative(ignoreFile));
+}
+
 export async function buildFileTree(
   path: string | string[],
   {
@@ -129,13 +154,34 @@ export async function buildFileTree(
       const vcConfigFilePaths = fileList.filter(
         file => basename(file) === '.vc-config.json'
       );
+      // `filePathMap` values come from the `.vercel/output` build artifact,
+      // which in split build/deploy workflows may be produced by a
+      // lower-trust job than the one running the deploy. Re-apply the
+      // project's own `.vercelignore` / `.nowignore` rules and reject
+      // values that escape the deployment root, so a tampered artifact
+      // cannot re-add ignored (e.g. secret) files to the upload set.
+      const userIg = await getUserIgnore(path);
       await Promise.all(
         vcConfigFilePaths.map(async p => {
           const configJson = await readFile(p, 'utf8');
           const config = JSON.parse(configJson);
           if (!config.filePathMap) return;
           for (const v of Object.values(config.filePathMap) as string[]) {
-            refs.add(join(path, v));
+            const absPath = join(path, v);
+            const rel = relative(path, absPath);
+            if (rel.startsWith('..') || isAbsolute(rel)) {
+              debug(
+                `Ignoring "filePathMap" entry "${v}": resolves outside the deployment root`
+              );
+              continue;
+            }
+            if (userIg && userIg.ignores(rel)) {
+              debug(
+                `Ignoring "filePathMap" entry "${v}": matched by a rule in .vercelignore/.nowignore`
+              );
+              continue;
+            }
+            refs.add(absPath);
           }
         })
       );
@@ -405,15 +451,54 @@ export interface PreparedFile {
   sha?: string;
   size?: number;
   mode: number;
+  data?: string;
+  encoding?: 'base64';
 }
 
 const isWin = process.platform.includes('win');
+
+const INLINE_STATIC_EXTENSIONS = ['.html', '.htm', '.md'];
+const MAX_INLINE_FILES = 10;
+const MAX_INLINE_TOTAL_BYTES = 5 * 1024 * 1024; // 5MB
+const S_IFREG = 0o100000;
+const S_IFMT = 0o170000;
+
+/**
+ * Small all-static file sets are sent inline in the deployment creation
+ * request instead of as SHA references. This lets the API take its instant
+ * static fast path (deployment is READY in the create response, no build) —
+ * eligibility is decided entirely server-side, and ineligible deployments
+ * fall back to the regular build flow with no behavior change.
+ */
+export function shouldInlineStaticFiles(files: FilesMap): boolean {
+  let count = 0;
+  let totalBytes = 0;
+  for (const file of files.values()) {
+    if ((file.mode & S_IFMT) !== S_IFREG) return false;
+    // Large files are streamed from disk and have no in-memory data
+    if (!file.data) return false;
+    for (const name of file.names) {
+      const lower = name.toLowerCase();
+      if (!INLINE_STATIC_EXTENSIONS.some(ext => lower.endsWith(ext))) {
+        return false;
+      }
+      count += 1;
+      totalBytes += file.data.byteLength;
+    }
+  }
+  return (
+    count > 0 &&
+    count <= MAX_INLINE_FILES &&
+    totalBytes <= MAX_INLINE_TOTAL_BYTES
+  );
+}
 
 export const prepareFiles = (
   files: FilesMap,
   clientOptions: VercelClientOptions
 ): PreparedFile[] => {
   const preparedFiles: PreparedFile[] = [];
+  const inlineStaticFiles = shouldInlineStaticFiles(files);
   for (const [sha, file] of files) {
     for (const name of file.names) {
       let fileName: string;
@@ -430,8 +515,21 @@ export const prepareFiles = (
         fileName = segments[segments.length - 1];
       }
 
+      const normalizedName = isWin ? fileName.replace(/\\/g, '/') : fileName;
+
+      if (inlineStaticFiles && file.data) {
+        // The InlinedFile API schema rejects `sha` and `size`
+        preparedFiles.push({
+          file: normalizedName,
+          data: file.data.toString('base64'),
+          encoding: 'base64',
+          mode: file.mode,
+        });
+        continue;
+      }
+
       preparedFiles.push({
-        file: isWin ? fileName.replace(/\\/g, '/') : fileName,
+        file: normalizedName,
         size: file.data?.byteLength ?? file.size,
         mode: file.mode,
         sha: sha || undefined,

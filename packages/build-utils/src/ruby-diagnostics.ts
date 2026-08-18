@@ -147,11 +147,13 @@ export async function generateRubyProjectManifest({
   gemfileLockPath,
   framework,
   serviceType,
+  outputRuntime = 'ruby',
 }: {
   workPath: string;
   gemfileLockPath: string | undefined;
   framework?: string | null;
   serviceType?: string | null;
+  outputRuntime?: string;
 }): Promise<void> {
   try {
     if (!gemfileLockPath) return;
@@ -206,7 +208,7 @@ export async function generateRubyProjectManifest({
       ],
     };
 
-    await writeProjectManifest(manifest, workPath, 'ruby');
+    await writeProjectManifest(manifest, workPath, outputRuntime);
   } catch {
     // never throw — build must succeed
   }

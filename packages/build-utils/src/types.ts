@@ -282,6 +282,26 @@ export interface StartDevServerSuccess {
    * Used by the dev orchestrator to schedule cron triggers.
    */
   crons?: Cron[];
+
+  /**
+   * Queue subscriptions registered by this dev server's code, introspected
+   * from the runtime SDK. When present, the dev queue broker delivers with
+   * these consumer groups (matching production trigger behavior) instead of
+   * the synthesized per-service consumer name.
+   */
+  queueSubscriptions?: DevQueueSubscription[];
+}
+
+/**
+ * A queue subscription registered by a dev server's code, keyed the way the
+ * queue SDK dispatches deliveries: by consumer group and topic pattern.
+ */
+export interface DevQueueSubscription {
+  topic: string;
+  consumer: string;
+  retryAfterSeconds?: number;
+  initialDelaySeconds?: number;
+  maxDeliveries?: number;
 }
 
 /**
@@ -460,6 +480,7 @@ export interface BuilderFunctions {
     architecture?: LambdaArchitecture;
     memory?: number;
     maxDuration?: MaxDuration;
+    maxConcurrency?: number;
     regions?: string[];
     functionFailoverRegions?: string[];
     runtime?: string;

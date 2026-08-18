@@ -6,11 +6,13 @@ import { type Command, help } from '../help';
 import set from './budgets-set';
 import list from './budgets-list';
 import remove from './budgets-remove';
+import budgetsDefaults from './budgets-defaults';
 import {
   budgetsSubcommand,
   budgetsSetSubcommand,
   budgetsListSubcommand,
   budgetsRemoveSubcommand,
+  budgetsDefaultsSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
@@ -22,6 +24,7 @@ const COMMAND_CONFIG = {
   set: getCommandAliases(budgetsSetSubcommand),
   list: getCommandAliases(budgetsListSubcommand),
   remove: getCommandAliases(budgetsRemoveSubcommand),
+  defaults: getCommandAliases(budgetsDefaultsSubcommand),
 };
 
 export default async function budgets(client: Client) {
@@ -90,6 +93,11 @@ export default async function budgets(client: Client) {
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return remove(client, args);
+    case 'defaults':
+      // Delegate to the nested router so it can resolve `--help` for its own
+      // subcommands (inspect/set/remove) instead of the group help here.
+      telemetry.trackCliSubcommandDefaults(subcommandOriginal);
+      return budgetsDefaults(client);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(budgetsSubcommand, { columns: client.stderr.columns }));

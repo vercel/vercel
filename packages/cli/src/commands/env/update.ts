@@ -26,6 +26,13 @@ import { resolveProjectContext } from '../../util/projects/resolve-project-conte
 import getTeamById from '../../util/teams/get-team-by-id';
 import type { ProjectEnvVariable } from '@vercel-internals/types';
 import { getGlobalFlagsFromArgs } from '../../util/arg-common';
+import { printAlignedLabel } from '../../util/output/print-aligned-label';
+import {
+  isEnvVarConfigSecretUiEnabled,
+  resolveEnvVarVisibility,
+  shouldEnforceSensitiveEnvVarPolicy,
+  formatVisibilityLabel,
+} from '../../util/env/env-var-config-secret-ui';
 
 function selectedEnvTargetsDevelopment(env: ProjectEnvVariable): boolean {
   if (typeof env.target === 'string') return env.target === 'development';
@@ -79,6 +86,9 @@ export default async function update(client: Client, argv: string[]) {
   telemetryClient.trackCliFlagSensitive(opts['--sensitive']);
   telemetryClient.trackCliFlagYes(opts['--yes']);
   telemetryClient.trackCliOptionValue(valueFromFlag);
+  telemetryClient.trackCliOptionVisibility(
+    typeof opts['--visibility'] === 'string' ? opts['--visibility'] : undefined
+  );
 
   if (args.length > 3) {
     if (client.nonInteractive) {
@@ -372,11 +382,14 @@ export default async function update(client: Client, argv: string[]) {
   }
 
   // Detect team-level sensitive env var policy. Cached in getTeamById.
+  const configSecretUiEnabled = isEnvVarConfigSecretUiEnabled();
   let policyOn = false;
+  let teamSensitivePolicyOn = false;
   if (link.org.type === 'team') {
     try {
       const team = await getTeamById(client, link.org.id);
-      policyOn = team?.sensitiveEnvironmentVariablePolicy === 'on';
+      teamSensitivePolicyOn = team?.sensitiveEnvironmentVariablePolicy === 'on';
+      policyOn = shouldEnforceSensitiveEnvVarPolicy(teamSensitivePolicyOn);
     } catch {
       // Non-fatal — policy detection is best-effort.
     }
@@ -504,12 +517,44 @@ export default async function update(client: Client, argv: string[]) {
   }
 
   const type = opts['--sensitive'] ? 'sensitive' : selectedEnv.type;
+  const explicitVisibility =
+    typeof opts['--visibility'] === 'string' ? opts['--visibility'] : undefined;
+  if (explicitVisibility === 'config' && opts['--sensitive']) {
+    output.error(
+      '`--visibility config` cannot be used with `--sensitive`. Pick one.'
+    );
+    return 1;
+  }
   const targets = Array.isArray(selectedEnv.target)
     ? selectedEnv.target
     : [selectedEnv.target].filter((r): r is NonNullable<typeof r> =>
         Boolean(r)
       );
   const allTargets = [...targets, ...(selectedEnv.customEnvironmentIds || [])];
+
+  const { visibility, error: visibilityError } = resolveEnvVarVisibility({
+    configSecretUiEnabled,
+    explicitVisibility,
+    type,
+    key: envName,
+    envTargets: allTargets,
+    teamSensitivePolicyOn,
+  });
+  if (visibilityError) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_visibility',
+          message: visibilityError,
+        },
+        1
+      );
+    }
+    output.error(visibilityError);
+    return 1;
+  }
 
   const updateStamp = stamp();
   try {
@@ -523,7 +568,8 @@ export default async function update(client: Client, argv: string[]) {
       keyToUpdate,
       finalValue,
       allTargets,
-      selectedEnv.gitBranch || ''
+      selectedEnv.gitBranch || '',
+      visibility
     );
   } catch (err: unknown) {
     if (client.nonInteractive && isAPIError(err)) {
@@ -557,6 +603,13 @@ export default async function update(client: Client, argv: string[]) {
       emoji('success')
     )}\n`
   );
+
+  if (configSecretUiEnabled) {
+    const visibilityLabel = formatVisibilityLabel(visibility, type);
+    if (visibilityLabel) {
+      printAlignedLabel('Visibility', visibilityLabel);
+    }
+  }
 
   return 0;
 }

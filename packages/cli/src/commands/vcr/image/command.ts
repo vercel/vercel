@@ -1,5 +1,6 @@
 import {
   formatOption,
+  jsonOption,
   limitOption,
   projectOption,
   yesOption,
@@ -43,6 +44,7 @@ export const imageLsSubcommand = {
     limitOption,
     cursorOption,
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -51,7 +53,7 @@ export const imageLsSubcommand = {
     },
     {
       name: 'List untagged images as JSON',
-      value: `${packageName} vcr image ls my-app --untagged --format json`,
+      value: `${packageName} vcr image ls my-app --untagged --json`,
     },
   ],
 } as const;
@@ -70,7 +72,7 @@ export const imageInspectSubcommand = {
       required: true,
     },
   ],
-  options: [projectScopeOption, formatOption],
+  options: [projectScopeOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Inspect an image by id',
@@ -93,7 +95,7 @@ export const imageRmSubcommand = {
       required: true,
     },
   ],
-  options: [projectScopeOption, yesOption, formatOption],
+  options: [projectScopeOption, yesOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Delete an image by id',

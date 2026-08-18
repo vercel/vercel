@@ -337,7 +337,7 @@ export const deployCommand = {
     },
     {
       name: 'Get every deployment file as JSON',
-      value: 'vercel deploy --dry --format=json',
+      value: 'vercel deploy --dry --json',
     },
     {
       name: 'Write Deployment URL to a file',

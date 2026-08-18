@@ -39,11 +39,21 @@ export async function writeManifests(
     builderUse,
   } of packageManifests) {
     const key = `${builderUse}:${workspace}`;
+    // api/ dir builds don't receive a framework in their build config (it
+    // would change builder behavior), so fall back to whatever the caller
+    // resolved into the manifest (builder-reported, or CLI-detected for
+    // api/ dir builds — see `apiDirFramework` in `doBuild`). Applied to both
+    // manifests: the explicit key below would otherwise clobber the correct
+    // value coming through the `...manifest` spread.
+    const framework =
+      service?.framework ??
+      buildConfig.framework ??
+      (manifest as unknown as PackageManifest).framework;
     projectManifest[key] = {
       ...manifest,
       workspace,
       builder: builderUse,
-      framework: service?.framework ?? buildConfig.framework,
+      framework,
       serviceName: service?.name,
       serviceType:
         service && isExperimentalService(service) ? service.type : undefined,
@@ -56,6 +66,7 @@ export async function writeManifests(
       manifest as unknown as PackageManifest;
     deployManifestBuilds[key] = {
       ...manifestWithoutVersion,
+      framework,
       root: workspace,
       builder: builderUse,
     };

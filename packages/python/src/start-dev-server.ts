@@ -8,10 +8,16 @@ import {
 } from 'fs';
 import { join, delimiter, dirname, basename } from 'path';
 import type { ChildProcess } from 'child_process';
-import type { PythonFramework, StartDevServer } from '@vercel/build-utils';
+import type {
+  DevQueueSubscription,
+  PythonFramework,
+  StartDevServer,
+} from '@vercel/build-utils';
 import {
   debug,
+  isQueueBackedService,
   isScheduleTriggeredService,
+  isWorkflowTriggeredService,
   NowBuildError,
 } from '@vercel/build-utils';
 import { buildCronRouteTable, getServiceCrons } from './crons';
@@ -44,6 +50,17 @@ import {
   VERCEL_RUNTIME_VERSION,
   VERCEL_WORKERS_VERSION,
 } from './package-versions';
+import {
+  getConditionalInjectedPackages,
+  getQueueIntegrations,
+  type QueueIntegration,
+} from './conditional-vendoring';
+import { introspectDevQueueSubscriptions } from './subscribers';
+import {
+  isLegacyWorkersProject,
+  isQueueWorkflowSdkVersion,
+  queryPythonVercelSdkVersion,
+} from './sdk-detection';
 
 const DEV_SERVER_STARTUP_TIMEOUT = 5 * 60_000; // 5 minutes
 
@@ -81,11 +98,6 @@ function silenceNodeWarnings() {
 }
 
 const DEV_SHIM_MODULE = 'vc_init_dev';
-
-function hasWorkerServicesEnabled(env: NodeJS.ProcessEnv): boolean {
-  const value = env.VERCEL_HAS_WORKER_SERVICES || '';
-  return ['1', 'true'].includes(value.trim().toLowerCase());
-}
 
 function createLogListener(
   callback: ((buf: Buffer) => void) | undefined,
@@ -351,8 +363,9 @@ const PENDING_INSTALLS = new Map<string, Promise<void>>();
 const COMPLETED_INSTALLS = new Set<string>();
 
 interface InjectedPackageSpec {
-  name: 'vercel-runtime' | 'vercel-workers';
-  pinnedVersion: string;
+  name: string;
+  pinnedVersion?: string;
+  requirement?: string;
   envOverride: string | undefined;
 }
 
@@ -372,7 +385,7 @@ async function installInjectedDevPackage(
   opts: DevPythonOptions
 ): Promise<void> {
   const targetDir = join(opts.workPath, '.vercel', 'python');
-  const source = pkg.envOverride || pkg.pinnedVersion;
+  const source = pkg.envOverride || pkg.pinnedVersion || pkg.requirement;
   const key = `${targetDir}:${pkg.name}:${source}`;
 
   if (
@@ -400,13 +413,15 @@ async function doInstallInjectedDevPackage(
   const localDir = join(__dirname, '..', '..', '..', 'python', pkg.name);
   const isLocalDev = existsSync(join(localDir, 'pyproject.toml'));
 
-  const dep =
-    pkg.envOverride ||
-    (isLocalDev ? localDir : `${pkg.name}==${pkg.pinnedVersion}`);
+  const requirement = pkg.pinnedVersion
+    ? `${pkg.name}==${pkg.pinnedVersion}`
+    : (pkg.requirement ?? pkg.name);
+  const dep = pkg.envOverride || (isLocalDev ? localDir : requirement);
 
   // Skip install if the exact pypi version is already present. Local dev
-  // builds and overrides always reinstall to pick up possible source changes.
-  if (!isLocalDev && !pkg.envOverride) {
+  // builds, unpinned requirements, and overrides always reinstall to pick
+  // up possible source changes.
+  if (!isLocalDev && !pkg.envOverride && pkg.pinnedVersion) {
     const distInfoName = pkg.name.replace('-', '_');
     const distInfo = join(
       targetDir,
@@ -896,7 +911,63 @@ export const startDevServer: StartDevServer = async opts => {
       devOpts
     );
 
-    if (hasWorkerServicesEnabled(env)) {
+    // Mirror the build-time conditional adapter injection (celery/dramatiq →
+    // vercel-celery(-bundle)/vercel-dramatiq(-bundle)) so modules importing
+    // `vercel.integrations.*` resolve in dev too. Legacy vercel-workers
+    // projects use the legacy integration instead — injecting or activating
+    // the vercel-queue adapters there would install competing transports.
+    const legacyProject = await isLegacyWorkersProject(workPath);
+    let queueIntegrations: QueueIntegration[] = [];
+    try {
+      const pythonPackage = await discoverPackage({
+        entrypointDir: workPath,
+        rootDir: workPath,
+      });
+      queueIntegrations = legacyProject
+        ? []
+        : await getQueueIntegrations({ pythonPackage });
+      // Any function of the project may publish through an adapter's
+      // transport, so the runtime activates the required integrations at
+      // startup in every dev process; activation failures are hard errors.
+      if (queueIntegrations.length > 0) {
+        env.VERCEL_QUEUE_INTEGRATIONS = queueIntegrations
+          .map(
+            ({ module, installer, servingActivator }) =>
+              `${module}:${installer}` +
+              (servingActivator ? `:${servingActivator}` : '')
+          )
+          .join(',');
+      } else {
+        delete env.VERCEL_QUEUE_INTEGRATIONS;
+      }
+      const conditionalInjectedPackages = legacyProject
+        ? []
+        : await getConditionalInjectedPackages({
+            pythonPackage,
+            env,
+          });
+      for (const injectedPackage of conditionalInjectedPackages) {
+        await installInjectedDevPackage(
+          {
+            name: injectedPackage.name,
+            requirement: injectedPackage.requirement,
+            envOverride: injectedPackage.envOverride,
+          },
+          devOpts
+        );
+      }
+    } catch (err) {
+      debug(
+        `Skipping conditional dev package injection: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
+    }
+
+    // Legacy vercel-workers projects run every dev process on the injected
+    // pinned vercel-workers, mirroring the build-time injection: both the
+    // worker bootstrap and publish-side send() need the pinned version
+    if (legacyProject) {
       await installInjectedDevPackage(
         {
           name: 'vercel-workers',
@@ -905,6 +976,69 @@ export const startDevServer: StartDevServer = async opts => {
         },
         devOpts
       );
+    }
+
+    // Queue sidecars (subscribers/workflows) are served through vercel-queue
+    // when the project's SDK supports it, and through the legacy
+    // vercel-workers bootstrap otherwise. Deliberately not keyed on
+    // env.VERCEL_HAS_WORKER_SERVICES: the CLI sets that for every
+    // queue-service project regardless of SDK generation. Besides pyproject
+    // sidecars (marked by the CLI via config.pythonQueueSidecar), this
+    // covers queue-backed experimentalServices (worker and queue/workflow
+    // triggered job services) until we fully get rid of them.
+    const queueSidecarKind =
+      config?.pythonQueueSidecar === 'subscriber' ||
+      config?.pythonQueueSidecar === 'workflow'
+        ? config.pythonQueueSidecar
+        : service && isQueueBackedService(service)
+          ? isWorkflowTriggeredService(service)
+            ? 'workflow'
+            : 'subscriber'
+          : undefined;
+    let queueSubscriptions: DevQueueSubscription[] | undefined;
+    if (queueSidecarKind) {
+      let useQueueServing = !legacyProject;
+      if (useQueueServing && queueSidecarKind === 'workflow') {
+        const sdkVersion = await queryPythonVercelSdkVersion({
+          pythonBin: spawnCommand,
+          cwd: workPath,
+          env,
+        });
+        useQueueServing =
+          sdkVersion !== undefined && isQueueWorkflowSdkVersion(sdkVersion);
+      }
+
+      if (useQueueServing) {
+        env.VERCEL_DEV_QUEUE_SERVING = '1';
+        // The vercel-queue SDK dispatches deliveries by the registered
+        // (consumer group, topic) pair, so the dev queue broker must
+        // deliver with the SDK-registered consumer groups. Introspect them
+        // the same way the build does. Conditional adapters live in
+        // .vercel/python, so put it on the interpreter's path.
+        const runtimeDir = join(workPath, '.vercel', 'python');
+        queueSubscriptions = await introspectDevQueueSubscriptions({
+          moduleName: modulePath,
+          pythonBin: spawnCommand,
+          cwd: workPath,
+          env: {
+            ...env,
+            PYTHONPATH: [runtimeDir, env.PYTHONPATH]
+              .filter(Boolean)
+              .join(delimiter),
+          },
+          integrations: queueIntegrations,
+        });
+      } else {
+        delete env.VERCEL_DEV_QUEUE_SERVING;
+        await installInjectedDevPackage(
+          {
+            name: 'vercel-workers',
+            pinnedVersion: VERCEL_WORKERS_VERSION,
+            envOverride: env.VERCEL_WORKERS_PYTHON,
+          },
+          devOpts
+        );
+      }
     }
 
     // Detect crons before spawning so we can set __VC_CRON_ROUTES.
@@ -1024,7 +1158,7 @@ export const startDevServer: StartDevServer = async opts => {
 
     // No-op shutdown so CLI won't kill the server after each request
     const shutdown = async () => {};
-    return { port, pid, shutdown, crons };
+    return { port, pid, shutdown, crons, queueSubscriptions };
   } catch (err) {
     rejectChildReady(err);
     throw err;

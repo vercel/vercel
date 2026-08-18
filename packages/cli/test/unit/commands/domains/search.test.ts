@@ -1029,12 +1029,33 @@ describe('domains search', () => {
     expect(client.stderr.getFullOutput()).toContain('Invalid order: "recent"');
   });
 
-  it('rejects the deprecated --json alias', async () => {
+  it('accepts --json as an alias for --format json', async () => {
+    client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
+      res.json(['com']);
+    });
+    client.scenario.post('/v1/registrar/domains/search', (_req, res) => {
+      res.json({
+        results: [
+          {
+            domain: 'acme.com',
+            available: true,
+            price: 20,
+            renewalPrice: 20,
+            years: 1,
+            premium: false,
+          },
+        ],
+      });
+    });
+
     client.setArgv('domains', 'search', 'acme', '--json');
 
-    expect(await domains(client)).toEqual(1);
-    expect(client.stdout.getFullOutput()).toEqual('');
-    expect(client.stderr.getFullOutput()).toContain('--json');
+    expect(await domains(client)).toEqual(0);
+    expect(client.stderr.getFullOutput()).not.toContain('--json');
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      query: 'acme',
+      results: [{ domain: 'acme.com', available: true }],
+    });
   });
 
   it.each([0, 201])('rejects invalid limit boundary %i', async limit => {

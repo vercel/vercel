@@ -40,6 +40,10 @@ export class ProjectUpdateTelemetryClient
     this.trackSettingOption('output-directory', value);
   }
 
+  trackCliOptionRootDirectory(value: string | undefined) {
+    this.trackSettingOption('root-directory', value);
+  }
+
   trackCliOptionAutoDetect(value: [string] | undefined) {
     if (value?.length) {
       this.trackCliOption({
@@ -55,6 +59,12 @@ export class ProjectUpdateTelemetryClient
         option,
         value: this.redactedValue,
       });
+    }
+  }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
     }
   }
 }

@@ -66,6 +66,10 @@ vercel logs --since 2024-01-01                 # filter by time
 vercel logs --query "timeout"                  # search
 ```
 
+With `--follow` and no deployment, the CLI tries the latest deployment on the current Git branch, your latest deployment, then the latest production deployment. Use `--environment production` or `--environment preview` to constrain automatic resolution.
+
+In agents, pipes, and CI, log messages expand automatically; do not add `--expand` solely for non-TTY output.
+
 Use `--follow` only for live debugging. Historical log queries should be bounded with `--since`, `--until`, and `--limit`.
 
 ## Metrics

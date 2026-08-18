@@ -1877,6 +1877,7 @@ export const build: BuildV2 = async buildOptions => {
       isApiLambda: boolean;
       lambdaIdentifier: string;
       lambdaCombinedBytes: number;
+      maxConcurrency?: number;
     };
     const apiLambdaGroups: Array<LambdaGroup> = [];
     const pageLambdaGroups: Array<LambdaGroup> = [];
@@ -2002,6 +2003,7 @@ export const build: BuildV2 = async buildOptions => {
               isApiLambda: !!routeIsApi,
               pseudoLayer: group.pseudoLayer,
               lambdaCombinedBytes: group.pseudoLayerBytes,
+              maxConcurrency: group.maxConcurrency,
               lambdaIdentifier: path.join(
                 entryDirectory,
                 `__NEXT_${
@@ -2110,6 +2112,7 @@ export const build: BuildV2 = async buildOptions => {
             architecture?: NodejsLambda['architecture'];
             memory?: number;
             maxDuration?: number | 'max';
+            maxConcurrency?: number;
             regions?: string[];
             experimentalTriggers?: TriggerEvent[];
             supportsCancellation?: boolean;
@@ -2399,6 +2402,7 @@ export const build: BuildV2 = async buildOptions => {
                 ),
                 operationType,
                 runtime: nodeVersion.runtime,
+                maxConcurrency: group.maxConcurrency,
                 nextVersion,
               });
           }

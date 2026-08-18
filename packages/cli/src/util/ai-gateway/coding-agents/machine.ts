@@ -23,6 +23,7 @@ export async function runMachine(args: {
   useKeychain: boolean;
   overrides?: Record<string, string>;
   shellRcOverride?: string;
+  baseUrlOverride?: string;
   home: string;
   alreadyConfigured: boolean;
   reconfigure: boolean;
@@ -171,6 +172,7 @@ export async function runMachine(args: {
     useKeychain,
     overrides: args.overrides,
     shellRcOverride: args.shellRcOverride,
+    baseUrlOverride: args.baseUrlOverride,
   });
 
   if (args.promptMode) {

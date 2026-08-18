@@ -55,6 +55,38 @@ world python-analysis {
     /// Returns false for invalid Python syntax.
     export contains-top-level-callable: func(source: string, name: string) -> bool;
 
+    /// A single import statement extracted from Python source, with the
+    /// syntactic context needed to decide whether it runs at import time.
+    ///
+    /// Policy (which contexts count as "runs at import") is deliberately left
+    /// to the caller so heuristics can evolve without rebuilding the WASM.
+    record import-stmt {
+        /// Dotted module path for from-imports (`from a.b import c` -> "a.b").
+        /// None for `from . import x` (module resolved via level only) and
+        /// always set for plain imports (`import a.b` -> "a.b").
+        module: option<string>,
+        /// Relative-import level (number of leading dots). 0 = absolute.
+        level: u8,
+        /// Imported names for from-imports (empty for plain imports).
+        /// Each name may itself be a submodule of `module`.
+        names: list<string>,
+        /// True when the statement is not nested inside any function body
+        /// (methods included). Function-level imports are lazy: they run on
+        /// first call, not at module import.
+        is-module-level: bool,
+        /// True when nested under `if TYPE_CHECKING:` (or
+        /// `typing.TYPE_CHECKING`). Such imports never run at runtime.
+        in-type-checking: bool,
+    }
+
+    /// Extract every import statement in Python source with its syntactic
+    /// context. Descends through module-level If/Try/With/loop/class bodies
+    /// (which execute at import time) but records function-body imports with
+    /// is-module-level = false.
+    ///
+    /// Returns an empty list for invalid Python syntax.
+    export extract-imports: func(source: string) -> list<import-stmt>;
+
     // =========================================================================
     // Installed package distribution metadata parsing
     // =========================================================================

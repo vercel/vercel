@@ -100,7 +100,7 @@ export default async function verify(client: Client, argv: string[]) {
         {
           command: buildCommandWithGlobalFlags(
             client.argv,
-            `domains verify ${shellQuoteCommandArg(domainName)} --format=json`
+            `domains verify ${shellQuoteCommandArg(domainName)} --json`
           ),
           when: 'Retry with the supported JSON format',
         },
@@ -280,7 +280,7 @@ function buildVerifyCommand(
     parts.push('--strict');
   }
   if (options.outputMode === 'json') {
-    parts.push('--format=json');
+    parts.push('--json');
   }
   if (scopeOverride) {
     parts.push('--scope', scopeOverride);

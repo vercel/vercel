@@ -3,6 +3,7 @@ import {
   allOption,
   confirmOption,
   formatOption,
+  jsonOption,
   limitOption,
   nextOption,
   yesOption,
@@ -62,6 +63,7 @@ export const listCommand = {
     yesOption,
     confirmOption,
     formatOption,
+    jsonOption,
   ],
   examples: [
     {

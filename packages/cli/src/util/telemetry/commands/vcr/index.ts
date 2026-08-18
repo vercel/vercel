@@ -41,6 +41,20 @@ export class VcrTelemetryClient
     });
   }
 
+  trackCliSubcommandBuild(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'build',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandPush(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'push',
+      value: actual,
+    });
+  }
+
   trackCliArgumentEngine(value: string | undefined) {
     if (value) {
       // Engine is a bounded enum (docker|podman|buildah), so it is safe to
@@ -48,6 +62,36 @@ export class VcrTelemetryClient
       this.trackCliArgument({
         arg: 'engine',
         value,
+      });
+    }
+  }
+
+  trackCliArgumentPath(value: string | undefined) {
+    if (value) {
+      this.trackCliArgument({
+        arg: 'path',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliArgumentName(value: string | undefined) {
+    if (value) {
+      this.trackCliArgument({
+        arg: 'name',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionPlatform(value: string | undefined) {
+    if (value) {
+      // Platform is effectively a bounded set; record the common values and
+      // redact anything else so custom platform strings never leak.
+      const known = value === 'linux/amd64' || value === 'linux/arm64';
+      this.trackCliOption({
+        option: 'platform',
+        value: known ? value : this.redactedValue,
       });
     }
   }
@@ -62,6 +106,13 @@ export class VcrTelemetryClient
   trackCliSubcommandImage(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'image',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandPermissions(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'permissions',
       value: actual,
     });
   }
@@ -111,6 +162,12 @@ export class VcrTelemetryClient
   trackCliFlagYes(value: boolean | undefined) {
     if (value) {
       this.trackCliFlag('yes');
+    }
+  }
+
+  trackCliFlagPush(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('push');
     }
   }
 }

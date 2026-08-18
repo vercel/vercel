@@ -69,7 +69,7 @@ import table from '../../util/output/table';
 import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
 import { withGlobalFlags } from '../../util/agent-output';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, packageName } from '../../util/pkg-name';
 import { getErrorCta } from '../../util/get-error-cta';
 import link from '../../util/output/link';
 import { outputAgentError } from '../../util/agent-output';
@@ -386,7 +386,12 @@ async function handleInitDeployment(
 
   const meta = Object.assign({}, parseMeta(localConfig.meta), cliMeta);
 
-  const gitMetadata = await createGitMeta(cwd, project);
+  // Observational path of the project dir relative to the git root — not the
+  // project `rootDirectory` setting (though they often resolve to the same path).
+  const gitMetadata = await createGitMeta(
+    join(cwd, project.rootDirectory || ''),
+    project
+  );
 
   const deploymentEnv = Object.assign(
     {},
@@ -1328,7 +1333,12 @@ async function handleDefaultDeploy(
   // #region Meta
   const meta = Object.assign({}, parseMeta(localConfig.meta), cliMeta);
 
-  const gitMetadata = await createGitMeta(cwd, project);
+  // Observational path of the project dir relative to the git root — not the
+  // project `rootDirectory` setting (though they often resolve to the same path).
+  const gitMetadata = await createGitMeta(
+    join(cwd, project.rootDirectory || ''),
+    project
+  );
   // #endregion
 
   // #region Env vars validation
@@ -1873,6 +1883,10 @@ async function handleDefaultDeploy(
               }
             : {}),
           next: [
+            {
+              command: `${packageName} curl https://${deployment.url}`,
+              when: 'Verify deployment, including when Deployment Protection is enabled',
+            },
             {
               command: withGlobalFlags(client, `inspect ${deployment.url}`),
               when: 'Inspect deployment',

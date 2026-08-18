@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.20.5
+
+### Patch Changes
+
+- a69c714: Propagate per-function `maxConcurrency` configuration into build outputs and keep every configured Next.js route in its own Lambda group, including routes with the same limit.
+
 ## 4.20.4
 
 ### Patch Changes
