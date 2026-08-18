@@ -1760,8 +1760,8 @@ importers:
         version: 1.10.0(rollup@4.60.4)
     devDependencies:
       '@next-community/adapter-vercel':
-        specifier: https://adapter-vercel-adapter-9b0rbv4m8.vercel.app/adapter.tgz
-        version: https://adapter-vercel-adapter-9b0rbv4m8.vercel.app/adapter.tgz
+        specifier: https://adapter-vercel-adapter-mxes03wc2.vercel.app/adapter.tgz
+        version: https://adapter-vercel-adapter-mxes03wc2.vercel.app/adapter.tgz
       '@types/aws-lambda':
         specifier: 8.10.19
         version: 8.10.19
@@ -4580,8 +4580,8 @@ packages:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
 
-  '@next-community/adapter-vercel@https://adapter-vercel-adapter-9b0rbv4m8.vercel.app/adapter.tgz':
-    resolution: {integrity: sha512-uAE3kYLPnzgvKee8sKb0qR5X+qOQY4PjTe6/PaZKgR4UoZzdz2W+JGHnOJiOVLnFweszAr7jQ7O6mR501pIn6g==, tarball: https://adapter-vercel-adapter-9b0rbv4m8.vercel.app/adapter.tgz}
+  '@next-community/adapter-vercel@https://adapter-vercel-adapter-mxes03wc2.vercel.app/adapter.tgz':
+    resolution: {integrity: sha512-+qL9VyCazo5cfJ2nQui0lLKm4n5F9QMjOe7FIKqnUXfq4djspKwwFxifl8NUk43ofwh+Cna+dF5O92y9Zk4PWw==, tarball: https://adapter-vercel-adapter-mxes03wc2.vercel.app/adapter.tgz}
     version: 0.0.1-beta.24
     engines: {node: '>= 20.6.0'}
 
@@ -15135,7 +15135,7 @@ snapshots:
       '@tybys/wasm-util': 0.10.2
     optional: true
 
-  '@next-community/adapter-vercel@https://adapter-vercel-adapter-9b0rbv4m8.vercel.app/adapter.tgz': {}
+  '@next-community/adapter-vercel@https://adapter-vercel-adapter-mxes03wc2.vercel.app/adapter.tgz': {}
 
   '@next/env@11.1.2': {}
 
