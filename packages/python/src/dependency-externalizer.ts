@@ -23,7 +23,6 @@ import {
   UV_BUNDLE_DIR,
 } from './uv';
 import { detectTargetPlatform } from './platform-info';
-import { isLargeFunctionsEnabled } from './large-functions';
 import { InstalledPythonDistributions } from './installed-distributions';
 import type { PythonVersion } from './version';
 
@@ -171,13 +170,10 @@ export class PythonDependencyExternalizer {
     ) {
       return false;
     }
-    // Over the threshold with a lock to defer from. Large functions skip
-    // runtime install once deps exceed ephemeral storage (bundled for Hive);
-    // below that, runtime install still keeps it on Lambda.
-    if (
-      isLargeFunctionsEnabled() &&
-      this.totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES
-    ) {
+    // Over the threshold with a lock to defer from. Skip runtime install once
+    // deps exceed ephemeral storage (bundled for Hive instead); below that,
+    // runtime install still keeps it on Lambda.
+    if (this.totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES) {
       return false;
     }
     return true;
@@ -209,8 +205,6 @@ export class PythonDependencyExternalizer {
 
     const runtimeInstallEnabled = this.shouldEnableRuntimeInstall();
 
-    const largeFunctionsEnabled = isLargeFunctionsEnabled();
-
     // Surface the size BEFORE the size-limit checks below, which may throw.
     // Otherwise oversized bundles would never report their size, biasing any
     // size telemetry toward builds that fit the limit.
@@ -219,34 +213,9 @@ export class PythonDependencyExternalizer {
       runtimeInstallEnabled,
     });
 
-    // Custom install commands can't use runtime install; enforced only when
-    // not bundling everything directly (large functions).
-    if (
-      this.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
-      this.hasCustomCommand &&
-      !largeFunctionsEnabled
-    ) {
-      const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
-      throw new NowBuildError({
-        code: 'LAMBDA_SIZE_EXCEEDED',
-        message:
-          `Total bundle size (${totalBundleSizeMB} MB) exceeds the maximum function size (${limitMB} MB).\n\n` +
-          `A custom install command prevents Vercel from optimizing your\n` +
-          `function bundle size automatically. To fix this, you can:\n` +
-          `  1. Remove unused dependencies from your project, or\n` +
-          `  2. Remove the custom install command so Vercel can optimize\n` +
-          `     the function bundle automatically.`,
-        link: BUNDLING_DOCS_LINK,
-        action: 'Learn More',
-      });
-    }
-
     // Enforce the large-function size limit up front (faster than failing at
     // ZIP time). `>=` matches the platform's uncompressed-size check.
-    if (
-      largeFunctionsEnabled &&
-      this.totalBundleSize >= MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
-    ) {
+    if (this.totalBundleSize >= MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE) {
       const limitMB = (
         MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE /
         (1024 * 1024)
@@ -275,9 +244,9 @@ export class PythonDependencyExternalizer {
    * public), runtime config, and uv binary.
    * Must be called after analyze().
    *
-   * If large functions are allowed and the bundle can't fit AWS Lambda, falls
-   * back to bundling everything for Hive and returns `fellBackToFullBundle:
-   * true` so the caller can apply the same compileall handling.
+   * If the bundle can't fit AWS Lambda, falls back to bundling everything for
+   * Hive and returns `fellBackToFullBundle: true` so the caller can apply the
+   * same compileall handling.
    */
   async generateBundle(
     files: Files,
@@ -299,27 +268,10 @@ export class PythonDependencyExternalizer {
 
     const totalBundleSizeMB = (this.totalBundleSize / (1024 * 1024)).toFixed(2);
 
-    // When set, a bundle that can't fit AWS Lambda is bundled for Hive instead
-    // of failing the build.
-    const largeFunctionsEnabled = isLargeFunctionsEnabled();
-
-    // Verify total deps won't exceed Lambda ephemeral storage (512 MB)
+    // Deps that won't fit Lambda ephemeral storage (512 MB) can't be installed
+    // at cold start, so bundle everything for Hive instead.
     if (this.totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES) {
-      if (largeFunctionsEnabled) {
-        return this.bundleAllForHive(files);
-      }
-      const limitMB = (LAMBDA_EPHEMERAL_STORAGE_BYTES / (1024 * 1024)).toFixed(
-        0
-      );
-      throw new NowBuildError({
-        code: 'LAMBDA_SIZE_EXCEEDED',
-        message:
-          `Total bundle size (${totalBundleSizeMB} MB) exceeds the maximum function size (${limitMB} MB).\n\n` +
-          `Reduce the size of your dependencies or split your application into\n` +
-          `smaller functions.`,
-        link: BUNDLING_DOCS_LINK,
-        action: 'Learn More',
-      });
+      return this.bundleAllForHive(files);
     }
 
     // Read and parse the uv.lock file. Use a project-relative path in
@@ -399,20 +351,9 @@ export class PythonDependencyExternalizer {
       name => !forceBundledSet.has(normalizePackageName(name))
     );
 
+    // Nothing left to defer to runtime install, so bundle everything for Hive.
     if (externalizablePublic.length === 0) {
-      if (largeFunctionsEnabled) {
-        return this.bundleAllForHive(files);
-      }
-      throw new NowBuildError({
-        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
-        message:
-          `Total bundle size (${totalBundleSizeMB} MB) exceeds the maximum function size and\n` +
-          `can't be optimized automatically because some dependencies don't\n` +
-          `provide a compatible pre-built wheel.\n\n` +
-          `To fix this, either:\n` +
-          `  1. Regenerate your lock file with: uv lock --upgrade, or\n` +
-          `  2. Replace the packages that don't provide a pre-built wheel.`,
-      });
+      return this.bundleAllForHive(files);
     }
 
     // Calculate per-package sizes for public packages
@@ -497,9 +438,8 @@ export class PythonDependencyExternalizer {
 
     // The non-deferrable footprint (source + private/wheel-less packages +
     // tooling) alone exceeds the threshold, so runtime install can't shrink the
-    // zip enough. Large functions bundle everything for Hive; otherwise the
-    // final-size check below throws.
-    if (largeFunctionsEnabled && remainingCapacity < 0) {
+    // zip enough. Bundle everything for Hive.
+    if (remainingCapacity < 0) {
       return this.bundleAllForHive(files);
     }
 
@@ -624,23 +564,8 @@ export class PythonDependencyExternalizer {
     // target 225 MB, so a slight overshoot here is safe.
     const finalBundleSize = await calculateBundleSize(files);
     if (finalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES + 100 * 1024) {
-      if (largeFunctionsEnabled) {
-        // Estimation overshoot past the threshold; bundle everything for Hive.
-        return this.bundleAllForHive(files);
-      }
-      const finalSizeMB = (finalBundleSize / (1024 * 1024)).toFixed(2);
-      const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
-      throw new NowBuildError({
-        code: 'LAMBDA_SIZE_EXCEEDED',
-        message:
-          `Total bundle size (${finalSizeMB} MB) exceeds the maximum function size (${limitMB} MB) even after\n` +
-          `optimizing dependencies.\n\n` +
-          `This usually means your source code or private packages are too\n` +
-          `large. Reduce their size or split your application into smaller\n` +
-          `functions.`,
-        link: BUNDLING_DOCS_LINK,
-        action: 'Learn More',
-      });
+      // Estimation overshoot past the threshold; bundle everything for Hive.
+      return this.bundleAllForHive(files);
     }
 
     return {

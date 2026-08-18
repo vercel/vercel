@@ -45,17 +45,6 @@ function createInstalledDistributions() {
 
 describe('dependency externalizer support', () => {
   describe('shouldEnableRuntimeInstall', () => {
-    const originalLargeFunctionsEnv =
-      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
-
-    afterEach(() => {
-      if (originalLargeFunctionsEnv === undefined) {
-        delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
-      } else {
-        process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = originalLargeFunctionsEnv;
-      }
-    });
-
     const oversized = LAMBDA_SIZE_THRESHOLD_BYTES + 1;
     const undersized = LAMBDA_SIZE_THRESHOLD_BYTES - 1;
     // Exceeds even the ephemeral-storage budget, so runtime installation can't
@@ -83,54 +72,24 @@ describe('dependency externalizer support', () => {
     }
 
     it('returns true when bundle exceeds threshold and uvLockPath is present', () => {
-      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+      // Deferrable bundles stay on Lambda via runtime install; Hive is only
+      // used when the deps can't fit ephemeral storage.
       const ext = createExternalizer({ totalBundleSize: oversized });
       expect(ext.shouldEnableRuntimeInstall()).toBe(true);
     });
 
-    it('still attempts runtime install under VERCEL_SUPPORT_LARGE_FUNCTIONS when the bundle fits ephemeral storage', () => {
-      // Large functions keep deferrable bundles on Lambda via runtime install;
-      // Hive is only used when the deps can't fit ephemeral storage.
-      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
-      const ext = createExternalizer({ totalBundleSize: oversized });
-      expect(ext.shouldEnableRuntimeInstall()).toBe(true);
-    });
-
-    it('skips runtime install under VERCEL_SUPPORT_LARGE_FUNCTIONS when the bundle exceeds ephemeral storage', () => {
+    it('returns false when the bundle exceeds ephemeral storage', () => {
       // Too big for /tmp: bundle everything and serve on Hive instead.
-      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
       const ext = createExternalizer({ totalBundleSize: ephemeralOversized });
       expect(ext.shouldEnableRuntimeInstall()).toBe(false);
-    });
-
-    it('skips runtime install under VERCEL_SUPPORT_LARGE_FUNCTIONS when the bundle is under threshold', () => {
-      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
-      const ext = createExternalizer({ totalBundleSize: undersized });
-      expect(ext.shouldEnableRuntimeInstall()).toBe(false);
-    });
-
-    it('attempts runtime install when VERCEL_SUPPORT_LARGE_FUNCTIONS is an unrecognised value', () => {
-      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = 'yes';
-      const ext = createExternalizer({ totalBundleSize: oversized });
-      expect(ext.shouldEnableRuntimeInstall()).toBe(true);
-    });
-
-    it('still attempts runtime install when the bundle exceeds ephemeral storage without large functions enabled', () => {
-      // Without large functions the ephemeral short-circuit does not apply, so
-      // it still attempts the hack (generateBundle later throws).
-      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
-      const ext = createExternalizer({ totalBundleSize: ephemeralOversized });
-      expect(ext.shouldEnableRuntimeInstall()).toBe(true);
     });
 
     it('returns false when bundle is under threshold', () => {
-      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
       const ext = createExternalizer({ totalBundleSize: undersized });
       expect(ext.shouldEnableRuntimeInstall()).toBe(false);
     });
 
     it('returns false when uvLockPath is null', () => {
-      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
       const ext = createExternalizer({
         totalBundleSize: oversized,
         uvLockPath: null,
@@ -139,7 +98,6 @@ describe('dependency externalizer support', () => {
     });
 
     it('returns false when hasCustomCommand is true even with oversized bundle and uvLockPath', () => {
-      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
       const ext = createExternalizer({
         totalBundleSize: oversized,
         hasCustomCommand: true,
@@ -148,7 +106,6 @@ describe('dependency externalizer support', () => {
     });
 
     it('returns false when hasCustomCommand is true and bundle is under threshold', () => {
-      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
       const ext = createExternalizer({
         totalBundleSize: undersized,
         hasCustomCommand: true,
@@ -1049,20 +1006,7 @@ version = "8.1.7"
   });
 
   describe('analyze', () => {
-    const originalLargeFunctionsEnv =
-      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
-
-    afterEach(() => {
-      if (originalLargeFunctionsEnv === undefined) {
-        delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
-      } else {
-        process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = originalLargeFunctionsEnv;
-      }
-    });
-
     it('uses the injected installed distributions when sizing the bundle', async () => {
-      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
-
       const installedDistributions = createInstalledDistributions();
       const mirrorPackagesIntoVendor = vi
         .spyOn(installedDistributions, 'mirrorPackagesIntoVendor')
@@ -1089,67 +1033,7 @@ version = "8.1.7"
       expect(Object.keys(result.allVendorFiles)).toEqual(['_vendor/pkg.py']);
     });
 
-    it('throws user-friendly error for custom install command with oversized bundle', async () => {
-      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
-
-      const tempDir = path.join(tmpdir(), `dep-ext-analyze-${Date.now()}`);
-      fs.mkdirSync(tempDir, { recursive: true });
-
-      // Create a sparse file that reports > 225 MB without using real disk space
-      const bigFilePath = path.join(tempDir, 'big-file.dat');
-      const fd = fs.openSync(bigFilePath, 'w');
-      fs.ftruncateSync(fd, LAMBDA_SIZE_THRESHOLD_BYTES + 1024 * 1024);
-      fs.closeSync(fd);
-
-      const ext = new PythonDependencyExternalizer({
-        installedDistributions: createInstalledDistributions(),
-        vendorDir: '_vendor',
-        workPath: tempDir,
-        uvLockPath: path.join(tempDir, 'uv.lock'),
-        uvProjectDir: tempDir,
-        projectName: 'test-project',
-        pythonVersion: TEST_PYTHON_VERSION,
-        hasCustomCommand: true,
-      });
-
-      const files = {
-        'big-file.dat': new FileFsRef({ fsPath: bigFilePath }),
-      };
-
-      try {
-        await expect(ext.analyze(files)).rejects.toThrow(
-          'exceeds the maximum function size'
-        );
-
-        // Re-create the externalizer since the previous one may have mutated state
-        const ext2 = new PythonDependencyExternalizer({
-          installedDistributions: createInstalledDistributions(),
-          vendorDir: '_vendor',
-          workPath: tempDir,
-          uvLockPath: path.join(tempDir, 'uv.lock'),
-          uvProjectDir: tempDir,
-          projectName: 'test-project',
-          pythonVersion: TEST_PYTHON_VERSION,
-          hasCustomCommand: true,
-        });
-
-        try {
-          await ext2.analyze(files);
-          expect.fail('Expected analyze() to throw');
-        } catch (error: unknown) {
-          const message = (error as Error).message;
-          expect(message).toContain('custom install command');
-          expect(message).not.toContain('Lambda size limit');
-          expect(message).not.toContain('runtime dependency installation');
-        }
-      } finally {
-        fs.removeSync(tempDir);
-      }
-    });
-
     it('does not throw for custom install command when bundle is under threshold', async () => {
-      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
-
       const tempDir = path.join(tmpdir(), `dep-ext-analyze-ok-${Date.now()}`);
       fs.mkdirSync(tempDir, { recursive: true });
 
@@ -1180,8 +1064,6 @@ version = "8.1.7"
     });
 
     it('invokes onSized with the size even when the bundle exceeds the large-function limit and throws', async () => {
-      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
-
       const tempDir = path.join(
         tmpdir(),
         `dep-ext-onsized-large-${Date.now()}`
@@ -1227,11 +1109,9 @@ version = "8.1.7"
       }
     });
 
-    it('attempts runtime install under supportLargeFunctions when the bundle fits ephemeral storage', async () => {
+    it('attempts runtime install when the bundle fits ephemeral storage', async () => {
       // Over the 225 MB Lambda threshold but within /tmp: keep it on Lambda via
       // runtime install rather than sending it to Hive.
-      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
-
       const tempDir = path.join(tmpdir(), `dep-ext-large-defer-${Date.now()}`);
       fs.mkdirSync(tempDir, { recursive: true });
 
@@ -1265,11 +1145,9 @@ version = "8.1.7"
       }
     });
 
-    it('skips runtime install under supportLargeFunctions when the bundle exceeds ephemeral storage', async () => {
+    it('skips runtime install when the bundle exceeds ephemeral storage', async () => {
       // Too big for /tmp: bundle everything (no runtime install) and let the
       // platform route it to Hive.
-      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
-
       const tempDir = path.join(tmpdir(), `dep-ext-large-hive-${Date.now()}`);
       fs.mkdirSync(tempDir, { recursive: true });
 
@@ -1303,9 +1181,7 @@ version = "8.1.7"
       }
     });
 
-    it('throws the extended limit error under supportLargeFunctions when the bundle exceeds 5 GB', async () => {
-      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
-
+    it('throws the extended limit error when the bundle exceeds 5 GB', async () => {
       const tempDir = path.join(tmpdir(), `dep-ext-large-over-${Date.now()}`);
       fs.mkdirSync(tempDir, { recursive: true });
 
@@ -1339,9 +1215,7 @@ version = "8.1.7"
       }
     });
 
-    it('throws under supportLargeFunctions when the bundle is exactly at the 5 GB limit', async () => {
-      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
-
+    it('throws when the bundle is exactly at the 5 GB limit', async () => {
       const tempDir = path.join(tmpdir(), `dep-ext-large-eq-${Date.now()}`);
       fs.mkdirSync(tempDir, { recursive: true });
 
@@ -1376,14 +1250,12 @@ version = "8.1.7"
       }
     });
 
-    it('does not throw the custom-install-command error under supportLargeFunctions', async () => {
-      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
-
+    it('bundles an oversized custom-install-command build for Hive instead of throwing', async () => {
       const tempDir = path.join(tmpdir(), `dep-ext-large-custom-${Date.now()}`);
       fs.mkdirSync(tempDir, { recursive: true });
 
-      // Over the AWS Lambda threshold; with a custom command this throws on the
-      // standard path, but direct-bundle mode bundles it for Hive instead.
+      // Over the AWS Lambda threshold. A custom install command rules out
+      // runtime install, so the whole bundle ships to Hive.
       const bigFilePath = path.join(tempDir, 'big-file.dat');
       const fd = fs.openSync(bigFilePath, 'w');
       fs.ftruncateSync(fd, LAMBDA_SIZE_THRESHOLD_BYTES + 1024 * 1024);
@@ -1413,8 +1285,6 @@ version = "8.1.7"
     });
 
     it('invokes onSized on the under-threshold success path', async () => {
-      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
-
       const tempDir = path.join(tmpdir(), `dep-ext-onsized-ok-${Date.now()}`);
       fs.mkdirSync(tempDir, { recursive: true });
 
@@ -1452,17 +1322,6 @@ version = "8.1.7"
   });
 
   describe('generateBundle Hive fallback', () => {
-    const originalLargeFunctionsEnv =
-      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
-
-    afterEach(() => {
-      if (originalLargeFunctionsEnv === undefined) {
-        delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
-      } else {
-        process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = originalLargeFunctionsEnv;
-      }
-    });
-
     // Build an externalizer in the post-analyze() state without a real venv:
     // the ephemeral-storage check runs before any uv.lock work, so the fallback
     // it triggers can be exercised by setting the analyzed fields directly.
@@ -1489,9 +1348,7 @@ version = "8.1.7"
       return ext;
     }
 
-    it('bundles all dependencies for Hive and discards runtime-install artifacts when deps exceed ephemeral storage under supportLargeFunctions', async () => {
-      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
-
+    it('bundles all dependencies for Hive and discards runtime-install artifacts when deps exceed ephemeral storage', async () => {
       const allVendorFiles: Files = {
         '_vendor/pkg/__init__.py': new FileBlob({ data: 'a' }),
         '_vendor/pkg/module.py': new FileBlob({ data: 'b' }),
@@ -1528,19 +1385,6 @@ version = "8.1.7"
       expect(files['_uv/uv']).toBeUndefined();
       expect(files['_uv/pyproject.toml']).toBeUndefined();
       expect(files['_uv/uv.lock']).toBeUndefined();
-    });
-
-    it('throws when deps exceed ephemeral storage without supportLargeFunctions', async () => {
-      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
-
-      const ext = createAnalyzedExternalizer({
-        totalBundleSize: LAMBDA_EPHEMERAL_STORAGE_BYTES + 1,
-        allVendorFiles: {},
-      });
-
-      await expect(ext.generateBundle({})).rejects.toThrow(
-        'exceeds the maximum function size'
-      );
     });
   });
 });

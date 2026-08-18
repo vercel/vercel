@@ -34,7 +34,6 @@ import {
 
 const mockedExeca = vi.mocked(execa);
 const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
-const originalLargeFnEnv = process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
 const tmpDirs: string[] = [];
 
 afterEach(() => {
@@ -46,11 +45,6 @@ afterEach(() => {
     delete process.env.VERCEL_PYTHON_COMPILEALL;
   } else {
     process.env.VERCEL_PYTHON_COMPILEALL = originalCompileAllEnv;
-  }
-  if (originalLargeFnEnv === undefined) {
-    delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
-  } else {
-    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = originalLargeFnEnv;
   }
 });
 
@@ -67,15 +61,6 @@ describe('shouldCompileAll', () => {
     );
 
     process.env.VERCEL_PYTHON_COMPILEALL = 'TRUE';
-    expect(shouldCompileAll({ isDev: false, hasCustomCommand: false })).toBe(
-      true
-    );
-  });
-
-  it('does not require VERCEL_SUPPORT_LARGE_FUNCTIONS', () => {
-    delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
-    process.env.VERCEL_PYTHON_COMPILEALL = '1';
-
     expect(shouldCompileAll({ isDev: false, hasCustomCommand: false })).toBe(
       true
     );

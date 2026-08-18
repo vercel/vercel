@@ -70,7 +70,6 @@ import {
   RUNTIME_DEPS_DIR,
   type GenerateBundleResult,
 } from './dependency-externalizer';
-import { isLargeFunctionsEnabled } from './large-functions';
 import {
   UvRunner,
   UV_LINUX_TARGET,
@@ -1835,13 +1834,11 @@ export const build: BuildVX = async ({
         }
       } else {
         // Bundle all deps directly. Either it fits the standard size limit, or
-        // large functions are enabled and the whole bundle ships.
+        // it exceeds it and the whole bundle ships on Hive.
         addFiles(files, depAnalysis.allVendorFiles);
         if (depAnalysis.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES) {
           packingMode = 'hive';
-          if (isLargeFunctionsEnabled()) {
-            announceLargeFunction();
-          }
+          announceLargeFunction();
           if (compileAllEnabled) {
             await runAdjacentCompileAndFill(LARGE_FUNCTION_FILL_CEILING_BYTES);
           }
