@@ -1087,15 +1087,28 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
-  it('should load environment variables from `.vercel/.env.preview.local`', async () => {
+  it('should ignore sensitive placeholders without overwriting local values', async () => {
     const cwd = fixture('env-from-vc-pull');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
-    const exitCode = await build(client);
-    expect(exitCode).toEqual(0);
+    process.env.VERCEL_TEST_SENSITIVE_OVERRIDE = 'configured';
+    process.env.VERCEL_TEST_EMPTY_SENSITIVE_OVERRIDE = '';
+    try {
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
 
-    const env = await fs.readJSON(join(output, 'static', 'env.json'));
-    expect(env['ENV_FILE']).toEqual('preview');
+      const env = await fs.readJSON(join(output, 'static', 'env.json'));
+      expect(env['ENV_FILE']).toEqual('preview');
+      expect(env['SENSITIVE_SECRET']).toBeUndefined();
+      expect(env['VERCEL_TEST_SENSITIVE_OVERRIDE']).toEqual('configured');
+      expect(env['VERCEL_TEST_EMPTY_SENSITIVE_OVERRIDE']).toEqual('');
+      await expect(client.stderr).toOutput(
+        'The following Sensitive Environment Variables were not loaded because their values are unavailable to `vercel build`: SENSITIVE_SECRET'
+      );
+    } finally {
+      delete process.env.VERCEL_TEST_SENSITIVE_OVERRIDE;
+      delete process.env.VERCEL_TEST_EMPTY_SENSITIVE_OVERRIDE;
+    }
   });
 
   it('should load environment variables from `.vercel/.env.production.local`', async () => {
