@@ -203,6 +203,7 @@ Rules:
 - Use `Name?`, `Store as sensitive?`, `Value?`, `Environments?`, and `Git branch?`.
 - Use `Variable name?` for public-prefix warning choices; use `Value?` for value-warning choices.
 - Public-prefix and value warnings use the warning gutter: `! The NEXT_PUBLIC_ prefix will make API_KEY visible to anyone visiting your site`. Do not use `WARNING!` as a column-0 label.
+- Config/Secret safety hard stops use the fatal-error gutter: `✗ <message>`. Do not print an `!` warning immediately before a fatal error for the same condition; print exactly one fatal message.
 - Keep the sensitive-value explanation as dim inline context on the prompt: `Store as sensitive? Sensitive values cannot be read later`. Do not wrap the hint in parentheses, add trailing punctuation, or print it as a separate row above the prompt.
 - Use checkbox instructions for `Environments?`: `<space> select, <enter> confirm, <a> toggle all, <i> invert` on the prompt line when it fits, with no parentheses.
 - Do not offer Development when the value is sensitive. Do not offer Production/Preview for non-sensitive values when the team policy requires sensitive values there.

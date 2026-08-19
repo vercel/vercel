@@ -717,7 +717,9 @@ describe('env update', () => {
         );
 
         await expect(env(client)).resolves.toBe(1);
-        const output = client.stderr.getFullOutput();
+        const output = stripAnsi(client.stderr.getFullOutput());
+        expect(output).toMatch(/^✗ /m);
+        expect(output).not.toContain('Error:');
         expect(output).toContain('cannot be a Secret');
         expect(output).toContain(
           'vercel env add API_KEY production --type secret --project explicit-public-update'
@@ -798,6 +800,9 @@ describe('env update', () => {
 
         await expect(env(client)).resolves.toBe(1);
         const output = stripAnsi(client.stderr.getFullOutput());
+        expect(output).toMatch(/^✗ /m);
+        expect(output).not.toMatch(/^! /m);
+        expect(output).not.toContain('Error:');
         expect(output).toContain(expected);
         expect(output).toContain('cannot be kept private as a Secret');
         if (expectedCommand) {
@@ -805,6 +810,61 @@ describe('env update', () => {
         } else {
           expect(output).not.toContain('Add the private Secret');
         }
+      });
+
+      it('does not print a SvelteKit warning before a conflicting type error', async () => {
+        client.cwd = setupTmpDir();
+        client.config.currentTeam = 'team_dummy';
+        await writeFile(
+          join(client.cwd, 'svelte.config.js'),
+          "export default { kit: { env: { publicPrefix: 'BROWSER_' } } };\n"
+        );
+        useProject(
+          {
+            ...defaultProject,
+            id: 'svelte-update-conflict',
+            name: 'svelte-update-conflict',
+            accountId: 'team_dummy',
+            framework: 'sveltekit',
+          },
+          [
+            {
+              type: 'encrypted',
+              visibility: 'config',
+              id: 'svelte-config-id',
+              key: 'BROWSER_API_KEY',
+              value: 'old-value',
+              target: ['production'],
+              gitBranch: undefined,
+              configurationId: null,
+              updatedAt: 1557241361455,
+              createdAt: 1557241361455,
+            },
+          ]
+        );
+        client.setArgv(
+          'env',
+          'update',
+          'BROWSER_API_KEY',
+          'production',
+          '--type',
+          'config',
+          '--sensitive',
+          '--value',
+          'new-value',
+          '--yes',
+          '--project',
+          'svelte-update-conflict'
+        );
+
+        await expect(env(client)).resolves.toBe(1);
+        const output = stripAnsi(client.stderr.getFullOutput());
+        expect(output).toMatch(/^✗ /m);
+        expect(output).toContain(
+          '`--type config` cannot be used with `--sensitive`'
+        );
+        expect(output).not.toMatch(/^! /m);
+        expect(output).not.toContain('Error:');
       });
 
       it('explains the remove-and-add path when a Secret cannot become Config', async () => {
@@ -849,6 +909,8 @@ describe('env update', () => {
 
         await expect(env(client)).resolves.toBe(1);
         const output = stripAnsi(client.stderr.getFullOutput());
+        expect(output).toMatch(/^✗ /m);
+        expect(output).not.toContain('Error:');
         expect(output).toContain('A Secret cannot be changed to Config');
         expect(output).toContain(
           'API_KEY" will be unavailable to new builds between these commands'

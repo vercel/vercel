@@ -48,6 +48,10 @@ function looksLikeCredentialName(
   return looksLikeSecret(publicPrefix ? key.slice(publicPrefix.length) : key);
 }
 
+function printEnvUpdateWarning(message: string): void {
+  output.print(`${chalk.yellow('!')} ${message}\n`);
+}
+
 function selectedEnvTargetsDevelopment(env: ProjectEnvVariable): boolean {
   if (typeof env.target === 'string') return env.target === 'development';
   if (Array.isArray(env.target)) return env.target.includes('development');
@@ -415,11 +419,6 @@ export default async function update(client: Client, argv: string[]) {
     );
     if (matchingLocalPrefix !== undefined && !getPublicPrefix(envName, true)) {
       customSveltePublicPrefix = matchingLocalPrefix;
-      output.warn(
-        matchingLocalPrefix === ''
-          ? 'This SvelteKit project uses an empty publicPrefix, so every Environment Variable is exposed to the browser.'
-          : `${matchingLocalPrefix} variables are exposed to the browser by this SvelteKit project.`
-      );
     }
   }
 
@@ -430,7 +429,7 @@ export default async function update(client: Client, argv: string[]) {
     return 1;
   }
   if (explicitType === 'config' && opts['--sensitive']) {
-    output.error(
+    output.fatal(
       '`--type config` cannot be used with `--sensitive`. Pick one.'
     );
     return 1;
@@ -491,7 +490,7 @@ export default async function update(client: Client, argv: string[]) {
         1
       );
     }
-    output.error(
+    output.fatal(
       `A Secret cannot be changed to Config. Remove the variable, then add it again as Config. ${param(envName)} will be unavailable to new builds between these commands.`
     );
     output.print(`  Remove:\n    ${removeHumanCommand}\n`);
@@ -578,7 +577,7 @@ export default async function update(client: Client, argv: string[]) {
           1
         );
       }
-      output.error(publicPrefixError);
+      output.fatal(publicPrefixError);
       if (addHumanCommand) {
         output.print(
           `  Add the private Secret (prompts for the value):\n    ${addHumanCommand}\n`
@@ -589,6 +588,14 @@ export default async function update(client: Client, argv: string[]) {
       }
       return 1;
     }
+  }
+
+  if (customSveltePublicPrefix !== undefined) {
+    printEnvUpdateWarning(
+      customSveltePublicPrefix === ''
+        ? 'This SvelteKit project uses an empty publicPrefix, so every Environment Variable is exposed to the browser.'
+        : `${customSveltePublicPrefix} variables are exposed to the browser by this SvelteKit project.`
+    );
   }
 
   // Detect team-level sensitive env var policy. Cached in getTeamById.
@@ -850,7 +857,7 @@ export default async function update(client: Client, argv: string[]) {
         1
       );
     }
-    output.error(message);
+    output.fatal(message);
     return 1;
   }
 
@@ -874,7 +881,7 @@ export default async function update(client: Client, argv: string[]) {
         1
       );
     }
-    output.error(visibilityError);
+    output.fatal(visibilityError);
     return 1;
   }
 

@@ -101,12 +101,13 @@ The canonical product terms in [`core.md`](core.md#voice--copy) override adjacen
 
 Errors include what failed, the constraint or cause when known, and the recovery step when one exists.
 
+- New or touched fatal human errors use the `✗` gutter without an additional `Error:` label. The glyph carries the error state; the sentence carries the meaning.
 - Use `Failed to` or `{Noun} failed` for system, API, build, deploy, network, and infrastructure failures.
 - Use `Couldn't` or `Can't` for validation, permission, and user-state failures.
 - Never use `Unable to`, `An error occurred`, or raw upstream error objects.
 - Preserve an actionable marketplace-partner message with attribution when exact partner wording helps supportability; otherwise translate upstream errors into Vercel voice.
 - Pair platform/system failures with the correctly labeled stable `Request ID`, `Deployment ID`, `Build ID`, `Run ID`, or `Trace ID` when available. Do not add IDs to ordinary validation or permission errors.
-- Warnings state the nonfatal condition, why it matters, and the fix when one exists. Do not warn when the command should fail or stay silent.
+- Warnings use the `!` gutter and state the nonfatal condition, why it matters, and the fix when one exists. Do not warn when the command should fail or stay silent.
 - Never use humor, exclamation marks, or apology preambles in errors.
 
 ## Banned + Avoided Language

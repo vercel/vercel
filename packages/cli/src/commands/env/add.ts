@@ -609,7 +609,7 @@ export default async function add(client: Client, argv: string[]) {
           1
         );
       }
-      output.error(publicPrefixError);
+      output.fatal(publicPrefixError);
       return 1;
     }
   }
@@ -699,7 +699,7 @@ export default async function add(client: Client, argv: string[]) {
             ],
           });
         }
-        output.error(message);
+        output.fatal(message);
         output.print(`  Keep it private:\n    ${privateHumanCommand}\n`);
         output.print(`  Expose it publicly:\n    ${publicHumanCommand}\n`);
         return 1;
@@ -909,11 +909,6 @@ export default async function add(client: Client, argv: string[]) {
     );
     if (matchingLocalPrefix !== undefined && !getPublicPrefix(envName, true)) {
       customSveltePublicPrefix = matchingLocalPrefix;
-      printEnvAddWarning(
-        matchingLocalPrefix === ''
-          ? 'This SvelteKit project uses an empty publicPrefix, so every Environment Variable is exposed to the browser.'
-          : `${matchingLocalPrefix} variables are exposed to the browser by this SvelteKit project.`
-      );
     }
   }
   if (
@@ -931,8 +926,15 @@ export default async function add(client: Client, argv: string[]) {
         1
       );
     }
-    output.error(message);
+    output.fatal(message);
     return 1;
+  }
+  if (customSveltePublicPrefix !== undefined) {
+    printEnvAddWarning(
+      customSveltePublicPrefix === ''
+        ? 'This SvelteKit project uses an empty publicPrefix, so every Environment Variable is exposed to the browser.'
+        : `${customSveltePublicPrefix} variables are exposed to the browser by this SvelteKit project.`
+    );
   }
   const [{ envs }, customEnvironments] = await Promise.all([
     getEnvRecords(client, project.id, 'vercel-cli:env:add'),
@@ -1047,13 +1049,13 @@ export default async function add(client: Client, argv: string[]) {
     return 1;
   }
   if (explicitType === 'secret' && forceEncrypted) {
-    output.error(
+    output.fatal(
       '`--type secret` cannot be used with `--no-sensitive`. Pick one.'
     );
     return 1;
   }
   if (explicitType === 'config' && forceSensitive) {
-    output.error(
+    output.fatal(
       '`--type config` cannot be used with `--sensitive`. Pick one.'
     );
     return 1;
@@ -1506,7 +1508,7 @@ export default async function add(client: Client, argv: string[]) {
         });
       }
       if (opts['--yes']) {
-        output.error(message);
+        output.fatal(message);
         if (publicPrefix !== '') {
           output.print(`  Keep it private:\n    ${privateHumanCommand}\n`);
         }
@@ -1649,7 +1651,7 @@ export default async function add(client: Client, argv: string[]) {
         1
       );
     }
-    output.error(message);
+    output.fatal(message);
     return 1;
   }
 
@@ -1674,7 +1676,7 @@ export default async function add(client: Client, argv: string[]) {
         1
       );
     }
-    output.error(visibilityError);
+    output.fatal(visibilityError);
     return 1;
   }
 

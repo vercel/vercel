@@ -182,7 +182,8 @@ Use existing helpers before adding formatting:
 
 - `output.print()` for designed rows
 - `output.log()` only when the gray `> ` prefix is intended
-- `output.warn()` / `output.error()` for warnings/errors when their format matches the target surface; if a warning helper emits a non-target label such as `WARNING!`, use or add a scoped formatted warning row and test it
+- `output.fatal()` for new or touched fatal human errors; it prints the error but does not exit, so the caller still owns the exit code
+- `output.warn()` / `output.error()` for legacy warnings/errors when their format must remain compatible; if a warning helper emits a non-target label such as `WARNING!`, use or add a scoped formatted warning row and test it
 - `output.spinner()` for long-running work
 - `printAlignedLabel()` for target aligned label-value result blocks
 - `table()` for tabular data
@@ -201,7 +202,7 @@ Target aligned result rows:
 
 Rules:
 
-- The first 2 columns are the gutter: either two spaces (`"  "`) or a semantic glyph plus space (`"▲ "`, `"✓ "`, `"! "`).
+- The first 2 columns are the gutter: either two spaces (`"  "`) or a semantic glyph plus space (`"▲ "`, `"✓ "`, `"! "`, `"✗ "`).
 - The gutter is not decoration. Use a glyph only when it carries state; otherwise keep the two-space gutter.
 - label width: 16 chars
 - value column: 18
@@ -215,6 +216,7 @@ Rules:
 - Production rows and production alias rows use `▲`: `▲ Production`, `▲ Aliased`.
 - Primary completed-phase rows use `✓`: `✓ Added`, `✓ Created`, `✓ Linked`, `✓ Removed`, `✓ Updated`, `✓ Overrode`, `✓ Ready`.
 - Warning rows use `!` in the gutter: `! --scope is deprecated. Use --team.` Do not render `WARNING!` starting at column 0; if a command must keep a text warning label for compatibility, indent it after the blank gutter.
+- Fatal error rows use `✗` in the gutter: `✗ Can't add this Secret because the name exposes it to the browser.` Do not also prefix the message with `Error:`.
 - Preview, setup, discovery, progress, settings, local file, and secondary receipt rows keep the blank two-space gutter.
 - Body section headings and detail blocks such as `Changes:`, diff rows, and local file summaries keep the blank two-space gutter. Do not let section headings or `+`/`-` diff markers occupy column 0.
 - URLs are cyan in human output and plain strings in JSON.
@@ -259,9 +261,12 @@ Allowed primary glyphs:
 - `?` active prompt
 - `✓` primary completed phase: completed action, deployment readiness, or terminal wait-state completion
 - `!` warning or nonfatal risk notice
+- `✗` fatal error or failed terminal state
 - `·` inline separator
 - `→` relationship/transition
 - `…` continuing work
+
+Legacy `✘` per-item failure markers may remain where compatibility requires them. `×` is a deletion/diff marker, not a fatal-error glyph. Do not add new meanings for either glyph.
 
 Banned in primary result and progress rows:
 
@@ -276,7 +281,7 @@ Color:
 - dim: paths, hints, metadata, durations
 - green: success only; color the `✓` gutter green when color is enabled, but do not turn secondary receipt rows green
 - yellow: warnings only; color the `!` gutter yellow when color is enabled
-- red: errors only
+- red: errors only; color the `✗` gutter red when color is enabled
 - Target: respect `--no-color` and standard `NO_COLOR`; current handling is narrower, so widen rather than narrow support when touching color handling.
 - Machine output is colorless regardless of color settings.
 - never rely on color, emoji width, or ANSI for required meaning
@@ -341,6 +346,9 @@ Provide --team explicitly. No default is applied in non-interactive mode.
 
 Rules:
 
+- New or touched fatal human errors use `output.fatal()` and the `✗` gutter. Keep legacy `output.error()` output unchanged for incremental migration.
+- `output.fatal()` does not terminate the process. The command must still return or exit with the correct nonzero code.
+- Indent explicit continuation lines after a fatal error with the blank gutter. Terminal wrapping does not need manual indentation.
 - Put the most actionable line last in multi-line errors.
 - Group repeated failures under one explanation.
 - Do not dump stack traces unless `--debug`.

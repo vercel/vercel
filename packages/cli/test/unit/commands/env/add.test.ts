@@ -616,7 +616,9 @@ describe('env add', () => {
           '--yes'
         );
         await expect(env(client)).resolves.toBe(1);
-        const output = client.stderr.getFullOutput();
+        const output = stripAnsi(client.stderr.getFullOutput());
+        expect(output).toMatch(/^✗ /m);
+        expect(output).not.toContain('Error:');
         expect(output).toContain('cannot be a Secret');
         expect(output).toContain(
           'rename the variable to `API_KEY` and keep the Secret type'
@@ -643,6 +645,43 @@ describe('env add', () => {
         await expect(exitCodePromise).resolves.toBe(1);
       });
 
+      it('keeps the fatal glyph out of non-interactive JSON errors', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        try {
+          client.nonInteractive = true;
+          client.setArgv(
+            'env',
+            'add',
+            'NEXT_PUBLIC_API_KEY',
+            'production',
+            '--type',
+            'secret',
+            '--value',
+            'my-secret',
+            '--yes',
+            '--non-interactive'
+          );
+
+          await expect(env(client)).rejects.toThrow('exit');
+          const payload = JSON.parse(
+            logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+          );
+          expect(payload).toMatchObject({
+            status: 'error',
+            reason: 'invalid_type',
+          });
+          expect(JSON.stringify(payload)).not.toContain('✗');
+          expect(client.stderr.getFullOutput()).not.toContain('✗');
+        } finally {
+          exitSpy.mockRestore();
+          logSpy.mockRestore();
+        }
+      });
+
       it('requires an explicit safe path for a credential-like public key with --yes', async () => {
         client.setArgv(
           'env',
@@ -662,6 +701,9 @@ describe('env add', () => {
           '    vercel env add NEXT_PUBLIC_API_KEY production --type config'
         );
         await expect(exitCodePromise).resolves.toBe(1);
+        const output = stripAnsi(client.stderr.getFullOutput());
+        expect(output).toMatch(/^✗ /m);
+        expect(output).not.toContain('Error:');
       });
 
       it('still prompts for the public-prefix decision when only --value is provided', async () => {
@@ -838,6 +880,9 @@ describe('env add', () => {
 
         await expect(env(client)).resolves.toBe(1);
         const output = stripAnsi(client.stderr.getFullOutput());
+        expect(output).toMatch(/^✗ /m);
+        expect(output).not.toMatch(/^! /m);
+        expect(output).not.toContain('Error:');
         expect(output).toContain(expected);
         expect(output).toContain('cannot be kept private as a Secret');
         expect(output).toContain(
