@@ -506,20 +506,21 @@ describe('blob store remove', () => {
     });
   });
 
-  describe('--yes flag', () => {
-    it('should skip confirmation prompt when --yes is passed', async () => {
+  describe('confirmation is always required', () => {
+    it('should reject --yes as an unknown option', async () => {
       const exitCode = await removeStore(
         client,
         ['store_1234567890123456', '--yes'],
         noToken
       );
 
-      expect(exitCode).toBe(0);
+      expect(exitCode).toBe(1);
       expect(confirmInputMock).not.toHaveBeenCalled();
-      expect(mockedOutput.success).toHaveBeenCalledWith('Blob store deleted');
+      expect(client.fetch).not.toHaveBeenCalled();
+      expect(mockedOutput.success).not.toHaveBeenCalled();
     });
 
-    it('should still prompt without --yes', async () => {
+    it('should always prompt for confirmation', async () => {
       const exitCode = await removeStore(
         client,
         ['store_1234567890123456'],
@@ -530,7 +531,7 @@ describe('blob store remove', () => {
       expect(confirmInputMock).toHaveBeenCalled();
     });
 
-    it('should error in non-TTY without --yes', async () => {
+    it('should error in non-TTY environments', async () => {
       (client.stdin as any).isTTY = false;
 
       const exitCode = await removeStore(
@@ -541,9 +542,10 @@ describe('blob store remove', () => {
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
-        'Confirmation required. Use --yes to skip confirmation in non-interactive environments.'
+        'Deleting a blob store requires interactive confirmation. Run this command in an interactive terminal.'
       );
       expect(confirmInputMock).not.toHaveBeenCalled();
+      expect(client.fetch).not.toHaveBeenCalled();
     });
   });
 
@@ -708,48 +710,50 @@ describe('blob store remove', () => {
       }) as () => never);
     });
 
-    it('requires --yes and emits confirmation_required instead of prompting', async () => {
+    it('emits dangerous_operation_requires_user instead of prompting', async () => {
       await removeStore(client, ['store_1234567890123456'], noToken).catch(
         () => {}
       );
 
       expect(vi.mocked(process.exit)).toHaveBeenCalledWith(1);
       expect(confirmInputMock).not.toHaveBeenCalled();
+      expect(client.fetch).not.toHaveBeenCalled();
       const payload = JSON.parse(client.stdout.getFullOutput());
       expect(payload).toMatchObject({
         status: 'error',
-        reason: 'confirmation_required',
-        message: expect.stringMatching(/--yes/),
+        reason: 'dangerous_operation_requires_user',
+        message: expect.stringContaining('interactively'),
         next: expect.arrayContaining([
           expect.objectContaining({
-            command: expect.stringContaining('--yes'),
+            when: 'user runs this command interactively',
           }),
         ]),
       });
+      expect(client.stdout.getFullOutput()).not.toContain('--yes');
     });
 
-    it('emits missing_arguments when no store id is available', async () => {
+    it('emits dangerous_operation_requires_user even when no store id is given', async () => {
       await removeStore(client, [], noToken).catch(() => {});
 
       expect(vi.mocked(process.exit)).toHaveBeenCalledWith(1);
       const payload = JSON.parse(client.stdout.getFullOutput());
       expect(payload).toMatchObject({
         status: 'error',
-        reason: 'missing_arguments',
-        message: expect.stringContaining('storeId'),
+        reason: 'dangerous_operation_requires_user',
       });
     });
 
-    it('deletes without prompting when --yes is passed', async () => {
+    it('does not delete when --yes is passed', async () => {
       const exitCode = await removeStore(
         client,
         ['store_1234567890123456', '--yes'],
         noToken
-      );
+      ).catch(() => 1);
 
-      expect(exitCode).toBe(0);
+      expect(exitCode).toBe(1);
       expect(confirmInputMock).not.toHaveBeenCalled();
-      expect(mockedOutput.success).toHaveBeenCalledWith('Blob store deleted');
+      expect(mockedOutput.success).not.toHaveBeenCalled();
+      expect(client.fetch).not.toHaveBeenCalled();
     });
   });
 });
