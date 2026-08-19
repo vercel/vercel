@@ -347,33 +347,17 @@ jobs:
       - name: Test ${{matrix.packageName}}
         timeout-minutes: 25
         run: |
-          attempt=1
-          max_attempts=2
           export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
 
-          while [ "$attempt" -le "$max_attempts" ]; do
-            echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
+          echo "Running tests: ${{matrix.testScript}} ${{matrix.packageName}}"
 
-            # When VITEST_TEST_FILES is set, the test script reads paths from that env var
-            # instead of CLI args, avoiding the Windows cmd.exe ~8191 char arg limit.
-            if [ -n "$VITEST_TEST_FILES" ]; then
-              run_cmd="node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir='.turbo' --log-order=stream --filter=${{matrix.packageName}}"
-            else
-              run_cmd="node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir='.turbo' --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}"
-            fi
-
-            if eval "$run_cmd"; then
-              exit 0
-            fi
-
-            if [ "$attempt" -eq "$max_attempts" ]; then
-              echo "Tests failed after $max_attempts attempts."
-              exit 1
-            fi
-
-            echo "Tests failed; retrying once..."
-            attempt=$((attempt+1))
-          done
+          # When VITEST_TEST_FILES is set, the test script reads paths from that env var
+          # instead of CLI args, avoiding the Windows cmd.exe ~8191 char arg limit.
+          if [ -n "$VITEST_TEST_FILES" ]; then
+            node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir='.turbo' --log-order=stream --filter=${{matrix.packageName}}
+          else
+            node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir='.turbo' --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}
+          fi
         shell: bash
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -541,25 +525,10 @@ jobs:
       - name: Test ${{matrix.packageName}}
         timeout-minutes: 35
         run: |
-          attempt=1
-          max_attempts=2
           export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
 
-          while [ "$attempt" -le "$max_attempts" ]; do
-            echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
-
-            if node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}; then
-              exit 0
-            fi
-
-            if [ "$attempt" -eq "$max_attempts" ]; then
-              echo "Tests failed after $max_attempts attempts."
-              exit 1
-            fi
-
-            echo "Tests failed; retrying once..."
-            attempt=$((attempt+1))
-          done
+          echo "Running tests: ${{matrix.testScript}} ${{matrix.packageName}}"
+          node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}
         shell: bash
         env:
           # Per-package pip install specs (e.g. VERCEL_RUNTIME_PYTHON,
