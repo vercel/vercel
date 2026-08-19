@@ -500,7 +500,7 @@ export const deleteStoreSubcommand = {
       required: false,
     },
   ],
-  options: [yesOption],
+  options: [],
   examples: [],
 } as const;
 
