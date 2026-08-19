@@ -77,8 +77,27 @@ export interface FirewallConfigChange {
   value?: unknown;
 }
 
+export type ManagedRuleAction = 'log' | 'challenge' | 'deny';
+
+export interface ManagedRuleGroupConfig {
+  active: boolean;
+  action?: ManagedRuleAction;
+}
+
+export interface ManagedRuleConfig {
+  active: boolean;
+  action?: ManagedRuleAction;
+  ruleGroups?: Record<string, ManagedRuleGroupConfig>;
+}
+
 export interface ManagedRulesResponse {
-  [key: string]: unknown;
+  bot_filter?: ManagedRuleConfig;
+  bot_protection?: ManagedRuleConfig;
+  ai_bots?: ManagedRuleConfig;
+  owasp?: ManagedRuleConfig;
+  traffic_sources?: ManagedRuleConfig;
+  vercel_ruleset?: ManagedRuleConfig;
+  [key: string]: ManagedRuleConfig | undefined;
 }
 
 export interface FirewallConfigResponse {
@@ -166,4 +185,19 @@ export interface UpdateAttackModeResponse {
   attackModeEnabled: boolean;
   /** Epoch milliseconds */
   attackModeUpdatedAt: number;
+}
+
+export interface FirewallActionRow {
+  startTime: string;
+  endTime: string;
+  isActive: boolean;
+  action_type: string;
+  action: string;
+  host: string;
+  public_ip: string;
+  count: number;
+}
+
+export interface FirewallEventsResponse {
+  actions: FirewallActionRow[];
 }

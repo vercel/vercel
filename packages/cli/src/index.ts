@@ -261,8 +261,8 @@ const main = async () => {
   // If empty, leave this code here for easy adding of beta commands later
   const betaCommands: string[] = ['api', 'crons', 'curl', 'webhooks'];
   const versionBanner = isNativeBinaryInstall()
-    ? `${getTitleName()} CLI ${pkg.version}`
-    : `${getTitleName()} CLI ${pkg.version} (Node.js ${process.versions.node})`;
+    ? `${getTitleName()} CLI ${pkg.version} (Beta)`
+    : `${getTitleName()} CLI ${pkg.version} (Beta) (Node.js ${process.versions.node})`;
   const msg = betaCommands.includes(targetOrSubcommand)
     ? `${versionBanner} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
     : versionBanner;

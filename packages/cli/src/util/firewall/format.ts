@@ -9,12 +9,30 @@ import type {
   FirewallRuleAction,
   FirewallIpRule,
   BypassRule,
+  ManagedRuleConfig,
+  ManagedRulesResponse,
 } from './types';
 
 export interface AttackModeStatus {
   enabled: boolean;
   /** Epoch milliseconds */
   activeUntil?: number | null;
+}
+
+export interface FirewallPlanInfo {
+  isEnterprise?: boolean;
+  hasSecurityPlus?: boolean;
+}
+
+function hasOwaspEntitlement(planInfo?: FirewallPlanInfo): boolean {
+  return Boolean(planInfo?.hasSecurityPlus || planInfo?.isEnterprise);
+}
+
+/** Bot Protection lives under either legacy `bot_filter` or `bot_protection`. */
+export function getBotProtectionConfig(
+  managedRules?: ManagedRulesResponse | null
+): ManagedRuleConfig | undefined {
+  return managedRules?.bot_filter ?? managedRules?.bot_protection;
 }
 
 export function isAllSourcesBypass(ip: string): boolean {
@@ -67,11 +85,89 @@ export function formatMitigationsStatus(bypass: BypassRule[]): string {
   return chalk.green('Active');
 }
 
+/** Bot Protection is Off when inactive, otherwise Log or Challenge. */
+export function formatBotProtectionStatus(
+  ruleset: ManagedRuleConfig | undefined
+): string {
+  if (!ruleset?.active) {
+    return chalk.dim('Off');
+  }
+  if (ruleset.action === 'log') {
+    return chalk.yellow('Log');
+  }
+  return chalk.green('Challenge');
+}
+
+/** AI Bots allows traffic when inactive, otherwise Log, Challenge, or Deny. */
+export function formatAiBotsStatus(
+  ruleset: ManagedRuleConfig | undefined
+): string {
+  if (!ruleset?.active) {
+    return chalk.dim('Allow');
+  }
+  if (ruleset.action === 'log') {
+    return chalk.yellow('Log');
+  }
+  if (ruleset.action === 'challenge') {
+    return chalk.green('Challenge');
+  }
+  return chalk.red('Deny');
+}
+
+/** OWASP is Off when inactive; when on, include active group counts when present. */
+export function formatOwaspStatus(
+  ruleset: ManagedRuleConfig | undefined,
+  planInfo?: FirewallPlanInfo
+): string {
+  if (!ruleset?.active) {
+    if (!hasOwaspEntitlement(planInfo)) {
+      return `${chalk.dim('Off')}  ${chalk.dim('· requires Security+')}`;
+    }
+    return chalk.dim('Off');
+  }
+  const groups = ruleset.ruleGroups
+    ? Object.values(ruleset.ruleGroups)
+    : undefined;
+  if (groups && groups.length > 0) {
+    const activeGroups = groups.filter(g => g.active).length;
+    return chalk.green(`On (${activeGroups} of ${groups.length} groups)`);
+  }
+  return chalk.green('On');
+}
+
+export function owaspJsonStatus(
+  ruleset: ManagedRuleConfig | undefined,
+  planInfo?: FirewallPlanInfo
+): {
+  enabled: boolean;
+  action: string | null;
+  requiresUpgrade?: boolean;
+  upgrade?: 'security-plus';
+} {
+  const enabled = Boolean(ruleset?.active);
+  const action = enabled ? (ruleset?.action ?? null) : null;
+  if (enabled || hasOwaspEntitlement(planInfo)) {
+    return { enabled, action };
+  }
+  return {
+    enabled: false,
+    action: null,
+    requiresUpgrade: true,
+    upgrade: 'security-plus',
+  };
+}
+
+/**
+ * Status summary in firewall execution order:
+ * System Bypass → System Mitigations → Attack Mode → IP Blocks → Custom Rules
+ * → Bot Protection → AI Bots → OWASP.
+ */
 export function formatStatusOutput(
   active: FirewallConfigResponse | null,
   draft: FirewallConfigResponse | null,
   bypass: BypassRule[],
-  attackMode?: AttackModeStatus
+  attackMode?: AttackModeStatus,
+  planInfo?: FirewallPlanInfo
 ): string {
   const lines: string[] = [];
 
@@ -80,15 +176,6 @@ export function formatStatusOutput(
     lines.push(
       `  ${chalk.bold('Firewall:')}             ${enabled ? chalk.green('Enabled') : chalk.red('Disabled')}`
     );
-
-    const activeRules = active.rules.filter(r => r.active).length;
-    const inactiveRules = active.rules.filter(r => !r.active).length;
-    const totalRules = active.rules.length;
-    lines.push(
-      `  ${chalk.bold('Custom Rules:')}         ${activeRules} active, ${inactiveRules} inactive (${totalRules} total)`
-    );
-
-    lines.push(`  ${chalk.bold('IP Blocks:')}            ${active.ips.length}`);
   } else {
     lines.push(
       `  ${chalk.bold('Firewall:')}             ${chalk.dim('Not configured')}`
@@ -100,15 +187,39 @@ export function formatStatusOutput(
   lines.push(
     `  ${chalk.bold('System Bypass:')}        ${regularBypasses.length} IP${regularBypasses.length !== 1 ? 's' : ''}`
   );
+  lines.push(
+    `  ${chalk.bold('System Mitigations:')}   ${formatMitigationsStatus(bypass)}`
+  );
 
-  lines.push('');
   if (attackMode) {
     lines.push(
       `  ${chalk.bold('Attack Mode:')}          ${formatAttackModeStatus(attackMode)}`
     );
   }
+
+  if (active) {
+    lines.push(`  ${chalk.bold('IP Blocks:')}            ${active.ips.length}`);
+
+    const activeRules = active.rules.filter(r => r.active).length;
+    const inactiveRules = active.rules.filter(r => !r.active).length;
+    const totalRules = active.rules.length;
+    lines.push(
+      `  ${chalk.bold('Custom Rules:')}         ${activeRules} active, ${inactiveRules} inactive (${totalRules} total)`
+    );
+  }
+
+  const botProtection = getBotProtectionConfig(active?.managedRules);
+  const aiBots = active?.managedRules?.ai_bots;
+  const owasp = active?.managedRules?.owasp;
+
   lines.push(
-    `  ${chalk.bold('System Mitigations:')}   ${formatMitigationsStatus(bypass)}`
+    `  ${chalk.bold('Bot Protection:')}       ${formatBotProtectionStatus(botProtection)}`
+  );
+  lines.push(
+    `  ${chalk.bold('AI Bots:')}              ${formatAiBotsStatus(aiBots)}`
+  );
+  lines.push(
+    `  ${chalk.bold('OWASP Ruleset:')}        ${formatOwaspStatus(owasp, planInfo)}`
   );
 
   if (draft && draft.changes.length > 0) {

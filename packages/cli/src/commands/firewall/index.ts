@@ -5,6 +5,13 @@ import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import { type Command, help } from '../help';
 import overview from './overview';
+import status from './status';
+import alerts from './alerts';
+import events from './events';
+import eventDetail from './event-detail';
+import trafficDashboard from './traffic-dashboard';
+import drillIn from './drill-in';
+import alertDetail from './alert-detail';
 import diff from './diff';
 import publish from './publish';
 import discard from './discard';
@@ -16,6 +23,13 @@ import rules from './rules';
 import {
   firewallCommand,
   overviewSubcommand,
+  statusSubcommand,
+  alertsSubcommand,
+  eventsSubcommand,
+  eventDetailSubcommand,
+  trafficDashboardSubcommand,
+  drillInSubcommand,
+  alertDetailSubcommand,
   diffSubcommand,
   publishSubcommand,
   discardSubcommand,
@@ -33,6 +47,13 @@ import { getProjectOptionFromArgs } from '../../util/arg-common';
 
 const COMMAND_CONFIG = {
   overview: getCommandAliases(overviewSubcommand),
+  status: getCommandAliases(statusSubcommand),
+  alerts: getCommandAliases(alertsSubcommand),
+  events: getCommandAliases(eventsSubcommand),
+  'event-detail': getCommandAliases(eventDetailSubcommand),
+  'traffic-dashboard': getCommandAliases(trafficDashboardSubcommand),
+  'drill-in': getCommandAliases(drillInSubcommand),
+  'alert-detail': getCommandAliases(alertDetailSubcommand),
   rules: getCommandAliases(rulesSubcommand),
   diff: getCommandAliases(diffSubcommand),
   publish: getCommandAliases(publishSubcommand),
@@ -97,6 +118,62 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandOverview(subcommandOriginal);
       return overview(client, args);
+    case 'status':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
+        printHelp(statusSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandStatus(subcommandOriginal);
+      return status(client, args);
+    case 'alerts':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
+        printHelp(alertsSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandAlerts(subcommandOriginal);
+      return alerts(client, args);
+    case 'events':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
+        printHelp(eventsSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandEvents(subcommandOriginal);
+      return events(client, args);
+    case 'event-detail':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
+        printHelp(eventDetailSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandEventDetail(subcommandOriginal);
+      return eventDetail(client, args);
+    case 'traffic-dashboard':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
+        printHelp(trafficDashboardSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandTrafficDashboard(subcommandOriginal);
+      return trafficDashboard(client, args);
+    case 'drill-in':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
+        printHelp(drillInSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandDrillIn(subcommandOriginal);
+      return drillIn(client, args);
+    case 'alert-detail':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
+        printHelp(alertDetailSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandAlertDetail(subcommandOriginal);
+      return alertDetail(client, args);
     case 'diff':
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', subcommandOriginal);

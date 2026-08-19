@@ -1,0 +1,5 @@
+---
+'vercel': minor
+---
+
+Add firewall observability commands: `firewall overview` (status, traffic by rule, requests-by-action timeseries with alert annotations, and Detail/Traffic next-step commands), `firewall status` (configuration with optional `--graph`; OWASP off shows when Security+ is required), `firewall alerts`, `firewall events` (alias `mitigations`; filterable list of enforced actions with Detail/Traffic next-step commands), `firewall event-detail <ip>` (start/end, action, host, IP, requests-by-action timeseries, and top request paths), `firewall traffic-dashboard` (filterable action timeseries plus top IPs, JA4 digests, AS names, user agents, paths, rules, hosts, and verified bots; `--alert` scopes the window and filter to a firewall alert), `firewall drill-in <dimension> <value>` (entity detail, timeseries, and group-by breakdown; `--alert` ANDs the alert scope), and `firewall alert-detail <id>` (baseline vs anomaly rates, anomaly-window timeseries, top offending IPs/hosts with an events fallback, and Traffic/Detail/Events/Block next-step commands).

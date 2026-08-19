@@ -109,7 +109,7 @@ if (
 ) {
   const { version } = await import('./version.mjs');
   const binaryLabel = process.env.VERCEL_VC_NATIVE === '1' ? ' (native)' : '';
-  console.error(`Vercel CLI ${version}${binaryLabel}`);
+  console.error(`Vercel CLI ${version} (Beta)${binaryLabel}`);
   console.log(version);
   process.exit(0);
 }
@@ -121,7 +121,7 @@ if (
 ) {
   const { version } = await import('./version.mjs');
   const { help } = await import('./help.js');
-  console.error(`Vercel CLI ${version}`);
+  console.error(`Vercel CLI ${version} (Beta)`);
   console.error(help());
   process.exit(0);
 }
