@@ -1,4 +1,6 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
+import { writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import env from '../../../../src/commands/env';
 import {
   setupTmpDir,
@@ -9,6 +11,7 @@ import { defaultProject, envs, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import type { ProjectEnvVariable } from '@vercel-internals/types';
+import stripAnsi from 'strip-ansi';
 
 describe('env update', () => {
   beforeEach(() => {
@@ -554,23 +557,308 @@ describe('env update', () => {
         updateSpy.mockRestore();
       });
 
-      it('rejects --sensitive on a Development record when flag is enabled', async () => {
+      it('allows --sensitive on a Development record when flag is enabled', async () => {
+        const updateEnvRecordModule = await import(
+          '../../../../src/util/env/update-env-record'
+        );
+        const updateSpy = vi
+          .spyOn(updateEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+        const cwd = setupUnitFixture('vercel-env-pull');
+        client.cwd = cwd;
+        try {
+          client.setArgv(
+            'env',
+            'update',
+            'TEST_VAR_DEV',
+            '--sensitive',
+            '--value',
+            'new-value',
+            '--yes'
+          );
+          await expect(env(client)).resolves.toBe(0);
+          expect(updateSpy.mock.calls[0]?.[3]).toBe('sensitive');
+          expect(updateSpy.mock.calls[0]?.[8]).toBe('secret');
+        } finally {
+          updateSpy.mockRestore();
+        }
+      });
+
+      it('resolves the Secret type before confirming the update', async () => {
         const cwd = setupUnitFixture('vercel-env-pull');
         client.cwd = cwd;
         client.setArgv(
           'env',
           'update',
-          'TEST_VAR_DEV',
-          '--sensitive',
+          'TEST_VAR',
+          'production',
+          '--type',
+          'secret',
           '--value',
-          'new-value',
-          '--yes'
+          'new-value'
         );
+
         const exitCodePromise = env(client);
         await expect(client.stderr).toOutput(
-          'not allowed with the Development Environment'
+          'The previous value was readable as Config'
         );
-        await expect(exitCodePromise).resolves.toBe(1);
+        await expect(client.stderr).toOutput('Type            Secret');
+        await expect(client.stderr).toOutput(
+          'Update this Environment Variable?'
+        );
+        const output = stripAnsi(client.stderr.getFullOutput());
+        expect(output.indexOf('Type            Secret')).toBeLessThan(
+          output.indexOf('Update this Environment Variable?')
+        );
+        client.stdin.write('n\n');
+        await expect(exitCodePromise).resolves.toBe(0);
+        expect(client.telemetryEventStore.readonlyEvents).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              key: 'option:type',
+              value: 'secret',
+            }),
+          ])
+        );
+      });
+
+      it('warns when a plain Config value looks like a credential', async () => {
+        const updateEnvRecordModule = await import(
+          '../../../../src/util/env/update-env-record'
+        );
+        const updateSpy = vi
+          .spyOn(updateEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+        client.cwd = setupTmpDir();
+        client.config.currentTeam = 'team_dummy';
+        useProject(
+          {
+            ...defaultProject,
+            id: 'explicit-plain-update',
+            name: 'explicit-plain-update',
+            accountId: 'team_dummy',
+          },
+          [
+            {
+              type: 'plain',
+              id: 'plain-env-id',
+              key: 'PUBLIC_VALUE',
+              value: 'old-value',
+              target: ['production'],
+              gitBranch: undefined,
+              configurationId: null,
+              updatedAt: 1557241361455,
+              createdAt: 1557241361455,
+            },
+          ]
+        );
+        try {
+          client.setArgv(
+            'env',
+            'update',
+            'PUBLIC_VALUE',
+            'production',
+            '--type',
+            'config',
+            '--value',
+            `ghp_${'a'.repeat(30)}`,
+            '--yes',
+            '--project',
+            'explicit-plain-update'
+          );
+
+          await expect(env(client)).resolves.toBe(0);
+          expect(client.stderr.getFullOutput()).toContain(
+            'This name or value looks like a credential'
+          );
+          expect(updateSpy).toHaveBeenCalled();
+        } finally {
+          updateSpy.mockRestore();
+        }
+      });
+
+      it('gives add-and-remove recovery for a public Config that cannot become Secret', async () => {
+        client.cwd = setupTmpDir();
+        client.config.currentTeam = 'team_dummy';
+        useProject(
+          {
+            ...defaultProject,
+            id: 'explicit-public-update',
+            name: 'explicit-public-update',
+            accountId: 'team_dummy',
+          },
+          [
+            {
+              type: 'encrypted',
+              visibility: 'config',
+              id: 'public-env-id',
+              key: 'NEXT_PUBLIC_API_KEY',
+              value: 'old-value',
+              target: ['production'],
+              gitBranch: undefined,
+              configurationId: null,
+              updatedAt: 1557241361455,
+              createdAt: 1557241361455,
+            },
+          ]
+        );
+        client.setArgv(
+          'env',
+          'update',
+          'NEXT_PUBLIC_API_KEY',
+          'production',
+          '--type',
+          'secret',
+          '--value',
+          'new-value',
+          '--yes',
+          '--project',
+          'explicit-public-update'
+        );
+
+        await expect(env(client)).resolves.toBe(1);
+        const output = client.stderr.getFullOutput();
+        expect(output).toContain('cannot be a Secret');
+        expect(output).toContain(
+          'vercel env add API_KEY production --type secret --project explicit-public-update'
+        );
+        expect(output).toContain(
+          'vercel env rm NEXT_PUBLIC_API_KEY production --project explicit-public-update'
+        );
+      });
+
+      it.each([
+        {
+          name: 'custom public prefix',
+          publicPrefix: 'BROWSER_',
+          envName: 'BROWSER_API_KEY',
+          expected:
+            '`BROWSER_` exposes this value to anyone visiting your site',
+          expectedCommand:
+            'vercel env add API_KEY production --type secret --project svelte-update-custom',
+        },
+        {
+          name: 'empty public prefix',
+          publicPrefix: '',
+          envName: 'API_KEY',
+          expected: 'every Environment Variable is exposed to the browser',
+          expectedCommand: undefined,
+        },
+      ])('blocks changing a SvelteKit $name Config to Secret', async ({
+        publicPrefix,
+        envName,
+        expected,
+        expectedCommand,
+      }) => {
+        const projectName = publicPrefix
+          ? 'svelte-update-custom'
+          : 'svelte-update-empty';
+        client.cwd = setupTmpDir();
+        client.config.currentTeam = 'team_dummy';
+        await writeFile(
+          join(client.cwd, 'svelte.config.js'),
+          `export default { kit: { env: { publicPrefix: '${publicPrefix}' } } };\n`
+        );
+        useProject(
+          {
+            ...defaultProject,
+            id: projectName,
+            name: projectName,
+            accountId: 'team_dummy',
+            framework: 'sveltekit',
+          },
+          [
+            {
+              type: 'encrypted',
+              visibility: 'config',
+              id: 'svelte-config-id',
+              key: envName,
+              value: 'old-value',
+              target: ['production'],
+              gitBranch: undefined,
+              configurationId: null,
+              updatedAt: 1557241361455,
+              createdAt: 1557241361455,
+            },
+          ]
+        );
+        client.setArgv(
+          'env',
+          'update',
+          envName,
+          'production',
+          '--type',
+          'secret',
+          '--value',
+          'new-value',
+          '--yes',
+          '--project',
+          projectName
+        );
+
+        await expect(env(client)).resolves.toBe(1);
+        const output = stripAnsi(client.stderr.getFullOutput());
+        expect(output).toContain(expected);
+        expect(output).toContain('cannot be kept private as a Secret');
+        if (expectedCommand) {
+          expect(output).toContain(expectedCommand);
+        } else {
+          expect(output).not.toContain('Add the private Secret');
+        }
+      });
+
+      it('explains the remove-and-add path when a Secret cannot become Config', async () => {
+        client.cwd = setupTmpDir();
+        client.config.currentTeam = 'team_dummy';
+        useProject(
+          {
+            ...defaultProject,
+            id: 'explicit-secret-update',
+            name: 'explicit-secret-update',
+            accountId: 'team_dummy',
+          },
+          [
+            {
+              type: 'sensitive',
+              visibility: 'secret',
+              id: 'secret-env-id',
+              key: 'API_KEY',
+              value: '',
+              target: ['production'],
+              gitBranch: undefined,
+              configurationId: null,
+              updatedAt: 1557241361455,
+              createdAt: 1557241361455,
+              customEnvironmentIds: [],
+            },
+          ]
+        );
+        client.setArgv(
+          'env',
+          'update',
+          'API_KEY',
+          'production',
+          '--type',
+          'config',
+          '--value',
+          'new-value',
+          '--yes',
+          '--project',
+          'explicit-secret-update'
+        );
+
+        await expect(env(client)).resolves.toBe(1);
+        const output = stripAnsi(client.stderr.getFullOutput());
+        expect(output).toContain('A Secret cannot be changed to Config');
+        expect(output).toContain(
+          'API_KEY" will be unavailable to new builds between these commands'
+        );
+        expect(output).toContain(
+          '    vercel env rm API_KEY production --project explicit-secret-update'
+        );
+        expect(output).toContain(
+          '    vercel env add API_KEY production --type config --project explicit-secret-update'
+        );
       });
     });
   });

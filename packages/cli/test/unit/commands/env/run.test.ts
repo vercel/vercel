@@ -343,5 +343,115 @@ describe('env run', () => {
 
       expect(exitCode).toEqual(42);
     });
+
+    describe('VERCEL_ENV_VAR_CONFIG_SECRET_UI', () => {
+      const originalFlag = process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
+      const originalRunOnlySecret = process.env.RUN_ONLY_SECRET;
+
+      beforeEach(() => {
+        process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI = '1';
+        delete process.env.RUN_ONLY_SECRET;
+      });
+
+      afterEach(() => {
+        if (originalFlag === undefined) {
+          delete process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
+        } else {
+          process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI = originalFlag;
+        }
+        if (originalRunOnlySecret === undefined) {
+          delete process.env.RUN_ONLY_SECRET;
+        } else {
+          process.env.RUN_ONLY_SECRET = originalRunOnlySecret;
+        }
+      });
+
+      function setupSensitiveRun() {
+        useUser();
+        useTeams('team_dummy');
+        useProject(
+          {
+            ...defaultProject,
+            id: 'env-run-sensitive',
+            name: 'env-run-sensitive',
+            accountId: 'team_dummy',
+          },
+          [
+            {
+              type: 'sensitive',
+              id: 'sensitive-run-id',
+              key: 'RUN_ONLY_SECRET',
+              value: '',
+              target: ['development'],
+              gitBranch: undefined,
+              configurationId: null,
+              updatedAt: 1557241361455,
+              createdAt: 1557241361455,
+            },
+          ]
+        );
+        client.cwd = setupTmpDir();
+        client.config.currentTeam = 'team_dummy';
+        client.setArgv(
+          'env',
+          'run',
+          '--project',
+          'env-run-sensitive',
+          '--',
+          'echo',
+          'hello'
+        );
+      }
+
+      it('warns when a Secret value is unavailable', async () => {
+        setupSensitiveRun();
+
+        await expect(env(client)).resolves.toBe(0);
+        expect(client.stderr.getFullOutput()).toContain(
+          '1 Secret value is not available to vercel env run. Define it in a local .env file.'
+        );
+      });
+
+      it('does not warn when the Secret is already defined locally', async () => {
+        setupSensitiveRun();
+        process.env.RUN_ONLY_SECRET = 'local-secret';
+
+        await expect(env(client)).resolves.toBe(0);
+        expect(client.stderr.getFullOutput()).not.toContain(
+          'Secret value is not available'
+        );
+      });
+
+      it('continues running when Secret metadata cannot be loaded', async () => {
+        const getEnvRecordsModule = await import(
+          '../../../../src/util/env/get-env-records'
+        );
+        const getEnvRecordsSpy = vi
+          .spyOn(getEnvRecordsModule, 'default')
+          .mockRejectedValueOnce(new Error('metadata unavailable'));
+        setupSensitiveRun();
+
+        try {
+          await expect(env(client)).resolves.toBe(0);
+          expect(execa).toHaveBeenCalledWith(
+            'echo',
+            ['hello'],
+            expect.objectContaining({ cwd: client.cwd })
+          );
+        } finally {
+          getEnvRecordsSpy.mockRestore();
+        }
+      });
+
+      it('preserves legacy behavior when the feature flag is disabled', async () => {
+        delete process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
+        setupSensitiveRun();
+
+        await expect(env(client)).resolves.toBe(0);
+        expect(client.stderr.getFullOutput()).not.toContain(
+          'Secret value is not available'
+        );
+      });
+    });
   });
 });

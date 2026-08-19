@@ -7,10 +7,11 @@ import { runSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { resolveProjectContext } from '../../util/projects/resolve-project-context';
-import { pullEnvRecords } from '../../util/env/get-env-records';
+import getEnvRecords, { pullEnvRecords } from '../../util/env/get-env-records';
 import parseTarget from '../../util/parse-target';
 import { getCommandName } from '../../util/pkg-name';
 import type { EnvTelemetryClient } from '../../util/telemetry/commands/env';
+import { isEnvVarConfigSecretUiEnabled } from '../../util/env/env-var-config-secret-ui';
 
 /**
  * Parses argv for the run subcommand, splitting on `--` to separate
@@ -121,6 +122,38 @@ export default async function run(
     localEnv = loadEnvConfig(client.cwd, true).combinedEnv;
   } catch (err) {
     output.debug(`Failed to load local env files: ${err}`);
+  }
+
+  if (isEnvVarConfigSecretUiEnabled()) {
+    const emptyKeys = new Set(
+      Object.entries(records.env)
+        .filter(([key, value]) => !value && !localEnv[key] && !process.env[key])
+        .map(([key]) => key)
+    );
+    if (emptyKeys.size > 0) {
+      try {
+        const { envs } = await getEnvRecords(
+          client,
+          link.project.id,
+          'vercel-cli:env:run',
+          { target: environment, gitBranch }
+        );
+        const unavailableSecretKeys = envs.filter(
+          env => env.type === 'sensitive' && emptyKeys.has(env.key)
+        );
+        if (unavailableSecretKeys.length > 0) {
+          output.warn(
+            `${unavailableSecretKeys.length} Secret ${
+              unavailableSecretKeys.length === 1 ? 'value is' : 'values are'
+            } not available to vercel env run. Define ${
+              unavailableSecretKeys.length === 1 ? 'it' : 'them'
+            } in a local .env file.`
+          );
+        }
+      } catch {
+        // The command can still run with the values returned by the pull API.
+      }
+    }
   }
 
   try {

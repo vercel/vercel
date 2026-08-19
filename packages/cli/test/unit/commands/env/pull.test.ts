@@ -416,6 +416,67 @@ describe('env pull', () => {
   });
 
   it('writes a placeholder for redacted sensitive env vars', async () => {
+    const originalFlag = process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
+    process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI = '1';
+    try {
+      useUser();
+      useTeams('team_dummy');
+      useProject(
+        {
+          ...defaultProject,
+          id: 'vercel-env-pull',
+          name: 'vercel-env-pull',
+        },
+        [
+          ...envs,
+          {
+            type: 'sensitive',
+            id: 'sens1234sens5678',
+            key: 'SENSITIVE_SECRET',
+            value: '',
+            target: ['production'],
+            gitBranch: undefined,
+            configurationId: null,
+            updatedAt: 1557241361455,
+            createdAt: 1557241361455,
+          },
+          {
+            type: 'encrypted',
+            id: 'empt1234empt5678',
+            key: 'ACTUALLY_EMPTY',
+            value: '',
+            target: ['production'],
+            gitBranch: undefined,
+            configurationId: null,
+            updatedAt: 1557241361455,
+            createdAt: 1557241361455,
+          },
+        ]
+      );
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      client.setArgv('env', 'pull', '--yes', '--environment', 'production');
+      const exitCode = await env(client);
+      expect(exitCode, 'exit code for "env"').toEqual(0);
+
+      const rawProdEnv = await fs.readFile(
+        path.join(cwd, '.env.local'),
+        'utf8'
+      );
+      expect(rawProdEnv).toContain('SENSITIVE_SECRET="[SENSITIVE]"');
+      expect(rawProdEnv).not.toContain('SENSITIVE_SECRET=""');
+      expect(rawProdEnv).toContain('ACTUALLY_EMPTY=""');
+    } finally {
+      if (originalFlag === undefined) {
+        delete process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
+      } else {
+        process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI = originalFlag;
+      }
+    }
+  });
+
+  it('keeps redacted sensitive placeholders when Config/Secret is disabled', async () => {
+    delete process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
     useUser();
     useTeams('team_dummy');
     useProject(
@@ -425,22 +486,10 @@ describe('env pull', () => {
         name: 'vercel-env-pull',
       },
       [
-        ...envs,
         {
           type: 'sensitive',
-          id: 'sens1234sens5678',
+          id: 'legacy-sensitive-id',
           key: 'SENSITIVE_SECRET',
-          value: '',
-          target: ['production'],
-          gitBranch: undefined,
-          configurationId: null,
-          updatedAt: 1557241361455,
-          createdAt: 1557241361455,
-        },
-        {
-          type: 'encrypted',
-          id: 'empt1234empt5678',
-          key: 'ACTUALLY_EMPTY',
           value: '',
           target: ['production'],
           gitBranch: undefined,
@@ -453,13 +502,14 @@ describe('env pull', () => {
     const cwd = setupUnitFixture('vercel-env-pull');
     client.cwd = cwd;
     client.setArgv('env', 'pull', '--yes', '--environment', 'production');
-    const exitCode = await env(client);
-    expect(exitCode, 'exit code for "env"').toEqual(0);
 
-    const rawProdEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
-    expect(rawProdEnv).toContain('SENSITIVE_SECRET="[SENSITIVE]"');
-    expect(rawProdEnv).not.toContain('SENSITIVE_SECRET=""');
-    expect(rawProdEnv).toContain('ACTUALLY_EMPTY=""');
+    await expect(env(client)).resolves.toBe(0);
+
+    const contents = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+    expect(contents).toContain('SENSITIVE_SECRET="[SENSITIVE]"');
+    expect(client.stderr.getFullOutput()).not.toContain(
+      'Secret value cannot be pulled'
+    );
   });
 
   it('should handle pulling from specific Git branch', async () => {

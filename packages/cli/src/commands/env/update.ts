@@ -9,6 +9,8 @@ import param from '../../util/output/param';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import {
+  getLocalSvelteKitPublicPrefixes,
+  getPublicPrefix,
   normalizeStdinEnvValue,
   validateEnvValue,
 } from '../../util/env/validate-env';
@@ -28,11 +30,23 @@ import type { ProjectEnvVariable } from '@vercel-internals/types';
 import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import {
+  getPublicPrefixSecretVisibilityError,
   isEnvVarConfigSecretUiEnabled,
   resolveEnvVarVisibility,
   shouldEnforceSensitiveEnvVarPolicy,
   formatVisibilityLabel,
 } from '../../util/env/env-var-config-secret-ui';
+import {
+  looksLikeSecret,
+  looksLikeSecretValue,
+} from '../../util/env/secret-detection';
+
+function looksLikeCredentialName(
+  key: string,
+  publicPrefix: string | null | undefined = getPublicPrefix(key, true)
+): boolean {
+  return looksLikeSecret(publicPrefix ? key.slice(publicPrefix.length) : key);
+}
 
 function selectedEnvTargetsDevelopment(env: ProjectEnvVariable): boolean {
   if (typeof env.target === 'string') return env.target === 'development';
@@ -74,6 +88,9 @@ export default async function update(client: Client, argv: string[]) {
     typeof opts['--value'] === 'string' ? opts['--value'] : undefined;
   const stdInput = await readStandardInput(client.stdin);
   let [envName, envTargetArg, envGitBranch] = args;
+  let explicitType =
+    typeof opts['--type'] === 'string' ? opts['--type'] : undefined;
+  const typeWasExplicit = explicitType !== undefined || opts['--sensitive'];
 
   const telemetryClient = new EnvUpdateTelemetryClient({
     opts: {
@@ -86,8 +103,8 @@ export default async function update(client: Client, argv: string[]) {
   telemetryClient.trackCliFlagSensitive(opts['--sensitive']);
   telemetryClient.trackCliFlagYes(opts['--yes']);
   telemetryClient.trackCliOptionValue(valueFromFlag);
-  telemetryClient.trackCliOptionVisibility(
-    typeof opts['--visibility'] === 'string' ? opts['--visibility'] : undefined
+  telemetryClient.trackCliOptionType(
+    typeof opts['--type'] === 'string' ? opts['--type'] : undefined
   );
 
   if (args.length > 3) {
@@ -97,9 +114,9 @@ export default async function update(client: Client, argv: string[]) {
         {
           status: 'error',
           reason: 'invalid_arguments',
-          message: `Invalid number of arguments. Usage: ${getCommandNamePlain(
+          message: `Invalid number of arguments. Usage: \`${getCommandNamePlain(
             `env update <name> ${getEnvTargetPlaceholder()} <gitbranch>`
-          )}`,
+          )}\``,
         },
         1
       );
@@ -143,7 +160,7 @@ export default async function update(client: Client, argv: string[]) {
           status: 'action_required',
           reason: 'missing_requirements',
           missing,
-          message: `Provide all required inputs for non-interactive mode: ${parts.join('; ')}. Example: ${getCommandNamePlain(template)}`,
+          message: `Provide all required inputs for non-interactive mode: ${parts.join('; ')}. Example: \`${getCommandNamePlain(template)}\``,
           next: [
             {
               command: buildEnvUpdateCommandWithPreservedArgs(
@@ -171,7 +188,7 @@ export default async function update(client: Client, argv: string[]) {
           status: 'action_required',
           reason: 'missing_name',
           message:
-            'Provide the variable name as an argument. Example: vercel env update <name>',
+            'Provide the variable name as an argument. Example: `vercel env update <name>`',
           next: [
             {
               command: buildEnvUpdateCommandWithPreservedArgs(
@@ -216,9 +233,9 @@ export default async function update(client: Client, argv: string[]) {
         {
           status: 'error',
           reason: 'not_linked',
-          message: `Your codebase isn't linked to a project on Vercel. Run ${getCommandNamePlain(
+          message: `Your codebase isn't linked to a project on Vercel. Run \`${getCommandNamePlain(
             'link'
-          )} to begin. Use --yes for non-interactive; use --scope or --project to specify team or project.`,
+          )}\` to begin. Use \`--yes\` for non-interactive; use \`--scope\` or \`--project\` to specify team or project.`,
           next: [
             { command: buildCommandWithYes(linkArgv) },
             { command: buildCommandWithYes(client.argv) },
@@ -259,7 +276,7 @@ export default async function update(client: Client, argv: string[]) {
         {
           status: 'error',
           reason: 'env_not_found',
-          message: `The variable ${envName} was not found. Run ${getCommandNamePlain(listArgs)} to see all available Environment Variables.`,
+          message: `The variable ${envName} was not found. Run \`${getCommandNamePlain(listArgs)}\` to see all available Environment Variables.`,
         },
         1
       );
@@ -381,14 +398,209 @@ export default async function update(client: Client, argv: string[]) {
     selectedEnv = matchingEnvs[selectedIndex];
   }
 
-  // Detect team-level sensitive env var policy. Cached in getTeamById.
   const configSecretUiEnabled = isEnvVarConfigSecretUiEnabled();
+  let customSveltePublicPrefix: string | undefined;
+  if (
+    configSecretUiEnabled &&
+    (project.framework === 'sveltekit' ||
+      project.framework === 'sveltekit-1' ||
+      project.framework === 'sveltekit-2')
+  ) {
+    const localPublicPrefixes = await getLocalSvelteKitPublicPrefixes(
+      link.repoRoot ?? client.cwd,
+      (project as { rootDirectory?: string | null }).rootDirectory
+    );
+    const matchingLocalPrefix = localPublicPrefixes?.find(prefix =>
+      envName.startsWith(prefix)
+    );
+    if (matchingLocalPrefix !== undefined && !getPublicPrefix(envName, true)) {
+      customSveltePublicPrefix = matchingLocalPrefix;
+      output.warn(
+        matchingLocalPrefix === ''
+          ? 'This SvelteKit project uses an empty publicPrefix, so every Environment Variable is exposed to the browser.'
+          : `${matchingLocalPrefix} variables are exposed to the browser by this SvelteKit project.`
+      );
+    }
+  }
+
+  if (explicitType && !configSecretUiEnabled) {
+    output.error(
+      '`--type` is only available while Config and Secret Environment Variables are enabled.'
+    );
+    return 1;
+  }
+  if (explicitType === 'config' && opts['--sensitive']) {
+    output.error(
+      '`--type config` cannot be used with `--sensitive`. Pick one.'
+    );
+    return 1;
+  }
+
+  const targets = Array.isArray(selectedEnv.target)
+    ? selectedEnv.target
+    : [selectedEnv.target].filter((r): r is NonNullable<typeof r> =>
+        Boolean(r)
+      );
+  const allTargets = [...targets, ...(selectedEnv.customEnvironmentIds || [])];
+
+  if (explicitType === 'config' && selectedEnv.type === 'sensitive') {
+    const targetArg = envTargetArg || targets[0] || getEnvTargetPlaceholder();
+    const branchArg = selectedEnv.gitBranch ? ` ${selectedEnv.gitBranch}` : '';
+    const globalFlags = getGlobalFlagsFromArgs(client.argv.slice(2), {
+      preserveProject: true,
+    });
+    const humanGlobalFlags = globalFlags.filter(
+      flag => !flag.startsWith('--non-interactive')
+    );
+    const globalSuffix =
+      globalFlags.length > 0 ? ` ${globalFlags.join(' ')}` : '';
+    const humanGlobalSuffix =
+      humanGlobalFlags.length > 0 ? ` ${humanGlobalFlags.join(' ')}` : '';
+    const removeCommand = getCommandNamePlain(
+      `env rm ${envName} ${targetArg}${branchArg} --yes${globalSuffix}`
+    );
+    const addCommand = getCommandNamePlain(
+      `env add ${envName} ${targetArg}${branchArg} --type config --value "<value>" --yes${globalSuffix}`
+    );
+    const removeHumanCommand = getCommandNamePlain(
+      `env rm ${envName} ${targetArg}${branchArg}${humanGlobalSuffix}`
+    );
+    const addHumanCommand = getCommandNamePlain(
+      `env add ${envName} ${targetArg}${branchArg} --type config${humanGlobalSuffix}`
+    );
+    const message =
+      'A Secret cannot be changed to Config. To store this value as Config, remove the variable and add it again with `--type config`.';
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'secret_cannot_become_config',
+          message,
+          next: [
+            {
+              command: removeCommand,
+              when: 'Remove the Secret variable',
+            },
+            {
+              command: addCommand,
+              when: 'Add it again as Config; replace <value> before running',
+            },
+          ],
+        },
+        1
+      );
+    }
+    output.error(
+      `A Secret cannot be changed to Config. Remove the variable, then add it again as Config. ${param(envName)} will be unavailable to new builds between these commands.`
+    );
+    output.print(`  Remove:\n    ${removeHumanCommand}\n`);
+    output.print(
+      `  Add as Config (prompts for the value):\n    ${addHumanCommand}\n`
+    );
+    return 1;
+  }
+
+  if (
+    configSecretUiEnabled &&
+    (explicitType === 'secret' || opts['--sensitive'])
+  ) {
+    const apiPublicPrefix = getPublicPrefix(envName, true);
+    const publicPrefix = apiPublicPrefix ?? customSveltePublicPrefix;
+    const publicPrefixError = apiPublicPrefix
+      ? getPublicPrefixSecretVisibilityError(envName, {
+          visibility: explicitType === 'secret' ? 'secret' : undefined,
+          type: 'sensitive',
+          context: 'update',
+        })
+      : customSveltePublicPrefix === ''
+        ? 'This SvelteKit project uses an empty `publicPrefix`, so every Environment Variable is exposed to the browser and cannot be kept private as a Secret. Change the SvelteKit `publicPrefix`, or keep this variable as Config only if the value is safe to expose.'
+        : customSveltePublicPrefix !== undefined
+          ? `\`${customSveltePublicPrefix}\` exposes this value to anyone visiting your site, so \`${envName}\` cannot be kept private as a Secret. Add a new Secret without the configured public prefix, then remove this Config.`
+          : null;
+    if (publicPrefixError) {
+      const privateName =
+        publicPrefix === undefined
+          ? envName
+          : envName.slice(publicPrefix.length);
+      const targetArg = envTargetArg || targets[0] || getEnvTargetPlaceholder();
+      const branchArg = selectedEnv.gitBranch
+        ? ` ${selectedEnv.gitBranch}`
+        : '';
+      const globalFlags = getGlobalFlagsFromArgs(client.argv.slice(2), {
+        preserveProject: true,
+      });
+      const humanGlobalFlags = globalFlags.filter(
+        flag => !flag.startsWith('--non-interactive')
+      );
+      const globalSuffix =
+        globalFlags.length > 0 ? ` ${globalFlags.join(' ')}` : '';
+      const humanGlobalSuffix =
+        humanGlobalFlags.length > 0 ? ` ${humanGlobalFlags.join(' ')}` : '';
+      const addCommand =
+        publicPrefix === ''
+          ? undefined
+          : getCommandNamePlain(
+              `env add ${privateName} ${targetArg}${branchArg} --type secret --value "<value>" --yes${globalSuffix}`
+            );
+      const removeCommand = getCommandNamePlain(
+        `env rm ${envName} ${targetArg}${branchArg} --yes${globalSuffix}`
+      );
+      const addHumanCommand =
+        publicPrefix === ''
+          ? undefined
+          : getCommandNamePlain(
+              `env add ${privateName} ${targetArg}${branchArg} --type secret${humanGlobalSuffix}`
+            );
+      const removeHumanCommand = getCommandNamePlain(
+        `env rm ${envName} ${targetArg}${branchArg}${humanGlobalSuffix}`
+      );
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'invalid_type',
+            message: publicPrefixError,
+            next: addCommand
+              ? [
+                  {
+                    command: addCommand,
+                    when: 'Add the private Secret; replace <value> before running',
+                  },
+                  {
+                    command: removeCommand,
+                    when: 'Remove the public Config after the Secret is available',
+                  },
+                ]
+              : [],
+          },
+          1
+        );
+      }
+      output.error(publicPrefixError);
+      if (addHumanCommand) {
+        output.print(
+          `  Add the private Secret (prompts for the value):\n    ${addHumanCommand}\n`
+        );
+        output.print(
+          `  Remove the public Config:\n    ${removeHumanCommand}\n`
+        );
+      }
+      return 1;
+    }
+  }
+
+  // Detect team-level sensitive env var policy. Cached in getTeamById.
   let policyOn = false;
   let teamSensitivePolicyOn = false;
+  let disjunctiveProductionSecretPolicyOn = false;
   if (link.org.type === 'team') {
     try {
       const team = await getTeamById(client, link.org.id);
       teamSensitivePolicyOn = team?.sensitiveEnvironmentVariablePolicy === 'on';
+      disjunctiveProductionSecretPolicyOn =
+        team?.disjunctiveProductionSecretPolicy === 'on';
       policyOn = shouldEnforceSensitiveEnvVarPolicy(teamSensitivePolicyOn);
     } catch {
       // Non-fatal — policy detection is best-effort.
@@ -414,7 +626,7 @@ export default async function update(client: Client, argv: string[]) {
     return 1;
   }
 
-  if (opts['--sensitive'] && selectedIsDevelopment) {
+  if (!configSecretUiEnabled && opts['--sensitive'] && selectedIsDevelopment) {
     const msg = `--sensitive is not allowed with the Development Environment. Sensitive Environment Variables are only supported on Production and Preview.`;
     if (client.nonInteractive) {
       outputAgentError(
@@ -454,7 +666,7 @@ export default async function update(client: Client, argv: string[]) {
           status: 'action_required',
           reason: 'missing_value',
           message:
-            "In non-interactive mode provide the new value via --value or stdin. Example: vercel env update <name> <environment> --value 'value' --yes",
+            "In non-interactive mode provide the new value via `--value` or stdin. Example: `vercel env update <name> <environment> --value 'value' --yes`",
           next: [
             {
               command: buildEnvUpdateCommandWithPreservedArgs(
@@ -486,8 +698,8 @@ export default async function update(client: Client, argv: string[]) {
     showLog: msg => output.log(msg),
   });
 
-  // Confirm the update unless --yes flag is provided or already confirmed from validation
-  if (!opts['--yes'] && !alreadyConfirmed) {
+  // Preserve the legacy confirmation order while the new type model is off.
+  if (!configSecretUiEnabled && !opts['--yes'] && !alreadyConfirmed) {
     if (client.nonInteractive) {
       outputActionRequired(
         client,
@@ -516,25 +728,135 @@ export default async function update(client: Client, argv: string[]) {
     }
   }
 
-  const type = opts['--sensitive'] ? 'sensitive' : selectedEnv.type;
-  const explicitVisibility =
-    typeof opts['--visibility'] === 'string' ? opts['--visibility'] : undefined;
-  if (explicitVisibility === 'config' && opts['--sensitive']) {
-    output.error(
-      '`--visibility config` cannot be used with `--sensitive`. Pick one.'
+  let type =
+    opts['--sensitive'] || explicitType === 'secret'
+      ? 'sensitive'
+      : explicitType === 'config'
+        ? 'encrypted'
+        : selectedEnv.type;
+
+  if (
+    configSecretUiEnabled &&
+    (type === 'plain' || type === 'encrypted') &&
+    (looksLikeCredentialName(envName, customSveltePublicPrefix) ||
+      looksLikeSecretValue(finalValue))
+  ) {
+    output.warn(
+      'This name or value looks like a credential. Config values can be revealed after saving.'
     );
+    const publicPrefix = getPublicPrefix(envName, true);
+    if (publicPrefix) {
+      const privateName = envName.slice(publicPrefix.length);
+      const targetArg = envTargetArg || targets[0] || getEnvTargetPlaceholder();
+      const branchArg = selectedEnv.gitBranch
+        ? ` ${selectedEnv.gitBranch}`
+        : '';
+      const humanGlobalFlags = getGlobalFlagsFromArgs(client.argv.slice(2), {
+        preserveProject: true,
+      }).filter(flag => !flag.startsWith('--non-interactive'));
+      const humanGlobalSuffix =
+        humanGlobalFlags.length > 0 ? ` ${humanGlobalFlags.join(' ')}` : '';
+      const addPrivateCommand = getCommandNamePlain(
+        `env add ${privateName} ${targetArg}${branchArg} --type secret${humanGlobalSuffix}`
+      );
+      const removePublicCommand = getCommandNamePlain(
+        `env rm ${envName} ${targetArg}${branchArg}${humanGlobalSuffix}`
+      );
+      output.warn(
+        `${publicPrefix} exposes this value to anyone visiting your site. Keep Config only if the value is safe to expose.`
+      );
+      if (!typeWasExplicit && !opts['--yes'] && !client.nonInteractive) {
+        const selectedAction = await client.input.select({
+          message: 'How should this variable be stored?',
+          choices: [
+            {
+              name: `Keep private: add ${privateName} as Secret, then remove ${envName}`,
+              value: 'private',
+            },
+            {
+              name: `Expose to anyone visiting your site: keep ${envName} as Config`,
+              value: 'config',
+            },
+          ],
+        });
+        if (selectedAction === 'private') {
+          output.print(`  Add the private Secret (prompts for the value):\n`);
+          output.print(`    ${addPrivateCommand}\n`);
+          output.print(`  Remove the public Config:\n`);
+          output.print(`    ${removePublicCommand}\n`);
+          return 1;
+        }
+      }
+    } else if (!typeWasExplicit && !opts['--yes'] && !client.nonInteractive) {
+      const selectedType = await client.input.select({
+        message: 'Store this value as?',
+        choices: [
+          {
+            name: 'Secret (cannot be revealed after saving; recommended)',
+            value: 'secret',
+          },
+          {
+            name: 'Config (can be revealed after saving)',
+            value: 'config',
+          },
+        ],
+      });
+      if (selectedType === 'secret') {
+        type = 'sensitive';
+        explicitType = 'secret';
+      }
+    } else if (!typeWasExplicit) {
+      output.warn('Re-run with `--type secret` to protect it.');
+    }
+  }
+
+  if (
+    configSecretUiEnabled &&
+    type === 'sensitive' &&
+    selectedEnv.type !== 'sensitive'
+  ) {
+    output.warn(
+      'The previous value was readable as Config and may have been exposed. If this variable still holds the same credential, rotate it at its provider and update this variable again.'
+    );
+  }
+
+  if (
+    configSecretUiEnabled &&
+    type === 'sensitive' &&
+    customSveltePublicPrefix !== undefined
+  ) {
+    output.warn(
+      'This SvelteKit project exposes this variable to the browser; the Secret type does not prevent that. Rename the variable without the configured public prefix to keep it private.'
+    );
+  }
+
+  if (
+    configSecretUiEnabled &&
+    type === 'sensitive' &&
+    disjunctiveProductionSecretPolicyOn &&
+    targets.includes('production') &&
+    allTargets.some(target => target !== 'production')
+  ) {
+    const message =
+      'Your team requires Production Secret values to be stored separately. Create separate Production and non-Production variables before converting this one.';
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'production_secret_must_be_separate',
+          message,
+        },
+        1
+      );
+    }
+    output.error(message);
     return 1;
   }
-  const targets = Array.isArray(selectedEnv.target)
-    ? selectedEnv.target
-    : [selectedEnv.target].filter((r): r is NonNullable<typeof r> =>
-        Boolean(r)
-      );
-  const allTargets = [...targets, ...(selectedEnv.customEnvironmentIds || [])];
 
   const { visibility, error: visibilityError } = resolveEnvVarVisibility({
     configSecretUiEnabled,
-    explicitVisibility,
+    explicitVisibility: explicitType,
     type,
     key: envName,
     envTargets: allTargets,
@@ -546,7 +868,7 @@ export default async function update(client: Client, argv: string[]) {
         client,
         {
           status: 'error',
-          reason: 'invalid_visibility',
+          reason: 'invalid_type',
           message: visibilityError,
         },
         1
@@ -554,6 +876,46 @@ export default async function update(client: Client, argv: string[]) {
     }
     output.error(visibilityError);
     return 1;
+  }
+
+  if (configSecretUiEnabled && !opts['--yes']) {
+    if (client.nonInteractive) {
+      outputActionRequired(
+        client,
+        {
+          status: 'action_required',
+          reason: 'confirmation_required',
+          message: `Update ${envName} as ${formatVisibilityLabel(
+            visibility,
+            type
+          )} in ${formatEnvironments(
+            link,
+            selectedEnv,
+            customEnvironments
+          )}? Use --yes to confirm.`,
+          next: [{ command: buildCommandWithYes(client.argv) }],
+        },
+        1
+      );
+    }
+    output.print('\n');
+    printAlignedLabel('Project', `${link.org.slug}/${project.name}`);
+    printAlignedLabel(
+      'Environments',
+      formatEnvironments(link, selectedEnv, customEnvironments)
+    );
+    const visibilityLabel = formatVisibilityLabel(visibility, type);
+    if (visibilityLabel) {
+      printAlignedLabel('Type', visibilityLabel);
+    }
+    const confirmed = await client.input.confirm(
+      'Update this Environment Variable?',
+      false
+    );
+    if (!confirmed) {
+      output.log('Canceled');
+      return 0;
+    }
   }
 
   const updateStamp = stamp();
@@ -573,17 +935,22 @@ export default async function update(client: Client, argv: string[]) {
     );
   } catch (err: unknown) {
     if (client.nonInteractive && isAPIError(err)) {
-      const reason =
-        (err as { slug?: string }).slug ||
-        (err.serverMessage?.toLowerCase().includes('branch')
-          ? 'branch_not_found'
-          : 'api_error');
+      const requiresSeparateProductionSecret =
+        /production.*separate|separate.*production/i.test(err.serverMessage);
+      const reason = requiresSeparateProductionSecret
+        ? 'production_secret_must_be_separate'
+        : (err as { slug?: string }).slug ||
+          (err.serverMessage?.toLowerCase().includes('branch')
+            ? 'branch_not_found'
+            : 'api_error');
       outputAgentError(
         client,
         {
           status: 'error',
           reason,
-          message: err.serverMessage,
+          message: requiresSeparateProductionSecret
+            ? `${err.serverMessage} Create separate Production and non-Production variables.`
+            : err.serverMessage,
         },
         1
       );
@@ -607,7 +974,7 @@ export default async function update(client: Client, argv: string[]) {
   if (configSecretUiEnabled) {
     const visibilityLabel = formatVisibilityLabel(visibility, type);
     if (visibilityLabel) {
-      printAlignedLabel('Visibility', visibilityLabel);
+      printAlignedLabel('Type', visibilityLabel);
     }
   }
 

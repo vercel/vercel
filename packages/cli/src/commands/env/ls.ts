@@ -26,6 +26,10 @@ import { resolveProjectContext } from '../../util/projects/resolve-project-conte
 import { determineAgent } from '@vercel/detect-agent';
 import { suggestNextCommands } from '../../util/suggest-next-commands';
 import { validateLsArgs } from '../../util/validate-ls-args';
+import {
+  formatVisibilityLabel,
+  isEnvVarConfigSecretUiEnabled,
+} from '../../util/env/env-var-config-secret-ui';
 
 export default async function ls(client: Client, argv: string[]) {
   const telemetryClient = new EnvLsTelemetryClient({
@@ -64,6 +68,7 @@ export default async function ls(client: Client, argv: string[]) {
     return 1;
   }
   const asJson = formatResult.jsonOutput;
+  const configSecretUiEnabled = isEnvVarConfigSecretUiEnabled();
 
   telemetryClient.trackCliArgumentEnvironment(envTarget);
   telemetryClient.trackCliArgumentGitBranch(envGitBranch);
@@ -110,6 +115,7 @@ export default async function ls(client: Client, argv: string[]) {
         key: env.key,
         value: env.type === 'plain' ? env.value : undefined,
         type: env.type,
+        ...(configSecretUiEnabled ? { visibility: env.visibility } : {}),
         target: env.target,
         gitBranch: env.gitBranch,
         configurationId: env.configurationId,
@@ -126,7 +132,9 @@ export default async function ls(client: Client, argv: string[]) {
     output.log(
       `Environment Variables found for ${projectSlugLink} ${chalk.gray(lsStamp())}`
     );
-    client.stdout.write(`${getTable(link, envs, customEnvs)}\n`);
+    client.stdout.write(
+      `${getTable(link, envs, customEnvs, configSecretUiEnabled)}\n`
+    );
   }
 
   if (!asJson) {
@@ -148,18 +156,24 @@ export default async function ls(client: Client, argv: string[]) {
 function getTable(
   link: ProjectLinked,
   records: ProjectEnvVariable[],
-  customEnvironments: CustomEnvironment[]
+  customEnvironments: CustomEnvironment[],
+  configSecretUiEnabled: boolean
 ) {
   const label = records.some(env => env.gitBranch)
     ? 'environments (git branch)'
     : 'environments';
+  const headers = configSecretUiEnabled
+    ? ['name', 'value', 'type', label, 'created']
+    : ['name', 'value', label, 'created'];
   return formatTable(
-    ['name', 'value', label, 'created'],
-    ['l', 'l', 'l', 'l', 'l'],
+    headers,
+    headers.map(() => 'l' as const),
     [
       {
         name: '',
-        rows: records.map(row => getRow(link, row, customEnvironments)),
+        rows: records.map(row =>
+          getRow(link, row, customEnvironments, configSecretUiEnabled)
+        ),
       },
     ]
   );
@@ -168,7 +182,8 @@ function getTable(
 function getRow(
   link: ProjectLinked,
   env: ProjectEnvVariable,
-  customEnvironments: CustomEnvironment[]
+  customEnvironments: CustomEnvironment[],
+  configSecretUiEnabled: boolean
 ) {
   let value: string;
   if (env.type === 'plain') {
@@ -184,10 +199,13 @@ function getRow(
   }
 
   const now = Date.now();
-  return [
-    chalk.bold(env.key),
-    value,
+  const row = [chalk.bold(env.key), value];
+  if (configSecretUiEnabled) {
+    row.push(formatVisibilityLabel(env.visibility, env.type) ?? '—');
+  }
+  row.push(
     formatEnvironments(link, env, customEnvironments),
-    env.createdAt ? `${ms(now - env.createdAt)} ago` : '',
-  ];
+    env.createdAt ? `${ms(now - env.createdAt)} ago` : ''
+  );
+  return row;
 }

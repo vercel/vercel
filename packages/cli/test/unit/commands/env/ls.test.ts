@@ -194,6 +194,59 @@ describe('env ls', () => {
       expect(stderrOutput).not.toContain('environments');
       expect(stderrOutput).not.toContain('created');
     });
+
+    it('includes API visibility while retaining legacy type when Config/Secret is enabled', async () => {
+      const originalFlag = process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
+      process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI = '1';
+      client.cwd = setupTmpDir();
+      client.config.currentTeam = 'team_dummy';
+      useProject(
+        {
+          ...defaultProject,
+          id: 'explicit-env-ls-visibility',
+          name: 'explicit-env-ls-visibility',
+          accountId: 'team_dummy',
+        },
+        [
+          {
+            id: 'env_secret',
+            key: 'API_KEY',
+            value: '',
+            type: 'sensitive',
+            visibility: 'secret',
+            target: ['production'],
+            gitBranch: undefined,
+            configurationId: null,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ]
+      );
+      try {
+        client.setArgv(
+          'env',
+          'ls',
+          '--format',
+          'json',
+          '--project',
+          'explicit-env-ls-visibility'
+        );
+        await expect(env(client)).resolves.toBe(0);
+        expect(JSON.parse(client.stdout.getFullOutput()).envs[0]).toMatchObject(
+          {
+            key: 'API_KEY',
+            type: 'sensitive',
+            visibility: 'secret',
+          }
+        );
+      } finally {
+        if (originalFlag === undefined) {
+          delete process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
+        } else {
+          process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI = originalFlag;
+        }
+      }
+    });
   });
 
   describe('--project', () => {

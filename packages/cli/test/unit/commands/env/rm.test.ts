@@ -92,6 +92,94 @@ describe('env rm', () => {
     await expect(env(client)).resolves.toEqual(0);
   });
 
+  it('warns that deleting a credential-like variable does not revoke it', async () => {
+    const originalFlag = process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
+    process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI = '1';
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject(
+      {
+        ...defaultProject,
+        id: 'explicit-secret-rm',
+        name: 'explicit-secret-rm',
+        accountId: 'team_dummy',
+      },
+      [
+        {
+          type: 'sensitive',
+          visibility: 'secret',
+          id: 'secret-rm-id',
+          key: 'STRIPE_SECRET_KEY',
+          value: '',
+          target: ['production'],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+      ]
+    );
+    try {
+      client.setArgv(
+        'env',
+        'rm',
+        'STRIPE_SECRET_KEY',
+        '--yes',
+        '--project',
+        'explicit-secret-rm'
+      );
+      const exitCodePromise = env(client);
+      await expect(client.stderr).toOutput(
+        'Removing this variable from Vercel does not revoke the credential'
+      );
+      await expect(exitCodePromise).resolves.toBe(0);
+    } finally {
+      if (originalFlag === undefined) {
+        delete process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
+      } else {
+        process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI = originalFlag;
+      }
+    }
+  });
+
+  it('does not add credential-rotation guidance when Config/Secret is disabled', async () => {
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject(
+      {
+        ...defaultProject,
+        id: 'explicit-legacy-rm',
+        name: 'explicit-legacy-rm',
+        accountId: 'team_dummy',
+      },
+      [
+        {
+          type: 'sensitive',
+          id: 'legacy-rm-id',
+          key: 'STRIPE_SECRET_KEY',
+          value: '',
+          target: ['production'],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+      ]
+    );
+    client.setArgv(
+      'env',
+      'rm',
+      'STRIPE_SECRET_KEY',
+      '--yes',
+      '--project',
+      'explicit-legacy-rm'
+    );
+    await expect(env(client)).resolves.toBe(0);
+    expect(client.stderr.getFullOutput()).not.toContain(
+      'does not revoke the credential'
+    );
+  });
+
   describe('non-interactive', () => {
     it('outputs action_required with missing_name when name not provided', async () => {
       const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {

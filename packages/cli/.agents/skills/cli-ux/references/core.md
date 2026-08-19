@@ -19,7 +19,7 @@ This is the cross-cutting baseline because most CLI UX work touches strings. For
 - Do not use `Unable to`.
 - Do not use `successfully`; name the completed action.
 - Do not use `Oops`, `Uh-oh`, `Whoops`, `Heads up`, `please`, or apologies unless Vercel is at fault or asking the user for an inconvenient favor.
-- CLI command/path/code output uses straight quotes/backticks for copyability. Dashboard UI may prefer curly quotes; CLI source strings may use ASCII apostrophes.
+- Command names, flags, paths, and code literals in prose use straight quotes/backticks for copyability. Put full runnable commands on their own indented lines without backticks or a shell prompt; literal backticks invoke command substitution when pasted into a shell. Dashboard UI may prefer curly quotes; CLI source strings may use ASCII apostrophes.
 - Use `…`, not `...`, in prose/progress text. Keep `...` only when syntax requires it.
 
 Use:
@@ -440,6 +440,7 @@ Rules:
 - Use existing `AGENT_REASON` / `AGENT_STATUS` before inventing strings.
 - Include `argv: string[]` with copy-pasteable `command` when feasible.
 - Use angle-bracket placeholders: `<name>`, `<slug>`, `<file>`.
+- Keep `next[].command` raw, without display delimiters. When it contains a placeholder, say what must be replaced in `when` or another structured field; do not describe a templated command as directly executable.
 - Preserve safe context flags; strip or redact secret values.
 - Do not suggest pipes, redirects, command substitution, or shell-specific syntax unless labeled for that shell.
 - Fully qualify suggested subcommands: `teams switch <slug>`, not `switch <slug>`.

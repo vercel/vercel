@@ -1,4 +1,6 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
+import { writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import stripAnsi from 'strip-ansi';
 import env from '../../../../src/commands/env';
 import {
@@ -508,7 +510,7 @@ describe('env add', () => {
         }
       });
 
-      it('prints visibility in the result when the flag is enabled', async () => {
+      it('prints Type in the result when the flag is enabled', async () => {
         const addEnvRecordModule = await import(
           '../../../../src/util/env/add-env-record'
         );
@@ -528,32 +530,43 @@ describe('env add', () => {
             '--yes'
           );
           const exitCodePromise = env(client);
-          await expect(client.stderr).toOutput('Visibility      Config');
+          await expect(client.stderr).toOutput('Type            Config');
           await expect(exitCodePromise).resolves.toBe(0);
+          const output = stripAnsi(client.stderr.getFullOutput());
+          expect(output.match(/Type\s+Config/g)).toHaveLength(1);
+          expect(output).not.toContain('Type            Non-sensitive');
         } finally {
           addSpy.mockRestore();
         }
       });
 
-      it('rejects --sensitive on Development', async () => {
-        client.setArgv(
-          'env',
-          'add',
-          'DEV_SECRET',
-          'development',
-          '--sensitive',
-          '--value',
-          'foo',
-          '--yes'
+      it('allows --sensitive on Development', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
         );
-        const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput(
-          'not allowed with the Development Environment'
-        );
-        await expect(exitCodePromise).resolves.toBe(1);
+        const addSpy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+        try {
+          client.setArgv(
+            'env',
+            'add',
+            'DEV_SECRET',
+            'development',
+            '--sensitive',
+            '--value',
+            'foo',
+            '--yes'
+          );
+          await expect(env(client)).resolves.toBe(0);
+          expect(addSpy.mock.calls[0]?.[3]).toBe('sensitive');
+          expect(addSpy.mock.calls[0]?.[8]).toBe('secret');
+        } finally {
+          addSpy.mockRestore();
+        }
       });
 
-      it('omits visibility for public-prefixed keys on Production when team policy is on', async () => {
+      it('keeps Config visibility for public-prefixed keys when legacy team policy is on', async () => {
         const teamModule = await import(
           '../../../../src/util/teams/get-team-by-id'
         );
@@ -584,7 +597,7 @@ describe('env add', () => {
 
           expect(addSpy).toHaveBeenCalled();
           const call = addSpy.mock.calls[0] as unknown[];
-          expect(call[8]).toBeUndefined();
+          expect(call[8]).toBe('config');
         } finally {
           teamSpy.mockRestore();
           addSpy.mockRestore();
@@ -602,29 +615,110 @@ describe('env add', () => {
           'my-secret',
           '--yes'
         );
-        const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput('cannot use secret visibility');
-        await expect(exitCodePromise).resolves.toBe(1);
+        await expect(env(client)).resolves.toBe(1);
+        const output = client.stderr.getFullOutput();
+        expect(output).toContain('cannot be a Secret');
+        expect(output).toContain(
+          'rename the variable to `API_KEY` and keep the Secret type'
+        );
+        expect(output).toContain(
+          'If the value is safe to expose, use `--type config`'
+        );
       });
 
-      it('rejects secret visibility on public-prefixed production keys', async () => {
+      it('rejects the Secret type on public-prefixed production keys', async () => {
         client.setArgv(
           'env',
           'add',
           'NEXT_PUBLIC_API_URL',
           'production',
-          '--visibility',
+          '--type',
           'secret',
           '--value',
           'https://example.com',
           '--yes'
         );
         const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput('cannot use secret visibility');
+        await expect(client.stderr).toOutput('cannot be a Secret');
         await expect(exitCodePromise).resolves.toBe(1);
       });
 
-      it('uses explicit --visibility when provided', async () => {
+      it('requires an explicit safe path for a credential-like public key with --yes', async () => {
+        client.setArgv(
+          'env',
+          'add',
+          'NEXT_PUBLIC_API_KEY',
+          'production',
+          '--value',
+          'my-secret',
+          '--yes'
+        );
+        const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput('Choose explicitly');
+        await expect(client.stderr).toOutput(
+          '    vercel env add API_KEY production --type secret'
+        );
+        await expect(client.stderr).toOutput(
+          '    vercel env add NEXT_PUBLIC_API_KEY production --type config'
+        );
+        await expect(exitCodePromise).resolves.toBe(1);
+      });
+
+      it('still prompts for the public-prefix decision when only --value is provided', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const addSpy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+        try {
+          client.setArgv(
+            'env',
+            'add',
+            'NEXT_PUBLIC_API_KEY',
+            'production',
+            '--value',
+            'my-secret'
+          );
+          const exitCodePromise = env(client);
+          await expect(client.stderr).toOutput(
+            'How should this variable be stored?'
+          );
+          client.stdin.write('\x1B[B\n');
+          await expect(exitCodePromise).resolves.toBe(0);
+          expect(addSpy.mock.calls[0]?.[3]).toBe('encrypted');
+          expect(addSpy.mock.calls[0]?.[8]).toBe('config');
+        } finally {
+          addSpy.mockRestore();
+        }
+      });
+
+      it('renames a public variable in-flow when its value looks like a credential', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const addSpy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+        try {
+          client.setArgv('env', 'add', 'NEXT_PUBLIC_URL', 'production');
+          const exitCodePromise = env(client);
+          await expect(client.stderr).toOutput('Value?');
+          client.stdin.write(`ghp_${'a'.repeat(30)}\n`);
+          await expect(client.stderr).toOutput(
+            'How should this variable be stored?'
+          );
+          client.stdin.write('\n');
+          await expect(exitCodePromise).resolves.toBe(0);
+          expect(addSpy.mock.calls[0]?.[3]).toBe('sensitive');
+          expect(addSpy.mock.calls[0]?.[4]).toBe('URL');
+          expect(addSpy.mock.calls[0]?.[8]).toBe('secret');
+        } finally {
+          addSpy.mockRestore();
+        }
+      });
+
+      it('uses explicit --type when provided', async () => {
         const addEnvRecordModule = await import(
           '../../../../src/util/env/add-env-record'
         );
@@ -638,7 +732,7 @@ describe('env add', () => {
             'add',
             'API_KEY',
             'production',
-            '--visibility',
+            '--type',
             'config',
             '--no-sensitive',
             '--value',
@@ -650,9 +744,105 @@ describe('env add', () => {
 
           const call = addSpy.mock.calls[0] as unknown[];
           expect(call[8]).toBe('config');
+          expect(client.telemetryEventStore.readonlyEvents).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({
+                key: 'option:type',
+                value: 'config',
+              }),
+            ])
+          );
         } finally {
           addSpy.mockRestore();
         }
+      });
+
+      it('maps --type secret to sensitive API storage in Development', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const addSpy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        try {
+          client.setArgv(
+            'env',
+            'add',
+            'API_KEY',
+            'development',
+            '--type',
+            'secret',
+            '--value',
+            'foo',
+            '--yes'
+          );
+          await expect(env(client)).resolves.toBe(0);
+
+          const call = addSpy.mock.calls[0] as unknown[];
+          expect(call[3]).toBe('sensitive');
+          expect(call[8]).toBe('secret');
+        } finally {
+          addSpy.mockRestore();
+        }
+      });
+
+      it.each([
+        {
+          name: 'custom public prefix',
+          publicPrefix: 'BROWSER_',
+          envName: 'BROWSER_API_KEY',
+          expected:
+            '`BROWSER_` exposes this value to anyone visiting your site',
+        },
+        {
+          name: 'empty public prefix',
+          publicPrefix: '',
+          envName: 'API_KEY',
+          expected: 'every Environment Variable is exposed to the browser',
+        },
+      ])('blocks the Secret type for a SvelteKit $name', async ({
+        publicPrefix,
+        envName,
+        expected,
+      }) => {
+        const projectName = publicPrefix
+          ? 'svelte-add-custom'
+          : 'svelte-add-empty';
+        client.cwd = setupTmpDir();
+        client.config.currentTeam = 'team_dummy';
+        await writeFile(
+          join(client.cwd, 'svelte.config.js'),
+          `export default { kit: { env: { publicPrefix: '${publicPrefix}' } } };\n`
+        );
+        useProject({
+          ...defaultProject,
+          id: projectName,
+          name: projectName,
+          accountId: 'team_dummy',
+          framework: 'sveltekit',
+        });
+        client.setArgv(
+          'env',
+          'add',
+          envName,
+          'production',
+          '--type',
+          'secret',
+          '--value',
+          'secret-value',
+          '--yes',
+          '--project',
+          projectName
+        );
+
+        await expect(env(client)).resolves.toBe(1);
+        const output = stripAnsi(client.stderr.getFullOutput());
+        expect(output).toContain(expected);
+        expect(output).toContain('cannot be kept private as a Secret');
+        expect(output).toContain(
+          'use `--type config` only if the value is safe to expose'
+        );
       });
     });
 
@@ -1884,7 +2074,7 @@ describe('env add', () => {
         logSpy.mockRestore();
       });
 
-      it('excludes Development from the multi-target suggestion when --sensitive is set and flag is enabled', async () => {
+      it('includes Development in the multi-target suggestion when --sensitive is set and flag is enabled', async () => {
         const originalFlag = process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
         process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI = '1';
 
@@ -1916,9 +2106,8 @@ describe('env add', () => {
           expect(
             commands.some(
               (c: string) =>
-                c.includes('production,preview') &&
-                c.includes('--sensitive') &&
-                !c.includes('development')
+                c.includes('production,preview,development') &&
+                c.includes('--sensitive')
             )
           ).toBe(true);
         } finally {

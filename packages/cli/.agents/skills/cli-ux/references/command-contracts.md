@@ -67,17 +67,17 @@ Current gaps to migrate incrementally:
 
 Link prompt map:
 
-| State                              | Human prompt/output                                                                                                                                                                  | Non-interactive                        |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
-| Multiple teams                     | searchable `Which team?` before project discovery                                                                                                                                    | `action_required: missing_scope` unless explicit signal or single choice |
-| Single team                        | no prompt; aligned `Team` row, then project discovery                                                                                                                                | proceeds with that team                |
-| One folder-name project match      | `Which project?` with the match labeled `(folder name)`, then search/create choices                                                                                                  | link only for explicit/repo-root match |
-| One repository project match       | direct interactive: `Which project?` with the match labeled `(linked by git)`; other paths: `Found existing project`, aligned `Project`/`Source`, then `Link repository to project?` | link only for explicit/repo-root match |
-| No project match                   | `Which project?` with `Search all projects` / `Create a new project`, then `Name?` when creating                                                                                     | require `--yes` or `project_not_found` |
-| Root choices exist                 | `Code directory?`                                                                                                                                                                    | require root flag/config/payload       |
-| Settings differ                    | `Customize settings?`                                                                                                                                                                | require flags/config/payload           |
-| Optional env pull                  | `Pull development environment variables into .env.local?`                                                                                                                            | skip unless explicitly requested       |
-| Stale/deleted link                 | show stale link, then concrete relink choice                                                                                                                                         | `action_required: stale_link`          |
+| State                         | Human prompt/output                                                                                                                                                                  | Non-interactive                                                          |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Multiple teams                | searchable `Which team?` before project discovery                                                                                                                                    | `action_required: missing_scope` unless explicit signal or single choice |
+| Single team                   | no prompt; aligned `Team` row, then project discovery                                                                                                                                | proceeds with that team                                                  |
+| One folder-name project match | `Which project?` with the match labeled `(folder name)`, then search/create choices                                                                                                  | link only for explicit/repo-root match                                   |
+| One repository project match  | direct interactive: `Which project?` with the match labeled `(linked by git)`; other paths: `Found existing project`, aligned `Project`/`Source`, then `Link repository to project?` | link only for explicit/repo-root match                                   |
+| No project match              | `Which project?` with `Search all projects` / `Create a new project`, then `Name?` when creating                                                                                     | require `--yes` or `project_not_found`                                   |
+| Root choices exist            | `Code directory?`                                                                                                                                                                    | require root flag/config/payload                                         |
+| Settings differ               | `Customize settings?`                                                                                                                                                                | require flags/config/payload                                             |
+| Optional env pull             | `Pull development environment variables into .env.local?`                                                                                                                            | skip unless explicitly requested                                         |
+| Stale/deleted link            | show stale link, then concrete relink choice                                                                                                                                         | `action_required: stale_link`                                            |
 
 Link acceptance matrix:
 
@@ -197,6 +197,7 @@ Rules:
 - Show linked `Project` context only when it changes the next decision or prevents real ambiguity. Prefer no preview over a block that repeats already-known values.
 - Never repeat the Environment Variable value after entry in human output, JSON, debug logs, telemetry, warnings, errors, or suggested commands. Sensitive values must not be visible at all.
 - Do not include actual `--value` contents in agent `next` commands. Use quoted `"<value>"` placeholders in shell commands, even if the user provided a value.
+- Human remediation commands run interactively: put each full command on its own indented line and omit `--yes` and templated `--value` arguments. Agent `next[].command` values stay raw and may use `--yes`; when they contain `"<value>"`, state that it must be replaced before running.
 - The environment positional accepts a comma-separated list producing one multi-target entry. Unknown tokens fail locally with `error: invalid_environment` naming valid targets; custom Environment slugs normalize to ids. A Git branch is only allowed when Preview is the only target (`error: branch_requires_preview_only` otherwise). `missing_environment` and `missing_requirements` payloads must include a comma-separated multi-target `next` suggestion (with `--no-sensitive` when Development is included and sensitivity was not explicit).
 - Use masked input for sensitive interactive `Value?` prompts. Use visible text input for non-sensitive `Value?` prompts so users can catch typos before saving.
 - Use `Name?`, `Store as sensitive?`, `Value?`, `Environments?`, and `Git branch?`.
@@ -210,6 +211,10 @@ Rules:
 - Omit timestamps from default success output unless the command family has a support/debug reason to show one.
 - Keep `--force` semantics as overwrite/upsert, not generic confirmation bypass.
 - Keep non-interactive output stdout-clean JSON/action payloads. Human preview/result rows stay on stderr.
+- Behind `env-var-config-secret-ui`, use `Type` with `Config` and `Secret` everywhere in human output; keep the API/JSON field `visibility` for compatibility. Print exactly one `Type` row.
+- Behind the flag, a secret-looking public-prefixed name with no explicit type requires one decision: rename without the prefix and use Secret, keep the public name as Config, or enter another name. `--yes` must not infer browser exposure; fail with both exact next commands instead of prompting. Feature-off keeps the legacy public-prefix flow.
+- Track whether type came from argv, a prompt, inference, or the default. Explicit Config warns and proceeds; inferred public Config can require a later decision when the entered value looks like a credential. Resolve each key/value signal at most once.
+- The feature-on default remains Secret when an explicit type is absent and the flow skips prompts. State the default after the result because Secrets cannot be revealed or pulled. Feature-off keeps the legacy Sensitive/Non-sensitive behavior.
 
 Env add prompt map:
 

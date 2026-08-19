@@ -36,6 +36,7 @@ import {
   outputAgentError,
 } from '../../util/agent-output';
 import { printAlignedLabel } from '../../util/output/print-aligned-label';
+import { isEnvVarConfigSecretUiEnabled } from '../../util/env/env-var-config-secret-ui';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -169,9 +170,9 @@ export default async function pull(
         {
           status: 'error',
           reason: 'not_linked',
-          message: `Your codebase isn't linked to a project on Vercel. Run ${getCommandNamePlain(
+          message: `Your codebase isn't linked to a project on Vercel. Run \`${getCommandNamePlain(
             'link'
-          )} to begin. Use --yes for non-interactive; use --scope or --project to specify team or project.`,
+          )}\` to begin. Use \`--yes\` for non-interactive; use \`--scope\` or \`--project\` to specify team or project.`,
           next: [
             { command: buildCommandWithYes(linkArgv) },
             { command: buildCommandWithYes(client.argv) },
@@ -315,6 +316,7 @@ export async function envPullCommandLogic(
   let contents: string;
   let fileChanged = true;
   const keptLocalKeys: string[] = [];
+  let redactedSecretCount = 0;
 
   if (oidcTokenOnly) {
     const existingContents = exists ? await readFile(fullPath, 'utf8') : '';
@@ -332,6 +334,7 @@ export async function envPullCommandLogic(
       gitBranch,
       records
     );
+    redactedSecretCount = sensitiveKeys.size;
 
     const mergedRecords: Record<string, string | undefined> = { ...records };
     for (const key of sensitiveKeys) {
@@ -385,6 +388,18 @@ export async function envPullCommandLogic(
         .join(', ')} (defined locally, not found in the ${chalk.cyan(
         environment
       )} Environment)`
+    );
+  }
+
+  if (isEnvVarConfigSecretUiEnabled() && redactedSecretCount > 0) {
+    output.warn(
+      `${redactedSecretCount} Secret ${
+        redactedSecretCount === 1 ? 'value' : 'values'
+      } cannot be pulled because ${
+        redactedSecretCount === 1 ? 'a Secret cannot' : 'Secrets cannot'
+      } be revealed. Wrote "${SENSITIVE_PLACEHOLDER}" ${
+        redactedSecretCount === 1 ? 'placeholder' : 'placeholders'
+      }; replace ${redactedSecretCount === 1 ? 'it' : 'them'} with local-only values.`
     );
   }
 

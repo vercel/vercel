@@ -2690,15 +2690,15 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
   Options:
 
-       --force                    Overwrite an existing variable for the same target                                         
-       --guidance                 Show command suggestions after completion                                                  
-       --no-sensitive             Store the value as non-sensitive when policy allows                                        
-       --project <NAME_OR_ID>     Project name or ID (defaults to the linked project)                                        
-       --sensitive                Store the value as sensitive for Production or Preview                                     
-       --value <VALUE>            Set the variable value for non-interactive use; otherwise use stdin or the prompt          
-       --visibility <VISIBILITY>  Set config/secret visibility (\`config\` or \`secret\`). Inferred from type when omitted and   
-                                  VERCEL_ENV_VAR_CONFIG_SECRET_UI is set                                                     
-  -y,  --yes                      Skip the confirmation prompt when adding an Environment Variable                           
+       --force                 Overwrite an existing variable for the same target                                            
+       --guidance              Show command suggestions after completion                                                     
+       --no-sensitive          Store the value as non-sensitive when policy allows                                           
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
+       --sensitive             Prevent the value from being read after saving                                                
+       --type <TYPE>           Set the type to \`config\` (value can be revealed after saving) or \`secret\` (value cannot be    
+                               revealed after saving)                                                                        
+       --value <VALUE>         Set the variable value for non-interactive use; otherwise use stdin or the prompt             
+  -y,  --yes                   Skip the confirmation prompt when adding an Environment Variable                              
 
 
   Global Options:

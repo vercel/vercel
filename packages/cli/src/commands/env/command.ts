@@ -61,7 +61,7 @@ export const addSubcommand = {
     projectOption,
     {
       name: 'sensitive',
-      description: 'Store the value as sensitive for Production or Preview',
+      description: 'Prevent the value from being read after saving',
       shorthand: null,
       type: Boolean,
       deprecated: false,
@@ -74,12 +74,12 @@ export const addSubcommand = {
       deprecated: false,
     },
     {
-      name: 'visibility',
+      name: 'type',
       description:
-        'Set config/secret visibility (`config` or `secret`). Inferred from type when omitted and VERCEL_ENV_VAR_CONFIG_SECRET_UI is set',
+        'Set the type to `config` (value can be revealed after saving) or `secret` (value cannot be revealed after saving)',
       shorthand: null,
       type: String,
-      argument: 'VISIBILITY',
+      argument: 'TYPE',
       deprecated: false,
     },
     {
@@ -338,12 +338,12 @@ export const updateSubcommand = {
       deprecated: false,
     },
     {
-      name: 'visibility',
+      name: 'type',
       description:
-        'Set config/secret visibility (`config` or `secret`). Inferred from type when omitted and VERCEL_ENV_VAR_CONFIG_SECRET_UI is set',
+        'Set the type to `config` (value can be revealed after saving) or `secret` (value cannot be revealed after saving)',
       shorthand: null,
       type: String,
-      argument: 'VISIBILITY',
+      argument: 'TYPE',
       deprecated: false,
     },
     {

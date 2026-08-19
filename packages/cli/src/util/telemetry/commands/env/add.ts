@@ -48,14 +48,12 @@ export class EnvAddTelemetryClient
     }
   }
 
-  trackCliOptionVisibility(visibility: string | undefined) {
-    if (visibility) {
-      const validVisibilities = ['config', 'secret'];
+  trackCliOptionType(type: string | undefined) {
+    if (type) {
+      const validTypes = ['config', 'secret'];
       this.trackCliOption({
-        option: 'visibility',
-        value: validVisibilities.includes(visibility)
-          ? visibility
-          : this.redactedValue,
+        option: 'type',
+        value: validTypes.includes(type) ? type : this.redactedValue,
       });
     }
   }
