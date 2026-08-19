@@ -13,7 +13,10 @@ import {
   buildDeltaString,
   createEnvObject,
 } from '../../util/env/diff-env-files';
-import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
+import {
+  SENSITIVE_PLACEHOLDER,
+  VERCEL_OIDC_TOKEN,
+} from '../../util/env/constants';
 import { updateOidcTokenContents } from '../../util/env/update-oidc-token-contents';
 import { isErrnoException } from '@vercel/error-utils';
 import { addToGitIgnore } from '../../util/link/add-to-gitignore';
@@ -76,8 +79,6 @@ const VARIABLES_TO_IGNORE = [
   'VERCEL_SPEED_INSIGHTS_ID',
   'VERCEL_WEB_ANALYTICS_ID',
 ];
-
-export const SENSITIVE_PLACEHOLDER = '[SENSITIVE]';
 
 async function getRedactedSensitiveKeys(
   client: Client,

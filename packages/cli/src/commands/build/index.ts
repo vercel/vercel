@@ -148,6 +148,7 @@ import {
 import { help } from '../help';
 import { ensureLink } from '../../util/link/ensure-link';
 import { pullCommandLogic } from '../pull';
+import { SENSITIVE_PLACEHOLDER } from '../../util/env/constants';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import { buildCommand } from './command';
 import { validatePackageManifest } from '../../util/validate-package-manifest';
@@ -588,6 +589,7 @@ export default async function main(client: Client): Promise<number> {
           `.env.${target}.local`
         );
         // TODO (maybe?): load env vars from the API, fall back to the local file if that fails
+        const envBeforeLoad = new Map(Object.entries(process.env));
         const dotenvResult = dotenv.config({
           path: envPath,
           debug: output.isDebugEnabled(),
@@ -597,8 +599,27 @@ export default async function main(client: Client): Promise<number> {
             `Failed loading environment variables: ${dotenvResult.error}`
           );
         } else if (dotenvResult.parsed) {
-          for (const key of Object.keys(dotenvResult.parsed)) {
+          const sensitiveKeys: string[] = [];
+          for (const [key, value] of Object.entries(dotenvResult.parsed)) {
             envToUnset.add(key);
+            if (
+              value === SENSITIVE_PLACEHOLDER &&
+              process.env[key] === SENSITIVE_PLACEHOLDER
+            ) {
+              if (envBeforeLoad.has(key)) {
+                process.env[key] = envBeforeLoad.get(key);
+              } else {
+                delete process.env[key];
+                sensitiveKeys.push(key);
+              }
+            }
+          }
+          if (sensitiveKeys.length > 0) {
+            output.warn(
+              `The following Sensitive Environment Variables were not loaded because their values are unavailable to ${cli.getCommandName(
+                'build'
+              )}: ${sensitiveKeys.join(', ')}`
+            );
           }
           output.debug(`Loaded environment variables from "${envPath}"`);
         }
