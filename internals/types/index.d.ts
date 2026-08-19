@@ -75,6 +75,8 @@ export interface Team {
    * Preview Environment Variables to `sensitive` on create.
    */
   sensitiveEnvironmentVariablePolicy?: 'default' | 'on' | 'off';
+  /** Require Production Secret values to be stored separately. */
+  disjunctiveProductionSecretPolicy?: 'default' | 'on' | 'off';
 }
 
 export type Domain = {

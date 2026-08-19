@@ -80,14 +80,15 @@ describe('visibilityFromEnvType', () => {
 });
 
 describe('getPublicPrefixSecretVisibilityError', () => {
-  it('returns an error for secret visibility on public-prefixed production keys', () => {
+  it('returns an error for Secret on public-prefixed keys', () => {
     expect(
       getPublicPrefixSecretVisibilityError('NEXT_PUBLIC_API_URL', {
         visibility: 'secret',
         type: 'encrypted',
-        envTargets: ['production'],
       })
-    ).toMatch(/cannot use secret visibility on Production or Preview/);
+    ).toBe(
+      '`NEXT_PUBLIC_` exposes this value to anyone visiting your site, so `NEXT_PUBLIC_API_URL` cannot be a Secret. To keep it private, rename the variable to `API_URL` and keep the Secret type. If the value is safe to expose, use `--type config`.'
+    );
   });
 
   it('returns null for config visibility on public-prefixed keys', () => {
@@ -95,9 +96,20 @@ describe('getPublicPrefixSecretVisibilityError', () => {
       getPublicPrefixSecretVisibilityError('NEXT_PUBLIC_API_URL', {
         visibility: 'config',
         type: 'encrypted',
-        envTargets: ['production'],
       })
     ).toBeNull();
+  });
+
+  it('uses add-and-remove recovery for updates', () => {
+    expect(
+      getPublicPrefixSecretVisibilityError('NEXT_PUBLIC_API_KEY', {
+        visibility: 'secret',
+        type: 'encrypted',
+        context: 'update',
+      })
+    ).toBe(
+      '`NEXT_PUBLIC_` exposes this value to anyone visiting your site, so `NEXT_PUBLIC_API_KEY` cannot be a Secret. To keep it private, add `API_KEY` as a Secret, then remove `NEXT_PUBLIC_API_KEY`. If the value is safe to expose, keep it as Config.'
+    );
   });
 });
 
@@ -126,7 +138,7 @@ describe('resolveEnvVarVisibility', () => {
     ).toEqual({});
   });
 
-  it('uses explicit --visibility when provided', () => {
+  it('uses explicit --type when provided', () => {
     expect(
       resolveEnvVarVisibility({
         configSecretUiEnabled: true,
@@ -139,7 +151,7 @@ describe('resolveEnvVarVisibility', () => {
     ).toEqual({ visibility: 'config' });
   });
 
-  it('errors on invalid explicit visibility values', () => {
+  it('errors on invalid explicit type values', () => {
     expect(
       resolveEnvVarVisibility({
         configSecretUiEnabled: true,
@@ -162,7 +174,7 @@ describe('resolveEnvVarVisibility', () => {
         envTargets: ['production'],
         teamSensitivePolicyOn: false,
       }).error
-    ).toMatch(/cannot use secret visibility/);
+    ).toMatch(/cannot be a Secret/);
   });
 
   it('infers visibility from type when not explicitly provided', () => {
@@ -177,7 +189,7 @@ describe('resolveEnvVarVisibility', () => {
     ).toEqual({ visibility: 'config' });
   });
 
-  it('omits inferred visibility for public-prefixed keys when team policy force-coerces type', () => {
+  it('keeps Config visibility for public-prefixed keys when the legacy team policy is on', () => {
     expect(
       resolveEnvVarVisibility({
         configSecretUiEnabled: true,
@@ -186,7 +198,7 @@ describe('resolveEnvVarVisibility', () => {
         envTargets: ['production'],
         teamSensitivePolicyOn: true,
       })
-    ).toEqual({});
+    ).toEqual({ visibility: 'config' });
   });
 
   it('does not omit inferred visibility for public-prefixed keys when only type is sensitive', () => {
@@ -198,7 +210,7 @@ describe('resolveEnvVarVisibility', () => {
         envTargets: ['production'],
         teamSensitivePolicyOn: false,
       }).error
-    ).toMatch(/cannot use secret visibility/);
+    ).toMatch(/cannot be a Secret/);
   });
 
   it('errors when sensitive type is requested on public-prefixed production keys', () => {
@@ -210,10 +222,10 @@ describe('resolveEnvVarVisibility', () => {
         envTargets: ['production'],
         teamSensitivePolicyOn: false,
       }).error
-    ).toMatch(/cannot use secret visibility/);
+    ).toMatch(/cannot be a Secret/);
   });
 
-  it('rejects secrets on Development when flag is enabled', () => {
+  it('allows secrets on Development when flag is enabled', () => {
     expect(
       resolveEnvVarVisibility({
         configSecretUiEnabled: true,
@@ -221,7 +233,7 @@ describe('resolveEnvVarVisibility', () => {
         key: 'API_KEY',
         envTargets: ['development'],
         teamSensitivePolicyOn: false,
-      }).error
-    ).toMatch(/not allowed with the Development Environment/);
+      })
+    ).toEqual({ visibility: 'secret' });
   });
 });

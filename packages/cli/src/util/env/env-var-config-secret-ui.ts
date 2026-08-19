@@ -1,12 +1,13 @@
 import type { ProjectEnvType } from '@vercel-internals/types';
-import { getPublicPrefix } from './validate-env';
+import { getApiPublicPrefix } from './validate-env';
 
 export type EnvVariableVisibility = 'config' | 'secret';
 
 /**
  * Opt-in CLI support for the config/secret env var model (dashboard flag:
  * `env-var-config-secret-ui`). When enabled, the CLI skips legacy Sensitive
- * Environment Variables Policy coercion. Development still disallows secrets.
+ * Environment Variables Policy coercion. The API allows Secret variables in
+ * Development while this model is enabled.
  */
 export function isEnvVarConfigSecretUiEnabled(): boolean {
   const raw = process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
@@ -19,7 +20,7 @@ export function shouldEnforceSensitiveEnvVarPolicy(policyOn: boolean): boolean {
   return policyOn && !isEnvVarConfigSecretUiEnabled();
 }
 
-/** Human-readable visibility for CLI output. */
+/** Human-readable type for CLI output. */
 export function formatVisibilityLabel(
   visibility: EnvVariableVisibility | undefined,
   type: ProjectEnvType
@@ -47,10 +48,6 @@ export function visibilityFromEnvType(
   return undefined;
 }
 
-function hasNonDevelopmentTarget(envTargets: string[]): boolean {
-  return envTargets.some(target => target !== 'development');
-}
-
 /**
  * Returns a client-side error when a public-prefixed key cannot use secret
  * visibility (matches API `getConfigSecretValidationError` rules).
@@ -60,10 +57,10 @@ export function getPublicPrefixSecretVisibilityError(
   options: {
     visibility?: EnvVariableVisibility;
     type: ProjectEnvType;
-    envTargets: string[];
+    context?: 'add' | 'update';
   }
 ): string | null {
-  const publicPrefix = getPublicPrefix(key);
+  const publicPrefix = getApiPublicPrefix(key);
   if (!publicPrefix) {
     return null;
   }
@@ -74,60 +71,11 @@ export function getPublicPrefixSecretVisibilityError(
     return null;
   }
 
-  const prefixLabel = publicPrefix.replace(/_$/, '');
-  if (hasNonDevelopmentTarget(options.envTargets)) {
-    return `Environment variables with a public framework prefix (${prefixLabel}) cannot use secret visibility on Production or Preview. Target Development only, rename to remove the public prefix, or use \`--visibility config\` with \`--no-sensitive\` on Development.`;
+  const privateKey = key.slice(publicPrefix.length);
+  if (options.context === 'update') {
+    return `\`${publicPrefix}\` exposes this value to anyone visiting your site, so \`${key}\` cannot be a Secret. To keep it private, add \`${privateKey}\` as a Secret, then remove \`${key}\`. If the value is safe to expose, keep it as Config.`;
   }
-
-  return `Environment variables with a public framework prefix (${prefixLabel}) cannot use secret visibility. Rename to remove the public prefix or use \`--visibility config\` with \`--no-sensitive\`.`;
-}
-
-/**
- * Returns a client-side error when secrets are requested for Development.
- */
-export function getDevelopmentSecretVisibilityError(
-  envTargets: string[],
-  options: {
-    type: ProjectEnvType;
-    visibility?: EnvVariableVisibility;
-  }
-): string | null {
-  if (!envTargets.includes('development')) {
-    return null;
-  }
-
-  const wouldBeSecret =
-    options.type === 'sensitive' || options.visibility === 'secret';
-  if (!wouldBeSecret) {
-    return null;
-  }
-
-  const hasNonDevelopment = envTargets.some(target => target !== 'development');
-  if (hasNonDevelopment) {
-    return `Sensitive Environment Variables are not supported on the Development Environment. Add --no-sensitive to store a non-sensitive value for all selected Environments, or run \`vercel env add\` separately for Development.`;
-  }
-
-  return `--sensitive is not allowed with the Development Environment. Sensitive Environment Variables are only supported on Production and Preview.`;
-}
-
-/**
- * Omits inferred visibility for public-prefixed keys only when the API team
- * policy will force-coerce type to sensitive (cannot safely set visibility).
- */
-function shouldOmitInferredVisibility(
-  key: string,
-  envTargets: string[],
-  teamSensitivePolicyOn: boolean
-): boolean {
-  if (!getPublicPrefix(key)) {
-    return false;
-  }
-
-  if (!hasNonDevelopmentTarget(envTargets)) {
-    return false;
-  }
-
-  return teamSensitivePolicyOn;
+  return `\`${publicPrefix}\` exposes this value to anyone visiting your site, so \`${key}\` cannot be a Secret. To keep it private, rename the variable to \`${privateKey}\` and keep the Secret type. If the value is safe to expose, use \`--type config\`.`;
 }
 
 export interface ResolveEnvVarVisibilityOptions {
@@ -145,7 +93,7 @@ export interface ResolveEnvVarVisibilityResult {
 }
 
 /**
- * Resolves `visibility` for API requests. Uses `--visibility` when set;
+ * Resolves `visibility` for API requests. Uses `--type` when set;
  * otherwise infers from `type` unless that would fail for public-prefixed keys.
  */
 export function resolveEnvVarVisibility(
@@ -161,7 +109,13 @@ export function resolveEnvVarVisibility(
       options.explicitVisibility !== 'secret'
     ) {
       return {
-        error: 'The `--visibility` flag must be either `config` or `secret`.',
+        error:
+          options.explicitVisibility === 'sensitive'
+            ? 'The `--type` flag accepts `config` or `secret`. Use `--type secret` or the legacy `--sensitive` flag.'
+            : options.explicitVisibility === 'plain' ||
+                options.explicitVisibility === 'encrypted'
+              ? 'The `--type` flag accepts `config` or `secret`. Use `--type config` for readable values.'
+              : 'The `--type` flag must be either `config` or `secret`.',
       };
     }
 
@@ -170,22 +124,10 @@ export function resolveEnvVarVisibility(
       {
         visibility: options.explicitVisibility,
         type: options.type,
-        envTargets: options.envTargets,
       }
     );
     if (publicPrefixError) {
       return { error: publicPrefixError };
-    }
-
-    const developmentError = getDevelopmentSecretVisibilityError(
-      options.envTargets,
-      {
-        type: options.type,
-        visibility: options.explicitVisibility,
-      }
-    );
-    if (developmentError) {
-      return { error: developmentError };
     }
 
     return { visibility: options.explicitVisibility };
@@ -196,31 +138,9 @@ export function resolveEnvVarVisibility(
     return {};
   }
 
-  const developmentError = getDevelopmentSecretVisibilityError(
-    options.envTargets,
-    {
-      type: options.type,
-      visibility: inferred,
-    }
-  );
-  if (developmentError) {
-    return { error: developmentError };
-  }
-
-  if (
-    shouldOmitInferredVisibility(
-      options.key,
-      options.envTargets,
-      options.teamSensitivePolicyOn
-    )
-  ) {
-    return {};
-  }
-
   const publicPrefixError = getPublicPrefixSecretVisibilityError(options.key, {
     visibility: inferred,
     type: options.type,
-    envTargets: options.envTargets,
   });
   if (publicPrefixError) {
     return { error: publicPrefixError };

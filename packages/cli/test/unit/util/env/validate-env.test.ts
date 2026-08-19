@@ -5,6 +5,7 @@ import {
   formatWarnings,
   hasOnlyWhitespaceWarnings,
   normalizeStdinEnvValue,
+  parseSvelteKitPublicEnvVarPrefix,
   trimValue,
   getPublicPrefix,
   removePublicPrefix,
@@ -677,6 +678,35 @@ describe('validate-env', () => {
         value: 'line1\nline2\n',
         strippedTrailingNewline: false,
       });
+    });
+  });
+
+  describe('parseSvelteKitPublicEnvVarPrefix', () => {
+    it.each([
+      ["kit: { env: { publicPrefix: 'BROWSER_' } }", 'BROWSER_'],
+      ['kit: { env: { publicPrefix: "CLIENT_" } }', 'CLIENT_'],
+      ['kit: { env: { publicPrefix: `WEB_` } }', 'WEB_'],
+      ["kit: { env: { publicPrefix: '' } }", ''],
+    ])('reads a static prefix from %s', (config, prefix) => {
+      expect(parseSvelteKitPublicEnvVarPrefix(config)).toEqual({
+        status: 'ready',
+        prefix,
+      });
+    });
+
+    it('uses the SvelteKit default when publicPrefix is absent', () => {
+      expect(parseSvelteKitPublicEnvVarPrefix('export default {}')).toEqual({
+        status: 'ready',
+        prefix: null,
+      });
+    });
+
+    it('does not guess a dynamic prefix', () => {
+      expect(
+        parseSvelteKitPublicEnvVarPrefix(
+          'export default { kit: { env: { publicPrefix } } }'
+        )
+      ).toEqual({ status: 'unavailable' });
     });
   });
 });
