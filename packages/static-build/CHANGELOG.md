@@ -1,5 +1,15 @@
 # @vercel/static-build
 
+## 2.12.0
+
+### Minor Changes
+
+- 5619873: Fix api dir builds receiving incorrect framework or runtime.
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.34
+
 ## 2.11.13
 
 ### Patch Changes

@@ -1,5 +1,18 @@
 # @vercel/fs-detectors
 
+## 6.15.0
+
+### Minor Changes
+
+- 5619873: Fix api dir builds receiving incorrect framework or runtime.
+
+### Patch Changes
+
+- Updated dependencies [b747ab4]
+- Updated dependencies [5c33351]
+- Updated dependencies [5619873]
+  - @vercel/build-utils@14.0.0
+
 ## 6.14.3
 
 ### Patch Changes

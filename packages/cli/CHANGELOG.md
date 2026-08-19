@@ -1,5 +1,88 @@
 # vercel
 
+## 58.5.0
+
+### Minor Changes
+
+- 4f8bda4: Add --root-directory support to project update.
+
+  Allows setting or resetting the project root directory via `vercel project update --root-directory <dir>` and `--auto-detect root-directory`. Adds telemetry tracking for the new option.
+
+- 3e71ed3: `vc logs` now displays request logs from all branches by default. Use `--branch <name>` to filter by branch. To preserve the previous behavior, pass the current branch name explicitly.
+
+  `vc logs --follow` now streams the latest READY production deployment by default. If none exists, it falls back to your latest READY deployment. Use `--environment preview`, `--branch <name>`, or a deployment URL or ID to select another deployment.
+
+  With `--follow`, `--branch` and `--environment` filter the deployment together. If no READY deployment matches both filters, the command returns an error instead of falling back to another branch or environment.
+
+  The deprecated `--no-branch` flag remains accepted as a no-op.
+
+- 5619873: Fix api dir builds receiving incorrect framework or runtime.
+
+### Patch Changes
+
+- e40fa39: Resolve the active production deployment when following production logs.
+- 5ec7cae: Add `vc alerts rules schema` and rule creation examples for built-in and custom alert rules. Use an explicit `--project` as the built-in rule target, and include complete custom alert project metadata for dashboard editing.
+- 8df62d7: Apply service-level rewrites in `vercel dev`.
+- 17d9eba: Include the deploy path relative to the detected git repository root in `gitMetadata.rootDirectory`.
+- c04d60d: Allow selecting webhook events when creating Linear connectors.
+- b747ab4: Replace the inferred PPR fields on `Prerender` with the Next.js prerender taxonomy.
+
+  `hasPostponed`, `hasFallback`, `isDynamicRoute` and `htmlSize` were derived by
+  `@vercel/next` from build artifacts (the `.meta` postponed state, which manifest
+  section a route came from, and a `statSync` of the `.html` shell). Next.js
+  `>= 16.3.0-canary.96` publishes its own classification in the prerender
+  manifest, so those four fields are removed in favour of a single optional
+  `prerenderClassification` on `Prerender` / `PrerenderOptions`:
+
+  - `routeType` — `'route' | 'page' | 'shell' | 'fallback'`
+  - `response` — `'empty' | 'initial' | 'complete'`
+  - `compute` — `'blocking' | 'resuming' | 'static'`
+  - `htmlSize` — byte size of the prerendered HTML shell, when the entry has one
+
+  The values are carried through unvalidated so a taxonomy value added by a future
+  Next.js release cannot hard-fail a deploy. `@vercel/next` sets the field only
+  when Next.js supplied the complete group — absence is legitimate for
+  `notFoundRoutes` and Pages Router `fallback: false` templates — and only on the
+  primary output of each prerender group, so a route is classified exactly once.
+
+- 830e091: Prevent Vercel plugin-install prompts after successful non-interactive commands.
+- 7d57d1f: Add a `vercel flags unarchive` command for unarchiving feature flags.
+
+  Examples:
+
+  - `vercel flags unarchive my-feature-flag`
+  - `vercel flags unarchive my-feature-flag --yes`
+  - `vercel flags unarchive my-feature-flag --project my-project --yes`
+
+- Updated dependencies [ce2eba4]
+- Updated dependencies [5c33351]
+- Updated dependencies [ce2eba4]
+- Updated dependencies [b747ab4]
+- Updated dependencies [08a2618]
+- Updated dependencies [5c33351]
+- Updated dependencies [5619873]
+- Updated dependencies [3586b18]
+  - @vercel/backends@0.8.31
+  - @vercel/go@3.10.3
+  - @vercel/build-utils@14.0.0
+  - @vercel/next@4.21.0
+  - @vercel/python@6.55.0
+  - @vercel/static-build@2.12.0
+  - @vercel/container@0.1.0
+  - @vercel/elysia@0.1.108
+  - @vercel/express@0.1.122
+  - @vercel/fastify@0.1.111
+  - @vercel/h3@0.1.117
+  - @vercel/hono@0.2.111
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.91
+  - @vercel/nestjs@0.2.112
+  - @vercel/node@5.9.4
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.0
+
 ## 58.4.4
 
 ### Patch Changes
