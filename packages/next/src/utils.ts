@@ -60,6 +60,11 @@ import {
   getSourceFileRefOfStaticMetadata,
 } from './metadata';
 import { isDynamicRoute } from './is-dynamic-route';
+import {
+  isNodePrecompileEnabled,
+  generateNodePrecompileFiles,
+  nodePrecompileCacheDir,
+} from './node-precompile';
 
 type stringMap = { [key: string]: string };
 
@@ -1127,6 +1132,17 @@ export async function createLambdaFromPseudoLayers({
   }
 
   createLambdaSema.release();
+
+  if (isNodePrecompileEnabled()) {
+    const precompiled = await generateNodePrecompileFiles(files);
+    if (Object.keys(precompiled).length > 0) {
+      Object.assign(files, precompiled);
+      lambdaOptions.environment = {
+        ...lambdaOptions.environment,
+        NODE_COMPILE_CACHE: nodePrecompileCacheDir(),
+      };
+    }
+  }
 
   return new NodejsLambda({
     ...lambdaOptions,
