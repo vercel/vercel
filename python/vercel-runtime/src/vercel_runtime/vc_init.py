@@ -483,6 +483,10 @@ _extra_path = os.environ.get("VERCEL_RUNTIME_ENV_PATH_PREPEND")
 if _extra_path:
     os.environ["PATH"] = _extra_path + ":" + os.environ.get("PATH", "")
 
+__import__(
+    "vercel_runtime.logging_defaults"
+).logging_defaults.configure_logging_defaults()
+
 try:
     prepare_worker_environment()
     # Publish-side activation only: subscriber lambdas do the consuming-side
