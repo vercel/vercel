@@ -119,6 +119,7 @@ export const frameworks = [
     sort: 1,
     envPrefix: 'NEXT_PUBLIC_',
     useRuntime: { src: 'package.json', use: '@vercel/next' },
+    ignoreRuntimes: ['@vercel/node'],
     detectors: {
       every: [
         {
