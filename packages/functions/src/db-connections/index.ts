@@ -1,4 +1,5 @@
 import { getContext } from '../get-context';
+import { createRootSpan } from '../spans';
 
 const DEBUG = !!process.env.DEBUG;
 
@@ -190,7 +191,9 @@ function waitUntilIdleTimeout(dbPool: DbPool) {
 
   const requestContext = getContext();
   if (requestContext?.waitUntil) {
-    requestContext.waitUntil(promise);
+    const span = createRootSpan('attachDatabasePool.waitForIdle');
+    const waitUntilPromise = promise.finally(() => span.end());
+    requestContext.waitUntil(waitUntilPromise);
   } else {
     console.warn('Pool release event triggered outside of request scope.');
   }
