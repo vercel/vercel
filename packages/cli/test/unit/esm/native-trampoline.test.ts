@@ -102,6 +102,21 @@ function optOutEnv() {
   return { ...cleanEnv(), VERCEL_CLI_USE_NATIVE_BINARY: '0' };
 }
 
+function linuxGlibcEnv(root: string, version?: string) {
+  const preload = join(root, 'linux-glibc-runtime.cjs');
+  writeFileSync(
+    preload,
+    [
+      "Object.defineProperty(process, 'platform', { value: 'linux' });",
+      `process.report.getReport = () => ({ header: { glibcVersionRuntime: ${JSON.stringify(
+        version
+      )} } });`,
+      '',
+    ].join('\n')
+  );
+  return { ...optInEnv(), NODE_OPTIONS: `--require=${preload}` };
+}
+
 describe('dist/vc.js native resolution', () => {
   it('no-ops to JS when no native package is installed', () => {
     const { vcJs } = buildInstall({
@@ -148,6 +163,64 @@ describe('dist/vc.js native resolution', () => {
         encoding: 'utf8',
         env: optInEnv(),
       });
+      expect(r.status).toBe(7);
+      expect(r.stdout.trim()).toBe('NATIVE_RAN');
+    }
+  );
+
+  it.runIf(process.platform !== 'win32')(
+    'falls through to JS when Linux glibc is older than the native binary requires',
+    () => {
+      const { root, vcJs } = buildInstall({
+        platform: 'linux',
+        arch: process.arch,
+        body: '#!/bin/sh\necho NATIVE_RAN\nexit 7\n',
+      });
+      const r = spawnSync(process.execPath, [vcJs, '--version'], {
+        encoding: 'utf8',
+        env: linuxGlibcEnv(root, '2.34'),
+      });
+
+      expect(r.status).toBe(0);
+      expect(r.stdout.trim()).toBe(cliVersion);
+      expect(r.stdout).not.toContain('NATIVE_RAN');
+      expect(r.stderr).not.toContain('(native)');
+    }
+  );
+
+  it.runIf(process.platform !== 'win32')(
+    'falls through to JS when Linux does not report a glibc runtime',
+    () => {
+      const { root, vcJs } = buildInstall({
+        platform: 'linux',
+        arch: process.arch,
+        body: '#!/bin/sh\necho NATIVE_RAN\nexit 7\n',
+      });
+      const r = spawnSync(process.execPath, [vcJs, '--version'], {
+        encoding: 'utf8',
+        env: linuxGlibcEnv(root),
+      });
+
+      expect(r.status).toBe(0);
+      expect(r.stdout.trim()).toBe(cliVersion);
+      expect(r.stdout).not.toContain('NATIVE_RAN');
+      expect(r.stderr).not.toContain('(native)');
+    }
+  );
+
+  it.runIf(process.platform !== 'win32')(
+    'spawns the native binary when Linux meets the minimum glibc version',
+    () => {
+      const { root, vcJs } = buildInstall({
+        platform: 'linux',
+        arch: process.arch,
+        body: '#!/bin/sh\necho NATIVE_RAN\nexit 7\n',
+      });
+      const r = spawnSync(process.execPath, [vcJs, '--version'], {
+        encoding: 'utf8',
+        env: linuxGlibcEnv(root, '2.38'),
+      });
+
       expect(r.status).toBe(7);
       expect(r.stdout.trim()).toBe('NATIVE_RAN');
     }
