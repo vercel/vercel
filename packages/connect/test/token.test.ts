@@ -117,7 +117,60 @@ describe('getTokenResponse cache', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
+  });
+
+  it('uses the dedicated branch endpoint with the current deployment ID', async () => {
+    vi.stubEnv('VERCEL_DEPLOYMENT_ID', 'dpl_branch');
+    fetchMock.mockResolvedValue(tokenResponse('tok_branch'));
+
+    await getTokenResponse('slack/eve-agent', {
+      subject: { type: 'app' },
+      branch: true,
+    });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(
+      'https://api.vercel.com/v1/connect/token/slack%2Feve-agent/branch'
+    );
+    expect(JSON.parse(init.body as string)).toEqual({
+      subject: { type: 'app' },
+      deploymentId: 'dpl_branch',
+    });
+  });
+
+  it('fails closed when branch resolution has no deployment context', async () => {
+    vi.stubEnv('VERCEL_DEPLOYMENT_ID', '');
+
+    await expect(
+      getTokenResponse('slack/eve-agent', {
+        subject: { type: 'app' },
+        branch: true,
+      })
+    ).rejects.toMatchObject({
+      code: 'branch_deployment_unavailable',
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps source and branch tokens in separate cache entries', async () => {
+    vi.stubEnv('VERCEL_DEPLOYMENT_ID', 'dpl_branch_cache');
+    fetchMock
+      .mockResolvedValueOnce(tokenResponse('tok_source'))
+      .mockResolvedValueOnce(tokenResponse('tok_branch'));
+
+    const source = await getTokenResponse('slack/eve-agent', {
+      subject: { type: 'app' },
+    });
+    const branch = await getTokenResponse('slack/eve-agent', {
+      subject: { type: 'app' },
+      branch: true,
+    });
+
+    expect(source.token).toBe('tok_source');
+    expect(branch.token).toBe('tok_branch');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('serves a cached, unexpired token without re-fetching', async () => {
