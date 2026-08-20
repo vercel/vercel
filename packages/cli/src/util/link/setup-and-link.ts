@@ -3,6 +3,7 @@ import { join, basename } from 'path';
 import { getPlatformEnv } from '@vercel/build-utils';
 import { LocalFileSystemDetector, getWorkspaces } from '@vercel/fs-detectors';
 import type {
+  Project,
   ProjectLinkResult,
   ProjectSettings,
   Org,
@@ -14,7 +15,11 @@ import {
   VERCEL_DIR_README,
   VERCEL_DIR_PROJECT,
 } from '../projects/link';
-import { linkRepoProject } from './repo';
+import {
+  ensureRepoLink,
+  linkRepoProject,
+  type ResolvedGitRemote,
+} from './repo';
 import createProject from '../projects/create-project';
 import type Client from '../client';
 import { printError } from '../error';
@@ -28,7 +33,13 @@ import {
 import toHumanPath from '../humanize-path';
 import { isDirectory } from '../fs';
 import selectOrg from '../input/select-org';
-import inputProject, { BACK_TO_TEAM_SELECTION } from '../input/input-project';
+import inputProject, {
+  BACK_TO_TEAM_SELECTION,
+  LINK_ALL_PROJECTS,
+  isSelectRemote,
+  type MultiProjectOffer,
+  type RemoteContext,
+} from '../input/input-project';
 import { validateRootDirectory } from '../validate-paths';
 import { inputRootDirectory } from '../input/input-root-directory';
 import {
@@ -55,8 +66,11 @@ import {
   toProjectRootDirectory,
   type InferredServicesChoice,
 } from './services-setup';
-import { searchProjectsByRepoRoot } from '../projects/search-project-across-teams';
-import type { CrossTeamMatch } from '../projects/search-project-across-teams';
+import { searchProjectsByRepoRootDetailed } from '../projects/search-project-across-teams';
+import type {
+  CrossTeamMatch,
+  RepoRootSearchResult,
+} from '../projects/search-project-across-teams';
 import { isPromptCanceledError } from '../input/prompt-cancellation';
 
 export interface SetupAndLinkOptions {
@@ -78,6 +92,32 @@ export interface SetupAndLinkOptions {
    * fail fast rather than creating a new project.
    */
   failIfNotFound?: boolean;
+  /**
+   * When true, run workspace detection and offer repository-wide linking in
+   * the project picker. Only `vc link` sets this: commands that need exactly
+   * one project (deploy, dev, pull, …) must not offer a multi-project link.
+   */
+  allowMultiProjectLink?: boolean;
+}
+
+/**
+ * Result of linking every project in a repository at once. It has no single
+ * project or per-directory `.vercel/project.json`, so it is kept separate from
+ * `ProjectLinked` instead of pretending one project was selected.
+ */
+export interface RepoWideLinked {
+  status: 'repo_linked';
+  org: Org;
+  repoRoot: string;
+  projects: Project[];
+}
+
+export type SetupAndLinkResult = ProjectLinkResult | RepoWideLinked;
+
+export function isRepoWideLinked(
+  result: SetupAndLinkResult
+): result is RepoWideLinked {
+  return result.status === 'repo_linked';
 }
 
 function isCrossTeamMatch(value: unknown): value is CrossTeamMatch {
@@ -150,6 +190,48 @@ async function hasWorkspaces(cwd: string): Promise<boolean> {
     }
     throw err;
   }
+}
+
+/**
+ * Decides whether the project picker should offer repository-wide linking, and
+ * describes the offer in terms of what the user actually gets.
+ *
+ * The count comes from projects on Vercel already connected to this
+ * repository's Git remote under the selected team — not from local framework
+ * detection, which counts every workspace package and overstates the work.
+ *
+ * `/v9/projects?repoUrl=…` is a partition-scoped filter whose cost grows with
+ * team size, so this reuses the projects the Git-match search already fetched
+ * rather than issuing a second crawl of the same data.
+ *
+ * The offer only applies from the repository root: inside a single package,
+ * linking one project is still the right job.
+ */
+export function resolveMultiProjectOffer({
+  path,
+  org,
+  repoSearch,
+}: {
+  path: string;
+  org: Org;
+  repoSearch: RepoRootSearchResult;
+}): MultiProjectOffer | undefined {
+  // Only offer from the repository root.
+  if (!repoSearch.rootPath || repoSearch.rootPath !== path) {
+    return undefined;
+  }
+
+  const connectedProjects = repoSearch.connectedByOrgId.get(org.id) ?? [];
+
+  // Nothing to batch: a single connected project is already covered by the
+  // `(linked by git)` suggestion.
+  if (connectedProjects.length < 2) {
+    return undefined;
+  }
+
+  return {
+    connectedCount: connectedProjects.length,
+  };
 }
 
 /**
@@ -290,8 +372,9 @@ export default async function setupAndLink(
     nonInteractive = false,
     pullEnv = true,
     v0,
+    allowMultiProjectLink = false,
   }: SetupAndLinkOptions
-): Promise<ProjectLinkResult> {
+): Promise<SetupAndLinkResult> {
   const { config } = client;
   const gitProjectName = projectName;
   projectName = projectName ?? basename(path);
@@ -376,6 +459,14 @@ export default async function setupAndLink(
   // When the team was auto-selected as the only choice, there is no other
   // team to go back to, so the project picker hides that option.
   let teamAutoSelected = false;
+  // Projects connected to the repo remote for the team the user settled on,
+  // carried out of the loop so linking them does not refetch the same list.
+  let connectedForOrg:
+    | { remote: ResolvedGitRemote; projects: Project[] }
+    | undefined;
+  // Set once the user overrides the default remote from the project picker, so
+  // the suggestion search re-runs against their choice.
+  let chosenRemoteName: string | undefined;
   for (;;) {
     if (!org) {
       const orgMeta: { choiceCount?: number } = {};
@@ -393,17 +484,44 @@ export default async function setupAndLink(
     }
 
     let repoMatches: CrossTeamMatch[] = [];
+    // The repo-wide offer is derived from the same search, so it costs no
+    // additional request.
+    let multiProjectOffer: MultiProjectOffer | undefined;
+    let remoteContext: RemoteContext | undefined;
+    connectedForOrg = undefined;
     if (showProjectSuggestions) {
       output.spinner('Searching for existing projects…', 1000);
       try {
-        repoMatches = await searchProjectsByRepoRoot({
+        const repoSearch = await searchProjectsByRepoRootDetailed({
           client,
           cwd: path,
           gitProjectName,
           orgs: [org],
-          autoConfirm,
-          nonInteractive,
+          remoteName: chosenRemoteName,
         });
+        repoMatches = repoSearch.matches;
+        if (repoSearch.remote) {
+          const { remoteName, remoteNames = [] } = repoSearch.remote;
+          remoteContext = {
+            remoteName,
+            otherRemoteNames: remoteNames.filter(name => name !== remoteName),
+          };
+        }
+        // Reset per iteration: on a "back to team" loop the previous team's
+        // projects must not leak into the newly selected team.
+        connectedForOrg = repoSearch.remote
+          ? {
+              remote: repoSearch.remote,
+              projects: repoSearch.connectedByOrgId.get(org.id) ?? [],
+            }
+          : undefined;
+        if (allowMultiProjectLink) {
+          multiProjectOffer = resolveMultiProjectOffer({
+            path,
+            org,
+            repoSearch,
+          });
+        }
       } catch (err) {
         if (isPromptCanceledError(err)) {
           throw err;
@@ -423,7 +541,9 @@ export default async function setupAndLink(
         false,
         showProjectSuggestions,
         searchableTeamPicker && !selectedOrg && !teamAutoSelected,
-        repoMatches
+        repoMatches,
+        multiProjectOffer,
+        remoteContext
       );
     } catch (err) {
       if (
@@ -439,7 +559,40 @@ export default async function setupAndLink(
       org = undefined;
       continue;
     }
+    // Re-run the search against the chosen remote, keeping the same team.
+    if (isSelectRemote(projectOrNewProjectName)) {
+      chosenRemoteName = projectOrNewProjectName.selectRemote;
+      continue;
+    }
     break;
+  }
+
+  if (projectOrNewProjectName === LINK_ALL_PROJECTS) {
+    config.currentTeam = org.type === 'team' ? org.id : undefined;
+    const repoLink = await ensureRepoLink(client, path, {
+      yes: autoConfirm,
+      overwrite: true,
+      // Team and link intent were already resolved by the project picker.
+      selectedOrg: org,
+      skipConfirm: true,
+      // The picker choice was "link all connected", so don't re-ask which
+      // projects, and don't offer to create new ones.
+      linkAllConnected: true,
+      // The picker already fetched this exact list to build the offer.
+      prefetchedConnected: connectedForOrg,
+    });
+
+    if (!repoLink?.repoConfig) {
+      // User selected no projects; nothing was written.
+      return { status: 'not_linked', org: null, project: null };
+    }
+
+    return {
+      status: 'repo_linked',
+      org,
+      repoRoot: repoLink.rootPath,
+      projects: repoLink.selectedProjects ?? [],
+    };
   }
 
   if (typeof projectOrNewProjectName === 'string') {

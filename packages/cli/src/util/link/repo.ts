@@ -15,7 +15,7 @@ import selectOrg from '../input/select-org';
 import { addToGitIgnore } from './add-to-gitignore';
 import type Client from '../client';
 import type { Framework } from '@vercel/frameworks';
-import type { Project } from '@vercel-internals/types';
+import type { Org, Project } from '@vercel-internals/types';
 import createProject from '../projects/create-project';
 import { detectProjects } from '../projects/detect-projects';
 import { repoInfoToUrl } from '../git/repo-info-to-url';
@@ -47,17 +47,44 @@ export interface RepoLink {
   rootPath: string;
   repoConfigPath: string;
   repoConfig?: RepoProjectsConfig;
+  /**
+   * Projects selected during this run, in API form. Only set when the link
+   * flow actually discovered/created projects.
+   */
+  selectedProjects?: Project[];
 }
 
 export interface ResolvedGitRemote {
   rootPath: string;
   remoteName: string;
   repoUrl: string;
+  /**
+   * Every remote configured in the repo, sorted. Lets callers offer a remote
+   * switcher only when there is actually another remote to switch to.
+   */
+  remoteNames?: string[];
 }
 
 export interface EnsureRepoLinkOptions {
   yes: boolean;
   overwrite: boolean;
+  /** Team already resolved by the caller; skips the `Which team?` prompt. */
+  selectedOrg?: Org;
+  /** Skip the `Link Git repository…?` confirmation when intent is known. */
+  skipConfirm?: boolean;
+  /**
+   * Link every connected project without re-prompting. Set when the user
+   * already chose "Link all N projects connected to this repo".
+   */
+  linkAllConnected?: boolean;
+  /**
+   * Git remote and connected projects the caller already fetched, reused
+   * instead of re-crawling `/v9/projects?repoUrl=…`.
+   */
+  prefetchedConnected?: {
+    remote: ResolvedGitRemote;
+    projects: Project[];
+  };
 }
 
 interface NewProject {
@@ -97,10 +124,17 @@ export async function resolveGitRemote(
   {
     yes,
     existingRemoteName,
+    preferredRemoteName,
   }: {
     yes: boolean;
     /** When set, skip remote selection and use this remote. */
     existingRemoteName?: string;
+    /**
+     * Remote the user explicitly chose this run. Unlike `existingRemoteName`
+     * it is not authoritative: if it is gone, fall back to the default rather
+     * than failing, since nothing has been written against it yet.
+     */
+    preferredRemoteName?: string;
   }
 ): Promise<ResolvedGitRemote | undefined> {
   // Use getGitConfigPath to correctly resolve the config path for
@@ -122,6 +156,8 @@ export async function resolveGitRemote(
         `Git remote "${remoteName}" from repo.json no longer exists`
       );
     }
+  } else if (preferredRemoteName && remoteUrls[preferredRemoteName]) {
+    remoteName = preferredRemoteName;
   } else {
     const remoteNames = Object.keys(remoteUrls).sort();
     if (remoteNames.length === 1) {
@@ -144,7 +180,12 @@ export async function resolveGitRemote(
     }
   }
 
-  return { rootPath, remoteName, repoUrl: remoteUrls[remoteName] };
+  return {
+    rootPath,
+    remoteName,
+    repoUrl: remoteUrls[remoteName],
+    remoteNames: Object.keys(remoteUrls).sort(),
+  };
 }
 
 export async function fetchProjectsForRepoUrl(
@@ -235,23 +276,66 @@ async function discoverRepoProjects(
     existingProjectIds,
     existingDirectories,
     existingRemoteName,
+    selectedOrg,
+    skipConfirm,
+    linkAllConnected,
+    prefetchedConnected,
   }: {
     yes: boolean;
     existingProjectIds?: Set<string>;
     existingDirectories?: Set<string>;
     /** When set, skip the remote selection prompt and use this remote. */
     existingRemoteName?: string;
+    /** Team already resolved by the caller; skips the `Which team?` prompt. */
+    selectedOrg?: Org;
+    /**
+     * Skip the `Link Git repository…?` confirmation. Use when the caller
+     * already captured that intent, e.g. the `vc link` project picker.
+     */
+    skipConfirm?: boolean;
+    /**
+     * Link every project already connected to the repo's Git remote without
+     * re-asking which ones. Set when the user picked "Link all N projects
+     * connected to this repo": that choice already answered the question, so
+     * re-prompting with a pre-checked list adds a step and, at real scale,
+     * buries it under dozens of unrelated "new Projects" to create.
+     *
+     * Local framework detection is skipped entirely in this mode — creating
+     * new projects is a different intent from linking the existing ones.
+     */
+    linkAllConnected?: boolean;
+    /**
+     * Git remote and connected projects the caller already fetched, reused to
+     * avoid a second `/v9/projects?repoUrl=…` crawl (a partition-scoped filter
+     * whose cost grows with team size). Only honored when the remote resolves
+     * to the same `rootPath`; `projects` must be the full connected set for
+     * `selectedOrg`.
+     */
+    prefetchedConnected?: {
+      remote: ResolvedGitRemote;
+      projects: Project[];
+    };
   }
 ): Promise<
-  | { remoteName: string; projects: RepoProjectConfig[]; orgSlug: string }
+  | {
+      remoteName: string;
+      projects: RepoProjectConfig[];
+      selectedProjects: Project[];
+      orgSlug: string;
+      repoUrl: string;
+    }
   | undefined
 > {
   // Detect the projects on the filesystem out of band, so that
-  // they will be ready by the time the projects are listed
-  const detectedProjectsPromise = detectProjects(rootPath).catch(err => {
-    output.debug(`Failed to detect local projects: ${err}`);
-    return new Map<string, Framework[]>();
-  });
+  // they will be ready by the time the projects are listed.
+  // Skipped when linking all connected projects: detection only feeds the
+  // "new Projects to be created" choices, which that flow never offers.
+  const detectedProjectsPromise = linkAllConnected
+    ? Promise.resolve(new Map<string, Framework[]>())
+    : detectProjects(rootPath).catch(err => {
+        output.debug(`Failed to detect local projects: ${err}`);
+        return new Map<string, Framework[]>();
+      });
 
   const promptAction = existingRemoteName ? 'add' : 'link';
   const confirmMessage =
@@ -263,20 +347,31 @@ async function discoverRepoProjects(
           `"${toHumanPath(rootPath)}"`
         )} to your Project(s)?`;
 
-  const shouldLink = yes || (await client.input.confirm(confirmMessage, true));
+  const shouldLink =
+    yes || skipConfirm || (await client.input.confirm(confirmMessage, true));
 
   if (!shouldLink) {
     output.print(`  Canceled. Repository not linked.\n`);
     return;
   }
 
-  const org = await selectOrg(client, 'Which team?', yes);
+  const org = selectedOrg ?? (await selectOrg(client, 'Which team?', yes));
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-  const remote = await resolveGitRemote(client, rootPath, {
-    yes,
-    existingRemoteName,
-  });
+  // Reuse the caller's remote only when it describes this same repo root and
+  // no specific remote was requested; otherwise resolve it here.
+  const reusableRemote =
+    prefetchedConnected &&
+    !existingRemoteName &&
+    prefetchedConnected.remote.rootPath === rootPath
+      ? prefetchedConnected.remote
+      : undefined;
+  const remote =
+    reusableRemote ??
+    (await resolveGitRemote(client, rootPath, {
+      yes,
+      existingRemoteName,
+    }));
   if (!remote) {
     throw new Error('Could not determine Git remote URLs');
   }
@@ -288,11 +383,20 @@ async function discoverRepoProjects(
   const repoUrlLink = output.link(repoUrl, repoInfoToUrl(parsedRepoUrl), {
     fallback: () => link(repoUrl),
   });
-  output.spinner(
-    `Fetching Projects for ${repoUrlLink} under ${chalk.bold(org.slug)}…`
-  );
+  // The caller's projects are only valid for the same remote URL.
+  const reusableProjects =
+    reusableRemote && prefetchedConnected?.remote.repoUrl === repoUrl
+      ? prefetchedConnected.projects
+      : undefined;
+  if (!reusableProjects) {
+    output.spinner(
+      `Fetching Projects for ${repoUrlLink} under ${chalk.bold(org.slug)}…`
+    );
+  }
   const detectedProjects = await detectedProjectsPromise;
-  let projects = await fetchProjectsForRepoUrl(client, repoUrl, org.id);
+  let projects =
+    reusableProjects ??
+    (await fetchProjectsForRepoUrl(client, repoUrl, org.id));
 
   // Filter out projects that are already linked in repo.json (by ID or directory)
   if (existingProjectIds || existingDirectories) {
@@ -308,7 +412,10 @@ async function discoverRepoProjects(
     output.print(
       `  No Projects are linked to ${repoUrlLink} under ${chalk.bold(org.slug)}.\n`
     );
-  } else {
+  } else if (!linkAllConnected) {
+    // Only useful as a preamble to the "which Projects?" list. When linking all
+    // connected projects there is no list, and the picker choice already named
+    // the count, so this would just restate it before the ✓ summary does.
     output.print(
       `  Found ${pluralize(
         'Project',
@@ -348,7 +455,8 @@ async function discoverRepoProjects(
   }
 
   let selected: (Project | NewProject)[];
-  if (yes) {
+  if (yes || linkAllConnected) {
+    // The caller already knows which projects to link: every connected one.
     selected = projects;
   } else {
     const addSeparators = projects.length > 0 && detectedProjectsCount > 0;
@@ -443,13 +551,26 @@ async function discoverRepoProjects(
     };
   });
 
-  return { remoteName, projects: repoProjects, orgSlug: org.slug };
+  return {
+    remoteName,
+    projects: repoProjects,
+    selectedProjects: selected as Project[],
+    orgSlug: org.slug,
+    repoUrl,
+  };
 }
 
 export async function ensureRepoLink(
   client: Client,
   cwd: string,
-  { yes, overwrite }: EnsureRepoLinkOptions
+  {
+    yes,
+    overwrite,
+    selectedOrg,
+    skipConfirm,
+    linkAllConnected,
+    prefetchedConnected,
+  }: EnsureRepoLinkOptions
 ): Promise<RepoLink | undefined> {
   const repoLink = await getRepoLink(client, cwd);
   if (repoLink) {
@@ -458,12 +579,20 @@ export async function ensureRepoLink(
     throw new Error('Could not determine Git repository root directory');
   }
   let { rootPath, repoConfig, repoConfigPath } = repoLink;
+  let selectedProjects: Project[] | undefined;
 
   if (overwrite || !repoConfig) {
-    const result = await discoverRepoProjects(client, rootPath, { yes });
+    const result = await discoverRepoProjects(client, rootPath, {
+      yes,
+      selectedOrg,
+      skipConfirm,
+      linkAllConnected,
+      prefetchedConnected,
+    });
     if (!result) {
       return;
     }
+    selectedProjects = result.selectedProjects;
 
     repoConfig = {
       remoteName: result.remoteName,
@@ -475,17 +604,22 @@ export async function ensureRepoLink(
 
     await addToGitIgnore(rootPath);
 
+    output.print('\n');
     printAlignedLabel(
       'Linked',
       `${pluralize('Project', result.projects.length, true)} under ${result.orgSlug}`,
       { gutter: '✓' }
     );
+    // Name the repo on a continuation row so the summary is self-contained
+    // without repeating it in prose above.
+    printAlignedLabel('Repository', result.repoUrl);
   }
 
   return {
     repoConfig,
     repoConfigPath,
     rootPath,
+    selectedProjects,
   };
 }
 
