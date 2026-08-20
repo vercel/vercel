@@ -45,7 +45,7 @@ export const linkCommand = {
     {
       name: 'team',
       description:
-        'Set the team ID or slug; use with --project for non-interactive links',
+        'Set the team ID or slug; use with --project for non-interactive links (or set VERCEL_TEAM)',
       shorthand: null,
       argument: 'TEAM_ID_OR_SLUG',
       type: String,

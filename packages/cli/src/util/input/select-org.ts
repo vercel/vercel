@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import type Client from '../client';
 import getUser from '../get-user';
 import getTeams from '../teams/get-teams';
+import { getTeamEnv } from '../teams/team-env';
 import type { User, Team, Org } from '@vercel-internals/types';
 import { getPlatformEnv } from '@vercel/build-utils';
 import { emoji } from '../emoji';
@@ -117,13 +118,16 @@ export default async function selectOrg(
   }
 
   // An explicit signal — `--scope`/`--team`, `vercel.json` `scope`,
-  // `VERCEL_ORG_ID` — selects the team directly. The globally selected team
-  // (`vc switch`, login default) is a guess, not a signal, and must not
-  // silently decide where a project gets linked.
+  // `VERCEL_TEAM`, `VERCEL_ORG_ID` — selects the team directly. The globally
+  // selected team (`vc switch`, login default) is a guess, not a signal, and
+  // must not silently decide where a project gets linked.
   const localConfigScope = client.localConfig?.scope;
   const explicitScope =
     getScopeOrTeamFromArgv(client.argv) ??
     (typeof localConfigScope === 'string' ? localConfigScope : null) ??
+    // `VERCEL_TEAM` may hold a slug; the matcher below already accepts both a
+    // team ID and a slug, so no lookup is needed here.
+    getTeamEnv() ??
     getPlatformEnv('ORG_ID') ??
     null;
   const matchExplicitScope = (): Org | undefined => {

@@ -985,6 +985,39 @@ describe('link', () => {
       );
     });
 
+    it('links to the env pair when VERCEL_TEAM holds a team slug', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      const [team] = useTeams('team_dummy') as Team[];
+      createTeam(); // multiple teams; the env pair disambiguates
+      const { project } = useProject({
+        ...defaultProject,
+        id: 'prj_env123',
+        name: 'env-project',
+      });
+      useUnknownProject();
+      mockPull.mockResolvedValue(0);
+
+      process.env.VERCEL_TEAM = team.slug;
+      process.env.VERCEL_PROJECT_ID = 'prj_env123';
+      client.cwd = cwd;
+      client.setArgv('link', '--non-interactive');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+      try {
+        const exitCode = await link(client);
+        expect(exitCode).toEqual(0);
+      } finally {
+        delete process.env.VERCEL_TEAM;
+        delete process.env.VERCEL_PROJECT_ID;
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      }
+
+      const plainOutput = stripAnsi(client.stderr.getFullOutput());
+      expect(plainOutput).not.toContain('Which team?');
+      expect(plainOutput).toContain('VERCEL_TEAM and VERCEL_PROJECT_ID');
+      expect(plainOutput).toContain(`${team.slug}/${project.name}`);
+    });
+
     it('errors when the env pair points to an unknown project', async () => {
       const cwd = setupTmpDir();
       useUser({ version: 'northstar' });

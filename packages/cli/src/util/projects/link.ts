@@ -27,6 +27,11 @@ import output from '../../output-manager';
 import { printAlignedLabel } from '../output/print-aligned-label';
 import pull from '../../commands/env/pull';
 import { resolveProjectCwd } from './find-project-root';
+import {
+  getOrgIdFromEnv,
+  getTeamEnvVar,
+  TeamEnvNotFound,
+} from '../teams/team-env';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -265,10 +270,12 @@ async function hasProjectLink(
   path: string
 ): Promise<boolean> {
   // "linked" via env vars?
-  const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
+  // A `VERCEL_TEAM` slug that can't be resolved is reported by the callers
+  // that actually depend on it; here it just means "not linked via env".
+  const envOrgId = await getOrgIdFromEnv(client).catch(() => undefined);
   const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
   if (
-    VERCEL_ORG_ID === projectLink.orgId &&
+    envOrgId === projectLink.orgId &&
     VERCEL_PROJECT_ID === projectLink.projectId
   ) {
     return true;
@@ -331,7 +338,21 @@ export async function getLinkedProject(
   let path = options.cwd ?? client.cwd;
   path = await resolveProjectCwd(path);
 
-  const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
+  // Either `VERCEL_TEAM` (team ID or slug) or the legacy `VERCEL_ORG_ID`
+  // (team ID) names the owner half of the env-based link; see
+  // `getOrgIdFromEnv()` for the precedence rule between them.
+  const teamEnvVar = getTeamEnvVar();
+  const teamEnvVarName = teamEnvVar?.name ?? 'VERCEL_ORG_ID';
+  let VERCEL_ORG_ID: string | undefined;
+  try {
+    VERCEL_ORG_ID = await getOrgIdFromEnv(client);
+  } catch (err: unknown) {
+    if (err instanceof TeamEnvNotFound) {
+      output.error(`${err.message}\n`);
+      return { status: 'error', exitCode: 1 };
+    }
+    throw err;
+  }
   const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
   const shouldUseEnv = Boolean(VERCEL_ORG_ID && VERCEL_PROJECT_ID);
   const projectName = options.projectName;
@@ -340,16 +361,25 @@ export async function getLinkedProject(
   const hasExplicitProject = Boolean(explicitProjectName);
   const shouldUseEnvContext = shouldUseEnv && !hasExplicitProject;
 
+  // `VERCEL_TEAM` selects a scope and is meaningful on its own, so it does not
+  // have to be paired with `VERCEL_PROJECT_ID`: with no project half set, fall
+  // through to the local `.vercel` link, exactly as when no env var is set.
+  // The legacy `VERCEL_ORG_ID` has only ever been half of an env-based link,
+  // so it keeps requiring the pair.
+  const envTeamSelectsScopeOnly =
+    teamEnvVar?.name === 'VERCEL_TEAM' && !VERCEL_PROJECT_ID;
+
   if (
     !hasExplicitProject &&
     (VERCEL_ORG_ID || VERCEL_PROJECT_ID) &&
-    !shouldUseEnv
+    !shouldUseEnv &&
+    !envTeamSelectsScopeOnly
   ) {
     output.error(
       `You specified ${
-        VERCEL_ORG_ID ? '`VERCEL_ORG_ID`' : '`VERCEL_PROJECT_ID`'
+        VERCEL_ORG_ID ? `\`${teamEnvVarName}\`` : '`VERCEL_PROJECT_ID`'
       } but you forgot to specify ${
-        VERCEL_ORG_ID ? '`VERCEL_PROJECT_ID`' : '`VERCEL_ORG_ID`'
+        VERCEL_ORG_ID ? '`VERCEL_PROJECT_ID`' : '`VERCEL_TEAM`'
       }. You need to specify both to deploy to a custom project.\n`
     );
     return { status: 'error', exitCode: 1 };
@@ -517,7 +547,9 @@ export async function getLinkedProject(
       output.error(
         `Project not found (${JSON.stringify({
           VERCEL_PROJECT_ID,
-          VERCEL_ORG_ID,
+          // Report the variable the user actually set, with its raw value, so
+          // a `VERCEL_TEAM` slug isn't echoed back as an unfamiliar ID.
+          [teamEnvVarName]: teamEnvVar?.value ?? VERCEL_ORG_ID,
         })})\n`
       );
       return { status: 'error', exitCode: 1, orgId };
