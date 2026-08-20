@@ -105,7 +105,7 @@ function setupMocks(options: MockOptions = {}) {
     res.json(groupsResponse);
   });
 
-  client.scenario.get('/v9/projects', (_req, res) => {
+  client.scenario.get('/v10/projects', (_req, res) => {
     res.json({
       projects: defaultProjects,
       pagination: { count: defaultProjects.length, next: null },

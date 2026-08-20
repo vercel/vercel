@@ -29,6 +29,16 @@ export interface CommandExample {
   readonly name: string;
   readonly value: string | ReadonlyArray<string>;
 }
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD';
+export interface CommandEndpoint {
+  /** HTTP method of the API call, e.g. `'GET'` */
+  readonly method: HttpMethod;
+  /**
+   * API path. Path parameters may use `:param` or `{param}` syntax,
+   * e.g. `'/v9/projects/:idOrName'`.
+   */
+  readonly path: string;
+}
 export interface Command {
   readonly name: string;
   readonly aliases: ReadonlyArray<string>;

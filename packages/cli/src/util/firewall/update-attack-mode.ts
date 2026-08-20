@@ -18,7 +18,7 @@ export default async function updateAttackMode(
   client: Client,
   body: UpdateAttackModeBody
 ): Promise<UpdateAttackModeResponse> {
-  return client.fetch<UpdateAttackModeResponse>('/security/attack-mode', {
+  return client.fetch<UpdateAttackModeResponse>('/v1/security/attack-mode', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
