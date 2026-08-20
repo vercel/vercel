@@ -10,7 +10,7 @@ import frameworkList from '../src/frameworks';
 // bump timeout for Windows as network can be slower
 vi.setConfig({ testTimeout: 15 * 1000, hookTimeout: 15 * 1000 });
 
-const logoPrefix = 'https://api-frameworks.vercel.sh/framework-logos/';
+const logoPrefix = 'https://api-frameworks-two.vercel.sh/framework-logos/';
 
 const SchemaFrameworkDetectionItem = {
   type: 'array',

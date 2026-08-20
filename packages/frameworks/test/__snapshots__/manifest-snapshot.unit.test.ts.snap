@@ -1,0 +1,4834 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`frameworks.json manifest (temporary drift guard) > manifest matches the committed snapshot 1`] = `
+[
+  {
+    "description": "A project deployed as a container image, built from a Dockerfile.vercel or Containerfile.vercel.",
+    "detectors": {
+      "some": [
+        {
+          "path": "Dockerfile.vercel",
+        },
+        {
+          "path": "Containerfile.vercel",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/container.svg",
+    "name": "Container",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "runtimeFramework": true,
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "outputDirectory": {
+        "placeholder": "None",
+      },
+    },
+    "slug": "container",
+    "tagline": "Deploy any project as a container image built from a Dockerfile.",
+    "useRuntime": {
+      "src": "<detect>",
+      "use": "@vercel/container",
+    },
+    "website": "https://docs.docker.com/reference/dockerfile/",
+  },
+  {
+    "demo": "https://blitz-template.vercel.app",
+    "description": "A brand new Blitz.js app - the result of running \`npx blitz@0.45.4 new\`.",
+    "detectors": {
+      "some": [
+        {
+          "path": "blitz.config.js",
+        },
+        {
+          "path": "blitz.config.ts",
+        },
+      ],
+    },
+    "envPrefix": "NEXT_PUBLIC_",
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/blitz.svg",
+    "name": "Blitz.js (Legacy)",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`blitz build\`",
+        "value": "blitz build",
+      },
+      "devCommand": {
+        "value": "blitz start",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "placeholder": "Next.js default",
+      },
+    },
+    "slug": "blitzjs",
+    "tagline": "Blitz.js: The Fullstack React Framework",
+    "useRuntime": {
+      "src": "package.json",
+      "use": "@vercel/next",
+    },
+    "website": "https://blitzjs.com",
+  },
+  {
+    "cachePattern": ".next/cache/**",
+    "darkModeLogo": "https://api-frameworks-two.vercel.sh/framework-logos/next-dark.svg",
+    "demo": "https://nextjs-template.vercel.app",
+    "description": "A Next.js app and a Serverless Function API.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "next",
+        },
+      ],
+    },
+    "envPrefix": "NEXT_PUBLIC_",
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/next.svg",
+    "name": "Next.js",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "recommendedIntegrations": [
+      {
+        "dependencies": [
+          "next-plugin-sentry",
+          "next-sentry-source-maps",
+        ],
+        "id": "oac_5lUsiANun1DEzgLg0NZx5Es3",
+      },
+    ],
+    "screenshot": "https://py8fhxnkzwtsqdo9.public.blob.vercel-storage.com/front/import/nextjs.png",
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`next build\`",
+        "value": "next build",
+      },
+      "devCommand": {
+        "placeholder": "next",
+        "value": "next dev --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "placeholder": "Next.js default",
+      },
+    },
+    "slug": "nextjs",
+    "sort": 1,
+    "tagline": "Next.js makes you productive with React instantly — whether you want to build static or dynamic sites.",
+    "useRuntime": {
+      "src": "package.json",
+      "use": "@vercel/next",
+    },
+    "website": "https://nextjs.org",
+  },
+  {
+    "cachePattern": "{.cache,public}/**",
+    "defaultRoutes": {
+      "fallback": [
+        {
+          "continue": true,
+          "headers": {
+            "cache-control": "public,max-age=31536000,immutable",
+          },
+          "src": "^/static/(.*)$",
+        },
+        {
+          "continue": true,
+          "headers": {
+            "cache-control": "public,max-age=31536000,immutable",
+          },
+          "src": "^/.*\\.(js|css)$",
+        },
+        {
+          "continue": true,
+          "headers": {
+            "cache-control": "public,max-age=0,must-revalidate",
+          },
+          "src": "^/(sw\\.js|app-data\\.json|.*\\.html|page-data/.*)$",
+        },
+        {
+          "handle": "filesystem",
+        },
+        {
+          "dest": "404.html",
+          "src": ".*",
+          "status": 404,
+        },
+      ],
+      "type": "gatsby",
+    },
+    "demo": "https://gatsby.vercel.app",
+    "dependency": "gatsby",
+    "description": "A Gatsby starter app with an API Route.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "gatsby",
+        },
+      ],
+    },
+    "envPrefix": "GATSBY_",
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/gatsby.svg",
+    "name": "Gatsby.js",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`gatsby build\`",
+        "value": "gatsby build",
+      },
+      "devCommand": {
+        "placeholder": "gatsby develop",
+        "value": "gatsby develop --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "public",
+      },
+    },
+    "slug": "gatsby",
+    "sort": 5,
+    "tagline": "Gatsby helps developers build blazing fast websites and apps with React.",
+    "website": "https://gatsbyjs.org",
+  },
+  {
+    "demo": "https://remix-run-template.vercel.app",
+    "dependency": "remix",
+    "description": "A new Remix app — the result of running \`npx create-remix\`.",
+    "detectors": {
+      "some": [
+        {
+          "matchPackage": "@remix-run/dev",
+        },
+        {
+          "path": "remix.config.js",
+        },
+        {
+          "path": "remix.config.mjs",
+        },
+      ],
+    },
+    "ignoreRuntimes": [
+      "@vercel/node",
+    ],
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/remix-no-shadow.svg",
+    "name": "Remix",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`remix build\`",
+        "value": "remix build",
+      },
+      "devCommand": {
+        "placeholder": "remix dev",
+        "value": "remix dev",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "public",
+      },
+    },
+    "slug": "remix",
+    "sort": 6,
+    "supersedes": [
+      "hydrogen",
+      "vite",
+      "node",
+    ],
+    "tagline": "Build Better Websites",
+    "useRuntime": {
+      "src": "package.json",
+      "use": "@vercel/remix-builder",
+    },
+    "website": "https://remix.run",
+  },
+  {
+    "darkModeLogo": "https://api-frameworks-two.vercel.sh/framework-logos/react-router-dark.svg",
+    "demo": "https://react-router-v7-template.vercel.app",
+    "dependency": "react-router",
+    "description": "A user-obsessed, standards-focused, multi-strategy router you can deploy anywhere.",
+    "detectors": {
+      "some": [
+        {
+          "matchContent": "@react-router/dev/vite",
+          "path": "vite.config.js",
+        },
+        {
+          "matchContent": "@react-router/dev/vite",
+          "path": "vite.config.ts",
+        },
+        {
+          "path": "react-router.config.js",
+        },
+        {
+          "path": "react-router.config.ts",
+        },
+      ],
+    },
+    "ignoreRuntimes": [
+      "@vercel/node",
+    ],
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/react-router.svg",
+    "name": "React Router",
+    "outputDirName": {
+      "type": "static",
+      "value": "build",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`react-router build\`",
+        "value": "react-router build",
+      },
+      "devCommand": {
+        "placeholder": "react-router dev",
+        "value": "react-router dev",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "build",
+      },
+    },
+    "slug": "react-router",
+    "sort": 7,
+    "supersedes": [
+      "hydrogen",
+      "vite",
+      "node",
+    ],
+    "tagline": "Declarative routing for React",
+    "useRuntime": {
+      "src": "package.json",
+      "use": "@vercel/remix-builder",
+    },
+    "website": "https://reactrouter.com",
+  },
+  {
+    "darkModeLogo": "https://api-frameworks-two.vercel.sh/framework-logos/astro-dark.svg",
+    "defaultRoutes": [
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "public, max-age=31536000, immutable",
+        },
+        "src": "^/assets/(.*)$",
+      },
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "public, max-age=31536000, immutable",
+        },
+        "src": "^/_astro/(.*)$",
+      },
+    ],
+    "demo": "https://astro-template.vercel.app",
+    "dependency": "astro",
+    "description": "An Astro site, using the basics starter kit.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "astro",
+        },
+      ],
+    },
+    "envPrefix": "PUBLIC_",
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/astro.svg",
+    "name": "Astro",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`astro build\`",
+        "value": "astro build",
+      },
+      "devCommand": {
+        "placeholder": "astro dev",
+        "value": "astro dev --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "dist",
+      },
+    },
+    "slug": "astro",
+    "tagline": "Astro is a new kind of static site builder for the modern web. Powerful developer experience meets lightweight output.",
+    "website": "https://astro.build",
+  },
+  {
+    "demo": "https://hexo-template.vercel.app",
+    "dependency": "hexo",
+    "description": "A Hexo site, created with the Hexo CLI.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "hexo",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/hexo.svg",
+    "name": "Hexo",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`hexo generate\`",
+        "value": "hexo generate",
+      },
+      "devCommand": {
+        "placeholder": "hexo server",
+        "value": "hexo server --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "public",
+      },
+    },
+    "slug": "hexo",
+    "tagline": "Hexo is a fast, simple & powerful blog framework powered by Node.js.",
+    "website": "https://hexo.io",
+  },
+  {
+    "cachePattern": ".cache/**",
+    "demo": "https://eleventy-template.vercel.app",
+    "dependency": "@11ty/eleventy",
+    "description": "An Eleventy site, created with npm init.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "@11ty/eleventy",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/eleventy.svg",
+    "name": "Eleventy",
+    "outputDirName": {
+      "type": "static",
+      "value": "_site",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`npx @11ty/eleventy\`",
+        "value": "npx @11ty/eleventy",
+      },
+      "devCommand": {
+        "placeholder": "npx @11ty/eleventy --serve",
+        "value": "npx @11ty/eleventy --serve --watch --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "_site",
+      },
+    },
+    "slug": "eleventy",
+    "tagline": "11ty is a simpler static site generator written in JavaScript, created to be an alternative to Jekyll.",
+    "website": "https://www.11ty.dev",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "max-age=31536000, immutable",
+        },
+        "src": "^/[^./]+\\.[0-9a-f]{8}\\.(css|js)$",
+      },
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "max-age=31536000, immutable",
+        },
+        "src": "^/assets/images/[^/]+-[0-9a-f]{32}\\.(ico|svg|jpg|jpeg|png|gif|webp)$",
+      },
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "max-age=31536000, immutable",
+        },
+        "src": "^/assets/medias/[^/]+-[0-9a-f]{32}\\.(ogv|wav|mp3|m4a|aac|oga|flac)$",
+      },
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "max-age=31536000, immutable",
+        },
+        "src": "^/assets/files/[^/]+-[0-9a-f]{32}\\.(pdf|doc|docx|xls|xlsx|zip|rar)$",
+      },
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "max-age=31536000, immutable",
+        },
+        "src": "^/ideal-img/[^/]+\\.[0-9a-f]{7}\\.\\d+\\.(png|jpe?g|gif)$",
+      },
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "404.html",
+        "src": ".*",
+        "status": 404,
+      },
+    ],
+    "demo": "https://docusaurus-2-template.vercel.app",
+    "dependency": "@docusaurus/core",
+    "description": "A static Docusaurus site that makes it easy to maintain OSS documentation.",
+    "detectors": {
+      "some": [
+        {
+          "matchPackage": "@docusaurus/core",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/docusaurus.svg",
+    "name": "Docusaurus (v2+)",
+    "outputDirName": {
+      "base": "build",
+      "type": "single-subdir",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`docusaurus build\`",
+        "value": "docusaurus build",
+      },
+      "devCommand": {
+        "placeholder": "docusaurus start",
+        "value": "docusaurus start --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "build",
+      },
+    },
+    "slug": "docusaurus-2",
+    "tagline": "Docusaurus makes it easy to maintain Open Source documentation websites.",
+    "website": "https://v2.docusaurus.io",
+  },
+  {
+    "demo": "https://docusaurus-template.vercel.app",
+    "dependency": "docusaurus",
+    "description": "A static Docusaurus site that makes it easy to maintain OSS documentation.",
+    "detectors": {
+      "some": [
+        {
+          "matchPackage": "docusaurus",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/docusaurus.svg",
+    "name": "Docusaurus (v1)",
+    "outputDirName": {
+      "base": "build",
+      "type": "single-subdir",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`docusaurus-build\`",
+        "value": "docusaurus-build",
+      },
+      "devCommand": {
+        "placeholder": "docusaurus-start",
+        "value": "docusaurus-start --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "build",
+      },
+    },
+    "slug": "docusaurus",
+    "tagline": "Docusaurus makes it easy to maintain Open Source documentation websites.",
+    "website": "https://docusaurus.io/",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/index.html",
+        "src": "/(.*)",
+      },
+    ],
+    "demo": "https://preact-template.vercel.app",
+    "dependency": "preact-cli",
+    "description": "A Preact app, created with the Preact CLI.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "preact-cli",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/preact.svg",
+    "name": "Preact",
+    "outputDirName": {
+      "type": "static",
+      "value": "build",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`preact build\`",
+        "value": "preact build",
+      },
+      "devCommand": {
+        "placeholder": "preact watch",
+        "value": "preact watch --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "build",
+      },
+    },
+    "slug": "preact",
+    "tagline": "Preact is a fast 3kB alternative to React with the same modern API.",
+    "website": "https://preactjs.com",
+  },
+  {
+    "demo": "https://solid-start-template.vercel.app",
+    "description": "A Solid app, created with SolidStart.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "solid-js",
+        },
+        {
+          "matchPackage": "@solidjs/start",
+        },
+      ],
+    },
+    "envPrefix": "VITE_",
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/solid.svg",
+    "name": "SolidStart (v1)",
+    "outputDirName": {
+      "type": "static",
+      "value": ".output",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`vinxi build\`",
+        "value": "vinxi build",
+      },
+      "devCommand": {
+        "value": "vinxi dev",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": ".output",
+      },
+    },
+    "slug": "solidstart-1",
+    "tagline": "Simple and performant reactivity for building user interfaces.",
+    "website": "https://start.solidjs.com",
+  },
+  {
+    "demo": "https://solid-start-template.vercel.app",
+    "description": "A Solid app, created with SolidStart.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "solid-js",
+        },
+        {
+          "matchPackage": "solid-start",
+        },
+      ],
+    },
+    "envPrefix": "VITE_",
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/solid.svg",
+    "name": "SolidStart (v0)",
+    "outputDirName": {
+      "type": "static",
+      "value": ".output",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`solid-start build\`",
+        "value": "solid-start build",
+      },
+      "devCommand": {
+        "value": "solid-start dev",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": ".output",
+      },
+    },
+    "slug": "solidstart",
+    "sort": 98,
+    "tagline": "Simple and performant reactivity for building user interfaces.",
+    "website": "https://solidjs.com",
+  },
+  {
+    "defaulHeaders": [
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "s-maxage=0",
+        },
+        "regex": "/service-worker.js",
+        "source": "/service-worker.js",
+      },
+    ],
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "s-maxage=0",
+        },
+        "src": "/service-worker.js",
+      },
+      {
+        "dest": "/index.html",
+        "src": "/(.*)",
+      },
+    ],
+    "demo": "https://dojo-template.vercel.app",
+    "dependency": "@dojo/cli",
+    "description": "A Dojo app, created with the Dojo CLI's cli-create-app command.",
+    "detectors": {
+      "some": [
+        {
+          "matchPackage": "@dojo/framework",
+        },
+        {
+          "path": ".dojorc",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/dojo.png",
+    "name": "Dojo",
+    "outputDirName": {
+      "type": "static",
+      "value": "output/dist",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`dojo build\`",
+        "value": "dojo build",
+      },
+      "devCommand": {
+        "placeholder": "dojo build -m dev -w -s",
+        "value": "dojo build -m dev -w -s -p $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "output/dist",
+      },
+    },
+    "slug": "dojo",
+    "tagline": "Dojo is a modern progressive, TypeScript first framework.",
+    "website": "https://dojo.io",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/index.html",
+        "src": "/(.*)",
+      },
+    ],
+    "demo": "https://ember-template.vercel.app",
+    "dependency": "ember-cli",
+    "description": "An Ember app, created with the Ember CLI.",
+    "detectors": {
+      "some": [
+        {
+          "matchPackage": "ember-source",
+        },
+        {
+          "matchPackage": "ember-cli",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/ember.svg",
+    "name": "Ember.js",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`ember build\`",
+        "value": "ember build",
+      },
+      "devCommand": {
+        "placeholder": "ember serve",
+        "value": "ember serve --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "dist",
+      },
+    },
+    "slug": "ember",
+    "tagline": "Ember.js helps webapp developers be more productive out of the box.",
+    "website": "https://emberjs.com/",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "max-age=300",
+        },
+        "src": "^/[^/]*\\.(js|txt|ico|json)",
+      },
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "max-age=31536000, immutable",
+        },
+        "src": "^/(img|js|css|fonts|media)/[^/]+\\.[0-9a-f]{8}\\.*",
+      },
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/index.html",
+        "src": "^.*",
+      },
+    ],
+    "demo": "https://vue-template.vercel.app",
+    "dependency": "@vue/cli-service",
+    "description": "A Vue.js app, created with the Vue CLI.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "@vue/cli-service",
+        },
+      ],
+    },
+    "envPrefix": "VUE_APP_",
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/vue.svg",
+    "name": "Vue.js",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`vue-cli-service build\`",
+        "value": "vue-cli-service build",
+      },
+      "devCommand": {
+        "placeholder": "vue-cli-service serve",
+        "value": "vue-cli-service serve --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "dist",
+      },
+    },
+    "slug": "vue",
+    "tagline": "Vue.js is a versatile JavaScript framework that is as approachable as it is performant.",
+    "website": "https://vuejs.org",
+  },
+  {
+    "demo": "https://scully-template.vercel.app",
+    "dependency": "@scullyio/init",
+    "description": "The Static Site Generator for Angular apps.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "@scullyio/init",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/scullyio-logo.png",
+    "name": "Scully",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist/static",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`ng build && scully\`",
+        "value": "ng build && scully",
+      },
+      "devCommand": {
+        "placeholder": "ng serve",
+        "value": "ng serve --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "dist",
+      },
+    },
+    "slug": "scully",
+    "tagline": "Scully is a static site generator for Angular.",
+    "website": "https://github.com/scullyio/scully",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/index.html",
+        "src": "/(.*)",
+      },
+    ],
+    "demo": "https://ionic-angular-template.vercel.app",
+    "dependency": "@ionic/angular",
+    "description": "An Ionic Angular site, created with the Ionic CLI.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "@ionic/angular",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/ionic.svg",
+    "name": "Ionic Angular",
+    "outputDirName": {
+      "type": "static",
+      "value": "www",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`ng build\`",
+        "value": "ng build",
+      },
+      "devCommand": {
+        "value": "ng serve --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "www",
+      },
+    },
+    "slug": "ionic-angular",
+    "tagline": "Ionic Angular allows you to build mobile PWAs with Angular and the Ionic Framework.",
+    "website": "https://ionicframework.com",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/index.html",
+        "src": "/(.*)",
+      },
+    ],
+    "demo": "https://angular-template.vercel.app",
+    "dependency": "@angular/cli",
+    "description": "An Angular app, created with the Angular CLI.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "@angular/cli",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/angular.svg",
+    "name": "Angular",
+    "outputDirName": {
+      "base": "dist",
+      "checkBrowser": true,
+      "type": "single-subdir",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`ng build\`",
+        "value": "ng build",
+      },
+      "devCommand": {
+        "placeholder": "ng serve",
+        "value": "ng serve --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "dist",
+      },
+    },
+    "slug": "angular",
+    "tagline": "Angular is a TypeScript-based cross-platform framework from Google.",
+    "website": "https://angular.io",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/index.html",
+        "src": "/(.*)",
+      },
+    ],
+    "demo": "https://polymer-template.vercel.app",
+    "dependency": "polymer-cli",
+    "description": "A Polymer app, created with the Polymer CLI.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "polymer-cli",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/polymer.svg",
+    "name": "Polymer",
+    "outputDirName": {
+      "base": "build",
+      "type": "single-subdir-nodot",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`polymer build\`",
+        "value": "polymer build",
+      },
+      "devCommand": {
+        "placeholder": "polymer serve",
+        "value": "polymer serve --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "build",
+      },
+    },
+    "slug": "polymer",
+    "tagline": "Polymer is an open-source webapps library from Google, for building using Web Components.",
+    "website": "https://www.polymer-project.org/",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/index.html",
+        "src": "/(.*)",
+      },
+    ],
+    "demo": "https://svelte.vercel.app",
+    "dependency": "sirv-cli",
+    "description": "A basic Svelte app using the default template.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "svelte",
+        },
+        {
+          "matchPackage": "sirv-cli",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/svelte.svg",
+    "name": "Svelte",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`rollup -c\`",
+        "value": "rollup -c",
+      },
+      "devCommand": {
+        "value": "rollup -c -w",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "public",
+      },
+    },
+    "slug": "svelte",
+    "sort": 3,
+    "tagline": "Svelte lets you write high performance reactive apps with significantly less boilerplate.",
+    "website": "https://svelte.dev",
+  },
+  {
+    "demo": "https://sveltekit-template.vercel.app",
+    "description": "A SvelteKit legacy app optimized Edge-first.",
+    "detectors": {
+      "every": [
+        {
+          "matchContent": ""(dev)?(d|D)ependencies":\\s*{[^}]*"@sveltejs\\/kit":\\s*"1\\.0\\.0-next\\.(\\d+)"[^}]*}",
+          "path": "package.json",
+        },
+      ],
+    },
+    "envPrefix": "VITE_",
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/svelte.svg",
+    "name": "SvelteKit (v0)",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "screenshot": "https://py8fhxnkzwtsqdo9.public.blob.vercel-storage.com/front/import/sveltekit.png",
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`svelte-kit build\`",
+        "value": "svelte-kit build",
+      },
+      "devCommand": {
+        "placeholder": "svelte-kit dev",
+        "value": "svelte-kit dev --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "public",
+      },
+    },
+    "slug": "sveltekit",
+    "sort": 99,
+    "supersedes": [
+      "vite",
+    ],
+    "tagline": "SvelteKit is a framework for building web applications of all sizes.",
+    "website": "https://kit.svelte.dev",
+  },
+  {
+    "demo": "https://sveltekit-1-template.vercel.app",
+    "description": "A SvelteKit app optimized Edge-first.",
+    "detectors": {
+      "every": [
+        {
+          "matchContent": ""(dev)?(d|D)ependencies":\\s*{[^}]*"@sveltejs\\/kit":\\s*".+?"[^}]*}",
+          "path": "package.json",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/svelte.svg",
+    "name": "SvelteKit",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "screenshot": "https://py8fhxnkzwtsqdo9.public.blob.vercel-storage.com/front/import/sveltekit.png",
+    "settings": {
+      "buildCommand": {
+        "placeholder": "vite build",
+        "value": "vite build",
+      },
+      "devCommand": {
+        "placeholder": "vite dev",
+        "value": "vite dev --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "public",
+      },
+    },
+    "slug": "sveltekit-1",
+    "supersedes": [
+      "vite",
+    ],
+    "tagline": "SvelteKit is a framework for building web applications of all sizes.",
+    "website": "https://kit.svelte.dev",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "s-maxage=31536000, immutable",
+        },
+        "src": "/static/(.*)",
+      },
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "s-maxage=0",
+        },
+        "src": "/service-worker.js",
+      },
+      {
+        "dest": "/sockjs-node/$1",
+        "src": "/sockjs-node/(.*)",
+      },
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/404.html",
+        "src": "/static/(.*)",
+        "status": 404,
+      },
+      {
+        "dest": "/index.html",
+        "headers": {
+          "cache-control": "s-maxage=0",
+        },
+        "src": "/(.*)",
+      },
+    ],
+    "demo": "https://ionic-react-template.vercel.app",
+    "dependency": "@ionic/react",
+    "description": "An Ionic React site, created with the Ionic CLI.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "@ionic/react",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/ionic.svg",
+    "name": "Ionic React",
+    "outputDirName": {
+      "type": "static",
+      "value": "build",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`react-scripts build\`",
+        "value": "react-scripts build",
+      },
+      "devCommand": {
+        "value": "react-scripts start",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "build",
+      },
+    },
+    "slug": "ionic-react",
+    "tagline": "Ionic React allows you to build mobile PWAs with React and the Ionic Framework.",
+    "website": "https://ionicframework.com",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "s-maxage=31536000, immutable",
+        },
+        "src": "/static/(.*)",
+      },
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "s-maxage=0",
+        },
+        "src": "/service-worker.js",
+      },
+      {
+        "dest": "/sockjs-node/$1",
+        "src": "/sockjs-node/(.*)",
+      },
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/404.html",
+        "src": "/static/(.*)",
+        "status": 404,
+      },
+      {
+        "dest": "/index.html",
+        "headers": {
+          "cache-control": "s-maxage=0",
+        },
+        "src": "/(.*)",
+      },
+    ],
+    "demo": "https://create-react-template.vercel.app",
+    "dependency": "react-scripts",
+    "description": "A client-side React app created with create-react-app.",
+    "detectors": {
+      "some": [
+        {
+          "matchPackage": "react-scripts",
+        },
+        {
+          "matchPackage": "react-dev-utils",
+        },
+      ],
+    },
+    "envPrefix": "REACT_APP_",
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/react.svg",
+    "name": "Create React App",
+    "outputDirName": {
+      "type": "static",
+      "value": "build",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`react-scripts build\`",
+        "value": "react-scripts build",
+      },
+      "devCommand": {
+        "value": "react-scripts start",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "build",
+      },
+    },
+    "slug": "create-react-app",
+    "sort": 4,
+    "tagline": "Create React App allows you to get going with React in no time.",
+    "website": "https://create-react-app.dev",
+  },
+  {
+    "demo": "https://gridsome-template.vercel.app",
+    "dependency": "gridsome",
+    "description": "A Gridsome app, created with the Gridsome CLI.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "gridsome",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/gridsome.svg",
+    "name": "Gridsome",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`gridsome build\`",
+        "value": "gridsome build",
+      },
+      "devCommand": {
+        "placeholder": "gridsome develop",
+        "value": "gridsome develop -p $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "dist",
+      },
+    },
+    "slug": "gridsome",
+    "tagline": "Gridsome is a Vue.js-powered framework for building websites & apps that are fast by default.",
+    "website": "https://gridsome.org/",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/index.html",
+        "src": "/(.*)",
+      },
+    ],
+    "demo": "https://umijs-template.vercel.app",
+    "dependency": "umi",
+    "description": "An UmiJS app, created using the Umi CLI.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "umi",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/umi.svg",
+    "name": "UmiJS",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`umi build\`",
+        "value": "umi build",
+      },
+      "devCommand": {
+        "placeholder": "umi dev",
+        "value": "umi dev --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "dist",
+      },
+    },
+    "slug": "umijs",
+    "tagline": "UmiJS is an extensible enterprise-level React application framework.",
+    "website": "https://umijs.org",
+  },
+  {
+    "demo": "https://sapper-template.vercel.app",
+    "dependency": "sapper",
+    "description": "A Sapper app, using the Sapper template.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "sapper",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/svelte.svg",
+    "name": "Sapper",
+    "outputDirName": {
+      "type": "static",
+      "value": "__sapper__/export",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`sapper export\`",
+        "value": "sapper export",
+      },
+      "devCommand": {
+        "placeholder": "sapper dev",
+        "value": "sapper dev --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "__sapper__/export",
+      },
+    },
+    "slug": "sapper",
+    "tagline": "Sapper is a framework for building high-performance universal web apps with Svelte.",
+    "website": "https://sapper.svelte.dev",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "headers": {
+          "cache-control": "max-age=31536000, immutable",
+        },
+        "src": "/_saber/.*",
+      },
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "404.html",
+        "src": ".*",
+        "status": 404,
+      },
+    ],
+    "dependency": "saber",
+    "description": "A Saber site, created with npm init.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "saber",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/saber.svg",
+    "name": "Saber",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`saber build\`",
+        "value": "saber build",
+      },
+      "devCommand": {
+        "placeholder": "saber",
+        "value": "saber --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "public",
+      },
+    },
+    "slug": "saber",
+    "tagline": "Saber is a framework for building static sites in Vue.js that supports data from any source.",
+    "website": "https://saber.egoist.dev",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "max-age=2592000",
+        },
+        "src": "/assets/(.*)",
+      },
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "max-age=31536000, immutable",
+        },
+        "src": "/build/p-.*",
+      },
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "no-cache",
+        },
+        "src": "/sw.js",
+      },
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/index.html",
+        "src": "/(.*)",
+      },
+    ],
+    "demo": "https://stencil.vercel.app",
+    "dependency": "@stencil/core",
+    "description": "A Stencil site, created with the Stencil CLI.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "@stencil/core",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/stencil.svg",
+    "name": "Stencil",
+    "outputDirName": {
+      "type": "static",
+      "value": "www",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`stencil build\`",
+        "value": "stencil build",
+      },
+      "devCommand": {
+        "placeholder": "stencil build --dev --watch --serve",
+        "value": "stencil build --dev --watch --serve --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "www",
+      },
+    },
+    "slug": "stencil",
+    "tagline": "Stencil is a powerful toolchain for building Progressive Web Apps and Design Systems.",
+    "website": "https://stenciljs.com/",
+  },
+  {
+    "cachePattern": ".nuxt/**",
+    "defaultRoutes": [
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "no-cache",
+        },
+        "src": "/sw.js",
+      },
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "public,max-age=31536000,immutable",
+        },
+        "src": "/_nuxt/(.*)",
+      },
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/200.html",
+        "src": "/(.*)",
+      },
+    ],
+    "demo": "https://nuxtjs-template.vercel.app",
+    "dependency": "nuxt",
+    "description": "A Nuxt app, bootstrapped with create-nuxt-app.",
+    "detectors": {
+      "some": [
+        {
+          "matchPackage": "nuxt",
+        },
+        {
+          "matchPackage": "nuxt3",
+        },
+        {
+          "matchPackage": "nuxt-edge",
+        },
+        {
+          "matchPackage": "nuxt-nightly",
+        },
+      ],
+    },
+    "envPrefix": "NUXT_ENV_",
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/nuxt.svg",
+    "name": "Nuxt",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
+    "screenshot": "https://py8fhxnkzwtsqdo9.public.blob.vercel-storage.com/front/import/nuxtjs.png",
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`nuxt build\`",
+        "value": "nuxt build",
+      },
+      "devCommand": {
+        "value": "nuxt dev",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "dist",
+      },
+    },
+    "slug": "nuxtjs",
+    "sort": 2,
+    "supersedes": [
+      "nitro",
+    ],
+    "tagline": "Nuxt is the open source framework that makes full-stack development with Vue.js intuitive.",
+    "website": "https://nuxt.com",
+  },
+  {
+    "demo": "https://redwood-template.vercel.app",
+    "description": "A RedwoodJS app, bootstraped with create-redwood-app.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "@redwoodjs/core",
+        },
+      ],
+    },
+    "envPrefix": "REDWOOD_ENV_",
+    "ignoreRuntimes": [
+      "@vercel/node",
+    ],
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/redwoodjs.svg",
+    "name": "RedwoodJS",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "value": "yarn rw deploy vercel",
+      },
+      "devCommand": {
+        "placeholder": "yarn rw dev",
+        "value": "yarn rw dev --fwd="--port=$PORT --open=false"",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "placeholder": "RedwoodJS default",
+      },
+    },
+    "slug": "redwoodjs",
+    "tagline": "RedwoodJS is a full-stack framework for the Jamstack.",
+    "useRuntime": {
+      "src": "package.json",
+      "use": "@vercel/redwood",
+    },
+    "website": "https://redwoodjs.com",
+  },
+  {
+    "defaultVersion": "0.58.2",
+    "demo": "https://hugo-template.vercel.app",
+    "description": "A Hugo site, created with the Hugo CLI.",
+    "detectors": {
+      "some": [
+        {
+          "matchContent": "baseURL",
+          "path": "config.yaml",
+        },
+        {
+          "matchContent": "baseURL",
+          "path": "config.toml",
+        },
+        {
+          "matchContent": "baseURL",
+          "path": "config.json",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/hugo.svg",
+    "name": "Hugo",
+    "outputDirName": {
+      "fallback": "public",
+      "files": [
+        "config.json",
+        "config.yaml",
+        "config.toml",
+      ],
+      "key": "publishDir",
+      "type": "config-file",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`hugo --gc\`",
+        "value": "hugo --gc",
+      },
+      "devCommand": {
+        "placeholder": "hugo server -D",
+        "value": "hugo server -D -w -p $PORT",
+      },
+      "installCommand": {
+        "placeholder": "None",
+      },
+      "outputDirectory": {
+        "placeholder": "\`public\` or \`publishDir\` from the \`config\` file",
+      },
+    },
+    "slug": "hugo",
+    "tagline": "Hugo is the world’s fastest framework for building websites, written in Go.",
+    "website": "https://gohugo.io",
+  },
+  {
+    "cachePattern": "{vendor/bin,vendor/cache,vendor/bundle}/**",
+    "demo": "https://jekyll-template.vercel.app",
+    "description": "A Jekyll site, created with the Jekyll CLI.",
+    "detectors": {
+      "every": [
+        {
+          "path": "_config.yml",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/jekyll.svg",
+    "name": "Jekyll",
+    "outputDirName": {
+      "fallback": "_site",
+      "files": [
+        "_config.yml",
+      ],
+      "key": "destination",
+      "type": "config-file",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`jekyll build\`",
+        "value": "jekyll build",
+      },
+      "devCommand": {
+        "placeholder": "bundle exec jekyll serve",
+        "value": "bundle exec jekyll serve --watch --port $PORT",
+      },
+      "installCommand": {
+        "value": "bundle install",
+      },
+      "outputDirectory": {
+        "placeholder": "\`_site\` or \`destination\` from \`_config.yml\`",
+      },
+    },
+    "slug": "jekyll",
+    "tagline": "Jekyll makes it super easy to transform your plain text into static websites and blogs.",
+    "website": "https://jekyllrb.com/",
+  },
+  {
+    "demo": "https://brunch-template.vercel.app",
+    "description": "A Brunch app, created with the Brunch CLI.",
+    "detectors": {
+      "some": [
+        {
+          "matchPackage": "brunch",
+        },
+        {
+          "path": "brunch-config.js",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/brunch.svg",
+    "name": "Brunch",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`brunch build --production\`",
+        "value": "brunch build --production",
+      },
+      "devCommand": {
+        "placeholder": "brunch watch --server",
+        "value": "brunch watch --server --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "public",
+      },
+    },
+    "slug": "brunch",
+    "tagline": "Brunch is a fast and simple webapp build tool with seamless incremental compilation for rapid development.",
+    "website": "https://brunch.io/",
+  },
+  {
+    "cachePattern": "{vendor/bin,vendor/cache,vendor/bundle}/**",
+    "demo": "https://middleman-template.vercel.app",
+    "description": "A Middleman app, created with the Middleman CLI.",
+    "detectors": {
+      "every": [
+        {
+          "path": "config.rb",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/middleman.svg",
+    "name": "Middleman",
+    "outputDirName": {
+      "type": "static",
+      "value": "build",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`bundle exec middleman build\`",
+        "value": "bundle exec middleman build",
+      },
+      "devCommand": {
+        "placeholder": "bundle exec middleman server",
+        "value": "bundle exec middleman server -p $PORT",
+      },
+      "installCommand": {
+        "value": "bundle install",
+      },
+      "outputDirectory": {
+        "value": "build",
+      },
+    },
+    "slug": "middleman",
+    "tagline": "Middleman is a static site generator that uses all the shortcuts and tools in modern web development.",
+    "website": "https://middlemanapp.com/",
+  },
+  {
+    "defaultVersion": "0.13.0",
+    "demo": "https://zola-template.vercel.app",
+    "description": "A Zola app, created with the "Getting Started" tutorial.",
+    "detectors": {
+      "every": [
+        {
+          "matchContent": "base_url",
+          "path": "config.toml",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/zola.png",
+    "name": "Zola",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "value": "zola build",
+      },
+      "devCommand": {
+        "placeholder": "zola serve",
+        "value": "zola serve --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "None",
+      },
+      "outputDirectory": {
+        "value": "public",
+      },
+    },
+    "slug": "zola",
+    "tagline": "Everything you need to make a static site engine in one binary.",
+    "website": "https://www.getzola.org",
+  },
+  {
+    "demo": "https://hydrogen-template.vercel.app",
+    "dependency": "@shopify/hydrogen",
+    "description": "React framework for headless commerce",
+    "detectors": {
+      "some": [
+        {
+          "matchPackage": "@shopify/hydrogen",
+        },
+        {
+          "path": "hydrogen.config.js",
+        },
+        {
+          "path": "hydrogen.config.ts",
+        },
+      ],
+    },
+    "envPrefix": "PUBLIC_",
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/hydrogen.svg",
+    "name": "Hydrogen (v1)",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`shopify hydrogen build\`",
+        "value": "shopify hydrogen build",
+      },
+      "devCommand": {
+        "placeholder": "shopify hydrogen dev",
+        "value": "shopify hydrogen dev",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "dist",
+      },
+    },
+    "slug": "hydrogen",
+    "supersedes": [
+      "vite",
+    ],
+    "tagline": "React framework for headless commerce",
+    "useRuntime": {
+      "src": "package.json",
+      "use": "@vercel/hydrogen",
+    },
+    "website": "https://hydrogen.shopify.dev",
+  },
+  {
+    "demo": "https://vite-vue-template.vercel.app",
+    "dependency": "vite",
+    "description": "A Vue.js app, created with Vite.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "vite",
+        },
+      ],
+    },
+    "envPrefix": "VITE_",
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/vite.svg",
+    "name": "Vite",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`vite build\`",
+        "value": "vite build",
+      },
+      "devCommand": {
+        "placeholder": "vite",
+        "value": "vite --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "dist",
+      },
+    },
+    "slug": "vite",
+    "supersedes": [
+      "ionic-react",
+    ],
+    "tagline": "Vite is a new breed of frontend build tool that significantly improves the frontend development experience.",
+    "website": "https://vitejs.dev",
+  },
+  {
+    "darkModeLogo": "https://api-frameworks-two.vercel.sh/framework-logos/tanstack-start-dark.svg",
+    "description": "Full-document SSR, Streaming, Server Functions, bundling and more, powered by TanStack Router and Vite - Ready to deploy to your favorite hosting provider.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "@tanstack/router-plugin",
+        },
+      ],
+      "some": [
+        {
+          "matchPackage": "@tanstack/react-start",
+        },
+        {
+          "matchPackage": "@tanstack/solid-start",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/tanstack-start.svg",
+    "name": "TanStack Start",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`vite build\`",
+        "value": "vite build",
+      },
+      "devCommand": {
+        "placeholder": "vite",
+        "value": "vite --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "dist",
+      },
+    },
+    "slug": "tanstack-start",
+    "supersedes": [
+      "ionic-react",
+      "vite",
+    ],
+    "tagline": "Full-stack Framework powered by TanStack Router for React and Solid.",
+    "website": "https://tanstack.com/start",
+  },
+  {
+    "darkModeLogo": "https://api-frameworks-two.vercel.sh/framework-logos/tanstack-start-dark.svg",
+    "description": "Full-document SSR, Streaming, Server Functions, bundling and more, imported from Lovable",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "@lovable.dev/vite-tanstack-config",
+        },
+      ],
+      "some": [
+        {
+          "matchPackage": "@tanstack/react-start",
+        },
+        {
+          "matchPackage": "@tanstack/solid-start",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/tanstack-start.svg",
+    "name": "TanStack Start",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
+    "platform": {
+      "logo": "https://api-frameworks-two.vercel.sh/framework-logos/lovable.svg",
+      "name": "lovable",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`vite build\`",
+        "value": "vite build",
+      },
+      "devCommand": {
+        "placeholder": "vite",
+        "value": "vite --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "dist",
+      },
+    },
+    "slug": "tanstack-start-lovable",
+    "supersedes": [
+      "tanstack-start",
+      "ionic-react",
+      "vite",
+    ],
+    "tagline": "Full-stack Framework powered by TanStack Router imported from Lovable",
+    "website": "https://lovable.dev/",
+  },
+  {
+    "demo": "https://vitepress-starter-template.vercel.app",
+    "description": "VuePress on top of Vite",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "vitepress",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/vite.svg",
+    "name": "VitePress",
+    "outputDirName": {
+      "type": "static",
+      "value": "docs/.vitepress/dist",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`vitepress build docs\`",
+        "value": "vitepress build docs",
+      },
+      "devCommand": {
+        "value": "vitepress dev docs --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "docs/.vitepress/dist",
+      },
+    },
+    "slug": "vitepress",
+    "tagline": "VitePress is VuePress' little brother, built on top of Vite.",
+    "website": "https://vitepress.vuejs.org/",
+  },
+  {
+    "demo": "https://vuepress-starter-template.vercel.app",
+    "description": "Vue-powered Static Site Generator",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "vuepress",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/vuepress.png",
+    "name": "VuePress",
+    "outputDirName": {
+      "type": "static",
+      "value": "src/.vuepress/dist",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`vuepress build src\`",
+        "value": "vuepress build src",
+      },
+      "devCommand": {
+        "value": "vuepress dev src --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "src/.vuepress/dist",
+      },
+    },
+    "slug": "vuepress",
+    "tagline": "Vue-powered Static Site Generator",
+    "website": "https://vuepress.vuejs.org/",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "continue": true,
+        "headers": {
+          "cache-control": "s-maxage=31536000, immutable",
+        },
+        "src": "^/[^./]+\\.[0-9a-f]{8}\\.(css|js|png|jpg|webp|avif|svg)$",
+      },
+      {
+        "handle": "filesystem",
+      },
+    ],
+    "demo": "https://parcel-template.vercel.app",
+    "dependency": "parcel",
+    "description": "A vanilla web app built with Parcel.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "parcel",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/parcel.png",
+    "name": "Parcel",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`parcel build\`",
+        "value": "parcel build",
+      },
+      "devCommand": {
+        "placeholder": "parcel",
+        "value": "parcel",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "dist",
+      },
+    },
+    "slug": "parcel",
+    "tagline": "Parcel is a zero configuration build tool for the web that scales to projects of any size and complexity.",
+    "website": "https://parceljs.org",
+  },
+  {
+    "darkModeLogo": "https://api-frameworks-two.vercel.sh/framework-logos/fastapi.svg",
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/",
+        "src": "/(.*)",
+      },
+    ],
+    "demo": "https://vercel-fastapi-gamma-smoky.vercel.app/",
+    "description": "FastAPI framework, high performance, easy to learn, fast to code, ready for production",
+    "detectors": {
+      "some": [
+        {
+          "matchContent": "fastapi",
+          "path": "requirements.txt",
+        },
+        {
+          "matchContent": "fastapi",
+          "path": "pyproject.toml",
+        },
+        {
+          "matchContent": "fastapi",
+          "path": "Pipfile",
+        },
+      ],
+    },
+    "ignoreRuntimes": [
+      "@vercel/python",
+    ],
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/fastapi.svg",
+    "name": "FastAPI",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "\`pip install -r requirements.txt\`",
+      },
+      "outputDirectory": {
+        "value": "N/A",
+      },
+    },
+    "slug": "fastapi",
+    "supersedes": [
+      "python",
+    ],
+    "tagline": "FastAPI framework, high performance, easy to learn, fast to code, ready for production",
+    "useRuntime": {
+      "src": "<detect>",
+      "use": "@vercel/python",
+    },
+    "website": "https://fastapi.tiangolo.com",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/",
+        "src": "/(.*)",
+      },
+    ],
+    "description": "A Flask app, ready for production",
+    "detectors": {
+      "some": [
+        {
+          "matchContent": "[Ff]lask",
+          "path": "requirements.txt",
+        },
+        {
+          "matchContent": "[Ff]lask",
+          "path": "pyproject.toml",
+        },
+        {
+          "matchContent": "[Ff]lask",
+          "path": "Pipfile",
+        },
+      ],
+    },
+    "ignoreRuntimes": [
+      "@vercel/python",
+    ],
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/flask.svg",
+    "name": "Flask",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "\`pip install -r requirements.txt\`",
+      },
+      "outputDirectory": {
+        "value": "N/A",
+      },
+    },
+    "slug": "flask",
+    "supersedes": [
+      "python",
+    ],
+    "tagline": "The Python micro web framework",
+    "useRuntime": {
+      "src": "<detect>",
+      "use": "@vercel/python",
+    },
+    "website": "https://flask.palletsprojects.com",
+  },
+  {
+    "darkModeLogo": "https://api-frameworks-two.vercel.sh/framework-logos/fasthtml-dark.png",
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/main",
+        "src": "/(.*)",
+      },
+    ],
+    "demo": "https://fasthtml-template.vercel.app",
+    "description": "A library for writing fast and scalable Starlette-powered web applications",
+    "detectors": {
+      "every": [
+        {
+          "matchContent": "python-fasthtml",
+          "path": "requirements.txt",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/fasthtml.png",
+    "name": "FastHTML",
+    "outputDirName": {
+      "type": "static",
+      "value": "",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "value": "uvicorn main:app --reload",
+      },
+      "installCommand": {
+        "placeholder": "\`pip install\`",
+      },
+      "outputDirectory": {
+        "value": "N/A",
+      },
+    },
+    "slug": "fasthtml",
+    "supersedes": [
+      "python",
+    ],
+    "tagline": "The fastest way to create an HTML app",
+    "useRuntime": {
+      "src": "main.py",
+      "use": "@vercel/python",
+    },
+    "website": "https://fastht.ml",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/",
+        "src": "/(.*)",
+      },
+    ],
+    "description": "A Django project served via the Python Runtime.",
+    "detectors": {
+      "some": [
+        {
+          "matchContent": "[Dd]jango",
+          "path": "requirements.txt",
+        },
+        {
+          "matchContent": "[Dd]jango",
+          "path": "pyproject.toml",
+        },
+        {
+          "matchContent": "[Dd]jango",
+          "path": "Pipfile",
+        },
+        {
+          "matchContent": "DJANGO_SETTINGS_MODULE",
+          "path": "manage.py",
+        },
+      ],
+    },
+    "ignoreRuntimes": [
+      "@vercel/python",
+    ],
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/django.svg",
+    "name": "Django",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "\`pip install -r requirements.txt\`",
+      },
+      "outputDirectory": {
+        "value": "N/A",
+      },
+    },
+    "slug": "django",
+    "supersedes": [
+      "python",
+    ],
+    "tagline": "Django is a high-level Python web framework that encourages rapid development and clean, pragmatic design. ",
+    "useRuntime": {
+      "src": "<detect>",
+      "use": "@vercel/python",
+    },
+    "website": "https://www.djangoproject.com",
+  },
+  {
+    "darkModeLogo": "https://api-frameworks-two.vercel.sh/framework-logos/ash-dark.svg",
+    "description": "An Ash app: agents authored as a directory of files, compiled and served on Vercel.",
+    "detectors": {
+      "every": [
+        {
+          "matchContent": ""(dev)?(d|D)ependencies":\\s*{[^}]*"experimental-ash":\\s*".+?"[^}]*}",
+          "path": "package.json",
+        },
+      ],
+    },
+    "experimental": true,
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/ash.svg",
+    "name": "Ash",
+    "outputDirName": {
+      "type": "static",
+      "value": ".output",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`ash build\`",
+        "value": "ash build",
+      },
+      "devCommand": {
+        "placeholder": "ash dev",
+        "value": "ash dev",
+      },
+      "installCommand": {
+        "placeholder": "\`pnpm install\`, \`yarn install\`, or \`npm install\`",
+      },
+      "outputDirectory": {
+        "value": ".output",
+      },
+    },
+    "slug": "ash",
+    "tagline": "A filesystem-first framework for durable backend agents on Vercel.",
+  },
+  {
+    "darkModeLogo": "https://api-frameworks-two.vercel.sh/framework-logos/eve-dark.svg",
+    "description": "An eve app: agents authored as a directory of files, compiled and served on Vercel.",
+    "detectors": {
+      "every": [
+        {
+          "matchContent": ""(dev)?(d|D)ependencies":\\s*{[^}]*"eve":\\s*".+?"[^}]*}",
+          "path": "package.json",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/eve.svg",
+    "name": "eve",
+    "outputDirName": {
+      "type": "static",
+      "value": ".output",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`eve build\`",
+        "value": "eve build",
+      },
+      "devCommand": {
+        "placeholder": "eve dev",
+        "value": "eve dev",
+      },
+      "installCommand": {
+        "placeholder": "\`pnpm install\`, \`yarn install\`, or \`npm install\`",
+      },
+      "outputDirectory": {
+        "value": ".output",
+      },
+    },
+    "slug": "eve",
+    "tagline": "A filesystem-first framework for durable backend agents on Vercel.",
+  },
+  {
+    "darkModeLogo": "https://api-frameworks-two.vercel.sh/framework-logos/sanity-dark.svg",
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/index.html",
+        "src": "/(.*)",
+      },
+    ],
+    "demo": "https://template-studio-clean.sanity.dev",
+    "dependency": "sanity",
+    "description": "A Sanity Studio",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "sanity",
+        },
+      ],
+      "some": [
+        {
+          "path": "sanity.config.js",
+        },
+        {
+          "path": "sanity.config.jsx",
+        },
+        {
+          "path": "sanity.config.ts",
+        },
+        {
+          "path": "sanity.config.tsx",
+        },
+      ],
+    },
+    "envPrefix": "SANITY_STUDIO_",
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/sanity.svg",
+    "name": "Sanity",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`sanity build\`",
+        "value": "sanity build",
+      },
+      "devCommand": {
+        "value": "sanity dev --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "dist",
+      },
+    },
+    "slug": "sanity",
+    "tagline": "The back-end built for AI content operations. Power web, mobile, and agentic applications at scale.",
+    "website": "https://www.sanity.io",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/index.html",
+        "src": "/(.*)",
+      },
+    ],
+    "demo": "https://sanity-studio-template.vercel.app",
+    "dependency": "@sanity/cli",
+    "description": "A Sanity Studio",
+    "detectors": {
+      "every": [
+        {
+          "matchContent": ""(dev)?(d|D)ependencies":\\s*{[^}]*"@sanity/cli":\\s*"\\^?2\\..*"[^}]*}",
+          "path": "package.json",
+        },
+      ],
+      "some": [
+        {
+          "path": "sanity.json",
+        },
+      ],
+    },
+    "envPrefix": "SANITY_STUDIO_",
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/sanity-v2.svg",
+    "name": "Sanity (v2 - legacy)",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`sanity build\`",
+        "value": "sanity build",
+      },
+      "devCommand": {
+        "value": "sanity start --port $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "dist",
+      },
+    },
+    "slug": "sanity-v2",
+    "tagline": "The structured content platform.",
+    "website": "https://www.sanity.io",
+  },
+  {
+    "description": "Storybook is a frontend workshop for building UI components and pages in isolation.",
+    "detectionConfidence": "weak",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "storybook",
+        },
+      ],
+    },
+    "disableRootMiddleware": true,
+    "ignoreRuntimes": [
+      "@vercel/next",
+      "@vercel/node",
+    ],
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/storybook.svg",
+    "name": "Storybook",
+    "outputDirName": {
+      "type": "static",
+      "value": "storybook-static",
+    },
+    "settings": {
+      "buildCommand": {
+        "ignorePackageJsonScript": true,
+        "value": "storybook build",
+      },
+      "devCommand": {
+        "value": "storybook dev -p $PORT",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "storybook-static",
+      },
+    },
+    "slug": "storybook",
+    "tagline": "Frontend workshop for UI development",
+    "website": "https://storybook.js.org",
+  },
+  {
+    "demo": "https://nitro-template.vercel.app",
+    "description": "Nitro lets you create web servers that run on multiple platforms.",
+    "detectors": {
+      "some": [
+        {
+          "matchPackage": "nitropack",
+        },
+        {
+          "matchPackage": "nitro",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/nitro.svg",
+    "name": "Nitro",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`nitro build\`",
+        "value": "nitro build",
+      },
+      "devCommand": {
+        "value": "nitro dev",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "dist",
+      },
+    },
+    "slug": "nitro",
+    "supersedes": [
+      "vite",
+    ],
+    "tagline": "Nitro is a next generation server toolkit.",
+    "website": "https://nitro.build/",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/",
+        "src": "/(.*)",
+      },
+    ],
+    "demo": "https://hono.vercel.dev",
+    "dependency": "hono",
+    "description": "Fast, lightweight, built on Web Standards. Support for any JavaScript runtime.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "hono",
+        },
+      ],
+      "some": [
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "app.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "app.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "app.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "app.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "app.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "app.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "index.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "index.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "index.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "index.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "index.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "index.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "server.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "server.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "server.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "server.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "server.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "server.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "src/index.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "src/index.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "src/index.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "src/index.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "src/index.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "src/index.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "src/app.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "src/app.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "src/app.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "src/app.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "src/app.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "src/app.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "src/server.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "src/server.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "src/server.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "src/server.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "src/server.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']hono["']\\s*(?:\\))?",
+          "path": "src/server.cts",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/hono.svg",
+    "name": "Hono",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "N/A",
+      },
+    },
+    "slug": "hono",
+    "supersedes": [
+      "node",
+    ],
+    "tagline": "Web framework built on Web Standards",
+    "useRuntime": {
+      "src": "index.js",
+      "use": "@vercel/hono",
+    },
+    "website": "https://hono.dev",
+  },
+  {
+    "darkModeLogo": "https://api-frameworks-two.vercel.sh/framework-logos/express-dark.svg",
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/",
+        "src": "/(.*)",
+      },
+    ],
+    "demo": "https://express-vercel-example-demo.vercel.app/",
+    "dependency": "express",
+    "description": "Fast, unopinionated, minimalist web framework for Node.js",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "express",
+        },
+      ],
+      "some": [
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "app.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "app.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "app.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "app.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "app.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "app.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "index.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "index.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "index.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "index.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "index.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "index.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "server.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "server.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "server.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "server.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "server.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "server.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "src/index.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "src/index.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "src/index.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "src/index.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "src/index.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "src/index.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "src/app.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "src/app.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "src/app.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "src/app.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "src/app.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "src/app.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "src/server.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "src/server.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "src/server.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "src/server.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "src/server.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']express["']\\s*(?:\\))?",
+          "path": "src/server.cts",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/express.svg",
+    "name": "Express",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "N/A",
+      },
+    },
+    "slug": "express",
+    "supersedes": [
+      "node",
+    ],
+    "tagline": "Fast, unopinionated, minimalist web framework for Node.js",
+    "useRuntime": {
+      "src": "index.js",
+      "use": "@vercel/express",
+    },
+    "website": "https://expressjs.com",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/",
+        "src": "/(.*)",
+      },
+    ],
+    "dependency": "h3",
+    "description": "H(TTP) server framework built on top of web standards for high performance and composability.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "h3",
+        },
+      ],
+      "some": [
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "app.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "app.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "app.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "app.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "app.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "app.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "index.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "index.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "index.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "index.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "index.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "index.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "server.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "server.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "server.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "server.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "server.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "server.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "src/index.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "src/index.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "src/index.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "src/index.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "src/index.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "src/index.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "src/app.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "src/app.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "src/app.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "src/app.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "src/app.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "src/app.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "src/server.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "src/server.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "src/server.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "src/server.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "src/server.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']h3["']\\s*(?:\\))?",
+          "path": "src/server.cts",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/h3.svg",
+    "name": "H3",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "N/A",
+      },
+    },
+    "slug": "h3",
+    "supersedes": [
+      "node",
+    ],
+    "tagline": "Universal, Tiny, and Fast Servers",
+    "useRuntime": {
+      "src": "index.js",
+      "use": "@vercel/h3",
+    },
+    "website": "https://h3.dev/",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/",
+        "src": "/(.*)",
+      },
+    ],
+    "dependency": "koa",
+    "description": "Koa is a new web framework designed by the team behind Express, which aims to be a smaller, more expressive, and more robust foundation for web applications and APIs.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "koa",
+        },
+      ],
+      "some": [
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "app.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "app.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "app.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "app.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "app.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "app.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "index.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "index.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "index.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "index.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "index.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "index.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "server.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "server.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "server.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "server.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "server.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "server.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "src/index.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "src/index.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "src/index.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "src/index.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "src/index.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "src/index.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "src/app.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "src/app.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "src/app.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "src/app.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "src/app.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "src/app.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "src/server.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "src/server.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "src/server.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "src/server.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "src/server.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']koa["']\\s*(?:\\))?",
+          "path": "src/server.cts",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/koa.svg",
+    "name": "Koa",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "N/A",
+      },
+    },
+    "slug": "koa",
+    "supersedes": [
+      "node",
+    ],
+    "tagline": "Expressive middleware for Node.js using ES2017 async functions",
+    "useRuntime": {
+      "src": "index.js",
+      "use": "@vercel/koa",
+    },
+    "website": "https://koajs.com",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/",
+        "src": "/(.*)",
+      },
+    ],
+    "dependency": "nestjs",
+    "description": "A progressive Node.js framework for building efficient, reliable and scalable server-side applications.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "@nestjs/core",
+        },
+      ],
+      "some": [
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/main.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/main.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/main.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/main.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/main.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/main.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "main.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "main.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "main.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "main.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "main.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "main.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "app.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "app.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "app.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "app.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "app.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "app.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "index.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "index.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "index.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "index.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "index.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "index.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "server.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "server.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "server.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "server.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "server.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "server.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/app.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/app.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/app.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/app.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/app.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/app.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/index.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/index.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/index.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/index.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/index.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/index.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/server.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/server.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/server.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/server.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/server.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']@nestjs/core["']\\s*(?:\\))?",
+          "path": "src/server.mts",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/nestjs.svg",
+    "name": "NestJS",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "N/A",
+      },
+    },
+    "slug": "nestjs",
+    "supersedes": [
+      "node",
+    ],
+    "tagline": "Framework for building efficient, scalable Node.js server-side applications",
+    "useRuntime": {
+      "src": "index.js",
+      "use": "@vercel/nestjs",
+    },
+    "website": "https://nestjs.com/",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/",
+        "src": "/(.*)",
+      },
+    ],
+    "description": "TypeScript with End-to-End Type Safety, type integrity, and exceptional developer experience. Supercharged by Bun.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "elysia",
+        },
+      ],
+      "some": [
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "app.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "app.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "app.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "app.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "app.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "app.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "index.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "index.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "index.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "index.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "index.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "index.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "server.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "server.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "server.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "server.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "server.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "server.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "src/index.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "src/index.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "src/index.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "src/index.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "src/index.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "src/index.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "src/app.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "src/app.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "src/app.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "src/app.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "src/app.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "src/app.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "src/server.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "src/server.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "src/server.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "src/server.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "src/server.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']elysia["']\\s*(?:\\))?",
+          "path": "src/server.cts",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/elysia.svg",
+    "name": "Elysia",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "N/A",
+      },
+    },
+    "slug": "elysia",
+    "supersedes": [
+      "node",
+    ],
+    "tagline": "Ergonomic framework for humans",
+    "useRuntime": {
+      "src": "index.js",
+      "use": "@vercel/elysia",
+    },
+    "website": "https://elysiajs.com/",
+  },
+  {
+    "darkModeLogo": "https://api-frameworks-two.vercel.sh/framework-logos/fastify-dark.svg",
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/",
+        "src": "/(.*)",
+      },
+    ],
+    "description": "Fastify is a web framework highly focused on providing the best developer experience with the least overhead and a powerful plugin architecture.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "fastify",
+        },
+      ],
+      "some": [
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "app.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "app.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "app.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "app.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "app.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "app.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "index.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "index.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "index.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "index.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "index.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "index.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "server.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "server.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "server.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "server.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "server.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "server.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "src/index.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "src/index.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "src/index.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "src/index.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "src/index.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "src/index.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "src/app.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "src/app.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "src/app.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "src/app.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "src/app.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "src/app.cts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "src/server.cjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "src/server.js",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "src/server.mjs",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "src/server.mts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "src/server.ts",
+        },
+        {
+          "matchContent": "(?:from|require|import)\\s*(?:\\(\\s*)?["']fastify["']\\s*(?:\\))?",
+          "path": "src/server.cts",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/fastify.svg",
+    "name": "Fastify",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "N/A",
+      },
+    },
+    "slug": "fastify",
+    "supersedes": [
+      "node",
+    ],
+    "tagline": "Fast and low overhead web framework, for Node.js",
+    "useRuntime": {
+      "src": "index.js",
+      "use": "@vercel/fastify",
+    },
+    "website": "https://fastify.dev/",
+  },
+  {
+    "demo": "https://xmcp-template.vercel.app/",
+    "dependency": "xmcp",
+    "description": "A framework for building Model Context Protocol servers with zero configuration.",
+    "detectors": {
+      "some": [
+        {
+          "path": "xmcp.config.ts",
+        },
+        {
+          "path": "xmcp.config.js",
+        },
+        {
+          "matchPackage": "xmcp",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/xmcp.svg",
+    "name": "xmcp",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`xmcp build\`",
+        "value": "xmcp build --vercel",
+      },
+      "devCommand": {
+        "placeholder": "xmcp dev",
+        "value": "xmcp dev",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "dist",
+      },
+    },
+    "slug": "xmcp",
+    "tagline": "The MCP framework for building AI-powered tools",
+    "website": "https://xmcp.dev",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/",
+        "src": "/(.*)",
+      },
+    ],
+    "description": "A generic Python application deployed as a serverless function.",
+    "detectors": {
+      "some": [
+        {
+          "path": "requirements.txt",
+        },
+        {
+          "path": "pyproject.toml",
+        },
+        {
+          "path": "Pipfile",
+        },
+      ],
+    },
+    "ignoreRuntimes": [
+      "@vercel/python",
+    ],
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/python.svg",
+    "name": "Python",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "runtimeFramework": true,
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "\`pip install -r requirements.txt\`",
+      },
+      "outputDirectory": {
+        "value": "N/A",
+      },
+    },
+    "slug": "python",
+    "tagline": "Python is a programming language that lets you work quickly and integrate systems more effectively.",
+    "useRuntime": {
+      "src": "<detect>",
+      "use": "@vercel/python",
+    },
+    "website": "https://python.org",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/config",
+        "src": "/(.*)",
+      },
+    ],
+    "description": "A generic Ruby application deployed as a serverless function.",
+    "detectors": {
+      "every": [
+        {
+          "path": "config.ru",
+        },
+        {
+          "path": "Gemfile",
+        },
+      ],
+    },
+    "experimental": true,
+    "ignoreRuntimes": [
+      "@vercel/ruby",
+    ],
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/ruby.svg",
+    "name": "Ruby",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "runtimeFramework": true,
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "\`bundle install\`",
+      },
+      "outputDirectory": {
+        "value": "N/A",
+      },
+    },
+    "slug": "ruby",
+    "tagline": "A dynamic, open source programming language with a focus on simplicity and productivity.",
+    "useRuntime": {
+      "src": "config.ru",
+      "use": "@vercel/ruby",
+    },
+    "website": "https://www.ruby-lang.org",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/src/main",
+        "src": "/(.*)",
+      },
+    ],
+    "description": "A generic Rust application deployed as a serverless function.",
+    "detectors": {
+      "every": [
+        {
+          "path": "Cargo.toml",
+        },
+        {
+          "path": "src/main.rs",
+        },
+      ],
+    },
+    "experimental": true,
+    "ignoreRuntimes": [
+      "@vercel/rust",
+    ],
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/rust.svg",
+    "name": "Rust",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "runtimeFramework": true,
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "\`cargo run\`",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "None",
+      },
+      "outputDirectory": {
+        "value": "N/A",
+      },
+    },
+    "slug": "rust",
+    "tagline": "A language empowering everyone to build reliable and efficient software.",
+    "useRuntime": {
+      "src": "src/main.rs",
+      "use": "@vercel/rust",
+    },
+    "website": "https://www.rust-lang.org",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/src/main",
+        "src": "/(.*)",
+      },
+    ],
+    "description": "An Axum application deployed as a serverless function.",
+    "detectors": {
+      "every": [
+        {
+          "matchContent": "axum\\s*=",
+          "path": "Cargo.toml",
+        },
+        {
+          "path": "src/main.rs",
+        },
+      ],
+    },
+    "experimental": true,
+    "ignoreRuntimes": [
+      "@vercel/rust",
+    ],
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/axum.svg",
+    "name": "Axum",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "\`cargo run\`",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "None",
+      },
+      "outputDirectory": {
+        "value": "N/A",
+      },
+    },
+    "slug": "axum",
+    "supersedes": [
+      "rust",
+    ],
+    "tagline": "Ergonomic and modular web framework built with Tokio, Tower, and Hyper.",
+    "useRuntime": {
+      "src": "src/main.rs",
+      "use": "@vercel/rust",
+    },
+    "website": "https://github.com/tokio-rs/axum",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/src/main",
+        "src": "/(.*)",
+      },
+    ],
+    "description": "An Actix Web application deployed as a serverless function.",
+    "detectors": {
+      "every": [
+        {
+          "matchContent": "actix-web\\s*=",
+          "path": "Cargo.toml",
+        },
+        {
+          "path": "src/main.rs",
+        },
+      ],
+    },
+    "experimental": true,
+    "ignoreRuntimes": [
+      "@vercel/rust",
+    ],
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/actix-web.svg",
+    "name": "Actix Web",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "runtimeFramework": true,
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "\`cargo run\`",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "None",
+      },
+      "outputDirectory": {
+        "value": "N/A",
+      },
+    },
+    "slug": "actix-web",
+    "supersedes": [
+      "rust",
+    ],
+    "tagline": "A powerful, pragmatic, and extremely fast web framework for Rust.",
+    "useRuntime": {
+      "src": "src/main.rs",
+      "use": "@vercel/rust",
+    },
+    "website": "https://actix.rs",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/",
+        "src": "/(.*)",
+      },
+    ],
+    "description": "A Bun application deployed as a serverless function.",
+    "detectors": {
+      "every": [
+        {
+          "path": "bun.lock",
+        },
+      ],
+      "some": [
+        {
+          "path": "server.cjs",
+        },
+        {
+          "path": "server.js",
+        },
+        {
+          "path": "server.mjs",
+        },
+        {
+          "path": "server.mts",
+        },
+        {
+          "path": "server.ts",
+        },
+        {
+          "path": "server.cts",
+        },
+        {
+          "path": "src/server.cjs",
+        },
+        {
+          "path": "src/server.js",
+        },
+        {
+          "path": "src/server.mjs",
+        },
+        {
+          "path": "src/server.mts",
+        },
+        {
+          "path": "src/server.ts",
+        },
+        {
+          "path": "src/server.cts",
+        },
+      ],
+    },
+    "experimental": true,
+    "ignoreRuntimes": [
+      "@vercel/node",
+    ],
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/bun.svg",
+    "name": "Bun",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "runtimeFramework": true,
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "\`bun dev\`, \`bun run dev\`, or \`bun --hot server.ts\`",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "bun install",
+        "value": "bun install",
+      },
+      "outputDirectory": {
+        "value": "N/A",
+      },
+    },
+    "slug": "bun",
+    "supersedes": [
+      "node",
+    ],
+    "tagline": "Bun is a fast all-in-one JavaScript runtime, bundler, and package manager.",
+    "useRuntime": {
+      "src": "package.json",
+      "use": "@vercel/backends",
+    },
+    "website": "https://bun.com",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/",
+        "src": "/(.*)",
+      },
+    ],
+    "description": "A generic Node.js application deployed as a serverless function.",
+    "detectors": {
+      "some": [
+        {
+          "path": "server.cjs",
+        },
+        {
+          "path": "server.js",
+        },
+        {
+          "path": "server.mjs",
+        },
+        {
+          "path": "server.mts",
+        },
+        {
+          "path": "server.ts",
+        },
+        {
+          "path": "server.cts",
+        },
+        {
+          "path": "src/server.cjs",
+        },
+        {
+          "path": "src/server.js",
+        },
+        {
+          "path": "src/server.mjs",
+        },
+        {
+          "path": "src/server.mts",
+        },
+        {
+          "path": "src/server.ts",
+        },
+        {
+          "path": "src/server.cts",
+        },
+      ],
+    },
+    "ignoreRuntimes": [
+      "@vercel/node",
+    ],
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/node.svg",
+    "name": "Node",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "runtimeFramework": true,
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "\`npm run dev\`, \`node server.js\`, or \`npx ts-node server.ts\`",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": "N/A",
+      },
+    },
+    "slug": "node",
+    "tagline": "Node.js is a JavaScript runtime built on Chrome's V8 JavaScript engine.",
+    "useRuntime": {
+      "src": "package.json",
+      "use": "@vercel/backends",
+    },
+    "website": "https://nodejs.org",
+  },
+  {
+    "defaultRoutes": [
+      {
+        "handle": "filesystem",
+      },
+      {
+        "dest": "/",
+        "src": "/(.*)",
+      },
+    ],
+    "description": "A generic Go application deployed as a serverless function.",
+    "detectors": {
+      "every": [
+        {
+          "path": "go.mod",
+        },
+      ],
+      "some": [
+        {
+          "path": "main.go",
+        },
+        {
+          "path": "cmd/api/main.go",
+        },
+        {
+          "path": "cmd/server/main.go",
+        },
+      ],
+    },
+    "ignoreRuntimes": [
+      "@vercel/go",
+    ],
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/go.svg",
+    "name": "Go",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "runtimeFramework": true,
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "\`go run .\` or \`go run ./cmd/api\`",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "\`go mod download\`",
+      },
+      "outputDirectory": {
+        "value": "N/A",
+      },
+    },
+    "slug": "go",
+    "tagline": "An open-source programming language supported by Google.",
+    "useRuntime": {
+      "src": "index.go",
+      "use": "@vercel/go",
+    },
+    "website": "https://go.dev",
+  },
+  {
+    "description": "Multiple services deployed as serverless functions within your project.",
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/services.svg",
+    "name": "Services",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "None",
+      },
+      "outputDirectory": {
+        "value": "N/A",
+      },
+    },
+    "slug": "services",
+    "tagline": "Multiple services deployed as serverless functions within your project.",
+    "website": "https://vercel.com",
+  },
+  {
+    "darkModeLogo": "https://api-frameworks-two.vercel.sh/framework-logos/mastra-dark.svg",
+    "description": "Mastra is a framework for building AI-powered apps and agents with workflows, memory, streaming, evals, tracing, and Studio, an interactive UI for dev and testing.",
+    "detectors": {
+      "every": [
+        {
+          "matchPackage": "mastra",
+        },
+      ],
+    },
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/mastra.svg",
+    "name": "Mastra",
+    "outputDirName": {
+      "type": "static",
+      "value": ".mastra",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run build\` or \`mastra build\`",
+        "value": "mastra build",
+      },
+      "devCommand": {
+        "value": "mastra dev",
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "value": ".mastra",
+      },
+    },
+    "slug": "mastra",
+    "tagline": "Build AI agents with a modern TypeScript stack",
+    "website": "https://mastra.ai",
+  },
+  {
+    "description": "No framework or an unoptimized framework.",
+    "logo": "https://api-frameworks-two.vercel.sh/framework-logos/other.svg",
+    "name": "Other",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "\`npm run vercel-build\` or \`npm run build\`",
+        "value": null,
+      },
+      "devCommand": {
+        "placeholder": "None",
+        "value": null,
+      },
+      "installCommand": {
+        "placeholder": "\`yarn install\`, \`pnpm install\`, \`npm install\`, or \`bun install\`",
+      },
+      "outputDirectory": {
+        "placeholder": "\`public\` if it exists, or \`.\`",
+      },
+    },
+    "slug": null,
+  },
+]
+`;
