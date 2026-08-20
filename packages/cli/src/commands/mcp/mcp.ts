@@ -1,6 +1,6 @@
 import output from '../../output-manager';
 import type Client from '../../util/client';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { getLinkedProject } from '../../util/projects/link';
 import { packageName } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
@@ -21,18 +21,29 @@ function getAvailableClients(): string[] {
   ];
 }
 
-function safeExecSync(
+function safeExecFileSync(
   command: string,
+  args: string[] = [],
   options: any = {}
 ): string | { error: string; stderr: string } {
   try {
-    return execSync(command, {
+    return execFileSync(command, args, {
       stdio: 'pipe',
       encoding: 'utf8',
       ...options,
     });
   } catch (error: any) {
     return { error: error.message, stderr: error.stderr?.toString() || '' };
+  }
+}
+
+function openDeepLink(url: string): void {
+  if (process.platform === 'darwin') {
+    execFileSync('open', [url], { stdio: 'ignore' });
+  } else if (process.platform === 'win32') {
+    execFileSync('cmd', ['/c', 'start', '', url], { stdio: 'ignore' });
+  } else {
+    execFileSync('xdg-open', [url], { stdio: 'ignore' });
   }
 }
 
@@ -179,16 +190,22 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
     }
 
     if (clientName === 'Claude Code') {
-      const mcpUrl = isProjectSpecific
-        ? (await getProjectSpecificUrl(client))?.url
-        : MCP_ENDPOINT;
-      const mcpName = isProjectSpecific
-        ? `vercel-${(await getProjectSpecificUrl(client))?.projectName}`
+      const projectInfo = isProjectSpecific
+        ? await getProjectSpecificUrl(client)
+        : null;
+      const mcpUrl = projectInfo?.url ?? MCP_ENDPOINT;
+      const mcpName = projectInfo?.projectName
+        ? `vercel-${projectInfo.projectName}`
         : 'vercel';
 
-      const result = safeExecSync(
-        `claude mcp add --transport http ${mcpName} ${mcpUrl}`
-      );
+      const result = safeExecFileSync('claude', [
+        'mcp',
+        'add',
+        '--transport',
+        'http',
+        mcpName,
+        mcpUrl,
+      ]);
 
       if (typeof result === 'object' && 'error' in result) {
         if (result.stderr?.includes('already exists')) {
@@ -249,12 +266,13 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
       }
     } else if (clientName === 'Cursor') {
       // Check if Cursor is installed
-      const cursorCheck = safeExecSync(
+      const cursorCheck = safeExecFileSync(
         process.platform === 'darwin'
-          ? 'ls /Applications/Cursor.app'
+          ? 'ls'
           : process.platform === 'win32'
-            ? 'where cursor'
-            : 'which cursor'
+            ? 'where'
+            : 'which',
+        [process.platform === 'darwin' ? '/Applications/Cursor.app' : 'cursor']
       );
 
       if (typeof cursorCheck === 'object' && 'error' in cursorCheck) {
@@ -270,11 +288,12 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
         continue;
       }
 
-      const mcpUrl = isProjectSpecific
-        ? (await getProjectSpecificUrl(client))?.url
-        : MCP_ENDPOINT;
-      const serverName = isProjectSpecific
-        ? `vercel-${(await getProjectSpecificUrl(client))?.projectName}`
+      const projectInfo = isProjectSpecific
+        ? await getProjectSpecificUrl(client)
+        : null;
+      const mcpUrl = projectInfo?.url ?? MCP_ENDPOINT;
+      const serverName = projectInfo?.projectName
+        ? `vercel-${projectInfo.projectName}`
         : 'vercel';
 
       // Check if Vercel MCP is already configured in Cursor
@@ -341,13 +360,7 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
 
       // Try to open the one-click installer
       try {
-        if (process.platform === 'darwin') {
-          execSync(`open '${oneClickUrl}'`);
-        } else if (process.platform === 'win32') {
-          execSync(`start ${oneClickUrl}`);
-        } else {
-          execSync(`xdg-open '${oneClickUrl}'`);
-        }
+        openDeepLink(oneClickUrl);
 
         summary.push('✅ Cursor: One-click installer opened');
         if (!client.nonInteractive) {
@@ -373,11 +386,12 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
       }
     } else if (clientName === 'VS Code with Copilot') {
       // Check if GitHub Copilot is installed
-      const copilotCheck = safeExecSync(
-        'code --list-extensions | grep -i copilot'
-      );
+      const copilotCheck = safeExecFileSync('code', ['--list-extensions']);
 
-      if (typeof copilotCheck === 'object' && 'error' in copilotCheck) {
+      if (
+        (typeof copilotCheck === 'object' && 'error' in copilotCheck) ||
+        !/copilot/i.test(copilotCheck)
+      ) {
         if (!client.nonInteractive) {
           output.print(
             '⚠️ GitHub Copilot not detected. MCP functionality may be limited.\n'
@@ -393,11 +407,12 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
         }
       }
 
-      const mcpUrl = isProjectSpecific
-        ? (await getProjectSpecificUrl(client))?.url
-        : MCP_ENDPOINT;
-      const serverName = isProjectSpecific
-        ? `vercel-${(await getProjectSpecificUrl(client))?.projectName}`
+      const projectInfo = isProjectSpecific
+        ? await getProjectSpecificUrl(client)
+        : null;
+      const mcpUrl = projectInfo?.url ?? MCP_ENDPOINT;
+      const serverName = projectInfo?.projectName
+        ? `vercel-${projectInfo.projectName}`
         : 'vercel';
 
       // Check if Vercel MCP is already configured in VS Code
@@ -463,13 +478,7 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
 
       try {
         // Try to open the one-click installer
-        if (process.platform === 'darwin') {
-          execSync(`open '${oneClickUrl}'`);
-        } else if (process.platform === 'win32') {
-          execSync(`start ${oneClickUrl}`);
-        } else {
-          execSync(`xdg-open '${oneClickUrl}'`);
-        }
+        openDeepLink(oneClickUrl);
 
         summary.push('✅ VS Code: One-click installer opened');
         if (!client.nonInteractive) {
