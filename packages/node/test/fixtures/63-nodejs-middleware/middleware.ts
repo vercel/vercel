@@ -1,7 +1,3 @@
-export const config = {
-  runtime: 'nodejs',
-};
-
 export default (req: Request) => {
   const url = new URL(req.url);
   const headers = new Headers({
