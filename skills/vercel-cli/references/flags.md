@@ -42,6 +42,17 @@ vercel flags list --limit 25                               # first page of 25
 vercel flags list --limit 25 --next <cursor>              # next page
 ```
 
+## Evaluation Metrics
+
+Use `evaluations` to inspect how often a flag has been evaluated, grouped by variant. Review production activity before changing or removing a flag.
+
+```bash
+vercel flags evaluations my-feature
+vercel flags evaluations my-feature --since 24h --json
+```
+
+Options include `--since`, `--until`, and `--granularity`. If evaluation data cannot be retrieved, treat usage as unknown and do not assume the flag is safe to remove.
+
 ## Version History
 
 ```bash
@@ -95,13 +106,6 @@ vercel flags disable my-feature -e production --message "Pause rollout"
 
 Boolean variants resolve by ID or **value** (`true` / `false`), not label. Passing `--variant off` for a boolean flag is rejected unless `off` is the variant's literal value or ID. Environments: `production`, `preview`, `development`. Omit `-e` to choose interactively.
 
-## Archive / Delete
-
-```bash
-vercel flags archive my-feature --yes                     # archive (skip prompt)
-vercel flags rm my-feature --yes                          # delete (must be archived first)
-```
-
 ## Split (Weighted Traffic)
 
 Distribute traffic across variants with weights. Repeat `--weight VARIANT=WEIGHT` per variant; weights are normalized, and `0` excludes a variant from the split.
@@ -127,6 +131,38 @@ vercel flags rollout redesigned-checkout -e production --stage 5,30m --stage 25,
 ```
 
 Options: `--environment`/`-e`, `--by`, `--from-variant`, `--to-variant`, `--default-variant`, `--stage`/`-s` (repeatable), `--start` (`now`, a relative duration like `1h`, or an ISO 8601 datetime), `--message`. For boolean flags, `--from-variant` defaults to `false` and `--to-variant` to `true`.
+
+## Working Safely With Flags
+
+Before proposing cleanup, identify exact flags and inspect their configuration,
+served environments, targeting, and recent production evaluations. Use
+`vercel flags evaluations` (see Evaluation Metrics) to check production activity.
+
+1. Discover and inspect candidate flags without changing them.
+2. Confirm the intended project, environment, and cleanup criteria.
+3. Query recent production evaluations for every candidate. If evaluation data
+   is unavailable or nonzero, do not propose mutation for that flag.
+4. Propose archive or deletion only for exact validated slugs and only after the
+   read-only investigation is complete.
+5. Archive before permanent deletion. Leave an archived flag in place through an
+   observation period before deletion; 7 days is a conservative recommendation.
+   Never use a broad name-based or tag-based deletion loop.
+
+Confirm the exact slug for each target with `vercel flags inspect <flag>` or
+`vercel flags list --json` output. The CLI accepts a flag slug or ID for these
+commands.
+
+## Archive / Delete
+
+**WARNING:** These operations can have profound negative consequences. Permanent
+deletion is irreversible; if in doubt it is much safer to archive than to
+delete. If the CLI reports a production safety blocker, stop and report it
+rather than using the `--dangerously-force` flag.
+
+```bash
+vercel flags archive my-feature --yes                     # archive (skip prompt)
+vercel flags rm my-feature --yes                          # delete (must be archived first)
+```
 
 ## Prepare (Build Integration)
 
