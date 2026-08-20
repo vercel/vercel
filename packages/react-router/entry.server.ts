@@ -5,7 +5,7 @@ import { createReadableStreamFromReadable } from '@react-router/node';
 import { isbot } from 'isbot';
 import { renderToPipeableStream } from 'react-dom/server';
 import { ServerRouter } from 'react-router';
-import type { AppLoadContext, EntryContext } from 'react-router';
+import type { EntryContext } from 'react-router';
 import type {
   RenderToPipeableStreamOptions,
   RenderToReadableStreamOptions,
@@ -27,7 +27,7 @@ export function handleRequest(
   responseStatusCode: number,
   responseHeaders: Headers,
   routerContext: EntryContext,
-  _loadContext?: AppLoadContext,
+  _loadContext?: unknown,
   options?: RenderOptions
 ): Promise<Response> {
   return new Promise((resolve, reject) => {
