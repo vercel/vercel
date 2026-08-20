@@ -138,6 +138,12 @@ impl Default for LogContext {
 #[derive(Clone)]
 pub struct AppState {
     pub log_context: LogContext,
+    /// Per-request background-work set. The request's `end` IPC message is
+    /// withheld until every future registered here settles, so the platform
+    /// keeps the invocation active (and the instance unsuspended) while
+    /// `waitUntil` work runs. Without this, Fluid suspends the instance as
+    /// soon as the response completes and background futures only advance
+    /// while later requests happen to wake the process.
     awaiter: Awaiter,
 }
 
@@ -145,13 +151,15 @@ impl AppState {
     pub fn new(log_context: LogContext) -> Self {
         Self {
             log_context,
-            awaiter: AWAITER.clone(),
+            awaiter: Awaiter::new(),
         }
     }
 
     /// Register a background future to keep running after the response has been
-    /// sent. The future is spawned immediately and awaited at process shutdown
-    /// (bounded by [`awaiter::WAIT_UNTIL_TIMEOUT`]).
+    /// sent. The future is spawned immediately; the request's `end` IPC message
+    /// (which lets the platform consider the invocation finished) is delayed
+    /// until all futures registered during the request settle, bounded by the
+    /// function's `maxDuration`.
     ///
     /// This future runs regardless of whether the handler succeeded or errored.
     /// A panic in the future is isolated from the rest of the runtime.
@@ -160,6 +168,12 @@ impl AppState {
         F: std::future::Future<Output = ()> + Send + 'static,
     {
         self.awaiter.wait_until(future);
+    }
+
+    /// Handle to this request's background-work set, used by [`run`] to drain
+    /// it before emitting the per-request `end` IPC message.
+    pub(crate) fn awaiter(&self) -> Awaiter {
+        self.awaiter.clone()
     }
 }
 
@@ -426,6 +440,8 @@ where
                         async move {
                             #[cfg(unix)]
                             let ipc_stream_for_end = app_state.log_context.ipc_stream.clone();
+                            #[cfg(unix)]
+                            let request_awaiter = app_state.awaiter();
 
                             if req.uri().path() == "/_vercel/ping" {
                                 let response = hyper::Response::builder()
@@ -462,15 +478,30 @@ where
                                 }
                             };
 
-                            // Send end message via IPC
+                            // Send end message via IPC once this request's
+                            // `waitUntil` work settles. The response is
+                            // returned to hyper immediately below, so client
+                            // latency is unaffected; only the platform's
+                            // "invocation finished" signal is delayed, which
+                            // keeps the instance from suspending while
+                            // background futures run (mirroring the Node.js
+                            // runtime's extended-lifecycle behavior). With no
+                            // registered work the drain resolves immediately
+                            // and the end message is sent right away. The
+                            // drain task is registered in the global AWAITER
+                            // so the SIGTERM drain also waits for in-flight
+                            // end messages.
                             #[cfg(unix)]
                             if let (Some(ipc_stream), Some(inv_id), Some(req_id)) =
-                                (&ipc_stream_for_end, &invocation_id, &request_id)
+                                (ipc_stream_for_end, invocation_id, request_id)
                             {
-                                let end_message = EndMessage::new(inv_id.clone(), *req_id, None);
-                                if let Err(_e) = send_message(ipc_stream, end_message) {
-                                    // Failed to send end message
-                                }
+                                AWAITER.wait_until(async move {
+                                    request_awaiter.awaiting().await;
+                                    let end_message = EndMessage::new(inv_id, req_id, None);
+                                    if let Err(_e) = send_message(&ipc_stream, end_message) {
+                                        // Failed to send end message
+                                    }
+                                });
                             }
 
                             Ok::<_, Infallible>(response)
