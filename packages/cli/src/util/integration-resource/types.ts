@@ -10,6 +10,7 @@ export interface Resource {
     name?: string;
     slug?: string;
     integrationConfigurationId?: string;
+    primaryProtocol?: string;
   };
   projectsMetadata?: ResourceConnection[];
   billingPlan?: BillingPlan;
