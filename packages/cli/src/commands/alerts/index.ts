@@ -14,7 +14,12 @@ import {
   shouldEmitNonInteractiveCommandError,
 } from '../../util/agent-output';
 import { AGENT_REASON } from '../../util/agent-output-constants';
-import { alertsCommand, inspectSubcommand, listSubcommand } from './command';
+import {
+  alertsCommand,
+  groupsSubcommand,
+  inspectSubcommand,
+  listSubcommand,
+} from './command';
 import {
   rulesAddSubcommand,
   rulesAggregateCommand,
@@ -28,6 +33,7 @@ import { getRulesAddBodyExamplesHelp } from './rules/add-help';
 
 const COMMAND_CONFIG = {
   inspect: getCommandAliases(inspectSubcommand),
+  groups: getCommandAliases(groupsSubcommand),
   ls: getCommandAliases(listSubcommand),
   rules: ['rules'],
 };
@@ -257,6 +263,11 @@ export default async function alerts(client: Client): Promise<number> {
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
       const inspectFn = (await import('./inspect')).default;
       return inspectFn(client, rawSubcommandArgs);
+    }
+    case 'groups': {
+      telemetry.trackCliSubcommandGroups(subcommandOriginal);
+      const groupsFn = (await import('./groups')).default;
+      return groupsFn(client, args, telemetry);
     }
     case 'rules': {
       telemetry.trackCliSubcommandRules(args[0] ?? 'ls');
