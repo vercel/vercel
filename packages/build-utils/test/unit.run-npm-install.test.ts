@@ -1,5 +1,9 @@
 import path from 'path';
-import { runNpmInstall } from '../src';
+import {
+  runNpmInstall,
+  runCustomInstallCommand,
+  resetCustomInstallCommandSet,
+} from '../src';
 import type { Meta } from '../src/types';
 import { afterEach, expect, it, vi } from 'vitest';
 
@@ -24,6 +28,7 @@ vi.mock('cross-spawn', () => {
 afterEach(() => {
   spawnExitCode = 0;
   spawnMock.mockClear();
+  resetCustomInstallCommandSet();
 });
 
 it('should only invoke `runNpmInstall()` once per `package.json` file (serial)', async () => {
@@ -156,4 +161,36 @@ it('should not disable global cache for yarn 1', async () => {
   const yarnInstall = spawnMock.mock.calls[0];
   expect(yarnInstall[0]).toEqual('yarn');
   expect(yarnInstall[1]).toEqual(['install']);
+});
+
+it('should disable global cache for yarn 3+ with a custom install command', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '44-yarn-v4');
+  expect(
+    await runCustomInstallCommand({
+      destPath: fixture,
+      installCommand: 'yarn install',
+    })
+  ).toEqual(true);
+
+  expect(spawnMock.mock.calls.length).toBe(2);
+  const yarnConfig = spawnMock.mock.calls[0];
+  expect(yarnConfig[0]).toEqual('yarn');
+  expect(yarnConfig[1]).toEqual([
+    'config',
+    'set',
+    'enableGlobalCache',
+    'false',
+  ]);
+});
+
+it('should not disable global cache for yarn 1 with a custom install command', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '45-yarn-v1');
+  expect(
+    await runCustomInstallCommand({
+      destPath: fixture,
+      installCommand: 'yarn install',
+    })
+  ).toEqual(true);
+
+  expect(spawnMock.mock.calls.length).toBe(1);
 });
