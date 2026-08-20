@@ -1526,13 +1526,24 @@ describe('integration add (auto-provision)', () => {
       );
     });
 
-    it('should error when integration has no products', async () => {
-      client.setArgv('integration', 'add', 'acme-no-products');
-      const exitCode = await integrationCommand(client);
-      expect(exitCode).toEqual(1);
+    it('should suggest the closest marketplace match for a non-marketplace slug', async () => {
+      // `turso` resolves to a legacy, non-marketplace integration (no products);
+      // its Marketplace counterpart is `tursocloud`.
+      useIntegrationDiscover();
+      client.setArgv('integration', 'add', 'turso');
+      const exitCodePromise = integrationCommand(client);
+
       await expect(client.stderr).toOutput(
-        'Error: Integration "acme-no-products" is not a Marketplace integration'
+        'Did you mean Turso Cloud (tursocloud)? Install it?'
       );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Turso Cloud successfully provisioned'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
     });
 
     it('should error when fetchInstallations fails', async () => {
@@ -1594,12 +1605,38 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(1);
     });
 
-    it('should error when integration is external', async () => {
+    it('emits structured JSON with a suggestion when non-interactive', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+      useIntegrationDiscover();
+      client.nonInteractive = true;
+      client.setArgv(
+        'integration',
+        'add',
+        'turso',
+        '--non-interactive',
+        '--cwd',
+        '/tmp/example'
+      );
+      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'not_found',
+        hint: 'Did you mean "tursocloud"?',
+      });
+      expect(payload.next?.[0]?.command).toMatch(/integration add tursocloud$/);
+      expect(payload.next?.[1]?.command).toMatch(/integration discover$/);
+    });
+
+    it('should error when a non-marketplace slug has no close match', async () => {
+      useIntegrationDiscover();
       client.setArgv('integration', 'add', 'acme-external');
       const exitCode = await integrationCommand(client);
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput(
-        'Error: Integration "acme-external" is not a Marketplace integration'
+        'No integration found matching "acme-external"'
       );
     });
   });
@@ -2817,7 +2854,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'postgres');
       const exitCodePromise = integrationCommand(client);
 
-      await expect(client.stderr).toOutput('Pick one to install');
+      await expect(client.stderr).toOutput('Did you mean one of these?');
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
@@ -2832,7 +2869,9 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'Neon');
       const exitCodePromise = integrationCommand(client);
 
-      await expect(client.stderr).toOutput('Install Neon Postgres (neon)?');
+      await expect(client.stderr).toOutput(
+        'Did you mean Neon Postgres (neon)? Install it?'
+      );
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
@@ -2855,14 +2894,12 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(1);
     });
 
-    it('should list matches in non-TTY mode', async () => {
+    it('should list matches (without installing) in non-TTY mode', async () => {
       (client.stdin as any).isTTY = false;
       client.setArgv('integration', 'add', 'postgres');
       const exitCodePromise = integrationCommand(client);
 
-      await expect(client.stderr).toOutput(
-        'Found 2 integrations matching "postgres"'
-      );
+      await expect(client.stderr).toOutput('Did you mean one of:');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
@@ -2874,7 +2911,7 @@ describe('integration add (auto-provision)', () => {
 
       // "queue" tag uniquely matches acme-two-products/acme-b (compound slug)
       await expect(client.stderr).toOutput(
-        'Install Acme Product B (acme-two-products/acme-b)?'
+        'Did you mean Acme Product B (acme-two-products/acme-b)? Install it?'
       );
       client.stdin.write('y\n');
 
