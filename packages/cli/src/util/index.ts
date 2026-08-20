@@ -1,5 +1,4 @@
 import qs from 'querystring';
-import { parse as parseUrl } from 'url';
 import retry from 'async-retry';
 import ms from 'ms';
 import fetch, { Headers } from './fetch';
@@ -352,8 +351,8 @@ export default class Now {
 
   async _fetch(_url: string, opts: FetchOptions = {}) {
     if (opts.useCurrentTeam !== false && this.currentTeam) {
-      const parsedUrl = parseUrl(_url, true);
-      const query = parsedUrl.query;
+      const parsedUrl = new URL(_url, this._apiUrl);
+      const query = qs.parse(parsedUrl.search.slice(1));
 
       query.teamId = this.currentTeam;
       _url = `${parsedUrl.pathname}?${qs.stringify(query)}`;

@@ -1,7 +1,7 @@
 import type { IncomingHttpHeaders, OutgoingHttpHeaders } from 'http';
-import url from 'url';
 import type { HeaderQueryTransform, Transform } from '@vercel/routing-utils';
 import { parseQueryString, formatQueryString } from './parse-query-string';
+import { formatUrl, parseUrl } from './url';
 
 export type { Transform };
 type TargetTransform = HeaderQueryTransform;
@@ -65,7 +65,7 @@ export function applyRequestTransforms(
 
   applyRequestHeaderTransforms(req.headers, transforms);
 
-  const parsed = url.parse(req.url || '/');
+  const parsed = parseUrl(req.url || '/');
   const query = parseQueryString(parsed.search);
   applyQueryTransforms(query, transforms);
 
@@ -73,8 +73,8 @@ export function applyRequestTransforms(
   if (newPath !== undefined) {
     parsed.pathname = newPath;
   }
-  parsed.search = formatQueryString(query);
-  req.url = url.format(parsed);
+  parsed.search = formatQueryString(query) || '';
+  req.url = formatUrl(parsed);
 }
 
 /** Whether any transform rules to be applied for responses. */

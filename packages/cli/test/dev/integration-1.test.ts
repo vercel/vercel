@@ -1,5 +1,4 @@
 import os from 'os';
-import url from 'url';
 import fs from 'fs-extra';
 import { join } from 'path';
 import { listen } from 'async-listen';
@@ -429,10 +428,10 @@ test('[vercel dev] should maintain query when invoking serverless function', asy
     validateResponseHeaders(res);
 
     const text = await res.text();
-    const parsed = url.parse(text, true);
+    const parsed = new URL(text, 'http://localhost');
     expect(parsed.pathname).toEqual('/something');
-    expect(parsed.query['url-param']).toEqual('a');
-    expect(parsed.query['route-param']).toEqual('b');
+    expect(parsed.searchParams.get('url-param')).toEqual('a');
+    expect(parsed.searchParams.get('route-param')).toEqual('b');
   } finally {
     await dev.kill();
   }
@@ -459,10 +458,10 @@ test('[vercel dev] should maintain query when proxy passing', async () => {
     validateResponseHeaders(res);
 
     const text = await res.text();
-    const parsed = url.parse(text, true);
+    const parsed = new URL(text, 'http://localhost');
     expect(parsed.pathname).toEqual('/something');
-    expect(parsed.query['url-param']).toEqual('a');
-    expect(parsed.query['route-param']).toEqual('b');
+    expect(parsed.searchParams.get('url-param')).toEqual('a');
+    expect(parsed.searchParams.get('route-param')).toEqual('b');
   } finally {
     dest.close();
     await dev.kill();
@@ -490,10 +489,10 @@ test('[vercel dev] should maintain query when dev server defines routes', async 
       .replace(/&amp;/g, '&')
       .replace(/&quot;/g, '"');
     const parsed = JSON.parse(json);
-    const query = url.parse(parsed.url, true).query;
+    const query = new URL(parsed.url, 'http://localhost').searchParams;
 
-    expect(query['url-param']).toEqual('a');
-    expect(query['route-param']).toEqual('b');
+    expect(query.get('url-param')).toEqual('a');
+    expect(query.get('route-param')).toEqual('b');
   } finally {
     await dev.kill();
   }

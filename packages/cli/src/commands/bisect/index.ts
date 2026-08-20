@@ -3,7 +3,7 @@ import execa from 'execa';
 import plural from 'pluralize';
 import { resolve } from 'path';
 import chalk, { type Chalk } from 'chalk';
-import { URLSearchParams, parse } from 'url';
+import { URL, URLSearchParams } from 'url';
 
 import box from '../../util/output/box';
 import formatDate from '../../util/format-date';
@@ -23,6 +23,62 @@ import { BisectTelemetryClient } from '../../util/telemetry/commands/bisect';
 
 interface Deployments {
   deployments: Deployment[];
+}
+
+type UrlPatternMatch = {
+  hostname: { input: string };
+  pathname: { input: string };
+  search: { input: string };
+};
+
+type UrlPattern = {
+  exec(input: string): UrlPatternMatch | null;
+};
+
+type UrlPatternConstructor = new (init: {
+  protocol: string;
+  hostname: string;
+  port: string;
+  pathname: string;
+  search: string;
+}) => UrlPattern;
+
+const NativeURLPattern = (globalThis as { URLPattern?: UrlPatternConstructor })
+  .URLPattern;
+const URL_COMPONENT_PATTERN = NativeURLPattern
+  ? new NativeURLPattern({
+      protocol: '*',
+      hostname: '*',
+      port: '*',
+      pathname: '*',
+      search: '*',
+    })
+  : null;
+
+function getUrlComponents(url: string) {
+  const match = URL_COMPONENT_PATTERN?.exec(url);
+  if (match?.hostname.input) {
+    return {
+      hostname: match.hostname.input.replace(/^\[(.*)\]$/, '$1'),
+      path: `${match.pathname.input}${
+        match.search.input ? `?${match.search.input}` : ''
+      }`,
+    };
+  }
+
+  try {
+    const parsed = new URL(url);
+    if (!parsed.hostname) {
+      return null;
+    }
+
+    return {
+      hostname: parsed.hostname.replace(/^\[(.*)\]$/, '$1'),
+      path: `${parsed.pathname}${parsed.search}`,
+    };
+  } catch {
+    return null;
+  }
 }
 export default async function bisect(client: Client): Promise<number> {
   let parsedArgs = null;
@@ -78,41 +134,38 @@ export default async function bisect(client: Client): Promise<number> {
   }
 
   bad = normalizeURL(bad);
-  let parsed = parse(bad);
-  if (!parsed.hostname) {
+  const badComponents = getUrlComponents(bad);
+  if (!badComponents) {
     output.error('Invalid input: no hostname provided');
     return 1;
   }
-  bad = parsed.hostname;
-  if (typeof parsed.path === 'string' && parsed.path !== '/') {
-    if (subpath && subpath !== parsed.path) {
+  bad = badComponents.hostname;
+  const badPath = badComponents.path;
+  if (badPath !== '/') {
+    if (subpath && subpath !== badPath) {
       output.note(
         `Ignoring subpath ${chalk.bold(
-          parsed.path
+          badPath
         )} in favor of \`--path\` argument ${chalk.bold(subpath)}`
       );
     } else {
-      subpath = parsed.path;
+      subpath = badPath;
     }
   }
 
   good = normalizeURL(good);
-  parsed = parse(good);
-  if (!parsed.hostname) {
+  const goodComponents = getUrlComponents(good);
+  if (!goodComponents) {
     output.error('Invalid input: no hostname provided');
     return 1;
   }
-  good = parsed.hostname;
-  if (
-    typeof parsed.path === 'string' &&
-    parsed.path !== '/' &&
-    subpath &&
-    subpath !== parsed.path
-  ) {
+  good = goodComponents.hostname;
+  const goodPath = goodComponents.path;
+  if (goodPath !== '/' && subpath && subpath !== goodPath) {
     output.note(
-      `Ignoring subpath ${chalk.bold(
-        parsed.path
-      )} which does not match ${chalk.bold(subpath)}`
+      `Ignoring subpath ${chalk.bold(goodPath)} which does not match ${chalk.bold(
+        subpath
+      )}`
     );
   }
 

@@ -1,4 +1,3 @@
-import url from 'url';
 import PCRE from 'pcre-to-regexp';
 
 import isURL from './is-url';
@@ -7,6 +6,7 @@ import type DevServer from './server';
 import type { VercelConfig, HttpHeadersConfig, RouteResult } from './types';
 import { isHandler, type Route, type HandleValue } from '@vercel/routing-utils';
 import { parseQueryString } from './parse-query-string';
+import { parseUrl } from './url';
 import { resolveTransforms, type Transform } from './transforms';
 
 export function resolveRouteParameters(
@@ -58,7 +58,7 @@ export async function devRouter(
   phase?: HandleValue | null
 ): Promise<RouteResult> {
   let result: RouteResult | undefined;
-  let { pathname: reqPathname, search: reqSearch } = url.parse(reqUrl);
+  let { pathname: reqPathname, search: reqSearch } = parseUrl(reqUrl);
   reqPathname = reqPathname || '/';
   const reqQuery = parseQueryString(reqSearch);
   const combinedHeaders: HttpHeadersConfig = { ...previousHeaders };
@@ -157,7 +157,7 @@ export async function devRouter(
           phase !== 'hit' &&
           !isDestUrl
         ) {
-          let { pathname } = url.parse(destPath);
+          let { pathname } = parseUrl(destPath);
           pathname = pathname || '/';
           const hasDestFile = await devServer.hasFilesystem(
             pathname,
@@ -249,7 +249,7 @@ export async function devRouter(
             destPath = `/${destPath}`;
           }
           let { pathname: destPathname, search: destSearch } =
-            url.parse(destPath);
+            parseUrl(destPath);
           destPathname = destPathname || '/';
           const destQuery = parseQueryString(destSearch);
           Object.assign(destQuery, reqQuery);

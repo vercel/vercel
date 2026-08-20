@@ -41,6 +41,13 @@ describe('parseListen', () => {
     expect(result[1]).toEqual('127.0.0.1');
   });
 
+  it('should parse "tcp://[::1]:5000" as IPv6 address and port', () => {
+    const result = parseListen('tcp://[::1]:5000');
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual(5000);
+    expect(result[1]).toEqual('::1');
+  });
+
   it('should parse "unix:/home/user/server.sock" as UNIX socket file', () => {
     if (IS_WINDOWS) {
       console.log('Skipping this test on Windows.');
