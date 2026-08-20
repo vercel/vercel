@@ -2,6 +2,7 @@ import { describe, test, expect } from 'vitest';
 import {
   detectPackageManager,
   PNPM_10_PREFERRED_AT,
+  PNPM_11_PREFERRED_AT,
 } from '../src/fs/run-user-scripts';
 
 describe('Test `detectPackageManager()`', () => {
@@ -108,6 +109,26 @@ describe('Test `detectPackageManager()`', () => {
           detectedPackageManager: 'pnpm@10.x',
           pnpmVersionRange: '10.x',
           path: '/pnpm10/node_modules/.bin',
+        },
+      },
+      {
+        name: 'for 9.0 lockfile returns pnpm 10 path just before prefer pnpm 11 datetime',
+        args: ['pnpm', 9.0, PNPM_11_PREFERRED_AT.getTime() - 1000],
+        want: {
+          detectedLockfile: 'pnpm-lock.yaml',
+          detectedPackageManager: 'pnpm@10.x',
+          pnpmVersionRange: '10.x',
+          path: '/pnpm10/node_modules/.bin',
+        },
+      },
+      {
+        name: 'for 9.0 lockfile returns pnpm 11 path after prefer pnpm 11 datetime',
+        args: ['pnpm', 9.0, PNPM_11_PREFERRED_AT.getTime() + 1000],
+        want: {
+          detectedLockfile: 'pnpm-lock.yaml',
+          detectedPackageManager: 'pnpm@11.x',
+          pnpmVersionRange: '11.x',
+          path: '/pnpm11/node_modules/.bin',
         },
       },
       {
