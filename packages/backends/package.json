@@ -1,6 +1,6 @@
 {
   "name": "@vercel/backends",
-  "version": "0.8.30",
+  "version": "0.8.38",
   "license": "Apache-2.0",
   "main": "./dist/index.mjs",
   "homepage": "https://vercel.com/docs",
@@ -22,10 +22,10 @@
   },
   "scripts": {
     "build": "tsdown",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
     "vitest": "tsdown && vitest",
-    "vitest-unit": "glob --absolute 'test/unit.*test.ts'",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test-unit": "vitest run --config ../../vitest.config.mts test/unit.",
+    "test": "vitest run --config ../../vitest.config.mts"
   },
   "files": [
     "dist",
@@ -54,8 +54,8 @@
     "@types/node": "20.11.0",
     "hono": "4.10.1",
     "tsdown": "0.16.3",
-    "vite": "^5.1.6",
-    "vitest": "^2.0.1"
+    "vite": "^6.4.3",
+    "vitest": "^4.1.10"
   },
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts"

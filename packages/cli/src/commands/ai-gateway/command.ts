@@ -57,6 +57,14 @@ export const createSubcommand = {
       description:
         'Expiry for the key: 7d, 30d, 60d, 90d, 1y, or none (default: none)',
     },
+    {
+      name: 'zdr-exempt',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        "Exempt the key from the team's ZDR-only model restriction (team owners only)",
+    },
   ],
   examples: [
     {
@@ -70,6 +78,10 @@ export const createSubcommand = {
     {
       name: 'Create a key that expires and alerts on spend',
       value: `${packageName} ai-gateway api-keys create --budget 500 --alert-thresholds 75,100 --expiration 90d`,
+    },
+    {
+      name: 'Create a ZDR-exempt key (team owners only)',
+      value: `${packageName} ai-gateway api-keys create --name escape-hatch --zdr-exempt --expiration 7d`,
     },
   ],
 } as const;
@@ -395,6 +407,14 @@ export const setupSubcommand = {
       type: Boolean,
       deprecated: false,
       description: 'Do not write .bak backups of changed files',
+    },
+    {
+      name: 'no-session-migration',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Do not copy existing Codex Desktop sessions for use with the Vercel AI Gateway provider.',
     },
     {
       name: 'no-keychain',

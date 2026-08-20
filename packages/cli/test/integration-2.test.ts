@@ -770,7 +770,6 @@ describe('telemetry submits data', () => {
       const output = await execCli(binaryPath, ['help', 'deploy'], {
         cwd: directory,
       });
-      expect(output.exitCode, formatOutput(output)).toBe(2);
       expect(mockTelemetryBridgeWasCalled).toEqual(false);
       expect(output.exitCode, formatOutput(output)).toBe(2);
 

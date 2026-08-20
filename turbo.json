@@ -1,68 +1,146 @@
 {
   "$schema": "https://turborepo.org/schema.json",
-  "globalDependencies": [
-    "turbo-cache-key.json",
-    "package.json",
-    "test/lib/**",
-    "utils/build.mjs"
-  ],
+  "futureFlags": {
+    "affectedUsingTaskInputs": true,
+    "strictTaskEntrypointSelection": true,
+    "experimentalObservability": true,
+    "experimentalTaskCommand": true,
+    "experimentalCargoWorkspaces": true,
+    "experimentalPythonWorkspaces": true
+  },
+  "globalDependencies": [".github/workflows/**", "turbo-cache-key.json"],
+  "globalEnv": ["OS", "RUNNER_OS"],
   "envMode": "loose",
+  "experimentalObservability": {
+    "otel": {
+      "enabled": true,
+      "protocol": "http/protobuf",
+      "timeoutMs": 10000,
+      "intervalMs": 15000,
+      "resource": {
+        "service.name": "turborepo"
+      },
+      "metrics": {
+        "runSummary": true,
+        "taskDetails": true
+      }
+    }
+  },
   "tasks": {
+    "//#format:check": {},
+    "//#lint": {},
+    "//#lint:dependencies": {},
+    "ci:checks": {
+      "dependsOn": ["build", "type-check"]
+    },
+    "//#ci:checks": {
+      "dependsOn": ["format:check", "lint", "lint:dependencies"]
+    },
     "build": {
       "dependsOn": ["^build"],
+      "env": ["VERCEL_CLI_BUILD_LABEL"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/utils/build.mjs",
+        "$TURBO_ROOT$/utils/build-builder.mjs"
+      ],
       "outputLogs": "new-only",
       "outputs": ["dist/**"]
     },
-    "vitest-unit": {
-      "dependsOn": ["build"],
+    "build:docs": {
+      "dependsOn": ["build", "^build"],
+      "inputs": ["$TURBO_DEFAULT$", "!docs/**"],
+      "outputLogs": "new-only",
+      "outputs": ["docs/**"]
+    },
+    "generate:schemas": {
       "outputLogs": "new-only"
     },
-    "vitest-unit-node-24": {
-      "dependsOn": ["build"],
-      "outputLogs": "new-only"
-    },
-    "vitest-run": {
-      "dependsOn": ["build"],
-      "outputLogs": "new-only"
-    },
-    "vitest-e2e": {
-      "dependsOn": ["build"],
-      "outputLogs": "new-only"
-    },
-    "vitest-e2e-node-20": {
-      "dependsOn": ["build"],
+    "build:wasm": {
       "outputLogs": "new-only"
     },
     "test-e2e-node-all-versions": {
       "dependsOn": ["build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/test/lib/**",
+        "$TURBO_ROOT$/vitest.config.mts"
+      ],
       "outputLogs": "new-only"
     },
     "test-unit": {
-      "dependsOn": ["build"],
+      "dependsOn": ["^build"],
+      "env": ["NODE_VERSION", "VITEST_SHARD"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/vitest.config.mts"],
       "outputLogs": "new-only"
     },
     "test-dev": {
       "dependsOn": ["build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/test/lib/**",
+        "$TURBO_ROOT$/vitest.config.mts"
+      ],
       "outputLogs": "new-only"
     },
-    "test-cli": {
+    "test-dev-artifacts": {
       "dependsOn": ["build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/test/lib/**",
+        "$TURBO_ROOT$/vitest.config.mts"
+      ],
       "outputLogs": "new-only"
     },
     "test-e2e": {
-      "dependsOn": ["build"],
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/test/lib/**",
+        "$TURBO_ROOT$/vitest.config.mts"
+      ],
+      "outputLogs": "new-only"
+    },
+    "test-e2e-artifacts": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/test/lib/**",
+        "$TURBO_ROOT$/vitest.config.mts"
+      ],
+      "outputLogs": "new-only"
+    },
+    "test-e2e-independent": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/test/lib/**",
+        "$TURBO_ROOT$/vitest.config.mts"
+      ],
       "outputLogs": "new-only"
     },
     "test-next-local": {
       "dependsOn": ["build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/test/lib/**",
+        "$TURBO_ROOT$/vitest.config.mts"
+      ],
       "outputLogs": "new-only"
     },
     "test": {
-      "dependsOn": ["build"],
+      "dependsOn": ["^build"],
+      "env": ["VITEST_SHARD", "VITEST_TEST_FILES"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/test/lib/**",
+        "$TURBO_ROOT$/vitest.config.mts"
+      ],
       "outputLogs": "new-only"
     },
     "type-check": {
-      "dependsOn": ["source", "^build"]
+      "dependsOn": ["build", "source"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.base.json"]
     },
     "source": {
       "dependsOn": ["^source"]

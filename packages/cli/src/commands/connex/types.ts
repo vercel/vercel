@@ -5,6 +5,12 @@ export interface ConnexClient {
   updatedAt: number;
   uid: string;
   type: string;
+  /** Third-party service this connector represents, e.g. `notion`. */
+  service?: string;
+  /** Registry connection method the connector was created from, when named. */
+  connectionMethod?: string;
+  /** Which of the service's products/surfaces the connector points at. */
+  target?: string;
   name: string;
   clientUrl?: string | null;
   data: object;

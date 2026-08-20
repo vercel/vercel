@@ -1,5 +1,76 @@
 # @vercel/client
 
+## 18.2.12
+
+### Patch Changes
+
+- Updated dependencies [b4f09c1]
+  - @vercel/build-utils@14.1.1
+
+## 18.2.11
+
+### Patch Changes
+
+- Updated dependencies [852e1a0]
+  - @vercel/routing-utils@6.5.0
+  - @vercel/build-utils@14.1.0
+
+## 18.2.10
+
+### Patch Changes
+
+- 299d5cd: Root-anchor the prebuilt deploy ignore negations so files under `.vercel` other than `.vercel/output` are not accidentally re-included when a positive `.vercel` pattern was compiled earlier in the same process (e.g. an in-process `vercel build`).
+
+## 18.2.9
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+- Updated dependencies [2da7809]
+  - @vercel/build-utils@14.0.5
+
+## 18.2.8
+
+### Patch Changes
+
+- Updated dependencies [13f81ac]
+  - @vercel/build-utils@14.0.4
+
+## 18.2.7
+
+### Patch Changes
+
+- Updated dependencies [d72826e]
+  - @vercel/build-utils@14.0.3
+
+## 18.2.6
+
+### Patch Changes
+
+- Updated dependencies [b7ec19b]
+  - @vercel/build-utils@14.0.2
+
+## 18.2.5
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/build-utils@14.0.1
+  - @vercel/error-utils@2.2.1
+  - @vercel/routing-utils@6.4.1
+
+## 18.2.4
+
+### Patch Changes
+
+- 4584bbd: Send eligible small static deployments inline so the API can use the instant static deployment path.
+- 17d9eba: Include the deploy path relative to the detected git repository root in `gitMetadata.rootDirectory`.
+- Updated dependencies [b747ab4]
+- Updated dependencies [5c33351]
+- Updated dependencies [5619873]
+  - @vercel/build-utils@14.0.0
+
 ## 18.2.3
 
 ### Patch Changes

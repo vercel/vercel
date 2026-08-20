@@ -1,7 +1,7 @@
 {
   "name": "@vercel/react-router",
   "description": "Vercel platform abstractions for React Router",
-  "version": "1.3.1",
+  "version": "1.3.4",
   "license": "Apache-2.0",
   "type": "module",
   "module": "./index.js",
@@ -33,7 +33,8 @@
     "defaults/"
   ],
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test-unit": "vitest run --config ../../vitest.config.mts"
   },
   "keywords": [
     "vercel",
@@ -53,7 +54,9 @@
     "isbot": "5.1.21",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router": "7.1.3"
+    "react-router": "7.1.3",
+    "vite": "6.4.3",
+    "vitest": "4.1.10"
   },
   "peerDependencies": {
     "@react-router/dev": "7",

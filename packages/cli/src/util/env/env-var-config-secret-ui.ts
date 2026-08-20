@@ -6,7 +6,7 @@ export type EnvVariableVisibility = 'config' | 'secret';
 /**
  * Opt-in CLI support for the config/secret env var model (dashboard flag:
  * `env-var-config-secret-ui`). When enabled, the CLI skips legacy Sensitive
- * Environment Variables Policy coercion. Development still disallows secrets.
+ * Environment Variables Policy coercion and allows secrets in Development.
  */
 export function isEnvVarConfigSecretUiEnabled(): boolean {
   const raw = process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
@@ -83,15 +83,21 @@ export function getPublicPrefixSecretVisibilityError(
 }
 
 /**
- * Returns a client-side error when secrets are requested for Development.
+ * Returns a client-side error when secrets are requested for Development under
+ * the legacy model. Allowed when config/secret UI is enabled.
  */
 export function getDevelopmentSecretVisibilityError(
   envTargets: string[],
   options: {
     type: ProjectEnvType;
     visibility?: EnvVariableVisibility;
+    configSecretUiEnabled?: boolean;
   }
 ): string | null {
+  if (options.configSecretUiEnabled) {
+    return null;
+  }
+
   if (!envTargets.includes('development')) {
     return null;
   }
@@ -182,6 +188,7 @@ export function resolveEnvVarVisibility(
       {
         type: options.type,
         visibility: options.explicitVisibility,
+        configSecretUiEnabled: options.configSecretUiEnabled,
       }
     );
     if (developmentError) {
@@ -201,6 +208,7 @@ export function resolveEnvVarVisibility(
     {
       type: options.type,
       visibility: inferred,
+      configSecretUiEnabled: options.configSecretUiEnabled,
     }
   );
   if (developmentError) {

@@ -7,6 +7,10 @@ import { printError } from '../../util/error';
 import { listSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
+import { packageName } from '../../util/pkg-name';
+import getCommandFlags from '../../util/get-command-flags';
+import cmd from '../../util/output/cmd';
+import { quoteArg } from '../../util/flags/quote-arg';
 
 interface TokenRow {
   id?: string;
@@ -17,7 +21,11 @@ interface TokenRow {
 
 interface ListTokensResponse {
   tokens: TokenRow[];
-  pagination?: { count?: number; next?: string | null; prev?: string | null };
+  pagination?: {
+    count?: number;
+    next?: number | string | null;
+    prev?: number | string | null;
+  };
 }
 
 export default async function ls(
@@ -45,10 +53,14 @@ export default async function ls(
     output.error('`--limit` must be between 1 and 100.');
     return 1;
   }
+  const next = parsedArgs.flags['--next'];
 
   const params = new URLSearchParams();
   if (typeof limit === 'number') {
     params.set('limit', String(limit));
+  }
+  if (typeof next === 'string') {
+    params.set('until', next);
   }
   const qs = params.toString();
   const path = `/v6/user/tokens${qs ? `?${qs}` : ''}`;
@@ -79,5 +91,12 @@ export default async function ls(
     ]),
   ];
   client.stderr.write(`${table(rows, { hsep: 2 })}\n`);
+
+  if (result.pagination?.next) {
+    const flags = getCommandFlags(parsedArgs.flags, ['_', '--next', '-N']);
+    const nextCmd = `${packageName} tokens ls${flags} --next ${quoteArg(String(result.pagination.next))}`;
+    output.log(`To display the next page run ${cmd(nextCmd)}`);
+  }
+
   return 0;
 }

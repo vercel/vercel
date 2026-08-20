@@ -1,5 +1,26 @@
 # @vercel/router-sdk
 
+## 0.6.1
+
+### Patch Changes
+
+- Updated dependencies [852e1a0]
+  - @vercel/routing-utils@6.5.0
+
+## 0.6.0
+
+### Minor Changes
+
+- d72c4fe: Add `maxConcurrency` to the per-function configuration type.
+
+## 0.5.6
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/routing-utils@6.4.1
+
 ## 0.5.5
 
 ### Patch Changes

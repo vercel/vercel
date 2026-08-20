@@ -1,5 +1,92 @@
 # @vercel/build-utils
 
+## 14.1.1
+
+### Patch Changes
+
+- b4f09c1: Support selecting Bun 1.4.x as an explicit runtime and build-time package manager, including local Bun servers.
+
+## 14.1.0
+
+### Minor Changes
+
+- 852e1a0: Move middleware matcher utils from node builder to general build utils.
+
+## 14.0.5
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+- Updated dependencies [2da7809]
+  - @vercel/python-analysis@0.13.2
+
+## 14.0.4
+
+### Patch Changes
+
+- 13f81ac: Support pnpm lockfiles containing multiple YAML documents.
+
+## 14.0.3
+
+### Patch Changes
+
+- d72826e: Prevented unit tests and generated outputs from changing Turborepo task inputs during CI, and removed the redundant affected Unit test retry.
+
+## 14.0.2
+
+### Patch Changes
+
+- b7ec19b: Scope the pre-compilation install's `VERCEL_INSTALL_COMPLETED` marker to the `package.json` it installed. Previously, a `vercel.toml`/`vercel.ts` config caused `vc build` to install at the repo root and then silently skip every later default install, so services whose install root is a different workspace (its own `package.json`/lockfile) built without dependencies.
+
+## 14.0.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/python-analysis@0.13.1
+
+## 14.0.0
+
+### Major Changes
+
+- 5c33351: Remove `getOsRelease()`, and stop deriving the provided runtime from the build host.
+
+  `getProvidedRuntime()` is retained and now always resolves to `'provided.al2023'`. It previously read `/etc/os-release` and returned `'provided.al2'` on Amazon Linux 2 hosts, so the emitted runtime depended on where the build ran — a `vercel build` on an AL2 machine produced output that is rejected at deploy time, because `provided.al2` is no longer an accepted Lambda runtime. Custom runtimes calling `getProvidedRuntime()` need no changes and are fixed by this release.
+
+  `getOsRelease()` is removed with no replacement.
+
+  `validateBuildResult()` no longer accepts an `osRelease` option. Its runtime allowlist check was previously skipped unless the caller passed `osRelease.VERSION === '2023'`; it now always runs.
+
+### Minor Changes
+
+- b747ab4: Replace the inferred PPR fields on `Prerender` with the Next.js prerender taxonomy.
+
+  `hasPostponed`, `hasFallback`, `isDynamicRoute` and `htmlSize` were derived by
+  `@vercel/next` from build artifacts (the `.meta` postponed state, which manifest
+  section a route came from, and a `statSync` of the `.html` shell). Next.js
+  `>= 16.3.0-canary.96` publishes its own classification in the prerender
+  manifest, so those four fields are removed in favour of a single optional
+  `prerenderClassification` on `Prerender` / `PrerenderOptions`:
+
+  - `routeType` — `'route' | 'page' | 'shell' | 'fallback'`
+  - `response` — `'empty' | 'initial' | 'complete'`
+  - `compute` — `'blocking' | 'resuming' | 'static'`
+  - `htmlSize` — byte size of the prerendered HTML shell, when the entry has one
+
+  The values are carried through unvalidated so a taxonomy value added by a future
+  Next.js release cannot hard-fail a deploy. `@vercel/next` sets the field only
+  when Next.js supplied the complete group — absence is legitimate for
+  `notFoundRoutes` and Pages Router `fallback: false` templates — and only on the
+  primary output of each prerender group, so a route is classified exactly once.
+
+- 5619873: Fix api dir builds receiving incorrect framework or runtime.
+
+### Patch Changes
+
+- Updated dependencies [08a2618]
+  - @vercel/python-analysis@0.13.0
+
 ## 13.36.3
 
 ### Patch Changes

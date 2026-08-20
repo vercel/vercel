@@ -1,5 +1,60 @@
 # @vercel/cervel
 
+## 0.1.46
+
+### Patch Changes
+
+- Updated dependencies [b4f09c1]
+  - @vercel/backends@0.8.38
+
+## 0.1.45
+
+### Patch Changes
+
+- @vercel/backends@0.8.37
+
+## 0.1.44
+
+### Patch Changes
+
+- Updated dependencies [2da7809]
+  - @vercel/backends@0.8.36
+
+## 0.1.43
+
+### Patch Changes
+
+- @vercel/backends@0.8.35
+
+## 0.1.42
+
+### Patch Changes
+
+- @vercel/backends@0.8.34
+
+## 0.1.41
+
+### Patch Changes
+
+- @vercel/backends@0.8.33
+
+## 0.1.40
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/backends@0.8.32
+
+## 0.1.39
+
+### Patch Changes
+
+- Updated dependencies [ce2eba4]
+- Updated dependencies [ce2eba4]
+- Updated dependencies [3586b18]
+  - @vercel/backends@0.8.31
+
 ## 0.1.38
 
 ### Patch Changes

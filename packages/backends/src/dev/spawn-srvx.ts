@@ -1,9 +1,13 @@
-import { fork, type ChildProcess } from 'node:child_process';
+import { fork, spawn, type ChildProcess } from 'node:child_process';
 import { createConnection } from 'node:net';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { cloneEnv, type StartDevServerSuccess } from '@vercel/build-utils';
+import {
+  cloneEnv,
+  getOrCreateBunBinary,
+  type StartDevServerSuccess,
+} from '@vercel/build-utils';
 import getPort from 'get-port';
 
 const require_ = createRequire(import.meta.url);
@@ -22,6 +26,7 @@ interface SpawnSrvxOptions {
   signal?: AbortSignal;
   onStdout?: (data: Buffer) => void;
   onStderr?: (data: Buffer) => void;
+  runtime: 'node' | 'bun';
 }
 
 function forwardOutput(
@@ -161,24 +166,28 @@ export async function spawnSrvx(
   });
   if (!env.NODE_ENV) env.NODE_ENV = 'development';
 
-  // Fork the executable with IPC so srvx serves in this process. Running it as
-  // a regular command would add a watcher supervisor and obscure the PID that
-  // Backends owns. The Vercel CLI already handles source-file invalidation.
-  const child = fork(
-    srvxBinPath,
-    [
-      `--port=${port}`,
-      '--host=127.0.0.1',
-      `--static=${resolve(opts.workPath, opts.publicDir)}`,
-      opts.entrypoint,
-    ],
-    {
-      cwd: opts.workPath,
-      env,
-      execArgv: ['--import', tsxPath],
-      stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
-    }
-  );
+  // Bun.serve entrypoints own their HTTP server and run directly. Node handlers
+  // use srvx with IPC so it does not add a watcher supervisor; the Vercel CLI
+  // already handles source-file invalidation.
+  const args = [
+    `--port=${port}`,
+    '--host=127.0.0.1',
+    `--static=${resolve(opts.workPath, opts.publicDir)}`,
+    opts.entrypoint,
+  ];
+  const child =
+    opts.runtime === 'bun'
+      ? spawn(await getOrCreateBunBinary(), ['--bun', opts.entrypoint], {
+          cwd: opts.workPath,
+          env,
+          stdio: ['ignore', 'pipe', 'pipe'],
+        })
+      : fork(srvxBinPath, args, {
+          cwd: opts.workPath,
+          env,
+          execArgv: ['--import', tsxPath],
+          stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
+        });
 
   child.stdout?.on('data', forwardOutput(opts.onStdout, process.stdout));
   child.stderr?.on('data', forwardOutput(opts.onStderr, process.stderr));

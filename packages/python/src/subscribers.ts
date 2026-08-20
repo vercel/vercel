@@ -11,18 +11,21 @@ import {
 } from '@vercel/build-utils';
 import {
   getModuleEntrypointName,
+  parseBareModuleEntrypoint,
   parseModuleEntrypoint,
   resolveExistingEntrypoint,
   safePathSegment,
 } from './module-entrypoint';
 import type { UvRunner } from './uv';
 import type { QueueIntegration } from './conditional-vendoring';
+import { isWorkflowQueueTopic } from './workflows';
 
 // Shared by the vercel-queue and legacy vercel-workers integrations.
 // Consumer names are derived from output paths, so deployments must keep
 // producing the same `_py_subscribers/...`-based names to retain their
 // queue consumer-group positions.
 const SUBSCRIBER_OUTPUT_DIR = '_py_subscribers';
+const SUBSCRIBER_ID_ENV = 'VERCEL_PYTHON_SUBSCRIBER_ID';
 
 type SubscriberTriggerDefaults = Omit<
   TriggerEvent,
@@ -38,7 +41,13 @@ export interface SubscriberDeclaration {
   name: string;
   entrypoint: string;
   moduleName: string;
-  variableName: string;
+  /**
+   * Only present for `module:object` entrypoints. The vercel-queue serving
+   * paths never dereference it (subscriptions register on import and are
+   * served through `vercel.queue.asgi_app()`); the legacy vercel-workers
+   * bootstrap serves the named object directly and requires it.
+   */
+  variableName?: string;
   topicPatterns?: string[];
   /** Present iff parsed under the legacy vercel-workers schema. */
   legacy?: LegacySubscriberConfig;
@@ -52,6 +61,13 @@ export interface SubscriberSubscription {
 
 export interface Subscriber extends SubscriberDeclaration {
   subscriptions: SubscriberSubscription[];
+  /** Integration modules whose subscriber probe claimed the declared object. */
+  owners: string[];
+}
+
+interface IntrospectedSubscriptions {
+  subscriptions: SubscriberSubscription[];
+  owners: string[];
 }
 
 interface RawSubscriber {
@@ -75,6 +91,19 @@ interface RawQueueSubscription {
   initial_delay_seconds?: unknown;
   max_concurrency?: unknown;
   max_attempts?: unknown;
+}
+
+interface RawApschedulerPreviews {
+  enabled?: unknown;
+  idle_timeout?: unknown;
+}
+
+interface RawApschedulerConfig {
+  previews?: unknown;
+}
+
+export interface ApschedulerPreviewConfig {
+  idleTimeoutSeconds: number;
 }
 
 interface TriggerNumberField {
@@ -157,9 +186,18 @@ interface Pyproject {
   tool?: {
     vercel?: {
       subscribers?: RawSubscriber[];
+      apscheduler?: RawApschedulerConfig;
     };
   };
 }
+
+const APSCHEDULER_PREVIEW_FIELD_NAMES = new Set(['enabled', 'idle_timeout']);
+const APSCHEDULER_DURATION_UNITS: Record<string, number> = {
+  s: 1,
+  m: 60,
+  h: 60 * 60,
+  d: 24 * 60 * 60,
+};
 
 export function getSubscriberOutputPath(subscriberName: string): string {
   return `${SUBSCRIBER_OUTPUT_DIR}/${safePathSegment(subscriberName)}`;
@@ -182,6 +220,25 @@ export function generatedPythonPathToModule(filePath: string): string {
     .replace(/\.py$/, '')
     .split(/[\\/]+/)
     .join('.');
+}
+
+/**
+ * Whether the project's pyproject.toml declares any
+ * `[[tool.vercel.subscribers]]`. Presence check only; schema validation
+ * stays in getPyprojectSubscribers. The queue adapter bootstrap gates on
+ * this rather than on composed subscribers so web service builds sharing
+ * the pyproject.toml still bootstrap the adapters for publishing.
+ */
+export async function hasPyprojectSubscribers(
+  workPath: string
+): Promise<boolean> {
+  const pyprojectPath = join(workPath, 'pyproject.toml');
+  if (!fs.existsSync(pyprojectPath)) {
+    return false;
+  }
+  const pyproject = await readConfigFile<Pyproject>(pyprojectPath);
+  const subscribers = pyproject?.tool?.vercel?.subscribers;
+  return Array.isArray(subscribers) && subscribers.length > 0;
 }
 
 export async function getPyprojectSubscribers(
@@ -223,6 +280,80 @@ export async function getPyprojectSubscribers(
   return parsedSubscribers;
 }
 
+export async function getApschedulerPreviewConfig(
+  workPath: string
+): Promise<ApschedulerPreviewConfig | undefined> {
+  const pyprojectPath = join(workPath, 'pyproject.toml');
+  if (!fs.existsSync(pyprojectPath)) {
+    return undefined;
+  }
+
+  const pyproject = await readConfigFile<Pyproject>(pyprojectPath);
+  const apscheduler = pyproject?.tool?.vercel?.apscheduler;
+  if (apscheduler === undefined) {
+    return undefined;
+  }
+  if (
+    !apscheduler ||
+    typeof apscheduler !== 'object' ||
+    Array.isArray(apscheduler)
+  ) {
+    throw apschedulerError('"tool.vercel.apscheduler" must be a table');
+  }
+
+  const previews = apscheduler.previews;
+  if (previews === undefined) {
+    return undefined;
+  }
+  if (!previews || typeof previews !== 'object' || Array.isArray(previews)) {
+    throw apschedulerError(
+      '"tool.vercel.apscheduler.previews" must be a table'
+    );
+  }
+
+  const rawPreviews = previews as RawApschedulerPreviews;
+  for (const key of Object.keys(rawPreviews)) {
+    if (!APSCHEDULER_PREVIEW_FIELD_NAMES.has(key)) {
+      throw apschedulerError(
+        `"tool.vercel.apscheduler.previews" has unrecognized field "${key}"`
+      );
+    }
+  }
+
+  if (
+    rawPreviews.enabled !== undefined &&
+    typeof rawPreviews.enabled !== 'boolean'
+  ) {
+    throw apschedulerError(
+      '"tool.vercel.apscheduler.previews.enabled" must be a boolean'
+    );
+  }
+  if (rawPreviews.enabled !== true) {
+    return undefined;
+  }
+  if (typeof rawPreviews.idle_timeout !== 'string') {
+    throw apschedulerError(
+      '"tool.vercel.apscheduler.previews.idle_timeout" must be a duration such as "30m"'
+    );
+  }
+
+  const match = /^([1-9]\d*)([smhd])$/.exec(rawPreviews.idle_timeout);
+  if (!match) {
+    throw apschedulerError(
+      '"tool.vercel.apscheduler.previews.idle_timeout" must be a positive duration using s, m, h, or d (for example "30m")'
+    );
+  }
+  const idleTimeoutSeconds =
+    Number(match[1]) * APSCHEDULER_DURATION_UNITS[match[2]];
+  if (!Number.isSafeInteger(idleTimeoutSeconds)) {
+    throw apschedulerError(
+      '"tool.vercel.apscheduler.previews.idle_timeout" is too large'
+    );
+  }
+
+  return { idleTimeoutSeconds };
+}
+
 export async function resolveQueueSubscribers({
   declarations,
   uv,
@@ -255,10 +386,12 @@ export async function resolveQueueSubscribers({
         : '';
     const unmatchedTopicPatterns = getUnmatchedQueueTopicPatterns(
       declaration,
-      introspected
+      introspected.subscriptions
     );
     if (unmatchedTopicPatterns.length > 0) {
-      const introspectedTopics = introspected.map(({ topic }) => topic);
+      const introspectedTopics = introspected.subscriptions.map(
+        ({ topic }) => topic
+      );
       throw subscriberError(
         `${kind} "${declaration.name}" declared topics [${unmatchedTopicPatterns.join(
           ', '
@@ -267,14 +400,28 @@ export async function resolveQueueSubscribers({
         )}]${hint}`
       );
     }
-    const subscriptions = filterQueueSubscriptions(declaration, introspected);
+    // Workflow entrypoints keep only the `__wkf_*`-shaped subscriptions
+    // their registry created (the namespace embedded in the topic is only
+    // known to the SDK); other queue subscriptions in the same import graph
+    // belong to subscriber lambdas.
+    const subscriptions =
+      kind === 'workflow'
+        ? introspected.subscriptions.filter(subscription =>
+            isWorkflowQueueTopic(subscription.topic)
+          )
+        : filterQueueSubscriptions(declaration, introspected.subscriptions);
     if (subscriptions.length === 0) {
+      if (kind === 'workflow') {
+        throw subscriberError(
+          `workflow "${declaration.name}" registered no workflow queue subscriptions${hint}`
+        );
+      }
       const declared = declaration.topicPatterns?.join(', ') ?? '*';
       throw subscriberError(
         `${kind} "${declaration.name}" declared topics [${declared}] but no introspected queue subscriptions matched${hint}`
       );
     }
-    result.push({ ...declaration, subscriptions });
+    result.push({ ...declaration, subscriptions, owners: introspected.owners });
   }
 
   return result;
@@ -332,26 +479,30 @@ export function queueTopicPatternsOverlap(
 /**
  * Python lines that activate the queue adapter integrations required by
  * the project's dependencies. The adapter packages have no import-time
- * side effects, so nothing else activates them. Activation runs after
- * the subscriber module is imported: each installer retroactively
- * registers subscriptions for apps the import created. And because the
- * project demonstrably depends on the upstream package, a failed import
- * or install is a hard error rather than something to skip.
+ * side effects, so nothing else activates them. Most adapters install after
+ * import and retroactively register framework objects; adapters that must
+ * observe declarations during import opt into the earlier phase. Because the
+ * project demonstrably depends on the upstream package, a failed import or
+ * install is a hard error rather than something to skip.
  */
 function createIntegrationInstallLines(
   integrations: QueueIntegration[],
-  { serving }: { serving: boolean }
+  { serving, beforeImport }: { serving: boolean; beforeImport: boolean }
 ): string[] {
-  return integrations.flatMap(({ module, installer, servingActivator }) => [
-    `from ${module} import ${installer}`,
-    `${installer}()`,
-    // Queue-serving processes must also activate consumption (register
-    // push callbacks, start the adapter's embedded worker); introspection
-    // and publish-only processes must not.
-    ...(serving && servingActivator
-      ? [`from ${module} import ${servingActivator}`, `${servingActivator}()`]
-      : []),
-  ]);
+  return integrations
+    .filter(
+      integration => Boolean(integration.installBeforeImport) === beforeImport
+    )
+    .flatMap(({ module, installer, servingActivator }) => [
+      `from ${module} import ${installer}`,
+      `${installer}()`,
+      // Queue-serving processes must also activate consumption (register
+      // push callbacks, start the adapter's embedded worker); introspection
+      // and publish-only processes must not.
+      ...(serving && servingActivator
+        ? [`from ${module} import ${servingActivator}`, `${servingActivator}()`]
+        : []),
+    ]);
 }
 
 export function createQueueHandlerModule(
@@ -360,10 +511,19 @@ export function createQueueHandlerModule(
 ): string {
   return [
     'import importlib',
+    'import os',
     'import vercel.queue',
     '',
+    `os.environ[${JSON.stringify(SUBSCRIBER_ID_ENV)}] = ${JSON.stringify(declaration.name)}`,
+    ...createIntegrationInstallLines(integrations, {
+      serving: true,
+      beforeImport: true,
+    }),
     `importlib.import_module(${JSON.stringify(declaration.moduleName)})`,
-    ...createIntegrationInstallLines(integrations, { serving: true }),
+    ...createIntegrationInstallLines(integrations, {
+      serving: true,
+      beforeImport: false,
+    }),
     'app = vercel.queue.asgi_app()',
     '',
   ].join('\n');
@@ -372,16 +532,45 @@ export function createQueueHandlerModule(
 async function parseSubscriberEntrypoint(
   workPath: string,
   label: string,
-  entrypointValue: unknown
+  entrypointValue: unknown,
+  { requireVariable }: { requireVariable: boolean }
 ): Promise<Omit<SubscriberDeclaration, 'topicPatterns' | 'legacy'>> {
   if (typeof entrypointValue !== 'string') {
     throw subscriberError(`${label} must define string field "entrypoint"`);
   }
 
-  const entrypoint = parseModuleEntrypoint(entrypointValue);
+  // A `.py` suffix is almost certainly a file path written where an import
+  // path belongs (`tasks.py` would otherwise parse as module `py` in
+  // package `tasks`). Modules named `py` remain reachable as `pkg.py:obj`.
+  if (!requireVariable && /\.py$/i.test(entrypointValue)) {
+    const suggestion = parseBareModuleEntrypoint(
+      entrypointValue
+        .slice(0, -3)
+        .replace(/[\\/]+/g, '.')
+        .replace(/(^|\.)__init__$/, '')
+    );
+    throw subscriberError(
+      `${label} has invalid entrypoint "${entrypointValue}". ` +
+        `Use an import path, not a file path${
+          suggestion ? `: "${suggestion.moduleName}"` : ''
+        }`
+    );
+  }
+
+  // The legacy vercel-workers bootstrap serves the entrypoint object
+  // directly, so it needs `module:object`. vercel-queue subscribers only
+  // need the module imported (subscriptions register globally on import),
+  // so a bare module path works too.
+  const entrypoint =
+    parseModuleEntrypoint(entrypointValue) ??
+    (requireVariable ? null : parseBareModuleEntrypoint(entrypointValue));
   if (!entrypoint) {
     throw subscriberError(
-      `${label} has invalid entrypoint "${entrypointValue}". Use "module:object"`
+      `${label} has invalid entrypoint "${entrypointValue}". Use ${
+        requireVariable
+          ? '"module:object"'
+          : '"module:object" or a module path like "pkg.module"'
+      }`
     );
   }
   const name = getModuleEntrypointName(entrypoint);
@@ -395,11 +584,12 @@ async function parseSubscriberEntrypoint(
     );
   }
 
+  const { variableName } = entrypoint;
   return {
     name,
     entrypoint: existingEntrypoint,
     moduleName: entrypoint.moduleName,
-    variableName: entrypoint.variableName,
+    ...(variableName === undefined ? {} : { variableName }),
   };
 }
 
@@ -422,7 +612,8 @@ async function parseSubscriber(
   const base = await parseSubscriberEntrypoint(
     workPath,
     label,
-    config.entrypoint
+    config.entrypoint,
+    { requireVariable: false }
   );
   return {
     ...base,
@@ -449,7 +640,8 @@ async function parseLegacySubscriber(
   const base = await parseSubscriberEntrypoint(
     workPath,
     label,
-    config.entrypoint
+    config.entrypoint,
+    { requireVariable: true }
   );
   return {
     ...base,
@@ -532,13 +724,45 @@ function parseTopicPatterns(
  * explicitly. None values are dropped rather than emitted as JSON null.
  */
 function createQueueIntrospectionScript(
-  moduleName: string,
+  declaration: Pick<
+    SubscriberDeclaration,
+    'moduleName' | 'name' | 'variableName'
+  >,
   integrations: QueueIntegration[]
 ): string {
+  // Ask each integration whether it owns the declared object. The ImportError
+  // guard tolerates adapter versions that predate the probe; those degrade to
+  // "not owned" rather than failing introspection. Probes identify an object
+  // by (module_name, variable_name), so bare-module declarations without a
+  // variable name cannot be probed and stay unowned.
+  const { variableName } = declaration;
+  const probeLines =
+    variableName === undefined
+      ? []
+      : integrations
+          .filter(integration => integration.subscriberProbe)
+          .flatMap(({ module, subscriberProbe }) => [
+            'try:',
+            `    from ${module} import ${subscriberProbe}`,
+            'except ImportError:',
+            '    pass',
+            'else:',
+            `    if ${subscriberProbe}(${JSON.stringify(declaration.moduleName)}, ${JSON.stringify(variableName)}):`,
+            `        owners.append(${JSON.stringify(module)})`,
+          ]);
   return [
-    'import importlib, json, sys',
-    `importlib.import_module(${JSON.stringify(moduleName)})`,
-    ...createIntegrationInstallLines(integrations, { serving: false }),
+    'import importlib, json, os, sys',
+    `os.environ[${JSON.stringify(SUBSCRIBER_ID_ENV)}] = ${JSON.stringify(declaration.name)}`,
+    'os.environ["VERCEL_APSCHEDULER_DISCOVERY"] = "1"',
+    ...createIntegrationInstallLines(integrations, {
+      serving: false,
+      beforeImport: true,
+    }),
+    `importlib.import_module(${JSON.stringify(declaration.moduleName)})`,
+    ...createIntegrationInstallLines(integrations, {
+      serving: false,
+      beforeImport: false,
+    }),
     'from vercel.queue import get_subscriptions',
     'subs = [',
     '    {k: v for k, v in {',
@@ -551,7 +775,9 @@ function createQueueIntrospectionScript(
     '    }.items() if v is not None}',
     '    for s in get_subscriptions()',
     ']',
-    'json.dump(subs, sys.stdout)',
+    'owners = []',
+    ...probeLines,
+    "json.dump({'subscriptions': subs, 'owners': owners}, sys.stdout)",
   ].join('\n');
 }
 
@@ -569,11 +795,8 @@ async function introspectQueueSubscriptions({
   projectDir: string;
   kind: 'subscriber' | 'workflow';
   integrations: QueueIntegration[];
-}): Promise<SubscriberSubscription[]> {
-  const script = createQueueIntrospectionScript(
-    declaration.moduleName,
-    integrations
-  );
+}): Promise<IntrospectedSubscriptions> {
+  const script = createQueueIntrospectionScript(declaration, integrations);
 
   try {
     const { stdout } = await uv.run({
@@ -614,21 +837,33 @@ async function introspectQueueSubscriptions({
  */
 export async function introspectDevQueueSubscriptions({
   moduleName,
+  subscriberName,
+  variableName,
   pythonBin,
   cwd,
   env,
   integrations,
 }: {
   moduleName: string;
+  subscriberName: string;
+  variableName?: string;
   pythonBin: string;
   cwd: string;
   env: NodeJS.ProcessEnv;
   integrations: QueueIntegration[];
-}): Promise<DevQueueSubscription[] | undefined> {
+}): Promise<
+  { subscriptions: DevQueueSubscription[]; owners: string[] } | undefined
+> {
   try {
     const { stdout } = await execa(
       pythonBin,
-      ['-c', createQueueIntrospectionScript(moduleName, integrations)],
+      [
+        '-c',
+        createQueueIntrospectionScript(
+          { moduleName, name: subscriberName, variableName },
+          integrations
+        ),
+      ],
       // Match the deployed-function environment (see
       // introspectQueueSubscriptions): SDKs may need VERCEL=1,
       // VERCEL_REGION, and VERCEL_DEPLOYMENT_ID to register subscriptions.
@@ -642,12 +877,12 @@ export async function introspectDevQueueSubscriptions({
         },
       }
     );
-    const subscriptions = parseIntrospectedSubscriptions(
+    const introspected = parseIntrospectedSubscriptions(
       'subscriber',
       moduleName,
       stdout
     );
-    return subscriptions.map(subscription => {
+    const subscriptions = introspected.subscriptions.map(subscription => {
       const { retryAfterSeconds, initialDelaySeconds, maxDeliveries } =
         subscription.triggerDefaults;
       return {
@@ -658,6 +893,7 @@ export async function introspectDevQueueSubscriptions({
         ...(maxDeliveries === undefined ? {} : { maxDeliveries }),
       };
     });
+    return { subscriptions, owners: introspected.owners };
   } catch (err) {
     debug(
       `Failed to introspect dev queue subscriptions for module "${moduleName}": ${
@@ -672,7 +908,7 @@ function parseIntrospectedSubscriptions(
   kind: 'subscriber' | 'workflow',
   subscriberName: string,
   stdout: string
-): SubscriberSubscription[] {
+): IntrospectedSubscriptions {
   let parsed: unknown;
   try {
     parsed = JSON.parse(stdout);
@@ -681,15 +917,32 @@ function parseIntrospectedSubscriptions(
       `${kind} "${subscriberName}" queue introspection did not return valid JSON`
     );
   }
-  if (!Array.isArray(parsed)) {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw subscriberError(
-      `${kind} "${subscriberName}" queue introspection must return an array`
+      `${kind} "${subscriberName}" queue introspection must return an object`
+    );
+  }
+  const { subscriptions, owners = [] } = parsed as {
+    subscriptions?: unknown;
+    owners?: unknown;
+  };
+  if (!Array.isArray(subscriptions)) {
+    throw subscriberError(
+      `${kind} "${subscriberName}" queue introspection must return a "subscriptions" array`
+    );
+  }
+  if (!Array.isArray(owners) || owners.some(o => typeof o !== 'string')) {
+    throw subscriberError(
+      `${kind} "${subscriberName}" queue introspection "owners" must be an array of strings`
     );
   }
 
-  return parsed.map((subscription, index) =>
-    parseIntrospectedSubscription(kind, subscriberName, index, subscription)
-  );
+  return {
+    subscriptions: subscriptions.map((subscription, index) =>
+      parseIntrospectedSubscription(kind, subscriberName, index, subscription)
+    ),
+    owners: owners as string[],
+  };
 }
 
 function parseIntrospectedSubscription(
@@ -754,9 +1007,38 @@ function getQueueWildcardPrefix(pattern: string): string | undefined {
   return undefined;
 }
 
+export const APSCHEDULER_INTEGRATION_MODULE = 'vercel.integrations.apscheduler';
+
+/**
+ * Identity mapping injected as VERCEL_APSCHEDULER_SUBSCRIBERS: the declared
+ * subscribers that the APScheduler integration claimed through its probe,
+ * with the stable id each object's lifecycle methods resolve at runtime.
+ */
+export function apschedulerSubscriberIdentities(
+  subscribers: Array<
+    Pick<Subscriber, 'name' | 'moduleName' | 'variableName' | 'owners'>
+  >
+): { id: string; entrypoint: string }[] {
+  return subscribers
+    .filter(subscriber =>
+      subscriber.owners.includes(APSCHEDULER_INTEGRATION_MODULE)
+    )
+    .map(subscriber => ({
+      id: subscriber.name,
+      entrypoint: `${subscriber.moduleName}:${subscriber.variableName}`,
+    }));
+}
+
 function subscriberError(message: string): NowBuildError {
   return new NowBuildError({
     code: 'PYTHON_INVALID_SUBSCRIBER_CONFIG',
+    message,
+  });
+}
+
+function apschedulerError(message: string): NowBuildError {
+  return new NowBuildError({
+    code: 'PYTHON_INVALID_APSCHEDULER_CONFIG',
     message,
   });
 }

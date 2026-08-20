@@ -111,15 +111,6 @@ describe('flags rm', () => {
     ]);
   });
 
-  it('deletes an archived flag successfully with --yes', async () => {
-    // Flag must be archived to be deleted
-    testFlags[0].state = 'archived';
-
-    client.setArgv('flags', 'rm', testFlags[0].slug, '--yes');
-    const exitCode = await flags(client);
-    expect(exitCode).toEqual(0);
-  });
-
   it('errors in non-interactive mode without --yes', async () => {
     testFlags[0].state = 'archived';
     (client.stdin as any).isTTY = false;

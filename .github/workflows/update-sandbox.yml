@@ -90,7 +90,7 @@ jobs:
               echo "Triggered by: [$SOURCE_REPOSITORY action run](https://github.com/$SOURCE_REPOSITORY/actions/runs/$SOURCE_RUN_ID)"
               echo
             fi
-            echo "[Action run](https://github.com/vercel/vercel/actions/runs/${{ github.run_id }})"
+            echo "[Action run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 

@@ -724,7 +724,7 @@ export const frameworks = [
     name: 'Dojo',
     slug: 'dojo',
     demo: 'https://dojo-template.vercel.app',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/dojo.png',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/dojo.svg',
     tagline: 'Dojo is a modern progressive, TypeScript first framework.',
     description:
       "A Dojo app, created with the Dojo CLI's cli-create-app command.",
@@ -889,7 +889,7 @@ export const frameworks = [
     name: 'Scully',
     slug: 'scully',
     demo: 'https://scully-template.vercel.app',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/scullyio-logo.png',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/scullyio-logo.svg',
     tagline: 'Scully is a static site generator for Angular.',
     description: 'The Static Site Generator for Angular apps.',
     website: 'https://github.com/scullyio/scully',
@@ -1840,7 +1840,7 @@ export const frameworks = [
     name: 'Zola',
     slug: 'zola',
     demo: 'https://zola-template.vercel.app',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/zola.png',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/zola.svg',
     tagline: 'Everything you need to make a static site engine in one binary.',
     description: 'A Zola app, created with the "Getting Started" tutorial.',
     website: 'https://www.getzola.org',
@@ -2077,7 +2077,7 @@ export const frameworks = [
     name: 'VuePress',
     slug: 'vuepress',
     demo: 'https://vuepress-starter-template.vercel.app',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/vuepress.png',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/vuepress.svg',
     tagline: 'Vue-powered Static Site Generator',
     description: 'Vue-powered Static Site Generator',
     website: 'https://vuepress.vuejs.org/',
@@ -2110,7 +2110,7 @@ export const frameworks = [
     name: 'Parcel',
     slug: 'parcel',
     demo: 'https://parcel-template.vercel.app',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/parcel.png',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/parcel.svg',
     tagline:
       'Parcel is a zero configuration build tool for the web that scales to projects of any size and complexity.',
     description: 'A vanilla web app built with Parcel.',
@@ -2267,9 +2267,9 @@ export const frameworks = [
     name: 'FastHTML',
     slug: 'fasthtml',
     demo: 'https://fasthtml-template.vercel.app',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/fasthtml.png',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/fasthtml.svg',
     darkModeLogo:
-      'https://api-frameworks.vercel.sh/framework-logos/fasthtml-dark.png',
+      'https://api-frameworks.vercel.sh/framework-logos/fasthtml-dark.svg',
     tagline: 'The fastest way to create an HTML app',
     description:
       'A library for writing fast and scalable Starlette-powered web applications',
@@ -4770,15 +4770,9 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
-    defaultRoutes: [
-      {
-        handle: 'filesystem',
-      },
-      {
-        src: '/(.*)',
-        dest: '/',
-      },
-    ],
+    // No `defaultRoutes`: `@vercel/go` emits its own catch-all, which points at
+    // the Lambda's real output path and carries the `request.path` transform
+    // that makes rewrites visible to the server.
   },
   {
     name: 'Services',

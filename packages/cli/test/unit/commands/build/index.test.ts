@@ -30,7 +30,8 @@ const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/commands/build', name);
 
 const flakey =
-  process.platform === 'win32' && process.version.startsWith('v22');
+  process.platform === 'win32' &&
+  ['v22', 'v24'].some(version => process.version.startsWith(version));
 
 async function createTempServicesProject(params: {
   experimentalServices: Record<string, unknown>;
@@ -1227,7 +1228,7 @@ describe.skipIf(flakey)('build', () => {
       name: 'Error',
       message:
         'Invalid vercel.json - `rewrites[2]` should NOT have additional property `src`. Did you mean `source`?',
-      stack: expect.stringContaining('at Module.validateConfig'),
+      stack: expect.stringContaining('at validateConfig'),
       hideStackTrace: true,
       code: 'INVALID_VERCEL_CONFIG',
       link: 'https://vercel.com/docs/concepts/projects/project-configuration#rewrites',
@@ -1251,6 +1252,88 @@ describe.skipIf(flakey)('build', () => {
         schedule: '0 0 * * *',
       },
     ]);
+  });
+
+  it('should not duplicate routes for a service built through the Build Output API', async () => {
+    const serviceRoutes = [
+      {
+        src: '^/(?<path>.+?)(?:/)?$',
+        dest: '/$path.segments/$segmentPath.segment.rsc',
+        has: [
+          {
+            type: 'header',
+            key: 'next-router-segment-prefetch',
+            value: '/(?<segmentPath>.+)',
+          },
+        ],
+        continue: true,
+      },
+      { handle: 'miss' },
+      {
+        src: '^/(?<path>.+)(?<rscSuffix>\\.segments/.+\\.segment\\.rsc)(?:/)?$',
+        dest: '/$path.rsc',
+        check: true,
+      },
+    ];
+    const cwd = await getWriteableDirectory();
+    await fs.ensureDir(join(cwd, '.vercel'));
+    await fs.writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: '.',
+      projectId: '.',
+      settings: {
+        framework: null,
+        installCommand: '',
+      },
+    });
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      services: {
+        web: {
+          root: 'web',
+          framework: 'vite',
+          buildCommand: 'node make-output.mjs',
+        },
+      },
+      rewrites: [{ source: '/(.*)', destination: { service: 'web' } }],
+    });
+    await fs.ensureDir(join(cwd, 'web'));
+    await fs.writeJSON(join(cwd, 'web', 'package.json'), { name: 'web' });
+    await fs.writeFile(
+      join(cwd, 'web', 'make-output.mjs'),
+      [
+        `import fs from 'node:fs';`,
+        `import path from 'node:path';`,
+        `import { fileURLToPath } from 'node:url';`,
+        `const dir = path.dirname(fileURLToPath(import.meta.url));`,
+        `const out = path.join(dir, '.vercel', 'output');`,
+        `fs.mkdirSync(path.join(out, 'static'), { recursive: true });`,
+        `fs.writeFileSync(path.join(out, 'static', 'index.html'), 'hello');`,
+        `fs.writeFileSync(path.join(out, 'config.json'), JSON.stringify({`,
+        `  version: 3,`,
+        `  routes: ${JSON.stringify(serviceRoutes)},`,
+        `}));`,
+      ].join('\n')
+    );
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const output = join(cwd, '.vercel', 'output');
+
+    // Every route from the service's Build Output config appears exactly once.
+    const webConfig = await fs.readJSON(
+      join(output, 'services', 'web', 'config.json')
+    );
+    expect(webConfig.routes).toEqual(serviceRoutes);
+
+    // The service's routes must not leak into the root route table.
+    const rootConfig = await fs.readJSON(join(output, 'config.json'));
+    expect(rootConfig.routes).not.toContainEqual(serviceRoutes[0]);
+    expect(rootConfig.routes).toContainEqual(
+      expect.objectContaining({
+        destination: { type: 'service', service: 'web' },
+      })
+    );
   });
 
   it('should include legacy cron service type in build output crons', async () => {
@@ -2763,6 +2846,26 @@ fs.writeFileSync(
     });
   });
 
+  it('should install a service with its own install root when a source config pre-compilation install ran', async () => {
+    // Regression test: `vercel.toml` (a source config) triggers a dependency
+    // install at the repo root before config compilation, which sets
+    // VERCEL_INSTALL_COMPLETED. That marker must not suppress the install of
+    // a service whose install root is a different `package.json` — here the
+    // service's build script requires a dependency that only exists after
+    // `frontend/` installs.
+    const cwd = fixture('services-toml-workspace-install');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const result = await fs.readFile(
+      join(output, 'services', 'web', 'static', 'index.txt'),
+      'utf8'
+    );
+    expect(result.trim()).toEqual('installed');
+  });
+
   it('should allow services to share the same builder source', async () => {
     const cwd = fixture('with-services-shared-source');
     const output = join(cwd, '.vercel', 'output');
@@ -2884,6 +2987,68 @@ createServer((_req, res) => {
       ])
     );
     expect(await fs.pathExists(join(output, 'functions'))).toBe(false);
+  });
+
+  it('should build a top-level `proxy` alongside services', async () => {
+    const cwd = await getWriteableDirectory();
+    const output = join(cwd, '.vercel', 'output');
+    await fs.ensureDir(join(cwd, '.vercel'));
+    await fs.writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: '.',
+      projectId: '.',
+      settings: {
+        framework: null,
+        installCommand: '',
+      },
+    });
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      private: true,
+    });
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      services: {
+        ui: { root: '.', entrypoint: 'ui.js', runtime: 'node' },
+      },
+      rewrites: [{ source: '/(.*)', destination: { service: 'ui' } }],
+      proxy: { entrypoint: 'proxy.js' },
+    });
+    await fs.outputFile(
+      join(cwd, 'ui.js'),
+      `
+const { createServer } = require('node:http');
+
+createServer((_req, res) => {
+  res.statusCode = 200;
+  res.end('ok');
+}).listen(3000);
+`
+    );
+    await fs.outputFile(
+      join(cwd, 'proxy.js'),
+      `module.exports = function proxy() { return new Response('proxy'); };\n`
+    );
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    // The proxy is a project-level function, not a service.
+    expect(await fs.readdir(join(output, 'functions'))).toEqual(['proxy.func']);
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.services).toEqual([
+      expect.objectContaining({
+        schema: 'experimentalServicesV2',
+        name: 'ui',
+      }),
+    ]);
+    // The proxy runs before the filesystem phase, so it sees requests ahead of
+    // the rewrites that hand traffic to a service.
+    expect(config.routes).toEqual([
+      expect.objectContaining({ middlewarePath: 'proxy', continue: true }),
+      { handle: 'filesystem' },
+      expect.objectContaining({
+        destination: { service: 'ui', type: 'service' },
+      }),
+    ]);
   });
 
   it('should apply per-service `functions` config to the service lambda', async () => {

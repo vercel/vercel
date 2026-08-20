@@ -18,7 +18,7 @@
       "require": "./dist/index.js"
     }
   },
-  "version": "3.8.1",
+  "version": "3.8.4",
   "repository": {
     "directory": "packages/oidc",
     "type": "git",
@@ -38,7 +38,7 @@
     "typedoc": "0.28.19",
     "typedoc-plugin-markdown": "4.11.0",
     "typedoc-plugin-mdn-links": "5.1.1",
-    "vitest": "2.0.1"
+    "vitest": "4.1.10"
   },
   "peerDependenciesMeta": {},
   "engines": {
@@ -47,7 +47,7 @@
   "scripts": {
     "pretest": "pnpm run build:code",
     "test": "vitest",
-    "build": "pnpm run build:code && pnpm run build:docs",
+    "build": "pnpm run build:code",
     "build:code": "node build.mjs",
     "build:docs": "typedoc && prettier --write docs/**/*.md docs/*.md"
   },

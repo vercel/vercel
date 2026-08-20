@@ -406,6 +406,7 @@ export const membersSubcommand = {
       description: 'Limit number of project members returned (1-100)',
       deprecated: false,
     },
+    nextOption,
   ],
   examples: [
     {

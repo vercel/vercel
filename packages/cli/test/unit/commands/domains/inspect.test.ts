@@ -6,7 +6,7 @@ import { useDomain, useProjectDomains } from '../../../mocks/domains';
 import { defaultProject, useProject } from '../../../mocks/project';
 
 function useDomainInspectScenario(domain: { name: string }) {
-  client.scenario.get(`/v4/domains/${domain.name}/config`, (_req, res) => {
+  client.scenario.get(`/v6/domains/${domain.name}/config`, (_req, res) => {
     res.json({});
   });
   client.scenario.get(

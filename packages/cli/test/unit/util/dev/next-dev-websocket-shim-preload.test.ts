@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 const shimPath = resolve(
   process.cwd(),
-  'src/util/dev/next-dev-websocket-shim-preload.cjs'
+  'src/runtime-assets/node-preloads/next-dev-websocket.cjs'
 );
 
 async function runShimScenario(scenario: string) {

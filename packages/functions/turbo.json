@@ -3,7 +3,8 @@
   "extends": ["//"],
   "tasks": {
     "build": {
-      "outputs": ["**/*.js", "**/*.d.ts", "**/*.md"]
+      "inputs": ["$TURBO_EXTENDS$", "!docs/**"],
+      "outputs": ["**/*.js", "**/*.d.ts"]
     }
   }
 }

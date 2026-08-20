@@ -70,7 +70,6 @@ Focused examples:
 ```bash
 cd packages/cli
 pnpm test test/unit/commands/<name>/<file>.test.ts
-pnpm vitest-run test/unit/commands/<name>/<file>.test.ts
 ```
 
 Repo-level checks when appropriate:

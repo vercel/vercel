@@ -1,5 +1,64 @@
 # @vercel/gatsby-plugin-vercel-builder
 
+## 2.2.41
+
+### Patch Changes
+
+- Updated dependencies [b4f09c1]
+  - @vercel/build-utils@14.1.1
+
+## 2.2.40
+
+### Patch Changes
+
+- Updated dependencies [852e1a0]
+  - @vercel/build-utils@14.1.0
+
+## 2.2.39
+
+### Patch Changes
+
+- Updated dependencies [2da7809]
+  - @vercel/build-utils@14.0.5
+
+## 2.2.38
+
+### Patch Changes
+
+- Updated dependencies [13f81ac]
+  - @vercel/build-utils@14.0.4
+
+## 2.2.37
+
+### Patch Changes
+
+- Updated dependencies [d72826e]
+  - @vercel/build-utils@14.0.3
+
+## 2.2.36
+
+### Patch Changes
+
+- Updated dependencies [b7ec19b]
+  - @vercel/build-utils@14.0.2
+
+## 2.2.35
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/build-utils@14.0.1
+
+## 2.2.34
+
+### Patch Changes
+
+- Updated dependencies [b747ab4]
+- Updated dependencies [5c33351]
+- Updated dependencies [5619873]
+  - @vercel/build-utils@14.0.0
+
 ## 2.2.33
 
 ### Patch Changes

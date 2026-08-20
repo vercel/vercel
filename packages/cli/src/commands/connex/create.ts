@@ -8,6 +8,8 @@ import type { JSONObject } from '@vercel-internals/types';
 import { validateJsonOutput } from '../../util/output-format';
 import { printError } from '../../util/error';
 import { getProjectLink } from '../../util/projects/link';
+import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
+import { ProjectNotFound } from '../../util/errors-ts';
 import { selectConnexTeam } from '../../util/connex/select-team';
 import {
   generateRequestCode,
@@ -19,14 +21,23 @@ import {
   uploadConnexIcon,
   type PreparedIcon,
 } from '../../util/connex/upload-icon';
+import {
+  buildMethodGuidance,
+  collectMethodCredentials,
+  collectTemplateParams,
+  ConnexMethodError,
+  fetchConnexServiceInfo,
+  parseConnexParams,
+  resolveConnexConnectionMethod,
+  type ConnexConnectionMethod,
+  type ConnexMethodSelection,
+  type ConnexServiceInfo,
+} from '../../util/connex/connection-methods';
 import type { ConnexClient } from './types';
-
-interface ConnexServiceInfo {
-  types?: Array<{
-    type?: string;
-    createInputSchema?: Record<string, unknown>;
-  }>;
-}
+import {
+  getCustomEnvironments,
+  pickCustomEnvironment,
+} from '../../util/target/get-custom-environments';
 
 export async function create(
   client: Client,
@@ -37,11 +48,19 @@ export async function create(
     '--json'?: boolean;
     '--triggers'?: boolean;
     '--trigger-event'?: string[];
+    '--trigger-path'?: string;
+    '--trigger-project'?: string;
+    '--trigger-branch'?: string;
+    '--trigger-environment'?: string;
     '--icon'?: string;
     '--background-color'?: string;
     '--accent-color'?: string;
     '--data'?: string;
     '--connector-type'?: string;
+    '--connection-method'?: string;
+    '--target'?: string;
+    '--param'?: string[];
+    '--yes'?: boolean;
   }
 ): Promise<number> {
   const formatResult = validateJsonOutput(flags);
@@ -51,9 +70,9 @@ export async function create(
   }
   const asJson = formatResult.jsonOutput;
 
-  const serviceType = args[0];
-  if (!serviceType) {
-    output.error('Missing service type. Usage: vercel connect create <type>');
+  const service = args[0];
+  if (!service) {
+    output.error('Missing service. Usage: vercel connect create <service>');
     return 1;
   }
 
@@ -62,20 +81,95 @@ export async function create(
     return 1;
   }
 
+  const triggerPath = flags['--trigger-path'];
+  const triggerProject = flags['--trigger-project'];
+  const triggerBranch = flags['--trigger-branch'];
+  const triggerEnvironment = flags['--trigger-environment'];
+  if (
+    !flags['--triggers'] &&
+    (triggerPath !== undefined ||
+      triggerProject !== undefined ||
+      triggerBranch !== undefined ||
+      triggerEnvironment !== undefined)
+  ) {
+    output.error(
+      'The --trigger-project, --trigger-path, --trigger-branch, and --trigger-environment flags require --triggers.'
+    );
+    return 1;
+  }
+  if (triggerBranch !== undefined && triggerEnvironment !== undefined) {
+    output.error(
+      'The --trigger-branch and --trigger-environment flags are mutually exclusive.'
+    );
+    return 1;
+  }
+  if (triggerProject !== undefined && triggerProject.trim() === '') {
+    output.error('The --trigger-project value must not be empty.');
+    return 1;
+  }
+  if (
+    triggerPath !== undefined &&
+    (triggerPath.length === 0 || triggerPath.length > 2048)
+  ) {
+    output.error(
+      'The --trigger-path value must be between 1 and 2048 characters.'
+    );
+    return 1;
+  }
+  if (triggerBranch !== undefined && triggerBranch.trim() === '') {
+    output.error('The --trigger-branch value must not be empty.');
+    return 1;
+  }
+  if (triggerEnvironment !== undefined && triggerEnvironment.trim() === '') {
+    output.error('The --trigger-environment value must not be empty.');
+    return 1;
+  }
+
   const dataFlag = flags['--data'];
   const connectorType = flags['--connector-type'];
+  const connectionMethodFlag = flags['--connection-method'];
+  const targetFlag = flags['--target'];
+
   if (connectorType && dataFlag === undefined) {
     output.error('The --connector-type flag requires --data.');
     return 1;
   }
+  if (connectorType && connectionMethodFlag) {
+    output.error(
+      'The --connector-type and --connection-method flags cannot be combined. The connection method decides the connector type.'
+    );
+    return 1;
+  }
 
-  const isNonManagedCreate = dataFlag !== undefined;
+  const hasDataFlag = dataFlag !== undefined;
+  const isDataOnlyCreate = hasDataFlag && !connectionMethodFlag;
+
+  let suppliedParams: Record<string, string> = {};
+  try {
+    const parsed = parseConnexParams(flags['--param']);
+    suppliedParams = parsed.params;
+    for (const warning of parsed.warnings) {
+      output.warn(warning);
+    }
+  } catch (err) {
+    output.error((err as Error).message);
+    return 1;
+  }
+
+  if (isDataOnlyCreate && Object.keys(suppliedParams).length > 0) {
+    output.error('The --param flag requires --connection-method.');
+    return 1;
+  }
+  if (isDataOnlyCreate && targetFlag) {
+    output.error('The --target flag requires --connection-method.');
+    return 1;
+  }
 
   // Resolve the --data source up front (inline JSON, `@<path>` to read a
   // file, or `@-` to read stdin) so credentials can be supplied without
   // leaking into shell history / process listings, and so we fail fast on a
   // bad source before team selection or any network call.
-  let nonManagedData: JSONObject | undefined;
+  let suppliedData: JSONObject | undefined;
   let isDataFlagEmpty = false;
   if (dataFlag !== undefined) {
     try {
@@ -83,12 +177,12 @@ export async function create(
       if (rawData.trim().length === 0) {
         isDataFlagEmpty = true;
       } else {
-        nonManagedData = parseDataFlag(rawData);
+        suppliedData = parseDataFlag(rawData);
         // Inline JSON (anything not read from a file or stdin) is exposed in
         // shell history and `ps`; nudge toward `@<path>`/`@-` when it looks
         // like it carries a secret.
         if (!dataFlag.startsWith('@')) {
-          warnInlineSecret(nonManagedData);
+          warnInlineSecret(suppliedData);
         }
       }
     } catch (err) {
@@ -132,24 +226,200 @@ export async function create(
     'Select the team where you want to create this connector'
   );
 
-  if (isDataFlagEmpty) {
-    return await outputMissingDataError(client, serviceType, connectorType);
+  const link = await getProjectLink(client, client.cwd);
+  let triggerProjectId: string | undefined;
+  if (triggerProject !== undefined) {
+    output.spinner('Looking up trigger destination project…');
+    try {
+      const resolvedProject = await getProjectByNameOrId(
+        client,
+        triggerProject,
+        client.config.currentTeam
+      );
+      output.stopSpinner();
+      if (resolvedProject instanceof ProjectNotFound) {
+        output.error(
+          `Trigger destination project ${triggerProject} was not found. Check the name/ID and try again.`
+        );
+        return 1;
+      }
+      triggerProjectId = resolvedProject.id;
+    } catch (err: unknown) {
+      output.stopSpinner();
+      printError(err);
+      return 1;
+    }
   }
+  const destinationProjectId = triggerProjectId ?? link?.projectId;
+  if (
+    (triggerPath !== undefined ||
+      triggerProject !== undefined ||
+      triggerBranch !== undefined ||
+      triggerEnvironment !== undefined) &&
+    !destinationProjectId
+  ) {
+    output.error(
+      'Trigger destination flags require a linked project. Run `vercel link` first.'
+    );
+    return 1;
+  }
+
+  let customEnvironmentId: string | undefined;
+  if (triggerEnvironment !== undefined && destinationProjectId) {
+    try {
+      const customEnvironments = await getCustomEnvironments(
+        client,
+        destinationProjectId
+      );
+      const customEnvironment = pickCustomEnvironment(
+        customEnvironments,
+        triggerEnvironment
+      );
+      if (!customEnvironment) {
+        output.error(
+          `Unknown trigger environment ${triggerEnvironment} for project ${destinationProjectId}. Use a custom environment slug or stable ID from that project.`
+        );
+        return 1;
+      }
+      customEnvironmentId = customEnvironment.id;
+    } catch (err: unknown) {
+      printError(err);
+      return 1;
+    }
+  }
+
+  if (isDataFlagEmpty && isDataOnlyCreate) {
+    return await outputMissingDataError(client, service, connectorType);
+  }
+
+  const interactive = Boolean(client.stdin.isTTY) && !client.nonInteractive;
 
   // Get app name from flag or interactive prompt
   let name = flags['--name'];
   if (!name) {
-    if (!client.stdin.isTTY) {
+    if (!interactive) {
       output.error(
         'Missing required flag --name. In non-interactive mode, provide --name for the connector.'
       );
       return 1;
     }
     name = await client.input.text({
-      message: `What would you like to name your ${serviceType} app?`,
+      message: `What would you like to name your ${service} app?`,
       validate: (val: string) =>
         val.trim().length > 0 || 'Name cannot be empty',
     });
+  }
+
+  // Resolve the connection method before any spinner, so the choosers own the
+  // terminal. Skipped when the caller supplied the config themselves.
+  let selection: ConnexMethodSelection | undefined;
+  let serviceName = service;
+  if (!isDataOnlyCreate) {
+    let serviceInfo: ConnexServiceInfo | undefined;
+    try {
+      output.spinner('Loading connection methods…');
+      serviceInfo = await fetchConnexServiceInfo(client, service);
+    } catch (err) {
+      if (connectionMethodFlag) {
+        output.stopSpinner();
+        printError(err);
+        return 1;
+      }
+      // Discovery is additive here: a service the registry doesn't describe
+      // still creates through the managed POST-first flow it always used.
+      output.debug(
+        `Failed to load connection methods: ${(err as Error).message}`
+      );
+    } finally {
+      output.stopSpinner();
+    }
+
+    serviceName = serviceInfo?.name ?? service;
+    const methods = serviceInfo?.connectionMethods ?? [];
+
+    if (methods.length === 0) {
+      // Nothing to resolve against, so every method-path flag is inert here.
+      // Reject all of them: a silently dropped value looks like it took.
+      const unusable = connectionMethodFlag
+        ? '--connection-method'
+        : targetFlag
+          ? '--target'
+          : Object.keys(suppliedParams).length > 0
+            ? '--param'
+            : undefined;
+      if (unusable) {
+        output.error(
+          `"${service}" doesn't publish connection methods, so ${unusable} can't be used.`
+        );
+        return 1;
+      }
+    } else {
+      try {
+        selection = await resolveConnexConnectionMethod(client, {
+          service: service,
+          serviceName,
+          methods,
+          targets: serviceInfo?.targets,
+          connectionMethodFlag,
+          targetFlag,
+          interactive,
+          skipConfirm: flags['--yes'] === true,
+        });
+      } catch (err) {
+        if (err instanceof ConnexMethodError) {
+          output.error(err.message);
+          return 1;
+        }
+        throw err;
+      }
+    }
+  }
+
+  // Managed wins when a method offers both paths; `--data` alongside
+  // `--connection-method` is the explicit opt-out into BYO credentials.
+  const useManagedMethodCreate =
+    selection !== undefined &&
+    selection.method.create.managed === true &&
+    !hasDataFlag;
+  const useManualMethodCreate =
+    selection !== undefined && !useManagedMethodCreate;
+
+  let methodParams: Record<string, string> = {};
+  let methodData: Record<string, unknown> = {};
+  if (useManualMethodCreate && selection) {
+    try {
+      const { method } = selection;
+      methodParams = await collectTemplateParams(
+        client,
+        method,
+        suppliedParams,
+        interactive
+      );
+      methodData = await collectMethodCredentials(
+        client,
+        method,
+        suppliedData,
+        interactive,
+        // Where to get credentials is only worth saying when we are about to
+        // ask for them; `--data` can supply every one of them.
+        () => printMethodGuidance(method, serviceName)
+      );
+    } catch (err) {
+      if (err instanceof ConnexMethodError) {
+        output.error(err.message);
+        return 1;
+      }
+      throw err;
+    }
+  } else if (
+    useManagedMethodCreate &&
+    Object.keys(suppliedParams).length > 0 &&
+    selection
+  ) {
+    output.error(
+      `Connection method "${selection.method.connectionMethod}" is registered automatically and takes no --param values.`
+    );
+    return 1;
   }
 
   // Upload the prepared icon (if any) before creating the connector. The
@@ -157,7 +427,7 @@ export async function create(
   let iconSha: string | undefined;
   if (preparedIcon) {
     try {
-      output.spinner('Uploading icon...');
+      output.spinner('Uploading icon…');
       iconSha = await uploadConnexIcon(client, preparedIcon);
     } catch (err) {
       output.stopSpinner();
@@ -167,10 +437,8 @@ export async function create(
     output.stopSpinner();
   }
 
-  const link = await getProjectLink(client, client.cwd);
-
   const body: JSONObject = {
-    service: serviceType,
+    service: service,
     name,
   };
   if (link?.projectId) {
@@ -179,6 +447,21 @@ export async function create(
   body.triggers = { enabled: flags['--triggers'] === true };
   if (flags['--trigger-event'] !== undefined) {
     body.events = flags['--trigger-event'];
+  }
+  if (
+    triggerPath !== undefined ||
+    triggerProject !== undefined ||
+    triggerBranch !== undefined ||
+    triggerEnvironment !== undefined
+  ) {
+    body.triggerDestination = {
+      ...(triggerProjectId !== undefined
+        ? { projectId: triggerProjectId }
+        : {}),
+      ...(triggerPath !== undefined ? { path: triggerPath } : {}),
+      ...(triggerBranch !== undefined ? { branch: triggerBranch } : {}),
+      ...(customEnvironmentId !== undefined ? { customEnvironmentId } : {}),
+    };
   }
   if (iconSha) {
     body.icon = iconSha;
@@ -189,20 +472,52 @@ export async function create(
   if (accentColor) {
     body.accentColor = accentColor;
   }
+  if (selection) {
+    body.connectionMethod = selection.method.connectionMethod;
+    if (selection.target !== undefined) {
+      body.target = selection.target;
+    }
+  }
 
-  output.spinner('Setting up...');
+  output.spinner('Setting up…');
   let createdClient: ConnexClient | null = null;
   let browserUrl: string | undefined;
 
   let verifier: string | undefined;
-  if (isNonManagedCreate) {
+  if (useManualMethodCreate) {
+    // The registry owns endpoints and the connector type: the server derives
+    // both from `connectionMethod`
+    if (Object.keys(methodParams).length > 0) {
+      body.params = methodParams;
+    }
+    // `data` is required by the create endpoint even when the method needs
+    // no credentials of its own.
+    body.data = methodData as JSONObject;
+
+    try {
+      createdClient = await client.fetch<ConnexClient>(
+        '/v1/connect/connectors',
+        { method: 'POST', body }
+      );
+    } catch (err: unknown) {
+      output.stopSpinner();
+      if ((err as { status?: number }).status === 404) {
+        output.error(
+          'Connect is not enabled for this team. Contact support to enable it.'
+        );
+        return 1;
+      }
+      printError(err);
+      return 1;
+    }
+  } else if (isDataOnlyCreate) {
     try {
       const resolvedConnectorType =
         connectorType ??
-        (await discoverConnectorType(client, serviceType)) ??
+        (await discoverConnectorType(client, service)) ??
         'oauth';
 
-      body.data = nonManagedData;
+      body.data = suppliedData;
       body.type = resolvedConnectorType;
 
       createdClient = await client.fetch<ConnexClient>(
@@ -272,13 +587,13 @@ export async function create(
     }
     const finalBrowserUrl = urlWithBranding.toString();
 
-    output.log(`Opening browser for ${serviceType} app setup...`);
+    output.log(`Opening browser for ${service} app setup…`);
     output.log(`If the browser doesn't open, visit:\n${finalBrowserUrl}`);
     open(finalBrowserUrl).catch((err: unknown) =>
       output.debug(`Failed to open browser: ${err}`)
     );
 
-    output.spinner('Waiting for you to complete setup in the browser...');
+    output.spinner('Waiting for you to complete setup in the browser…');
     if (!verifier) {
       output.stopSpinner();
       output.error('Missing browser setup verifier.');
@@ -314,7 +629,7 @@ export async function create(
           brandingBody.accentColor = accentColor;
         }
         try {
-          output.spinner('Applying branding...');
+          output.spinner('Applying branding…');
           createdClient = await client.fetch<ConnexClient>(
             `/v1/connect/connectors/${encodeURIComponent(clientId)}`,
             { method: 'PATCH', body: brandingBody }
@@ -354,21 +669,43 @@ export async function create(
           icon: createdClient.icon ?? null,
           backgroundColor: createdClient.backgroundColor ?? null,
           accentColor: createdClient.accentColor ?? null,
+          service: createdClient.service ?? null,
+          connectionMethod: createdClient.connectionMethod ?? null,
+          target: createdClient.target ?? null,
         },
         null,
         2
       )}\n`
     );
-  } else if (hasBeenInstalled) {
-    output.success(
-      `${serviceType} connector created and installed: ${createdClient.id} (UID ${createdClient.uid})`
-    );
   } else {
+    const via = selection ? ` via ${selection.method.label}` : '';
+    const created = hasBeenInstalled
+      ? `${service} connector created and installed${via}`
+      : `${service} connector created${via}`;
     output.success(
-      `${serviceType} connector created: ${createdClient.id} (UID ${createdClient.uid})`
+      `${created}: ${createdClient.id} (UID ${createdClient.uid})`
     );
   }
   return brandingPatchFailed ? 1 : 0;
+}
+
+/**
+ * Prints the method's setup guidance as its own phase, so the credential
+ * prompts that follow have the register link and redirect URI in view.
+ */
+function printMethodGuidance(
+  method: ConnexConnectionMethod,
+  serviceName: string
+): void {
+  const lines = buildMethodGuidance(method, serviceName);
+  if (lines.length === 0) {
+    return;
+  }
+  output.print('\n');
+  for (const line of lines) {
+    output.print(`  ${line}\n`);
+  }
+  output.print('\n');
 }
 
 /**
@@ -448,7 +785,7 @@ async function discoverConnectorType(
   client: Client,
   service: string
 ): Promise<string | undefined> {
-  const serviceInfo = await fetchServiceInfo(client, service);
+  const serviceInfo = await fetchConnexServiceInfo(client, service);
   return defaultConnectorType(serviceInfo);
 }
 
@@ -481,35 +818,21 @@ async function resolveMissingDataSchemaInfo(
   connectorType: string;
   createInputSchema?: Record<string, unknown>;
 }> {
-  let serviceInfo = await fetchServiceInfo(client, service);
+  let serviceInfo = await fetchConnexServiceInfo(client, service);
   const connectorType =
     inputConnectorType ?? defaultConnectorType(serviceInfo) ?? 'oauth';
 
   if (!serviceInfo) {
-    serviceInfo = await fetchServiceInfo(client, inputConnectorType || 'oauth');
+    serviceInfo = await fetchConnexServiceInfo(
+      client,
+      inputConnectorType || 'oauth'
+    );
   }
 
   return {
     connectorType,
     createInputSchema: createInputSchemaForType(serviceInfo, connectorType),
   };
-}
-
-async function fetchServiceInfo(
-  client: Client,
-  service: string
-): Promise<ConnexServiceInfo | undefined> {
-  try {
-    return await client.fetch<ConnexServiceInfo>(
-      `/v1/connect/services/${encodeURIComponent(service)}?schemas=true`
-    );
-  } catch (err) {
-    const apiErr = err as { status?: number };
-    if (apiErr.status === 404) {
-      return undefined;
-    }
-    throw err;
-  }
 }
 
 function defaultConnectorType(

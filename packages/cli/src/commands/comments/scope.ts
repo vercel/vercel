@@ -1,32 +1,19 @@
 import { spawnSync } from 'node:child_process';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import getScope, { detectExplicitScope } from '../../util/get-scope';
 import { getLinkedProject } from '../../util/projects/link';
-import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
-import { ProjectNotFound, isAPIError } from '../../util/errors-ts';
-import { outputError } from '../../util/command-validation';
+import { resolveProjectContext } from '../../util/projects/resolve-project-context';
+import { isAPIError } from '../../util/errors-ts';
+import { outputError, writeJsonError } from '../../util/command-validation';
 import type { BranchFocus, CommentsScope } from './types';
 
 /**
  * Resolve the team (and optionally project) for a comments command.
  *
- * Precedence: explicit --project (resolved against the current team scope),
- * then the linked project. Thread-scoped commands only need a team, so they
- * pass `requireProject: false` and fall back to the current team scope.
+ * Precedence: explicit --project (resolved from local metadata before the
+ * current team), then the linked project. Thread-scoped commands only need a
+ * team, so they pass `requireProject: false` and fall back to the current team.
  */
-/** Whether the user passed an explicit scope flag on the command line. */
-function scopeIsExplicit(client: Client): boolean {
-  return client.argv.some(
-    arg =>
-      arg === '--scope' ||
-      arg === '-S' ||
-      arg.startsWith('--scope=') ||
-      arg === '--team' ||
-      arg.startsWith('--team=') ||
-      arg === '-T'
-  );
-}
-
 export async function resolveCommentsScope(
   client: Client,
   opts: {
@@ -39,25 +26,19 @@ export async function resolveCommentsScope(
 ): Promise<CommentsScope | number> {
   // Precedence: explicit flags (--project / --scope) beat the URL's team,
   // which beats the linked project, which beats the current default team.
-  if (opts.urlTeamSlug && !opts.project && !scopeIsExplicit(client)) {
+  if (opts.urlTeamSlug && !opts.project && !detectExplicitScope(client)) {
     // The API accepts team slugs directly.
     return { teamId: opts.urlTeamSlug, teamSlug: opts.urlTeamSlug };
   }
 
   if (opts.project) {
-    const { team } = await getScope(client);
-    if (!team) {
-      return outputError(
-        client,
-        opts.jsonOutput,
-        'NO_TEAM',
-        'No team context found. Run `vercel switch` to select a team, or run `vercel link` in a project directory.'
-      );
-    }
-
-    let project: Awaited<ReturnType<typeof getProjectByNameOrId>>;
+    let context: Awaited<ReturnType<typeof resolveProjectContext>>;
     try {
-      project = await getProjectByNameOrId(client, opts.project, team.id);
+      context = await resolveProjectContext({
+        client,
+        projectNameOrId: opts.project,
+        projectNotFoundHandling: opts.jsonOutput ? 'return' : 'report',
+      });
     } catch (err) {
       if (isAPIError(err)) {
         return outputError(
@@ -69,21 +50,31 @@ export async function resolveCommentsScope(
       }
       throw err;
     }
-
-    if (project instanceof ProjectNotFound) {
+    if (context.status === 'error') {
+      if (opts.jsonOutput) {
+        writeJsonError(
+          client,
+          'PROJECT_CONTEXT_ERROR',
+          'Could not resolve the project context.'
+        );
+      }
+      return context.exitCode;
+    }
+    if (context.status === 'not_linked') {
       return outputError(
         client,
         opts.jsonOutput,
         'PROJECT_NOT_FOUND',
-        `Project "${opts.project}" was not found in team "${team.slug}".`
+        `Project "${opts.project}" was not found in the current scope.`
       );
     }
 
     return {
-      teamId: team.id,
-      teamSlug: team.slug,
-      projectId: project.id,
-      projectName: project.name,
+      teamId: context.org.id,
+      teamSlug: context.org.slug,
+      projectId: context.project.id,
+      projectName: context.project.name,
+      linked: Boolean(context.repoRoot),
     };
   }
 
@@ -96,7 +87,7 @@ export async function resolveCommentsScope(
     // An explicit --scope must beat the linked directory (documented
     // precedence). Keep the linked project only when it belongs to the
     // explicitly selected team.
-    if (scopeIsExplicit(client)) {
+    if (detectExplicitScope(client)) {
       const { team } = await getScope(client);
       if (!team) {
         return outputError(

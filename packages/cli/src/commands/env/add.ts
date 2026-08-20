@@ -66,9 +66,10 @@ function filterEnvChoicesForSensitivity(
   opts: {
     isSensitive: boolean;
     policyOn: boolean;
+    configSecretUiEnabled: boolean;
   }
 ): EnvChoice[] {
-  if (opts.isSensitive) {
+  if (opts.isSensitive && !opts.configSecretUiEnabled) {
     return choices.filter(c => c.value !== 'development');
   }
   if (opts.policyOn) {
@@ -80,12 +81,13 @@ function filterEnvChoicesForSensitivity(
 function getTargetCompatibilityError(
   envTargets: string[],
   isSensitive: boolean,
-  policyOn: boolean
+  policyOn: boolean,
+  configSecretUiEnabled: boolean
 ): string | null {
   const hasDevelopment = envTargets.includes('development');
   const hasSensitiveCapable = envTargets.some(t => t !== 'development');
 
-  if (isSensitive && hasDevelopment) {
+  if (isSensitive && hasDevelopment && !configSecretUiEnabled) {
     return `Sensitive Environment Variables are not supported on the Development Environment. Add --no-sensitive to store a non-sensitive value for all selected Environments, or run ${getCommandName(
       'env add'
     )} separately for Development.`;
@@ -107,10 +109,11 @@ function resolveFinalType(
     forceSensitive: boolean;
     forceEncrypted: boolean;
     policyOn: boolean;
+    configSecretUiEnabled: boolean;
   }
 ): EnvType {
   const hasDevelopment = envTargets.includes('development');
-  if (hasDevelopment) {
+  if (hasDevelopment && !(opts.configSecretUiEnabled && isSensitive)) {
     return 'encrypted';
   }
   if (opts.forceEncrypted && !opts.policyOn) {
@@ -131,15 +134,13 @@ function fillEnvAddTemplate(
   opts: {
     envName?: string;
     envTargetArg?: string;
-    envGitBranch?: string;
   }
 ): string {
   const targetPlaceholder = getEnvTargetPlaceholder();
   const out = template
     .replace(/<name>/g, opts.envName ?? '<name>')
     .split(targetPlaceholder)
-    .join(opts.envTargetArg ?? targetPlaceholder)
-    .replace(/<gitbranch>/g, opts.envGitBranch ?? '<gitbranch>');
+    .join(opts.envTargetArg ?? targetPlaceholder);
   return out.replace(/<value>/g, '<value>');
 }
 
@@ -293,7 +294,11 @@ export default async function add(client: Client, argv: string[]) {
   const stdInput = await readStandardInput(client.stdin);
   const valueFromFlag =
     typeof opts['--value'] === 'string' ? opts['--value'] : undefined;
-  let [envName, envTargetArg, envGitBranch] = args;
+  let [envName, envTargetArg] = args;
+  const positionalGitBranch = args[2];
+  const optionGitBranch =
+    typeof opts['--git-branch'] === 'string' ? opts['--git-branch'] : undefined;
+  let envGitBranch = optionGitBranch ?? positionalGitBranch;
 
   const telemetryClient = new EnvAddTelemetryClient({
     opts: {
@@ -302,7 +307,8 @@ export default async function add(client: Client, argv: string[]) {
   });
   telemetryClient.trackCliArgumentName(envName);
   telemetryClient.trackCliArgumentEnvironment(envTargetArg);
-  telemetryClient.trackCliArgumentGitBranch(envGitBranch);
+  telemetryClient.trackCliArgumentGitBranch(positionalGitBranch);
+  telemetryClient.trackCliOptionGitBranch(optionGitBranch);
   telemetryClient.trackCliOptionValue(
     valueFromFlag === undefined ? undefined : '<redacted>'
   );
@@ -316,10 +322,17 @@ export default async function add(client: Client, argv: string[]) {
   );
   telemetryClient.trackCliOptionProject(opts['--project']);
 
+  if (positionalGitBranch && optionGitBranch) {
+    output.error(
+      'Git branch was provided twice. Use either `--git-branch <name>` or the legacy third argument.'
+    );
+    return 1;
+  }
+
   if (args.length > 3) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add <name> ${getEnvTargetPlaceholder()} <gitbranch>`
+        `env add <name> ${getEnvTargetPlaceholder()} --git-branch <name>`
       )}`
     );
     return 1;
@@ -328,7 +341,7 @@ export default async function add(client: Client, argv: string[]) {
   if (stdInput && (!envName || !envTargetArg)) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add <name> <target> <gitbranch> < <file>`
+        `env add <name> <target> --git-branch <name> < <file>`
       )}`
     );
     return 1;
@@ -362,29 +375,7 @@ export default async function add(client: Client, argv: string[]) {
         '<scope>',
         ...linkPreserved,
       ];
-      let envAddRetryArgv = redactEnvValueArgs(client.argv);
-      if (envTargetArg === 'preview' && envGitBranch === undefined) {
-        const argvArgs = client.argv.slice(2);
-        const addIdx = argvArgs.indexOf('add');
-        if (addIdx !== -1) {
-          let pos = addIdx + 1;
-          let positionals = 0;
-          while (
-            pos < argvArgs.length &&
-            positionals < 3 &&
-            !argvArgs[pos].startsWith('-')
-          ) {
-            positionals++;
-            pos++;
-          }
-          const insertAt = 2 + pos;
-          envAddRetryArgv = redactEnvValueArgs([
-            ...client.argv.slice(0, insertAt),
-            '<gitbranch>',
-            ...client.argv.slice(insertAt),
-          ]);
-        }
-      }
+      const envAddRetryArgv = redactEnvValueArgs(client.argv);
       outputAgentError(
         client,
         {
@@ -440,72 +431,26 @@ export default async function add(client: Client, argv: string[]) {
     if (valueFromFlag === undefined && !stdInput) missing.push('missing_value');
     if (!envTargetArg && choices.length > 0)
       missing.push('missing_environment');
-    // When nonInteractive and exactly two positionals (name, preview), treat as "all Preview branches"; otherwise require branch
-    if (
-      envTargetArg === 'preview' &&
-      envGitBranch === undefined &&
-      !(client.nonInteractive && args.length === 2)
-    ) {
-      missing.push('git_branch_required');
-    }
     if (missing.length > 0) {
       const parts = missing.map(m => {
         if (m === 'missing_name') return 'variable name';
         if (m === 'missing_value') return '--value or stdin';
         if (m === 'missing_environment')
           return 'environment (production, preview, development, or a comma-separated list)';
-        if (m === 'git_branch_required')
-          return 'third argument <gitbranch> for Preview, or omit for all Preview branches';
         return m;
       });
-      const fullTemplate = `env add <name> ${getEnvTargetPlaceholder()} <gitbranch> --value "<value>" --yes`;
+      const fullTemplate = `env add <name> ${getEnvTargetPlaceholder()} --value "<value>" --yes`;
       const filledTemplate = fillEnvAddTemplate(fullTemplate, {
         envName,
         envTargetArg,
-        envGitBranch,
       });
       const next: Array<{ command: string; when?: string }> = [];
-      // Only suggest the full template when something other than git_branch is missing (that command would fail again if only git_branch is missing)
-      const onlyGitBranchMissing =
-        missing.length === 1 && missing[0] === 'git_branch_required';
-      if (!onlyGitBranchMissing) {
-        next.push({
-          command: buildEnvAddCommandWithPreservedArgs(
-            client.argv,
-            filledTemplate
-          ),
-        });
-      }
-      if (
-        missing.includes('git_branch_required') &&
-        envName &&
-        (valueFromFlag !== undefined || stdInput)
-      ) {
-        const branchSpecific = fillEnvAddTemplate(
-          'env add <name> preview <gitbranch> --value "<value>" --yes',
-          { envName, envTargetArg: 'preview' }
-        );
-        const branchAll = fillEnvAddTemplate(
-          'env add <name> preview --value "<value>" --yes',
-          { envName, envTargetArg: 'preview' }
-        );
-        next.push(
-          {
-            command: buildEnvAddCommandWithPreservedArgs(
-              client.argv,
-              branchSpecific
-            ),
-            when: 'Add to a specific Git branch',
-          },
-          {
-            command: buildEnvAddCommandWithPreservedArgs(
-              client.argv,
-              branchAll
-            ),
-            when: 'Add to all Preview branches',
-          }
-        );
-      }
+      next.push({
+        command: buildEnvAddCommandWithPreservedArgs(
+          client.argv,
+          filledTemplate
+        ),
+      });
       if (missing.includes('missing_environment')) {
         const standardAvailable = choices
           .map(c => c.value)
@@ -656,29 +601,7 @@ export default async function add(client: Client, argv: string[]) {
         ...(link.status === 'not_linked' ? ['--scope', '<scope>'] : []),
         ...linkPreserved,
       ];
-      let envAddRetryArgv = redactEnvValueArgs(client.argv);
-      if (envTargetArg === 'preview' && envGitBranch === undefined) {
-        const argvArgs = client.argv.slice(2);
-        const addIdx = argvArgs.indexOf('add');
-        if (addIdx !== -1) {
-          let pos = addIdx + 1;
-          let positionals = 0;
-          while (
-            pos < argvArgs.length &&
-            positionals < 3 &&
-            !argvArgs[pos].startsWith('-')
-          ) {
-            positionals++;
-            pos++;
-          }
-          const insertAt = 2 + pos;
-          envAddRetryArgv = redactEnvValueArgs([
-            ...client.argv.slice(0, insertAt),
-            '<gitbranch>',
-            ...client.argv.slice(insertAt),
-          ]);
-        }
-      }
+      const envAddRetryArgv = redactEnvValueArgs(client.argv);
       outputAgentError(
         client,
         {
@@ -887,7 +810,11 @@ export default async function add(client: Client, argv: string[]) {
     );
   }
 
-  if (forceSensitive && envTargets.includes('development')) {
+  if (
+    forceSensitive &&
+    envTargets.includes('development') &&
+    !configSecretUiEnabled
+  ) {
     const msg = `--sensitive is not allowed with the Development Environment. Sensitive Environment Variables are only supported on Production and Preview.`;
     if (client.nonInteractive) {
       const nonDev = envTargets.filter(t => t !== 'development');
@@ -922,7 +849,8 @@ export default async function add(client: Client, argv: string[]) {
     const compatibilityError = getTargetCompatibilityError(
       envTargets,
       isSensitive,
-      policyOn
+      policyOn,
+      configSecretUiEnabled
     );
     if (compatibilityError) {
       if (client.nonInteractive) {
@@ -973,6 +901,7 @@ export default async function add(client: Client, argv: string[]) {
   const envChoices = filterEnvChoicesForSensitivity(choices, {
     isSensitive,
     policyOn,
+    configSecretUiEnabled,
   });
 
   if (policyOn && isSensitive) {
@@ -1101,7 +1030,8 @@ export default async function add(client: Client, argv: string[]) {
   const postSelectionError = getTargetCompatibilityError(
     envTargets,
     isSensitive,
-    policyOn
+    policyOn,
+    configSecretUiEnabled
   );
   if (postSelectionError) {
     output.error(postSelectionError);
@@ -1112,42 +1042,15 @@ export default async function add(client: Client, argv: string[]) {
     envGitBranch === undefined &&
     envTargets.length === 1 &&
     envTargets[0] === 'preview' &&
-    !(client.nonInteractive && args.length === 2)
+    !client.nonInteractive &&
+    !opts['--yes']
   ) {
-    if (client.nonInteractive) {
-      outputActionRequired(
-        client,
-        {
-          status: 'action_required',
-          reason: 'git_branch_required',
-          message: `Add ${envName} to which Git branch for Preview? Pass branch as third argument, or omit for all Preview branches.`,
-          next: [
-            {
-              command: buildEnvAddCommandWithPreservedArgs(
-                client.argv,
-                `env add ${envName} preview <gitbranch> --value "<value>" --yes`
-              ),
-              when: 'Add to a specific Git branch',
-            },
-            {
-              command: buildEnvAddCommandWithPreservedArgs(
-                client.argv,
-                `env add ${envName} preview --value "<value>" --yes`
-              ),
-              when: 'Add to all Preview branches',
-            },
-          ],
-        },
-        1
-      );
-    } else {
-      output.print(
-        `  ${chalk.dim('Leave empty to apply to all Preview branches.')}\n`
-      );
-      envGitBranch = await client.input.text({
-        message: `Git branch?`,
-      });
-    }
+    output.print(
+      `  ${chalk.dim('Leave empty to apply to all Preview branches.')}\n`
+    );
+    envGitBranch = await client.input.text({
+      message: `Git branch?`,
+    });
   }
 
   const hasDevelopment = envTargets.includes('development');
@@ -1156,6 +1059,7 @@ export default async function add(client: Client, argv: string[]) {
     forceSensitive,
     forceEncrypted,
     policyOn,
+    configSecretUiEnabled,
   });
 
   if (policyOn && !hasDevelopment) {

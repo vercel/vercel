@@ -524,6 +524,7 @@ export const build: BuildV2 = async ({
       cliType,
       lockfileVersion,
       packageJsonPackageManager,
+      nodeVersion,
       env: process.env,
       turboSupportsCorepackHome,
       projectCreatedAt: config.projectSettings?.createdAt,

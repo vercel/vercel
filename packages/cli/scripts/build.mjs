@@ -16,6 +16,9 @@ import { createConfigValidatorPlugin } from './precompile-config-validator.mjs';
 const repoRoot = new URL('../', import.meta.url);
 const cwd = process.cwd();
 const pkg = JSON.parse(readFileSync(new URL('package.json', repoRoot), 'utf8'));
+const runtimeAssetManifest = JSON.parse(
+  readFileSync(new URL('src/runtime-assets/manifest.json', repoRoot), 'utf8')
+);
 
 // Priority commands get their own entry points for fast loading
 // This list needs to be fairly short and targeted -- we can't add everything
@@ -29,6 +32,9 @@ function createConstants() {
   const filename = new URL('src/util/constants.ts', repoRoot);
   const contents = `// This file is auto-generated
 export const SENTRY_DSN: string | undefined = ${envToString('SENTRY_DSN')};
+export const BUILD_LABEL: string | undefined = ${envToString(
+    'VERCEL_CLI_BUILD_LABEL'
+  )};
 `;
   writeFileSync(filename, contents, 'utf8');
 }
@@ -162,10 +168,26 @@ copyFileSync(
   new URL('src/util/dev/builder-worker.cjs', repoRoot),
   new URL('commands/dev/builder-worker.cjs', distRoot)
 );
-copyFileSync(
-  new URL('src/util/dev/next-dev-websocket-shim-preload.cjs', repoRoot),
-  new URL('commands/dev/next-dev-websocket-shim-preload.cjs', distRoot)
-);
+for (const [id, asset] of Object.entries(runtimeAssetManifest)) {
+  for (const field of ['source', 'destination']) {
+    const value = asset[field];
+    if (
+      typeof value !== 'string' ||
+      value === '' ||
+      path.isAbsolute(value) ||
+      value.split(/[\\/]/).includes('..')
+    ) {
+      throw new Error(
+        `Runtime asset "${id}" has an invalid ${field} path: ${JSON.stringify(value)}`
+      );
+    }
+  }
+
+  const source = new URL(`src/runtime-assets/${asset.source}`, repoRoot);
+  const destination = new URL(`runtime-assets/${asset.destination}`, distRoot);
+  mkdirSync(new URL('./', destination), { recursive: true });
+  copyFileSync(source, destination);
+}
 copyFileSync(
   new URL('src/util/get-latest-version/get-latest-worker.cjs', repoRoot),
   new URL('get-latest-worker.cjs', distRoot)
@@ -176,8 +198,12 @@ copyFileSync(
 );
 copyFileSync(new URL('src/vc.js', repoRoot), new URL('vc.js', distRoot));
 
-// Generate version.mjs for fast --version lookup
+// Generate version.mjs for fast --version lookup. VERCEL_CLI_BUILD_LABEL is
+// stamped by CI for non-release builds (e.g. "pr-115 abc1234") and shown in
+// the `vc --version` banner.
+const buildLabel = process.env.VERCEL_CLI_BUILD_LABEL || '';
 writeFileSync(
   new URL('version.mjs', distRoot),
-  `export const version = ${JSON.stringify(pkg.version)};\n`
+  `export const version = ${JSON.stringify(pkg.version)};\n` +
+    `export const buildLabel = ${JSON.stringify(buildLabel)};\n`
 );

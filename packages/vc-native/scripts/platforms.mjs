@@ -2,7 +2,7 @@
 // Consumed by stage-packages.mjs (staging/publishing the native npm packages)
 // and utils/inject-native-optional-deps.mjs (wiring them onto `vercel` as
 // optionalDependencies at pack time). Keep this list in sync with the build
-// matrix in .github/workflows/release-binary.yml.
+// matrix in .github/workflows/realease-binary.yml.
 export const platforms = [
   {
     name: '@vercel/vc-native-darwin-arm64',
@@ -28,11 +28,14 @@ export const platforms = [
     os: ['linux'],
     cpu: ['x64'],
   },
-  {
-    name: '@vercel/vc-native-win32-x64',
-    asset: 'vercel-windows-x64.exe',
-    os: ['win32'],
-    cpu: ['x64'],
-    binary: 'vercel.exe',
-  },
+  // Temporarily skipped: Windows release-binary is disabled (slow custom Node
+  // embed on windows-2022). Re-enable with the windows matrix entry in
+  // .github/workflows/realease-binary.yml.
+  // {
+  //   name: '@vercel/vc-native-win32-x64',
+  //   asset: 'vercel-windows-x64.exe',
+  //   os: ['win32'],
+  //   cpu: ['x64'],
+  //   binary: 'vercel.exe',
+  // },
 ];

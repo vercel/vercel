@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   formatVisibilityLabel,
+  getDevelopmentSecretVisibilityError,
   getPublicPrefixSecretVisibilityError,
   isEnvVarConfigSecretUiEnabled,
   resolveEnvVarVisibility,
@@ -213,7 +214,7 @@ describe('resolveEnvVarVisibility', () => {
     ).toMatch(/cannot use secret visibility/);
   });
 
-  it('rejects secrets on Development when flag is enabled', () => {
+  it('allows secrets on Development when config/secret UI flag is enabled', () => {
     expect(
       resolveEnvVarVisibility({
         configSecretUiEnabled: true,
@@ -221,7 +222,17 @@ describe('resolveEnvVarVisibility', () => {
         key: 'API_KEY',
         envTargets: ['development'],
         teamSensitivePolicyOn: false,
-      }).error
-    ).toMatch(/not allowed with the Development Environment/);
+      })
+    ).toEqual({ visibility: 'secret' });
+  });
+
+  it('returns null for Development when config/secret UI is enabled', () => {
+    expect(
+      getDevelopmentSecretVisibilityError(['development'], {
+        type: 'sensitive',
+        visibility: 'secret',
+        configSecretUiEnabled: true,
+      })
+    ).toBeNull();
   });
 });

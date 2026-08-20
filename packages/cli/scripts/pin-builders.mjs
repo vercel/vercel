@@ -25,16 +25,23 @@ export function getWorkspaceVersions(packagesDir) {
   return versions;
 }
 
-export function pinBuilders(pkg, workspaceVersions) {
+export function pinBuilders(pkg, workspaceVersions, previewTarballBaseUrl) {
   const builders = pkg.builders;
   if (!builders || Object.keys(builders).length === 0) {
     throw new Error('package.json has no `builders` manifest to pin');
   }
   const pinned = {};
+  const tarballBaseUrl = previewTarballBaseUrl?.replace(/\/$/, '');
   for (const [name, marker] of Object.entries(builders)) {
     if (!marker.startsWith('workspace:')) {
       // Already rewritten (e.g. to a tarball URL by utils/pack.ts)
       pinned[name] = marker;
+      continue;
+    }
+    if (tarballBaseUrl) {
+      // Keep the scope separator as a path segment while encoding `@`, matching
+      // the preview tarball upload path (for example `%40vercel/node.tgz`).
+      pinned[name] = `${tarballBaseUrl}/${name.replace('@', '%40')}.tgz`;
       continue;
     }
     const version = workspaceVersions.get(name);

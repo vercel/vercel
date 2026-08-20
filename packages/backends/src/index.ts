@@ -10,7 +10,6 @@ import {
   NodejsLambda,
   NowBuildError,
   debug,
-  getNodeVersion,
   getLambdaOptionsFromFunction,
   Span,
   type PrepareCache,
@@ -81,12 +80,7 @@ export const build: BuildV2 = async args => {
   }
 
   const downloadResult = await downloadInstallAndBundle(args);
-  const nodeVersion = await getNodeVersion(
-    args.workPath,
-    undefined,
-    args.config,
-    args.meta
-  );
+  const { nodeVersion } = downloadResult;
   const isBun = isBunVersion(nodeVersion);
   const builderName = '@vercel/backends';
 

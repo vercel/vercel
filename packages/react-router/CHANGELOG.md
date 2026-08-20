@@ -1,5 +1,25 @@
 # @vercel/react-router
 
+## 1.3.4
+
+### Patch Changes
+
+- 9a9a6f8: Restrict KV session operations to adapter-generated session keys.
+
+## 1.3.3
+
+### Patch Changes
+
+- 1b62f2c: Set the `__vdpl` Skew Protection cookie for React Router via a routing-layer header rule instead of `Set-Cookie` on the SSR response, so document responses stay cacheable by the CDN.
+
+## 1.3.2
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/static-config@3.4.1
+
 ## 1.3.1
 
 ### Patch Changes

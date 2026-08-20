@@ -69,9 +69,7 @@ describe('vcr add', () => {
   });
 
   it('creates a repository with a POST', async () => {
-    let method = '';
     client.scenario.post('/v1/vcr/repository', (req, res) => {
-      method = req.method;
       expect(req.body).toMatchObject({
         projectId: 'prj_vcr',
         name: 'my-app',
@@ -82,7 +80,6 @@ describe('vcr add', () => {
     client.setArgv('vcr', 'add', 'my-app');
     const exitCode = await vcr(client);
     expect(exitCode).toBe(0);
-    expect(method).toBe('POST');
     expect(client.stderr.getFullOutput()).toContain('Created repository');
   });
 

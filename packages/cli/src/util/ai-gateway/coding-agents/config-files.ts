@@ -5,6 +5,8 @@ import {
   copyFile,
   access,
   lstat,
+  link,
+  unlink,
 } from 'node:fs/promises';
 import { isDeepStrictEqual } from 'node:util';
 import { dirname } from 'node:path';
@@ -372,6 +374,28 @@ export function upsertManagedBlock(
       ? '\n'
       : '\n\n';
   return `${existing}${prefix}${block}\n`;
+}
+
+/**
+ * Publishes a fully-written temp file to `destination` without clobbering:
+ * hard-link (fails atomically if the destination exists), then always remove
+ * the temp. Returns false when the destination already existed.
+ */
+export async function publishNoClobber(
+  temporary: string,
+  destination: string
+): Promise<boolean> {
+  try {
+    await link(temporary, destination);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+      return false;
+    }
+    throw error;
+  } finally {
+    await unlink(temporary).catch(() => {});
+  }
 }
 
 export async function backupFile(path: string): Promise<string> {

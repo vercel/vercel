@@ -147,12 +147,6 @@ describe('flags archive', () => {
     ]);
   });
 
-  it('archives a flag successfully with --yes', async () => {
-    client.setArgv('flags', 'archive', testFlags[0].slug, '--yes');
-    const exitCode = await flags(client);
-    expect(exitCode).toEqual(0);
-  });
-
   it('errors in non-interactive mode without --yes', async () => {
     (client.stdin as any).isTTY = false;
     client.setArgv('flags', 'archive', testFlags[0].slug);

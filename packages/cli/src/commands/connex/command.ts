@@ -9,10 +9,11 @@ import { packageName } from '../../util/pkg-name';
 export const createSubcommand = {
   name: 'create',
   aliases: [],
-  description: 'Create a new connector',
+  description:
+    'Create a new connector\n\nAccepts a known service (slack, notion, okta) or the URL of an OAuth or MCP server (mcp.notion.com/mcp). Run `create <service> --help` to see how a specific service can be connected to.',
   arguments: [
     {
-      name: 'type',
+      name: 'service',
       required: true,
     },
   ],
@@ -40,6 +41,73 @@ export const createSubcommand = {
       deprecated: false,
       description:
         "Webhook event to receive. Repeatable. Requires --triggers and replaces the provider's default events.",
+    },
+    {
+      name: 'trigger-project',
+      shorthand: null,
+      type: String,
+      argument: 'PROJECT',
+      deprecated: false,
+      description:
+        'Target a project by name or ID instead of the linked project. Requires --triggers.',
+    },
+    {
+      name: 'trigger-path',
+      shorthand: null,
+      type: String,
+      argument: 'PATH',
+      deprecated: false,
+      description:
+        'Set the path on the destination project that receives forwarded webhooks. Requires --triggers.',
+    },
+    {
+      name: 'trigger-branch',
+      shorthand: null,
+      type: String,
+      argument: 'BRANCH',
+      deprecated: false,
+      description:
+        'Target a specific git branch for the trigger destination. Requires --triggers.',
+    },
+    {
+      name: 'trigger-environment',
+      shorthand: null,
+      type: String,
+      argument: 'ENV',
+      deprecated: false,
+      description:
+        'Target a custom environment by slug or stable ID. Mutually exclusive with --trigger-branch and requires --triggers.',
+    },
+    {
+      name: 'connection-method',
+      shorthand: null,
+      type: String,
+      argument: 'METHOD',
+      deprecated: false,
+      description:
+        'How to connect to the service (e.g. oauth, mcp, api-key). Run without it to choose interactively; the error lists the valid values for a service.',
+    },
+    {
+      name: 'target',
+      shorthand: null,
+      type: String,
+      argument: 'TARGET',
+      deprecated: false,
+      description:
+        "Which of the service's products to connect to (e.g. api, mcp). Only needed when a service exposes more than one.",
+    },
+    {
+      name: 'param',
+      shorthand: null,
+      type: [String],
+      argument: 'KEY=VALUE',
+      deprecated: false,
+      description:
+        'Value for a connection method template field (e.g. domain=acme.okta.com). Repeatable.',
+    },
+    {
+      ...yesOption,
+      description: 'Skip the single-connection-method confirmation prompt',
     },
     {
       name: 'data',
@@ -105,8 +173,36 @@ export const createSubcommand = {
       value: `${packageName} connect create linear --name linear --triggers --trigger-event Issue --trigger-event Comment --trigger-event Project`,
     },
     {
+      name: 'Create with a custom trigger path',
+      value: `${packageName} connect create github --name github --triggers --trigger-path /eve/v1/github`,
+    },
+    {
+      name: 'Create with branch-specific trigger routing',
+      value: `${packageName} connect create github --name github --triggers --trigger-path /api/webhooks --trigger-branch main`,
+    },
+    {
+      name: 'Create with trigger routing on another project',
+      value: `${packageName} connect create github --name github --triggers --trigger-project my-api --trigger-path /api/webhooks`,
+    },
+    {
       name: 'Create with branding (icon and colors)',
       value: `${packageName} connect create slack --name my-bot --icon ./logo.png --background-color '#1A2B3C' --accent-color '#FF0066'`,
+    },
+    {
+      name: 'Create with a specific connection method',
+      value: `${packageName} connect create notion --connection-method mcp --name notion-mcp`,
+    },
+    {
+      name: 'Create with an API key, reading it from a file',
+      value: `${packageName} connect create notion --connection-method api-key --name notion --data @key.json`,
+    },
+    {
+      name: 'Create from a connection method that needs template values',
+      value: `${packageName} connect create okta --connection-method custom-server --param domain=acme.okta.com --param auth_server_id=default --name okta --data @creds.json`,
+    },
+    {
+      name: 'Target a specific product of a service',
+      value: `${packageName} connect create notion --target api --connection-method oauth --name notion --data @creds.json`,
     },
     {
       name: 'Create a non-managed connector from explicit data',

@@ -833,24 +833,41 @@ exports[`help command > connex help output snapshots > connex attach subcommand 
 
 exports[`help command > connex help output snapshots > connex create subcommand > connex create subcommand help column width 120 1`] = `
 "
-  ▲ vercel connect create type [options]
+  ▲ vercel connect create service [options]
 
   Create a new connector                                                                                                
+  Accepts a known service (slack, notion, okta) or the URL of an OAuth or MCP server (mcp.notion.com/mcp). Run \`create  
+  <service> --help\` to see how a specific service can be connected to.                                                  
 
   Options:
 
-       --accent-color <HEX>      Accent color for the connector icon (e.g. #1A2B3C)                                          
-       --background-color <HEX>  Background color for the connector icon (e.g. #1A2B3C)                                      
-       --connector-type <TYPE>   Connector type for non-managed creation. By default, the type is resolved from the service. 
-       --data <JSON>             JSON object for non-managed connector creation. When set, posts directly to the connector   
-                                 create API. Pass \`@<path>\` to read from a file or \`@-\` to read from stdin — recommended for 
-                                 secrets (e.g. client secrets), which leak into shell history when passed inline.            
-  -F,  --format <FORMAT>         Specify the output format (json)                                                            
-       --icon <PATH>             Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)               
-       --json                    Output as JSON                                                                              
-  -n,  --name <NAME>             Name of the connector                                                                       
-       --trigger-event <EVENT>   Webhook event to receive. Repeatable.                                                       
-       --triggers                Enable webhook triggers for this connector                                                  
+       --accent-color <HEX>          Accent color for the connector icon (e.g. #1A2B3C)                                      
+       --background-color <HEX>      Background color for the connector icon (e.g. #1A2B3C)                                  
+       --connection-method <METHOD>  How to connect to the service (e.g. oauth, mcp, api-key). Run without it to choose      
+                                     interactively; the error lists the valid values for a service.                          
+       --connector-type <TYPE>       Connector type for non-managed creation. By default, the type is resolved from the      
+                                     service.                                                                                
+       --data <JSON>                 JSON object for non-managed connector creation. When set, posts directly to the         
+                                     connector create API. Pass \`@<path>\` to read from a file or \`@-\` to read from stdin —   
+                                     recommended for secrets (e.g. client secrets), which leak into shell history when passed
+                                     inline.                                                                                 
+  -F,  --format <FORMAT>             Specify the output format (json)                                                        
+       --icon <PATH>                 Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)           
+       --json                        Output as JSON                                                                          
+  -n,  --name <NAME>                 Name of the connector                                                                   
+       --param <KEY=VALUE>           Value for a connection method template field (e.g. domain=acme.okta.com). Repeatable.   
+       --target <TARGET>             Which of the service's products to connect to (e.g. api, mcp). Only needed when a       
+                                     service exposes more than one.                                                          
+       --trigger-branch <BRANCH>     Target a specific git branch for the trigger destination. Requires --triggers.          
+       --trigger-environment <ENV>   Target a custom environment by slug or stable ID. Mutually exclusive with               
+                                     --trigger-branch and requires --triggers.                                               
+       --trigger-event <EVENT>       Webhook event to receive. Repeatable. Requires --triggers and replaces the provider's   
+                                     default events.                                                                         
+       --trigger-path <PATH>         Set the path on the destination project that receives forwarded webhooks. Requires      
+                                     --triggers.                                                                             
+       --trigger-project <PROJECT>   Target a project by name or ID instead of the linked project. Requires --triggers.      
+       --triggers                    Enable webhook triggers for this connector                                              
+  -y,  --yes                         Skip the single-connection-method confirmation prompt                                   
 
 
   Global Options:
@@ -885,9 +902,37 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 
     $ vercel connect create linear --name linear --triggers --trigger-event Issue --trigger-event Comment --trigger-event Project
 
+  - Create with a custom trigger path
+
+    $ vercel connect create github --name github --triggers --trigger-path /eve/v1/github
+
+  - Create with branch-specific trigger routing
+
+    $ vercel connect create github --name github --triggers --trigger-path /api/webhooks --trigger-branch main
+
+  - Create with trigger routing on another project
+
+    $ vercel connect create github --name github --triggers --trigger-project my-api --trigger-path /api/webhooks
+
   - Create with branding (icon and colors)
 
     $ vercel connect create slack --name my-bot --icon ./logo.png --background-color '#1A2B3C' --accent-color '#FF0066'
+
+  - Create with a specific connection method
+
+    $ vercel connect create notion --connection-method mcp --name notion-mcp
+
+  - Create with an API key, reading it from a file
+
+    $ vercel connect create notion --connection-method api-key --name notion --data @key.json
+
+  - Create from a connection method that needs template values
+
+    $ vercel connect create okta --connection-method custom-server --param domain=acme.okta.com --param auth_server_id=default --name okta --data @creds.json
+
+  - Target a specific product of a service
+
+    $ vercel connect create notion --target api --connection-method oauth --name notion --data @creds.json
 
   - Create a non-managed connector from explicit data
 
@@ -963,7 +1008,12 @@ exports[`help command > connex help output snapshots > connex help column width 
 
   Commands:
 
-  create         type       Create a new connector                      
+  create         service    Create a new connector                      
+                            Accepts a known service (slack, notion,     
+                            okta) or the URL of an OAuth or MCP server  
+                            (mcp.notion.com/mcp). Run \`create <service> 
+                            --help\` to see how a specific service can be
+                            connected to.                               
   update         id         Update connector branding (icon and colors) 
   list                      List connectors linked to the current       
                             project (falls back to every connector in   
@@ -1207,7 +1257,9 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 "
   ▲ vercel deploy [project-path] [options]
 
-  Deploy your project to Vercel. The    
+  Deploy your project to Vercel. Use    
+  \`--temporary\` to create a temporary   
+  deployment without logging in. The    
   \`deploy\` command is the default       
   command for the Vercel CLI, and can   
   be omitted (\`vc deploy my-app\` equals 
@@ -1360,6 +1412,12 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 target  
                                 deploym…
                                 environ…
+       --temporary              Create a
+                                tempora…
+                                deploym…
+                                without 
+                                logging 
+                                in      
        --with-cache             Retain  
                                 build   
                                 cache   
@@ -1460,7 +1518,8 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 "
   ▲ vercel deploy [project-path] [options]
 
-  Deploy your project to Vercel. The \`deploy\` command is the default command    
+  Deploy your project to Vercel. Use \`--temporary\` to create a temporary        
+  deployment without logging in. The \`deploy\` command is the default command    
   for the Vercel CLI, and can be omitted (\`vc deploy my-app\` equals \`vc         
   my-app\`). Use \`--dry\` to inspect the detected framework preset and source     
   files without deploying.                                                      
@@ -1499,6 +1558,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 deployment. You can use \`vc promote\` to complete
                                 the domain-assignment process later             
        --target <TARGET>        Specify the target deployment environment       
+       --temporary              Create a temporary deployment without logging in
        --with-cache             Retain build cache when using "--force"         
   -y,  --yes                    Use default options to skip all prompts         
 
@@ -1557,9 +1617,9 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 "
   ▲ vercel deploy [project-path] [options]
 
-  Deploy your project to Vercel. The \`deploy\` command is the default command for the Vercel CLI, and can be omitted     
-  (\`vc deploy my-app\` equals \`vc my-app\`). Use \`--dry\` to inspect the detected framework preset and source files        
-  without deploying.                                                                                                    
+  Deploy your project to Vercel. Use \`--temporary\` to create a temporary deployment without logging in. The \`deploy\`    
+  command is the default command for the Vercel CLI, and can be omitted (\`vc deploy my-app\` equals \`vc my-app\`). Use    
+  \`--dry\` to inspect the detected framework preset and source files without deploying.                                  
 
   Options:
 
@@ -1582,6 +1642,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
        --skip-domain            Disable the automatic promotion (aliasing) of the relevant domains to a new production  
                                 deployment. You can use \`vc promote\` to complete the domain-assignment process later    
        --target <TARGET>        Specify the target deployment environment                                               
+       --temporary              Create a temporary deployment without logging in                                        
        --with-cache             Retain build cache when using "--force"                                                 
   -y,  --yes                    Use default options to skip all prompts                                                 
 
@@ -2684,13 +2745,14 @@ exports[`help command > domains help output snapshots > domains verify help outp
 
 exports[`help command > env help output snapshots > env add help output snapshots > env add help column width 120 1`] = `
 "
-  ▲ vercel env add name [environment] [git-branch] [options]
+  ▲ vercel env add name [environment] [options]
 
   Add an Environment Variable                                                                                           
 
   Options:
 
        --force                    Overwrite an existing variable for the same target                                         
+       --git-branch <NAME>        Set the Git branch for a Preview Environment Variable                                      
        --guidance                 Show command suggestions after completion                                                  
        --no-sensitive             Store the value as non-sensitive when policy allows                                        
        --project <NAME_OR_ID>     Project name or ID (defaults to the linked project)                                        
@@ -2698,7 +2760,7 @@ exports[`help command > env help output snapshots > env add help output snapshot
        --value <VALUE>            Set the variable value for non-interactive use; otherwise use stdin or the prompt          
        --visibility <VISIBILITY>  Set config/secret visibility (\`config\` or \`secret\`). Inferred from type when omitted and   
                                   VERCEL_ENV_VAR_CONFIG_SECRET_UI is set                                                     
-  -y,  --yes                      Skip the confirmation prompt when adding an Environment Variable                           
+  -y,  --yes                      Accept default choices when adding an Environment Variable                                 
 
 
   Global Options:
@@ -2742,8 +2804,8 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
   - Add a new Environment Variable for a specific Environment and Git Branch
 
-    $ vercel env add <name> <production | preview | development> <gitbranch>
-    $ vercel env add DB_PASS preview feat1
+    $ vercel env add <name> <production | preview | development> --git-branch <name>
+    $ vercel env add DB_PASS preview --git-branch feat1
 
   - Add a new Environment Variable from stdin
 
@@ -2767,60 +2829,60 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
 
   Commands:
 
-  add     name [environment] [git-branch]  …
-                                           …
-                                           …
-                                           …
-  list    [environment] [git-branch]       …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           a
-                                           …
-  pull    [filename]                       …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           a
-                                           …
-                                           …
-  remove  name [environment]               …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-  run     command                          …
-                                           a
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-  update  name [environment]               …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
+  add     name [environment]          …
+                                      …
+                                      …
+                                      …
+  list    [environment] [git-branch]  …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      a
+                                      …
+  pull    [filename]                  …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      a
+                                      …
+                                      …
+  remove  name [environment]          …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+  run     command                     …
+                                      a
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+  update  name [environment]          …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
 
 
   Global Options:
@@ -2892,20 +2954,20 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
 
   Commands:
 
-  add     name [environment] [git-branch]  Add an Environment Variable     
-  list    [environment] [git-branch]       List all Environment Variables  
-                                           for a Project                   
-  pull    [filename]                       Pull all Development Environment
-                                           Variables from the cloud and    
-                                           write to a file [.env.local]    
-  remove  name [environment]               Remove an Environment Variable  
-                                           (see examples below)            
-  run     command                          Run a command with environment  
-                                           variables from the linked Vercel
-                                           project                         
-  update  name [environment]               Update the value of an existing 
-                                           Environment Variable (see       
-                                           examples below)                 
+  add     name [environment]          Add an Environment Variable         
+  list    [environment] [git-branch]  List all Environment Variables for a
+                                      Project                             
+  pull    [filename]                  Pull all Development Environment    
+                                      Variables from the cloud and write  
+                                      to a file [.env.local]              
+  remove  name [environment]          Remove an Environment Variable (see 
+                                      examples below)                     
+  run     command                     Run a command with environment      
+                                      variables from the linked Vercel    
+                                      project                             
+  update  name [environment]          Update the value of an existing     
+                                      Environment Variable (see examples  
+                                      below)                              
 
 
   Global Options:
@@ -2945,14 +3007,13 @@ exports[`help command > env help output snapshots > env help column width 120 1`
 
   Commands:
 
-  add     name [environment] [git-branch]  Add an Environment Variable                                             
-  list    [environment] [git-branch]       List all Environment Variables for a Project                            
-  pull    [filename]                       Pull all Development Environment Variables from the cloud and write to a
-                                           file [.env.local]                                                       
-  remove  name [environment]               Remove an Environment Variable (see examples below)                     
-  run     command                          Run a command with environment variables from the linked Vercel project 
-  update  name [environment]               Update the value of an existing Environment Variable (see examples      
-                                           below)                                                                  
+  add     name [environment]          Add an Environment Variable                                                 
+  list    [environment] [git-branch]  List all Environment Variables for a Project                                
+  pull    [filename]                  Pull all Development Environment Variables from the cloud and write to a    
+                                      file [.env.local]                                                           
+  remove  name [environment]          Remove an Environment Variable (see examples below)                         
+  run     command                     Run a command with environment variables from the linked Vercel project     
+  update  name [environment]          Update the value of an existing Environment Variable (see examples below)   
 
 
   Global Options:

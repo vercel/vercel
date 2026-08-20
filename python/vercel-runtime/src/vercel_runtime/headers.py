@@ -3,11 +3,32 @@ from __future__ import annotations
 import contextlib
 import os
 from collections.abc import Iterable, Mapping
+from contextvars import ContextVar
 from importlib import import_module
 from typing import cast
 
 OIDC_HEADER_NAME = "x-vercel-oidc-token"
 INTERNAL_OIDC_HEADER_NAME = "x-vercel-internal-oidc-token"
+FORWARDED_HOST_HEADER = "x-forwarded-host"
+
+# The host the proxy routed the current request on. Routing is by host, so
+# this is trustworthy provenance: environment aliases (production and custom
+# domains) only ever route to the currently promoted deployment.
+_forwarded_host: ContextVar[str | None] = ContextVar(
+    "vercel_forwarded_host",
+    default=None,
+)
+
+
+def current_forwarded_host() -> str | None:
+    """Return the host the current request arrived on, if any."""
+    return _forwarded_host.get()
+
+
+def _remember_forwarded_host(normalized: Mapping[str, str]) -> None:
+    _forwarded_host.set(
+        normalized.get(FORWARDED_HOST_HEADER) or normalized.get("host") or None
+    )
 
 
 def _iter_header_items(headers: object) -> list[tuple[object, object]]:
@@ -135,6 +156,7 @@ def set_vercel_headers_from_asgi_pairs(
         value = decode_header_bytes(value_bytes)
         normalized[key] = value
 
+    _remember_forwarded_host(normalized)
     set_headers(normalized if normalized else None)
 
 
@@ -147,10 +169,12 @@ def set_vercel_headers_from_http_headers(
             continue
         normalized[str(key).lower()] = str(value)
 
+    _remember_forwarded_host(normalized)
     set_headers(normalized if normalized else None)
 
 
 def clear_vercel_headers_context() -> None:
+    _forwarded_host.set(None)
     set_headers(None)
 
 

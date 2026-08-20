@@ -16,9 +16,9 @@ import {
  * `workPath` relative to project root, which we resolve here so the
  * per-builder helpers can read files directly.
  *
- * Builder modules are loaded lazily so importers don't pay their startup
- * cost (and don't trip over eager `readFileSync` calls in mocked-fs test
- * environments) until a runtime framework is actually detected.
+ * Builders are loaded via `importBuilders`. The import is dynamic so this
+ * module does not create a static cycle through
+ * `import-builders` → `static-builder` → `compile-vercel-config`.
  */
 export function createDetectEntrypoint(
   projectRoot: string
@@ -27,27 +27,47 @@ export function createDetectEntrypoint(
     // Normalize to forward slashes so the path is platform-consistent;
     // Node's `fs` accepts either separator on Windows.
     const absWorkPath = normalizePath(join(projectRoot, workPath));
-    // Builder packages ship without `.d.ts`; casts re-narrow the
-    // `allowJs`-inferred return type back to `DetectedEntrypoint`.
+
+    let builderName: string | undefined;
     if (isPythonFramework(framework)) {
-      const { detectEntrypoint } = await import('@vercel/python');
+      builderName = '@vercel/python';
+    } else if (isNodeBackendFramework(framework)) {
+      builderName = '@vercel/backends';
+    } else if (framework === 'go') {
+      builderName = '@vercel/go';
+    } else {
+      return null;
+    }
+
+    const detectEntrypoint = await loadBuilderDetectEntrypoint(
+      builderName,
+      projectRoot
+    );
+    if (!detectEntrypoint) {
+      return null;
+    }
+
+    if (builderName === '@vercel/python') {
       return detectEntrypoint({
         workPath: absWorkPath,
         framework,
-      }) as Promise<DetectedEntrypoint>;
+      });
     }
-    if (isNodeBackendFramework(framework)) {
-      const { detectEntrypoint } = await import('@vercel/backends');
-      return detectEntrypoint({
-        workPath: absWorkPath,
-      }) as Promise<DetectedEntrypoint>;
-    }
-    if (framework === 'go') {
-      const { detectEntrypoint } = await import('@vercel/go');
-      return detectEntrypoint({
-        workPath: absWorkPath,
-      }) as Promise<DetectedEntrypoint>;
-    }
-    return null;
+    return detectEntrypoint({ workPath: absWorkPath });
   };
+}
+
+async function loadBuilderDetectEntrypoint(
+  name: string,
+  projectRoot: string
+): Promise<DetectEntrypointFn | undefined> {
+  const { importBuilders } = await import('../build/import-builders');
+  const builders = await importBuilders(new Set([name]), projectRoot);
+  const loaded = builders.get(name);
+  if (!loaded) {
+    return undefined;
+  }
+  const detect = (loaded.builder as { detectEntrypoint?: DetectEntrypointFn })
+    .detectEntrypoint;
+  return typeof detect === 'function' ? detect : undefined;
 }

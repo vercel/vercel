@@ -71,6 +71,22 @@ describe('validateConfig', () => {
       );
     });
 
+    it('accepts proxy together with services', () => {
+      expect(
+        validateConfig({
+          services: {
+            web: { root: 'apps/web', framework: 'nextjs' },
+            vr: { root: 'apps/vr' },
+          },
+          rewrites: [
+            { source: '/app/(.*)', destination: { service: 'vr' } },
+            { source: '/(.*)', destination: { service: 'web' } },
+          ],
+          proxy: { entrypoint: 'proxy.ts' },
+        })
+      ).toBeNull();
+    });
+
     it('rejects proxy together with builds', () => {
       const error = validateConfig({
         proxy: { entrypoint: 'proxy.ts' },

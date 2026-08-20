@@ -1,0 +1,38 @@
+{
+  "uploadNowJson": true,
+  "projectSettings": {
+    "framework": "services"
+  },
+  "build": {
+    "env": {
+      "VERCEL_FASTAPI_STATIC_CDN": "1"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/cdn-frontend/:path(.*)?",
+      "destination": { "service": "cdn-frontend" }
+    },
+    {
+      "source": "/cdn-static/:path(.*)?",
+      "destination": { "service": "cdn-static" }
+    },
+    {
+      "source": "/nocdn-frontend/:path(.*)?",
+      "destination": { "service": "nocdn-frontend" }
+    },
+    {
+      "source": "/nocdn-static/:path(.*)?",
+      "destination": { "service": "nocdn-static" }
+    }
+  ],
+  "services": {
+    "cdn-frontend": { "root": "cdn-frontend/", "entrypoint": "pyproject.toml" },
+    "cdn-static": { "root": "cdn-static/", "entrypoint": "pyproject.toml" },
+    "nocdn-frontend": {
+      "root": "nocdn-frontend/",
+      "entrypoint": "pyproject.toml"
+    },
+    "nocdn-static": { "root": "nocdn-static/", "entrypoint": "pyproject.toml" }
+  }
+}

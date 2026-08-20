@@ -1,5 +1,19 @@
 # @vercel/hydrogen
 
+## 1.4.2
+
+### Patch Changes
+
+- b4f09c1: Support selecting Bun 1.4.x as an explicit runtime and build-time package manager, including local Bun servers.
+
+## 1.4.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/static-config@3.4.1
+
 ## 1.4.0
 
 ### Minor Changes

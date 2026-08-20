@@ -1,5 +1,501 @@
 # vercel
 
+## 59.1.4
+
+### Patch Changes
+
+- b8d7cd8: Fix `vercel comments` crashing in the native binary when rendering comment previews.
+
+## 59.1.3
+
+### Patch Changes
+
+- 69955f8: Accept the npm-selected Builder version when a CLI-pinned version is unavailable.
+- Updated dependencies [596868c]
+  - @vercel/python@6.57.1
+
+## 59.1.2
+
+### Patch Changes
+
+- 7e9fd02: Fixed `vc dev` failing with `ENOENT ... copyfile '/snapshot/...'` in the native binary when the devCommand triggers the Next.js dev WebSocket shim. The shim is now extracted from the SEA virtual filesystem with a read+write instead of `copyFileSync`, which does not support copying across the VFS boundary.
+- 157cffa: Require `--temporary` for deployments without credentials.
+- 7e9fd02: Organize files materialized for external processes through a declarative, versioned runtime asset manifest.
+
+## 59.1.1
+
+### Patch Changes
+
+- e1aa02b: Native binary builds now embed a pinned `builders` manifest in the staged package.json. Previously the binary shipped without any `builders` pins, so `importBuilders` installed builders from npm `latest` instead of the versions the CLI was released with.
+
+  The native binary now resolves Builders exclusively from the Builders directory (no fallback to CLI-bundled dependencies), and the directory is configurable via `VERCEL_BUILDERS_DIR` (default: `.vercel/builders` in the project). Builder installs respect project and user npm settings, including minimum release age. If npm rejects a CLI-pinned Builder version, the CLI warns and retries the original bare Builder spec so npm can select an allowed version.
+
+- 20f1ba4: `vc security check --findings` lists every stored finding by paging the findings endpoint, instead of the first 100 samples.
+- 36dead1: Publish PR binaries and workspace tarballs under immutable commit-scoped Blob paths.
+- Updated dependencies [bded29c]
+- Updated dependencies [a684b77]
+  - @vercel/next@4.21.6
+  - @vercel/python@6.57.0
+
+## 59.1.0
+
+### Minor Changes
+
+- 90124c0: Add `vercel kms` (beta) for managing KMS issuers, signing keys, and project grants. Issuers can be listed, inspected, created, imported, renamed, and deleted; signing keys can be added, imported, activated, and revoked; and project grants can be added, updated, and removed.
+- aad793c: List custom metrics and their observed attributes from the Observability API catalog and query them through the `/metrics/v1` API proxy, while preserving the existing schema and query paths for `vercel.*` metrics.
+
+### Patch Changes
+
+- c43803d: Use unit-aware default aggregations for custom metrics and human-readable values for all metrics.
+
+## 59.0.1
+
+### Patch Changes
+
+- d5bac31: Standardize list pagination on `--limit` and `--next` while preserving existing pagination flags as compatibility aliases.
+- 4f83283: Fix `vercel dev` failing with `PROXY_AND_BUILDS` for any project that configures `proxy` in `vercel.json`. The dev server synthesizes the proxy build into its in-memory config and then re-ran the authored-config validator over that derived plan, which rejected the pairing it had just created itself.
+- 6673559: Offer to link the project inline when `vercel env pull` runs in an unlinked directory, then continue pulling environment variables in the same invocation.
+- 98941c0: Move anonymous deployment orchestration out of the deploy command entrypoint.
+- b4f09c1: Support selecting Bun 1.4.x as an explicit runtime and build-time package manager, including local Bun servers.
+- Updated dependencies [de992e6]
+- Updated dependencies [b4f09c1]
+  - @vercel/python@6.57.0
+  - @vercel/build-utils@14.1.1
+  - @vercel/backends@0.8.38
+  - @vercel/hydrogen@1.4.2
+  - @vercel/next@4.21.5
+  - @vercel/node@5.10.1
+  - @vercel/redwood@2.5.2
+  - @vercel/remix-builder@5.9.5
+  - @vercel/static-build@2.12.7
+  - @vercel/container@0.2.0
+  - @vercel/elysia@0.1.115
+  - @vercel/express@0.1.129
+  - @vercel/fastify@0.1.118
+  - @vercel/go@3.11.0
+  - @vercel/h3@0.1.124
+  - @vercel/hono@0.2.118
+  - @vercel/koa@0.1.98
+  - @vercel/nestjs@0.2.119
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.2
+
+## 59.0.0
+
+### Major Changes
+
+- d7760a7: Removed CLI purchase support for the deprecated SIEM add-on.
+
+### Minor Changes
+
+- d87479d: Advertise kebab-case names for the Custom Environment and Observability Plus add-ons while continuing to accept their camelCase aliases.
+- a44c461: Add support for purchasing Observability Plus with `vercel buy addon observabilityPlus`.
+
+### Patch Changes
+
+- 466716e: Remove duplicate Blob command tests.
+- 466716e: Remove duplicate and mutation-insensitive CLI command tests.
+- 466716e: Remove ineffective and obsolete CLI integration test code.
+- 9980fab: Remove duplicate CLI utility test equivalence classes.
+- Updated dependencies [7ddf258]
+- Updated dependencies [852e1a0]
+- Updated dependencies [b517588]
+  - @vercel/next@4.21.4
+  - @vercel/build-utils@14.1.0
+  - @vercel/node@5.10.0
+  - @vercel/redwood@2.5.1
+  - @vercel/rust@1.4.2
+  - @vercel/static-build@2.12.6
+  - @vercel/backends@0.8.37
+  - @vercel/container@0.2.0
+  - @vercel/elysia@0.1.114
+  - @vercel/express@0.1.128
+  - @vercel/fastify@0.1.117
+  - @vercel/go@3.11.0
+  - @vercel/h3@0.1.123
+  - @vercel/hono@0.2.117
+  - @vercel/hydrogen@1.4.1
+  - @vercel/koa@0.1.97
+  - @vercel/nestjs@0.2.118
+  - @vercel/python@6.56.2
+  - @vercel/remix-builder@5.9.4
+  - @vercel/ruby@2.5.1
+
+## 58.11.0
+
+### Minor Changes
+
+- 299d5cd: `vercel deploy` without credentials can create a temporary anonymous project and deploy prebuilt output to it, running `vercel build` locally first when needed. Interactive users confirm before the first deployment, while `--yes` skips the prompt and non-interactive use requires it until `.vercel/anonymous.json` records the temporary project. The anonymous credential is reused until it expires, and each deploy prints a claim URL to keep the deployment by signing in. When anonymous deployments are unavailable, the previous login behavior applies.
+- 9daa87d: Add `vc security check` for reading the team security report from the terminal.
+
+### Patch Changes
+
+- 65ba1e0: Start linked deployments before project lookups finish without sending the repository root marker as the Root Directory.
+- 1b8d228: Fix duplicated route tables for services built through the Build Output API.
+
+## 58.10.0
+
+### Minor Changes
+
+- 3df8e01: Add `vercel blob put-image <file-or-url>`. The command runs an image through Vercel Image Optimization and stores only the optimized output in the Blob store, printing the resulting blob URL (or the full result with `--json`). It accepts a local file or a public http(s) URL as the source, with `--width` (required), `--quality` (default 75), and `--format` (jpeg/png/webp/avif, original preserved when omitted) controlling the transformation and `--pathname` (required) setting where the result is stored. The command warns when the optimizer kept the original image because the optimized output would have been larger. Requires OIDC credentials (`--oidc-token` + `--store-id`, or `VERCEL_OIDC_TOKEN` + `BLOB_STORE_ID`). Uses the new `putImage` method from `@vercel/blob` 2.8.0; the stored content type always comes from the optimizer output, so there is no `--content-type` flag.
+- da6b94c: Support multiple middlewares in vc dev.
+
+### Patch Changes
+
+- e570d3c: Remove duplicate Blob command tests.
+- cb76527: Remove ineffective and obsolete CLI integration test code.
+- 7d1c33b: `vercel ai-gateway coding-agents setup` no longer treats Cline, Cursor, Hermes, Kilo Code, and OpenClaw as experimental. They now appear in the interactive agent picker, are pre-selected when detected, and are included by `--all` and by the detected-agents default, alongside Claude Code, Codex, OpenCode, and Pi. Selecting them explicitly with `--agent <id>` already worked and is unchanged.
+- 4cc87f8: Emit `connect` as the telemetry command name for `vercel connect`, and track the previously-missing `create` service argument, `--name` and `--format`, plus all `token` arguments and options.
+- 59d5225: The Cursor guidance in `ai-gateway coding-agents setup` points at the dedicated `/cursor/v1` gateway endpoint. Cursor's request format is rejected by the generic `/coding-agent/v1` surface; the dedicated endpoint normalizes it.
+- Updated dependencies [7846a8c]
+- Updated dependencies [962d043]
+- Updated dependencies [15e0a8e]
+  - @vercel/python@6.56.2
+  - @vercel/rust@1.4.2
+
+## 58.9.5
+
+### Patch Changes
+
+- 28a2dd0: Expose the resolved rewrite destination as the request path observed by containers, and warn affected container projects about the behavior change.
+- 2fa7e02: Revert the linked deploy optimization that can send an invalid root directory.
+- Updated dependencies [28a2dd0]
+  - @vercel/container@0.2.0
+
+## 58.9.4
+
+### Patch Changes
+
+- a7fc7e8: Expose the resolved rewrite destination as the request path observed by standalone Go servers, and warn affected Go projects about the behavior change.
+- 22ce405: Do not prompt for a Git remote while gathering project link suggestions; offer "Switch Git remote" in the project picker instead when multiple remotes exist. Ask about connecting a detected Git repository before creating the project (default No).
+- Updated dependencies [a7fc7e8]
+- Updated dependencies [1b62f2c]
+  - @vercel/go@3.11.0
+  - @vercel/remix-builder@5.9.4
+  - @vercel/static-build@2.12.5
+
+## 58.9.3
+
+### Patch Changes
+
+- 4b22527: Improved `vercel upgrade` for native binary installs: the suggested update command now targets the correct install method instead of assuming a package manager, and self-updates are resilient to `/tmp` being on a different filesystem than the install directory.
+- e62af7f: Point native binary installer and PR binary downloads at the production domain (api-frameworks.vercel.sh) instead of a branch preview URL.
+
+## 58.9.2
+
+### Patch Changes
+
+- 33cdc9e: Remove CLI tests that do not execute production behavior.
+- b971158: Materialize the Next.js `vc dev` WebSocket preload shim to `~/.vercel/runtime/<version>/` so child Node processes can `--require` it (including native SEA installs whose `/snapshot` paths are not visible to external Node).
+- Updated dependencies [2da7809]
+- Updated dependencies [a8fee66]
+  - @vercel/backends@0.8.36
+  - @vercel/build-utils@14.0.5
+  - @vercel/cli-auth@0.3.4
+  - @vercel/detect-agent@1.2.5
+  - @vercel/go@3.10.5
+  - @vercel/node@5.9.9
+  - @vercel/remix-builder@5.9.3
+  - @vercel/static-build@2.12.5
+  - @vercel/python@6.56.1
+  - @vercel/container@0.1.1
+  - @vercel/elysia@0.1.113
+  - @vercel/express@0.1.127
+  - @vercel/fastify@0.1.116
+  - @vercel/h3@0.1.122
+  - @vercel/hono@0.2.116
+  - @vercel/hydrogen@1.4.1
+  - @vercel/koa@0.1.96
+  - @vercel/nestjs@0.2.117
+  - @vercel/next@4.21.3
+  - @vercel/redwood@2.5.1
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.1
+
+## 58.9.1
+
+### Patch Changes
+
+- 73b3efd: Support app principal tokens in scope resolution via token introspection
+- ce81015: Document and regression-test horizontal option uniformity across the Vercel CLI.
+- 337f9ed: `vercel ai-gateway coding-agents setup` now points Cursor, Hermes, Kilo Code,
+  and OpenClaw at the gateway's generic coding-agent surface,
+  `https://ai-gateway.vercel.sh/coding-agent/v1`, instead of the generic
+  `/v1` base URL. Claude Code and Codex keep their dedicated compatibility
+  endpoints, and Cline, OpenCode, and Pi are unaffected because they use their
+  native gateway providers rather than a base URL. This also fixes Cursor, whose
+  previous base URL `https://ai-gateway.vercel.sh/v1/cursor` is not a route the
+  gateway serves and returned a 404.
+- 03b264b: Migrate domains REST API calls off `/v4/domains` to the current documented versions: `GET /v5/domains/:domain` (get domain), `GET /v5/domains/:domain/records` (list DNS records), `POST /v7/domains` (add domain), and `GET /v6/domains/:domain/config` (domain config). `vercel domains add` now sends `zone: true` explicitly, preserving the DNS-zone creation that the API only defaults on for v4 and below.
+- Updated dependencies [13f81ac]
+- Updated dependencies [0dd2105]
+- Updated dependencies [4a1b21c]
+- Updated dependencies [92dfd87]
+- Updated dependencies [e829b31]
+  - @vercel/build-utils@14.0.4
+  - @vercel/next@4.21.3
+  - @vercel/cli-config@0.2.3
+  - @vercel/node@5.9.8
+  - @vercel/backends@0.8.35
+  - @vercel/container@0.1.1
+  - @vercel/elysia@0.1.112
+  - @vercel/express@0.1.126
+  - @vercel/fastify@0.1.115
+  - @vercel/go@3.10.4
+  - @vercel/h3@0.1.121
+  - @vercel/hono@0.2.115
+  - @vercel/hydrogen@1.4.1
+  - @vercel/koa@0.1.95
+  - @vercel/nestjs@0.2.116
+  - @vercel/python@6.56.0
+  - @vercel/redwood@2.5.1
+  - @vercel/remix-builder@5.9.2
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.1
+  - @vercel/static-build@2.12.4
+  - @vercel/cli-auth@0.3.3
+
+## 58.9.0
+
+### Minor Changes
+
+- f4c7bc0: Preserve existing Claude Desktop sessions when configuring the Vercel AI Gateway.
+- 9508026: Preserve existing Codex Desktop sessions when configuring the Vercel AI Gateway.
+
+### Patch Changes
+
+- 6989e14: Add an experimental Cline agent to `vercel ai-gateway coding-agents setup`. Writes Cline's first-party `vercel-ai-gateway` provider entry in `~/.cline/data/settings/providers.json` (the same 0600 file `cline auth` manages), preserving any existing schema version and provider entries. Select it explicitly with `--agent cline`.
+- a29784e: Add the Codex Desktop session-migration engine: a deterministic, atomic copy of Codex rollout sessions into the Vercel AI Gateway provider (UUIDv5 destinations, no-clobber writes, originals never modified). This is the internal capability; it is wired into `ai-gateway coding-agents setup` in a follow-up.
+- 20629d5: Add experimental Cursor support to `vercel ai-gateway coding-agents setup`. Cursor stores its BYOK settings in its own account-synced store, so setup provisions the AI Gateway key into the shell environment and walks through the manual steps in Cursor's Models settings (base URL override, adding gateway model ids), instead of writing config files. Select it explicitly with `--agent cursor`.
+- 823940c: Stage the UUID dependency in native binaries and validate binaries after CLI source changes.
+- eaf633f: Add an experimental Hermes agent to `vercel ai-gateway coding-agents setup`. Writes a gateway provider to `~/.hermes/config.yaml` using `key_env` (the key stays in the shell environment) with model auto-discovery enabled. Select it explicitly with `--agent hermes`.
+- 4e93b80: Add an experimental Kilo Code agent to `vercel ai-gateway coding-agents setup`. Writes an `openai-compatible` provider to `~/.config/kilo/kilo.json` using Kilo's `{env:AI_GATEWAY_API_KEY}` substitution so the key never lands in the file; the model picker auto-populates from the gateway's `/v1/models`. Select it explicitly with `--agent kilo`.
+- edd4e56: Add an experimental OpenClaw agent to `vercel ai-gateway coding-agents setup`. Writes a `models.providers` entry to `~/.openclaw/openclaw.json` with a `${AI_GATEWAY_API_KEY}` reference OpenClaw resolves itself, plus a starter model list. Select it explicitly with `--agent openclaw`.
+- 9508026: `vercel ai-gateway coding-agents setup` no longer drops env exports that other agents previously wrote into the managed shell block. A codex-only rerun used to rewrite the block with just its own exports, wiping claude-code's `ANTHROPIC_AUTH_TOKEN` — which silently disabled gateway model discovery in Claude Code.
+- Updated dependencies [4e2c621]
+- Updated dependencies [d72826e]
+- Updated dependencies [eee4afc]
+- Updated dependencies [d0f5927]
+- Updated dependencies [bacf4ff]
+  - @vercel/python@6.56.0
+  - @vercel/build-utils@14.0.3
+  - @vercel/next@4.21.2
+  - @vercel/backends@0.8.34
+  - @vercel/container@0.1.1
+  - @vercel/elysia@0.1.111
+  - @vercel/express@0.1.125
+  - @vercel/fastify@0.1.114
+  - @vercel/go@3.10.4
+  - @vercel/h3@0.1.120
+  - @vercel/hono@0.2.114
+  - @vercel/hydrogen@1.4.1
+  - @vercel/koa@0.1.94
+  - @vercel/nestjs@0.2.115
+  - @vercel/node@5.9.7
+  - @vercel/redwood@2.5.1
+  - @vercel/remix-builder@5.9.2
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.1
+  - @vercel/static-build@2.12.3
+
+## 58.8.0
+
+### Minor Changes
+
+- fa93c8f: Add `--trigger-project`, `--trigger-path`, `--trigger-branch`, and `--trigger-environment` to `vercel connect create` so trigger-enabled connectors can atomically register full destination routing, defaulting to the linked project.
+- c5caaf8: Add `vercel vcr config <repository> --public <true|false>` to configure a container registry repository's visibility.
+
+### Patch Changes
+
+- 19c6a71: Skip owner and project lookups before deploying a linked project.
+- b7ec19b: Scope the pre-compilation install's `VERCEL_INSTALL_COMPLETED` marker to the `package.json` it installed. Previously, a `vercel.toml`/`vercel.ts` config caused `vc build` to install at the repo root and then silently skip every later default install, so services whose install root is a different workspace (its own `package.json`/lockfile) built without dependencies.
+- Updated dependencies [a61bdfc]
+- Updated dependencies [b7ec19b]
+  - @vercel/python@6.55.3
+  - @vercel/build-utils@14.0.2
+  - @vercel/node@5.9.6
+  - @vercel/static-build@2.12.2
+  - @vercel/backends@0.8.33
+  - @vercel/container@0.1.1
+  - @vercel/elysia@0.1.110
+  - @vercel/express@0.1.124
+  - @vercel/fastify@0.1.113
+  - @vercel/go@3.10.4
+  - @vercel/h3@0.1.119
+  - @vercel/hono@0.2.113
+  - @vercel/hydrogen@1.4.1
+  - @vercel/koa@0.1.93
+  - @vercel/nestjs@0.2.114
+  - @vercel/next@4.21.1
+  - @vercel/redwood@2.5.1
+  - @vercel/remix-builder@5.9.2
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.1
+
+## 58.7.1
+
+### Patch Changes
+
+- e089b31: Suppress version/beta banner and deploy-subdirectory warnings for `vercel api` and `--json` / `--format json` so agents can parse machine-readable output.
+
+## 58.7.0
+
+### Minor Changes
+
+- f054187: Add `--team-level` flag to `vercel firewall` rules, ip-blocks, diff, publish, and discard commands for managing the team-level firewall configuration, which applies to every project in the team. Requires an Enterprise plan and team owner role; no linked project is needed.
+
+## 58.6.0
+
+### Minor Changes
+
+- cf8672c: Add `--zdr-exempt` to `vercel ai-gateway api-keys create`. When passed, the key is created with the `zdr` metadata fact exempting it from the team's ZDR-only model restriction; the API only accepts it from team owners. Adds telemetry tracking for the new flag.
+- f10dac6: Teach `vercel connect create` the connection methods a service publishes.
+
+  When a service describes how it can be connected to, the command asks which product to connect to and how, shows the provider's setup steps, prompts for the credentials that method needs, and lets the server resolve the endpoints and connector type.
+
+  Adds `--connection-method`, `--target`, `--param KEY=VALUE`, and `--yes` for scripted use, and adds `service`, `connectionMethod`, and `target` to `--json` output. The positional argument is now documented as `<service>`; it was called `type`, which read as a synonym for the unrelated `--connector-type` flag.
+
+  Services that publish no connection methods, and `--data` on its own, keep their existing behavior.
+
+- 360ea93: Describe a service's connection methods in `vercel connect create <service> --help`.
+
+  Help for a specific service now lists the products it exposes, each connection method with the credentials and template params it needs, and a runnable example per method. The generic flag reference stays on `vercel connect create --help`, which the service-specific output points to.
+
+  Falls back to static help when the service is unknown or the API is unreachable, so `--help` never depends on a working connection.
+
+- fff07a8: Stop setting VERCEL_DEPLOYMENT_ID=dpl_dev when running vc dev. Workflows interpreted that as running on a real deployment.
+
+### Patch Changes
+
+- f5d7860: Allow secrets in Development when `VERCEL_ENV_VAR_CONFIG_SECRET_UI` is enabled.
+- 7fa6f6a: Show readable non-sensitive values and sensitivity types in `vercel env ls`, and support `--git-branch` in `vercel env add`.
+- 58d84ee: Keep builders out of the native binary SEA snapshot and load them exclusively through `importBuilders`:
+
+  - detect-entrypoint loads builder `detectEntrypoint` helpers via `importBuilders` instead of static builder imports, and the binary build refuses to stage any `package.json#builders` package.
+  - Treat SEA `ENOENT` like `MODULE_NOT_FOUND` when resolving builders so the install fallback runs for VFS ghost paths.
+  - Enforce exact `builders` manifest pins for bare builder specs (exact-version pins only — range-shaped pins cannot force reinstalls), reinstalling into `.vercel/builders` on mismatch, including CLI-local resolves.
+  - `utils/pack.ts` rewrites `builders` entries to preview tarball URLs; `importBuilders` installs bare specs from those URL pins and revalidates cached URL-pinned builders against the CLI's preview pack suffix (`-${sha}`), reinstalling when the cache came from a different preview deployment.
+  - Tag `vc.installBuilders` spans with `pinned` / `pinnedPackages` when installs use pinned versions.
+
+  Also fixes affected unit-test CI steps to invoke global turbo@2.10.8 instead of workspace pnpm turbo 2.5.0, which rejects combining `--affected` with `--filter`.
+
+- 75db948: Build the linux native CLI Node runtime on manylinux_2_28 so the published binary stays at glibc ≤ 2.28 (runs on Amazon Linux 2023 / Vercel Sandboxes).
+- Updated dependencies [c446421]
+  - @vercel/python@6.55.2
+
+## 58.5.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/backends@0.8.32
+  - @vercel/build-utils@14.0.1
+  - @vercel/cli-auth@0.3.2
+  - @vercel/cli-config@0.2.2
+  - @vercel/container@0.1.1
+  - @vercel/detect-agent@1.2.4
+  - @vercel/elysia@0.1.109
+  - @vercel/express@0.1.123
+  - @vercel/fastify@0.1.112
+  - @vercel/go@3.10.4
+  - @vercel/h3@0.1.118
+  - @vercel/hono@0.2.112
+  - @vercel/hydrogen@1.4.1
+  - @vercel/koa@0.1.92
+  - @vercel/nestjs@0.2.113
+  - @vercel/next@4.21.1
+  - @vercel/node@5.9.5
+  - @vercel/python@6.55.1
+  - @vercel/redwood@2.5.1
+  - @vercel/remix-builder@5.9.2
+  - @vercel/ruby@2.5.2
+  - @vercel/rust@1.4.1
+  - @vercel/static-build@2.12.1
+
+## 58.5.0
+
+### Minor Changes
+
+- 4f8bda4: Add --root-directory support to project update.
+
+  Allows setting or resetting the project root directory via `vercel project update --root-directory <dir>` and `--auto-detect root-directory`. Adds telemetry tracking for the new option.
+
+- 3e71ed3: `vc logs` now displays request logs from all branches by default. Use `--branch <name>` to filter by branch. To preserve the previous behavior, pass the current branch name explicitly.
+
+  `vc logs --follow` now streams the latest READY production deployment by default. If none exists, it falls back to your latest READY deployment. Use `--environment preview`, `--branch <name>`, or a deployment URL or ID to select another deployment.
+
+  With `--follow`, `--branch` and `--environment` filter the deployment together. If no READY deployment matches both filters, the command returns an error instead of falling back to another branch or environment.
+
+  The deprecated `--no-branch` flag remains accepted as a no-op.
+
+- 5619873: Fix api dir builds receiving incorrect framework or runtime.
+
+### Patch Changes
+
+- e40fa39: Resolve the active production deployment when following production logs.
+- 5ec7cae: Add `vc alerts rules schema` and rule creation examples for built-in and custom alert rules. Use an explicit `--project` as the built-in rule target, and include complete custom alert project metadata for dashboard editing.
+- 8df62d7: Apply service-level rewrites in `vercel dev`.
+- 17d9eba: Include the deploy path relative to the detected git repository root in `gitMetadata.rootDirectory`.
+- c04d60d: Allow selecting webhook events when creating Linear connectors.
+- b747ab4: Replace the inferred PPR fields on `Prerender` with the Next.js prerender taxonomy.
+
+  `hasPostponed`, `hasFallback`, `isDynamicRoute` and `htmlSize` were derived by
+  `@vercel/next` from build artifacts (the `.meta` postponed state, which manifest
+  section a route came from, and a `statSync` of the `.html` shell). Next.js
+  `>= 16.3.0-canary.96` publishes its own classification in the prerender
+  manifest, so those four fields are removed in favour of a single optional
+  `prerenderClassification` on `Prerender` / `PrerenderOptions`:
+
+  - `routeType` — `'route' | 'page' | 'shell' | 'fallback'`
+  - `response` — `'empty' | 'initial' | 'complete'`
+  - `compute` — `'blocking' | 'resuming' | 'static'`
+  - `htmlSize` — byte size of the prerendered HTML shell, when the entry has one
+
+  The values are carried through unvalidated so a taxonomy value added by a future
+  Next.js release cannot hard-fail a deploy. `@vercel/next` sets the field only
+  when Next.js supplied the complete group — absence is legitimate for
+  `notFoundRoutes` and Pages Router `fallback: false` templates — and only on the
+  primary output of each prerender group, so a route is classified exactly once.
+
+- 830e091: Prevent Vercel plugin-install prompts after successful non-interactive commands.
+- 7d57d1f: Add a `vercel flags unarchive` command for unarchiving feature flags.
+
+  Examples:
+
+  - `vercel flags unarchive my-feature-flag`
+  - `vercel flags unarchive my-feature-flag --yes`
+  - `vercel flags unarchive my-feature-flag --project my-project --yes`
+
+- Updated dependencies [ce2eba4]
+- Updated dependencies [5c33351]
+- Updated dependencies [ce2eba4]
+- Updated dependencies [b747ab4]
+- Updated dependencies [08a2618]
+- Updated dependencies [5c33351]
+- Updated dependencies [5619873]
+- Updated dependencies [3586b18]
+  - @vercel/backends@0.8.31
+  - @vercel/go@3.10.3
+  - @vercel/build-utils@14.0.0
+  - @vercel/next@4.21.0
+  - @vercel/python@6.55.0
+  - @vercel/static-build@2.12.0
+  - @vercel/container@0.1.0
+  - @vercel/elysia@0.1.108
+  - @vercel/express@0.1.122
+  - @vercel/fastify@0.1.111
+  - @vercel/h3@0.1.117
+  - @vercel/hono@0.2.111
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.91
+  - @vercel/nestjs@0.2.112
+  - @vercel/node@5.9.4
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.0
+
 ## 58.4.4
 
 ### Patch Changes

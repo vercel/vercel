@@ -5,6 +5,7 @@ import {
   GATEWAY_CLAUDE_CODE_BASE_URL,
   resolveGatewayBaseUrl,
 } from '../gateway';
+import { planClaudeDesktopSessionMigration } from '../migrations/claude-desktop-sessions';
 
 /**
  * Claude Code reads env vars from the `env` object in `~/.claude/settings.json`.
@@ -28,6 +29,9 @@ function claudeDir(home: string): string {
 export const claudeCode: CodingAgent = {
   id: 'claude-code',
   displayName: 'Claude Code',
+  sessionMigration: {
+    plan: ({ home }) => planClaudeDesktopSessionMigration(home),
+  },
 
   async detect(home) {
     return pathExists(claudeDir(home));
@@ -66,12 +70,15 @@ export const claudeCode: CodingAgent = {
         },
       ],
       envExports,
-      notes: ctx.useKeychain
-        ? [
-            'The Anthropic auth token is read from your shell environment (Keychain-backed).',
-            'Open a new terminal so ANTHROPIC_AUTH_TOKEN is loaded, then restart Claude Code.',
-          ]
-        : ['Restart Claude Code to pick up the new settings.'],
+      notes: [
+        ...(ctx.useKeychain
+          ? [
+              'The Anthropic auth token is read from your shell environment (Keychain-backed).',
+              'Open a new terminal so ANTHROPIC_AUTH_TOKEN is loaded, then restart Claude Code.',
+            ]
+          : ['Restart Claude Code to pick up the new settings.']),
+        'The Claude Desktop app switches providers in its own settings (Developer → Configure Third-Party Inference…). After its first gateway launch, re-run this command to copy your existing desktop sessions over.',
+      ],
     };
   },
 };

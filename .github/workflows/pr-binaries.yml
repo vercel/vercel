@@ -1,0 +1,464 @@
+name: PR Binaries
+
+# Fast native binary builds for PRs: skips the custom Node runtime compile
+# (the slow part of Release Binary) by letting build-binary.mjs fetch the
+# prebuilt pkg Node base. macOS binaries are still signed and notarized so
+# they can be run directly from the artifact. See realease-binary.yml for
+# the full release pipeline.
+#
+# Signing uses the native Apple toolchain that ships on the macOS runners
+# (codesign + xcrun notarytool + a throwaway keychain) instead of building
+# rcodesign from source with cargo, which added several minutes per job.
+# The secrets are shared with the release pipeline: APPLE_CERT_DATA is a
+# base64 .p12, and APPLE_API_KEY is a base64 rcodesign "unified" JSON key
+# ({issuer_id, key_id, private_key}) that we convert to the .p8 + ids that
+# notarytool expects.
+
+on:
+  pull_request:
+    branches:
+      - main
+      - 'stack/**'
+
+permissions:
+  contents: read
+
+env:
+  VERCEL_TELEMETRY_DISABLED: '1'
+  TURBO_CACHE: 'remote:rw'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.asset }}
+    outputs:
+      deployment-url: ${{ steps.deployment.outputs.url }}
+    permissions:
+      contents: read
+      deployments: read
+      id-token: write
+      statuses: read
+    strategy:
+      fail-fast: false
+      # Intentionally incomplete matrix: Apple Silicon macOS + Linux only, so
+      # the binaries are testable by internal users. Intel macOS and Windows
+      # will need to be added before any external rollout, along with Windows'
+      # own signing story.
+      matrix:
+        include:
+          - runs-on: macos-15-xlarge
+            target: node24.14.1-macos-arm64
+            asset: vercel-darwin-arm64
+            sign: true
+          - runs-on: ubuntu-latest-32-core-arm
+            target: node24.14.1-linux-arm64
+            asset: vercel-linux-arm64
+            sign: false
+          - runs-on: ubuntu-latest-32-core
+            target: node24.14.1-linux-x64
+            asset: vercel-linux-x64
+            sign: false
+    runs-on: ${{ matrix['runs-on'] }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Setup Turborepo Remote Cache
+        uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
+        with:
+          team: ${{ vars.TURBO_TEAM }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.14.1
+          package-manager-cache: false
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
+        with:
+          toolchain: stable
+          targets: wasm32-wasip2
+
+      # The workspace build compiles @vercel-internals/ipc-proxy, which
+      # requires a Go toolchain on PATH (build.mjs hard-fails in GitHub
+      # Actions rather than downloading Go). Keep in sync with GO_VERSION
+      # in internals/ipc-proxy/build.mjs and test.yml.
+      - name: Setup Go toolchain
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.23.12'
+          cache: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: 'pyproject.toml'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          enable-cache: false
+
+      - name: Install pnpm
+        run: npm i -g pnpm@10.29.3
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Shown in the `vc --version` banner, e.g.
+      # "Vercel CLI 58.7.1 (native, pr-115 abc1234)".
+      - name: Set build label
+        shell: bash
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: echo "VERCEL_CLI_BUILD_LABEL=pr-$PR_NUMBER ${HEAD_SHA:0:7}" >> "$GITHUB_ENV"
+
+      - name: Build workspace packages
+        run: pnpm build
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      # The workspace build above runs immediately while Vercel builds the
+      # preview deployment. Wait only when build-binary.mjs needs its tarballs.
+      - name: Wait for deployment tarballs
+        id: deployment
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          validate_deployment_url() {
+            local url="${1%/}"
+            [[ -n "$url" ]] || return 1
+            if curl --connect-timeout 5 --max-time 15 -fsI "$url/tarballs/vercel.tgz" >/dev/null; then
+              echo "url=$url" >> "$GITHUB_OUTPUT"
+              echo "Deployment tarballs are ready at $url/tarballs"
+              return 0
+            fi
+            return 1
+          }
+
+          get_candidate_urls() {
+            local deployment_ids
+            deployment_ids=$(gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${HEAD_SHA}&per_page=20" --jq '.[].id') || return 1
+            while IFS= read -r deployment_id; do
+              [[ -n "$deployment_id" ]] || continue
+              gh api "repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses" \
+                --jq '.[] | select(.state == "success" and .environment_url != null and .environment_url != "") | .environment_url' || return 1
+            done <<< "$deployment_ids"
+            gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/status" \
+              --jq '.statuses[] | select(.state == "success" and .target_url != null and .target_url != "") | .target_url'
+          }
+
+          api_failures=0
+          for attempt in {1..120}; do
+            if ! candidate_urls=$(get_candidate_urls); then
+              api_failures=$((api_failures + 1))
+              echo "Failed to query deployment URLs (attempt $api_failures/3)."
+              [[ "$api_failures" -lt 3 ]] || exit 1
+              sleep 10
+              continue
+            fi
+            api_failures=0
+            while IFS= read -r candidate_url; do
+              if validate_deployment_url "$candidate_url"; then
+                exit 0
+              fi
+            done < <(printf '%s\n' "$candidate_urls" | sort -u)
+            echo "Deployment tarballs are not ready yet (attempt $attempt/120)."
+            sleep 10
+          done
+
+          echo "::error::Timed out waiting for deployment tarballs" >&2
+          exit 1
+
+      # No VERCEL_CLI_BINARY_NODE_PATH: build-binary.mjs downloads the
+      # prebuilt pkg Node base instead of compiling a custom runtime.
+      - name: Build binary
+        working-directory: packages/cli
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          VERCEL_CLI_PREVIEW_TARBALL_BASE_URL: ${{ steps.deployment.outputs.url }}/tarballs
+        run: node scripts/build-binary.mjs --target ${{ matrix.target }} --compress Brotli --output ./dist-bin/${{ matrix.asset }}
+
+      # Imports the Developer ID cert into a throwaway keychain so the
+      # system `codesign` can use it. The keychain is password-protected,
+      # unlocked for the duration of the job, and deleted in the cleanup
+      # step below; the runner VM is destroyed after the job anyway.
+      - name: Import Apple signing certificate
+        if: ${{ matrix.sign }}
+        shell: bash
+        env:
+          APPLE_CERT_DATA: ${{ secrets.APPLE_CERT_DATA }}
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$APPLE_CERT_DATA" ]]; then
+            echo "::error::APPLE_CERT_DATA secret is empty or unavailable"
+            exit 1
+          fi
+          cert_path="$RUNNER_TEMP/apple-certificate.p12"
+          keychain_path="$RUNNER_TEMP/signing.keychain-db"
+          keychain_password=$(openssl rand -base64 24)
+
+          echo "$APPLE_CERT_DATA" | base64 --decode > "$cert_path"
+          if [[ ! -s "$cert_path" ]]; then
+            echo "::error::Decoded Apple certificate is empty"
+            exit 1
+          fi
+
+          security create-keychain -p "$keychain_password" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$keychain_password" "$keychain_path"
+          security import "$cert_path" -k "$keychain_path" \
+            -P "$APPLE_CERT_PASSWORD" -f pkcs12 \
+            -T /usr/bin/codesign -T /usr/bin/security
+          # Allow codesign to use the key non-interactively.
+          security set-key-partition-list -S apple-tool:,apple: \
+            -k "$keychain_password" "$keychain_path" > /dev/null
+          security list-keychains -d user -s "$keychain_path" login.keychain-db
+
+          rm -f "$cert_path"
+
+          signing_identity=$(security find-identity -v -p codesigning "$keychain_path" \
+            | awk -F'"' '/Developer ID Application/ {print $2; exit}')
+          if [[ -z "$signing_identity" ]]; then
+            echo "::error::No Developer ID Application identity found in imported certificate"
+            exit 1
+          fi
+          echo "Using identity: $signing_identity"
+
+          echo "KEYCHAIN_PATH=$keychain_path" >> "$GITHUB_ENV"
+          echo "APPLE_SIGNING_IDENTITY=$signing_identity" >> "$GITHUB_ENV"
+
+      # The APPLE_API_KEY secret is rcodesign's "unified" JSON format
+      # (issuer_id, key_id, base64 DER private_key). notarytool wants a
+      # PEM .p8 file plus the two ids, so split it apart here.
+      - name: Write Apple notarization API key
+        if: ${{ matrix.sign }}
+        shell: bash
+        env:
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$APPLE_API_KEY" ]]; then
+            echo "::error::APPLE_API_KEY secret is empty or unavailable"
+            exit 1
+          fi
+          key_json="$RUNNER_TEMP/apple-api-key.json"
+          key_p8="$RUNNER_TEMP/apple-api-key.p8"
+          echo "$APPLE_API_KEY" | base64 --decode > "$key_json"
+          if [[ ! -s "$key_json" ]]; then
+            echo "::error::Decoded Apple API key is empty"
+            exit 1
+          fi
+          issuer_id=$(jq -r '.issuer_id' "$key_json")
+          key_id=$(jq -r '.key_id' "$key_json")
+          {
+            echo "-----BEGIN PRIVATE KEY-----"
+            jq -r '.private_key' "$key_json" | fold -w 64
+            echo "-----END PRIVATE KEY-----"
+          } > "$key_p8"
+          rm -f "$key_json"
+          echo "::add-mask::$issuer_id"
+          echo "::add-mask::$key_id"
+          echo "APPLE_API_KEY_P8_PATH=$key_p8" >> "$GITHUB_ENV"
+          echo "APPLE_API_ISSUER_ID=$issuer_id" >> "$GITHUB_ENV"
+          echo "APPLE_API_KEY_ID=$key_id" >> "$GITHUB_ENV"
+
+      - name: Sign binary
+        if: ${{ matrix.sign }}
+        shell: bash
+        working-directory: packages/cli
+        env:
+          VERCEL_CLI_APPLE_SIGNING_IDENTIFIER: com.vercel.vercel-cli
+        run: |
+          set -euo pipefail
+          bin="dist-bin/${{ matrix.asset }}"
+          codesign --sign "$APPLE_SIGNING_IDENTITY" \
+            --keychain "$KEYCHAIN_PATH" \
+            --identifier "$VERCEL_CLI_APPLE_SIGNING_IDENTIFIER" \
+            --entitlements entitlements.plist \
+            --options runtime \
+            --timestamp \
+            --force \
+            "$bin"
+
+          codesign --verify --strict --verbose=2 "$bin"
+
+          requirement=$(codesign -dr - "$bin" 2>&1)
+          printf '%s\n' "$requirement"
+          expected_identifier="identifier \"$VERCEL_CLI_APPLE_SIGNING_IDENTIFIER\""
+          if [[ "$requirement" != *"$expected_identifier"* ]]; then
+            echo "::error::Expected designated requirement to contain $expected_identifier"
+            exit 1
+          fi
+
+      - name: Notarize binary
+        if: ${{ matrix.sign }}
+        shell: bash
+        working-directory: packages/cli
+        run: |
+          set -euo pipefail
+          bin="dist-bin/${{ matrix.asset }}"
+          zip_path="$RUNNER_TEMP/${{ matrix.asset }}.zip"
+          ditto -c -k --keepParent "$bin" "$zip_path"
+          xcrun notarytool submit "$zip_path" \
+            --key "$APPLE_API_KEY_P8_PATH" \
+            --key-id "$APPLE_API_KEY_ID" \
+            --issuer "$APPLE_API_ISSUER_ID" \
+            --wait \
+            --timeout 15m
+
+          # Standalone Mach-O binaries can't be stapled (no ticket slot);
+          # Gatekeeper fetches the ticket online. Confirm acceptance:
+          spctl --assess --type install --verbose=2 "$bin" 2>&1 || true
+
+      - name: Delete signing keychain
+        if: ${{ always() && matrix.sign }}
+        shell: bash
+        run: |
+          if [[ -n "${KEYCHAIN_PATH:-}" && -f "$KEYCHAIN_PATH" ]]; then
+            security delete-keychain "$KEYCHAIN_PATH"
+          fi
+
+      - name: Compute checksum
+        shell: bash
+        working-directory: packages/cli
+        run: |
+          file="dist-bin/${{ matrix.asset }}"
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            shasum -a 256 "$file" > "$file.sha256"
+          else
+            sha256sum "$file" > "$file.sha256"
+          fi
+          cat "$file.sha256"
+
+      # Publishes the binary to a public Vercel Blob store so it can be
+      # downloaded without GitHub auth (Actions artifacts of a private repo
+      # are never publicly accessible). Blobs are keyed by PR number, so the
+      # URL is stable across pushes to the same PR.
+      #
+      # Auth: the job's GitHub OIDC token (audience vercel-cli-pr-binaries)
+      # is exchanged at the deployment's /api/pr-binaries-token route for a
+      # short-lived Blob client token scoped to this PR's pathname. The Blob
+      # read-write token never leaves that deployment's environment.
+      - name: Upload binary to Vercel Blob
+        id: blob
+        shell: bash
+        working-directory: packages/cli
+        env:
+          TOKEN_EXCHANGE_URL: ${{ steps.deployment.outputs.url }}/api/pr-binaries-token
+          OIDC_AUDIENCE: vercel-cli-pr-binaries
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          ASSET: ${{ matrix.asset }}
+        run: |
+          set -euo pipefail
+
+          oidc_token=$(curl -sS --fail \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$OIDC_AUDIENCE" \
+            | jq -r '.value')
+
+          exchange() {
+            local pathname="$1"
+            curl -sS --fail-with-body -X POST "$TOKEN_EXCHANGE_URL" \
+              -H "Authorization: Bearer $oidc_token" \
+              -H "Content-Type: application/json" \
+              -d "{\"pathname\":\"$pathname\"}" \
+              | jq -r '.token'
+          }
+
+          upload() {
+            local file="$1"
+            local pathname="$2"
+            local content_type="$3"
+            local client_token
+            client_token=$(exchange "$pathname") || return 1
+            if [[ -z "$client_token" || "$client_token" == "null" ]]; then
+              return 1
+            fi
+            BLOB_CLIENT_TOKEN="$client_token" \
+              BLOB_FILE="$file" \
+              BLOB_PATHNAME="$pathname" \
+              BLOB_CONTENT_TYPE="$content_type" \
+              node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          import { put } from '@vercel/blob/client';
+
+          const blob = await put(
+            process.env.BLOB_PATHNAME,
+            await readFile(process.env.BLOB_FILE),
+            {
+              access: 'public',
+              contentType: process.env.BLOB_CONTENT_TYPE,
+              token: process.env.BLOB_CLIENT_TOKEN,
+            }
+          );
+          console.log(blob.url);
+          NODE
+          }
+
+          artifact_root="pr-binaries/$PR_NUMBER/shas/$HEAD_SHA"
+          bin_url=$(upload "dist-bin/$ASSET" "$artifact_root/$ASSET" "application/octet-stream")
+          sha_url=$(upload "dist-bin/$ASSET.sha256" "$artifact_root/$ASSET.sha256" "text/plain")
+
+          echo "Uploaded: $bin_url"
+          echo "Uploaded: $sha_url"
+          {
+            echo "### Blob download"
+            echo ""
+            echo "- [$ASSET]($bin_url)"
+            echo "- [$ASSET.sha256]($sha_url)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish-current-sha:
+    name: Publish current SHA
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Upload current SHA pointer
+        shell: bash
+        env:
+          TOKEN_EXCHANGE_URL: ${{ needs.build.outputs.deployment-url }}/api/pr-binaries-token
+          OIDC_AUDIENCE: vercel-cli-pr-binaries
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          pathname="pr-binaries/$PR_NUMBER/current-sha"
+          oidc_token=$(curl -sS --fail \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$OIDC_AUDIENCE" \
+            | jq -r '.value')
+          client_token=$(curl -sS --fail-with-body -X POST "$TOKEN_EXCHANGE_URL" \
+            -H "Authorization: Bearer $oidc_token" \
+            -H "Content-Type: application/json" \
+            -d "{\"pathname\":\"$pathname\"}" | jq -r '.token')
+          store_id=$(cut -d_ -f4 <<< "$client_token")
+          encoded_pathname=$(jq -rn --arg value "$pathname" '$value | @uri')
+          request_id="$store_id:$(date +%s%3N):$RANDOM"
+          response=$(curl -sS --fail-with-body -X PUT \
+            "https://vercel.com/api/blob/?pathname=$encoded_pathname" \
+            -H "authorization: Bearer $client_token" \
+            -H "x-vercel-blob-store-id: $store_id" \
+            -H "x-api-version: 12" \
+            -H "x-api-blob-request-id: $request_id" \
+            -H "x-api-blob-request-attempt: 0" \
+            -H "x-vercel-blob-access: public" \
+            -H "x-content-type: text/plain" \
+            --data-binary "$HEAD_SHA")
+          echo "Uploaded: $(echo "$response" | jq -r '.url')"

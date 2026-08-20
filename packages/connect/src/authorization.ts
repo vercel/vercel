@@ -12,6 +12,8 @@ export interface ConnectAuthorizationOptions {
   webhook?: string;
   deviceCode?: boolean;
   expiresInMs?: number;
+  /** OAuth prompt value to pass to the connector's authorization server. */
+  prompt?: string;
 }
 
 export interface ConnectAuthorizationResponse {
@@ -80,6 +82,7 @@ export async function startAuthorization(
     ...(options?.expiresInMs !== undefined && {
       expiresInMs: options.expiresInMs,
     }),
+    ...(options?.prompt !== undefined && { prompt: options.prompt }),
   };
 
   const response = await fetch(endpoint, {

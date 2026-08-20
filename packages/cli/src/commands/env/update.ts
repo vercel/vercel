@@ -397,7 +397,7 @@ export default async function update(client: Client, argv: string[]) {
 
   const selectedIsDevelopment = selectedEnvTargetsDevelopment(selectedEnv);
 
-  if (policyOn && selectedIsDevelopment) {
+  if (policyOn && selectedIsDevelopment && !configSecretUiEnabled) {
     const msg = `Your team has enabled the Sensitive Environment Variables Policy and the Development Environment does not support sensitive values. https://vercel.com/docs/environment-variables/sensitive-environment-variables#environment-variables-policy`;
     if (client.nonInteractive) {
       outputAgentError(
@@ -414,7 +414,7 @@ export default async function update(client: Client, argv: string[]) {
     return 1;
   }
 
-  if (opts['--sensitive'] && selectedIsDevelopment) {
+  if (opts['--sensitive'] && selectedIsDevelopment && !configSecretUiEnabled) {
     const msg = `--sensitive is not allowed with the Development Environment. Sensitive Environment Variables are only supported on Production and Preview.`;
     if (client.nonInteractive) {
       outputAgentError(

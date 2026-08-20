@@ -1,0 +1,17 @@
+[project]
+name = "services-v2-apscheduler"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = [
+  "apscheduler>=3.10.4,<4",
+  "fastapi",
+]
+
+[tool.setuptools]
+py-modules = ["app", "scheduler"]
+
+[tool.vercel]
+entrypoint = "app:app"
+
+[[tool.vercel.subscribers]]
+entrypoint = "scheduler:scheduler"

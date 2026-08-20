@@ -2,3 +2,6 @@
 resolver = "3"
 members = ["crates/vercel_runtime"]
 exclude = ["examples/axum", "examples/actix-web"]
+
+[workspace.metadata]
+name = "vercel-rust-workspace"

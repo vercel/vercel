@@ -1,5 +1,55 @@
 # vercel-runtime
 
+## 0.21.0
+
+### Minor Changes
+
+- d92066f: Report the cold start phase breakdown as server timings.
+
+  The `bootstrap`, `import-fn` and `server-ready` phases are now reported on the
+  first response through `x-vercel-internal-timing`, the same channel and names the
+  Node bridge uses, instead of a `phases` field on the `server-started` handshake.
+  `userInitDuration` continues to be reported on the handshake.
+
+## 0.20.0
+
+### Minor Changes
+
+- 15e0a8e: Report a cold start phase breakdown from the Python runtime.
+
+  The `server-started` handshake now includes `userInitDuration` and a `phases`
+  breakdown (`bootstrap`, `importFn`, `serverReady`), and `initDuration` is
+  measured from a timestamp stamped by the generated handler before it does any
+  work, so it covers the `vercel_runtime` import chain and the user code import
+  instead of starting after them.
+
+## 0.19.0
+
+### Minor Changes
+
+- 4e2c621: Discover durable APScheduler subscribers, inject their stable runtime
+  identities, and activate the integration consistently in web and queue
+  Functions. Production schedulers activate on their first request, and
+  opted-in previews use request activity to renew a durable scheduling
+  deadline configured in pyproject.toml.
+- bacf4ff: Execute `wait_until` only for HTTP requests that are short-lived in `vc dev`. Lifespan ASGI events or websocket events are skipped for this mechanism to not block a possible fast request from invoking hooks.
+- 64879d7: Let invocation hook callbacks choose their next run time by returning a
+  non-negative number of seconds. Returning a number keeps even a one-shot
+  hook alive; returning None keeps the registered cadence.
+
+## 0.18.0
+
+### Minor Changes
+
+- a029198: Add private invocation hooks: Vercel-owned integrations can call
+  `run_on_next_invocation()` to run work once on an upcoming request, off the
+  response path and with that request's context. Failures retry with backoff on
+  later requests, and `repeat_after_seconds` re-arms a hook after each success.
+- 8f1364b: Add invocation-scoped `wait_until` to the Python runtime. Awaitables attached
+  during a request are drained after the response is sent, bounded by the
+  Function's maximum duration, and exposed to the SDK's
+  `vercel.functions.wait_until()` through the invocation context.
+
 ## 0.17.0
 
 ### Minor Changes

@@ -42,7 +42,6 @@ jobs:
       - name: Set NPM dist-tag latest to ${{ inputs.version }}
         run: npm dist-tag add vercel@${{ inputs.version }} latest
         env:
-          NPM_CONFIG_PROVENANCE: 'true'
           NPM_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
 

@@ -1,0 +1,271 @@
+name: Build Node Runtime
+
+# Builds the pruned custom Node.js runtimes (small-icu, en-only, no
+# inspector/npm/corepack/sqlite) that get embedded into the native vercel
+# binaries by realease-binary.yml.
+#
+# Runtimes are published to a rolling GitHub Release tagged
+# `node-runtime-v<version>` so the release workflow can download them instead
+# of compiling Node from source on every release (the compile takes 45-80+
+# minutes per platform and previously forced Windows to be disabled).
+#
+# Run this manually (or let the monthly cron refresh it) whenever:
+#   - the embedded Node version changes (update DEFAULT_NODE_VERSION here,
+#     realease-binary.yml, pkg.config.mjs, and validate-binary.yml together)
+#   - a new target platform is added
+#   - packages/cli/scripts/build-binary-node.mjs or patch-node-source.mjs
+#     change in a way that affects the produced runtime
+
+on:
+  workflow_dispatch:
+    inputs:
+      node_version:
+        description: Node.js version to build (e.g. 24.14.1)
+        required: false
+        type: string
+        default: ''
+  schedule:
+    # Monthly refresh so the runtimes never go stale relative to script
+    # changes. Version bumps still require a manual dispatch + matrix update.
+    - cron: '0 6 1 * *'
+
+permissions:
+  contents: write
+
+env:
+  DEFAULT_NODE_VERSION: 24.14.1
+
+concurrency:
+  group: build-node-runtime
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare rolling release
+    runs-on: ubuntu-latest
+    outputs:
+      node-version: ${{ steps.version.outputs.node-version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve Node version
+        id: version
+        env:
+          INPUT_NODE_VERSION: ${{ inputs.node_version }}
+        run: |
+          set -euo pipefail
+          version="${INPUT_NODE_VERSION:-$DEFAULT_NODE_VERSION}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid node_version: $version"
+            exit 1
+          fi
+          echo "node-version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=node-runtime-v$version" >> "$GITHUB_OUTPUT"
+
+      - name: Create rolling release if missing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG already exists"
+            exit 0
+          fi
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Custom Node runtimes $TAG" \
+            --notes "Rolling release of pruned Node.js runtimes embedded into the native Vercel CLI binaries. Rebuilt by build-node-runtime.yml; consumed by realease-binary.yml. Assets are replaced in place on every run." \
+            --latest=false
+
+  build:
+    name: ${{ matrix.runtime }}
+    needs: prepare
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runs-on: macos-15-xlarge
+            platform: darwin
+            arch: arm64
+            libc: ''
+            runtime: node-darwin-arm64
+          - runs-on: macos-15-large
+            platform: darwin
+            arch: x64
+            libc: ''
+            runtime: node-darwin-x64
+          # glibc builds are compiled inside manylinux_2_28 so the runtime's
+          # glibc floor stays at 2.28 (matches official Node; runs on AL2023 /
+          # Vercel Sandboxes with glibc 2.34). Building directly on
+          # ubuntu-latest produces GLIBC_2.38+ and breaks those hosts.
+          - runs-on: ubuntu-latest-32-core
+            platform: linux
+            arch: x64
+            libc: ''
+            runtime: node-linux-x64
+            container_image: quay.io/pypa/manylinux_2_28_x86_64
+          - runs-on: ubuntu-latest-32-core-arm
+            platform: linux
+            arch: arm64
+            libc: ''
+            runtime: node-linux-arm64
+            container_image: quay.io/pypa/manylinux_2_28_aarch64
+          # musl builds run inside Alpine so the runtime links against musl
+          # libc and works in Alpine-based containers where glibc binaries
+          # fail to load.
+          - runs-on: ubuntu-latest-32-core
+            platform: linux
+            arch: x64
+            libc: musl
+            runtime: node-linux-x64-musl
+            container_image: alpine:3.21
+          - runs-on: ubuntu-latest-32-core-arm
+            platform: linux
+            arch: arm64
+            libc: musl
+            runtime: node-linux-arm64-musl
+            container_image: alpine:3.21
+          # Node 24.14.1 does not build with Clang 22 on the VS 2026 image.
+          # windows-latest migrated to VS 2026 in June 2026, so stay on the
+          # VS 2022/LLVM 20 toolchain until the embedded Node source supports
+          # Clang 22.
+          - runs-on: windows-2022
+            platform: win
+            arch: x64
+            libc: ''
+            runtime: node-win-x64
+          # windows-11-arm is a GitHub-hosted arm64 pool. If this queues
+          # forever on the private repo, the org needs an arm64 Windows
+          # larger-runner pool shared with this repository.
+          - runs-on: windows-11-arm
+            platform: win
+            arch: arm64
+            libc: ''
+            runtime: node-win-arm64
+    runs-on: ${{ matrix['runs-on'] }}
+    timeout-minutes: 180
+    env:
+      VERCEL_CLI_NODE_VERSION: ${{ needs.prepare.outputs.node-version }}
+      VERCEL_CLI_NODE_PLATFORM: ${{ matrix.platform }}
+      VERCEL_CLI_NODE_ARCH: ${{ matrix.arch }}
+      VERCEL_CLI_NODE_LIBC: ${{ matrix.libc }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        if: ${{ matrix.platform != 'linux' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ needs.prepare.outputs.node-version }}
+          package-manager-cache: false
+
+      - name: Build runtime
+        if: ${{ matrix.platform != 'linux' }}
+        run: node packages/cli/scripts/build-binary-node.mjs
+
+      # Compile inside manylinux_2_28 so the produced ELF keeps a glibc
+      # floor of 2.28.
+      - name: Build runtime (manylinux)
+        if: ${{ matrix.platform == 'linux' && matrix.libc == '' }}
+        env:
+          MANYLINUX_IMAGE: ${{ matrix.container_image }}
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp \
+            -e TMPDIR=/tmp \
+            -e VERCEL_CLI_NODE_VERSION \
+            -e VERCEL_CLI_NODE_PLATFORM \
+            -e VERCEL_CLI_NODE_ARCH \
+            -v "$GITHUB_WORKSPACE:/work" \
+            -w /work \
+            "$MANYLINUX_IMAGE" \
+            bash -lc "
+              set -euo pipefail
+              curl -fsSL \"https://nodejs.org/dist/v\${VERCEL_CLI_NODE_VERSION}/node-v\${VERCEL_CLI_NODE_VERSION}-linux-${{ matrix.arch }}.tar.gz\" \
+                | tar -xz -C /tmp
+              export PATH=\"/tmp/node-v\${VERCEL_CLI_NODE_VERSION}-linux-${{ matrix.arch }}/bin:\$PATH\"
+              node --version
+              node packages/cli/scripts/build-binary-node.mjs
+            "
+
+      - name: Build runtime (alpine/musl)
+        if: ${{ matrix.libc == 'musl' }}
+        env:
+          ALPINE_IMAGE: ${{ matrix.container_image }}
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -e VERCEL_CLI_NODE_VERSION \
+            -e VERCEL_CLI_NODE_PLATFORM \
+            -e VERCEL_CLI_NODE_ARCH \
+            -e VERCEL_CLI_NODE_LIBC \
+            -v "$GITHUB_WORKSPACE:/work" \
+            -w /work \
+            "$ALPINE_IMAGE" \
+            sh -ec "
+              apk add --no-cache bash build-base curl linux-headers nodejs python3 py3-setuptools tar binutils
+              node --version
+              node packages/cli/scripts/build-binary-node.mjs
+              chown -R $(id -u):$(id -g) packages/cli/.node-runtime
+            "
+
+      - name: Verify glibc ceiling
+        if: ${{ matrix.platform == 'linux' && matrix.libc == '' }}
+        run: |
+          set -euo pipefail
+          node packages/cli/scripts/check-binary-glibc.mjs \
+            "packages/cli/.node-runtime/node-v${VERCEL_CLI_NODE_VERSION}-linux-${{ matrix.arch }}-small-icu/bin/node" 2.28
+
+      - name: Package runtime
+        shell: bash
+        working-directory: packages/cli/.node-runtime
+        run: |
+          set -euo pipefail
+          suffix=""
+          if [[ -n "$VERCEL_CLI_NODE_LIBC" ]]; then
+            suffix="-$VERCEL_CLI_NODE_LIBC"
+          fi
+          dir="node-v${VERCEL_CLI_NODE_VERSION}-${VERCEL_CLI_NODE_PLATFORM}-${VERCEL_CLI_NODE_ARCH}${suffix}-small-icu"
+          test -d "$dir"
+          tar -czf "$dir.tar.gz" "$dir"
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            shasum -a 256 "$dir.tar.gz" > "$dir.tar.gz.sha256"
+          else
+            sha256sum "$dir.tar.gz" > "$dir.tar.gz.sha256"
+          fi
+          cat "$dir.tar.gz.sha256"
+          echo "RUNTIME_ARCHIVE=$dir.tar.gz" >> "$GITHUB_ENV"
+
+      - name: Upload runtime artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.runtime }}
+          path: |
+            packages/cli/.node-runtime/*.tar.gz
+            packages/cli/.node-runtime/*.tar.gz.sha256
+          retention-days: 7
+          if-no-files-found: error
+          # .node-runtime is a dot-directory; without this the v4 action
+          # silently matches nothing (hidden paths excluded by default).
+          include-hidden-files: true
+
+      - name: Upload to rolling release
+        shell: bash
+        working-directory: packages/cli/.node-runtime
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release upload "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber \
+            "$RUNTIME_ARCHIVE" "$RUNTIME_ARCHIVE.sha256"

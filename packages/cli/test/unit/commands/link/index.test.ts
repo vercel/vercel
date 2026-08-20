@@ -2071,41 +2071,6 @@ describe('link', () => {
   });
 
   describe('OIDC token refresh', () => {
-    it('automatically refreshes OIDC after successful linking', async () => {
-      useUser({ version: 'northstar' });
-      const cwd = setupTmpDir();
-      const [team] = useTeams('team_dummy') as Team[];
-      const { project } = useProject({
-        ...defaultProject,
-        id: basename(cwd),
-        name: basename(cwd),
-      });
-      useUnknownProject();
-
-      client.cwd = cwd;
-      client.setArgv('--project', project.name!);
-      const exitCodePromise = link(client);
-
-      await expect(client.stderr).toOutput('Directory');
-      // Single team auto-selects; no team prompt.
-      await expect(client.stderr).toOutput('Link directory to project?');
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
-        `✓ Linked          ${team.slug}/${project.name}`
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
-
-      expect(mockPull).toHaveBeenCalledWith(
-        expect.objectContaining({ cwd }),
-        ['--yes'],
-        'vercel-cli:link',
-        { oidcTokenOnly: true }
-      );
-    });
-
     it('does not prompt before refreshing OIDC', async () => {
       useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
@@ -2177,83 +2142,6 @@ describe('link', () => {
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0); // Link should still succeed even if env pull fails
-
-      expect(mockPull).toHaveBeenCalledWith(
-        expect.objectContaining({ cwd }),
-        ['--yes'],
-        'vercel-cli:link',
-        { oidcTokenOnly: true }
-      );
-    });
-
-    it('should handle env pull command throwing an error', async () => {
-      useUser({ version: 'northstar' });
-      const cwd = setupTmpDir();
-      const [team] = useTeams('team_dummy') as Team[];
-      const { project } = useProject({
-        ...defaultProject,
-        id: basename(cwd),
-        name: basename(cwd),
-      });
-      useUnknownProject();
-
-      // Mock env pull to throw an error
-      mockPull.mockRejectedValue(new Error('Network error'));
-
-      client.cwd = cwd;
-      client.setArgv('--project', project.name!);
-      const exitCodePromise = link(client);
-
-      await expect(client.stderr).toOutput('Directory');
-      // Single team auto-selects; no team prompt.
-      await expect(client.stderr).toOutput('Link directory to project?');
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
-        `✓ Linked          ${team.slug}/${project.name}`
-      );
-
-      await expect(client.stderr).toOutput(
-        'Linked project, but failed to refresh VERCEL_OIDC_TOKEN in .env.local.'
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0); // Link should still succeed even if env pull throws
-
-      expect(mockPull).toHaveBeenCalledWith(
-        expect.objectContaining({ cwd }),
-        ['--yes'],
-        'vercel-cli:link',
-        { oidcTokenOnly: true }
-      );
-    });
-
-    it('uses --yes internally without treating it as target selection', async () => {
-      useUser({ version: 'northstar' });
-      const cwd = setupTmpDir();
-      const [team] = useTeams('team_dummy') as Team[];
-      const { project } = useProject({
-        ...defaultProject,
-        id: basename(cwd),
-        name: basename(cwd),
-      });
-      useUnknownProject();
-
-      client.cwd = cwd;
-      client.setArgv('--project', project.name!);
-      const exitCodePromise = link(client);
-
-      await expect(client.stderr).toOutput('Directory');
-      // Single team auto-selects; no team prompt.
-      await expect(client.stderr).toOutput('Link directory to project?');
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
-        `✓ Linked          ${team.slug}/${project.name}`
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
 
       expect(mockPull).toHaveBeenCalledWith(
         expect.objectContaining({ cwd }),

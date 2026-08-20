@@ -1,5 +1,63 @@
 # @vercel/static-build
 
+## 2.12.7
+
+### Patch Changes
+
+- b4f09c1: Support selecting Bun 1.4.x as an explicit runtime and build-time package manager, including local Bun servers.
+  - @vercel/gatsby-plugin-vercel-builder@2.2.41
+
+## 2.12.6
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.40
+
+## 2.12.5
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+  - @vercel/gatsby-plugin-vercel-builder@2.2.39
+
+## 2.12.4
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.38
+
+## 2.12.3
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.37
+
+## 2.12.2
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.36
+
+## 2.12.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/gatsby-plugin-vercel-analytics@1.0.12
+  - @vercel/gatsby-plugin-vercel-builder@2.2.35
+  - @vercel/static-config@3.4.1
+
+## 2.12.0
+
+### Minor Changes
+
+- 5619873: Fix api dir builds receiving incorrect framework or runtime.
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.34
+
 ## 2.11.13
 
 ### Patch Changes

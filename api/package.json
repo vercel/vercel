@@ -7,7 +7,9 @@
   "scripts": {},
   "dependencies": {
     "@sentry/node": "7.120.1",
+    "@vercel/blob": "2.4.0",
     "got": "11.8.5",
+    "jose": "5.9.6",
     "node-fetch": "2.6.7",
     "parse-github-url": "1.0.2",
     "tar-fs": "2.0.0"

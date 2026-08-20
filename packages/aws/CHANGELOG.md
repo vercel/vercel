@@ -1,5 +1,25 @@
 # @vercel/aws
 
+## 0.2.11
+
+### Patch Changes
+
+- @vercel/oidc-aws-credentials-provider@3.3.4
+
+## 0.2.10
+
+### Patch Changes
+
+- @vercel/oidc-aws-credentials-provider@3.3.3
+
+## 0.2.9
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/oidc-aws-credentials-provider@3.3.2
+
 ## 0.2.8
 
 ### Patch Changes

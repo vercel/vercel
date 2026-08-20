@@ -8,6 +8,9 @@ members = [
     "vercel-workers",
 ]
 
+[manifest.dependency-groups]
+dev = [{ name = "ruff", specifier = "~=0.15.1" }]
+
 [[package]]
 name = "amqp"
 version = "5.3.1"
@@ -1216,7 +1219,7 @@ wheels = [
 
 [[package]]
 name = "vercel-runtime"
-version = "0.17.0"
+version = "0.21.0"
 source = { editable = "python/vercel-runtime" }
 
 [package.dev-dependencies]
@@ -1227,6 +1230,7 @@ test = [
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
+    { name = "vercel" },
 ]
 
 [package.metadata]
@@ -1239,6 +1243,7 @@ test = [
     { name = "pytest", specifier = "~=9.0.2" },
     { name = "pytest-cov", specifier = "~=7.0.0" },
     { name = "ruff", specifier = "~=0.15.1" },
+    { name = "vercel", specifier = "~=0.5" },
 ]
 
 [[package]]

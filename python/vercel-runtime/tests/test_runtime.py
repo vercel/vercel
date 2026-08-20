@@ -14,6 +14,7 @@ import socket
 import struct
 import sys
 import tempfile
+import time
 import unittest
 from typing import TYPE_CHECKING, Any
 
@@ -37,6 +38,18 @@ _TEST_ROOT = pathlib.Path(__file__).parent
 _COV_WRAPPER = _TEST_ROOT / "_cov_wrapper.py"
 _LAMBDA_INVOKER = _TEST_ROOT / "fixtures" / "lambda_invoke.py"
 _FIXTURES = _TEST_ROOT / "fixtures"
+_TIMING_HEADER = "x-vercel-internal-timing"
+
+
+def _parse_server_timing(header: str) -> dict[str, int]:
+    """Map the ``name;dur=D;...`` entries of a server timing header to D."""
+    timings: dict[str, int] = {}
+    for entry in header.split(","):
+        fields = entry.strip().split(";")
+        for field in fields[1:]:
+            if field.startswith("dur="):
+                timings[fields[0]] = int(field.removeprefix("dur="))
+    return timings
 
 
 def _make_entrypoint(
@@ -137,6 +150,7 @@ async def _invoke_lambda(
     module_name: str,
     event: dict[str, Any],
     variable_name: str = "app",
+    extra_env: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Run vc_init.py in legacy mode and call vc_handler.
 
@@ -151,6 +165,8 @@ async def _invoke_lambda(
         "__VC_HANDLER_VARIABLE_NAME": variable_name,
     }
     env.pop("VERCEL_IPC_PATH", None)
+    if extra_env:
+        env.update(extra_env)
 
     result_r, result_w = os.pipe()
     env["_RESULT_FD"] = str(result_w)
@@ -677,6 +693,50 @@ class TestWSGIApp(_RuntimeTestCase):
                 "GET /search?q=test",
             )
 
+    async def test_wait_until_runs_after_response_with_request_oidc(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wait_until_wsgi.py",
+            self.tmp_path,
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage,
+                timeout=10.0,
+            )
+            port = ss.payload.http_port
+
+            first = await _http_get(
+                port,
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "first-request-token",
+                },
+            )
+            self.assertEqual(
+                json.loads(first.read()),
+                [],
+            )
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+
+            second = await _http_get(
+                port,
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "second-request-token",
+                },
+            )
+            self.assertEqual(
+                json.loads(second.read()),
+                ["first-request-token"],
+            )
+
     async def test_wsgi_chunked_post_without_content_length(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint(
             "wsgi_echo_app.py", self.tmp_path
@@ -944,6 +1004,47 @@ class TestASGIApp(_RuntimeTestCase):
             conn.request("GET", "/_vercel/ping")
             resp = conn.getresponse()
             self.assertEqual(resp.status, 200)
+
+    async def test_wait_until_runs_after_response_with_request_oidc(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wait_until_asgi.py",
+            self.tmp_path,
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage,
+                timeout=10.0,
+            )
+            port = ss.payload.http_port
+
+            first = await _http_get(
+                port,
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "first-request-token",
+                },
+            )
+            self.assertEqual(json.loads(first.read()), [])
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+
+            second = await _http_get(
+                port,
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "second-request-token",
+                },
+            )
+            self.assertEqual(
+                json.loads(second.read()),
+                ["first-request-token"],
+            )
 
     async def test_invalid_utf8_header(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
@@ -1580,6 +1681,139 @@ class TestLogging(_RuntimeTestCase):
             self.assertIn("with traceback", decoded)
 
 
+class TestColdStartPhases(_RuntimeTestCase):
+    """Tests for the cold start breakdown reported as server timings."""
+
+    async def _cold_start(
+        self,
+        extra_env: dict[str, str] | None = None,
+        fixture: str = "wsgi_app.py",
+        variable_name: str = "app",
+        warmup_path: str | None = None,
+    ) -> tuple[ServerStartedMessage, str, str | None]:
+        """Boot and return the handshake plus the first two timing headers.
+
+        ``warmup_path`` is requested before the measured request, to prove a
+        request does not consume the timings.
+        """
+        ep_abs, ep_rel, mod = _make_entrypoint(fixture, self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            variable_name=variable_name,
+            extra_env=extra_env,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            if warmup_path is not None:
+                (await _http_get(port, warmup_path)).read()
+
+            first = await _http_get(port, "/")
+            first.read()
+            header = first.headers.get(_TIMING_HEADER)
+            if header is None:
+                self.fail("first response carries no cold start timings")
+
+            second = await _http_get(port, "/")
+            second.read()
+            return ss, header, second.headers.get(_TIMING_HEADER)
+
+    async def test_phases_sum_to_init_duration(self) -> None:
+        ss, header, _ = await self._cold_start()
+        phases = _parse_server_timing(header)
+
+        self.assertEqual(
+            sorted(phases), ["bootstrap", "import-fn", "server-ready"]
+        )
+        for name, duration in phases.items():
+            self.assertGreaterEqual(duration, 0, name)
+        # Contiguous phases, so they sum to initDuration bar truncation
+        self.assertLessEqual(
+            abs(sum(phases.values()) - ss.payload.init_duration),
+            len(phases),
+        )
+
+    async def test_offsets_are_cumulative(self) -> None:
+        _, header, _ = await self._cold_start()
+        phases = _parse_server_timing(header)
+
+        offset = 0
+        for name in ("bootstrap", "import-fn", "server-ready"):
+            duration = phases[name]
+            self.assertIn(
+                f'{name};dur={duration};desc="{name}_{offset}+{duration}"'
+                f";offset={offset}",
+                header,
+            )
+            offset += duration
+
+    async def test_only_the_first_response_is_timed(self) -> None:
+        _, _, second = await self._cold_start()
+        self.assertIsNone(second)
+
+    async def test_readiness_ping_does_not_consume_the_timings(self) -> None:
+        # A ping is not an invocation, so the timings must survive it.
+        _, header, _ = await self._cold_start(warmup_path="/_vercel/ping")
+        self.assertIn("bootstrap", _parse_server_timing(header))
+
+    async def test_user_init_duration_is_the_user_import(self) -> None:
+        ss, header, _ = await self._cold_start()
+        self.assertEqual(
+            ss.payload.user_init_duration,
+            _parse_server_timing(header)["import-fn"],
+        )
+
+    async def test_asgi_reports_the_timings(self) -> None:
+        _, header, _ = await self._cold_start(fixture="asgi_app.py")
+        self.assertEqual(
+            sorted(_parse_server_timing(header)),
+            ["bootstrap", "import-fn", "server-ready"],
+        )
+
+    async def test_http_handler_reports_the_timings(self) -> None:
+        _, header, _ = await self._cold_start(
+            fixture="http_handler.py",
+            variable_name="handler",
+        )
+        self.assertEqual(
+            sorted(_parse_server_timing(header)),
+            ["bootstrap", "import-fn", "server-ready"],
+        )
+
+    async def test_boot_stamp_is_attributed_to_bootstrap(self) -> None:
+        # The trampoline stamps in the process it is read from, but
+        # CLOCK_MONOTONIC is system wide, so stamping from here works too.
+        stamped_ms = int(time.monotonic() * 1000) - 5000
+        ss, header, _ = await self._cold_start(
+            extra_env={"__VC_PY_BOOT_START_MS": str(stamped_ms)},
+        )
+
+        self.assertGreaterEqual(_parse_server_timing(header)["bootstrap"], 5000)
+        self.assertGreaterEqual(ss.payload.init_duration, 5000)
+
+    async def test_invalid_boot_stamp_falls_back_to_module_import(self) -> None:
+        ss, header, _ = await self._cold_start(
+            extra_env={"__VC_PY_BOOT_START_MS": "not-a-number"},
+        )
+
+        self.assertGreaterEqual(_parse_server_timing(header)["bootstrap"], 0)
+        self.assertLess(ss.payload.init_duration, 60_000)
+
+    async def test_boot_stamp_in_the_future_does_not_go_negative(self) -> None:
+        stamped_ms = int(time.monotonic() * 1000) + 60_000
+        ss, header, _ = await self._cold_start(
+            extra_env={"__VC_PY_BOOT_START_MS": str(stamped_ms)},
+        )
+
+        self.assertEqual(_parse_server_timing(header)["bootstrap"], 0)
+        self.assertEqual(ss.payload.init_duration, 0)
+
+
 class TestErrorPaths(_RuntimeTestCase):
     """Tests for error handling in vc_init.py."""
 
@@ -1763,6 +1997,32 @@ class TestLambdaWSGI(_LambdaTestCase):
         body = base64.b64decode(result["body"]).decode()
         self.assertEqual(body, "GET /hello")
 
+    async def test_wait_until_drains_with_request_oidc(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wait_until_wsgi.py",
+            self.tmp_path,
+        )
+        output_path = self.tmp_path / "wait-until-output.txt"
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event(
+                "GET",
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "request-token",
+                },
+            ),
+            extra_env={"WAIT_UNTIL_OUTPUT": str(output_path)},
+        )
+        self.assertEqual(result["statusCode"], 200)
+        body = base64.b64decode(result["body"]).decode()
+        self.assertEqual(json.loads(body), [])
+        self.assertEqual(output_path.read_text(), "request-token\n")
+
     async def test_query_string(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)
         result = await _invoke_lambda(
@@ -1805,6 +2065,30 @@ class TestLambdaASGI(_LambdaTestCase):
         self.assertEqual(result["statusCode"], 200)
         body = base64.b64decode(result["body"]).decode()
         self.assertEqual(body, "GET /hello")
+
+    async def test_wait_until_drains_with_request_oidc(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wait_until_asgi.py",
+            self.tmp_path,
+        )
+        output_path = self.tmp_path / "wait-until-output.txt"
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event(
+                "GET",
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "request-token",
+                },
+            ),
+            extra_env={"WAIT_UNTIL_OUTPUT": str(output_path)},
+        )
+        self.assertEqual(result["statusCode"], 200)
+        body = base64.b64decode(result["body"]).decode()
+        self.assertEqual(json.loads(body), [])
+        self.assertEqual(output_path.read_text(), "request-token\n")
 
     async def test_base64_body(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)

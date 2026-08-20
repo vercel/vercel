@@ -1,6 +1,6 @@
 {
   "name": "@vercel/hydrogen",
-  "version": "1.4.0",
+  "version": "1.4.2",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -11,11 +11,9 @@
   },
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
-    "test-e2e": "pnpm test test/test.js",
+    "test-e2e": "vitest run --config ../../vitest.config.mts test/test.js",
     "test": "vitest run --config ../../vitest.config.mts",
-    "type-check": "tsc --noEmit",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-e2e": "glob --absolute 'test/test.js'"
+    "type-check": "tsc --noEmit"
   },
   "files": [
     "dist",
@@ -30,6 +28,6 @@
     "@vercel/build-utils": "workspace:*",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
-    "vitest": "2.0.3"
+    "vitest": "4.1.10"
   }
 }

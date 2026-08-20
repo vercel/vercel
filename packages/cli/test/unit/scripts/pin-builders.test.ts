@@ -39,6 +39,22 @@ describe('pinBuilders()', () => {
     });
   });
 
+  it('pins workspace markers to preview tarballs when provided', () => {
+    const pkg = {
+      name: 'vercel',
+      builders: {
+        '@vercel/node': 'workspace:*',
+        '@vercel/next': 'workspace:*',
+      },
+    };
+    expect(
+      pinBuilders(pkg, versions, 'https://preview.vercel.sh/tarballs/').builders
+    ).toEqual({
+      '@vercel/node': 'https://preview.vercel.sh/tarballs/%40vercel/node.tgz',
+      '@vercel/next': 'https://preview.vercel.sh/tarballs/%40vercel/next.tgz',
+    });
+  });
+
   it('throws when a builder is not in the workspace', () => {
     const pkg = {
       name: 'vercel',

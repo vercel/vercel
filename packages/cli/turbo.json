@@ -8,6 +8,36 @@
         "src/util/constants.ts",
         "src/util/dev/templates/*.ts"
       ]
+    },
+    "build-binary": {
+      "cache": false,
+      "dependsOn": ["build"]
+    },
+    "build-binary:host": {
+      "cache": false,
+      "dependsOn": ["build"]
+    },
+    "test": {
+      "dependsOn": ["build"]
+    },
+    "test-e2e": {
+      "dependsOn": []
+    },
+    "test-e2e-artifacts": {
+      "command": [
+        "node",
+        "scripts/test.mjs",
+        "--run",
+        "test/e2e-curl-deploy.test.ts",
+        "test/e2e-curl-deploy-no-framework.test.ts"
+      ],
+      "dependsOn": []
+    },
+    "test-dev-artifacts": {
+      "command": ["pnpm", "run", "test-dev"]
+    },
+    "test-unit": {
+      "dependsOn": ["build"]
     }
   }
 }

@@ -72,7 +72,7 @@ export function useDomain(postfix?: string) {
   const domain = createDomain(postfix);
 
   client.scenario.get(
-    `/v4/domains/${encodeURIComponent(`example-${postfix}.com`)}`,
+    `/v5/domains/${encodeURIComponent(`example-${postfix}.com`)}`,
     (req, res) => {
       res.json({
         domain,

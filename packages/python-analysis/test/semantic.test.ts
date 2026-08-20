@@ -80,13 +80,6 @@ from server import application as app
       expect(await findAppOrHandler(source)).toBe('app');
     });
 
-    it('detects imported application', async () => {
-      const source = `
-from server import application as app
-`;
-      expect(await findAppOrHandler(source)).toBe('app');
-    });
-
     it('detects aliased import as application', async () => {
       const source = `
 from server import callable as application

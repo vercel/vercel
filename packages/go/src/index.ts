@@ -21,6 +21,7 @@ import {
 } from 'fs-extra';
 import {
   BuildOptions,
+  type BuildResultVX,
   Files,
   PrepareCacheOptions,
   ShouldServe,
@@ -131,9 +132,12 @@ type UndoActions = {
   functionRenames: UndoFunctionRename[];
 };
 
-export const version = 3;
+// `-1` lets each build pick its result version: standalone server builds
+// return a V2 result so they can name their own output, while the classic
+// `api/*.go` path keeps the scalar V3 result the CLI names from `build.src`.
+export const version = -1;
 
-export async function build(options: BuildOptions) {
+export async function build(options: BuildOptions): Promise<BuildResultVX> {
   const {
     files,
     config,
@@ -328,7 +332,8 @@ export async function build(options: BuildOptions) {
     }
 
     return {
-      output: lambda,
+      resultVersion: 3,
+      result: { output: lambda },
     };
   } catch (error) {
     debug(`Go Builder Error: ${error}`);

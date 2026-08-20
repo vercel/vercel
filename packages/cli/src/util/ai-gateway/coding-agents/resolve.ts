@@ -80,6 +80,8 @@ export async function resolveAgents(args: {
       '  Detected agents are pre-selected ·'
     )}${CHECKBOX_INSTRUCTIONS}`,
     instructions: false,
+    loop: false,
+    pageSize: Math.max(choices.length, 7),
     choices,
   });
   const selected = picked

@@ -108,8 +108,9 @@ export default async function ls(client: Client, argv: string[]) {
     const jsonOutput = {
       envs: envs.map(env => ({
         key: env.key,
-        value: env.type === 'plain' ? env.value : undefined,
+        value: isSensitiveEnvironmentVariable(env) ? undefined : env.value,
         type: env.type,
+        visibility: env.visibility,
         target: env.target,
         gitBranch: env.gitBranch,
         configurationId: env.configurationId,
@@ -154,7 +155,7 @@ function getTable(
     ? 'environments (git branch)'
     : 'environments';
   return formatTable(
-    ['name', 'value', label, 'created'],
+    ['name', 'value', 'type', label, 'created'],
     ['l', 'l', 'l', 'l', 'l'],
     [
       {
@@ -171,23 +172,37 @@ function getRow(
   customEnvironments: CustomEnvironment[]
 ) {
   let value: string;
-  if (env.type === 'plain') {
+  if (isSensitiveEnvironmentVariable(env)) {
+    value = chalk.gray.italic('Hidden');
+  } else if (env.type === 'system') {
+    value = chalk.gray.italic(env.value);
+  } else {
     // replace space characters (line-break, etc.) with simple spaces
     // to make sure the displayed value is a single line
     const singleLineValue = env.value.replace(/\s/g, ' ');
 
     value = chalk.gray(ellipsis(singleLineValue, 19));
-  } else if (env.type === 'system') {
-    value = chalk.gray.italic(env.value);
-  } else {
-    value = chalk.gray.italic('Encrypted');
   }
 
   const now = Date.now();
   return [
     chalk.bold(env.key),
     value,
+    getEnvironmentVariableTypeLabel(env),
     formatEnvironments(link, env, customEnvironments),
     env.createdAt ? `${ms(now - env.createdAt)} ago` : '',
   ];
+}
+
+function isSensitiveEnvironmentVariable(env: ProjectEnvVariable): boolean {
+  return env.type === 'sensitive' || env.visibility === 'secret';
+}
+
+function getEnvironmentVariableTypeLabel(
+  env: ProjectEnvVariable
+): 'Non-sensitive' | 'Sensitive' | 'System' {
+  if (isSensitiveEnvironmentVariable(env)) {
+    return 'Sensitive';
+  }
+  return env.type === 'system' ? 'System' : 'Non-sensitive';
 }

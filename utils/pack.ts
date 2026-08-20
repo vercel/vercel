@@ -20,8 +20,16 @@ const pythonWheelPackages = getPythonPackages(rootDir).map(
   })
 );
 
+function getTarballBaseUrl(): string {
+  if (process.env.VERCEL_TARBALL_BASE_URL) {
+    return process.env.VERCEL_TARBALL_BASE_URL.replace(/\/$/, '');
+  }
+  return `https://${process.env.VERCEL_URL}/tarballs`;
+}
+
 async function main() {
   const sha = await getSha();
+  const tarballBaseUrl = getTarballBaseUrl();
 
   const { stdout: turboStdout } = await execa(
     'turbo',
@@ -38,7 +46,13 @@ async function main() {
 
     const dir = path.join(rootDir, task.directory);
     const packageJsonPath = path.join(dir, 'package.json');
+    if (!(await fs.pathExists(packageJsonPath))) {
+      continue;
+    }
     const originalPackageObj = await fs.readJson(packageJsonPath);
+    if (originalPackageObj.name !== task.package) {
+      continue;
+    }
     const packageObj = await fs.readJson(packageJsonPath);
     packageObj.version += `-${sha.trim()}`;
 
@@ -47,12 +61,18 @@ async function main() {
         const name = dependency.split('#')[0];
         // pnpm 8 fails to install dependencies with @ in the URL
         const escapedName = name.replace('@', '%40');
-        const tarballUrl = `https://${process.env.VERCEL_URL}/tarballs/${escapedName}.tgz`;
+        const tarballUrl = `${tarballBaseUrl}/${escapedName}.tgz`;
         if (packageObj.dependencies && name in packageObj.dependencies) {
           packageObj.dependencies[name] = tarballUrl;
         }
         if (packageObj.devDependencies && name in packageObj.devDependencies) {
           packageObj.devDependencies[name] = tarballUrl;
+        }
+        // Preview tarballs also pin `builders` to the same URLs so
+        // importBuilders installs the PR build instead of the npm version.
+        // pin-builders prepack leaves non-workspace entries alone.
+        if (packageObj.builders && name in packageObj.builders) {
+          packageObj.builders[name] = tarballUrl;
         }
       }
     }

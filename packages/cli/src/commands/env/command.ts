@@ -52,13 +52,17 @@ export const addSubcommand = {
       name: 'environment',
       required: false,
     },
-    {
-      name: 'git-branch',
-      required: false,
-    },
   ],
   options: [
     projectOption,
+    {
+      name: 'git-branch',
+      description: 'Set the Git branch for a Preview Environment Variable',
+      shorthand: null,
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+    },
     {
       name: 'sensitive',
       description: 'Store the value as sensitive for Production or Preview',
@@ -89,8 +93,7 @@ export const addSubcommand = {
     },
     {
       ...yesOption,
-      description:
-        'Skip the confirmation prompt when adding an Environment Variable',
+      description: 'Accept default choices when adding an Environment Variable',
     },
     {
       name: 'guidance',
@@ -142,8 +145,8 @@ export const addSubcommand = {
     {
       name: 'Add a new Environment Variable for a specific Environment and Git Branch',
       value: [
-        `${packageName} env add <name> ${targetPlaceholder} <gitbranch>`,
-        `${packageName} env add DB_PASS preview feat1`,
+        `${packageName} env add <name> ${targetPlaceholder} --git-branch <name>`,
+        `${packageName} env add DB_PASS preview --git-branch feat1`,
       ],
     },
     {

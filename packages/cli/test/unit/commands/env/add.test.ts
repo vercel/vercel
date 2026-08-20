@@ -535,22 +535,46 @@ describe('env add', () => {
         }
       });
 
-      it('rejects --sensitive on Development', async () => {
-        client.setArgv(
-          'env',
-          'add',
-          'DEV_SECRET',
-          'development',
-          '--sensitive',
-          '--value',
-          'foo',
-          '--yes'
+      it('allows --sensitive on Development', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
         );
-        const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput(
-          'not allowed with the Development Environment'
-        );
-        await expect(exitCodePromise).resolves.toBe(1);
+        const addSpy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        try {
+          client.setArgv(
+            'env',
+            'add',
+            'DEV_SECRET',
+            'development',
+            '--sensitive',
+            '--value',
+            'foo',
+            '--yes'
+          );
+          const exitCodePromise = env(client);
+          await expect(exitCodePromise).resolves.toBe(0);
+
+          expect(addSpy).toHaveBeenCalled();
+          const [, , , type, , , , , visibility] = addSpy.mock
+            .calls[0] as unknown as [
+            unknown,
+            unknown,
+            unknown,
+            string,
+            unknown,
+            unknown,
+            unknown,
+            unknown,
+            string,
+          ];
+          expect(type).toBe('sensitive');
+          expect(visibility).toBe('secret');
+        } finally {
+          addSpy.mockRestore();
+        }
       });
 
       it('omits visibility for public-prefixed keys on Production when team policy is on', async () => {
@@ -1237,6 +1261,87 @@ describe('env add', () => {
             },
           ]);
         });
+
+        it('accepts a Git branch with --git-branch', async () => {
+          const addEnvRecordModule = await import(
+            '../../../../src/util/env/add-env-record'
+          );
+          const spy = vi
+            .spyOn(addEnvRecordModule, 'default')
+            .mockResolvedValue(undefined);
+
+          client.setArgv(
+            'env',
+            'add',
+            'GIT_BRANCH_OPTION',
+            'preview',
+            '--git-branch',
+            'branchName',
+            '--value',
+            'testvalue',
+            '--no-sensitive',
+            '--yes'
+          );
+
+          await expect(env(client)).resolves.toEqual(0);
+          expect(spy.mock.calls[0][7]).toBe('branchName');
+          expect(client.telemetryEventStore).toHaveTelemetryEvents([
+            { key: 'subcommand:add', value: 'add' },
+            { key: 'argument:name', value: '[REDACTED]' },
+            { key: 'argument:environment', value: 'preview' },
+            { key: 'option:git-branch', value: '[REDACTED]' },
+            { key: 'option:value', value: '[REDACTED]' },
+            { key: 'flag:no-sensitive', value: 'TRUE' },
+            { key: 'flag:yes', value: 'TRUE' },
+          ]);
+
+          spy.mockRestore();
+        });
+
+        it('rejects a branch provided as both a flag and positional argument', async () => {
+          client.setArgv(
+            'env',
+            'add',
+            'DUPLICATE_BRANCH',
+            'preview',
+            'legacy-branch',
+            '--git-branch',
+            'flag-branch'
+          );
+
+          const exitCode = await env(client);
+
+          expect(exitCode).toEqual(1);
+          await expect(client.stderr).toOutput('Git branch was provided twice');
+        });
+
+        it('uses all Preview branches without prompting when --yes is set', async () => {
+          const addEnvRecordModule = await import(
+            '../../../../src/util/env/add-env-record'
+          );
+          const spy = vi
+            .spyOn(addEnvRecordModule, 'default')
+            .mockResolvedValue(undefined);
+
+          client.setArgv(
+            'env',
+            'add',
+            'ALL_PREVIEW_BRANCHES',
+            'preview',
+            '--value',
+            'testvalue',
+            '--no-sensitive',
+            '--yes'
+          );
+
+          await expect(env(client)).resolves.toEqual(0);
+          expect(spy.mock.calls[0][7]).toBeUndefined();
+          expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
+            'Git branch?'
+          );
+
+          spy.mockRestore();
+        });
       });
     });
 
@@ -1346,7 +1451,8 @@ describe('env add', () => {
         expect(payload.next[0].command).toContain('<scope>');
         expect(payload.next[0].command).not.toMatch(/--value/);
         expect(payload.next[1].command).toMatch(/env add/);
-        expect(payload.next[1].command).toContain('<gitbranch>');
+        expect(payload.next[1].command).not.toContain('<gitbranch>');
+        expect(payload.next[1].command).not.toContain('--git-branch');
         expect(payload.next[1].command).toContain(
           '--cwd=../../../test-custom-deployment-id'
         );
@@ -1573,7 +1679,7 @@ describe('env add', () => {
         logSpy.mockRestore();
       });
 
-      it('does not output git_branch_required when branch is passed as third argument for preview', async () => {
+      it('preserves --git-branch in the missing-value suggestion', async () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');
         });
@@ -1585,6 +1691,7 @@ describe('env add', () => {
           'add',
           'PREVIEW_WITH_FLAG',
           'preview',
+          '--git-branch',
           'feat/test',
           '--yes'
         );
@@ -1598,6 +1705,7 @@ describe('env add', () => {
         expect(payload.reason).toBe('missing_requirements');
         expect(payload.missing).toContain('missing_value');
         expect(payload.missing).not.toContain('git_branch_required');
+        expect(payload.next[0].command).toContain('--git-branch feat/test');
 
         exitSpy.mockRestore();
         logSpy.mockRestore();

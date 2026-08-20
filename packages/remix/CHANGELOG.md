@@ -1,5 +1,32 @@
 # @vercel/remix-builder
 
+## 5.9.5
+
+### Patch Changes
+
+- b4f09c1: Support selecting Bun 1.4.x as an explicit runtime and build-time package manager, including local Bun servers.
+
+## 5.9.4
+
+### Patch Changes
+
+- 1b62f2c: Set the `__vdpl` Skew Protection cookie for React Router via a routing-layer header rule instead of `Set-Cookie` on the SSR response, so document responses stay cacheable by the CDN.
+
+## 5.9.3
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+
+## 5.9.2
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/error-utils@2.2.1
+  - @vercel/static-config@3.4.1
+
 ## 5.9.1
 
 ### Patch Changes

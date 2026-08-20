@@ -1,5 +1,38 @@
 # @vercel/connect
 
+## 0.8.0
+
+### Minor Changes
+
+- 9476255: Add `connectNotionAdapter` for outbound Chat SDK Notion credentials while retaining native webhook verification.
+- 52de67d: Add `connectTelegramAdapter` for outbound Chat SDK Telegram credentials while retaining native webhook verification or polling.
+
+## 0.7.0
+
+### Minor Changes
+
+- fff606d: Add `connectDiscordAdapter` for Chat SDK Discord credentials and Connect-verified webhooks.
+
+### Patch Changes
+
+- 52b82cc: Allow authorization callers to pass an OAuth prompt to the connector's authorization server.
+- Updated dependencies [2da7809]
+  - @vercel/oidc@3.8.4
+
+## 0.6.2
+
+### Patch Changes
+
+- @vercel/oidc@3.8.3
+
+## 0.6.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/oidc@3.8.2
+
 ## 0.6.0
 
 ### Minor Changes

@@ -1,5 +1,60 @@
 # @vercel/nestjs
 
+## 0.2.119
+
+### Patch Changes
+
+- Updated dependencies [b4f09c1]
+  - @vercel/node@5.10.1
+
+## 0.2.118
+
+### Patch Changes
+
+- Updated dependencies [852e1a0]
+  - @vercel/node@5.10.0
+
+## 0.2.117
+
+### Patch Changes
+
+- Updated dependencies [2da7809]
+  - @vercel/node@5.9.9
+
+## 0.2.116
+
+### Patch Changes
+
+- Updated dependencies [e829b31]
+  - @vercel/node@5.9.8
+
+## 0.2.115
+
+### Patch Changes
+
+- @vercel/node@5.9.7
+
+## 0.2.114
+
+### Patch Changes
+
+- @vercel/node@5.9.6
+
+## 0.2.113
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/node@5.9.5
+  - @vercel/static-config@3.4.1
+
+## 0.2.112
+
+### Patch Changes
+
+- @vercel/node@5.9.4
+
 ## 0.2.111
 
 ### Patch Changes

@@ -137,7 +137,7 @@ export function validateCustomEnvironmentPacks(
     return {
       error:
         'Missing packs. Specify the number of custom environment packs to purchase.',
-      usage: `Example: ${getCommandName(`buy addon customEnvironment ${CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT}`)} — each pack adds ${CUSTOM_ENVIRONMENTS_PER_PACK} environments.`,
+      usage: `Example: ${getCommandName(`buy addon custom-environment ${CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT}`)} — each pack adds ${CUSTOM_ENVIRONMENTS_PER_PACK} environments.`,
     };
   }
 

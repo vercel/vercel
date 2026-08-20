@@ -27,6 +27,13 @@ export class VcrTelemetryClient
     });
   }
 
+  trackCliSubcommandConfig(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'config',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandRm(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'rm',
@@ -126,6 +133,15 @@ export class VcrTelemetryClient
     }
   }
 
+  trackCliOptionNext(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'next',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionCursor(value: string | undefined) {
     if (value) {
       this.trackCliOption({
@@ -148,6 +164,17 @@ export class VcrTelemetryClient
     if (value) {
       this.trackCliOption({
         option: 'sort-order',
+        value,
+      });
+    }
+  }
+
+  trackCliOptionPublic(value: string | undefined) {
+    // Visibility is a bounded boolean ("true" | "false"), so it is safe to
+    // record the actual value; anything else is never recorded.
+    if (value === 'true' || value === 'false') {
+      this.trackCliOption({
+        option: 'public',
         value,
       });
     }

@@ -862,6 +862,29 @@ function checkIfAlreadyInstalled(
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);
 
+/**
+ * Whether the `VERCEL_INSTALL_COMPLETED` marker covers the given
+ * `package.json`. When `VERCEL_INSTALL_COMPLETED_PATH` is also set (by
+ * `vc build`'s pre-compilation install), the marker is scoped to the
+ * `package.json` that was actually installed, so projects with a different
+ * install root (e.g. services in another workspace of a monorepo) still
+ * install. Without the path (e.g. set by the build container), the marker
+ * covers every default install, preserving the legacy behavior.
+ */
+function installCompletedCovers(packageJsonPath: string | undefined): boolean {
+  if (process.env.VERCEL_INSTALL_COMPLETED !== '1') {
+    return false;
+  }
+  const completedPath = process.env.VERCEL_INSTALL_COMPLETED_PATH;
+  if (!completedPath) {
+    return true;
+  }
+  return (
+    packageJsonPath !== undefined &&
+    path.normalize(completedPath) === path.normalize(packageJsonPath)
+  );
+}
+
 // Track paths where custom install commands have already run (module-level since no meta object)
 let customInstallCommandSet: Set<string> | undefined;
 
@@ -921,7 +944,7 @@ export async function runNpmInstall(
       if (alreadyInstalled) {
         return false;
       }
-      if (process.env.VERCEL_INSTALL_COMPLETED === '1') {
+      if (installCompletedCovers(packageJsonPath)) {
         debug(
           `Skipping dependency installation for ${packageJsonPath} because VERCEL_INSTALL_COMPLETED is set`
         );
@@ -998,6 +1021,7 @@ export function getEnvForPackageManager({
   cliType,
   lockfileVersion,
   packageJsonPackageManager,
+  nodeVersion,
   env,
   packageJsonEngines,
   turboSupportsCorepackHome,
@@ -1006,6 +1030,7 @@ export function getEnvForPackageManager({
   cliType: CliType;
   lockfileVersion: number | undefined;
   packageJsonPackageManager?: string | undefined;
+  nodeVersion?: NodeVersion | BunVersion;
   env: { [x: string]: string | undefined };
   packageJsonEngines?: PackageJson.Engines;
   turboSupportsCorepackHome?: boolean | undefined;
@@ -1026,6 +1051,7 @@ export function getEnvForPackageManager({
     lockfileVersion,
     corepackPackageManager: packageJsonPackageManager,
     corepackEnabled,
+    nodeVersion,
     packageJsonEngines,
     projectCreatedAt,
   });
@@ -1044,18 +1070,47 @@ export function getEnvForPackageManager({
     ...env,
   };
 
+  const bunRuntimePath =
+    nodeVersion && isBunVersion(nodeVersion)
+      ? `/bun${nodeVersion.major}${
+          nodeVersion.minor === undefined ? '' : `.${nodeVersion.minor}`
+        }`
+      : undefined;
+
   const alreadyInPath = (newPath: string) => {
     const oldPath = env.PATH ?? '';
     return oldPath.split(path.delimiter).includes(newPath);
   };
 
-  if (newPath && !alreadyInPath(newPath)) {
+  const hasSelectedBunPath =
+    cliType === 'bun' &&
+    nodeVersion === undefined &&
+    (env.PATH ?? '')
+      .split(path.delimiter)
+      .some(segment => /^\/bun\d+(?:\.\d+)?$/.test(segment));
+
+  const pathsToPrepend = Array.from(
+    new Set(
+      [newPath, bunRuntimePath].filter((value): value is string => !!value)
+    )
+  ).filter(
+    value => !alreadyInPath(value) && !(hasSelectedBunPath && value === newPath)
+  );
+
+  if (pathsToPrepend.length > 0) {
     // Ensure that the binaries of the detected package manager are at the
     // beginning of the `$PATH`.
     const oldPath = env.PATH + '';
-    newEnv.PATH = `${newPath}${path.delimiter}${oldPath}`;
+    newEnv.PATH = `${pathsToPrepend.join(path.delimiter)}${
+      oldPath ? path.delimiter : ''
+    }${oldPath}`;
 
-    if (detectedLockfile && detectedPackageManager) {
+    if (
+      newPath &&
+      pathsToPrepend.includes(newPath) &&
+      detectedLockfile &&
+      detectedPackageManager
+    ) {
       const detectedV9PnpmLockfile =
         detectedLockfile === 'pnpm-lock.yaml' && lockfileVersion === 9;
       const pnpm10UsingPackageJsonPackageManager =
@@ -1187,6 +1242,7 @@ export function getPathOverrideForPackageManager({
   lockfileVersion,
   corepackPackageManager,
   corepackEnabled = true,
+  nodeVersion,
   packageJsonEngines,
   projectCreatedAt,
 }: {
@@ -1194,6 +1250,7 @@ export function getPathOverrideForPackageManager({
   lockfileVersion: number | undefined;
   corepackPackageManager: string | undefined;
   corepackEnabled?: boolean;
+  nodeVersion?: NodeVersion | BunVersion;
   packageJsonEngines?: PackageJson.Engines;
   projectCreatedAt?: number;
 }): {
@@ -1242,6 +1299,20 @@ export function getPathOverrideForPackageManager({
         detectedPackageManger
       );
     }
+  }
+
+  if (
+    cliType === 'bun' &&
+    detectedPackageManger &&
+    nodeVersion &&
+    isBunVersion(nodeVersion)
+  ) {
+    const minor = nodeVersion.minor;
+    return {
+      ...detectedPackageManger,
+      path: `/bun${nodeVersion.major}${minor === undefined ? '' : `.${minor}`}`,
+      detectedPackageManager: `bun@${nodeVersion.range}`,
+    };
   }
 
   return detectedPackageManger ?? NO_OVERRIDE;
@@ -1527,9 +1598,18 @@ export async function runCustomInstallCommand({
     return false;
   }
 
-  // Skip if VERCEL_INSTALL_COMPLETED is set (e.g., for vercel.ts config compilation)
-  // Path is already marked as installed above, allowing subdirectory installs to proceed
-  if (process.env.VERCEL_INSTALL_COMPLETED === '1') {
+  const {
+    cliType,
+    lockfileVersion,
+    packageJson,
+    packageJsonPath,
+    packageJsonPackageManager,
+    turboSupportsCorepackHome,
+  } = await scanParentDirs(destPath, true);
+
+  // Skip if VERCEL_INSTALL_COMPLETED covers this install root (e.g., the
+  // vercel.ts config compilation install already ran for it)
+  if (installCompletedCovers(packageJsonPath)) {
     debug(
       `Skipping custom install command for ${normalizedPath} because VERCEL_INSTALL_COMPLETED is set`
     );
@@ -1537,13 +1617,6 @@ export async function runCustomInstallCommand({
   }
 
   console.log(`Running "install" command: \`${installCommand}\`...`);
-  const {
-    cliType,
-    lockfileVersion,
-    packageJson,
-    packageJsonPackageManager,
-    turboSupportsCorepackHome,
-  } = await scanParentDirs(destPath, true);
   const env = getEnvForPackageManager({
     cliType,
     lockfileVersion,

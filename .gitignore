@@ -56,3 +56,4 @@ junit.xml
 .claude/settings.local.json
 .pnpm-store
 .env*
+tmp/

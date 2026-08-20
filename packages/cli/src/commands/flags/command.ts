@@ -149,10 +149,18 @@ export const versionsListSubcommand = {
       argument: 'NUMBER',
     },
     {
-      name: 'cursor',
+      name: 'next',
       shorthand: null,
       type: String,
       deprecated: false,
+      description: 'Continue from a previous response',
+      argument: 'CURSOR',
+    },
+    {
+      name: 'cursor',
+      shorthand: null,
+      type: String,
+      deprecated: true,
       description: 'Pagination cursor from a previous versions response',
       argument: 'CURSOR',
     },
@@ -179,7 +187,7 @@ export const versionsListSubcommand = {
     },
     {
       name: 'List the next page of version history',
-      value: `${packageName} flags versions my-feature-flag --limit 10 --cursor <cursor>`,
+      value: `${packageName} flags versions my-feature-flag --limit 10 --next <cursor>`,
     },
     {
       name: 'List version history as JSON',

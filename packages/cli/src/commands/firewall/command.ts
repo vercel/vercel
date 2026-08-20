@@ -1,6 +1,15 @@
 import { packageName } from '../../util/pkg-name';
 import { projectOption, yesOption } from '../../util/arg-common';
 
+export const teamLevelOption = {
+  name: 'team-level',
+  shorthand: null,
+  type: Boolean,
+  deprecated: false,
+  description:
+    'Operate on the team-level firewall configuration, which applies to every project in the team. No linked project required. Cannot be combined with --project',
+} as const;
+
 export const overviewSubcommand = {
   name: 'overview',
   aliases: [],
@@ -33,6 +42,7 @@ export const diffSubcommand = {
   arguments: [],
   options: [
     projectOption,
+    teamLevelOption,
     {
       name: 'json',
       shorthand: null,
@@ -46,6 +56,10 @@ export const diffSubcommand = {
       name: 'Show unpublished changes',
       value: `${packageName} firewall diff`,
     },
+    {
+      name: 'Show unpublished team-level changes',
+      value: `${packageName} firewall diff --team-level`,
+    },
   ],
 } as const;
 
@@ -55,7 +69,7 @@ export const publishSubcommand = {
   description:
     'Publish all draft firewall changes to production, making them live immediately',
   arguments: [],
-  options: [projectOption, yesOption],
+  options: [projectOption, teamLevelOption, yesOption],
   examples: [
     {
       name: 'Publish draft changes',
@@ -64,6 +78,10 @@ export const publishSubcommand = {
     {
       name: 'Publish without confirmation',
       value: `${packageName} firewall publish --yes`,
+    },
+    {
+      name: 'Publish team-level draft changes',
+      value: `${packageName} firewall publish --team-level`,
     },
   ],
 } as const;
@@ -74,7 +92,7 @@ export const discardSubcommand = {
   description:
     'Permanently discard all unpublished draft changes, reverting to the current production configuration',
   arguments: [],
-  options: [projectOption, yesOption],
+  options: [projectOption, teamLevelOption, yesOption],
   examples: [
     {
       name: 'Discard draft changes',
@@ -210,6 +228,7 @@ export const ipBlocksListSubcommand = {
   arguments: [],
   options: [
     projectOption,
+    teamLevelOption,
     {
       name: 'json',
       shorthand: null,
@@ -234,6 +253,7 @@ export const ipBlocksBlockSubcommand = {
   arguments: [{ name: 'ip', required: true }],
   options: [
     projectOption,
+    teamLevelOption,
     {
       name: 'hostname',
       shorthand: null,
@@ -275,6 +295,7 @@ export const ipBlocksUnblockSubcommand = {
   arguments: [{ name: 'id-or-ip', required: true }],
   options: [
     projectOption,
+    teamLevelOption,
     {
       name: 'hostname',
       shorthand: null,
@@ -340,6 +361,7 @@ export const rulesListSubcommand = {
   arguments: [],
   options: [
     projectOption,
+    teamLevelOption,
     {
       name: 'expand',
       shorthand: 'e',
@@ -364,6 +386,10 @@ export const rulesListSubcommand = {
       name: 'List rules with full condition details',
       value: `${packageName} firewall rules list --expand`,
     },
+    {
+      name: 'List team-level rules',
+      value: `${packageName} firewall rules list --team-level`,
+    },
   ],
 } as const;
 
@@ -375,6 +401,7 @@ export const rulesInspectSubcommand = {
   arguments: [{ name: 'name-or-id', required: true }],
   options: [
     projectOption,
+    teamLevelOption,
     {
       name: 'json',
       shorthand: null,
@@ -403,6 +430,7 @@ export const rulesAddSubcommand = {
   arguments: [{ name: 'name', required: false }],
   options: [
     projectOption,
+    teamLevelOption,
     {
       name: 'ai',
       shorthand: null,
@@ -549,6 +577,7 @@ export const rulesEditSubcommand = {
   arguments: [{ name: 'name-or-id', required: true }],
   options: [
     projectOption,
+    teamLevelOption,
     {
       name: 'ai',
       shorthand: null,
@@ -703,7 +732,7 @@ export const rulesEnableSubcommand = {
   description:
     'Enable a disabled custom firewall rule. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
-  options: [projectOption, yesOption],
+  options: [projectOption, teamLevelOption, yesOption],
   examples: [
     {
       name: 'Enable a rule',
@@ -718,7 +747,7 @@ export const rulesDisableSubcommand = {
   description:
     'Disable a custom firewall rule without removing it. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
-  options: [projectOption, yesOption],
+  options: [projectOption, teamLevelOption, yesOption],
   examples: [
     {
       name: 'Disable a rule',
@@ -733,7 +762,7 @@ export const rulesRemoveSubcommand = {
   description:
     'Remove a custom firewall rule. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
-  options: [projectOption, yesOption],
+  options: [projectOption, teamLevelOption, yesOption],
   examples: [
     {
       name: 'Remove a rule',
@@ -750,6 +779,7 @@ export const rulesReorderSubcommand = {
   arguments: [{ name: 'name-or-id', required: true }],
   options: [
     projectOption,
+    teamLevelOption,
     {
       name: 'position',
       shorthand: null,

@@ -9,7 +9,11 @@ import {
 } from './helpers';
 
 vi.mock('../../../../src/util/projects/link');
-vi.mock('../../../../src/util/get-scope');
+vi.mock('../../../../src/util/get-scope', async importOriginal => {
+  const actual =
+    await importOriginal<typeof import('../../../../src/util/get-scope')>();
+  return { ...actual, default: vi.fn() };
+});
 vi.mock('../../../../src/util/projects/get-project-by-id-or-name');
 
 describe('comments resolve/reopen', () => {

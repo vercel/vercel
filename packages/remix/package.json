@@ -1,6 +1,6 @@
 {
   "name": "@vercel/remix-builder",
-  "version": "5.9.1",
+  "version": "5.9.5",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -13,10 +13,9 @@
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
     "test": "vitest run --config ../../vitest.config.mts",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/unit.*.test.ts'",
-    "vitest-e2e": "glob --absolute 'test/integration-*.test.ts'",
-    "type-check": "tsc --noEmit"
+    "test-e2e": "vitest run --config ../../vitest.config.mts test/integration-",
+    "type-check": "tsc --noEmit",
+    "test-unit": "vitest run --config ../../vitest.config.mts test/unit."
   },
   "files": [
     "dist",
@@ -36,7 +35,7 @@
     "@vercel/build-utils": "workspace:*",
     "glob": "10.3.16",
     "semver": "7.5.2",
-    "vitest": "2.0.1"
+    "vitest": "4.1.10"
   },
   "VERCEL_REMIX_RUN_DEV_MAX_VERSION": "2.16.6"
 }

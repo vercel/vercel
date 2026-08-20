@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "58.4.4",
+  "version": "59.1.4",
   "type": "module",
   "preferGlobal": true,
   "license": "Apache-2.0",
@@ -12,16 +12,14 @@
     "directory": "packages/cli"
   },
   "scripts": {
-    "test": "vitest run --config ./vitest.config.mts",
-    "vitest-run": "node scripts/vitest-run.mjs",
-    "vitest-unit": "glob --absolute 'test/unit/**/*.test.ts'",
-    "vitest-e2e": "glob --absolute 'test/e2e-*.test.ts'",
-    "test-e2e-node-all-versions": "rimraf test/fixtures/integration && pnpm test test/integration-1.test.ts test/integration-2.test.ts test/integration-3.test.ts test/integration-link-env-pull.test.ts",
-    "test-dev": "pnpm test test/dev/",
+    "test": "node scripts/test.mjs --run",
+    "test-e2e": "node scripts/test.mjs --run test/e2e-",
+    "test-e2e-node-all-versions": "rimraf test/fixtures/integration && vitest run --config ./vitest.config.mts test/integration-1.test.ts test/integration-2.test.ts test/integration-3.test.ts test/integration-link-env-pull.test.ts",
+    "test-dev": "vitest run --config ./vitest.config.mts test/dev/",
     "coverage": "codecov",
     "build": "node scripts/build.mjs",
-    "build-binary": "pnpm --filter vercel... build && node scripts/build-binary.mjs",
-    "build-binary:host": "pnpm --filter vercel... build && node scripts/build-binary.mjs --target host --output ./dist-bin/vercel",
+    "build-binary": "node scripts/build-binary.mjs",
+    "build-binary:host": "node scripts/build-binary.mjs --target host --output ./dist-bin/vercel",
     "build-binary-node": "node scripts/build-binary-node.mjs",
     "smoke-binary": "node scripts/smoke-test-binary.mjs",
     "dev": "echo \"'pnpm dev [command]' has been removed. Use 'pnpm vercel [command]' instead.\" && exit 1",
@@ -33,7 +31,8 @@
     "test:evals": "tsx evals/run.ts",
     "test:evals:smoke": "tsx evals/run.ts smoke --smoke",
     "test:evals:dry": "tsx evals/run.ts --dry",
-    "test:evals:local-fixture": "tsx evals/run.ts --local-fixture"
+    "test:evals:local-fixture": "tsx evals/run.ts --local-fixture",
+    "test-unit": "node scripts/test.mjs --run test/unit/"
   },
   "bin": {
     "vc": "./dist/vc.js",
@@ -47,7 +46,7 @@
   },
   "dependencies": {
     "@vercel/backends": "workspace:*",
-    "@vercel/blob": "2.4.0",
+    "@vercel/blob": "2.8.0",
     "@vercel/build-utils": "workspace:*",
     "@vercel/cli-auth": "workspace:*",
     "@vercel/cli-config": "workspace:*",
@@ -67,6 +66,7 @@
     "@vercel/node": "workspace:*",
     "@vercel/prepare-flags-definitions": "0.3.0",
     "@vercel/python": "workspace:*",
+    "@vercel/python-analysis": "workspace:*",
     "@vercel/redwood": "workspace:*",
     "@vercel/remix-builder": "workspace:*",
     "@vercel/ruby": "workspace:*",
@@ -80,6 +80,7 @@
     "sandbox": "3.4.0",
     "smol-toml": "1.5.2",
     "undici": "5.29.0",
+    "uuid": "14.0.1",
     "zod": "4.1.11"
   },
   "builders": {
@@ -155,7 +156,7 @@
     "@vercel/fs-detectors": "workspace:*",
     "@vercel/routing-utils": "workspace:*",
     "@vercel/sdk": "^1.19.6",
-    "@vitest/expect": "2.1.3",
+    "@vitest/expect": "4.1.10",
     "@yao-pkg/pkg": "6.19.0",
     "ajv": "6.12.3",
     "alpha-sort": "2.0.1",
@@ -226,8 +227,8 @@
     "ts-node": "10.9.1",
     "tsx": "^4.20.4",
     "utility-types": "2.1.0",
-    "vite": "^5.1.6",
-    "vitest": "^2.1.3",
+    "vite": "^6.4.3",
+    "vitest": "^4.1.10",
     "which": "3.0.0",
     "write-json-file": "2.2.0",
     "xdg-app-paths": "5.1.0",

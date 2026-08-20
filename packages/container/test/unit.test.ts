@@ -2,9 +2,14 @@ import type { BuildResultV2Typical } from '@vercel/build-utils';
 import { sanitizeConsumerName } from '@vercel/build-utils';
 import { EventEmitter } from 'node:events';
 import { readFileSync, statSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { basename, dirname } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { build, prepareCache, startDevServer } from '../src';
+import {
+  build,
+  CONTAINER_OUTPUT_PATH,
+  prepareCache,
+  startDevServer,
+} from '../src';
 import { __resetStorageDriverCache } from '../src/storage-driver';
 import { __resetRunningContainers } from '../src/dev';
 
@@ -22,6 +27,12 @@ vi.mock('node:fs', async importActual => {
   const actual = await importActual<typeof import('node:fs')>();
   return { ...actual, existsSync: existsSyncMock };
 });
+
+const catchAllRoute = {
+  src: '/(.*)',
+  dest: `/${CONTAINER_OUTPUT_PATH}`,
+  transforms: [{ type: 'request.path', op: 'set', args: '/$1' }],
+};
 
 const createBuildOptions = (config: Record<string, unknown>) => ({
   files: {},
@@ -175,9 +186,9 @@ describe('@vercel/container', () => {
     );
 
     expect(result).toEqual({
-      routes: [{ handle: 'filesystem' }, { src: '/(.*)', dest: '/index' }],
+      routes: [{ handle: 'filesystem' }, catchAllRoute],
       output: {
-        index: {
+        [CONTAINER_OUTPUT_PATH]: {
           type: 'Lambda',
           files: {},
           handler: 'docker.io/library/nginx:1.27',
@@ -186,6 +197,26 @@ describe('@vercel/container', () => {
         },
       },
     });
+  });
+
+  it('copies the resolved rewrite destination into the request path', async () => {
+    // Rewrites only change the path Vercel matches; without this transform the
+    // container keeps seeing the original request path.
+    const result = expectTypicalBuildResult(
+      await build(
+        createBuildOptions({ handler: 'docker.io/library/nginx:1.27' })
+      )
+    );
+
+    expect(result.routes?.[1]).toMatchObject({
+      transforms: [{ type: 'request.path', op: 'set', args: '/$1' }],
+    });
+  });
+
+  it('does not park the function at `index`', () => {
+    // The filesystem handler resolves `/` to an `index` output, which would
+    // dispatch a rewrite landing on `/` before the transform above can run.
+    expect(CONTAINER_OUTPUT_PATH).not.toBe('index');
   });
 
   it('applies matching function configuration to the build output', async () => {
@@ -204,7 +235,7 @@ describe('@vercel/container', () => {
       })
     );
 
-    expect(result.output.index).toMatchObject({
+    expect(result.output[CONTAINER_OUTPUT_PATH]).toMatchObject({
       handler: 'docker.io/library/nginx:1.27',
       runtime: 'container',
       memory: 2048,
@@ -230,7 +261,7 @@ describe('@vercel/container', () => {
       })
     );
 
-    expect(result.output.index).toMatchObject({
+    expect(result.output[CONTAINER_OUTPUT_PATH]).toMatchObject({
       memory: 4096,
       experimentalTriggers: [
         {
@@ -250,7 +281,7 @@ describe('@vercel/container', () => {
       })
     );
 
-    expect(result.output.index).toMatchObject({
+    expect(result.output[CONTAINER_OUTPUT_PATH]).toMatchObject({
       handler: 'grycap/cowsay:latest',
       runtime: 'container',
     });
@@ -264,16 +295,16 @@ describe('@vercel/container', () => {
       })
     );
 
-    expect(result.output.index).toMatchObject({
+    expect(result.output[CONTAINER_OUTPUT_PATH]).toMatchObject({
       handler: 'docker.io/library/nginx:1.27',
       command: ['nginx -g daemon off;'],
     });
   });
 
   it('does a normal build with a catch-all route for services', async () => {
-    // The function lands at the natural `index` path (no `_svc` namespacing) so
-    // the nested `services/<name>/` output "just works", with a catch-all route
-    // to reach it.
+    // The function keeps its plain output path (no `_svc` namespacing) so the
+    // nested `services/<name>/` output "just works", with a catch-all route to
+    // reach it.
     const result = expectTypicalBuildResult(
       await build({
         ...createBuildOptions({}),
@@ -284,9 +315,9 @@ describe('@vercel/container', () => {
       })
     );
 
-    expect(result.output).toHaveProperty('index');
+    expect(result.output).toHaveProperty(CONTAINER_OUTPUT_PATH);
     expect(result.output).not.toHaveProperty('_svc/api/index');
-    expect(result.output.index).toMatchObject({
+    expect(result.output[CONTAINER_OUTPUT_PATH]).toMatchObject({
       handler: 'docker.io/library/nginx:1.27',
       runtime: 'container',
       environment: {},
@@ -294,10 +325,7 @@ describe('@vercel/container', () => {
 
     // Without a catch-all, a request to the service root never reaches the
     // Lambda inside the isolated per-service route table.
-    expect(result.routes).toEqual([
-      { handle: 'filesystem' },
-      { src: '/(.*)', dest: '/index' },
-    ]);
+    expect(result.routes).toEqual([{ handle: 'filesystem' }, catchAllRoute]);
   });
 
   it('emits the catch-all route for non-service builds too', async () => {
@@ -310,11 +338,8 @@ describe('@vercel/container', () => {
       })
     );
 
-    expect(result.output).toHaveProperty('index');
-    expect(result.routes).toEqual([
-      { handle: 'filesystem' },
-      { src: '/(.*)', dest: '/index' },
-    ]);
+    expect(result.output).toHaveProperty(CONTAINER_OUTPUT_PATH);
+    expect(result.routes).toEqual([{ handle: 'filesystem' }, catchAllRoute]);
   });
 
   async function runDockerfileBuild(options?: {
@@ -344,7 +369,11 @@ describe('@vercel/container', () => {
     // Everything exists (Dockerfile, store dir, …) except the registry auth
     // file, which is only present when the build container provisioned it.
     existsSyncMock.mockImplementation((p: unknown) => {
-      if (typeof p === 'string' && p.includes('containers/auth.json')) {
+      if (
+        typeof p === 'string' &&
+        basename(p) === 'auth.json' &&
+        basename(dirname(p)) === 'containers'
+      ) {
         return Boolean(options?.authFilePresent);
       }
       return true;
@@ -385,7 +414,7 @@ describe('@vercel/container', () => {
       } as any)
     );
 
-    expect(result.output.index).toMatchObject({
+    expect(result.output[CONTAINER_OUTPUT_PATH]).toMatchObject({
       type: 'Lambda',
       runtime: 'container',
       handler: `vcr.vercel.com/acme/my-app/api@${digest}`,
@@ -560,18 +589,16 @@ describe('@vercel/container', () => {
       } as any)
     );
 
-    // No service name → output at `index`, with the catch-all so `/` reaches
-    // it. Repository leaf comes from the Dockerfile base name (`dockerfile`).
-    expect(result.output).toHaveProperty('index');
-    expect(result.output.index).toMatchObject({
+    // No service name, so the output sits at the top level with the catch-all
+    // so `/` reaches it. Repository leaf comes from the Dockerfile base name
+    // (`dockerfile`).
+    expect(result.output).toHaveProperty(CONTAINER_OUTPUT_PATH);
+    expect(result.output[CONTAINER_OUTPUT_PATH]).toMatchObject({
       type: 'Lambda',
       runtime: 'container',
       handler: `vcr.vercel.com/acme/my-app/dockerfile@${digest}`,
     });
-    expect(result.routes).toEqual([
-      { handle: 'filesystem' },
-      { src: '/(.*)', dest: '/index' },
-    ]);
+    expect(result.routes).toEqual([{ handle: 'filesystem' }, catchAllRoute]);
   });
 
   it('forwards the project build env to the image build as --build-arg', async () => {
@@ -607,7 +634,7 @@ describe('@vercel/container', () => {
       } as any)
     );
 
-    expect(result.output.index).toMatchObject({
+    expect(result.output[CONTAINER_OUTPUT_PATH]).toMatchObject({
       type: 'Lambda',
       runtime: 'container',
       handler: 'vercel-dev/api:dev',
@@ -708,7 +735,7 @@ describe('@vercel/container', () => {
       })
     );
 
-    expect(result.output.index).toMatchObject({
+    expect(result.output[CONTAINER_OUTPUT_PATH]).toMatchObject({
       handler: `vcr.vercel.com/acme/my-app/api@${digest}`,
     });
   });
@@ -822,7 +849,11 @@ describe('@vercel/container', () => {
     // No provisioned auth file here, so the builder performs an explicit
     // login (the docker/local path) which we simulate rejecting.
     existsSyncMock.mockImplementation((p: unknown) => {
-      if (typeof p === 'string' && p.includes('containers/auth.json')) {
+      if (
+        typeof p === 'string' &&
+        basename(p) === 'auth.json' &&
+        basename(dirname(p)) === 'containers'
+      ) {
         return false;
       }
       return true;

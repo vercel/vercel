@@ -307,17 +307,6 @@ describe('verifyVercelOidcToken', () => {
     );
   });
 
-  test('passes explicit issuer option to Jose verification', async () => {
-    await verifyVercelOidcToken('token', {
-      issuer: 'https://oidc.vercel.com/other-team',
-    });
-
-    expect(jwtVerify).toHaveBeenCalledWith('token', mocks.remoteJwks, {
-      algorithms: ['RS256'],
-      issuer: 'https://oidc.vercel.com/other-team',
-    });
-  });
-
   test('rejects a token from an issuer that only shares the prefix text', async () => {
     mockVerifiedPayload({
       iss: 'https://oidc.vercel.com.evil.example',

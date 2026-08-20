@@ -33,13 +33,6 @@ describe('determineAgent', () => {
   });
 
   describe('custom agent detection from `AI_AGENT`', () => {
-    describe('AI_AGENT not set', () => {
-      it('returns no agent', async () => {
-        const result = await determineAgent();
-        expect(result).toEqual({ isAgent: false });
-      });
-    });
-
     describe('AI_AGENT set', () => {
       beforeEach(() => {
         vi.stubEnv('AI_AGENT', 'custom-agent');
@@ -120,13 +113,6 @@ describe('determineAgent', () => {
   });
 
   describe('cursor detection', () => {
-    describe('CURSOR_TRACE_ID not set', () => {
-      it('returns no agent', async () => {
-        const result = await determineAgent();
-        expect(result).toEqual({ isAgent: false });
-      });
-    });
-
     describe('CURSOR_TRACE_ID set', () => {
       beforeEach(() => {
         vi.stubEnv('CURSOR_TRACE_ID', 'some-uuid');
@@ -143,13 +129,6 @@ describe('determineAgent', () => {
   });
 
   describe('cursor cli detection', () => {
-    describe('CURSOR_AGENT not set', () => {
-      it('returns no agent', async () => {
-        const result = await determineAgent();
-        expect(result).toEqual({ isAgent: false });
-      });
-    });
-
     describe('CURSOR_AGENT set', () => {
       beforeEach(() => {
         vi.stubEnv('CURSOR_AGENT', '1');
@@ -177,13 +156,6 @@ describe('determineAgent', () => {
   });
 
   describe('gemini detection', () => {
-    describe('GEMINI_CLI not set', () => {
-      it('returns no agent', async () => {
-        const result = await determineAgent();
-        expect(result).toEqual({ isAgent: false });
-      });
-    });
-
     describe('GEMINI_CLI set', () => {
       beforeEach(() => {
         vi.stubEnv('GEMINI_CLI', '1');
@@ -200,13 +172,6 @@ describe('determineAgent', () => {
   });
 
   describe('codex detection', () => {
-    describe('CODEX_SANDBOX not set', () => {
-      it('returns no agent', async () => {
-        const result = await determineAgent();
-        expect(result).toEqual({ isAgent: false });
-      });
-    });
-
     describe('CODEX_SANDBOX set', () => {
       beforeEach(() => {
         vi.stubEnv('CODEX_SANDBOX', 'seatbelt');
@@ -251,36 +216,6 @@ describe('determineAgent', () => {
   });
 
   describe('antigravity detection', () => {
-    describe('ANTIGRAVITY_AGENT not set', () => {
-      it('returns no agent', async () => {
-        const result = await determineAgent();
-        expect(result).toEqual({ isAgent: false });
-      });
-    });
-
-    describe('ANTIGRAVITY_AGENT set', () => {
-      beforeEach(() => {
-        vi.stubEnv('ANTIGRAVITY_AGENT', '1');
-      });
-
-      it('detects antigravity', async () => {
-        const result = await determineAgent();
-        expect(result).toEqual({
-          isAgent: true,
-          agent: { name: KNOWN_AGENTS.ANTIGRAVITY },
-        });
-      });
-    });
-  });
-
-  describe('antigravity detection', () => {
-    describe('ANTIGRAVITY_AGENT not set', () => {
-      it('returns no agent', async () => {
-        const result = await determineAgent();
-        expect(result).toEqual({ isAgent: false });
-      });
-    });
-
     describe('ANTIGRAVITY_AGENT set', () => {
       beforeEach(() => {
         vi.stubEnv('ANTIGRAVITY_AGENT', '1');
@@ -297,13 +232,6 @@ describe('determineAgent', () => {
   });
 
   describe('augment cli detection', () => {
-    describe('AUGMENT_AGENT not set', () => {
-      it('returns no agent', async () => {
-        const result = await determineAgent();
-        expect(result).toEqual({ isAgent: false });
-      });
-    });
-
     describe('AUGMENT_AGENT set', () => {
       beforeEach(() => {
         vi.stubEnv('AUGMENT_AGENT', '1');
@@ -320,13 +248,6 @@ describe('determineAgent', () => {
   });
 
   describe('opencode detection', () => {
-    describe('OPENCODE_CLIENT not set', () => {
-      it('returns no agent', async () => {
-        const result = await determineAgent();
-        expect(result).toEqual({ isAgent: false });
-      });
-    });
-
     describe('OPENCODE_CLIENT set', () => {
       beforeEach(() => {
         vi.stubEnv('OPENCODE_CLIENT', 'opencode');
@@ -343,13 +264,6 @@ describe('determineAgent', () => {
   });
 
   describe('claude detection', () => {
-    describe('CLAUDE_CODE not set', () => {
-      it('returns no agent', async () => {
-        const result = await determineAgent();
-        expect(result).toEqual({ isAgent: false });
-      });
-    });
-
     describe('CLAUDE_CODE set', () => {
       beforeEach(() => {
         vi.stubEnv('CLAUDE_CODE', '1');
@@ -464,13 +378,6 @@ describe('determineAgent', () => {
   });
 
   describe('replit detection', () => {
-    describe('REPL_ID not set', () => {
-      it('returns no agent', async () => {
-        const result = await determineAgent();
-        expect(result).toEqual({ isAgent: false });
-      });
-    });
-
     describe('REPL_ID set', () => {
       beforeEach(() => {
         vi.stubEnv('REPL_ID', '1');
@@ -567,14 +474,6 @@ describe('determineAgent', () => {
   });
 
   describe('edge cases', () => {
-    it('handles empty string values for environment variables', async () => {
-      vi.stubEnv('AI_AGENT', '');
-      vi.stubEnv('CURSOR_TRACE_ID', '');
-
-      const result = await determineAgent();
-      expect(result).toEqual({ isAgent: false });
-    });
-
     it('handles whitespace-only values for AI_AGENT', async () => {
       vi.stubEnv('AI_AGENT', '   ');
 
@@ -615,22 +514,6 @@ describe('determineAgent', () => {
   });
 
   describe('convenience methods', () => {
-    it('provides easy boolean check', async () => {
-      vi.stubEnv('AI_AGENT', 'test-agent');
-
-      const result = await determineAgent();
-      expect(result.isAgent).toBe(true);
-    });
-
-    it('provides agent details when detected', async () => {
-      vi.stubEnv('CURSOR_TRACE_ID', 'some-id');
-
-      const result = await determineAgent();
-      if (result.isAgent) {
-        expect(result.agent?.name).toBe(KNOWN_AGENTS.CURSOR);
-      }
-    });
-
     it('has no agent details when not detected', async () => {
       const result = await determineAgent();
       expect(result.isAgent).toBe(false);

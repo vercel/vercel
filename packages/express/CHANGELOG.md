@@ -1,5 +1,68 @@
 # @vercel/express
 
+## 0.1.129
+
+### Patch Changes
+
+- Updated dependencies [b4f09c1]
+  - @vercel/node@5.10.1
+  - @vercel/cervel@0.1.46
+
+## 0.1.128
+
+### Patch Changes
+
+- Updated dependencies [852e1a0]
+  - @vercel/node@5.10.0
+  - @vercel/cervel@0.1.45
+
+## 0.1.127
+
+### Patch Changes
+
+- Updated dependencies [2da7809]
+  - @vercel/node@5.9.9
+  - @vercel/cervel@0.1.44
+
+## 0.1.126
+
+### Patch Changes
+
+- Updated dependencies [e829b31]
+  - @vercel/node@5.9.8
+  - @vercel/cervel@0.1.43
+
+## 0.1.125
+
+### Patch Changes
+
+- @vercel/node@5.9.7
+- @vercel/cervel@0.1.42
+
+## 0.1.124
+
+### Patch Changes
+
+- @vercel/node@5.9.6
+- @vercel/cervel@0.1.41
+
+## 0.1.123
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/cervel@0.1.40
+  - @vercel/node@5.9.5
+  - @vercel/static-config@3.4.1
+
+## 0.1.122
+
+### Patch Changes
+
+- @vercel/cervel@0.1.39
+- @vercel/node@5.9.4
+
 ## 0.1.121
 
 ### Patch Changes

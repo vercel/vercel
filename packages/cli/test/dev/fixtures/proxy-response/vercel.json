@@ -1,0 +1,5 @@
+{
+  "proxy": {
+    "entrypoint": "proxy.js"
+  }
+}

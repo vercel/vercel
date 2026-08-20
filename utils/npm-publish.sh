@@ -72,10 +72,13 @@ while IFS=$'\t' read -r name pkg_path; do
 
   # pnpm pack resolves workspace:* to real versions and outputs the full path
   tarball=$(pnpm pack --pack-destination="$TARBALL_DIR" -C "$pkg_path" 2>/dev/null | tail -1)
+  # No --provenance: npm provenance requires a public source repo, and publishes
+  # now come from vercel/vercel-internal (private). Trusted publishing (OIDC)
+  # still authenticates the publish without provenance attestations.
   if [ -n "$NPM_TAG" ]; then
-    npm publish "$tarball" --tag "$NPM_TAG" --access public --provenance
+    npm publish "$tarball" --tag "$NPM_TAG" --access public
   else
-    npm publish "$tarball" --access public --provenance
+    npm publish "$tarball" --access public
   fi
 
   published=$((published + 1))

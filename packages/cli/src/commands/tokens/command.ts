@@ -17,6 +17,14 @@ export const listSubcommand = {
       description: 'Maximum number of tokens to return (default 20)',
       deprecated: false,
     },
+    {
+      name: 'next',
+      shorthand: null,
+      type: String,
+      description: 'Continue from a previous response',
+      argument: 'CURSOR',
+      deprecated: false,
+    },
   ],
   examples: [
     {

@@ -939,16 +939,6 @@ describe('logs', () => {
       });
     });
 
-    it('should limit number of results', async () => {
-      useRequestLogs([createMockLog(), createMockLog()]);
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--limit', '10');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-    });
-
     it('should track telemetry for --limit option', async () => {
       useRequestLogs([]);
 

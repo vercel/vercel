@@ -1,5 +1,17 @@
 # @vercel/container
 
+## 0.2.0
+
+### Minor Changes
+
+- 28a2dd0: Expose the resolved rewrite destination as the request path observed by containers, and warn affected container projects about the behavior change.
+
+## 0.1.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
 ## 0.1.0
 
 ### Minor Changes

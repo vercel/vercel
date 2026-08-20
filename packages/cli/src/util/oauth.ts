@@ -430,11 +430,18 @@ export async function inspectTokenRequest(token: string): Promise<Response> {
 
 /**
  * @see https://datatracker.ietf.org/doc/html/rfc7662#section-2.2 */
-interface AccessToken {
+export interface AccessToken {
   /** Whether or not the presented token is active. */
   active: boolean;
   client_id?: string;
+  client_name?: string;
   session_id?: string;
+  sub?: string;
+  team?: {
+    id: string;
+    slug?: string;
+    name?: string;
+  };
 }
 
 /**

@@ -1,0 +1,15 @@
+{
+  "rewrites": [
+    {
+      "source": "/:path*",
+      "destination": { "type": "service", "service": "web" }
+    }
+  ],
+  "services": {
+    "web": {
+      "root": ".",
+      "framework": "fastapi",
+      "entrypoint": "pyproject.toml"
+    }
+  }
+}

@@ -103,6 +103,7 @@ import {
   require_,
   getServerlessPages,
   RenderingMode,
+  getDefaultNextDeploymentId,
 } from './utils';
 import { getAppRouterPathnameFilesMap } from './metadata';
 
@@ -288,6 +289,7 @@ export const build: BuildV2 = async buildOptions => {
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
+    nodeVersion,
     env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -515,14 +517,22 @@ export const build: BuildV2 = async buildOptions => {
     env.NODE_ENV = 'production';
   }
 
-  if (
+  const isAdapterEnabled =
     // integration tests expect outputs object
     !process.env.NEXT_BUILDER_INTEGRATION &&
     process.env.NEXT_ENABLE_ADAPTER === '1' &&
-    semver.gte(nextVersion, MINIMUM_NEXT_ADAPTER_VERSION)
-  ) {
+    semver.gte(nextVersion, MINIMUM_NEXT_ADAPTER_VERSION);
+
+  if (isAdapterEnabled) {
     env.NEXT_ADAPTER_PATH = path.join(__dirname, 'adapter/index.js');
     env.NEXT_ADAPTER_VERCEL_CONFIG = JSON.stringify(config);
+  } else {
+    // Adapter builds get `deploymentId` assigned via the adapter's
+    // `modifyConfig` instead.
+    const defaultNextDeploymentId = getDefaultNextDeploymentId(env);
+    if (defaultNextDeploymentId) {
+      env.NEXT_DEPLOYMENT_ID = defaultNextDeploymentId;
+    }
   }
 
   const shouldRunCompileStep =

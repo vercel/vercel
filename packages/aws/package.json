@@ -18,7 +18,7 @@
       "require": "./dist/opensearch.js"
     }
   },
-  "version": "0.2.8",
+  "version": "0.2.11",
   "repository": {
     "directory": "packages/aws",
     "type": "git",
@@ -34,7 +34,7 @@
     "typedoc": "0.28.19",
     "typedoc-plugin-markdown": "4.11.0",
     "typedoc-plugin-mdn-links": "5.1.1",
-    "vitest": "2.0.1"
+    "vitest": "4.1.10"
   },
   "peerDependencies": {
     "@opensearch-project/opensearch": "^3.0.0"
@@ -50,7 +50,7 @@
   "scripts": {
     "pretest": "pnpm run build:code",
     "test": "vitest",
-    "build": "pnpm run build:code && pnpm run build:docs",
+    "build": "pnpm run build:code",
     "build:code": "node ../../utils/build.mjs",
     "build:docs": "typedoc && prettier --write docs/**/*.md docs/*.md"
   },

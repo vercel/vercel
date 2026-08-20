@@ -9,13 +9,11 @@ permissions:
   contents: read
   checks: read
   deployments: read
-  issues: write
-  pull-requests: write
   statuses: write
 
 env:
   VERCEL_TELEMETRY_DISABLED: '1'
-  TURBO_REMOTE_ONLY: 'true'
+  TURBO_CACHE: 'remote:rw'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -30,26 +28,16 @@ jobs:
       id-token: write
       statuses: write
     outputs:
-      unitTests: ${{ steps['set-tests'].outputs['unitTests'] }}
-      e2eTests: ${{ steps['set-tests'].outputs['e2eTests'] }}
+      e2e-artifact-tests: ${{ steps.e2e-matrix.outputs.e2eArtifactTests }}
+      e2e-independent-tests: ${{ steps.e2e-matrix.outputs.e2eIndependentTests }}
       baseSha: ${{ steps.pr-context.outputs.baseSha }}
       headSha: ${{ steps.pr-context.outputs.headSha }}
-      prNumber: ${{ steps.pr-context.outputs.prNumber }}
-      affectedPackages: ${{ steps['affected-packages'].outputs['packages'] }}
-      testStrategy: ${{ steps['affected-packages'].outputs['strategy'] }}
-      affectedCount: ${{ steps['affected-packages'].outputs['count'] }}
-      totalCount: ${{ steps['affected-packages'].outputs['total'] }}
-      allPackages: ${{ steps['affected-packages'].outputs['allPackages'] }}
     steps:
       - name: Resolve PR context
         id: pr-context
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PR_NUMBER="${{ github.event.pull_request.number }}"
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-          echo "prNumber=$PR_NUMBER" >> $GITHUB_OUTPUT
           echo "baseSha=$BASE_SHA" >> $GITHUB_OUTPUT
           echo "headSha=$HEAD_SHA" >> $GITHUB_OUTPUT
       # The `context` here MUST exactly match the one written by the
@@ -82,220 +70,434 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: install turbo@2.10.8
-        run: npm i -g turbo@2.10.8
-      - id: affected-packages
-        run: |
-          # Set base SHA for affected package detection
-          export TURBO_BASE_SHA="${{ steps.pr-context.outputs.baseSha }}"
-
-          # Get affected packages info for PR comment
-          AFFECTED_OUTPUT=$(node utils/test-affected.js "${{ steps.pr-context.outputs.baseSha }}" 2>&1)
-
-          # Extract affected packages count and total packages count
-          PACKAGE_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Found [0-9]* affected packages" | grep -o "[0-9]*" | head -1 || echo "0")
-          TOTAL_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Total packages with tests: [0-9]*" | grep -o "[0-9]*" | head -1 || echo "0")
-
-          if echo "$AFFECTED_OUTPUT" | grep -q "config or workflow changes detected"; then
-            STRATEGY="all-e2e"
-          elif echo "$AFFECTED_OUTPUT" | grep -q "test-all result detected"; then
-            STRATEGY="test-all"
-          elif [ "$PACKAGE_COUNT" -gt "0" ]; then
-            STRATEGY="affected-only"
-          else
-            STRATEGY="no-tests"
-          fi
-
-          # Get the list of affected packages
-          PACKAGES=$(echo "$AFFECTED_OUTPUT" | sed -n '/Affected packages that would be tested:/,/This would result in the following turbo filters:/p' | grep "  - " | sed 's/  - //' | tr '\n' ',' | sed 's/,$//')
-
-          # Get all packages (trim whitespace and newlines)
-          ALL_PACKAGES=$(echo "$AFFECTED_OUTPUT" | grep "All packages with tests:" | sed 's/All packages with tests: //' | head -1 | xargs)
-
-          # Debug output
-          echo "PACKAGE_COUNT=$PACKAGE_COUNT"
-          echo "TOTAL_COUNT=$TOTAL_COUNT"
-          echo "STRATEGY=$STRATEGY"
-
-          echo "strategy=$STRATEGY" >> $GITHUB_OUTPUT
-          echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
-          echo "count=$PACKAGE_COUNT" >> $GITHUB_OUTPUT
-          echo "total=$TOTAL_COUNT" >> $GITHUB_OUTPUT
-          echo "allPackages=$ALL_PACKAGES" >> $GITHUB_OUTPUT
-      - id: set-tests
-        run: |
-          UNIT_TESTS_ARRAY=$(TEST_TYPE=unit node utils/chunk-tests.js)
-          E2E_TESTS_ARRAY=$(TEST_TYPE=e2e node utils/chunk-tests.js)
-          echo "Unit tests to run:"
-          echo "$UNIT_TESTS_ARRAY"
-          echo "E2E tests to run:"
-          echo "$E2E_TESTS_ARRAY"
-          echo "unitTests=$UNIT_TESTS_ARRAY" >> $GITHUB_OUTPUT
-          echo "e2eTests=$E2E_TESTS_ARRAY" >> $GITHUB_OUTPUT
-        env:
-          TURBO_BASE_SHA: ${{ steps.pr-context.outputs.baseSha }}
-
-  comment-test-strategy:
-    name: Comment Test Strategy
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    needs:
-      - setup
-    steps:
-      - name: Comment PR with test strategy
-        uses: actions/github-script@v7
+      # Native Cargo workspace discovery runs `cargo metadata` while Turbo
+      # constructs the graph, before any package-specific tasks are selected.
+      - name: Setup Rust toolchain for Turbo graph discovery
+        uses: ./.github/actions/setup-rust
         with:
-          script: |
-            const strategy = '${{ needs.setup.outputs.testStrategy }}';
-            const packages = '${{ needs.setup.outputs.affectedPackages }}';
-            const allPackages = '${{ needs.setup.outputs.allPackages }}';
-            const affectedCount = parseInt('${{ needs.setup.outputs.affectedCount }}') || 0;
-            const totalCount = parseInt('${{ needs.setup.outputs.totalCount }}') || 0;
-            const baseSha = '${{ needs.setup.outputs.baseSha }}';
-            const headSha = '${{ needs.setup.outputs.headSha }}';
-            const prNumber = ${{ needs.setup.outputs.prNumber }};
-
-            const percentage = totalCount > 0 ? Math.round((affectedCount / totalCount) * 100) : 0;
-            const unaffectedCount = totalCount - affectedCount;
-            const unaffectedPercentage = totalCount > 0 ? Math.round((unaffectedCount / totalCount) * 100) : 0;
-
-            const affectedSet = packages ? new Set(packages.split(',').map(p => p.trim())) : new Set();
-            const allPackagesList = allPackages ? allPackages.split(',').map(p => p.trim()) : [];
-            const unaffectedPackages = allPackagesList.filter(pkg => !affectedSet.has(pkg));
-            const unaffectedList = unaffectedPackages.map(p => `1. \`${p}\``).join('\n');
-
-            let message = '## 🧪 Unit Test Strategy\n\n';
-            message += `**Comparing**: [\`${baseSha.substring(0, 7)}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${baseSha}) → [\`${headSha.substring(0, 7)}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${headSha}) ([view diff](https://github.com/${context.repo.owner}/${context.repo.repo}/compare/${baseSha}...${headSha}))\n\n`;
-
-            if (strategy === 'all-e2e') {
-              message += '**Strategy**: Code changed outside of a package - running all unit tests\n\n';
-              message += '⚠️ All unit tests will run because global code changes could impact all packages.\n\n';
-              if (packages) {
-                const packageList = packages.split(',').map(p => `1. \`${p.trim()}\``).join('\n');
-                message += `<details>\n<summary>Affected packages - ${affectedCount} (${percentage}%)</summary>\n\n${packageList}\n\n</details>\n\n`;
-              }
-              if (unaffectedCount > 0) {
-                message += `<details>\n<summary>Unaffected packages - ${unaffectedCount} (${unaffectedPercentage}%)</summary>\n\n${unaffectedList || '_No unaffected packages_'}\n\n</details>\n\n`;
-              }
-              message += '### Results\n\n';
-              message += '- **Unit tests**: All affected packages will run unit tests\n';
-              message += '- **E2E tests**: Running in parallel in this workflow\n';
-              message += '- **Type checks**: All affected packages will run type checks';
-            } else if (strategy === 'affected-only') {
-              message += '**Strategy**: Affected packages only\n\n';
-              message += '✅ Only testing packages that have been modified or depend on modified packages.\n\n';
-              if (packages) {
-                const packageList = packages.split(',').map(p => `1. \`${p.trim()}\``).join('\n');
-                message += `<details>\n<summary>Affected packages - ${affectedCount} (${percentage}%)</summary>\n\n${packageList}\n\n</details>\n\n`;
-              }
-              if (unaffectedCount > 0) {
-                message += `<details>\n<summary>Unaffected packages - ${unaffectedCount} (${unaffectedPercentage}%)</summary>\n\n${unaffectedList || '_No unaffected packages_'}\n\n</details>\n\n`;
-              }
-              message += '### Results\n\n';
-              message += '- **Unit tests**: Only affected packages will run unit tests\n';
-              message += '- **E2E tests**: Running in parallel in this workflow\n';
-              message += '- **Type checks**: Only affected packages will run type checks';
-            } else if (strategy === 'no-tests') {
-              message += '**Strategy**: No tests needed\n\n';
-              message += '✨ No packages affected - skipping tests\n\n';
-              message += '### Results\n\n';
-              message += '- **Unit tests**: None\n';
-              message += '- **E2E tests**: Running in parallel in this workflow\n';
-              message += '- **Type checks**: None';
-            } else if (strategy === 'test-all') {
-              message += '**Strategy**: Full unit test suite\n\n';
-              message += '🔄 Running all unit tests (unable to determine affected packages)\n\n';
-              if (packages) {
-                const packageList = packages.split(',').map(p => `1. \`${p.trim()}\``).join('\n');
-                message += `<details>\n<summary>Affected packages - ${affectedCount} (${percentage}%)</summary>\n\n${packageList}\n\n</details>\n\n`;
-              }
-              if (unaffectedCount > 0) {
-                message += `<details>\n<summary>Unaffected packages - ${unaffectedCount} (${unaffectedPercentage}%)</summary>\n\n${unaffectedList || '_No unaffected packages_'}\n\n</details>\n\n`;
-              }
-              message += '### Results\n\n';
-              message += '- **Unit tests**: All packages will run unit tests\n';
-              message += '- **E2E tests**: Running in parallel in this workflow\n';
-              message += '- **Type checks**: All packages will run type checks';
-            } else {
-              message += '**Strategy**: Unknown\n\n';
-              message += `⚠️ Unknown strategy: ${strategy}\n\n`;
-              message += '### Results\n\n';
-              message += '- **Unit tests**: Unknown\n';
-              message += '- **E2E tests**: Running in parallel in this workflow\n';
-              message += '- **Type checks**: Unknown';
-            }
-
-            message += '\n\n---\n*This comment is automatically generated based on the [affected testing strategy](.github/AFFECTED_TESTING.md)*';
-
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-            });
-
-            const existingComment = comments.find(comment =>
-              comment.user.login === 'github-actions[bot]' &&
-              (comment.body.includes('## 🧪 Unit Test Strategy') || comment.body.includes('## 🧪 Test Strategy'))
-            );
-
-            if (existingComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existingComment.id,
-                body: message
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prNumber,
-                body: message
-              });
-            }
+          toolchain: '1.96.1'
+      - name: install turbo@2.10.10-canary.3
+        run: npm i -g turbo@2.10.10-canary.3
+      - name: Build E2E test matrix
+        id: e2e-matrix
+        env:
+          TURBO_SCM_BASE: ${{ steps.pr-context.outputs.baseSha }}
+          TURBO_SCM_HEAD: ${{ steps.pr-context.outputs.headSha }}
+        run: |
+          set -euo pipefail
+          plan=$(turbo run test-e2e-artifacts test-e2e-independent test-e2e-node-all-versions test-next-local test-dev-artifacts --affected --dry=json)
+          tasks=$(printf '%s' "$plan" | jq -c '[
+            .tasks[]
+            | select(
+                (.task == "test-e2e-artifacts"
+                  or .task == "test-e2e-independent"
+                  or .task == "test-e2e-node-all-versions"
+                  or .task == "test-next-local"
+                  or .task == "test-dev-artifacts")
+                and .command != "<NONEXISTENT>"
+              )
+            | {package, directory, task, command}
+          ]')
+          matrix=$(TURBO_TASKS="$tasks" node utils/chunk-tests.js)
+          artifact_matrix=$(printf '%s' "$matrix" | jq -c '[.[] | select(.scriptName == "test-e2e-artifacts" or .scriptName == "test-dev-artifacts")]')
+          independent_matrix=$(printf '%s' "$matrix" | jq -c '[.[] | select(.scriptName != "test-e2e-artifacts" and .scriptName != "test-dev-artifacts")]')
+          echo "e2eArtifactTests=$artifact_matrix" >> "$GITHUB_OUTPUT"
+          echo "e2eIndependentTests=$independent_matrix" >> "$GITHUB_OUTPUT"
+          echo "$matrix" | jq
 
   unit-test:
+    name: Unit / ${{ matrix.label }}
+    needs: setup
     timeout-minutes: 120
     runs-on: ${{ matrix.runner }}
-    name: Unit / ${{ matrix.label }}
     permissions:
       contents: read
       id-token: write
-    if: ${{ needs.setup.outputs['unitTests'] != '[]' }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            nodeVersion: 20
+            label: linux/node20
+          - runner: ubuntu-latest
+            nodeVersion: 22
+            label: linux/node22
+          - runner: ubuntu-latest
+            nodeVersion: 24
+            concurrency: 2
+            label: linux/node24
+          - runner: macos-14
+            nodeVersion: 20
+            label: mac/node20
+          - runner: macos-14
+            nodeVersion: 22
+            label: mac/node22
+          - runner: macos-14
+            nodeVersion: 24
+            concurrency: 2
+            label: mac/node24
+          - runner: windows-latest-8-core
+            nodeVersion: 22
+            label: win/node22
+          - runner: windows-latest-8-core
+            nodeVersion: 24
+            concurrency: 1
+            label: win/node24
+    env:
+      TURBO_SCM_BASE: ${{ needs.setup.outputs.baseSha }}
+      TURBO_SCM_HEAD: ${{ needs.setup.outputs.headSha }}
+      NODE_VERSION: ${{ matrix.nodeVersion }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.setup.outputs.headSha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.nodeVersion }}
+      # This cannot be conditional on the dry run: Turbo needs Cargo to build
+      # the native workspace graph that determines whether tests are affected.
+      - name: Setup Rust toolchain for Turbo graph discovery
+        uses: ./.github/actions/setup-rust
+        with:
+          toolchain: '1.96.1'
+          targets: wasm32-wasip2
+      - name: install turbo@2.10.10-canary.3
+        run: npm i -g turbo@2.10.10-canary.3
+      - name: Check for affected unit tests
+        id: affected
+        run: |
+          set -euo pipefail
+          node utils/gen.js
+          count=$(turbo run test-unit --affected --filter=!vercel --dry=json | jq '[.tasks[] | select(.task == "test-unit" and .command != "<NONEXISTENT>")] | length')
+          if [ "$count" -gt 0 ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No affected unit-test tasks."
+          fi
+      - parallel:
+          - name: Setup Turborepo Remote Cache
+            if: steps.affected.outputs.run == 'true'
+            uses: ./.github/actions/setup-turborepo-remote-cache
+            with:
+              team: ${{ vars.TURBO_TEAM }}
+          - name: Setup Go toolchain
+            if: steps.affected.outputs.run == 'true'
+            uses: ./.github/actions/setup-go
+            with:
+              go-version: '1.23.12'
+              cache: false
+          - name: install uv@0.10.11
+            if: steps.affected.outputs.run == 'true'
+            uses: ./.github/actions/setup-uv
+            with:
+              version: '0.10.11'
+      # yarn 1.22.21 introduced a Corepack bug when running tests.
+      # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
+      - name: install yarn@1.22.19
+        if: steps.affected.outputs.run == 'true'
+        run: npm i -g yarn@1.22.19
+      - name: install pnpm@10.29.3
+        if: steps.affected.outputs.run == 'true'
+        run: npm i -g pnpm@10.29.3
+      - run: pnpm install
+        if: steps.affected.outputs.run == 'true'
+      - name: Run affected unit tests
+        if: steps.affected.outputs.run == 'true'
+        timeout-minutes: 65
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          TURBO_EXPERIMENTAL_OTEL_ENDPOINT: ${{ secrets.TURBO_EXPERIMENTAL_OTEL_ENDPOINT }}
+          CARGO_NET_GIT_FETCH_WITH_CLI: 'true'
+          FORCE_COLOR: '1'
+          DD_CIVISIBILITY_AGENTLESS_ENABLED: 'true'
+          DD_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
+          DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
+          DD_ENV: ci
+          DD_SERVICE: vercel-cli
+          DD_PROFILING_ENABLED: 'false'
+          DD_NATIVE_METRICS: 'false'
+        run: |
+          export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
+          if [ -n "$TURBO_EXPERIMENTAL_OTEL_ENDPOINT" ]; then
+            export TURBO_EXPERIMENTAL_OTEL_HEADERS="Authorization=Bearer ${TURBO_TOKEN}"
+          fi
+
+          turbo run test-unit --affected --filter=!vercel --summarize --log-order=stream --continue=always
+
+  python-test:
+    name: Python / ${{ matrix.pythonVersion }}
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        pythonVersion: ['3.12', '3.13', '3.14']
+    env:
+      TURBO_SCM_BASE: ${{ needs.setup.outputs.baseSha }}
+      TURBO_SCM_HEAD: ${{ needs.setup.outputs.headSha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.setup.outputs.headSha }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.pythonVersion }}
+      - uses: ./.github/actions/setup-uv
+        with:
+          version: '0.10.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Turbo needs Cargo to discover the root workspace before selecting the
+      # affected Python tasks.
+      - name: Setup Rust toolchain for Turbo graph discovery
+        uses: ./.github/actions/setup-rust
+        with:
+          toolchain: '1.96.1'
+      - name: install turbo@2.10.10-canary.3
+        run: npm i -g turbo@2.10.10-canary.3
+      - run: turbo run test --affected --filter='vercel-python-workspace...' --filter='!@vercel/*' -- -v --tb=short
+
+  cli-unit-test:
+    name: CLI Unit / ${{ matrix.runner }}/node${{ matrix.nodeVersion }} / ${{ matrix.shard }}/7
+    needs: setup
+    timeout-minutes: 120
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, macos-14, windows-latest]
+        nodeVersion: [20, 22, 24]
+        shard: [1, 2, 3, 4, 5, 6, 7]
+        exclude:
+          - runner: windows-latest
+            nodeVersion: 20
+    env:
+      TURBO_SCM_BASE: ${{ needs.setup.outputs.baseSha }}
+      TURBO_SCM_HEAD: ${{ needs.setup.outputs.headSha }}
+      NODE_VERSION: ${{ matrix.nodeVersion }}
+      VITEST_SHARD: ${{ matrix.shard }}/7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.setup.outputs.headSha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.nodeVersion }}
+      # This cannot be conditional on the dry run: Turbo needs Cargo to build
+      # the native workspace graph that determines whether tests are affected.
+      - name: Setup Rust toolchain for Turbo graph discovery
+        uses: ./.github/actions/setup-rust
+        with:
+          toolchain: '1.96.1'
+          targets: wasm32-wasip2
+      - name: install turbo@2.10.10-canary.3
+        run: npm i -g turbo@2.10.10-canary.3
+      - name: Check for affected CLI unit tests
+        id: affected
+        run: |
+          set -euo pipefail
+          node utils/gen.js
+          count=$(turbo run test-unit --affected --filter=vercel --dry=json | jq '[.tasks[] | select(.task == "test-unit" and .command != "<NONEXISTENT>")] | length')
+          if [ "$count" -gt 0 ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No affected CLI unit-test task."
+          fi
+      - parallel:
+          - name: Setup Turborepo Remote Cache
+            if: steps.affected.outputs.run == 'true'
+            uses: ./.github/actions/setup-turborepo-remote-cache
+            with:
+              team: ${{ vars.TURBO_TEAM }}
+          - name: Setup Go toolchain
+            if: steps.affected.outputs.run == 'true'
+            uses: ./.github/actions/setup-go
+            with:
+              go-version: '1.23.12'
+              cache: false
+          - name: install uv@0.10.11
+            if: steps.affected.outputs.run == 'true'
+            uses: ./.github/actions/setup-uv
+            with:
+              version: '0.10.11'
+      - name: install yarn@1.22.19
+        if: steps.affected.outputs.run == 'true'
+        run: npm i -g yarn@1.22.19
+      - name: install pnpm@10.29.3
+        if: steps.affected.outputs.run == 'true'
+        run: npm i -g pnpm@10.29.3
+      - run: pnpm install
+        if: steps.affected.outputs.run == 'true'
+      - name: Run affected CLI unit tests
+        if: steps.affected.outputs.run == 'true'
+        timeout-minutes: 65
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          TURBO_EXPERIMENTAL_OTEL_ENDPOINT: ${{ secrets.TURBO_EXPERIMENTAL_OTEL_ENDPOINT }}
+          CARGO_NET_GIT_FETCH_WITH_CLI: 'true'
+          FORCE_COLOR: '1'
+          DD_CIVISIBILITY_AGENTLESS_ENABLED: 'true'
+          DD_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
+          DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
+          DD_ENV: ci
+          DD_SERVICE: vercel-cli
+          DD_PROFILING_ENABLED: 'false'
+          DD_NATIVE_METRICS: 'false'
+        run: |
+          export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
+          if [ -n "$TURBO_EXPERIMENTAL_OTEL_ENDPOINT" ]; then
+            export TURBO_EXPERIMENTAL_OTEL_HEADERS="Authorization=Bearer ${TURBO_TOKEN}"
+          fi
+
+          turbo run test-unit --affected --filter=vercel
+
+  e2e-artifacts:
+    name: Resolve E2E Artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    if: ${{ needs.setup.outputs['e2e-artifact-tests'] != '[]' }}
+    needs:
+      - setup
+    permissions:
+      contents: read
+      deployments: read
+      statuses: read
+    outputs:
+      deploymentUrl: ${{ steps.resolve.outputs.deploymentUrl }}
+      cliVersion: ${{ steps.resolve.outputs.cliVersion }}
+    steps:
+      - name: Wait for deployment tarballs
+        id: resolve
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ needs.setup.outputs.headSha }}
+        run: |
+          set -euo pipefail
+
+          # E2E needs the CLI and Python wheel tarballs produced by the Vercel
+          # preview deployment. Resolve them once before the E2E matrix starts
+          # so every shard uses the same deployment without duplicating API calls.
+          validate_deployment_url() {
+            local url="${1%/}"
+            if [ -z "$url" ]; then
+              return 1
+            fi
+
+            if curl --connect-timeout 5 --max-time 15 -fsI "$url/tarballs/vercel.tgz" >/dev/null; then
+              echo "deploymentUrl=$url" >> "$GITHUB_OUTPUT"
+              echo "cliVersion=$url/tarballs/vercel.tgz" >> "$GITHUB_OUTPUT"
+              echo "Deployment tarball is ready at $url/tarballs/vercel.tgz"
+              return 0
+            fi
+
+            return 1
+          }
+
+          get_candidate_urls() {
+            local deployment_ids
+            deployment_ids="$(gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${HEAD_SHA}&per_page=20" --jq '.[].id')" || return 1
+
+            while IFS= read -r deployment_id; do
+              if [ -n "$deployment_id" ]; then
+                gh api "repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses" \
+                  --jq '.[] | select(.state == "success" and .environment_url != null and .environment_url != "") | .environment_url' || return 1
+              fi
+            done <<< "$deployment_ids"
+
+            gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/status" \
+              --jq '.statuses[] | select(.state == "success" and .target_url != null and .target_url != "") | .target_url'
+          }
+
+          api_failures=0
+          for attempt in {1..120}; do
+            if ! candidate_urls="$(get_candidate_urls)"; then
+              api_failures=$((api_failures + 1))
+              echo "Failed to query deployment URLs (attempt $api_failures/3)."
+              if [ "$api_failures" -eq 3 ]; then
+                exit 1
+              fi
+              sleep 10
+              continue
+            fi
+            api_failures=0
+
+            while IFS= read -r candidate_url; do
+              if validate_deployment_url "$candidate_url"; then
+                exit 0
+              fi
+            done < <(printf '%s\n' "$candidate_urls" | sort -u)
+
+            echo "Deployment tarball is not ready yet (attempt $attempt/120)."
+            sleep 10
+          done
+
+          echo "Timed out waiting for deployment tarball."
+          exit 1
+
+  e2e-independent-test:
+    timeout-minutes: 120
+    runs-on: ${{ matrix.runner }}
+    name: E2E / ${{ matrix.label }}
+    permissions:
+      contents: read
+      id-token: write
+    if: ${{ needs.setup.outputs['e2e-independent-tests'] != '[]' }}
     needs:
       - setup
     strategy:
       fail-fast: false
       max-parallel: 75
       matrix:
-        include: ${{ fromJson(needs.setup.outputs['unitTests']) }}
+        include: ${{ fromJson(needs.setup.outputs['e2e-independent-tests']) }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ needs.setup.outputs.headSha }}
-      - name: Setup Turborepo Remote Cache
-        uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
-        with:
-          team: ${{ vars.TURBO_TEAM }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.nodeVersion }}
-
-      - name: Setup Go toolchain
-        if: ${{ matrix.needsGo == true }}
-        uses: actions/setup-go@v6
-        with:
-          go-version: '1.23.12'
-          cache: false
-
-      - name: Setup Rust toolchain
-        if: ${{ matrix.needsRust == true }}
-        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
-        with:
-          toolchain: '1.96.1'
-          targets: wasm32-wasip2
-
+      - parallel:
+          - name: Setup Turborepo Remote Cache
+            uses: ./.github/actions/setup-turborepo-remote-cache
+            with:
+              team: ${{ vars.TURBO_TEAM }}
+          - uses: ./.github/actions/setup-node
+            with:
+              node-version: ${{ matrix.nodeVersion }}
+          - name: Setup Go toolchain
+            if: ${{ matrix.needsGo == true }}
+            uses: ./.github/actions/setup-go
+            with:
+              go-version: '1.23.12'
+              cache: false
+          # Every Turbo invocation needs Cargo for native workspace discovery.
+          - name: Setup Rust toolchain
+            uses: ./.github/actions/setup-rust
+            with:
+              toolchain: '1.96.1'
+              targets: wasm32-wasip2
+          - name: Install uv
+            uses: ./.github/actions/setup-uv
+            with:
+              version: '0.10.11'
       # yarn 1.22.21 introduced a Corepack bug when running tests.
       # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
       - name: install yarn@1.22.19
@@ -304,65 +506,30 @@ jobs:
       - name: install pnpm@10.29.3
         run: npm i -g pnpm@10.29.3
 
-      - name: install uv@0.10.11
-        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+      - name: Install Ruby + Bundler
+        if: ${{ matrix.packageName == 'vercel' }}
+        uses: ruby/setup-ruby@9eb537ca036ebaed86729dcb9309076e4c5c3b74 # v1.314.0
         with:
-          version: '0.10.11'
+          ruby-version: '3.3'
 
-      - run: pnpm install
-
-      - name: "Print test manifest (chunk ${{matrix.chunkNumber}}/${{matrix.allChunksLength}})"
-        shell: bash
-        env:
-          VITEST_TEST_FILES: ${{ matrix.useEnvPaths == true && join(matrix.testPaths, ' ') || '' }}
-        run: |
-          # Resolve the file list the same way the test step does
-          if [ -n "$VITEST_TEST_FILES" ]; then
-            files="$VITEST_TEST_FILES"
-            source="VITEST_TEST_FILES env var"
-          else
-            files="${{ join(matrix.testPaths, ' ') }}"
-            source="CLI args"
-          fi
-
-          count=$(echo "$files" | tr ' ' '\n' | grep -c .)
-          echo "Chunk ${{matrix.chunkNumber}} of ${{matrix.allChunksLength}} — $count files via $source"
-          echo "$files" | tr ' ' '\n' | grep . | sort | sed 's/^/  /'
-
-          {
-            echo "## Chunk ${{matrix.chunkNumber}}/${{matrix.allChunksLength}} — \`${{matrix.packageName}}\`"
-            echo "| | |"
-            echo "|---|---|"
-            echo "| Runner | \`${{matrix.runner}}\` / Node v\`${{matrix.nodeVersion}}\` |"
-            echo "| Files | $count (via $source) |"
-            echo ""
-            echo "<details><summary>File list</summary>"
-            echo ""
-            echo '```'
-            echo "$files" | tr ' ' '\n' | grep . | sort
-            echo '```'
-            echo "</details>"
-          } >> "$GITHUB_STEP_SUMMARY"
+      - parallel:
+          - name: Install dependencies
+            run: pnpm install
 
       - name: Test ${{matrix.packageName}}
-        timeout-minutes: 25
+        timeout-minutes: 35
         run: |
           attempt=1
           max_attempts=2
           export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
+          if [ -n "$TURBO_EXPERIMENTAL_OTEL_ENDPOINT" ]; then
+            export TURBO_EXPERIMENTAL_OTEL_HEADERS="Authorization=Bearer ${TURBO_TOKEN}"
+          fi
 
           while [ "$attempt" -le "$max_attempts" ]; do
             echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
 
-            # When VITEST_TEST_FILES is set, the test script reads paths from that env var
-            # instead of CLI args, avoiding the Windows cmd.exe ~8191 char arg limit.
-            if [ -n "$VITEST_TEST_FILES" ]; then
-              run_cmd="node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir='.turbo' --log-order=stream --filter=${{matrix.packageName}}"
-            else
-              run_cmd="node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir='.turbo' --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}"
-            fi
-
-            if eval "$run_cmd"; then
+            if node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}; then
               exit 0
             fi
 
@@ -379,13 +546,8 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
           TURBO_BASE_SHA: ${{ needs.setup.outputs.baseSha }}
-          CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+          TURBO_EXPERIMENTAL_OTEL_ENDPOINT: ${{ secrets.TURBO_EXPERIMENTAL_OTEL_ENDPOINT }}
           FORCE_COLOR: '1'
-          VITEST_TEST_FILES: ${{ matrix.useEnvPaths == true && join(matrix.testPaths, ' ') || '' }}
-          # Datadog Test Optimization: emit per-test spans correlated to the
-          # GitHub Actions job span, replacing the previous post-hoc JUnit
-          # upload. See test/lib/deployment/metrics.js for the legacy
-          # DATADOG_API_KEY consumer (custom transient-error metrics).
           DD_CIVISIBILITY_AGENTLESS_ENABLED: 'true'
           DD_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
           DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
@@ -403,41 +565,47 @@ jobs:
       deployments: read
       id-token: write
       statuses: read
-    if: ${{ needs.setup.outputs['e2eTests'] != '[]' }}
+    if: ${{ needs.setup.outputs['e2e-artifact-tests'] != '[]' }}
     needs:
       - setup
+      - e2e-artifacts
+    env:
+      DPL_URL: ${{ needs.e2e-artifacts.outputs.deploymentUrl }}
+      VERCEL_CLI_VERSION: ${{ needs.e2e-artifacts.outputs.cliVersion }}
     strategy:
       fail-fast: false
       max-parallel: 75
       matrix:
-        include: ${{ fromJson(needs.setup.outputs['e2eTests']) }}
+        include: ${{ fromJson(needs.setup.outputs['e2e-artifact-tests']) }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ needs.setup.outputs.headSha }}
-      - name: Setup Turborepo Remote Cache
-        uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
-        with:
-          team: ${{ vars.TURBO_TEAM }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.nodeVersion }}
-
-      - name: Setup Go toolchain
-        if: ${{ matrix.needsGo == true }}
-        uses: actions/setup-go@v6
-        with:
-          go-version: '1.23.12'
-          cache: false
-
-      - name: Setup Rust toolchain
-        if: ${{ matrix.needsRust == true }}
-        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
-        with:
-          toolchain: '1.96.1'
-          targets: wasm32-wasip2
-
+      - parallel:
+          - name: Setup Turborepo Remote Cache
+            uses: ./.github/actions/setup-turborepo-remote-cache
+            with:
+              team: ${{ vars.TURBO_TEAM }}
+          - uses: ./.github/actions/setup-node
+            with:
+              node-version: ${{ matrix.nodeVersion }}
+          - name: Setup Go toolchain
+            if: ${{ matrix.needsGo == true }}
+            uses: ./.github/actions/setup-go
+            with:
+              go-version: '1.23.12'
+              cache: false
+          # Every Turbo invocation needs Cargo for native workspace discovery.
+          - name: Setup Rust toolchain
+            uses: ./.github/actions/setup-rust
+            with:
+              toolchain: '1.96.1'
+              targets: wasm32-wasip2
+          - name: Install uv
+            uses: ./.github/actions/setup-uv
+            with:
+              version: '0.10.11'
       # yarn 1.22.21 introduced a Corepack bug when running tests.
       # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
       - name: install yarn@1.22.19
@@ -446,75 +614,16 @@ jobs:
       - name: install pnpm@10.29.3
         run: npm i -g pnpm@10.29.3
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
-        with:
-          version: '0.10.11'
-
       - name: Install Ruby + Bundler
         if: ${{ matrix.packageName == 'vercel' }}
         uses: ruby/setup-ruby@9eb537ca036ebaed86729dcb9309076e4c5c3b74 # v1.314.0
         with:
           ruby-version: '3.3'
 
-      - run: pnpm install
+      - parallel:
+          - name: Install dependencies
+            run: pnpm install
 
-      - name: Wait for deployment tarballs
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HEAD_SHA: ${{ needs.setup.outputs.headSha }}
-        run: |
-          set -euo pipefail
-
-          # E2E needs the CLI and Python wheel tarballs produced by the Vercel
-          # preview deployment, but the workflow now starts on pull_request so
-          # tests can begin before the deployment-ready repository_dispatch.
-          # Vercel already reports successful deployments back to GitHub via
-          # deployment statuses and commit statuses. We poll those GitHub-owned
-          # records for candidate public URLs, then trust a URL only after the
-          # actual tarball endpoint responds. That final HTTP check is the
-          # readiness gate, so stale/unrelated status URLs are harmless.
-          validate_deployment_url() {
-            local url="${1%/}"
-            if [ -z "$url" ]; then
-              return 1
-            fi
-
-            if curl -fsI "$url/tarballs/vercel.tgz" >/dev/null; then
-              echo "DPL_URL=$url" >> "$GITHUB_ENV"
-              echo "VERCEL_CLI_VERSION=$url/tarballs/vercel.tgz" >> "$GITHUB_ENV"
-              echo "Deployment tarball is ready at $url/tarballs/vercel.tgz"
-              return 0
-            fi
-
-            return 1
-          }
-
-          get_candidate_urls() {
-            gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${HEAD_SHA}&per_page=20" \
-              --jq '.[].id' | while IFS= read -r deployment_id; do
-                gh api "repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses" \
-                  --jq '.[] | select(.state == "success" and .environment_url != null and .environment_url != "") | .environment_url'
-              done
-
-            gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/status" \
-              --jq '.statuses[] | select(.state == "success" and .target_url != null and .target_url != "") | .target_url'
-          }
-
-          for attempt in {1..120}; do
-            while IFS= read -r candidate_url; do
-              if validate_deployment_url "$candidate_url"; then
-                exit 0
-              fi
-            done < <(get_candidate_urls | sort -u)
-
-            echo "Deployment tarball is not ready yet (attempt $attempt/120)."
-            sleep 10
-          done
-
-          echo "Timed out waiting for deployment tarball."
-          exit 1
       - name: Resolve Python wheel URLs
         shell: bash
         run: |
@@ -544,6 +653,9 @@ jobs:
           attempt=1
           max_attempts=2
           export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
+          if [ -n "$TURBO_EXPERIMENTAL_OTEL_ENDPOINT" ]; then
+            export TURBO_EXPERIMENTAL_OTEL_HEADERS="Authorization=Bearer ${TURBO_TOKEN}"
+          fi
 
           while [ "$attempt" -le "$max_attempts" ]; do
             echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
@@ -568,6 +680,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
           TURBO_BASE_SHA: ${{ needs.setup.outputs.baseSha }}
+          TURBO_EXPERIMENTAL_OTEL_ENDPOINT: ${{ secrets.TURBO_EXPERIMENTAL_OTEL_ENDPOINT }}
           FORCE_COLOR: '1'
           # Datadog Test Optimization: emit per-test spans correlated to the
           # GitHub Actions job span, replacing the previous post-hoc JUnit
@@ -581,6 +694,131 @@ jobs:
           DD_PROFILING_ENABLED: 'false'
           DD_NATIVE_METRICS: 'false'
 
+  enforce-changeset:
+    name: Enforce Changeset
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.title != 'Version Packages'
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: git fetch origin ${{ github.event.pull_request.head.sha }}:pr-${{ github.event.pull_request.number }}
+      - run: git checkout pr-${{ github.event.pull_request.number }}
+      - name: install pnpm@10.29.3
+        run: npm i -g pnpm@10.29.3
+      - run: pnpm install
+      # Enforce a changeset file to be present
+      - run: pnpm exec changeset status --since=main
+
+  lint:
+    name: Lint
+    needs: setup
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.title != 'Version Packages'
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TURBO_SCM_BASE: ${{ needs.setup.outputs.baseSha }}
+      TURBO_SCM_HEAD: ${{ needs.setup.outputs.headSha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Check out the PR commit directly instead of a merge commit.
+          fetch-depth: 0
+          ref: ${{ needs.setup.outputs.headSha }}
+      - name: Setup Turborepo Remote Cache
+        uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
+        with:
+          team: ${{ vars.TURBO_TEAM }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: install turbo@2.10.10-canary.3
+        run: npm i -g turbo@2.10.10-canary.3
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
+        with:
+          toolchain: '1.96.1'
+          targets: wasm32-wasip2
+          components: clippy
+      - name: install uv@0.10.11
+        uses: ./.github/actions/setup-uv
+        with:
+          version: '0.10.11'
+      - name: install pnpm@10.29.3
+        run: npm i -g pnpm@10.29.3
+      - run: pnpm install
+      - name: Generate Turborepo cache key
+        run: node utils/gen.js
+      - name: Lint, build, and type-check affected packages
+        run: turbo run ci:checks --affected --output-logs=errors-only --summarize --continue
+      - name: Ensure clean git workspace
+        run: git diff --name-only --exit-code
+
+  lint-actions:
+    name: Lint GitHub Actions
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Deliberately run against the merge commit here because GitHub
+          # Actions are sourced from it and cannot be overridden.
+          ref:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install pyyaml==6.0.3 zizmor==1.29.0
+      - name: Enforce actions/checkout ref
+        shell: python
+        run: |
+          import glob, sys, yaml
+
+          errors = []
+          for path in sorted(glob.glob(".github/workflows/*.yml")):
+              with open(path) as f:
+                  workflow = yaml.safe_load(f)
+              if not isinstance(workflow, dict):
+                  continue
+              triggers = workflow.get(True) or {}  # 'on' parses as True in YAML
+              if isinstance(triggers, list):
+                  if "pull_request" not in triggers:
+                      continue
+              elif isinstance(triggers, dict):
+                  if "pull_request" not in triggers:
+                      continue
+              else:
+                  continue
+              for job_name, job in workflow.get("jobs", {}).items():
+                  for i, step in enumerate(job.get("steps") or []):
+                      uses = step.get("uses", "")
+                      if not uses.startswith("actions/checkout"):
+                          continue
+                      with_block = step.get("with") or {}
+                      if "ref" not in with_block:
+                          errors.append(
+                              f"  {path}: job '{job_name}', step {i + 1} "
+                              f"uses {uses} without a 'ref'"
+                          )
+
+          if errors:
+              print("actions/checkout steps missing 'ref':")
+              print("\n".join(errors))
+              sys.exit(1)
+          print("All actions/checkout steps have a 'ref' specified.")
+      - name: Run zizmor
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: zizmor --collect=workflows --color=never .github/workflows/
+
   summary:
     name: Summary
     runs-on: ubuntu-latest
@@ -589,7 +827,14 @@ jobs:
     needs:
       - setup
       - unit-test
+      - python-test
+      - cli-unit-test
+      - e2e-artifacts
+      - e2e-independent-test
       - e2e-test
+      - enforce-changeset
+      - lint
+      - lint-actions
     permissions:
       statuses: write
     steps:

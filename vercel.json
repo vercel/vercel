@@ -17,6 +17,14 @@
     {
       "source": "/api/examples/list-all",
       "destination": "/list-all.json"
+    },
+    {
+      "source": "/install",
+      "destination": "/install.sh"
+    },
+    {
+      "source": "/pr-binaries/:path*",
+      "destination": "https://uooy84xs8iqkn6s9.public.blob.vercel-storage.com/pr-binaries/:path*"
     }
   ],
   "github": {
@@ -39,6 +47,19 @@
         {
           "key": "cache-control",
           "value": "public, max-age=60, s-maxage=86400, stale-while-revalidate=86400, stale-if-error=86400"
+        }
+      ]
+    },
+    {
+      "source": "/install(\\.sh)?",
+      "headers": [
+        {
+          "key": "content-type",
+          "value": "text/x-shellscript; charset=utf-8"
+        },
+        {
+          "key": "cache-control",
+          "value": "public, max-age=60, s-maxage=300, stale-while-revalidate=300"
         }
       ]
     }

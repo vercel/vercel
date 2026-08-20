@@ -848,6 +848,62 @@ test('create zero-config deployment', async () => {
   expect(validBuilders).toBe(true);
 });
 
+test('deploys a repo-linked project from the repository root', async () => {
+  const directory = await setupE2EFixture('repo-root-next-js', {
+    removeProjectLink: true,
+  });
+  const projectName = `repo-root-next-js-${session}`;
+
+  const firstDeployment = await execCli(binaryPath, [
+    directory,
+    '--name',
+    projectName,
+    '--force',
+    '--yes',
+  ]);
+  expect(firstDeployment.exitCode, formatOutput(firstDeployment)).toBe(0);
+
+  const projectLink = await fs.readJSON(
+    path.join(directory, '.vercel', 'project.json')
+  );
+  await fs.remove(path.join(directory, '.vercel'));
+  await fs.outputJSON(path.join(directory, '.vercel', 'repo.json'), {
+    remoteName: 'origin',
+    projects: [
+      {
+        id: projectLink.projectId,
+        name: projectName,
+        orgId: projectLink.orgId,
+        directory: '.',
+      },
+    ],
+  });
+
+  try {
+    const subsequentDeployment = await execCli(binaryPath, [
+      directory,
+      '--force',
+      '--yes',
+    ]);
+    expect(
+      subsequentDeployment.exitCode,
+      formatOutput(subsequentDeployment)
+    ).toBe(0);
+
+    const { host } = new URL(subsequentDeployment.stdout);
+    const response = await apiFetch(
+      `/v13/deployments/${encodeURIComponent(host)}`
+    );
+    expect(response.status).toBe(200);
+    const deployment = (await response.json()) as { projectId: string };
+    expect(deployment.projectId).toBe(projectLink.projectId);
+  } finally {
+    await apiFetch(`/v2/projects/${projectLink.projectId}`, {
+      method: 'DELETE',
+    });
+  }
+});
+
 test('next unsupported functions config shows warning link', async () => {
   const fixturePath = await setupE2EFixture(
     'zero-config-next-js-functions-warning'
@@ -1004,23 +1060,28 @@ test('should pass through exit code for CLI extension', async () => {
   expect(output.exitCode).toEqual(6);
 });
 
-test('default command should prompt login with empty credentials', async () => {
+test.each([
+  { args: [] },
+  { args: ['deploy'] },
+])('deploy should require credentials or --temporary ($args)', async ({
+  args,
+}: {
+  args: string[];
+}) => {
   const globalConfigDir = getNewTmpDir();
   await fs.writeJson(path.join(globalConfigDir, 'config.json'), {
     credStorage: 'file',
   });
 
-  const output = await execCli(binaryPath, ['-Q', globalConfigDir], {
-    // execCli passes the token automatically, undo that functionality for this test
+  const output = await execCli(binaryPath, ['-Q', globalConfigDir, ...args], {
     token: false,
+    scope: false,
     env: {
-      // Unset VERCEL_TOKEN so the env var doesn't bypass the login prompt
       VERCEL_TOKEN: '',
     },
   });
-  expect(output.stderr, formatOutput(output)).toBeTruthy();
-  expect(output.stderr).toContain(
-    'Error: No existing credentials found. Please run `vercel login` or pass "--token"'
+  expect(output.stderr, formatOutput(output)).toContain(
+    'No existing credentials found. Run `vercel deploy --temporary` to create a temporary deployment you can claim later, or `vercel login` to log in.'
   );
 });
 

@@ -230,12 +230,13 @@ function parsePnpmLock(
   lockfileVersion: number | undefined
 ): Map<string, LockEntry> {
   const lockMap = new Map<string, LockEntry>();
-  // pnpm lockfiles may have multiple YAML documents (starts with '---')
+  // pnpm lockfiles may have multiple YAML documents (starts with '---'),
+  // with the workspace lockfile in the final document.
   const docs: Array<Record<string, unknown> | null> = [];
   yaml.safeLoadAll(content, doc =>
     docs.push(doc as Record<string, unknown> | null)
   );
-  const parsedYaml = docs[0];
+  const parsedYaml = docs.at(-1);
   if (!parsedYaml) return lockMap;
 
   const lv =

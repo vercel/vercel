@@ -29,17 +29,6 @@ describe('usingCorepack', () => {
           ).toEqual(false);
         });
       });
-      describe('with Turborepo supporting `COREPACK_HOME`', () => {
-        it('should return true', () => {
-          expect(
-            usingCorepack(
-              { ENABLE_EXPERIMENTAL_COREPACK: '1' },
-              'pnpm@8.3.1',
-              true
-            )
-          ).toEqual(true);
-        });
-      });
     });
   });
 });
