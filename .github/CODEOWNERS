@@ -26,6 +26,14 @@
 /packages/oidc-aws-credentials-provider  @vercel/ci-cd @vercel/identity-and-access-management
 /packages/config                         @vercel/ci-cd @MatthewStanciu
 /packages/cli/                           @vercel/ci-cd @vercel/vercel-cli-approvers
+/packages/cli/src/commands/activity/     @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/observability
+/packages/cli/src/commands/alerts/       @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/observability
+/packages/cli/src/commands/logs/         @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/observability
+/packages/cli/src/commands/metrics/      @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/observability
+/packages/cli/test/unit/commands/activity/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/observability
+/packages/cli/test/unit/commands/alerts/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/observability
+/packages/cli/test/unit/commands/logs/   @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/observability
+/packages/cli/test/unit/commands/metrics/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/observability
 /packages/cli/test/unit/commands/build/emit-flags-definitions.test.ts @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/flags
 /packages/cli/src/commands/install/       @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
 /packages/cli/src/commands/integration/  @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
