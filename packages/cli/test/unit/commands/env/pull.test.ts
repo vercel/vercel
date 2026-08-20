@@ -408,7 +408,7 @@ describe('env pull', () => {
     // check for Preview env vars
     const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
     expect(rawDevEnv).toContain(
-      'REDIS_CONNECTION_STRING="redis://abc123@redis.example.com:6379"'
+      'REDIS_CONNECTION_STRING=redis://abc123@redis.example.com:6379'
     );
     expect(rawDevEnv).not.toContain(
       'BRANCH_ENV_VAR="env var for a specific branch"'
@@ -496,7 +496,7 @@ describe('env pull', () => {
     // check for Preview env vars
     const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
     expect(rawDevEnv).toContain(
-      'REDIS_CONNECTION_STRING="redis://abc123@redis.example.com:6379"'
+      'REDIS_CONNECTION_STRING=redis://abc123@redis.example.com:6379'
     );
     expect(rawDevEnv).toContain(
       'BRANCH_ENV_VAR="env var for a specific branch"'
@@ -633,7 +633,7 @@ describe('env pull', () => {
 
     const productionFileHasVercelEnv = rawDevEnv
       .toString()
-      .includes('VERCEL_ENV="production"');
+      .includes('VERCEL_ENV=production');
     expect(productionFileHasVercelEnv).toBeTruthy();
   });
 

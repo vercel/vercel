@@ -13,6 +13,7 @@ import {
   buildDeltaString,
   createEnvObject,
 } from '../../util/env/diff-env-files';
+import { formatEnvValue } from '../../util/env/format-env-value';
 import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
 import { updateOidcTokenContents } from '../../util/env/update-oidc-token-contents';
 import { isErrnoException } from '@vercel/error-utils';
@@ -367,6 +368,16 @@ export async function envPullCommandLogic(
     }
   }
 
+  const contents =
+    CONTENTS_PREFIX +
+    Object.keys(records)
+      .sort()
+      .filter(key => !VARIABLES_TO_IGNORE.includes(key))
+      .map(key => `${key}=${formatEnvValue(records[key])}`)
+      .join('\n') +
+    '\n';
+
+  await outputFile(fullPath, contents, 'utf8');
   if (fileChanged) {
     await outputFile(fullPath, contents, 'utf8');
   }
@@ -415,12 +426,4 @@ export async function envPullCommandLogic(
     `${filename} file${isGitIgnoreUpdated ? ' and added it to .gitignore' : ''}`,
     { gutter: '✓' }
   );
-}
-
-function escapeValue(value: string | undefined) {
-  return value
-    ? value
-        .replace(new RegExp('\n', 'g'), '\\n') // combine newlines (unix) into one line
-        .replace(new RegExp('\r', 'g'), '\\r') // combine newlines (windows) into one line
-    : '';
 }
