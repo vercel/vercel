@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import stripAnsi from 'strip-ansi';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -10,6 +11,13 @@ import output from '../../output-manager';
 import { FlagsArchiveTelemetryClient } from '../../util/telemetry/commands/flags/archive';
 import { archiveSubcommand } from './command';
 import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
+import {
+  buildFlagSafetyRetryCommand,
+  formatFlagSafetyFailure,
+  getFlagSafetyBlockers,
+} from '../../util/flags/safety-check';
+import { outputAgentError } from '../../util/agent-output';
+import { AGENT_STATUS } from '../../util/agent-output-constants';
 
 export default async function archive(
   client: Client,
@@ -33,6 +41,7 @@ export default async function archive(
   const { args, flags } = parsedArgs;
   const [flagArg] = args;
   const skipConfirmation = flags['--yes'] as boolean | undefined;
+  const dangerouslyForce = flags['--dangerously-force'] as boolean | undefined;
   const projectName = getProjectNameFromFlags(flags);
 
   if (!flagArg) {
@@ -44,6 +53,7 @@ export default async function archive(
   telemetryClient.trackCliArgumentFlag(flagArg);
   telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliFlagYes(skipConfirmation);
+  telemetryClient.trackCliFlagDangerouslyForce(dangerouslyForce);
 
   const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
@@ -71,6 +81,47 @@ export default async function archive(
       return 0;
     }
 
+    let blockers = await getFlagSafetyBlockers({
+      client,
+      projectId: project.id,
+      ownerId: link.org.id,
+      slug: flag.slug,
+    });
+
+    if (blockers.length && !dangerouslyForce) {
+      const retryCmd = buildFlagSafetyRetryCommand({
+        client,
+        operation: 'archive',
+        slug: flag.slug,
+        includeYes: Boolean(skipConfirmation || client.nonInteractive),
+      });
+
+      const errorMessage = formatFlagSafetyFailure({
+        flagName: chalk.bold(flag.slug),
+        operation: 'archive',
+        blockers,
+        retryCommand: retryCmd,
+      });
+
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: AGENT_STATUS.ERROR,
+          reason: 'production_safety_check_failed',
+          message: stripAnsi(errorMessage),
+          next: [
+            {
+              command: retryCmd,
+              when: 'override the production safety check',
+            },
+          ],
+        });
+        return 1;
+      }
+
+      output.error(errorMessage);
+      return 1;
+    }
+
     // Confirm archival
     if (!skipConfirmation) {
       if (!client.stdin.isTTY) {
@@ -89,6 +140,40 @@ export default async function archive(
         output.log('Aborted');
         return 0;
       }
+
+      // Recheck safety after interactive confirmation to catch race conditions
+      blockers = await getFlagSafetyBlockers({
+        client,
+        projectId: project.id,
+        ownerId: link.org.id,
+        slug: flag.slug,
+      });
+
+      if (blockers.length && !dangerouslyForce) {
+        const retryCmd = buildFlagSafetyRetryCommand({
+          client,
+          operation: 'archive',
+          slug: flag.slug,
+          includeYes: false,
+        });
+
+        output.error(
+          formatFlagSafetyFailure({
+            flagName: chalk.bold(flag.slug),
+            operation: 'archive',
+            blockers,
+            retryCommand: retryCmd,
+            detectedAfterConfirmation: true,
+          })
+        );
+        return 1;
+      }
+    }
+
+    if (blockers.length) {
+      output.warn(
+        `Archiving ${chalk.bold(flag.slug)} despite production activity because --dangerously-force was provided.`
+      );
     }
 
     // Archive the flag by setting state to 'archived'

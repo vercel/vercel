@@ -1027,6 +1027,15 @@ export const rulesSubcommand = {
   examples: [],
 } as const;
 
+const dangerouslyForceOption = {
+  name: 'dangerously-force',
+  shorthand: null,
+  type: Boolean,
+  deprecated: false,
+  description:
+    'Bypass production activity and deployment-reference safety checks',
+} as const;
+
 export const removeSubcommand = {
   name: 'remove',
   aliases: ['rm'],
@@ -1043,6 +1052,7 @@ export const removeSubcommand = {
       ...yesOption,
       description: 'Skip the confirmation prompt when deleting a flag',
     },
+    dangerouslyForceOption,
   ],
   examples: [
     {
@@ -1052,6 +1062,10 @@ export const removeSubcommand = {
     {
       name: 'Delete without confirmation',
       value: `${packageName} flags rm my-feature-flag --yes`,
+    },
+    {
+      name: 'DANGER: bypass safety checks and delete the flag',
+      value: `${packageName} flags rm my-feature-flag --yes --dangerously-force`,
     },
   ],
 } as const;
@@ -1072,6 +1086,7 @@ export const archiveSubcommand = {
       ...yesOption,
       description: 'Skip the confirmation prompt when archiving a flag',
     },
+    dangerouslyForceOption,
   ],
   examples: [
     {
@@ -1081,6 +1096,10 @@ export const archiveSubcommand = {
     {
       name: 'Archive without confirmation',
       value: `${packageName} flags archive my-feature-flag --yes`,
+    },
+    {
+      name: 'DANGER: bypass safety checks and archive the flag',
+      value: `${packageName} flags archive my-feature-flag --yes --dangerously-force`,
     },
   ],
 } as const;
