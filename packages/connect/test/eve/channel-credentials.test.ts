@@ -188,6 +188,73 @@ describe('Eve channel credential helpers', () => {
     });
   });
 
+  it('resolves Slack botToken using a function-valued params resolver', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonTokenResponse('slack_token_ws1'))
+      .mockResolvedValueOnce(jsonTokenResponse('slack_token_ws2'));
+
+    let call = 0;
+    const resolver = () => {
+      call++;
+      return { installationId: `workspace-${call}` };
+    };
+
+    const credentials = connectSlackCredentials('oauth/slack', resolver, {
+      vercelToken: 'vercel_token',
+    });
+
+    expect(credentials.botToken).toEqual(expect.any(Function));
+
+    // First invocation uses installationId from first resolver call
+    await expect(resolveToken(credentials.botToken)).resolves.toBe(
+      'slack_token_ws1'
+    );
+    const [url1, init1] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url1).toBe(
+      `https://api.vercel.com/v1/connect/token/${encodeURIComponent('oauth/slack')}`
+    );
+    expect(JSON.parse(init1.body as string)).toEqual({
+      installationId: 'workspace-1',
+      subject: { type: 'app' },
+    });
+
+    // Second invocation re-invokes resolver — different installationId
+    await expect(resolveToken(credentials.botToken)).resolves.toBe(
+      'slack_token_ws2'
+    );
+    const [url2, init2] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(url2).toBe(
+      `https://api.vercel.com/v1/connect/token/${encodeURIComponent('oauth/slack')}`
+    );
+    expect(JSON.parse(init2.body as string)).toEqual({
+      installationId: 'workspace-2',
+      subject: { type: 'app' },
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('resolves Slack botToken using an async params resolver (Promise)', async () => {
+    fetchMock.mockResolvedValue(jsonTokenResponse('slack_async_token'));
+
+    const asyncResolver = async () => ({
+      installationId: 'async-workspace',
+    });
+
+    const credentials = connectSlackCredentials('oauth/slack', asyncResolver, {
+      vercelToken: 'vercel_token',
+    });
+
+    expect(credentials.botToken).toEqual(expect.any(Function));
+    await expect(resolveToken(credentials.botToken)).resolves.toBe(
+      'slack_async_token'
+    );
+    expectTokenRequest('oauth/slack', {
+      installationId: 'async-workspace',
+      subject: { type: 'app' },
+    });
+  });
+
   function expectTokenRequest(
     connector: string,
     body: Record<string, unknown>
