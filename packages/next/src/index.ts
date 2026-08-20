@@ -1375,8 +1375,16 @@ export const build: BuildV2 = async buildOptions => {
      * This is a detection for preview mode that's required for the pages
      * router.
      */
-    const canUsePreviewMode = Object.keys(pages).some(page =>
-      isApiPage(pages[page].fsPath)
+    const canUsePreviewMode = !!prerenderManifest?.bypassToken;
+
+    console.log(
+      `[DRAFT MODE DEBUG] canUsePreviewMode = ${canUsePreviewMode}, appDir = ${!!appDir}, hasAppPathRoutesManifest = ${!!appPathRoutesManifest}, hasAppRouterApi = ${!!(appPathRoutesManifest && Object.keys(appPathRoutesManifest).some(r => r.startsWith('/api/')))}`,
+      {
+        appDirExists: !!appDir,
+        appPathRoutesManifestKeys: appPathRoutesManifest
+          ? Object.keys(appPathRoutesManifest)
+          : [],
+      }
     );
     const originalStaticPages = await glob('**/*.html', pagesDir);
     staticPages = filterStaticPages(
@@ -1437,7 +1445,8 @@ export const build: BuildV2 = async buildOptions => {
               // we don't need to add routes for non-lazy SSG routes since
               // they have outputs which would override the routes anyways
               if (
-                prerenderManifest.staticRoutes[dataRoute.page] ||
+                (prerenderManifest.staticRoutes[dataRoute.page] &&
+                  !canUsePreviewMode) ||
                 (!(static404Page && canUsePreviewMode) && isOmittedRoute)
               ) {
                 continue;
@@ -1469,9 +1478,7 @@ export const build: BuildV2 = async buildOptions => {
                 route.check = true;
               }
 
-              if (isOmittedRoute && isServerMode) {
-                // only match this route when in preview mode so
-                // preview works for non-prerender fallback: false pages
+              if (isServerMode && canUsePreviewMode) {
                 (route as RouteWithSrc).has = [
                   {
                     type: 'cookie',
@@ -2014,20 +2021,30 @@ export const build: BuildV2 = async buildOptions => {
           }
 
           const addPageLambdaRoute = (escapedOutputPath: string) => {
-            const pageLambdaRoute: Route = {
-              src: `^${escapedOutputPath.replace(
-                /\/index$/,
-                '(/|/index|)'
-              )}/?$`,
+            const pageLambdaRoute: RouteWithSrc = {
+              src: `^${escapedOutputPath.replace(/\/index$/, '(/|/index|)')}/?$`,
               dest: `${path.join('/', currentLambdaGroup.lambdaIdentifier)}`,
               headers: {
                 'x-nextjs-page': outputName,
               },
               check: true,
+              override: true,
             };
 
-            // we only need to add the additional routes if shared lambdas
-            // is enabled
+            if (canUsePreviewMode) {
+              pageLambdaRoute.has = [
+                {
+                  type: 'cookie',
+                  key: '__prerender_bypass',
+                  value: prerenderManifest.bypassToken || undefined,
+                },
+                {
+                  type: 'cookie',
+                  key: '__next_preview_data',
+                },
+              ];
+            }
+
             if (routeIsDynamic) {
               dynamicPageLambdaRoutes.push(pageLambdaRoute);
               dynamicPageLambdaRoutesMap[outputName] = pageLambdaRoute;
@@ -2509,23 +2526,12 @@ export const build: BuildV2 = async buildOptions => {
   }
 
   if (!isSharedLambdas) {
-    // We need to delete lambdas from output instead of omitting them from the
-    // start since we rely on them for powering Preview Mode (read above in
-    // onPrerenderRoute).
-    omittedPrerenderRoutes.forEach(routeKey => {
-      // Get the route file as it'd be mounted in the builder output
-      const routeFileNoExt = path.posix.join(
-        entryDirectory,
-        routeKey === '/' ? '/index' : routeKey
-      );
-      if (typeof lambdas[routeFileNoExt] === undefined) {
-        throw new NowBuildError({
-          code: 'NEXT__UNKNOWN_ROUTE_KEY',
-          message: `invariant: unknown lambda ${routeKey} (lookup: ${routeFileNoExt}) | please report this immediately`,
-        });
-      }
-      delete lambdas[routeFileNoExt];
-    });
+    // REMOVED: Lambda deletion logic has been moved to server-build.ts
+    // to centralize the decision and use a more reliable detection method
+    // (isDynamicRouteCandidate) that preserves lambdas for pages that need
+    // dynamic rendering during Preview/Draft Mode.
+    // See PR #93063 and related discussion in vercel/next.js#92562.
+    // The old logic using hasStaticParams was unreliable and has been superseded.
   }
   const mergedDataRoutesLambdaRoutes = [];
   const mergedDynamicRoutesLambdaRoutes = [];
