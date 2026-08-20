@@ -43,6 +43,11 @@ export {
   type ConnectPhotonCredentialsParams,
 } from './photon-credentials.js';
 export {
+  connectResendApiKey,
+  type ConnectResendApiKeyParams,
+  type ConnectResendApiKeyProvider,
+} from './resend-api-key.js';
+export {
   connectSlackCredentials,
   type ConnectSlackCredentialsParams,
 } from './slack-credentials.js';

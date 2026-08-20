@@ -4,6 +4,7 @@ import {
   connectGitHubCredentials,
   connectLinearCredentials,
   connectPhotonCredentials,
+  connectResendApiKey,
   connectSlackCredentials,
 } from '../../src/eve/index.js';
 
@@ -166,6 +167,54 @@ describe('Eve channel credential helpers', () => {
     await expect(credentials()).rejects.toThrow(
       'Photon connector returned invalid credentials.'
     );
+  });
+
+  it('resolves a Resend API key from an app-scoped Connect token', async () => {
+    fetchMock.mockResolvedValue(jsonTokenResponse('re_secret'));
+
+    const apiKey = connectResendApiKey(
+      'api-key/resend-my-agent',
+      {},
+      { vercelToken: 'vercel_token' }
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    await expect(apiKey()).resolves.toBe('re_secret');
+    expectTokenRequest('api-key/resend-my-agent', {
+      subject: { type: 'app' },
+    });
+  });
+
+  it('forwards Resend token refinements while keeping the subject app-scoped', async () => {
+    fetchMock.mockResolvedValue(jsonTokenResponse('re_secret'));
+
+    const apiKey = connectResendApiKey(
+      'api-key/resend-my-agent',
+      { installationId: 'resend-installation' },
+      { vercelToken: 'vercel_token' }
+    );
+
+    await expect(apiKey()).resolves.toBe('re_secret');
+    expectTokenRequest('api-key/resend-my-agent', {
+      installationId: 'resend-installation',
+      subject: { type: 'app' },
+    });
+  });
+
+  it('keeps failed Resend API-key resolution retryable', async () => {
+    fetchMock
+      .mockRejectedValueOnce(new Error('temporary failure'))
+      .mockResolvedValueOnce(jsonTokenResponse('re_secret'));
+
+    const apiKey = connectResendApiKey(
+      'api-key/resend-retry',
+      {},
+      { vercelToken: 'vercel_token', forceRefresh: true }
+    );
+
+    await expect(apiKey()).rejects.toThrow('temporary failure');
+    await expect(apiKey()).resolves.toBe('re_secret');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('keeps Slack credentials backed by an app-scoped Connect token', async () => {
