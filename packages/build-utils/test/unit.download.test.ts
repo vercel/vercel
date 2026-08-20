@@ -190,6 +190,107 @@ describe('download()', () => {
     expect(isExternalSymlink(internalSymlink)).toBe(false);
   });
 
+  it('should reject a symlink whose absolute target escapes the build root', async () => {
+    if (process.platform === 'win32') {
+      console.log('Skipping test on windows');
+      return;
+    }
+    const files = {
+      evil: new FileBlob({
+        mode: S_IFLNK,
+        contentType: undefined,
+        data: '/etc/passwd',
+      }),
+    };
+
+    const outDir = path.join(__dirname, 'symlinks-out');
+    await fs.remove(outDir);
+
+    await expect(download(files, outDir)).rejects.toThrow(
+      /resolves outside of the build root/
+    );
+
+    // The escaping symlink must not have been created.
+    expect(await fs.pathExists(path.join(outDir, 'evil'))).toBe(false);
+  });
+
+  it('should reject a symlink whose ../ target escapes the build root', async () => {
+    if (process.platform === 'win32') {
+      console.log('Skipping test on windows');
+      return;
+    }
+    const files = {
+      evil: new FileBlob({
+        mode: S_IFLNK,
+        contentType: undefined,
+        data: '../../../../../../etc/passwd',
+      }),
+    };
+
+    const outDir = path.join(__dirname, 'symlinks-out');
+    await fs.remove(outDir);
+
+    await expect(download(files, outDir)).rejects.toThrow(
+      /resolves outside of the build root/
+    );
+    expect(await fs.pathExists(path.join(outDir, 'evil'))).toBe(false);
+  });
+
+  it('should still allow a ../ symlink that resolves inside the build root (monorepo hoisting)', async () => {
+    if (process.platform === 'win32') {
+      console.log('Skipping test on windows');
+      return;
+    }
+    const files = {
+      'shared/dep.txt': new FileBlob({
+        mode: 33188,
+        contentType: undefined,
+        data: 'dep text',
+      }),
+      // From app/node_modules this resolves to <outDir>/shared/dep.txt.
+      'app/node_modules/dep.txt': new FileBlob({
+        mode: S_IFLNK,
+        contentType: undefined,
+        data: '../../shared/dep.txt',
+      }),
+    };
+
+    const outDir = path.join(__dirname, 'symlinks-out');
+    await fs.remove(outDir);
+
+    const files2 = await download(files, outDir);
+    strictEqual(Object.keys(files2).length, 2);
+
+    const linkStat = await fs.lstat(
+      path.join(outDir, 'app/node_modules/dep.txt')
+    );
+    assert(linkStat.isSymbolicLink());
+    strictEqual(
+      await readlink(path.join(outDir, 'app/node_modules/dep.txt')),
+      '../../shared/dep.txt'
+    );
+  });
+
+  it('should reject a file name that escapes the build root', async () => {
+    const files = {
+      '../evil.txt': new FileBlob({
+        mode: 33188,
+        contentType: undefined,
+        data: 'escaped',
+      }),
+    };
+
+    const outDir = path.join(__dirname, 'symlinks-out');
+    await fs.remove(outDir);
+
+    await expect(download(files, outDir)).rejects.toThrow(
+      /resolves outside of the build root/
+    );
+    expect(await fs.pathExists(path.join(path.dirname(outDir), 'evil.txt'))).toBe(
+      false
+    );
+  });
+
   it('should not fail when symlink already exists with same target', async () => {
     if (process.platform === 'win32') {
       console.log('Skipping test on windows');

@@ -85,7 +85,8 @@ async function prepareSymlinkTarget(
 
 export async function downloadFile(
   file: File,
-  fsPath: string
+  fsPath: string,
+  basePath?: string
 ): Promise<FileFsRef> {
   const { mode } = file;
 
@@ -100,6 +101,28 @@ export async function downloadFile(
   // enabled in the group policy. We may want to improve the error message.
   if (isSymbolicLink(mode)) {
     const target = await prepareSymlinkTarget(file, fsPath);
+
+    // Reject symlink targets that escape the build root. The file map comes
+    // from untrusted deployment source, so a symlink such as `/etc/passwd` or
+    // `../../../../etc/passwd` must never be created inside `basePath`.
+    // `isExternalSymlinkTarget` flags absolute and `../` targets, but monorepo
+    // hoisting legitimately uses `../` links whose *resolved* location still
+    // lands inside `basePath` (see #16439), so we only reject once the target
+    // is resolved and shown to point outside the build root. Internal targets
+    // skip the resolve entirely.
+    if (basePath !== undefined && isExternalSymlinkTarget(target)) {
+      const resolvedTarget = path.resolve(path.dirname(fsPath), target);
+      const relative = path.relative(basePath, resolvedTarget);
+      if (
+        relative === '..' ||
+        relative.startsWith(`..${path.sep}`) ||
+        path.isAbsolute(relative)
+      ) {
+        throw new Error(
+          `Symlink "${fsPath}" points to "${target}", which resolves outside of the build root and was rejected`
+        );
+      }
+    }
 
     try {
       await symlink(target, fsPath);
@@ -130,6 +153,23 @@ async function removeFile(basePath: string, fileMatched: string) {
   await remove(file);
 }
 
+// Resolve a (untrusted) file map key against `basePath` and reject any name
+// that escapes the build root, e.g. `../../etc/foo` or an absolute path.
+function assertWithinBasePath(basePath: string, name: string): string {
+  const fsPath = path.join(basePath, name);
+  const relative = path.relative(basePath, fsPath);
+  if (
+    relative === '..' ||
+    relative.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relative)
+  ) {
+    throw new Error(
+      `File "${name}" resolves outside of the build root and was rejected`
+    );
+  }
+  return fsPath;
+}
+
 export default async function download(
   files: Files,
   basePath: string,
@@ -156,6 +196,10 @@ export default async function download(
 
   await Promise.all(
     filenames.map(async name => {
+      // Reject any entry whose resolved path escapes the build root before
+      // touching the filesystem (covers both `removeFile` and `downloadFile`).
+      const fsPath = assertWithinBasePath(basePath, name);
+
       // If the file does not exist anymore, remove it.
       if (Array.isArray(filesRemoved) && filesRemoved.includes(name)) {
         await removeFile(basePath, name);
@@ -188,9 +232,8 @@ export default async function download(
       }
 
       const file = files[name];
-      const fsPath = path.join(basePath, name);
 
-      files2[name] = await downloadFile(file, fsPath);
+      files2[name] = await downloadFile(file, fsPath, basePath);
     })
   );
 

@@ -639,8 +639,16 @@ async function writeStaticFile(
   const dest = join(outputDir, 'static', fsPath);
   await fs.mkdirp(dirname(dest));
 
-  // if already on disk hard link instead of copying
-  if ('fsPath' in file) {
+  // if already on disk hard link instead of copying.
+  // Symlinks deliberately skip this fast-path: `fs.link()` would copy the
+  // entry into the output directory without ever consulting the build-root
+  // boundary check, so a symlink such as `../../secret` committed to the
+  // source would land in `.vercel/output/static`. (Platforms differ on
+  // whether `link()` dereferences — Linux preserves the symlink, macOS/BSD
+  // hard-links the resolved target — but both escape the build root.)
+  // Falling through to `downloadFile()` routes them through the single
+  // `basePath` check below instead.
+  if ('fsPath' in file && !isSymbolicLink(file.mode)) {
     // If source and destination resolve to the same path (e.g. local builds
     // where a builder writes static files directly into outputDir/static/ and
     // then returns FileFsRef objects pointing to those same paths), the file
@@ -654,7 +662,7 @@ async function writeStaticFile(
       // if link fails we continue attempting to copy
     }
   }
-  await downloadFile(file, dest);
+  await downloadFile(file, dest, join(outputDir, 'static'));
 }
 
 /**
