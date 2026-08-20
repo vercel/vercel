@@ -10,7 +10,7 @@ export class DomainsBuyTelemetryClient
     if (v) {
       this.trackCliArgument({
         arg: 'domain',
-        value: this.redactedValue,
+        value: v,
       });
     }
   }
