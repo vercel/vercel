@@ -135,7 +135,12 @@ function spawnWorker(payload: GetLatestWorkerPayload) {
     args.push('--debug');
   }
   const worker = spawn(process.execPath, args, {
-    stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+    // Do not inherit the parent's TTY: a Node child attached to the terminal
+    // snapshots its (cooked) termios at startup and restores it on exit,
+    // which clobbers the parent's raw mode and breaks interactive prompts
+    // (arrow keys echo as ^[[A/^[[B). Debug output is persisted to the
+    // worker's log file instead of stderr.
+    stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
     windowsHide: true,
   });
 
