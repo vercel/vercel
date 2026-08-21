@@ -40,7 +40,7 @@ describe('clientSegmentCache prerender headers', () => {
     }
   });
 
-  it('should surface prerenderClassification on Prerender outputs', async () => {
+  it('should surface initialMetadata on Prerender outputs', async () => {
     const fixturePath = path.join(__dirname, 'segment-cache-cc');
 
     const {
@@ -52,61 +52,48 @@ describe('clientSegmentCache prerender headers', () => {
       expect(output[key].type).toBe('Prerender');
       return output[key];
     };
-    // `htmlSize` is a byte count that shifts with every Next.js release, so
-    // assert on its presence rather than its value.
-    const classification = key => {
-      const actual = prerender(key).prerenderClassification;
-      expect(actual, `expected a classification on ${key}`).toBeDefined();
-      const { htmlSize, ...rest } = actual;
-      return { ...rest, htmlSize: typeof htmlSize };
+    const initialMetadata = key => {
+      const actual = prerender(key).initialMetadata;
+      expect(actual, `expected initialMetadata on ${key}`).toBeDefined();
+      return actual;
     };
 
     // `cacheComponents: true` app routes that fully prerender: the whole
     // response is in the shell and nothing is left to compute per-request.
     for (const key of ['index', 'careers', 'careers/foobar-1']) {
-      expect(classification(key)).toEqual({
-        routeType: 'page',
-        response: 'complete',
-        compute: 'static',
-        htmlSize: 'number',
-      });
+      expect(initialMetadata(key)).toEqual({ compute: 'static' });
     }
 
     // Suspense around an async component reading `headers()`: the shell is
-    // prerendered and the dynamic hole is postponed, so the response is only
-    // the initial part and the request resumes it.
-    expect(classification('dynamic-suspense')).toEqual({
-      routeType: 'page',
-      response: 'initial',
+    // prerendered and the dynamic hole is postponed, so the request resumes
+    // the response on the server.
+    expect(initialMetadata('dynamic-suspense')).toEqual({
       compute: 'resuming',
-      htmlSize: 'number',
     });
 
-    // `[slug]` is a dynamic template with a prerendered fallback shell. It
-    // still has unprerendered params, so it is a fallback rather than a shell.
-    expect(classification('careers/[slug]')).toEqual({
-      routeType: 'fallback',
-      response: 'initial',
+    // `[slug]` is a dynamic template with a prerendered fallback shell that
+    // postponed work, so serving it resumes on the server too.
+    expect(initialMetadata('careers/[slug]')).toEqual({
       compute: 'resuming',
-      htmlSize: 'number',
     });
 
-    // Pages-router ISR route: classified, but there is no app HTML shell to
-    // measure.
-    expect(classification('legacy')).toEqual({
-      routeType: 'page',
-      response: 'complete',
-      compute: 'static',
-      htmlSize: 'undefined',
-    });
+    // Pages-router ISR route: fully static per request.
+    expect(initialMetadata('legacy')).toEqual({ compute: 'static' });
 
-    // A route in the manifest's `notFoundRoutes` gets no classification from
+    // Next.js emits the full taxonomy (`routeType`, `response`, `htmlSize`),
+    // but the platform consumes `compute` only — the rest must not ride
+    // along into the Prerender output.
+    expect(initialMetadata('careers/[slug]')).not.toHaveProperty('routeType');
+    expect(initialMetadata('careers/[slug]')).not.toHaveProperty('response');
+    expect(initialMetadata('careers/[slug]')).not.toHaveProperty('htmlSize');
+
+    // A route in the manifest's `notFoundRoutes` gets no taxonomy from
     // Next.js, and must not be given a synthesized one.
-    expect(prerender('missing').prerenderClassification).toBeUndefined();
+    expect(prerender('missing').initialMetadata).toBeUndefined();
 
-    // Only the primary output of a route group is classified — the sibling
-    // data, prefetch and segment prerenders are grouped back to it downstream
-    // via `sourcePath`, and must not each contribute a classified row.
+    // Only the primary output of a route group carries the metadata — the
+    // sibling data, prefetch and segment prerenders are grouped back to it
+    // downstream via `sourcePath`, and must not each contribute a row.
     for (const key of [
       'index.rsc',
       'dynamic-suspense.rsc',
@@ -116,8 +103,8 @@ describe('clientSegmentCache prerender headers', () => {
       '_next/data/' + buildId(output) + '/legacy.json',
     ]) {
       expect(
-        prerender(key).prerenderClassification,
-        `expected no classification on ${key}`
+        prerender(key).initialMetadata,
+        `expected no initialMetadata on ${key}`
       ).toBeUndefined();
     }
   });

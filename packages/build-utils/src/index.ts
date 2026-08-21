@@ -8,7 +8,7 @@ import {
   sanitizeConsumerName,
 } from './lambda';
 import { NodejsLambda, type NodejsLambdaOptions } from './nodejs-lambda';
-import { Prerender, type PrerenderClassification } from './prerender';
+import { Prerender, type PrerenderInitialMetadata } from './prerender';
 import download, {
   downloadFile,
   DownloadedFiles,
@@ -69,7 +69,7 @@ import { cloneEnv } from './clone-env';
 import { hardLinkDir } from './hard-link-dir';
 import { validateNpmrc } from './validate-npmrc';
 
-export type { NodejsLambdaOptions, PrerenderClassification };
+export type { NodejsLambdaOptions, PrerenderInitialMetadata };
 
 export {
   FileBlob,

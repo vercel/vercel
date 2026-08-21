@@ -2,18 +2,20 @@ import type { File, HasField, Chain } from './types';
 import { Lambda } from './lambda';
 
 /**
- * The framework's own description of what it prerendered, mirroring the
- * Next.js prerender taxonomy rather than re-deriving it from build artifacts.
+ * The framework's own description of what it prerendered at build time,
+ * rather than re-deriving it from build artifacts. These are *initial*
+ * values: revalidation can regenerate a route's output over the lifetime of
+ * a deployment, so readers must treat them as the state as of the build,
+ * not as live state.
  */
-export interface PrerenderClassification {
-  /** What kind of entry this is within its route group. */
-  routeType: 'route' | 'page' | 'shell' | 'fallback';
-  /** How much of the response the prerender contains. */
-  response: 'empty' | 'initial' | 'complete';
-  /** What has to happen at request time to finish the response. */
+export interface PrerenderInitialMetadata {
+  /**
+   * What has to happen at request time to finish the response, as of build
+   * time: `static` needs no server compute, `resuming` streams the static
+   * response while the server resumes postponed work, and `blocking` cannot
+   * start the response until request-time compute starts.
+   */
   compute: 'blocking' | 'resuming' | 'static';
-  /** Byte size of the prerendered HTML shell, when the entry has one. */
-  htmlSize?: number;
 }
 
 interface PrerenderOptions {
@@ -34,7 +36,7 @@ interface PrerenderOptions {
   chain?: Chain;
   exposeErrBody?: boolean;
   partialFallback?: boolean;
-  prerenderClassification?: PrerenderClassification;
+  initialMetadata?: PrerenderInitialMetadata;
 }
 
 export class Prerender {
@@ -66,11 +68,12 @@ export class Prerender {
   public exposeErrBody?: boolean;
   public partialFallback?: boolean;
   /**
-   * The framework's classification of this prerender. `undefined` when the
-   * framework did not provide one, which is legitimate: not-found routes and
-   * Pages Router `fallback: false` templates have no classification.
+   * The framework's build-time serving metadata for this prerender.
+   * `undefined` when the framework did not provide it, which is legitimate:
+   * not-found routes, Pages Router `fallback: false` templates, and builds
+   * from frameworks that predate the field carry none.
    */
-  public prerenderClassification?: PrerenderClassification;
+  public initialMetadata?: PrerenderInitialMetadata;
 
   constructor({
     expiration,
@@ -90,17 +93,17 @@ export class Prerender {
     chain,
     exposeErrBody,
     partialFallback,
-    prerenderClassification,
+    initialMetadata,
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
     this.staleExpiration = staleExpiration;
     this.sourcePath = sourcePath;
     // Deliberately unvalidated: producers in this repo are trusted, and a
-    // taxonomy value added by a future Next.js release must not hard-fail a
+    // compute mode added by a future framework release must not hard-fail a
     // deploy. Untrusted input — a `.prerender-config.json` supplied by
     // `vercel deploy --prebuilt` — is sanitized by the platform instead.
-    this.prerenderClassification = prerenderClassification;
+    this.initialMetadata = initialMetadata;
 
     this.lambda = lambda;
     if (this.lambda) {

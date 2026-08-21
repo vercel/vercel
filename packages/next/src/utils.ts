@@ -18,7 +18,7 @@ import {
   File,
   FlagDefinitions,
   Chain,
-  PrerenderClassification,
+  PrerenderInitialMetadata,
 } from '@vercel/build-utils';
 import { NodeFileTraceReasons } from '@vercel/nft';
 import type {
@@ -1193,32 +1193,31 @@ export enum RenderingMode {
 }
 
 /**
- * The prerender taxonomy as it appears on a v4 prerender-manifest entry, where
- * each field is independently optional because older Next.js versions omit the
- * group entirely.
+ * The prerender taxonomy fields as they appear on a v4 prerender-manifest
+ * entry. Next.js also emits `routeType`, `response` and `htmlSize`, but the
+ * platform consumes only `compute`, so the rest are deliberately left
+ * untyped and unread. Optional because older Next.js versions omit the
+ * taxonomy entirely.
  */
-type RawPrerenderClassification = Partial<PrerenderClassification>;
+type RawPrerenderTaxonomy = {
+  compute?: PrerenderInitialMetadata['compute'];
+};
 
 /**
- * Read the prerender taxonomy off a manifest entry, but only when Next.js
- * supplied the complete group: it throws an `InvariantError` on a partial one,
- * and absence is legitimate (`notFoundRoutes`, Pages Router `fallback: false`).
- * Values are carried through verbatim — Next.js owns this vocabulary, and one
- * it adds later must reach the platform rather than fail the build.
+ * Read the build-time serving metadata off a manifest entry. Absence is
+ * legitimate (`notFoundRoutes`, Pages Router `fallback: false`, older
+ * Next.js). The value is carried through verbatim — Next.js owns this
+ * vocabulary, and a compute mode it adds later must reach the platform
+ * rather than fail the build.
  */
-function toPrerenderClassification(
-  entry: RawPrerenderClassification
-): PrerenderClassification | undefined {
-  const { routeType, response, compute, htmlSize } = entry;
-  if (!routeType || !response || !compute) {
+function toInitialMetadata(
+  entry: RawPrerenderTaxonomy
+): PrerenderInitialMetadata | undefined {
+  const { compute } = entry;
+  if (!compute) {
     return undefined;
   }
-  return {
-    routeType,
-    response,
-    compute,
-    ...(htmlSize !== undefined ? { htmlSize } : {}),
-  };
+  return { compute };
 }
 
 export type NextPrerenderedRoutes = {
@@ -1226,7 +1225,7 @@ export type NextPrerenderedRoutes = {
 
   staticRoutes: {
     [route: string]: {
-      prerenderClassification?: PrerenderClassification;
+      initialMetadata?: PrerenderInitialMetadata;
       initialRevalidate: number | false;
       initialExpire?: number;
       dataRoute: string | null;
@@ -1242,7 +1241,7 @@ export type NextPrerenderedRoutes = {
 
   blockingFallbackRoutes: {
     [route: string]: {
-      prerenderClassification?: PrerenderClassification;
+      initialMetadata?: PrerenderInitialMetadata;
       routeRegex: string;
       dataRoute: string | null;
       fallback: string | boolean | null;
@@ -1258,7 +1257,7 @@ export type NextPrerenderedRoutes = {
 
   fallbackRoutes: {
     [route: string]: {
-      prerenderClassification?: PrerenderClassification;
+      initialMetadata?: PrerenderInitialMetadata;
       fallback: string;
       fallbackStatus?: number;
       fallbackHeaders?: Record<string, string>;
@@ -1283,7 +1282,7 @@ export type NextPrerenderedRoutes = {
    */
   omittedRoutes: {
     [route: string]: {
-      prerenderClassification?: PrerenderClassification;
+      initialMetadata?: PrerenderInitialMetadata;
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
@@ -1483,7 +1482,7 @@ export async function getPrerenderManifest(
     | {
         version: 4;
         routes: {
-          [route: string]: RawPrerenderClassification & {
+          [route: string]: RawPrerenderTaxonomy & {
             initialRevalidateSeconds: number | false;
             initialExpireSeconds?: number;
             srcRoute: string | null;
@@ -1498,7 +1497,7 @@ export async function getPrerenderManifest(
           };
         };
         dynamicRoutes: {
-          [route: string]: RawPrerenderClassification & {
+          [route: string]: RawPrerenderTaxonomy & {
             routeRegex: string;
             fallback: string | false;
             fallbackStatus?: number;
@@ -1618,12 +1617,10 @@ export async function getPrerenderManifest(
         let prefetchDataRoute: undefined | string | null;
         let allowHeader: undefined | string[];
         let renderingMode: RenderingMode;
-        let prerenderClassification: PrerenderClassification | undefined;
+        let initialMetadata: PrerenderInitialMetadata | undefined;
 
         if (manifest.version === 4) {
-          prerenderClassification = toPrerenderClassification(
-            manifest.routes[route]
-          );
+          initialMetadata = toInitialMetadata(manifest.routes[route]);
           initialExpireSeconds = manifest.routes[route].initialExpireSeconds;
           initialStatus = manifest.routes[route].initialStatus;
           initialHeaders = manifest.routes[route].initialHeaders;
@@ -1641,7 +1638,7 @@ export async function getPrerenderManifest(
         }
 
         ret.staticRoutes[route] = {
-          prerenderClassification,
+          initialMetadata,
           initialRevalidate:
             initialRevalidateSeconds === false
               ? false
@@ -1672,9 +1669,9 @@ export async function getPrerenderManifest(
         let fallbackRootParams: undefined | string[];
         let allowHeader: undefined | string[];
         let fallbackSourceRoute: undefined | string;
-        let prerenderClassification: PrerenderClassification | undefined;
+        let initialMetadata: PrerenderInitialMetadata | undefined;
         if (manifest.version === 4) {
-          prerenderClassification = toPrerenderClassification(
+          initialMetadata = toInitialMetadata(
             manifest.dynamicRoutes[lazyRoute]
           );
           experimentalBypassFor =
@@ -1704,7 +1701,7 @@ export async function getPrerenderManifest(
 
         if (typeof fallback === 'string') {
           ret.fallbackRoutes[lazyRoute] = {
-            prerenderClassification,
+            initialMetadata,
             experimentalBypassFor,
             routeRegex,
             fallback,
@@ -1723,7 +1720,7 @@ export async function getPrerenderManifest(
           };
         } else if (fallback === null) {
           ret.blockingFallbackRoutes[lazyRoute] = {
-            prerenderClassification,
+            initialMetadata,
             experimentalBypassFor,
             routeRegex,
             dataRoute,
@@ -1737,7 +1734,7 @@ export async function getPrerenderManifest(
           };
         } else {
           ret.omittedRoutes[lazyRoute] = {
-            prerenderClassification,
+            initialMetadata,
             experimentalBypassFor,
             routeRegex,
             dataRoute,
@@ -2693,13 +2690,13 @@ export const onPrerenderRoute =
     let allowHeader: string[] | undefined;
     // Next.js' own description of what it prerendered, read off the manifest
     // rather than inferred from the emitted build artifacts.
-    let prerenderClassification: PrerenderClassification | undefined;
+    let initialMetadata: PrerenderInitialMetadata | undefined;
 
     if (isFallback || isBlocking) {
       const pr = isFallback
         ? prerenderManifest.fallbackRoutes[routeKey]
         : prerenderManifest.blockingFallbackRoutes[routeKey];
-      prerenderClassification = pr.prerenderClassification;
+      initialMetadata = pr.initialMetadata;
       initialRevalidate = 1; // TODO: should Next.js provide this default?
       // @ts-ignore
       if (initialRevalidate === false) {
@@ -2716,8 +2713,8 @@ export const onPrerenderRoute =
       renderingMode = pr.renderingMode;
       prefetchDataRoute = pr.prefetchDataRoute;
     } else if (isOmitted) {
-      prerenderClassification =
-        prerenderManifest.omittedRoutes[routeKey].prerenderClassification;
+      initialMetadata =
+        prerenderManifest.omittedRoutes[routeKey].initialMetadata;
       initialRevalidate = false;
       srcRoute = routeKey;
       dataRoute = prerenderManifest.omittedRoutes[routeKey].dataRoute;
@@ -2729,7 +2726,7 @@ export const onPrerenderRoute =
         prerenderManifest.omittedRoutes[routeKey].prefetchDataRoute;
     } else {
       const pr = prerenderManifest.staticRoutes[routeKey];
-      prerenderClassification = pr.prerenderClassification;
+      initialMetadata = pr.initialMetadata;
       ({
         initialRevalidate,
         initialExpire,
@@ -3257,11 +3254,11 @@ export const onPrerenderRoute =
           chain,
           allowHeader,
           partialFallback: partialFallback || undefined,
-          // The classification goes on the primary output only, so each route
-          // group has exactly one classified entry; the sibling data and
+          // The metadata goes on the primary output only, so each route
+          // group has exactly one carrying entry; the sibling data and
           // segment prerenders below are grouped back to it by `sourcePath`
           // downstream.
-          prerenderClassification,
+          initialMetadata,
 
           ...(isNotFound
             ? {

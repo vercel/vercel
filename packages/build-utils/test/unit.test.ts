@@ -623,55 +623,31 @@ it('should support experimentalBypassFor correctly', async () => {
   );
 });
 
-it('should round-trip prerenderClassification', async () => {
-  const shell = new Prerender({
+it('should round-trip initialMetadata', async () => {
+  const resuming = new Prerender({
     expiration: 1,
     fallback: null,
     group: 1,
     bypassToken: 'some-long-bypass-token-to-make-it-work',
-    prerenderClassification: {
-      routeType: 'shell',
-      response: 'initial',
+    initialMetadata: {
       compute: 'resuming',
-      htmlSize: 5491,
     },
   });
-  expect(shell.prerenderClassification).toEqual({
-    routeType: 'shell',
-    response: 'initial',
+  expect(resuming.initialMetadata).toEqual({
     compute: 'resuming',
-    htmlSize: 5491,
   });
 
-  // `htmlSize` is optional within the group — route handlers have no HTML.
-  const route = new Prerender({
-    expiration: 1,
-    fallback: null,
-    group: 1,
-    bypassToken: 'some-long-bypass-token-to-make-it-work',
-    prerenderClassification: {
-      routeType: 'route',
-      response: 'complete',
-      compute: 'static',
-    },
-  });
-  expect(route.prerenderClassification).toEqual({
-    routeType: 'route',
-    response: 'complete',
-    compute: 'static',
-  });
-
-  const unclassified = new Prerender({
+  const withoutMetadata = new Prerender({
     expiration: 1,
     fallback: null,
     group: 1,
     bypassToken: 'some-long-bypass-token-to-make-it-work',
   });
-  expect(unclassified.prerenderClassification).toBeUndefined();
+  expect(withoutMetadata.initialMetadata).toBeUndefined();
 });
 
-it('should not validate prerenderClassification enum values', async () => {
-  // Deliberately unvalidated: a taxonomy value added by a future Next.js
+it('should not validate initialMetadata enum values', async () => {
+  // Deliberately unvalidated: a compute mode added by a future framework
   // release must not hard-fail a deploy. Untrusted `.prerender-config.json`
   // input is sanitized by the platform instead.
   const future = new Prerender({
@@ -679,14 +655,12 @@ it('should not validate prerenderClassification enum values', async () => {
     fallback: null,
     group: 1,
     bypassToken: 'some-long-bypass-token-to-make-it-work',
-    prerenderClassification: {
-      // @ts-expect-error - a value Next.js has not shipped yet
-      routeType: 'something-new',
-      response: 'complete',
-      compute: 'static',
+    initialMetadata: {
+      // @ts-expect-error - a value no framework has shipped yet
+      compute: 'something-new',
     },
   });
-  expect(future.prerenderClassification?.routeType).toBe('something-new');
+  expect(future.initialMetadata?.compute).toBe('something-new');
 });
 
 it('should support passQuery correctly', async () => {

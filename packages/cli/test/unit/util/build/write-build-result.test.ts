@@ -160,7 +160,7 @@ describe('writeBuildResult()', () => {
     }
   });
 
-  it('writes prerenderClassification to .prerender-config.json', async () => {
+  it('writes initialMetadata to .prerender-config.json', async () => {
     const workPath = await getWriteableDirectory();
     const outputDir = join(workPath, '.vercel', 'output');
     const build = {
@@ -181,11 +181,8 @@ describe('writeBuildResult()', () => {
       handler: 'index.handler',
       runtime: 'nodejs22.x',
     });
-    const prerenderClassification = {
-      routeType: 'shell',
-      response: 'initial',
+    const initialMetadata = {
       compute: 'resuming',
-      htmlSize: 5491,
     } as const;
 
     try {
@@ -199,10 +196,10 @@ describe('writeBuildResult()', () => {
               fallback: null,
               lambda,
               bypassToken: 'some-long-bypass-token-to-make-it-work',
-              prerenderClassification,
+              initialMetadata,
             }),
-            // A route Next.js declined to classify (`notFoundRoutes`, Pages
-            // Router `fallback: false`) must not gain an empty group.
+            // A route the framework supplied no metadata for (`notFoundRoutes`,
+            // Pages Router `fallback: false`) must not gain an empty object.
             unclassified: new Prerender({
               expiration: 1,
               fallback: null,
@@ -222,14 +219,12 @@ describe('writeBuildResult()', () => {
       const classified = await fs.readJSON(
         join(outputDir, 'functions/classified.prerender-config.json')
       );
-      expect(classified.prerenderClassification).toEqual(
-        prerenderClassification
-      );
+      expect(classified.initialMetadata).toEqual(initialMetadata);
 
       const unclassified = await fs.readJSON(
         join(outputDir, 'functions/unclassified.prerender-config.json')
       );
-      expect(unclassified).not.toHaveProperty('prerenderClassification');
+      expect(unclassified).not.toHaveProperty('initialMetadata');
     } finally {
       await fs.remove(workPath);
     }
