@@ -28,6 +28,38 @@ const accessOption = {
   choices: ['public', 'private'],
 } as const;
 
+const rwTokenOption = {
+  name: 'rw-token',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description:
+    'Read-write token for the Blob store. Defaults to the BLOB_READ_WRITE_TOKEN environment variable. Used when OIDC credentials are not available',
+  argument: 'STRING',
+} as const;
+
+const oidcTokenOption = {
+  name: 'oidc-token',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description:
+    'OIDC token to authenticate with the Blob store (must be passed together with --store-id). Defaults to the VERCEL_OIDC_TOKEN environment variable. Takes priority over the read-write token',
+  argument: 'STRING',
+} as const;
+
+const storeIdOption = {
+  name: 'store-id',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description:
+    'Blob store id, with or without the "store_" prefix (must be passed together with --oidc-token). Defaults to the BLOB_STORE_ID environment variable',
+  argument: 'STRING',
+} as const;
+
+const authOptions = [rwTokenOption, oidcTokenOption, storeIdOption] as const;
+
 import { yesOption } from '../../util/arg-common';
 
 const environmentOption = {
@@ -81,6 +113,7 @@ export const listSubcommand = {
       argument: 'String',
       choices: ['folded', 'expanded'],
     },
+    ...authOptions,
   ],
   examples: [],
 } as const;
@@ -149,6 +182,7 @@ export const putSubcommand = {
       argument: 'Boolean',
     },
     ifMatchOption,
+    ...authOptions,
   ],
   examples: [],
 } as const;
@@ -163,7 +197,7 @@ export const delSubcommand = {
       required: true,
     },
   ],
-  options: [ifMatchOption],
+  options: [ifMatchOption, ...authOptions],
   examples: [],
 } as const;
 
@@ -210,6 +244,7 @@ export const copySubcommand = {
       argument: 'Number',
     },
     ifMatchOption,
+    ...authOptions,
   ],
   examples: [],
 } as const;
@@ -235,6 +270,7 @@ export const getSubcommand = {
       argument: 'PATH',
     },
     ifNoneMatchOption,
+    ...authOptions,
   ],
   examples: [],
 } as const;
@@ -304,6 +340,7 @@ export const signedTokenSubcommand = {
       deprecated: false,
       description: 'Output signed token payload as JSON',
     },
+    ...authOptions,
   ],
   examples: [
     {
@@ -430,6 +467,7 @@ export const presignSubcommand = {
       deprecated: false,
       description: 'Output presign result as JSON',
     },
+    ...authOptions,
   ],
   examples: [
     {
@@ -500,7 +538,7 @@ export const deleteStoreSubcommand = {
       required: false,
     },
   ],
-  options: [yesOption],
+  options: [yesOption, ...authOptions],
   examples: [],
 } as const;
 
@@ -509,7 +547,7 @@ export const emptyStoreSubcommand = {
   aliases: [],
   description: 'Delete all blobs in a Blob store',
   arguments: [],
-  options: [yesOption],
+  options: [yesOption, ...authOptions],
   examples: [],
 } as const;
 
@@ -523,7 +561,7 @@ export const getStoreInfoSubcommand = {
       required: false,
     },
   ],
-  options: [],
+  options: [...authOptions],
   examples: [],
 } as const;
 
@@ -587,33 +625,16 @@ export const blobCommand = {
     listStoresSubcommand,
     emptyStoreSubcommand,
   ],
-  options: [
+  options: [...authOptions],
+  examples: [
     {
-      name: 'rw-token',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-      description: 'Read_Write_Token for the Blob store',
-      argument: 'String',
+      name: 'Authenticate with OIDC credentials. When omitted, the CLI reads VERCEL_OIDC_TOKEN and BLOB_STORE_ID from the environment or .env.local (populated automatically in linked projects)',
+      value:
+        'vercel blob list --oidc-token <VERCEL_OIDC_TOKEN> --store-id <BLOB_STORE_ID>',
     },
     {
-      name: 'oidc-token',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-      description:
-        'OIDC token for the Blob store (must be passed together with --store-id)',
-      argument: 'String',
-    },
-    {
-      name: 'store-id',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-      description:
-        'Blob store id, with or without the "store_" prefix (must be passed together with --oidc-token)',
-      argument: 'String',
+      name: 'Authenticate with a read-write token when OIDC credentials are not available. When omitted, the CLI reads BLOB_READ_WRITE_TOKEN from the environment or .env.local',
+      value: 'vercel blob list --rw-token <BLOB_READ_WRITE_TOKEN>',
     },
   ],
-  examples: [],
 } as const;

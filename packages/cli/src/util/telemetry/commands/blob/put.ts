@@ -1,9 +1,9 @@
-import { TelemetryClient } from '../..';
+import { BlobAuthTelemetryClient } from './auth';
 import type { putSubcommand } from '../../../../commands/blob/command';
 import type { TelemetryMethods } from '../../types';
 
 export class BlobPutTelemetryClient
-  extends TelemetryClient
+  extends BlobAuthTelemetryClient
   implements TelemetryMethods<typeof putSubcommand>
 {
   trackCliOptionAccess(value: string | undefined) {

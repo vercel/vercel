@@ -1,9 +1,9 @@
-import { TelemetryClient } from '../..';
+import { BlobAuthTelemetryClient } from './auth';
 import type { delSubcommand } from '../../../../commands/blob/command';
 import type { TelemetryMethods } from '../../types';
 
 export class BlobDelTelemetryClient
-  extends TelemetryClient
+  extends BlobAuthTelemetryClient
   implements TelemetryMethods<typeof delSubcommand>
 {
   trackCliArgumentUrlsOrPathnames(urlsOrPathnames: string | undefined) {

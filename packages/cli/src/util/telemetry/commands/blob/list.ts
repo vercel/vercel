@@ -1,9 +1,9 @@
-import { TelemetryClient } from '../..';
+import { BlobAuthTelemetryClient } from './auth';
 import type { listSubcommand } from '../../../../commands/blob/command';
 import type { TelemetryMethods } from '../../types';
 
 export class BlobListTelemetryClient
-  extends TelemetryClient
+  extends BlobAuthTelemetryClient
   implements TelemetryMethods<typeof listSubcommand>
 {
   trackCliOptionLimit(limit: number | undefined) {
