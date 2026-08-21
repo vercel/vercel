@@ -631,10 +631,27 @@ it('should round-trip initialMetadata', async () => {
     bypassToken: 'some-long-bypass-token-to-make-it-work',
     initialMetadata: {
       compute: 'resuming',
+      htmlSize: 5491,
     },
   });
   expect(resuming.initialMetadata).toEqual({
     compute: 'resuming',
+    htmlSize: 5491,
+  });
+
+  // `htmlSize` is optional within the group — route handlers and Pages
+  // Router entries have no HTML shell to measure.
+  const withoutShell = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    initialMetadata: {
+      compute: 'static',
+    },
+  });
+  expect(withoutShell.initialMetadata).toEqual({
+    compute: 'static',
   });
 
   const withoutMetadata = new Prerender({

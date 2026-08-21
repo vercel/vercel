@@ -1194,30 +1194,36 @@ export enum RenderingMode {
 
 /**
  * The prerender taxonomy fields as they appear on a v4 prerender-manifest
- * entry. Next.js also emits `routeType`, `response` and `htmlSize`, but the
- * platform consumes only `compute`, so the rest are deliberately left
+ * entry. Next.js also emits `routeType` and `response`, but the platform
+ * consumes only `compute` and `htmlSize`, so the rest are deliberately left
  * untyped and unread. Optional because older Next.js versions omit the
  * taxonomy entirely.
  */
 type RawPrerenderTaxonomy = {
   compute?: PrerenderInitialMetadata['compute'];
+  htmlSize?: number;
 };
 
 /**
  * Read the build-time serving metadata off a manifest entry. Absence is
  * legitimate (`notFoundRoutes`, Pages Router `fallback: false`, older
- * Next.js). The value is carried through verbatim — Next.js owns this
+ * Next.js). The values are carried through verbatim — Next.js owns this
  * vocabulary, and a compute mode it adds later must reach the platform
  * rather than fail the build.
  */
 function toInitialMetadata(
   entry: RawPrerenderTaxonomy
 ): PrerenderInitialMetadata | undefined {
-  const { compute } = entry;
+  const { compute, htmlSize } = entry;
   if (!compute) {
     return undefined;
   }
-  return { compute };
+  return {
+    compute,
+    // Zero is a real shell size — a shell that postponed everything — so
+    // this tests for presence, not truthiness.
+    ...(htmlSize !== undefined ? { htmlSize } : {}),
+  };
 }
 
 export type NextPrerenderedRoutes = {

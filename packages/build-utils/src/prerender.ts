@@ -16,6 +16,12 @@ export interface PrerenderInitialMetadata {
    * start the response until request-time compute starts.
    */
   compute: 'blocking' | 'resuming' | 'static';
+  /**
+   * Byte size of the prerendered HTML shell, when the entry has one. `0` is
+   * a real size — a shell that postponed everything — and `undefined` means
+   * there is no HTML shell to measure (route handlers, Pages Router).
+   */
+  htmlSize?: number;
 }
 
 interface PrerenderOptions {

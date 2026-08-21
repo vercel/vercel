@@ -52,16 +52,22 @@ describe('clientSegmentCache prerender headers', () => {
       expect(output[key].type).toBe('Prerender');
       return output[key];
     };
+    // `htmlSize` is a byte count that shifts with every Next.js release, so
+    // assert on its presence rather than its value.
     const initialMetadata = key => {
       const actual = prerender(key).initialMetadata;
       expect(actual, `expected initialMetadata on ${key}`).toBeDefined();
-      return actual;
+      const { htmlSize, ...rest } = actual;
+      return { ...rest, htmlSize: typeof htmlSize };
     };
 
     // `cacheComponents: true` app routes that fully prerender: the whole
     // response is in the shell and nothing is left to compute per-request.
     for (const key of ['index', 'careers', 'careers/foobar-1']) {
-      expect(initialMetadata(key)).toEqual({ compute: 'static' });
+      expect(initialMetadata(key)).toEqual({
+        compute: 'static',
+        htmlSize: 'number',
+      });
     }
 
     // Suspense around an async component reading `headers()`: the shell is
@@ -69,23 +75,32 @@ describe('clientSegmentCache prerender headers', () => {
     // the response on the server.
     expect(initialMetadata('dynamic-suspense')).toEqual({
       compute: 'resuming',
+      htmlSize: 'number',
     });
 
     // `[slug]` is a dynamic template with a prerendered fallback shell that
     // postponed work, so serving it resumes on the server too.
     expect(initialMetadata('careers/[slug]')).toEqual({
       compute: 'resuming',
+      htmlSize: 'number',
     });
 
-    // Pages-router ISR route: fully static per request.
-    expect(initialMetadata('legacy')).toEqual({ compute: 'static' });
+    // Pages-router ISR route: fully static per request, and there is no app
+    // HTML shell to measure.
+    expect(initialMetadata('legacy')).toEqual({
+      compute: 'static',
+      htmlSize: 'undefined',
+    });
 
-    // Next.js emits the full taxonomy (`routeType`, `response`, `htmlSize`),
-    // but the platform consumes `compute` only — the rest must not ride
+    // Next.js also emits `routeType` and `response`, but the platform
+    // consumes `compute` and `htmlSize` only — the rest must not ride
     // along into the Prerender output.
-    expect(initialMetadata('careers/[slug]')).not.toHaveProperty('routeType');
-    expect(initialMetadata('careers/[slug]')).not.toHaveProperty('response');
-    expect(initialMetadata('careers/[slug]')).not.toHaveProperty('htmlSize');
+    expect(prerender('careers/[slug]').initialMetadata).not.toHaveProperty(
+      'routeType'
+    );
+    expect(prerender('careers/[slug]').initialMetadata).not.toHaveProperty(
+      'response'
+    );
 
     // A route in the manifest's `notFoundRoutes` gets no taxonomy from
     // Next.js, and must not be given a synthesized one.

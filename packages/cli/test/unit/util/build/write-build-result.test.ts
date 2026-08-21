@@ -183,6 +183,9 @@ describe('writeBuildResult()', () => {
     });
     const initialMetadata = {
       compute: 'resuming',
+      // Zero is a real shell size — a shell that postponed everything — and
+      // must survive serialization.
+      htmlSize: 0,
     } as const;
 
     try {
