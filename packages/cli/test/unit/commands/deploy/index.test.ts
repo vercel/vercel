@@ -1192,6 +1192,91 @@ describe('deploy', () => {
     });
   });
 
+  it('should not send `projectSettings.rootDirectory` when the root directory is "."', async () => {
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'app',
+      id: 'QmbKpqpiUqbcke',
+      rootDirectory: '.',
+    });
+
+    let body: any;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      body = req.body;
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_',
+      });
+    });
+    client.scenario.get(`/v13/deployments/dpl_`, (req, res) => {
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+      });
+    });
+
+    const repoRoot = setupUnitFixture('commands/deploy/repo-root-static');
+    client.cwd = repoRoot;
+    client.setArgv('deploy');
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    expect(body.projectSettings.rootDirectory).toBeUndefined();
+    expect(body.gitMetadata?.rootDirectory).not.toEqual('.');
+  });
+
+  it('should send `projectSettings.rootDirectory` when the root directory is a subdirectory', async () => {
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'app',
+      id: 'QmbKpqpiUqbcke',
+      rootDirectory: 'app',
+    });
+
+    let body: any;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      body = req.body;
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_',
+      });
+    });
+    client.scenario.get(`/v13/deployments/dpl_`, (req, res) => {
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+      });
+    });
+
+    const repoRoot = setupUnitFixture('commands/deploy/monorepo-static');
+    client.cwd = join(repoRoot, 'app');
+    client.setArgv('deploy');
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    expect(body.projectSettings.rootDirectory).toEqual('app');
+  });
+
   it('should send latest supported node version when given a >low-node-version based on `engines.node` package.json field', async () => {
     const user = useUser();
     useTeams('team_dummy');

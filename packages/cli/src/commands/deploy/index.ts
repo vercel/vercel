@@ -74,7 +74,10 @@ import { getErrorCta } from '../../util/get-error-cta';
 import link from '../../util/output/link';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS } from '../../util/agent-output-constants';
-import { pickOverrides } from '../../util/projects/project-settings';
+import {
+  normalizeRootDirectory,
+  pickOverrides,
+} from '../../util/projects/project-settings';
 import validatePaths, {
   validateRootDirectory,
 } from '../../util/validate-paths';
@@ -292,7 +295,7 @@ async function handleInitDeployment(
   }
 
   const { org, project } = link;
-  const rootDirectory = project.rootDirectory;
+  const rootDirectory = normalizeRootDirectory(project.rootDirectory);
   const sourceFilesOutsideRootDirectory =
     project.sourceFilesOutsideRootDirectory ?? true;
 
@@ -1147,7 +1150,7 @@ async function handleDefaultDeploy(
   }
 
   const { org, project } = link;
-  const rootDirectory = project.rootDirectory;
+  const rootDirectory = normalizeRootDirectory(project.rootDirectory);
   const sourceFilesOutsideRootDirectory =
     project.sourceFilesOutsideRootDirectory ?? true;
 

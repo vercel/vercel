@@ -1,0 +1,11 @@
+{
+    "remoteName": "origin",
+    "projects": [
+      {
+        "id": "QmbKpqpiUqbcke",
+        "name": "app",
+        "directory": ".",
+        "orgId": "team_dummy"
+      }
+    ]
+}
