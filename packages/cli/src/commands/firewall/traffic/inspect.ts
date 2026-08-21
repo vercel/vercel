@@ -1,80 +1,81 @@
 import chalk from 'chalk';
-import type Client from '../../util/client';
-import { requireProjectContext } from '../../util/projects/require-project-context';
-import output from '../../output-manager';
-import { drillInSubcommand } from './command';
-import { parseSubcommandArgs, outputJson, withGlobalFlags } from './shared';
+import type Client from '../../../util/client';
+import { requireProjectContext } from '../../../util/projects/require-project-context';
+import output from '../../../output-manager';
+import { trafficInspectSubcommand } from '../command';
+import {
+  parseSubcommandArgs,
+  outputJson,
+  failFirewall,
+  failFirewallApi,
+  requireFirewallTeam,
+  withGlobalFlags,
+} from '../shared';
 import {
   andFilters,
   dimensionAliases,
   eqFilter,
   getDimension,
-} from '../../util/firewall/dimensions';
+} from '../../../util/firewall/dimensions';
 import {
   AlertNotFoundError,
   resolveAlertScope,
   resolveScopedTimeRange,
-} from '../../util/firewall/alert-scope';
+} from '../../../util/firewall/alert-scope';
 import {
   getGroupedTimeseries,
   getTopList,
-} from '../../util/firewall/get-firewall-traffic';
-import { formatDrillInOutput } from '../../util/firewall/format-traffic';
-import { outputAgentError } from '../../util/agent-output';
-import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
-import { isAPIError } from '../../util/errors-ts';
+} from '../../../util/firewall/get-firewall-traffic';
+import { formatDrillInOutput } from '../../../util/firewall/format-traffic';
+import { cliToken, formatHintLine } from '../../../util/firewall/format-utils';
+import { resolveManagedBotRuleId } from '../../../util/firewall/managed-bot-rules';
+import { AGENT_REASON } from '../../../util/agent-output-constants';
 
 const DEFAULT_TOP = 10;
 
 export default async function drillIn(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, drillInSubcommand, client);
+  const parsed = await parseSubcommandArgs(
+    argv,
+    trafficInspectSubcommand,
+    client
+  );
   if (typeof parsed === 'number') return parsed;
-
-  const fail = (msg: string, nextCommand: string) => {
-    if (client.nonInteractive) {
-      outputAgentError(client, {
-        status: AGENT_STATUS.ERROR,
-        reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: msg,
-        next: [{ command: withGlobalFlags(client, nextCommand) }],
-      });
-      process.exit(1);
-      return 1;
-    }
-    output.error(msg);
-    return 1;
-  };
 
   const dimensionArg = parsed.args[0] as string | undefined;
   const value = parsed.args[1] as string | undefined;
   const aliases = dimensionAliases().join(', ');
   if (!dimensionArg || !value) {
-    return fail(
-      `Specify a dimension and value, e.g. \`vercel firewall drill-in ip 1.2.3.4\`. Dimensions: ${aliases}`,
-      'firewall traffic-dashboard'
+    return failFirewall(
+      client,
+      `Specify a dimension and value, e.g. \`vercel firewall traffic inspect ip 1.2.3.4\`. Dimensions: ${aliases}`,
+      'firewall traffic'
     );
   }
   const dimension = getDimension(dimensionArg);
   if (!dimension) {
-    return fail(
+    return failFirewall(
+      client,
       `Unknown dimension "${dimensionArg}". Dimensions: ${aliases}`,
-      'firewall traffic-dashboard'
+      'firewall traffic'
     );
   }
 
+  const inspectCmd = `firewall traffic inspect ${dimension.alias} ${cliToken(value)}`;
   const groupByArg =
     (parsed.flags['--group-by'] as string) ?? dimension.defaultGroupBy;
   const groupByDim = getDimension(groupByArg);
   if (!groupByDim) {
-    return fail(
+    return failFirewall(
+      client,
       `Unknown --group-by dimension "${groupByArg}". Dimensions: ${aliases}`,
-      `firewall drill-in ${dimensionArg} ${value}`
+      inspectCmd
     );
   }
   if (groupByDim.alias === dimension.alias) {
-    return fail(
-      `--group-by must differ from the drill-in dimension (${dimension.alias}).`,
-      `firewall drill-in ${dimensionArg} ${value}`
+    return failFirewall(
+      client,
+      `--group-by must differ from the inspect dimension (${dimension.alias}).`,
+      inspectCmd
     );
   }
 
@@ -86,28 +87,8 @@ export default async function drillIn(client: Client, argv: string[]) {
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
-  if (org.type !== 'team') {
-    return fail(
-      'Firewall drill-in requires a team scope. Run `vercel switch` to select a team.',
-      'switch'
-    );
-  }
-  const teamId = org.id;
-
-  const failAlert = (err: AlertNotFoundError) => {
-    if (client.nonInteractive) {
-      outputAgentError(client, {
-        status: AGENT_STATUS.ERROR,
-        reason: AGENT_REASON.NOT_FOUND,
-        message: err.message,
-        next: [{ command: withGlobalFlags(client, 'firewall alerts') }],
-      });
-      process.exit(1);
-      return 1;
-    }
-    output.error(err.message);
-    return 1;
-  };
+  const teamId = requireFirewallTeam(client, org, 'Firewall traffic inspect');
+  if (typeof teamId === 'number') return teamId;
 
   let alertScope: Awaited<ReturnType<typeof resolveAlertScope>> | undefined;
   const alertId = parsed.flags['--alert'] as string | undefined;
@@ -120,8 +101,21 @@ export default async function drillIn(client: Client, argv: string[]) {
         teamId,
       });
     } catch (err) {
-      if (err instanceof AlertNotFoundError) return failAlert(err);
-      throw err;
+      if (err instanceof AlertNotFoundError) {
+        return failFirewall(
+          client,
+          err.message,
+          'firewall alerts',
+          AGENT_REASON.NOT_FOUND
+        );
+      }
+      return failFirewallApi(client, err, {
+        fallback: 'Failed to fetch firewall traffic',
+        nextCommand: inspectCmd,
+        permissionAction: 'query firewall traffic',
+        projectName: project.name,
+        timeoutJob: 'firewall traffic',
+      });
     }
   }
 
@@ -134,8 +128,11 @@ export default async function drillIn(client: Client, argv: string[]) {
       until: parsed.flags['--until'] as string | undefined,
     }));
   } catch (err) {
-    output.error(err instanceof Error ? err.message : String(err));
-    return 1;
+    return failFirewall(
+      client,
+      err instanceof Error ? err.message : String(err),
+      inspectCmd
+    );
   }
 
   const top = (parsed.flags['--top'] as number) ?? DEFAULT_TOP;
@@ -146,7 +143,6 @@ export default async function drillIn(client: Client, argv: string[]) {
     eqFilter(dimension.field, value),
     userFilter
   );
-  const displayFilter = andFilters(alertScope?.filter, userFilter);
 
   try {
     // Sequential steps with progressive spinner text (see overview.ts).
@@ -163,7 +159,7 @@ export default async function drillIn(client: Client, argv: string[]) {
         startTime,
         endTime,
         top: 1,
-      }).catch(() => []);
+      });
       const first = detailRows[0];
       if (first) {
         for (const field of dimension.headerDetailFields) {
@@ -246,44 +242,62 @@ export default async function drillIn(client: Client, argv: string[]) {
         breakdownField: groupByDim.field,
         breakdownLabel: groupByDim.label,
         top,
-        filter: displayFilter,
       })
     );
-    const alertFlag = alertScope ? ` --alert ${alertScope.alert.id}` : '';
+    const nextHints: Array<{ label: string; command: string }> = [];
+    if (dimension.alias === 'ip') {
+      const condition = JSON.stringify({
+        type: 'ip_address',
+        op: 'eq',
+        value,
+      });
+      nextHints.push({
+        label: 'Create rule',
+        command: withGlobalFlags(
+          client,
+          `firewall rules add "Block ${value}" --condition ${cliToken(condition)} --action deny`
+        ),
+      });
+    } else if (dimension.alias === 'rule') {
+      const managedId = resolveManagedBotRuleId(value);
+      nextHints.push({
+        label: 'Edit rule',
+        command: withGlobalFlags(
+          client,
+          `firewall rules edit ${cliToken(managedId ?? value)}`
+        ),
+      });
+    } else if (dimension.alias === 'bot') {
+      nextHints.push({
+        label: 'Edit bot management',
+        command: withGlobalFlags(client, 'firewall bot-management'),
+      });
+    }
+    if (nextHints.length > 0) {
+      output.print(
+        `\n${nextHints.map(h => formatHintLine(h.label, h.command)).join('\n')}\n`
+      );
+    }
+    const alertFlag = alertScope
+      ? ` --alert ${cliToken(alertScope.alert.id)}`
+      : '';
+    const otherDims = dimensionAliases()
+      .filter(a => a !== dimension.alias)
+      .join('|');
     output.print(
       chalk.dim(
-        `\n  Group by something else: \`vercel firewall drill-in ${dimension.alias} ${value} --group-by <${dimensionAliases()
-          .filter(a => a !== dimension.alias)
-          .join('|')}>${alertFlag}\`\n\n`
+        `\n  Group by something else: \`vercel firewall traffic inspect ${dimension.alias} ${cliToken(value)} --group-by <${otherDims}>${alertFlag}\`\n\n`
       )
     );
     return 0;
   } catch (e: unknown) {
-    let msg =
-      e instanceof Error ? e.message : 'Failed to fetch firewall drill-in';
-    if (isAPIError(e) && (e.status === 401 || e.status === 403)) {
-      msg =
-        'You do not have permission to query firewall traffic for this project. Check team access and try again.';
-    }
-    if (client.nonInteractive) {
-      outputAgentError(client, {
-        status: 'error',
-        reason: 'api_error',
-        message: msg,
-        next: [
-          {
-            command: withGlobalFlags(
-              client,
-              `firewall drill-in ${dimensionArg} ${value}`
-            ),
-          },
-        ],
-      });
-      process.exit(1);
-      return 1;
-    }
-    output.error(msg);
-    return 1;
+    return failFirewallApi(client, e, {
+      fallback: 'Failed to fetch firewall traffic',
+      nextCommand: inspectCmd,
+      permissionAction: 'query firewall traffic',
+      projectName: project.name,
+      timeoutJob: 'firewall traffic',
+    });
   } finally {
     output.stopSpinner();
   }

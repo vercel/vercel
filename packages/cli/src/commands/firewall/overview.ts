@@ -3,12 +3,15 @@ import type Client from '../../util/client';
 import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { overviewSubcommand } from './command';
-import { parseSubcommandArgs, outputJson, withGlobalFlags } from './shared';
-import getFirewallMetrics from '../../util/firewall/get-firewall-metrics';
 import {
-  emptyFirewallAlerts,
-  getFirewallAlerts,
-} from '../../util/firewall/get-firewall-alerts';
+  parseSubcommandArgs,
+  outputJson,
+  withGlobalFlags,
+  requireFirewallTeam,
+  failFirewallApi,
+} from './shared';
+import getFirewallMetrics from '../../util/firewall/get-firewall-metrics';
+import { getFirewallAlerts } from '../../util/firewall/get-firewall-alerts';
 import {
   formatOverviewOutput,
   flattenOverviewHints,
@@ -28,33 +31,11 @@ import {
   type AttackModeStatus,
 } from '../../util/firewall/format';
 import { fetchPlanInfo } from '../../util/firewall/interactive-helpers';
-import { outputAgentError } from '../../util/agent-output';
-import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
-import { isAPIError } from '../../util/errors-ts';
 import type { ProjectSecurityResponse } from '../../util/firewall/types';
 
 export default async function overview(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, overviewSubcommand, client);
   if (typeof parsed === 'number') return parsed;
-
-  if (parsed.flags['--json'] && parsed.flags['--graph']) {
-    const msg = 'Cannot use --json and --graph together. Pick one.';
-    if (client.nonInteractive) {
-      outputAgentError(client, {
-        status: AGENT_STATUS.ERROR,
-        reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: msg,
-        next: [
-          { command: withGlobalFlags(client, 'firewall overview --json') },
-          { command: withGlobalFlags(client, 'firewall overview --graph') },
-        ],
-      });
-      process.exit(1);
-      return 1;
-    }
-    output.error(msg);
-    return 1;
-  }
 
   const link = await requireProjectContext(
     client,
@@ -64,32 +45,20 @@ export default async function overview(client: Client, argv: string[]) {
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
-  if (org.type !== 'team') {
-    const msg =
-      'Firewall overview requires a team scope. Run `vercel switch` to select a team.';
-    if (client.nonInteractive) {
-      outputAgentError(client, {
-        status: AGENT_STATUS.ERROR,
-        reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: msg,
-        next: [{ command: withGlobalFlags(client, 'switch') }],
-      });
-      process.exit(1);
-      return 1;
-    }
-    output.error(msg);
-    return 1;
-  }
-
-  const teamId = org.id;
+  const teamId = requireFirewallTeam(client, org, 'Firewall overview');
+  if (typeof teamId === 'number') return teamId;
 
   try {
     // Sequential steps on purpose: concurrent auth/SAML retries on first run
     // can appear to hang, and progressive spinner text shows which step is
     // slow.
+    output.spinner(`Fetching firewall config for ${chalk.bold(project.name)}`);
+    const { active, draft } = await listFirewallConfigs(client, project.id, {
+      teamId,
+    });
+
     output.spinner(`Fetching firewall status for ${chalk.bold(project.name)}`);
-    const [configList, bypassList, freshProject, planInfo] = await Promise.all([
-      listFirewallConfigs(client, project.id, { teamId }),
+    const [bypassList, freshProject, planInfo] = await Promise.all([
       getBypass(client, project.id, { teamId }),
       client.fetch<ProjectSecurityResponse>(
         `/v9/projects/${encodeURIComponent(project.id)}`,
@@ -97,7 +66,6 @@ export default async function overview(client: Client, argv: string[]) {
       ),
       fetchPlanInfo(client),
     ]);
-    const { active, draft } = configList;
     const attackMode: AttackModeStatus = {
       enabled: freshProject.security?.attackModeEnabled ?? false,
       activeUntil: freshProject.security?.attackModeActiveUntil,
@@ -119,7 +87,7 @@ export default async function overview(client: Client, argv: string[]) {
       startTime: new Date(metrics.startTime),
       endTime: new Date(metrics.endTime),
       top: OVERVIEW_TOP_RULES,
-    }).catch(() => []);
+    });
     const rules: OverviewRuleRow[] = topRules.map(row => {
       const id = row.values.waf_rule_id || '';
       return {
@@ -134,7 +102,7 @@ export default async function overview(client: Client, argv: string[]) {
       projectId: project.id,
       teamId,
       sinceDays: 1,
-    }).catch(() => emptyFirewallAlerts());
+    });
 
     const windowStart = new Date(metrics.startTime).getTime();
     const windowEnd = new Date(metrics.endTime).getTime();
@@ -191,7 +159,7 @@ export default async function overview(client: Client, argv: string[]) {
     output.print(
       formatStatusOutput(active, draft, bypassList.result, attackMode, planInfo)
     );
-    output.print('\n');
+    output.print('\n\n');
     output.print(
       formatOverviewOutput({
         series: metrics.series,
@@ -207,24 +175,13 @@ export default async function overview(client: Client, argv: string[]) {
 
     return 0;
   } catch (e: unknown) {
-    const err = e as { message?: string; status?: number };
-    let msg = err.message || 'Failed to fetch firewall overview';
-    if (isAPIError(e) && (e.status === 401 || e.status === 403)) {
-      msg =
-        'You do not have permission to query firewall metrics for this project. Check team access and try again.';
-    }
-    if (client.nonInteractive) {
-      outputAgentError(client, {
-        status: 'error',
-        reason: 'api_error',
-        message: msg,
-        next: [{ command: withGlobalFlags(client, 'firewall overview') }],
-      });
-      process.exit(1);
-      return 1;
-    }
-    output.error(msg);
-    return 1;
+    return failFirewallApi(client, e, {
+      fallback: 'Failed to fetch firewall overview',
+      nextCommand: 'firewall overview',
+      permissionAction: 'query firewall metrics',
+      projectName: project.name,
+      timeoutJob: 'firewall overview',
+    });
   } finally {
     output.stopSpinner();
   }

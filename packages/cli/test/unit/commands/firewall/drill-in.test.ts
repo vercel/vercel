@@ -70,7 +70,7 @@ function mockDrillInApis(capturedBodies: any[]) {
   });
 }
 
-describe('firewall drill-in', () => {
+describe('firewall traffic inspect', () => {
   let capturedBodies: any[];
 
   beforeEach(() => {
@@ -91,20 +91,20 @@ describe('firewall drill-in', () => {
 
   describe('--help', () => {
     it('tracks telemetry', async () => {
-      client.setArgv('firewall', 'drill-in', '--help');
+      client.setArgv('firewall', 'traffic', 'inspect', '--help');
       const exitCode = await firewall(client);
       expect(exitCode).toEqual(2);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
-          value: 'firewall:drill-in',
+          value: 'firewall:traffic:inspect',
         },
       ]);
     });
   });
 
   it('shows entity header, timeseries, and default breakdown', async () => {
-    client.setArgv('firewall', 'drill-in', 'ip', '52.53.157.118');
+    client.setArgv('firewall', 'traffic', 'inspect', 'ip', '52.53.157.118');
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('Breakdown by Request Path');
     expect(await exitCodePromise).toEqual(0);
@@ -116,6 +116,11 @@ describe('firewall drill-in', () => {
     expect(fullOutput).toContain('Amazon.com, Inc.');
     expect(fullOutput).toMatch(/Requests\s+117\.5k/);
     expect(fullOutput).toContain('/request_path/top');
+    expect(fullOutput).toContain(
+      'firewall rules add "Block 52.53.157.118" --condition \'{"type":"ip_address","op":"eq","value":"52.53.157.118"}\' --action deny'
+    );
+    expect(fullOutput).toContain('Group by something else');
+    expect(fullOutput).not.toContain('firewall bot-management');
 
     // Entity filter applied to every query.
     for (const body of capturedBodies) {
@@ -126,7 +131,8 @@ describe('firewall drill-in', () => {
   it('honors --group-by', async () => {
     client.setArgv(
       'firewall',
-      'drill-in',
+      'traffic',
+      'inspect',
       'ip',
       '52.53.157.118',
       '--group-by',
@@ -142,8 +148,58 @@ describe('firewall drill-in', () => {
     expect(breakdownQuery).toBeDefined();
   });
 
+  it('suggests editing the inspected rule', async () => {
+    client.setArgv(
+      'firewall',
+      'traffic',
+      'inspect',
+      'rule',
+      'rule_inc_5723_PAkIBS'
+    );
+    const exitCodePromise = firewall(client);
+    await expect(client.stderr).toOutput('Firewall Rule');
+    expect(await exitCodePromise).toEqual(0);
+
+    const fullOutput = client.stderr.getFullOutput();
+    expect(fullOutput).toContain('firewall rules edit rule_inc_5723_PAkIBS');
+    expect(fullOutput).toContain('Group by something else');
+    expect(fullOutput).not.toContain('firewall rules add');
+  });
+
+  it('maps managed bot rule ids to reserved slugs', async () => {
+    client.setArgv(
+      'firewall',
+      'traffic',
+      'inspect',
+      'rule',
+      'managed_bot_protection'
+    );
+    const exitCodePromise = firewall(client);
+    await expect(client.stderr).toOutput('Firewall Rule');
+    expect(await exitCodePromise).toEqual(0);
+
+    const fullOutput = client.stderr.getFullOutput();
+    expect(fullOutput).toContain('firewall rules edit bot-protection');
+    expect(fullOutput).not.toContain(
+      'firewall rules edit managed_bot_protection'
+    );
+  });
+
+  it('sends bot inspect to the bot-management grouping', async () => {
+    client.setArgv('firewall', 'traffic', 'inspect', 'bot', 'amazonbot');
+    const exitCodePromise = firewall(client);
+    await expect(client.stderr).toOutput('Bot');
+    expect(await exitCodePromise).toEqual(0);
+
+    const fullOutput = client.stderr.getFullOutput();
+    expect(fullOutput).toContain('amazonbot');
+    expect(fullOutput).toContain('firewall bot-management');
+    expect(fullOutput).not.toContain('firewall rules edit amazonbot');
+    expect(fullOutput).not.toContain('firewall rules add');
+  });
+
   it('rejects an unknown dimension', async () => {
-    client.setArgv('firewall', 'drill-in', 'flavor', 'vanilla');
+    client.setArgv('firewall', 'traffic', 'inspect', 'flavor', 'vanilla');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(1);
     const fullOutput = client.stderr.getFullOutput();
@@ -151,7 +207,14 @@ describe('firewall drill-in', () => {
   });
 
   it('outputs JSON with --json', async () => {
-    client.setArgv('firewall', 'drill-in', 'ip', '52.53.157.118', '--json');
+    client.setArgv(
+      'firewall',
+      'traffic',
+      'inspect',
+      'ip',
+      '52.53.157.118',
+      '--json'
+    );
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
     const payload = JSON.parse((client.stdout as any).getFullOutput());
@@ -202,7 +265,8 @@ describe('firewall drill-in', () => {
       mockAlertLookup();
       client.setArgv(
         'firewall',
-        'drill-in',
+        'traffic',
+        'inspect',
         'ip',
         '104.30.175.37',
         '--alert',
@@ -227,7 +291,8 @@ describe('firewall drill-in', () => {
       mockAlertLookup();
       client.setArgv(
         'firewall',
-        'drill-in',
+        'traffic',
+        'inspect',
         'ip',
         '104.30.175.37',
         '--alert',
@@ -244,7 +309,8 @@ describe('firewall drill-in', () => {
       mockAlertLookup();
       client.setArgv(
         'firewall',
-        'drill-in',
+        'traffic',
+        'inspect',
         'ip',
         '104.30.175.37',
         '--alert',

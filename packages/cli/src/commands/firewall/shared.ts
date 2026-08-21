@@ -9,6 +9,7 @@ import {
   withGlobalFlags as withClientGlobalFlags,
 } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
+import { isAPIError } from '../../util/errors-ts';
 import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import type { Command } from '../help';
 import {
@@ -16,6 +17,10 @@ import {
   type ParsedSubcommandArguments,
 } from '../../util/command-arguments';
 import type { FirewallIpRule, FirewallRule } from '../../util/firewall/types';
+import {
+  reservedManagedBotMutationMessage,
+  resolveManagedBotRuleId,
+} from '../../util/firewall/managed-bot-rules';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import activateFirewallConfig from '../../util/firewall/activate-firewall-config';
 import stamp from '../../util/output/stamp';
@@ -30,6 +35,121 @@ export function withGlobalFlags(
   return withClientGlobalFlags(client, commandTemplate, {
     preserveProject: true,
   });
+}
+
+export function firewallTeamRequiredMessage(job: string): string {
+  return `${job} requires a team. Run \`vercel teams switch <slug>\` to select one.`;
+}
+
+export function firewallPermissionMessage(
+  action: string,
+  projectName: string
+): string {
+  return `You do not have permission to ${action} for ${projectName}. Ask a team owner to grant access.`;
+}
+
+/** Human error, or a JSON agent payload when non-interactive. */
+export function failFirewall(
+  client: Client,
+  message: string,
+  nextCommand: string,
+  reason: string = AGENT_REASON.INVALID_ARGUMENTS
+): number {
+  if (client.nonInteractive) {
+    outputAgentError(client, {
+      status: AGENT_STATUS.ERROR,
+      reason,
+      message,
+      next: [{ command: withGlobalFlags(client, nextCommand) }],
+    });
+    return 1;
+  }
+  output.error(message);
+  return 1;
+}
+
+export function refuseManagedBotMutation(
+  client: Client,
+  identifier: string | undefined,
+  verb: string
+): number | null {
+  const message = reservedManagedBotMutationMessage(
+    identifier,
+    verb,
+    template => withGlobalFlags(client, template)
+  );
+  if (!message) return null;
+  const id = resolveManagedBotRuleId(identifier);
+  return failFirewall(
+    client,
+    message,
+    `firewall rules edit ${id} --action <action>`
+  );
+}
+
+export function requireFirewallTeam(
+  client: Client,
+  org: { type: string; id: string },
+  job: string
+): string | number {
+  if (org.type !== 'team') {
+    return failFirewall(
+      client,
+      firewallTeamRequiredMessage(job),
+      'teams switch',
+      AGENT_REASON.MISSING_SCOPE
+    );
+  }
+  return org.id;
+}
+
+export function failFirewallApi(
+  client: Client,
+  e: unknown,
+  opts: {
+    fallback: string;
+    nextCommand: string;
+    permissionAction: string;
+    projectName: string;
+    timeoutJob?: string;
+  }
+): number {
+  if (isAPIError(e) && (e.status === 401 || e.status === 403)) {
+    return failFirewall(
+      client,
+      firewallPermissionMessage(opts.permissionAction, opts.projectName),
+      opts.nextCommand,
+      AGENT_REASON.PERMISSION_DENIED
+    );
+  }
+  if (
+    e instanceof Error &&
+    (e.name === 'TimeoutError' || e.name === 'AbortError')
+  ) {
+    const job = opts.timeoutJob ?? 'firewall data';
+    return failFirewall(
+      client,
+      `Timed out waiting for ${job}. Re-run the command — the next try is usually faster.`,
+      opts.nextCommand,
+      AGENT_REASON.API_ERROR
+    );
+  }
+  const msg = e instanceof Error && e.message ? e.message : opts.fallback;
+  return failFirewall(client, msg, opts.nextCommand, AGENT_REASON.API_ERROR);
+}
+
+export function takeNestedInspect(args: string[]): {
+  isInspect: boolean;
+  rest: string[];
+} {
+  const idx = args.findIndex(a => a === 'inspect');
+  if (idx === -1) {
+    return { isInspect: false, rest: args };
+  }
+  return {
+    isInspect: true,
+    rest: args.filter((_, i) => i !== idx),
+  };
 }
 
 export async function parseSubcommandArgs(

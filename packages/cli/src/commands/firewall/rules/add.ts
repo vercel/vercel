@@ -10,6 +10,7 @@ import {
   detectExistingDraft,
   offerAutoPublish,
   printActionImpactWarning,
+  refuseManagedBotMutation,
 } from '../shared';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
 import { parseConditionFlags } from '../../../util/firewall/parse-conditions';
@@ -36,6 +37,13 @@ export default async function add(client: Client, argv: string[]) {
     'rules add'
   );
   if (typeof parsed === 'number') return parsed;
+
+  const reserved = refuseManagedBotMutation(
+    client,
+    parsed.args[0],
+    'add a custom rule named'
+  );
+  if (reserved !== null) return reserved;
 
   const aiPrompt = parsed.flags['--ai'] as string | undefined;
   const jsonInput = parsed.flags['--json'] as string | undefined;

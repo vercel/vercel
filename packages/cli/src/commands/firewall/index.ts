@@ -7,11 +7,8 @@ import { type Command, help } from '../help';
 import overview from './overview';
 import status from './status';
 import alerts from './alerts';
-import events from './events';
-import eventDetail from './event-detail';
-import trafficDashboard from './traffic-dashboard';
-import drillIn from './drill-in';
-import alertDetail from './alert-detail';
+import persistentActions from './persistent-actions';
+import traffic from './traffic';
 import diff from './diff';
 import publish from './publish';
 import discard from './discard';
@@ -20,16 +17,15 @@ import attackMode from './attack-mode';
 import systemMitigations from './system-mitigations';
 import ipBlocks from './ip-blocks';
 import rules from './rules';
+import botManagement from './bot-management';
 import {
   firewallCommand,
   overviewSubcommand,
   statusSubcommand,
   alertsSubcommand,
-  eventsSubcommand,
-  eventDetailSubcommand,
-  trafficDashboardSubcommand,
-  drillInSubcommand,
-  alertDetailSubcommand,
+  persistentActionsSubcommand,
+  trafficSubcommand,
+  botManagementSubcommand,
   diffSubcommand,
   publishSubcommand,
   discardSubcommand,
@@ -49,11 +45,9 @@ const COMMAND_CONFIG = {
   overview: getCommandAliases(overviewSubcommand),
   status: getCommandAliases(statusSubcommand),
   alerts: getCommandAliases(alertsSubcommand),
-  events: getCommandAliases(eventsSubcommand),
-  'event-detail': getCommandAliases(eventDetailSubcommand),
-  'traffic-dashboard': getCommandAliases(trafficDashboardSubcommand),
-  'drill-in': getCommandAliases(drillInSubcommand),
-  'alert-detail': getCommandAliases(alertDetailSubcommand),
+  'persistent-actions': getCommandAliases(persistentActionsSubcommand),
+  traffic: getCommandAliases(trafficSubcommand),
+  'bot-management': getCommandAliases(botManagementSubcommand),
   rules: getCommandAliases(rulesSubcommand),
   diff: getCommandAliases(diffSubcommand),
   publish: getCommandAliases(publishSubcommand),
@@ -126,54 +120,50 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandStatus(subcommandOriginal);
       return status(client, args);
-    case 'alerts':
-      if (needHelp) {
+    case 'alerts': {
+      if (needHelp && !args.includes('inspect')) {
         telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
         printHelp(alertsSubcommand);
         return 2;
       }
-      telemetry.trackCliSubcommandAlerts(subcommandOriginal);
-      return alerts(client, args);
-    case 'events':
-      if (needHelp) {
+      if (!needHelp) {
+        telemetry.trackCliSubcommandAlerts(subcommandOriginal);
+      }
+      const nestedArgs = needHelp ? [...args, '--help'] : args;
+      return alerts(client, nestedArgs, telemetry);
+    }
+    case 'persistent-actions': {
+      if (needHelp && !args.includes('inspect')) {
         telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
-        printHelp(eventsSubcommand);
+        printHelp(persistentActionsSubcommand);
         return 2;
       }
-      telemetry.trackCliSubcommandEvents(subcommandOriginal);
-      return events(client, args);
-    case 'event-detail':
-      if (needHelp) {
+      if (!needHelp) {
+        telemetry.trackCliSubcommandPersistentActions(subcommandOriginal);
+      }
+      const nestedArgs = needHelp ? [...args, '--help'] : args;
+      return persistentActions(client, nestedArgs, telemetry);
+    }
+    case 'traffic': {
+      if (needHelp && !args.includes('inspect')) {
         telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
-        printHelp(eventDetailSubcommand);
+        printHelp(trafficSubcommand);
         return 2;
       }
-      telemetry.trackCliSubcommandEventDetail(subcommandOriginal);
-      return eventDetail(client, args);
-    case 'traffic-dashboard':
+      if (!needHelp) {
+        telemetry.trackCliSubcommandTraffic(subcommandOriginal);
+      }
+      const nestedArgs = needHelp ? [...args, '--help'] : args;
+      return traffic(client, nestedArgs, telemetry);
+    }
+    case 'bot-management':
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
-        printHelp(trafficDashboardSubcommand);
+        printHelp(botManagementSubcommand);
         return 2;
       }
-      telemetry.trackCliSubcommandTrafficDashboard(subcommandOriginal);
-      return trafficDashboard(client, args);
-    case 'drill-in':
-      if (needHelp) {
-        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
-        printHelp(drillInSubcommand);
-        return 2;
-      }
-      telemetry.trackCliSubcommandDrillIn(subcommandOriginal);
-      return drillIn(client, args);
-    case 'alert-detail':
-      if (needHelp) {
-        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
-        printHelp(alertDetailSubcommand);
-        return 2;
-      }
-      telemetry.trackCliSubcommandAlertDetail(subcommandOriginal);
-      return alertDetail(client, args);
+      telemetry.trackCliSubcommandBotManagement(subcommandOriginal);
+      return botManagement(client, args);
     case 'diff':
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', subcommandOriginal);

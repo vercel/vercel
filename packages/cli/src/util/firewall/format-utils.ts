@@ -1,4 +1,6 @@
 import chalk from 'chalk';
+import cmd from '../output/cmd';
+import { ALIGNED_LABEL_WIDTH } from '../output/print-aligned-label';
 
 export const ACTION_COLORS: Record<string, (s: string) => string> = {
   allow: chalk.blue,
@@ -70,4 +72,9 @@ export function relativeTime(ts: number): string {
 /** Whether a window is long enough that bare HH:MM timestamps get ambiguous. */
 export function windowNeedsDate(startMs: number, endMs: number): boolean {
   return endMs - startMs > 25 * 3_600_000;
+}
+
+/** Phrase label + command, aligned to the shared 16-character label column. */
+export function formatHintLine(label: string, command: string): string {
+  return `  ${chalk.dim(label.padEnd(ALIGNED_LABEL_WIDTH))}${cmd(command)}`;
 }

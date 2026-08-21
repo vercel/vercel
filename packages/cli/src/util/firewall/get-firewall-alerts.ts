@@ -1,4 +1,5 @@
 import type Client from '../client';
+import { isAPIError } from '../errors-ts';
 
 export const FIREWALL_O11Y_ALERT_TYPES = [
   'botId_anomaly',
@@ -205,13 +206,19 @@ export async function getFirewallAlerts(
   const signal = AbortSignal.timeout(timeoutMs);
 
   const [o11yAlerts, attackStatus] = await Promise.all([
-    getFirewallO11yAlerts(client, { ...opts, signal }).catch(
-      () => [] as FirewallAlertRow[]
-    ),
+    getFirewallO11yAlerts(client, { ...opts, signal }).catch(err => {
+      if (isAPIError(err) && (err.status === 401 || err.status === 403)) {
+        throw err;
+      }
+      return [] as FirewallAlertRow[];
+    }),
     includeAttackHistory
-      ? getAttackStatus(client, { ...opts, sinceDays, signal }).catch(
-          () => ({ anomalies: [] }) as AttackStatusResponse
-        )
+      ? getAttackStatus(client, { ...opts, sinceDays, signal }).catch(err => {
+          if (isAPIError(err) && (err.status === 401 || err.status === 403)) {
+            throw err;
+          }
+          return { anomalies: [] } as AttackStatusResponse;
+        })
       : Promise.resolve({ anomalies: [] } as AttackStatusResponse),
   ]);
 

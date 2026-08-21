@@ -19,14 +19,21 @@ export const ALIGNED_LABEL_WIDTH = 16;
  * as indented body content. See the cli-ux skill's Layout and Glyphs + Color
  * sections for the full gutter system.
  */
+export function formatAlignedLabel(
+  label: string,
+  value: string,
+  options: { gutter?: string } = {}
+): string {
+  const gutter = options.gutter === '✓' ? chalk.green('✓') : options.gutter;
+  const prefix = gutter ? `${gutter} ` : '  ';
+  return `${prefix}${chalk.bold(label.padEnd(ALIGNED_LABEL_WIDTH))}${value}`;
+}
+
 export function printAlignedLabel(
   label: string,
   value: string,
   options: { gutter?: string } = {}
 ): void {
-  const gutter = options.gutter === '✓' ? chalk.green('✓') : options.gutter;
-  const prefix = gutter ? `${gutter} ` : '  ';
-  output.print(
-    `${prefix}${chalk.bold(label.padEnd(ALIGNED_LABEL_WIDTH))}${chalk.bold(value)}\n`
-  );
+  const formatted = formatAlignedLabel(label, chalk.bold(value), options);
+  output.print(`${formatted}\n`);
 }

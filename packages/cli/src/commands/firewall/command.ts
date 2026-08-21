@@ -4,8 +4,7 @@ import { projectOption, yesOption } from '../../util/arg-common';
 export const statusSubcommand = {
   name: 'status',
   aliases: [],
-  description:
-    "Show your project's firewall configuration status, including rules, IP blocks, bypasses, Bot Protection, and OWASP",
+  description: 'Show firewall configuration and execution order',
   arguments: [],
   options: [
     projectOption,
@@ -39,8 +38,7 @@ export const statusSubcommand = {
 export const overviewSubcommand = {
   name: 'overview',
   aliases: [],
-  description:
-    'Show high-level firewall stats, traffic by rule, and a 1-day Requests-by-Action timeseries with alert spike annotations',
+  description: 'Show 1-day firewall traffic by action and rule',
   arguments: [],
   options: [
     projectOption,
@@ -51,43 +49,11 @@ export const overviewSubcommand = {
       deprecated: false,
       description: 'Output as JSON',
     },
-    {
-      name: 'graph',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      description:
-        'Emphasize the Requests-by-Action chart (default view includes it)',
-    },
   ],
   examples: [
     {
-      name: 'Show firewall overview stats and timeseries',
+      name: 'Show 1-day firewall traffic',
       value: `${packageName} firewall overview`,
-    },
-  ],
-} as const;
-
-export const alertsSubcommand = {
-  name: 'alerts',
-  aliases: [],
-  description:
-    'List active and recently resolved firewall alerts for the linked project',
-  arguments: [],
-  options: [
-    projectOption,
-    {
-      name: 'json',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      description: 'Output as JSON',
-    },
-  ],
-  examples: [
-    {
-      name: 'Show firewall alerts',
-      value: `${packageName} firewall alerts`,
     },
   ],
 } as const;
@@ -110,7 +76,7 @@ const untilOption = {
 
 const rawFilterOption = {
   name: 'filter',
-  shorthand: 'f',
+  shorthand: null,
   type: [String],
   deprecated: false,
   description: 'Raw OData filter, e.g. "contains(request_path, \'/api\')"',
@@ -145,12 +111,92 @@ const dimensionFilterOptions = [
   argument: 'VALUE',
 }));
 
-export const eventsSubcommand = {
-  name: 'events',
-  aliases: ['mitigations'],
-  description:
-    'List enforced firewall events (mitigations): type, action, hostname, IP, start, end, and request count',
+export const alertsInspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description: 'Show one firewall alert',
+  arguments: [{ name: 'alert-id', required: true }],
+  options: [projectOption, jsonOption],
+  examples: [
+    {
+      name: 'Inspect an alert',
+      value: `${packageName} firewall alerts inspect <alert-id>`,
+    },
+  ],
+} as const;
+
+export const alertsSubcommand = {
+  name: 'alerts',
+  aliases: [],
+  description: 'List firewall alerts from the last 1 day',
   arguments: [],
+  subcommands: [alertsInspectSubcommand],
+  options: [projectOption, jsonOption],
+  examples: [
+    {
+      name: 'List firewall alerts',
+      value: `${packageName} firewall alerts`,
+    },
+    {
+      name: 'Inspect an alert',
+      value: `${packageName} firewall alerts inspect <alert-id>`,
+    },
+  ],
+} as const;
+
+export const persistentActionsInspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description: 'Show one persistent action',
+  arguments: [{ name: 'ip', required: true }],
+  options: [
+    projectOption,
+    jsonOption,
+    sinceOption,
+    untilOption,
+    {
+      name: 'host',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Disambiguate by request hostname',
+      argument: 'HOST',
+    },
+    {
+      name: 'action',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Disambiguate by firewall action (challenge or deny)',
+      argument: 'ACTION',
+    },
+    {
+      name: 'top',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Number of top request paths (default 5)',
+      argument: 'N',
+    },
+  ],
+  examples: [
+    {
+      name: 'Inspect the most recent persistent action for an IP',
+      value: `${packageName} firewall persistent-actions inspect 45.79.7.220`,
+    },
+    {
+      name: 'Inspect a specific persistent action window',
+      value: `${packageName} firewall persistent-actions inspect 45.79.7.220 --host vercel.com --action challenge --since 2025-08-13T18:10:46Z --until 2025-08-13T18:20:46Z`,
+    },
+  ],
+} as const;
+
+export const persistentActionsSubcommand = {
+  name: 'persistent-actions',
+  aliases: ['events', 'mitigations'],
+  description: 'List enforced persistent actions from the past hour',
+  arguments: [],
+  subcommands: [persistentActionsInspectSubcommand],
   options: [
     projectOption,
     jsonOption,
@@ -161,7 +207,7 @@ export const eventsSubcommand = {
       shorthand: null,
       type: String,
       deprecated: false,
-      description: 'Filter by event type (system or customer)',
+      description: 'Filter by type (system or customer)',
       argument: 'TYPE',
     },
     {
@@ -207,76 +253,24 @@ export const eventsSubcommand = {
   ],
   examples: [
     {
-      name: 'List firewall events from the past hour',
-      value: `${packageName} firewall events`,
+      name: 'List persistent actions from the past hour',
+      value: `${packageName} firewall persistent-actions`,
     },
     {
       name: 'System-rule challenges from the past day',
-      value: `${packageName} firewall events --type system --action challenge --since 1d`,
+      value: `${packageName} firewall persistent-actions --type system --action challenge --since 1d`,
     },
     {
-      name: 'Search events by IP',
-      value: `${packageName} firewall events --search 45.79.7.220`,
+      name: 'Inspect a persistent action by IP',
+      value: `${packageName} firewall persistent-actions inspect 45.79.7.220`,
     },
   ],
 } as const;
 
-export const trafficDashboardSubcommand = {
-  name: 'traffic-dashboard',
-  aliases: ['traffic'],
-  description:
-    'Firewall traffic dashboard: requests-by-action timeseries plus top IPs, JA4 digests, AS names, user agents, paths, rules, hosts, and verified bots, scoped by filter flags',
-  arguments: [],
-  options: [
-    projectOption,
-    jsonOption,
-    sinceOption,
-    untilOption,
-    rawFilterOption,
-    {
-      name: 'top',
-      shorthand: null,
-      type: Number,
-      deprecated: false,
-      description: 'Number of rows per widget (default 5)',
-      argument: 'N',
-    },
-    ...dimensionFilterOptions,
-    {
-      name: 'alert',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-      description:
-        'Scope to a firewall alert id (anomaly window and action/rule filter)',
-      argument: 'ID',
-    },
-  ],
-  examples: [
-    {
-      name: 'Show the firewall traffic dashboard for the past day',
-      value: `${packageName} firewall traffic-dashboard`,
-    },
-    {
-      name: 'Traffic denied over the past hour',
-      value: `${packageName} firewall traffic-dashboard --action deny --since 1h`,
-    },
-    {
-      name: 'Traffic from one IP, top 10 per widget',
-      value: `${packageName} firewall traffic-dashboard --ip 1.2.3.4 --top 10`,
-    },
-    {
-      name: 'Traffic for one alert (window and filter from the alert)',
-      value: `${packageName} firewall traffic-dashboard --alert al_ec2e8c92-1653-4910-ac6c-4a431f08db4d`,
-    },
-  ],
-} as const;
-
-export const drillInSubcommand = {
-  name: 'drill-in',
+export const trafficInspectSubcommand = {
+  name: 'inspect',
   aliases: [],
-  description:
-    'Drill into one traffic entity (ip, ja4, asn, user-agent, path, rule, host, bot, country, action): header detail, request timeseries, and a group-by breakdown table',
+  description: 'Show traffic for one IP, path, rule, or other dimension',
   arguments: [
     { name: 'dimension', required: true },
     { name: 'value', required: true },
@@ -309,90 +303,87 @@ export const drillInSubcommand = {
       shorthand: null,
       type: String,
       deprecated: false,
-      description:
-        'Scope to a firewall alert id (anomaly window and action/rule filter)',
+      description: 'Limit to a firewall alert id',
       argument: 'ID',
     },
   ],
   examples: [
     {
-      name: 'Drill into an IP address',
-      value: `${packageName} firewall drill-in ip 52.53.157.118`,
+      name: 'Inspect traffic from an IP',
+      value: `${packageName} firewall traffic inspect ip 52.53.157.118`,
     },
     {
       name: 'Break an IP down by user agent',
-      value: `${packageName} firewall drill-in ip 52.53.157.118 --group-by user-agent`,
+      value: `${packageName} firewall traffic inspect ip 52.53.157.118 --group-by user-agent`,
     },
     {
-      name: 'Drill into a JA4 digest over the past week',
-      value: `${packageName} firewall drill-in ja4 t13d591100_a33745022dd6_dbd39dd1d406 --since 7d`,
-    },
-    {
-      name: 'Drill into an IP during a firewall alert',
-      value: `${packageName} firewall drill-in ip 104.30.175.37 --alert al_ec2e8c92-1653-4910-ac6c-4a431f08db4d`,
+      name: 'Inspect a JA4 digest over the past week',
+      value: `${packageName} firewall traffic inspect ja4 t13d591100_a33745022dd6_dbd39dd1d406 --since 7d`,
     },
   ],
 } as const;
 
-export const eventDetailSubcommand = {
-  name: 'event-detail',
+export const botManagementSubcommand = {
+  name: 'bot-management',
   aliases: [],
   description:
-    'Inspect one firewall event: start/end, action, host, IP, requests-by-action timeseries, and top request paths',
-  arguments: [{ name: 'ip', required: true }],
+    'List managed bot rules (Bot Protection, AI Bots, BotID). Edit them with `firewall rules edit`',
+  arguments: [],
+  options: [projectOption, jsonOption],
+  examples: [
+    {
+      name: 'List managed bot rules',
+      value: `${packageName} firewall bot-management`,
+    },
+    {
+      name: 'Edit Bot Protection',
+      value: `${packageName} firewall rules edit bot-protection --action log --yes`,
+    },
+  ],
+} as const;
+
+export const trafficSubcommand = {
+  name: 'traffic',
+  aliases: ['traffic-dashboard'],
+  description: 'Show 1-day firewall traffic by action and top clients',
+  arguments: [],
+  subcommands: [trafficInspectSubcommand],
   options: [
     projectOption,
     jsonOption,
     sinceOption,
     untilOption,
-    {
-      name: 'host',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-      description: 'Disambiguate by request hostname',
-      argument: 'HOST',
-    },
-    {
-      name: 'action',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-      description: 'Disambiguate by firewall action (challenge or deny)',
-      argument: 'ACTION',
-    },
+    rawFilterOption,
     {
       name: 'top',
       shorthand: null,
       type: Number,
       deprecated: false,
-      description: 'Number of top request paths (default 5)',
+      description: 'Number of rows per widget (default 5)',
       argument: 'N',
     },
+    ...dimensionFilterOptions,
+    {
+      name: 'alert',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Limit to a firewall alert id',
+      argument: 'ID',
+    },
   ],
   examples: [
     {
-      name: 'Inspect the most recent event for an IP',
-      value: `${packageName} firewall event-detail 45.79.7.220`,
+      name: 'Show firewall traffic for the past day',
+      value: `${packageName} firewall traffic`,
     },
     {
-      name: 'Inspect a specific event window from `firewall events`',
-      value: `${packageName} firewall event-detail 45.79.7.220 --host vercel.com --action challenge --since 2025-08-13T18:10:46Z --until 2025-08-13T18:20:46Z`,
+      name: 'Traffic denied over the past hour',
+      value: `${packageName} firewall traffic --action deny --since 1h`,
     },
-  ],
-} as const;
-
-export const alertDetailSubcommand = {
-  name: 'alert-detail',
-  aliases: [],
-  description:
-    'Deep-dive one firewall alert: baseline vs anomaly request rates, the anomaly-window timeseries, and top offending IPs and hosts',
-  arguments: [{ name: 'alert-id', required: true }],
-  options: [projectOption, jsonOption],
-  examples: [
     {
-      name: 'Inspect an alert from `firewall alerts`',
-      value: `${packageName} firewall alert-detail <alert-id>`,
+      name: 'Inspect one IP',
+      value: `${packageName} firewall traffic inspect ip 1.2.3.4`,
     },
   ],
 } as const;
@@ -708,7 +699,7 @@ export const rulesListSubcommand = {
   name: 'list',
   aliases: ['ls'],
   description:
-    'List all custom firewall rules, including any unpublished draft changes',
+    'List custom firewall rules and managed bot rules, including any unpublished draft changes',
   arguments: [],
   options: [
     projectOption,
@@ -743,7 +734,7 @@ export const rulesInspectSubcommand = {
   name: 'inspect',
   aliases: [],
   description:
-    'Show the full configuration of a custom firewall rule, including conditions, action, and rate limit settings',
+    'Show a custom firewall rule or a managed bot rule (bot-protection, ai-bots, bot-id)',
   arguments: [{ name: 'name-or-id', required: true }],
   options: [
     projectOption,
@@ -759,6 +750,10 @@ export const rulesInspectSubcommand = {
     {
       name: 'Inspect a rule by name',
       value: `${packageName} firewall rules inspect "Block bots"`,
+    },
+    {
+      name: 'Inspect a managed bot rule',
+      value: `${packageName} firewall rules inspect bot-protection`,
     },
     {
       name: 'Inspect a rule by ID',
@@ -917,7 +912,7 @@ export const rulesEditSubcommand = {
   name: 'edit',
   aliases: [],
   description:
-    'Edit an existing custom firewall rule using AI, an interactive editor, JSON, or command-line flags. Stages a draft change — run `publish` to make it live',
+    'Edit a custom firewall rule or a managed bot rule (bot-protection, ai-bots, bot-id). Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
   options: [
     projectOption,
@@ -1161,7 +1156,7 @@ export const rulesSubcommand = {
   name: 'rules',
   aliases: [],
   description:
-    'Manage custom firewall rules that control how traffic is handled based on conditions',
+    'Manage custom firewall rules and managed bot rules (Bot Protection, AI Bots, BotID)',
   arguments: [],
   subcommands: [
     rulesListSubcommand,
@@ -1312,17 +1307,15 @@ export const firewallCommand = {
   name: 'firewall',
   aliases: [],
   description:
-    "Manage your project's firewall rules, IP blocks, and system bypass configuration",
+    'Manage firewall rules and inspect traffic, alerts, and persistent actions',
   arguments: [],
   subcommands: [
     overviewSubcommand,
     statusSubcommand,
     alertsSubcommand,
-    eventsSubcommand,
-    eventDetailSubcommand,
-    trafficDashboardSubcommand,
-    drillInSubcommand,
-    alertDetailSubcommand,
+    persistentActionsSubcommand,
+    trafficSubcommand,
+    botManagementSubcommand,
     diffSubcommand,
     publishSubcommand,
     discardSubcommand,
@@ -1335,36 +1328,32 @@ export const firewallCommand = {
   options: [],
   examples: [
     {
-      name: 'Show firewall overview stats',
+      name: 'Show 1-day firewall traffic',
       value: `${packageName} firewall overview`,
     },
     {
-      name: 'Show firewall configuration status',
+      name: 'Show firewall configuration',
       value: `${packageName} firewall status`,
     },
     {
-      name: 'Show firewall execution graph',
-      value: `${packageName} firewall status --graph`,
-    },
-    {
-      name: 'Show firewall alerts',
+      name: 'List firewall alerts',
       value: `${packageName} firewall alerts`,
     },
     {
-      name: 'List firewall events from the past hour',
-      value: `${packageName} firewall events`,
+      name: 'List persistent actions from the past hour',
+      value: `${packageName} firewall persistent-actions`,
     },
     {
-      name: 'Inspect one firewall event',
-      value: `${packageName} firewall event-detail 45.79.7.220`,
+      name: 'Show firewall traffic',
+      value: `${packageName} firewall traffic`,
+    },
+    {
+      name: 'List managed bot rules',
+      value: `${packageName} firewall bot-management`,
     },
     {
       name: 'Show unpublished changes',
       value: `${packageName} firewall diff`,
-    },
-    {
-      name: 'Add a system bypass for an IP',
-      value: `${packageName} firewall system-bypass add 10.0.0.1`,
     },
   ],
 } as const;

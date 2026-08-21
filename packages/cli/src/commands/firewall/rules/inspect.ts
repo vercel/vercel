@@ -10,7 +10,17 @@ import {
   withGlobalFlags,
 } from '../shared';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
-import { formatRuleDetail } from '../../../util/firewall/format';
+import {
+  formatRuleDetail,
+  formatManagedBotRuleDetail,
+} from '../../../util/firewall/format';
+import {
+  getManagedBotRule,
+  managedBotJson,
+  resolveManagedBotRuleId,
+  suggestedManagedBotAction,
+} from '../../../util/firewall/managed-bot-rules';
+import { formatHintLine } from '../../../util/firewall/format-utils';
 import { outputAgentError } from '../../../util/agent-output';
 
 export default async function inspect(client: Client, argv: string[]) {
@@ -70,6 +80,27 @@ export default async function inspect(client: Client, argv: string[]) {
     const { active, draft } = await listFirewallConfigs(client, project.id, {
       teamId,
     });
+
+    const config = draft ?? active;
+    const managedId = resolveManagedBotRuleId(identifier);
+    if (managedId) {
+      const managed = getManagedBotRule(config, managedId);
+      if (parsed.flags['--json']) {
+        outputJson(client, managedBotJson(managed));
+        return 0;
+      }
+      output.print(`\n${formatManagedBotRuleDetail(managed)}\n`);
+      output.print(
+        `\n${formatHintLine(
+          'Edit rule',
+          withGlobalFlags(
+            client,
+            `firewall rules edit ${managed.id} --action ${suggestedManagedBotAction(managed)}`
+          )
+        )}\n\n`
+      );
+      return 0;
+    }
 
     // Resolve against draft (if exists) or active
     const currentRules = draft?.rules || active?.rules || [];

@@ -35,6 +35,9 @@ describe('firewall rules list', () => {
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('No custom rules configured');
     expect(await exitCodePromise).toEqual(0);
+    const fullOutput = client.stderr.getFullOutput();
+    expect(fullOutput).toContain('Managed');
+    expect(fullOutput).toContain('bot-protection');
   });
 
   it('should list active rules in table format', async () => {
@@ -144,6 +147,12 @@ describe('firewall rules list', () => {
     const jsonOutput = (client.stdout as any).getFullOutput();
     const parsed = JSON.parse(jsonOutput);
     expect(parsed).toHaveProperty('rules');
+    expect(parsed).toHaveProperty('managed');
+    expect(parsed.managed).toHaveLength(3);
+    expect(parsed.managed[0]).toMatchObject({
+      id: 'bot-protection',
+      name: 'Bot Protection',
+    });
     expect(parsed).toHaveProperty('hasDraft');
     expect(parsed).toHaveProperty('pendingChanges');
     expect(parsed.rules).toHaveLength(2);

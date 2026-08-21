@@ -40,7 +40,7 @@ const SAMPLE_EVENTS: FirewallActionRow[] = [
   },
 ];
 
-describe('firewall events', () => {
+describe('firewall persistent-actions', () => {
   let actions: FirewallActionRow[];
 
   beforeEach(() => {
@@ -66,6 +66,18 @@ describe('firewall events', () => {
 
   describe('--help', () => {
     it('tracks telemetry', async () => {
+      client.setArgv('firewall', 'persistent-actions', '--help');
+      const exitCode = await firewall(client);
+      expect(exitCode).toEqual(2);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: 'firewall:persistent-actions',
+        },
+      ]);
+    });
+
+    it('tracks the events alias', async () => {
       client.setArgv('firewall', 'events', '--help');
       const exitCode = await firewall(client);
       expect(exitCode).toEqual(2);
@@ -90,10 +102,10 @@ describe('firewall events', () => {
     });
   });
 
-  it('lists events in a table with Detail and Traffic hints', async () => {
-    client.setArgv('firewall', 'events');
+  it('lists persistent actions in a table with Inspect and Traffic hints', async () => {
+    client.setArgv('firewall', 'persistent-actions');
     const exitCodePromise = firewall(client);
-    await expect(client.stderr).toOutput('Firewall events');
+    await expect(client.stderr).toOutput('Persistent actions');
     expect(await exitCodePromise).toEqual(0);
 
     const fullOutput = client.stderr.getFullOutput();
@@ -106,14 +118,21 @@ describe('firewall events', () => {
     expect(fullOutput).toContain('vercel.com');
     expect(fullOutput).toContain('45.79.7.220');
     expect(fullOutput).toContain('48');
-    expect(fullOutput).toContain('Customer Rule');
+    expect(fullOutput).toContain('Custom Rule');
     expect(fullOutput).toContain(
-      'firewall event-detail 45.79.7.220 --host vercel.com --action challenge --since 2025-08-13T18:10:46.000Z --until 2025-08-13T18:20:46.000Z'
+      'firewall persistent-actions inspect 45.79.7.220 --host vercel.com --action challenge --since 2025-08-13T18:10:46.000Z --until 2025-08-13T18:20:46.000Z'
     );
     expect(fullOutput).toContain(
-      'firewall traffic-dashboard --ip 45.79.7.220 --host vercel.com --action challenge --since 2025-08-13T18:10:46.000Z --until 2025-08-13T18:20:46.000Z'
+      'firewall traffic --ip 45.79.7.220 --host vercel.com --action challenge --since 2025-08-13T18:10:46.000Z --until 2025-08-13T18:20:46.000Z'
     );
-    expect(fullOutput).not.toContain('No firewall events found.');
+    expect(fullOutput).not.toContain('No persistent actions found.');
+  });
+
+  it('accepts the events alias', async () => {
+    client.setArgv('firewall', 'events');
+    const exitCode = await firewall(client);
+    expect(exitCode).toEqual(0);
+    expect(client.stderr.getFullOutput()).toContain('45.79.7.220');
   });
 
   it('accepts the mitigations alias', async () => {
@@ -124,7 +143,7 @@ describe('firewall events', () => {
   });
 
   it('outputs JSON with --json', async () => {
-    client.setArgv('firewall', 'events', '--json');
+    client.setArgv('firewall', 'persistent-actions', '--json');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
     const payload = JSON.parse((client.stdout as any).getFullOutput());
@@ -134,23 +153,23 @@ describe('firewall events', () => {
     expect(payload.period.start).toBeTruthy();
     expect(payload.period.end).toBeTruthy();
     expect((client.stdout as any).getFullOutput()).not.toMatch(
-      /Firewall events|Detail|Traffic/
+      /Persistent actions|Inspect|Traffic/
     );
   });
 
   it('filters by --type system', async () => {
-    client.setArgv('firewall', 'events', '--type', 'system');
+    client.setArgv('firewall', 'persistent-actions', '--type', 'system');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
     const fullOutput = client.stderr.getFullOutput();
     expect(fullOutput).toContain('45.79.7.220');
     expect(fullOutput).toContain('13.38.73.16');
     expect(fullOutput).not.toContain('1.2.3.4');
-    expect(fullOutput).not.toContain('Customer Rule');
+    expect(fullOutput).not.toContain('Custom Rule');
   });
 
   it('filters by --action challenge', async () => {
-    client.setArgv('firewall', 'events', '--action', 'challenge');
+    client.setArgv('firewall', 'persistent-actions', '--action', 'challenge');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
     const fullOutput = client.stderr.getFullOutput();
@@ -160,7 +179,12 @@ describe('firewall events', () => {
   });
 
   it('searches by IP, hostname, or action', async () => {
-    client.setArgv('firewall', 'events', '--search', 'api.vercel.com');
+    client.setArgv(
+      'firewall',
+      'persistent-actions',
+      '--search',
+      'api.vercel.com'
+    );
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
     const fullOutput = client.stderr.getFullOutput();
@@ -169,7 +193,7 @@ describe('firewall events', () => {
   });
 
   it('limits rows and shows a remaining-count footer', async () => {
-    client.setArgv('firewall', 'events', '--limit', '1');
+    client.setArgv('firewall', 'persistent-actions', '--limit', '1');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
     const fullOutput = client.stderr.getFullOutput();
@@ -180,29 +204,29 @@ describe('firewall events', () => {
     );
   });
 
-  it('prints an empty state when there are no events', async () => {
+  it('prints an empty state when there are no persistent actions', async () => {
     actions = [];
-    client.setArgv('firewall', 'events');
+    client.setArgv('firewall', 'persistent-actions');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
     expect(client.stderr.getFullOutput()).toContain(
-      'No firewall events found.'
+      'No persistent actions found.'
     );
     expect(client.stderr.getFullOutput()).not.toContain('Detail');
   });
 
   it('prints a filtered empty state', async () => {
-    client.setArgv('firewall', 'events', '--ip', '9.9.9.9');
+    client.setArgv('firewall', 'persistent-actions', '--ip', '9.9.9.9');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
     expect(client.stderr.getFullOutput()).toContain(
-      'No firewall events match the current filters.'
+      'No persistent actions match the current filters.'
     );
   });
 
   it('outputs empty JSON as actions: []', async () => {
     actions = [];
-    client.setArgv('firewall', 'events', '--json');
+    client.setArgv('firewall', 'persistent-actions', '--json');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
     const payload = JSON.parse((client.stdout as any).getFullOutput());
@@ -224,19 +248,21 @@ describe('firewall events', () => {
       },
       SAMPLE_EVENTS[0],
     ];
-    client.setArgv('firewall', 'events');
+    client.setArgv('firewall', 'persistent-actions');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
     const fullOutput = client.stderr.getFullOutput();
     expect(fullOutput).toContain(
-      'Some older events are redacted on the Hobby plan.'
+      'Some older persistent actions are redacted on the Hobby plan.'
     );
     expect(fullOutput).toContain('***');
-    expect(fullOutput).toContain('firewall event-detail 45.79.7.220');
+    expect(fullOutput).toContain(
+      'firewall persistent-actions inspect 45.79.7.220'
+    );
   });
 
   it('rejects an unknown --type', async () => {
-    client.setArgv('firewall', 'events', '--type', 'ddos');
+    client.setArgv('firewall', 'persistent-actions', '--type', 'ddos');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(1);
     expect(client.stderr.getFullOutput()).toContain(

@@ -110,7 +110,7 @@ describe('firewall traffic-dashboard', () => {
       expect(fullOutput).toContain(title);
     }
     expect(fullOutput).toContain('client_ip-top');
-    expect(fullOutput).toContain('drill-in');
+    expect(fullOutput).toContain('traffic inspect');
   });
 
   it('routes the `traffic` alias', async () => {

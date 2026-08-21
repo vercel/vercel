@@ -76,9 +76,10 @@ describe('firewall status', () => {
 
     const fullOutput = client.stderr.getFullOutput();
     expect(fullOutput).toContain('Enabled');
-    expect(fullOutput).toMatch(/Bot Protection:\s+Challenge/);
-    expect(fullOutput).toMatch(/AI Bots:\s+Log/);
-    expect(fullOutput).toMatch(/OWASP Ruleset:\s+On \(3 of 4 groups\)/);
+    expect(fullOutput).toMatch(/Bot Protection\s+Challenge/);
+    expect(fullOutput).toMatch(/AI Bots\s+Log/);
+    expect(fullOutput).toMatch(/OWASP\s+On \(3 of 4 groups\)/);
+    expect(fullOutput).not.toMatch(/BotID/);
     expect(fullOutput).not.toContain('requires Security+');
   });
 
@@ -98,7 +99,7 @@ describe('firewall status', () => {
     expect(await exitCodePromise).toEqual(0);
 
     const fullOutput = client.stderr.getFullOutput();
-    expect(fullOutput).toMatch(/OWASP Ruleset:\s+Off\s+· requires Security\+/);
+    expect(fullOutput).toMatch(/OWASP\s+Off\s+· requires Security\+/);
   });
 
   it('shows the status for the project selected by --project', async () => {
@@ -227,6 +228,7 @@ describe('firewall status', () => {
     const payload = JSON.parse((client.stdout as any).getFullOutput());
     expect(payload.botProtection).toEqual({ enabled: true, action: 'log' });
     expect(payload.aiBots).toEqual({ enabled: true, action: 'deny' });
+    expect(payload.botId).toBeUndefined();
     expect(payload.owasp).toEqual({
       enabled: false,
       action: null,

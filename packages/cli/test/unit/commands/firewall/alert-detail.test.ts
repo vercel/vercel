@@ -85,7 +85,7 @@ function mockAlertDetailApis(capturedBodies: any[]) {
   });
 }
 
-describe('firewall alert-detail', () => {
+describe('firewall alerts inspect', () => {
   let capturedBodies: any[];
 
   beforeEach(() => {
@@ -107,39 +107,42 @@ describe('firewall alert-detail', () => {
 
   describe('--help', () => {
     it('tracks telemetry', async () => {
-      client.setArgv('firewall', 'alert-detail', '--help');
+      client.setArgv('firewall', 'alerts', 'inspect', '--help');
       const exitCode = await firewall(client);
       expect(exitCode).toEqual(2);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
-          value: 'firewall:alert-detail',
+          value: 'firewall:alerts:inspect',
         },
       ]);
     });
   });
 
   it('shows alert meta, baseline comparison, and top entities', async () => {
-    client.setArgv('firewall', 'alert-detail', 'alert_deny_1');
+    client.setArgv('firewall', 'alerts', 'inspect', 'alert_deny_1');
     const exitCodePromise = firewall(client);
-    await expect(client.stderr).toOutput('During anomaly');
+    await expect(client.stderr).toOutput('Previous 24h');
     expect(await exitCodePromise).toEqual(0);
 
     const fullOutput = client.stderr.getFullOutput();
     expect(fullOutput).toContain('Firewall Custom Rule Anomaly');
     expect(fullOutput).toContain('Active');
-    expect(fullOutput).toMatch(/Rule:\s+rule_1/);
-    expect(fullOutput).toMatch(/Action:\s+Deny/);
-    expect(fullOutput).toContain('Previous 24h (avg)');
+    expect(fullOutput).toMatch(/Rule\s+rule_1/);
+    expect(fullOutput).toMatch(/Action\s+Deny/);
+    expect(fullOutput).toContain('Previous 24h');
     expect(fullOutput).toContain('Anomaly window');
     expect(fullOutput).toContain('Denied IPs (during anomaly)');
     expect(fullOutput).toContain('160.119.71.90');
     expect(fullOutput).toContain('Top Hosts (during anomaly)');
     expect(fullOutput).toContain('vercel.com');
-    expect(fullOutput).toContain('traffic-dashboard --alert alert_deny_1');
+    expect(fullOutput).toContain('traffic --alert alert_deny_1');
     expect(fullOutput).not.toContain('drill-in');
     expect(fullOutput).toContain('ip-blocks block 160.119.71.90');
-    expect(fullOutput).toContain('firewall events --action deny');
+    expect(fullOutput).toContain('firewall persistent-actions --action deny');
+    expect(fullOutput).toMatch(/Inspect traffic/);
+    expect(fullOutput).toMatch(/Block IP/);
+    expect(fullOutput).toMatch(/List actions/);
 
     // Queries are scoped to the alert's action and rule.
     const chartQuery = capturedBodies.find(b => (b.groupBy ?? []).length === 0);
@@ -148,14 +151,14 @@ describe('firewall alert-detail', () => {
   });
 
   it('errors on an unknown alert id', async () => {
-    client.setArgv('firewall', 'alert-detail', 'nope');
+    client.setArgv('firewall', 'alerts', 'inspect', 'nope');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(1);
     const fullOutput = client.stderr.getFullOutput();
     expect(fullOutput).toContain('No firewall alert found with id "nope"');
   });
 
-  it('falls back to firewall events when Top IPs is empty', async () => {
+  it('falls back to persistent actions when Top IPs is empty', async () => {
     emptyTopIps = true;
     client.scenario.get(
       '/v1/security/firewall/events',
@@ -197,19 +200,19 @@ describe('firewall alert-detail', () => {
       }
     );
 
-    client.setArgv('firewall', 'alert-detail', 'alert_deny_1');
+    client.setArgv('firewall', 'alerts', 'inspect', 'alert_deny_1');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
     const fullOutput = client.stderr.getFullOutput();
     expect(fullOutput).toContain('104.30.175.37');
     expect(fullOutput).not.toContain('1.2.3.4');
-    expect(fullOutput).toContain('traffic-dashboard --alert alert_deny_1');
+    expect(fullOutput).toContain('traffic --alert alert_deny_1');
     expect(fullOutput).toContain('ip-blocks block 104.30.175.37');
     expect(fullOutput).not.toContain('drill-in');
   });
 
   it('outputs JSON with --json', async () => {
-    client.setArgv('firewall', 'alert-detail', 'alert_deny_1', '--json');
+    client.setArgv('firewall', 'alerts', 'inspect', 'alert_deny_1', '--json');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
     const payload = JSON.parse((client.stdout as any).getFullOutput());

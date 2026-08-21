@@ -6,6 +6,11 @@ import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import type { FirewallActionRow } from '../../../../src/util/firewall/types';
+import {
+  useListFirewallConfigs,
+  createConfig,
+  createRule,
+} from '../../../mocks/firewall';
 
 const ROLLUP = 'vercel_firewall_action_count_sum';
 
@@ -53,6 +58,15 @@ function mockEventDetailApis(actions: FirewallActionRow[]) {
       return;
     }
 
+    if (groupBy[0] === 'waf_rule_id') {
+      res.json({
+        summary: [{ waf_rule_id: 'rule_001', [ROLLUP]: 9 }],
+        data: [],
+        statistics: {},
+      });
+      return;
+    }
+
     res.json({
       summary: [{ waf_action: 'challenge', [ROLLUP]: 48 }],
       data: [
@@ -67,7 +81,7 @@ function mockEventDetailApis(actions: FirewallActionRow[]) {
   });
 }
 
-describe('firewall event-detail', () => {
+describe('firewall persistent-actions inspect', () => {
   beforeEach(() => {
     useUser();
     useTeams('team_dummy');
@@ -80,32 +94,39 @@ describe('firewall event-detail', () => {
     client.config.currentTeam = 'team_dummy';
     const cwd = setupUnitFixture('commands/firewall');
     client.cwd = cwd;
+    useListFirewallConfigs(
+      createConfig({
+        rules: [createRule(1)],
+      }),
+      null
+    );
     mockEventDetailApis(SAMPLE_EVENTS);
   });
 
   describe('--help', () => {
     it('tracks telemetry', async () => {
-      client.setArgv('firewall', 'event-detail', '--help');
+      client.setArgv('firewall', 'persistent-actions', 'inspect', '--help');
       const exitCode = await firewall(client);
       expect(exitCode).toEqual(2);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
-          value: 'firewall:event-detail',
+          value: 'firewall:persistent-actions:inspect',
         },
       ]);
     });
   });
 
-  it('prints event metadata, timeseries, and top paths', async () => {
-    client.setArgv('firewall', 'event-detail', '45.79.7.220');
+  it('prints persistent action metadata, timeseries, and top paths', async () => {
+    client.setArgv('firewall', 'persistent-actions', 'inspect', '45.79.7.220');
     const exitCodePromise = firewall(client);
-    await expect(client.stderr).toOutput('Event Details');
+    await expect(client.stderr).toOutput('Top Request Paths');
     expect(await exitCodePromise).toEqual(0);
 
     const fullOutput = client.stderr.getFullOutput();
-    expect(fullOutput).toContain('Start Time');
-    expect(fullOutput).toContain('End Time');
+    expect(fullOutput).toContain('Persistent action');
+    expect(fullOutput).toContain('Start');
+    expect(fullOutput).toContain('End');
     expect(fullOutput).toContain('challenge');
     expect(fullOutput).toContain('System Rule');
     expect(fullOutput).toContain('vercel.com');
@@ -114,15 +135,23 @@ describe('firewall event-detail', () => {
     expect(fullOutput).toContain('Top Request Paths');
     expect(fullOutput).toContain('/atom');
     expect(fullOutput).toContain(
-      'firewall traffic-dashboard --ip 45.79.7.220 --host vercel.com --action challenge --since 2025-08-13T18:10:46.000Z --until 2025-08-13T18:20:46.000Z'
+      'firewall traffic --ip 45.79.7.220 --host vercel.com --action challenge --since 2025-08-13T18:10:46.000Z --until 2025-08-13T18:20:46.000Z'
     );
-    expect(fullOutput).toContain('most recent of 2 matching events');
+    expect(fullOutput).toContain(
+      'firewall system-bypass add 45.79.7.220 --domain vercel.com'
+    );
+    expect(fullOutput).not.toContain('firewall rules add');
+    expect(fullOutput).not.toContain('firewall rules edit');
+    expect(fullOutput).toContain(
+      'most recent of 2 matching persistent actions'
+    );
   });
 
   it('disambiguates with --host and --action', async () => {
     client.setArgv(
       'firewall',
-      'event-detail',
+      'persistent-actions',
+      'inspect',
       '45.79.7.220',
       '--host',
       'api.vercel.com',
@@ -133,35 +162,49 @@ describe('firewall event-detail', () => {
     expect(exitCode).toEqual(0);
     const fullOutput = client.stderr.getFullOutput();
     expect(fullOutput).toContain('api.vercel.com');
-    expect(fullOutput).toContain('Customer Rule');
+    expect(fullOutput).toContain('Custom Rule');
     expect(fullOutput).not.toContain('most recent of');
+    expect(fullOutput).toContain(
+      'firewall traffic --ip 45.79.7.220 --host api.vercel.com --action deny'
+    );
+    expect(fullOutput).toContain('rule_001');
+    expect(fullOutput).toContain('firewall rules edit rule_001');
+    expect(fullOutput).not.toContain('firewall system-bypass add');
+    expect(fullOutput).not.toContain('firewall rules add');
   });
 
   it('outputs JSON with --json', async () => {
-    client.setArgv('firewall', 'event-detail', '45.79.7.220', '--json');
+    client.setArgv(
+      'firewall',
+      'persistent-actions',
+      'inspect',
+      '45.79.7.220',
+      '--json'
+    );
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
     const payload = JSON.parse((client.stdout as any).getFullOutput());
-    expect(payload.event.public_ip).toEqual('45.79.7.220');
+    expect(payload.persistentAction.public_ip).toEqual('45.79.7.220');
     expect(payload.matchCount).toEqual(2);
     expect(payload.topPaths[0].path).toEqual('/atom');
     expect(payload.timeseries.groups[0].action).toEqual('challenge');
+    expect(payload.attributedRule).toBeNull();
     expect((client.stdout as any).getFullOutput()).not.toContain(
-      'Event Details'
+      'Top Request Paths'
     );
   });
 
-  it('errors when no event matches', async () => {
-    client.setArgv('firewall', 'event-detail', '9.9.9.9');
+  it('errors when no persistent action matches', async () => {
+    client.setArgv('firewall', 'persistent-actions', 'inspect', '9.9.9.9');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(1);
     expect(client.stderr.getFullOutput()).toContain(
-      'No firewall event found for IP "9.9.9.9"'
+      'No persistent action found for IP "9.9.9.9"'
     );
   });
 
   it('requires an IP argument', async () => {
-    client.setArgv('firewall', 'event-detail');
+    client.setArgv('firewall', 'persistent-actions', 'inspect');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(1);
     expect(client.stderr.getFullOutput()).toContain('Specify an IP address');

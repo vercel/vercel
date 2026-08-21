@@ -1,34 +1,38 @@
 import chalk from 'chalk';
-import type Client from '../../util/client';
-import { requireProjectContext } from '../../util/projects/require-project-context';
-import output from '../../output-manager';
-import { alertDetailSubcommand } from './command';
-import { parseSubcommandArgs, outputJson, withGlobalFlags } from './shared';
-import cmd from '../../util/output/cmd';
-import { cliToken } from '../../util/firewall/format-utils';
-import { andFilters, eqFilter } from '../../util/firewall/dimensions';
+import type Client from '../../../util/client';
+import { requireProjectContext } from '../../../util/projects/require-project-context';
+import output from '../../../output-manager';
+import { alertsInspectSubcommand } from '../command';
+import {
+  parseSubcommandArgs,
+  outputJson,
+  withGlobalFlags,
+  failFirewall,
+  failFirewallApi,
+  requireFirewallTeam,
+} from '../shared';
+import { andFilters, eqFilter } from '../../../util/firewall/dimensions';
 import {
   AlertNotFoundError,
   actionFilter,
   resolveAlertScope,
-} from '../../util/firewall/alert-scope';
+} from '../../../util/firewall/alert-scope';
 import {
   getGroupedTimeseries,
   getTopList,
   granularityMs,
   type TopListRow,
-} from '../../util/firewall/get-firewall-traffic';
-import { getFirewallEvents } from '../../util/firewall/get-firewall-events';
+} from '../../../util/firewall/get-firewall-traffic';
+import { getFirewallEvents } from '../../../util/firewall/get-firewall-events';
 import {
   isUsableField,
   matchesEventFilters,
   type EventActionFilter,
-} from '../../util/firewall/format-events';
-import { formatAlertDetailOutput } from '../../util/firewall/format-traffic';
-import { outputAgentError } from '../../util/agent-output';
-import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
-import { isAPIError } from '../../util/errors-ts';
-import type { FirewallActionRow } from '../../util/firewall/types';
+} from '../../../util/firewall/format-events';
+import { formatAlertDetailOutput } from '../../../util/firewall/format-traffic';
+import { cliToken, formatHintLine } from '../../../util/firewall/format-utils';
+import { AGENT_REASON } from '../../../util/agent-output-constants';
+import type { FirewallActionRow } from '../../../util/firewall/types';
 
 export { actionFilter };
 
@@ -72,25 +76,20 @@ function topIpsFromEvents(
 }
 
 export default async function alertDetail(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, alertDetailSubcommand, client);
+  const parsed = await parseSubcommandArgs(
+    argv,
+    alertsInspectSubcommand,
+    client
+  );
   if (typeof parsed === 'number') return parsed;
 
   const alertId = parsed.args[0] as string | undefined;
   if (!alertId) {
-    const msg =
-      'Specify an alert id. Run `vercel firewall alerts` to list alert ids.';
-    if (client.nonInteractive) {
-      outputAgentError(client, {
-        status: AGENT_STATUS.ERROR,
-        reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: msg,
-        next: [{ command: withGlobalFlags(client, 'firewall alerts') }],
-      });
-      process.exit(1);
-      return 1;
-    }
-    output.error(msg);
-    return 1;
+    return failFirewall(
+      client,
+      'Specify an alert id. Run `vercel firewall alerts` to list alert ids.',
+      'firewall alerts'
+    );
   }
 
   const link = await requireProjectContext(
@@ -101,38 +100,8 @@ export default async function alertDetail(client: Client, argv: string[]) {
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
-  if (org.type !== 'team') {
-    const msg =
-      'Firewall alert detail requires a team scope. Run `vercel switch` to select a team.';
-    if (client.nonInteractive) {
-      outputAgentError(client, {
-        status: AGENT_STATUS.ERROR,
-        reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: msg,
-        next: [{ command: withGlobalFlags(client, 'switch') }],
-      });
-      process.exit(1);
-      return 1;
-    }
-    output.error(msg);
-    return 1;
-  }
-  const teamId = org.id;
-
-  const failAlert = (err: AlertNotFoundError) => {
-    if (client.nonInteractive) {
-      outputAgentError(client, {
-        status: AGENT_STATUS.ERROR,
-        reason: AGENT_REASON.NOT_FOUND,
-        message: err.message,
-        next: [{ command: withGlobalFlags(client, 'firewall alerts') }],
-      });
-      process.exit(1);
-      return 1;
-    }
-    output.error(err.message);
-    return 1;
-  };
+  const teamId = requireFirewallTeam(client, org, 'Firewall alerts inspect');
+  if (typeof teamId === 'number') return teamId;
 
   try {
     output.spinner(`Looking up alert ${chalk.bold(alertId)}`);
@@ -144,7 +113,14 @@ export default async function alertDetail(client: Client, argv: string[]) {
         teamId,
       });
     } catch (err) {
-      if (err instanceof AlertNotFoundError) return failAlert(err);
+      if (err instanceof AlertNotFoundError) {
+        return failFirewall(
+          client,
+          err.message,
+          'firewall alerts',
+          AGENT_REASON.NOT_FOUND
+        );
+      }
       throw err;
     }
 
@@ -169,11 +145,11 @@ export default async function alertDetail(client: Client, argv: string[]) {
       filter: chartFilter,
       startTime: chartStart,
       endTime: chartEnd,
-    }).catch(() => null);
+    });
 
     let baselineAvgPerMin: number | null = null;
     let anomalyAvgPerMin: number | null = null;
-    if (timeseries && timeseries.groups[0]) {
+    if (timeseries.groups[0]) {
       const bucketMs = granularityMs(timeseries.granularity);
       const series = timeseries.groups[0].series;
       const baseline: number[] = [];
@@ -199,7 +175,7 @@ export default async function alertDetail(client: Client, argv: string[]) {
         startTime: anomalyStart,
         endTime: anomalyEnd,
         top: TOP_ENTITIES,
-      }).catch(() => []),
+      }),
       getTopList(client, {
         ownerId: teamId,
         projectId: project.id,
@@ -208,7 +184,7 @@ export default async function alertDetail(client: Client, argv: string[]) {
         startTime: anomalyStart,
         endTime: anomalyEnd,
         top: TOP_ENTITIES,
-      }).catch(() => []),
+      }),
     ]);
 
     let topIps = topIpsRaw;
@@ -218,7 +194,7 @@ export default async function alertDetail(client: Client, argv: string[]) {
         teamId,
         startTime: anomalyStart,
         endTime: anomalyEnd,
-      }).catch(() => ({ actions: [] as FirewallActionRow[] }));
+      });
       topIps = topIpsFromEvents(events.actions, TOP_ENTITIES, alert.action);
     }
 
@@ -234,13 +210,11 @@ export default async function alertDetail(client: Client, argv: string[]) {
         filter: chartFilter ?? null,
         baselineAvgPerMin,
         anomalyAvgPerMin,
-        timeseries: timeseries
-          ? {
-              axis: timeseries.axis,
-              series: timeseries.groups[0]?.series ?? [],
-              granularity: timeseries.granularity,
-            }
-          : null,
+        timeseries: {
+          axis: timeseries.axis,
+          series: timeseries.groups[0]?.series ?? [],
+          granularity: timeseries.granularity,
+        },
         topIps: topIps.map(r => ({
           ip: r.values.client_ip,
           total: r.total,
@@ -267,53 +241,44 @@ export default async function alertDetail(client: Client, argv: string[]) {
     );
 
     const suggest = (template: string) => withGlobalFlags(client, template);
-    const label = (s: string) => chalk.dim(s.padEnd(8));
     const lines = ['', `  ${chalk.dim('Investigate further')}`];
     lines.push(
-      `  ${label('Traffic')}${cmd(
-        suggest(`firewall traffic-dashboard --alert ${cliToken(alert.id)}`)
-      )}`
+      formatHintLine(
+        'Inspect traffic',
+        suggest(`firewall traffic --alert ${cliToken(alert.id)}`)
+      )
     );
     const topIp = topIps[0]?.values.client_ip;
-    if (topIp) {
+    if (topIp && client.stdin.isTTY && !client.nonInteractive) {
       lines.push(
-        `  ${label('Block')}${cmd(
+        formatHintLine(
+          'Block IP',
           suggest(`firewall ip-blocks block ${cliToken(topIp)}`)
-        )}`
+        )
       );
     }
     if (alert.action === 'challenge' || alert.action === 'deny') {
       const since = cliToken(new Date(anomalyStartMs).toISOString());
       const until = cliToken(new Date(anomalyEndMs).toISOString());
       lines.push(
-        `  ${label('Events')}${cmd(
+        formatHintLine(
+          'List actions',
           suggest(
-            `firewall events --action ${cliToken(alert.action)} --since ${since} --until ${until}`
+            `firewall persistent-actions --action ${cliToken(alert.action)} --since ${since} --until ${until}`
           )
-        )}`
+        )
       );
     }
     output.print(`${lines.join('\n')}\n\n`);
     return 0;
   } catch (e: unknown) {
-    let msg =
-      e instanceof Error ? e.message : 'Failed to fetch firewall alert detail';
-    if (isAPIError(e) && (e.status === 401 || e.status === 403)) {
-      msg =
-        'You do not have permission to read firewall alerts for this project. Check team access and try again.';
-    }
-    if (client.nonInteractive) {
-      outputAgentError(client, {
-        status: 'error',
-        reason: 'api_error',
-        message: msg,
-        next: [{ command: withGlobalFlags(client, 'firewall alerts') }],
-      });
-      process.exit(1);
-      return 1;
-    }
-    output.error(msg);
-    return 1;
+    return failFirewallApi(client, e, {
+      fallback: 'Failed to fetch firewall alert',
+      nextCommand: 'firewall alerts',
+      permissionAction: 'read firewall alerts',
+      projectName: project.name,
+      timeoutJob: 'firewall alerts',
+    });
   } finally {
     output.stopSpinner();
   }

@@ -28,6 +28,11 @@ import {
 } from '../../../util/firewall/format';
 import type { FirewallRule } from '../../../util/firewall/types';
 import { runInteractiveEditLoop } from './edit-interactive';
+import { editManagedBotRule } from './edit-managed-bot';
+import {
+  getManagedBotRules,
+  resolveManagedBotRuleId,
+} from '../../../util/firewall/managed-bot-rules';
 import stamp from '../../../util/output/stamp';
 import { outputAgentError } from '../../../util/agent-output';
 
@@ -59,7 +64,9 @@ export default async function edit(client: Client, argv: string[]) {
     teamId,
   });
 
+  const config = draft ?? active;
   const currentRules = draft?.rules || active?.rules || [];
+  const managedRules = getManagedBotRules(config);
 
   // If no identifier provided, let interactive users pick from a list
   if (!identifier) {
@@ -72,20 +79,30 @@ export default async function edit(client: Client, argv: string[]) {
       return 1;
     }
 
-    if (currentRules.length === 0) {
-      output.error(
-        'No custom rules configured. Create one first with `vercel firewall rules add`.'
-      );
-      return 1;
-    }
-
     const selectedId = await client.input.select({
       message: 'Select a rule to edit:',
-      choices: currentRules.map(r => ({
-        value: r.id,
-        name: `${r.name} [${r.active ? 'Enabled' : 'Disabled'}] — ${formatActionDisplay(r.action)}`,
-      })),
+      choices: [
+        ...managedRules.map(r => ({
+          value: r.id,
+          name: `${r.name} — ${r.action} (${r.id})`,
+        })),
+        ...currentRules.map(r => ({
+          value: r.id,
+          name: `${r.name} [${r.active ? 'Enabled' : 'Disabled'}] — ${formatActionDisplay(r.action)}`,
+        })),
+      ],
     });
+
+    const selectedManaged = resolveManagedBotRuleId(selectedId);
+    if (selectedManaged) {
+      return editManagedBotRule(client, {
+        id: selectedManaged,
+        flags: parsed.flags,
+        project,
+        teamId,
+        config,
+      });
+    }
 
     const selected = currentRules.find(r => r.id === selectedId);
     if (!selected) {
@@ -93,6 +110,18 @@ export default async function edit(client: Client, argv: string[]) {
       return 1;
     }
     identifier = selected.name;
+  }
+
+  const managedId = resolveManagedBotRuleId(identifier);
+  if (managedId) {
+    output.stopSpinner();
+    return editManagedBotRule(client, {
+      id: managedId,
+      flags: parsed.flags,
+      project,
+      teamId,
+      config,
+    });
   }
 
   const matches = resolveRule(currentRules, identifier);

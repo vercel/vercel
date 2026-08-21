@@ -1,34 +1,33 @@
 import chalk from 'chalk';
-import type Client from '../../util/client';
-import { requireProjectContext } from '../../util/projects/require-project-context';
-import output from '../../output-manager';
-import { trafficDashboardSubcommand } from './command';
-import { parseSubcommandArgs, outputJson, withGlobalFlags } from './shared';
+import type Client from '../../../util/client';
+import { requireProjectContext } from '../../../util/projects/require-project-context';
+import output from '../../../output-manager';
+import { trafficSubcommand } from '../command';
+import { parseSubcommandArgs, outputJson } from '../shared';
 import {
   TRAFFIC_DIMENSIONS,
   andFilters,
   eqFilter,
   getDimension,
-} from '../../util/firewall/dimensions';
+} from '../../../util/firewall/dimensions';
 import {
   AlertNotFoundError,
   resolveAlertScope,
   resolveScopedTimeRange,
-} from '../../util/firewall/alert-scope';
+} from '../../../util/firewall/alert-scope';
 import {
   REQUEST_METRIC,
   getGroupedTimeseries,
   getTopList,
-} from '../../util/firewall/get-firewall-traffic';
-import type { TopListRow } from '../../util/firewall/get-firewall-traffic';
+} from '../../../util/firewall/get-firewall-traffic';
+import type { TopListRow } from '../../../util/firewall/get-firewall-traffic';
 import {
   formatTrafficDashboardOutput,
   topListToWidgetRows,
-} from '../../util/firewall/format-traffic';
-import type { WidgetResult } from '../../util/firewall/format-traffic';
-import { outputAgentError } from '../../util/agent-output';
-import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
-import { isAPIError } from '../../util/errors-ts';
+} from '../../../util/firewall/format-traffic';
+import type { WidgetResult } from '../../../util/firewall/format-traffic';
+import { failFirewall, failFirewallApi, requireFirewallTeam } from '../shared';
+import { AGENT_REASON } from '../../../util/agent-output-constants';
 
 const DEFAULT_TOP = 5;
 
@@ -99,11 +98,7 @@ export function buildDimensionFilter(
 }
 
 export default async function trafficDashboard(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(
-    argv,
-    trafficDashboardSubcommand,
-    client
-  );
+  const parsed = await parseSubcommandArgs(argv, trafficSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
   const link = await requireProjectContext(
@@ -114,38 +109,8 @@ export default async function trafficDashboard(client: Client, argv: string[]) {
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
-  if (org.type !== 'team') {
-    const msg =
-      'Firewall traffic requires a team scope. Run `vercel switch` to select a team.';
-    if (client.nonInteractive) {
-      outputAgentError(client, {
-        status: AGENT_STATUS.ERROR,
-        reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: msg,
-        next: [{ command: withGlobalFlags(client, 'switch') }],
-      });
-      process.exit(1);
-      return 1;
-    }
-    output.error(msg);
-    return 1;
-  }
-  const teamId = org.id;
-
-  const failAlert = (err: AlertNotFoundError) => {
-    if (client.nonInteractive) {
-      outputAgentError(client, {
-        status: AGENT_STATUS.ERROR,
-        reason: AGENT_REASON.NOT_FOUND,
-        message: err.message,
-        next: [{ command: withGlobalFlags(client, 'firewall alerts') }],
-      });
-      process.exit(1);
-      return 1;
-    }
-    output.error(err.message);
-    return 1;
-  };
+  const teamId = requireFirewallTeam(client, org, 'Firewall traffic');
+  if (typeof teamId === 'number') return teamId;
 
   let alertScope: Awaited<ReturnType<typeof resolveAlertScope>> | undefined;
   const alertId = parsed.flags['--alert'] as string | undefined;
@@ -158,8 +123,21 @@ export default async function trafficDashboard(client: Client, argv: string[]) {
         teamId,
       });
     } catch (err) {
-      if (err instanceof AlertNotFoundError) return failAlert(err);
-      throw err;
+      if (err instanceof AlertNotFoundError) {
+        return failFirewall(
+          client,
+          err.message,
+          'firewall alerts',
+          AGENT_REASON.NOT_FOUND
+        );
+      }
+      return failFirewallApi(client, err, {
+        fallback: 'Failed to fetch firewall traffic',
+        nextCommand: 'firewall traffic',
+        permissionAction: 'query firewall traffic',
+        projectName: project.name,
+        timeoutJob: 'firewall traffic',
+      });
     }
   }
 
@@ -172,8 +150,11 @@ export default async function trafficDashboard(client: Client, argv: string[]) {
       until: parsed.flags['--until'] as string | undefined,
     }));
   } catch (err) {
-    output.error(err instanceof Error ? err.message : String(err));
-    return 1;
+    return failFirewall(
+      client,
+      err instanceof Error ? err.message : String(err),
+      'firewall traffic'
+    );
   }
 
   const top = (parsed.flags['--top'] as number) ?? DEFAULT_TOP;
@@ -265,29 +246,16 @@ export default async function trafficDashboard(client: Client, argv: string[]) {
       return 0;
     }
 
-    output.print(formatTrafficDashboardOutput({ actions, widgets, filter }));
+    output.print(formatTrafficDashboardOutput({ actions, widgets }));
     return 0;
   } catch (e: unknown) {
-    let msg =
-      e instanceof Error ? e.message : 'Failed to fetch firewall traffic';
-    if (isAPIError(e) && (e.status === 401 || e.status === 403)) {
-      msg =
-        'You do not have permission to query firewall traffic for this project. Check team access and try again.';
-    }
-    if (client.nonInteractive) {
-      outputAgentError(client, {
-        status: 'error',
-        reason: 'api_error',
-        message: msg,
-        next: [
-          { command: withGlobalFlags(client, 'firewall traffic-dashboard') },
-        ],
-      });
-      process.exit(1);
-      return 1;
-    }
-    output.error(msg);
-    return 1;
+    return failFirewallApi(client, e, {
+      fallback: 'Failed to fetch firewall traffic',
+      nextCommand: 'firewall traffic',
+      permissionAction: 'query firewall traffic',
+      projectName: project.name,
+      timeoutJob: 'firewall traffic',
+    });
   } finally {
     output.stopSpinner();
   }

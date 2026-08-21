@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import table from '../output/table';
-import cmd from '../output/cmd';
 import { ellipsizeMiddle } from '../output/truncate';
 import { generateSparkline } from '../../commands/metrics/text-output';
 import { packageName } from '../pkg-name';
@@ -8,6 +7,7 @@ import {
   ACTION_COLORS,
   cliToken,
   formatCount,
+  formatHintLine,
   formatUtcTime,
   labelForAction,
   relativeTime,
@@ -97,8 +97,8 @@ export function getOverviewSectionHints(opts: {
   if (action) {
     const value = cliToken(action);
     hints.action = {
-      detail: suggest(`firewall drill-in action ${value}`),
-      traffic: suggest(`firewall traffic-dashboard --action ${value}`),
+      detail: suggest(`firewall traffic inspect action ${value}`),
+      traffic: suggest(`firewall traffic --action ${value}`),
     };
   }
 
@@ -106,21 +106,19 @@ export function getOverviewSectionHints(opts: {
   if (rule) {
     const value = cliToken(rule.id);
     hints.rule = {
-      detail: suggest(`firewall drill-in rule ${value}`),
-      traffic: suggest(`firewall traffic-dashboard --rule ${value}`),
+      detail: suggest(`firewall traffic inspect rule ${value}`),
+      traffic: suggest(`firewall traffic --rule ${value}`),
     };
   }
 
   const alert = opts.annotations[0];
   if (alert) {
     hints.alert = {
-      detail: suggest(`firewall alert-detail ${cliToken(alert.id)}`),
+      detail: suggest(`firewall alerts inspect ${cliToken(alert.id)}`),
     };
     const trafficFlags = trafficFlagsFromAlert(alert);
     if (trafficFlags) {
-      hints.alert.traffic = suggest(
-        `firewall traffic-dashboard ${trafficFlags}`
-      );
+      hints.alert.traffic = suggest(`firewall traffic ${trafficFlags}`);
     }
   }
 
@@ -130,13 +128,13 @@ export function getOverviewSectionHints(opts: {
 export function flattenOverviewHints(
   sections: OverviewSectionHints
 ): OverviewViewHint[] {
-  const next: OverviewViewHint[] = [];
-  for (const section of [sections.action, sections.rule, sections.alert]) {
-    if (!section) continue;
-    next.push({ view: 'detail', command: section.detail });
-    if (section.traffic) {
-      next.push({ view: 'traffic', command: section.traffic });
-    }
+  const section = sections.alert ?? sections.action ?? sections.rule;
+  if (!section) return [];
+  const next: OverviewViewHint[] = [
+    { view: 'detail', command: section.detail },
+  ];
+  if (section.traffic) {
+    next.push({ view: 'traffic', command: section.traffic });
   }
   return next;
 }
@@ -145,10 +143,9 @@ function formatViewHintLines(section: {
   detail: string;
   traffic?: string;
 }): string[] {
-  const label = (s: string) => chalk.dim(s.padEnd(8));
-  const lines = ['', `  ${label('Detail')}${cmd(section.detail)}`];
+  const lines = [formatHintLine('Inspect', section.detail)];
   if (section.traffic) {
-    lines.push(`  ${label('Traffic')}${cmd(section.traffic)}`);
+    lines.push(formatHintLine('Inspect traffic', section.traffic));
   }
   return lines;
 }
@@ -168,7 +165,7 @@ export function formatOverviewOutput(opts: {
   granularity?: { hours: number };
   suggest?: (template: string) => string;
 }): string {
-  const lines: string[] = [''];
+  const lines: string[] = [];
 
   const windowStartMs = new Date(opts.startTime).getTime();
   const windowEndMs = new Date(opts.endTime).getTime();
@@ -211,7 +208,7 @@ export function formatOverviewOutput(opts: {
 
     for (const s of opts.series) {
       const byTs = new Map(s.timeseries.map(p => [p.timestamp, p.value]));
-      // Missing buckets mean no firewall events fired in that hour, which is
+      // Missing buckets mean no persistent actions fired in that hour, which is
       // a true zero for a count metric — not missing data.
       const values = axis.map(t => byTs.get(t) ?? 0);
 
@@ -244,9 +241,6 @@ export function formatOverviewOutput(opts: {
     for (const line of rendered.split('\n')) {
       lines.push(`  ${line}`);
     }
-    if (hints.action) {
-      lines.push(...formatViewHintLines(hints.action));
-    }
   }
 
   lines.push('');
@@ -271,9 +265,6 @@ export function formatOverviewOutput(opts: {
     for (const line of rendered.split('\n')) {
       lines.push(`  ${line}`);
     }
-    if (hints.rule) {
-      lines.push(...formatViewHintLines(hints.rule));
-    }
   }
 
   if (opts.annotations.length > 0) {
@@ -285,12 +276,15 @@ export function formatOverviewOutput(opts: {
       const count = a.count !== undefined ? ` · ${formatCount(a.count)}` : '';
       const detail = a.detail ? chalk.dim(` · ${a.detail}`) : '';
       lines.push(
-        `  ${chalk.red('▲')} ${when} UTC ${ago}  ${a.title}${detail}${count}`
+        `  ${chalk.yellow('!')} ${when} UTC ${ago}  ${a.title}${detail}${count}`
       );
     }
-    if (hints.alert) {
-      lines.push(...formatViewHintLines(hints.alert));
-    }
+  }
+
+  const nextSection = hints.alert ?? hints.action ?? hints.rule;
+  if (nextSection) {
+    lines.push('');
+    lines.push(...formatViewHintLines(nextSection));
   }
 
   lines.push('');
@@ -301,7 +295,7 @@ export function formatAlertsOutput(opts: {
   active: FirewallAlertRow[];
   resolved: FirewallAlertRow[];
 }): string {
-  const lines: string[] = [''];
+  const lines: string[] = [];
 
   lines.push(chalk.bold('  Active alerts'));
   if (opts.active.length === 0) {
@@ -328,9 +322,7 @@ export function formatAlertsOutput(opts: {
       const when = a.resolvedAt
         ? relativeTime(a.resolvedAt)
         : relativeTime(a.startedAt);
-      lines.push(
-        `  ${chalk.dim('✓')} ${a.title}${detail}  ${count}  ${chalk.dim(when)}`
-      );
+      lines.push(`  ${a.title}${detail}  ${count}  ${chalk.dim(when)}`);
       lines.push(chalk.dim(`    id: ${a.id}`));
     }
   }
@@ -339,7 +331,7 @@ export function formatAlertsOutput(opts: {
     lines.push('');
     lines.push(
       chalk.dim(
-        '  Deep-dive an alert with `vercel firewall alert-detail <id>`.'
+        '  Inspect an alert with `vercel firewall alerts inspect <id>`.'
       )
     );
   }

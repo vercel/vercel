@@ -150,4 +150,25 @@ describe('firewall rules inspect', () => {
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(2);
   });
+
+  it('inspects a managed bot rule by slug or waf id', async () => {
+    useListFirewallConfigs(
+      createConfig({
+        managedRules: {
+          bot_filter: { active: true, action: 'challenge' },
+        },
+      }),
+      null
+    );
+    client.setArgv('firewall', 'rules', 'inspect', 'managed_bot_protection');
+    const exitCode = await firewall(client);
+    expect(exitCode).toEqual(0);
+    const fullOutput = client.stderr.getFullOutput();
+    expect(fullOutput).toContain('Bot Protection');
+    expect(fullOutput).toContain('bot-protection');
+    expect(fullOutput).toContain('managed_bot_protection');
+    expect(fullOutput).toContain(
+      'firewall rules edit bot-protection --action log'
+    );
+  });
 });

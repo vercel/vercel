@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { formatAlignedLabel } from '../output/print-aligned-label';
 import type {
   FirewallConfigResponse,
   FirewallConfigChange,
@@ -12,6 +13,8 @@ import type {
   ManagedRuleConfig,
   ManagedRulesResponse,
 } from './types';
+import type { ManagedBotRule } from './managed-bot-rules';
+import { formatManagedBotAction } from './managed-bot-rules';
 
 export interface AttackModeStatus {
   enabled: boolean;
@@ -174,37 +177,44 @@ export function formatStatusOutput(
   if (active) {
     const enabled = active.firewallEnabled;
     lines.push(
-      `  ${chalk.bold('Firewall:')}             ${enabled ? chalk.green('Enabled') : chalk.red('Disabled')}`
+      formatAlignedLabel(
+        'Firewall',
+        enabled ? chalk.green('Enabled') : chalk.red('Disabled')
+      )
     );
   } else {
-    lines.push(
-      `  ${chalk.bold('Firewall:')}             ${chalk.dim('Not configured')}`
-    );
+    lines.push(formatAlignedLabel('Firewall', chalk.dim('Not configured')));
   }
 
   // Filter out the allSources bypass (system mitigations) from the count
   const regularBypasses = bypass.filter(b => !isAllSourcesBypass(b.Ip));
   lines.push(
-    `  ${chalk.bold('System Bypass:')}        ${regularBypasses.length} IP${regularBypasses.length !== 1 ? 's' : ''}`
+    formatAlignedLabel(
+      'Bypass',
+      `${regularBypasses.length} IP${regularBypasses.length !== 1 ? 's' : ''}`
+    )
   );
   lines.push(
-    `  ${chalk.bold('System Mitigations:')}   ${formatMitigationsStatus(bypass)}`
+    formatAlignedLabel('Mitigations', formatMitigationsStatus(bypass))
   );
 
   if (attackMode) {
     lines.push(
-      `  ${chalk.bold('Attack Mode:')}          ${formatAttackModeStatus(attackMode)}`
+      formatAlignedLabel('Attack Mode', formatAttackModeStatus(attackMode))
     );
   }
 
   if (active) {
-    lines.push(`  ${chalk.bold('IP Blocks:')}            ${active.ips.length}`);
+    lines.push(formatAlignedLabel('IP Blocks', String(active.ips.length)));
 
     const activeRules = active.rules.filter(r => r.active).length;
     const inactiveRules = active.rules.filter(r => !r.active).length;
     const totalRules = active.rules.length;
     lines.push(
-      `  ${chalk.bold('Custom Rules:')}         ${activeRules} active, ${inactiveRules} inactive (${totalRules} total)`
+      formatAlignedLabel(
+        'Rules',
+        `${activeRules} active, ${inactiveRules} inactive (${totalRules} total)`
+      )
     );
   }
 
@@ -213,19 +223,23 @@ export function formatStatusOutput(
   const owasp = active?.managedRules?.owasp;
 
   lines.push(
-    `  ${chalk.bold('Bot Protection:')}       ${formatBotProtectionStatus(botProtection)}`
+    formatAlignedLabel(
+      'Bot Protection',
+      formatBotProtectionStatus(botProtection)
+    )
   );
-  lines.push(
-    `  ${chalk.bold('AI Bots:')}              ${formatAiBotsStatus(aiBots)}`
-  );
-  lines.push(
-    `  ${chalk.bold('OWASP Ruleset:')}        ${formatOwaspStatus(owasp, planInfo)}`
-  );
+  lines.push(formatAlignedLabel('AI Bots', formatAiBotsStatus(aiBots)));
+  lines.push(formatAlignedLabel('OWASP', formatOwaspStatus(owasp, planInfo)));
 
   if (draft && draft.changes.length > 0) {
     lines.push('');
     lines.push(
-      `  ${chalk.bold('Pending Draft:')}        ${chalk.yellow(`${draft.changes.length} unpublished change${draft.changes.length !== 1 ? 's' : ''}`)}`
+      formatAlignedLabel(
+        'Draft',
+        chalk.yellow(
+          `${draft.changes.length} unpublished change${draft.changes.length !== 1 ? 's' : ''}`
+        )
+      )
     );
     const activeRulesMap = new Map((active?.rules || []).map(r => [r.id, r]));
     lines.push(formatDiffOutput(draft.changes, activeRulesMap));
@@ -860,6 +874,56 @@ export function formatRulesTable(annotated: AnnotatedRule[]): string {
     lines.push(colorFn(`  ${idIndent}${chalk.dim(rule.id)}`));
   }
 
+  return lines.join('\n');
+}
+
+function colorManagedBotAction(action: ManagedBotRule['action']): string {
+  const label = formatManagedBotAction(action);
+  if (action === 'off' || action === 'allow' || action === 'basic') {
+    return chalk.dim(label);
+  }
+  if (action === 'log') return chalk.yellow(label);
+  if (action === 'deny') return chalk.red(label);
+  return chalk.green(label);
+}
+
+export function formatManagedBotRulesTable(rules: ManagedBotRule[]): string {
+  const lines: string[] = [];
+  const gap = 3;
+  const nameWidth = Math.max('Name'.length, ...rules.map(r => r.name.length));
+  const actionWidth = Math.max(
+    'Action'.length,
+    ...rules.map(r => formatManagedBotAction(r.action).length)
+  );
+
+  lines.push(`  ${chalk.bold('Managed')}`);
+  lines.push('');
+  lines.push(
+    `  ${chalk.dim('Name'.padEnd(nameWidth + gap))}${chalk.dim('Action'.padEnd(actionWidth + gap))}${chalk.dim('ID')}`
+  );
+
+  for (const rule of rules) {
+    const name = rule.name.padEnd(nameWidth + gap);
+    const actionLabel = formatManagedBotAction(rule.action);
+    const actionPad = ' '.repeat(
+      Math.max(0, actionWidth + gap - actionLabel.length)
+    );
+    lines.push(
+      `  ${name}${colorManagedBotAction(rule.action)}${actionPad}${chalk.dim(rule.id)}`
+    );
+  }
+
+  return lines.join('\n');
+}
+
+export function formatManagedBotRuleDetail(rule: ManagedBotRule): string {
+  const lines: string[] = [];
+  lines.push(formatAlignedLabel('Rule', rule.name));
+  lines.push(formatAlignedLabel('ID', chalk.dim(rule.id)));
+  if (rule.wafRuleId) {
+    lines.push(formatAlignedLabel('WAF ID', chalk.dim(rule.wafRuleId)));
+  }
+  lines.push(formatAlignedLabel('Action', colorManagedBotAction(rule.action)));
   return lines.join('\n');
 }
 

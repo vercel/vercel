@@ -3,7 +3,12 @@ import type Client from '../../util/client';
 import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { statusSubcommand } from './command';
-import { parseSubcommandArgs, outputJson, withGlobalFlags } from './shared';
+import {
+  parseSubcommandArgs,
+  outputJson,
+  failFirewall,
+  failFirewallApi,
+} from './shared';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import getBypass from '../../util/firewall/get-bypass';
 import {
@@ -14,8 +19,7 @@ import {
 } from '../../util/firewall/format';
 import { fetchPlanInfo } from '../../util/firewall/interactive-helpers';
 import { formatGraphOutput } from '../../util/firewall/format-graph';
-import { outputAgentError } from '../../util/agent-output';
-import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
+import { AGENT_REASON } from '../../util/agent-output-constants';
 import type { ProjectSecurityResponse } from '../../util/firewall/types';
 
 export default async function status(client: Client, argv: string[]) {
@@ -23,22 +27,12 @@ export default async function status(client: Client, argv: string[]) {
   if (typeof parsed === 'number') return parsed;
 
   if (parsed.flags['--json'] && parsed.flags['--graph']) {
-    const msg = 'Cannot use --json and --graph together. Pick one.';
-    if (client.nonInteractive) {
-      outputAgentError(client, {
-        status: AGENT_STATUS.ERROR,
-        reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: msg,
-        next: [
-          { command: withGlobalFlags(client, 'firewall status --json') },
-          { command: withGlobalFlags(client, 'firewall status --graph') },
-        ],
-      });
-      process.exit(1);
-      return 1;
-    }
-    output.error(msg);
-    return 1;
+    return failFirewall(
+      client,
+      'Cannot use --json and --graph together. Pick one.',
+      'firewall status --json',
+      AGENT_REASON.INVALID_ARGUMENTS
+    );
   }
 
   const link = await requireProjectContext(
@@ -76,9 +70,7 @@ export default async function status(client: Client, argv: string[]) {
 
     if (parsed.flags['--json']) {
       outputJson(client, {
-        active,
-        draft,
-        bypass: bypassList.result,
+        firewallEnabled: active?.firewallEnabled ?? false,
         attackMode,
         botProtection: {
           enabled: botProtection?.active ?? false,
@@ -89,6 +81,13 @@ export default async function status(client: Client, argv: string[]) {
           action: aiBots?.action ?? null,
         },
         owasp: owaspJsonStatus(owasp, planInfo),
+        rules: {
+          active: active?.rules.filter(r => r.active).length ?? 0,
+          inactive: active?.rules.filter(r => !r.active).length ?? 0,
+          total: active?.rules.length ?? 0,
+        },
+        ipBlocks: active?.ips.length ?? 0,
+        draftChanges: draft?.changes.length ?? 0,
       });
       return 0;
     }
@@ -111,20 +110,17 @@ export default async function status(client: Client, argv: string[]) {
 
     return 0;
   } catch (e: unknown) {
-    const error = e as { message?: string };
-    const msg = error.message || 'Failed to fetch firewall status';
-    if (client.nonInteractive) {
-      outputAgentError(client, {
-        status: 'error',
-        reason: 'api_error',
-        message: msg,
-        next: [{ command: withGlobalFlags(client, 'firewall status') }],
-      });
-      process.exit(1);
-      return 1;
-    }
-    output.error(msg);
-    return 1;
+    return failFirewallApi(client, e, {
+      fallback: 'Failed to fetch firewall status',
+      nextCommand: parsed.flags['--json']
+        ? 'firewall status --json'
+        : parsed.flags['--graph']
+          ? 'firewall status --graph'
+          : 'firewall status',
+      permissionAction: 'read firewall status',
+      projectName: project.name,
+      timeoutJob: 'firewall status',
+    });
   } finally {
     output.stopSpinner();
   }

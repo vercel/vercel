@@ -9,6 +9,7 @@ import {
   resolveRule,
   detectExistingDraft,
   offerAutoPublish,
+  refuseManagedBotMutation,
 } from '../shared';
 import { formatActionDisplay } from '../../../util/firewall/format';
 import { outputAgentError } from '../../../util/agent-output';
@@ -35,6 +36,9 @@ export default async function disable(client: Client, argv: string[]) {
   const { project, org } = link;
   const teamId = org.type === 'team' ? org.id : undefined;
   let identifier = parsed.args[0] as string | undefined;
+
+  const reserved = refuseManagedBotMutation(client, identifier, 'disable');
+  if (reserved !== null) return reserved;
 
   output.spinner(`Fetching rules for ${chalk.bold(project.name)}`);
 

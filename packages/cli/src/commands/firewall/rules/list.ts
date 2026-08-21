@@ -9,7 +9,14 @@ import {
   annotateRules,
   formatRulesTable,
   formatRuleExpanded,
+  formatManagedBotRulesTable,
 } from '../../../util/firewall/format';
+import {
+  getManagedBotRules,
+  managedBotJson,
+  suggestedManagedBotAction,
+} from '../../../util/firewall/managed-bot-rules';
+import { formatHintLine } from '../../../util/firewall/format-utils';
 import { outputAgentError } from '../../../util/agent-output';
 
 export default async function list(client: Client, argv: string[]) {
@@ -31,13 +38,15 @@ export default async function list(client: Client, argv: string[]) {
   const { project, org } = link;
   const teamId = org.type === 'team' ? org.id : undefined;
 
-  output.spinner(`Fetching custom rules for ${chalk.bold(project.name)}`);
+  output.spinner(`Fetching rules for ${chalk.bold(project.name)}`);
 
   try {
     const { active, draft } = await listFirewallConfigs(client, project.id, {
       teamId,
     });
 
+    const config = draft ?? active;
+    const managed = getManagedBotRules(config);
     const activeRules = active?.rules || [];
     const draftRules = draft?.rules || null;
     const changes = draft?.changes || [];
@@ -46,6 +55,7 @@ export default async function list(client: Client, argv: string[]) {
 
     if (parsed.flags['--json']) {
       outputJson(client, {
+        managed: managed.map(managedBotJson),
         rules: annotated.map(a => ({
           ...a.rule,
           _status: a.status,
@@ -56,14 +66,13 @@ export default async function list(client: Client, argv: string[]) {
       return 0;
     }
 
-    if (annotated.length === 0) {
-      output.log('No custom rules configured.');
-      return 0;
-    }
+    output.print(`\n${formatManagedBotRulesTable(managed)}\n`);
 
-    // Expanded view — full condition details
-    if (parsed.flags['--expand']) {
-      output.print('\n');
+    if (annotated.length === 0) {
+      output.print(`\n  ${chalk.bold('Custom')}\n`);
+      output.print(`\n  ${chalk.dim('No custom rules configured.')}\n`);
+    } else if (parsed.flags['--expand']) {
+      output.print(`\n  ${chalk.bold('Custom')}\n\n`);
       for (let i = 0; i < annotated.length; i++) {
         const { rule, status } = annotated[i];
         let colorFn: (s: string) => string = (s: string) => s;
@@ -81,7 +90,6 @@ export default async function list(client: Client, argv: string[]) {
 
         const expanded = formatRuleExpanded(rule, i);
         if (prefix) {
-          // Color the first line with prefix
           const expandedLines = expanded.split('\n');
           expandedLines[0] = colorFn(
             expandedLines[0].replace(/^ {2}/, `  ${prefix}`)
@@ -97,8 +105,8 @@ export default async function list(client: Client, argv: string[]) {
       }
       output.print('\n');
     } else {
-      // Table view — compact with description
-      output.print(`\n${formatRulesTable(annotated)}\n`);
+      output.print(`\n  ${chalk.bold('Custom')}\n\n`);
+      output.print(`${formatRulesTable(annotated)}\n`);
     }
 
     const ruleChanges = changes.filter(c =>
@@ -112,11 +120,24 @@ export default async function list(client: Client, argv: string[]) {
       output.print(`\n  ${chalk.dim('Showing live configuration.')}\n`);
     }
 
+    const first = managed[0];
+    if (first) {
+      output.print(
+        `\n${formatHintLine(
+          'Edit rule',
+          withGlobalFlags(
+            client,
+            `firewall rules edit ${first.id} --action ${suggestedManagedBotAction(first)}`
+          )
+        )}\n`
+      );
+    }
+
     output.print('\n');
     return 0;
   } catch (e: unknown) {
     const error = e as { message?: string };
-    const msg = error.message || 'Failed to fetch custom rules';
+    const msg = error.message || 'Failed to fetch rules';
     if (client.nonInteractive) {
       outputAgentError(client, {
         status: 'error',

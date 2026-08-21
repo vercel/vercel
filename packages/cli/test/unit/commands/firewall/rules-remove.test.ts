@@ -141,4 +141,15 @@ describe('firewall rules remove', () => {
     await expect(client.stderr).toOutput('No custom rules configured');
     expect(await exitCodePromise).toEqual(1);
   });
+
+  it('refuses to remove a managed bot rule', async () => {
+    useListFirewallConfigs(createConfig({ rules: [createRule(1)] }), null);
+    client.setArgv('firewall', 'rules', 'remove', 'bot-protection', '--yes');
+    const exitCode = await firewall(client);
+    expect(exitCode).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain("Can't remove");
+    expect(client.stderr.getFullOutput()).toContain(
+      'firewall rules edit bot-protection --action'
+    );
+  });
 });

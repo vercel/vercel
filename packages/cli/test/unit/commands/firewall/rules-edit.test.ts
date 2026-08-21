@@ -672,12 +672,14 @@ describe('firewall rules edit', () => {
     // Interactive rule selection (TTY) is tested manually — requires multi-step
     // stdin simulation that's fragile in unit tests.
 
-    it('should error with no rules when no identifier in TTY', async () => {
+    it('offers managed bot rules when no identifier is given', async () => {
       useListFirewallConfigs(createConfig({ rules: [] }), null);
 
       client.setArgv('firewall', 'rules', 'edit');
       const exitCodePromise = firewall(client);
-      await expect(client.stderr).toOutput('No custom rules configured');
+      await expect(client.stderr).toOutput('Select a rule to edit');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Specify --action');
       expect(await exitCodePromise).toEqual(1);
     });
   });
@@ -975,6 +977,75 @@ describe('firewall rules edit', () => {
 
       expect(lastPatchBody.action).toBe('rules.update');
       expect(lastPatchBody.value.name).toBe('AI Modified Rule');
+    });
+  });
+
+  describe('managed bot rules', () => {
+    it('stages a managedRules.update patch for Bot Protection', async () => {
+      const active = createConfig({
+        managedRules: {
+          bot_filter: { active: true, action: 'challenge' },
+        },
+      });
+      useListFirewallConfigs(active, null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'edit',
+        'managed_bot_protection',
+        '--action',
+        'log',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('updated to Log');
+      expect(await exitCodePromise).toEqual(0);
+      expect(lastPatchBody.action).toBe('managedRules.update');
+      expect(lastPatchBody.id).toBe('bot_protection');
+      expect(lastPatchBody.value).toEqual({ active: true, action: 'log' });
+    });
+
+    it('stages botId.toggle for BotID Deep Analysis', async () => {
+      const active = createConfig({ botIdEnabled: false });
+      useListFirewallConfigs(active, null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'edit',
+        'bot-id',
+        '--action',
+        'deep-analysis',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('npm i botid');
+      expect(await exitCodePromise).toEqual(0);
+      expect(lastPatchBody.action).toBe('botId.toggle');
+      expect(lastPatchBody.value).toBe(true);
+    });
+
+    it('rejects custom-rule flags on managed bot rules', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      client.setArgv(
+        'firewall',
+        'rules',
+        'edit',
+        'ai-bots',
+        '--condition',
+        '{"type":"path","op":"pre","value":"/api"}',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCode = await firewall(client);
+      expect(exitCode).toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain("Can't use --condition");
     });
   });
 

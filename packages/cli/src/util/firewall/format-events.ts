@@ -1,13 +1,21 @@
 import chalk from 'chalk';
 import table from '../output/table';
-import cmd from '../output/cmd';
+import { formatAlignedLabel } from '../output/print-aligned-label';
 import { packageName } from '../pkg-name';
-import { ACTION_COLORS, formatCount, windowNeedsDate } from './format-utils';
+import {
+  ACTION_COLORS,
+  cliToken,
+  formatCount,
+  formatHintLine,
+  formatUtcTime,
+  windowNeedsDate,
+} from './format-utils';
 import { actionSeriesRows, formatSeriesTable } from './format-traffic';
 import type {
   GroupedTimeseriesResult,
   TopListRow,
 } from './get-firewall-traffic';
+import type { AttributedPersistentActionRule } from './attribute-persistent-action-rule';
 import type { FirewallActionRow } from './types';
 
 export const DEFAULT_EVENTS_LIMIT = 10;
@@ -49,11 +57,6 @@ function pad2(n: number): string {
   return String(n).padStart(2, '0');
 }
 
-function cliToken(value: string): string {
-  if (/^[A-Za-z0-9_.:/@-]+$/.test(value)) return value;
-  return `'${value.replace(/'/g, `'\\''`)}'`;
-}
-
 function defaultSuggest(template: string): string {
   return `${packageName} ${template}`;
 }
@@ -73,7 +76,7 @@ export function isRedactedEvent(row: FirewallActionRow): boolean {
 
 export function formatEventType(actionType: string): string {
   if (actionType === REDACTED) return REDACTED;
-  return actionType === 'system-action' ? 'System Rule' : 'Customer Rule';
+  return actionType === 'system-action' ? 'System Rule' : 'Custom Rule';
 }
 
 export function parseEventTime(value: string): Date | undefined {
@@ -174,16 +177,57 @@ export function getEventHints(
 
   const detailSuffix = scoped.length > 0 ? ` ${scoped.join(' ')}` : '';
   return {
-    detail: suggest(`firewall event-detail ${ip}${detailSuffix}`),
-    traffic: suggest(`firewall traffic-dashboard --ip ${ip}${detailSuffix}`),
+    detail: suggest(`firewall persistent-actions inspect ${ip}${detailSuffix}`),
+    traffic: suggest(`firewall traffic --ip ${ip}${detailSuffix}`),
   };
 }
 
+/**
+ * Inspect-page CTAs. `Edit rule` only when a custom rule was uniquely
+ * attributed — the events API does not return a rule id (see
+ * `get-firewall-events.ts`).
+ */
+export function getPersistentActionInspectHints(
+  row: FirewallActionRow,
+  suggest: (template: string) => string = defaultSuggest,
+  attributed?: AttributedPersistentActionRule
+): Array<{ label: string; command: string }> {
+  const hints: Array<{ label: string; command: string }> = [];
+  const view = getEventHints(row, suggest);
+  if (view?.traffic) {
+    hints.push({ label: 'Inspect traffic', command: view.traffic });
+  }
+  if (
+    row.action_type === 'system-action' &&
+    isUsableField(row.public_ip) &&
+    isUsableField(row.host)
+  ) {
+    hints.push({
+      label: 'Bypass',
+      command: suggest(
+        `firewall system-bypass add ${cliToken(row.public_ip)} --domain ${cliToken(row.host)}`
+      ),
+    });
+  }
+  if (attributed?.kind === 'custom_rule') {
+    hints.push({
+      label: 'Edit rule',
+      command: suggest(`firewall rules edit ${cliToken(attributed.id)}`),
+    });
+  }
+  return hints;
+}
+
+function formatEventUtc(value: string): string {
+  const d = parseEventTime(value);
+  if (!d) return value || '--';
+  return `${formatUtcTime(d.getTime(), true)} UTC`;
+}
+
 function formatViewHintLines(section: EventViewHint): string[] {
-  const label = (s: string) => chalk.dim(s.padEnd(8));
-  const lines = ['', `  ${label('Detail')}${cmd(section.detail)}`];
+  const lines = ['', formatHintLine('Inspect', section.detail)];
   if (section.traffic) {
-    lines.push(`  ${label('Traffic')}${cmd(section.traffic)}`);
+    lines.push(formatHintLine('Traffic', section.traffic));
   }
   return lines;
 }
@@ -204,15 +248,15 @@ export function formatEventsOutput(opts: {
 }): string {
   const lines: string[] = [];
   lines.push(
-    `  ${chalk.bold('Firewall events')}  ${chalk.dim(`(${periodLabel(opts.since)})`)}`
+    `  ${chalk.bold('Persistent actions')}  ${chalk.dim(`(${periodLabel(opts.since)}, UTC)`)}`
   );
 
   if (opts.actions.length === 0) {
     lines.push('');
     lines.push(
       opts.filtered
-        ? '  No firewall events match the current filters.'
-        : '  No firewall events found.'
+        ? '  No persistent actions match the current filters.'
+        : '  No persistent actions found.'
     );
     return `${lines.join('\n')}\n`;
   }
@@ -234,8 +278,8 @@ export function formatEventsOutput(opts: {
       colorAction(row.action),
       row.host || '--',
       row.public_ip || '--',
-      formatLocalEventTime(row.startTime),
-      formatLocalEventTime(row.endTime),
+      formatEventUtc(row.startTime),
+      formatEventUtc(row.endTime),
       formatCount(row.count),
     ]);
   }
@@ -252,7 +296,9 @@ export function formatEventsOutput(opts: {
   if (opts.actions.some(isRedactedEvent)) {
     lines.push('');
     lines.push(
-      chalk.dim('  Some older events are redacted on the Hobby plan.')
+      chalk.dim(
+        '  Some older persistent actions are redacted on the Hobby plan.'
+      )
     );
   }
 
@@ -275,7 +321,7 @@ export function formatEventsOutput(opts: {
 }
 
 function metaRow(label: string, value: string): string {
-  return `  ${chalk.bold(label.padEnd(16))}${value}`;
+  return formatAlignedLabel(label, value);
 }
 
 export function formatEventDetailOutput(opts: {
@@ -283,26 +329,46 @@ export function formatEventDetailOutput(opts: {
   matchCount: number;
   timeseries: GroupedTimeseriesResult | null;
   topPaths: TopListRow[];
+  attributedRule?: AttributedPersistentActionRule;
 }): string {
   const { event } = opts;
   const action = event.action === 'block' ? 'deny' : event.action;
   const color = ACTION_COLORS[action] ?? ((s: string) => s);
-  const lines: string[] = [''];
-  lines.push(`  ${chalk.bold('Event Details')}`);
+  const lines: string[] = [];
+  lines.push(`  ${chalk.bold('Persistent action')}`);
   lines.push('');
-  lines.push(metaRow('Start Time', formatLocalEventTime(event.startTime)));
-  lines.push(metaRow('End Time', formatLocalEventTime(event.endTime)));
+  const startMs = parseEventTime(event.startTime)?.getTime();
+  const endMs = parseEventTime(event.endTime)?.getTime();
+  lines.push(
+    metaRow(
+      'Start',
+      startMs !== undefined
+        ? `${formatUtcTime(startMs, true)} UTC`
+        : formatLocalEventTime(event.startTime)
+    )
+  );
+  lines.push(
+    metaRow(
+      'End',
+      endMs !== undefined
+        ? `${formatUtcTime(endMs, true)} UTC`
+        : formatLocalEventTime(event.endTime)
+    )
+  );
   lines.push(metaRow('Action', color(action)));
-  lines.push(metaRow('Action Type', formatEventType(event.action_type)));
+  lines.push(metaRow('Type', formatEventType(event.action_type)));
+  if (opts.attributedRule) {
+    lines.push(metaRow('Rule', opts.attributedRule.id));
+  }
   lines.push(metaRow('Hostname', event.host || '--'));
-  lines.push(metaRow('IP Address', event.public_ip || '--'));
+  lines.push(metaRow('IP', event.public_ip || '--'));
   lines.push(metaRow('Requests', formatCount(event.count)));
 
   if (opts.matchCount > 1) {
     lines.push('');
     lines.push(
       chalk.dim(
-        `  Showing the most recent of ${opts.matchCount} matching events. Pass --host, --action, --since, and --until to pick one.`
+        `  Showing the most recent of ${opts.matchCount} matching persistent actions. Pass --host, --action, --since, and --until to pick one.`
       )
     );
   }
@@ -330,7 +396,7 @@ export function formatEventDetailOutput(opts: {
   lines.push('');
   lines.push(chalk.bold('  Top Request Paths'));
   if (opts.topPaths.length === 0) {
-    lines.push(chalk.dim('  No path data for this event.'));
+    lines.push(chalk.dim('  No path data for this persistent action.'));
   } else {
     const rendered = table(
       opts.topPaths.map(row => [

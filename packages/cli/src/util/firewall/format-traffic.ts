@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import table from '../output/table';
+import { formatAlignedLabel } from '../output/print-aligned-label';
 import { ellipsizeMiddle } from '../output/truncate';
 import { generateSparkline } from '../../commands/metrics/text-output';
 import {
@@ -145,11 +146,11 @@ export function topListToWidgetRows(
 function formatWidget(widget: WidgetResult): string[] {
   const lines: string[] = [chalk.bold(`  ${widget.title}`)];
   if (widget.error) {
-    lines.push(chalk.dim(`  Unavailable: ${widget.error}`));
+    lines.push(chalk.dim(`  Couldn't load this table.`));
     return lines;
   }
   if (widget.rows.length === 0) {
-    lines.push(chalk.dim('  No data.'));
+    lines.push(chalk.dim('  No requests in this period.'));
     return lines;
   }
   const rendered = table(
@@ -168,9 +169,8 @@ function formatWidget(widget: WidgetResult): string[] {
 export function formatTrafficDashboardOutput(opts: {
   actions: GroupedTimeseriesResult;
   widgets: WidgetResult[];
-  filter?: string;
 }): string {
-  const lines: string[] = [''];
+  const lines: string[] = [];
   const startMs = new Date(opts.actions.startTime).getTime();
   const endMs = new Date(opts.actions.endTime).getTime();
   const needsDate = windowNeedsDate(startMs, endMs);
@@ -185,9 +185,6 @@ export function formatTrafficDashboardOutput(opts: {
       })
     )}`
   );
-  if (opts.filter) {
-    lines.push(`  ${chalk.dim('Filter:')} ${opts.filter}`);
-  }
   lines.push('');
 
   lines.push(chalk.bold('  Requests by Action'));
@@ -212,7 +209,7 @@ export function formatTrafficDashboardOutput(opts: {
   lines.push('');
   lines.push(
     chalk.dim(
-      '  Drill into any value with `vercel firewall drill-in <dimension> <value>`.'
+      '  Inspect any value with `vercel firewall traffic inspect <dimension> <value>`.'
     )
   );
   lines.push('');
@@ -229,9 +226,8 @@ export function formatDrillInOutput(opts: {
   breakdownField: string;
   breakdownLabel: string;
   top: number;
-  filter?: string;
 }): string {
-  const lines: string[] = [''];
+  const lines: string[] = [];
   const startMs = new Date(opts.timeseries.startTime).getTime();
   const endMs = new Date(opts.timeseries.endTime).getTime();
   const needsDate = windowNeedsDate(startMs, endMs);
@@ -246,9 +242,6 @@ export function formatDrillInOutput(opts: {
       )
       .join('  ·  ');
     if (detail) lines.push(`  ${detail}`);
-  }
-  if (opts.filter) {
-    lines.push(`  ${chalk.dim('Filter:')} ${opts.filter}`);
   }
   lines.push('');
 
@@ -290,7 +283,7 @@ export function formatDrillInOutput(opts: {
       chalk.dim(`  (top ${opts.top})`)
   );
   if (opts.breakdown.groups.length === 0) {
-    lines.push(chalk.dim('  No data.'));
+    lines.push(chalk.dim('  No requests in this period.'));
   } else {
     lines.push(
       ...formatSeriesTable({
@@ -320,11 +313,11 @@ export function formatAlertDetailOutput(opts: {
   topIps: TopListRow[];
   topHosts: TopListRow[];
 }): string {
-  const lines: string[] = [''];
+  const lines: string[] = [];
   const { alert } = opts;
   const state = alert.resolvedAt
     ? chalk.dim('Resolved')
-    : chalk.red('● Active');
+    : `${chalk.yellow('!')} Active`;
   lines.push(`  ${chalk.bold(alert.title)}  ${state}`);
 
   const needsDate = true;
@@ -350,7 +343,7 @@ export function formatAlertDetailOutput(opts: {
   ];
   for (const [key, value] of meta) {
     if (value) {
-      lines.push(`  ${chalk.bold(`${key}:`.padEnd(10))} ${value}`);
+      lines.push(formatAlignedLabel(key, value));
     }
   }
   lines.push('');
@@ -361,13 +354,19 @@ export function formatAlertDetailOutput(opts: {
         ? opts.anomalyAvgPerMin / opts.baselineAvgPerMin
         : null;
     lines.push(
-      `  ${chalk.bold('Previous 24h (avg):')}    ${formatCount(opts.baselineAvgPerMin)} req/min`
+      formatAlignedLabel(
+        'Previous 24h',
+        `${formatCount(opts.baselineAvgPerMin)} req/min`
+      )
     );
     lines.push(
-      `  ${chalk.bold('During anomaly (avg):')}  ${formatCount(opts.anomalyAvgPerMin)} req/min` +
-        (multiplier !== null && multiplier >= 2
-          ? `  ${chalk.red(`${Math.round(multiplier)}x`)}`
-          : '')
+      formatAlignedLabel(
+        'Anomaly',
+        `${formatCount(opts.anomalyAvgPerMin)} req/min` +
+          (multiplier !== null && multiplier >= 2
+            ? `  ${chalk.red(`${Math.round(multiplier)}x`)}`
+            : '')
+      )
     );
     lines.push('');
   }

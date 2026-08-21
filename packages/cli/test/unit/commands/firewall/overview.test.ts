@@ -6,9 +6,9 @@ import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import {
   useListFirewallConfigs,
-  useGetBypass,
   createConfig,
   createRule,
+  useGetBypass,
 } from '../../../mocks/firewall';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 
@@ -162,9 +162,6 @@ describe('firewall overview', () => {
     expect(await exitCodePromise).toEqual(0);
 
     const fullOutput = client.stderr.getFullOutput();
-    // Status section comes first.
-    expect(fullOutput).toContain('Enabled');
-    expect(fullOutput).toMatch(/Bot Protection:\s+Challenge/);
     expect(fullOutput).toContain('Attacks mitigated');
     // Chart table: header columns and per-action rows with totals.
     expect(fullOutput).toContain('Requests by Action');
@@ -172,7 +169,7 @@ describe('firewall overview', () => {
     expect(fullOutput).toMatch(/Action\s+Trend\s+Total\s+Peak\s+Peak at/);
     expect(fullOutput).toMatch(/Allow\s+\S+\s+8\.2M/);
     expect(fullOutput).toMatch(/Deny\s+\S+\s+34\.5k/);
-    // Rules: resolved names, counts, and ids for drill-in.
+    // Rules: resolved names, counts, and ids for inspect.
     expect(fullOutput).toContain('(top 8)');
     expect(fullOutput).toMatch(/Rule\s+Requests\s+Id/);
     expect(fullOutput).toMatch(
@@ -183,24 +180,21 @@ describe('firewall overview', () => {
       /DDoS Mitigation\s+155\.9k\s+sys_dos_mitigation/
     );
     expect(fullOutput).not.toContain('Drill into a rule with');
-    // Detail vs traffic-dashboard next steps, filled from the top row.
-    expect(fullOutput).toContain('`vercel firewall drill-in action deny`');
-    expect(fullOutput).toContain(
-      '`vercel firewall traffic-dashboard --action deny`'
-    );
-    expect(fullOutput).toContain(
-      '`vercel firewall drill-in rule managed_bot_protection`'
-    );
-    expect(fullOutput).toContain(
-      '`vercel firewall traffic-dashboard --rule managed_bot_protection`'
+    expect(fullOutput).toContain('Enabled');
+    expect(fullOutput).toMatch(/Bot Protection\s+Challenge/);
+    // One next-command pair from the highest-signal alert in the window.
+    expect(fullOutput).toMatch(
+      /firewall alerts inspect team_dummy-firewall-test-project-\d+/
     );
     expect(fullOutput).toMatch(
-      /`vercel firewall traffic-dashboard --alert team_dummy-firewall-test-project-\d+`/
+      /firewall traffic --alert team_dummy-firewall-test-project-\d+/
     );
-    expect(fullOutput).toMatch(/alert-detail /);
+    expect(fullOutput).not.toContain('drill-in');
+    expect(fullOutput).not.toContain('traffic-dashboard');
+    expect(fullOutput).not.toContain('alert-detail');
     // Alerts carry absolute UTC timestamps so they correlate with `Peak at`.
     expect(fullOutput).toContain('Alerts in this window');
-    expect(fullOutput).toMatch(/▲ \d{2}:\d{2} UTC/);
+    expect(fullOutput).toMatch(/! \d{2}:\d{2} UTC/);
   });
 
   it('prints an empty state when there is no rule traffic', async () => {
@@ -212,8 +206,8 @@ describe('firewall overview', () => {
 
     const fullOutput = client.stderr.getFullOutput();
     expect(fullOutput).toContain('No rule traffic for this period.');
-    expect(fullOutput).not.toContain('drill-in rule');
-    expect(fullOutput).toContain('`vercel firewall drill-in action deny`');
+    expect(fullOutput).not.toContain('traffic inspect rule');
+    expect(fullOutput).toMatch(/firewall alerts inspect /);
   });
 
   it('outputs JSON with --json', async () => {
@@ -222,10 +216,9 @@ describe('firewall overview', () => {
     expect(exitCode).toEqual(0);
     const payload = JSON.parse((client.stdout as any).getFullOutput());
     expect(payload.status.firewallEnabled).toEqual(true);
-    expect(payload.status.botProtection).toEqual({
-      enabled: true,
-      action: 'challenge',
-    });
+    expect(payload.status.owasp).toEqual(
+      expect.objectContaining({ enabled: false })
+    );
     expect(payload.stats.deny).toEqual(34500);
     expect(payload.stats.attacksMitigated).toEqual(1);
     expect(payload.series.length).toBeGreaterThan(0);
@@ -247,37 +240,18 @@ describe('firewall overview', () => {
       expect.arrayContaining([
         {
           view: 'detail',
-          command: 'vercel firewall drill-in action deny',
+          command: expect.stringMatching(
+            /^vercel firewall alerts inspect team_dummy-firewall-test-project-/
+          ),
         },
         {
           view: 'traffic',
-          command: 'vercel firewall traffic-dashboard --action deny',
-        },
-        {
-          view: 'detail',
-          command: 'vercel firewall drill-in rule managed_bot_protection',
-        },
-        {
-          view: 'traffic',
-          command:
-            'vercel firewall traffic-dashboard --rule managed_bot_protection',
+          command: expect.stringMatching(
+            /^vercel firewall traffic --alert team_dummy-firewall-test-project-/
+          ),
         },
       ])
     );
-    expect(
-      payload.next.some(
-        (n: { view: string; command: string }) =>
-          n.view === 'traffic' &&
-          n.command.includes(
-            'firewall traffic-dashboard --alert team_dummy-firewall-test-project-'
-          )
-      )
-    ).toEqual(true);
-    expect(
-      payload.next.some(
-        (n: { view: string; command: string }) =>
-          n.view === 'detail' && n.command.includes('alert-detail')
-      )
-    ).toEqual(true);
+    expect(payload.next).toHaveLength(2);
   });
 });
