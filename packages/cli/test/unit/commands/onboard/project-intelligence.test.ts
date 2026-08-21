@@ -97,6 +97,47 @@ describe('project intelligence', () => {
     expect(rendered).toContain('none configured or inferred');
   });
 
+  it('renders migration signals and annotates what the proposed config leaves open', async () => {
+    await writeFile(
+      join(cwd, 'docker-compose.yml'),
+      [
+        'services:',
+        '  web:',
+        '    ports: ["3000:3000"]',
+        '    volumes: [artifacts:/data]',
+        '  worker:',
+        '    command: npm run worker',
+        '    volumes: [artifacts:/data]',
+        'volumes:',
+        '  artifacts:',
+      ].join('\n')
+    );
+    await writeFile(
+      join(cwd, 'nginx.conf'),
+      'server { location /api/ { proxy_pass http://api:8000; } }\n'
+    );
+
+    const intelligence = await collectProjectIntelligence(cwd);
+    expect(intelligence.migrationSignals).toContainEqual(
+      expect.objectContaining({ kind: 'shared-volume' })
+    );
+
+    const rendered = formatProjectIntelligence(intelligence);
+    expect(rendered).toContain('Migration signals');
+    expect(rendered).toContain('Named volume `artifacts`');
+    expect(rendered).toContain('Route `/api/` proxies to `http://api:8000`');
+
+    // With a proposed config, the unresolved signals are called out.
+    intelligence.proposedConfig = {
+      fileName: 'vercel.json',
+      content: '{\n  "services": {}\n}\n',
+    };
+    const annotated = formatProjectIntelligence(intelligence);
+    expect(annotated).toContain('does NOT');
+    expect(annotated).toContain('Named volume `artifacts`');
+    expect(annotated).toContain('Compare the proxy routes');
+  });
+
   it('renders a CLI-computed config as the starting point when services were inferred', async () => {
     const intelligence = await collectProjectIntelligence(cwd);
     intelligence.workspaceManagers = ['pnpm'];

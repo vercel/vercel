@@ -29,6 +29,57 @@ describe('preflight formatting', () => {
     expect(rendered).not.toContain('Marketplace catalog');
   });
 
+  it('renders task-relevant recipes above the catalog when a need was detected', () => {
+    const rendered = formatPreflight({
+      ...base,
+      team: 'acme-team',
+      intelligence: {
+        workspaceManagers: [],
+        frameworks: [],
+        services: [],
+        intentFiles: [],
+        migrationSignals: [
+          {
+            kind: 'sqlite-runtime',
+            source: 'server/db.js',
+            evidence: 'Runtime SQLite usage: `…`',
+            confidence: 'high',
+          },
+        ],
+      },
+      marketplace: [
+        { slug: 'neon', name: 'Neon', description: 'Serverless Postgres' },
+        { slug: 'upstash', name: 'Upstash' },
+      ],
+    });
+
+    expect(rendered).toContain('Detected stateful needs');
+    expect(rendered).toContain('Need: postgres');
+    expect(rendered).toContain(
+      'vercel integration add neon --name <resource-name> --scope acme-team'
+    );
+    // The full catalog stays as the fallback, after the recipes.
+    expect(rendered.indexOf('Detected stateful needs')).toBeLessThan(
+      rendered.indexOf('Marketplace catalog')
+    );
+  });
+
+  it('renders no recipes when detection saw no stateful need', () => {
+    const rendered = formatPreflight({
+      ...base,
+      intelligence: {
+        workspaceManagers: [],
+        frameworks: [],
+        services: [],
+        intentFiles: [],
+        migrationSignals: [],
+      },
+      marketplace: [{ slug: 'neon', name: 'Neon' }],
+    });
+    expect(rendered).not.toContain('Detected stateful needs');
+    expect(rendered).toContain('Marketplace catalog');
+  });
+
   it('states a pinned team as decided and withholds the alternatives', () => {
     const rendered = formatPreflight({
       ...base,

@@ -87,7 +87,14 @@ export function buildSessionReport(
   // The latest verification per deployment, journaled by `onboard verify` —
   // the CLI's own measurement, so "checks passed" is never the model's
   // claim.
-  const verifications = new Map<string, { passed: number; failed: number }>();
+  const verifications = new Map<
+    string,
+    {
+      passed: number;
+      failed: number;
+      milestones?: { verified: string[]; unverified: string[] };
+    }
+  >();
   for (const event of ledger) {
     if (
       event.type === 'verification' &&
@@ -95,9 +102,13 @@ export function buildSessionReport(
       typeof event.passed === 'number' &&
       typeof event.failed === 'number'
     ) {
+      // Milestones ride along when the manifest declared any; older ledger
+      // events without them render exactly as before.
+      const milestones = parseMilestones(event.milestones);
       verifications.set(event.deployment, {
         passed: event.passed,
         failed: event.failed,
+        ...(milestones ? { milestones } : {}),
       });
     }
   }
@@ -140,6 +151,23 @@ export function buildSessionReport(
         ? ` · ${checks.failed}/${checks.passed + checks.failed} checks failing`
         : ` · ${checks.passed}/${checks.passed + checks.failed} checks passed`
       : '';
+    // Stateful migration milestones, measured by `onboard verify`. A
+    // provisioned and connected database is not a migrated one; these lines
+    // say which behaviors were proven and which are still missing.
+    const milestoneDetails: string[] = [];
+    if (checks?.milestones) {
+      if (checks.milestones.verified.length > 0) {
+        milestoneDetails.push(
+          `migration verified: ${checks.milestones.verified.join(', ')}`
+        );
+      }
+      if (checks.milestones.unverified.length > 0) {
+        milestoneDetails.push(
+          `migration NOT verified: ${checks.milestones.unverified.join(', ')}`
+        );
+      }
+    }
+
     rows.push({
       kind: 'deployment',
       resource: outcome.url,
@@ -147,7 +175,14 @@ export function buildSessionReport(
         ? (outcome.production ? 'deployed, production' : 'deployed') + checkNote
         : 'reported, unverified',
       cost: 'usage',
-      ...(outcome.inspectUrl ? { details: [outcome.inspectUrl] } : {}),
+      ...(outcome.inspectUrl || milestoneDetails.length > 0
+        ? {
+            details: [
+              ...(outcome.inspectUrl ? [outcome.inspectUrl] : []),
+              ...milestoneDetails,
+            ],
+          }
+        : {}),
       production: outcome.production,
       unverified: !outcome.verified,
     });
@@ -207,6 +242,32 @@ export function buildSessionReport(
     resourcesProvisioned: ledger
       .filter(event => event.type === 'resource-provisioned')
       .map(event => `${event.integration}/${event.resource}`),
+  };
+}
+
+/** Milestones from a verification event, when that event carried any. */
+function parseMilestones(
+  value: unknown
+): { verified: string[]; unverified: string[] } | undefined {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    !Array.isArray((value as { verified?: unknown }).verified) ||
+    !Array.isArray((value as { unverified?: unknown }).unverified)
+  ) {
+    return undefined;
+  }
+  const { verified, unverified } = value as {
+    verified: unknown[];
+    unverified: unknown[];
+  };
+  return {
+    verified: verified.filter(
+      (entry): entry is string => typeof entry === 'string'
+    ),
+    unverified: unverified.filter(
+      (entry): entry is string => typeof entry === 'string'
+    ),
   };
 }
 

@@ -28,7 +28,13 @@ import {
   buildResumeState,
   type ResumableSession,
 } from './session-storage';
-import { FOLLOW_UPS } from './follow-ups';
+import { CONTINUE_PROVIDER_SETUP, FOLLOW_UPS } from './follow-ups';
+import {
+  BrowserHandoffWatcher,
+  completePendingHandoffs,
+  expirePendingHandoffs,
+  installBrowserBridge,
+} from './browser-handoff';
 import { ActivityIndicator, WORKING_PHRASES } from './activity';
 import { answerAskUser, createAskUserTool, isAskUserTool } from './ask-user';
 import {
@@ -50,6 +56,7 @@ import {
   waitForTranscriptSettle,
 } from './session-continuation';
 import { buildSessionReport } from './session-report';
+import { maybeSteerVerification } from './verification-steering';
 import { agentLabel, blankGutter, gutter, GUTTER_WIDTH } from './voice';
 import { textWidth, truncateAnsi, wrapAnsi } from './wrap';
 import type { OnboardProfile } from './profile';
@@ -257,6 +264,10 @@ async function driveSession(
   const shimDir = await installCliShim(sessionDir);
   if (shimDir) {
     process.env.PATH = previousPath ? `${shimDir}:${previousPath}` : shimDir;
+    // Same directory, same rationale: a child command that tries to open a
+    // browser in a headless session lands on the bridge instead of dying on
+    // `spawn xdg-open ENOENT`, and the URL reaches the user.
+    await installBrowserBridge(sessionDir, shimDir);
   }
 
   const cleanupSessionDir = async (): Promise<void> => {
@@ -320,6 +331,9 @@ async function driveSession(
     // Recorded before the destroy, so a signalled run stays resumable: the
     // agent's transcript is already on disk by the time a turn has streamed.
     await recordResumePoint();
+    // A checkout the user never finished is journaled as such, so a resumed
+    // session offers to continue it instead of assuming it happened.
+    await expirePendingHandoffs(sessionDir);
     try {
       await session?.destroy();
     } catch (err) {
@@ -429,6 +443,26 @@ async function driveSession(
   );
   approvals.start();
 
+  // A child command that needed a browser has handed its URL to the bridge;
+  // this side shows it to the person who can actually finish the checkout.
+  // The full URL is printed — the user needs it verbatim — and journaled in
+  // the local session record only.
+  const browserHandoffs = new BrowserHandoffWatcher(sessionDir, url => {
+    activity.pause();
+    output.print('\n');
+    vercelSays(chalk.yellow('Provider setup requires a browser'));
+    vercelSays(`Open  ${chalk.cyan(url)}`, true);
+    vercelSays(
+      chalk.dim(
+        'Finish the setup there. The session continues; approval gates stay active.'
+      ),
+      true
+    );
+    output.print('\n');
+    activity.resume();
+  });
+  browserHandoffs.start();
+
   // Printed after each turn and again on teardown, deduplicated by content:
   // the user decides what to do next from the outcome, not from scrollback,
   // and an unchanged outcome is not repeated.
@@ -509,6 +543,28 @@ async function driveSession(
         // An interrupt key during the turn skips the menu: the user already
         // chose what happens next.
         const interrupt = handoffKeys.consumePending();
+
+        // Deterministic steering, before the user is asked anything: if the
+        // agent stopped while the latest deployment is unverified or failing
+        // the session's own checks, re-verify out of band and send it back
+        // with the measured evidence. Bounded per deployment, derived from
+        // the ledger, and skipped entirely when the user interrupted — an
+        // interrupt means the user owns the next move.
+        if (interrupt === undefined && exitCode === 0) {
+          const endSteer = profile.start('verification steering');
+          const nudge = await maybeSteerVerification({ client, sessionDir });
+          endSteer({
+            steered: nudge !== undefined,
+            ...(nudge ? { reason: nudge.reason, nudge: nudge.nudge } : {}),
+          });
+          if (nudge) {
+            output.print('\n');
+            vercelSays(chalk.yellow(nudge.announce));
+            turnPrompt = nudge.prompt;
+            continue;
+          }
+        }
+
         if (interrupt === 'handoff') {
           await runNativeTui({
             harness,
@@ -558,6 +614,13 @@ async function driveSession(
         return 0;
       }
 
+      // Choosing to continue provider setup is the user saying the browser
+      // checkout is done; the record moves on, and the prompt still tells
+      // the agent to verify before provisioning anything.
+      if (followUp.id === CONTINUE_PROVIDER_SETUP) {
+        await completePendingHandoffs(sessionDir);
+      }
+
       if (followUp.id === NATIVE_TUI_FOLLOW_UP) {
         await runNativeTui({
           harness,
@@ -595,6 +658,15 @@ async function driveSession(
     // A thrown turn must not leave the terminal in raw mode.
     handoffKeys.disarm();
     approvals.stop();
+
+    // One last sweep for a URL captured in the final moments, then journal
+    // what was left unfinished — while the session env still points at the
+    // ledger.
+    await browserHandoffs.scan().catch(() => undefined);
+    browserHandoffs.stop();
+    if (!teardownRan) {
+      await expirePendingHandoffs(sessionDir);
+    }
 
     const endDestroy = profile.start('stop agent session');
     try {

@@ -9,6 +9,36 @@ function valid(overrides: object = {}) {
 }
 
 describe('verify manifest', () => {
+  it('parses "proves" milestones on a check', () => {
+    const parsed = parseManifest(
+      JSON.stringify({
+        checks: [
+          {
+            path: '/api/todos',
+            proves: ['read-verified', 'seed-imported'],
+          },
+        ],
+      })
+    );
+    if (!parsed.ok) throw new Error(parsed.errors.join(', '));
+    expect(parsed.manifest.checks[0].proves).toEqual([
+      'read-verified',
+      'seed-imported',
+    ]);
+  });
+
+  it('rejects unknown "proves" values, naming the allowed set', () => {
+    const parsed = parseManifest(
+      JSON.stringify({
+        checks: [{ path: '/', proves: ['database-migrated'] }],
+      })
+    );
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.errors[0]).toContain('unknown "proves" value');
+    expect(parsed.errors[0]).toContain('cross-request-persistence-verified');
+  });
+
   it('parses a minimal manifest with defaults', () => {
     const parsed = parseManifest(valid());
     if (!parsed.ok) throw new Error(parsed.errors.join(', '));

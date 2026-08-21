@@ -161,7 +161,7 @@ describe('verify runner', () => {
 
     expect(result.passed).toBe(2);
     expect(result.attempts).toBe(2);
-    expect(onRetry).toHaveBeenCalledWith(2);
+    expect(onRetry).toHaveBeenCalledWith(2, 'unready');
     expect(sleeps).toHaveLength(1);
   });
 
@@ -219,5 +219,233 @@ describe('verify runner', () => {
       'https://app.vercel.app/2',
       'https://app.vercel.app/3',
     ]);
+  });
+});
+
+/** A Vercel Authentication redirect: the SSO handshake entry point. */
+function protectedRedirect(): Response {
+  return respond(302, 'Redirecting...', {
+    location:
+      'https://vercel.com/sso-api?url=https%3A%2F%2Fapp.vercel.app%2F&nonce=abc',
+  });
+}
+
+/** A Vercel Authentication 401 that sets the SSO nonce cookie. */
+function protectedUnauthorized(): Response {
+  return respond(401, 'Authentication Required', {
+    'set-cookie': '_vercel_sso_nonce=abc123; Path=/; HttpOnly',
+  });
+}
+
+describe('verify runner — deployment protection', () => {
+  it('refreshes the token and retries the full manifest when all checks are protected', async () => {
+    const fetchImpl = vi
+      .fn()
+      // First pass: both checks blocked by protection.
+      .mockResolvedValueOnce(protectedRedirect())
+      .mockResolvedValueOnce(protectedRedirect())
+      // Second pass, with the refreshed token: both pass.
+      .mockResolvedValue(respond(200));
+    const refreshBypassToken = vi.fn(async () => 'fresh-token');
+
+    const result = await runChecks({
+      baseUrl: 'https://app.vercel.app',
+      manifest: manifestOf([{ path: '/a' }, { path: '/b' }]),
+      bypassToken: 'stale-token',
+      refreshBypassToken,
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      readinessMs: 0,
+    });
+
+    expect(refreshBypassToken).toHaveBeenCalledTimes(1);
+    expect(result.passed).toBe(2);
+    expect(result.attempts).toBe(2);
+    expect(result.protectionRetries).toBe(1);
+    expect(result.protectionBlocked).toBe(0);
+
+    // The retried pass carries the refreshed token.
+    const lastCall = fetchImpl.mock.calls.at(-1) as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(lastCall[1].headers).toMatchObject({
+      'x-vercel-protection-bypass': 'fresh-token',
+    });
+  });
+
+  it('retries the full manifest even when only early checks were protected', async () => {
+    // The observed misclassification: protection blocks the first requests
+    // of a pass while later ones pass — a partial pass must not end retries.
+    const order: string[] = [];
+    let pass = 0;
+    const fetchImpl = vi.fn(async (url: string | URL | Request) => {
+      order.push(String(url));
+      if (order.length === 1) return protectedRedirect();
+      if (order.length === 2) return respond(200);
+      pass = 2;
+      return respond(200);
+    });
+
+    const result = await runChecks({
+      baseUrl: 'https://app.vercel.app',
+      manifest: manifestOf([{ path: '/a' }, { path: '/b' }]),
+      refreshBypassToken: async () => 'fresh-token',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      readinessMs: 0,
+    });
+
+    expect(pass).toBe(2);
+    // Full manifest, original order, from the beginning.
+    expect(order).toEqual([
+      'https://app.vercel.app/a',
+      'https://app.vercel.app/b',
+      'https://app.vercel.app/a',
+      'https://app.vercel.app/b',
+    ]);
+    expect(result.passed).toBe(2);
+    expect(result.protectionRetries).toBe(1);
+  });
+
+  it('reruns a stateful POST-then-GET manifest from the beginning in order', async () => {
+    const order: string[] = [];
+    const fetchImpl = vi.fn(
+      async (url: string | URL | Request, init?: RequestInit) => {
+        order.push(`${init?.method} ${String(url)}`);
+        return order.length <= 2 ? protectedUnauthorized() : respond(200);
+      }
+    );
+
+    await runChecks({
+      baseUrl: 'https://app.vercel.app',
+      manifest: manifestOf([
+        {
+          method: 'POST',
+          path: '/api/todos',
+          body: { title: 'x' },
+          expect: { status: 200 },
+        },
+        { path: '/api/todos' },
+      ]),
+      refreshBypassToken: async () => 'fresh-token',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      readinessMs: 0,
+    });
+
+    expect(order).toEqual([
+      'POST https://app.vercel.app/api/todos',
+      'GET https://app.vercel.app/api/todos',
+      'POST https://app.vercel.app/api/todos',
+      'GET https://app.vercel.app/api/todos',
+    ]);
+  });
+
+  it('does not classify an ordinary application redirect as protection', async () => {
+    const fetchImpl = vi.fn(async () =>
+      respond(302, 'Redirecting...', { location: '/login' })
+    );
+
+    const result = await runChecks({
+      baseUrl: 'https://app.vercel.app',
+      manifest: manifestOf([{ path: '/' }, { path: '/two' }]),
+      refreshBypassToken: async () => {
+        throw new Error('must not refresh for an application redirect');
+      },
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      readinessMs: 0,
+    });
+
+    expect(result.protectionRetries).toBe(0);
+    expect(result.protectionBlocked).toBe(0);
+    expect(result.outcomes[0].failureClass).toBe('application');
+  });
+
+  it('does not retry application 401/403 responses without protection signals', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(respond(401, 'unauthorized'))
+      .mockResolvedValueOnce(respond(403, 'forbidden'));
+
+    const result = await runChecks({
+      baseUrl: 'https://app.vercel.app',
+      manifest: manifestOf([{ path: '/a' }, { path: '/b' }]),
+      refreshBypassToken: async () => {
+        throw new Error('must not refresh for application auth failures');
+      },
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      readinessMs: 0,
+    });
+
+    expect(result.protectionRetries).toBe(0);
+    expect(result.outcomes.map(outcome => outcome.failureClass)).toEqual([
+      'application',
+      'application',
+    ]);
+  });
+
+  it('stays bounded and names protection when the refresh fails', async () => {
+    const fetchImpl = vi.fn(async () => protectedRedirect());
+    const refreshBypassToken = vi.fn(async () => null);
+
+    const result = await runChecks({
+      baseUrl: 'https://app.vercel.app',
+      manifest: manifestOf([{ path: '/a' }, { path: '/b' }, { path: '/c' }]),
+      refreshBypassToken,
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      readinessMs: 0,
+      sleepImpl: async () => {
+        throw new Error('protection retries must not use the readiness sleep');
+      },
+    });
+
+    // Two protection retries (the budget), then a bounded stop — no
+    // readiness retries piled on top of a protection result.
+    expect(refreshBypassToken).toHaveBeenCalledTimes(2);
+    expect(result.attempts).toBe(3);
+    expect(result.protectionRetries).toBe(2);
+    expect(result.protectionBlocked).toBe(3);
+    expect(result.outcomes.every(o => !o.ok)).toBe(true);
+    expect(
+      result.outcomes.every(o => o.failureClass === 'deployment-protection')
+    ).toBe(true);
+    expect(result.outcomes[0].failures).toContain(
+      'blocked by Vercel Deployment Protection'
+    );
+  });
+
+  it('a protected response that matches the expectation is a pass, not a retry', async () => {
+    // The author explicitly expects the protected redirect — asking for it
+    // means measuring it, so classification must not override the match.
+    const fetchImpl = vi.fn(async () => protectedRedirect());
+
+    const result = await runChecks({
+      baseUrl: 'https://app.vercel.app',
+      manifest: manifestOf([{ path: '/', expect: { status: 302 } }]),
+      refreshBypassToken: async () => {
+        throw new Error('must not refresh a passing check');
+      },
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      readinessMs: 0,
+    });
+
+    expect(result.passed).toBe(1);
+    expect(result.protectionRetries).toBe(0);
+    expect(result.outcomes[0].failureClass).toBeUndefined();
+  });
+
+  it('works without a refresh callback — bounded reruns with the same token', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(protectedUnauthorized())
+      .mockResolvedValue(respond(200));
+
+    const result = await runChecks({
+      baseUrl: 'https://app.vercel.app',
+      manifest: manifestOf([{ path: '/' }]),
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      readinessMs: 0,
+    });
+
+    expect(result.passed).toBe(1);
+    expect(result.protectionRetries).toBe(1);
   });
 });

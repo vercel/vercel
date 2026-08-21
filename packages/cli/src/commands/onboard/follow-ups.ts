@@ -1,4 +1,5 @@
 import type { LedgerEvent } from '../../util/onboard-session';
+import { unresolvedHandoffs } from './browser-handoff';
 import teardownTemplate from './instructions/teardown.md';
 
 /**
@@ -28,7 +29,26 @@ const TEARDOWN_EVENTS = new Set([
   'project-linked',
 ]);
 
+/** Menu id for resuming provider setup after a browser checkout. */
+export const CONTINUE_PROVIDER_SETUP = 'continue-provider-setup';
+
 export const FOLLOW_UPS: FollowUp[] = [
+  {
+    id: CONTINUE_PROVIDER_SETUP,
+    label: 'Continue provider setup (browser checkout finished)',
+    available: ledger => unresolvedHandoffs(ledger).length > 0,
+    prompt: () =>
+      [
+        'The user finished (or believes they finished) the provider setup',
+        'that required a browser. Before provisioning anything, check',
+        'whether the installation and resource already exist — the checkout',
+        'may have created them — using `vercel integration list` (and the',
+        'integration’s own listing commands). If the resource exists,',
+        'connect it and continue the plan; only if it verifiably does not',
+        'exist should you provision again. Never create a duplicate',
+        'resource.',
+      ].join('\n'),
+  },
   {
     id: 'teardown',
     label: 'Tear down everything this session created',

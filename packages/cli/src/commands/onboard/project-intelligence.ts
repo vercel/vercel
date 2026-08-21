@@ -10,6 +10,12 @@ import {
 import output from '../../output-manager';
 import { createDetectEntrypoint } from '../../util/projects/detect-entrypoint';
 import { prepareServicesConfigWrite } from '../../util/projects/detect-services';
+import {
+  detectMigrationSignals,
+  formatMigrationSignals,
+  unresolvedByProposedConfig,
+  type MigrationSignal,
+} from './migration-signals';
 
 /**
  * Deployment intelligence the CLI can compute deterministically before the
@@ -47,6 +53,12 @@ export interface ProjectIntelligence {
   proposedConfig?: { fileName: string; content: string };
   /** Deployment-intent files present, relative to the workspace. */
   intentFiles: string[];
+  /**
+   * Runtime semantics read from the intent files and sources — shared
+   * volumes, resident workers, proxy routes, runtime SQLite — the facts a
+   * migration plan must account for. See `migration-signals.ts`.
+   */
+  migrationSignals: MigrationSignal[];
 }
 
 export interface DetectedFrameworks {
@@ -121,6 +133,7 @@ export async function collectProjectIntelligence(
     frameworks: [],
     services: [],
     intentFiles: [],
+    migrationSignals: [],
   };
 
   const fs = new LocalFileSystemDetector(cwd);
@@ -228,6 +241,17 @@ export async function collectProjectIntelligence(
     })(),
   ]);
 
+  // After the parallel detectors: reads the intent files they found, so the
+  // compose/proxy/Procfile analysis never rescans the tree for them.
+  try {
+    intelligence.migrationSignals = await detectMigrationSignals(cwd, {
+      dirs,
+      intentFiles: intelligence.intentFiles,
+    });
+  } catch (error) {
+    debug('migration signal detection', error);
+  }
+
   return intelligence;
 }
 
@@ -261,6 +285,11 @@ export function formatProjectIntelligence(
     facts.push(
       `  - Deployment-intent files present: ${intelligence.intentFiles.join(', ')}`
     );
+  }
+
+  const signalsBlock = formatMigrationSignals(intelligence.migrationSignals);
+  if (signalsBlock) {
+    facts.push(signalsBlock);
   }
 
   if (facts.length === 0) {
@@ -311,6 +340,34 @@ export function formatProjectIntelligence(
       intelligence.proposedConfig.content.trimEnd(),
       '```'
     );
+
+    // The config covers request routing and nothing else; saying which
+    // signals it leaves open is what keeps "config written" from being
+    // mistaken for "migration planned".
+    const unresolved = unresolvedByProposedConfig(
+      intelligence.migrationSignals
+    );
+    if (unresolved.length > 0) {
+      lines.push(
+        '- This proposed config addresses request routing only. It does NOT',
+        '  resolve these migration signals — the plan must handle each',
+        '  separately:',
+        ...unresolved.map(
+          signal => `    - ${signal.evidence} (${signal.source})`
+        )
+      );
+    }
+    if (
+      intelligence.migrationSignals.some(
+        signal => signal.kind === 'reverse-proxy-route'
+      )
+    ) {
+      lines.push(
+        '- Compare the proxy routes above against the rewrites in the proposed',
+        '  config: every proxied route must have an equivalent before the old',
+        '  proxy is retired.'
+      );
+    }
   }
 
   return lines.join('\n');

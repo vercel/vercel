@@ -305,8 +305,12 @@ Databases, caches, queues, object storage, and search **cannot run as services**
 There are no persistent volumes. Every one of them must become a managed resource
 from the Vercel Marketplace.
 
-**Context may include the marketplace catalog, pre-fetched by the CLI.** When
-it does, choose from it directly — the slugs listed are exactly what
+**Context may include the marketplace catalog, pre-fetched by the CLI — and,
+when the static analysis detected a stateful need, a "Detected stateful
+needs" block matching that need to specific integrations with an exact
+command.** Use those commands verbatim: the only unresolved field is the
+resource name, and the team scope is already correct. When only the catalog
+is present, choose from it directly — the slugs listed are exactly what
 `vercel integration add <slug>` accepts, and browsing them again costs tool
 calls for information you already have. Fall back to browsing only when the
 catalog is absent or nothing in it covers the need:
@@ -322,18 +326,15 @@ For a category-shaped need ("I need a database"), list categories first and filt
 by slug. Substring search misses integrations whose description uses a different
 word.
 
-Common mappings:
+Databases, caches, and blob storage are matched for you in the "Detected
+stateful needs" block when detection saw them. Mappings detection does not
+cover:
 
-| Found in the project                         | Vercel Marketplace               |
-| -------------------------------------------- | -------------------------------- |
-| `postgres`, `postgis`                        | a Postgres provider              |
-| `mysql`, `mariadb`                           | a MySQL provider                 |
-| `mongo`                                      | a MongoDB provider               |
-| `redis`, `valkey`, `memcached`               | a Redis-compatible / KV provider |
-| `rabbitmq`, `kafka`, `nats`                  | a queue provider                 |
-| `elasticsearch`, `opensearch`, `meilisearch` | a search provider                |
-| `minio`, S3-compatible storage               | a blob storage provider          |
-| `localstack`                                 | the real underlying services     |
+| Found in the project                         | Vercel Marketplace           |
+| -------------------------------------------- | ---------------------------- |
+| `rabbitmq`, `kafka`, `nats`                  | a queue provider             |
+| `elasticsearch`, `opensearch`, `meilisearch` | a search provider            |
+| `localstack`                                 | the real underlying services |
 
 Do not provision yet. In the plan, list each resource, the integration you propose,
 and note that it may incur cost.
@@ -656,6 +657,15 @@ Manifest shape (all `expect` fields optional; status defaults to 200):
 is carried into the record. Anything the manifest cannot express (a
 multi-step flow, a websocket), check by hand afterwards and say so.
 
+When the mission migrated data, add `"proves"` to the checks that
+demonstrate it, choosing from: `schema-created`, `seed-imported`,
+`read-verified`, `write-verified`, `cross-request-persistence-verified`. A
+milestone is recorded only when every check claiming it passes — mark the
+POST **and** the GET that reads it back with
+`cross-request-persistence-verified`, and the session report will state
+exactly which migration behaviors were proven. A provisioned database is
+not a migrated one; the milestones are how the record tells the difference.
+
 #### 7d. Iterate until it passes
 
 If any check fails:
@@ -671,7 +681,9 @@ If any check fails:
 Repeat until every check passes, or until you have tried twice on the same failure
 and are genuinely stuck — in which case stop, and report precisely what fails, what
 you tried, and what you think the cause is. **Do not report a partial success as
-success.**
+success.** If you end a turn while verification is failing or missing, the CLI
+re-runs the manifest itself and sends you back with the measured result — a
+message titled "From the CLI" is that mechanism, not the user typing.
 
 ---
 
@@ -762,8 +774,18 @@ vercel curl <url> -- <curl flags>        # everything after -- goes to curl
 - **A service cannot reach another** — it needs a `binding`. There is no DNS.
 - **A database will not connect** — run `vercel env pull` and confirm the variable
   name the app reads matches what the integration injected.
-- **A deployed URL returns 401/403** — that is Deployment Protection. Use
-  `vercel curl <url>`.
+- **A deployed URL returns 401/403 or redirects to an SSO page** — that is
+  Deployment Protection, an access-control result, never an application
+  failure. `vercel onboard verify` authenticates through it, recognizes it,
+  refreshes the bypass token, and retries the full manifest itself; for
+  ad-hoc requests use `vercel curl <url>`. Do not add retries or treat a
+  protected redirect as a broken route.
+- **`vercel integration add` reports "Additional setup required. Opening
+  browser..." and exits** — provider checkout needs the user's browser. The
+  CLI has already surfaced the checkout URL to the user; do not retry the
+  command (a retry can create a duplicate resource). Continue work that does
+  not depend on the resource, or end your turn saying you are waiting for
+  the user to finish provider setup.
 - **A command exits saying the user declined** — the human answered no through
   the CLI's approval gate. Treat it exactly like a "no" from `askUser`: do not
   retry the command; ask what they would prefer, or adapt the plan.

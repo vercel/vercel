@@ -27,7 +27,28 @@ export interface VerifyCheck {
   expect: VerifyExpectation;
   /** What this check proves — carried into the output and the ledger. */
   why?: string;
+  /**
+   * Stateful migration milestones this check is evidence for. A milestone
+   * is recorded as verified only when every check claiming it passes — the
+   * author declares what the sequence proves, the runner measures it.
+   */
+  proves?: StatefulMilestone[];
 }
+
+/**
+ * The milestones a verification check can prove. Provisioning and
+ * connection milestones come from typed CLI ledger events, never from a
+ * manifest — a manifest can only prove what an HTTP check can measure.
+ */
+export const MANIFEST_MILESTONES = [
+  'schema-created',
+  'seed-imported',
+  'read-verified',
+  'write-verified',
+  'cross-request-persistence-verified',
+] as const;
+
+export type StatefulMilestone = (typeof MANIFEST_MILESTONES)[number];
 
 export interface VerifyExpectation {
   /** Any of these statuses passes. */
@@ -45,6 +66,7 @@ const CHECK_FIELDS = new Set([
   'body',
   'expect',
   'why',
+  'proves',
 ]);
 const EXPECT_FIELDS = new Set([
   'status',
@@ -152,6 +174,8 @@ export function parseManifest(raw: string): ParsedManifest {
       errors.push(`${where}: "why" must be a string`);
     }
 
+    const proves = parseProves(entry.proves, where, errors);
+
     checks.push({
       method,
       path: entry.path,
@@ -160,6 +184,7 @@ export function parseManifest(raw: string): ParsedManifest {
       bodyIsJson,
       expect: expectation,
       ...(typeof entry.why === 'string' ? { why: entry.why } : {}),
+      ...(proves.length > 0 ? { proves } : {}),
     });
   });
 
@@ -247,6 +272,36 @@ function parseExpectation(
   }
 
   return expectation;
+}
+
+/**
+ * `proves` accepts only the known milestone names — an unknown value is an
+ * error naming the allowed set, because a silently dropped milestone would
+ * make the report lie by omission.
+ */
+function parseProves(
+  value: unknown,
+  where: string,
+  errors: string[]
+): StatefulMilestone[] {
+  if (value === undefined) return [];
+  const list = Array.isArray(value) ? value : [value];
+  const proves: StatefulMilestone[] = [];
+  for (const entry of list) {
+    if (
+      typeof entry === 'string' &&
+      (MANIFEST_MILESTONES as readonly string[]).includes(entry)
+    ) {
+      proves.push(entry as StatefulMilestone);
+    } else {
+      errors.push(
+        `${where}: unknown "proves" value ${JSON.stringify(
+          entry
+        )} — allowed: ${MANIFEST_MILESTONES.join(', ')}`
+      );
+    }
+  }
+  return proves;
 }
 
 function parseStringList(

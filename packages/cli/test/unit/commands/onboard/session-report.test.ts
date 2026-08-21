@@ -221,6 +221,86 @@ describe('session report', () => {
     expect(report.rows[0].status).toBe('deployed · 12/12 checks passed');
   });
 
+  it('renders migration milestones measured by verify under the deployment', () => {
+    const report = buildSessionReport(
+      [
+        deployment(),
+        {
+          type: 'verification',
+          deployment: DEPLOY_URL,
+          passed: 3,
+          failed: 1,
+          milestones: {
+            verified: ['schema-created', 'seed-imported', 'read-verified'],
+            unverified: ['cross-request-persistence-verified'],
+          },
+        },
+      ],
+      []
+    );
+
+    expect(report.rows[0].details).toEqual([
+      'migration verified: schema-created, seed-imported, read-verified',
+      'migration NOT verified: cross-request-persistence-verified',
+    ]);
+  });
+
+  it('provisioning alone never marks migration milestones', () => {
+    const report = buildSessionReport(
+      [
+        { type: 'resource-provisioned', integration: 'neon', resource: 'db' },
+        deployment(),
+      ],
+      []
+    );
+
+    // The resource is provisioned; nothing claims schema, seed, or
+    // persistence — those only ever come from verification events.
+    const resourceRow = report.rows.find(row => row.kind === 'resource');
+    expect(resourceRow?.status).toBe('provisioned');
+    expect(JSON.stringify(report.rows)).not.toContain('migration verified');
+  });
+
+  it('remains backward-compatible with verification events lacking milestones', () => {
+    const report = buildSessionReport(
+      [
+        deployment(),
+        { type: 'verification', deployment: DEPLOY_URL, passed: 5, failed: 0 },
+      ],
+      []
+    );
+
+    expect(report.rows[0].status).toBe('deployed · 5/5 checks passed');
+    expect(report.rows[0].details).toBeUndefined();
+  });
+
+  it('milestones follow the latest verification, so re-runs update them', () => {
+    const report = buildSessionReport(
+      [
+        deployment(),
+        {
+          type: 'verification',
+          deployment: DEPLOY_URL,
+          passed: 1,
+          failed: 1,
+          milestones: { verified: [], unverified: ['seed-imported'] },
+        },
+        {
+          type: 'verification',
+          deployment: DEPLOY_URL,
+          passed: 2,
+          failed: 0,
+          milestones: { verified: ['seed-imported'], unverified: [] },
+        },
+      ],
+      []
+    );
+
+    expect(report.rows[0].details).toEqual([
+      'migration verified: seed-imported',
+    ]);
+  });
+
   it('reports projects and removals', () => {
     const report = buildSessionReport(
       [

@@ -13,6 +13,11 @@ import {
   type ProjectIntelligence,
 } from './project-intelligence';
 import { fetchMarketplaceIntegrationsList } from '../../util/integration/fetch-marketplace-integrations-list';
+import {
+  buildRecipes,
+  formatRecipes,
+  inferCapabilities,
+} from './marketplace-recipes';
 
 /** Skill id looked up in the agent skill directories. */
 const VERCEL_SKILL_ID = 'vercel-cli';
@@ -210,6 +215,26 @@ export function formatPreflight(preflight: Preflight): string {
     : undefined;
   if (intelligence) {
     lines.push(intelligence);
+  }
+
+  // Task-relevant recipes first: detected needs matched against the live
+  // catalog, with exact commands bound to the pinned team. The full catalog
+  // stays below as the fallback for needs detection cannot see.
+  if (
+    preflight.marketplace &&
+    preflight.marketplace.length > 0 &&
+    preflight.intelligence
+  ) {
+    const recipes = formatRecipes(
+      buildRecipes({
+        needs: inferCapabilities(preflight.intelligence.migrationSignals),
+        catalog: preflight.marketplace,
+        ...(preflight.team ? { team: preflight.team } : {}),
+      })
+    );
+    if (recipes) {
+      lines.push(recipes);
+    }
   }
 
   if (preflight.marketplace && preflight.marketplace.length > 0) {
