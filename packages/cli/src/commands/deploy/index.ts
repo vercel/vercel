@@ -91,7 +91,10 @@ import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
 import { isOwnerLookupUnavailableLink } from '../../util/projects/link';
-import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
+import {
+  UploadErrorMissingArchive,
+  UploadFailureError,
+} from '../../util/deploy/process-deployment';
 import { displayBuildLogsUntilFinalError } from '../../util/logs';
 import { determineAgent } from '@vercel/detect-agent';
 import { validateJsonOutput } from '../../util/output-format';
@@ -725,6 +728,11 @@ async function handleInitDeployment(
     }
 
     if (err instanceof UploadErrorMissingArchive) {
+      output.prettyError(err);
+      return 1;
+    }
+
+    if (err instanceof UploadFailureError) {
       output.prettyError(err);
       return 1;
     }
@@ -1649,6 +1657,32 @@ async function handleDefaultDeploy(
             {
               status: AGENT_STATUS.ERROR,
               reason: 'missing_archive',
+              message: err.message,
+              next: [
+                {
+                  command: withGlobalFlags(client, 'deploy'),
+                  when: 'retry deploy',
+                },
+              ],
+            },
+            null,
+            2
+          )}\n`
+        );
+        return 1;
+      } else {
+        output.prettyError(err);
+        return 1;
+      }
+    }
+
+    if (err instanceof UploadFailureError) {
+      if (client.nonInteractive) {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              status: AGENT_STATUS.ERROR,
+              reason: 'upload_failed',
               message: err.message,
               next: [
                 {
