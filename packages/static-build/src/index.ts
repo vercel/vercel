@@ -49,6 +49,10 @@ import {
   defaultCachePathGlob,
 } from '@vercel/build-utils';
 import type { Route, RouteWithSrc } from '@vercel/routing-utils';
+import {
+  findMisplacedOutput,
+  formatMisplacedOutputHint,
+} from './misplaced-output';
 import * as BuildOutputV1 from './utils/build-output-v1';
 import * as BuildOutputV2 from './utils/build-output-v2';
 import * as BuildOutputV3 from './utils/build-output-v3';
@@ -104,7 +108,10 @@ function validateDistDir(distDir: string, workPath: string) {
 
     let message = `No Output Directory named "${distDirName}" found after the Build completed.`;
 
-    if (vercelJsonExists && buildCommandExists) {
+    const misplaced = findMisplacedOutput(workPath, distDirName, distDir);
+    if (misplaced) {
+      message += formatMisplacedOutputHint(misplaced);
+    } else if (vercelJsonExists && buildCommandExists) {
       message += ` Update vercel.json#outputDirectory to ensure the correct output directory is generated.`;
     } else {
       message += ` Configure the Output Directory in your Project Settings. Alternatively, configure vercel.json#outputDirectory.`;
