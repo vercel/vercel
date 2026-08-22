@@ -23,6 +23,7 @@ import type { QueueIntegration } from './conditional-vendoring';
 // producing the same `_py_subscribers/...`-based names to retain their
 // queue consumer-group positions.
 const SUBSCRIBER_OUTPUT_DIR = '_py_subscribers';
+const SUBSCRIBER_ID_ENV = 'VERCEL_PYTHON_SUBSCRIBER_ID';
 
 type SubscriberTriggerDefaults = Omit<
   TriggerEvent,
@@ -52,6 +53,12 @@ export interface SubscriberSubscription {
 
 export interface Subscriber extends SubscriberDeclaration {
   subscriptions: SubscriberSubscription[];
+}
+
+export interface APSchedulerControlDeclaration {
+  entrypoint: string;
+  moduleName: string;
+  variableName: string;
 }
 
 interface RawSubscriber {
@@ -157,6 +164,11 @@ interface Pyproject {
   tool?: {
     vercel?: {
       subscribers?: RawSubscriber[];
+      apscheduler?: {
+        control?: {
+          entrypoint?: unknown;
+        };
+      };
     };
   };
 }
@@ -221,6 +233,55 @@ export async function getPyprojectSubscribers(
   }
 
   return parsedSubscribers;
+}
+
+export async function getPyprojectAPSchedulerControl(
+  workPath: string
+): Promise<APSchedulerControlDeclaration | undefined> {
+  const pyprojectPath = join(workPath, 'pyproject.toml');
+  if (!fs.existsSync(pyprojectPath)) {
+    return undefined;
+  }
+  const pyproject = await readConfigFile<Pyproject>(pyprojectPath);
+  const config = pyproject?.tool?.vercel?.apscheduler?.control;
+  if (config === undefined) {
+    return undefined;
+  }
+  if (!config || typeof config !== 'object' || Array.isArray(config)) {
+    throw subscriberError('"tool.vercel.apscheduler.control" must be a table');
+  }
+  for (const key of Object.keys(config)) {
+    if (key !== 'entrypoint') {
+      throw subscriberError(
+        `"tool.vercel.apscheduler.control" has unrecognized field "${key}"`
+      );
+    }
+  }
+  if (typeof config.entrypoint !== 'string') {
+    throw subscriberError(
+      '"tool.vercel.apscheduler.control" must define string field "entrypoint"'
+    );
+  }
+  const entrypoint = parseModuleEntrypoint(config.entrypoint);
+  if (!entrypoint) {
+    throw subscriberError(
+      `"tool.vercel.apscheduler.control" has invalid entrypoint "${config.entrypoint}". Use "module:object"`
+    );
+  }
+  const existingEntrypoint = await resolveExistingEntrypoint(
+    workPath,
+    entrypoint.filePath
+  );
+  if (!existingEntrypoint) {
+    throw subscriberError(
+      `APScheduler control entrypoint "${config.entrypoint}" references missing file "${entrypoint.filePath}"`
+    );
+  }
+  return {
+    entrypoint: config.entrypoint,
+    moduleName: entrypoint.moduleName,
+    variableName: entrypoint.variableName,
+  };
 }
 
 export async function resolveQueueSubscribers({
@@ -332,26 +393,30 @@ export function queueTopicPatternsOverlap(
 /**
  * Python lines that activate the queue adapter integrations required by
  * the project's dependencies. The adapter packages have no import-time
- * side effects, so nothing else activates them. Activation runs after
- * the subscriber module is imported: each installer retroactively
- * registers subscriptions for apps the import created. And because the
- * project demonstrably depends on the upstream package, a failed import
- * or install is a hard error rather than something to skip.
+ * side effects, so nothing else activates them. Most adapters install after
+ * import and retroactively register framework objects; adapters that must
+ * observe declarations during import opt into the earlier phase. Because the
+ * project demonstrably depends on the upstream package, a failed import or
+ * install is a hard error rather than something to skip.
  */
 function createIntegrationInstallLines(
   integrations: QueueIntegration[],
-  { serving }: { serving: boolean }
+  { serving, beforeImport }: { serving: boolean; beforeImport: boolean }
 ): string[] {
-  return integrations.flatMap(({ module, installer, servingActivator }) => [
-    `from ${module} import ${installer}`,
-    `${installer}()`,
-    // Queue-serving processes must also activate consumption (register
-    // push callbacks, start the adapter's embedded worker); introspection
-    // and publish-only processes must not.
-    ...(serving && servingActivator
-      ? [`from ${module} import ${servingActivator}`, `${servingActivator}()`]
-      : []),
-  ]);
+  return integrations
+    .filter(
+      integration => Boolean(integration.installBeforeImport) === beforeImport
+    )
+    .flatMap(({ module, installer, servingActivator }) => [
+      `from ${module} import ${installer}`,
+      `${installer}()`,
+      // Queue-serving processes must also activate consumption (register
+      // push callbacks, start the adapter's embedded worker); introspection
+      // and publish-only processes must not.
+      ...(serving && servingActivator
+        ? [`from ${module} import ${servingActivator}`, `${servingActivator}()`]
+        : []),
+    ]);
 }
 
 export function createQueueHandlerModule(
@@ -360,10 +425,19 @@ export function createQueueHandlerModule(
 ): string {
   return [
     'import importlib',
+    'import os',
     'import vercel.queue',
     '',
+    `os.environ[${JSON.stringify(SUBSCRIBER_ID_ENV)}] = ${JSON.stringify(declaration.name)}`,
+    ...createIntegrationInstallLines(integrations, {
+      serving: true,
+      beforeImport: true,
+    }),
     `importlib.import_module(${JSON.stringify(declaration.moduleName)})`,
-    ...createIntegrationInstallLines(integrations, { serving: true }),
+    ...createIntegrationInstallLines(integrations, {
+      serving: true,
+      beforeImport: false,
+    }),
     'app = vercel.queue.asgi_app()',
     '',
   ].join('\n');
@@ -532,13 +606,21 @@ function parseTopicPatterns(
  * explicitly. None values are dropped rather than emitted as JSON null.
  */
 function createQueueIntrospectionScript(
-  moduleName: string,
+  declaration: Pick<SubscriberDeclaration, 'moduleName' | 'name'>,
   integrations: QueueIntegration[]
 ): string {
   return [
-    'import importlib, json, sys',
-    `importlib.import_module(${JSON.stringify(moduleName)})`,
-    ...createIntegrationInstallLines(integrations, { serving: false }),
+    'import importlib, json, os, sys',
+    `os.environ[${JSON.stringify(SUBSCRIBER_ID_ENV)}] = ${JSON.stringify(declaration.name)}`,
+    ...createIntegrationInstallLines(integrations, {
+      serving: false,
+      beforeImport: true,
+    }),
+    `importlib.import_module(${JSON.stringify(declaration.moduleName)})`,
+    ...createIntegrationInstallLines(integrations, {
+      serving: false,
+      beforeImport: false,
+    }),
     'from vercel.queue import get_subscriptions',
     'subs = [',
     '    {k: v for k, v in {',
@@ -570,10 +652,7 @@ async function introspectQueueSubscriptions({
   kind: 'subscriber' | 'workflow';
   integrations: QueueIntegration[];
 }): Promise<SubscriberSubscription[]> {
-  const script = createQueueIntrospectionScript(
-    declaration.moduleName,
-    integrations
-  );
+  const script = createQueueIntrospectionScript(declaration, integrations);
 
   try {
     const { stdout } = await uv.run({
@@ -614,12 +693,14 @@ async function introspectQueueSubscriptions({
  */
 export async function introspectDevQueueSubscriptions({
   moduleName,
+  subscriberName,
   pythonBin,
   cwd,
   env,
   integrations,
 }: {
   moduleName: string;
+  subscriberName: string;
   pythonBin: string;
   cwd: string;
   env: NodeJS.ProcessEnv;
@@ -628,7 +709,13 @@ export async function introspectDevQueueSubscriptions({
   try {
     const { stdout } = await execa(
       pythonBin,
-      ['-c', createQueueIntrospectionScript(moduleName, integrations)],
+      [
+        '-c',
+        createQueueIntrospectionScript(
+          { moduleName, name: subscriberName },
+          integrations
+        ),
+      ],
       // Match the deployed-function environment (see
       // introspectQueueSubscriptions): SDKs may need VERCEL=1,
       // VERCEL_REGION, and VERCEL_DEPLOYMENT_ID to register subscriptions.
