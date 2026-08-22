@@ -137,6 +137,7 @@ async def _invoke_lambda(
     module_name: str,
     event: dict[str, Any],
     variable_name: str = "app",
+    extra_env: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Run vc_init.py in legacy mode and call vc_handler.
 
@@ -151,6 +152,8 @@ async def _invoke_lambda(
         "__VC_HANDLER_VARIABLE_NAME": variable_name,
     }
     env.pop("VERCEL_IPC_PATH", None)
+    if extra_env:
+        env.update(extra_env)
 
     result_r, result_w = os.pipe()
     env["_RESULT_FD"] = str(result_w)
@@ -995,6 +998,41 @@ class TestASGIApp(_RuntimeTestCase):
             self.assertEqual(resp.status, 200)
             self.assertEqual(resp.read().decode(), "env-token")
 
+    async def test_oidc_token_reaches_app_via_request_context(self) -> None:
+        # Server mode (uvicorn + ASGIMiddleware) already sets and awaits the
+        # app in the same context, so the OIDC contextvar should reach the app.
+        # This guards that propagation against future refactors. A stub `vercel`
+        # SDK lets the app read the token from context, not the wire header.
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "oidc_context_app.py", self.tmp_path
+        )
+        stub_path = str(_FIXTURES / "_oidc_sdk_stub")
+        pythonpath = os.pathsep.join(
+            p for p in (stub_path, os.environ.get("PYTHONPATH", "")) if p
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "PYTHONPATH": pythonpath,
+                "VERCEL_OIDC_TOKEN": "env-fallback-token",
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(
+                port,
+                "/",
+                headers={"x-vercel-oidc-token": "per-request-token"},
+            )
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "per-request-token")
+
     async def test_sc_headers_stripped_per_no_leak_flag(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
         async with _run_runtime(
@@ -1714,6 +1752,38 @@ class TestLambdaHTTPHandler(_LambdaTestCase):
         self.assertEqual(result["statusCode"], 200)
         self.assertIn("GET /hello", result["body"])
 
+    async def test_oidc_token_reaches_handler_via_request_context(
+        self,
+    ) -> None:
+        # The raw-handler path runs the handler in a thread with a copied
+        # context, so the runtime must publish the request's OIDC header into
+        # that context. The fixture resolves the token via the SDK (context),
+        # not the wire header; a regression would show the env fallback below.
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "oidc_http_handler.py", self.tmp_path
+        )
+        stub_path = str(_FIXTURES / "_oidc_sdk_stub")
+        pythonpath = os.pathsep.join(
+            p for p in (stub_path, os.environ.get("PYTHONPATH", "")) if p
+        )
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event(
+                "GET",
+                "/",
+                headers={"x-vercel-oidc-token": "per-request-token"},
+            ),
+            variable_name="handler",
+            extra_env={
+                "PYTHONPATH": pythonpath,
+                "VERCEL_OIDC_TOKEN": "env-fallback-token",
+            },
+        )
+        self.assertEqual(result["statusCode"], 200)
+        self.assertEqual(result["body"], "per-request-token")
+
     async def test_post_with_base64_body(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
         result = await _invoke_lambda(
@@ -1841,6 +1911,38 @@ class TestLambdaASGI(_LambdaTestCase):
         self.assertEqual(result["statusCode"], 200)
         body = base64.b64decode(result["body"]).decode()
         self.assertEqual(body, "text/html,application/json")
+
+    async def test_oidc_token_reaches_app_via_request_context(self) -> None:
+        # The runtime publishes the request's OIDC header into vercel's context
+        # before dispatching the ASGI app. Because the ASGI app runs on a
+        # persistent asyncio.Runner, the per-request context must be passed
+        # explicitly or the app sees the context frozen at lifespan startup. A
+        # stub `vercel` SDK on the path lets the app read the token back; if
+        # propagation regresses it would instead see the env fallback below.
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "oidc_context_app.py", self.tmp_path
+        )
+        stub_path = str(_FIXTURES / "_oidc_sdk_stub")
+        pythonpath = os.pathsep.join(
+            p for p in (stub_path, os.environ.get("PYTHONPATH", "")) if p
+        )
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event(
+                "GET",
+                "/",
+                headers={"x-vercel-oidc-token": "per-request-token"},
+            ),
+            extra_env={
+                "PYTHONPATH": pythonpath,
+                "VERCEL_OIDC_TOKEN": "env-fallback-token",
+            },
+        )
+        self.assertEqual(result["statusCode"], 200)
+        body = base64.b64decode(result["body"]).decode()
+        self.assertEqual(body, "per-request-token")
 
 
 class TestLambdaASGILifespan(_LambdaTestCase):
