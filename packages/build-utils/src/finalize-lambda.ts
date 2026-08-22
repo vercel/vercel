@@ -31,6 +31,8 @@ export interface CreateZipResult {
   digest: string;
   /** Compressed size in bytes. */
   size: number;
+  /** Number of files in the lambda. */
+  fileCount: number;
 }
 
 /**
@@ -63,6 +65,7 @@ export interface FinalizeLambdaParams {
     buffer: Buffer | null;
     zipPath?: string;
     size: number;
+    fileCount: number;
   }) => void;
 }
 
@@ -75,6 +78,8 @@ export interface FinalizeLambdaResult {
   digest: string;
   /** Compressed size in bytes. */
   size: number;
+  /** Number of files in the lambda. */
+  fileCount: number;
   uncompressedBytes: number;
 }
 
@@ -155,6 +160,7 @@ export async function finalizeLambda(
       buffer,
       digest: '', // computed in step 5
       size: buffer.byteLength,
+      fileCount: Object.keys(lambda.files ?? {}).length,
     };
   }
 
@@ -164,6 +170,7 @@ export async function finalizeLambda(
       buffer: zipResult.buffer,
       zipPath: zipResult.zipPath,
       size: zipResult.size,
+      fileCount: zipResult.fileCount,
     });
   }
 
@@ -194,6 +201,7 @@ export async function finalizeLambda(
     zipPath: zipResult.zipPath ?? null,
     digest: zipResult.digest,
     size: zipResult.size,
+    fileCount: zipResult.fileCount,
     uncompressedBytes,
   };
 }
