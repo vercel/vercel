@@ -224,6 +224,46 @@ describe('detectServices (services)', () => {
     expect(isRouteOwningBuilder(web)).toBe(true);
   });
 
+  it('resolves Laravel to its container-backed builder with a command override', async () => {
+    const fs = new VirtualFilesystem({
+      'vercel.json': vercelJson({
+        services: {
+          worker: {
+            root: 'worker',
+            framework: 'laravel',
+            command: 'php artisan queue:work',
+          },
+        },
+      }),
+      'worker/artisan': '#!/usr/bin/env php',
+      'worker/composer.json': JSON.stringify({
+        require: { 'laravel/framework': '^13.0' },
+      }),
+    });
+
+    const result = await detectServices({ fs });
+
+    expect(result.errors).toEqual([]);
+    const [worker] = servicesV2(result.services);
+    expect(worker).toMatchObject({
+      name: 'worker',
+      root: 'worker',
+      framework: 'laravel',
+      runtime: 'container',
+      command: ['php artisan queue:work'],
+      builder: {
+        src: 'worker/<detect>',
+        use: '@vercel/laravel',
+        config: {
+          zeroConfig: true,
+          framework: 'laravel',
+          workspace: 'worker',
+          command: ['php artisan queue:work'],
+        },
+      },
+    });
+  });
+
   it('detects a root-only frontend framework service', async () => {
     const fs = new VirtualFilesystem({
       'vercel.json': vercelJson({

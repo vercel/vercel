@@ -4,7 +4,12 @@ import { EventEmitter } from 'node:events';
 import { readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { build, prepareCache, startDevServer } from '../src';
+import {
+  build,
+  buildWithContainerSource,
+  prepareCache,
+  startDevServer,
+} from '../src';
 import { __resetStorageDriverCache } from '../src/storage-driver';
 import { __resetRunningContainers } from '../src/dev';
 
@@ -330,6 +335,11 @@ describe('@vercel/container', () => {
     authFilePresent?: boolean;
     /** Override the service entrypoint (e.g. a `Containerfile` to build). */
     entrypoint?: string;
+    source?: {
+      dockerfilePath: string;
+      contextDir: string;
+      functionSource?: string;
+    };
   }) {
     if (options?.buildImageEnv) {
       process.env.VERCEL_BUILD_IMAGE = options.buildImageEnv;
@@ -376,13 +386,16 @@ describe('@vercel/container', () => {
       return fakeChild('');
     });
 
+    const buildOptions = {
+      ...createBuildOptions({ runtime: 'container' }),
+      ...(options?.entrypoint ? { entrypoint: options.entrypoint } : {}),
+      service: { name: 'api' },
+      ...(options?.meta ? { meta: options.meta } : {}),
+    } as any;
     const result = expectTypicalBuildResult(
-      await build({
-        ...createBuildOptions({ runtime: 'container' }),
-        ...(options?.entrypoint ? { entrypoint: options.entrypoint } : {}),
-        service: { name: 'api' },
-        ...(options?.meta ? { meta: options.meta } : {}),
-      } as any)
+      options?.source
+        ? await buildWithContainerSource(buildOptions, options.source)
+        : await build(buildOptions)
     );
 
     expect(result.output.index).toMatchObject({
@@ -520,6 +533,27 @@ describe('@vercel/container', () => {
         c =>
           /\bbuildah\b.*\bbuild\b/.test(c) &&
           /-f \S*Dockerfile\.vercel\b/.test(c)
+      )
+    ).toBe(true);
+  });
+
+  it('builds a generated Dockerfile with an independent project context', async () => {
+    const commands = await runDockerfileBuild({
+      buildImageEnv: 'al2023',
+      entrypoint: '<detect>',
+      source: {
+        dockerfilePath: '/tmp/vercel-laravel/Dockerfile',
+        contextDir: '/workspace/laravel',
+        functionSource: 'artisan',
+      },
+    });
+
+    expect(
+      commands.some(
+        command =>
+          /\bbuildah\b.*\bbuild\b/.test(command) &&
+          command.includes('-f /tmp/vercel-laravel/Dockerfile') &&
+          command.endsWith('/workspace/laravel')
       )
     ).toBe(true);
   });
