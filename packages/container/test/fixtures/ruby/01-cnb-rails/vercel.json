@@ -1,0 +1,11 @@
+{
+  "build": {
+    "env": {
+      "RACK_ENV": "fixture-override",
+      "VERCEL_EXPERIMENTAL_BUILDPACK_RUBY": "1"
+    }
+  },
+  "projectSettings": {
+    "framework": "ruby"
+  }
+}

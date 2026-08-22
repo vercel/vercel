@@ -25,7 +25,9 @@ export default class VirtualFilesystem extends DetectorFilesystem {
   async _hasPath(name: string): Promise<boolean> {
     const basePath = this._normalizePath(posixPath.join(this.cwd, name));
     for (const file of this.files.keys()) {
-      if (file.startsWith(basePath)) {
+      // Match exact files or directory prefixes only ("Gemfile.lock" must
+      // not satisfy hasPath("Gemfile")).
+      if (file === basePath || file.startsWith(`${basePath}/`)) {
         return true;
       }
     }

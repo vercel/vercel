@@ -11,7 +11,10 @@ import {
   VCR_REGISTRY,
   TARGET_PLATFORM,
 } from './engines';
-import type { BuildPushParams } from './engines/types';
+import type { BuildPushParams, ContainerEngine } from './engines/types';
+import { buildAndPushWithLifecycle } from './buildpacks/lifecycle';
+import type { BuildpackDescriptor } from './buildpacks/registry';
+import { resolveImageSource } from './image-source';
 import { resolveOidcTokenForBuild } from './oidc';
 import { ensureRepository } from './registry';
 import {
@@ -24,7 +27,7 @@ import {
   existingRegistryAuthFile,
   findDockerfile,
   info,
-  isDockerfileRef,
+  normalizeCommand,
   readString,
   shortDigest,
   step,
@@ -32,6 +35,7 @@ import {
   toTag,
   withSpan,
 } from './util';
+import type { OidcClaims } from './util';
 
 export const version = 2;
 
@@ -45,19 +49,6 @@ function resolveFunctionSourceFile(options: BuildOptions): string {
     return findDockerfile(options.workPath) ?? entrypoint;
   }
   return entrypoint;
-}
-
-function normalizeCommand(command: unknown): string[] | undefined {
-  if (typeof command === 'string') {
-    return [command];
-  }
-  if (
-    Array.isArray(command) &&
-    command.every(item => typeof item === 'string')
-  ) {
-    return command;
-  }
-  return undefined;
 }
 
 function sanitizeRepository(name: string): string {
@@ -81,6 +72,79 @@ function resolveImageTag(): string {
   return `build-${Date.now().toString(36)}`;
 }
 
+interface RegistryTarget {
+  token: string;
+  claims: OidcClaims;
+  username: string;
+  fullRepository: string;
+  imageRef: string;
+}
+
+async function resolveRegistryTarget(params: {
+  repository: string;
+  tag: string;
+  span?: Span;
+}): Promise<RegistryTarget> {
+  const token = await withSpan(params.span, 'container.mint_oidc', {}, s =>
+    resolveOidcTokenForBuild(s)
+  );
+  const claims = decodeOidcClaims(token);
+  debug(`registry token: ${tokenFingerprint(token)}`);
+  debugTokenClaims('OIDC token claims', token);
+
+  const username = claims.owner_id;
+  if (!username) {
+    throw new Error(
+      'VERCEL_OIDC_TOKEN is missing the `owner_id` (team id) claim required to ' +
+        'authenticate to the container registry.'
+    );
+  }
+
+  const fullRepository = [claims.owner, claims.project, params.repository].join(
+    '/'
+  );
+  return {
+    token,
+    claims,
+    username,
+    fullRepository,
+    imageRef: `${VCR_REGISTRY}/${fullRepository}:${params.tag}`,
+  };
+}
+
+async function authenticateRegistry(
+  engine: ContainerEngine,
+  buildParams: BuildPushParams,
+  span?: Span
+): Promise<void> {
+  const forceLogin = readString(process.env.VERCEL_VCR_FORCE_LOGIN) === '1';
+  const authFile = forceLogin ? undefined : existingRegistryAuthFile();
+  if (authFile) {
+    debug(`registry auth file present: ${authFile}`);
+    step(`Using registry credentials from ${authFile}`);
+    span?.setAttributes({
+      'container.registry': VCR_REGISTRY,
+      'registry.username': buildParams.username,
+      'registry.auth_file': authFile,
+      'registry.login_skipped': toTag(true),
+    });
+    done('authenticated via provisioned credentials');
+    return;
+  }
+
+  step(`Authenticating to ${VCR_REGISTRY} as ${buildParams.username}`);
+  await withSpan(
+    span,
+    'container.registry_login',
+    {
+      'container.registry': VCR_REGISTRY,
+      'registry.username': buildParams.username,
+    },
+    () => engine.login(buildParams)
+  );
+  done('authenticated');
+}
+
 async function buildAndPushImage(params: {
   contextDir: string;
   dockerfilePath: string;
@@ -102,26 +166,12 @@ async function buildAndPushImage(params: {
       'container.repository': repository,
     },
     async buildSpan => {
-      const token = await withSpan(buildSpan, 'container.mint_oidc', {}, s =>
-        resolveOidcTokenForBuild(s)
-      );
-
-      const claims = decodeOidcClaims(token);
-      debug(`registry token: ${tokenFingerprint(token)}`);
-      debugTokenClaims('OIDC token claims', token);
-
-      const username = claims.owner_id;
-      if (!username) {
-        throw new Error(
-          'VERCEL_OIDC_TOKEN is missing the `owner_id` (team id) claim required to ' +
-            'authenticate to the container registry.'
-        );
-      }
-
-      const fullRepository = [claims.owner, claims.project, repository].join(
-        '/'
-      );
-      const imageRef = `${VCR_REGISTRY}/${fullRepository}:${tag}`;
+      const target = await resolveRegistryTarget({
+        repository,
+        tag,
+        span: buildSpan,
+      });
+      const { token, claims, username, fullRepository, imageRef } = target;
 
       buildSpan?.setAttributes({
         'container.repository': fullRepository,
@@ -167,37 +217,7 @@ async function buildAndPushImage(params: {
           span: buildSpan,
         };
 
-        // The build container provisions a registry auth file
-        // (`~/.config/containers/auth.json`, vercel/api#76560) that buildah
-        // picks up automatically, so skip the redundant explicit login when one
-        // exists. Local `vercel build` (docker engine) still logs in.
-        // `VERCEL_VCR_FORCE_LOGIN=1` forces an explicit login.
-        const forceLogin =
-          readString(process.env.VERCEL_VCR_FORCE_LOGIN) === '1';
-        const authFile = forceLogin ? undefined : existingRegistryAuthFile();
-        if (authFile) {
-          debug(`registry auth file present: ${authFile}`);
-          step(`Using registry credentials from ${authFile}`);
-          buildSpan?.setAttributes({
-            'container.registry': VCR_REGISTRY,
-            'registry.username': username,
-            'registry.auth_file': authFile,
-            'registry.login_skipped': toTag(true),
-          });
-          done('authenticated via provisioned credentials');
-        } else {
-          step(`Authenticating to ${VCR_REGISTRY} as ${username}`);
-          await withSpan(
-            buildSpan,
-            'container.registry_login',
-            {
-              'container.registry': VCR_REGISTRY,
-              'registry.username': username,
-            },
-            () => engine.login(buildParams)
-          );
-          done('authenticated');
-        }
+        await authenticateRegistry(engine, buildParams, buildSpan);
 
         await withSpan(
           buildSpan,
@@ -267,44 +287,146 @@ async function buildAndPushImage(params: {
   );
 }
 
+async function buildAndPushBuildpack(params: {
+  buildpack: BuildpackDescriptor;
+  workPath: string;
+  repository: string;
+  tag: string;
+  buildEnv?: Record<string, string>;
+  command?: string[];
+  commandShell?: boolean;
+  parentSpan?: Span;
+}): Promise<string> {
+  const engine = selectContainerEngine();
+  if (engine.name !== 'buildah') {
+    throw new Error(
+      'Buildpack deployments require the Vercel Buildah build environment. ' +
+        'Use `vercel dev` for local buildpack development.'
+    );
+  }
+
+  return withSpan(
+    params.parentSpan,
+    'container.buildpack.build_and_push',
+    {
+      'buildpack.runtime': params.buildpack.runtime,
+      'container.engine': engine.name,
+      'container.repository': params.repository,
+    },
+    async buildSpan => {
+      const target = await resolveRegistryTarget({
+        repository: params.repository,
+        tag: params.tag,
+        span: buildSpan,
+      });
+      buildSpan?.setAttributes({
+        'container.repository': target.fullRepository,
+        'image.tag': params.tag,
+        'image.ref': target.imageRef,
+        'registry.username': target.username,
+      });
+
+      return engine.withRuntime(buildSpan, async () => {
+        await withSpan(
+          buildSpan,
+          'container.ensure_toolchain_ready',
+          { 'container.engine': engine.name },
+          s => engine.ensureReady(s)
+        );
+        await withSpan(
+          buildSpan,
+          'container.verify_storage',
+          { 'container.engine': engine.name },
+          s => engine.verifyStorage?.(s) ?? Promise.resolve()
+        );
+        await withSpan(
+          buildSpan,
+          'container.ensure_repository',
+          { 'container.repository': params.repository },
+          s =>
+            ensureRepository(params.repository, target.token, target.claims, s)
+        );
+
+        const result = await buildAndPushWithLifecycle(
+          params.buildpack,
+          {
+            workPath: params.workPath,
+            imageRef: target.imageRef,
+            registry: VCR_REGISTRY,
+            username: target.username,
+            token: target.token,
+            buildEnv: params.buildEnv,
+            command: params.command,
+            commandShell: params.commandShell,
+          },
+          buildSpan
+        );
+        const resolvedRef = `${VCR_REGISTRY}/${target.fullRepository}@${result.digest}`;
+        buildSpan?.setAttributes({
+          'image.digest': result.digest,
+          'image.resolved_ref': resolvedRef,
+        });
+        info(`Image reference ${resolvedRef}`);
+        return resolvedRef;
+      });
+    }
+  );
+}
+
 async function resolveImageHandler(
   options: BuildOptions,
   span?: Span
 ): Promise<string> {
-  const { config, workPath, entrypoint, meta } = options;
+  const { config, workPath, meta } = options;
 
-  const entrypointRef = readString(entrypoint);
-  // An entrypoint that names a Dockerfile (including the `Dockerfile.vercel` /
-  // `Containerfile.vercel` opt-in markers) is built directly. Otherwise — e.g.
-  // when the `container` framework preset resolves its entrypoint via
-  // `<detect>` — discover a Dockerfile in the work directory.
-  const dockerfileConfigured =
-    entrypointRef && isDockerfileRef(entrypointRef)
-      ? entrypointRef
-      : findDockerfile(workPath);
-  const dockerfileRel = dockerfileConfigured ?? 'Dockerfile';
-  const dockerfilePath = path.join(workPath, dockerfileRel);
-  const hasDockerfile =
-    dockerfileConfigured !== undefined || existsSync(dockerfilePath);
-
-  const prebuiltImage =
-    readString(config.handler) ?? (hasDockerfile ? undefined : entrypointRef);
-
+  const source = resolveImageSource(options, 'build');
   span?.setAttributes({
-    'container.has_dockerfile': toTag(hasDockerfile),
+    'container.has_dockerfile': toTag(source.kind === 'dockerfile'),
     'container.is_dev': toTag(Boolean(meta?.isDev)),
   });
 
-  if (!hasDockerfile) {
-    if (!prebuiltImage) {
-      throw new Error(
-        'Container service must specify an entrypoint: a prebuilt OCI image reference, or a Dockerfile path to build.'
-      );
-    }
+  if (source.kind === 'prebuilt') {
     span?.setAttributes({ 'container.mode': 'prebuilt' });
-    info(`Using prebuilt image ${prebuiltImage}`);
-    return prebuiltImage;
+    info(`Using prebuilt image ${source.imageRef}`);
+    return source.imageRef;
   }
+
+  if (source.kind === 'buildpack') {
+    const { buildpack } = source;
+    if (meta?.isDev) {
+      const tag = devImageTag(options.service?.name ?? 'service');
+      span?.setAttributes({
+        'container.mode': 'buildpack-dev',
+        'buildpack.runtime': buildpack.runtime,
+        'image.tag': tag,
+      });
+      return tag;
+    }
+
+    const repository = sanitizeRepository(
+      options.service?.name ?? buildpack.runtime
+    );
+    const tag = resolveImageTag();
+    span?.setAttributes({
+      'container.mode': 'buildpack-build-and-push',
+      'buildpack.runtime': buildpack.runtime,
+      'container.repository': repository,
+      'image.tag': tag,
+    });
+    return buildAndPushBuildpack({
+      buildpack,
+      workPath,
+      repository,
+      tag,
+      buildEnv: buildArgsFromEnv(meta?.buildEnv),
+      command: normalizeCommand(config.command),
+      commandShell:
+        typeof config.command === 'string' || config.commandShell === true,
+      parentSpan: span,
+    });
+  }
+
+  const { dockerfileRel, dockerfilePath } = source;
 
   if (meta?.isDev) {
     // In dev the image is built and run locally from the Dockerfile by

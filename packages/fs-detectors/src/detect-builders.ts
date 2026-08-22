@@ -27,6 +27,8 @@ import {
   getServicesBuilders,
   warnIgnoredDirectories,
 } from './services/get-services-builders';
+import { toBuildpackRuntime } from './services/types';
+import { inferRuntimeFromFramework } from './services/utils';
 
 /**
  * Pattern for finding all supported middleware files.
@@ -927,6 +929,15 @@ function detectFrontBuilder(
 
   const f = slugToFramework.get(framework || '');
   if (f && f.useRuntime) {
+    // Buildpack-backed runtime frameworks (Ruby, …) build the whole project
+    // into a container image instead of using their Lambda runtime.
+    if (toBuildpackRuntime(inferRuntimeFromFramework(framework))) {
+      return {
+        src: '<detect>',
+        use: `@vercel/container${withTag}`,
+        config,
+      };
+    }
     const { src, use } = f.useRuntime;
     // Replace framework-specific backend builders with the unified backend builder
     // when experimental backends is enabled

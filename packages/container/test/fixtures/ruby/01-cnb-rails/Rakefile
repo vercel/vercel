@@ -1,0 +1,14 @@
+require "fileutils"
+require_relative "config/application"
+
+Rails.application.load_tasks
+
+namespace :assets do
+  task precompile: :environment do
+    output = Rails.root.join("public", "buildpack-generated.txt")
+    FileUtils.mkdir_p(output.dirname)
+    output.write("generated while building the Rails application\n")
+  end
+
+  task clean: :environment
+end

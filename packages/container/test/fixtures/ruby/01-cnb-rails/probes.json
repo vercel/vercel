@@ -1,0 +1,23 @@
+{
+  "probes": [
+    {
+      "logMustContain": "via ruby buildpacks"
+    },
+    {
+      "logMustContain": "Defaulting RAILS_ENV=production"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "bodyMustBe": "{\"message\":\"hello from Rails buildpacks\",\"rails_env\":\"production\",\"rack_env\":\"fixture-override\",\"log_to_stdout\":\"true\",\"serve_static_files\":\"true\"}",
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "path": "/buildpack-generated.txt",
+      "status": 200,
+      "bodyMustBe": "generated while building the Rails application\n"
+    }
+  ]
+}

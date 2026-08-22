@@ -5,6 +5,7 @@ import type {
   ConfiguredServices,
   ExperimentalServiceConfig,
   ServiceDetectionError,
+  ServiceDetectionWarning,
   ServiceRuntime,
 } from './types';
 import {
@@ -19,8 +20,10 @@ import {
   RUNTIME_BUILDERS,
   STATIC_BUILDERS,
   RUNTIME_MANIFESTS,
+  toBuildpackRuntime,
 } from './types';
 import {
+  buildpackEntrypointWarning,
   filterFrameworksByRuntime,
   getBuilderForRuntime,
   hasFile,
@@ -145,6 +148,15 @@ function getEntrypointRequiredRuntime(
     return config.runtime as ServiceRuntime;
   }
   return inferRuntimeFromFramework(config.framework);
+}
+
+function getBuildpackRuntime(
+  config: ConfiguredServiceConfig
+): ServiceRuntime | undefined {
+  if (config.builder) {
+    return undefined;
+  }
+  return toBuildpackRuntime(getEntrypointRequiredRuntime(config));
 }
 
 function validateBackendFileEntrypoint(
@@ -697,17 +709,26 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
-  if (hasBuilderOrRuntime && !hasFramework && !hasEntrypoint) {
+  if (
+    hasBuilderOrRuntime &&
+    !hasFramework &&
+    !hasEntrypoint &&
+    !getBuildpackRuntime(config)
+  ) {
     return {
       code: 'MISSING_ENTRYPOINT',
       message: `Service "${name}" must specify "entrypoint" when using "${config.builder ? 'builder' : 'runtime'}".`,
       serviceName: name,
     };
   }
-  if (config.command !== undefined && !isContainerRuntime(config)) {
+  if (
+    config.command !== undefined &&
+    !isContainerRuntime(config) &&
+    !getBuildpackRuntime(config)
+  ) {
     return {
       code: 'INVALID_COMMAND',
-      message: `Service "${name}" can only specify "command" when using runtime "container".`,
+      message: `Service "${name}" can only specify "command" for container or buildpack-backed services.`,
       serviceName: name,
     };
   }
@@ -824,6 +845,9 @@ export async function resolveConfiguredService(
     ...config,
     entrypoint: entrypointIsDirectory ? undefined : normalizedEntrypoint,
   });
+  const buildpackRuntime = config.builder
+    ? undefined
+    : toBuildpackRuntime(inferredRuntime);
   let workspace = '.';
   let resolvedEntrypointFile =
     entrypointIsDirectory || !normalizedEntrypoint
@@ -884,6 +908,9 @@ export async function resolveConfiguredService(
       resolvedEntrypointFile ||
       frameworkDefinition?.useRuntime?.src ||
       'package.json';
+  } else if (buildpackRuntime) {
+    builderUse = '@vercel/container';
+    builderSrc = '<detect>';
   } else if (config.framework) {
     const isCronService = isScheduleTriggeredService({ type, trigger });
     if (
@@ -977,11 +1004,17 @@ export async function resolveConfiguredService(
   if (config.framework) {
     builderConfig.framework = config.framework;
   }
+  if (buildpackRuntime) {
+    builderConfig.buildpack = buildpackRuntime;
+  }
   if (containerImage) {
     builderConfig.handler = containerImage;
   }
   if (config.command !== undefined) {
     builderConfig.command = normalizeContainerCommand(config.command);
+    if (typeof config.command === 'string') {
+      builderConfig.commandShell = true;
+    }
   }
   if (moduleAttrParsed) {
     builderConfig.handlerFunction = moduleAttrParsed.attrName;
@@ -1027,9 +1060,11 @@ export async function resolveAllConfiguredServices(
 ): Promise<{
   services: ExperimentalService[];
   errors: ServiceDetectionError[];
+  warnings: ServiceDetectionWarning[];
 }> {
   const resolved: ExperimentalService[] = [];
   const errors: ServiceDetectionError[] = [];
+  const warnings: ServiceDetectionWarning[] = [];
   const webServicesByRoutePrefix = new Map<string, string>();
 
   for (const name of Object.keys(services)) {
@@ -1173,6 +1208,15 @@ export async function resolveAllConfiguredServices(
       routePrefixSource,
     });
 
+    const entrypointWarning = buildpackEntrypointWarning(
+      name,
+      serviceConfig.entrypoint,
+      service.builder
+    );
+    if (entrypointWarning) {
+      warnings.push(entrypointWarning);
+    }
+
     if (service.type === 'web' && typeof service.routePrefix === 'string') {
       const normalizedRoutePrefix = normalizeRoutePrefix(service.routePrefix);
       const existingServiceName = webServicesByRoutePrefix.get(
@@ -1198,7 +1242,7 @@ export async function resolveAllConfiguredServices(
     validateEnvRefs(service.env, service.name, servicesByName, errors);
   }
 
-  return { services: resolved, errors };
+  return { services: resolved, errors, warnings };
 }
 
 function validateEnvRefs(

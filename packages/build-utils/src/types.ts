@@ -58,6 +58,17 @@ export interface Config {
   middlewareMatcher?: string | string[];
   /** Owning service name; scopes per-function config such as the v2beta consumer. */
   serviceName?: string;
+  /**
+   * Buildpack runtime slug (e.g. `"ruby"`) requesting a Cloud Native
+   * Buildpack container build. Set by `@vercel/fs-detectors` services
+   * resolution and consumed by `@vercel/container`.
+   */
+  buildpack?: string;
+  /**
+   * Internal marker preserving that a normalized buildpack `command` came
+   * from a shell command string rather than an argv array.
+   */
+  commandShell?: boolean;
   [key: string]: unknown;
 }
 
@@ -712,7 +723,7 @@ export interface ExperimentalServiceV2 {
   runtime?: string;
   /** Resolved entrypoint, relative to the service root. */
   entrypoint?: string;
-  /** Command override for `runtime: "container"` services. */
+  /** Command override for container and buildpack-backed services. */
   command?: string[];
   /** Builder selected by the resolver. */
   builder: Builder;
@@ -1128,7 +1139,7 @@ export interface ServiceConfig {
    * prebuilt OCI image reference.
    */
   entrypoint?: string;
-  /** Command override for `runtime: "container"` services. */
+  /** Command override for container and buildpack-backed services. */
   command?: string | string[];
 
   /* Service-level build setting overrides. */

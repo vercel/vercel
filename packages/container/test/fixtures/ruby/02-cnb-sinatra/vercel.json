@@ -1,0 +1,26 @@
+{
+  "uploadNowJson": true,
+  "build": {
+    "env": {
+      "VERCEL_EXPERIMENTAL_BUILDPACK_RUBY": "1"
+    }
+  },
+  "projectSettings": {
+    "framework": "services"
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "sinatra"
+      }
+    }
+  ],
+  "services": {
+    "sinatra": {
+      "root": ".",
+      "runtime": "ruby"
+    }
+  }
+}

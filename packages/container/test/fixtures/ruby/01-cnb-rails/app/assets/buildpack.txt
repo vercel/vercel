@@ -1,0 +1,1 @@
+This file makes Paketo's Rails assets buildpack participate in the build.

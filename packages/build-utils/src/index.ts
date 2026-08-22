@@ -181,6 +181,7 @@ export {
   isBackendFramework,
   isNodeBackendFramework,
   isBackendBuilder,
+  isBuildpackRuntimeEnabled,
   isExperimentalBackendsEnabled,
   isExperimentalBackendsWithoutIntrospectionEnabled,
   shouldUseExperimentalBackends,

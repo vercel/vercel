@@ -806,6 +806,68 @@ describe('Test `detectBuilders`', () => {
     });
   });
 
+  it('routes the Ruby framework through the container buildpack builder when buildpacks are enabled', async () => {
+    process.env.VERCEL_EXPERIMENTAL_BUILDPACK_RUBY = '1';
+    try {
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['Gemfile', 'config.ru'],
+        null,
+        {
+          projectSettings: { framework: 'ruby' },
+        }
+      );
+
+      expect(builders).toContainEqual({
+        src: '<detect>',
+        use: '@vercel/container',
+        config: {
+          zeroConfig: true,
+          framework: 'ruby',
+        },
+      });
+    } finally {
+      delete process.env.VERCEL_EXPERIMENTAL_BUILDPACK_RUBY;
+    }
+  });
+
+  it('keeps the Ruby framework on the legacy Ruby builder when buildpacks are disabled', async () => {
+    const { builders } = await invokeDetectBuildersAndThrow(
+      ['Gemfile', 'config.ru'],
+      null,
+      {
+        projectSettings: { framework: 'ruby' },
+      }
+    );
+
+    expect(builders).toContainEqual({
+      src: 'config.ru',
+      use: '@vercel/ruby',
+      config: {
+        zeroConfig: true,
+        framework: 'ruby',
+      },
+    });
+  });
+
+  it('keeps framework-null api Ruby files on the legacy Ruby builder', async () => {
+    const { builders } = await invokeDetectBuildersAndThrow(
+      ['api/date.rb'],
+      null,
+      {
+        projectSettings: { framework: null },
+      }
+    );
+
+    expect(builders).toContainEqual({
+      src: 'api/date.rb',
+      use: '@vercel/ruby',
+      config: { zeroConfig: true },
+    });
+    expect(builders.some(builder => builder.use === '@vercel/container')).toBe(
+      false
+    );
+  });
+
   it('extend with functions', async () => {
     const pkg = {
       scripts: { build: 'next build' },

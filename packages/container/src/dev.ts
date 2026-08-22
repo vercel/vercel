@@ -8,14 +8,17 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { resolveImageSource } from './image-source';
+import type { DevOutput } from './util';
 import {
+  assertValidCommandShell,
   debug,
   devImageTag,
-  findDockerfile,
-  isDockerfileRef,
-  readString,
+  normalizeCommand,
   withSpan,
 } from './util';
+
+export type { DevOutput } from './util';
 
 /**
  * Host/shell environment variables that are meaningful only on the developer's
@@ -85,19 +88,12 @@ function writeEnvFile(env: Record<string, string>): string {
   return file;
 }
 
-/**
- * Sink for all dev output. `vercel dev` runs many services in parallel and
- * prefixes each service's logs (e.g. `[api]`) by piping through per-service
- * `onStdout`/`onStderr` callbacks. So in dev we must route ALL output
- * (status lines, `docker build`, the container) through these callbacks rather
- * than writing to `process.stderr` directly (which would print unprefixed and
- * interleave with other services).
- */
-interface DevOutput {
-  onStdout?: (data: Buffer) => void;
-  onStderr?: (data: Buffer) => void;
-}
-
+// `vercel dev` runs many services in parallel and prefixes each service's
+// logs (e.g. `[api]`) by piping through per-service `onStdout`/`onStderr`
+// callbacks (`DevOutput`, defined in ./util). All dev output — status lines,
+// `docker build`, the container — must route through them rather than writing
+// to `process.stderr` directly (which would print unprefixed and interleave
+// with other services).
 function emit(out: DevOutput, line: string): void {
   if (out.onStderr) {
     out.onStderr(Buffer.from(`${line}\n`));
@@ -169,19 +165,6 @@ function runForwarded(
   });
 }
 
-function normalizeCommand(command: unknown): string[] | undefined {
-  if (typeof command === 'string') {
-    return [command];
-  }
-  if (
-    Array.isArray(command) &&
-    command.every(item => typeof item === 'string')
-  ) {
-    return command;
-  }
-  return undefined;
-}
-
 /**
  * Resolve the image to run locally: either a configured prebuilt image, or one
  * built locally from the service's Dockerfile.
@@ -193,39 +176,56 @@ async function resolveDevImage(
   options: StartDevServerOptions,
   out: DevOutput,
   span?: Span
-): Promise<string> {
-  const { config, workPath, entrypoint } = options;
+): Promise<{ image: string; isBuildpack: boolean }> {
+  const { workPath } = options;
 
-  const entrypointRef = readString(entrypoint);
-  // An entrypoint that names a Dockerfile (including the `Dockerfile.vercel` /
-  // `Containerfile.vercel` opt-in markers) is built directly. Otherwise — e.g.
-  // when the `container` framework preset resolves its entrypoint via
-  // `<detect>` — discover an opt-in marker in the work directory. This mirrors
-  // the build path (`resolveImageHandler`) so dev and deploy resolve the same
-  // Dockerfile.
-  const dockerfileConfigured =
-    entrypointRef && isDockerfileRef(entrypointRef)
-      ? entrypointRef
-      : findDockerfile(workPath);
-  const dockerfileRel = dockerfileConfigured ?? 'Dockerfile';
-  const dockerfilePath = path.join(workPath, dockerfileRel);
-  const hasDockerfile =
-    dockerfileConfigured !== undefined || existsSync(dockerfilePath);
+  // Mirrors the build path (`resolveImageHandler`) so dev and deploy resolve
+  // the same image source.
+  const source = resolveImageSource(options, 'dev');
 
-  const prebuiltImage =
-    readString(config.handler) ?? (hasDockerfile ? undefined : entrypointRef);
-
-  if (!hasDockerfile) {
-    if (!prebuiltImage) {
-      throw new Error(
-        'Container service must specify an entrypoint: a prebuilt OCI image ' +
-          'reference, or a Dockerfile path to run with `vercel dev`.'
-      );
-    }
+  if (source.kind === 'prebuilt') {
     span?.setAttributes({ 'container.dev_mode': 'prebuilt' });
-    emit(out, `▲ container  vercel dev: using prebuilt image ${prebuiltImage}`);
-    return prebuiltImage;
+    emit(
+      out,
+      `▲ container  vercel dev: using prebuilt image ${source.imageRef}`
+    );
+    return { image: source.imageRef, isBuildpack: false };
   }
+
+  if (source.kind === 'buildpack') {
+    const { buildpack } = source;
+    const serviceName = options.service?.name ?? 'service';
+    const tag = devImageTag(serviceName);
+    const buildEnv = (options.meta?.buildEnv ?? {}) as Record<
+      string,
+      string | undefined
+    >;
+    const buildArgs: Record<string, string> = {};
+    for (const [key, value] of Object.entries(buildEnv)) {
+      if (typeof value === 'string') buildArgs[key] = value;
+    }
+
+    span?.setAttributes({
+      'container.dev_mode': 'buildpack',
+      'buildpack.runtime': buildpack.runtime,
+      'image.tag': tag,
+    });
+    emit(
+      out,
+      `▲ container  vercel dev: building ${tag} via ${buildpack.runtime} buildpacks`
+    );
+    const { buildWithLifecycle } = await import('./buildpacks/lifecycle');
+    await buildWithLifecycle(
+      buildpack,
+      { workPath, tag, buildEnv: buildArgs },
+      out,
+      span
+    );
+    emit(out, `▲ container  built ${tag} (${buildpack.runtime} buildpack)`);
+    return { image: tag, isBuildpack: true };
+  }
+
+  const { dockerfilePath } = source;
 
   if (!existsSync(dockerfilePath)) {
     throw new Error(
@@ -259,7 +259,7 @@ async function resolveDevImage(
     out
   );
   emit(out, `▲ container  built ${tag}`);
-  return tag;
+  return { image: tag, isBuildpack: false };
 }
 
 /**
@@ -481,8 +481,11 @@ async function startContainer(
       // letting `docker build`/`docker run` fail later with a bare exit code.
       await assertDockerAvailable(out);
 
-      const image = await withSpan(span, 'container.dev.resolve_image', {}, s =>
-        resolveDevImage(options, out, s)
+      const { image, isBuildpack } = await withSpan(
+        span,
+        'container.dev.resolve_image',
+        {},
+        s => resolveDevImage(options, out, s)
       );
 
       const containerPort = await resolveContainerPort(image, out);
@@ -512,9 +515,14 @@ async function startContainer(
       mergedEnv.PORT = String(containerPort);
       const envFilePath = writeEnvFile(mergedEnv);
 
-      const command = normalizeCommand(
-        (config as { command?: unknown }).command
-      );
+      const rawCommand = (config as { command?: unknown }).command;
+      const command = normalizeCommand(rawCommand);
+      const commandShell =
+        typeof rawCommand === 'string' ||
+        (config as { commandShell?: unknown }).commandShell === true;
+      if (isBuildpack) {
+        assertValidCommandShell(command, commandShell);
+      }
 
       // Honor the host port the orchestrator pre-allocated for this service
       // (passed via `meta.port`). Service bindings are built against this port
@@ -522,6 +530,18 @@ async function startContainer(
       // on it for cross-service requests to reach it. Fall back to `0` (an
       // ephemeral port chosen by Docker) when no port was provided.
       const requestedHostPort = typeof meta?.port === 'number' ? meta.port : 0;
+
+      // A CNB-built image's entrypoint is the launcher for its default web
+      // process; positional `docker run` args would be appended to that
+      // process instead of replacing it. Route a `command` override through
+      // the launcher binary so it replaces the default process while keeping
+      // the buildpack-provided environment (PATH to the language runtime,
+      // etc.). Deploys bake the same override into the image itself (see
+      // buildpacks/lifecycle.ts `writeCommandProcfile`).
+      const entrypointFlags =
+        isBuildpack && command?.length ? ['--entrypoint', 'launcher'] : [];
+      const launcherCommandFlags =
+        isBuildpack && command?.length && !commandShell ? ['--'] : [];
 
       const args = [
         'run',
@@ -534,7 +554,9 @@ async function startContainer(
         `127.0.0.1:${requestedHostPort}:${containerPort}`,
         '--env-file',
         envFilePath,
+        ...entrypointFlags,
         image,
+        ...launcherCommandFlags,
         ...(command ?? []),
       ];
 

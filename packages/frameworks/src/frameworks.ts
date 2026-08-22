@@ -4368,15 +4368,27 @@ export const frameworks = [
     description:
       'A generic Ruby application deployed as a serverless function.',
     website: 'https://www.ruby-lang.org',
+    // With `VERCEL_EXPERIMENTAL_BUILDPACK_RUBY=1`, builds-and-routes detection
+    // replaces this runtime with a `@vercel/container` buildpack build (see
+    // fs-detectors `detectFrontBuilder`).
     useRuntime: { src: 'config.ru', use: '@vercel/ruby' },
     ignoreRuntimes: ['@vercel/ruby'],
+    // Mirrors the Paketo Ruby buildpack's detect phase: a Gemfile is
+    // mandatory, plus a `config.ru` or a supported server gem resolved in
+    // Gemfile.lock.
     detectors: {
       every: [
+        {
+          path: 'Gemfile',
+        },
+      ],
+      some: [
         {
           path: 'config.ru',
         },
         {
-          path: 'Gemfile',
+          path: 'Gemfile.lock',
+          matchContent: '^    (puma|thin|unicorn|passenger|rack) \\(',
         },
       ],
     },
@@ -4397,13 +4409,18 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
-    defaultRoutes: [
+    // The buildpack container build outputs `index`; the legacy Lambda build
+    // outputs a function named after its `config.ru` entrypoint.
+    defaultRoutes: async () => [
       {
         handle: 'filesystem',
       },
       {
         src: '/(.*)',
-        dest: '/config',
+        dest:
+          process.env.VERCEL_EXPERIMENTAL_BUILDPACK_RUBY === '1'
+            ? '/index'
+            : '/config',
       },
     ],
   },
