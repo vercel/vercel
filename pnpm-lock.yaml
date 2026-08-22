@@ -1760,8 +1760,8 @@ importers:
         version: 1.10.0(rollup@4.60.4)
     devDependencies:
       '@next-community/adapter-vercel':
-        specifier: 0.0.1-beta.24
-        version: 0.0.1-beta.24
+        specifier: https://adapter-vercel-adapter-kpa498vl1.vercel.app/adapter.tgz
+        version: https://adapter-vercel-adapter-kpa498vl1.vercel.app/adapter.tgz
       '@types/aws-lambda':
         specifier: 8.10.19
         version: 8.10.19
@@ -4583,8 +4583,9 @@ packages:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
 
-  '@next-community/adapter-vercel@0.0.1-beta.24':
-    resolution: {integrity: sha512-6c3DfRgVcDocIB2CTpp+7txplXMdrK69/CwyLJMDmcB2mvdjpXjKBOOJwjwa13E8zBPzhvRKnmkBxj+U40UUvw==}
+  '@next-community/adapter-vercel@https://adapter-vercel-adapter-kpa498vl1.vercel.app/adapter.tgz':
+    resolution: {integrity: sha512-MPBvoPiJZIBKsotoIYUQAijqo3Nl14JuW2pXD/Vh2VUQmIQuHrhtaAs7VJJHH8tiWF1HQW5RSlnvTrAm+5nw6g==, tarball: https://adapter-vercel-adapter-kpa498vl1.vercel.app/adapter.tgz}
+    version: 0.0.1-beta.24
     engines: {node: '>= 20.6.0'}
 
   '@next/env@11.1.2':
@@ -15171,7 +15172,7 @@ snapshots:
       '@tybys/wasm-util': 0.10.2
     optional: true
 
-  '@next-community/adapter-vercel@0.0.1-beta.24': {}
+  '@next-community/adapter-vercel@https://adapter-vercel-adapter-kpa498vl1.vercel.app/adapter.tgz': {}
 
   '@next/env@11.1.2': {}
 
