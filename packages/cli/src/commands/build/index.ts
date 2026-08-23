@@ -118,7 +118,13 @@ import { staticFiles as getFiles } from '../../util/get-files';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import cmd from '../../util/output/cmd';
 import stamp from '../../util/output/stamp';
-import parseTarget from '../../util/parse-target';
+import { parseAliasedTarget } from '../../util/parse-target';
+import { isErrnoException } from '@vercel/error-utils';
+import humanizePath from '../../util/humanize-path';
+import {
+  compareEnvProvenance,
+  parseEnvProvenance,
+} from '../../util/env/env-provenance';
 import cliPkg from '../../util/pkg';
 import * as cli from '../../util/pkg-name';
 import {
@@ -132,8 +138,12 @@ import { detectExplicitScope } from '../../util/get-scope';
 import {
   pickOverrides,
   readProjectSettings,
+  toProjectLinkAndSettings,
   type ProjectLinkAndSettings,
 } from '../../util/projects/project-settings';
+import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
+import getOrgById from '../../util/projects/get-org-by-id';
+import { ProjectNotFound } from '../../util/errors-ts';
 import readJSONFile from '../../util/read-json-file';
 import { getStaticServiceSchedules } from '../../util/service-schedules';
 import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
@@ -147,7 +157,6 @@ import {
 } from '../../util/compile-vercel-config';
 import { help } from '../help';
 import { ensureLink } from '../../util/link/ensure-link';
-import { pullCommandLogic } from '../pull';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import { buildCommand } from './command';
 import { validatePackageManifest } from '../../util/validate-package-manifest';
@@ -253,6 +262,71 @@ export interface BuildsManifest {
   detectedFramework?: DetectedFramework;
 }
 
+/** Returns `undefined` when settings can't be resolved, so the caller can fall back. */
+async function fetchProjectSettings(
+  client: Client,
+  link: { projectId: string; orgId: string; repoRoot?: string } | null
+): Promise<ProjectLinkAndSettings | undefined> {
+  if (!link) {
+    return undefined;
+  }
+
+  try {
+    if (link.orgId.startsWith('team_')) {
+      client.config.currentTeam = link.orgId;
+    } else {
+      client.config.currentTeam = undefined;
+    }
+
+    const [project, org] = await Promise.all([
+      getProjectByNameOrId(client, link.projectId, link.orgId),
+      getOrgById(client, link.orgId),
+    ]);
+
+    if (project instanceof ProjectNotFound) {
+      output.debug(
+        `Project ${link.projectId} not found while fetching settings`
+      );
+      return undefined;
+    }
+    if (!org) {
+      output.debug(`Org ${link.orgId} not found while fetching settings`);
+      return undefined;
+    }
+
+    output.debug(`Resolved Project Settings for ${project.name} from the API`);
+    return toProjectLinkAndSettings(project, org, Boolean(link.repoRoot));
+  } catch (err: unknown) {
+    output.debug(`Failed to fetch Project Settings from the API: ${err}`);
+    return undefined;
+  }
+}
+
+/** Returns `undefined` when env vars can't be fetched, so the caller can fall back. */
+async function fetchProjectEnv(
+  client: Client,
+  link: { projectId: string; orgId: string } | null,
+  target: string,
+  gitBranch: string | undefined
+): Promise<Record<string, string> | undefined> {
+  if (!link) {
+    return undefined;
+  }
+
+  try {
+    const { env } = await pullEnvRecords(
+      client,
+      link.projectId,
+      'vercel-cli:build',
+      { target, gitBranch }
+    );
+    return env;
+  } catch (err: unknown) {
+    output.debug(`Failed to fetch Environment Variables from the API: ${err}`);
+    return undefined;
+  }
+}
+
 export default async function main(client: Client): Promise<number> {
   const telemetryClient = new BuildTelemetryClient({
     opts: {
@@ -297,6 +371,10 @@ export default async function main(client: Client): Promise<number> {
     telemetryClient.trackCliFlagStandalone(parsedArgs.flags['--standalone']);
     telemetryClient.trackCliOptionId(parsedArgs.flags['--id']);
     telemetryClient.trackCliOptionProject(parsedArgs.flags['--project']);
+    telemetryClient.trackCliOptionGitBranch(parsedArgs.flags['--git-branch']);
+    telemetryClient.trackCliOptionEnvironment(
+      parsedArgs.flags['--environment']
+    );
   } catch (error) {
     printError(error);
     return 1;
@@ -309,11 +387,13 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // Build `target` influences which environment variables will be used
-  const target =
-    parseTarget({
-      flagName: 'target',
-      flags: parsedArgs.flags,
-    }) || 'preview';
+  const target = parseAliasedTarget({
+    flags: parsedArgs.flags,
+    defaultTarget: 'preview',
+  });
+
+  // Resolves branch-specific Environment Variables for the build target
+  const gitBranch = parsedArgs.flags['--git-branch'];
 
   const yes = Boolean(parsedArgs.flags['--yes']);
 
@@ -386,17 +466,15 @@ export default async function main(client: Client): Promise<number> {
     cwd = client.cwd = link.repoRoot;
   }
 
-  // TODO: read project settings from the API, fall back to local `project.json` if that fails
-
-  // Read project settings, and pull them from Vercel if necessary
+  // Settings come from the API when linked, so `vercel pull` is not required
+  // first. A local `project.json` still wins, for offline builds.
   const vercelDir = join(cwd, projectRootDirectory, VERCEL_DIR);
   let project = await rootSpan
     .child('vc.readProjectSettings')
     .trace(() => readProjectSettings(vercelDir));
   const isTTY = process.stdin.isTTY;
-  while (!project?.settings) {
-    let confirmed = yes;
-    if (!confirmed) {
+  if (!project?.settings) {
+    if (!link) {
       if (client.nonInteractive) {
         outputAgentError(
           client,
@@ -404,21 +482,18 @@ export default async function main(client: Client): Promise<number> {
             status: AGENT_STATUS.ERROR,
             reason: AGENT_REASON.PROJECT_SETTINGS_REQUIRED,
             message:
-              'No project settings found locally. Run pull to retrieve them, or re-run with --yes to pull automatically.',
+              'No project settings found. Link the project so settings can be resolved, or run pull to retrieve them locally.',
             next: [
+              {
+                command: buildCommandWithGlobalFlags('link --yes', client.argv),
+                when: 'link the project',
+              },
               {
                 command: buildCommandWithGlobalFlags(
                   `pull --yes --environment ${target}`,
                   client.argv
                 ),
-                when: 'retrieve project settings',
-              },
-              {
-                command: buildCommandWithGlobalFlags(
-                  'build --yes',
-                  client.argv
-                ),
-                when: 're-run build after pull',
+                when: 'retrieve project settings locally instead',
               },
             ],
           },
@@ -426,70 +501,60 @@ export default async function main(client: Client): Promise<number> {
         );
         return 1;
       }
-      if (!isTTY) {
+      if (!isTTY && !yes) {
         output.print(
-          `No Project Settings found locally. Run ${cli.getCommandName(
-            'pull --yes'
-          )} to retrieve them. In non-interactive mode, set VERCEL_TOKEN for authentication.`
+          `No Project Settings found. Run ${cli.getCommandName(
+            'link'
+          )} to link this directory to a project. In non-interactive mode, set VERCEL_TOKEN for authentication.`
         );
         return 1;
       }
 
-      // An unlinked directory gets the link flow first, so the pull
-      // question refers to a known project instead of linking as a side
-      // effect of the pull.
-      if (!link) {
-        const ensured = await ensureLink('build', client, cwd, {
-          projectName: projectNameOrId,
-          failIfNotFound: !!projectNameOrId,
-          pullEnv: false,
-        });
-        if (typeof ensured === 'number') {
-          return ensured;
-        }
-        link = await getProjectLink(client, cwd, projectNameOrId, true);
+      const ensured = await ensureLink('build', client, cwd, {
+        autoConfirm: yes,
+        projectName: projectNameOrId,
+        failIfNotFound: !!projectNameOrId,
+      });
+      if (typeof ensured === 'number') {
+        return ensured;
       }
+      link = await getProjectLink(client, cwd, projectNameOrId, true);
+    }
 
-      confirmed = await client.input.confirm(
-        `No Project Settings found locally. Run ${cli.getCommandName(
+    const resolved = await rootSpan
+      .child('vc.fetchProjectSettings')
+      .trace(() => fetchProjectSettings(client, link));
+    if (!resolved) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: AGENT_STATUS.ERROR,
+            reason: AGENT_REASON.PROJECT_SETTINGS_REQUIRED,
+            message:
+              'Could not resolve project settings from Vercel. Run pull to retrieve them locally, then re-run the build.',
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  `pull --yes --environment ${target}`,
+                  client.argv
+                ),
+                when: 'retrieve project settings locally',
+              },
+            ],
+          },
+          1
+        );
+        return 1;
+      }
+      output.error(
+        `Failed to resolve Project Settings. Run ${cli.getCommandName(
           'pull'
-        )} for retrieving them?`,
-        true
+        )} to retrieve them locally, then re-run the build.`
       );
+      return 1;
     }
-    if (!confirmed) {
-      if (!client.nonInteractive)
-        output.print(`Canceled. No Project Settings retrieved.\n`);
-      return 0;
-    }
-    const { argv: originalArgv } = client;
-    client.cwd = join(cwd, projectRootDirectory);
-    client.setArgv([
-      ...originalArgv.slice(0, 2),
-      'pull',
-      `--environment`,
-      target,
-    ]);
-    const result = await pullCommandLogic(
-      client,
-      client.cwd,
-      Boolean(parsedArgs.flags['--yes']),
-      target,
-      parsedArgs.flags,
-      projectNameOrId
-    );
-    if (result !== 0) {
-      return result;
-    }
-    client.cwd = cwd;
-    client.setArgv(originalArgv);
-    project = await readProjectSettings(vercelDir);
-  }
-
-  // The settings pull above may have just established the link; re-read it
-  // so the re-anchoring below sees it.
-  if (!link) {
-    link = await getProjectLink(client, cwd, projectNameOrId, true);
+    project = resolved;
   }
 
   // A per-directory link (`<dir>/.vercel/project.json`) doesn't report a
@@ -587,20 +652,67 @@ export default async function main(client: Client): Promise<number> {
           VERCEL_DIR,
           `.env.${target}.local`
         );
-        // TODO (maybe?): load env vars from the API, fall back to the local file if that fails
-        const dotenvResult = dotenv.config({
-          path: envPath,
-          debug: output.isDebugEnabled(),
-        });
-        if (dotenvResult.error) {
-          output.debug(
-            `Failed loading environment variables: ${dotenvResult.error}`
-          );
-        } else if (dotenvResult.parsed) {
-          for (const key of Object.keys(dotenvResult.parsed)) {
-            envToUnset.add(key);
+
+        // A pulled file records what it was resolved for. When that matches
+        // this build, the file wins so `vercel pull --git-branch` and
+        // hand-edited values keep working. When it doesn't, the API wins so a
+        // file pulled for a different Environment or branch can't silently
+        // shadow the right values.
+        let localContents: string | undefined;
+        try {
+          localContents = await fs.readFile(envPath, 'utf8');
+        } catch (err: unknown) {
+          if (!isErrnoException(err) || err.code !== 'ENOENT') {
+            output.debug(`Failed reading "${envPath}": ${err}`);
           }
-          output.debug(`Loaded environment variables from "${envPath}"`);
+        }
+        const provenance = localContents
+          ? parseEnvProvenance(localContents)
+          : undefined;
+        const comparison = compareEnvProvenance(provenance, {
+          target,
+          gitBranch,
+        });
+
+        const isMismatch = comparison.status === 'mismatch';
+        if (localContents && isMismatch) {
+          output.warn(
+            `Ignoring ${humanizePath(envPath)} because ${comparison.reason}. Resolving Environment Variables from Vercel instead.`
+          );
+        }
+
+        // Files pulled by older CLI versions have no provenance. Trusting them
+        // preserves the previous behavior for anyone who hasn't re-pulled.
+        const useLocalFile = Boolean(localContents) && !isMismatch;
+
+        if (useLocalFile) {
+          const dotenvResult = dotenv.config({
+            path: envPath,
+            debug: output.isDebugEnabled(),
+          });
+          if (dotenvResult.error) {
+            output.debug(
+              `Failed loading environment variables: ${dotenvResult.error}`
+            );
+          } else if (dotenvResult.parsed) {
+            for (const key of Object.keys(dotenvResult.parsed)) {
+              envToUnset.add(key);
+            }
+            output.debug(`Loaded environment variables from "${envPath}"`);
+          }
+        } else {
+          const apiEnv = await fetchProjectEnv(client, link, target, gitBranch);
+          if (apiEnv) {
+            for (const [key, value] of Object.entries(apiEnv)) {
+              // The ambient environment is the more explicit signal.
+              if (key in process.env) continue;
+              envToUnset.add(key);
+              process.env[key] = value;
+            }
+            output.debug(
+              `Loaded ${Object.keys(apiEnv).length} environment variables from the API`
+            );
+          }
         }
       }
     } finally {

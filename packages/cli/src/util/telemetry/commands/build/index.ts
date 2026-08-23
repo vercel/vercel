@@ -50,4 +50,22 @@ export class BuildTelemetryClient
       });
     }
   }
+
+  trackCliOptionEnvironment(option: string | undefined) {
+    if (option) {
+      this.trackCliOption({
+        option: 'environment',
+        value: this.redactedTargetName(option),
+      });
+    }
+  }
+
+  trackCliOptionGitBranch(gitBranch: string | undefined) {
+    if (gitBranch) {
+      this.trackCliOption({
+        option: 'git-branch',
+        value: this.redactedValue,
+      });
+    }
+  }
 }

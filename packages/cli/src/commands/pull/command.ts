@@ -25,6 +25,14 @@ export const pullCommand = {
       deprecated: false,
     },
     {
+      name: 'target',
+      description: 'Alias for `--environment`',
+      argument: 'TARGET',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+    },
+    {
       name: 'git-branch',
       description:
         'Specify the Git branch to pull specific Environment Variables for',

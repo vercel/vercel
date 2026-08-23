@@ -6262,6 +6262,8 @@ exports[`help command > pull help output snapshots > pull help column width 40 1
                                (defaults to  
                                the linked    
                                project)      
+       --target <TARGET>       Alias for     
+                               \`--environmen…
   -y,  --yes                   Skip questions
                                when setting  
                                up new project
@@ -6355,6 +6357,7 @@ exports[`help command > pull help output snapshots > pull help column width 80 1
        --git-branch <NAME>     Specify the Git branch to pull specific Environment   
                                Variables for                                         
        --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)   
+       --target <TARGET>       Alias for \`--environment\`                             
   -y,  --yes                   Skip questions when setting up new project using      
                                default scope and settings                            
 
@@ -6411,6 +6414,7 @@ exports[`help command > pull help output snapshots > pull help column width 120 
        --environment <TARGET>  Deployment environment [development]                                                          
        --git-branch <NAME>     Specify the Git branch to pull specific Environment Variables for                             
        --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
+       --target <TARGET>       Alias for \`--environment\`                                                                     
   -y,  --yes                   Skip questions when setting up new project using default scope and settings                   
 
 

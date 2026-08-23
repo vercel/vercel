@@ -24,6 +24,15 @@ export class PullTelemetryClient
     }
   }
 
+  trackCliOptionTarget(target: string | undefined) {
+    if (target) {
+      this.trackCliOption({
+        option: 'target',
+        value: this.redactedTargetName(target),
+      });
+    }
+  }
+
   trackCliOptionGitBranch(gitBranch: string | undefined) {
     if (gitBranch) {
       this.trackCliOption({

@@ -186,7 +186,6 @@ async function linkProject(client: Client) {
       projectName: parsedArgs.flags['--project'],
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
-      pullEnv: false,
     });
 
     if (typeof link === 'number') {

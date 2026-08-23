@@ -23,7 +23,7 @@ When adding a durable contract, add a row to `SKILL.md` so agents load it only f
 3. Intended project: explicit `--project`, repo-root match, exact folder-name match, selected existing project, or new project.
 4. Project root: inferred root, selected root, or cwd.
 5. Settings: detected framework/settings, explicit overrides, or defaults.
-6. Mutations: create project if needed, write `.vercel/project.json`, update `.gitignore`, optional Git connection, optional env pull.
+6. Mutations: create project if needed, write `.vercel/project.json`, update `.gitignore`, optional Git connection.
 
 Rules:
 
@@ -55,7 +55,7 @@ Rules:
 - Link/setup primary completed-phase rows use `✓`: `✓ Linked`, `✓ Created`, `✓ Added`. Discovery, preview, progress, and secondary rows such as `Found existing project`, `Detected`, `Project`, `Directory`, `Config`, `Settings`, and `Source` keep the blank two-space gutter. Never use `▲` for setup/link rows.
 - Default human success output prints the user-facing completion receipt, such as `✓ Linked acme/web` or `✓ Created acme/web`.
 - Do not print `.vercel/project.json`, `.vercel/repo.json`, or a repeated `Directory` row in default human success output when the local target was already shown. Verify link files in tests and expose them through machine/debug/help surfaces when needed.
-- Offer `Pull development environment variables into .env.local?` after linking when TTY and safe.
+- Do not offer to pull environment variables after linking, and do not pull them as a side effect of linking. Env files are written only when the user explicitly asks (`vc env pull`, `vc pull`). See "Env files on disk" below.
 
 Current gaps to migrate incrementally:
 
@@ -67,17 +67,16 @@ Current gaps to migrate incrementally:
 
 Link prompt map:
 
-| State                              | Human prompt/output                                                                                                                                                                  | Non-interactive                        |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
-| Multiple teams                     | searchable `Which team?` before project discovery                                                                                                                                    | `action_required: missing_scope` unless explicit signal or single choice |
-| Single team                        | no prompt; aligned `Team` row, then project discovery                                                                                                                                | proceeds with that team                |
-| One folder-name project match      | `Which project?` with the match labeled `(folder name)`, then search/create choices                                                                                                  | link only for explicit/repo-root match |
-| One repository project match       | direct interactive: `Which project?` with the match labeled `(linked by git)`; other paths: `Found existing project`, aligned `Project`/`Source`, then `Link repository to project?` | link only for explicit/repo-root match |
-| No project match                   | `Which project?` with `Search all projects` / `Create a new project`, then `Name?` when creating                                                                                     | require `--yes` or `project_not_found` |
-| Root choices exist                 | `Code directory?`                                                                                                                                                                    | require root flag/config/payload       |
-| Settings differ                    | `Customize settings?`                                                                                                                                                                | require flags/config/payload           |
-| Optional env pull                  | `Pull development environment variables into .env.local?`                                                                                                                            | skip unless explicitly requested       |
-| Stale/deleted link                 | show stale link, then concrete relink choice                                                                                                                                         | `action_required: stale_link`          |
+| State                         | Human prompt/output                                                                                                                                                                  | Non-interactive                                                          |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Multiple teams                | searchable `Which team?` before project discovery                                                                                                                                    | `action_required: missing_scope` unless explicit signal or single choice |
+| Single team                   | no prompt; aligned `Team` row, then project discovery                                                                                                                                | proceeds with that team                                                  |
+| One folder-name project match | `Which project?` with the match labeled `(folder name)`, then search/create choices                                                                                                  | link only for explicit/repo-root match                                   |
+| One repository project match  | direct interactive: `Which project?` with the match labeled `(linked by git)`; other paths: `Found existing project`, aligned `Project`/`Source`, then `Link repository to project?` | link only for explicit/repo-root match                                   |
+| No project match              | `Which project?` with `Search all projects` / `Create a new project`, then `Name?` when creating                                                                                     | require `--yes` or `project_not_found`                                   |
+| Root choices exist            | `Code directory?`                                                                                                                                                                    | require root flag/config/payload                                         |
+| Settings differ               | `Customize settings?`                                                                                                                                                                | require flags/config/payload                                             |
+| Stale/deleted link            | show stale link, then concrete relink choice                                                                                                                                         | `action_required: stale_link`                                            |
 
 Link acceptance matrix:
 
@@ -106,6 +105,34 @@ Link acceptance matrix:
 - JSON-only stdout
 - `--yes` default path creates no duplicate resources on retry
 - primary completed-phase gutter: `✓ Linked`, `✓ Created`, or `✓ Added`; no `▲` on setup/link rows
+
+## Env Files On Disk
+
+Direction: the CLI is getting out of the business of writing env files to disk. Commands that need Project Settings or Environment Variables resolve them from the API in memory; files are written only when the user explicitly asks for a file.
+
+Rules:
+
+- Do not write, or offer to write, env files as a side effect of another command. No command outside `vc env pull` / `vc pull` may create `.env*` files.
+- When a command needs env values, fetch them with `pullEnvRecords` and keep them in memory (`vc dev`, `vc env run`, `vc build`).
+- When a command needs Project Settings, resolve them from the API for the linked project. Treat a local `.vercel/project.json` as a cache/offline fallback, never as a prerequisite the user must produce first.
+- Never require a preceding `vc pull` to make another command work. `vc pull` is a convenience for getting files on disk (offline work, non-Vercel tooling, `vc dev` parity), not a setup step.
+- Secrets belong in memory. Prefer not persisting values the build or dev server can fetch itself.
+
+Migration state:
+
+- Done: `vc build` resolves settings and env from the API and no longer prompts `No Project Settings found locally. Run vercel pull for retrieving them?`.
+- Done: pulled env files record provenance (`# vercel-env: target=… gitBranch=… pulledAt=…`, see `src/util/env/env-provenance.ts`). `vc build` uses a local file when its provenance matches the requested target and branch, and prefers the API when it doesn't. Files without provenance predate this and are still trusted. `.env.<target>.local` encodes only the target in its filename, so provenance is the only way to distinguish a `--git-branch` pull from a plain one.
+- Done: `vc build` and `vc pull` accept the same environment selection options. `--target` and `--environment` are aliases in both via `parseAliasedTarget` in `src/util/parse-target.ts`, both accept `--git-branch`, and `--git-branch` without an explicit environment implies `preview`.
+- Done: the post-link/post-create `Pull development environment variables into .env.local?` prompt and the `pullEnv` plumbing through `setupAndLink` / `linkFolderToProject` are removed.
+- Remaining: `vc link` still writes `VERCEL_OIDC_TOKEN` to `<root>/.env.local` via `refreshOidcTokenAfterLink()` in `src/commands/link/index.ts`. This is the last path that writes outside `.vercel/` as a link side effect. Removing it needs a decision on how local dev consumes the OIDC token without a file.
+- Remaining: `vc dev` calls `pullEnvRecords` with neither `target` nor `gitBranch` (`src/commands/dev/dev.ts`), so it can't resolve branch-specific values the way `vc build` and `vc pull` now can.
+- Remaining: docs and skills still teach `vc pull` before `vc build` (`skills/vercel-cli/**`, `packages/cli/src/commands/agent/init.ts`). Update them as the file-writing paths retire.
+
+Stale-string sweep:
+
+```bash
+rg -n "Pull development environment variables into \.env\.local\?|No Project Settings found locally|Run .*pull.* for retrieving them|pullEnv" <paths>
+```
 
 ## Deploy Flow Contract
 

@@ -44,6 +44,8 @@ Before editing shared prompt/output/link helpers, inspect call sites and tests f
 - `setupAndLink()` changes affect direct setup callers and unlinked flows reached through `ensureLink()`, including `vc dev`.
 - `linkFolderToProject()` changes affect any command that links before continuing work, including deploy, dev, pull/env, git connect/disconnect, open, target, and other project-scoped commands.
 - `printAlignedLabel()` changes affect deploy result rows and every command adopting aligned rows.
+- `toProjectLinkAndSettings()` changes affect both the `.vercel/project.json` written by `vc pull` and the settings `vc build` resolves from the API; keep the two in sync.
+- `pullEnvRecords()` / `envPullCommandLogic()` changes affect `vc build`, `vc dev`, `vc env run`, `vc env pull`, `vc pull`, and OIDC refresh. Check whether a change adds a new file write; see `command-contracts.md` → Env Files On Disk.
 
 Use `rg` before editing and testing:
 
