@@ -188,6 +188,41 @@ describe('Eve channel credential helpers', () => {
     });
   });
 
+  it('selects a Slack installation from Eve workspace context', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonTokenResponse('slack_token_a'))
+      .mockResolvedValueOnce(jsonTokenResponse('slack_token_b'));
+    const installationIdsBySlackTeam: Record<string, string> = {
+      T_A: 'inst_a',
+      T_B: 'inst_b',
+    };
+    const installationId = vi.fn(
+      async ({ teamId }: { readonly teamId?: string }) =>
+        teamId ? installationIdsBySlackTeam[teamId] : undefined
+    );
+    const credentials = connectSlackCredentials(
+      'oauth/slack-multi-workspace',
+      { installationId },
+      { vercelToken: 'vercel_token' }
+    );
+
+    await expect(
+      resolveSlackToken(credentials.botToken, { teamId: 'T_A' })
+    ).resolves.toBe('slack_token_a');
+    await expect(
+      resolveSlackToken(credentials.botToken, { teamId: 'T_B' })
+    ).resolves.toBe('slack_token_b');
+
+    expect(installationId).toHaveBeenNthCalledWith(1, { teamId: 'T_A' });
+    expect(installationId).toHaveBeenNthCalledWith(2, { teamId: 'T_B' });
+    expect(
+      fetchMock.mock.calls.map(([, init]) => JSON.parse(init.body as string))
+    ).toEqual([
+      { installationId: 'inst_a', subject: { type: 'app' } },
+      { installationId: 'inst_b', subject: { type: 'app' } },
+    ]);
+  });
+
   function expectTokenRequest(
     connector: string,
     body: Record<string, unknown>
@@ -212,6 +247,19 @@ async function resolveToken(
     throw new Error('Expected token callback.');
   }
   return token();
+}
+
+async function resolveSlackToken(
+  token:
+    | string
+    | ((context?: { readonly teamId?: string }) => string | Promise<string>)
+    | undefined,
+  context: { readonly teamId?: string }
+): Promise<string> {
+  if (typeof token !== 'function') {
+    throw new Error('Expected token callback.');
+  }
+  return token(context);
 }
 
 function jsonTokenResponse(

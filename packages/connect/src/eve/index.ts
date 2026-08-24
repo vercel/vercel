@@ -44,5 +44,7 @@ export {
 } from './photon-credentials.js';
 export {
   connectSlackCredentials,
+  type ConnectSlackCredentialsContext,
   type ConnectSlackCredentialsParams,
+  type ConnectSlackInstallationIdResolver,
 } from './slack-credentials.js';

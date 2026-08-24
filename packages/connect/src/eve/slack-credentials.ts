@@ -15,16 +15,35 @@ import { vercelOidc } from 'eve/channels/auth';
  * is pinned to `{ type: "app" }` by this helper and cannot be
  * overridden.
  */
-export type ConnectSlackCredentialsParams = Omit<ConnectTokenParams, 'subject'>;
+export interface ConnectSlackCredentialsContext {
+  /** Slack workspace whose app installation must supply the bot token. */
+  readonly teamId?: string;
+}
+
+export type ConnectSlackInstallationIdResolver = (
+  context: ConnectSlackCredentialsContext
+) => string | undefined | Promise<string | undefined>;
+
+export type ConnectSlackCredentialsParams = Omit<
+  ConnectTokenParams,
+  'installationId' | 'subject'
+> & {
+  /**
+   * A fixed Connect installation id, or a resolver for multi-workspace apps.
+   * The resolver maps Eve's Slack workspace context to Connect's opaque
+   * installation id.
+   */
+  readonly installationId?: string | ConnectSlackInstallationIdResolver;
+};
 
 /**
  * Build {@link SlackChannelCredentials} backed by a Vercel Connect
  * connector that stores a Slack workspace's bot token.
  *
- * The returned `botToken` is a function form, invoked once per
- * inbound webhook so the chat adapter always picks up a fresh token
- * from Vercel Connect (rotation, refresh, multi-workspace tenancy
- * are all handled server-side).
+ * The returned `botToken` is resolved when Eve makes a Slack API call,
+ * so the chat adapter always picks up a fresh token from Vercel Connect.
+ * Rotation and refresh are handled server-side; multi-workspace callers
+ * resolve the installation from webhook context.
  *
  * Slack bot tokens are app-scoped — one token per workspace install,
  * shared across every end-user — so this helper calls Vercel Connect
@@ -44,11 +63,14 @@ export type ConnectSlackCredentialsParams = Omit<ConnectTokenParams, 'subject'>;
  * });
  * ```
  *
- * Multi-workspace deployments can select a specific workspace install
- * via `installationId`:
+ * Multi-workspace deployments can resolve the Connect installation from
+ * Eve's Slack workspace context:
  *
  * ```ts
- * connectSlackCredentials("scl_...", { installationId: workspaceId });
+ * connectSlackCredentials("scl_...", {
+ *   installationId: ({ teamId }) =>
+ *     teamId ? installationIdsBySlackTeam[teamId] : undefined,
+ * });
  * ```
  */
 export function connectSlackCredentials(
@@ -57,8 +79,22 @@ export function connectSlackCredentials(
   options?: ConnectOptions
 ): SlackChannelCredentials {
   return {
-    botToken: () =>
-      getToken(connector, { ...params, subject: { type: 'app' } }, options),
+    botToken: async (context: ConnectSlackCredentialsContext = {}) => {
+      const { installationId: installationIdParam, ...tokenParams } = params;
+      const installationId =
+        typeof installationIdParam === 'function'
+          ? await installationIdParam(context)
+          : installationIdParam;
+      return getToken(
+        connector,
+        {
+          ...tokenParams,
+          ...(installationId === undefined ? {} : { installationId }),
+          subject: { type: 'app' },
+        },
+        options
+      );
+    },
     webhookVerifier: vercelOidc(),
   };
 }
