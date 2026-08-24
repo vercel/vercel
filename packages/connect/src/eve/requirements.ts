@@ -15,7 +15,7 @@ export interface VercelConnectRequirement {
 }
 
 export interface VercelConnectRequirementCarrier {
-  readonly vercelConnect: VercelConnectRequirement;
+  readonly vercelConnectRequirement: VercelConnectRequirement;
 }
 
 export function connectRequirement(
@@ -37,5 +37,5 @@ export function withConnectRequirement<T extends object>(
   value: T,
   requirement: VercelConnectRequirement
 ): T & VercelConnectRequirementCarrier {
-  return { ...value, vercelConnect: requirement };
+  return { ...value, vercelConnectRequirement: requirement };
 }
