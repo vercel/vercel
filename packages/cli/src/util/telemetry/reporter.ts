@@ -4,12 +4,30 @@ import type { RootTelemetryClient } from './root';
 // telemetry without threading a client through every call site.
 let reporter: RootTelemetryClient | undefined;
 
-export function setTelemetryReporter(client: RootTelemetryClient): void {
+export function setTelemetryReporter(
+  client: RootTelemetryClient | undefined
+): void {
   reporter = client;
 }
 
 export function getTelemetryReporter(): RootTelemetryClient | undefined {
   return reporter;
+}
+
+// `getSubcommand` cannot tell an unknown subcommand from a positional
+// argument to an implicit default action (e.g. `vercel alias <src> <tgt>`),
+// so it parks the candidate here and `getInvalidSubcommand` — which only
+// runs when a dispatcher actually rejects — consumes and reports it.
+let pendingSubcommandToken: string | undefined;
+
+export function setPendingSubcommandNotFound(token: string | undefined): void {
+  pendingSubcommandToken = token;
+}
+
+export function consumePendingSubcommandNotFound(): string | undefined {
+  const token = pendingSubcommandToken;
+  pendingSubcommandToken = undefined;
+  return token;
 }
 
 /**

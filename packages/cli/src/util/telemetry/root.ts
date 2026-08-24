@@ -475,6 +475,26 @@ export class RootTelemetryClient extends TelemetryClient {
     super.trackExitCode(code);
   }
 
+  trackError(err: unknown, opts: { agent?: boolean } = {}) {
+    super.trackError(err, opts);
+  }
+
+  trackParseError(err: unknown, knownFlags: readonly string[] = []) {
+    super.trackParseError(err, knownFlags);
+  }
+
+  trackCommandNotFound(token: string, suggestion?: string) {
+    super.trackCommandNotFound(token, suggestion);
+  }
+
+  trackSubcommandNotFound(token: string | undefined, suggestion?: string) {
+    super.trackSubcommandNotFound(token, suggestion);
+  }
+
+  trackCrash(err: unknown) {
+    super.trackCrash(err);
+  }
+
   trackAgenticUse(agent: string | undefined) {
     super.trackAgenticUse(agent);
   }

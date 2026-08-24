@@ -1,6 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import os from 'node:os';
+import { isError } from '@vercel/error-utils';
 import type { GlobalConfig } from '@vercel-internals/types';
+import didYouMean from '../did-you-mean';
+import { REDACTED, crashFrame, gatedFlag, gatedToken } from './sanitize';
 import output from '../../output-manager';
 import { spawn } from 'node:child_process';
 import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
@@ -18,6 +21,24 @@ import { isNativeBinaryInstall } from '../native-install';
 
 const LogLabel = `['telemetry']:`;
 const MAX_ERROR_SERVER_MESSAGE_LENGTH = 500;
+
+function isV2(): boolean {
+  return process.env.VERCEL_CLI_TELEMETRY_V2 === '1';
+}
+
+function getProperty<T extends 'string' | 'number'>(
+  value: unknown,
+  key: string,
+  type: T
+): (T extends 'string' ? string : number) | undefined {
+  if (typeof value === 'object' && value !== null && key in value) {
+    const property = (value as Record<string, unknown>)[key];
+    if (typeof property === type) {
+      return property as T extends 'string' ? string : number;
+    }
+  }
+  return undefined;
+}
 
 interface Args {
   opts: Options;
@@ -140,13 +161,116 @@ export class TelemetryClient {
   }
 
   protected trackExitCode(code: number) {
-    if (process.env.VERCEL_CLI_TELEMETRY_V2 !== '1') {
+    if (!isV2()) {
       return;
     }
     this.track({
       key: 'exit_code',
       value: String(code),
     });
+  }
+
+  private structuredErrorsSeen = new WeakSet<object>();
+  private serverMessagesSeen = new WeakSet<object>();
+
+  /**
+   * Structured error fields for all users under v2; the free-text server
+   * message only for agent sessions. Deduped per error object because both
+   * `printError` and the top-level handler may see the same error.
+   */
+  protected trackError(err: unknown, opts: { agent?: boolean } = {}) {
+    const ref = typeof err === 'object' && err !== null ? err : undefined;
+
+    if (
+      (opts.agent || isV2()) &&
+      !(ref && this.structuredErrorsSeen.has(ref))
+    ) {
+      if (ref) {
+        this.structuredErrorsSeen.add(ref);
+      }
+      this.trackErrorStatus(getProperty(err, 'status', 'number'));
+      this.trackErrorCode(getProperty(err, 'code', 'string'));
+      this.trackErrorSlug(getProperty(err, 'slug', 'string'));
+      this.trackErrorAction(getProperty(err, 'action', 'string'));
+    }
+
+    if (opts.agent && !(ref && this.serverMessagesSeen.has(ref))) {
+      if (ref) {
+        this.serverMessagesSeen.add(ref);
+      }
+      this.trackErrorServerMessage(
+        getProperty(err, 'serverMessage', 'string') ??
+          (isError(err) ? err.message : undefined)
+      );
+    }
+  }
+
+  /**
+   * The literal option name is only recorded when it resembles a known
+   * flag of the command (mistyped-flag intent); anything else — which
+   * could be arbitrary user content — is redacted.
+   */
+  protected trackParseError(err: unknown, knownFlags: readonly string[] = []) {
+    if (!isV2()) {
+      return;
+    }
+    const code = getProperty(err, 'code', 'string');
+    let value = 'unknown';
+    if (code === 'ARG_UNKNOWN_OPTION' && isError(err)) {
+      const option = err.message.match(/: (\S+)$/)?.[1] ?? '';
+      const similar = didYouMean(
+        option.replace(/^-+/, ''),
+        knownFlags.map(flag => flag.replace(/^-+/, '')),
+        0.7
+      );
+      value = `unknown_option:${similar ? gatedFlag(option) : REDACTED}`;
+    } else if (code?.startsWith('ARG_')) {
+      value = code.toLowerCase();
+    }
+    this.track({ key: 'parse_error', value });
+  }
+
+  /**
+   * The literal token is only recorded when a did-you-mean suggestion
+   * exists (command intent); tokens without one may be mistyped directory
+   * or project names, so only the fact is recorded.
+   */
+  protected trackCommandNotFound(token: string, suggestion?: string) {
+    if (!isV2()) {
+      return;
+    }
+    this.track({
+      key: 'command_not_found',
+      value: suggestion ? gatedToken(token) : REDACTED,
+    });
+    this.track({
+      key: 'command_not_found_suggestion',
+      value: suggestion ?? 'NONE',
+    });
+  }
+
+  /** Same policy as trackCommandNotFound: literal only with a suggestion. */
+  protected trackSubcommandNotFound(
+    token: string | undefined,
+    suggestion?: string
+  ) {
+    if (!isV2()) {
+      return;
+    }
+    this.track({
+      key: 'subcommand_not_found',
+      value: token ? (suggestion ? gatedToken(token) : REDACTED) : 'NONE',
+    });
+  }
+
+  protected trackCrash(err: unknown) {
+    if (!isV2()) {
+      return;
+    }
+    const name =
+      isError(err) && /^[a-zA-Z]{1,64}$/.test(err.name) ? err.name : 'Error';
+    const stack = isError(err) ? err.stack : undefined;
+    this.track({ key: 'crash', value: `${name}:${crashFrame(stack)}` });
   }
 
   protected trackOidcTokenRefresh(count: number) {
@@ -543,6 +667,8 @@ export class TelemetryEventStore {
         body: events,
       };
       await this.sendToSubprocess(payload, output.debugEnabled);
+      // Prevent re-sending if save() runs again (e.g. crash after flush).
+      this.reset();
     }
   }
 

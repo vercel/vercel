@@ -46,6 +46,21 @@ export function fp(values: readonly string[], salt: string): string {
   return hmac(values, salt).slice(0, 32);
 }
 
+/**
+ * Reduces a stack trace to `<basename>:<line>` of its top frame.
+ * File basenames outside a safe charset become `external`.
+ */
+export function crashFrame(stack: string | undefined): string {
+  const match = stack?.match(/\n\s+at\s+(?:.*\()?([^()\s]+):(\d+):\d+\)?/);
+  if (!match) {
+    return 'unknown';
+  }
+  const basename = match[1].split(/[\\/]/).pop() ?? '';
+  return /^[a-zA-Z0-9._-]{1,64}$/.test(basename)
+    ? `${basename}:${match[2]}`
+    : 'external';
+}
+
 /** Salted context hash for scoping sessions to a terminal/harness. */
 export function ctxHash(
   parts: readonly (string | number)[],

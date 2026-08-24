@@ -1,5 +1,6 @@
 import arg from 'arg';
 import getCommonArgs from './arg-common';
+import { getTelemetryReporter } from './telemetry/reporter';
 import type { Prettify } from './types';
 
 type ArgOptions = {
@@ -46,12 +47,20 @@ export function parseArguments<T extends arg.Spec>(
 ) {
   // currently parseArgument (and arg as a whole) will hang
   // if there are cycles in the flagsSpecification
-  const { _: positional, ...rest } = arg(
-    Object.assign({}, getCommonArgs(), flagsSpecification),
-    {
-      ...parserOptions,
-      argv: args,
-    }
-  );
-  return { args: positional, flags: rest as Prettify<typeof rest> };
+  try {
+    const { _: positional, ...rest } = arg(
+      Object.assign({}, getCommonArgs(), flagsSpecification),
+      {
+        ...parserOptions,
+        argv: args,
+      }
+    );
+    return { args: positional, flags: rest as Prettify<typeof rest> };
+  } catch (err: unknown) {
+    getTelemetryReporter()?.trackParseError(
+      err,
+      Object.keys(Object.assign({}, getCommonArgs(), flagsSpecification))
+    );
+    throw err;
+  }
 }

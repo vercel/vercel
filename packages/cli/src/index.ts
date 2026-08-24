@@ -84,7 +84,10 @@ import type { VercelConfig } from '@vercel/client';
 import box from './util/output/box';
 import { TelemetryEventStore } from './util/telemetry';
 import { RootTelemetryClient } from './util/telemetry/root';
-import { setTelemetryReporter } from './util/telemetry/reporter';
+import {
+  getTelemetryReporter,
+  setTelemetryReporter,
+} from './util/telemetry/reporter';
 import { readVercelPluginActiveSessionMarker } from './util/telemetry/vercel-plugin';
 import { help } from './args';
 import { checkTelemetryStatus } from './util/telemetry/check-status';
@@ -132,6 +135,19 @@ let resolvedCommandForUpdate: string | undefined;
 
 // Register global error handlers early to catch errors during initialization.
 // Sentry is lazily initialized only when an error actually occurs.
+const flushCrashTelemetry = async (err: unknown) => {
+  try {
+    const reporter = getTelemetryReporter();
+    if (reporter) {
+      reporter.trackCrash(err);
+      reporter.trackExitCode(1);
+      await reporter.store.save();
+    }
+  } catch {
+    // telemetry must never block the crash path
+  }
+};
+
 const handleRejection = async (err: any) => {
   if (err) {
     if (err instanceof Error) {
@@ -144,6 +160,7 @@ const handleRejection = async (err: any) => {
     output.error('An unexpected empty rejection occurred');
   }
 
+  await flushCrashTelemetry(err);
   process.exit(1);
 };
 
@@ -159,6 +176,7 @@ const handleUnexpected = async (err: Error) => {
   output.error(`An unexpected error occurred!\n${err.stack}`);
   await reportError(await getSentry(), client, err);
 
+  await flushCrashTelemetry(err);
   process.exit(1);
 };
 
@@ -439,48 +457,8 @@ const main = async () => {
   let earlyGetUserPromise: Promise<User | undefined> | undefined;
   let telemetrySaved = false;
 
-  const getStringProperty = (
-    value: unknown,
-    key: string
-  ): string | undefined => {
-    if (typeof value === 'object' && value !== null && key in value) {
-      const property = (value as Record<string, unknown>)[key];
-      if (typeof property === 'string') {
-        return property;
-      }
-    }
-
-    return undefined;
-  };
-
-  const getNumberProperty = (
-    value: unknown,
-    key: string
-  ): number | undefined => {
-    if (typeof value === 'object' && value !== null && key in value) {
-      const property = (value as Record<string, unknown>)[key];
-      if (typeof property === 'number') {
-        return property;
-      }
-    }
-
-    return undefined;
-  };
-
-  const trackAgenticErrorTelemetry = (err: unknown) => {
-    if (!isAgent) {
-      return;
-    }
-
-    telemetry.trackErrorStatus(getNumberProperty(err, 'status'));
-    telemetry.trackErrorCode(getStringProperty(err, 'code'));
-    telemetry.trackErrorSlug(getStringProperty(err, 'slug'));
-    telemetry.trackErrorAction(getStringProperty(err, 'action'));
-
-    const serverMessage =
-      getStringProperty(err, 'serverMessage') ??
-      (isError(err) ? err.message : undefined);
-    telemetry.trackErrorServerMessage(serverMessage);
+  const trackErrorTelemetry = (err: unknown) => {
+    telemetry.trackError(err, { agent: isAgent });
   };
 
   const saveTelemetry = async () => {
@@ -650,7 +628,9 @@ const main = async () => {
         return finishWithExitCode(result ?? 1);
       } else if (targetPathExists) {
         subcommand = 'deploy';
-        userSuppliedSubCommand = targetOrSubcommand;
+        // Shape only: the token is a user directory name, not a command
+        // alias, and must not reach telemetry (`command:deploy`'s value).
+        userSuppliedSubCommand = 'DIRECTORY';
         output.debug(
           `first token "${targetOrSubcommand}" is an existing path; routing to deploy`
         );
@@ -719,7 +699,7 @@ const main = async () => {
         if (result !== 0) return finishWithExitCode(result);
       } catch (error) {
         printError(error);
-        trackAgenticErrorTelemetry(error);
+        trackErrorTelemetry(error);
         return finishWithExitCode(1);
       }
 
@@ -733,7 +713,7 @@ const main = async () => {
         if (result !== 0) return finishWithExitCode(result);
       } catch (error) {
         printError(error);
-        trackAgenticErrorTelemetry(error);
+        trackErrorTelemetry(error);
         return finishWithExitCode(1);
       }
 
@@ -841,14 +821,14 @@ const main = async () => {
           link: 'https://err.sh/vercel/scope-not-accessible',
         });
 
-        trackAgenticErrorTelemetry(err);
+        trackErrorTelemetry(err);
         return finishWithExitCode(1);
       }
 
       output.error(
         `Not able to load user because of unexpected error: ${errorToString(err)}`
       );
-      trackAgenticErrorTelemetry(err);
+      trackErrorTelemetry(err);
       return finishWithExitCode(1);
     }
 
@@ -874,7 +854,7 @@ const main = async () => {
           link: 'https://err.sh/vercel/scope-not-accessible',
         });
 
-        trackAgenticErrorTelemetry(err);
+        trackErrorTelemetry(err);
         return finishWithExitCode(1);
       } else if (isErrnoException(err) && err.code === 'rate_limited') {
         output.prettyError({
@@ -882,11 +862,11 @@ const main = async () => {
             'Rate limited. Too many requests to the same endpoint: /teams',
         });
 
-        trackAgenticErrorTelemetry(err);
+        trackErrorTelemetry(err);
         return finishWithExitCode(1);
       } else {
         output.error('Not able to load teams');
-        trackAgenticErrorTelemetry(err);
+        trackErrorTelemetry(err);
         return finishWithExitCode(1);
       }
     }
@@ -939,12 +919,16 @@ const main = async () => {
       } catch (err: unknown) {
         if (isErrnoException(err) && err.code === 'ENOENT') {
           // Check if the user made a typo before falling back to deploy
-          if (
-            handleCommandTypo({
-              command: targetCommand,
-              availableCommands: commandNames,
-            })
-          ) {
+          const suggestion = handleCommandTypo({
+            command: targetCommand,
+            availableCommands: commandNames,
+          });
+          // Not a command, path, or extension: a made-up token
+          telemetry.trackCommandNotFound(
+            targetCommand ?? '',
+            suggestion || undefined
+          );
+          if (suggestion) {
             return finishWithExitCode(1);
           }
           // Fall back to `vc deploy <dir>`
@@ -1241,14 +1225,17 @@ const main = async () => {
       }
 
       if (!func || !targetCommand) {
-        if (
-          !handleCommandTypo({
-            command: subcommand,
-            availableCommands: commandNames,
-          })
-        ) {
+        const suggestion = handleCommandTypo({
+          command: subcommand,
+          availableCommands: commandNames,
+        });
+        if (!suggestion) {
           output.error(`The ${param(subcommand)} subcommand does not exist`);
         }
+        telemetry.trackCommandNotFound(
+          subcommand ?? '',
+          suggestion || undefined
+        );
         return finishWithExitCode(1);
       }
 
@@ -1266,7 +1253,7 @@ const main = async () => {
         .trace(() => func(client));
     }
   } catch (err: unknown) {
-    trackAgenticErrorTelemetry(err);
+    trackErrorTelemetry(err);
 
     if (isErrnoException(err) && err.code === 'ENOTFOUND') {
       // Error message will look like the following:

@@ -4,6 +4,7 @@ import bytes from 'bytes';
 import type { APIError } from './errors-ts';
 import { parseRetryAfterHeaderAsMillis } from './errors-ts';
 import { getCommandName } from './pkg-name';
+import { getTelemetryReporter } from './telemetry/reporter';
 import output from '../output-manager';
 
 export const error = errorOutput;
@@ -112,6 +113,8 @@ export function printError(error: unknown) {
   if (typeof error === 'string') {
     error = new Error(error);
   }
+
+  getTelemetryReporter()?.trackError(error);
 
   const apiError = error as APIError;
   const { message, stack, status, code, sizeLimit } = apiError;
