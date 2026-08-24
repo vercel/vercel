@@ -43,7 +43,13 @@ describe('connect() adapter provisioning', () => {
       .mockResolvedValueOnce(jsonProvisionResponse(connector))
       .mockResolvedValueOnce(jsonTokenResponse('tok_provisioned', connector));
 
-    const definition = connect(connector) as InteractiveAuthorizationDefinition;
+    const definition = connect(connector);
+
+    expect(definition.vercelConnect).toEqual({
+      connector,
+      connectorType: 'oauth',
+      principalTypes: ['user'],
+    });
 
     const result = await definition.getToken({
       principal: PRINCIPAL,

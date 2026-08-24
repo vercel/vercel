@@ -178,6 +178,11 @@ describe('Eve channel credential helpers', () => {
     );
 
     expect(credentials.webhookVerifier).toEqual(expect.any(Function));
+    expect(credentials.vercelConnect).toEqual({
+      connector: 'oauth/slack',
+      connectorType: 'slack',
+      principalTypes: ['app'],
+    });
     expect(credentials.botToken).toEqual(expect.any(Function));
     await expect(resolveToken(credentials.botToken)).resolves.toBe(
       'slack_token'

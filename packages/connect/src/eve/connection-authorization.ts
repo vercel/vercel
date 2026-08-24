@@ -279,7 +279,12 @@ export type EveAuthorizationInput = string | EveAuthorizationOptions;
  * also sent as the managed OAuth UID.
  */
 export interface VercelConnectMetadata {
+  /** Direct connector locator retained for eve runtime authorization behavior. */
   readonly connector: string;
+  /** Connect's connector-type discriminator. */
+  readonly connectorType: string;
+  /** Principals that may receive a token from this helper. */
+  readonly principalTypes: readonly ('app' | 'user')[];
 }
 
 /**
@@ -368,7 +373,11 @@ export function connect(
   InteractiveAuthorizationDefinition | NonInteractiveAuthorizationDefinition
 > {
   const options = normalizeAuthorizationOptions(input);
-  const vercelConnect: VercelConnectMetadata = { connector: options.connector };
+  const vercelConnect: VercelConnectMetadata = {
+    connector: options.connector,
+    connectorType: 'oauth',
+    principalTypes: [options.principalType ?? 'user'],
+  };
   const evict = makeEvict(options);
   if (options.principalType === 'app') {
     return { ...buildNonInteractiveDefinition(options), vercelConnect, evict };
