@@ -218,6 +218,11 @@ const main = async () => {
     process.stdin.isTTY = true;
   }
 
+  const agentResult = await determineAgent({
+    inspectProcessTree: !isTelemetryFlushCommand,
+  });
+  const { isAgent, agent: detectedAgent } = agentResult;
+
   const telemetryEventStore = new TelemetryEventStore({
     isDebug: process.env.VERCEL_TELEMETRY_DEBUG === '1',
     cliDevice: isTelemetryFlushCommand
@@ -229,6 +234,22 @@ const main = async () => {
       ? undefined
       : {
           filePath: join(VERCEL_DIR, 'telemetry-session.json'),
+        },
+    sessionContext: isTelemetryFlushCommand
+      ? undefined
+      : {
+          // Harness pid when found. Env-detected agents without one get no
+          // pid at all: each agent tool-call runs in a fresh shell, and a
+          // per-shell pid would fragment one agent session into many.
+          pid:
+            agentResult.procContext?.harnessPid ??
+            (isAgent
+              ? undefined
+              : (agentResult.procContext?.shellPid ?? process.ppid)),
+          bootTime: agentResult.procContext?.bootTime,
+          // cwd only scopes sessions for harnesses; humans cd too often.
+          cwd: isAgent ? process.cwd() : undefined,
+          agent: detectedAgent?.name,
         },
   });
 
@@ -295,15 +316,18 @@ const main = async () => {
     return finishEarly(1);
   }
 
-  const { isAgent, agent: detectedAgent } = await determineAgent();
   telemetry.trackInvocationId(telemetryEventStore.currentInvocationId);
   telemetry.trackDeviceId(telemetryEventStore.currentDeviceId);
+  telemetry.trackContextId(telemetryEventStore.currentContextId);
   const vercelPluginMarker = readVercelPluginActiveSessionMarker();
   if (vercelPluginMarker) {
     telemetry.trackVercelPluginActiveSession();
     telemetry.trackVercelPluginVersion(vercelPluginMarker.pluginVersion);
   }
   telemetry.trackAgenticUse(detectedAgent?.name);
+  telemetry.trackAgentVersion(detectedAgent?.version);
+  telemetry.trackAgentDetectionSource(detectedAgent?.source);
+  telemetry.trackAgentDetectionConflict(agentResult.conflict);
   telemetry.trackCPUs();
   telemetry.trackPlatform();
   telemetry.trackArch();

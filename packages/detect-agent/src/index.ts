@@ -1,5 +1,9 @@
 import { access } from 'node:fs/promises';
 import { constants } from 'node:fs';
+import { inspectProcessTree } from './proc-tree';
+
+export { inspectProcessTree } from './proc-tree';
+export type { ProcessTreeResult, HarnessMatch } from './proc-tree';
 
 const DEVIN_LOCAL_PATH = '/opt/.devin';
 
@@ -35,9 +39,27 @@ export type KnownAgentNames =
 
 export interface KnownAgentDetails {
   name: KnownAgentNames;
+  /** Harness version, when resolvable from the process tree. */
+  version?: string;
+  /** How the agent was detected. */
+  source?: 'env' | 'proctree' | 'both';
 }
 
-export type AgentResult =
+export interface ProcessContext {
+  /** PID of the matched harness process, when found. */
+  harnessPid?: number;
+  /** Immediate parent of this process (typically the shell). */
+  shellPid?: number;
+  /** System boot time (epoch seconds); guards PID reuse across reboots. */
+  bootTime?: number;
+}
+
+export interface AgentDetectionConflict {
+  env: KnownAgentNames;
+  proctree: KnownAgentNames;
+}
+
+export type AgentResult = (
   | {
       isAgent: true;
       agent: KnownAgentDetails;
@@ -45,7 +67,21 @@ export type AgentResult =
   | {
       isAgent: false;
       agent: undefined;
-    };
+    }
+) & {
+  /** Populated when `inspectProcessTree` was requested and succeeded. */
+  procContext?: ProcessContext;
+  /** Populated when env and process-tree detection disagree. */
+  conflict?: AgentDetectionConflict;
+};
+
+export interface DetermineAgentOptions {
+  /**
+   * Also walk the parent process tree (Linux/macOS, ~50ms budget,
+   * fail-open) to identify the harness binary and version.
+   */
+  inspectProcessTree?: boolean;
+}
 
 export const KNOWN_AGENTS = {
   CURSOR,
@@ -63,7 +99,61 @@ export const KNOWN_AGENTS = {
   V0,
 } as const;
 
-export async function determineAgent(): Promise<AgentResult> {
+export async function determineAgent(
+  options: DetermineAgentOptions = {}
+): Promise<AgentResult> {
+  const envResult = await determineAgentFromEnv();
+  if (!options.inspectProcessTree) {
+    return envResult;
+  }
+
+  const tree = await inspectProcessTree();
+  const procContext: ProcessContext = {
+    harnessPid: tree.match?.pid,
+    shellPid: tree.shellPid,
+    bootTime: tree.bootTime,
+  };
+
+  if (envResult.isAgent && tree.match) {
+    const sameAgent = envResult.agent.name === tree.match.name;
+    return {
+      isAgent: true,
+      agent: {
+        name: envResult.agent.name,
+        version: sameAgent ? tree.match.version : undefined,
+        source: sameAgent ? 'both' : 'env',
+      },
+      procContext,
+      conflict: sameAgent
+        ? undefined
+        : { env: envResult.agent.name, proctree: tree.match.name },
+    };
+  }
+
+  if (tree.match) {
+    return {
+      isAgent: true,
+      agent: {
+        name: tree.match.name,
+        version: tree.match.version,
+        source: 'proctree',
+      },
+      procContext,
+    };
+  }
+
+  if (envResult.isAgent) {
+    return {
+      isAgent: true,
+      agent: { ...envResult.agent, source: 'env' },
+      procContext,
+    };
+  }
+
+  return { isAgent: false, agent: undefined, procContext };
+}
+
+async function determineAgentFromEnv(): Promise<AgentResult> {
   if (process.env.AI_AGENT) {
     const name = process.env.AI_AGENT.trim();
     if (name) {

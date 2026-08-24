@@ -7,6 +7,9 @@ import writeJSON from 'write-json-file';
 export const DEFAULT_CLI_SESSION_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 export const DEFAULT_CLI_SESSION_MAX_LIFETIME_MS = 24 * 60 * 60 * 1000;
 
+const DEFAULT_CONTEXT_KEY = 'default';
+const MAX_CONTEXTS = 50;
+
 export interface PersistedCliSession {
   id: string;
   createdAt: number;
@@ -21,9 +24,15 @@ export interface PersistedCliDevice {
 
 export interface PersistedCliSessionOptions {
   filePath: string;
+  /** Scopes the session to one terminal/harness; see `ctxHash`. */
+  contextKey?: string;
   inactivityTimeoutMs?: number;
   maxLifetimeMs?: number;
   now?: () => number;
+}
+
+interface PersistedCliSessionFile {
+  contexts: Record<string, PersistedCliSession>;
 }
 
 export interface PersistedCliDeviceOptions {
@@ -54,25 +63,60 @@ function isPersistedCliDevice(value: unknown): value is PersistedCliDevice {
   return typeof device.id === 'string';
 }
 
-function readPersistedCliSession(filePath: string): PersistedCliSession | null {
+function readPersistedCliSessionFile(
+  filePath: string
+): PersistedCliSessionFile {
   try {
-    const session = loadJSON.sync(filePath);
-    return isPersistedCliSession(session) ? session : null;
+    const data = loadJSON.sync(filePath);
+    // Pre-context files held a single top-level session.
+    if (isPersistedCliSession(data)) {
+      return { contexts: { [DEFAULT_CONTEXT_KEY]: data } };
+    }
+    if (data && typeof data === 'object' && 'contexts' in data) {
+      const contexts: Record<string, PersistedCliSession> = {};
+      for (const [key, session] of Object.entries(
+        (data as PersistedCliSessionFile).contexts ?? {}
+      )) {
+        if (isPersistedCliSession(session)) {
+          contexts[key] = session;
+        }
+      }
+      return { contexts };
+    }
   } catch {
-    return null;
+    // fall through to an empty file
   }
+  return { contexts: {} };
 }
 
-function writePersistedCliSession(
+function writePersistedCliSessionFile(
   filePath: string,
-  session: PersistedCliSession
+  file: PersistedCliSessionFile
 ): void {
   try {
     mkdirSync(dirname(filePath), { recursive: true });
-    writeJSON.sync(filePath, session, { indent: 2 });
+    writeJSON.sync(filePath, file, { indent: 2 });
   } catch {
     // best-effort for telemetry
   }
+}
+
+/** Drops sessions that can no longer be reused, oldest first past the cap. */
+function prune(
+  contexts: Record<string, PersistedCliSession>,
+  now: number,
+  inactivityTimeoutMs: number,
+  maxLifetimeMs: number
+): Record<string, PersistedCliSession> {
+  const alive = Object.entries(contexts)
+    .filter(
+      ([, s]) =>
+        now - s.lastSeenAt <= inactivityTimeoutMs &&
+        now - s.createdAt <= maxLifetimeMs
+    )
+    .sort(([, a], [, b]) => b.lastSeenAt - a.lastSeenAt)
+    .slice(0, MAX_CONTEXTS);
+  return Object.fromEntries(alive);
 }
 
 function readPersistedCliDevice(filePath: string): PersistedCliDevice | null {
@@ -104,7 +148,9 @@ export function getOrCreatePersistedCliSession(
     opts.inactivityTimeoutMs ?? DEFAULT_CLI_SESSION_INACTIVITY_TIMEOUT_MS;
   const maxLifetimeMs =
     opts.maxLifetimeMs ?? DEFAULT_CLI_SESSION_MAX_LIFETIME_MS;
-  const existing = readPersistedCliSession(opts.filePath);
+  const contextKey = opts.contextKey ?? DEFAULT_CONTEXT_KEY;
+  const file = readPersistedCliSessionFile(opts.filePath);
+  const existing = file.contexts[contextKey];
 
   const shouldReuseExisting =
     existing &&
@@ -122,7 +168,10 @@ export function getOrCreatePersistedCliSession(
         lastSeenAt: now,
       };
 
-  writePersistedCliSession(opts.filePath, session);
+  file.contexts[contextKey] = session;
+  writePersistedCliSessionFile(opts.filePath, {
+    contexts: prune(file.contexts, now, inactivityTimeoutMs, maxLifetimeMs),
+  });
   return session;
 }
 
@@ -134,7 +183,9 @@ export function touchPersistedCliSession(
     ...session,
     lastSeenAt: opts.now?.() ?? Date.now(),
   };
-  writePersistedCliSession(opts.filePath, nextSession);
+  const file = readPersistedCliSessionFile(opts.filePath);
+  file.contexts[opts.contextKey ?? DEFAULT_CONTEXT_KEY] = nextSession;
+  writePersistedCliSessionFile(opts.filePath, file);
   return nextSession;
 }
 

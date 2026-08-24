@@ -6,6 +6,7 @@ import didYouMean from '../did-you-mean';
 import {
   REDACTED,
   crashFrame,
+  ctxHash,
   fp,
   gatedFlag,
   gatedToken,
@@ -359,6 +360,44 @@ export class TelemetryClient {
     });
   }
 
+  protected trackAgentVersion(version: string | undefined) {
+    if (!isV2() || !version) {
+      return;
+    }
+    this.track({
+      key: 'agent_version',
+      value: /^[\w.+-]{1,32}$/.test(version) ? version : REDACTED,
+    });
+  }
+
+  protected trackAgentDetectionSource(
+    source: 'env' | 'proctree' | 'both' | undefined
+  ) {
+    if (!isV2() || !source) {
+      return;
+    }
+    this.track({ key: 'agent_detection_source', value: source });
+  }
+
+  protected trackAgentDetectionConflict(
+    conflict: { env: string; proctree: string } | undefined
+  ) {
+    if (!isV2() || !conflict) {
+      return;
+    }
+    this.track({
+      key: 'agent_detection_conflict',
+      value: `proctree:${conflict.proctree},env:${conflict.env}`,
+    });
+  }
+
+  protected trackContextId(contextId: string | undefined) {
+    if (!isV2() || !contextId) {
+      return;
+    }
+    this.track({ key: 'context_id', value: contextId });
+  }
+
   protected trackCrash(err: unknown) {
     if (!isV2()) {
       return;
@@ -592,6 +631,13 @@ export class TelemetryClient {
   }
 }
 
+export interface SessionContext {
+  pid?: number;
+  bootTime?: number;
+  cwd?: string;
+  agent?: string;
+}
+
 export class TelemetryEventStore {
   private events: Event[];
   private isDebug: boolean;
@@ -601,6 +647,7 @@ export class TelemetryEventStore {
   // Local-only HMAC salt; unlike deviceId it is never sent, so hashes made
   // with it cannot be dictionary-tested by anyone holding the telemetry.
   private fpSalt: string;
+  private contextId?: string;
   private teamId = 'NO_TEAM_ID';
   private userId = 'NO_USER_ID';
   private projectId = 'NO_PROJECT_ID';
@@ -616,6 +663,7 @@ export class TelemetryEventStore {
     config?: GlobalConfig['telemetry'];
     cliDevice?: PersistedCliDeviceOptions;
     cliSession?: PersistedCliSessionOptions;
+    sessionContext?: SessionContext;
   }) {
     this.isDebug = opts?.isDebug || false;
     this.events = [];
@@ -634,6 +682,17 @@ export class TelemetryEventStore {
     }
 
     if (this.cliSessionOptions) {
+      if (opts?.sessionContext) {
+        const { pid, bootTime, cwd, agent } = opts.sessionContext;
+        this.contextId = ctxHash(
+          [pid ?? 0, bootTime ?? 0, cwd ?? '', agent ?? ''],
+          this.fpSalt
+        );
+        this.cliSessionOptions = {
+          ...this.cliSessionOptions,
+          contextKey: this.contextId,
+        };
+      }
       this.cliSession = getOrCreatePersistedCliSession(this.cliSessionOptions);
       this.sessionId = this.cliSession.id;
     } else {
@@ -696,6 +755,10 @@ export class TelemetryEventStore {
 
   get currentSessionId() {
     return this.sessionId;
+  }
+
+  get currentContextId() {
+    return this.contextId;
   }
 
   get readonlyEvents() {

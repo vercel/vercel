@@ -531,6 +531,24 @@ export class RootTelemetryClient extends TelemetryClient {
     super.trackAgentTaskId(id);
   }
 
+  trackAgentVersion(version: string | undefined) {
+    super.trackAgentVersion(version);
+  }
+
+  trackAgentDetectionSource(source: 'env' | 'proctree' | 'both' | undefined) {
+    super.trackAgentDetectionSource(source);
+  }
+
+  trackAgentDetectionConflict(
+    conflict: { env: string; proctree: string } | undefined
+  ) {
+    super.trackAgentDetectionConflict(conflict);
+  }
+
+  trackContextId(contextId: string | undefined) {
+    super.trackContextId(contextId);
+  }
+
   trackAgenticUse(agent: string | undefined) {
     super.trackAgenticUse(agent);
   }
