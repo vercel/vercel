@@ -35,3 +35,17 @@ export {
   getConnectorMetadata,
   type ConnectorMetadata,
 } from './connector.js';
+
+export {
+  VERCEL_CONNECT_MANIFEST_KIND,
+  VERCEL_CONNECT_MANIFEST_SCHEMA_VERSION,
+  type VercelConnectAccess,
+  type VercelConnectConnector,
+  type VercelConnectManifest,
+  type VercelConnectManifestGenerator,
+  type VercelConnectRequirement,
+  type VercelConnectResource,
+  type VercelConnectTarget,
+  type VercelConnectTrigger,
+  type VercelConnectUse,
+} from './manifest.js';
