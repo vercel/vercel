@@ -171,20 +171,49 @@ describe('Eve channel credential helpers', () => {
   it('keeps Slack credentials backed by an app-scoped Connect token', async () => {
     fetchMock.mockResolvedValue(jsonTokenResponse('slack_token'));
 
-    const credentials = connectSlackCredentials(
-      'oauth/slack',
-      { installationId: 'slack-installation' },
-      { vercelToken: 'vercel_token' }
-    );
+    const credentials = connectSlackCredentials('slack', {
+      capabilities: {
+        additionalBotScopes: ['reactions:read'],
+        additionalEvents: ['reaction_added'],
+        privateChannelMessages: true,
+        publicChannelMessages: true,
+      },
+      token: { installationId: 'slack-installation' },
+      connect: { vercelToken: 'vercel_token' },
+    });
 
     expect(credentials.webhookVerifier).toEqual(expect.any(Function));
     expect(credentials.botToken).toEqual(expect.any(Function));
     await expect(resolveToken(credentials.botToken)).resolves.toBe(
       'slack_token'
     );
-    expectTokenRequest('oauth/slack', {
+    expectTokenRequest('slack', {
       installationId: 'slack-installation',
       subject: { type: 'app' },
+    });
+    expect(credentials.vercelConnectRequirement).toEqual({
+      reference: 'slack',
+      connector: {
+        type: 'slack',
+        configuration: {
+          agentExperience: true,
+          botScopes: [
+            'app_mentions:read',
+            'assistant:write',
+            'channels:history',
+            'chat:write',
+            'groups:history',
+            'reactions:read',
+          ],
+          events: [
+            'app_mention',
+            'message.channels',
+            'message.groups',
+            'reaction_added',
+          ],
+        },
+      },
+      access: { principalTypes: ['app'] },
     });
   });
 

@@ -44,5 +44,11 @@ export {
 } from './photon-credentials.js';
 export {
   connectSlackCredentials,
+  type ConnectSlackCapabilities,
+  type ConnectSlackCredentialsOptions,
   type ConnectSlackCredentialsParams,
 } from './slack-credentials.js';
+export type {
+  VercelConnectRequirement,
+  VercelConnectRequirementCarrier,
+} from './requirements.js';

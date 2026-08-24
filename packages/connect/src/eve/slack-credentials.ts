@@ -6,6 +6,7 @@ import {
   type ConnectTokenParams,
 } from '../index.js';
 import { vercelOidc } from 'eve/channels/auth';
+import { connectRequirement, withConnectRequirement } from './requirements.js';
 
 /**
  * Token parameters accepted by {@link connectSlackCredentials}.
@@ -16,6 +17,19 @@ import { vercelOidc } from 'eve/channels/auth';
  * overridden.
  */
 export type ConnectSlackCredentialsParams = Omit<ConnectTokenParams, 'subject'>;
+
+export interface ConnectSlackCapabilities {
+  readonly additionalBotScopes?: readonly string[];
+  readonly additionalEvents?: readonly string[];
+  readonly privateChannelMessages?: boolean;
+  readonly publicChannelMessages?: boolean;
+}
+
+export interface ConnectSlackCredentialsOptions {
+  readonly capabilities?: ConnectSlackCapabilities;
+  readonly token?: ConnectSlackCredentialsParams;
+  readonly connect?: ConnectOptions;
+}
 
 /**
  * Build {@link SlackChannelCredentials} backed by a Vercel Connect
@@ -52,13 +66,46 @@ export type ConnectSlackCredentialsParams = Omit<ConnectTokenParams, 'subject'>;
  * ```
  */
 export function connectSlackCredentials(
-  connector: string,
-  params: ConnectSlackCredentialsParams = {},
-  options?: ConnectOptions
+  reference: string,
+  options: ConnectSlackCredentialsOptions = {}
 ): SlackChannelCredentials {
-  return {
-    botToken: () =>
-      getToken(connector, { ...params, subject: { type: 'app' } }, options),
-    webhookVerifier: vercelOidc(),
-  };
+  const capabilities = options.capabilities;
+  const botScopes = [
+    'app_mentions:read',
+    'assistant:write',
+    'chat:write',
+    ...(capabilities?.publicChannelMessages ? ['channels:history'] : []),
+    ...(capabilities?.privateChannelMessages ? ['groups:history'] : []),
+    ...(capabilities?.additionalBotScopes ?? []),
+  ];
+  const events = [
+    'app_mention',
+    ...(capabilities?.publicChannelMessages ? ['message.channels'] : []),
+    ...(capabilities?.privateChannelMessages ? ['message.groups'] : []),
+    ...(capabilities?.additionalEvents ?? []),
+  ];
+
+  return withConnectRequirement(
+    {
+      botToken: () =>
+        getToken(
+          reference,
+          { ...options.token, subject: { type: 'app' } },
+          options.connect
+        ),
+      webhookVerifier: vercelOidc(),
+    },
+    connectRequirement(
+      reference,
+      {
+        type: 'slack',
+        configuration: {
+          agentExperience: true,
+          botScopes: [...new Set(botScopes)].sort(),
+          events: [...new Set(events)].sort(),
+        },
+      },
+      'app'
+    )
+  );
 }
