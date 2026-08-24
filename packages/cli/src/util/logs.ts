@@ -12,6 +12,7 @@ import { CommandTimeout } from '../commands/logs/command';
 import output from '../output-manager';
 import stripAnsi from 'strip-ansi';
 import { toNodeReadable } from './fetch';
+import { getTelemetryReporter } from './telemetry/reporter';
 
 type Printer = (l: string) => void;
 
@@ -193,6 +194,7 @@ export async function displayRuntimeLogs(
     const stream = readable.pipe(parse ? jsonlines.parse() : split());
     let finished = false;
     let errored = false;
+    let matchedLogs = false;
 
     function finish(err?: unknown) {
       if (finished) return;
@@ -202,6 +204,7 @@ export async function displayRuntimeLogs(
       if (err) {
         reject(err);
       } else {
+        getTelemetryReporter()?.trackLogsMatched(matchedLogs);
         resolve(abortController.signal.aborted ? 1 : 0);
       }
     }
@@ -214,6 +217,7 @@ export async function displayRuntimeLogs(
         warn(`${chalk.bold(log.message)}\n`);
         return;
       }
+      matchedLogs = true;
       parse
         ? prettyPrintLogline(log, print)
         : printRawLogLine(data as string, client);

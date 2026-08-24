@@ -3,7 +3,14 @@ import os from 'node:os';
 import { isError } from '@vercel/error-utils';
 import type { GlobalConfig } from '@vercel-internals/types';
 import didYouMean from '../did-you-mean';
-import { REDACTED, crashFrame, gatedFlag, gatedToken, slug } from './sanitize';
+import {
+  REDACTED,
+  crashFrame,
+  fp,
+  gatedFlag,
+  gatedToken,
+  slug,
+} from './sanitize';
 import output from '../../output-manager';
 import { spawn } from 'node:child_process';
 import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
@@ -312,6 +319,46 @@ export class TelemetryClient {
     this.track({ key: 'auth_config_error', value: kind });
   }
 
+  protected trackDeployState(readyState: string) {
+    if (!isV2()) {
+      return;
+    }
+    this.trackCommandOutput({
+      key: 'deploy_state',
+      value: /^[A-Z_]{1,32}$/.test(readyState) ? readyState : REDACTED,
+    });
+  }
+
+  protected trackLogsMatched(matched: boolean) {
+    if (!isV2()) {
+      return;
+    }
+    this.trackCommandOutput({
+      key: 'logs_matched',
+      value: matched ? 'SOME' : 'NONE',
+    });
+  }
+
+  protected trackArgsFingerprint(argv: readonly string[], salt: string) {
+    if (!isV2()) {
+      return;
+    }
+    this.track({ key: 'args_fingerprint', value: fp(argv, salt) });
+  }
+
+  protected trackAgentTaskId(id: string | undefined) {
+    if (!isV2() || !id) {
+      return;
+    }
+    // UUID-shape only: structurally incapable of carrying user content.
+    this.track({
+      key: 'agent_task_id',
+      value: /^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$/.test(id)
+        ? id.toLowerCase()
+        : REDACTED,
+    });
+  }
+
   protected trackCrash(err: unknown) {
     if (!isV2()) {
       return;
@@ -551,6 +598,9 @@ export class TelemetryEventStore {
   private sessionId: string;
   private invocationId: string;
   private deviceId: string;
+  // Local-only HMAC salt; unlike deviceId it is never sent, so hashes made
+  // with it cannot be dictionary-tested by anyone holding the telemetry.
+  private fpSalt: string;
   private teamId = 'NO_TEAM_ID';
   private userId = 'NO_USER_ID';
   private projectId = 'NO_PROJECT_ID';
@@ -575,10 +625,12 @@ export class TelemetryEventStore {
     this.cliSessionOptions = opts?.cliSession;
     this.invocationId = randomUUID();
     this.deviceId = randomUUID();
+    this.fpSalt = randomUUID();
 
     if (this.cliDeviceOptions) {
       this.cliDevice = getOrCreatePersistedCliDevice(this.cliDeviceOptions);
       this.deviceId = this.cliDevice.id;
+      this.fpSalt = this.cliDevice.fpSalt ?? this.fpSalt;
     }
 
     if (this.cliSessionOptions) {
@@ -636,6 +688,10 @@ export class TelemetryEventStore {
 
   get currentDeviceId() {
     return this.deviceId;
+  }
+
+  get currentFpSalt() {
+    return this.fpSalt;
   }
 
   get currentSessionId() {

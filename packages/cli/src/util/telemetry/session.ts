@@ -15,6 +15,8 @@ export interface PersistedCliSession {
 
 export interface PersistedCliDevice {
   id: string;
+  /** HMAC salt for fingerprint/context hashes. Never transmitted. */
+  fpSalt?: string;
 }
 
 export interface PersistedCliSessionOptions {
@@ -141,12 +143,13 @@ export function getOrCreatePersistedCliDevice(
 ): PersistedCliDevice {
   const existing = readPersistedCliDevice(opts.filePath);
 
-  if (existing) {
+  if (existing?.fpSalt) {
     return existing;
   }
 
   const device = {
-    id: randomUUID(),
+    id: existing?.id ?? randomUUID(),
+    fpSalt: randomUUID(),
   };
 
   writePersistedCliDevice(opts.filePath, device);

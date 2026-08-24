@@ -515,6 +515,22 @@ export class RootTelemetryClient extends TelemetryClient {
     super.trackAuthConfigError(kind);
   }
 
+  trackDeployState(readyState: string) {
+    super.trackDeployState(readyState);
+  }
+
+  trackLogsMatched(matched: boolean) {
+    super.trackLogsMatched(matched);
+  }
+
+  trackArgsFingerprint(argv: readonly string[], salt: string) {
+    super.trackArgsFingerprint(argv, salt);
+  }
+
+  trackAgentTaskId(id: string | undefined) {
+    super.trackAgentTaskId(id);
+  }
+
   trackAgenticUse(agent: string | undefined) {
     super.trackAgenticUse(agent);
   }

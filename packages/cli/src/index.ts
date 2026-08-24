@@ -88,6 +88,7 @@ import {
   getTelemetryReporter,
   setTelemetryReporter,
 } from './util/telemetry/reporter';
+import { gatedToken } from './util/telemetry/sanitize';
 import { readVercelPluginActiveSessionMarker } from './util/telemetry/vercel-plugin';
 import { help } from './args';
 import { checkTelemetryStatus } from './util/telemetry/check-status';
@@ -318,6 +319,17 @@ const main = async () => {
   telemetry.trackCliOptionToken(parsedArgs.flags['--token']);
   telemetry.trackCliOptionTeam(parsedArgs.flags['--team']);
   telemetry.trackCliOptionApi(parsedArgs.flags['--api']);
+  // Structural shape only (never raw argv), salted with the local-only
+  // fingerprint salt: correlates retries without exposing argument content.
+  telemetry.trackArgsFingerprint(
+    [
+      gatedToken(parsedArgs.args[2] ?? ''),
+      String(parsedArgs.args.length - 2),
+      ...Object.keys(parsedArgs.flags).sort(),
+    ],
+    telemetryEventStore.currentFpSalt
+  );
+  telemetry.trackAgentTaskId(process.env.AI_AGENT_TASK_ID);
 
   const localConfigPath = parsedArgs.flags['--local-config'];
   // The flush subprocess must not depend on the invoking directory's

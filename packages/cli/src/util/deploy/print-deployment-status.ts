@@ -10,6 +10,7 @@ import output from '../../output-manager';
 import { getCommandName } from '../pkg-name';
 import { suggestNextCommands } from '../suggest-next-commands';
 import { showPluginTipIfNeeded } from '../agent/auto-install-agentic';
+import { getTelemetryReporter } from '../telemetry/reporter';
 
 /**
  * `deployStamp()` returns a string formatted like `[47s]` (gray-wrapped).
@@ -51,6 +52,8 @@ export async function printDeploymentStatus(
   guidanceMode: boolean,
   isInit?: boolean
 ): Promise<number> {
+  getTelemetryReporter()?.trackDeployState(readyState);
+
   indications = indications || [];
 
   let isStillBuilding = false;
