@@ -610,6 +610,45 @@ it('prefixes emitted service route sources with routePrefix', async () => {
   expect(lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX_STRIP).toBe('1');
 }, 30000);
 
+it('emits a prefixed request.path transform so the runtime shim strips once', async () => {
+  const fixtureName = '01-express-index-ts-esm';
+  const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+  const { workDir } = await getWorkDir(fixtureName, fixtureSource);
+
+  const result = (await build({
+    files: {},
+    workPath: workDir,
+    config: {
+      ...defaultConfig,
+      routePrefix: 'api/js',
+      serviceName: 'js-api',
+    },
+    meta,
+    entrypoint: 'package.json',
+    repoRootPath: workDir,
+  })) as BuildResultV2Typical;
+
+  // The catch-all capture group only matches the segment after the prefix, so
+  // the transform must re-include the prefix. The runtime shim then performs
+  // the single prefix strip, avoiding a double-strip when the suffix begins
+  // with the prefix segment (e.g. `/api/js/api/js/...`).
+  expect(result.routes).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        src: '^/api/js(?:/(.*))?$',
+        dest: '/_svc/js-api/index',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/api/js/$1',
+          },
+        ],
+      }),
+    ])
+  );
+}, 30000);
+
 it('does not double-prefix routes already authored with routePrefix', async () => {
   const fixtureName = '04-hono-index-ts-esm';
   const fixtureSource = join(__dirname, 'fixtures', fixtureName);

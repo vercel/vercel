@@ -1,4 +1,8 @@
-import { isPythonFramework, type Builder } from '@vercel/build-utils';
+import {
+  isNodeBackendFramework,
+  isPythonFramework,
+  type Builder,
+} from '@vercel/build-utils';
 import type { Rewrite } from '@vercel/routing-utils';
 
 export const BACKEND_REWRITE_BEHAVIOR_WARNING =
@@ -14,6 +18,12 @@ function hasInternalPathRewrite(rewrites: Rewrite[] | undefined): boolean {
   );
 }
 
+function isBackendRewriteFramework(
+  framework: string | null | undefined
+): boolean {
+  return isPythonFramework(framework) || isNodeBackendFramework(framework);
+}
+
 export function hasBackendRewriteBehaviorChange({
   projectRewrites,
   builders,
@@ -24,7 +34,7 @@ export function hasBackendRewriteBehaviorChange({
   return (
     hasInternalPathRewrite(projectRewrites) &&
     (builders ?? []).some(builder =>
-      isPythonFramework(builder.config?.framework)
+      isBackendRewriteFramework(builder.config?.framework)
     )
   );
 }
