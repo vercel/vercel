@@ -1,6 +1,7 @@
 import { remove } from 'fs-extra';
 import { join, basename } from 'path';
 import { getPlatformEnv } from '@vercel/build-utils';
+import { getTeamEnvVar } from '../teams/team-env';
 import { LocalFileSystemDetector, getWorkspaces } from '@vercel/fs-detectors';
 import type {
   ProjectLinkResult,
@@ -312,11 +313,12 @@ export default async function setupAndLink(
     return link;
   }
 
-  // `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` form an explicit project-owner
-  // pair, so resolve and confirm exactly that pair without prompting (and
-  // without requiring `--yes`). The env link itself is what makes commands
-  // work here, so leave local link files untouched.
-  if (getPlatformEnv('ORG_ID') && getPlatformEnv('PROJECT_ID')) {
+  // `VERCEL_TEAM` (or the legacy `VERCEL_ORG_ID`) and `VERCEL_PROJECT_ID` form
+  // an explicit project-owner pair, so resolve and confirm exactly that pair
+  // without prompting (and without requiring `--yes`). The env link itself is
+  // what makes commands work here, so leave local link files untouched.
+  const teamEnvVar = getTeamEnvVar();
+  if (teamEnvVar && getPlatformEnv('PROJECT_ID')) {
     const envLink = await getLinkedProject(client, { cwd: path });
     if (envLink.status === 'error') {
       return envLink;
@@ -326,7 +328,7 @@ export default async function setupAndLink(
         envLink.org.type === 'team' ? envLink.org.id : undefined;
       output.print('\n');
       printAlignedLabel('Directory', toHumanPath(path));
-      printAlignedLabel('Source', 'VERCEL_ORG_ID and VERCEL_PROJECT_ID');
+      printAlignedLabel('Source', `${teamEnvVar.name} and VERCEL_PROJECT_ID`);
       output.print('\n');
       printAlignedLabel(
         'Linked',
