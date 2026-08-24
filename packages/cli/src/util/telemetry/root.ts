@@ -495,6 +495,26 @@ export class RootTelemetryClient extends TelemetryClient {
     super.trackCrash(err);
   }
 
+  trackHelpRendered(context: string) {
+    super.trackHelpRendered(context);
+  }
+
+  trackProjectConfigError(kind: 'parse' | 'not_found_explicit') {
+    super.trackProjectConfigError(kind);
+  }
+
+  trackProjectConfigValidation(code: string | undefined) {
+    super.trackProjectConfigValidation(code);
+  }
+
+  trackConfigError(kind: 'read' | 'write') {
+    super.trackConfigError(kind);
+  }
+
+  trackAuthConfigError(kind: 'read') {
+    super.trackAuthConfigError(kind);
+  }
+
   trackAgenticUse(agent: string | undefined) {
     super.trackAgenticUse(agent);
   }

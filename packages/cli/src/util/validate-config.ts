@@ -17,6 +17,7 @@ import {
 import { fileNameSymbol } from '@vercel/client';
 import { validateProxyConfig } from '@vercel/fs-detectors';
 import { getConfigValidator } from './config-validator';
+import { getTelemetryReporter } from './telemetry/reporter';
 
 const imagesSchema = {
   type: 'object',
@@ -632,6 +633,14 @@ export function buildVercelConfigSchema() {
 }
 
 export function validateConfig(config: VercelConfig): NowBuildError | null {
+  const error = validateConfigImpl(config);
+  if (error) {
+    getTelemetryReporter()?.trackProjectConfigValidation(error.code);
+  }
+  return error;
+}
+
+function validateConfigImpl(config: VercelConfig) {
   const validate = getConfigValidator(buildVercelConfigSchema);
   if (!validate(config)) {
     if (validate.errors && validate.errors[0]) {

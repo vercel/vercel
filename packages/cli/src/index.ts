@@ -258,6 +258,16 @@ const main = async () => {
     return code;
   };
 
+  // The opt-out state is unknowable when the CLI config cannot be read or
+  // written, so drop everything buffered and send one anonymous event.
+  const flushConfigError = async (kind: 'read' | 'write'): Promise<number> => {
+    telemetryEventStore.reset();
+    telemetry.trackConfigError(kind);
+    telemetryEventStore.updateConfig(undefined);
+    telemetryConfigLoaded = true;
+    return finishEarly(1);
+  };
+
   const parseInitialArgs = () =>
     parseArguments(
       process.argv,
@@ -318,6 +328,7 @@ const main = async () => {
 
   if (localConfig instanceof ERRORS.CantParseJSONFile) {
     output.error(`Couldn't parse JSON file ${localConfig.meta.file}.`);
+    telemetry.trackProjectConfigError('parse');
     return finishEarly(1);
   }
 
@@ -328,6 +339,7 @@ const main = async () => {
           ' or\n    '
         )}`
       );
+      telemetry.trackProjectConfigError('not_found_explicit');
       return finishEarly(1);
     } else {
       localConfig = undefined;
@@ -368,6 +380,7 @@ const main = async () => {
   const bareHelpSubcommand = targetOrSubcommand === 'help' && !subSubCommand;
   if (bareHelpOption || bareHelpSubcommand) {
     output.print(help());
+    telemetry.trackHelpRendered('root');
     return finishEarly(0);
   }
 
@@ -380,7 +393,7 @@ const main = async () => {
         VERCEL_DIR
       )}" ${errorToString(err)}`
     );
-    return finishEarly(1);
+    return flushConfigError('write');
   }
 
   let config: GlobalConfig;
@@ -397,7 +410,7 @@ const main = async () => {
             VERCEL_CONFIG_PATH
           )}" ${errorToString(err)}`
         );
-        return finishEarly(1);
+        return flushConfigError('write');
       }
     } else {
       output.error(
@@ -405,7 +418,7 @@ const main = async () => {
           VERCEL_CONFIG_PATH
         )}" ${errorToString(err)}`
       );
-      return finishEarly(1);
+      return flushConfigError('read');
     }
   }
 
@@ -449,6 +462,7 @@ const main = async () => {
             VERCEL_AUTH_CONFIG_PATH
           )}" ${errorToString(err)}`
         );
+        telemetry.trackAuthConfigError('read');
         return finishEarly(1);
       }
     }
