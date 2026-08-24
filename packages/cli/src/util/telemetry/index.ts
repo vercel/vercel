@@ -139,6 +139,16 @@ export class TelemetryClient {
     });
   }
 
+  protected trackExitCode(code: number) {
+    if (process.env.VERCEL_CLI_TELEMETRY_V2 !== '1') {
+      return;
+    }
+    this.track({
+      key: 'exit_code',
+      value: String(code),
+    });
+  }
+
   protected trackOidcTokenRefresh(count: number) {
     this.track({
       key: 'oidc-token-refresh',
@@ -372,6 +382,7 @@ export class TelemetryEventStore {
   private userId = 'NO_USER_ID';
   private projectId = 'NO_PROJECT_ID';
   private config: GlobalConfig['telemetry'];
+  private configLoaded: boolean;
   private cliDevice?: PersistedCliDevice;
   private cliSession?: PersistedCliSession;
   private cliDeviceOptions?: PersistedCliDeviceOptions;
@@ -379,13 +390,14 @@ export class TelemetryEventStore {
 
   constructor(opts?: {
     isDebug?: boolean;
-    config: GlobalConfig['telemetry'];
+    config?: GlobalConfig['telemetry'];
     cliDevice?: PersistedCliDeviceOptions;
     cliSession?: PersistedCliSessionOptions;
   }) {
     this.isDebug = opts?.isDebug || false;
     this.events = [];
     this.config = opts?.config;
+    this.configLoaded = opts?.config !== undefined;
     this.cliDeviceOptions = opts?.cliDevice;
     this.cliSessionOptions = opts?.cliSession;
     this.invocationId = randomUUID();
@@ -410,6 +422,13 @@ export class TelemetryEventStore {
     event.userId = this.userId;
     event.projectId = this.projectId;
     this.events.push(event);
+  }
+
+  // The store may be constructed before the global config is readable;
+  // events are only sent once the config (and thus opt-out state) is known.
+  updateConfig(config: GlobalConfig['telemetry']) {
+    this.config = config;
+    this.configLoaded = true;
   }
 
   updateTeamId(teamId?: string) {
@@ -462,11 +481,18 @@ export class TelemetryEventStore {
     if (process.env.VERCEL_TELEMETRY_DISABLED) {
       return false;
     }
+    if (!this.configLoaded) {
+      return false;
+    }
 
     return this.config?.enabled ?? true;
   }
 
   async save() {
+    if (this.events.length === 0) {
+      return;
+    }
+
     if (this.cliSession && this.cliSessionOptions) {
       this.cliSession = touchPersistedCliSession(
         this.cliSessionOptions,

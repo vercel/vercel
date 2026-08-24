@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { exitWithTelemetry } from '../telemetry/reporter';
 import type Client from '../client';
 import getUser from '../get-user';
 import getTeams from '../teams/get-teams';
@@ -180,7 +181,7 @@ export default async function selectOrg(
           )}, or run ${getCommandName('teams ls')} to list your teams.`
         : 'No teams available.'
     );
-    process.exit(1);
+    exitWithTelemetry(1);
   }
 
   // An explicit signal answers the team question without prompting. The team

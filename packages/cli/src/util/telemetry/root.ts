@@ -471,6 +471,10 @@ export class RootTelemetryClient extends TelemetryClient {
     super.trackCPUs();
   }
 
+  trackExitCode(code: number) {
+    super.trackExitCode(code);
+  }
+
   trackAgenticUse(agent: string | undefined) {
     super.trackAgenticUse(agent);
   }

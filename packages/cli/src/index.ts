@@ -84,6 +84,7 @@ import type { VercelConfig } from '@vercel/client';
 import box from './util/output/box';
 import { TelemetryEventStore } from './util/telemetry';
 import { RootTelemetryClient } from './util/telemetry/root';
+import { setTelemetryReporter } from './util/telemetry/reporter';
 import { readVercelPluginActiveSessionMarker } from './util/telemetry/vercel-plugin';
 import { help } from './args';
 import { checkTelemetryStatus } from './util/telemetry/check-status';
@@ -198,6 +199,47 @@ const main = async () => {
     process.stdin.isTTY = true;
   }
 
+  const telemetryEventStore = new TelemetryEventStore({
+    isDebug: process.env.VERCEL_TELEMETRY_DEBUG === '1',
+    cliDevice: isTelemetryFlushCommand
+      ? undefined
+      : {
+          filePath: join(VERCEL_DIR, 'telemetry-device.json'),
+        },
+    cliSession: isTelemetryFlushCommand
+      ? undefined
+      : {
+          filePath: join(VERCEL_DIR, 'telemetry-session.json'),
+        },
+  });
+
+  const telemetry = new RootTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
+  setTelemetryReporter(telemetry);
+
+  // Flush-and-exit for paths that run before the global config is loaded
+  // (help, version, early failures). Loads the config best-effort so the
+  // opt-out state is known; when unreadable, the batch is silently dropped.
+  let telemetryConfigLoaded = false;
+  const finishEarly = async (code: number): Promise<number> => {
+    if (!telemetryConfigLoaded) {
+      try {
+        const earlyConfig = configFiles.readConfigFile();
+        checkTelemetryStatus({ config: earlyConfig });
+        telemetryEventStore.updateConfig(earlyConfig.telemetry);
+        telemetryConfigLoaded = true;
+      } catch {
+        // config unavailable: leave the store disabled
+      }
+    }
+    telemetry.trackExitCode(code);
+    await telemetryEventStore.save();
+    return code;
+  };
+
   const parseInitialArgs = () =>
     parseArguments(
       process.argv,
@@ -221,16 +263,44 @@ const main = async () => {
     });
   } catch (err: unknown) {
     printError(err);
-    return 1;
+    return finishEarly(1);
   }
 
+  const { isAgent, agent: detectedAgent } = await determineAgent();
+  telemetry.trackInvocationId(telemetryEventStore.currentInvocationId);
+  telemetry.trackDeviceId(telemetryEventStore.currentDeviceId);
+  const vercelPluginMarker = readVercelPluginActiveSessionMarker();
+  if (vercelPluginMarker) {
+    telemetry.trackVercelPluginActiveSession();
+    telemetry.trackVercelPluginVersion(vercelPluginMarker.pluginVersion);
+  }
+  telemetry.trackAgenticUse(detectedAgent?.name);
+  telemetry.trackCPUs();
+  telemetry.trackPlatform();
+  telemetry.trackArch();
+  telemetry.trackCIVendorName();
+  telemetry.trackStdinIsTTY(process.stdin?.isTTY === true);
+  telemetry.trackVersion(pkg.version);
+  telemetry.trackCliOptionCwd(parsedArgs.flags['--cwd']);
+  telemetry.trackCliOptionLocalConfig(parsedArgs.flags['--local-config']);
+  telemetry.trackCliOptionGlobalConfig(parsedArgs.flags['--global-config']);
+  telemetry.trackCliFlagDebug(parsedArgs.flags['--debug']);
+  telemetry.trackCliFlagNoColor(parsedArgs.flags['--no-color']);
+  telemetry.trackCliOptionScope(parsedArgs.flags['--scope']);
+  telemetry.trackCliOptionToken(parsedArgs.flags['--token']);
+  telemetry.trackCliOptionTeam(parsedArgs.flags['--team']);
+  telemetry.trackCliOptionApi(parsedArgs.flags['--api']);
+
   const localConfigPath = parsedArgs.flags['--local-config'];
-  let localConfig: VercelConfig | Error | undefined =
-    await earlyGetConfig(localConfigPath);
+  // The flush subprocess must not depend on the invoking directory's
+  // vercel.json: a parse failure here would drop the batch it carries.
+  let localConfig: VercelConfig | Error | undefined = isTelemetryFlushCommand
+    ? undefined
+    : await earlyGetConfig(localConfigPath);
 
   if (localConfig instanceof ERRORS.CantParseJSONFile) {
     output.error(`Couldn't parse JSON file ${localConfig.meta.file}.`);
-    return 1;
+    return finishEarly(1);
   }
 
   if (localConfig instanceof ERRORS.CantFindConfig) {
@@ -240,7 +310,7 @@ const main = async () => {
           ' or\n    '
         )}`
       );
-      return 1;
+      return finishEarly(1);
     } else {
       localConfig = undefined;
     }
@@ -248,7 +318,7 @@ const main = async () => {
 
   if (localConfig instanceof Error) {
     output.prettyError(localConfig);
-    return 1;
+    return finishEarly(1);
   }
 
   // The second argument to the command can be:
@@ -272,7 +342,7 @@ const main = async () => {
   if (!targetOrSubcommand && parsedArgs.flags['--version']) {
     // biome-ignore lint/suspicious/noConsole: intentional console usage
     console.log(pkg.version);
-    return 0;
+    return finishEarly(0);
   }
 
   // Handle bare `-h` directly
@@ -280,7 +350,7 @@ const main = async () => {
   const bareHelpSubcommand = targetOrSubcommand === 'help' && !subSubCommand;
   if (bareHelpOption || bareHelpSubcommand) {
     output.print(help());
-    return 0;
+    return finishEarly(0);
   }
 
   // Ensure that the Vercel global configuration directory exists
@@ -292,7 +362,7 @@ const main = async () => {
         VERCEL_DIR
       )}" ${errorToString(err)}`
     );
-    return 1;
+    return finishEarly(1);
   }
 
   let config: GlobalConfig;
@@ -309,7 +379,7 @@ const main = async () => {
             VERCEL_CONFIG_PATH
           )}" ${errorToString(err)}`
         );
-        return 1;
+        return finishEarly(1);
       }
     } else {
       output.error(
@@ -317,8 +387,21 @@ const main = async () => {
           VERCEL_CONFIG_PATH
         )}" ${errorToString(err)}`
       );
-      return 1;
+      return finishEarly(1);
     }
+  }
+
+  telemetryEventStore.updateConfig(config.telemetry);
+  telemetryConfigLoaded = true;
+
+  checkTelemetryStatus({
+    config,
+  });
+
+  if (process.env.FF_GUIDANCE_MODE) {
+    checkGuidanceStatus({
+      config,
+    });
   }
 
   // Check for explicit tokens before reading persisted credentials so CI/headless
@@ -348,66 +431,10 @@ const main = async () => {
             VERCEL_AUTH_CONFIG_PATH
           )}" ${errorToString(err)}`
         );
-        return 1;
+        return finishEarly(1);
       }
     }
   }
-
-  const telemetryEventStore = new TelemetryEventStore({
-    isDebug: process.env.VERCEL_TELEMETRY_DEBUG === '1',
-    config: config.telemetry,
-    cliDevice: isTelemetryFlushCommand
-      ? undefined
-      : {
-          filePath: join(VERCEL_DIR, 'telemetry-device.json'),
-        },
-    cliSession: isTelemetryFlushCommand
-      ? undefined
-      : {
-          filePath: join(VERCEL_DIR, 'telemetry-session.json'),
-        },
-  });
-
-  checkTelemetryStatus({
-    config,
-  });
-
-  if (process.env.FF_GUIDANCE_MODE) {
-    checkGuidanceStatus({
-      config,
-    });
-  }
-
-  const telemetry = new RootTelemetryClient({
-    opts: {
-      store: telemetryEventStore,
-    },
-  });
-
-  const { isAgent, agent: detectedAgent } = await determineAgent();
-  telemetry.trackInvocationId(telemetryEventStore.currentInvocationId);
-  telemetry.trackDeviceId(telemetryEventStore.currentDeviceId);
-  const vercelPluginMarker = readVercelPluginActiveSessionMarker();
-  if (vercelPluginMarker) {
-    telemetry.trackVercelPluginActiveSession();
-    telemetry.trackVercelPluginVersion(vercelPluginMarker.pluginVersion);
-  }
-  telemetry.trackAgenticUse(detectedAgent?.name);
-  telemetry.trackCPUs();
-  telemetry.trackPlatform();
-  telemetry.trackArch();
-  telemetry.trackCIVendorName();
-  telemetry.trackStdinIsTTY(process.stdin?.isTTY === true);
-  telemetry.trackVersion(pkg.version);
-  telemetry.trackCliOptionCwd(parsedArgs.flags['--cwd']);
-  telemetry.trackCliOptionLocalConfig(parsedArgs.flags['--local-config']);
-  telemetry.trackCliOptionGlobalConfig(parsedArgs.flags['--global-config']);
-  telemetry.trackCliFlagDebug(parsedArgs.flags['--debug']);
-  telemetry.trackCliFlagNoColor(parsedArgs.flags['--no-color']);
-  telemetry.trackCliOptionScope(parsedArgs.flags['--scope']);
-  telemetry.trackCliOptionToken(parsedArgs.flags['--token']);
-  telemetry.trackCliOptionTeam(parsedArgs.flags['--team']);
-  telemetry.trackCliOptionApi(parsedArgs.flags['--api']);
 
   let earlyGetUserPromise: Promise<User | undefined> | undefined;
   let telemetrySaved = false;
@@ -509,6 +536,7 @@ const main = async () => {
   };
 
   const finishWithExitCode = async (code: number) => {
+    telemetry.trackExitCode(code);
     await saveTelemetry();
     return code;
   };
@@ -917,7 +945,7 @@ const main = async () => {
               availableCommands: commandNames,
             })
           ) {
-            return 1;
+            return finishWithExitCode(1);
           }
           // Fall back to `vc deploy <dir>`
           targetCommand = subcommand = 'deploy';
@@ -1221,7 +1249,7 @@ const main = async () => {
         ) {
           output.error(`The ${param(subcommand)} subcommand does not exist`);
         }
-        return 1;
+        return finishWithExitCode(1);
       }
 
       if (func.default) {
@@ -1307,7 +1335,9 @@ const main = async () => {
     return finishWithExitCode(1);
   }
 
-  await saveTelemetry();
+  // Flush before stopping the root span so the vc.postCommand span from
+  // saveTelemetry is captured in the trace file below.
+  const finalExitCode = await finishWithExitCode(exitCode ?? 0);
 
   rootSpan.stop();
 
@@ -1326,7 +1356,7 @@ const main = async () => {
     }
   }
 
-  return exitCode;
+  return finalExitCode;
 };
 
 // Start the CLI update check early so the fresh registry lookup runs in
@@ -1422,6 +1452,9 @@ main()
 
       if (
         !userUpToDate &&
+        // client is undefined when the command exited before creating it
+        // (e.g. `--version`, bare help)
+        client !== undefined &&
         (await canAutoUpdate(
           client,
           originalExitCode,
@@ -1461,6 +1494,11 @@ main()
             `Changelog: ${output.link(changelog, changelog, { fallback: false })}\n`
           );
 
+          // client is undefined when the command exited before creating it
+          // (e.g. `--version`, bare help): show the notice, skip the prompt.
+          if (client === undefined) {
+            return;
+          }
           const upgradeExitCode = await promptAndUpgrade(client, latest);
           if (upgradeExitCode !== undefined) {
             process.exitCode = upgradeExitCode;

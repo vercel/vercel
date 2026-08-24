@@ -1,4 +1,5 @@
 import { isError } from '@vercel/error-utils';
+import { exitWithTelemetry } from './telemetry/reporter';
 import type Client from './client';
 import { isAPIError, LinkRequiredError, ProjectNotFound } from './errors-ts';
 import { packageName } from './pkg-name';
@@ -554,7 +555,7 @@ export function outputActionRequired(
       'Run one of the commands in next[] to complete without prompting.';
   }
   client.stdout.write(`${JSON.stringify(enriched, null, 2)}\n`);
-  process.exit(exitCode);
+  exitWithTelemetry(exitCode);
 }
 
 /** True when argv explicitly requests non-interactive mode (matches main `index.ts`). */
@@ -592,7 +593,7 @@ export function outputAgentError(
     return;
   }
   client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
-  process.exit(exitCode);
+  exitWithTelemetry(exitCode);
 }
 
 /**
@@ -612,7 +613,7 @@ export function outputAgentSuccess(
     payload.hint = 'Follow up with one of the commands in next[].';
   }
   client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
-  process.exit(exitCode);
+  exitWithTelemetry(exitCode);
 }
 
 /** Suggested follow-ups for `global-config` failures (only callers of exitWithNonInteractiveError). */
@@ -801,7 +802,7 @@ function writeAgentErrorPayloadAndExit(
     hint: payload.hint ?? defaults.hint,
   };
   client.stdout.write(`${JSON.stringify(out, null, 2)}\n`);
-  process.exit(exitCode);
+  exitWithTelemetry(exitCode);
 }
 
 function isProjectNotFoundLike(err: unknown): boolean {
