@@ -7,7 +7,6 @@ let telemetry: RootTelemetryClient;
 let store: TelemetryEventStore;
 
 beforeEach(() => {
-  vi.stubEnv('VERCEL_CLI_TELEMETRY_V2', '1');
   store = new TelemetryEventStore({ isDebug: true, config: {} });
   telemetry = new RootTelemetryClient({ opts: { store } });
 });
@@ -72,16 +71,5 @@ describe('agent_task_id', () => {
       '[REDACTED]',
       '[REDACTED]',
     ]);
-  });
-});
-
-describe('v2 gating', () => {
-  it('tracks nothing without the flag', () => {
-    vi.stubEnv('VERCEL_CLI_TELEMETRY_V2', '');
-    telemetry.trackDeployState('READY');
-    telemetry.trackLogsMatched(true);
-    telemetry.trackArgsFingerprint(['x'], 's');
-    telemetry.trackAgentTaskId('t');
-    expect(store.readonlyEvents).toHaveLength(0);
   });
 });

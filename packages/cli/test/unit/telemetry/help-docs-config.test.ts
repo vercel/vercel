@@ -8,7 +8,6 @@ let telemetry: RootTelemetryClient;
 let store: TelemetryEventStore;
 
 beforeEach(() => {
-  vi.stubEnv('VERCEL_CLI_TELEMETRY_V2', '1');
   store = new TelemetryEventStore({ isDebug: true, config: {} });
   telemetry = new RootTelemetryClient({ opts: { store } });
 });
@@ -93,15 +92,5 @@ describe('cli config events', () => {
       { key: 'config_error', value: 'read' },
       { key: 'auth_config_error', value: 'read' },
     ]);
-  });
-
-  it('tracks nothing without v2', () => {
-    vi.stubEnv('VERCEL_CLI_TELEMETRY_V2', '');
-    telemetry.trackHelpRendered('root');
-    telemetry.trackProjectConfigError('parse');
-    telemetry.trackConfigError('read');
-    telemetry.trackAuthConfigError('read');
-    telemetry.trackProjectConfigValidation('X');
-    expect(store.readonlyEvents).toHaveLength(0);
   });
 });

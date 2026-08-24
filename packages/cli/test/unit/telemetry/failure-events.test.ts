@@ -13,7 +13,6 @@ let telemetry: RootTelemetryClient;
 let store: TelemetryEventStore;
 
 beforeEach(() => {
-  vi.stubEnv('VERCEL_CLI_TELEMETRY_V2', '1');
   store = new TelemetryEventStore({ isDebug: true, config: {} });
   telemetry = new RootTelemetryClient({ opts: { store } });
 });
@@ -35,7 +34,7 @@ describe('trackError', () => {
       serverMessage: 'Rate limited',
     });
 
-  it('tracks structured fields for non-agents under v2', () => {
+  it('tracks structured fields for non-agents', () => {
     telemetry.trackError(apiError());
     expect(store.readonlyEvents).toMatchObject([
       { key: 'error_status', value: '429' },
@@ -45,14 +44,7 @@ describe('trackError', () => {
     ]);
   });
 
-  it('tracks nothing for non-agents without v2', () => {
-    vi.stubEnv('VERCEL_CLI_TELEMETRY_V2', '');
-    telemetry.trackError(apiError());
-    expect(store.readonlyEvents).toHaveLength(0);
-  });
-
-  it('adds server message for agents regardless of v2', () => {
-    vi.stubEnv('VERCEL_CLI_TELEMETRY_V2', '');
+  it('adds server message for agents', () => {
     telemetry.trackError(apiError(), { agent: true });
     expect(keys()).toEqual([
       'error_status',
@@ -119,12 +111,6 @@ describe('command_not_found', () => {
       { key: 'command_not_found', value: '[REDACTED]' },
       { key: 'command_not_found_suggestion', value: 'NONE' },
     ]);
-  });
-
-  it('tracks nothing without v2', () => {
-    vi.stubEnv('VERCEL_CLI_TELEMETRY_V2', '');
-    telemetry.trackCommandNotFound('deplyo', 'deploy');
-    expect(store.readonlyEvents).toHaveLength(0);
   });
 });
 

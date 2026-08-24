@@ -124,3 +124,33 @@ it('tracks humor level', async () => {
   ]);
 });
 ```
+
+## Failure and outcome events
+
+Beyond command/flag usage, the CLI records structured failure and outcome
+signals. All values pass through the sanitization primitives in
+`sanitize.ts` (constants, charset-gated short tokens, our own doc slugs,
+salted hashes, or counts) — free-form user input never leaves the machine.
+
+| Key | Value | Emitted from |
+| --- | --- | --- |
+| `exit_code` | numeric exit code, every invocation | `finishWithExitCode` |
+| `command_not_found` / `command_not_found_suggestion` | `gatedToken` of the unknown token; did-you-mean match or `NONE` | `index.ts` |
+| `subcommand_not_found` | `gatedToken` of the unknown subcommand | `getSubcommand` |
+| `parse_error` | `unknown_option:<gatedFlag>` or the `arg` error code | `parseArguments` |
+| `error_status` / `error_code` / `error_slug` / `error_action` | structured fields from tracked errors (all users) | `trackError` via `printError` and the root handler |
+| `error_server_message` | first 500 chars of the server message (**agent sessions only**) | `trackError` |
+| `docs_link_shown` | `slug` of our own err.sh/docs link | `trackError` |
+| `crash` | error name + top stack-frame basename and line | uncaught handlers |
+| `help_rendered` | help context (e.g. `root`) | `index.ts` |
+| `project_config_error` / `project_config_validation` | `parse`/`not_found_explicit`; `NowBuildError` code | `index.ts`, `validateConfig` |
+| `config_error` / `auth_config_error` | `read`/`write`; sent as a single **anonymous** event when the CLI config is unreadable | `index.ts` |
+| `output:deploy_state` / `output:logs_matched` | deployment `readyState`; `SOME`/`NONE` | `printDeploymentStatus`, `displayRuntimeLogs` |
+| `args_fingerprint` | HMAC of the invocation's structural shape (command token, arg count, flag names) keyed with a local-only salt that is never transmitted | `index.ts` |
+| `agent`, `agent_version`, `agent_detection_source`, `agent_detection_conflict` | detected harness name/version, `env`/`proctree`/`both`, conflicts | `@vercel/detect-agent` |
+| `agent_task_id` | UUID-shaped id from `AI_AGENT_TASK_ID` (anything else redacts) | `index.ts` |
+| `context_id` | hash scoping the session to one terminal/harness, keyed with the same local-only salt | event store |
+
+Sessions are persisted per context in `telemetry-session.json` as a map of
+context hashes to sessions (30 min inactivity / 24 h max, pruned, capped at
+50 entries).

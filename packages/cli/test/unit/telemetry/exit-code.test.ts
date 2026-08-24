@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { TelemetryEventStore } from '../../../src/util/telemetry';
 import { RootTelemetryClient } from '../../../src/util/telemetry/root';
 
@@ -16,20 +16,10 @@ describe('exit_code tracking', () => {
     });
   });
 
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  it('tracks exit_code when v2 flag is enabled', () => {
-    vi.stubEnv('VERCEL_CLI_TELEMETRY_V2', '1');
+  it('tracks exit_code', () => {
     telemetry.trackExitCode(1);
     expect(telemetryEventStore.readonlyEvents).toMatchObject([
       { key: 'exit_code', value: '1' },
     ]);
-  });
-
-  it('tracks nothing without the v2 flag', () => {
-    telemetry.trackExitCode(1);
-    expect(telemetryEventStore.readonlyEvents).toHaveLength(0);
   });
 });

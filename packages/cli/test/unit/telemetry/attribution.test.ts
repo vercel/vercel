@@ -14,7 +14,6 @@ let telemetry: RootTelemetryClient;
 let store: TelemetryEventStore;
 
 beforeEach(() => {
-  vi.stubEnv('VERCEL_CLI_TELEMETRY_V2', '1');
   store = new TelemetryEventStore({ isDebug: true, config: {} });
   telemetry = new RootTelemetryClient({ opts: { store } });
 });
