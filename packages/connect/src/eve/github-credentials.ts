@@ -1,6 +1,10 @@
 import type { GitHubChannelCredentials } from 'eve/channels/github';
 
 import { vercelOidc } from 'eve/channels/auth';
+import {
+  directConnectRequirement,
+  withConnectRequirement,
+} from './requirements.js';
 
 import {
   getToken,
@@ -38,9 +42,12 @@ export function connectGitHubCredentials(
   params: ConnectGitHubCredentialsParams = {},
   options?: ConnectOptions
 ): GitHubChannelCredentials {
-  return {
-    installationToken: () =>
-      getToken(connector, { ...params, subject: { type: 'app' } }, options),
-    webhookVerifier: vercelOidc(),
-  };
+  return withConnectRequirement(
+    {
+      installationToken: () =>
+        getToken(connector, { ...params, subject: { type: 'app' } }, options),
+      webhookVerifier: vercelOidc(),
+    },
+    directConnectRequirement(connector, 'github', 'app')
+  );
 }

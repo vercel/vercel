@@ -1,6 +1,10 @@
 import type { DiscordChannelCredentials } from 'eve/channels/discord';
 
 import { vercelOidc } from 'eve/channels/auth';
+import {
+  directConnectRequirement,
+  withConnectRequirement,
+} from './requirements.js';
 
 import {
   getTokenResponse,
@@ -71,9 +75,12 @@ export function connectDiscordCredentials(
     return pending;
   }
 
-  return {
-    applicationId: async () => (await resolveCredentials()).applicationId,
-    botToken: async () => (await resolveCredentials()).botToken,
-    webhookVerifier: vercelOidc(),
-  };
+  return withConnectRequirement(
+    {
+      applicationId: async () => (await resolveCredentials()).applicationId,
+      botToken: async () => (await resolveCredentials()).botToken,
+      webhookVerifier: vercelOidc(),
+    },
+    directConnectRequirement(connector, 'discord', 'app')
+  );
 }

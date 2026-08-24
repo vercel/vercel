@@ -53,6 +53,7 @@ import {
   UserAuthorizationRequiredError,
 } from '../token.js';
 import { provisionEveOAuthConnector } from './provision-oauth-connector.js';
+import { directConnectRequirement } from './requirements.js';
 
 /**
  * Authorization phase passed to {@link EveAuthorizationOptions.onError}
@@ -293,6 +294,9 @@ export type EveConnectAuthorizationDefinition<
     | NonInteractiveAuthorizationDefinition,
 > = TAuthorization & {
   readonly vercelConnect: VercelConnectMetadata;
+  readonly vercelConnectRequirement: ReturnType<
+    typeof directConnectRequirement
+  >;
 
   /**
    * Drops the in-process Vercel Connect token cache entry for
@@ -371,9 +375,27 @@ export function connect(
   const vercelConnect: VercelConnectMetadata = { connector: options.connector };
   const evict = makeEvict(options);
   if (options.principalType === 'app') {
-    return { ...buildNonInteractiveDefinition(options), vercelConnect, evict };
+    return {
+      ...buildNonInteractiveDefinition(options),
+      vercelConnect,
+      vercelConnectRequirement: directConnectRequirement(
+        options.connector,
+        'oauth',
+        'app'
+      ),
+      evict,
+    };
   }
-  return { ...buildInteractiveDefinition(options), vercelConnect, evict };
+  return {
+    ...buildInteractiveDefinition(options),
+    vercelConnect,
+    vercelConnectRequirement: directConnectRequirement(
+      options.connector,
+      'oauth',
+      'user'
+    ),
+    evict,
+  };
 }
 
 /**

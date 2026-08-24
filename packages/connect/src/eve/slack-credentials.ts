@@ -6,6 +6,10 @@ import {
   type ConnectTokenParams,
 } from '../index.js';
 import { vercelOidc } from 'eve/channels/auth';
+import {
+  directConnectRequirement,
+  withConnectRequirement,
+} from './requirements.js';
 
 /**
  * Token parameters accepted by {@link connectSlackCredentials}.
@@ -56,9 +60,12 @@ export function connectSlackCredentials(
   params: ConnectSlackCredentialsParams = {},
   options?: ConnectOptions
 ): SlackChannelCredentials {
-  return {
-    botToken: () =>
-      getToken(connector, { ...params, subject: { type: 'app' } }, options),
-    webhookVerifier: vercelOidc(),
-  };
+  return withConnectRequirement(
+    {
+      botToken: () =>
+        getToken(connector, { ...params, subject: { type: 'app' } }, options),
+      webhookVerifier: vercelOidc(),
+    },
+    directConnectRequirement(connector, 'slack', 'app')
+  );
 }

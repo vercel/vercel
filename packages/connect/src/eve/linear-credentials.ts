@@ -1,6 +1,10 @@
 import type { LinearChannelCredentials } from 'eve/channels/linear';
 
 import { vercelOidc } from 'eve/channels/auth';
+import {
+  directConnectRequirement,
+  withConnectRequirement,
+} from './requirements.js';
 
 import {
   getToken,
@@ -36,9 +40,12 @@ export function connectLinearCredentials(
   params: ConnectLinearCredentialsParams = {},
   options?: ConnectOptions
 ): LinearChannelCredentials {
-  return {
-    accessToken: () =>
-      getToken(connector, { ...params, subject: { type: 'app' } }, options),
-    webhookVerifier: vercelOidc(),
-  };
+  return withConnectRequirement(
+    {
+      accessToken: () =>
+        getToken(connector, { ...params, subject: { type: 'app' } }, options),
+      webhookVerifier: vercelOidc(),
+    },
+    directConnectRequirement(connector, 'linear', 'app')
+  );
 }
