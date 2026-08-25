@@ -251,6 +251,15 @@ export class TelemetryClient {
     }
   }
 
+  protected trackVercelPluginInstallId(installId: string | undefined) {
+    if (installId) {
+      this.track({
+        key: 'vercel_plugin_install_id',
+        value: installId,
+      });
+    }
+  }
+
   protected trackErrorStatus(status: number | string | undefined) {
     if (typeof status !== 'undefined') {
       this.track({
