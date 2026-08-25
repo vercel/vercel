@@ -149,6 +149,38 @@ describe('login', () => {
     expect(tokenAfter).toBe(tokenResult.access_token);
   });
 
+  it('prints device login instructions without opening a browser', async () => {
+    const authorizationResult = {
+      device_code: randomUUID(),
+      user_code: 'ABCD-EFGH',
+      verification_uri: 'https://vercel.com/device',
+      verification_uri_complete:
+        'https://vercel.com/device?user_code=ABCD-EFGH',
+      expires_in: 30,
+      interval: 0.005,
+    };
+    fetch.mockResolvedValueOnce(mockResponse(authorizationResult));
+
+    await simulateTokenPolling(
+      1,
+      mockResponse({
+        access_token: randomUUID(),
+        token_type: 'Bearer',
+        expires_in: 60,
+        scope: 'openid offline_access',
+      })
+    );
+
+    await expect(
+      performDeviceCodeFlow(client, { openBrowser: false })
+    ).resolves.not.toBeNull();
+
+    expect(open.default).not.toHaveBeenCalled();
+    expect(client.getFullOutput()).toContain(
+      'Open https://vercel.com/device and enter ABCD-EFGH'
+    );
+  });
+
   it.todo('Authorization request error');
   it.todo('Token request error');
 

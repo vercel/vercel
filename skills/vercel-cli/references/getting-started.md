@@ -8,7 +8,7 @@ npm i -g vercel
 
 ## First-Time Setup
 
-1. **Authenticate** - `vercel login` opens a browser/device flow. For CI, use the `VERCEL_TOKEN` environment variable instead. Wait for deliberate user completion when a browser flow starts.
+1. **Authenticate** - Run `vercel login` on a trusted computer. On a trusted remote server, run `vercel login --no-browser` and approve the device flow from your phone or client computer. For automation, use a project-scoped `VERCEL_TOKEN`. Read [authentication](authentication.md) before using a shared, disposable, or untrusted server.
 2. **Link your project** - `vercel link` for a working-directory project or `vercel link --repo` for repository directory mappings. Both create files under `.vercel/`.
 3. **Verify the target** - from the intended working directory, run `vercel project inspect --non-interactive` and confirm its owner and project. Stop on `link_required` or a mismatch rather than linking automatically. `vercel whoami --format json` identifies the authenticated user and effective team, not the linked project.
 4. **Pull local data** - `vercel pull` writes project settings and environment data under `.vercel/`, including `.vercel/.env.<environment>.local`. Use `vercel env pull` to write `.env.local` or another file that is already excluded from source control.

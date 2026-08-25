@@ -5504,6 +5504,13 @@ exports[`help command > login help output snapshots > login help column width 40
 
   Sign in to your Vercel account.       
 
+  Options:
+
+   --no-browser  Print the device login  
+                 URL without opening a   
+                 browser                 
+
+
   Global Options:
 
        --cwd <DIR>            Sets the  
@@ -5556,6 +5563,10 @@ exports[`help command > login help output snapshots > login help column width 40
 
     $ vercel login
 
+  - Sign in from a remote machine.
+
+    $ vercel login --no-browser
+
 "
 `;
 
@@ -5564,6 +5575,11 @@ exports[`help command > login help output snapshots > login help column width 80
   ▲ vercel login [email or team id] [options]
 
   Sign in to your Vercel account.                                               
+
+  Options:
+
+   --no-browser  Print the device login URL without opening a browser            
+
 
   Global Options:
 
@@ -5586,6 +5602,10 @@ exports[`help command > login help output snapshots > login help column width 80
 
     $ vercel login
 
+  - Sign in from a remote machine.
+
+    $ vercel login --no-browser
+
 "
 `;
 
@@ -5594,6 +5614,11 @@ exports[`help command > login help output snapshots > login help column width 12
   ▲ vercel login [email or team id] [options]
 
   Sign in to your Vercel account.                                                                                       
+
+  Options:
+
+   --no-browser  Print the device login URL without opening a browser                                                    
+
 
   Global Options:
 
@@ -5613,6 +5638,10 @@ exports[`help command > login help output snapshots > login help column width 12
   - Sign in to your Vercel account.
 
     $ vercel login
+
+  - Sign in from a remote machine.
+
+    $ vercel login --no-browser
 
 "
 `;

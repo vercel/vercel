@@ -45,4 +45,16 @@ describe('login', () => {
     futureSpy.mockRestore();
     (client as { nonInteractive: boolean }).nonInteractive = false;
   });
+
+  it('does not open a browser when --no-browser is set', async () => {
+    client.setArgv('login', '--no-browser');
+
+    const futureSpy = vi.spyOn(loginFuture, 'login').mockResolvedValue(0);
+    const exitCode = await login(client, { shouldParseArgs: true });
+
+    expect(exitCode).toBe(0);
+    expect(futureSpy).toHaveBeenCalledWith(client, expect.anything(), false);
+
+    futureSpy.mockRestore();
+  });
 });

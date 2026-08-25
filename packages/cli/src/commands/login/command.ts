@@ -12,6 +12,12 @@ export const loginCommand = {
   ],
   options: [
     {
+      name: 'no-browser',
+      description: 'Print the device login URL without opening a browser',
+      shorthand: null,
+      type: Boolean,
+    },
+    {
       name: 'github',
       description: 'Log in with GitHub',
       shorthand: null,
@@ -39,6 +45,10 @@ export const loginCommand = {
     {
       name: 'Sign in to your Vercel account.',
       value: `${packageName} login`,
+    },
+    {
+      name: 'Sign in from a remote machine.',
+      value: `${packageName} login --no-browser`,
     },
   ],
   disabledGlobalOptions: ['token'],

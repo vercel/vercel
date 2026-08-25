@@ -25,7 +25,7 @@ Many project-aware commands also accept `--project <name-or-id>` with `--scope <
 
 Being inside an app directory is not proof that the intended project was selected. Check the resolved project explicitly, especially when a repo mapping does not cover that directory.
 
-`vercel whoami --format json` identifies the authenticated user and effective team; plain non-TTY `vercel whoami` prints only the username. Neither verifies the linked project. Read-only project commands can still require login or team SAML re-authentication and open a browser/device flow. Ask the user to complete that flow deliberately before continuing.
+`vercel whoami --format json` identifies the authenticated user and effective team; plain non-TTY `vercel whoami` prints only the username. Neither verifies the linked project. Read-only project commands can still require login or team SAML re-authentication and open a browser/device flow. Ask the user to complete that flow deliberately before continuing. For remote and automated authentication, read [`references/authentication.md`](references/authentication.md).
 
 ## Quick Start
 
@@ -49,6 +49,7 @@ Use this to route to the correct reference file:
 - **Rolling releases, deploy hooks, cron jobs, cache, git connection, Edge Config, redirects, custom environments** → `references/project-infra.md`
 - **Local development** → `references/local-development.md`
 - **Environment variables** → `references/environment-variables.md`
+- **Authentication, remote servers, or access tokens** → `references/authentication.md`
 - **CI/CD automation** → `references/ci-automation.md`
 - **Domains or DNS** → `references/domains-and-dns.md`
 - **Projects or teams** → `references/projects-and-teams.md`
@@ -86,5 +87,6 @@ Use this to route to the correct reference file:
 - **Using `vercel deploy` after `vercel build` without `--prebuilt`**: The build output is ignored.
 - **Using `vercel redeploy` for no-cache rebuilds**: `vercel redeploy` does not expose a no-cache flag; use `vercel deploy --force` without `--with-cache` when you need a fresh deployment that does not retain build cache.
 - **Hardcoding tokens in flags**: Use `VERCEL_TOKEN` env var instead of `--token`.
+- **Saving an OAuth session on an untrusted server**: Use a narrow project-scoped token when the server is trusted with the environment values. Do not authenticate an untrusted server.
 - **Disabling deployment protection**: Use `vercel curl` instead to access preview deploys.
 - **Using `vercel api` too early**: Prefer first-class CLI commands when they expose the needed data or mutation.

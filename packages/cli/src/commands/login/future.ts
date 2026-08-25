@@ -30,6 +30,7 @@ interface DeviceCodeFlowOptions {
   teamId?: string;
   refreshToken?: string;
   acrValues?: string;
+  openBrowser?: boolean;
   /**
    * A CLI version before 56.4.1 could persist the rotated access token after
    * step-up without persisting its matching refresh token. Recover those
@@ -105,21 +106,30 @@ export async function performDeviceCodeFlow(
     verification_uri_complete = url.toString();
   }
 
-  // Determine if we should skip opening the browser (only in CI, but not in Cursor)
+  // CI skips browser opening for every client except Cursor. --no-browser always skips it.
   const isCursorAgent =
     client.agentName === KNOWN_AGENTS.CURSOR ||
     client.agentName === KNOWN_AGENTS.CURSOR_CLI;
-  const shouldSkipBrowser = process.env.CI && !isCursorAgent;
+  const shouldSkipBrowser =
+    options?.openBrowser === false || (process.env.CI && !isCursorAgent);
 
-  o.log(
-    `\n  Visit ${chalk.bold(
-      o.link(
-        verification_uri.replace('https://', ''),
-        verification_uri_complete,
-        { color: false, fallback: () => verification_uri_complete }
-      )
-    )}${o.supportsHyperlink ? ` and enter ${chalk.bold(user_code)}` : ''}\n`
-  );
+  if (options?.openBrowser === false) {
+    o.log(
+      `\n  Open ${chalk.bold(verification_uri)} and enter ${chalk.bold(
+        user_code
+      )}\n`
+    );
+  } else {
+    o.log(
+      `\n  Visit ${chalk.bold(
+        o.link(
+          verification_uri.replace('https://', ''),
+          verification_uri_complete,
+          { color: false, fallback: () => verification_uri_complete }
+        )
+      )}${o.supportsHyperlink ? ` and enter ${chalk.bold(user_code)}` : ''}\n`
+    );
+  }
 
   // Open browser automatically unless we're in CI (excluding Cursor)
   if (!shouldSkipBrowser) {
@@ -234,9 +244,10 @@ export async function performDeviceCodeFlow(
 
 export async function login(
   client: Client,
-  telemetry: LoginTelemetryClient
+  telemetry: LoginTelemetryClient,
+  openBrowser = true
 ): Promise<number> {
-  const tokens = await performDeviceCodeFlow(client);
+  const tokens = await performDeviceCodeFlow(client, { openBrowser });
 
   if (!tokens) {
     telemetry.trackState('error');
