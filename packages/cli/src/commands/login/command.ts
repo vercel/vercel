@@ -16,6 +16,7 @@ export const loginCommand = {
       description: 'Print the device login URL without opening a browser',
       shorthand: null,
       type: Boolean,
+      deprecated: false,
     },
     {
       name: 'github',
