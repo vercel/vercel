@@ -87,6 +87,6 @@ Use this to route to the correct reference file:
 - **Using `vercel deploy` after `vercel build` without `--prebuilt`**: The build output is ignored.
 - **Using `vercel redeploy` for no-cache rebuilds**: `vercel redeploy` does not expose a no-cache flag; use `vercel deploy --force` without `--with-cache` when you need a fresh deployment that does not retain build cache.
 - **Hardcoding tokens in flags**: Use `VERCEL_TOKEN` env var instead of `--token`.
-- **Saving an OAuth session on an untrusted server**: Use a narrow project-scoped token when the server is trusted with the environment values. Do not authenticate an untrusted server.
+- **Saving an OAuth session on an untrusted server**: Use a token with only the access required for the command when the server is trusted with the environment values. Do not authenticate an untrusted server.
 - **Disabling deployment protection**: Use `vercel curl` instead to access preview deploys.
 - **Using `vercel api` too early**: Prefer first-class CLI commands when they expose the needed data or mutation.

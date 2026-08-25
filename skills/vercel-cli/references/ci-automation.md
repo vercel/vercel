@@ -2,7 +2,7 @@
 
 ## Authentication
 
-Use a project-scoped `VERCEL_TOKEN` from the CI secret manager, not `--token`, which can leak in process listings. Use `--scope` if the token has access to multiple teams. Read [authentication](authentication.md) for remote-server and credential-persistence guidance.
+Use `VERCEL_TOKEN` from the CI secret manager, not `--token`, which can leak in process listings. Choose the narrowest token scope that supports every command in the job. Use `--scope` if the token has access to multiple teams. Read [authentication](authentication.md) for remote-server and credential-persistence guidance.
 
 ## The Standard CI Deploy Pattern
 
