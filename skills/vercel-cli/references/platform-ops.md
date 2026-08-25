@@ -52,7 +52,6 @@ vercel whoami --format json
 ```bash
 vercel activity --help
 vercel teams --help
-vercel oauth-apps --help
 ```
 
 If an account operation is not available through a first-class command, use `vercel api` as a fallback.
