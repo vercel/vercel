@@ -4,7 +4,10 @@ import {
   validateCallbackUrl,
   validateWebhookUrl,
 } from './internal/url-validation.js';
-import type { ConnectTokenParams } from './token.js';
+import {
+  createConnectErrorFromResponse,
+  type ConnectTokenParams,
+} from './token.js';
 
 export interface ConnectAuthorizationOptions {
   vercelToken?: string;
@@ -93,12 +96,9 @@ export async function startAuthorization(
   });
 
   if (!response.ok) {
-    let errorText: string | undefined;
-    try {
-      errorText = await response.text();
-    } catch {}
-    throw new Error(
-      `Failed to start authorization: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`
+    throw await createConnectErrorFromResponse(
+      response,
+      'Failed to start authorization'
     );
   }
 

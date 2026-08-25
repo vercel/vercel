@@ -118,9 +118,10 @@ export default defineMcpClientConnection({
 });
 ```
 
-By default, `connect()` provisions or links the connector for the deploying
-Vercel project on first use. Pass `autoProvision: false` when the connector is
-managed elsewhere.
+By default, `connect()` uses an existing project link when available. If the
+connector is missing or not linked, it provisions or links it and retries the
+request once. Pass `autoProvision: false` when the connector is managed
+elsewhere.
 
 ### Better Auth
 
