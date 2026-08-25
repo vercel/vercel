@@ -391,6 +391,7 @@ const main = async () => {
   if (vercelPluginMarker) {
     telemetry.trackVercelPluginActiveSession();
     telemetry.trackVercelPluginVersion(vercelPluginMarker.pluginVersion);
+    telemetry.trackVercelPluginInstallId(vercelPluginMarker.installId);
   }
   telemetry.trackAgenticUse(detectedAgent?.name);
   telemetry.trackCPUs();

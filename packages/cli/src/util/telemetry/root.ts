@@ -515,6 +515,10 @@ export class RootTelemetryClient extends TelemetryClient {
     super.trackVercelPluginVersion(version);
   }
 
+  trackVercelPluginInstallId(installId: string | undefined) {
+    super.trackVercelPluginInstallId(installId);
+  }
+
   trackErrorStatus(status: number | string | undefined) {
     super.trackErrorStatus(status);
   }
