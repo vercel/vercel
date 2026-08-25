@@ -57,6 +57,26 @@ async function chooseCreateNewProject() {
   client.events.keypress('enter');
 }
 
+/**
+ * Answer the `Code directory?` search prompt.
+ *
+ * Waits for the choice list rather than the message, since the prompt ignores
+ * Enter until its source resolves, and submits with `\r` because
+ * `@inquirer/search` only treats a carriage return as enter. Passing no path
+ * selects the pinned current-directory entry.
+ */
+async function chooseCodeDirectory(relativePath?: string) {
+  await expect(client.stderr).toOutput('Use this directory');
+  if (relativePath) {
+    client.stdin.write(relativePath);
+    // Wait for the typed term to reach the highlighted row, not just the
+    // input buffer: the list re-filters asynchronously, and submitting early
+    // would select whatever was highlighted before (the current directory).
+    await expect(client.stderr).toOutput(`❯ ${relativePath}`);
+  }
+  client.stdin.write('\r');
+}
+
 describe('link', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -1423,8 +1443,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Name?');
     client.stdin.write('awesome-app\n');
 
-    await expect(client.stderr).toOutput('Code directory? ./');
-    client.stdin.write('apps/nextjs\n');
+    await chooseCodeDirectory('apps/nextjs');
 
     await expect(client.stderr).toOutput('Detected Next.js');
     await expect(client.stderr).toOutput('Customize settings?');
@@ -1718,8 +1737,7 @@ describe('link', () => {
     );
     client.stdin.write('\x1B[B\x1B[B\x1B[B\n');
 
-    await expect(client.stderr).toOutput('Code directory? ./');
-    client.stdin.write('apps/web\n');
+    await chooseCodeDirectory('apps/web');
 
     await expect(client.stderr).toOutput(
       'Multiple services were detected. How would you like to set up this project?'
@@ -1792,8 +1810,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Name?');
     client.stdin.write('nested-multi-service-app\n');
 
-    await expect(client.stderr).toOutput('Code directory? ./');
-    client.stdin.write('apps/web\n');
+    await chooseCodeDirectory('apps/web');
 
     await expect(client.stderr).toOutput(
       'Multiple services were detected. How would you like to set up this project?'
@@ -1854,8 +1871,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Name?');
     client.stdin.write('invalid-selected-root-config-app\n');
 
-    await expect(client.stderr).toOutput('Code directory? ./');
-    client.stdin.write('apps/web\n');
+    await chooseCodeDirectory('apps/web');
 
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
@@ -2611,8 +2627,7 @@ describe('link', () => {
       client.stdin.write(`${basename(cwd)}\n`);
       // Tmp dir has no detectable framework at the root, so the
       // root-directory prompt now fires (nested-monolith guard).
-      await expect(client.stderr).toOutput('Code directory?');
-      client.stdin.write('\n');
+      await chooseCodeDirectory();
       await expect(client.stderr).toOutput('Customize settings?');
       client.stdin.write('\n');
 
