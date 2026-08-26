@@ -264,6 +264,12 @@ happens first, services cannot collide with each other.
 Rules:
 
 - Only services reachable through a top-level rewrite are public.
+- **Selection never rewrites the path.** A service receives the exact URL the
+  client sent: `/blog/post` arrives as `/blog/post`, never `/post`. There is no
+  prefix stripping (an nginx `proxy_pass` with a trailing slash has no
+  equivalent). A service mounted anywhere but `/` must therefore expect its
+  prefix in everything it serves — routes, base-path config, asset URLs — and
+  the plan must say how it does.
 - Order rewrites longest-path-first; the catch-all goes last.
 - **Write sources in the forms Vercel's own detection generates:** `/(.*)` for the
   root catch-all, and `/<prefix>(/.*)?` for a mounted service. Do not use
@@ -771,6 +777,9 @@ vercel curl <url> -- <curl flags>        # everything after -- goes to curl
   cloud build; iterate there, not by redeploying.
 - **A route 404s** — check that a top-level rewrite targets that service. An
   explicit `services` block infers no routing at all.
+- **A mounted service 404s everywhere, or renders unstyled** — it is receiving
+  its full prefixed path and does not expect it. Fix the service, not the
+  rewrites; selection never rewrites the path.
 - **A service cannot reach another** — it needs a `binding`. There is no DNS.
 - **A database will not connect** — run `vercel env pull` and confirm the variable
   name the app reads matches what the integration injected.
