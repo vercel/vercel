@@ -203,13 +203,16 @@ async function driveSession(
     workspace,
   });
   if (!bootstrapped) {
-    // Only the local build drives an agent executable the machine already has,
+    // Only the branch build (local checkout or the team deployment's
+    // prebuilt tarballs) drives an agent executable the machine already has,
     // which is the difference between seconds and minutes, since the pinned
     // copy of the Claude Code binary alone is 236MB. Both builds report the
     // same version, so where the packages came from is the only signal, and
     // guessing from `binPath` alone would promise a quick install and then sit
     // there for minutes.
-    const reused = loader.origin === 'local' && Boolean(harness.binPath);
+    const reused =
+      (loader.origin === 'local' || loader.origin === 'remote') &&
+      Boolean(harness.binPath);
     vercelSays(
       `First run: installing the ${harness.label} bridge into ` +
         `${chalk.dim('.harness-bootstrap/')} (once per project; ` +
@@ -1524,9 +1527,7 @@ function quietSandboxWarning(): void {
 }
 
 interface HarnessRuntime {
-  HarnessAgent: new (
-    config: unknown
-  ) => {
+  HarnessAgent: new (config: unknown) => {
     createSession: (options?: {
       sessionId?: string;
       resumeFrom?: unknown;

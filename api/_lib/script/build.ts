@@ -99,6 +99,26 @@ async function main() {
     await fs.copyFile(srcTarballPath, destTarballPath);
   }
 
+  // Copy the prebuilt `@ai-sdk/harness*` tarballs (built from a vercel/ai
+  // branch checkout, see harness-prebuilt/README.md) so `vercel onboard`
+  // installs the branch build instead of the published registry build.
+  const harnessPrebuiltDir = join(repoRoot, 'harness-prebuilt');
+  try {
+    const harnessFiles = await fs.readdir(harnessPrebuiltDir);
+    const harnessDestDir = join(tarballsDir, 'harness');
+    await fs.mkdir(harnessDestDir, { recursive: true });
+    for (const file of harnessFiles) {
+      if (!file.endsWith('.tgz') && file !== 'manifest.json') continue;
+      await fs.copyFile(
+        join(harnessPrebuiltDir, file),
+        join(harnessDestDir, file)
+      );
+    }
+    console.log('Copied prebuilt harness tarballs to tarballs/harness/');
+  } catch {
+    console.log('No harness-prebuilt directory found - skipping harness copy');
+  }
+
   // Copy Python wheels to tarballs, preserving the original filename
   // (uv requires valid wheel tags in the filename for URL installs).
   // Write a well-known sidecar .json with full .whl name.

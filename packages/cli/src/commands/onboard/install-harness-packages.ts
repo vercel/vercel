@@ -21,7 +21,6 @@ import {
   HARNESS_SOURCE_ENV_VAR,
   packLocalHarnessPackages,
   type LocalHarnessSource,
-  type PackedPackage,
 } from './local-harness-source';
 
 /**
@@ -66,6 +65,22 @@ const LOADER_FILENAME = 'load-harness.mjs';
 const AI_PACKAGE = 'ai';
 const ZOD_PACKAGE = 'zod';
 
+/**
+ * Where prebuilt branch tarballs of the harness packages are served.
+ *
+ * The capabilities this command depends on are on a vercel/ai branch, not in
+ * a published release (see `local-harness-source.ts`). This fork's deployment
+ * hosts tarballs packed from that branch — `harness-prebuilt/` in the repo —
+ * and the CLI prefers them over the registry so testers get the working build
+ * without a local checkout.
+ *
+ * Point the variable at a different base URL to test another build, or set it
+ * to an empty string to skip straight to the npm registry.
+ */
+export const HARNESS_REMOTE_ENV_VAR = 'VERCEL_ONBOARD_HARNESS_REMOTE';
+const DEFAULT_HARNESS_REMOTE =
+  'https://vercel-onboard.vercel.app/tarballs/harness';
+
 export interface HarnessPackageSpecs {
   /**
    * `@ai-sdk/harness` — the agent runtime. It also provides the local workspace
@@ -80,15 +95,17 @@ export interface HarnessPackageSpecs {
  * Where the harness runtime came from.
  *
  * `local`    — built from a checkout named by `VERCEL_ONBOARD_HARNESS_SOURCE`.
+ * `remote`   — prebuilt branch tarballs downloaded from the team deployment.
  * `bundled`  — resolvable by the CLI itself.
  * `managed`  — installed from the npm registry into the global config directory.
  *
  * Worth carrying because the branch build and the published one currently share
  * a version number, so nothing about the loaded package distinguishes them, and
- * they do not behave the same: only the branch reuses a `claude` the machine
- * already has instead of downloading a second copy.
+ * they do not behave the same: only the branch build (`local` and `remote`)
+ * reuses a `claude` the machine already has instead of downloading a second
+ * copy.
  */
-export type HarnessOrigin = 'local' | 'bundled' | 'managed';
+export type HarnessOrigin = 'local' | 'remote' | 'bundled' | 'managed';
 
 export interface HarnessLoader {
   origin: HarnessOrigin;
@@ -140,6 +157,20 @@ export async function ensureHarnessPackages(options: {
   if (bundled) {
     output.log('Using harness packages bundled with the CLI.');
     return bundled;
+  }
+
+  // Prebuilt branch tarballs served by the team deployment. The registry
+  // build cannot run sandbox-less yet, so for anyone without a local
+  // checkout this is the path that actually works.
+  const remote = await installFromRemoteSource({
+    client,
+    specs,
+    packages,
+    harnessLabel,
+    autoApprove,
+  });
+  if (remote !== 'unavailable') {
+    return remote;
   }
 
   const dir = getHarnessPackagesDir();
@@ -418,11 +449,124 @@ async function installFromLocalSource(options: {
     return undefined;
   }
 
-  if (!(await syncLocalManifest(client, dir, packed))) {
+  const pins = Object.fromEntries(
+    packed.map(entry => [entry.name, `file:${entry.tarball}`])
+  );
+  const hashes = Object.fromEntries(
+    await Promise.all(
+      packed.map(async entry => [entry.name, await hashFile(entry.tarball)])
+    )
+  );
+
+  if (!(await syncPinnedManifest({ client, dir, pins, hashes }))) {
     return undefined;
   }
 
   return createManagedLoader(dir, specs, 'local');
+}
+
+interface RemoteHarnessManifest {
+  packages: Record<
+    string,
+    { version: string; filename: string; sha256: string }
+  >;
+}
+
+function getRemoteHarnessBase(): string | undefined {
+  const configured = process.env[HARNESS_REMOTE_ENV_VAR];
+  const base = (configured === undefined ? DEFAULT_HARNESS_REMOTE : configured)
+    .trim()
+    .replace(/\/+$/, '');
+  return base || undefined;
+}
+
+async function fetchRemoteManifest(
+  base: string
+): Promise<RemoteHarnessManifest | undefined> {
+  try {
+    const res = await fetch(`${base}/manifest.json`, {
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) {
+      return undefined;
+    }
+    const parsed = (await res.json()) as RemoteHarnessManifest;
+    return parsed && typeof parsed.packages === 'object' ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Install prebuilt branch tarballs served over HTTPS.
+ *
+ * Returns `'unavailable'` when no remote source is configured, reachable and
+ * carrying the needed packages — the caller then falls back to the registry —
+ * and `undefined` when the source was usable but the install failed, which
+ * has already been reported.
+ */
+async function installFromRemoteSource(options: {
+  client: Client;
+  specs: HarnessPackageSpecs;
+  packages: string[];
+  harnessLabel: string;
+  autoApprove: boolean;
+}): Promise<HarnessLoader | 'unavailable' | undefined> {
+  const { client, specs, packages, harnessLabel, autoApprove } = options;
+
+  const base = getRemoteHarnessBase();
+  if (!base) {
+    return 'unavailable';
+  }
+
+  const manifest = await fetchRemoteManifest(base);
+  if (!manifest) {
+    output.debug(
+      `onboard: no prebuilt harness manifest at ${base}; using the registry`
+    );
+    return 'unavailable';
+  }
+
+  const absent = packages.filter(name => !manifest.packages[name]);
+  if (absent.length > 0) {
+    output.debug(
+      `onboard: prebuilt harness source lacks ${absent.join(', ')}; ` +
+        'using the registry'
+    );
+    return 'unavailable';
+  }
+
+  // Separate from both the registry and local-source installs, so switching
+  // between sources never overwrites a working tree.
+  const dir = join(getHarnessPackagesDir(), 'remote');
+  const pins = Object.fromEntries(
+    packages.map(name => [name, `${base}/${manifest.packages[name].filename}`])
+  );
+  const hashes = Object.fromEntries(
+    packages.map(name => [name, manifest.packages[name].sha256])
+  );
+
+  output.log(`Using prebuilt harness packages from ${base}.`);
+
+  const synced = await syncPinnedManifest({
+    client,
+    dir,
+    pins,
+    hashes,
+    approve: () =>
+      confirmInstall({
+        client,
+        harnessLabel,
+        missing: packages,
+        dir,
+        autoApprove,
+      }),
+  });
+  if (!synced) {
+    return undefined;
+  }
+
+  return createManagedLoader(dir, specs, 'remote');
 }
 
 /**
@@ -444,24 +588,26 @@ async function installFromLocalSource(options: {
  * from its lockfile and cache, so a plain install can quietly keep the stale
  * copy.
  */
-async function syncLocalManifest(
-  client: Client,
-  dir: string,
-  packed: PackedPackage[]
-): Promise<boolean> {
-  const pins = Object.fromEntries(
-    packed.map(entry => [entry.name, `file:${entry.tarball}`])
-  );
+async function syncPinnedManifest(options: {
+  client: Client;
+  dir: string;
+  /** Package name → npm spec: a `file:` path or an HTTPS tarball URL. */
+  pins: Record<string, string>;
+  /** Package name → content hash of the tarball behind each pin. */
+  hashes: Record<string, string>;
+  /**
+   * Consulted only when an install is actually needed. Absent means consent
+   * already exists — setting the local-source env var is itself the consent.
+   */
+  approve?: () => Promise<boolean>;
+}): Promise<boolean> {
+  const { client, dir, pins, hashes, approve } = options;
   const manifest = {
     private: true,
     license: 'UNLICENSED',
     dependencies: pins,
     overrides: pins,
-    onboardTarballHashes: Object.fromEntries(
-      await Promise.all(
-        packed.map(async entry => [entry.name, await hashFile(entry.tarball)])
-      )
-    ),
+    onboardTarballHashes: hashes,
   };
 
   const manifestPath = join(dir, 'package.json');
@@ -473,8 +619,12 @@ async function syncLocalManifest(
       JSON.stringify(manifest);
 
   if (unchanged) {
-    output.debug('onboard: local harness packages already installed');
+    output.debug('onboard: pinned harness packages already installed');
     return true;
+  }
+
+  if (approve && !(await approve())) {
+    return false;
   }
 
   // Stage the working install aside instead of deleting it: the install can
@@ -492,7 +642,7 @@ async function syncLocalManifest(
 
   const installed = await runNpmInstall({
     dir,
-    labels: packed.map(entry => entry.name),
+    labels: Object.keys(pins),
     consent: client,
   });
 

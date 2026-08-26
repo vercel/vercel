@@ -17,6 +17,7 @@ coverage.lcov
 *~
 *.bak
 *.tgz
+!harness-prebuilt/*.tgz
 packages/cli/src/util/dev/templates/*.ts
 packages/cli/src/util/constants.ts
 packages/cli/test/**/yarn.lock
