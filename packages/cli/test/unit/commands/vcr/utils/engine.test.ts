@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import execa from 'execa';
-import { runEngine } from '../../../../../src/commands/vcr/utils/engine';
+import {
+  CREDENTIAL_STORE_CONFLICT,
+  engineLogout,
+  runEngine,
+} from '../../../../../src/commands/vcr/utils/engine';
 
 vi.mock('execa', () => ({ default: vi.fn() }));
 
@@ -70,5 +74,41 @@ describe('runEngine', () => {
     const result = await runEngine('docker', ['build', '.'], { cwd: '/tmp/x' });
 
     expect(result).toEqual({ exitCode: 1, stderr: 'spawn docker ENOENT' });
+  });
+});
+
+describe('engineLogout', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('runs `<engine> logout <registry>` without throwing on failure', async () => {
+    mockedExeca.mockResolvedValue({ exitCode: 1 } as any);
+
+    await expect(
+      engineLogout('docker', 'vcr.vercel.com')
+    ).resolves.toBeUndefined();
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'docker',
+      ['logout', 'vcr.vercel.com'],
+      { reject: false, stdio: 'ignore' }
+    );
+  });
+});
+
+describe('CREDENTIAL_STORE_CONFLICT', () => {
+  it('matches the macOS keychain duplicate-item error', () => {
+    expect(
+      CREDENTIAL_STORE_CONFLICT.test(
+        'error saving credentials: error storing credentials - err: exit status 1, out: `The specified item already exists in the keychain. (-25299)`'
+      )
+    ).toBe(true);
+  });
+
+  it('does not match ordinary login failures', () => {
+    expect(
+      CREDENTIAL_STORE_CONFLICT.test('Cannot connect to the Docker daemon')
+    ).toBe(false);
   });
 });
