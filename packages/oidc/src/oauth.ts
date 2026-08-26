@@ -4,7 +4,10 @@ const VERCEL_ISSUER = 'https://vercel.com';
 const VERCEL_CLI_CLIENT_ID = 'cl_HYyOPBNtFMfHhaUn9L4QPfTZz6TP47bp';
 
 // Simplified user agent for OIDC package
-const userAgent = `@vercel/oidc node-${process.version} ${platform()} (${arch()}) ${hostname()}`;
+const userAgent = `@vercel/oidc node-${process.version} ${platform()} (${arch()}) ${hostname()
+  // Strip non-ASCII characters (e.g. emoji) from hostname to avoid illegal HTTP header values
+  .replace(/[^\x20-\x7e]/g, '')
+  .trim()}`;
 
 export interface TokenSet {
   access_token: string;
