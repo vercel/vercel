@@ -1,7 +1,8 @@
 import { join } from 'node:path';
-import type { AgentWarning, CodingAgent } from '../types';
-import { mergeToml, pathExists } from '../config-files';
+import type { AgentWarning, CodingAgent, EnvExport } from '../types';
+import { mergeToml, pathExists, removeTomlPath } from '../config-files';
 import { isMacAppInstalled } from '../desktop-apps';
+import { keychainAuthCommand } from '../keychain';
 import {
   GATEWAY_CODEX_BASE_URL,
   GATEWAY_API_KEY_ENV,
@@ -18,8 +19,10 @@ const CODEX_DESKTOP_APP = 'Codex.app';
  * rejected by current Codex). We deliberately do NOT pin a `model` — the user
  * keeps choosing their own. `wire_api` MUST be `responses` — Codex removed Chat
  * Completions support, and the gateway serves the Responses API at
- * `/v1/responses`. The key itself never lands in the TOML; `env_key` names an env
- * var Codex reads at runtime, so we also export it via the shell rc.
+ * `/v1/responses`.
+ *
+ * Codex 0.118.0+ can read the Keychain through provider `auth`; older versions
+ * use `env_key` and a shell export. The two settings are mutually exclusive.
  *
  * Docs: https://vercel.com/docs/ai-gateway/coding-agents/openai-codex
  */
@@ -61,33 +64,55 @@ export const codex: CodingAgent = {
 
   buildPlan(ctx) {
     const path = this.configPath(ctx);
+    const useAuthCommand =
+      Boolean(ctx.useKeychain) && ctx.codexSupportsAuthCommand !== false;
+    const provider: Record<string, unknown> = {
+      name: 'Vercel AI Gateway',
+      base_url: resolveGatewayBaseUrl(
+        ctx.baseUrlOverride,
+        GATEWAY_CODEX_BASE_URL
+      ),
+      wire_api: 'responses',
+    };
+    if (useAuthCommand) {
+      const { command, args } = keychainAuthCommand();
+      provider.auth = {
+        command,
+        args,
+        timeout_ms: 5000,
+        refresh_interval_ms: 300000,
+      };
+    } else {
+      provider.env_key = GATEWAY_API_KEY_ENV;
+    }
+    const envExports: EnvExport[] = useAuthCommand
+      ? []
+      : [{ name: GATEWAY_API_KEY_ENV, value: ctx.apiKey }];
     return {
       fileChanges: [
         {
           path,
           label: 'Codex config',
           format: 'toml',
-          transform: current =>
-            mergeToml(current, {
+          transform: current => {
+            const merged = mergeToml(current, {
               model_provider: 'vercel',
-              model_providers: {
-                vercel: {
-                  name: 'Vercel AI Gateway',
-                  base_url: resolveGatewayBaseUrl(
-                    ctx.baseUrlOverride,
-                    GATEWAY_CODEX_BASE_URL
-                  ),
-                  env_key: GATEWAY_API_KEY_ENV,
-                  wire_api: 'responses',
-                },
-              },
-            }),
+              model_providers: { vercel: provider },
+            });
+            return removeTomlPath(merged, [
+              'model_providers',
+              'vercel',
+              useAuthCommand ? 'env_key' : 'auth',
+            ]);
+          },
         },
       ],
-      envExports: [{ name: GATEWAY_API_KEY_ENV, value: ctx.apiKey }],
+      envExports,
       notes: [
         'Codex now defaults to the Vercel AI Gateway; pick a model with --model or in config.',
-        `Open a new terminal so ${GATEWAY_API_KEY_ENV} is loaded, or run: export ${GATEWAY_API_KEY_ENV}=<key>`,
+        useAuthCommand
+          ? 'Codex reads the key from the macOS Keychain; restart Codex to pick up the new config.'
+          : `Open a new terminal so ${GATEWAY_API_KEY_ENV} is loaded, or run: export ${GATEWAY_API_KEY_ENV}=<key>`,
       ],
     };
   },

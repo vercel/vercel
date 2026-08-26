@@ -6,6 +6,7 @@ import {
   writeConfigFile,
   upsertManagedBlock,
   isSymlink,
+  MANAGED_BLOCK_START,
 } from './config-files';
 import { KEY_PLACEHOLDER } from './gateway';
 import { keychainLookup } from './keychain';
@@ -178,6 +179,18 @@ export async function buildSetupPlan(
       owner: 'Environment',
       transform: current => upsertManagedBlock(current, body),
     });
+  } else if (ctx.useKeychain) {
+    const rcPath = detectShellRc(ctx.home, ctx.shellRcOverride);
+    const rc = await readFileOrNull(rcPath);
+    if (rc?.includes(MANAGED_BLOCK_START)) {
+      notes.push({
+        id: 'environment',
+        displayName: 'Environment',
+        notes: [
+          `${rcPath} still exports the key from an earlier setup; the selected agents no longer need it. Remove the "vercel ai-gateway" block if nothing else uses it.`,
+        ],
+      });
+    }
   }
 
   const byPath = new Map<

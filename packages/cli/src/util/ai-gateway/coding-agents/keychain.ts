@@ -38,8 +38,26 @@ export function storeKeyInKeychain(key: string): boolean {
   }
 }
 
+export function keychainHelperCommand(): string {
+  return `${SECURITY_BIN} find-generic-password -s '${KEYCHAIN_SERVICE}' -a '${KEYCHAIN_ACCOUNT}' -w`;
+}
+
+export function keychainAuthCommand(): { command: string; args: string[] } {
+  return {
+    command: SECURITY_BIN,
+    args: [
+      'find-generic-password',
+      '-s',
+      KEYCHAIN_SERVICE,
+      '-a',
+      KEYCHAIN_ACCOUNT,
+      '-w',
+    ],
+  };
+}
+
 export function keychainLookup(opts: { fish?: boolean } = {}): string {
-  const cmd = `${SECURITY_BIN} find-generic-password -s '${KEYCHAIN_SERVICE}' -a '${KEYCHAIN_ACCOUNT}' -w 2>/dev/null`;
+  const cmd = `${keychainHelperCommand()} 2>/dev/null`;
   return opts.fish ? `(${cmd})` : `$(${cmd})`;
 }
 

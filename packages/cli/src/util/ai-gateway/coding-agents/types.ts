@@ -2,6 +2,8 @@ export interface SetupContext {
   apiKey: string;
   home: string;
   useKeychain?: boolean;
+  /** `false` falls back to env-var auth when Codex lacks provider `auth`. */
+  codexSupportsAuthCommand?: boolean;
   overrides?: Record<string, string>;
   shellRcOverride?: string;
   baseUrlOverride?: string;

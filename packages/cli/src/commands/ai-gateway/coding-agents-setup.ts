@@ -52,12 +52,19 @@ import {
   promptAgentConsent,
 } from '../../util/ai-gateway/coding-agents/consent';
 import { runMachine } from '../../util/ai-gateway/coding-agents/machine';
-import { KEY_PLACEHOLDER } from '../../util/ai-gateway/coding-agents/gateway';
+import {
+  GATEWAY_API_KEY_ENV,
+  KEY_PLACEHOLDER,
+} from '../../util/ai-gateway/coding-agents/gateway';
 import {
   isKeychainAvailable,
   storeKeyInKeychain,
   copyToClipboard,
 } from '../../util/ai-gateway/coding-agents/keychain';
+import {
+  detectCodexAuthSupport,
+  MIN_CODEX_AUTH_VERSION,
+} from '../../util/ai-gateway/coding-agents/codex-version';
 import {
   outputAgentError,
   shouldEmitNonInteractiveCommandError,
@@ -351,6 +358,25 @@ export default async function codingAgentsSetup(
     useKeychain = await promptKeychain(client);
   }
 
+  let codexSupportsAuthCommand = true;
+  if (useKeychain && agents.some(a => a.id === 'codex')) {
+    const support = detectCodexAuthSupport();
+    codexSupportsAuthCommand = support.supported;
+    if (!support.supported) {
+      const message = support.version
+        ? `Codex ${support.version} can't read the key from the macOS Keychain (needs ${MIN_CODEX_AUTH_VERSION} or newer); Codex will use the ${GATEWAY_API_KEY_ENV} environment variable instead. Update Codex and re-run to switch.`
+        : `Couldn't determine the Codex version; Codex will use the ${GATEWAY_API_KEY_ENV} environment variable instead of the macOS Keychain. Check that codex is on your PATH and re-run to switch.`;
+      machineWarnings.push({
+        agent: 'codex',
+        code: 'codex_auth_command_unsupported',
+        message,
+      });
+      if (!machine) {
+        printWarning(message);
+      }
+    }
+  }
+
   if (canPrompt && !yes) {
     const missing = agents.filter(
       a =>
@@ -394,6 +420,7 @@ export default async function codingAgentsSetup(
     apiKey: previewKey,
     home,
     useKeychain,
+    codexSupportsAuthCommand,
     overrides,
     shellRcOverride,
     baseUrlOverride: baseUrl,
@@ -425,6 +452,7 @@ export default async function codingAgentsSetup(
           expiresAt: keyExpiresAt,
         }),
       useKeychain,
+      codexSupportsAuthCommand,
       overrides,
       shellRcOverride,
       baseUrlOverride: baseUrl,
@@ -588,6 +616,7 @@ export default async function codingAgentsSetup(
     apiKey: keySource.key,
     home,
     useKeychain,
+    codexSupportsAuthCommand,
     overrides,
     shellRcOverride,
     baseUrlOverride: baseUrl,

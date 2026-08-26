@@ -164,6 +164,13 @@ function tomlScalar(value: unknown): string | null {
       return Number.isFinite(value) ? String(value) : null;
     case 'boolean':
       return String(value);
+    case 'object': {
+      if (Array.isArray(value)) {
+        const items = value.map(tomlScalar);
+        return items.some(i => i === null) ? null : `[${items.join(', ')}]`;
+      }
+      return null;
+    }
     default:
       return null;
   }
@@ -343,6 +350,141 @@ export function mergeToml(current: string | null, patch: JsonObject): string {
     // fall through to the legacy rewrite
   }
   return legacy();
+}
+
+/** Remove an assignment or table while preserving unrelated TOML text. */
+export function removeTomlPath(current: string, path: string[]): string {
+  if (!current.trim() || path.length === 0) {
+    return current;
+  }
+  let parsed: JsonObject;
+  try {
+    parsed = tomlParse(current) as JsonObject;
+  } catch {
+    return current;
+  }
+  let cursor: unknown = parsed;
+  for (const seg of path.slice(0, -1)) {
+    if (!isPlainObject(cursor)) {
+      return current;
+    }
+    cursor = cursor[seg];
+  }
+  const leaf = path[path.length - 1];
+  if (!isPlainObject(cursor) || !(leaf in cursor)) {
+    return current;
+  }
+  const removed = cursor[leaf];
+  delete cursor[leaf];
+
+  const lines = current.split('\n');
+  const content = (line: string) =>
+    line.endsWith('\r') ? line.slice(0, -1) : line;
+  const headerAt = (i: number): string | null => {
+    const m = content(lines[i]).match(TOML_HEADER);
+    if (!m) {
+      return null;
+    }
+    return m[1]
+      .split('.')
+      .map(s => s.trim())
+      .join('.');
+  };
+
+  const out: string[] = [];
+  if (isPlainObject(removed)) {
+    const name = path.join('.');
+    let skipping = false;
+    for (let i = 0; i < lines.length; i++) {
+      const header = headerAt(i);
+      if (header !== null) {
+        skipping = header === name || header.startsWith(`${name}.`);
+      }
+      if (!skipping) {
+        out.push(lines[i]);
+      }
+    }
+  } else {
+    const section = path.slice(0, -1).join('.');
+    const escaped = leaf.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const assignment = new RegExp(`^\\s*${escaped}\\s*=`);
+    let inSection = section === '';
+    let removedLine = false;
+    for (let i = 0; i < lines.length; i++) {
+      const header = headerAt(i);
+      if (header !== null) {
+        inSection = header === section;
+      } else if (
+        inSection &&
+        !removedLine &&
+        assignment.test(content(lines[i]))
+      ) {
+        removedLine = true;
+        continue;
+      }
+      out.push(lines[i]);
+    }
+  }
+
+  const result = out.join('\n');
+  try {
+    if (isDeepStrictEqual(tomlParse(result), parsed)) {
+      return result;
+    }
+  } catch {
+    // fall through to the full rewrite
+  }
+  return `${tomlStringify(parsed)}\n`;
+}
+
+/** Remove a JSON key, optionally only when it matches an expected value. */
+export function removeJsonPath(
+  current: string,
+  path: string[],
+  onlyIfEquals?: unknown
+): string {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(current);
+  } catch {
+    return current;
+  }
+  if (!isPlainObject(raw) || path.length === 0) {
+    return current;
+  }
+  let cursor: unknown = raw;
+  for (const seg of path.slice(0, -1)) {
+    if (!isPlainObject(cursor)) {
+      return current;
+    }
+    cursor = cursor[seg];
+  }
+  const leaf = path[path.length - 1];
+  if (!isPlainObject(cursor) || !(leaf in cursor)) {
+    return current;
+  }
+  if (
+    onlyIfEquals !== undefined &&
+    !isDeepStrictEqual(cursor[leaf], onlyIfEquals)
+  ) {
+    return current;
+  }
+  delete cursor[leaf];
+  const modifyOptions = current.trim().includes('\n')
+    ? { formattingOptions: detectJsonFormatting(current) }
+    : {};
+  try {
+    const text = applyEdits(
+      current,
+      modify(current, path, undefined, modifyOptions)
+    );
+    if (isDeepStrictEqual(JSON.parse(text), raw)) {
+      return text;
+    }
+  } catch {
+    // fall through to the full rewrite
+  }
+  return `${JSON.stringify(raw, null, 2)}\n`;
 }
 
 export const MANAGED_BLOCK_START = '# >>> vercel ai-gateway >>>';

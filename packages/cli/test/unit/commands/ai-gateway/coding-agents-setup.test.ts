@@ -42,7 +42,13 @@ import {
   isKeychainAvailable,
   storeKeyInKeychain,
   keychainLookup,
+  keychainHelperCommand,
 } from '../../../../src/util/ai-gateway/coding-agents/keychain';
+import {
+  MIN_CODEX_AUTH_VERSION,
+  parseCodexVersion,
+  supportsAuthCommand,
+} from '../../../../src/util/ai-gateway/coding-agents/codex-version';
 
 // A pass-through mock of the keychain module: tests that set `available` get a
 // fake in-memory keychain (usable on Linux CI); everything else hits the real
@@ -79,6 +85,27 @@ vi.mock(
         keychainState.copied.push(text);
         return keychainState.copyResult;
       },
+    };
+  }
+);
+
+const codexVersionState = vi.hoisted(() => ({
+  support: { supported: true, version: '0.130.0' } as {
+    supported: boolean;
+    version: string | null;
+  },
+}));
+
+vi.mock(
+  '../../../../src/util/ai-gateway/coding-agents/codex-version',
+  async importOriginal => {
+    const actual =
+      await importOriginal<
+        typeof import('../../../../src/util/ai-gateway/coding-agents/codex-version')
+      >();
+    return {
+      ...actual,
+      detectCodexAuthSupport: () => codexVersionState.support,
     };
   }
 );
@@ -124,7 +151,7 @@ function codexConfigPath() {
   return join(home, '.codex', 'config.toml');
 }
 function bashrcPath() {
-  return join(home, '.bashrc');
+  return detectShellRc(home);
 }
 function opencodeConfigPath() {
   return join(home, '.config', 'opencode', 'opencode.json');
@@ -139,6 +166,7 @@ beforeEach(() => {
   keychainState.storeResult = true;
   keychainState.copied.length = 0;
   keychainState.copyResult = true;
+  codexVersionState.support = { supported: true, version: '0.130.0' };
   desktopState.codex = false;
   home = mkdtempSync(join(tmpdir(), 'vc-setup-agents-'));
   savedEnv = {
@@ -456,6 +484,101 @@ describe('ai-gateway coding-agents setup', () => {
         expect(shell?.next).not.toContain(secret);
       }
     );
+
+    it('writes a Codex auth command instead of a shell export under keychain', async () => {
+      useUser();
+      client.nonInteractive = true;
+      keychainState.available = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0042',
+        '--agent',
+        'codex'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const raw = readFileSync(codexConfigPath(), 'utf8');
+      const toml = tomlParse(raw) as any;
+      expect(toml.model_providers.vercel.auth.command).toBe(
+        '/usr/bin/security'
+      );
+      expect(toml.model_providers.vercel.env_key).toBeUndefined();
+      expect(raw).not.toContain('vck_DummyKey0042');
+      expect(keychainState.stored).toContain('vck_DummyKey0042');
+      expect(existsSync(detectShellRc(home))).toBe(false);
+    });
+
+    it('warns and falls back to the env var when Codex is too old', async () => {
+      useUser();
+      client.nonInteractive = true;
+      keychainState.available = true;
+      codexVersionState.support = { supported: false, version: '0.110.0' };
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0043',
+        '--agent',
+        'codex'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const toml = tomlParse(readFileSync(codexConfigPath(), 'utf8')) as any;
+      expect(toml.model_providers.vercel.env_key).toBe('AI_GATEWAY_API_KEY');
+      expect(toml.model_providers.vercel.auth).toBeUndefined();
+      // Keychain-backed shell exports only exist on macOS (no shell rc on Windows).
+      if (process.platform !== 'win32') {
+        const rc = readFileSync(detectShellRc(home), 'utf8');
+        expect(rc).toContain('export AI_GATEWAY_API_KEY=');
+        expect(rc).toContain('security find-generic-password');
+      }
+
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.status).toBe('ok');
+      const warning = out.warnings.find(
+        (w: any) => w.code === 'codex_auth_command_unsupported'
+      );
+      expect(warning?.agent).toBe('codex');
+      expect(warning?.message).toContain('0.110.0');
+      expect(warning?.message).toContain(MIN_CODEX_AUTH_VERSION);
+    });
+
+    it('configures Claude Code with an apiKeyHelper under keychain', async () => {
+      useUser();
+      client.nonInteractive = true;
+      keychainState.available = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0044',
+        '--agent',
+        'claude-code'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const raw = readFileSync(claudeSettingsPath(), 'utf8');
+      const settings = JSON.parse(raw);
+      expect(settings.apiKeyHelper).toContain('security find-generic-password');
+      expect(settings.env.ANTHROPIC_BASE_URL).toBe(
+        'https://ai-gateway.vercel.sh/claude-code'
+      );
+      expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe('');
+      expect(raw).not.toContain('vck_DummyKey0044');
+      expect(keychainState.stored).toContain('vck_DummyKey0044');
+      expect(existsSync(detectShellRc(home))).toBe(false);
+    });
 
     it('configures Pi via the native vercel-ai-gateway auth entry (0600)', async () => {
       useUser();
@@ -802,34 +925,81 @@ describe('ai-gateway coding-agents setup', () => {
         expect(storeKeyInKeychain('vck_whatever')).toBe(false);
       }
       expect(keychainLookup()).toContain('security find-generic-password');
+      expect(keychainHelperCommand()).toContain(
+        'security find-generic-password'
+      );
+      expect(keychainHelperCommand()).not.toContain('$(');
     });
 
-    // Keychain-backed shell exports only exist on macOS (no shell rc on Windows).
-    it.skipIf(process.platform === 'win32')(
-      'keeps the secret out of the configs and reads it from the shell',
-      async () => {
-        const secret = 'vck_KeychainSecret321';
-        const plan = await buildSetupPlan([claudeCode], {
-          apiKey: secret,
-          home,
-          useKeychain: true,
-        });
+    it('replaces a foreign apiKeyHelper and empties an embedded token', async () => {
+      const secret = 'vck_KeychainSecret321';
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      writeFileSync(
+        claudeSettingsPath(),
+        JSON.stringify(
+          {
+            apiKeyHelper: 'my-custom-helper',
+            env: { ANTHROPIC_AUTH_TOKEN: 'vck_OldEmbedded99' },
+          },
+          null,
+          2
+        ),
+        'utf8'
+      );
 
-        // The env-based agent resolves its var from the Keychain at runtime.
-        const shell = plan.changes.find(c => c.format === 'shell');
-        expect(shell?.next).toContain('security find-generic-password');
-        expect(shell?.next).toContain('export ANTHROPIC_AUTH_TOKEN=');
-        expect(shell?.next).not.toContain(secret);
+      const plan = await buildSetupPlan([claudeCode], {
+        apiKey: secret,
+        home,
+        useKeychain: true,
+      });
 
-        // Claude's token is no longer embedded in settings.json.
-        const claude = plan.changes.find(
-          c => c.label === 'Claude Code settings'
-        );
-        expect(claude?.next).toContain('ANTHROPIC_BASE_URL');
-        expect(claude?.next).not.toContain('ANTHROPIC_AUTH_TOKEN');
-        expect(claude?.next).not.toContain(secret);
-      }
-    );
+      // The helper-based agent resolves its token from the Keychain at runtime.
+      const claude = plan.changes.find(c => c.label === 'Claude Code settings');
+      const settings = JSON.parse(claude?.next ?? '{}');
+      expect(settings.apiKeyHelper).toBe(keychainHelperCommand());
+      // Claude's token is no longer embedded in settings.json.
+      expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe('');
+      expect(claude?.next).not.toContain('vck_OldEmbedded99');
+    });
+
+    it('removes our apiKeyHelper when reconfiguring without the Keychain', async () => {
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      writeFileSync(
+        claudeSettingsPath(),
+        JSON.stringify({ apiKeyHelper: keychainHelperCommand() }, null, 2),
+        'utf8'
+      );
+
+      const plan = await buildSetupPlan([claudeCode], {
+        apiKey: 'vck_Plain111',
+        home,
+        useKeychain: false,
+      });
+
+      const claude = plan.changes.find(c => c.label === 'Claude Code settings');
+      const settings = JSON.parse(claude?.next ?? '{}');
+      expect(settings.apiKeyHelper).toBeUndefined();
+      expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe('vck_Plain111');
+    });
+
+    it('leaves a custom apiKeyHelper alone when the Keychain is off', async () => {
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      writeFileSync(
+        claudeSettingsPath(),
+        JSON.stringify({ apiKeyHelper: 'my-custom-helper' }, null, 2),
+        'utf8'
+      );
+
+      const plan = await buildSetupPlan([claudeCode], {
+        apiKey: 'vck_Plain222',
+        home,
+        useKeychain: false,
+      });
+
+      const claude = plan.changes.find(c => c.label === 'Claude Code settings');
+      const settings = JSON.parse(claude?.next ?? '{}');
+      expect(settings.apiKeyHelper).toBe('my-custom-helper');
+    });
 
     it('embeds the key directly when keychain is off', async () => {
       const secret = 'vck_PlainSecret654';
@@ -843,21 +1013,98 @@ describe('ai-gateway coding-agents setup', () => {
       expect(claude?.next).toContain(secret);
     });
 
-    // Keychain-backed shell exports only exist on macOS (no shell rc on Windows).
+    it('removes a stale env_key and keeps comments when switching to the auth command', async () => {
+      mkdirSync(join(home, '.codex'), { recursive: true });
+      writeFileSync(
+        codexConfigPath(),
+        [
+          '# my precious comment',
+          'model = "gpt-5"',
+          'model_provider = "vercel"',
+          '',
+          '[model_providers.vercel]',
+          'name = "Vercel AI Gateway"',
+          'base_url = "https://ai-gateway.vercel.sh/codex/v1"',
+          'env_key = "AI_GATEWAY_API_KEY"',
+          'wire_api = "responses"',
+          '',
+        ].join('\n'),
+        'utf8'
+      );
+
+      const plan = await buildSetupPlan([codex], {
+        apiKey: 'vck_x',
+        home,
+        useKeychain: true,
+      });
+
+      const cfg = plan.changes.find(c => c.label === 'Codex config');
+      expect(cfg?.status).toBe('update');
+      expect(cfg?.next).toContain('# my precious comment');
+      expect(cfg?.next).not.toContain('env_key');
+      const toml = tomlParse(cfg?.next ?? '') as any;
+      expect(toml.model).toBe('gpt-5');
+      expect(toml.model_providers.vercel.auth.command).toBe(
+        '/usr/bin/security'
+      );
+    });
+
+    it('removes the auth command when reconfiguring without the Keychain', async () => {
+      mkdirSync(join(home, '.codex'), { recursive: true });
+      writeFileSync(
+        codexConfigPath(),
+        [
+          'model_provider = "vercel"',
+          '',
+          '[model_providers.vercel]',
+          'name = "Vercel AI Gateway"',
+          'base_url = "https://ai-gateway.vercel.sh/codex/v1"',
+          'wire_api = "responses"',
+          '',
+          '[model_providers.vercel.auth]',
+          'command = "/usr/bin/security"',
+          'args = ["find-generic-password", "-s", "Vercel AI Gateway", "-a", "vercel-ai-gateway", "-w"]',
+          'timeout_ms = 5000',
+          'refresh_interval_ms = 300000',
+          '',
+        ].join('\n'),
+        'utf8'
+      );
+
+      const plan = await buildSetupPlan([codex], {
+        apiKey: 'vck_Plain333',
+        home,
+        useKeychain: false,
+      });
+
+      const cfg = plan.changes.find(c => c.label === 'Codex config');
+      const toml = tomlParse(cfg?.next ?? '') as any;
+      expect(toml.model_providers.vercel.auth).toBeUndefined();
+      expect(toml.model_providers.vercel.env_key).toBe('AI_GATEWAY_API_KEY');
+    });
+
+    // Shell rc management is intentionally skipped on Windows.
     it.skipIf(process.platform === 'win32')(
-      'reads the Codex env key from the Keychain instead of the config',
+      'notes a stale shell export when the selected agents no longer need it',
       async () => {
-        const secret = 'vck_KeychainSecret321';
+        writeFileSync(
+          detectShellRc(home),
+          upsertManagedBlock(
+            null,
+            `export AI_GATEWAY_API_KEY="${keychainLookup()}"`
+          ),
+          'utf8'
+        );
+
         const plan = await buildSetupPlan([codex], {
-          apiKey: secret,
+          apiKey: 'vck_x',
           home,
           useKeychain: true,
         });
 
-        const shell = plan.changes.find(c => c.format === 'shell');
-        expect(shell?.next).toContain('security find-generic-password');
-        expect(shell?.next).toContain('export AI_GATEWAY_API_KEY=');
-        expect(shell?.next).not.toContain(secret);
+        expect(plan.changes.some(c => c.format === 'shell')).toBe(false);
+        const env = plan.notes.find(n => n.id === 'environment');
+        expect(env?.notes.join(' ')).toContain('no longer need');
       }
     );
   });
@@ -2694,14 +2941,14 @@ describe('ai-gateway coding-agents setup', () => {
           true
         );
 
-        // A single shared shell block. Codex and OpenCode both want
-        // AI_GATEWAY_API_KEY — it's exported once (deduped) — and Claude Code
-        // contributes ANTHROPIC_AUTH_TOKEN.
+        // A single shared shell block. OpenCode contributes
+        // AI_GATEWAY_API_KEY once; Claude Code and Codex read the Keychain
+        // directly and contribute no exports.
         const shells = plan.changes.filter(c => c.format === 'shell');
         expect(shells).toHaveLength(1);
         const gateway = shells[0].next?.match(/AI_GATEWAY_API_KEY/g) ?? [];
         expect(gateway).toHaveLength(1);
-        expect(shells[0].next).toContain('ANTHROPIC_AUTH_TOKEN');
+        expect(shells[0].next).not.toContain('ANTHROPIC_AUTH_TOKEN');
       }
     );
 
@@ -2714,5 +2961,21 @@ describe('ai-gateway coding-agents setup', () => {
       expect(codexChange?.status).toBe('error');
       expect(codexChange?.error).toContain('not valid TOML');
     });
+  });
+});
+
+vitestDescribe('codex auth-command support', () => {
+  it('parses the codex --version output', () => {
+    expect(parseCodexVersion('codex-cli 0.130.1')).toBe('0.130.1');
+    expect(parseCodexVersion('0.118.0\n')).toBe('0.118.0');
+    expect(parseCodexVersion('garbage')).toBeNull();
+  });
+
+  it('gates on the minimum version', () => {
+    expect(supportsAuthCommand(MIN_CODEX_AUTH_VERSION)).toBe(true);
+    expect(supportsAuthCommand('0.130.0')).toBe(true);
+    expect(supportsAuthCommand('1.0.0')).toBe(true);
+    expect(supportsAuthCommand('0.117.9')).toBe(false);
+    expect(supportsAuthCommand('0.9.9')).toBe(false);
   });
 });

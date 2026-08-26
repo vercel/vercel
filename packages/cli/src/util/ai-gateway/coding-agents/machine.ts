@@ -21,6 +21,7 @@ export async function runMachine(args: {
   keySource: KeySource | null;
   createKey: () => Promise<string>;
   useKeychain: boolean;
+  codexSupportsAuthCommand?: boolean;
   overrides?: Record<string, string>;
   shellRcOverride?: string;
   baseUrlOverride?: string;
@@ -170,6 +171,7 @@ export async function runMachine(args: {
     apiKey: key,
     home,
     useKeychain,
+    codexSupportsAuthCommand: args.codexSupportsAuthCommand,
     overrides: args.overrides,
     shellRcOverride: args.shellRcOverride,
     baseUrlOverride: args.baseUrlOverride,
