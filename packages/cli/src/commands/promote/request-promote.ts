@@ -5,6 +5,7 @@ import getProjectByDeployment from '../../util/projects/get-project-by-deploymen
 import ms from 'ms';
 import promoteStatus from './status';
 import output from '../../output-manager';
+import { confirmGatedOperation } from '../../util/onboard-session';
 
 interface DeploymentCreateResponsePartial {
   inspectorUrl: string;
@@ -28,6 +29,16 @@ export default async function requestPromote({
   timeout?: string;
   yes: boolean;
 }): Promise<number> {
+  if (
+    !(await confirmGatedOperation({
+      command: 'promote',
+      gate: 'production',
+      description: `promotes ${deployId} to production`,
+    }))
+  ) {
+    return 1;
+  }
+
   const { contextName, deployment, project } = await getProjectByDeployment({
     client,
     deployId,

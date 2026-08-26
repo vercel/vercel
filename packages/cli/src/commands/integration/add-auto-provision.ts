@@ -3,6 +3,7 @@ import execa from 'execa';
 import { errorToString } from '@vercel/error-utils';
 import open from 'open';
 import output from '../../output-manager';
+import { recordSessionEvent } from '../../util/onboard-session';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import indent from '../../util/output/indent';
@@ -480,6 +481,36 @@ export async function addAutoProvision(
   output.success(
     `${product.name} successfully provisioned: ${chalk.bold(resourceName)}`
   );
+  recordSessionEvent({
+    type: 'resource-provisioned',
+    integration: integration.slug,
+    product: product.name,
+    resource: resourceName,
+    // The billing plan the platform actually selected, journaled so the
+    // session's cost report comes from the platform's own pricing data.
+    // The detail lines ride along because integrations frequently state the
+    // price there ("$19/month") rather than in `cost`.
+    ...(provisioned.billingPlan
+      ? {
+          plan: {
+            id: provisioned.billingPlan.id,
+            name: provisioned.billingPlan.name,
+            ...(provisioned.billingPlan.cost !== undefined
+              ? { cost: provisioned.billingPlan.cost }
+              : {}),
+            paymentMethodRequired:
+              provisioned.billingPlan.paymentMethodRequired,
+            details: [
+              ...(provisioned.billingPlan.highlightedDetails ?? []),
+              ...(provisioned.billingPlan.details ?? []),
+            ].map(detail => ({
+              label: detail.label,
+              ...(detail.value !== undefined ? { value: detail.value } : {}),
+            })),
+          },
+        }
+      : {}),
+  });
 
   // Sandbox resources (e.g. Stripe, Shopify) require the user to claim the
   // account in the provider UI to convert from sandbox to a real owned account.

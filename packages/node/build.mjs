@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { readFileSync, copyFileSync } from 'node:fs';
+import { readFileSync, copyFileSync, existsSync } from 'node:fs';
 import { esbuild } from '../../utils/build.mjs';
 
 const pkgPath = join(process.cwd(), 'package.json');
@@ -26,11 +26,15 @@ const distTypesFile = new URL('dist/index.d.ts', import.meta.url);
 copyFileSync(srcTypesFile, distTypesFile);
 
 if (process.env.CI) {
-  // Copy type file for ts test
-  copyFileSync(
-    distTypesFile,
-    new URL('test/fixtures/15-helpers/ts/types.d.ts', import.meta.url)
+  // Copy type file for ts test. Skipped when test fixtures are not present
+  // (e.g. tarball deployments where `.vercelignore` excludes `test/**`).
+  const tsFixtureDir = new URL(
+    'test/fixtures/15-helpers/ts/',
+    import.meta.url
   );
+  if (existsSync(tsFixtureDir)) {
+    copyFileSync(distTypesFile, new URL('types.d.ts', tsFixtureDir));
+  }
 }
 
 copyFileSync(

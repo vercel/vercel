@@ -5,6 +5,7 @@ import {
 } from '../../util/integration/post-provision-setup';
 import { addAutoProvision } from './add-auto-provision';
 import output from '../../output-manager';
+import { confirmGatedOperation } from '../../util/onboard-session';
 import { validateJsonOutput } from '../../util/output-format';
 import {
   buildCommandWithGlobalFlags,
@@ -116,6 +117,18 @@ export async function add(
   const noClaimFlag = flags['--no-claim'];
   if (claimFlag && noClaimFlag) {
     output.error('Cannot use both --claim and --no-claim.');
+    return 1;
+  }
+
+  if (
+    !(await confirmGatedOperation({
+      command: 'integration add',
+      gate: 'spend',
+      description: `provisions ${
+        resourceNameArg ? `"${resourceNameArg}" from ` : 'a resource from '
+      }the ${integrationSlug} integration — may be billed`,
+    }))
+  ) {
     return 1;
   }
 

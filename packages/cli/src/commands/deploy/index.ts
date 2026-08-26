@@ -30,6 +30,10 @@ import { getDeploymentCheckRuns } from '../../util/deploy/get-deployment-check-r
 import { getDeploymentCheckRunLogs } from '../../util/deploy/get-deployment-check-run-logs';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
+import {
+  confirmGatedOperation,
+  recordSessionEvent,
+} from '../../util/onboard-session';
 import { isValidArchive } from '../../util/deploy/validate-archive-format';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import { emoji, prependEmoji } from '../../util/emoji';
@@ -253,6 +257,17 @@ async function handleInitDeployment(
     flags: parsedArguments.flags,
   });
   telemetryClient.trackTargetEnvironment(target);
+
+  if (
+    target === 'production' &&
+    !(await confirmGatedOperation({
+      command: 'deploy',
+      gate: 'production',
+      description: 'deploys to production',
+    }))
+  ) {
+    return 1;
+  }
 
   const parsedArchive = parsedArguments.flags['--archive'];
   if (
@@ -708,6 +723,11 @@ async function handleInitDeployment(
           }
         : deploymentJson;
       client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+      recordSessionEvent({
+        type: 'deployment',
+        url: `https://${deployment.url}`,
+        target: deployment.target ?? 'preview',
+      });
       return 0;
     }
 
@@ -1096,6 +1116,17 @@ async function handleDefaultDeploy(
     flags: parsedArguments.flags,
   });
   telemetryClient.trackTargetEnvironment(target);
+
+  if (
+    target === 'production' &&
+    !(await confirmGatedOperation({
+      command: 'deploy',
+      gate: 'production',
+      description: 'deploys to production',
+    }))
+  ) {
+    return 1;
+  }
 
   // Validate that --skip-domain is only used with production deployments
   const skipDomain = parsedArguments.flags['--skip-domain'];
@@ -1903,6 +1934,15 @@ async function handleDefaultDeploy(
         }
       : deploymentJson;
     client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+    // Inside a `vercel onboard` session, the deployment is journaled from the
+    // typed deployment. This is the main deploy flow's JSON exit — the init
+    // flow journals its own copy of this branch — and a session that missed
+    // this site reported a deployed, verified app as nothing deployed.
+    recordSessionEvent({
+      type: 'deployment',
+      url: `https://${deployment.url}`,
+      target: deployment.target ?? 'preview',
+    });
     return 0;
   }
 

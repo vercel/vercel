@@ -60,6 +60,7 @@ describe('index', () => {
         ['mf', 'microfrontends'],
         ['metrics', 'metrics'],
         ['microfrontends', 'microfrontends'],
+        ['onboard', 'onboard'],
         ['open', 'open'],
         ['project', 'project'],
         ['projects', 'project'],

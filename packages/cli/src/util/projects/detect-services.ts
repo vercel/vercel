@@ -156,7 +156,13 @@ function toProjectServicesConfigPatch(
   };
 }
 
-async function prepareServicesConfigWrite(
+/**
+ * Compute the exact config-file write that `writeServicesConfig` would
+ * perform, without touching disk. Exported so `vercel onboard` can show the
+ * agent the finished, validated `vercel.json` as a starting point instead of
+ * asking it to derive one.
+ */
+export async function prepareServicesConfigWrite(
   cwd: string,
   config: InferredServicesConfig
 ): Promise<{

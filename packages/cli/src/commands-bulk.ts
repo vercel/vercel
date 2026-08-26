@@ -42,6 +42,7 @@ export { default as logs } from './commands/logs';
 export { default as mcp } from './commands/mcp';
 export { default as metrics } from './commands/metrics';
 export { default as microfrontends } from './commands/microfrontends';
+export { default as onboard } from './commands/onboard';
 export { default as open } from './commands/open';
 export { default as project } from './commands/project';
 export { default as promote } from './commands/promote';
