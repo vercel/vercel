@@ -56,6 +56,37 @@ describe('getUpdateCommandInfo install detection', () => {
       expect(info).toEqual({ command: 'npm i -g vercel@latest', global: true });
     });
 
+    it('detects a global npm install in Homebrew-managed npm PREFIX', async () => {
+      const originalArgv = process.argv;
+      process.argv = ['/usr/bin/node', '/some/bin/vercel'];
+      try {
+        const installPath = join(
+          sep,
+          'opt',
+          'homebrew',
+          'lib',
+          'node_modules',
+          'vercel',
+          'dist'
+        );
+        realpathMock.mockResolvedValueOnce(installPath);
+        mockExecFile.mockRejectedValue(new Error('not installed'));
+        scanParentDirsMock.mockResolvedValue({
+          cliType: 'npm',
+          lockfilePath: join(sep, 'project', 'package-lock.json'),
+        } as any);
+
+        const info = await getUpdateCommandInfo();
+
+        expect(info).toEqual({
+          command: 'npm i -g vercel@latest',
+          global: true,
+        });
+      } finally {
+        process.argv = originalArgv;
+      }
+    });
+
     it('detects a global pnpm install via the symlinked content-addressable store', async () => {
       const npmRoot = join(sep, 'npm-gnm');
       const pnpmRoot = join(sep, 'pnpm-gnm');
