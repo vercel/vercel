@@ -227,7 +227,7 @@ export default async function add(client: Client, argv: string[]) {
         {
           status: AGENT_STATUS.ERROR,
           reason: AGENT_REASON.INVALID_DNS_TYPE,
-          message: `Invalid <type> parameter "${record.meta.type}". Expected one of A, AAAA, ALIAS, CAA, CNAME, MX, SRV, TXT.`,
+          message: `Invalid <type> parameter "${record.meta.type}". Expected one of A, AAAA, ALIAS, CAA, CNAME, DS, MX, SRV, TXT.`,
         },
         1
       );
@@ -235,7 +235,7 @@ export default async function add(client: Client, argv: string[]) {
     output.error(
       `Invalid <type> parameter "${
         record.meta.type
-      }". Expected one of A, AAAA, ALIAS, CAA, CNAME, MX, SRV, TXT ${chalk.gray(
+      }". Expected one of A, AAAA, ALIAS, CAA, CNAME, DS, MX, SRV, TXT ${chalk.gray(
         addStamp()
       )}`
     );

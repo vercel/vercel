@@ -3,7 +3,17 @@ import type { DNSRecordData } from '@vercel-internals/types';
 import type Client from '../client';
 import output from '../../output-manager';
 
-const RECORD_TYPES = ['A', 'AAAA', 'ALIAS', 'CAA', 'CNAME', 'MX', 'SRV', 'TXT'];
+const RECORD_TYPES = [
+  'A',
+  'AAAA',
+  'ALIAS',
+  'CAA',
+  'CNAME',
+  'DS',
+  'MX',
+  'SRV',
+  'TXT',
+];
 
 export default async function getDNSData(
   client: Client,

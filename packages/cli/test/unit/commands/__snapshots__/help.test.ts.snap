@@ -1811,7 +1811,7 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
 
   - Add an A record for a subdomain
 
-    $ vercel dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | TXT>  <VALUE>
+    $ vercel dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | DS | TXT>  <VALUE>
     $ vercel dns add zeit.rocks api A 198.51.100.100
 
   - Add an MX record (@ as a name refers to the domain)
@@ -1828,6 +1828,11 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
 
     $ vercel dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'
     $ vercel dns add zeit.rocks '@' CAA '0 issue "example.com"'
+
+  - Add a DS record
+
+    $ vercel dns add <DOMAIN> <NAME> DS '<KEY TAG> <ALGORITHM> <DIGEST TYPE> <DIGEST>'
+    $ vercel dns add zeit.rocks sub DS '2371 13 2 5be1a3f7'
 
   - Import a Zone file
 
@@ -1879,7 +1884,7 @@ exports[`help command > dns help output snapshots > dns help column width 80 1`]
 
   - Add an A record for a subdomain
 
-    $ vercel dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | TXT>  <VALUE>
+    $ vercel dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | DS | TXT>  <VALUE>
     $ vercel dns add zeit.rocks api A 198.51.100.100
 
   - Add an MX record (@ as a name refers to the domain)
@@ -1896,6 +1901,11 @@ exports[`help command > dns help output snapshots > dns help column width 80 1`]
 
     $ vercel dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'
     $ vercel dns add zeit.rocks '@' CAA '0 issue "example.com"'
+
+  - Add a DS record
+
+    $ vercel dns add <DOMAIN> <NAME> DS '<KEY TAG> <ALGORITHM> <DIGEST TYPE> <DIGEST>'
+    $ vercel dns add zeit.rocks sub DS '2371 13 2 5be1a3f7'
 
   - Import a Zone file
 
@@ -1943,7 +1953,7 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
 
   - Add an A record for a subdomain
 
-    $ vercel dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | TXT>  <VALUE>
+    $ vercel dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | DS | TXT>  <VALUE>
     $ vercel dns add zeit.rocks api A 198.51.100.100
 
   - Add an MX record (@ as a name refers to the domain)
@@ -1960,6 +1970,11 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
 
     $ vercel dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'
     $ vercel dns add zeit.rocks '@' CAA '0 issue "example.com"'
+
+  - Add a DS record
+
+    $ vercel dns add <DOMAIN> <NAME> DS '<KEY TAG> <ALGORITHM> <DIGEST TYPE> <DIGEST>'
+    $ vercel dns add zeit.rocks sub DS '2371 13 2 5be1a3f7'
 
   - Import a Zone file
 

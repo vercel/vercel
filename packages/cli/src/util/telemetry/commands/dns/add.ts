@@ -7,6 +7,7 @@ const ALLOWED_RECORD_TYPES = [
   'AAAA',
   'ALIAS',
   'CNAME',
+  'DS',
   'TXT',
   'MX',
   'SRV',

@@ -854,7 +854,7 @@ export class DNSInvalidType extends NowError<
     super({
       code: 'DNS_INVALID_TYPE',
       meta: { type },
-      message: `Invalid <type> parameter "${type}". Expected one of A, AAAA, ALIAS, CAA, CNAME, MX, SRV, TXT`,
+      message: `Invalid <type> parameter "${type}". Expected one of A, AAAA, ALIAS, CAA, CNAME, DS, MX, SRV, TXT`,
     });
   }
 }
