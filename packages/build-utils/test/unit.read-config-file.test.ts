@@ -21,6 +21,7 @@ describe('Test `readConfigFile()`', () => {
   const doesnotexist = join(__dirname, 'does-not-exist.json');
   const tsconfig = join(__dirname, '../tsconfig.json');
   const invalid = join(__dirname, 'invalid.json');
+  const multiDocumentYaml = join(__dirname, 'multi-document.yaml');
 
   it('should return null when file does not exist', async () => {
     expect(await readConfigFile(doesnotexist)).toBeNull();
@@ -43,6 +44,28 @@ describe('Test `readConfigFile()`', () => {
         outDir: './dist',
       },
     });
+    expect(logMessages).toEqual([]);
+  });
+
+  it('should return the final document from multi-document YAML', async () => {
+    try {
+      await writeFile(
+        multiDocumentYaml,
+        `---
+lockfileVersion: '9.0'
+source: config-dependency
+---
+lockfileVersion: '9.0'
+source: workspace
+`
+      );
+      expect(await readConfigFile(multiDocumentYaml)).toEqual({
+        lockfileVersion: '9.0',
+        source: 'workspace',
+      });
+    } finally {
+      await rm(multiDocumentYaml);
+    }
     expect(logMessages).toEqual([]);
   });
 
