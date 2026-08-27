@@ -1,0 +1,18 @@
+.home {
+  padding: 12rem 6vw 6rem;
+  max-width: 60rem;
+
+  &__headline {
+    font-size: clamp(3rem, 8vw, 6.5rem);
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin: 0 0 2rem;
+  }
+
+  &__tagline {
+    max-width: 34rem;
+    font-size: 1.125rem;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+}
