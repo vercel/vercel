@@ -63,9 +63,11 @@ export const KNOWN_AGENTS = {
   V0,
 } as const;
 
-export async function determineAgent(): Promise<AgentResult> {
-  if (process.env.AI_AGENT) {
-    const name = process.env.AI_AGENT.trim();
+export function determineAgentFromEnv(
+  env: NodeJS.ProcessEnv = process.env
+): AgentResult {
+  if (env.AI_AGENT) {
+    const name = env.AI_AGENT.trim();
     if (name) {
       if (name === GITHUB_COPILOT || name === GITHUB_COPILOT_CLI) {
         return {
@@ -88,58 +90,56 @@ export async function determineAgent(): Promise<AgentResult> {
     }
   }
 
-  if (process.env.CURSOR_TRACE_ID) {
+  if (env.CURSOR_TRACE_ID) {
     return { isAgent: true, agent: { name: CURSOR } };
   }
 
-  if (
-    process.env.CURSOR_AGENT ||
-    process.env.CURSOR_EXTENSION_HOST_ROLE === 'agent-exec'
-  ) {
+  if (env.CURSOR_AGENT || env.CURSOR_EXTENSION_HOST_ROLE === 'agent-exec') {
     return { isAgent: true, agent: { name: CURSOR_CLI } };
   }
 
-  if (process.env.GEMINI_CLI) {
+  if (env.GEMINI_CLI) {
     return { isAgent: true, agent: { name: GEMINI } };
   }
 
-  if (
-    process.env.CODEX_SANDBOX ||
-    process.env.CODEX_CI ||
-    process.env.CODEX_THREAD_ID
-  ) {
+  if (env.CODEX_SANDBOX || env.CODEX_CI || env.CODEX_THREAD_ID) {
     return { isAgent: true, agent: { name: CODEX } };
   }
 
-  if (process.env.ANTIGRAVITY_AGENT) {
+  if (env.ANTIGRAVITY_AGENT) {
     return { isAgent: true, agent: { name: ANTIGRAVITY } };
   }
 
-  if (process.env.AUGMENT_AGENT) {
+  if (env.AUGMENT_AGENT) {
     return { isAgent: true, agent: { name: AUGMENT_CLI } };
   }
 
-  if (process.env.OPENCODE_CLIENT) {
+  if (env.OPENCODE_CLIENT) {
     return { isAgent: true, agent: { name: OPENCODE } };
   }
 
-  if (process.env.CLAUDECODE || process.env.CLAUDE_CODE) {
-    if (process.env.CLAUDE_CODE_IS_COWORK) {
+  if (env.CLAUDECODE || env.CLAUDE_CODE) {
+    if (env.CLAUDE_CODE_IS_COWORK) {
       return { isAgent: true, agent: { name: COWORK } };
     }
     return { isAgent: true, agent: { name: CLAUDE } };
   }
 
-  if (process.env.REPL_ID) {
+  if (env.REPL_ID) {
     return { isAgent: true, agent: { name: REPLIT } };
   }
 
-  if (
-    process.env.COPILOT_MODEL ||
-    process.env.COPILOT_ALLOW_ALL ||
-    process.env.COPILOT_GITHUB_TOKEN
-  ) {
+  if (env.COPILOT_MODEL || env.COPILOT_ALLOW_ALL || env.COPILOT_GITHUB_TOKEN) {
     return { isAgent: true, agent: { name: GITHUB_COPILOT } };
+  }
+
+  return { isAgent: false, agent: undefined };
+}
+
+export async function determineAgent(): Promise<AgentResult> {
+  const result = determineAgentFromEnv(process.env);
+  if (result.isAgent) {
+    return result;
   }
 
   try {
