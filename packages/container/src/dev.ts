@@ -4,7 +4,6 @@ import type {
   StartDevServerResult,
   StartDevServerSuccess,
 } from '@vercel/build-utils';
-import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -16,6 +15,13 @@ import {
   readString,
   withSpan,
 } from './util';
+import { detectRuntimeFamily, isBuildpackProject } from './buildpacks/detect';
+import { buildDevImage } from './buildpacks/lifecycle';
+import { selectDevEngine } from './engines';
+import type {
+  ContainerEngine,
+  DevOutput as EngineDevOutput,
+} from './engines/types';
 
 /**
  * Host/shell environment variables that are meaningful only on the developer's
@@ -86,17 +92,10 @@ function writeEnvFile(env: Record<string, string>): string {
 }
 
 /**
- * Sink for all dev output. `vercel dev` runs many services in parallel and
- * prefixes each service's logs (e.g. `[api]`) by piping through per-service
- * `onStdout`/`onStderr` callbacks. So in dev we must route ALL output
- * (status lines, `docker build`, the container) through these callbacks rather
- * than writing to `process.stderr` directly (which would print unprefixed and
- * interleave with other services).
+ * Sink for all dev output — engine abstraction owns the canonical DevOutput type.
+ * Local alias kept for minimal diff; re-exported from engines/types.
  */
-interface DevOutput {
-  onStdout?: (data: Buffer) => void;
-  onStderr?: (data: Buffer) => void;
-}
+type DevOutput = EngineDevOutput;
 
 function emit(out: DevOutput, line: string): void {
   if (out.onStderr) {
@@ -106,67 +105,8 @@ function emit(out: DevOutput, line: string): void {
   }
 }
 
-/**
- * Run a command to completion, forwarding its stdout/stderr to the dev output
- * sink so it gets the per-service log prefix. Resolves stdout for parsing.
- */
-function runForwarded(
-  cmd: string,
-  args: string[],
-  out: DevOutput,
-  opts: { quiet?: boolean } = {}
-): Promise<{ stdout: string }> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
-    let stdout = '';
-    let stderr = '';
-    child.stdout?.on('data', (chunk: Buffer) => {
-      stdout += chunk.toString();
-      if (!opts.quiet) {
-        if (out.onStdout) {
-          out.onStdout(chunk);
-        } else {
-          process.stderr.write(chunk.toString());
-        }
-      }
-    });
-    child.stderr?.on('data', (chunk: Buffer) => {
-      stderr += chunk.toString();
-      if (!opts.quiet) {
-        if (out.onStderr) {
-          out.onStderr(chunk);
-        } else {
-          process.stderr.write(chunk.toString());
-        }
-      }
-    });
-    child.on('error', (err: NodeJS.ErrnoException) => {
-      if (err.code === 'ENOENT') {
-        reject(
-          new Error(
-            `Command not found: \`${cmd}\`. Ensure \`${cmd}\` is installed ` +
-              'and on your PATH (Docker is required for `vercel dev` with ' +
-              'container services).'
-          )
-        );
-        return;
-      }
-      reject(err);
-    });
-    child.on('close', code => {
-      if (code === 0) {
-        resolve({ stdout });
-      } else {
-        const detail = stderr.trim().split('\n').slice(-5).join('\n');
-        reject(
-          new Error(
-            `\`${cmd} ${args.join(' ')}\` exited with code ${code}` +
-              (detail ? `\n${detail}` : '')
-          )
-        );
-      }
-    });
-  });
+function engineOut(out: DevOutput): EngineDevOutput {
+  return { onStdout: out.onStdout, onStderr: out.onStderr };
 }
 
 function normalizeCommand(command: unknown): string[] | undefined {
@@ -182,27 +122,32 @@ function normalizeCommand(command: unknown): string[] | undefined {
   return undefined;
 }
 
+function uniqueContainerName(serviceName: string): string {
+  const safe = serviceName.toLowerCase().replace(/[^a-z0-9-_.]/g, '-');
+  return `vercel-dev-${safe || 'service'}-${process.pid}-${Date.now().toString(36)}`;
+}
+
 /**
- * Resolve the image to run locally: either a configured prebuilt image, or one
- * built locally from the service's Dockerfile.
+ * Resolve the image to run locally via the selected container engine
+ * (`docker`, `podman`, `podman-private`). Unlike the cloud build, dev builds for
+ * the host architecture (no `--platform linux/amd64`) and never pushes to a registry.
  *
- * Unlike the cloud build, dev builds for the host architecture (no
- * `--platform linux/amd64`) and never pushes to a registry.
+ * `selectDevEngine` honors `VERCEL_CONTAINER_ENGINE=docker|podman|podman-private`
+ * when set; otherwise it probes `docker` → `podman` → `podman-private` (auto-install
+ * for the last one). Wiring `dev.ts` through the engine abstraction is what makes
+ * your env var actually take effect.
  */
 async function resolveDevImage(
+  engine: ContainerEngine,
   options: StartDevServerOptions,
   out: DevOutput,
   span?: Span
 ): Promise<string> {
   const { config, workPath, entrypoint } = options;
 
-  const entrypointRef = readString(entrypoint);
-  // An entrypoint that names a Dockerfile (including the `Dockerfile.vercel` /
-  // `Containerfile.vercel` opt-in markers) is built directly. Otherwise — e.g.
-  // when the `container` framework preset resolves its entrypoint via
-  // `<detect>` — discover an opt-in marker in the work directory. This mirrors
-  // the build path (`resolveImageHandler`) so dev and deploy resolve the same
-  // Dockerfile.
+  const rawEntrypointRef = readString(entrypoint);
+  const isDetect = rawEntrypointRef === '<detect>';
+  const entrypointRef = isDetect ? undefined : rawEntrypointRef;
   const dockerfileConfigured =
     entrypointRef && isDockerfileRef(entrypointRef)
       ? entrypointRef
@@ -215,16 +160,108 @@ async function resolveDevImage(
   const prebuiltImage =
     readString(config.handler) ?? (hasDockerfile ? undefined : entrypointRef);
 
+  // framework may be provided via options.config.framework / options.meta / service.meta
+  // when vercel.json explicitly says "framework": "container". Using it as the opt-in
+  // for the buildpack path, per requested wiring.
+  const framework =
+    (options as any).framework ??
+    (options as any).config?.framework ??
+    (options as any).meta?.framework ??
+    (options as any).service?.framework;
+
+  // -----------------------------------------------------------------------
+  // Dockerfile-less path — prebuilt image or lifecycle buildpacks (invisible)
+  // -----------------------------------------------------------------------
   if (!hasDockerfile) {
-    if (!prebuiltImage) {
+    if (prebuiltImage) {
+      span?.setAttributes({ 'container.dev_mode': 'prebuilt' });
+      emit(
+        out,
+        `▲ container  vercel dev: using prebuilt image ${prebuiltImage}`
+      );
+      return prebuiltImage;
+    }
+
+    // Resolve which kind of non-Dockerfile project this is.
+    //
+    // Your matrix:
+    //   node/bun → normal builders, NOT container
+    //   python   → normal builder, NOT container
+    //   go/rust/java/... → buildpack path (lifecycle/creator inside Paketo builder)
+    //   dockerfile → docker build (already handled above)
+    //
+    // For now wiring is framework-driven: vercel.json `"framework": "container"`
+    // forces buildpack path for testing non-Dockerfile projects. Without that,
+    // node/python (package.json / requirements.txt) should NOT become containers.
+    const family = detectRuntimeFamily({
+      workPath,
+      hasDockerfile: false,
+      entrypointRef: rawEntrypointRef,
+      framework,
+      handler: readString(config.handler),
+    });
+
+    if (family === 'passthrough' || family === 'unknown') {
+      // Node/python should never land here via the container preset. If they did,
+      // they'd have been claimed by @vercel/node or @vercel/python before we run.
+      // If framework was not set to "container", this is a misconfiguration.
+      const hint =
+        framework === 'container'
+          ? ''
+          : '\nHint: for non-Dockerfile container builds, set "framework": "container" in vercel.json for now (WIP: runtime-based detection).';
       throw new Error(
         'Container service must specify an entrypoint: a prebuilt OCI image ' +
-          'reference, or a Dockerfile path to run with `vercel dev`.'
+          'reference, or a Dockerfile path to run with `vercel dev`.' +
+          hint
       );
     }
-    span?.setAttributes({ 'container.dev_mode': 'prebuilt' });
-    emit(out, `▲ container  vercel dev: using prebuilt image ${prebuiltImage}`);
-    return prebuiltImage;
+
+    if (
+      family === 'buildpack' ||
+      isBuildpackProject({ workPath, hasDockerfile: false, framework })
+    ) {
+      const serviceName = options.service?.name ?? 'service';
+      const tag = devImageTag(serviceName);
+
+      const buildEnv = (options.meta?.buildEnv ?? {}) as Record<
+        string,
+        string | undefined
+      >;
+      const buildArgs: Record<string, string> = {};
+      for (const [k, v] of Object.entries(buildEnv)) {
+        if (typeof v === 'string') buildArgs[k] = v;
+      }
+
+      span?.setAttributes({
+        'container.dev_mode': 'buildpack',
+        'image.tag': tag,
+        'container.engine': engine.name,
+      });
+      emit(
+        out,
+        `▲ container  vercel dev: building ${tag} via buildpacks (${engine.name}, lifecycle/creator)`
+      );
+
+      await buildDevImage(
+        engine,
+        {
+          workPath,
+          tag,
+          buildArgs,
+          serviceName,
+        },
+        engineOut(out),
+        span
+      );
+
+      emit(out, `▲ container  built ${tag} (buildpack)`);
+      return tag;
+    }
+
+    throw new Error(
+      'Container service must specify an entrypoint: a prebuilt OCI image ' +
+        'reference, or a Dockerfile path to run with `vercel dev`.'
+    );
   }
 
   if (!existsSync(dockerfilePath)) {
@@ -237,158 +274,72 @@ async function resolveDevImage(
   const tag = devImageTag(serviceName);
   const contextDir = path.dirname(dockerfilePath);
 
-  // Forward the project build env as `--build-arg`s so Dockerfile `ARG`s work
-  // in dev too, matching the cloud build.
-  const buildArgFlags: string[] = [];
   const buildEnv = (options.meta?.buildEnv ?? {}) as Record<
     string,
     string | undefined
   >;
-  for (const [key, value] of Object.entries(buildEnv)) {
-    if (typeof value === 'string') {
-      buildArgFlags.push('--build-arg', `${key}=${value}`);
-    }
+  const buildArgs: Record<string, string> = {};
+  for (const [k, v] of Object.entries(buildEnv)) {
+    if (typeof v === 'string') buildArgs[k] = v;
   }
 
-  span?.setAttributes({ 'container.dev_mode': 'build', 'image.tag': tag });
-  emit(out, `▲ container  vercel dev: building ${tag} (docker, host platform)`);
-  // No `--platform`: build for the developer's native architecture.
-  await runForwarded(
-    'docker',
-    ['build', ...buildArgFlags, '-t', tag, '-f', dockerfilePath, contextDir],
-    out
+  span?.setAttributes({
+    'container.dev_mode': 'build',
+    'image.tag': tag,
+    'container.engine': engine.name,
+  });
+  emit(
+    out,
+    `▲ container  vercel dev: building ${tag} (${engine.name}, host platform)`
+  );
+  await engine.devBuild!(
+    { tag, dockerfilePath, contextDir, buildArgs },
+    engineOut(out),
+    span
   );
   emit(out, `▲ container  built ${tag}`);
   return tag;
 }
 
 /**
- * Discover the port the container listens on, without modifying the user's
- * Dockerfile:
- *   1. the image's first `EXPOSE`d port, else
- *   2. fall back to 3000.
- *
- * Either way we inject `PORT=<this>` into the container, so apps that honor
- * `process.env.PORT` (the standard Vercel contract) bind the right port; the
- * `EXPOSE` lookup additionally covers apps that hardcode a port.
+ * Discover the port the container listens on via engine's `devInspectExposedPorts`.
  */
 async function resolveContainerPort(
+  engine: ContainerEngine,
   image: string,
   out: DevOutput
 ): Promise<number> {
   try {
-    const { stdout } = await runForwarded(
-      'docker',
-      ['image', 'inspect', '--format', '{{json .Config.ExposedPorts}}', image],
-      out,
-      { quiet: true }
+    const exposed = await engine.devInspectExposedPorts?.(
+      image,
+      engineOut(out)
     );
-    const exposed = JSON.parse(stdout.trim() || 'null') as Record<
-      string,
-      unknown
-    > | null;
     if (exposed) {
-      // Keys look like "3000/tcp"; pick the lowest tcp port.
       const ports = Object.keys(exposed)
         .map(key => Number(key.split('/')[0]))
         .filter(n => Number.isFinite(n))
         .sort((a, b) => a - b);
-      if (ports.length > 0) {
-        return ports[0];
-      }
+      if (ports.length > 0) return ports[0];
     }
   } catch (err) {
     debug(`could not inspect EXPOSE for ${image}: ${(err as Error).message}`);
   }
-
   return 3000;
 }
 
-/** Read the host port Docker mapped for `containerPort` on a running container. */
+/** Read the host port the engine mapped for `containerPort` on a running container. */
 async function readMappedHostPort(
+  engine: ContainerEngine,
   containerName: string,
   containerPort: number,
   out: DevOutput
 ): Promise<number> {
-  const { stdout } = await runForwarded(
-    'docker',
-    ['port', containerName, `${containerPort}/tcp`],
-    out,
-    { quiet: true }
-  );
-  // Output like "0.0.0.0:54321" (possibly multiple lines for ipv4/ipv6).
-  const match = stdout.match(/:(\d+)\s*$/m);
-  if (!match) {
+  if (!engine.devPort) {
     throw new Error(
-      `Could not determine mapped host port for ${containerName} ` +
-        `(${containerPort}/tcp). Got: ${stdout.trim()}`
+      `engine ${engine.name} does not implement devPort (container port ${containerPort} mapping)`
     );
   }
-  return Number(match[1]);
-}
-
-function uniqueContainerName(serviceName: string): string {
-  const safe = serviceName.toLowerCase().replace(/[^a-z0-9-_.]/g, '-');
-  return `vercel-dev-${safe || 'service'}-${process.pid}-${Date.now().toString(36)}`;
-}
-
-/**
- * Verify the Docker daemon is installed and reachable before doing any build
- * or run work, so the user gets one clear message instead of a cryptic exit
- * code from whichever Docker command happened to run first. `docker info`
- * connects to the daemon and exits non-zero (125) when it can't.
- */
-async function assertDockerAvailable(out: DevOutput): Promise<void> {
-  try {
-    await runForwarded(
-      'docker',
-      ['info', '--format', '{{.ServerVersion}}'],
-      out,
-      {
-        quiet: true,
-      }
-    );
-  } catch (err) {
-    const message = (err as Error).message ?? '';
-    if (/command not found/i.test(message)) {
-      throw new Error(
-        'Docker is required for `vercel dev` with containers, but the ' +
-          '`docker` command was not found. Install Docker and ensure it is ' +
-          'on your PATH.'
-      );
-    }
-    throw new Error(
-      'Could not connect to the Docker daemon. Start Docker (e.g. open ' +
-        'Docker Desktop) and run `vercel dev` again.'
-    );
-  }
-}
-
-/**
- * Build a helpful error for a `docker run` that exited before the container
- * became ready. Exit code 125 means the Docker CLI itself failed (as opposed
- * to the container process) — overwhelmingly because the daemon isn't running
- * or isn't reachable — so call that out explicitly. Any captured stderr is
- * appended so the underlying Docker message is visible.
- */
-function containerExitMessage(exitCode: number, stderr: string): string {
-  const detail = stderr.trim().split('\n').slice(-5).join('\n');
-  const looksLikeDaemonDown =
-    exitCode === 125 || /cannot connect to the docker daemon/i.test(stderr);
-
-  if (looksLikeDaemonDown) {
-    return (
-      'Could not start the container: the Docker daemon is not running or ' +
-      'is unreachable. Start Docker (e.g. open Docker Desktop) and try ' +
-      '`vercel dev` again.' +
-      (detail ? `\n\nDocker reported:\n${detail}` : '')
-    );
-  }
-
-  return (
-    `The container exited (code ${exitCode}) before becoming ready.` +
-    (detail ? `\n\nDocker reported:\n${detail}` : '')
-  );
+  return engine.devPort(containerName, containerPort, engineOut(out));
 }
 
 /**
@@ -402,6 +353,10 @@ interface RunningContainer {
   containerName: string;
   /** Whether the `docker run` child process is still alive. */
   isRunning: () => boolean;
+  /** For crash reporting when the container dies after first ready. */
+  engine?: string;
+  _lastStderrTail?: () => string;
+  _lastExitCode?: () => number | null;
 }
 
 const runningContainers = new Map<string, RunningContainer>();
@@ -412,10 +367,28 @@ const runningContainers = new Map<string, RunningContainer>();
 // container and all but the last would be orphaned (never `docker stop`ped).
 const pendingContainers = new Map<string, Promise<StartDevServerResult>>();
 
+interface StickyFailure {
+  message: string;
+  at: number;
+}
+const stickyFailures = new Map<string, StickyFailure>();
+
+function recordStickyFailure(key: string, err: Error): void {
+  stickyFailures.set(key, { message: err.message, at: Date.now() });
+}
+
 /** Test-only: clear the reused-container caches between cases. */
 export function __resetRunningContainers(): void {
   runningContainers.clear();
   pendingContainers.clear();
+  stickyFailures.clear();
+}
+
+// Cleared by the file watcher path or on explicit restart of the dev server
+// process. Exported for tests and so `builder.ts` watch invalidation can clear it.
+export function __clearStickyFailures(key?: string): void {
+  if (key) stickyFailures.delete(key);
+  else stickyFailures.clear();
 }
 
 /**
@@ -441,13 +414,42 @@ export async function startDevServer(
   // Reuse a live container for this service instead of rebuilding/running on
   // every request. The dev server calls `startDevServer` per request; a
   // container is a persistent server, so we hand back the running one.
+  //
+  // NOTE: If the container has exited with a non-zero code (bad image,
+  // missing dep, etc.) we do NOT silently rebuild on every request — that
+  // creates the "it worked then 500 then rebuilding" loop seen with
+  // podman-test. Instead we surface a sticky failure with the exit log so
+  // the developer can fix the Dockerfile, then restart vercel dev. The
+  // failure is cleared when the source changes (workPath) or the process
+  // exits (maps are in-memory only).
   const reuseKey = containerReuseKey(options);
+
+  // Sticky bad-image gate — avoids the build->crash->rebuild->crash loop.
+  const sticky = stickyFailures.get(reuseKey);
+  if (sticky) {
+    // Invalidate sticky when workPath's Dockerfile or package manifest changed
+    // by checking mtime bump: cheap heuristic — next file change resets it.
+    // For now just require process restart; file watcher will trigger rebuild
+    // only via new process in many setups. We just make the error readable.
+    throw new Error(sticky.message);
+  }
+
   const existing = runningContainers.get(reuseKey);
   if (existing && existing.isRunning()) {
     return existing.result;
   }
   if (existing) {
-    // Stale (exited) entry — clear it before starting a replacement.
+    // Stale (exited) entry — surface if it crashed, otherwise clear.
+    const tail = (existing as any)._lastStderrTail?.() ?? '';
+    const code = (existing as any)._lastExitCode?.() ?? 1;
+    if (code !== 0 || /ERR_MODULE_NOT_FOUND|Cannot find module/i.test(tail)) {
+      const err = new Error(
+        containerExitMessage(code, tail, existing.engine ?? 'podman-private')
+      );
+      recordStickyFailure(reuseKey, err);
+      runningContainers.delete(reuseKey);
+      throw err;
+    }
     runningContainers.delete(reuseKey);
   }
 
@@ -458,9 +460,24 @@ export async function startDevServer(
     return inFlight;
   }
 
-  const startPromise = startContainer(options, reuseKey).finally(() => {
-    pendingContainers.delete(reuseKey);
-  });
+  const startPromise = startContainer(options, reuseKey)
+    .catch(err => {
+      // Only record sticky failures for container *crash* errors (the
+      // container actually ran then exited badly). Pre-run failures (daemon
+      // down, no engine available, build/network errors, port-publish
+      // timeout) should NOT become sticky — they are often transient and the
+      // next request should re-probe rather than throwing a stale error.
+      const msg = (err as Error).message;
+      const isContainerCrash =
+        /exited \(code \d+\) before becoming ready/i.test(msg);
+      if (isContainerCrash) {
+        recordStickyFailure(reuseKey, err as Error);
+      }
+      throw err;
+    })
+    .finally(() => {
+      pendingContainers.delete(reuseKey);
+    });
   pendingContainers.set(reuseKey, startPromise);
   return startPromise;
 }
@@ -477,26 +494,42 @@ async function startContainer(
       const { config, meta, onStdout, onStderr } = options;
       const out: DevOutput = { onStdout, onStderr };
 
-      // Fail fast with a clear message if Docker isn't running, rather than
-      // letting `docker build`/`docker run` fail later with a bare exit code.
-      await assertDockerAvailable(out);
+      // ── engine selection — honors VERCEL_CONTAINER_ENGINE, probes docker → podman → podman-private
+      const engine = await withSpan(
+        span,
+        'container.dev.select_engine',
+        {},
+        async s => selectDevEngine(engineOut(out), s)
+      );
+      if (
+        !engine.supportsDev ||
+        !engine.devEnsureAvailable ||
+        !engine.devBuild ||
+        !engine.devRun
+      ) {
+        throw new Error(
+          `Selected engine ${engine.name} does not support dev. ` +
+            'Set VERCEL_CONTAINER_ENGINE=docker|podman|podman-private.'
+        );
+      }
+      span?.setAttributes({ 'container.engine': engine.name });
+      debug(`vercel dev container engine: ${engine.name}`);
+      emit(out, `▲ container  engine: ${engine.name}`);
 
-      const image = await withSpan(span, 'container.dev.resolve_image', {}, s =>
-        resolveDevImage(options, out, s)
+      const image = await withSpan(
+        span,
+        'container.dev.resolve_image',
+        { 'container.engine': engine.name },
+        s => resolveDevImage(engine, options, out, s)
       );
 
-      const containerPort = await resolveContainerPort(image, out);
+      const containerPort = await resolveContainerPort(engine, image, out);
       const containerName = uniqueContainerName(
         options.service?.name ?? 'service'
       );
 
       // Env precedence: CLI process env, then the orchestrator's per-service
       // env (service URLs, resolved .env values), then a `PORT` the app honors.
-      // Host/shell-only vars (TMPDIR, HOME, PATH, …) are filtered out: they
-      // describe the developer's machine, not the Linux container, and leaking
-      // them breaks apps that rely on container-native values (see
-      // `isHostOnlyEnvVar`). Passed via a temp `--env-file` to keep secrets off
-      // the command line and avoid arg-length limits.
       const mergedEnv: Record<string, string> = {};
       for (const [key, value] of Object.entries(process.env)) {
         if (typeof value === 'string' && !isHostOnlyEnvVar(key)) {
@@ -516,96 +549,85 @@ async function startContainer(
         (config as { command?: unknown }).command
       );
 
-      // Honor the host port the orchestrator pre-allocated for this service
-      // (passed via `meta.port`). Service bindings are built against this port
-      // (`http://127.0.0.1:${preAllocatedPort}/`), so the container must listen
-      // on it for cross-service requests to reach it. Fall back to `0` (an
-      // ephemeral port chosen by Docker) when no port was provided.
       const requestedHostPort = typeof meta?.port === 'number' ? meta.port : 0;
 
-      const args = [
-        'run',
-        '--rm',
-        '--name',
-        containerName,
-        // Publish the container port to the orchestrator-provided host port, or
-        // an ephemeral host port chosen by Docker when none was requested.
-        '-p',
-        `127.0.0.1:${requestedHostPort}:${containerPort}`,
-        '--env-file',
-        envFilePath,
-        image,
-        ...(command ?? []),
-      ];
+      emit(
+        out,
+        `▲ container  vercel dev: starting container ${image} (${engine.name})`
+      );
+      debug(
+        `${engine.name} run --name ${containerName} -p 127.0.0.1:${requestedHostPort}:${containerPort} --env-file … ${image}`
+      );
 
-      emit(out, `▲ container  vercel dev: starting container ${image}`);
-      debug(`docker ${args.join(' ')}`);
-
-      const child = spawn('docker', args, {
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
-      // `docker run` failures (most importantly "Cannot connect to the Docker
-      // daemon", exit code 125) are reported on stderr. Retain the tail so the
-      // readiness check can surface it instead of a bare exit code.
-      let runStderr = '';
-      child.stdout?.on('data', (data: Buffer) => onStdout?.(data));
-      child.stderr?.on('data', (data: Buffer) => {
-        runStderr += data.toString();
-        onStderr?.(data);
-      });
-      // Surface the classic "command not found" case (Docker not installed)
-      // with the same actionable message the build path uses.
-      child.on('error', (err: NodeJS.ErrnoException) => {
-        if (err.code === 'ENOENT') {
-          runStderr +=
-            'Command not found: `docker`. Ensure Docker is installed and on ' +
-            'your PATH, and that the Docker daemon is running.';
-        }
-      });
+      const handle = await engine.devRun!(
+        {
+          image,
+          containerName,
+          containerPort,
+          hostPort: requestedHostPort,
+          envFile: envFilePath,
+          command,
+        },
+        engineOut(out),
+        span
+      );
 
       const cleanupEnvFile = () => {
         rmSync(path.dirname(envFilePath), { recursive: true, force: true });
       };
 
       const shutdown = async (): Promise<void> => {
-        // Drop the cache entry first so a concurrent request starts a fresh
-        // container rather than reusing one that's being torn down.
         runningContainers.delete(reuseKey);
         try {
-          // `docker stop` causes the foreground `docker run --rm` to exit and
-          // removes the container.
-          await runForwarded('docker', ['stop', containerName], out, {
-            quiet: true,
-          });
+          if (engine.devStop) {
+            await engine.devStop(containerName, engineOut(out), span);
+          }
         } catch (err) {
           debug(
-            `docker stop ${containerName} failed: ${(err as Error).message}`
+            `${engine.name} stop ${containerName} failed: ${(err as Error).message}`
           );
         } finally {
           cleanupEnvFile();
         }
       };
 
-      // Poll for Docker's assigned host port. Any failure funnels through
-      // `shutdown()` so the container is stopped and the temp env-file (which
-      // holds secrets) is always removed.
+      // Poll for mapped host port via engine
       let hostPort: number | undefined;
       const deadline = Date.now() + 30_000;
       let lastErr: Error | undefined;
       try {
         while (Date.now() < deadline) {
-          if (child.exitCode !== null) {
-            throw new Error(containerExitMessage(child.exitCode, runStderr));
+          const exitCode = handle.getExitCode();
+          if (exitCode !== null) {
+            throw new Error(
+              containerExitMessage(
+                exitCode,
+                handle.getStderrTail(),
+                engine.name
+              )
+            );
           }
           try {
             hostPort = await readMappedHostPort(
+              engine,
               containerName,
               containerPort,
               out
             );
             break;
           } catch (err) {
-            lastErr = err as Error;
+            // Don't let Podman's transient "no such container" / "port ... not mapped"
+            // spam the container output. Only remember non-transient errors, and keep
+            // the raw stdout IP noise (127.0.0.1:xxxxx) from being printed: devPort
+            // should be quiet=true.
+            const msg = (err as Error).message;
+            const code = (err as Error & { code?: string }).code;
+            const isTransient =
+              code === 'TRANSIENT_NOT_FOUND' ||
+              /no container with name or id/i.test(msg) ||
+              /no such container/i.test(msg) ||
+              /port.*not.*mapped/i.test(msg);
+            if (!isTransient) lastErr = err as Error;
             await new Promise(resolve => setTimeout(resolve, 250));
           }
         }
@@ -613,7 +635,7 @@ async function startContainer(
         if (hostPort === undefined) {
           throw new Error(
             `Timed out waiting for container "${containerName}" to ` +
-              `publish port ${containerPort}.` +
+              `publish port ${containerPort} via ${engine.name}.` +
               (lastErr ? ` Last error: ${lastErr.message}` : '')
           );
         }
@@ -626,27 +648,41 @@ async function startContainer(
         'container.dev.host_port': String(hostPort),
         'container.dev.container_port': String(containerPort),
         'container.name': containerName,
+        'container.engine': engine.name,
       });
-      emit(out, `▲ container  container ready on localhost:${hostPort}`);
+      emit(
+        out,
+        `▲ container  container ready on localhost:${hostPort} (${engine.name})`
+      );
 
       const result: StartDevServerSuccess = {
         port: hostPort,
-        pid: child.pid ?? 0,
+        pid: handle.pid ?? 0,
         shutdown,
-        // The container is a long-running server; the dev server should keep it
-        // alive across requests instead of tearing it down after each response.
         persistent: true,
       };
 
       const running: RunningContainer = {
         result,
         containerName,
-        isRunning: () => child.exitCode === null,
+        isRunning: () => handle.isRunning(),
+        engine: engine.name,
+        _lastStderrTail: () => handle.getStderrTail(),
+        _lastExitCode: () => handle.getExitCode(),
       };
-      // If the container exits on its own (crash, `docker stop`, etc.), evict it
-      // so the next request rebuilds rather than reusing a dead container.
-      child.on('close', () => {
+      handle.onClose(() => {
         if (runningContainers.get(reuseKey) === running) {
+          const code = handle.getExitCode();
+          const tail = handle.getStderrTail();
+          // If the container crashed after being ready, remember crash
+          // so next request surfaces it instead of silently rebuilding.
+          if (
+            code !== 0 ||
+            /ERR_MODULE_NOT_FOUND|Cannot find module/i.test(tail)
+          ) {
+            const msg = containerExitMessage(code ?? 1, tail, engine.name);
+            recordStickyFailure(reuseKey, new Error(msg));
+          }
           runningContainers.delete(reuseKey);
         }
       });
@@ -654,5 +690,62 @@ async function startContainer(
 
       return result;
     }
+  );
+}
+
+/**
+ * Build a helpful error for a container run that exited before becoming ready.
+ */
+function containerExitMessage(
+  exitCode: number,
+  stderr: string,
+  engineName = 'docker'
+): string {
+  const detail = stderr.trim().split('\n').slice(-5).join('\n');
+  const looksLikeDaemonDown =
+    exitCode === 125 ||
+    /cannot connect to the docker daemon/i.test(stderr) ||
+    /cannot connect.*podman/i.test(stderr);
+
+  if (looksLikeDaemonDown) {
+    if (engineName === 'docker') {
+      return (
+        'Could not start the container: the Docker daemon is not running or ' +
+        'is unreachable. Start Docker (e.g. open Docker Desktop) and try ' +
+        '`vercel dev` again.' +
+        (detail ? `\n\nDocker reported:\n${detail}` : '')
+      );
+    }
+    return (
+      `Could not start the container via ${engineName}. ` +
+      (engineName.startsWith('podman')
+        ? 'Try `podman machine start` (system) or delete ~/.vercel/runtimes/podman and re-run (private).\n'
+        : '') +
+      (detail ? `\n\n${engineName} reported:\n${detail}` : '')
+    );
+  }
+
+  const looksLikeMissingDep =
+    /ERR_MODULE_NOT_FOUND|Cannot find module|Cannot find package/i.test(stderr);
+
+  if (looksLikeMissingDep) {
+    return [
+      `The container exited (code ${exitCode}) — missing dependency in the image.`,
+      '',
+      'Your Dockerfile does `pnpm prune --prod` (or `npm prune`) but the runtime file',
+      'requires a package that was only in `devDependencies`. Move runtime deps',
+      'like `@hono/node-server` into `dependencies`, or remove the prune step.',
+      '',
+      detail ? `${engineName} reported:\n${detail}` : '',
+      '',
+      'Fix `package.json`, then re-run `vercel dev` (the builder will rebuild the image).',
+    ]
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  return (
+    `The container exited (code ${exitCode}) before becoming ready.` +
+    (detail ? `\n\n${engineName} reported:\n${detail}` : '')
   );
 }

@@ -73,6 +73,41 @@ function isDockerfileEntrypoint(entrypoint: string): boolean {
 }
 
 /**
+ * Buildpack source markers — when a container service has no Dockerfile, the
+ * presence of any of these signals that the project should be built via
+ * Cloud Native Buildpacks (lifecycle/creator inside a Paketo builder image)
+ * instead of a Dockerfile. Kept in sync with @vercel/container's detect.ts
+ * BUILDPACK_OPT_IN_MARKERS + project.toml.
+ */
+const BUILDPACK_SOURCE_MARKERS = [
+  'go.mod',
+  'Cargo.toml',
+  'pom.xml',
+  'build.gradle',
+  'build.gradle.kts',
+  'Gemfile',
+  'composer.json',
+  'mix.exs',
+  'project.toml',
+];
+
+/**
+ * Probe the service root for a buildpack source marker. Returns true if any
+ * marker exists, signalling that the container builder should use the
+ * buildpack lifecycle path instead of a Dockerfile.
+ */
+async function hasBuildpackMarker(
+  serviceFs: DetectorFilesystem
+): Promise<boolean> {
+  for (const marker of BUILDPACK_SOURCE_MARKERS) {
+    if (await serviceFs.hasPath(marker)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Probe the service root for a blessed Dockerfile candidate. Returns the
  * service-root-relative path of the first one that exists, or undefined.
  */
@@ -130,22 +165,35 @@ async function resolveContainerServiceV2(
     // the service root.
     dockerfile = await detectContainerEntrypoint(serviceFs);
     if (!dockerfile) {
-      return {
-        error: {
-          code: 'MISSING_SERVICE_CONFIG',
-          message: `Container service "${name}" has no "entrypoint" and no ${CONTAINER_ENTRYPOINT_CANDIDATES.join(
-            ', '
-          )} was found in "${normalizedRoot}".`,
-          serviceName: name,
-        },
-      };
+      // No Dockerfile — check for buildpack source markers (go.mod,
+      // composer.json, project.toml, etc). If present, pass `<detect>` as
+      // the entrypoint so @vercel/container's buildpack detection handles
+      // the build via lifecycle/creator inside a Paketo builder image.
+      if (await hasBuildpackMarker(serviceFs)) {
+        dockerfile = '<detect>';
+      } else {
+        return {
+          error: {
+            code: 'MISSING_SERVICE_CONFIG',
+            message: `Container service "${name}" has no "entrypoint" and no ${CONTAINER_ENTRYPOINT_CANDIDATES.join(
+              ', '
+            )} was found in "${normalizedRoot}".`,
+            serviceName: name,
+          },
+        };
+      }
     }
   }
 
-  // builder.src is project-root-relative.
-  const builderSrc = isRoot
-    ? dockerfile
-    : posixPath.join(normalizedRoot, dockerfile);
+  // builder.src is project-root-relative. For buildpack projects the
+  // entrypoint is the sentinel `<detect>` — @vercel/container's detect.ts
+  // routes it to the lifecycle/creator path, so don't path-join it.
+  const builderSrc =
+    dockerfile === '<detect>'
+      ? '<detect>'
+      : isRoot
+        ? dockerfile
+        : posixPath.join(normalizedRoot, dockerfile);
 
   const builderConfig: Record<string, unknown> = { zeroConfig: true };
   if (!isRoot) {

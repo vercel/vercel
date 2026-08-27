@@ -11,6 +11,8 @@
   },
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
+    "build:podman-tarballs": "node ./scripts/build-podman-runtimes.mjs",
+    "build:podman-tarballs:local": "node ./scripts/build-podman-runtimes.mjs --local",
     "type-check": "tsc --noEmit",
     "test-unit": "vitest run --config ../../vitest.config.mts test/unit.test.ts test/diagnostics.test.ts",
     "vitest-unit": "glob --absolute 'test/*.test.ts'"

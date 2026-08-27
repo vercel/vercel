@@ -15,7 +15,14 @@ import {
   withSpan,
 } from '../util';
 import { selectStorageDriver } from '../storage-driver';
-import type { BuildPushParams, ContainerEngine } from './types';
+import type {
+  BuildPushParams,
+  ContainerEngine,
+  DevBuildParams,
+  DevContainerHandle,
+  DevOutput,
+  DevRunParams,
+} from './types';
 import { TARGET_PLATFORM, buildArgFlags } from './types';
 
 /** Run `docker` with the given args, logging the exact invocation for debugging. */
@@ -201,8 +208,60 @@ async function withManagedDaemon<T>(
   }
 }
 
+function runForwardedDocker(
+  args: string[],
+  out: DevOutput,
+  opts: { quiet?: boolean } = {}
+): Promise<{ stdout: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('docker', args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout?.on('data', (chunk: Buffer) => {
+      stdout += chunk.toString();
+      if (!opts.quiet) {
+        if (out.onStdout) out.onStdout(chunk);
+        else process.stderr.write(chunk as unknown as Uint8Array);
+      }
+    });
+    child.stderr?.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString();
+      if (!opts.quiet) {
+        if (out.onStderr) out.onStderr(chunk);
+        else process.stderr.write(chunk as unknown as Uint8Array);
+      }
+    });
+    child.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'ENOENT') {
+        reject(
+          new Error(
+            `Command not found: \`docker\`. Install Docker (Docker Desktop, OrbStack, Colima).`
+          )
+        );
+        return;
+      }
+      reject(err);
+    });
+    child.on('close', code => {
+      if (code === 0) resolve({ stdout });
+      else {
+        const detail = stderr.trim().split('\n').slice(-5).join('\n');
+        reject(
+          new Error(
+            `\`docker ${args.join(' ')}\` exited ${code}` +
+              (detail ? `\n${detail}` : '')
+          )
+        );
+      }
+    });
+  });
+}
+
 export const dockerEngine: ContainerEngine = {
   name: 'docker',
+  supportsDev: true,
 
   async ensureReady(span?: Span): Promise<void> {
     try {
@@ -286,6 +345,139 @@ export const dockerEngine: ContainerEngine = {
   },
 
   withRuntime: withManagedDaemon,
+
+  // ---- dev: mirror podman.ts dev* so selectDevEngine can probe docker ----
+  async devEnsureAvailable(out?: DevOutput): Promise<void> {
+    try {
+      await runForwardedDocker(
+        ['info', '--format', '{{.ServerVersion}}'],
+        out ?? {},
+        { quiet: true }
+      );
+    } catch (err) {
+      const msg = (err as Error).message;
+      if (/command not found/i.test(msg)) {
+        throw new Error(
+          'Docker not found on PATH. Install Docker Desktop, OrbStack, or Colima.'
+        );
+      }
+      throw new Error(
+        'Could not connect to Docker daemon. Start Docker and re-run `vercel dev`.\n\n' +
+          msg
+      );
+    }
+  },
+
+  async devBuild(params: DevBuildParams, out?: DevOutput): Promise<void> {
+    const flags: string[] = [];
+    for (const [k, v] of Object.entries(params.buildArgs ?? {})) {
+      flags.push('--build-arg', `${k}=${v}`);
+    }
+    await runForwardedDocker(
+      [
+        'build',
+        ...flags,
+        '-t',
+        params.tag,
+        '-f',
+        params.dockerfilePath,
+        params.contextDir,
+      ],
+      out ?? {}
+    );
+  },
+
+  async devInspectExposedPorts(
+    image: string,
+    out?: DevOutput
+  ): Promise<Record<string, unknown> | null> {
+    try {
+      const { stdout } = await runForwardedDocker(
+        [
+          'image',
+          'inspect',
+          '--format',
+          '{{json .Config.ExposedPorts}}',
+          image,
+        ],
+        out ?? {},
+        { quiet: true }
+      );
+      const parsed = JSON.parse(stdout.trim() || 'null') as Record<
+        string,
+        unknown
+      > | null;
+      return parsed ?? null;
+    } catch {
+      return null;
+    }
+  },
+
+  async devRun(
+    params: DevRunParams,
+    out?: DevOutput
+  ): Promise<DevContainerHandle> {
+    const args = [
+      'run',
+      '--rm',
+      '--name',
+      params.containerName,
+      '-p',
+      `127.0.0.1:${params.hostPort}:${params.containerPort}`,
+      '--env-file',
+      params.envFile,
+      params.image,
+      ...(params.command ?? []),
+    ];
+    const child = spawn('docker', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stderr = '';
+    child.stdout?.on('data', (c: Buffer) => out?.onStdout?.(c));
+    child.stderr?.on('data', (c: Buffer) => {
+      stderr += c.toString();
+      out?.onStderr?.(c);
+    });
+    child.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'ENOENT') {
+        stderr += 'Command not found: `docker`.';
+      } else {
+        stderr += (err as Error).message;
+      }
+    });
+    return {
+      pid: child.pid,
+      isRunning: () =>
+        (child as any).exitCode == null && (child as any).signalCode == null,
+      onClose: cb => child.on('close', cb),
+      getStderrTail: () => stderr,
+      getExitCode: () => (child as any).exitCode ?? null,
+    };
+  },
+
+  async devPort(
+    containerName: string,
+    containerPort: number,
+    out?: DevOutput
+  ): Promise<number> {
+    const { stdout } = await runForwardedDocker(
+      ['port', containerName, `${containerPort}/tcp`],
+      out ?? {},
+      { quiet: true }
+    );
+    const m = stdout.match(/:(\d+)\s*$/m);
+    if (!m)
+      throw new Error(`Could not parse docker port output: ${stdout.trim()}`);
+    return Number(m[1]);
+  },
+
+  async devStop(containerName: string, out?: DevOutput): Promise<void> {
+    try {
+      await runForwardedDocker(['stop', containerName], out ?? {}, {
+        quiet: true,
+      });
+    } catch {
+      // best-effort
+    }
+  },
 
   async build(params: BuildPushParams): Promise<void> {
     await runDocker([

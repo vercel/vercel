@@ -1,0 +1,9 @@
+{
+    "name": "acme/status-page",
+    "description": "PHP buildpack test",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.1"
+    }
+}

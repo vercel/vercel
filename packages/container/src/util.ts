@@ -133,11 +133,17 @@ export interface RunResult {
 export function run(
   cmd: string,
   args: string[],
-  opts: { cwd?: string; input?: string; quiet?: boolean } = {}
+  opts: {
+    cwd?: string;
+    input?: string;
+    quiet?: boolean;
+    env?: NodeJS.ProcessEnv;
+  } = {}
 ): Promise<RunResult> {
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args, {
       cwd: opts.cwd,
+      env: opts.env ?? process.env,
       stdio: [opts.input !== undefined ? 'pipe' : 'ignore', 'pipe', 'pipe'],
     });
 

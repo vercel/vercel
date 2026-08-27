@@ -95,6 +95,24 @@ describe('detectServices (services) — container detection', () => {
       expect(svc.builder.src).toBe('apps/api/Dockerfile');
       expect(svc.builder.config).toMatchObject({ workspace: 'apps/api' });
     });
+
+    it('resolves a container service with a buildpack marker and no Dockerfile via <detect>', async () => {
+      // runtime: container + no Dockerfile + a buildpack source marker
+      // (composer.json, go.mod, Cargo.toml, etc) → the entrypoint is set to
+      // `<detect>` so @vercel/container's buildpack lifecycle path handles
+      // the build via Paketo lifecycle/creator.
+      const result = await detectFixture('pass-runtime-buildpack-marker');
+
+      expect(result.errors).toEqual([]);
+      const [svc] = servicesV2(result.services);
+      expect(svc).toMatchObject({
+        root: '.',
+        runtime: 'container',
+        entrypoint: '<detect>',
+      });
+      expect(svc.builder.use).toBe('@vercel/container');
+      expect(svc.builder.src).toBe('<detect>');
+    });
   });
 
   describe('failure cases', () => {

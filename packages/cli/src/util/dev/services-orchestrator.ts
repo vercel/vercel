@@ -783,6 +783,18 @@ export class ServicesOrchestrator {
     }
 
     const root = service.root || '.';
+    // V2 services don't carry a `type` field — routing is framework-based.
+    // Container frameworks should be treated as web services for dev.
+    // Fix: when there's a single service whose root is '.' (the common case for
+    // `vercel.json` with one container service like `api { root: "." }`),
+    // route it at `/` so `vercel dev` doesn't fall back to static file listing
+    // and return 404. Without this, a lone container service showed
+    // "Files within /" instead of proxying to the container.
+    const isContainerFramework = service.framework === 'container';
+    const v2RoutePrefixes: string[] =
+      root === '.' || (this.services.length === 1 && isContainerFramework)
+        ? ['/']
+        : [];
     return {
       rootPath: path.join(this.cwd, root),
       rootLabel: root,
@@ -796,7 +808,7 @@ export class ServicesOrchestrator {
       builderConfig: service.builder?.config,
       frameworkForDev: service.framework || 'services',
       servicePayload: { name: service.name, workspace: root },
-      routePrefixes: [],
+      routePrefixes: v2RoutePrefixes,
       env,
       explicitDevCommand: service.devCommand,
     };

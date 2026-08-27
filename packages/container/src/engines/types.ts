@@ -40,6 +40,37 @@ export interface BuildPushParams {
  * Pluggable container image toolchain. Docker is used on developer machines;
  * buildah is used in the Vercel build container (daemonless, smaller footprint).
  */
+/** Output sink for `vercel dev` — routes through per-service prefixed callbacks. */
+export interface DevOutput {
+  onStdout?: (data: Buffer) => void;
+  onStderr?: (data: Buffer) => void;
+}
+
+export interface DevBuildParams {
+  tag: string;
+  dockerfilePath: string;
+  contextDir: string;
+  buildArgs?: Record<string, string>;
+}
+
+export interface DevRunParams {
+  image: string;
+  containerName: string;
+  containerPort: number;
+  /** Pre-allocated host port (0 = ephemeral). */
+  hostPort: number;
+  envFile: string;
+  command?: string[];
+}
+
+export interface DevContainerHandle {
+  pid?: number;
+  isRunning: () => boolean;
+  onClose: (cb: () => void) => void;
+  getStderrTail: () => string;
+  getExitCode: () => number | null;
+}
+
 export interface ContainerEngine {
   readonly name: string;
 
@@ -72,4 +103,49 @@ export interface ContainerEngine {
    * using the mounted cell storage volume. Must not fail the build.
    */
   reportStorage?(span?: Span): Promise<void>;
+
+  // -------------------------------------------------------------------------
+  // Dev-plane (optional, `vercel dev` only). Engines that implement these
+  // can be selected via `VERCEL_CONTAINER_ENGINE` and probed by `selectDevEngine`.
+  // -------------------------------------------------------------------------
+
+  /** Whether this engine supports `vercel dev` locally. */
+  supportsDev?: boolean;
+  /** Pre-explains why dev is unavailable, to surface in `selectDevEngine` errors. */
+  devUnavailableReason?: string;
+
+  /** Probe that the engine is installed and reachable for dev. */
+  devEnsureAvailable?(out?: DevOutput, span?: Span): Promise<void>;
+
+  /** Build the local dev image (host arch, no push, no linux/amd64 forced). */
+  devBuild?(
+    params: DevBuildParams,
+    out?: DevOutput,
+    span?: Span
+  ): Promise<void>;
+
+  /** Inspect image's Config.ExposedPorts → Record<string, unknown> | null */
+  devInspectExposedPorts?(
+    image: string,
+    out?: DevOutput,
+    span?: Span
+  ): Promise<Record<string, unknown> | null>;
+
+  /** Run container in background, returns a handle we poll for port mapping. */
+  devRun?(
+    params: DevRunParams,
+    out?: DevOutput,
+    span?: Span
+  ): Promise<DevContainerHandle>;
+
+  /** Read mapped host port for `containerName:containerPort/tcp`. */
+  devPort?(
+    containerName: string,
+    containerPort: number,
+    out?: DevOutput,
+    span?: Span
+  ): Promise<number>;
+
+  /** Stop named container (wrapper around `docker/podman stop`). */
+  devStop?(containerName: string, out?: DevOutput, span?: Span): Promise<void>;
 }
