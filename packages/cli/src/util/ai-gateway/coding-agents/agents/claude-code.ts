@@ -1,6 +1,7 @@
 import { join } from 'node:path';
-import type { CodingAgent, EnvExport } from '../types';
-import { mergeJson, pathExists } from '../config-files';
+import type { CodingAgent } from '../types';
+import { mergeJson, pathExists, removeJsonPath } from '../config-files';
+import { keychainHelperCommand } from '../keychain';
 import {
   GATEWAY_CLAUDE_CODE_BASE_URL,
   resolveGatewayBaseUrl,
@@ -12,10 +13,9 @@ import {
  * `/v1` (the Anthropic SDK appends `/v1/messages`). `ANTHROPIC_API_KEY` must be
  * emptied because it takes precedence over `ANTHROPIC_AUTH_TOKEN`.
  *
- * With Keychain enabled we keep the token out of `settings.json` and export
- * `ANTHROPIC_AUTH_TOKEN` from the shell rc (resolved from the Keychain) instead,
- * so the secret never lands in the config file. Claude Code then reads the token
- * from its inherited environment.
+ * With Keychain enabled we keep the token out of `settings.json` and use
+ * `apiKeyHelper` so Claude Code reads it directly from the Keychain.
+ * `ANTHROPIC_AUTH_TOKEN` is emptied so it cannot shadow the helper.
  *
  * Docs: https://vercel.com/docs/ai-gateway/coding-agents/claude-code
  */
@@ -50,9 +50,10 @@ export const claudeCode: CodingAgent = {
       ANTHROPIC_API_KEY: '',
       CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY: '1',
     };
-    const envExports: EnvExport[] = [];
+    const patch: Record<string, unknown> = { env };
     if (ctx.useKeychain) {
-      envExports.push({ name: 'ANTHROPIC_AUTH_TOKEN', value: ctx.apiKey });
+      patch.apiKeyHelper = keychainHelperCommand();
+      env.ANTHROPIC_AUTH_TOKEN = '';
     } else {
       env.ANTHROPIC_AUTH_TOKEN = ctx.apiKey;
     }
@@ -62,14 +63,18 @@ export const claudeCode: CodingAgent = {
           path,
           label: 'Claude Code settings',
           format: 'json',
-          transform: current => mergeJson(current, { env }),
+          transform: current => {
+            const next = mergeJson(current, patch);
+            return ctx.useKeychain
+              ? next
+              : removeJsonPath(next, ['apiKeyHelper'], keychainHelperCommand());
+          },
         },
       ],
-      envExports,
+      envExports: [],
       notes: ctx.useKeychain
         ? [
-            'The Anthropic auth token is read from your shell environment (Keychain-backed).',
-            'Open a new terminal so ANTHROPIC_AUTH_TOKEN is loaded, then restart Claude Code.',
+            'Claude Code reads the key from the macOS Keychain. Restart Claude Code to pick up the new settings.',
           ]
         : ['Restart Claude Code to pick up the new settings.'],
     };

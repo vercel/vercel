@@ -158,7 +158,7 @@ export function buildAgentPrompt(plan: SetupPlan, apiKey: string): string {
   const sections: string[] = [
     'Set up the Vercel AI Gateway for my coding agents by applying the file changes below.',
     'For each file, create it if missing or edit it to match the diff (lines starting with `+` are added, `-` are removed; `⋯` marks skipped unchanged lines).',
-    `Any masked value (e.g. ${maskSecret(apiKey)}) is my AI Gateway API key, stored in my macOS Keychain; the config and shell already reference it with \`${'security find-generic-password'}\`, so leave those lookups as-is and do not ask me to paste the key.`,
+    `Any masked value (e.g. ${maskSecret(apiKey)}) is my AI Gateway API key, stored in my macOS Keychain; the config files already reference it with \`${'security find-generic-password'}\`, so leave those lookups as-is and do not ask me to paste the key.`,
     '',
   ];
   for (const change of plan.changes) {
