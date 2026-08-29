@@ -13,7 +13,7 @@ interface LambdaLike {
 
 /**
  * Returns an array of scripts that should be preloaded in Node.js Lambdas.
- * The `buffer` parameter is needed to decide wether or not to enable Bytecode
+ * The `buffer` parameter is needed to decide whether or not to enable Bytecode
  * Caching so it doesn't **need** to be exact (we can leave out the env layer)
  */
 export function getLambdaPreloadScripts(
