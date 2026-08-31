@@ -1,12 +1,16 @@
 export function formatCurrency(amount: number): string {
-  return `$${amount.toFixed(4)}`;
+  return `$${amount.toFixed(2)}`;
 }
 
 export function formatQuantity(quantity: number, unit: string): string {
   if (unit === 'USD') {
-    return `$${quantity.toFixed(4)}`;
+    return formatCurrency(quantity);
   }
-  return quantity.toFixed(4);
+
+  return `${new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: 2,
+    notation: Math.abs(quantity) >= 1000 ? 'compact' : 'standard',
+  }).format(quantity)} ${unit}`;
 }
 
 export function extractDatePortion(isoString: string): string {

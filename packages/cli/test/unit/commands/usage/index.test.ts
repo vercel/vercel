@@ -30,13 +30,94 @@ function createMockCharge(overrides: Partial<FocusCharge> = {}): FocusCharge {
 }
 
 function useBillingCharges(charges: FocusCharge[] = []) {
-  client.scenario.get('/v1/billing/charges', (_req, res) => {
-    res.setHeader('Content-Type', 'application/jsonl');
-    // Stream JSONL response
-    for (const charge of charges) {
-      res.write(JSON.stringify(charge) + '\n');
-    }
-    res.end();
+  client.scenario.post('/v2/billing/costs', (_req, res) => {
+    const products = Object.fromEntries(
+      charges.map(charge => [
+        charge.ServiceName,
+        {
+          title: charge.ServiceName,
+          category:
+            charge.Tags.Category === 'Subscription Licenses'
+              ? 'Subscription Licenses'
+              : 'Vercel Functions',
+        },
+      ])
+    );
+    const projects = Object.fromEntries(
+      charges.flatMap(charge =>
+        charge.Tags.ProjectId
+          ? [[charge.Tags.ProjectId, { title: charge.Tags.ProjectName }]]
+          : []
+      )
+    );
+    const regions = Object.fromEntries(
+      charges.flatMap(charge =>
+        charge.RegionId ? [[charge.RegionId, { title: charge.RegionName }]] : []
+      )
+    );
+    const times = [
+      ...new Set(charges.map(charge => charge.ChargePeriodStart)),
+    ].sort();
+
+    res.json({
+      metrics: [
+        {
+          slug: 'gross_cost',
+          title: 'Cost',
+          unit: { kind: 'standard', name: 'USD' },
+        },
+        {
+          slug: 'quantity',
+          title: 'Usage',
+          unit: { kind: 'custom', singular: 'unit', plural: 'units' },
+        },
+      ],
+      from: times.at(0) ?? '2025-12-01T08:00:00.000Z',
+      to: '2026-01-01T08:00:00.000Z',
+      results: {
+        granularity: { unit: 'day', step: 1 },
+        times,
+        dimensionsMeta: {
+          product: { values: products },
+          project: { values: projects },
+          region: { values: regions },
+        },
+        views: {
+          byProduct: {
+            groupBy: ['product'],
+            results: charges.map(charge => ({
+              dimensionValues: { product: charge.ServiceName },
+              metrics: ['gross_cost', 'quantity'],
+              values: times.map(time =>
+                time === charge.ChargePeriodStart
+                  ? [charge.BilledCost, charge.ConsumedQuantity]
+                  : [0, 0]
+              ),
+              totalValue: [charge.BilledCost, charge.ConsumedQuantity],
+              flatRate: charge.Tags.FlatRate === 'true',
+            })),
+          },
+          byProductRegionProject: {
+            groupBy: ['product', 'region', 'project'],
+            results: charges.map(charge => ({
+              dimensionValues: {
+                product: charge.ServiceName,
+                project: charge.Tags.ProjectId ?? null,
+                region: charge.RegionId ?? null,
+              },
+              metrics: ['gross_cost', 'quantity'],
+              values: times.map(time =>
+                time === charge.ChargePeriodStart
+                  ? [charge.BilledCost, charge.ConsumedQuantity]
+                  : [0, 0]
+              ),
+              totalValue: [charge.BilledCost, charge.ConsumedQuantity],
+              flatRate: charge.Tags.FlatRate === 'true',
+            })),
+          },
+        },
+      },
+    });
   });
 }
 
@@ -100,6 +181,55 @@ describe('usage', () => {
       expect(output).toContain('Edge Middleware Invocations');
     });
 
+    it('should display included Flat Rate CDN usage in consumed units', async () => {
+      useBillingCharges([
+        createMockCharge({
+          ServiceName: 'Edge Requests',
+          ConsumedQuantity: 12040,
+          ConsumedUnit: 'requests',
+          PricingQuantity: 0,
+          EffectiveCost: 0,
+          BilledCost: 0,
+          Tags: { FlatRate: 'true' },
+        }),
+      ]);
+
+      client.setArgv('usage', '--from', '2025-12-01', '--to', '2025-12-31');
+      const exitCode = await usage(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.getFullOutput();
+      expect(output).toContain('12K units');
+      expect(output).toContain('Edge Requests (Flat Rate CDN)');
+      expect(output).toContain('Included');
+      expect(output).not.toContain('Amount due');
+    });
+
+    it('should separate subscription licenses from infrastructure usage', async () => {
+      useBillingCharges([
+        createMockCharge({
+          ServiceName: 'Pro',
+          ConsumedQuantity: 1,
+          BilledCost: 20,
+          Tags: { Category: 'Subscription Licenses' },
+        }),
+        createMockCharge({
+          ServiceName: 'Function Invocations',
+          ConsumedQuantity: 8340,
+          BilledCost: 0.01,
+        }),
+      ]);
+
+      client.setArgv('usage', '--from', '2025-12-01', '--to', '2025-12-31');
+      const exitCode = await usage(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.getFullOutput();
+      expect(output).toContain('Infrastructure');
+      expect(output).toContain('Subscription licenses');
+      expect(output).toContain('Estimated total:');
+    });
+
     it('should output JSON with --format json', async () => {
       const mockCharges = [
         createMockCharge({
@@ -126,7 +256,11 @@ describe('usage', () => {
       const output = client.stdout.getFullOutput();
       const json = JSON.parse(output);
       expect(json.services).toHaveLength(1);
+      expect(json.pricingUnit).toEqual('USD');
       expect(json.services[0].name).toEqual('Serverless Function Execution');
+      expect(json.services[0].quantity).toEqual(1000000);
+      expect(json.services[0].unit).toEqual('units');
+      expect(json.totals.cost).toEqual(10);
       expect(json.totals.billedCost).toEqual(10);
     });
 

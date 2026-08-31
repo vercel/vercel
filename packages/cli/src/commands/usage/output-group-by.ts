@@ -6,14 +6,7 @@ import { formatCurrency, formatQuantity } from '../../util/billing/format';
 import type { OutputOptions, GroupByDimension } from './types';
 
 function getDimensionLabel(dimension: GroupByDimension): string {
-  switch (dimension) {
-    case 'project':
-      return 'Project';
-    case 'region':
-      return 'Region';
-    default:
-      return 'Group';
-  }
+  return dimension === 'project' ? 'Project' : 'Region';
 }
 
 export function outputGroupBy({
@@ -28,52 +21,45 @@ export function outputGroupBy({
     `Usage by ${dimensionLabel} for ${chalk.bold(data.contextName)} ${elapsed(Date.now() - startTime)}`
   );
   log('');
-  const periodSuffix = data.usingDefaults ? ' (current month)' : '';
+  const periodSuffix = data.usingDefaults ? ' (current billing cycle)' : '';
   log(
     `${chalk.gray('Period:')} ${data.fromDisplay} to ${data.toDisplay}${periodSuffix}`
   );
-  log(`${chalk.gray('Charges processed:')} ${data.chargeCount}`);
-  log(`${chalk.gray('Pricing unit:')} ${data.pricingUnit}`);
   log('');
 
   const sortedGroups = [...data.groupByUsage.entries()].sort(
-    (a, b) => b[1].totalBilledCost - a[1].totalBilledCost
+    (a, b) => b[1].totalCost - a[1].totalCost
   );
-
   if (sortedGroups.length === 0) {
     log('No usage data found for this period.');
     return;
   }
 
-  const quantityHeader =
-    data.pricingUnit === 'USD' ? 'Usage (USD)' : data.pricingUnit;
-
   for (const [groupName, groupData] of sortedGroups) {
     log(
-      `${chalk.bold(chalk.cyan(groupName))} (Total: ${formatQuantity(groupData.totalPricingQuantity, data.pricingUnit)}, ${formatCurrency(groupData.totalBilledCost)})`
+      `${chalk.bold(chalk.cyan(groupName))} (${formatCurrency(groupData.totalCost)})`
     );
-
-    const sortedServices = [...groupData.services.entries()].sort(
-      (a, b) => b[1].billedCost - a[1].billedCost
-    );
-
-    const headers = ['Service', quantityHeader, 'Billed Cost'];
-    const rows = sortedServices.map(([name, svc]) => [
-      name,
-      formatQuantity(svc.pricingQuantity, svc.pricingUnit),
-      formatCurrency(svc.billedCost),
-    ]);
-
+    const rows = [...groupData.services.entries()]
+      .sort((a, b) => b[1].cost - a[1].cost)
+      .map(([name, service]) => [
+        service.included ? chalk.blue(name) : name,
+        formatQuantity(service.quantity, service.unit),
+        service.included ? 'Included' : formatCurrency(service.cost),
+      ]);
     const tablePrint = table(
-      [headers.map(h => chalk.bold(chalk.gray(h))), ...rows],
+      [
+        ['Service', 'Usage', 'Cost'].map(header =>
+          chalk.bold(chalk.gray(header))
+        ),
+        ...rows,
+      ],
       { hsep: 4, align: ['l', 'r', 'r'] }
     ).replace(/^/gm, '  ');
-
     print(`${tablePrint}\n`);
   }
 
   log('');
   log(
-    `${chalk.gray('Amount due:')} ${chalk.bold(formatCurrency(data.grandTotals.billedCost))}`
+    `${chalk.gray('Estimated total:')} ${chalk.bold(formatCurrency(data.totalCost))}`
   );
 }
