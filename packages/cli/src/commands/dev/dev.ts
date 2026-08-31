@@ -145,7 +145,23 @@ export default async function dev(
 
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-    projectSettings = project;
+    // The linked `project` response carries bulky runtime-only fields that are
+    // not part of `ProjectSettings` — notably `env`, an array of every
+    // environment record across all branches, and `latestDeployments`.
+    // `projectSettings` is serialized into `VERCEL_DEV_CONFIG` and injected into
+    // the forked dev server's environment; on projects with many branches that
+    // `env` array can push the environment block past the OS `ARG_MAX` limit and
+    // fail the fork with `E2BIG`. Keep only the settings — the real env values
+    // reach the dev server separately via `envValues`.
+    const {
+      env: _env,
+      latestDeployments: _latestDeployments,
+      ...settings
+    } = project as typeof project & {
+      env?: unknown;
+      latestDeployments?: unknown;
+    };
+    projectSettings = settings;
     projectId = project.id;
     orgId = org.id;
 

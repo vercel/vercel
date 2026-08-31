@@ -22,6 +22,7 @@ const { mockStart, devServerInstances, mockedRepoRoots } = vi.hoisted(() => ({
     cwd: string;
     projectId?: string;
     orgId?: string;
+    projectSettings?: unknown;
   }[],
   mockedRepoRoots: new Map<string, string>(),
 }));
@@ -32,11 +33,15 @@ vi.mock('../../../../src/util/dev/server', async () => {
   >('../../../../src/util/dev/server');
   class DevServer {
     devCommand = 'framework dev';
-    constructor(cwd: string, options: { projectId?: string; orgId?: string }) {
+    constructor(
+      cwd: string,
+      options: { projectId?: string; orgId?: string; projectSettings?: unknown }
+    ) {
       devServerInstances.push({
         cwd,
         projectId: options.projectId,
         orgId: options.orgId,
+        projectSettings: options.projectSettings,
       });
     }
     feed() {}
@@ -440,6 +445,47 @@ describe('dev', () => {
         projectId: undefined,
         orgId: undefined,
       });
+    });
+  });
+
+  describe('projectSettings', () => {
+    it('strips the bulky `env` and `latestDeployments` fields from the projectSettings passed to DevServer', async () => {
+      // `getLinkedProject` returns a full `Project` whose `env` array holds
+      // every environment record across all branches (>1MB on large projects).
+      // That object is serialized into VERCEL_DEV_CONFIG and forked into the
+      // dev server's environment, so `dev` must drop it (and `latestDeployments`)
+      // while preserving the actual project settings.
+      const spy = vi.spyOn(linkModule, 'getLinkedProject').mockResolvedValue({
+        status: 'linked',
+        org: { type: 'team', id: orgId, slug: 'team' },
+        project: {
+          id: projectId,
+          name: projectName,
+          framework: 'vite',
+          env: [
+            { id: 'e1', key: 'SECRET_ONE', value: 'a' },
+            { id: 'e2', key: 'SECRET_TWO', value: 'b' },
+          ],
+          latestDeployments: [{ id: 'dpl_1' }],
+        },
+      } as unknown as Awaited<ReturnType<typeof linkModule.getLinkedProject>>);
+
+      client.setArgv('dev', projectPath);
+      await expect(dev(client)).resolves.toEqual(undefined);
+
+      expect(devServerInstances).toHaveLength(1);
+      const projectSettings = devServerInstances[0].projectSettings as Record<
+        string,
+        unknown
+      >;
+      expect(projectSettings).toBeDefined();
+      // The bulky fields must be gone…
+      expect(projectSettings.env).toBeUndefined();
+      expect(projectSettings.latestDeployments).toBeUndefined();
+      // …but the real settings must be preserved.
+      expect(projectSettings.framework).toBe('vite');
+
+      spy.mockRestore();
     });
   });
 
