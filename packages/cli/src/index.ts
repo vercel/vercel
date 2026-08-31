@@ -118,13 +118,14 @@ function hasProxyConfig(): boolean {
 }
 
 /*
-  By default, node throws EPIPE errors if process.stdout is being written to
-  and a user runs it through a pipe that gets closed while the process is still outputting
-  (eg, the simple case of piping a node app through head).
+  By default, node throws EPIPE errors if process.stdout or process.stderr is
+  being written to and a user runs it through a pipe that gets closed while
+  the process is still outputting (eg, piping a node app through head).
 
-  This suppresses those errors.
+  This suppresses those errors for both output streams.
 */
 epipebomb();
+epipebomb(process.stderr);
 
 let client: Client;
 let resolvedCommandForUpdate: string | undefined;
