@@ -183,8 +183,10 @@ describe('firewall overview', () => {
         ...defaultProject,
         id: 'firewall-test-project',
         name: 'firewall-test',
+        // The API returns `security`, but it is not modelled on `Project` —
+        // which is why the command fetches it as `ProjectSecurityResponse`.
         security: { firewallBypassIps: [`0.0.0.0/0#${resumesAt}`] },
-      });
+      } as Parameters<typeof useProject>[0]);
       useListFirewallConfigs(createConfig({ firewallEnabled: true }), null);
       useGetBypassError();
 
