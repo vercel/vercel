@@ -5,6 +5,7 @@ import { useUser } from '../../../mocks/user';
 import {
   useListFirewallConfigs,
   useGetBypass,
+  useGetBypassError,
   createConfig,
   createRule,
   createIpRule,
@@ -153,5 +154,74 @@ describe('firewall overview', () => {
     client.setArgv('firewall', 'overview', '--json');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
+  });
+
+  describe('when IP Bypass is unavailable on the plan', () => {
+    it('still renders the overview instead of failing', async () => {
+      useListFirewallConfigs(createConfig({ firewallEnabled: true }), null);
+      useGetBypassError();
+
+      client.setArgv('firewall', 'overview');
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Not available on this plan');
+      expect(await exitCodePromise).toEqual(0);
+
+      const fullOutput = client.stderr.getFullOutput();
+      // The rest of the overview is still reported.
+      expect(fullOutput).toContain('Enabled');
+      expect(fullOutput).toContain('IP Blocks');
+      expect(fullOutput).not.toContain('IP Bypass is unavailable');
+      // Bypass is gated; mitigations are not, so they must not be conflated.
+      expect(fullOutput).not.toContain('System Mitigations:   Not available');
+    });
+
+    it('reports mitigation status from the project', async () => {
+      // Mitigations are read from the project, which is not plan-gated, so the
+      // status is still accurate when the bypass endpoint is unavailable.
+      const resumesAt = Math.floor(Date.now() / 1000) + 2 * 60 * 60;
+      useProject({
+        ...defaultProject,
+        id: 'firewall-test-project',
+        name: 'firewall-test',
+        security: { firewallBypassIps: [`0.0.0.0/0#${resumesAt}`] },
+      });
+      useListFirewallConfigs(createConfig({ firewallEnabled: true }), null);
+      useGetBypassError();
+
+      client.setArgv('firewall', 'overview');
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Paused');
+      expect(await exitCodePromise).toEqual(0);
+
+      expect(client.stderr.getFullOutput()).toContain('auto-resumes in');
+    });
+
+    it('reports bypass as null in JSON output', async () => {
+      useListFirewallConfigs(createConfig({ firewallEnabled: true }), null);
+      useGetBypassError();
+
+      client.setArgv('firewall', 'overview', '--json');
+      const exitCode = await firewall(client);
+      expect(exitCode).toEqual(0);
+
+      const json = JSON.parse(client.stdout.getFullOutput());
+      // `null` distinguishes "unreadable" from `[]`, meaning "none configured".
+      expect(json.bypass).toBeNull();
+    });
+  });
+
+  it('still fails when the bypass request is denied by permissions', async () => {
+    // The API checks permissions after the plan gate, so a 403 means the user
+    // lacks access and must not be reported as a plan limitation.
+    useListFirewallConfigs(createConfig({ firewallEnabled: true }), null);
+    useGetBypassError(403, 'You do not have permission to read IP blocking.');
+
+    client.setArgv('firewall', 'overview');
+    const exitCode = await firewall(client);
+    expect(exitCode).toEqual(1);
+
+    expect(client.stderr.getFullOutput()).not.toContain(
+      'Not available on this plan'
+    );
   });
 });

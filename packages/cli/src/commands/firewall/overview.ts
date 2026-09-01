@@ -11,7 +11,24 @@ import {
   type AttackModeStatus,
 } from '../../util/firewall/format';
 import { outputAgentError } from '../../util/agent-output';
-import type { ProjectSecurityResponse } from '../../util/firewall/types';
+import { isAPIError } from '../../util/errors-ts';
+import type {
+  BypassRule,
+  ProjectSecurityResponse,
+} from '../../util/firewall/types';
+
+/**
+ * Whether an error indicates the endpoint is gated behind the account's plan
+ * rather than having genuinely failed. The bypass API responds 404 with
+ * "IP Bypass is unavailable for this plan." on plans without the feature.
+ *
+ * Deliberately narrow: that endpoint checks permissions only after the plan
+ * gate, so a 403 means the user lacks access rather than the plan lacking the
+ * feature, and must still surface as an error.
+ */
+function isPlanGatedError(error: unknown): boolean {
+  return isAPIError(error) && error.status === 404;
+}
 
 export default async function overview(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, overviewSubcommand, client);
@@ -30,15 +47,32 @@ export default async function overview(client: Client, argv: string[]) {
   output.spinner(`Fetching firewall overview for ${chalk.bold(project.name)}`);
 
   try {
-    const [configList, bypassList, freshProject] = await Promise.all([
-      listFirewallConfigs(client, project.id, { teamId }),
-      getBypass(client, project.id, { teamId }),
-      client.fetch<ProjectSecurityResponse>(
-        `/v9/projects/${encodeURIComponent(project.id)}`,
-        { accountId: teamId }
-      ),
-    ]);
+    const [configResult, bypassResult, projectResult] =
+      await Promise.allSettled([
+        listFirewallConfigs(client, project.id, { teamId }),
+        getBypass(client, project.id, { teamId }),
+        client.fetch<ProjectSecurityResponse>(
+          `/v9/projects/${encodeURIComponent(project.id)}`,
+          { accountId: teamId }
+        ),
+      ]);
 
+    // The firewall config and project are required to render anything
+    // meaningful, so their failures remain fatal.
+    if (configResult.status === 'rejected') throw configResult.reason;
+    if (projectResult.status === 'rejected') throw projectResult.reason;
+
+    // Bypass is plan-gated. When it is unavailable the rest of the overview is
+    // still useful, so degrade to `null` rather than failing the command.
+    let bypass: BypassRule[] | null = null;
+    if (bypassResult.status === 'fulfilled') {
+      bypass = bypassResult.value.result;
+    } else if (!isPlanGatedError(bypassResult.reason)) {
+      throw bypassResult.reason;
+    }
+
+    const configList = configResult.value;
+    const freshProject = projectResult.value;
     const { active, draft } = configList;
 
     const attackMode: AttackModeStatus = {
@@ -50,7 +84,7 @@ export default async function overview(client: Client, argv: string[]) {
       outputJson(client, {
         active,
         draft,
-        bypass: bypassList.result,
+        bypass,
         attackMode,
       });
       return 0;
@@ -58,7 +92,13 @@ export default async function overview(client: Client, argv: string[]) {
 
     output.print('\n');
     output.print(
-      formatStatusOutput(active, draft, bypassList.result, attackMode)
+      formatStatusOutput(
+        active,
+        draft,
+        bypass,
+        attackMode,
+        freshProject.security?.firewallBypassIps
+      )
     );
     output.print('\n\n');
 

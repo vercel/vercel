@@ -115,6 +115,15 @@ export interface ProjectSecurityResponse {
     /** Epoch milliseconds */
     attackModeActiveUntil?: number | null;
     attackModeUpdatedAt?: number;
+    /**
+     * System bypass entries encoded as `<cidr>#<expiry>`, where `<expiry>` is
+     * epoch seconds. An unexpired all-sources entry (`0.0.0.0/0` or `::/0`)
+     * means system mitigations are paused.
+     *
+     * Unlike the `/firewall/bypass` endpoint this is not plan-gated, so it is
+     * the only reliable source for mitigation status.
+     */
+    firewallBypassIps?: string[];
   };
 }
 

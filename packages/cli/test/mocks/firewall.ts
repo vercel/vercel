@@ -206,6 +206,19 @@ export function useGetBypass(bypass: BypassRule[] = []) {
   });
 }
 
+/**
+ * Mock the bypass endpoint rejecting. Defaults to the 404 the API returns when
+ * the account's plan has no IP Bypass access.
+ */
+export function useGetBypassError(
+  statusCode = 404,
+  message = 'IP Bypass is unavailable for this plan.'
+) {
+  client.scenario.get('/v1/security/firewall/bypass', (_req: any, res: any) => {
+    res.status(statusCode).json({ error: { code: 'not_found', message } });
+  });
+}
+
 export const capturedRequests: {
   activate?: { version: string };
   deleteDraft?: boolean;

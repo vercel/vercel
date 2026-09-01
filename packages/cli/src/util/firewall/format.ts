@@ -17,17 +17,97 @@ export interface AttackModeStatus {
   activeUntil?: number | null;
 }
 
+/** Shown in place of a value the account's plan has no access to. */
+const PLAN_UNAVAILABLE = 'Not available on this plan';
+
 export function isAllSourcesBypass(ip: string): boolean {
   return ip === '0.0.0.0/0' || ip === '::/0';
 }
 
-export function isMitigationsPaused(bypass: BypassRule[]): boolean {
-  const now = Math.floor(Date.now() / 1000);
-  return bypass.some(
-    b =>
-      isAllSourcesBypass(b.Ip) &&
-      b.Domain === '*' &&
-      (b.ExpiresAt === null || b.ExpiresAt === undefined || b.ExpiresAt > now)
+export type MitigationsStatus =
+  | { paused: false }
+  /** `resumesAt` is epoch seconds; absent for a bypass with no expiry. */
+  | { paused: true; resumesAt?: number };
+
+/**
+ * Combine two readings of mitigation status, preferring the one that keeps
+ * mitigations paused for longer. A paused state with no expiry is permanent and
+ * so outranks any expiring one.
+ */
+function mergeMitigationsStatus(
+  a: MitigationsStatus,
+  b: MitigationsStatus
+): MitigationsStatus {
+  if (!a.paused) return b;
+  if (!b.paused) return a;
+  if (a.resumesAt === undefined || b.resumesAt === undefined) {
+    return { paused: true };
+  }
+  return { paused: true, resumesAt: Math.max(a.resumesAt, b.resumesAt) };
+}
+
+/**
+ * Derive mitigation status from a project's `firewallBypassIps`, encoded as
+ * `<cidr>#<expiry>` with `<expiry>` in epoch seconds.
+ */
+function mitigationsFromProject(
+  firewallBypassIps: string[]
+): MitigationsStatus {
+  const nowSeconds = Date.now() / 1000;
+  let status: MitigationsStatus = { paused: false };
+
+  for (const entry of firewallBypassIps) {
+    const [ip, expiry] = entry.split('#');
+    if (!isAllSourcesBypass(ip)) continue;
+
+    if (!expiry) return { paused: true };
+
+    const resumesAt = Number.parseInt(expiry, 10);
+    if (!Number.isNaN(resumesAt) && resumesAt > nowSeconds) {
+      status = { paused: true, resumesAt };
+    }
+  }
+
+  return status;
+}
+
+/** Derive mitigation status from the bypass API's project-scoped rules. */
+function mitigationsFromBypassRules(bypass: BypassRule[]): MitigationsStatus {
+  const nowSeconds = Date.now() / 1000;
+  let status: MitigationsStatus = { paused: false };
+
+  for (const rule of bypass) {
+    if (!isAllSourcesBypass(rule.Ip) || rule.Domain !== '*') continue;
+
+    if (rule.ExpiresAt === null || rule.ExpiresAt === undefined) {
+      return { paused: true };
+    }
+    if (rule.ExpiresAt > nowSeconds) {
+      status = { paused: true, resumesAt: rule.ExpiresAt };
+    }
+  }
+
+  return status;
+}
+
+/**
+ * Whether system mitigations are paused, which is the case while an all-sources
+ * system bypass is in effect.
+ *
+ * Reads both available sources. The project field is not plan-gated, so it is
+ * the only source on plans without IP Bypass; the bypass API is consulted when
+ * available so that a bypass which was never mirrored onto the project is still
+ * reported. Either source reporting paused is treated as paused.
+ */
+export function getMitigationsStatus(
+  firewallBypassIps?: string[],
+  bypass?: BypassRule[] | null
+): MitigationsStatus {
+  return mergeMitigationsStatus(
+    firewallBypassIps
+      ? mitigationsFromProject(firewallBypassIps)
+      : { paused: false },
+    bypass ? mitigationsFromBypassRules(bypass) : { paused: false }
   );
 }
 
@@ -47,31 +127,34 @@ export function formatAttackModeStatus(status: AttackModeStatus): string {
   return chalk.red('On');
 }
 
-export function formatMitigationsStatus(bypass: BypassRule[]): string {
-  if (isMitigationsPaused(bypass)) {
-    const entry = bypass.find(
-      b => isAllSourcesBypass(b.Ip) && b.Domain === '*'
-    );
-    if (entry?.ExpiresAt) {
-      const remainingMs = entry.ExpiresAt * 1000 - Date.now();
-      if (remainingMs > 0) {
-        const hours = Math.floor(remainingMs / (60 * 60 * 1000));
-        const minutes = Math.floor(
-          (remainingMs % (60 * 60 * 1000)) / (60 * 1000)
-        );
-        return chalk.yellow(`Paused (auto-resumes in ${hours}h ${minutes}m)`);
-      }
+export function formatMitigationsStatus(status: MitigationsStatus): string {
+  if (!status.paused) return chalk.green('Active');
+
+  if (status.resumesAt !== undefined) {
+    const remainingMs = status.resumesAt * 1000 - Date.now();
+    if (remainingMs > 0) {
+      const hours = Math.floor(remainingMs / (60 * 60 * 1000));
+      const minutes = Math.floor(
+        (remainingMs % (60 * 60 * 1000)) / (60 * 1000)
+      );
+      return chalk.yellow(`Paused (auto-resumes in ${hours}h ${minutes}m)`);
     }
-    return chalk.yellow('Paused');
   }
-  return chalk.green('Active');
+  return chalk.yellow('Paused');
 }
 
+/**
+ * @param bypass Bypass rules, or `null` when the bypass API is unavailable on
+ * the account's plan.
+ * @param firewallBypassIps The project's `security.firewallBypassIps`, used to
+ * report mitigation status on plans where `bypass` is unavailable.
+ */
 export function formatStatusOutput(
   active: FirewallConfigResponse | null,
   draft: FirewallConfigResponse | null,
-  bypass: BypassRule[],
-  attackMode?: AttackModeStatus
+  bypass: BypassRule[] | null,
+  attackMode?: AttackModeStatus,
+  firewallBypassIps?: string[]
 ): string {
   const lines: string[] = [];
 
@@ -95,11 +178,17 @@ export function formatStatusOutput(
     );
   }
 
-  // Filter out the allSources bypass (system mitigations) from the count
-  const regularBypasses = bypass.filter(b => !isAllSourcesBypass(b.Ip));
-  lines.push(
-    `  ${chalk.bold('System Bypass:')}        ${regularBypasses.length} IP${regularBypasses.length !== 1 ? 's' : ''}`
-  );
+  if (bypass === null) {
+    lines.push(
+      `  ${chalk.bold('System Bypass:')}        ${chalk.dim(PLAN_UNAVAILABLE)}`
+    );
+  } else {
+    // Filter out the allSources bypass (system mitigations) from the count
+    const regularBypasses = bypass.filter(b => !isAllSourcesBypass(b.Ip));
+    lines.push(
+      `  ${chalk.bold('System Bypass:')}        ${regularBypasses.length} IP${regularBypasses.length !== 1 ? 's' : ''}`
+    );
+  }
 
   lines.push('');
   if (attackMode) {
@@ -108,7 +197,9 @@ export function formatStatusOutput(
     );
   }
   lines.push(
-    `  ${chalk.bold('System Mitigations:')}   ${formatMitigationsStatus(bypass)}`
+    `  ${chalk.bold('System Mitigations:')}   ${formatMitigationsStatus(
+      getMitigationsStatus(firewallBypassIps, bypass)
+    )}`
   );
 
   if (draft && draft.changes.length > 0) {
