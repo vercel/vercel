@@ -37,6 +37,10 @@ export function outputJson(
     pricingUnit: 'USD',
   };
 
+  if (data.credit) {
+    jsonOutput.credit = data.credit;
+  }
+
   if (breakdownPeriod) {
     jsonOutput.breakdown = {
       period: breakdownPeriod,

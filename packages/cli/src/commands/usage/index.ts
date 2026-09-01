@@ -29,6 +29,7 @@ import { outputGroupBy } from './output-group-by';
 import { outputJson } from './output-json';
 import type {
   BreakdownPeriod,
+  CommitmentUsageResponse,
   CostMetric,
   CostMetricGroup,
   CostMetricsResponse,
@@ -39,7 +40,8 @@ import type {
   UsageData,
 } from './types';
 
-const COST_METRIC = 'gross_cost';
+const GROSS_COST_METRIC = 'gross_cost';
+// TODO: Add `net_cost` once the billing costs API contract supports it.
 
 export default async function usage(client: Client): Promise<number> {
   const { print, error, debug, spinner } = output;
@@ -107,16 +109,19 @@ export default async function usage(client: Client): Promise<number> {
   telemetry.trackCliOptionFrom(fromFlag);
   telemetry.trackCliOptionTo(toFlag);
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
+  telemetry.trackCliFlagAll(parsedArgs.flags['--all']);
   telemetry.trackCliOptionBreakdown(breakdownFlag);
   telemetry.trackCliOptionGroupBy(groupByFlag);
 
   let contextName: string;
+  let contextType: 'team' | 'personal account';
   let teamId: string | undefined;
   let billingPeriod: { start: number; end: number } | undefined;
 
   try {
     const scope = await getScope(client);
     contextName = scope.contextName;
+    contextType = scope.team ? 'team' : 'personal account';
     teamId = scope.team?.id;
     billingPeriod = (scope.team ?? scope.user).billing?.period;
   } catch (err: unknown) {
@@ -162,13 +167,15 @@ export default async function usage(client: Client): Promise<number> {
     const query = new URLSearchParams({ from: fromDate, to: toDate });
     if (teamId) query.set('teamId', teamId);
 
-    const response = await client.fetch<CostMetricsResponse>(
+    const costsRequest = client.fetch<CostMetricsResponse>(
       `/v2/billing/costs?${query}`,
       {
         method: 'POST',
         body: {
           from: fromDate,
           to: toDate,
+          // TODO: Request `net_cost` here once the billing costs API PR lands.
+          metrics: [GROSS_COST_METRIC, 'quantity'],
           format: 'timeseries',
           views: {
             byProduct: { groupBy: ['product'] },
@@ -181,16 +188,53 @@ export default async function usage(client: Client): Promise<number> {
         useCurrentTeam: false,
       }
     );
+    const commitmentRequest =
+      usingDefaults && teamId
+        ? client
+            .fetch<CommitmentUsageResponse>(
+              `/v1/invoices/pre-commitment-usage?teamId=${encodeURIComponent(teamId)}`,
+              { useCurrentTeam: false }
+            )
+            .catch(err => {
+              debug(`Unable to fetch infrastructure credit: ${String(err)}`);
+              return null;
+            })
+        : Promise.resolve(null);
+
+    const [response, commitmentUsage] = await Promise.all([
+      costsRequest,
+      commitmentRequest,
+    ]);
 
     const usageData = processCosts(
       response,
       contextName,
+      contextType,
+      parsedArgs.flags['--scope'],
       fromDisplay,
       toDisplay,
       usingDefaults,
+      Boolean(parsedArgs.flags['--all']),
       breakdownPeriod,
       groupByDimension
     );
+    const creditLedger = commitmentUsage?.creditLedgers[0];
+    if (creditLedger) {
+      const used = roundToHundredths(
+        creditLedger.total - creditLedger.remaining
+      );
+      usageData.credit = {
+        cadence: commitmentUsage.cadence,
+        currency: creditLedger.currency,
+        allocated: creditLedger.total,
+        used,
+        remaining: creditLedger.remaining,
+        progress:
+          creditLedger.total > 0
+            ? roundToHundredths((used / creditLedger.total) * 100)
+            : 0,
+      };
+    }
 
     if (asJson) {
       outputJson(client, {
@@ -217,6 +261,15 @@ export default async function usage(client: Client): Promise<number> {
   }
 }
 
+function roundToHundredths(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function getUsageThrough(queriedAt: string, toDisplay: string): string {
+  const queriedDate = extractDatePortion(queriedAt);
+  return queriedDate < toDisplay ? queriedDate : toDisplay;
+}
+
 function parseDashboardDate(value: string, end: boolean): string {
   const date = value.includes('T')
     ? DateTime.fromISO(value)
@@ -234,9 +287,12 @@ function parseDashboardDate(value: string, end: boolean): string {
 function processCosts(
   response: CostMetricsResponse,
   contextName: string,
+  contextType: 'team' | 'personal account',
+  scope: string | undefined,
   fromDisplay: string,
   toDisplay: string,
   usingDefaults: boolean,
+  showAll: boolean,
   breakdownPeriod?: BreakdownPeriod,
   groupByDimension?: GroupByDimension
 ): UsageData {
@@ -252,6 +308,7 @@ function processCosts(
   const periodUsage = new Map<string, PeriodAggregation>();
   const groupByUsage = new Map<string, GroupAggregation>();
   let totalCost = 0;
+  let totalEffectiveCost = 0;
 
   for (const result of summaryView?.results ?? []) {
     const product = result.dimensionValues.product;
@@ -269,6 +326,7 @@ function processCosts(
       : serviceName;
     addService(services, aggregationName, aggregation);
     totalCost += aggregation.cost;
+    totalEffectiveCost += aggregation.effectiveCost;
 
     if (breakdownPeriod) {
       for (let index = 0; index < response.results.times.length; index++) {
@@ -286,8 +344,8 @@ function processCosts(
         addService(period.services, aggregationName, sample);
         period.totalCost += sample.cost;
         period.totalPricingQuantity += sample.cost;
-        period.totalEffectiveCost += sample.cost;
-        period.totalBilledCost += sample.cost;
+        period.totalEffectiveCost += sample.effectiveCost;
+        period.totalBilledCost += sample.billedCost;
         periodUsage.set(periodKey, period);
       }
     }
@@ -317,17 +375,21 @@ function processCosts(
       addService(group.services, aggregationName, aggregation);
       group.totalCost += aggregation.cost;
       group.totalPricingQuantity += aggregation.cost;
-      group.totalEffectiveCost += aggregation.cost;
-      group.totalBilledCost += aggregation.cost;
+      group.totalEffectiveCost += aggregation.effectiveCost;
+      group.totalBilledCost += aggregation.billedCost;
       groupByUsage.set(groupName, group);
     }
   }
 
   return {
     contextName,
+    contextType,
+    scope,
     fromDisplay,
     toDisplay,
+    usageThrough: getUsageThrough(response.queriedAt, toDisplay),
     usingDefaults,
+    showAll,
     chargeCount: summaryView?.results.length ?? 0,
     services,
     periodUsage,
@@ -335,8 +397,8 @@ function processCosts(
     totalCost,
     grandTotals: {
       pricingQuantity: totalCost,
-      effectiveCost: totalCost,
-      billedCost: totalCost,
+      effectiveCost: totalEffectiveCost,
+      billedCost: totalEffectiveCost,
     },
   };
 }
@@ -347,15 +409,18 @@ function aggregateResult(
   sampleIndex?: number,
   isSubscription = false
 ): ServiceAggregation {
-  const costIndex = result.metrics.indexOf(COST_METRIC);
+  const grossCostIndex = result.metrics.indexOf(GROSS_COST_METRIC);
   const quantityIndex = result.metrics.findIndex(
-    metric => metric !== COST_METRIC
+    metric => metric !== GROSS_COST_METRIC
   );
   const values =
     sampleIndex === undefined
       ? result.totalValue
       : (result.values[sampleIndex] ?? []);
-  const cost = costIndex === -1 ? 0 : (values[costIndex] ?? 0);
+  const cost = grossCostIndex === -1 ? 0 : (values[grossCostIndex] ?? 0);
+  const included = result.flatRate === true;
+  // TODO: Read `net_cost` directly once the billing costs API PR lands.
+  const effectiveCost = included ? 0 : cost;
   const quantity = quantityIndex === -1 ? 0 : (values[quantityIndex] ?? 0);
   const metric =
     quantityIndex === -1
@@ -367,12 +432,12 @@ function aggregateResult(
     quantity,
     unit,
     cost,
-    included: result.flatRate === true,
+    included,
     category: isSubscription ? 'subscription' : 'usage',
     pricingQuantity: cost,
     pricingUnit: 'USD',
-    effectiveCost: cost,
-    billedCost: cost,
+    effectiveCost,
+    billedCost: effectiveCost,
   };
 }
 
@@ -380,7 +445,7 @@ function getUnitLabel(
   metric: CostMetric | undefined,
   quantity: number
 ): string {
-  if (!metric) return 'licenses';
+  if (!metric?.unit) return quantity === 1 ? 'license' : 'licenses';
   if (metric.unit.kind === 'custom') {
     return quantity === 1
       ? (metric.unit.singular ?? metric.unit.plural ?? metric.title)

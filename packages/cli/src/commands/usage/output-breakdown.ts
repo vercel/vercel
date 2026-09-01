@@ -4,6 +4,11 @@ import output from '../../output-manager';
 import elapsed from '../../util/output/elapsed';
 import { formatCurrency, formatQuantity } from '../../util/billing/format';
 import type { OutputOptions, BreakdownPeriod } from './types';
+import {
+  outputHiddenServicesHint,
+  outputUsageHeader,
+  visibleServices,
+} from './output-utils';
 
 function getPeriodLabel(period: BreakdownPeriod): string {
   switch (period) {
@@ -24,15 +29,11 @@ export function outputBreakdown({
   const { print, log } = output;
   const periodLabel = getPeriodLabel(breakdownPeriod!);
 
-  log(
-    `${periodLabel} Usage for ${chalk.bold(data.contextName)} ${elapsed(Date.now() - startTime)}`
+  outputUsageHeader(
+    data,
+    `${periodLabel} usage`,
+    elapsed(Date.now() - startTime)
   );
-  log('');
-  const periodSuffix = data.usingDefaults ? ' (current billing cycle)' : '';
-  log(
-    `${chalk.gray('Period:')} ${data.fromDisplay} to ${data.toDisplay}${periodSuffix}`
-  );
-  log('');
 
   const sortedPeriods = [...data.periodUsage.keys()].sort();
   if (sortedPeriods.length === 0) {
@@ -40,23 +41,31 @@ export function outputBreakdown({
     return;
   }
 
+  let hiddenCount = 0;
   for (const periodKey of sortedPeriods) {
     const periodData = data.periodUsage.get(periodKey)!;
-    const sortedServices = [...periodData.services.entries()].sort(
-      (a, b) => b[1].cost - a[1].cost
-    );
+    const allServices = [...periodData.services.entries()];
+    const sortedServices = visibleServices(
+      periodData.services,
+      data.showAll
+    ).sort((a, b) => b[1].effectiveCost - a[1].effectiveCost);
+    hiddenCount += allServices.length - sortedServices.length;
+    if (sortedServices.length === 0) continue;
+
     log(
-      `${chalk.bold(chalk.cyan(periodKey))} (${formatCurrency(periodData.totalCost)})`
+      `${chalk.bold(chalk.cyan(periodKey))} (${formatCurrency(
+        periodData.totalEffectiveCost
+      )})`
     );
 
     const rows = sortedServices.map(([name, service]) => [
       service.included ? chalk.blue(name) : name,
       formatQuantity(service.quantity, service.unit),
-      service.included ? 'Included' : formatCurrency(service.cost),
+      formatCurrency(service.effectiveCost),
     ]);
     const tablePrint = table(
       [
-        ['Service', 'Usage', 'Cost'].map(header =>
+        ['Service', 'Usage', 'Effective Cost'].map(header =>
           chalk.bold(chalk.gray(header))
         ),
         ...rows,
@@ -65,4 +74,5 @@ export function outputBreakdown({
     ).replace(/^/gm, '  ');
     print(`${tablePrint}\n`);
   }
+  outputHiddenServicesHint(hiddenCount, data.scope);
 }

@@ -12,7 +12,7 @@ export interface MetricUnit {
 export interface CostMetric {
   slug: string;
   title: string;
-  unit: MetricUnit;
+  unit: MetricUnit | null;
 }
 
 export interface CostMetricGroup {
@@ -27,6 +27,7 @@ export interface CostMetricsResponse {
   metrics: CostMetric[];
   from: string;
   to: string;
+  queriedAt: string;
   results: {
     granularity: {
       unit: 'hour' | 'day' | 'week' | 'month';
@@ -81,12 +82,38 @@ export interface GroupAggregation {
   totalBilledCost: number;
 }
 
+export interface CreditSummary {
+  cadence?: 'one_time' | 'annual' | 'monthly' | 'quarterly' | 'semi_annual';
+  currency: string;
+  allocated: number;
+  used: number;
+  remaining: number;
+  progress: number;
+}
+
+export interface CommitmentUsageResponse {
+  creditLedgers: Array<{
+    currency: string;
+    title: string;
+    periodStart: string;
+    periodEnd: string;
+    total: number;
+    remaining: number;
+  }>;
+  cadence?: CreditSummary['cadence'];
+}
+
 export interface UsageData {
   contextName: string;
+  contextType: 'team' | 'personal account';
+  scope?: string;
   fromDisplay: string;
   toDisplay: string;
+  usageThrough: string;
   usingDefaults: boolean;
+  showAll: boolean;
   chargeCount: number;
+  credit?: CreditSummary;
   services: Map<string, ServiceAggregation>;
   periodUsage: Map<string, PeriodAggregation>;
   groupByUsage: Map<string, GroupAggregation>;

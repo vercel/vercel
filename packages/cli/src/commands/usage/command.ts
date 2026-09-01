@@ -42,6 +42,13 @@ export const usageCommand = {
         'Group usage by a dimension instead of aggregated totals (project, region)',
       deprecated: false,
     },
+    {
+      name: 'all',
+      shorthand: null,
+      type: Boolean,
+      description: 'Show services with zero usage and zero cost',
+      deprecated: false,
+    },
     formatOption,
     jsonOption,
   ],
