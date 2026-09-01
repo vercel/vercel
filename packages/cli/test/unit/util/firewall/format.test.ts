@@ -69,9 +69,37 @@ describe('getMitigationsStatus', () => {
     });
   });
 
-  it('ignores an unparseable expiry', () => {
-    expect(getMitigationsStatus(['0.0.0.0/0#not-a-number'])).toEqual({
-      paused: false,
+  describe('when an expiry cannot be interpreted', () => {
+    // The entry still proves a bypass exists, so it must not be discarded:
+    // reporting mitigations as active is the more dangerous reading.
+    it('reports paused for a non-numeric suffix', () => {
+      expect(getMitigationsStatus(['0.0.0.0/0#not-a-number'])).toEqual({
+        paused: true,
+      });
+    });
+
+    it('reports paused for a partially numeric suffix', () => {
+      // `parseInt` would read this as 12 and treat the bypass as expired.
+      expect(getMitigationsStatus(['0.0.0.0/0#12abc'])).toEqual({
+        paused: true,
+      });
+    });
+
+    it('reports paused for a suffix that looks like a rule id', () => {
+      expect(getMitigationsStatus([`0.0.0.0/0#rule_abc123`])).toEqual({
+        paused: true,
+      });
+    });
+
+    it('reports paused for an empty suffix', () => {
+      expect(getMitigationsStatus(['0.0.0.0/0#'])).toEqual({ paused: true });
+    });
+
+    it('reports paused for a millisecond timestamp', () => {
+      // Read as seconds this would be a date ~50,000 years out.
+      expect(getMitigationsStatus([`0.0.0.0/0#${NOW}`])).toEqual({
+        paused: true,
+      });
     });
   });
 

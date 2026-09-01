@@ -41,8 +41,32 @@ export type MitigationsStatus =
   | { paused: true; resumesAt?: number };
 
 /**
+ * Latest expiry that can plausibly be epoch seconds, guarding against a value
+ * in different units being read as a date tens of thousands of years out.
+ */
+const MAX_EXPIRY_SECONDS = 4102444800; // 2100-01-01
+
+/**
+ * Parse the expiry of a project bypass entry, in epoch seconds.
+ *
+ * Returns `null` when the bypass is open-ended: either it carries no expiry, or
+ * the expiry cannot be interpreted. An uninterpretable expiry is deliberately
+ * not discarded — the entry still proves a bypass exists, and on a plan-gated
+ * account this is the only evidence of one, so reporting mitigations as active
+ * would be the more dangerous reading.
+ */
+function parseExpirySeconds(expiry: string | undefined): number | null {
+  if (!expiry || !/^\d+$/.test(expiry)) return null;
+
+  const seconds = Number(expiry);
+  return Number.isSafeInteger(seconds) && seconds <= MAX_EXPIRY_SECONDS
+    ? seconds
+    : null;
+}
+
+/**
  * Expiry of every all-sources bypass in effect, in epoch seconds, using `null`
- * for one that never expires.
+ * for one that is open-ended.
  *
  * Both sources are read. The project's `firewallBypassIps` is not plan-gated,
  * so it is the only source on plans without IP Bypass; the bypass API is
@@ -55,18 +79,14 @@ function allSourcesBypassExpiries(
 ): (number | null)[] {
   const expiries: (number | null)[] = [];
 
-  // Project entries are encoded as `<cidr>#<expiry>`, the expiry omitted when
-  // the bypass is permanent.
+  // Entries are encoded as `<cidr>#<epoch-seconds>` by the bypass API, the
+  // expiry omitted when the bypass is permanent. They carry no domain: the API
+  // only records them on the project for a project-scoped bypass, which its
+  // request schema makes mutually exclusive with a domain-scoped one.
   for (const entry of firewallBypassIps) {
     const [ip, expiry] = entry.split('#');
     if (!isAllSourcesBypass(ip)) continue;
-
-    if (!expiry) {
-      expiries.push(null);
-      continue;
-    }
-    const parsed = Number.parseInt(expiry, 10);
-    if (!Number.isNaN(parsed)) expiries.push(parsed);
+    expiries.push(parseExpirySeconds(expiry));
   }
 
   for (const rule of bypass ?? []) {
