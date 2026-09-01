@@ -178,11 +178,16 @@ describe('firewall overview', () => {
     it('reports mitigation status from the project', async () => {
       // Mitigations are read from the project, which is not plan-gated, so the
       // status is still accurate when the bypass endpoint is unavailable.
+      // Uses its own project so the mock gets a distinct route; re-registering
+      // the one from `beforeEach` would not override it.
+      client.cwd = setupTmpDir();
+      client.config.currentTeam = 'team_dummy';
       const resumesAt = Math.floor(Date.now() / 1000) + 2 * 60 * 60;
       useProject({
         ...defaultProject,
-        id: 'firewall-test-project',
-        name: 'firewall-test',
+        id: 'paused-mitigations',
+        name: 'paused-mitigations',
+        accountId: 'team_dummy',
         // The API returns `security`, but it is not modelled on `Project` —
         // which is why the command fetches it as `ProjectSecurityResponse`.
         security: { firewallBypassIps: [`0.0.0.0/0#${resumesAt}`] },
@@ -190,7 +195,7 @@ describe('firewall overview', () => {
       useListFirewallConfigs(createConfig({ firewallEnabled: true }), null);
       useGetBypassError();
 
-      client.setArgv('firewall', 'overview');
+      client.setArgv('firewall', 'overview', '--project', 'paused-mitigations');
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Paused');
       expect(await exitCodePromise).toEqual(0);
