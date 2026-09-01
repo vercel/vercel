@@ -30,6 +30,12 @@ function isPlanGatedError(error: unknown): boolean {
   return isAPIError(error) && error.status === 404;
 }
 
+/** Return a settled result's value, rethrowing if it rejected. */
+function unwrap<T>(result: PromiseSettledResult<T>): T {
+  if (result.status === 'rejected') throw result.reason;
+  return result.value;
+}
+
 export default async function overview(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, overviewSubcommand, client);
   if (typeof parsed === 'number') return parsed;
@@ -59,8 +65,8 @@ export default async function overview(client: Client, argv: string[]) {
 
     // The firewall config and project are required to render anything
     // meaningful, so their failures remain fatal.
-    if (configResult.status === 'rejected') throw configResult.reason;
-    if (projectResult.status === 'rejected') throw projectResult.reason;
+    const { active, draft } = unwrap(configResult);
+    const freshProject = unwrap(projectResult);
 
     // Bypass is plan-gated. When it is unavailable the rest of the overview is
     // still useful, so degrade to `null` rather than failing the command.
@@ -70,10 +76,6 @@ export default async function overview(client: Client, argv: string[]) {
     } else if (!isPlanGatedError(bypassResult.reason)) {
       throw bypassResult.reason;
     }
-
-    const configList = configResult.value;
-    const freshProject = projectResult.value;
-    const { active, draft } = configList;
 
     const attackMode: AttackModeStatus = {
       enabled: freshProject.security?.attackModeEnabled ?? false,
