@@ -20,6 +20,17 @@ export interface AttackModeStatus {
 /** Shown in place of a value the account's plan has no access to. */
 const PLAN_UNAVAILABLE = 'Not available on this plan';
 
+const MS_PER_SECOND = 1000;
+const MS_PER_MINUTE = 60 * MS_PER_SECOND;
+const MS_PER_HOUR = 60 * MS_PER_MINUTE;
+
+/** Render a duration as `1h 30m`. */
+function formatDuration(ms: number): string {
+  const hours = Math.floor(ms / MS_PER_HOUR);
+  const minutes = Math.floor((ms % MS_PER_HOUR) / MS_PER_MINUTE);
+  return `${hours}h ${minutes}m`;
+}
+
 export function isAllSourcesBypass(ip: string): boolean {
   return ip === '0.0.0.0/0' || ip === '::/0';
 }
@@ -30,85 +41,62 @@ export type MitigationsStatus =
   | { paused: true; resumesAt?: number };
 
 /**
- * Combine two readings of mitigation status, preferring the one that keeps
- * mitigations paused for longer. A paused state with no expiry is permanent and
- * so outranks any expiring one.
+ * Expiry of every all-sources bypass in effect, in epoch seconds, using `null`
+ * for one that never expires.
+ *
+ * Both sources are read. The project's `firewallBypassIps` is not plan-gated,
+ * so it is the only source on plans without IP Bypass; the bypass API is
+ * consulted when readable so that a bypass which was never mirrored onto the
+ * project is still accounted for.
  */
-function mergeMitigationsStatus(
-  a: MitigationsStatus,
-  b: MitigationsStatus
-): MitigationsStatus {
-  if (!a.paused) return b;
-  if (!b.paused) return a;
-  if (a.resumesAt === undefined || b.resumesAt === undefined) {
-    return { paused: true };
-  }
-  return { paused: true, resumesAt: Math.max(a.resumesAt, b.resumesAt) };
-}
+function allSourcesBypassExpiries(
+  firewallBypassIps: string[] = [],
+  bypass: BypassRule[] | null = []
+): (number | null)[] {
+  const expiries: (number | null)[] = [];
 
-/**
- * Derive mitigation status from a project's `firewallBypassIps`, encoded as
- * `<cidr>#<expiry>` with `<expiry>` in epoch seconds.
- */
-function mitigationsFromProject(
-  firewallBypassIps: string[]
-): MitigationsStatus {
-  const nowSeconds = Date.now() / 1000;
-  let status: MitigationsStatus = { paused: false };
-
+  // Project entries are encoded as `<cidr>#<expiry>`, the expiry omitted when
+  // the bypass is permanent.
   for (const entry of firewallBypassIps) {
     const [ip, expiry] = entry.split('#');
     if (!isAllSourcesBypass(ip)) continue;
 
-    if (!expiry) return { paused: true };
-
-    const resumesAt = Number.parseInt(expiry, 10);
-    if (!Number.isNaN(resumesAt) && resumesAt > nowSeconds) {
-      status = { paused: true, resumesAt };
+    if (!expiry) {
+      expiries.push(null);
+      continue;
     }
+    const parsed = Number.parseInt(expiry, 10);
+    if (!Number.isNaN(parsed)) expiries.push(parsed);
   }
 
-  return status;
-}
-
-/** Derive mitigation status from the bypass API's project-scoped rules. */
-function mitigationsFromBypassRules(bypass: BypassRule[]): MitigationsStatus {
-  const nowSeconds = Date.now() / 1000;
-  let status: MitigationsStatus = { paused: false };
-
-  for (const rule of bypass) {
+  for (const rule of bypass ?? []) {
     if (!isAllSourcesBypass(rule.Ip) || rule.Domain !== '*') continue;
-
-    if (rule.ExpiresAt === null || rule.ExpiresAt === undefined) {
-      return { paused: true };
-    }
-    if (rule.ExpiresAt > nowSeconds) {
-      status = { paused: true, resumesAt: rule.ExpiresAt };
-    }
+    expiries.push(rule.ExpiresAt ?? null);
   }
 
-  return status;
+  return expiries;
 }
 
 /**
  * Whether system mitigations are paused, which is the case while an all-sources
- * system bypass is in effect.
- *
- * Reads both available sources. The project field is not plan-gated, so it is
- * the only source on plans without IP Bypass; the bypass API is consulted when
- * available so that a bypass which was never mirrored onto the project is still
- * reported. Either source reporting paused is treated as paused.
+ * system bypass is in effect. A permanent bypass keeps them paused indefinitely;
+ * otherwise they resume when the last bypass expires.
  */
 export function getMitigationsStatus(
   firewallBypassIps?: string[],
   bypass?: BypassRule[] | null
 ): MitigationsStatus {
-  return mergeMitigationsStatus(
-    firewallBypassIps
-      ? mitigationsFromProject(firewallBypassIps)
-      : { paused: false },
-    bypass ? mitigationsFromBypassRules(bypass) : { paused: false }
+  const expiries = allSourcesBypassExpiries(firewallBypassIps, bypass);
+  if (expiries.includes(null)) return { paused: true };
+
+  const nowSeconds = Date.now() / MS_PER_SECOND;
+  const unexpired = expiries.filter(
+    (expiry): expiry is number => expiry !== null && expiry > nowSeconds
   );
+
+  return unexpired.length
+    ? { paused: true, resumesAt: Math.max(...unexpired) }
+    : { paused: false };
 }
 
 export function formatAttackModeStatus(status: AttackModeStatus): string {
@@ -120,9 +108,7 @@ export function formatAttackModeStatus(status: AttackModeStatus): string {
     if (remainingMs <= 0) {
       return chalk.dim('Off (expired)');
     }
-    const hours = Math.floor(remainingMs / (60 * 60 * 1000));
-    const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
-    return chalk.red(`On (expires in ${hours}h ${minutes}m)`);
+    return chalk.red(`On (expires in ${formatDuration(remainingMs)})`);
   }
   return chalk.red('On');
 }
@@ -131,13 +117,11 @@ export function formatMitigationsStatus(status: MitigationsStatus): string {
   if (!status.paused) return chalk.green('Active');
 
   if (status.resumesAt !== undefined) {
-    const remainingMs = status.resumesAt * 1000 - Date.now();
+    const remainingMs = status.resumesAt * MS_PER_SECOND - Date.now();
     if (remainingMs > 0) {
-      const hours = Math.floor(remainingMs / (60 * 60 * 1000));
-      const minutes = Math.floor(
-        (remainingMs % (60 * 60 * 1000)) / (60 * 1000)
+      return chalk.yellow(
+        `Paused (auto-resumes in ${formatDuration(remainingMs)})`
       );
-      return chalk.yellow(`Paused (auto-resumes in ${hours}h ${minutes}m)`);
     }
   }
   return chalk.yellow('Paused');
