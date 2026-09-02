@@ -21,10 +21,6 @@
     "vitest-run": "vitest -c ../../vitest.config.mts",
     "vitest-unit": "glob --absolute 'test/**/*.test.js' 'test/**/*.test.ts' 'test/**/*.test.mjs' 'test/**/*.test.mts' 'tests/**/*.test.js' 'tests/**/*.test.ts'"
   },
-  "dependencies": {
-    "path-to-regexp-updated": "npm:path-to-regexp@6.3.0",
-    "path-to-regexp": "6.1.0"
-  },
   "devDependencies": {
     "@types/node": "20.11.0",
     "ajv": "^6.12.3",

@@ -18,6 +18,7 @@
       "!packages/**/test/build-fixtures/**",
       "!packages/**/test/cache-fixtures/**",
       "!packages/**/test/**/test-limit-exceeded*/**",
+      "!packages/**/src/vendor/**",
       "!packages/cli/types/**",
       "test/**/*.{js,ts,mjs,cjs,jsx,tsx,json,css}",
       "utils/**/*.{js,ts,mjs,cjs,jsx,tsx,json,css}",
@@ -185,6 +186,7 @@
         "packages/middleware/src/entries.js",
         "packages/gatsby-plugin-vercel-analytics/**",
         "packages/functions/**/*.js",
+        "packages/**/src/vendor/**",
       ],
       "linter": {
         "enabled": false,
