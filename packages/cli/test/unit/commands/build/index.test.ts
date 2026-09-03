@@ -1505,6 +1505,45 @@ createServer((_req, res) => {
     }
   });
 
+  it('should fail build when synthesized service crons exist and CRON_SECRET is invalid', async () => {
+    const cwd = fixture('with-services-cron');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    process.env.CRON_SECRET = 'my\nsecret';
+
+    try {
+      const exitCode = await build(client);
+      expect(exitCode).toBe(1);
+
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds.error).toMatchObject({
+        code: 'INVALID_CRON_SECRET',
+      });
+      expect(builds.error.message).toContain('control character');
+    } finally {
+      delete process.env.CRON_SECRET;
+    }
+  });
+
+  it('should fail build when CRON_SECRET is invalid, even without crons configured', async () => {
+    const cwd = fixture('static');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    process.env.CRON_SECRET = 'my\nsecret';
+
+    try {
+      const exitCode = await build(client);
+      expect(exitCode).toBe(1);
+
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds.error).toMatchObject({
+        code: 'INVALID_CRON_SECRET',
+      });
+    } finally {
+      delete process.env.CRON_SECRET;
+    }
+  });
+
   it('should fail build when CRON_SECRET contains invalid HTTP header characters', async () => {
     const cwd = fixture('with-cron');
     const output = join(cwd, '.vercel', 'output');

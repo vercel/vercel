@@ -808,12 +808,9 @@ async function doBuild(
     throw validateError;
   }
 
-  // Validate CRON_SECRET if crons are defined
-  if (localConfig.crons && localConfig.crons.length > 0) {
-    const cronSecretError = validateCronSecret(process.env.CRON_SECRET);
-    if (cronSecretError) {
-      throw cronSecretError;
-    }
+  const cronSecretError = validateCronSecret(process.env.CRON_SECRET);
+  if (cronSecretError) {
+    throw cronSecretError;
   }
 
   const projectSettings = {
