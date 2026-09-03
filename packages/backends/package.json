@@ -33,18 +33,18 @@
   ],
   "dependencies": {
     "@vercel/build-utils": "workspace:*",
-    "@vercel/nft": "1.10.0",
+    "@vercel/nft": "1.11.0",
     "@vercel/static-config": "workspace:*",
     "execa": "3.2.0",
-    "fs-extra": "11.1.0",
+    "fs-extra": "11.4.0",
     "get-port": "5.1.1",
-    "oxc-transform": "0.111.0",
-    "path-to-regexp": "8.3.0",
+    "oxc-transform": "0.148.0",
+    "path-to-regexp": "8.4.2",
     "resolve.exports": "2.0.3",
-    "rolldown": "1.0.0-rc.1",
-    "srvx": "0.11.16",
+    "rolldown": "1.2.7",
+    "srvx": "1.0.1",
     "ts-morph": "12.0.0",
-    "tsx": "4.21.0",
+    "tsx": "4.23.13",
     "zod": "3.22.4"
   },
   "devDependencies": {
@@ -52,10 +52,11 @@
     "@types/fs-extra": "11",
     "@types/js-yaml": "3.12.1",
     "@types/node": "20.11.0",
-    "hono": "4.10.1",
-    "tsdown": "0.16.3",
+    "hono": "4.13.5",
+    "tsdown": "0.22.14",
     "vite": "^5.1.6",
-    "vitest": "^2.0.1"
+    "vitest": "^2.0.1",
+    "typescript": "5.9.3"
   },
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts"

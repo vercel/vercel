@@ -24,10 +24,10 @@
   ],
   "dependencies": {
     "@vercel/error-utils": "workspace:*",
-    "@vercel/nft": "1.10.0",
+    "@vercel/nft": "1.11.0",
     "@vercel/static-config": "workspace:*",
-    "path-to-regexp-updated": "npm:path-to-regexp@6.3.0",
     "path-to-regexp": "6.1.0",
+    "path-to-regexp-updated": "npm:path-to-regexp@6.3.0",
     "ts-morph": "12.0.0"
   },
   "devDependencies": {
@@ -35,7 +35,7 @@
     "@types/semver": "7.3.13",
     "@vercel/build-utils": "workspace:*",
     "glob": "10.3.16",
-    "semver": "7.5.2",
+    "semver": "7.8.5",
     "vitest": "2.0.1"
   },
   "VERCEL_REMIX_RUN_DEV_MAX_VERSION": "2.16.6"

@@ -81,12 +81,12 @@
     }
   },
   "devDependencies": {
-    "@ai-sdk/mcp": "2.0.0-beta.37",
-    "@auth/core": "0.37.4",
-    "@chat-adapter/slack": "4.31.0",
-    "ai": "7.0.26",
-    "better-auth": "1.5.5",
-    "eve": "0.24.3",
+    "@ai-sdk/mcp": "2.0.44",
+    "@auth/core": "0.41.3",
+    "@chat-adapter/slack": "4.39.0",
+    "ai": "7.0.91",
+    "better-auth": "1.7.2",
+    "eve": "0.51.0",
     "typescript": "^5"
   },
   "private": false,

@@ -8,7 +8,7 @@
     "web-vitals.js"
   ],
   "dependencies": {
-    "web-vitals": "0.2.4"
+    "web-vitals": "6.2.1"
   },
   "repository": {
     "type": "git",

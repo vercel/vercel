@@ -26,12 +26,13 @@
   "devDependencies": {
     "@aws-sdk/credential-provider-web-identity": "3.609.0",
     "@smithy/types": "3.3.0",
-    "prettier": "3.8.3",
-    "tinyspawn": "1.3.1",
-    "typedoc": "0.28.19",
-    "typedoc-plugin-markdown": "4.11.0",
+    "prettier": "3.9.6",
+    "tinyspawn": "1.5.10",
+    "typedoc": "0.28.20",
+    "typedoc-plugin-markdown": "4.13.0",
     "typedoc-plugin-mdn-links": "5.1.1",
-    "vitest": "2.0.1"
+    "vitest": "2.0.1",
+    "typescript": "5.9.3"
   },
   "engines": {
     "node": ">= 20"
@@ -48,7 +49,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@aws-sdk/credential-provider-web-identity": "^3.609.0",
+    "@aws-sdk/credential-provider-web-identity": "^3.972.76",
     "@vercel/oidc": "workspace:*"
   }
 }

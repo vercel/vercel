@@ -30,7 +30,7 @@
     "@types/which": "3.0.0",
     "@vercel/build-utils": "workspace:*",
     "execa": "2.0.4",
-    "fs-extra": "^7.0.1",
+    "fs-extra": "^11.4.0",
     "semver": "6.3.1",
     "vitest": "2.0.3",
     "which": "3.0.0"

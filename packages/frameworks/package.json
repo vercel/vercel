@@ -21,9 +21,9 @@
     "vitest-unit": "glob --absolute 'test/**/*.test.js' 'test/**/*.test.ts' 'test/**/*.test.mjs' 'test/**/*.test.mts' 'tests/**/*.test.js' 'tests/**/*.test.ts'"
   },
   "dependencies": {
-    "smol-toml": "1.5.2",
+    "@vercel/error-utils": "workspace:*",
     "js-yaml": "3.13.1",
-    "@vercel/error-utils": "workspace:*"
+    "smol-toml": "1.8.0"
   },
   "devDependencies": {
     "@types/js-yaml": "3.12.1",

@@ -49,11 +49,10 @@
     "README.md",
     "CHANGELOG.md"
   ],
-  "dependencies": {},
   "devDependencies": {
-    "vite": "^5.1.6",
-    "vitest": "^2.0.1",
+    "@types/mock-fs": "4.13.4",
     "mock-fs": "5.5.0",
-    "@types/mock-fs": "4.13.4"
+    "vite": "^5.1.6",
+    "vitest": "^2.0.1"
   }
 }
