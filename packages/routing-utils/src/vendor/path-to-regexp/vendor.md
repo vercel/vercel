@@ -4,5 +4,7 @@ Upgrading to 6.3.0 (the GHSA-9wv6-86v2-598j patch) changes compiled
 route regular expressions for existing customer configs. Monitoring of
 that upgrade showed it is not safe to ship (PIPE-2699).
 
-The implementation is vendored so published packages no longer depend on
-the flagged npm version, while route compilation behavior stays the same.
+This is the shared copy used by `@vercel/routing-utils`, `@vercel/node`,
+and `@vercel/remix-builder`. It is vendored so published packages no
+longer depend on the flagged npm version, while route compilation
+behavior stays the same.

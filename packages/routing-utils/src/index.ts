@@ -36,6 +36,8 @@ export {
   getCleanUrls,
   sourceToRegex,
 } from './superstatic';
+export { pathToRegexp } from './vendor/path-to-regexp';
+export type { Key } from './vendor/path-to-regexp';
 export * from './types';
 
 const VALID_HANDLE_VALUES = [

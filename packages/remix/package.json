@@ -25,6 +25,7 @@
   "dependencies": {
     "@vercel/error-utils": "workspace:*",
     "@vercel/nft": "1.10.0",
+    "@vercel/routing-utils": "workspace:*",
     "@vercel/static-config": "workspace:*",
     "ts-morph": "12.0.0"
   },

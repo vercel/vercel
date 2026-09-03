@@ -1900,6 +1900,9 @@ importers:
       '@vercel/nft':
         specifier: 1.10.0
         version: 1.10.0(rollup@4.60.4)
+      '@vercel/routing-utils':
+        specifier: workspace:*
+        version: link:../routing-utils
       '@vercel/static-config':
         specifier: workspace:*
         version: link:../static-config
@@ -2290,6 +2293,9 @@ importers:
       '@vercel/nft':
         specifier: 1.10.0
         version: 1.10.0(rollup@4.60.4)
+      '@vercel/routing-utils':
+        specifier: workspace:*
+        version: link:../routing-utils
       '@vercel/static-config':
         specifier: workspace:*
         version: link:../static-config
