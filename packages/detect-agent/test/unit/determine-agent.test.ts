@@ -1,5 +1,9 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { determineAgent, KNOWN_AGENTS } from '../../src/index';
+import {
+  determineAgent,
+  determineAgentFromEnv,
+  KNOWN_AGENTS,
+} from '../../src/index';
 import mockFs from 'mock-fs';
 
 vi.setConfig({ testTimeout: 6 * 60 * 1000 });
@@ -635,6 +639,477 @@ describe('determineAgent', () => {
       const result = await determineAgent();
       expect(result.isAgent).toBe(false);
       expect(result.agent).toBeUndefined();
+    });
+  });
+});
+
+describe('determineAgentFromEnv', () => {
+  describe('custom agent detection from `AI_AGENT`', () => {
+    describe('AI_AGENT not set', () => {
+      it('returns no agent', () => {
+        const result = determineAgentFromEnv({});
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('AI_AGENT set', () => {
+      it('detects custom agent', () => {
+        const result = determineAgentFromEnv({ AI_AGENT: 'custom-agent' });
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: 'custom-agent' },
+        });
+      });
+    });
+  });
+
+  describe('v0 detection', () => {
+    it('detects v0 from AI_AGENT=v0', () => {
+      const result = determineAgentFromEnv({ AI_AGENT: 'v0' });
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.V0 },
+      });
+    });
+  });
+
+  describe('github copilot detection', () => {
+    it('detects github copilot from AI_AGENT=github-copilot', () => {
+      const result = determineAgentFromEnv({ AI_AGENT: 'github-copilot' });
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.GITHUB_COPILOT },
+      });
+    });
+
+    it('detects github copilot from AI_AGENT=github-copilot-cli', () => {
+      const result = determineAgentFromEnv({ AI_AGENT: 'github-copilot-cli' });
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.GITHUB_COPILOT },
+      });
+    });
+
+    it('detects github copilot from COPILOT_MODEL', () => {
+      const result = determineAgentFromEnv({ COPILOT_MODEL: 'gpt-5' });
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.GITHUB_COPILOT },
+      });
+    });
+
+    it('detects github copilot from COPILOT_ALLOW_ALL', () => {
+      const result = determineAgentFromEnv({ COPILOT_ALLOW_ALL: 'true' });
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.GITHUB_COPILOT },
+      });
+    });
+
+    it('detects github copilot from COPILOT_GITHUB_TOKEN', () => {
+      const result = determineAgentFromEnv({ COPILOT_GITHUB_TOKEN: 'ghp_xxx' });
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.GITHUB_COPILOT },
+      });
+    });
+  });
+
+  describe('cursor detection', () => {
+    describe('CURSOR_TRACE_ID not set', () => {
+      it('returns no agent', () => {
+        const result = determineAgentFromEnv({});
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('CURSOR_TRACE_ID set', () => {
+      it('detects cursor', () => {
+        const result = determineAgentFromEnv({ CURSOR_TRACE_ID: 'some-uuid' });
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.CURSOR },
+        });
+      });
+    });
+  });
+
+  describe('cursor cli detection', () => {
+    describe('CURSOR_AGENT not set', () => {
+      it('returns no agent', () => {
+        const result = determineAgentFromEnv({});
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('CURSOR_AGENT set', () => {
+      it('detects cursor cli', () => {
+        const result = determineAgentFromEnv({ CURSOR_AGENT: '1' });
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.CURSOR_CLI },
+        });
+      });
+    });
+
+    describe('CURSOR_EXTENSION_HOST_ROLE=agent-exec', () => {
+      it('detects cursor cli', () => {
+        const result = determineAgentFromEnv({
+          CURSOR_EXTENSION_HOST_ROLE: 'agent-exec',
+        });
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.CURSOR_CLI },
+        });
+      });
+    });
+  });
+
+  describe('gemini detection', () => {
+    describe('GEMINI_CLI not set', () => {
+      it('returns no agent', () => {
+        const result = determineAgentFromEnv({});
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('GEMINI_CLI set', () => {
+      it('detects gemini', () => {
+        const result = determineAgentFromEnv({ GEMINI_CLI: '1' });
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.GEMINI },
+        });
+      });
+    });
+  });
+
+  describe('codex detection', () => {
+    describe('CODEX_SANDBOX not set', () => {
+      it('returns no agent', () => {
+        const result = determineAgentFromEnv({});
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('CODEX_SANDBOX set', () => {
+      it('detects codex', () => {
+        const result = determineAgentFromEnv({ CODEX_SANDBOX: 'seatbelt' });
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.CODEX },
+        });
+      });
+    });
+
+    describe('CODEX_CI set', () => {
+      it('detects codex', () => {
+        const result = determineAgentFromEnv({ CODEX_CI: '1' });
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.CODEX },
+        });
+      });
+    });
+
+    describe('CODEX_THREAD_ID set', () => {
+      it('detects codex', () => {
+        const result = determineAgentFromEnv({ CODEX_THREAD_ID: 'thread-123' });
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.CODEX },
+        });
+      });
+    });
+  });
+
+  describe('antigravity detection', () => {
+    describe('ANTIGRAVITY_AGENT not set', () => {
+      it('returns no agent', () => {
+        const result = determineAgentFromEnv({});
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('ANTIGRAVITY_AGENT set', () => {
+      it('detects antigravity', () => {
+        const result = determineAgentFromEnv({ ANTIGRAVITY_AGENT: '1' });
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.ANTIGRAVITY },
+        });
+      });
+    });
+  });
+
+  describe('antigravity detection', () => {
+    describe('ANTIGRAVITY_AGENT not set', () => {
+      it('returns no agent', () => {
+        const result = determineAgentFromEnv({});
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('ANTIGRAVITY_AGENT set', () => {
+      it('detects antigravity', () => {
+        const result = determineAgentFromEnv({ ANTIGRAVITY_AGENT: '1' });
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.ANTIGRAVITY },
+        });
+      });
+    });
+  });
+
+  describe('augment cli detection', () => {
+    describe('AUGMENT_AGENT not set', () => {
+      it('returns no agent', () => {
+        const result = determineAgentFromEnv({});
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('AUGMENT_AGENT set', () => {
+      it('detects augment cli', () => {
+        const result = determineAgentFromEnv({ AUGMENT_AGENT: '1' });
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.AUGMENT_CLI },
+        });
+      });
+    });
+  });
+
+  describe('opencode detection', () => {
+    describe('OPENCODE_CLIENT not set', () => {
+      it('returns no agent', () => {
+        const result = determineAgentFromEnv({});
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('OPENCODE_CLIENT set', () => {
+      it('detects opencode', () => {
+        const result = determineAgentFromEnv({ OPENCODE_CLIENT: 'opencode' });
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.OPENCODE },
+        });
+      });
+    });
+  });
+
+  describe('claude detection', () => {
+    describe('CLAUDE_CODE not set', () => {
+      it('returns no agent', () => {
+        const result = determineAgentFromEnv({});
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('CLAUDE_CODE set', () => {
+      it('detects claude', () => {
+        const result = determineAgentFromEnv({ CLAUDE_CODE: '1' });
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.CLAUDE },
+        });
+      });
+    });
+
+    describe('CLAUDECODE set', () => {
+      it('detects claude', () => {
+        const result = determineAgentFromEnv({ CLAUDECODE: '1' });
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.CLAUDE },
+        });
+      });
+    });
+  });
+
+  describe('cowork detection', () => {
+    describe('CLAUDE_CODE_IS_COWORK not set', () => {
+      it('detects claude', () => {
+        const result = determineAgentFromEnv({ CLAUDECODE: '1' });
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.CLAUDE },
+        });
+      });
+    });
+
+    describe('CLAUDE_CODE_IS_COWORK set with CLAUDECODE', () => {
+      it('detects cowork', () => {
+        const result = determineAgentFromEnv({
+          CLAUDECODE: '1',
+          CLAUDE_CODE_IS_COWORK: '1',
+        });
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.COWORK },
+        });
+      });
+    });
+
+    describe('CLAUDE_CODE_IS_COWORK set with CLAUDE_CODE', () => {
+      it('detects cowork', () => {
+        const result = determineAgentFromEnv({
+          CLAUDE_CODE: '1',
+          CLAUDE_CODE_IS_COWORK: '1',
+        });
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.COWORK },
+        });
+      });
+    });
+
+    describe('CLAUDE_CODE_IS_COWORK set without CLAUDECODE or CLAUDE_CODE', () => {
+      it('returns no agent', () => {
+        const result = determineAgentFromEnv({ CLAUDE_CODE_IS_COWORK: '1' });
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+  });
+
+  describe('replit detection', () => {
+    describe('REPL_ID not set', () => {
+      it('returns no agent', () => {
+        const result = determineAgentFromEnv({});
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('REPL_ID set', () => {
+      it('detects replit', () => {
+        const result = determineAgentFromEnv({ REPL_ID: '1' });
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.REPLIT },
+        });
+      });
+    });
+  });
+
+  describe('priority order detection', () => {
+    it('AI_AGENT takes highest priority over all other environment variables', () => {
+      const result = determineAgentFromEnv({
+        AI_AGENT: 'custom-priority',
+        CURSOR_TRACE_ID: 'some-uuid',
+        CURSOR_AGENT: '1',
+        GEMINI_CLI: '1',
+        CODEX_SANDBOX: 'seatbelt',
+        ANTIGRAVITY_AGENT: '1',
+        AUGMENT_AGENT: '1',
+        OPENCODE_CLIENT: 'opencode',
+        CLAUDE_CODE: '1',
+        REPL_ID: '1',
+        COPILOT_MODEL: 'gpt-5',
+        COPILOT_ALLOW_ALL: 'true',
+        COPILOT_GITHUB_TOKEN: 'ghp_xxx',
+      });
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: 'custom-priority' },
+      });
+    });
+
+    it('CURSOR_TRACE_ID takes priority over other agents (except AI_AGENT)', () => {
+      const result = determineAgentFromEnv({
+        CURSOR_TRACE_ID: 'some-uuid',
+        CURSOR_AGENT: '1',
+        GEMINI_CLI: '1',
+        CODEX_SANDBOX: 'seatbelt',
+        ANTIGRAVITY_AGENT: '1',
+        AUGMENT_AGENT: '1',
+        OPENCODE_CLIENT: 'opencode',
+        CLAUDE_CODE: '1',
+        REPL_ID: '1',
+        COPILOT_MODEL: 'gpt-5',
+        COPILOT_ALLOW_ALL: 'true',
+        COPILOT_GITHUB_TOKEN: 'ghp_xxx',
+      });
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.CURSOR },
+      });
+    });
+
+    it('CURSOR_AGENT takes priority over remaining agents', () => {
+      const result = determineAgentFromEnv({
+        CURSOR_AGENT: '1',
+        GEMINI_CLI: '1',
+        CODEX_SANDBOX: 'seatbelt',
+        ANTIGRAVITY_AGENT: '1',
+        AUGMENT_AGENT: '1',
+        OPENCODE_CLIENT: 'opencode',
+        CLAUDE_CODE: '1',
+        REPL_ID: '1',
+        COPILOT_MODEL: 'gpt-5',
+        COPILOT_ALLOW_ALL: 'true',
+        COPILOT_GITHUB_TOKEN: 'ghp_xxx',
+      });
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.CURSOR_CLI },
+      });
+    });
+  });
+
+  describe('edge cases', () => {
+    it('handles empty string values for environment variables', () => {
+      const result = determineAgentFromEnv({
+        AI_AGENT: '',
+        CURSOR_TRACE_ID: '',
+      });
+      expect(result).toEqual({ isAgent: false });
+    });
+
+    it('handles whitespace-only values for AI_AGENT', () => {
+      const result = determineAgentFromEnv({
+        AI_AGENT: '   ',
+      });
+      expect(result).toEqual({ isAgent: false });
+    });
+
+    it('handles special characters in AI_AGENT value', () => {
+      const result = determineAgentFromEnv({
+        AI_AGENT: 'my-custom-agent@v1.0',
+      });
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: 'my-custom-agent@v1.0' },
+      });
+    });
+
+    it('trims leading and trailing whitespace from AI_AGENT', () => {
+      const result = determineAgentFromEnv({
+        AI_AGENT: '  custom-agent  ',
+      });
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: 'custom-agent' },
+      });
+    });
+  });
+
+  describe('convenience methods', () => {
+    it('provides easy boolean check', () => {
+      const result = determineAgentFromEnv({ AI_AGENT: 'test-agent' });
+      expect(result?.isAgent).toBe(true);
+    });
+
+    it('provides agent details when detected', () => {
+      const result = determineAgentFromEnv({ CURSOR_TRACE_ID: 'some-id' });
+      if (result?.isAgent) {
+        expect(result.agent.name).toBe(KNOWN_AGENTS.CURSOR);
+      }
+    });
+
+    it('has no agent details when not detected', () => {
+      const result = determineAgentFromEnv({});
+      expect(result).toEqual({ isAgent: false });
     });
   });
 });
