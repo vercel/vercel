@@ -384,6 +384,29 @@ export namespace PackageJson {
   export interface ScriptsMap {
     [scriptName: string]: string;
   }
+
+  /**
+   * A single entry of the `devEngines` field, as defined by the
+   * [devEngines spec](https://github.com/openjs-foundation/package-metadata-interoperability-collab-space/blob/main/deps/devengines.md).
+   */
+  export interface DevEngineDependency {
+    name?: string;
+    version?: string;
+    onFail?: 'download' | 'warn' | 'error' | 'ignore';
+  }
+
+  /**
+   * The modern, non-corepack alternative to the top-level `packageManager`
+   * field. Each property may be a single dependency object or an array of
+   * them (npm allows an array so multiple acceptable options can be listed).
+   */
+  export interface DevEngines {
+    cpu?: DevEngineDependency | DevEngineDependency[];
+    os?: DevEngineDependency | DevEngineDependency[];
+    libc?: DevEngineDependency | DevEngineDependency[];
+    runtime?: DevEngineDependency | DevEngineDependency[];
+    packageManager?: DevEngineDependency | DevEngineDependency[];
+  }
 }
 
 export interface PackageJson {
@@ -416,6 +439,7 @@ export interface PackageJson {
   readonly private?: boolean;
   readonly publishConfig?: PackageJson.PublishConfig;
   readonly packageManager?: string;
+  readonly devEngines?: PackageJson.DevEngines;
   readonly type?: string;
 }
 

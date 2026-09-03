@@ -1263,6 +1263,59 @@ it('should detect `packageManager` in pnpm monorepo', async () => {
   }
 });
 
+describe('`devEngines.packageManager` support', () => {
+  it('should detect cliType from a `devEngines.packageManager` object when no lockfile or `packageManager` field is present', async () => {
+    const fixture = path.join(
+      __dirname,
+      'fixtures',
+      '50-dev-engines-package-manager-object'
+    );
+    const result = await scanParentDirs(fixture, true, fixture);
+    expect(result.cliType).toEqual('pnpm');
+    expect(result.lockfileVersion).toEqual(undefined);
+    expect(result.lockfilePath).toEqual(undefined);
+    expect(result.packageJsonPackageManager).toEqual(undefined);
+  });
+
+  it('should detect cliType from a `devEngines.packageManager` array, using the first recognized entry', async () => {
+    const fixture = path.join(
+      __dirname,
+      'fixtures',
+      '51-dev-engines-package-manager-array'
+    );
+    const result = await scanParentDirs(fixture, true, fixture);
+    expect(result.cliType).toEqual('pnpm');
+    expect(result.lockfileVersion).toEqual(undefined);
+    expect(result.lockfilePath).toEqual(undefined);
+  });
+
+  it('should ignore `devEngines.packageManager` when top-level `packageManager` is present', async () => {
+    const fixture = path.join(
+      __dirname,
+      'fixtures',
+      '52-dev-engines-package-manager-ignored-with-packagemanager'
+    );
+    const result = await scanParentDirs(fixture, true, fixture);
+    // No lockfile and corepack is not enabled, so this matches the
+    // pre-existing fallback behavior for a `packageManager` field: "npm".
+    // `devEngines.packageManager` (which specifies "pnpm") must not override it.
+    expect(result.cliType).toEqual('npm');
+    expect(result.packageJsonPackageManager).toEqual('npm@10.7.0');
+  });
+
+  it('should fall back to the existing detection when `devEngines.packageManager.name` is unrecognized', async () => {
+    const fixture = path.join(
+      __dirname,
+      'fixtures',
+      '53-dev-engines-package-manager-unknown-name'
+    );
+    const result = await scanParentDirs(fixture, true, fixture);
+    expect(result.cliType).toEqual('npm');
+    expect(result.lockfileVersion).toEqual(undefined);
+    expect(result.lockfilePath).toEqual(undefined);
+  });
+});
+
 describe('findPackageJson', () => {
   it('should find package.json and return path without reading contents', async () => {
     const fixture = path.join(__dirname, 'fixtures', '20-npm-7');

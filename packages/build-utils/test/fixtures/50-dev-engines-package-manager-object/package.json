@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "name": "50-dev-engines-package-manager-object",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.0.0",
+      "onFail": "error"
+    }
+  }
+}
