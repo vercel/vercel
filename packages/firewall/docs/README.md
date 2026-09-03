@@ -10,6 +10,6 @@
 
 ## References
 
-### unstable_checkRateLimit
+### unstable\_checkRateLimit
 
 Renames and re-exports [checkRateLimit](functions/checkRateLimit.md)

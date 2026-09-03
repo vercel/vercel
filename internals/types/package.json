@@ -9,14 +9,15 @@
   ],
   "dependencies": {
     "@types/node": "20.11.0",
-    "@vercel/cli-config": "workspace:*",
     "@vercel-internals/constants": "workspace:*",
     "@vercel/build-utils": "workspace:*",
+    "@vercel/cli-config": "workspace:*",
     "@vercel/routing-utils": "workspace:*"
   },
   "devDependencies": {
     "@vercel-internals/tsconfig": "workspace:*",
     "@vercel/style-guide": "4.0.2",
+    "eslint": "8.57.1",
     "typescript": "5.9.3"
   }
 }

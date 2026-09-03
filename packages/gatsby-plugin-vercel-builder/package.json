@@ -21,11 +21,11 @@
     "vitest-unit": "glob --absolute 'test/unit.*test.*'"
   },
   "dependencies": {
-    "@sinclair/typebox": "0.25.24",
+    "@sinclair/typebox": "0.34.52",
     "@vercel/build-utils": "workspace:*",
-    "esbuild": "0.27.0",
+    "esbuild": "0.28.2",
     "etag": "1.8.1",
-    "fs-extra": "11.1.0"
+    "fs-extra": "11.4.0"
   },
   "devDependencies": {
     "@types/etag": "1.8.0",

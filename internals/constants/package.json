@@ -10,10 +10,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.json"
   },
-  "dependencies": {},
   "devDependencies": {
     "@vercel-internals/tsconfig": "workspace:*",
     "@vercel/style-guide": "4.0.2",
+    "eslint": "8.57.1",
     "typescript": "5.9.3"
   }
 }

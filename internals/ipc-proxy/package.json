@@ -23,8 +23,8 @@
     "@vercel-internals/tsconfig": "workspace:*",
     "@vercel/build-utils": "workspace:*",
     "execa": "5",
-    "fs-extra": "11.2.0",
-    "tar": "7.5.11",
+    "fs-extra": "11.4.0",
+    "tar": "7.5.22",
     "vitest": "2.0.3"
   }
 }

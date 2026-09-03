@@ -27,13 +27,13 @@
   "dependencies": {
     "@napi-rs/keyring": "1.2.0",
     "@vercel/cli-config": "workspace:*",
-    "async-listen": "3.0.0",
+    "async-listen": "3.1.0",
     "open": "8.4.0",
-    "zod": "4.1.11"
+    "zod": "4.5.4"
   },
   "devDependencies": {
     "@types/node": "20.11.0",
-    "memfs": "4.14.0",
+    "memfs": "4.69.1",
     "vite": "7.1.7",
     "vitest": "2.1.4"
   },

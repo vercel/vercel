@@ -67,5 +67,11 @@
     "source": {
       "dependsOn": ["^source"]
     }
-  }
+  },
+  "globalPassThroughEnv": [
+    "GITHUB_BASE_REF",
+    "GITHUB_HEAD_REF",
+    "TURBO_BASE_SHA",
+    "TURBO_BINARY"
+  ]
 }

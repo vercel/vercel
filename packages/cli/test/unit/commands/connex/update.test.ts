@@ -229,7 +229,8 @@ describe('connex update', () => {
       accentColor: '#ff0066',
     });
     expect(typeof patchBody?.icon).toBe('string');
-    expect((patchBody?.icon as string).length).toBe(40); // sha1 hex length
+    const icon = patchBody?.icon as string;
+    expect(icon.length).toBe(40); // sha1 hex length
 
     // The body for /v2/files is binary (Buffer), so express.json() does not
     // parse it. Assert via headers + content-type instead.

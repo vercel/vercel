@@ -29,7 +29,7 @@
     "@types/node": "20.11.0",
     "@vercel/build-utils": "workspace:*",
     "execa": "3.2.0",
-    "fs-extra": "11.1.0",
+    "fs-extra": "11.4.0",
     "vitest": "2.0.3"
   }
 }
