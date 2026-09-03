@@ -78,6 +78,41 @@ export interface ScanParentDirsResult extends FindPackageJsonResult {
   turboSupportsCorepackHome?: boolean;
 }
 
+const KNOWN_PACKAGE_MANAGER_NAMES = new Set<CliType>([
+  'npm',
+  'pnpm',
+  'yarn',
+  'bun',
+]);
+
+/**
+ * Resolves the `name` of the intended package manager from a `package.json`
+ * `devEngines.packageManager` field. That field may be a single dependency
+ * object or an array of them (npm allows an array of acceptable options).
+ * Returns the first entry with a name recognized by Vercel, or `undefined`
+ * if the field is absent or none of the entries have a recognized name.
+ */
+export function getPackageManagerNameFromDevEngines(
+  devEnginesPackageManager: PackageJson.DevEngines['packageManager']
+): CliType | undefined {
+  if (!devEnginesPackageManager) {
+    return undefined;
+  }
+
+  const candidates = Array.isArray(devEnginesPackageManager)
+    ? devEnginesPackageManager
+    : [devEnginesPackageManager];
+
+  for (const candidate of candidates) {
+    const name = candidate?.name;
+    if (name && KNOWN_PACKAGE_MANAGER_NAMES.has(name as CliType)) {
+      return name as CliType;
+    }
+  }
+
+  return undefined;
+}
+
 export interface TraverseUpDirectoriesProps {
   /**
    * The directory to start iterating from, typically the same directory of the entrypoint.
@@ -503,6 +538,7 @@ export async function scanParentDirs(
       vltLockPath,
     ],
     packageJsonPackageManager,
+    packageJsonDevEnginesPackageManager,
   } = await walkParentDirsMulti({
     base,
     start: destPath,
@@ -575,7 +611,8 @@ export async function scanParentDirs(
   } else {
     cliType = detectPackageManagerNameWithoutLockfile(
       packageJsonPackageManager,
-      turboSupportsCorepackHome
+      turboSupportsCorepackHome,
+      getPackageManagerNameFromDevEngines(packageJsonDevEnginesPackageManager)
     );
   }
 
@@ -669,7 +706,8 @@ export function turboVersionSpecifierSupportsCorepack(
 
 function detectPackageManagerNameWithoutLockfile(
   packageJsonPackageManager: string | undefined,
-  turboSupportsCorepackHome: boolean | undefined
+  turboSupportsCorepackHome: boolean | undefined,
+  devEnginesPackageManagerName?: CliType
 ) {
   if (
     usingCorepack(
@@ -694,6 +732,13 @@ function detectPackageManagerNameWithoutLockfile(
           `Unknown package manager "${corepackPackageManager?.packageName}". Change your package.json "packageManager" field to a known package manager: npm, pnpm, yarn, bun.`
         );
     }
+  }
+  // The top-level `packageManager` (corepack) field always takes precedence
+  // for backwards compatibility. Only fall back to `devEngines.packageManager`
+  // when that field is absent, since modern tooling (pnpm, yarn, turborepo)
+  // increasingly favors it over corepack and it supports version ranges.
+  if (packageJsonPackageManager === undefined && devEnginesPackageManagerName) {
+    return devEnginesPackageManagerName;
   }
   return 'npm';
 }
@@ -744,8 +789,10 @@ async function walkParentDirsMulti({
 }: WalkParentDirsMultiProps): Promise<{
   paths: (string | undefined)[];
   packageJsonPackageManager?: string;
+  packageJsonDevEnginesPackageManager?: PackageJson.DevEngines['packageManager'];
 }> {
   let packageManager: string | undefined;
+  let devEnginesPackageManager: PackageJson.DevEngines['packageManager'];
 
   for (const dir of traverseUpDirectories({ start, base })) {
     const fullPaths = filenames.map(f => path.join(dir, f));
@@ -760,16 +807,24 @@ async function walkParentDirsMulti({
     if (packageJson?.packageManager) {
       packageManager = packageJson.packageManager;
     }
+    if (packageJson?.devEngines?.packageManager) {
+      devEnginesPackageManager = packageJson.devEngines.packageManager;
+    }
 
     if (foundOneOrMore) {
       return {
         paths: fullPaths.map((f, i) => (existResults[i] ? f : undefined)),
         packageJsonPackageManager: packageManager,
+        packageJsonDevEnginesPackageManager: devEnginesPackageManager,
       };
     }
   }
 
-  return { paths: [], packageJsonPackageManager: packageManager };
+  return {
+    paths: [],
+    packageJsonPackageManager: packageManager,
+    packageJsonDevEnginesPackageManager: devEnginesPackageManager,
+  };
 }
 
 function isSet<T>(v: any): v is Set<T> {
