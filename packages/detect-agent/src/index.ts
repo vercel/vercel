@@ -67,15 +67,12 @@ export const KNOWN_AGENTS = {
   FX,
 } as const;
 
-function agentDetails(name: KnownAgentNames): KnownAgentDetails {
-  const model = process.env.AI_AGENT_MODEL?.trim();
-  return model ? { name, model } : { name };
-}
-
 export async function determineAgent(): Promise<AgentResult> {
   if (process.env.AI_AGENT) {
     const name = process.env.AI_AGENT.trim();
     if (name) {
+      const model = process.env.AI_AGENT_MODEL?.trim();
+
       if (name === GITHUB_COPILOT || name === GITHUB_COPILOT_CLI) {
         return {
           isAgent: true,
@@ -86,20 +83,23 @@ export async function determineAgent(): Promise<AgentResult> {
       if (name === V0) {
         return {
           isAgent: true,
-          agent: agentDetails(V0),
+          agent: { name: V0, ...(model ? { model } : {}) },
         };
       }
 
       if (name === FX) {
         return {
           isAgent: true,
-          agent: agentDetails(FX),
+          agent: { name: FX, ...(model ? { model } : {}) },
         };
       }
 
       return {
         isAgent: true,
-        agent: agentDetails(name as KnownAgentNames),
+        agent: {
+          name: name as KnownAgentNames,
+          ...(model ? { model } : {}),
+        },
       };
     }
   }
