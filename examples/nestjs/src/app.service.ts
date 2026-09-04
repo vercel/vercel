@@ -80,12 +80,12 @@ export class AppService {
     </head>
     <body>
       <div class="container">
-        <img src="https://api-frameworks.vercel.sh/framework-logos/nestjs.svg" alt="Nitro logo" class="logo" />
+        <img src="https://api-frameworks.vercel.sh/framework-logos/nestjs.svg" alt="NestJS logo" class="logo" />
         <h1>Welcome to NestJS</h1>
         <p>A progressive Node.js framework running on Vercel</p>
         <div class="features">
           <div class="feature">
-            <a href="https://vercel.com/docs/frameworks/nestjs" target="_blank" rel="noreferrer">Vercel docs</a>
+            <a href="https://vercel.com/docs/frameworks/backend/nestjs" target="_blank" rel="noreferrer">Vercel docs</a>
           </div>
           <div class="feature">
             <a href="https://docs.nestjs.com" target="_blank" rel="noreferrer">NestJS docs</a>
