@@ -1,6 +1,5 @@
 import chalk from 'chalk';
-import jsonlines from 'jsonlines';
-import { toNodeReadable, type Response } from '../../util/fetch';
+import { DateTime } from 'luxon';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
 import type Client from '../../util/client';
@@ -12,21 +11,9 @@ import { UsageTelemetryClient } from '../../util/telemetry/commands/usage';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import { isErrnoException } from '@vercel/error-utils';
-import type { FocusCharge } from '../../util/billing/focus-charge';
-import type {
-  BreakdownPeriod,
-  GroupByDimension,
-  ServiceAggregation,
-  PeriodAggregation,
-  GroupAggregation,
-  UsageData,
-} from './types';
 import {
-  parseBillingDate,
   getDefaultFromDate,
   getDefaultToDate,
-  getDefaultFromDateDisplay,
-  getDefaultToDateDisplay,
   getPeriodKey,
   isValidBreakdownPeriod,
   VALID_BREAKDOWN_PERIODS,
@@ -35,16 +22,31 @@ import {
   isValidGroupByDimension,
   VALID_GROUP_BY_DIMENSIONS,
 } from '../../util/billing/group-by-utils';
+import { extractDatePortion } from '../../util/billing/format';
 import { outputAggregated } from './output-aggregated';
 import { outputBreakdown } from './output-breakdown';
 import { outputGroupBy } from './output-group-by';
 import { outputJson } from './output-json';
+import type {
+  BreakdownPeriod,
+  CommitmentUsageResponse,
+  CostMetric,
+  CostMetricGroup,
+  CostMetricsResponse,
+  GroupAggregation,
+  GroupByDimension,
+  PeriodAggregation,
+  ServiceAggregation,
+  UsageData,
+} from './types';
+
+const GROSS_COST_METRIC = 'gross_cost';
+// TODO: Add `net_cost` once the billing costs API contract supports it.
 
 export default async function usage(client: Client): Promise<number> {
   const { print, error, debug, spinner } = output;
-
-  let parsedArgs = null;
   const flagsSpecification = getFlagsSpecification(usageCommand.options);
+  let parsedArgs;
 
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
@@ -54,9 +56,7 @@ export default async function usage(client: Client): Promise<number> {
   }
 
   const telemetry = new UsageTelemetryClient({
-    opts: {
-      store: client.telemetryEventStore,
-    },
+    opts: { store: client.telemetryEventStore },
   });
 
   if (parsedArgs.flags['--help']) {
@@ -71,58 +71,33 @@ export default async function usage(client: Client): Promise<number> {
     return 1;
   }
   const asJson = formatResult.jsonOutput;
-
   const fromFlag = parsedArgs.flags['--from'];
   const toFlag = parsedArgs.flags['--to'];
 
   if (Boolean(fromFlag) !== Boolean(toFlag)) {
     error(
-      'Both --from and --to must be specified or neither for the current month'
+      'Both --from and --to must be specified or neither for the current billing cycle'
     );
     return 1;
   }
-  const usingDefaults = !fromFlag && !toFlag;
-
-  let fromDate: string;
-  let toDate: string;
-  try {
-    fromDate = fromFlag
-      ? parseBillingDate(fromFlag, false)
-      : getDefaultFromDate();
-    toDate = toFlag ? parseBillingDate(toFlag, true) : getDefaultToDate();
-  } catch (err) {
-    error((err as Error).message);
-    return 1;
-  }
-
-  const fromDisplay = fromFlag ?? getDefaultFromDateDisplay();
-  const toDisplay = toFlag ?? getDefaultToDateDisplay();
 
   const breakdownFlag = parsedArgs.flags['--breakdown'];
-  let breakdownPeriod: BreakdownPeriod | undefined;
-
-  if (breakdownFlag) {
-    if (!isValidBreakdownPeriod(breakdownFlag)) {
-      error(
-        `Invalid breakdown period: "${breakdownFlag}". Valid options are: ${VALID_BREAKDOWN_PERIODS.join(', ')}`
-      );
-      return 1;
-    }
-    breakdownPeriod = breakdownFlag;
+  if (breakdownFlag && !isValidBreakdownPeriod(breakdownFlag)) {
+    error(
+      `Invalid breakdown period: "${breakdownFlag}". Valid options are: ${VALID_BREAKDOWN_PERIODS.join(', ')}`
+    );
+    return 1;
   }
+  const breakdownPeriod = breakdownFlag as BreakdownPeriod | undefined;
 
   const groupByFlag = parsedArgs.flags['--group-by'];
-  let groupByDimension: GroupByDimension | undefined;
-
-  if (groupByFlag) {
-    if (!isValidGroupByDimension(groupByFlag)) {
-      error(
-        `Invalid group-by dimension: "${groupByFlag}". Valid options are: ${VALID_GROUP_BY_DIMENSIONS.join(', ')}`
-      );
-      return 1;
-    }
-    groupByDimension = groupByFlag;
+  if (groupByFlag && !isValidGroupByDimension(groupByFlag)) {
+    error(
+      `Invalid group-by dimension: "${groupByFlag}". Valid options are: ${VALID_GROUP_BY_DIMENSIONS.join(', ')}`
+    );
+    return 1;
   }
+  const groupByDimension = groupByFlag as GroupByDimension | undefined;
 
   if (breakdownPeriod && groupByDimension) {
     error(
@@ -134,23 +109,21 @@ export default async function usage(client: Client): Promise<number> {
   telemetry.trackCliOptionFrom(fromFlag);
   telemetry.trackCliOptionTo(toFlag);
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
+  telemetry.trackCliFlagAll(parsedArgs.flags['--all']);
   telemetry.trackCliOptionBreakdown(breakdownFlag);
   telemetry.trackCliOptionGroupBy(groupByFlag);
 
-  if (fromFlag) {
-    debug(`Date conversion: ${fromFlag} -> ${fromDate}`);
-  }
-  if (toFlag) {
-    debug(`Date conversion: ${toFlag} (end of day) -> ${toDate}`);
-  }
-
   let contextName: string;
+  let contextType: 'team' | 'personal account';
   let teamId: string | undefined;
+  let billingPeriod: { start: number; end: number } | undefined;
 
   try {
     const scope = await getScope(client);
     contextName = scope.contextName;
+    contextType = scope.team ? 'team' : 'personal account';
     teamId = scope.team?.id;
+    billingPeriod = (scope.team ?? scope.user).billing?.period;
   } catch (err: unknown) {
     if (
       isErrnoException(err) &&
@@ -162,42 +135,106 @@ export default async function usage(client: Client): Promise<number> {
     throw err;
   }
 
+  const usingDefaults = !fromFlag && !toFlag;
+  let fromDate: string;
+  let toDate: string;
+  try {
+    fromDate = fromFlag
+      ? parseDashboardDate(fromFlag, false)
+      : billingPeriod
+        ? new Date(billingPeriod.start).toISOString()
+        : getDefaultFromDate();
+    toDate = toFlag
+      ? parseDashboardDate(toFlag, true)
+      : billingPeriod
+        ? new Date(billingPeriod.end).toISOString()
+        : getDefaultToDate();
+  } catch (err) {
+    error((err as Error).message);
+    return 1;
+  }
+
+  const fromDisplay = fromFlag ?? extractDatePortion(fromDate);
+  const toDisplay = toFlag ?? extractDatePortion(toDate);
+  debug(`Fetching dashboard usage from ${fromDate} to ${toDate}`);
+
   const start = Date.now();
   if (!asJson) {
     spinner(`Fetching usage data for ${chalk.bold(contextName)}`);
   }
 
-  debug(`Fetching charges from ${fromDate} to ${toDate}`);
-
-  const query = new URLSearchParams({
-    from: fromDate,
-    to: toDate,
-  });
-  if (teamId) {
-    query.set('teamId', teamId);
-  }
-
   try {
-    const response = await client.fetch(`/v1/billing/charges?${query}`, {
-      json: false,
-      useCurrentTeam: false,
-    });
+    const query = new URLSearchParams({ from: fromDate, to: toDate });
+    if (teamId) query.set('teamId', teamId);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      error(`Failed to fetch usage data: ${response.status} ${errorText}`);
-      return 1;
-    }
+    const costsRequest = client.fetch<CostMetricsResponse>(
+      `/v2/billing/costs?${query}`,
+      {
+        method: 'POST',
+        body: {
+          from: fromDate,
+          to: toDate,
+          // TODO: Request `net_cost` here once the billing costs API PR lands.
+          metrics: [GROSS_COST_METRIC, 'quantity'],
+          format: 'timeseries',
+          views: {
+            byProduct: { groupBy: ['product'] },
+            byProductRegionProject: {
+              groupBy: ['product', 'region', 'project'],
+            },
+          },
+          userAgent: 'vercel-cli.usage',
+        },
+        useCurrentTeam: false,
+      }
+    );
+    const commitmentRequest =
+      usingDefaults && teamId
+        ? client
+            .fetch<CommitmentUsageResponse>(
+              `/v1/invoices/pre-commitment-usage?teamId=${encodeURIComponent(teamId)}`,
+              { useCurrentTeam: false }
+            )
+            .catch(err => {
+              debug(`Unable to fetch infrastructure credit: ${String(err)}`);
+              return null;
+            })
+        : Promise.resolve(null);
 
-    const usageData = await processCharges(
+    const [response, commitmentUsage] = await Promise.all([
+      costsRequest,
+      commitmentRequest,
+    ]);
+
+    const usageData = processCosts(
       response,
-      breakdownPeriod,
-      groupByDimension,
       contextName,
+      contextType,
+      parsedArgs.flags['--scope'],
       fromDisplay,
       toDisplay,
-      usingDefaults
+      usingDefaults,
+      Boolean(parsedArgs.flags['--all']),
+      breakdownPeriod,
+      groupByDimension
     );
+    const creditLedger = commitmentUsage?.creditLedgers[0];
+    if (creditLedger) {
+      const used = roundToHundredths(
+        creditLedger.total - creditLedger.remaining
+      );
+      usageData.credit = {
+        cadence: commitmentUsage.cadence,
+        currency: creditLedger.currency,
+        allocated: creditLedger.total,
+        used,
+        remaining: creditLedger.remaining,
+        progress:
+          creditLedger.total > 0
+            ? roundToHundredths((used / creditLedger.total) * 100)
+            : 0,
+      };
+    }
 
     if (asJson) {
       outputJson(client, {
@@ -211,24 +248,12 @@ export default async function usage(client: Client): Promise<number> {
     }
 
     if (groupByDimension) {
-      outputGroupBy({
-        data: usageData,
-        groupByDimension,
-        startTime: start,
-      });
+      outputGroupBy({ data: usageData, groupByDimension, startTime: start });
     } else if (breakdownPeriod) {
-      outputBreakdown({
-        data: usageData,
-        breakdownPeriod,
-        startTime: start,
-      });
+      outputBreakdown({ data: usageData, breakdownPeriod, startTime: start });
     } else {
-      outputAggregated({
-        data: usageData,
-        startTime: start,
-      });
+      outputAggregated({ data: usageData, startTime: start });
     }
-
     return 0;
   } catch (err) {
     output.prettyError(err);
@@ -236,155 +261,233 @@ export default async function usage(client: Client): Promise<number> {
   }
 }
 
-function getGroupKey(charge: FocusCharge, dimension: GroupByDimension): string {
-  if (dimension === 'project') {
-    return (
-      charge.Tags?.ProjectName || charge.Tags?.ProjectId || '(unattributed)'
-    );
-  }
-  return charge.RegionName || charge.RegionId || '(global)';
+function roundToHundredths(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-async function processCharges(
-  response: Response,
-  breakdownPeriod: BreakdownPeriod | undefined,
-  groupByDimension: GroupByDimension | undefined,
+function getUsageThrough(queriedAt: string, toDisplay: string): string {
+  const queriedDate = extractDatePortion(queriedAt);
+  return queriedDate < toDisplay ? queriedDate : toDisplay;
+}
+
+function parseDashboardDate(value: string, end: boolean): string {
+  const date = value.includes('T')
+    ? DateTime.fromISO(value)
+    : DateTime.fromISO(value, { zone: 'America/Los_Angeles' }).startOf('day');
+  if (!date.isValid) {
+    throw new Error(
+      `Invalid date: "${value}". Expected ISO 8601 format (YYYY-MM-DD)`
+    );
+  }
+  return (end && !value.includes('T') ? date.plus({ days: 1 }) : date)
+    .toUTC()
+    .toISO()!;
+}
+
+function processCosts(
+  response: CostMetricsResponse,
   contextName: string,
+  contextType: 'team' | 'personal account',
+  scope: string | undefined,
   fromDisplay: string,
   toDisplay: string,
-  usingDefaults: boolean
-): Promise<UsageData> {
+  usingDefaults: boolean,
+  showAll: boolean,
+  breakdownPeriod?: BreakdownPeriod,
+  groupByDimension?: GroupByDimension
+): UsageData {
+  const metrics = new Map(
+    response.metrics.map(metric => [metric.slug, metric])
+  );
+  const products = response.results.dimensionsMeta.product?.values ?? {};
+  const projects = response.results.dimensionsMeta.project?.values ?? {};
+  const regions = response.results.dimensionsMeta.region?.values ?? {};
+  const summaryView = response.results.views.byProduct;
+  const detailView = response.results.views.byProductRegionProject;
   const services = new Map<string, ServiceAggregation>();
   const periodUsage = new Map<string, PeriodAggregation>();
   const groupByUsage = new Map<string, GroupAggregation>();
-  let grandPricingQuantity = 0;
-  let grandEffective = 0;
-  let grandBilled = 0;
-  let chargeCount = 0;
-  let pricingUnit = 'MIUs';
+  let totalCost = 0;
+  let totalEffectiveCost = 0;
 
-  await new Promise<void>((resolve, reject) => {
-    // gzip compression is assumed
-    const readable = toNodeReadable(response.body);
-    const stream = readable.pipe(jsonlines.parse());
+  for (const result of summaryView?.results ?? []) {
+    const product = result.dimensionValues.product;
+    if (!product) continue;
+    const productMetadata = products[product];
+    const serviceName = productMetadata?.title ?? product;
+    const aggregation = aggregateResult(
+      result,
+      metrics,
+      undefined,
+      productMetadata?.category === 'Subscription Licenses'
+    );
+    const aggregationName = aggregation.included
+      ? `${serviceName} (Flat Rate CDN)`
+      : serviceName;
+    addService(services, aggregationName, aggregation);
+    totalCost += aggregation.cost;
+    totalEffectiveCost += aggregation.effectiveCost;
 
-    stream.on('data', (charge: FocusCharge) => {
-      chargeCount++;
-
-      // Capture pricing unit from the first charge
-      if (chargeCount === 1 && charge.PricingUnit) {
-        pricingUnit = charge.PricingUnit;
-      }
-
-      const serviceName = charge.ServiceName || 'Unknown';
-      const quantity = charge.PricingQuantity || 0;
-      const effective = charge.EffectiveCost || 0;
-      const billed = charge.BilledCost || 0;
-
-      // Accumulate grand totals
-      grandPricingQuantity += quantity;
-      grandEffective += effective;
-      grandBilled += billed;
-
-      // Accumulate per service
-      const existing = services.get(serviceName) || {
-        pricingQuantity: 0,
-        effectiveCost: 0,
-        billedCost: 0,
-        pricingUnit: charge.PricingUnit || pricingUnit,
-      };
-      services.set(serviceName, {
-        pricingQuantity: existing.pricingQuantity + quantity,
-        effectiveCost: existing.effectiveCost + effective,
-        billedCost: existing.billedCost + billed,
-        pricingUnit: existing.pricingUnit,
-      });
-
-      // Accumulate per period per service (for breakdown view)
-      if (breakdownPeriod) {
+    if (breakdownPeriod) {
+      for (let index = 0; index < response.results.times.length; index++) {
         const periodKey = getPeriodKey(
-          charge.ChargePeriodStart,
+          response.results.times[index],
           breakdownPeriod
         );
-
-        if (!periodUsage.has(periodKey)) {
-          periodUsage.set(periodKey, {
-            services: new Map(),
-            totalPricingQuantity: 0,
-            totalEffectiveCost: 0,
-            totalBilledCost: 0,
-          });
-        }
-        const periodData = periodUsage.get(periodKey)!;
-        periodData.totalPricingQuantity += quantity;
-        periodData.totalEffectiveCost += effective;
-        periodData.totalBilledCost += billed;
-
-        const periodService = periodData.services.get(serviceName) || {
-          pricingQuantity: 0,
-          effectiveCost: 0,
-          billedCost: 0,
-          pricingUnit: charge.PricingUnit || pricingUnit,
-        };
-        periodData.services.set(serviceName, {
-          pricingQuantity: periodService.pricingQuantity + quantity,
-          effectiveCost: periodService.effectiveCost + effective,
-          billedCost: periodService.billedCost + billed,
-          pricingUnit: periodService.pricingUnit,
-        });
+        const period = periodUsage.get(periodKey) ?? emptyPeriod();
+        const sample = aggregateResult(
+          result,
+          metrics,
+          index,
+          productMetadata?.category === 'Subscription Licenses'
+        );
+        addService(period.services, aggregationName, sample);
+        period.totalCost += sample.cost;
+        period.totalPricingQuantity += sample.cost;
+        period.totalEffectiveCost += sample.effectiveCost;
+        period.totalBilledCost += sample.billedCost;
+        periodUsage.set(periodKey, period);
       }
+    }
+  }
 
-      // Accumulate per group-by dimension
-      if (groupByDimension) {
-        const groupKey = getGroupKey(charge, groupByDimension);
-
-        if (!groupByUsage.has(groupKey)) {
-          groupByUsage.set(groupKey, {
-            services: new Map(),
-            totalPricingQuantity: 0,
-            totalEffectiveCost: 0,
-            totalBilledCost: 0,
-          });
-        }
-        const groupData = groupByUsage.get(groupKey)!;
-        groupData.totalPricingQuantity += quantity;
-        groupData.totalEffectiveCost += effective;
-        groupData.totalBilledCost += billed;
-
-        const groupService = groupData.services.get(serviceName) || {
-          pricingQuantity: 0,
-          effectiveCost: 0,
-          billedCost: 0,
-          pricingUnit: charge.PricingUnit || pricingUnit,
-        };
-        groupData.services.set(serviceName, {
-          pricingQuantity: groupService.pricingQuantity + quantity,
-          effectiveCost: groupService.effectiveCost + effective,
-          billedCost: groupService.billedCost + billed,
-          pricingUnit: groupService.pricingUnit,
-        });
-      }
-    });
-
-    stream.on('end', resolve);
-    stream.on('error', reject);
-    readable.on('error', reject);
-  });
+  if (groupByDimension) {
+    for (const result of detailView?.results ?? []) {
+      const product = result.dimensionValues.product;
+      if (!product) continue;
+      const productMetadata = products[product];
+      const serviceName = productMetadata?.title ?? product;
+      const aggregation = aggregateResult(
+        result,
+        metrics,
+        undefined,
+        productMetadata?.category === 'Subscription Licenses'
+      );
+      const aggregationName = aggregation.included
+        ? `${serviceName} (Flat Rate CDN)`
+        : serviceName;
+      const id = result.dimensionValues[groupByDimension];
+      const fallback =
+        groupByDimension === 'project' ? '(unattributed)' : '(global)';
+      const metadata = groupByDimension === 'project' ? projects : regions;
+      const groupName = id ? (metadata[id]?.title ?? id) : fallback;
+      const group = groupByUsage.get(groupName) ?? emptyGroup();
+      addService(group.services, aggregationName, aggregation);
+      group.totalCost += aggregation.cost;
+      group.totalPricingQuantity += aggregation.cost;
+      group.totalEffectiveCost += aggregation.effectiveCost;
+      group.totalBilledCost += aggregation.billedCost;
+      groupByUsage.set(groupName, group);
+    }
+  }
 
   return {
     contextName,
+    contextType,
+    scope,
     fromDisplay,
     toDisplay,
+    usageThrough: getUsageThrough(response.queriedAt, toDisplay),
     usingDefaults,
-    pricingUnit,
-    chargeCount,
+    showAll,
+    chargeCount: summaryView?.results.length ?? 0,
     services,
     periodUsage,
     groupByUsage,
+    totalCost,
     grandTotals: {
-      pricingQuantity: grandPricingQuantity,
-      effectiveCost: grandEffective,
-      billedCost: grandBilled,
+      pricingQuantity: totalCost,
+      effectiveCost: totalEffectiveCost,
+      billedCost: totalEffectiveCost,
     },
+  };
+}
+
+function aggregateResult(
+  result: CostMetricGroup,
+  metrics: Map<string, CostMetric>,
+  sampleIndex?: number,
+  isSubscription = false
+): ServiceAggregation {
+  const grossCostIndex = result.metrics.indexOf(GROSS_COST_METRIC);
+  const quantityIndex = result.metrics.findIndex(
+    metric => metric !== GROSS_COST_METRIC
+  );
+  const values =
+    sampleIndex === undefined
+      ? result.totalValue
+      : (result.values[sampleIndex] ?? []);
+  const cost = grossCostIndex === -1 ? 0 : (values[grossCostIndex] ?? 0);
+  const included = result.flatRate === true;
+  // TODO: Read `net_cost` directly once the billing costs API PR lands.
+  const effectiveCost = included ? 0 : cost;
+  const quantity = quantityIndex === -1 ? 0 : (values[quantityIndex] ?? 0);
+  const metric =
+    quantityIndex === -1
+      ? undefined
+      : metrics.get(result.metrics[quantityIndex]);
+  const unit = getUnitLabel(metric, quantity);
+
+  return {
+    quantity,
+    unit,
+    cost,
+    included,
+    category: isSubscription ? 'subscription' : 'usage',
+    pricingQuantity: cost,
+    pricingUnit: 'USD',
+    effectiveCost,
+    billedCost: effectiveCost,
+  };
+}
+
+function getUnitLabel(
+  metric: CostMetric | undefined,
+  quantity: number
+): string {
+  if (!metric?.unit) return quantity === 1 ? 'license' : 'licenses';
+  if (metric.unit.kind === 'custom') {
+    return quantity === 1
+      ? (metric.unit.singular ?? metric.unit.plural ?? metric.title)
+      : (metric.unit.plural ?? metric.unit.singular ?? metric.title);
+  }
+  return metric.unit.name ?? metric.title;
+}
+
+function addService(
+  services: Map<string, ServiceAggregation>,
+  name: string,
+  value: ServiceAggregation
+): void {
+  const existing = services.get(name);
+  if (!existing) {
+    services.set(name, { ...value });
+    return;
+  }
+  existing.quantity += value.quantity;
+  existing.cost += value.cost;
+  existing.included ||= value.included;
+  existing.pricingQuantity += value.pricingQuantity;
+  existing.effectiveCost += value.effectiveCost;
+  existing.billedCost += value.billedCost;
+}
+
+function emptyPeriod(): PeriodAggregation {
+  return {
+    services: new Map(),
+    totalCost: 0,
+    totalPricingQuantity: 0,
+    totalEffectiveCost: 0,
+    totalBilledCost: 0,
+  };
+}
+
+function emptyGroup(): GroupAggregation {
+  return {
+    services: new Map(),
+    totalCost: 0,
+    totalPricingQuantity: 0,
+    totalEffectiveCost: 0,
+    totalBilledCost: 0,
   };
 }

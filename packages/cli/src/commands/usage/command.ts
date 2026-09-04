@@ -5,7 +5,7 @@ export const usageCommand = {
   name: 'usage',
   aliases: [],
   description:
-    'Show billing usage (MIUs and costs) for the current billing period or a custom date range',
+    'Show billing usage and costs for the current billing cycle or a custom date range',
   arguments: [],
   options: [
     {
@@ -40,6 +40,13 @@ export const usageCommand = {
       argument: 'DIMENSION',
       description:
         'Group usage by a dimension instead of aggregated totals (project, region)',
+      deprecated: false,
+    },
+    {
+      name: 'all',
+      shorthand: null,
+      type: Boolean,
+      description: 'Show services with zero usage and zero cost',
       deprecated: false,
     },
     formatOption,

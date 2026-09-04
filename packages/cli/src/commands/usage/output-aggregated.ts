@@ -3,59 +3,153 @@ import table from '../../util/output/table';
 import output from '../../output-manager';
 import elapsed from '../../util/output/elapsed';
 import { formatCurrency, formatQuantity } from '../../util/billing/format';
-import type { OutputOptions } from './types';
+import type { OutputOptions, ServiceAggregation, UsageData } from './types';
+import {
+  outputHiddenServicesHint,
+  outputUsageHeader,
+  visibleServices,
+} from './output-utils';
 
 export function outputAggregated({ data, startTime }: OutputOptions): void {
   const { print, log } = output;
 
-  log(
-    `Usage for ${chalk.bold(data.contextName)} ${elapsed(Date.now() - startTime)}`
-  );
-  log('');
-  const periodSuffix = data.usingDefaults ? ' (current month)' : '';
-  log(
-    `${chalk.gray('Period:')} ${data.fromDisplay} to ${data.toDisplay}${periodSuffix}`
-  );
-  log(`${chalk.gray('Charges processed:')} ${data.chargeCount}`);
-  log(`${chalk.gray('Pricing unit:')} ${data.pricingUnit}`);
-  log('');
+  outputUsageHeader(data, 'Usage', elapsed(Date.now() - startTime));
 
-  const sortedServices = [...data.services.entries()].sort(
-    (a, b) => b[1].billedCost - a[1].billedCost
+  if (data.credit) {
+    log(chalk.bold('Credit'));
+    if (data.credit.cadence) {
+      log(
+        `  ${chalk.gray('Cadence')}    ${formatCadence(data.credit.cadence)}`
+      );
+    }
+    log(
+      `  ${chalk.gray('Used')}       ${formatCurrency(data.credit.used)} of ${formatCurrency(data.credit.allocated)}`
+    );
+    log(
+      `  ${chalk.gray('Remaining')}  ${formatCurrency(data.credit.remaining)}`
+    );
+    log(`  ${chalk.gray('Progress')}   ${Math.round(data.credit.progress)}%`);
+    log('');
+  }
+
+  const allServices = [...data.services.entries()];
+  const sortedServices = visibleServices(data.services, data.showAll).sort(
+    (a, b) => b[1].effectiveCost - a[1].effectiveCost
   );
 
   if (sortedServices.length === 0) {
     log('No usage data found for this period.');
+    outputHiddenServicesHint(allServices.length, data.scope);
     return;
   }
 
-  const quantityHeader =
-    data.pricingUnit === 'USD' ? 'Usage (USD)' : data.pricingUnit;
-  const headers = ['Service', quantityHeader, 'Effective Cost', 'Billed Cost'];
-  const rows = sortedServices.map(([name, svc]) => [
-    name,
-    formatQuantity(svc.pricingQuantity, svc.pricingUnit),
-    formatCurrency(svc.effectiveCost),
-    formatCurrency(svc.billedCost),
+  const usage = sortedServices.filter(
+    ([, service]) => service.category === 'usage'
+  );
+  const subscriptions = sortedServices.filter(
+    ([, service]) => service.category === 'subscription'
+  );
+
+  if (usage.length > 0) {
+    log(chalk.bold('Infrastructure'));
+    printTable(print, usage, 'Infrastructure subtotal');
+    log('');
+  }
+
+  if (subscriptions.length > 0) {
+    log(chalk.bold('Subscription licenses'));
+    printTable(print, subscriptions, 'Subscriptions subtotal');
+    log('');
+  }
+
+  printBillSummary(print, usage, subscriptions, data.credit?.used);
+  outputHiddenServicesHint(
+    allServices.length - sortedServices.length,
+    data.scope
+  );
+}
+
+function formatCadence(
+  cadence: NonNullable<NonNullable<UsageData['credit']>['cadence']>
+): string {
+  return cadence
+    .split('_')
+    .map(word => word[0].toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+function printBillSummary(
+  print: (message: string) => void,
+  usage: [string, ServiceAggregation][],
+  subscriptions: [string, ServiceAggregation][],
+  creditsApplied = 0
+): void {
+  const subscriptionCost = sumEffectiveCost(subscriptions);
+  const infrastructureCost = sumEffectiveCost(usage);
+  const appliedCredit = Math.min(creditsApplied, infrastructureCost);
+  const estimatedBill = subscriptionCost + infrastructureCost - appliedCredit;
+  const rows = [
+    ['Subscriptions', formatCurrency(subscriptionCost)],
+    ['Infrastructure usage', formatCurrency(infrastructureCost)],
+  ];
+
+  if (appliedCredit > 0) {
+    rows.push(['Credits applied', `-${formatCurrency(appliedCredit)}`]);
+  }
+  rows.push([
+    chalk.bold('Estimated bill'),
+    chalk.bold(formatCurrency(estimatedBill)),
   ]);
 
+  const tablePrint = table(rows, { hsep: 4, align: ['l', 'r'] }).replace(
+    /^/gm,
+    '  '
+  );
+  print(`${tablePrint}\n`);
+}
+
+function sumEffectiveCost(services: [string, ServiceAggregation][]): number {
+  return services.reduce(
+    (total, [, service]) => total + service.effectiveCost,
+    0
+  );
+}
+
+function printTable(
+  print: (message: string) => void,
+  services: [string, ServiceAggregation][],
+  subtotalLabel: string
+): void {
+  const headers = ['Service', 'Usage', 'Effective Cost'];
+  const rows = services.map(([name, service]) => {
+    const quantity =
+      service.category === 'subscription'
+        ? service.quantity || 1
+        : service.quantity;
+    return [
+      service.included ? chalk.blue(name) : name,
+      service.category === 'subscription'
+        ? formatQuantity(quantity, quantity === 1 ? 'license' : 'licenses', {
+            compact: true,
+          })
+        : formatQuantity(quantity, service.unit, { compact: true }),
+      formatCurrency(service.effectiveCost),
+    ];
+  });
+  const subtotal = services.reduce(
+    (total, [, service]) => total + service.effectiveCost,
+    0
+  );
   rows.push([
-    chalk.bold('Total'),
-    chalk.bold(
-      formatQuantity(data.grandTotals.pricingQuantity, data.pricingUnit)
-    ),
-    chalk.bold(formatCurrency(data.grandTotals.effectiveCost)),
-    chalk.bold(formatCurrency(data.grandTotals.billedCost)),
+    chalk.bold(subtotalLabel),
+    '',
+    chalk.bold(formatCurrency(subtotal)),
   ]);
 
   const tablePrint = table(
-    [headers.map(h => chalk.bold(chalk.cyan(h))), ...rows],
-    { hsep: 4, align: ['l', 'r', 'r', 'r'] }
+    [headers.map(header => chalk.bold(chalk.cyan(header))), ...rows],
+    { hsep: 4, align: ['l', 'r', 'r'] }
   ).replace(/^/gm, '  ');
 
-  print(`\n${tablePrint}\n\n`);
-
-  log(
-    `${chalk.gray('Amount due:')} ${chalk.bold(formatCurrency(data.grandTotals.billedCost))}`
-  );
+  print(`\n${tablePrint}\n`);
 }
