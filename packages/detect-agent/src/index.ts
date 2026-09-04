@@ -37,7 +37,6 @@ export type KnownAgentNames =
 
 export interface KnownAgentDetails {
   name: KnownAgentNames;
-  model?: string;
 }
 
 export type AgentResult =
@@ -71,8 +70,6 @@ export async function determineAgent(): Promise<AgentResult> {
   if (process.env.AI_AGENT) {
     const name = process.env.AI_AGENT.trim();
     if (name) {
-      const model = process.env.AI_AGENT_MODEL?.trim();
-
       if (name === GITHUB_COPILOT || name === GITHUB_COPILOT_CLI) {
         return {
           isAgent: true,
@@ -83,23 +80,20 @@ export async function determineAgent(): Promise<AgentResult> {
       if (name === V0) {
         return {
           isAgent: true,
-          agent: { name: V0, ...(model ? { model } : {}) },
+          agent: { name: V0 },
         };
       }
 
       if (name === FX) {
         return {
           isAgent: true,
-          agent: { name: FX, ...(model ? { model } : {}) },
+          agent: { name: FX },
         };
       }
 
       return {
         isAgent: true,
-        agent: {
-          name: name as KnownAgentNames,
-          ...(model ? { model } : {}),
-        },
+        agent: { name: name as KnownAgentNames },
       };
     }
   }
