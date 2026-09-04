@@ -17,6 +17,7 @@ const OPENCODE = 'opencode' as const;
 const GITHUB_COPILOT = 'github-copilot' as const;
 const GITHUB_COPILOT_CLI = 'github-copilot-cli' as const;
 const V0 = 'v0' as const;
+const FX = 'fx' as const;
 
 export type KnownAgentNames =
   | typeof CURSOR
@@ -31,10 +32,12 @@ export type KnownAgentNames =
   | typeof AUGMENT_CLI
   | typeof OPENCODE
   | typeof GITHUB_COPILOT
-  | typeof V0;
+  | typeof V0
+  | typeof FX;
 
 export interface KnownAgentDetails {
   name: KnownAgentNames;
+  model?: string;
 }
 
 export type AgentResult =
@@ -61,7 +64,13 @@ export const KNOWN_AGENTS = {
   OPENCODE,
   GITHUB_COPILOT,
   V0,
+  FX,
 } as const;
+
+function agentDetails(name: KnownAgentNames): KnownAgentDetails {
+  const model = process.env.AI_AGENT_MODEL?.trim();
+  return model ? { name, model } : { name };
+}
 
 export async function determineAgent(): Promise<AgentResult> {
   if (process.env.AI_AGENT) {
@@ -77,13 +86,20 @@ export async function determineAgent(): Promise<AgentResult> {
       if (name === V0) {
         return {
           isAgent: true,
-          agent: { name: V0 },
+          agent: agentDetails(V0),
+        };
+      }
+
+      if (name === FX) {
+        return {
+          isAgent: true,
+          agent: agentDetails(FX),
         };
       }
 
       return {
         isAgent: true,
-        agent: { name: name as KnownAgentNames },
+        agent: agentDetails(name as KnownAgentNames),
       };
     }
   }

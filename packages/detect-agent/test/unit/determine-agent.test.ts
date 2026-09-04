@@ -8,6 +8,7 @@ describe('determineAgent', () => {
   beforeEach(() => {
     vi.unstubAllEnvs();
     vi.stubEnv('AI_AGENT', '');
+    vi.stubEnv('AI_AGENT_MODEL', '');
     vi.stubEnv('CURSOR_TRACE_ID', '');
     vi.stubEnv('CURSOR_AGENT', '');
     vi.stubEnv('CURSOR_EXTENSION_HOST_ROLE', '');
@@ -63,6 +64,22 @@ describe('determineAgent', () => {
       expect(result).toEqual({
         isAgent: true,
         agent: { name: KNOWN_AGENTS.V0 },
+      });
+    });
+  });
+
+  describe('fx detection', () => {
+    it('detects fx and its active model from AI_AGENT variables', async () => {
+      vi.stubEnv('AI_AGENT', 'fx');
+      vi.stubEnv('AI_AGENT_MODEL', 'openai/gpt-5');
+
+      const result = await determineAgent();
+      expect(result).toEqual({
+        isAgent: true,
+        agent: {
+          name: KNOWN_AGENTS.FX,
+          model: 'openai/gpt-5',
+        },
       });
     });
   });
