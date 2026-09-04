@@ -95,6 +95,7 @@ import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment'
 import { displayBuildLogsUntilFinalError } from '../../util/logs';
 import { determineAgent } from '@vercel/detect-agent';
 import { validateJsonOutput } from '../../util/output-format';
+import { validateCronSecret } from '../../util/validate-cron-secret';
 
 const COMMAND_CONFIG = {
   init: getCommandAliases(initSubcommand),
@@ -337,7 +338,6 @@ async function handleInitDeployment(
   }
 
   localConfig = localConfig || {};
-
   if (localConfig.name) {
     output.print(
       `${prependEmoji(
@@ -410,6 +410,12 @@ async function handleInitDeployment(
     await addProcessEnv(log, deploymentBuildEnv);
   } catch (err: unknown) {
     error(errorToString(err));
+    return 1;
+  }
+
+  const cronSecretError = validateCronSecret(process.env.CRON_SECRET);
+  if (cronSecretError) {
+    output.prettyError(cronSecretError);
     return 1;
   }
 
@@ -1208,6 +1214,7 @@ async function handleDefaultDeploy(
       });
       return 1;
     }
+
   }
   // #endregion
 
@@ -1359,6 +1366,12 @@ async function handleDefaultDeploy(
     await addProcessEnv(log, deploymentBuildEnv);
   } catch (err: unknown) {
     error(errorToString(err));
+    return 1;
+  }
+
+  const cronSecretError = validateCronSecret(process.env.CRON_SECRET);
+  if (cronSecretError) {
+    output.prettyError(cronSecretError);
     return 1;
   }
   // #endregion

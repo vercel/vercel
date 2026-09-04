@@ -455,6 +455,92 @@ describe('deploy', () => {
     expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
+  it('should reject `--prebuilt` deploys when prebuilt output has crons and CRON_SECRET is invalid', async () => {
+    const cwd = setupTmpDir('deploy-prebuilt-invalid-cron-secret');
+    await fs.outputJson(join(cwd, '.vercel/project.json'), {
+      orgId: 'team_dummy',
+      projectId: 'deploy-prebuilt-invalid-cron-secret',
+    });
+    await fs.outputJson(join(cwd, '.vercel/output/builds.json'), {
+      target: 'preview',
+    });
+    await fs.outputJson(join(cwd, '.vercel/output/config.json'), {
+      version: 3,
+      crons: [{ path: '/api/cron', schedule: '0 0 * * *' }],
+    });
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'deploy-prebuilt-invalid-cron-secret',
+      name: 'deploy-prebuilt-invalid-cron-secret',
+    });
+
+    process.env.CRON_SECRET = 'my\nsecret';
+    try {
+      client.setArgv('deploy', cwd, '--prebuilt');
+      const exitCode = await deploy(client);
+      expect(exitCode, 'exit code for "deploy"').toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'The `CRON_SECRET` environment variable contains characters that are not valid in HTTP headers'
+      );
+    } finally {
+      delete process.env.CRON_SECRET;
+    }
+  });
+
+  it('should reject deploys when vercel.json has crons and CRON_SECRET is invalid', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'static',
+      name: 'static',
+    });
+
+    client.cwd = setupUnitFixture('commands/deploy/static');
+    client.localConfig = {
+      [fileNameSymbol]: 'vercel.json',
+      version: 2,
+      crons: [{ path: '/api/cron', schedule: '0 0 * * *' }],
+    };
+    process.env.CRON_SECRET = 'mysecret🔐';
+    try {
+      client.setArgv('deploy');
+      const exitCode = await deploy(client);
+      expect(exitCode, 'exit code for "deploy"').toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'The `CRON_SECRET` environment variable contains characters that are not valid in HTTP headers'
+      );
+    } finally {
+      delete process.env.CRON_SECRET;
+    }
+  });
+
+  it('should reject deploys when CRON_SECRET is invalid, even without crons configured', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'static',
+      name: 'static',
+    });
+
+    client.cwd = setupUnitFixture('commands/deploy/static');
+    process.env.CRON_SECRET = 'my\nsecret';
+    try {
+      client.setArgv('deploy');
+      const exitCode = await deploy(client);
+      expect(exitCode, 'exit code for "deploy"').toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'The `CRON_SECRET` environment variable contains characters that are not valid in HTTP headers'
+      );
+    } finally {
+      delete process.env.CRON_SECRET;
+    }
+  });
+
   it('should reject deploying "version: 1"', async () => {
     client.setArgv('deploy');
     client.localConfig = {
@@ -2978,6 +3064,27 @@ describe('deploy', () => {
         target: 'production',
         deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
       });
+    });
+
+    it('should reject deploy init when prebuilt output has crons and CRON_SECRET is invalid', async () => {
+      const cwd = setupUnitFixture('commands/deploy/static');
+      await fs.outputJson(join(cwd, '.vercel/output/config.json'), {
+        version: 3,
+        crons: [{ path: '/api/cron', schedule: '0 0 * * *' }],
+      });
+
+      process.env.CRON_SECRET = 'my\nsecret';
+      try {
+        client.cwd = cwd;
+        client.setArgv('deploy', 'init', '--json');
+        const exitCode = await deploy(client);
+        expect(exitCode).toEqual(1);
+        expect(client.stderr.getFullOutput()).toContain(
+          'The `CRON_SECRET` environment variable contains characters that are not valid in HTTP headers'
+        );
+      } finally {
+        delete process.env.CRON_SECRET;
+      }
     });
   });
 
