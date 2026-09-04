@@ -19,6 +19,7 @@ export interface CommandOption {
   readonly argument?: string;
   readonly deprecated: boolean;
   readonly description?: string;
+  readonly hidden?: true;
 }
 export interface CommandArgument {
   readonly name: string;
@@ -149,7 +150,8 @@ export function buildCommandOptionLines(
 ) {
   // Filter out deprecated and intentionally undocumented options
   const filteredCommandOptions = commandOptions.filter(
-    option => !option.deprecated && option.description !== undefined
+    option =>
+      !option.deprecated && !option.hidden && option.description !== undefined
   );
 
   if (filteredCommandOptions.length === 0) {

@@ -98,6 +98,7 @@ describe('deploy', () => {
       const helpOutput = client.stderr.getFullOutput();
       expect(helpOutput).toContain('--dry');
       expect(helpOutput).toContain('vercel deploy --dry --json');
+      expect(helpOutput).not.toContain('--build-machine');
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
@@ -105,6 +106,47 @@ describe('deploy', () => {
         },
       ]);
     });
+  });
+
+  it('rejects an invalid --build-machine value', async () => {
+    client.setArgv('deploy', '--build-machine', 'large');
+
+    const exitCode = await deploy(client);
+
+    expect(exitCode).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Error: `--build-machine` must be one of: basic, standard, enhanced, turbo'
+    );
+  });
+
+  it('sends buildMachine in the deployment creation request', async () => {
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'static',
+      id: 'static',
+    });
+
+    let body: Record<string, unknown> | undefined;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      body = req.body;
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_build_machine_test',
+        readyState: 'BUILDING',
+        url: 'build-machine-test.vercel.app',
+      });
+    });
+
+    client.cwd = setupUnitFixture('commands/deploy/static');
+    client.setArgv('deploy', '--build-machine', 'enhanced', '--no-wait');
+
+    expect(await deploy(client)).toEqual(0);
+    expect(body).toMatchObject({ buildMachine: 'enhanced' });
   });
 
   it('should reject deploying a single file', async () => {
@@ -1488,6 +1530,24 @@ describe('deploy', () => {
         { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
+    });
+    it.each([
+      'basic',
+      'standard',
+      'enhanced',
+      'turbo',
+    ] as const)('--build-machine=%s', async buildMachine => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--build-machine', buildMachine);
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(mock).toHaveBeenCalledWith(
+        ...Object.values({
+          ...baseCreateDeployArgs,
+          createArgs: expect.objectContaining({ buildMachine }),
+        })
+      );
     });
     it('--env', async () => {
       client.cwd = setupUnitFixture('commands/deploy/static');
