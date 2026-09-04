@@ -67,6 +67,18 @@ describe('determineAgent', () => {
     });
   });
 
+  describe('fx detection', () => {
+    it('detects fx from AI_AGENT=fx', async () => {
+      vi.stubEnv('AI_AGENT', 'fx');
+
+      const result = await determineAgent();
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.FX },
+      });
+    });
+  });
+
   describe('github copilot detection', () => {
     it('detects github copilot from AI_AGENT=github-copilot', async () => {
       vi.stubEnv('AI_AGENT', 'github-copilot');
