@@ -109,6 +109,7 @@ describe('contract', () => {
       const output = client.getFullOutput();
       expect(output).toContain('Enterprise');
       expect(output).toContain('Usage');
+      expect(output).toContain('1,000,000 MIUs');
     });
 
     it('should output JSON with --format json', async () => {

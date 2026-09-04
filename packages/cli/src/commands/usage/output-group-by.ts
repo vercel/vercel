@@ -52,7 +52,7 @@ export function outputGroupBy({
     );
     const rows = services.map(([name, service]) => [
       service.included ? chalk.blue(name) : name,
-      formatQuantity(service.quantity, service.unit),
+      formatQuantity(service.quantity, service.unit, { compact: true }),
       formatCurrency(service.effectiveCost),
     ]);
     const tablePrint = table(

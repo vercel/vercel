@@ -2,7 +2,11 @@ export function formatCurrency(amount: number): string {
   return `$${amount.toFixed(2)}`;
 }
 
-export function formatQuantity(quantity: number, unit: string): string {
+export function formatQuantity(
+  quantity: number,
+  unit: string,
+  options: { compact?: boolean } = {}
+): string {
   if (unit === 'USD') {
     return formatCurrency(quantity);
   }
@@ -10,7 +14,8 @@ export function formatQuantity(quantity: number, unit: string): string {
   const displayUnit = quantity === 1 && unit === 'licenses' ? 'license' : unit;
   return `${new Intl.NumberFormat('en-US', {
     maximumFractionDigits: 2,
-    notation: Math.abs(quantity) >= 1000 ? 'compact' : 'standard',
+    notation:
+      options.compact && Math.abs(quantity) >= 1000 ? 'compact' : 'standard',
   }).format(quantity)} ${displayUnit}`;
 }
 

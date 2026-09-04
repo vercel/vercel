@@ -129,8 +129,10 @@ function printTable(
     return [
       service.included ? chalk.blue(name) : name,
       service.category === 'subscription'
-        ? formatQuantity(quantity, quantity === 1 ? 'license' : 'licenses')
-        : formatQuantity(quantity, service.unit),
+        ? formatQuantity(quantity, quantity === 1 ? 'license' : 'licenses', {
+            compact: true,
+          })
+        : formatQuantity(quantity, service.unit, { compact: true }),
       formatCurrency(service.effectiveCost),
     ];
   });
