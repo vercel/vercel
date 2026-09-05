@@ -778,8 +778,18 @@ function isSet<T>(v: any): v is Set<T> {
 
 function getInstallCommandForPackageManager(
   packageManager: CliType,
-  args: string[]
+  args: string[],
+  packageManagerVersion?: string
 ) {
+  // Parse major version from packageManagerVersion like "pnpm@12.1.0"
+  let pnpmMajorVersion: number | undefined;
+  if (packageManagerVersion) {
+    const match = packageManagerVersion.match(/pnpm@(\d+)/);
+    if (match) {
+      pnpmMajorVersion = parseInt(match[1], 10);
+    }
+  }
+
   switch (packageManager) {
     case 'npm':
       return {
@@ -789,13 +799,17 @@ function getInstallCommandForPackageManager(
           .concat(['install', '--no-audit']),
       };
     case 'pnpm':
+      // --unsafe-perm was removed in pnpm 12 (https://pnpm.io/cli/install#unsafe-perm)
+      // pnpm 12 also changed its CLI and rejects the flag.
+      const pnpmArgs = args.filter(a => a !== '--prefer-offline');
+      if (pnpmMajorVersion === undefined || pnpmMajorVersion < 12) {
+        pnpmArgs.push('--unsafe-perm');
+      }
       return {
         prettyCommand: 'pnpm install',
         // PNPM's install command is similar to NPM's but without the audit nonsense
         // @see options https://pnpm.io/cli/install
-        commandArguments: args
-          .filter(a => a !== '--prefer-offline')
-          .concat(['install', '--unsafe-perm']),
+        commandArguments: pnpmArgs.concat(['install']),
       };
     case 'bun':
       return {
@@ -821,14 +835,16 @@ async function runInstallCommand({
   args,
   opts,
   output,
+  packageManagerVersion,
 }: {
   packageManager: CliType;
   args: string[];
   opts: SpawnOptionsExtended;
   output?: NpmInstallOutput;
+  packageManagerVersion?: string;
 }) {
   const { commandArguments, prettyCommand } =
-    getInstallCommandForPackageManager(packageManager, args);
+    getInstallCommandForPackageManager(packageManager, args, packageManagerVersion);
   opts.prettyCommand = prettyCommand;
 
   if (process.env.NPM_ONLY_PRODUCTION) {
@@ -981,6 +997,7 @@ export async function runNpmInstall(
       args,
       opts,
       output,
+      packageManagerVersion: packageJsonPackageManager,
     });
 
     debug(`Install complete [${Date.now() - installTime}ms]`);
