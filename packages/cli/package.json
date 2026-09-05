@@ -79,7 +79,7 @@
     "luxon": "^3.4.0",
     "sandbox": "3.4.0",
     "smol-toml": "1.5.2",
-    "undici": "5.29.0",
+    "undici": "7.24.0",
     "zod": "4.1.11"
   },
   "builders": {
