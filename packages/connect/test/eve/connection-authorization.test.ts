@@ -66,13 +66,57 @@ describe('connect() adapter provisioning', () => {
       }),
     });
     expect(JSON.parse(provisionInit.body as string)).toEqual({
-      serverUrl: CONNECTION.url,
       uid: connector,
+      canonicalName: connector,
+      service: 'mcp.example.com',
+      serverUrl: CONNECTION.url,
+      principalType: 'user',
     });
 
     const [tokenUrl] = fetchMock.mock.calls[1];
     expect(tokenUrl).toBe(
-      'https://api.vercel.com/v1/connect/token/mcp.example.com%2Fprovisioned'
+      'https://api.vercel.com/v1/connect/token/scl_provisioned'
+    );
+  });
+
+  it('sends registry provisioning identity and uses the resolved connector id', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            outcome: 'linked',
+            connector: {
+              id: 'scl_linear',
+              uid: 'mcp.linear.app/team-linear',
+              service: 'mcp.linear.app',
+              type: 'oauth',
+              supportedSubjectTypes: ['user'],
+            },
+            attachment: {
+              projectId: 'prj_example',
+              environments: ['development'],
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+      .mockResolvedValueOnce(jsonTokenResponse('tok_linear', 'scl_linear'));
+
+    const definition = connect({
+      connector: 'linear',
+      provisioning: { service: 'mcp.linear.app', canonicalName: 'linear' },
+    }) as InteractiveAuthorizationDefinition;
+    await definition.getToken({ principal: PRINCIPAL, connection: CONNECTION });
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).toEqual({
+      uid: 'linear',
+      canonicalName: 'linear',
+      service: 'mcp.linear.app',
+      serverUrl: CONNECTION.url,
+      principalType: 'user',
+    });
+    expect(fetchMock.mock.calls[1][0]).toBe(
+      'https://api.vercel.com/v1/connect/token/scl_linear'
     );
   });
 
@@ -176,7 +220,7 @@ describe('connect() adapter provisioning', () => {
       'https://api.vercel.com/v1/connect/connectors/managed/oauth'
     );
     expect(fetchMock.mock.calls[1][0]).toBe(
-      'https://api.vercel.com/v1/connect/authorize/mcp.example.com%2Fstart-authorization'
+      'https://api.vercel.com/v1/connect/authorize/scl_provisioned'
     );
   });
 
@@ -205,7 +249,7 @@ describe('connect() adapter provisioning', () => {
         new Response(
           JSON.stringify({
             error: {
-              code: 'conflict',
+              code: 'unsupported_connector_type',
               message:
                 'A connector with uid "linear" already exists and is not an OAuth connector.',
             },
@@ -775,9 +819,18 @@ function jsonTokenResponse(
 function jsonProvisionResponse(uid: string): Response {
   return new Response(
     JSON.stringify({
-      id: 'scl_provisioned',
-      uid,
-      type: 'oauth',
+      outcome: 'created',
+      connector: {
+        id: 'scl_provisioned',
+        uid,
+        service: 'mcp.example.com',
+        type: 'oauth',
+        supportedSubjectTypes: ['user'],
+      },
+      attachment: {
+        projectId: 'prj_example',
+        environments: ['development'],
+      },
     }),
     { status: 201, headers: { 'Content-Type': 'application/json' } }
   );

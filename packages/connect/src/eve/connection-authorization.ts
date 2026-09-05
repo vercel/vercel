@@ -52,13 +52,18 @@ import {
   revokeToken,
   UserAuthorizationRequiredError,
 } from '../token.js';
-import { provisionEveOAuthConnector } from './provision-oauth-connector.js';
+import {
+  ExplicitSetupRequiredError,
+  provisionEveOAuthConnector,
+  type EveOAuthProvisioningIdentity,
+} from './provision-oauth-connector.js';
 
 /**
  * Authorization phase passed to {@link EveAuthorizationOptions.onError}
  * so consumers can branch their error translation per callback.
  */
 export type ConnectAuthorizationPhase =
+  | 'provisioning'
   | 'getToken'
   | 'startAuthorization'
   | 'completeAuthorization';
@@ -139,6 +144,12 @@ export interface EveAuthorizationOptions {
   readonly principalType?: 'app' | 'user';
 
   /**
+   * Identity used by managed OAuth lazy provisioning. Registry entries should
+   * provide `service`; a canonical name is not necessarily the final UID.
+   */
+  readonly provisioning?: EveOAuthProvisioningIdentity;
+
+  /**
    * Extra parameters forwarded to every `getTokenResponse` /
    * `startAuthorization` call, minus `subject` — the helper derives
    * `subject` from the framework-resolved principal.
@@ -191,10 +202,10 @@ export interface EveAuthorizationOptions {
    * `true`.
    *
    * The provision request is authenticated with the deployment OIDC token
-   * and carries the eve connection's `url` plus this connector UID. Connect
-   * creates the managed OAuth connector when missing, links an existing
-   * OAuth connector when the UID already exists, and scopes the new project
-   * link to the OIDC token's environment and higher promotion targets.
+   * and carries the Eve connection URL, canonical name, service, and
+   * principal type. Connect resolves a compatible team connector, creates or
+   * links it atomically, and returns its canonical identity. Ambiguous or
+   * administratively restricted cases require explicit setup instead.
    *
    * Set this to `false` for callers that intentionally manage the connector
    * linkage elsewhere. Opaque connector ids (`scl_...`) and connections
@@ -395,6 +406,17 @@ function makeEvict(
 }) => Promise<void> {
   return async ({ principal, connection, revoke }) => {
     const params = await buildTokenParams(options, principal, connection);
+    // Eviction can be called without Eve's connection context. Use the
+    // resolved identity when context is available, otherwise retain the
+    // authored identifier as a best-effort backwards-compatible fallback.
+    let connector = options.connector;
+    if (connection !== undefined) {
+      try {
+        connector = await autoProvisionConnectorIfEnabled(options, connection);
+      } catch {
+        // A provisioning conflict must not prevent local cache eviction.
+      }
+    }
     if (revoke) {
       try {
         // Destructive: tears down the grant at Vercel Connect (refresh
@@ -402,7 +424,7 @@ function makeEvict(
         // a failed or duplicate revoke must not mask the auth error that
         // triggered eviction.
         await revokeToken(
-          options.connector,
+          connector,
           {
             subject: params.subject,
             installationId: params.installationId,
@@ -415,7 +437,7 @@ function makeEvict(
         // gone even when the server-side revoke failed.
       }
     }
-    deleteTokenCacheEntry(options.connector, params);
+    deleteTokenCacheEntry(connector, params);
   };
 }
 
@@ -439,9 +461,12 @@ function buildInteractiveDefinition(
       connection,
     }: GetTokenOptions): Promise<TokenResult> {
       try {
-        await autoProvisionConnectorIfEnabled(options, connection);
+        const connector = await autoProvisionConnectorIfEnabled(
+          options,
+          connection
+        );
         const response = await getTokenResponse(
-          options.connector,
+          connector,
           await buildTokenParams(options, principal, connection),
           getTokenConnectOptions(options)
         );
@@ -460,7 +485,10 @@ function buildInteractiveDefinition(
       challenge: ConnectionAuthorizationChallengeWithDisplayName;
     }> {
       try {
-        await autoProvisionConnectorIfEnabled(options, connection);
+        const connector = await autoProvisionConnectorIfEnabled(
+          options,
+          connection
+        );
         // eve's `webhook` parameter is also the browser-redirect
         // target when `callbackUrl` is absent — the orchestrator mints
         // it via `createWebhook({ respondWith:
@@ -481,7 +509,7 @@ function buildInteractiveDefinition(
         // work without an OAuth-style redirect-URI allowlist.
         const completionWebhook = connectCompletionWebhook(webhook);
         const response = await startAuthorization(
-          options.connector,
+          connector,
           await buildTokenParams(options, principal, connection),
           {
             ...options.connectOptions,
@@ -522,9 +550,12 @@ function buildInteractiveDefinition(
       connection,
     }: CompleteAuthorizationOptions): Promise<TokenResult> {
       try {
-        await autoProvisionConnectorIfEnabled(options, connection);
+        const connector = await autoProvisionConnectorIfEnabled(
+          options,
+          connection
+        );
         const response = await getTokenResponse(
-          options.connector,
+          connector,
           await buildTokenParams(options, principal, connection),
           options.connectOptions
         );
@@ -557,9 +588,12 @@ function buildNonInteractiveDefinition(
       connection,
     }: GetTokenOptions): Promise<TokenResult> {
       try {
-        await autoProvisionConnectorIfEnabled(options, connection);
+        const connector = await autoProvisionConnectorIfEnabled(
+          options,
+          connection
+        );
         const response = await getTokenResponse(
-          options.connector,
+          connector,
           await buildTokenParams(options, principal, connection),
           getTokenConnectOptions(options)
         );
@@ -574,15 +608,20 @@ function buildNonInteractiveDefinition(
 async function autoProvisionConnectorIfEnabled(
   options: EveAuthorizationOptions,
   connection: EveConnectionAuthorizationContext
-): Promise<void> {
-  if (options.autoProvision === false) {
-    return;
+): Promise<string> {
+  if (options.autoProvision === false) return options.connector;
+  try {
+    const resolved = await provisionEveOAuthConnector({
+      connector: options.connector,
+      connection,
+      principalType: options.principalType ?? 'user',
+      provisioning: options.provisioning,
+      connectOptions: options.connectOptions,
+    });
+    return resolved?.id ?? resolved?.uid ?? options.connector;
+  } catch (error) {
+    throw translate(error, 'provisioning', options);
   }
-  await provisionEveOAuthConnector({
-    connector: options.connector,
-    connection,
-    connectOptions: options.connectOptions,
-  });
 }
 
 /**
@@ -663,6 +702,14 @@ function translate(
 ): Error {
   const override = options.onError?.(error, phase);
   if (override !== undefined) return override;
+
+  if (error instanceof ExplicitSetupRequiredError) {
+    return new ConnectionAuthorizationFailedError('connect', {
+      message: error.message,
+      reason: 'explicit_setup_required',
+      retryable: false,
+    });
+  }
 
   // `UserAuthorizationRequiredError` and `NoValidTokenError` both
   // mean "Vercel Connect has no valid credential for this principal
