@@ -17,12 +17,19 @@ function cloneKeys(keys: Key[] | undefined): Key[] | undefined {
   return keys.slice(0);
 }
 
-function compareKeys(left: Key[] | undefined, right: Key[] | undefined) {
-  const leftSerialized =
-    typeof left === 'undefined' ? 'undefined' : left.toString();
-  const rightSerialized =
-    typeof right === 'undefined' ? 'undefined' : right.toString();
-  return leftSerialized === rightSerialized;
+function serializeKeys(keys: Key[] | undefined): string {
+  // `Array.prototype.toString()` renders every `Key` as "[object Object]", so
+  // joining the array only reflects how many keys there are. Serializing the
+  // fields keeps renamed parameters, changed patterns and changed modifiers
+  // visible to the comparison below.
+  return typeof keys === 'undefined' ? 'undefined' : JSON.stringify(keys);
+}
+
+export function compareKeys(
+  left: Key[] | undefined,
+  right: Key[] | undefined
+) {
+  return serializeKeys(left) === serializeKeys(right);
 }
 
 // run the updated version of path-to-regexp, compare the results, and log if different
