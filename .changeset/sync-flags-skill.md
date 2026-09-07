@@ -1,4 +1,4 @@
 ---
 ---
 
-Sync the flags CLI skill guidance from vercel-internal.
+Update flags CLI skill guidance.
