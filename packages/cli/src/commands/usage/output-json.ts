@@ -9,11 +9,7 @@ function serializeService(name: string, service: ServiceAggregation) {
     cost: service.cost,
     included: service.included,
     category: service.category,
-    // Existing fields are retained for scripts consuming the current contract.
-    pricingQuantity: service.pricingQuantity,
-    pricingUnit: service.pricingUnit,
     effectiveCost: service.effectiveCost,
-    billedCost: service.billedCost,
   };
 }
 
@@ -34,7 +30,7 @@ export function outputJson(
   const jsonOutput: Record<string, unknown> = {
     period: { from: fromDate, to: toDate },
     context: data.contextName,
-    pricingUnit: 'USD',
+    costUnit: data.costUnit,
   };
 
   if (data.credit) {
@@ -53,9 +49,7 @@ export function outputJson(
             .map(([name, service]) => serializeService(name, service)),
           totals: {
             cost: period.totalCost,
-            pricingQuantity: period.totalPricingQuantity,
             effectiveCost: period.totalEffectiveCost,
-            billedCost: period.totalBilledCost,
           },
         };
       }),
@@ -76,9 +70,7 @@ export function outputJson(
             ),
           totals: {
             cost: group.totalCost,
-            pricingQuantity: group.totalPricingQuantity,
             effectiveCost: group.totalEffectiveCost,
-            billedCost: group.totalBilledCost,
           },
         })),
     };
@@ -89,11 +81,8 @@ export function outputJson(
   );
   jsonOutput.totals = {
     cost: data.totalCost,
-    pricingQuantity: data.grandTotals.pricingQuantity,
     effectiveCost: data.grandTotals.effectiveCost,
-    billedCost: data.grandTotals.billedCost,
   };
-  jsonOutput.chargeCount = data.chargeCount;
 
   client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
 }

@@ -45,10 +45,9 @@ export function outputBreakdown({
   for (const periodKey of sortedPeriods) {
     const periodData = data.periodUsage.get(periodKey)!;
     const allServices = [...periodData.services.entries()];
-    const sortedServices = visibleServices(
-      periodData.services,
-      data.showAll
-    ).sort((a, b) => b[1].effectiveCost - a[1].effectiveCost);
+    const sortedServices = visibleServices(periodData.services).sort(
+      (a, b) => b[1].effectiveCost - a[1].effectiveCost
+    );
     hiddenCount += allServices.length - sortedServices.length;
     if (sortedServices.length === 0) continue;
 
@@ -60,7 +59,9 @@ export function outputBreakdown({
 
     const rows = sortedServices.map(([name, service]) => [
       service.included ? chalk.blue(name) : name,
-      formatQuantity(service.quantity, service.unit, { compact: true }),
+      formatQuantity(service.quantity, service.unit ?? '', {
+        compact: true,
+      }).trim(),
       formatCurrency(service.effectiveCost),
     ]);
     const tablePrint = table(
@@ -74,5 +75,5 @@ export function outputBreakdown({
     ).replace(/^/gm, '  ');
     print(`${tablePrint}\n`);
   }
-  outputHiddenServicesHint(hiddenCount, data.scope);
+  outputHiddenServicesHint(hiddenCount);
 }

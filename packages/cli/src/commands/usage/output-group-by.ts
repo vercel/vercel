@@ -39,7 +39,7 @@ export function outputGroupBy({
   let hiddenCount = 0;
   for (const [groupName, groupData] of sortedGroups) {
     const allServices = [...groupData.services.entries()];
-    const services = visibleServices(groupData.services, data.showAll).sort(
+    const services = visibleServices(groupData.services).sort(
       (a, b) => b[1].effectiveCost - a[1].effectiveCost
     );
     hiddenCount += allServices.length - services.length;
@@ -52,7 +52,9 @@ export function outputGroupBy({
     );
     const rows = services.map(([name, service]) => [
       service.included ? chalk.blue(name) : name,
-      formatQuantity(service.quantity, service.unit, { compact: true }),
+      formatQuantity(service.quantity, service.unit ?? '', {
+        compact: true,
+      }).trim(),
       formatCurrency(service.effectiveCost),
     ]);
     const tablePrint = table(
@@ -73,5 +75,5 @@ export function outputGroupBy({
       formatCurrency(data.grandTotals.effectiveCost)
     )}`
   );
-  outputHiddenServicesHint(hiddenCount, data.scope);
+  outputHiddenServicesHint(hiddenCount);
 }

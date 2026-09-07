@@ -30,12 +30,6 @@ export class UsageTelemetryClient
     }
   }
 
-  trackCliFlagAll(all: boolean | undefined) {
-    if (all) {
-      this.trackCliFlag('all');
-    }
-  }
-
   trackCliOptionBreakdown(breakdown: string | undefined) {
     if (breakdown) {
       this.trackCliOption({

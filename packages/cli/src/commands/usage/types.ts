@@ -53,34 +53,22 @@ export interface CostMetricsResponse {
 
 export interface ServiceAggregation {
   quantity: number;
-  unit: string;
+  unit?: string;
   cost: number;
   included: boolean;
   category: 'usage' | 'subscription';
-  // Kept for backwards-compatible JSON output.
-  pricingQuantity: number;
-  pricingUnit: string;
   effectiveCost: number;
-  billedCost: number;
 }
 
-export interface PeriodAggregation {
+export interface Aggregation {
   services: Map<string, ServiceAggregation>;
   totalCost: number;
-  // Kept for backwards-compatible JSON output.
-  totalPricingQuantity: number;
   totalEffectiveCost: number;
-  totalBilledCost: number;
 }
 
-export interface GroupAggregation {
-  services: Map<string, ServiceAggregation>;
-  totalCost: number;
-  // Kept for backwards-compatible JSON output.
-  totalPricingQuantity: number;
-  totalEffectiveCost: number;
-  totalBilledCost: number;
-}
+export type PeriodAggregation = Aggregation;
+
+export type GroupAggregation = Aggregation;
 
 export interface CreditSummary {
   cadence?: 'one_time' | 'annual' | 'monthly' | 'quarterly' | 'semi_annual';
@@ -111,18 +99,14 @@ export interface UsageData {
   toDisplay: string;
   usageThrough: string;
   usingDefaults: boolean;
-  showAll: boolean;
-  chargeCount: number;
+  costUnit: 'USD';
   credit?: CreditSummary;
   services: Map<string, ServiceAggregation>;
   periodUsage: Map<string, PeriodAggregation>;
   groupByUsage: Map<string, GroupAggregation>;
   totalCost: number;
   grandTotals: {
-    // Kept for backwards-compatible JSON output.
-    pricingQuantity: number;
     effectiveCost: number;
-    billedCost: number;
   };
 }
 

@@ -33,16 +33,18 @@ function useCommitmentUsage({
   total = 20,
   remaining = 17.96,
   cadence = 'monthly',
+  currency = 'USD',
 }: {
   total?: number;
   remaining?: number;
   cadence?: 'one_time' | 'annual' | 'monthly' | 'quarterly' | 'semi_annual';
+  currency?: string;
 } = {}) {
   client.scenario.get('/v1/invoices/pre-commitment-usage', (_req, res) => {
     res.json({
       creditLedgers: [
         {
-          currency: 'USD',
+          currency,
           title: 'Infrastructure credit',
           periodStart: '2025-12-01T08:00:00.000Z',
           periodEnd: '2026-01-01T08:00:00.000Z',
@@ -57,9 +59,12 @@ function useCommitmentUsage({
 
 function useBillingCharges(
   charges: FocusCharge[] = [],
-  quantityUnit: 'inferred' | 'none' = 'inferred'
+  quantityUnit: 'inferred' | 'none' = 'inferred',
+  onRequest?: (request: { body: unknown; query: unknown }) => void,
+  detailGroupBy = ['product', 'region', 'project']
 ) {
-  client.scenario.post('/v2/billing/costs', (_req, res) => {
+  client.scenario.post('/v2/billing/costs', (req, res) => {
+    onRequest?.({ body: req.body, query: req.query });
     const products = Object.fromEntries(
       charges.map(charge => [
         charge.ServiceName,
@@ -135,7 +140,7 @@ function useBillingCharges(
             })),
           },
           byProductRegionProject: {
-            groupBy: ['product', 'region', 'project'],
+            groupBy: detailGroupBy,
             results: charges.map(charge => ({
               dimensionValues: {
                 product: charge.ServiceName,
@@ -182,15 +187,21 @@ describe('usage', () => {
       expect(output).toContain('--from');
       expect(output).toContain('--to');
       expect(output).toContain('--breakdown');
-      expect(output).toContain('--all');
+      expect(output).not.toContain('--all');
       expect(output).toContain('--format');
     });
   });
 
   describe('with team context', () => {
+    let team: Record<string, unknown>;
+
     beforeEach(() => {
       useUser();
-      useTeams('team_dummy');
+      const teams = useTeams('team_dummy');
+      team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+      Object.assign(team, {
+        billing: { plan: 'enterprise', planIteration: 'unbundled' },
+      });
     });
 
     it('should fetch and display usage data', async () => {
@@ -224,6 +235,52 @@ describe('usage', () => {
       expect(output).toContain('Estimated bill          $15.00');
     });
 
+    it('should request USD costs and only request the detail view for group-by', async () => {
+      const requests: Array<{ body: any; query: any }> = [];
+      useBillingCharges([], 'inferred', request => requests.push(request));
+
+      client.setArgv('usage', '--from', '2025-12-01', '--to', '2025-12-31');
+      expect(await usage(client)).toEqual(0);
+      expect(requests[0].body.currency).toEqual('USD');
+      expect(requests[0].body.views).toEqual({
+        byProduct: { groupBy: ['product'] },
+      });
+      expect(requests[0].query).not.toHaveProperty('from');
+      expect(requests[0].query).not.toHaveProperty('to');
+
+      client.setArgv(
+        'usage',
+        '--from',
+        '2025-12-01',
+        '--to',
+        '2025-12-31',
+        '--group-by',
+        'project'
+      );
+      expect(await usage(client)).toEqual(0);
+      expect(requests[1].body.views.byProductRegionProject).toEqual({
+        groupBy: ['product', 'region', 'project'],
+      });
+    });
+
+    it('should reject group-by when the API strips the requested dimension', async () => {
+      useBillingCharges([], 'inferred', undefined, ['product']);
+
+      client.setArgv(
+        'usage',
+        '--from',
+        '2025-12-01',
+        '--to',
+        '2025-12-31',
+        '--group-by',
+        'project'
+      );
+      expect(await usage(client)).toEqual(1);
+      expect(client.getFullOutput()).toContain(
+        'Usage cannot be grouped by project for this team.'
+      );
+    });
+
     it('should identify a selected team as the billing target', async () => {
       client.config.currentTeam = 'team_dummy';
       useBillingCharges([]);
@@ -232,6 +289,23 @@ describe('usage', () => {
       expect(await usage(client)).toEqual(0);
 
       expect(client.getFullOutput()).toContain('Usage for team');
+    });
+
+    it('should skip the precommitment request for teams without precommitment', async () => {
+      client.config.currentTeam = 'team_dummy';
+      Object.assign(team, {
+        billing: { plan: 'pro', planIteration: 'unbundled' },
+      });
+      useBillingCharges([]);
+      let requested = false;
+      client.scenario.get('/v1/invoices/pre-commitment-usage', (_req, res) => {
+        requested = true;
+        res.json({ creditLedgers: [] });
+      });
+
+      client.setArgv('usage');
+      expect(await usage(client)).toEqual(0);
+      expect(requested).toEqual(false);
     });
 
     it('should display the current monthly infrastructure credit for a team', async () => {
@@ -248,6 +322,30 @@ describe('usage', () => {
       expect(output).toContain('Used       $2.04 of $20.00');
       expect(output).toContain('Remaining  $17.96');
       expect(output).toContain('Progress   10%');
+    });
+
+    it('should format MIU credits without subtracting them from a USD bill', async () => {
+      client.config.currentTeam = 'team_dummy';
+      useBillingCharges([
+        createMockCharge({
+          ServiceName: 'Infrastructure usage',
+          BilledCost: 10,
+        }),
+      ]);
+      useCommitmentUsage({
+        total: 1000,
+        remaining: 750,
+        currency: 'managed_infrastructure_units',
+      });
+
+      client.setArgv('usage');
+      expect(await usage(client)).toEqual(0);
+
+      const output = client.getFullOutput();
+      expect(output).toContain('Used       250 MIUs of 1,000 MIUs');
+      expect(output).toContain('Remaining  750 MIUs');
+      expect(output).not.toContain('Credits applied');
+      expect(output).toMatch(/Estimated bill\s+\$10\.00/);
     });
 
     it('should explain how credits affect the estimated bill', async () => {
@@ -317,7 +415,7 @@ describe('usage', () => {
       expect(client.getFullOutput()).not.toContain('Cadence    Monthly');
     });
 
-    it('should hide empty services by default and show them with --all', async () => {
+    it('should hide empty services', async () => {
       useBillingCharges([
         createMockCharge({
           ServiceName: 'Used Service',
@@ -336,76 +434,35 @@ describe('usage', () => {
 
       client.setArgv('usage', '--from', '2025-12-01', '--to', '2025-12-31');
       expect(await usage(client)).toEqual(0);
-      let output = client.getFullOutput();
+      const output = client.getFullOutput();
       expect(output).toContain('Used Service');
       expect(output).not.toContain('Flat Rate CDN Advanced');
       expect(output).toContain('1 service with no usage hidden');
-
-      const previousOutputLength = output.length;
-      client.setArgv(
-        'usage',
-        '--from',
-        '2025-12-01',
-        '--to',
-        '2025-12-31',
-        '--all'
-      );
-      expect(await usage(client)).toEqual(0);
-      output = client.getFullOutput().slice(previousOutputLength);
-      expect(output).toContain('Flat Rate CDN Advanced');
-      expect(output).toContain('1 license');
-      expect(output).not.toContain('1 licenses');
-      expect(output).not.toContain('with no usage hidden');
+      expect(output).not.toContain('Show all with:');
     });
 
-    it('should singularize license units regardless of service category', async () => {
-      useBillingCharges(
-        [
-          createMockCharge({
-            ServiceName: 'v0 Enterprise',
-            ConsumedQuantity: 1,
-            BilledCost: 100,
-          }),
-          createMockCharge({
-            ServiceName: 'Standard Enterprise Support',
-            ConsumedQuantity: 1,
-            BilledCost: 50,
-          }),
-        ],
-        'none'
-      );
+    it('should omit unknown product units', async () => {
+      useBillingCharges([
+        createMockCharge({
+          ServiceName: 'v0 Enterprise',
+          ConsumedQuantity: 1,
+          BilledCost: 100,
+        }),
+        createMockCharge({
+          ServiceName: 'Standard Enterprise Support',
+          ConsumedQuantity: 1,
+          BilledCost: 50,
+        }),
+      ]);
 
       client.setArgv('usage', '--from', '2025-12-01', '--to', '2025-12-31');
       expect(await usage(client)).toEqual(0);
 
       const output = client.getFullOutput();
-      expect(output).toMatch(/v0 Enterprise\s+1 license/);
-      expect(output).toMatch(/Standard Enterprise Support\s+1 license/);
-      expect(output).not.toContain('1 licenses');
-    });
-
-    it('should preserve an explicit scope in the show-all command', async () => {
-      useBillingCharges([
-        createMockCharge({
-          ServiceName: 'Unused Service',
-          ConsumedQuantity: 0,
-          BilledCost: 0,
-        }),
-      ]);
-
-      client.setArgv(
-        'usage',
-        '--scope',
-        'team_dummy',
-        '--from',
-        '2025-12-01',
-        '--to',
-        '2025-12-31'
-      );
-      expect(await usage(client)).toEqual(0);
-      expect(client.getFullOutput()).toContain(
-        'Show all with: vc usage --scope team_dummy --all'
-      );
+      expect(output).toMatch(/v0 Enterprise\s+1\s+\$100\.00/);
+      expect(output).toMatch(/Standard Enterprise Support\s+1\s+\$50\.00/);
+      expect(output).not.toContain('unit');
+      expect(output).not.toContain('license');
     });
 
     it('should display included Flat Rate CDN usage in consumed units', async () => {
@@ -426,12 +483,52 @@ describe('usage', () => {
 
       expect(exitCode).toEqual(0);
       const output = client.getFullOutput();
-      expect(output).toContain('12.04K units');
-      expect(output).toContain('Edge Requests (Flat Rate CDN)');
+      expect(output).toContain('12.04K');
+      expect(output).not.toContain('12.04K units');
+      expect(output).toContain('Edge Requests');
+      expect(output).not.toContain('Edge Requests (Flat Rate CDN)');
       expect(output).toContain('Effective Cost');
       expect(output).toContain('$0.00');
       expect(output).not.toContain('Net Cost');
       expect(output).not.toContain('Amount due');
+    });
+
+    it('should merge flat-rate and metered usage into one product row', async () => {
+      useBillingCharges([
+        createMockCharge({
+          ServiceName: 'Edge Requests',
+          ConsumedQuantity: 12000,
+          BilledCost: 0,
+          Tags: { FlatRate: 'true' },
+        }),
+        createMockCharge({
+          ServiceName: 'Edge Requests',
+          ConsumedQuantity: 40,
+          BilledCost: 2,
+        }),
+      ]);
+
+      client.setArgv(
+        'usage',
+        '--from',
+        '2025-12-01',
+        '--to',
+        '2025-12-31',
+        '--format',
+        'json'
+      );
+      expect(await usage(client)).toEqual(0);
+
+      const json = JSON.parse(client.stdout.getFullOutput());
+      expect(json.services).toEqual([
+        expect.objectContaining({
+          name: 'Edge Requests',
+          quantity: 12040,
+          cost: 2,
+          effectiveCost: 2,
+          included: false,
+        }),
+      ]);
     });
 
     it('should handle subscription metrics with a null unit', async () => {
@@ -506,12 +603,14 @@ describe('usage', () => {
       const output = client.stdout.getFullOutput();
       const json = JSON.parse(output);
       expect(json.services).toHaveLength(1);
-      expect(json.pricingUnit).toEqual('USD');
+      expect(json.costUnit).toEqual('USD');
       expect(json.services[0].name).toEqual('Serverless Function Execution');
       expect(json.services[0].quantity).toEqual(1000000);
-      expect(json.services[0].unit).toEqual('units');
-      expect(json.totals.cost).toEqual(10);
-      expect(json.totals.billedCost).toEqual(10);
+      expect(json.services[0]).not.toHaveProperty('unit');
+      expect(json.services[0]).not.toHaveProperty('pricingQuantity');
+      expect(json.services[0]).not.toHaveProperty('billedCost');
+      expect(json.totals).toEqual({ cost: 10, effectiveCost: 10 });
+      expect(json).not.toHaveProperty('chargeCount');
     });
 
     it('should track telemetry for date options', async () => {
@@ -698,10 +797,15 @@ describe('usage', () => {
       expect(json.breakdown.data).toHaveLength(2);
       expect(json.breakdown.data[0].periodKey).toEqual('2025-12-01');
       expect(json.breakdown.data[1].periodKey).toEqual('2025-12-02');
-      expect(json.breakdown.data[0].totals.billedCost).toEqual(10);
-      expect(json.breakdown.data[1].totals.billedCost).toEqual(20);
-      // Grand totals should still be present
-      expect(json.totals.billedCost).toEqual(30);
+      expect(json.breakdown.data[0].totals).toEqual({
+        cost: 10,
+        effectiveCost: 10,
+      });
+      expect(json.breakdown.data[1].totals).toEqual({
+        cost: 20,
+        effectiveCost: 20,
+      });
+      expect(json.totals).toEqual({ cost: 30, effectiveCost: 30 });
     });
 
     it('should track telemetry for --breakdown option', async () => {
@@ -940,13 +1044,18 @@ describe('usage', () => {
       expect(json.groupBy).toBeDefined();
       expect(json.groupBy.dimension).toEqual('project');
       expect(json.groupBy.data).toHaveLength(2);
-      // Sorted by billedCost descending
+      // Sorted by cost descending
       expect(json.groupBy.data[0].name).toEqual('my-api');
-      expect(json.groupBy.data[0].totals.billedCost).toEqual(20);
+      expect(json.groupBy.data[0].totals).toEqual({
+        cost: 20,
+        effectiveCost: 20,
+      });
       expect(json.groupBy.data[1].name).toEqual('my-web-app');
-      expect(json.groupBy.data[1].totals.billedCost).toEqual(10);
-      // Grand totals should still be present
-      expect(json.totals.billedCost).toEqual(30);
+      expect(json.groupBy.data[1].totals).toEqual({
+        cost: 10,
+        effectiveCost: 10,
+      });
+      expect(json.totals).toEqual({ cost: 30, effectiveCost: 30 });
     });
 
     it('should error when --breakdown and --group-by are used together', async () => {

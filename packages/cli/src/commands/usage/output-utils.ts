@@ -4,17 +4,19 @@ import output from '../../output-manager';
 import type { ServiceAggregation, UsageData } from './types';
 
 export function isEmptyService(service: ServiceAggregation): boolean {
+  if (service.category === 'subscription') {
+    return service.cost === 0 && service.effectiveCost === 0;
+  }
   return (
     service.quantity === 0 && service.cost === 0 && service.effectiveCost === 0
   );
 }
 
 export function visibleServices(
-  services: Map<string, ServiceAggregation>,
-  showAll: boolean
+  services: Map<string, ServiceAggregation>
 ): [string, ServiceAggregation][] {
   return [...services.entries()].filter(
-    ([, service]) => showAll || !isEmptyService(service)
+    ([, service]) => !isEmptyService(service)
   );
 }
 
@@ -42,15 +44,11 @@ export function outputUsageHeader(
   log('');
 }
 
-export function outputHiddenServicesHint(
-  hiddenCount: number,
-  scope?: string
-): void {
+export function outputHiddenServicesHint(hiddenCount: number): void {
   if (hiddenCount <= 0) return;
-  const scopeFlag = scope ? ` --scope ${scope}` : '';
   output.log(
     chalk.gray(
-      `${hiddenCount} ${hiddenCount === 1 ? 'service' : 'services'} with no usage hidden. Show all with: vc usage${scopeFlag} --all`
+      `${hiddenCount} ${hiddenCount === 1 ? 'service' : 'services'} with no usage hidden.`
     )
   );
 }

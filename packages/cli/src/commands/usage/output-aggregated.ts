@@ -23,23 +23,23 @@ export function outputAggregated({ data, startTime }: OutputOptions): void {
       );
     }
     log(
-      `  ${chalk.gray('Used')}       ${formatCurrency(data.credit.used)} of ${formatCurrency(data.credit.allocated)}`
+      `  ${chalk.gray('Used')}       ${formatCredit(data.credit.used, data.credit.currency)} of ${formatCredit(data.credit.allocated, data.credit.currency)}`
     );
     log(
-      `  ${chalk.gray('Remaining')}  ${formatCurrency(data.credit.remaining)}`
+      `  ${chalk.gray('Remaining')}  ${formatCredit(data.credit.remaining, data.credit.currency)}`
     );
     log(`  ${chalk.gray('Progress')}   ${Math.round(data.credit.progress)}%`);
     log('');
   }
 
   const allServices = [...data.services.entries()];
-  const sortedServices = visibleServices(data.services, data.showAll).sort(
+  const sortedServices = visibleServices(data.services).sort(
     (a, b) => b[1].effectiveCost - a[1].effectiveCost
   );
 
   if (sortedServices.length === 0) {
     log('No usage data found for this period.');
-    outputHiddenServicesHint(allServices.length, data.scope);
+    outputHiddenServicesHint(allServices.length);
     return;
   }
 
@@ -62,11 +62,13 @@ export function outputAggregated({ data, startTime }: OutputOptions): void {
     log('');
   }
 
-  printBillSummary(print, usage, subscriptions, data.credit?.used);
-  outputHiddenServicesHint(
-    allServices.length - sortedServices.length,
-    data.scope
+  printBillSummary(
+    print,
+    usage,
+    subscriptions,
+    data.credit?.currency === data.costUnit ? data.credit.used : 0
   );
+  outputHiddenServicesHint(allServices.length - sortedServices.length);
 }
 
 function formatCadence(
@@ -76,6 +78,12 @@ function formatCadence(
     .split('_')
     .map(word => word[0].toUpperCase() + word.slice(1))
     .join(' ');
+}
+
+function formatCredit(amount: number, currency: string): string {
+  return currency === 'USD'
+    ? formatCurrency(amount)
+    : formatQuantity(amount, 'MIUs');
 }
 
 function printBillSummary(
@@ -122,17 +130,15 @@ function printTable(
 ): void {
   const headers = ['Service', 'Usage', 'Effective Cost'];
   const rows = services.map(([name, service]) => {
-    const quantity =
-      service.category === 'subscription'
-        ? service.quantity || 1
-        : service.quantity;
     return [
       service.included ? chalk.blue(name) : name,
       service.category === 'subscription'
-        ? formatQuantity(quantity, quantity === 1 ? 'license' : 'licenses', {
+        ? formatQuantity(service.quantity, service.unit ?? 'licenses', {
             compact: true,
           })
-        : formatQuantity(quantity, service.unit, { compact: true }),
+        : formatQuantity(service.quantity, service.unit ?? '', {
+            compact: true,
+          }).trim(),
       formatCurrency(service.effectiveCost),
     ];
   });
