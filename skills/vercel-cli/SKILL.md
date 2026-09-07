@@ -1,6 +1,6 @@
 ---
 name: vercel-cli
-description: Deploy, manage, inspect, and troubleshoot Vercel projects from the command line. Use for Vercel deployments, Vercel Toolbar comments, build failures, projects and teams, environment variables, domains and DNS, logs, metrics, Speed Insights, Core Web Vitals, request traces, usage, activity, alerts, firewall rules, cache, cron jobs, deploy hooks, Edge Config, feature flags, integrations, connectors, Blob storage, Container Registry (VCR), microfrontends, rolling releases, custom environments, Sandbox, agent/MCP setup, OAuth apps, preview access, local development, or `vercel api` fallback.
+description: Deploy, manage, inspect, and troubleshoot Vercel projects from the command line. Use for Vercel deployments, Vercel Toolbar comments, build failures, projects and teams, environment variables, domains and DNS, logs, metrics, Speed Insights, Core Web Vitals, request traces, usage, activity, alerts, firewall rules, cache, cron jobs, deploy hooks, Edge Config, feature flags (`vercel flags`), integrations, connectors, Blob storage, Container Registry (VCR), microfrontends, rolling releases, custom environments, Sandbox, agent/MCP setup, OAuth apps, preview access, local development, or `vercel api` fallback.
 ---
 
 # Vercel CLI Skill
@@ -66,7 +66,7 @@ Use this to route to the correct reference file:
 - **Node.js backends (Express, Hono, etc.)** → `references/node-backends.md`
 - **Monorepos (Turborepo, Nx, workspaces)** → `references/monorepos.md`
 - **Bun runtime** → `references/bun.md`
-- **Feature flags** → `references/flags.md`
+- **Feature flags (`vercel flags`: create, inspect, set, split, rollout, rules, segments, sdk-keys)** → `references/flags.md`
 - **Microfrontends** → `references/microfrontends.md`
 - **Sandbox** → `references/sandbox.md`
 - **Agent, MCP, skills discovery, or AI Gateway** → `references/agent-and-ai.md`
