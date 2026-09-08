@@ -316,6 +316,30 @@ export function convertTrailingSlash(enable: boolean, status = 308): Route[] {
   return routes;
 }
 
+/**
+ * path-to-regexp keeps the leading delimiter *inside* the group it generates
+ * for a parameter, so a source that starts with a zero-segment-capable
+ * parameter (`/:path*`, `/:path?`) compiles to `^(?:\/(…))?$`. Because
+ * `strict: true` also drops the optional trailing delimiter, the zero-segment
+ * case only matches the empty string and never the bare root `/` that requests
+ * actually carry — a catch-all rewrite would 404 the homepage. Add `/` as an
+ * explicit alternative for those sources. The alternative is non-capturing, so
+ * capture group numbering (and therefore `segments`) is unchanged.
+ */
+function allowRootPath(source: string, regExp: RegExp): string {
+  const src = regExp.source;
+  if (
+    !source.startsWith('/') ||
+    !src.startsWith('^') ||
+    !src.endsWith('$') ||
+    !regExp.test('') ||
+    regExp.test('/')
+  ) {
+    return src;
+  }
+  return `^(?:${src.slice(1, -1)}|\\/)$`;
+}
+
 export function sourceToRegex(source: string): {
   src: string;
   segments: string[];
@@ -334,7 +358,7 @@ export function sourceToRegex(source: string): {
       }
       return name;
     });
-  return { src: r.source, segments };
+  return { src: allowRootPath(source, r), segments };
 }
 
 // The ECMA-262 specification explicitly allows for underscores in
