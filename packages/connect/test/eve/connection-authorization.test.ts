@@ -349,6 +349,49 @@ describe('connect() adapter evict', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('evicts by the last resolved id when re-provisioning fails', async () => {
+    const connector = 'mcp.example.com/evict-resolved';
+    vi.mocked(getVercelOidcToken)
+      .mockResolvedValueOnce('oidc_project_a')
+      .mockResolvedValueOnce('oidc_project_a')
+      .mockResolvedValueOnce('oidc_project_b')
+      .mockResolvedValueOnce('oidc_project_a')
+      .mockResolvedValueOnce('oidc_project_a');
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonProvisionResponse(connector, 'scl_evict_resolved')
+      )
+      .mockResolvedValueOnce(jsonTokenResponse('tok_stale', connector))
+      .mockRejectedValueOnce(new Error('transient provisioning failure'))
+      .mockResolvedValueOnce(jsonTokenResponse('tok_fresh', connector));
+
+    const definition = connect({
+      connector,
+    }) as InteractiveAuthorizationDefinition & {
+      readonly evict: (opts: {
+        readonly principal: ConnectionPrincipal;
+        readonly connection?: EveConnectionAuthorizationContext;
+      }) => Promise<void>;
+    };
+
+    const first = await definition.getToken({
+      principal: PRINCIPAL,
+      connection: CONNECTION,
+    });
+    await definition.evict({ principal: PRINCIPAL, connection: CONNECTION });
+    const refetched = await definition.getToken({
+      principal: PRINCIPAL,
+      connection: CONNECTION,
+    });
+
+    expect(first.token).toBe('tok_stale');
+    expect(refetched.token).toBe('tok_fresh');
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock.mock.calls[3][0]).toBe(
+      'https://api.vercel.com/v1/connect/token/scl_evict_resolved'
+    );
+  });
+
   it('tears the grant down at Connect when called with revoke:true', async () => {
     fetchMock
       .mockResolvedValueOnce(jsonTokenResponse('tok_initial'))
@@ -816,12 +859,12 @@ function jsonTokenResponse(
   );
 }
 
-function jsonProvisionResponse(uid: string): Response {
+function jsonProvisionResponse(uid: string, id = 'scl_provisioned'): Response {
   return new Response(
     JSON.stringify({
       outcome: 'created',
       connector: {
-        id: 'scl_provisioned',
+        id,
         uid,
         service: 'mcp.example.com',
         type: 'oauth',

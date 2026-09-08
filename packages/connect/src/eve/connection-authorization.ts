@@ -380,11 +380,44 @@ export function connect(
 > {
   const options = normalizeAuthorizationOptions(input);
   const vercelConnect: VercelConnectMetadata = { connector: options.connector };
-  const evict = makeEvict(options);
+  const connectorResolver = makeConnectorResolver(options);
+  const evict = makeEvict(options, connectorResolver);
   if (options.principalType === 'app') {
-    return { ...buildNonInteractiveDefinition(options), vercelConnect, evict };
+    return {
+      ...buildNonInteractiveDefinition(options, connectorResolver),
+      vercelConnect,
+      evict,
+    };
   }
-  return { ...buildInteractiveDefinition(options), vercelConnect, evict };
+  return {
+    ...buildInteractiveDefinition(options, connectorResolver),
+    vercelConnect,
+    evict,
+  };
+}
+
+interface ConnectorResolver {
+  readonly current: () => string;
+  readonly resolve: (
+    connection: EveConnectionAuthorizationContext
+  ) => Promise<string>;
+}
+
+function makeConnectorResolver(
+  options: EveAuthorizationOptions
+): ConnectorResolver {
+  let current = options.connector;
+  return {
+    current: () => current,
+    resolve: async connection => {
+      const resolved = await autoProvisionConnectorIfEnabled(
+        options,
+        connection
+      );
+      current = resolved;
+      return resolved;
+    },
+  };
 }
 
 /**
@@ -398,7 +431,8 @@ export function connect(
  * local cache drop if the revoke request fails).
  */
 function makeEvict(
-  options: EveAuthorizationOptions
+  options: EveAuthorizationOptions,
+  connectorResolver: ConnectorResolver
 ): (opts: {
   readonly principal: ConnectionPrincipal;
   readonly connection?: EveConnectionAuthorizationContext;
@@ -406,17 +440,17 @@ function makeEvict(
 }) => Promise<void> {
   return async ({ principal, connection, revoke }) => {
     const params = await buildTokenParams(options, principal, connection);
-    // Eviction can be called without Eve's connection context. Use the
-    // resolved identity when context is available, otherwise retain the
-    // authored identifier as a best-effort backwards-compatible fallback.
-    let connector = options.connector;
+    // Retain the last identity used to cache a token. If re-provisioning
+    // fails transiently, falling back to the authored UID would leave the
+    // rejected token cached under the resolved connector id.
     if (connection !== undefined) {
       try {
-        connector = await autoProvisionConnectorIfEnabled(options, connection);
+        await connectorResolver.resolve(connection);
       } catch {
-        // A provisioning conflict must not prevent local cache eviction.
+        // Provisioning failures must not prevent local cache eviction.
       }
     }
+    const connector = connectorResolver.current();
     if (revoke) {
       try {
         // Destructive: tears down the grant at Vercel Connect (refresh
@@ -451,7 +485,8 @@ function normalizeAuthorizationOptions(
 }
 
 function buildInteractiveDefinition(
-  options: EveAuthorizationOptions
+  options: EveAuthorizationOptions,
+  connectorResolver: ConnectorResolver
 ): InteractiveAuthorizationDefinition {
   return {
     principalType: 'user',
@@ -461,10 +496,7 @@ function buildInteractiveDefinition(
       connection,
     }: GetTokenOptions): Promise<TokenResult> {
       try {
-        const connector = await autoProvisionConnectorIfEnabled(
-          options,
-          connection
-        );
+        const connector = await connectorResolver.resolve(connection);
         const response = await getTokenResponse(
           connector,
           await buildTokenParams(options, principal, connection),
@@ -485,10 +517,7 @@ function buildInteractiveDefinition(
       challenge: ConnectionAuthorizationChallengeWithDisplayName;
     }> {
       try {
-        const connector = await autoProvisionConnectorIfEnabled(
-          options,
-          connection
-        );
+        const connector = await connectorResolver.resolve(connection);
         // eve's `webhook` parameter is also the browser-redirect
         // target when `callbackUrl` is absent — the orchestrator mints
         // it via `createWebhook({ respondWith:
@@ -550,10 +579,7 @@ function buildInteractiveDefinition(
       connection,
     }: CompleteAuthorizationOptions): Promise<TokenResult> {
       try {
-        const connector = await autoProvisionConnectorIfEnabled(
-          options,
-          connection
-        );
+        const connector = await connectorResolver.resolve(connection);
         const response = await getTokenResponse(
           connector,
           await buildTokenParams(options, principal, connection),
@@ -579,7 +605,8 @@ function connectCompletionWebhook(webhook: string | undefined): string | null {
 }
 
 function buildNonInteractiveDefinition(
-  options: EveAuthorizationOptions
+  options: EveAuthorizationOptions,
+  connectorResolver: ConnectorResolver
 ): NonInteractiveAuthorizationDefinition {
   return {
     principalType: 'app',
@@ -588,10 +615,7 @@ function buildNonInteractiveDefinition(
       connection,
     }: GetTokenOptions): Promise<TokenResult> {
       try {
-        const connector = await autoProvisionConnectorIfEnabled(
-          options,
-          connection
-        );
+        const connector = await connectorResolver.resolve(connection);
         const response = await getTokenResponse(
           connector,
           await buildTokenParams(options, principal, connection),
