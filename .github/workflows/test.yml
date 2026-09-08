@@ -16,6 +16,8 @@ permissions:
 env:
   VERCEL_TELEMETRY_DISABLED: '1'
   TURBO_REMOTE_ONLY: 'true'
+  # zero-conf-vtest314 — Turborepo cache + Vercel CLI OIDC policies
+  VERCEL_TEAM_ID: team_whnAQ3A1tbgFP0cDEVtL8tlk
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -78,7 +80,7 @@ jobs:
       - name: Setup Turborepo Remote Cache
         uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
         with:
-          team: ${{ vars.TURBO_TEAM }}
+          team: ${{ env.VERCEL_TEAM_ID }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -277,7 +279,11 @@ jobs:
       - name: Setup Turborepo Remote Cache
         uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
         with:
-          team: ${{ vars.TURBO_TEAM }}
+          team: ${{ env.VERCEL_TEAM_ID }}
+      - name: Authenticate Vercel CLI
+        uses: vercel/authenticate-cli-action@cec4e78ed4686ab05721608393617a31147f082b
+        with:
+          team: ${{ env.VERCEL_TEAM_ID }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
@@ -376,8 +382,6 @@ jobs:
           done
         shell: bash
         env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
           TURBO_BASE_SHA: ${{ needs.setup.outputs.baseSha }}
           CARGO_NET_GIT_FETCH_WITH_CLI: "true"
           FORCE_COLOR: '1'
@@ -419,7 +423,11 @@ jobs:
       - name: Setup Turborepo Remote Cache
         uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
         with:
-          team: ${{ vars.TURBO_TEAM }}
+          team: ${{ env.VERCEL_TEAM_ID }}
+      - name: Authenticate Vercel CLI
+        uses: vercel/authenticate-cli-action@cec4e78ed4686ab05721608393617a31147f082b
+        with:
+          team: ${{ env.VERCEL_TEAM_ID }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
@@ -565,8 +573,6 @@ jobs:
           # Per-package pip install specs (e.g. VERCEL_RUNTIME_PYTHON,
           # VERCEL_WORKERS_PYTHON) are also available here, injected into
           # $GITHUB_ENV by the "Resolve Python wheel URLs" step above.
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
           TURBO_BASE_SHA: ${{ needs.setup.outputs.baseSha }}
           FORCE_COLOR: '1'
           # Datadog Test Optimization: emit per-test spans correlated to the

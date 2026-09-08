@@ -20,6 +20,8 @@ env:
   VERCEL_TELEMETRY_DISABLED: '1'
   # Force turbo to ignore all caches (local and remote) for every task.
   TURBO_FORCE: 'true'
+  # zero-conf-vtest314 — Vercel CLI OIDC policy
+  VERCEL_TEAM_ID: team_whnAQ3A1tbgFP0cDEVtL8tlk
 
 concurrency:
   group: ${{ github.workflow }}
@@ -73,6 +75,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Authenticate Vercel CLI
+        uses: vercel/authenticate-cli-action@cec4e78ed4686ab05721608393617a31147f082b
+        with:
+          team: ${{ env.VERCEL_TEAM_ID }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
@@ -120,8 +126,6 @@ jobs:
           fi
         shell: bash
         env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
           CARGO_NET_GIT_FETCH_WITH_CLI: 'true'
           FORCE_COLOR: '1'
           VITEST_TEST_FILES: ${{ matrix.useEnvPaths == true && join(matrix.testPaths, ' ') || '' }}
@@ -147,6 +151,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Authenticate Vercel CLI
+        uses: vercel/authenticate-cli-action@cec4e78ed4686ab05721608393617a31147f082b
+        with:
+          team: ${{ env.VERCEL_TEAM_ID }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
@@ -272,8 +280,6 @@ jobs:
           # Per-package pip install specs (e.g. VERCEL_RUNTIME_PYTHON,
           # VERCEL_WORKERS_PYTHON) are also available here, injected into
           # $GITHUB_ENV by the "Resolve Python wheel URLs" step above.
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
           FORCE_COLOR: '1'
 
   alert-on-failure:
