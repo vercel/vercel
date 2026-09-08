@@ -92,6 +92,8 @@ function useBillingCharges(
     const times = [
       ...new Set(charges.map(charge => charge.ChargePeriodStart)),
     ].sort();
+    const quantityMetricSlug = (charge: FocusCharge) =>
+      `usage_${charge.ServiceName.replaceAll(' ', '_').toLowerCase()}`;
 
     res.json({
       metrics: [
@@ -100,18 +102,19 @@ function useBillingCharges(
           title: 'Cost',
           unit: { kind: 'standard', name: 'USD' },
         },
-        {
-          slug: 'quantity',
-          title: 'Usage',
+        ...charges.map(charge => ({
+          slug: quantityMetricSlug(charge),
+          title: charge.ServiceName,
           unit:
-            quantityUnit === 'none'
+            quantityUnit === 'none' ||
+            charge.Tags.Category === 'Subscription Licenses'
               ? null
-              : charges.some(
-                    charge => charge.Tags.Category !== 'Subscription Licenses'
-                  )
-                ? { kind: 'custom', singular: 'unit', plural: 'units' }
-                : null,
-        },
+              : {
+                  kind: 'custom',
+                  singular: charge.ConsumedUnit.replace(/s$/, ''),
+                  plural: charge.ConsumedUnit,
+                },
+        })),
       ],
       from: times.at(0) ?? '2025-12-01T08:00:00.000Z',
       to: '2026-01-01T08:00:00.000Z',
@@ -129,7 +132,7 @@ function useBillingCharges(
             groupBy: ['product'],
             results: charges.map(charge => ({
               dimensionValues: { product: charge.ServiceName },
-              metrics: ['gross_cost', 'quantity'],
+              metrics: ['gross_cost', quantityMetricSlug(charge)],
               values: times.map(time =>
                 time === charge.ChargePeriodStart
                   ? [charge.BilledCost, charge.ConsumedQuantity]
@@ -147,7 +150,7 @@ function useBillingCharges(
                 project: charge.Tags.ProjectId ?? null,
                 region: charge.RegionId ?? null,
               },
-              metrics: ['gross_cost', 'quantity'],
+              metrics: ['gross_cost', quantityMetricSlug(charge)],
               values: times.map(time =>
                 time === charge.ChargePeriodStart
                   ? [charge.BilledCost, charge.ConsumedQuantity]
@@ -415,6 +418,58 @@ describe('usage', () => {
       expect(client.getFullOutput()).not.toContain('Cadence    Monthly');
     });
 
+    it('should distinguish small nonzero usage from exact zero', async () => {
+      useBillingCharges([
+        createMockCharge({
+          ServiceName: 'Small Positive Usage',
+          ConsumedQuantity: 0.004,
+          BilledCost: 1,
+        }),
+        createMockCharge({
+          ServiceName: 'Small Negative Usage',
+          ConsumedQuantity: -0.004,
+          BilledCost: 1,
+        }),
+        createMockCharge({
+          ServiceName: 'Fixed Fee',
+          ConsumedQuantity: 0,
+          BilledCost: 1,
+        }),
+      ]);
+
+      client.setArgv('usage', '--from', '2025-12-01', '--to', '2025-12-31');
+      expect(await usage(client)).toEqual(0);
+
+      const output = client.getFullOutput();
+      expect(output).toMatch(/Small Positive Usage\s+<0\.01\s+\$1\.00/);
+      expect(output).toMatch(/Small Negative Usage\s+>-0\.01\s+\$1\.00/);
+      expect(output).toMatch(/Fixed Fee\s+0\s+\$1\.00/);
+    });
+
+    it('should preserve small nonzero usage in JSON output', async () => {
+      useBillingCharges([
+        createMockCharge({
+          ServiceName: 'Small Usage',
+          ConsumedQuantity: 0.004,
+          BilledCost: 1,
+        }),
+      ]);
+
+      client.setArgv(
+        'usage',
+        '--from',
+        '2025-12-01',
+        '--to',
+        '2025-12-31',
+        '--format',
+        'json'
+      );
+      expect(await usage(client)).toEqual(0);
+
+      const json = JSON.parse(client.stdout.getFullOutput());
+      expect(json.services[0].quantity).toEqual(0.004);
+    });
+
     it('should hide empty services', async () => {
       useBillingCharges([
         createMockCharge({
@@ -442,18 +497,21 @@ describe('usage', () => {
     });
 
     it('should omit unknown product units', async () => {
-      useBillingCharges([
-        createMockCharge({
-          ServiceName: 'v0 Enterprise',
-          ConsumedQuantity: 1,
-          BilledCost: 100,
-        }),
-        createMockCharge({
-          ServiceName: 'Standard Enterprise Support',
-          ConsumedQuantity: 1,
-          BilledCost: 50,
-        }),
-      ]);
+      useBillingCharges(
+        [
+          createMockCharge({
+            ServiceName: 'v0 Enterprise',
+            ConsumedQuantity: 1,
+            BilledCost: 100,
+          }),
+          createMockCharge({
+            ServiceName: 'Standard Enterprise Support',
+            ConsumedQuantity: 1,
+            BilledCost: 50,
+          }),
+        ],
+        'none'
+      );
 
       client.setArgv('usage', '--from', '2025-12-01', '--to', '2025-12-31');
       expect(await usage(client)).toEqual(0);
@@ -484,7 +542,7 @@ describe('usage', () => {
       expect(exitCode).toEqual(0);
       const output = client.getFullOutput();
       expect(output).toContain('12.04K');
-      expect(output).not.toContain('12.04K units');
+      expect(output).not.toContain('12.04K requests');
       expect(output).toContain('Edge Requests');
       expect(output).not.toContain('Edge Requests (Flat Rate CDN)');
       expect(output).toContain('Effective Cost');

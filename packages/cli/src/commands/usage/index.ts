@@ -404,7 +404,9 @@ function aggregateResult(
   isSubscription = false
 ): ServiceAggregation {
   const grossCostIndex = result.metrics.indexOf(GROSS_COST_METRIC);
-  const quantityIndex = result.metrics.indexOf('quantity');
+  const quantityIndex = result.metrics.findIndex(
+    metric => metric !== GROSS_COST_METRIC
+  );
   const values =
     sampleIndex === undefined
       ? result.totalValue

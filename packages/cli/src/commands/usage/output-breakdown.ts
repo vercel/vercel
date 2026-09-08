@@ -61,6 +61,7 @@ export function outputBreakdown({
       service.included ? chalk.blue(name) : name,
       formatQuantity(service.quantity, service.unit ?? '', {
         compact: true,
+        showSmallValues: true,
       }).trim(),
       formatCurrency(service.effectiveCost),
     ]);
