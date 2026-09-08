@@ -1,0 +1,25 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "framework:bin-target randomness:RANDOMNESS_PLACEHOLDER",
+      "responseHeaders": {
+        "content-type": "/text\\/html/"
+      }
+    },
+    {
+      "path": "/api/data",
+      "status": 200,
+      "mustContain": "\"bin\":\"server\"",
+      "responseHeaders": {
+        "content-type": "/application\\/json/"
+      }
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 404,
+      "mustContain": "not found:bin-target /does-not-exist"
+    }
+  ]
+}

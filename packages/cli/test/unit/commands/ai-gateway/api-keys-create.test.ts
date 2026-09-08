@@ -56,6 +56,122 @@ describe('ai-gateway api-keys create', () => {
       await expect(client.stderr).toOutput('API key');
       expect(await exitCodePromise).toBe(0);
     });
+
+    it('names the caps a budget-less key still counts toward', async () => {
+      const team = useTeam();
+      const user = useUser();
+      useCreateApiKey();
+      client.scenario.get('/ai-gateway/budgets/defaults/list', (_req, res) => {
+        res.json({
+          defaults: [
+            {
+              scopeType: 'api-key',
+              limitAmount: 50,
+              refreshPeriod: 'monthly',
+              active: true,
+              createdAt: 1,
+              updatedAt: 2,
+            },
+          ],
+        });
+      });
+      client.scenario.get('/ai-gateway/budgets/list', (_req, res) => {
+        res.json({
+          budgets: [
+            {
+              quotaEntityId: 'team_1',
+              scopeType: 'team',
+              scopeId: team.id,
+              limitAmount: 500,
+              currentSpend: 0,
+              currentByokSpend: 0,
+              includeByokInQuota: false,
+              refreshPeriod: 'monthly',
+              active: true,
+              archived: false,
+              createdAt: 1,
+              updatedAt: 2,
+            },
+            {
+              quotaEntityId: 'user_1',
+              scopeType: 'user',
+              scopeId: `usr_${user.id}`,
+              limitAmount: 100,
+              currentSpend: 0,
+              currentByokSpend: 0,
+              includeByokInQuota: false,
+              refreshPeriod: 'weekly',
+              active: true,
+              archived: false,
+              createdAt: 1,
+              updatedAt: 2,
+            },
+          ],
+        });
+      });
+      client.config.currentTeam = team.id;
+      client.setArgv('ai-gateway', 'api-keys', 'create');
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stdout).toOutput(mockApiKeyResponse.apiKeyString);
+      await expect(client.stderr).toOutput(
+        'No key budget set. Spend still counts toward the API key default ($50 a month), your user budget ($100 a week) and the team budget ($500 a month).'
+      );
+      expect(await exitCodePromise).toBe(0);
+    });
+
+    it('names the stacking caps when the key has its own budget', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.scenario.get('/ai-gateway/budgets/defaults/list', (_req, res) => {
+        res.json({
+          defaults: [
+            {
+              scopeType: 'api-key',
+              limitAmount: 50,
+              refreshPeriod: 'monthly',
+              active: true,
+              createdAt: 1,
+              updatedAt: 2,
+            },
+          ],
+        });
+      });
+      client.scenario.get('/ai-gateway/budgets/list', (_req, res) => {
+        res.json({
+          budgets: [
+            {
+              quotaEntityId: 'team_1',
+              scopeType: 'team',
+              scopeId: team.id,
+              limitAmount: 500,
+              currentSpend: 0,
+              currentByokSpend: 0,
+              includeByokInQuota: false,
+              refreshPeriod: 'monthly',
+              active: true,
+              archived: false,
+              createdAt: 1,
+              updatedAt: 2,
+            },
+          ],
+        });
+      });
+      client.config.currentTeam = team.id;
+      client.setArgv('ai-gateway', 'api-keys', 'create', '--budget', '10');
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stdout).toOutput(mockApiKeyResponse.apiKeyString);
+      // The api-key default is overridden by the explicit budget, so only the
+      // team cap is named, with the budgeted lead-in.
+      await expect(client.stderr).toOutput(
+        'Spend on this key also counts toward the team budget ($500 a month).'
+      );
+      expect(await exitCodePromise).toBe(0);
+    });
   });
 
   describe('success with all flags', () => {
@@ -115,6 +231,126 @@ describe('ai-gateway api-keys create', () => {
         aiGatewayQuota: { limitAmount: 500, alertThresholds: [75, 100] },
       });
       expect((body as { expiresAt?: number }).expiresAt).toBeTypeOf('number');
+    });
+  });
+
+  describe('success with --zdr-exempt', () => {
+    it('sends the zdr metadata fact and tracks the flag', async () => {
+      const team = useTeam();
+      useUser();
+      let body: unknown;
+      client.scenario.post('/v1/api-keys', (req, res) => {
+        body = req.body;
+        res.json(mockApiKeyResponse);
+      });
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'api-keys',
+        'create',
+        '--name',
+        'escape-hatch',
+        '--zdr-exempt'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stdout).toOutput(mockApiKeyResponse.apiKeyString);
+      expect(await exitCodePromise).toBe(0);
+      expect(body).toMatchObject({
+        metadata: { zdr: { enableNonZdrModels: true } },
+      });
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:api-keys', value: 'api-keys' },
+        { key: 'subcommand:create', value: 'create' },
+        { key: 'option:name', value: '[REDACTED]' },
+        { key: 'flag:zdr-exempt', value: 'TRUE' },
+      ]);
+    });
+
+    it('omits metadata when the flag is not passed', async () => {
+      const team = useTeam();
+      useUser();
+      let body: unknown;
+      client.scenario.post('/v1/api-keys', (req, res) => {
+        body = req.body;
+        res.json(mockApiKeyResponse);
+      });
+      client.config.currentTeam = team.id;
+      client.setArgv('ai-gateway', 'api-keys', 'create');
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stdout).toOutput(mockApiKeyResponse.apiKeyString);
+      expect(await exitCodePromise).toBe(0);
+      expect(body).not.toHaveProperty('metadata');
+    });
+  });
+
+  describe('success with --bypass-all-settings', () => {
+    it('sends the bypassAll metadata fact and tracks the flag', async () => {
+      const team = useTeam();
+      useUser();
+      let body: unknown;
+      client.scenario.post('/v1/api-keys', (req, res) => {
+        body = req.body;
+        res.json(mockApiKeyResponse);
+      });
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'api-keys',
+        'create',
+        '--name',
+        'escape-hatch',
+        '--bypass-all-settings'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stdout).toOutput(mockApiKeyResponse.apiKeyString);
+      expect(await exitCodePromise).toBe(0);
+      expect(body).toMatchObject({
+        metadata: { bypassAll: true },
+      });
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:api-keys', value: 'api-keys' },
+        { key: 'subcommand:create', value: 'create' },
+        { key: 'option:name', value: '[REDACTED]' },
+        { key: 'flag:bypass-all-settings', value: 'TRUE' },
+      ]);
+    });
+
+    it('merges both facts when --zdr-exempt and --bypass-all-settings are passed', async () => {
+      const team = useTeam();
+      useUser();
+      let body: unknown;
+      client.scenario.post('/v1/api-keys', (req, res) => {
+        body = req.body;
+        res.json(mockApiKeyResponse);
+      });
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'api-keys',
+        'create',
+        '--zdr-exempt',
+        '--bypass-all-settings'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stdout).toOutput(mockApiKeyResponse.apiKeyString);
+      expect(await exitCodePromise).toBe(0);
+      expect(body).toMatchObject({
+        metadata: { zdr: { enableNonZdrModels: true }, bypassAll: true },
+      });
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:api-keys', value: 'api-keys' },
+        { key: 'subcommand:create', value: 'create' },
+        { key: 'flag:zdr-exempt', value: 'TRUE' },
+        { key: 'flag:bypass-all-settings', value: 'TRUE' },
+      ]);
     });
   });
 

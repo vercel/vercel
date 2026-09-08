@@ -10,6 +10,7 @@ import { buildCommand } from './build/command';
 import { buyCommand } from './buy/command';
 import { cacheCommand } from './cache/command';
 import { certsCommand } from './certs/command';
+import { changelogCommand } from './changelog/command';
 import { commentsCommand } from './comments/command';
 import { connexCommand } from './connex/command';
 import { contractCommand } from './contract/command';
@@ -32,6 +33,7 @@ import { inspectCommand } from './inspect/command';
 import { installCommand } from './install/command';
 import { integrationResourceCommand } from './integration-resource/command';
 import { integrationCommand } from './integration/command';
+import { kmsCommand } from './kms/command';
 import { linkCommand } from './link/command';
 import { listCommand } from './list/command';
 import { loginCommand } from './login/command';
@@ -51,6 +53,7 @@ import { routesCommand } from './routes/command';
 import { rollbackCommand } from './rollback/command';
 import { rollingReleaseCommand } from './rolling-release/command';
 import { sandboxCommand } from './sandbox/command';
+import { securityCommand } from './security/command';
 import { skillsCommand } from './skills/command';
 import { targetCommand } from './target/command';
 import { teamsCommand } from './teams/command';
@@ -60,6 +63,7 @@ import { tracesCommand } from './traces/command';
 import { upgradeCommand } from './upgrade/command';
 import { usageCommand } from './usage/command';
 import { vcrCommand } from './vcr/command';
+import { versionCommand } from './version/command';
 import { whoamiCommand } from './whoami/command';
 import { blobCommand } from './blob/command';
 import { webhooksCommand } from './webhooks/command';
@@ -80,6 +84,7 @@ const commandsStructs = [
   buyCommand,
   cacheCommand,
   certsCommand,
+  changelogCommand,
   commentsCommand,
   contractCommand,
   cronsCommand,
@@ -100,6 +105,7 @@ const commandsStructs = [
   installCommand,
   integrationCommand,
   integrationResourceCommand,
+  kmsCommand,
   linkCommand,
   listCommand,
   loginCommand,
@@ -118,6 +124,7 @@ const commandsStructs = [
   rollbackCommand,
   rollingReleaseCommand,
   sandboxCommand,
+  securityCommand,
   skillsCommand,
   targetCommand,
   teamsCommand,
@@ -128,6 +135,7 @@ const commandsStructs = [
   webhooksCommand,
   usageCommand,
   vcrCommand,
+  versionCommand,
   whoamiCommand,
   // added because we don't have a full help command
   { name: 'help', aliases: [] },

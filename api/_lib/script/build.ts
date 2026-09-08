@@ -6,6 +6,10 @@ import { join, dirname } from 'path';
 import { getExampleList } from '../examples/example-list';
 import { mapOldToNew } from '../examples/map-old-to-new';
 
+const {
+  previewTarballFilename,
+} = require('../../../utils/preview-tarball-filename.js');
+
 const repoRoot = join(__dirname, '..', '..', '..');
 const pubDir = join(repoRoot, 'public');
 const ignoredPackages = [];
@@ -26,6 +30,12 @@ async function main() {
     join(repoRoot, 'packages', 'fs-detectors', 'logos'),
     join(pubDir, 'monorepo-logos'),
     { recursive: true, force: true }
+  );
+
+  // Static installer script served at /install (see rewrite in vercel.json)
+  await fs.copyFile(
+    join(repoRoot, 'api', '_scripts', 'install.sh'),
+    join(pubDir, 'install.sh')
   );
 
   const examples = await getExampleList();
@@ -94,9 +104,17 @@ async function main() {
       );
     }
     const srcTarballPath = join(fullDir, tarballName);
+    // Nested `@vercel/node.tgz` keeps old `%40vercel/node.tgz` URLs working.
     const destTarballPath = join(tarballsDir, `${packageJson.name}.tgz`);
     await fs.mkdir(dirname(destTarballPath), { recursive: true });
     await fs.copyFile(srcTarballPath, destTarballPath);
+    const flatTarballPath = join(
+      tarballsDir,
+      previewTarballFilename(packageJson.name)
+    );
+    if (flatTarballPath !== destTarballPath) {
+      await fs.copyFile(srcTarballPath, flatTarballPath);
+    }
   }
 
   // Copy Python wheels to tarballs, preserving the original filename

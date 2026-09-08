@@ -285,6 +285,61 @@ export const transferInSubcommand = {
   examples: [],
 } as const;
 
+export const autoRenewSubcommand = {
+  name: 'auto-renew',
+  aliases: [],
+  description: 'Turn automatic renewal on or off for a registered domain',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+    {
+      name: 'state',
+      required: true,
+    },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Turn automatic renewal on',
+      value: `${packageName} domains auto-renew example.com on`,
+    },
+    {
+      name: 'Turn automatic renewal off',
+      value: `${packageName} domains auto-renew example.com off`,
+    },
+    {
+      name: 'JSON output',
+      value: `${packageName} domains auto-renew example.com on --json`,
+    },
+  ],
+} as const;
+
+export const renewSubcommand = {
+  name: 'renew',
+  aliases: [],
+  description:
+    'Renew a registered domain before it expires (charges your account)',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Renew a domain (shows the renewal price and asks to confirm)',
+      value: `${packageName} domains renew example.com`,
+    },
+    {
+      name: 'JSON output (renewal still requires interactive confirmation)',
+      value: `${packageName} domains renew example.com --json`,
+    },
+  ],
+} as const;
+
 export const verifySubcommand = {
   name: 'verify',
   aliases: [],
@@ -345,8 +400,25 @@ export const domainsCommand = {
     searchSubcommand,
     transferInSubcommand,
     removeSubcommand,
+    renewSubcommand,
+    autoRenewSubcommand,
     verifySubcommand,
   ],
   options: [],
-  examples: [],
+  examples: [
+    {
+      name: 'Renew a registered domain before it expires',
+      value: [
+        `${packageName} domains renew <DOMAIN>`,
+        `${packageName} domains renew example.com`,
+      ],
+    },
+    {
+      name: 'Turn automatic renewal on or off for a registered domain',
+      value: [
+        `${packageName} domains auto-renew <DOMAIN> <on | off>`,
+        `${packageName} domains auto-renew example.com on`,
+      ],
+    },
+  ],
 } as const;

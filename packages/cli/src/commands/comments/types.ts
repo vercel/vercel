@@ -106,9 +106,10 @@ export interface CommentsScope {
   teamSlug?: string;
   projectId?: string;
   projectName?: string;
-  /** True when the scope came from the cwd's project link. Branch inference
-   * is only coherent when the project context and the git context share a
-   * source — a branch from an unrelated checkout is noise, not context. */
+  /** True when the scope came from the cwd's link, or when an explicit
+   * --project was resolved through this checkout's repository link metadata
+   * (`repoRoot` on the link result). Branch inference is only coherent when
+   * the project context and the Git checkout share a source. */
   linked?: boolean;
 }
 

@@ -2,6 +2,8 @@ import { normalizePackageName, parsePep508 } from '@vercel/python-analysis';
 import type { PythonPackage } from '@vercel/python-analysis';
 
 type InjectedPackageName =
+  | 'vercel-apscheduler'
+  | 'vercel-apscheduler-bundle'
   | 'vercel-celery'
   | 'vercel-celery-bundle'
   | 'vercel-dramatiq'
@@ -17,6 +19,23 @@ const UPSTREAM_DEPENDENCY_ADAPTERS = new Map<
     integration: QueueIntegration;
   }
 >([
+  [
+    'apscheduler',
+    {
+      bundled: 'vercel-apscheduler-bundle',
+      unbundled: 'vercel-apscheduler',
+      envOverride: 'VERCEL_PYTHON_APSCHEDULER_DEPENDENCY',
+      preferUnbundledWhenPresent: ['vercel-queue'],
+      integration: {
+        module: 'vercel.integrations.apscheduler',
+        installer: 'install_vercel_apscheduler_integration',
+        // APScheduler jobs are declared while the subscriber module imports.
+        // Install first so the adapter can capture those definitions.
+        installBeforeImport: true,
+        subscriberProbe: 'is_scheduler_subscriber',
+      },
+    },
+  ],
   [
     'celery',
     {
@@ -59,6 +78,20 @@ export interface QueueIntegration {
   /** Name of the integration's install function within {@link module}. */
   installer: string;
   /**
+   * Install before importing the subscriber module. Frameworks whose
+   * declarations are created during import use this to observe construction
+   * rather than trying to reconstruct it afterward.
+   */
+  installBeforeImport?: boolean;
+  /**
+   * Optional function within {@link module} that reports whether a declared
+   * subscriber object belongs to this integration, given
+   * (module_name, variable_name). Build-time introspection calls it so
+   * classification stays in the integration instead of leaking wire details
+   * such as internal topic names.
+   */
+  subscriberProbe?: string;
+  /**
    * Optional function within {@link module} that queue-serving processes
    * call after {@link installer} to activate consumption (register push
    * callbacks, start the adapter's embedded worker). Never called from
@@ -67,58 +100,71 @@ export interface QueueIntegration {
   servingActivator?: string;
 }
 
-/**
- * Queue adapter integrations required by the project's direct
- * dependencies. Activation is keyed on the upstream dependency (celery,
- * dramatiq, …) being declared by the project — the integration package
- * itself may be conditionally injected or declared directly. Failing to
- * import or install a required integration is a hard error for the
- * callers emitting activation code.
- */
-export async function getQueueIntegrations({
-  pythonPackage,
-}: {
-  pythonPackage: PythonPackage | undefined;
-}): Promise<QueueIntegration[]> {
-  const dependencies = await getDirectDependencyNames(pythonPackage);
-  if (!dependencies) return [];
-  const integrations: QueueIntegration[] = [];
-  for (const [upstream, adapter] of UPSTREAM_DEPENDENCY_ADAPTERS) {
-    if (dependencies.has(upstream)) {
-      integrations.push(adapter.integration);
-    }
-  }
-  return integrations;
-}
-
-const INJECTED_PACKAGE_NAMES = new Set<InjectedPackageName>([
-  'vercel-celery',
-  'vercel-celery-bundle',
-  'vercel-dramatiq',
-  'vercel-dramatiq-bundle',
-]);
-
-export interface ConditionalInjectedPackage {
+export interface QueueAdapterInjectedPackage {
   name: InjectedPackageName;
   requirement: string;
   envOverride: string | undefined;
   allowLocalSource: boolean;
 }
 
-export async function getConditionalInjectedPackages({
+export interface QueueAdapterBootstrap {
+  /**
+   * Integrations to activate around importing subscriber modules, keyed on
+   * the upstream dependency (APScheduler, Celery, Dramatiq, …). The
+   * adapter package may be injected or self-declared. Callers emitting
+   * activation code treat a failed import or install as a hard error.
+   */
+  integrations: QueueIntegration[];
+  /** Adapter packages to install when the project does not declare them itself. */
+  injectedPackages: QueueAdapterInjectedPackage[];
+}
+
+/**
+ * The queue adapter bootstrap (package injection plus integration
+ * activation) required by the project's dependencies. Owns the
+ * applicability policy:
+ *
+ * - Only projects declaring `[[tool.vercel.subscribers]]` bootstrap
+ *   adapters: without a subscriber nothing serves the queues, and keying
+ *   on the upstream dependency alone would couple every project using the
+ *   framework to the adapter packages. hasDeclaredSubscribers is presence
+ *   in the project pyproject.toml (hasPyprojectSubscribers), not this
+ *   build's composed subscribers, so web service builds that only publish
+ *   still bootstrap.
+ * - Legacy vercel-workers projects are excluded: their runtime brings its
+ *   own adapter integration, and a second transport would compete with it.
+ */
+export async function getQueueAdapterBootstrap({
   pythonPackage,
   env,
+  legacyWorkersProject,
+  hasDeclaredSubscribers,
 }: {
   pythonPackage: PythonPackage | undefined;
   env: NodeJS.ProcessEnv;
-}): Promise<ConditionalInjectedPackage[]> {
+  legacyWorkersProject: boolean;
+  hasDeclaredSubscribers: boolean;
+}): Promise<QueueAdapterBootstrap> {
+  const integrations: QueueIntegration[] = [];
+  const injectedPackages: QueueAdapterInjectedPackage[] = [];
+  const bootstrap = { integrations, injectedPackages };
+  if (legacyWorkersProject || !hasDeclaredSubscribers) {
+    return bootstrap;
+  }
   const dependencies = await getDirectDependencyNames(pythonPackage);
-  if (!dependencies) return [];
+  if (!dependencies) {
+    return bootstrap;
+  }
 
-  const injectedPackages: ConditionalInjectedPackage[] = [];
   for (const [upstream, adapter] of UPSTREAM_DEPENDENCY_ADAPTERS) {
     if (!dependencies.has(upstream)) continue;
-    if (hasDirectInjectedPackage(dependencies)) {
+    integrations.push(adapter.integration);
+    // Injection is narrower than activation: a self-declared adapter is
+    // the user's to manage but must still be activated.
+    if (
+      dependencies.has(adapter.bundled) ||
+      dependencies.has(adapter.unbundled)
+    ) {
       continue;
     }
 
@@ -135,7 +181,7 @@ export async function getConditionalInjectedPackages({
     });
   }
 
-  return injectedPackages;
+  return bootstrap;
 }
 
 async function getDirectDependencyNames(
@@ -153,11 +199,4 @@ async function getDirectDependencyNames(
       .map(dependency => normalizePackageName(dependency.name))
   );
   return dependencyNames;
-}
-
-function hasDirectInjectedPackage(dependencies: Set<string>): boolean {
-  for (const packageName of INJECTED_PACKAGE_NAMES) {
-    if (dependencies.has(packageName)) return true;
-  }
-  return false;
 }

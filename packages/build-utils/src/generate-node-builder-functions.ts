@@ -65,6 +65,27 @@ export function generateNodeBuilderFunctions(
       slug: frameworkName,
       version,
     };
+    // Mirror the framework `defaultRoutes` catch-all, but copy the resolved
+    // (post-rewrite) path into the runtime request via a `request.path`
+    // transform so application routing observes the rewritten destination.
+    // Only emit when the node build did not already produce routes (e.g.
+    // middleware) so we don't clobber that behavior.
+    if (!res.routes) {
+      res.routes = [
+        { handle: 'filesystem' },
+        {
+          src: '/(.*)',
+          dest: '/',
+          transforms: [
+            {
+              type: 'request.path' as const,
+              op: 'set' as const,
+              args: '/$1',
+            },
+          ],
+        },
+      ];
+    }
     return res;
   };
 

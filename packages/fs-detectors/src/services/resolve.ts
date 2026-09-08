@@ -19,16 +19,18 @@ import {
   RUNTIME_BUILDERS,
   STATIC_BUILDERS,
   RUNTIME_MANIFESTS,
-} from './types';
+} from './runtimes/constants';
 import {
   filterFrameworksByRuntime,
-  getBuilderForRuntime,
-  hasFile,
   inferRuntimeFromFramework,
-  inferServiceRuntime,
-  INTERNAL_SERVICE_PREFIX,
+} from './runtimes/framework';
+import { getBuilderForRuntime, inferRuntime } from './runtimes/runtime';
+import {
+  parsePyModuleAttrEntrypoint,
+  isDockerfileEntrypoint,
   stripTrailingSlash,
-} from './utils';
+} from './runtimes/entrypoint';
+import { hasFile, INTERNAL_SERVICE_PREFIX } from './utils';
 import { frameworkList } from '@vercel/frameworks';
 import { detectFrameworks } from '../detect-framework';
 import type { DetectorFilesystem } from '../detectors/filesystem';
@@ -36,26 +38,6 @@ import { normalizeRoutePrefix } from '@vercel/routing-utils';
 import { isNodeBackendFramework } from '@vercel/build-utils';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
-
-/**
- * Match a Python `module:attr` entrypoint (e.g. `backend.jobs.scheduled:cleanup`).
- * Kept inline to avoid coupling fs-detectors to a Python-specific package.
- * Real verification would happen at the build time.
- */
-const PYTHON_MODULE_ATTR_RE =
-  /^([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*):([A-Za-z_][\w]*)$/;
-
-export function parsePyModuleAttrEntrypoint(entrypoint: string): {
-  attrName: string;
-  filePath: string;
-} | null {
-  const match = PYTHON_MODULE_ATTR_RE.exec(entrypoint);
-  if (!match) return null;
-  return {
-    attrName: match[2],
-    filePath: match[1].replace(/\./g, '/') + '.py',
-  };
-}
 
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
 const DNS_LABEL_RE = /^(?!-)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
@@ -219,20 +201,6 @@ interface ResolveConfiguredServiceOptions {
 
 interface ResolveAllConfiguredServicesOptions {
   requireFileEntrypointForBackendRuntimes?: boolean;
-}
-
-/**
- * A container service whose entrypoint points at a Dockerfile/Containerfile is
- * built and pushed at build time, rather than treated as a prebuilt image
- * reference. Matches `Dockerfile`, `Containerfile`, and `*.Dockerfile`.
- */
-function isDockerfileEntrypoint(entrypoint: string): boolean {
-  const base = posixPath.basename(entrypoint).toLowerCase();
-  return (
-    base === 'dockerfile' ||
-    base === 'containerfile' ||
-    base.endsWith('.dockerfile')
-  );
 }
 
 function toWorkspaceRelativeEntrypoint(
@@ -729,7 +697,7 @@ export function validateServiceEntrypoint(
     !config.runtime &&
     !config.framework
   ) {
-    const runtime = inferServiceRuntime({
+    const runtime = inferRuntime({
       ...config,
       entrypoint: resolvedEntrypoint.normalized,
     });
@@ -820,7 +788,7 @@ export async function resolveConfiguredService(
   const normalizedEntrypoint = resolvedEntrypointPath?.normalized;
   const entrypointIsDirectory = Boolean(resolvedEntrypointPath?.isDirectory);
 
-  const inferredRuntime = inferServiceRuntime({
+  const inferredRuntime = inferRuntime({
     ...config,
     entrypoint: entrypointIsDirectory ? undefined : normalizedEntrypoint,
   });
@@ -1096,7 +1064,7 @@ export async function resolveAllConfiguredServices(
     let resolvedConfig = serviceConfig;
     if (!serviceConfig.framework && resolvedEntrypoint) {
       if (resolvedEntrypoint.isDirectory) {
-        const inferredRuntime = inferServiceRuntime({
+        const inferredRuntime = inferRuntime({
           ...serviceConfig,
         });
         const workspace = resolvedEntrypoint.normalized;
@@ -1123,7 +1091,7 @@ export async function resolveAllConfiguredServices(
           framework,
         };
       } else {
-        const inferredRuntime = inferServiceRuntime({
+        const inferredRuntime = inferRuntime({
           ...serviceConfig,
           entrypoint: resolvedEntrypoint.normalized,
         });

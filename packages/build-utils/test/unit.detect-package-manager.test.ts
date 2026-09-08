@@ -1,8 +1,11 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   detectPackageManager,
   PNPM_10_PREFERRED_AT,
+  PNPM_11_PREFERRED_AT,
 } from '../src/fs/run-user-scripts';
+import { getNodeVersionByMajor } from '../src/fs/node-version';
+import { mockPnpmMajorAvailable } from './mock-pnpm-major-available';
 
 describe('Test `detectPackageManager()`', () => {
   describe('with "npm"', () => {
@@ -25,6 +28,14 @@ describe('Test `detectPackageManager()`', () => {
   });
 
   describe('with "pnpm', () => {
+    beforeEach(() => {
+      mockPnpmMajorAvailable(11, true);
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     test.each<{
       name: string;
       args: Parameters<typeof detectPackageManager>;
@@ -111,6 +122,66 @@ describe('Test `detectPackageManager()`', () => {
         },
       },
       {
+        name: 'for 9.0 lockfile returns pnpm 10 path before prefer pnpm 11 datetime',
+        args: ['pnpm', 9.0, PNPM_11_PREFERRED_AT.getTime() - 1000],
+        want: {
+          detectedLockfile: 'pnpm-lock.yaml',
+          detectedPackageManager: 'pnpm@10.x',
+          pnpmVersionRange: '10.x',
+          path: '/pnpm10/node_modules/.bin',
+        },
+      },
+      {
+        name: 'for 9.0 lockfile returns pnpm 10 for projects created after the 2026-08-19 rollback cutoff',
+        args: ['pnpm', 9.0, new Date('2026-09-02T15:00:00Z').getTime()],
+        want: {
+          detectedLockfile: 'pnpm-lock.yaml',
+          detectedPackageManager: 'pnpm@10.x',
+          pnpmVersionRange: '10.x',
+          path: '/pnpm10/node_modules/.bin',
+        },
+      },
+      {
+        name: 'for 9.0 lockfile returns pnpm 11 path after prefer pnpm 11 datetime',
+        args: ['pnpm', 9.0, PNPM_11_PREFERRED_AT.getTime() + 1000],
+        want: {
+          detectedLockfile: 'pnpm-lock.yaml',
+          detectedPackageManager: 'pnpm@11.x',
+          pnpmVersionRange: '11.x',
+          path: '/pnpm11/node_modules/.bin',
+        },
+      },
+      {
+        name: 'for 9.0 lockfile returns pnpm 11 path after prefer pnpm 11 datetime on Node 22',
+        args: [
+          'pnpm',
+          9.0,
+          PNPM_11_PREFERRED_AT.getTime() + 1000,
+          getNodeVersionByMajor(22),
+        ],
+        want: {
+          detectedLockfile: 'pnpm-lock.yaml',
+          detectedPackageManager: 'pnpm@11.x',
+          pnpmVersionRange: '11.x',
+          path: '/pnpm11/node_modules/.bin',
+        },
+      },
+      {
+        name: 'for 9.0 lockfile returns pnpm 10 path after prefer pnpm 11 datetime on Node 20',
+        args: [
+          'pnpm',
+          9.0,
+          PNPM_11_PREFERRED_AT.getTime() + 1000,
+          getNodeVersionByMajor(20),
+        ],
+        want: {
+          detectedLockfile: 'pnpm-lock.yaml',
+          detectedPackageManager: 'pnpm@10.x',
+          pnpmVersionRange: '10.x',
+          path: '/pnpm10/node_modules/.bin',
+        },
+      },
+      {
         name: 'for undefined lockfile does not return a path',
         args: ['pnpm', -3],
         want: undefined,
@@ -121,10 +192,27 @@ describe('Test `detectPackageManager()`', () => {
         want: undefined,
       },
     ])('$name', ({ args, want }) => {
-      const [cliType, lockfileVersion, preferredAt] = args;
+      const [cliType, lockfileVersion, preferredAt, nodeVersion] = args;
       expect(
-        detectPackageManager(cliType, lockfileVersion, preferredAt)
+        detectPackageManager(cliType, lockfileVersion, preferredAt, nodeVersion)
       ).toStrictEqual(want);
+    });
+
+    test('for 9.0 lockfile returns pnpm 10 when /pnpm11 is not in the image', () => {
+      mockPnpmMajorAvailable(11, false);
+      expect(
+        detectPackageManager(
+          'pnpm',
+          9.0,
+          PNPM_11_PREFERRED_AT.getTime() + 1000,
+          getNodeVersionByMajor(22)
+        )
+      ).toStrictEqual({
+        detectedLockfile: 'pnpm-lock.yaml',
+        detectedPackageManager: 'pnpm@10.x',
+        pnpmVersionRange: '10.x',
+        path: '/pnpm10/node_modules/.bin',
+      });
     });
   });
 

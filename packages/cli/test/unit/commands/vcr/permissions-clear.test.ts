@@ -55,11 +55,9 @@ describe('vcr permissions clear', () => {
   });
 
   it('clears all permissions with --yes', async () => {
-    let method = '';
     client.scenario.delete(
       '/v1/vcr/repository/my-app/permissions/all',
       (req, res) => {
-        method = req.method;
         expect(req.query.projectId).toBe('prj_vcr');
         res.status(204).end();
       }
@@ -68,7 +66,6 @@ describe('vcr permissions clear', () => {
     client.setArgv('vcr', 'permissions', 'my-app', 'clear', '--yes');
     const exitCode = await vcr(client);
     expect(exitCode).toBe(0);
-    expect(method).toBe('DELETE');
     expect(client.stderr.getFullOutput()).toContain(
       'Cleared repository permissions for my-app'
     );

@@ -3,289 +3,29 @@ import output from '../../../output-manager';
 import { parseArguments } from '../../../util/get-args';
 import { getFlagsSpecification } from '../../../util/get-flags-specification';
 import { printError } from '../../../util/error';
+import { isAPIError } from '../../../util/errors-ts';
 import { validateJsonOutput } from '../../../util/output-format';
-import { outputError } from '../../../util/command-validation';
 import formatTable from '../../../util/format-table';
 import indent from '../../../util/output/indent';
+import { packageName } from '../../../util/pkg-name';
 import { rulesSchemaSubcommand } from './command';
-import { CUSTOM_ALERT_EVENT_HELP } from './schema-help';
+import { resolveRulesTeam } from './parse-scope';
+import { handleRulesApiError, outputRulesError, rulesSchemaPath } from './util';
+import type {
+  AlertRuleAuthoringConstraint,
+  AlertRuleAuthoringExample,
+  AlertRuleAuthoringRuleType,
+  AlertRuleAuthoringSchemaResponse,
+  PublicAlertRuleType,
+} from './types';
 
-type RuleType = 'usage_anomaly' | 'error_anomaly' | 'custom_alert';
+interface SchemaField {
+  requirement: 'required' | 'optional' | 'conditional';
+  types: string[];
+  descriptions: string[];
+}
 
-type SchemaField = {
-  field: string;
-  required: 'yes' | 'no';
-  type: string;
-  notes: string;
-};
-
-type SchemaExample = {
-  name: string;
-  body: unknown;
-};
-
-type RuleTypeSchema = {
-  type: RuleType;
-  description: string;
-  fields: SchemaField[];
-  alertTypeFilterValues?: string[][];
-  customAlertFields?: SchemaField[];
-  queryJsonFields?: SchemaField[];
-  queryJsonBeforeEscaping?: unknown;
-  help?: string[];
-  examples: SchemaExample[];
-};
-
-const RULE_TYPES: Array<{ type: RuleType; description: string }> = [
-  {
-    type: 'usage_anomaly',
-    description: 'Built-in usage anomaly alerts',
-  },
-  {
-    type: 'error_anomaly',
-    description: 'Built-in error anomaly alerts',
-  },
-  {
-    type: 'custom_alert',
-    description: 'Custom Observability metric alerts',
-  },
-];
-
-const BUILT_IN_COMMON_FIELDS: SchemaField[] = [
-  field('name', 'yes', 'string', 'Rule name'),
-  field('alertTypes', 'yes', 'array', 'One or more alert type configs'),
-  field(
-    'projectId',
-    'no',
-    'string',
-    'OData project filter; omit for team-wide'
-  ),
-  field(
-    'autosubscribeOwnersInKnock',
-    'no',
-    'boolean',
-    'Subscribe project owners'
-  ),
-];
-
-const CUSTOM_ALERT_COMMON_FIELDS: SchemaField[] = [
-  field('name', 'yes', 'string', 'Rule name'),
-  field(
-    'projectId',
-    'no',
-    'string',
-    'Defaults to --project or the linked project'
-  ),
-  field('alertTypes', 'yes', 'array', 'One or more alert type configs'),
-  field('customAlert', 'yes', 'object', 'Custom alert definition'),
-  field(
-    'autosubscribeOwnersInKnock',
-    'no',
-    'boolean',
-    'Subscribe project owners'
-  ),
-];
-
-const USAGE_METRICS = [
-  'fluid_cpu_duration',
-  'fluid_duration',
-  'fast_data_transfer',
-  'edge_requests',
-  'function_invocations',
-];
-
-const customQueryJson = {
-  event: 'incomingRequest',
-  rollups: {
-    requests: {
-      measure: 'count',
-      aggregation: 'sum',
-    },
-  },
-  groupBy: ['route'],
-  granularity: { minutes: 5 },
-};
-
-const ratioQueryJson = {
-  event: 'incomingRequest',
-  rollups: {
-    numerator: {
-      measure: 'count',
-      aggregation: 'sum',
-      filter: 'httpStatus ge 500',
-    },
-    denominator: {
-      measure: 'count',
-      aggregation: 'sum',
-    },
-  },
-  granularity: { hours: 1 },
-};
-
-const SCHEMAS: Record<RuleType, RuleTypeSchema> = {
-  usage_anomaly: {
-    type: 'usage_anomaly',
-    description: 'Built-in usage anomaly alerts',
-    fields: [
-      ...BUILT_IN_COMMON_FIELDS,
-      field('alertTypes[].type', 'yes', 'string', 'usage_anomaly'),
-      field(
-        'alertTypes[].filter',
-        'no',
-        'string',
-        'OData filter for this type'
-      ),
-    ],
-    alertTypeFilterValues: [['metric', USAGE_METRICS.join(', ')]],
-    examples: [
-      {
-        name: 'Minimal',
-        body: {
-          name: 'Usage anomalies',
-          alertTypes: [{ type: 'usage_anomaly' }],
-        },
-      },
-      {
-        name: 'Filtered to one metric',
-        body: {
-          name: 'Edge request anomalies',
-          projectId: "projectId eq 'prj_123'",
-          alertTypes: [
-            { type: 'usage_anomaly', filter: "metric eq 'edge_requests'" },
-          ],
-        },
-      },
-    ],
-  },
-  error_anomaly: {
-    type: 'error_anomaly',
-    description: 'Built-in error anomaly alerts',
-    fields: [
-      ...BUILT_IN_COMMON_FIELDS,
-      field('alertTypes[].type', 'yes', 'string', 'error_anomaly'),
-      field(
-        'alertTypes[].filter',
-        'no',
-        'string',
-        'OData filter for this type'
-      ),
-    ],
-    alertTypeFilterValues: [
-      ['statusGroup', '4xx, 5xx'],
-      ['route', `route eq '/api/checkout', contains(route, '/api')`],
-    ],
-    examples: [
-      {
-        name: 'Minimal',
-        body: {
-          name: 'Error anomalies',
-          alertTypes: [{ type: 'error_anomaly' }],
-        },
-      },
-      {
-        name: 'Filtered to 5xx on one route',
-        body: {
-          name: 'Checkout 5xx errors',
-          projectId: "projectId eq 'prj_123'",
-          alertTypes: [
-            {
-              type: 'error_anomaly',
-              filter: "statusGroup eq '5xx' and route eq '/api/checkout'",
-            },
-          ],
-        },
-      },
-    ],
-  },
-  custom_alert: {
-    type: 'custom_alert',
-    description: 'Custom Observability metric alerts',
-    fields: [
-      ...CUSTOM_ALERT_COMMON_FIELDS,
-      field('alertTypes[].type', 'yes', 'string', 'custom_alert'),
-    ],
-    customAlertFields: [
-      field(
-        'customAlert.queryJsonString',
-        'yes',
-        'string',
-        'Escaped query JSON'
-      ),
-      field('customAlert.triggerType', 'yes', 'string', 'threshold, anomaly'),
-      field('customAlert.triggerOperator', 'yes', 'string', 'gt, gte, lt, lte'),
-      field(
-        'customAlert.triggerThreshold',
-        'yes',
-        'number',
-        'Threshold value or z-score'
-      ),
-      field(
-        'customAlert.minThreshold',
-        'no',
-        'number',
-        'Minimum observed value'
-      ),
-      field(
-        'customAlert.formula',
-        'no',
-        'object',
-        'Ratio formula; left and right reference rollup keys'
-      ),
-    ],
-    queryJsonFields: [
-      field('scope', 'no', 'object', 'Project scope'),
-      field(
-        'event',
-        'yes',
-        'string',
-        'Alert query event name, for example incomingRequest'
-      ),
-      field('rollups', 'yes', 'object', 'Named measure aggregations'),
-      field('rollups.*.measure', 'yes', 'string', 'Metric measure'),
-      field('rollups.*.aggregation', 'yes', 'string', 'Metric aggregation'),
-      field('rollups.*.filter', 'no', 'string', 'Rollup-level OData filter'),
-      field('groupBy', 'no', 'array', 'At most one dimension'),
-      field('filter', 'no', 'string', 'Top-level OData filter'),
-      field('granularity', 'no', 'object', '5m, 1h, or 1d; defaults to 5m'),
-    ],
-    queryJsonBeforeEscaping: customQueryJson,
-    help: CUSTOM_ALERT_EVENT_HELP,
-    examples: [
-      {
-        name: 'Anomaly',
-        body: {
-          name: 'Request volume anomaly',
-          alertTypes: [{ type: 'custom_alert' }],
-          customAlert: {
-            queryJsonString: JSON.stringify(customQueryJson),
-            triggerType: 'anomaly',
-            triggerOperator: 'gt',
-            triggerThreshold: 3,
-          },
-        },
-      },
-      {
-        name: 'Threshold ratio',
-        body: {
-          name: 'Checkout error rate',
-          alertTypes: [{ type: 'custom_alert' }],
-          customAlert: {
-            queryJsonString: JSON.stringify(ratioQueryJson),
-            triggerType: 'threshold',
-            triggerOperator: 'gt',
-            triggerThreshold: 0.05,
-            formula: {
-              operator: 'divide',
-              left: 'numerator',
-              right: 'denominator',
-            },
-            minThreshold: 20,
-          },
-        },
-      },
-    ],
-  },
-};
+type JsonSchema = Record<string, unknown>;
 
 export default async function schema(
   client: Client,
@@ -297,143 +37,360 @@ export default async function schema(
       argv,
       getFlagsSpecification(rulesSchemaSubcommand.options)
     );
-  } catch (err) {
-    printError(err);
+  } catch (error) {
+    printError(error);
     return 1;
   }
 
-  const formatResult = validateJsonOutput(parsedArgs.flags);
-  if (!formatResult.valid) {
-    output.error(formatResult.error);
-    return 1;
+  const format = validateJsonOutput(parsedArgs.flags);
+  if (!format.valid) {
+    return outputRulesError(client, false, 'INVALID_ARGUMENTS', format.error);
   }
 
-  const jsonOutput = formatResult.jsonOutput;
-  const ruleType = normalizeRuleType(parsedArgs.flags['--type']);
+  const value = parsedArgs.flags['--type'];
+  if (value !== undefined && value !== 'built-in' && value !== 'custom') {
+    const suggestion =
+      value === 'custom_alert'
+        ? ' Use custom; alert rule types are built-in and custom.'
+        : '';
+    return outputRulesError(
+      client,
+      format.jsonOutput,
+      'INVALID_RULE_TYPE',
+      `Invalid rule type "${String(value)}".${suggestion} Expected built-in or custom.`
+    );
+  }
 
-  if (!ruleType) {
-    if (parsedArgs.flags['--type']) {
-      return outputError(
+  const type = value as PublicAlertRuleType | undefined;
+  const scope = await resolveRulesTeam(client, format.jsonOutput);
+  if (typeof scope === 'number') return scope;
+
+  output.spinner('Fetching alert rule schema…');
+  try {
+    const document = await client.fetch<AlertRuleAuthoringSchemaResponse>(
+      rulesSchemaPath(scope.teamId, type)
+    );
+
+    if (format.jsonOutput) {
+      client.stdout.write(`${JSON.stringify(document, null, 2)}\n`);
+      return 0;
+    }
+
+    if (!type) {
+      printSchemaIndex(document.ruleTypes);
+      return 0;
+    }
+
+    const ruleSchema = document.ruleTypes.find(item => item.type === type);
+    if (!ruleSchema) {
+      return outputRulesError(
         client,
-        jsonOutput,
-        'INVALID_ARGUMENTS',
-        `Invalid alert rule type "${String(parsedArgs.flags['--type'])}". Use usage_anomaly, error_anomaly, or custom_alert.`
+        false,
+        'INVALID_SCHEMA_RESPONSE',
+        `The API did not return the ${type} alert rule schema.`
       );
     }
 
-    if (jsonOutput) {
-      client.stdout.write(
-        `${JSON.stringify({ types: RULE_TYPES }, null, 2)}\n`
-      );
-    } else {
-      output.log('Alert rule schema');
-      output.print(
-        `\n${formatRows(
-          ['Type', 'Description'],
-          RULE_TYPES.map(type => [type.type, type.description])
-        )}\n\nRun \`vercel alerts rules schema --type <type>\` to see a rule body schema.\n`
-      );
-    }
+    printSchema(ruleSchema);
     return 0;
-  }
-
-  printRuleSchema(client, SCHEMAS[ruleType], jsonOutput);
-  return 0;
-}
-
-function field(
-  field: string,
-  required: 'yes' | 'no',
-  type: string,
-  notes: string
-): SchemaField {
-  return { field, required, type, notes };
-}
-
-function normalizeRuleType(value: unknown): RuleType | undefined {
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-  const normalized = value
-    .trim()
-    .toLowerCase()
-    .replace(/[-\s]+/g, '_');
-  return RULE_TYPES.some(type => type.type === normalized)
-    ? (normalized as RuleType)
-    : undefined;
-}
-
-function printRuleSchema(
-  client: Client,
-  schema: RuleTypeSchema,
-  jsonOutput: boolean
-): void {
-  if (jsonOutput) {
-    client.stdout.write(`${JSON.stringify({ schema }, null, 2)}\n`);
-    return;
-  }
-
-  output.log(`Alert rule schema: ${schema.type}`);
-  output.print('\n');
-  printFieldSection('Fields', schema.fields);
-
-  if (schema.alertTypeFilterValues) {
-    output.print('alertTypes[].filter values\n\n');
-    output.print(
-      `${formatRows(
-        ['Field', 'Allowed values / examples'],
-        schema.alertTypeFilterValues
-      )}\n\n`
-    );
-  }
-
-  if (schema.customAlertFields) {
-    printFieldSection('Custom alert fields', schema.customAlertFields);
-  }
-
-  if (schema.queryJsonFields) {
-    printFieldSection(
-      'customAlert.queryJsonString fields',
-      schema.queryJsonFields
-    );
-  }
-
-  if (schema.queryJsonBeforeEscaping) {
-    output.print('customAlert.queryJsonString before escaping\n\n');
-    output.print(
-      `${indent(JSON.stringify(schema.queryJsonBeforeEscaping, null, 2), 2)}\n\n`
-    );
-  }
-
-  if (schema.help) {
-    output.print('Custom alert metric discovery\n\n');
-    output.print(`${indent(schema.help.join('\n'), 2)}\n\n`);
-  }
-
-  output.print('Body examples\n\n');
-  for (const example of schema.examples) {
-    output.print(`  ${example.name}\n\n`);
-    output.print(`${indent(JSON.stringify(example.body, null, 2), 4)}\n\n`);
+  } catch (error) {
+    if (isAPIError(error)) {
+      return handleRulesApiError(client, error, format.jsonOutput);
+    }
+    throw error;
+  } finally {
+    output.stopSpinner();
   }
 }
 
-function printFieldSection(title: string, fields: SchemaField[]): void {
-  output.print(`${title}\n\n`);
+function printSchemaIndex(ruleTypes: AlertRuleAuthoringRuleType[]): void {
+  output.log('Alert rule schemas');
   output.print(
     `${formatRows(
-      ['Field', 'Required', 'Type', 'Values / notes'],
-      fields.map(field => [
-        field.field,
-        field.required,
-        field.type,
-        field.notes,
-      ])
-    )}\n\n`
+      ['Type', 'Description'],
+      ruleTypes.map(item => [item.type, item.description])
+    )}\nRun \`${packageName} alerts rules schema --type <type>\` for fields and examples.\n`
   );
 }
 
+function printSchema(schema: AlertRuleAuthoringRuleType): void {
+  output.log(`Alert rule schema: ${schema.type}`);
+  output.print(`${schema.description}\n\n`);
+  printCliScope(schema.type);
+  printFields(schema);
+
+  if (schema.metricDiscovery) {
+    output.print('Metric discovery\n\n');
+    output.print(`${indent(schema.metricDiscovery.command, 2)}\n`);
+    output.print(`${indent(schema.metricDiscovery.description, 4)}\n\n`);
+  }
+
+  printConstraints(schema.constraints);
+  printExamples('Create examples', 'create', schema.create.examples);
+  printExamples('Update examples', 'update', schema.update.examples);
+}
+
+function printCliScope(type: PublicAlertRuleType): void {
+  output.print('CLI scope flags\n\n');
+  output.print(`${indent('--project <name-or-id>', 2)}\n`);
+  output.print(
+    `${indent(
+      type === 'built-in'
+        ? 'Apply the rule only to the resolved project'
+        : 'Set the project evaluated by the rule',
+      4
+    )}\n`
+  );
+  if (type === 'built-in') {
+    output.print(`${indent('--all', 2)}\n`);
+    output.print(`${indent('Apply the rule to every team project', 4)}\n`);
+  }
+  output.print(
+    `${indent('Use a scope flag or ruleScope in the body, not both.', 2)}\n\n`
+  );
+}
+
+function printFields(schema: AlertRuleAuthoringRuleType): void {
+  const createFields = collectFields(schema.create.jsonSchema);
+  const updateFields = collectFields(schema.update.jsonSchema);
+  const paths = [
+    ...createFields.keys(),
+    ...[...updateFields.keys()].filter(path => !createFields.has(path)),
+  ];
+
+  output.print('Fields\n\n');
+  for (const path of paths) {
+    const create = createFields.get(path);
+    const update = updateFields.get(path);
+    const types = unique([...(create?.types ?? []), ...(update?.types ?? [])]);
+    const descriptions = unique([
+      ...(create?.descriptions ?? []),
+      ...(update?.descriptions ?? []),
+    ]);
+
+    output.print(`${indent(path, 2)}\n`);
+    output.print(
+      `${indent(
+        `${types.join(' | ') || 'value'} · create ${
+          create?.requirement ?? 'not accepted'
+        } · update ${update?.requirement ?? 'not accepted'}`,
+        4
+      )}\n`
+    );
+    if (descriptions[0]) {
+      output.print(`${indent(descriptions[0], 4)}\n`);
+    }
+    output.print('\n');
+  }
+}
+
+function collectFields(schema: JsonSchema): Map<string, SchemaField> {
+  const fields = new Map<string, SchemaField>();
+  visitObjectSchema(schema, '', false, fields);
+  return fields;
+}
+
+function visitObjectSchema(
+  schema: JsonSchema,
+  prefix: string,
+  conditional: boolean,
+  fields: Map<string, SchemaField>
+): void {
+  const properties = asSchemaRecord(schema.properties);
+  const required = new Set(
+    Array.isArray(schema.required)
+      ? schema.required.filter(
+          (item): item is string => typeof item === 'string'
+        )
+      : []
+  );
+
+  for (const [name, propertySchema] of Object.entries(properties)) {
+    const path = prefix ? `${prefix}.${name}` : name;
+    const requirement = conditional
+      ? 'conditional'
+      : required.has(name)
+        ? 'required'
+        : 'optional';
+    addField(fields, path, propertySchema, requirement);
+    visitNestedSchema(propertySchema, path, requirement !== 'required', fields);
+  }
+
+  for (const variant of schemaVariants(schema)) {
+    visitObjectSchema(variant, prefix, true, fields);
+  }
+}
+
+function visitNestedSchema(
+  schema: JsonSchema,
+  path: string,
+  conditional: boolean,
+  fields: Map<string, SchemaField>
+): void {
+  if (schema.properties || schema.oneOf || schema.anyOf || schema.allOf) {
+    visitObjectSchema(schema, path, conditional, fields);
+  }
+
+  const additionalProperties = asSchema(schema.additionalProperties);
+  if (additionalProperties) {
+    const entryPath = `${path}.<key>`;
+    addField(fields, entryPath, additionalProperties, 'conditional');
+    visitNestedSchema(additionalProperties, entryPath, true, fields);
+  }
+
+  const items = asSchema(schema.items);
+  if (items) {
+    visitNestedSchema(items, `${path}[]`, true, fields);
+  }
+
+  if (Array.isArray(schema.prefixItems)) {
+    for (const item of schema.prefixItems) {
+      const itemSchema = asSchema(item);
+      if (itemSchema) visitNestedSchema(itemSchema, `${path}[]`, true, fields);
+    }
+  }
+}
+
+function addField(
+  fields: Map<string, SchemaField>,
+  path: string,
+  schema: JsonSchema,
+  requirement: SchemaField['requirement']
+): void {
+  const current = fields.get(path);
+  const type = describeSchemaType(schema);
+  const description =
+    typeof schema.description === 'string' ? schema.description : undefined;
+
+  if (!current) {
+    fields.set(path, {
+      requirement,
+      types: type ? [type] : [],
+      descriptions: description ? [description] : [],
+    });
+    return;
+  }
+
+  current.types = unique([...current.types, ...(type ? [type] : [])]);
+  current.descriptions = unique([
+    ...current.descriptions,
+    ...(description ? [description] : []),
+  ]);
+  if (current.requirement !== requirement) current.requirement = 'conditional';
+}
+
+function describeSchemaType(schema: JsonSchema): string {
+  if ('const' in schema) return formatLiteral(schema.const);
+  if (Array.isArray(schema.enum)) {
+    return schema.enum.map(formatLiteral).join(' | ');
+  }
+
+  const variants = schemaVariants(schema)
+    .map(describeSchemaType)
+    .filter(Boolean);
+  if (variants.length > 0) return unique(variants).join(' | ');
+
+  if (schema.type === 'array' || schema.prefixItems || schema.items) {
+    if (Array.isArray(schema.prefixItems)) {
+      const tuple = schema.prefixItems
+        .map(asSchema)
+        .filter((item): item is JsonSchema => item !== undefined)
+        .map(describeSchemaType)
+        .join(', ');
+      return `[${tuple || 'value'}]`;
+    }
+    const item = asSchema(schema.items);
+    return `${item ? describeSchemaType(item) : 'value'}[]`;
+  }
+
+  if (schema.type === 'object' || schema.properties) {
+    const value = asSchema(schema.additionalProperties);
+    return value ? `record<string, ${describeSchemaType(value)}>` : 'object';
+  }
+
+  return typeof schema.type === 'string' ? schema.type : 'value';
+}
+
+function schemaVariants(schema: JsonSchema): JsonSchema[] {
+  return ['oneOf', 'anyOf', 'allOf'].flatMap(key => {
+    const value = schema[key];
+    if (!Array.isArray(value)) return [];
+    return value
+      .map(asSchema)
+      .filter((item): item is JsonSchema => item !== undefined);
+  });
+}
+
+function asSchema(value: unknown): JsonSchema | undefined {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as JsonSchema)
+    : undefined;
+}
+
+function asSchemaRecord(value: unknown): Record<string, JsonSchema> {
+  const schema = asSchema(value);
+  if (!schema) return {};
+  return Object.fromEntries(
+    Object.entries(schema).filter(
+      (entry): entry is [string, JsonSchema] => asSchema(entry[1]) !== undefined
+    )
+  );
+}
+
+function formatLiteral(value: unknown): string {
+  return typeof value === 'string'
+    ? value
+    : (JSON.stringify(value) ?? String(value));
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values)];
+}
+
+function printConstraints(constraints: AlertRuleAuthoringConstraint[]): void {
+  if (constraints.length === 0) return;
+
+  output.print('Constraints\n\n');
+  for (const constraint of constraints) {
+    const operations = constraint.appliesTo.join('/');
+    const kind =
+      constraint.kind === 'request' ? '' : ` · ${humanize(constraint.kind)}`;
+    output.print(
+      `${indent(`${humanize(constraint.code)} · ${operations}${kind}`, 2)}\n`
+    );
+    output.print(`${indent(`Paths: ${constraint.paths.join(', ')}`, 4)}\n`);
+    output.print(`${indent(constraint.description, 4)}\n\n`);
+  }
+}
+
+function humanize(value: string): string {
+  const words = value.replace(/[-_]/g, ' ');
+  return `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
+}
+
+function printExamples(
+  title: string,
+  operation: 'create' | 'update',
+  examples: AlertRuleAuthoringExample[]
+): void {
+  output.print(`${title}\n\n`);
+  for (const example of examples) {
+    const fileName = operation === 'create' ? 'rule.json' : 'patch.json';
+    const command =
+      operation === 'create'
+        ? `${packageName} alerts rules add --body ./${fileName}`
+        : `${packageName} alerts rules update <rule-id> --body ./${fileName}`;
+    output.print(`${indent(example.name, 2)}\n`);
+    output.print(`${indent(`Body (${fileName}):`, 4)}\n`);
+    output.print(`${indent(JSON.stringify(example.body, null, 2), 6)}\n`);
+    output.print(`${indent(command, 4)}\n\n`);
+  }
+}
+
 function formatRows(headers: string[], rows: string[][]): string {
-  const alignment = headers.map(() => 'l' as const);
-  const tableRows = rows.map(row => [...row]);
-  return formatTable(headers, alignment, [{ rows: tableRows }]).trim();
+  return formatTable(
+    headers,
+    headers.map(() => 'l' as const),
+    [{ rows }]
+  ).trim();
 }

@@ -32,6 +32,10 @@ import {
 import {
   buildSetupPlan,
   applyPlan,
+  applySessionMigrations,
+  planSessionMigrations,
+  type SessionMigrationApplyResult,
+  type PlannedSessionMigration,
 } from '../../util/ai-gateway/coding-agents/apply';
 import {
   printResolvedState,
@@ -97,6 +101,9 @@ export default async function codingAgentsSetup(
   const reconfigure = opts['--reconfigure'] as boolean | undefined;
   const dryRun = opts['--dry-run'] as boolean | undefined;
   const noBackup = opts['--no-backup'] as boolean | undefined;
+  const noSessionMigration = opts['--no-session-migration'] as
+    | boolean
+    | undefined;
   const noKeychain = opts['--no-keychain'] as boolean | undefined;
   const agentConfig = opts['--agent-config'] as string[] | undefined;
   const shellRcOverride = opts['--shell-rc'] as string | undefined;
@@ -115,6 +122,7 @@ export default async function codingAgentsSetup(
   telemetry.trackCliFlagReconfigure(reconfigure);
   telemetry.trackCliFlagDryRun(dryRun);
   telemetry.trackCliFlagNoBackup(noBackup);
+  telemetry.trackCliFlagNoSessionMigration(noSessionMigration);
   telemetry.trackCliFlagNoKeychain(noKeychain);
   telemetry.trackCliOptionAgentConfig(agentConfig);
   telemetry.trackCliOptionShellRc(shellRcOverride);
@@ -163,14 +171,6 @@ export default async function codingAgentsSetup(
       `Invalid --apply "${applyMode}". Must be "edit" or "prompt".`
     );
   }
-  if (applyMode === 'prompt' && !wantKeychain) {
-    return failValidation(
-      client,
-      machine,
-      AGENT_REASON.INVALID_ARGUMENTS,
-      'The `--apply prompt` mode needs the macOS Keychain so the prompt never contains your plaintext key. Run on macOS without --no-keychain, or use `--apply edit`.'
-    );
-  }
   if (baseUrl !== undefined && !isValidBaseUrl(baseUrl)) {
     return failValidation(
       client,
@@ -210,7 +210,7 @@ export default async function codingAgentsSetup(
 
   if (dryRun && !machine) {
     printStatus(
-      `${chalk.bold('Dry run')} — previewing changes only. No files will be written and no API key will be created.`
+      `${chalk.bold('Dry run')}: previewing changes only. No files will be written and no API key will be created.`
     );
   }
 
@@ -310,31 +310,87 @@ export default async function codingAgentsSetup(
     }
   }
 
-  // With no --key we create one. Resolve the owning team first — it decides
-  // where the key lives (and can fail) — then collect name, quota, and expiry.
+  let sessionMigrations: PlannedSessionMigration[] = [];
+  if (!noSessionMigration) {
+    try {
+      sessionMigrations = await planSessionMigrations(agents, { home });
+    } catch (error) {
+      return failValidation(
+        client,
+        machine,
+        'session_migration_failed',
+        `${error instanceof Error ? error.message : String(error)}. No configuration was changed. Pass --no-session-migration to leave existing sessions untouched and continue.`
+      );
+    }
+    if (sessionMigrations.length > 0 && canPrompt && !yes && !dryRun) {
+      const count = sessionMigrations.reduce(
+        (total, migration) => total + migration.itemCount,
+        0
+      );
+      const agentNames = [
+        ...new Set(sessionMigrations.map(migration => migration.agent)),
+      ].join(' and ');
+      const migrate = await client.input.confirm(
+        count === 1
+          ? `Copy your existing ${agentNames} Desktop session so it stays visible after switching to the AI Gateway? The original will be left unchanged.`
+          : `Copy your ${count} existing ${agentNames} Desktop sessions so they stay visible after switching to the AI Gateway? The originals will be left unchanged.`,
+        true
+      );
+      if (!migrate) {
+        sessionMigrations = [];
+        printStatus(
+          `Skipped ${agentNames} Desktop session migration. Your existing sessions were left unchanged.`
+        );
+      }
+    }
+  }
+
   const willCreate = !providedKey;
   let keyName = name;
   let keyBudget = budget;
   let keyRefresh = refreshPeriod;
   let keyExpiresAt = flagExpiresAt;
-  // With every agent consent-skipped the run can only end as a no-op, so the
-  // key interview (and its team/scope requirement) has nothing to set up.
-  if (willCreate && agents.length > 0 && (!dryRun || canPrompt)) {
+  const preflightPlan = await buildSetupPlan(
+    agents,
+    {
+      apiKey: previewKey,
+      home,
+      useKeychain: wantKeychain,
+      overrides,
+      shellRcOverride,
+      baseUrlOverride: baseUrl,
+    },
+    sessionMigrations
+  );
+  const preflightSessionOnly =
+    !providedKey &&
+    !reconfigure &&
+    preflightPlan.changes.every(change => change.status === 'unchanged') &&
+    preflightPlan.migrations.length > 0;
+  if (applyMode === 'prompt' && !wantKeychain && !preflightSessionOnly) {
+    return failValidation(
+      client,
+      machine,
+      AGENT_REASON.INVALID_ARGUMENTS,
+      'The `--apply prompt` mode needs the macOS Keychain so the prompt never contains your plaintext key. Run on macOS without --no-keychain, or use `--apply edit`.'
+    );
+  }
+  if (
+    willCreate &&
+    !preflightSessionOnly &&
+    agents.length > 0 &&
+    (!dryRun || canPrompt)
+  ) {
     const promptCreate = canPrompt && !yes;
-
     const teamError = await ensureTeam(client, {
       machine,
       canPrompt,
       yes: Boolean(yes),
     });
-    if (teamError) {
-      return teamError;
-    }
-
+    if (teamError) return teamError;
     if (promptCreate && keyName === undefined) {
       keyName = await promptKeyName(client);
     }
-
     if (promptCreate) {
       if (keyBudget === undefined && keyRefresh === undefined) {
         const quota = await promptQuota(client);
@@ -346,8 +402,9 @@ export default async function codingAgentsSetup(
       }
     }
   }
+
   let useKeychain = wantKeychain;
-  if (wantKeychain && canPrompt && !yes) {
+  if (!preflightSessionOnly && wantKeychain && canPrompt && !yes) {
     useKeychain = await promptKeychain(client);
   }
 
@@ -390,20 +447,31 @@ export default async function codingAgentsSetup(
     );
   }
 
-  const previewPlan = await buildSetupPlan(agents, {
-    apiKey: previewKey,
-    home,
-    useKeychain,
-    overrides,
-    shellRcOverride,
-    baseUrlOverride: baseUrl,
-  });
+  const previewPlan = await buildSetupPlan(
+    agents,
+    {
+      apiKey: previewKey,
+      home,
+      useKeychain,
+      overrides,
+      shellRcOverride,
+      baseUrlOverride: baseUrl,
+    },
+    sessionMigrations
+  );
 
   const changed = previewPlan.changes.filter(
     c => c.status === 'create' || c.status === 'update'
   );
   const errored = previewPlan.changes.filter(c => c.status === 'error');
-  const alreadyConfigured = changed.length === 0 && errored.length === 0;
+  const noConfigChanges = changed.length === 0 && errored.length === 0;
+  const alreadyConfigured =
+    noConfigChanges && previewPlan.migrations.length === 0;
+  const sessionOnly =
+    !providedKey &&
+    !reconfigure &&
+    noConfigChanges &&
+    previewPlan.migrations.length > 0;
 
   if (machine) {
     return runMachine({
@@ -499,12 +567,13 @@ export default async function codingAgentsSetup(
     refreshPeriod: keyRefresh,
     expiresAt: keyExpiresAt,
     keychain: wantKeychain ? useKeychain : undefined,
+    preserveKey: sessionOnly,
   });
   printPlan(previewPlan, previewKey, { backup: !noBackup });
 
   if (dryRun) {
     printStatus(
-      `Dry run — no files written. Re-run without ${chalk.bold('--dry-run')} to apply.`
+      `Dry run: no files written. Re-run without ${chalk.bold('--dry-run')} to apply.`
     );
     return 0;
   }
@@ -512,7 +581,11 @@ export default async function codingAgentsSetup(
   // A shell-rc export alone doesn't count: without its agent config written,
   // the exported key would serve nothing.
   const agentConfigChanged = changed.filter(c => c.format !== 'shell');
-  if (agentConfigChanged.length === 0 && errored.length > 0) {
+  if (
+    agentConfigChanged.length === 0 &&
+    errored.length > 0 &&
+    previewPlan.migrations.length === 0
+  ) {
     output.error(
       "Couldn't write any agent configurations. Fix the files above, then re-run."
     );
@@ -520,7 +593,12 @@ export default async function codingAgentsSetup(
   }
 
   let applyAction: 'apply' | 'copy' = applyMode === 'prompt' ? 'copy' : 'apply';
-  if (applyMode === undefined && changed.length > 0 && canPrompt && !yes) {
+  if (
+    applyMode === undefined &&
+    (changed.length > 0 || previewPlan.migrations.length > 0) &&
+    canPrompt &&
+    !yes
+  ) {
     if (useKeychain) {
       const choice = await client.input.select<'apply' | 'copy' | 'cancel'>({
         message: 'Apply these changes?',
@@ -546,6 +624,52 @@ export default async function codingAgentsSetup(
         return 0;
       }
     }
+  }
+
+  if (sessionOnly) {
+    if (applyAction === 'copy' && previewPlan.migrations.length > 0) {
+      const promptText = buildAgentPrompt(previewPlan, KEY_PLACEHOLDER);
+      emitAgentPrompt(client, promptText, applyMode === 'prompt', 'migration');
+      return 0;
+    }
+
+    const migrated = await applySessionMigrations(previewPlan);
+    printSessionMigrationReceipt(migrated, true);
+    return migrated.errors.length > 0 ? 1 : 0;
+  }
+
+  if (applyAction === 'copy' && !useKeychain) {
+    return failValidation(
+      client,
+      machine,
+      AGENT_REASON.INVALID_ARGUMENTS,
+      'The `--apply prompt` mode needs the macOS Keychain so the prompt never contains your plaintext key. Run on macOS without --no-keychain, or use `--apply edit`.'
+    );
+  }
+
+  const migrated =
+    applyAction === 'apply'
+      ? await applySessionMigrations(previewPlan)
+      : { results: [], errors: [] };
+  if (migrated.errors.length > 0) {
+    printSessionMigrationReceipt(migrated);
+    output.error(
+      'Session migration did not complete, so no agent configuration was changed. Rerun the command to retry, or pass --no-session-migration to set up without copying sessions.'
+    );
+    return 1;
+  }
+  if (migrated.results.length > 0) {
+    printSessionMigrationReceipt(migrated, true);
+  }
+  if (
+    applyAction === 'apply' &&
+    agentConfigChanged.length === 0 &&
+    errored.length > 0
+  ) {
+    output.error(
+      "Copied the eligible sessions, but couldn't write any agent configurations. Fix the files above, then re-run."
+    );
+    return 1;
   }
 
   let keySource: KeySource;
@@ -584,34 +708,22 @@ export default async function codingAgentsSetup(
     useKeychain = false;
   }
 
-  const applyPlanResult = await buildSetupPlan(agents, {
-    apiKey: keySource.key,
-    home,
-    useKeychain,
-    overrides,
-    shellRcOverride,
-    baseUrlOverride: baseUrl,
-  });
+  const applyPlanResult = await buildSetupPlan(
+    agents,
+    {
+      apiKey: keySource.key,
+      home,
+      useKeychain,
+      overrides,
+      shellRcOverride,
+      baseUrlOverride: baseUrl,
+    },
+    sessionMigrations
+  );
 
   if (applyAction === 'copy') {
     const promptText = buildAgentPrompt(applyPlanResult, keySource.key);
-    if (applyMode === 'prompt') {
-      const copied = copyToClipboard(promptText);
-      printStatus(
-        copied
-          ? 'Created the key and generated an agent prompt (copied to clipboard; also written to stdout).'
-          : 'Created the key and generated an agent prompt (written to stdout).'
-      );
-      client.stdout.write(`${promptText}\n`);
-    } else if (copyToClipboard(promptText)) {
-      printStatus(
-        'Prompt copied to clipboard. Paste it into your coding agent to apply the changes.'
-      );
-    } else {
-      output.debug('pbcopy failed or unavailable');
-      printStatus('Could not access the clipboard — prompt printed below:');
-      client.stdout.write(`${promptText}\n`);
-    }
+    emitAgentPrompt(client, promptText, applyMode === 'prompt', 'setup');
     printKey(keySource.key, { keychain: true, created: keySource.created });
     return 0;
   }
@@ -657,7 +769,6 @@ export default async function codingAgentsSetup(
       `Skipped ${change.label} (${change.path}): ${change.error}. Fix or remove the file, then re-run.`
     );
   }
-
   printNotes(applyPlanResult);
   if (
     keySource.created &&
@@ -669,7 +780,51 @@ export default async function codingAgentsSetup(
     // it once — otherwise it would be unrecoverable.
     client.stdout.write(`${keySource.key}\n`);
   }
-  return 0;
+  return migrated.errors.length > 0 ? 1 : 0;
+}
+
+function printSessionMigrationReceipt(
+  migration: SessionMigrationApplyResult,
+  gutter = false
+): void {
+  if (gutter) output.print('\n');
+  for (const result of migration.results) {
+    printAlignedLabel(
+      'Sessions',
+      `Copied ${result.copied} ${
+        result.copied === 1 ? 'session' : 'sessions'
+      } for ${result.agent}; originals unchanged`,
+      gutter ? { gutter: '✓' } : undefined
+    );
+    gutter = false;
+  }
+  for (const error of migration.errors) {
+    printWarning(
+      `Could not migrate ${error.agent} sessions: ${error.message}. Original sessions were left unchanged.`
+    );
+  }
+}
+
+function emitAgentPrompt(
+  client: Client,
+  prompt: string,
+  writeToStdout: boolean,
+  subject: 'migration' | 'setup'
+): void {
+  const copied = copyToClipboard(prompt);
+  if (writeToStdout) {
+    printStatus(
+      `Generated the ${subject} prompt${copied ? ' (also copied to clipboard)' : ''}.`
+    );
+    client.stdout.write(`${prompt}\n`);
+  } else if (copied) {
+    printStatus(
+      `Prompt copied. Paste it into your coding agent for the ${subject}.`
+    );
+  } else {
+    printStatus('Could not access the clipboard. Prompt printed below:');
+    client.stdout.write(`${prompt}\n`);
+  }
 }
 
 /**

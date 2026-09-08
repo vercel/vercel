@@ -91,6 +91,43 @@ test(
 );
 
 test(
+  '[vercel dev] bulkRedirectsPath applies before other routing',
+  testFixtureStdio(
+    'test-bulk-redirects',
+    async (testPath: any) => {
+      await testPath(200, '/', 'Hello World');
+      await testPath(308, '/old-blog', 'Redirecting...', {
+        Location: '/blog',
+      });
+      await testPath(308, '/OLD-BLOG', 'Redirecting...', {
+        Location: '/blog',
+      });
+      await testPath(307, '/old-about', 'Redirecting...', {
+        Location: '/about',
+      });
+      await testPath(301, '/old-contact', 'Redirecting...', {
+        Location: '/contact',
+      });
+      await testPath(307, '/drop-query?foo=1', 'Redirecting...', {
+        Location: '/dropped',
+      });
+      await testPath(307, '/keep-query?foo=1', 'Redirecting...', {
+        Location: '/kept?foo=1',
+      });
+      await testPath(307, '/conflict', 'Redirecting...', {
+        Location: '/from-bulk',
+      });
+      await testPath(308, '/only-json', 'Redirecting...', {
+        Location: '/from-vercel-json-only',
+      });
+    },
+    // New fixture projects get Deployment Protection, so the helper's
+    // production fetch 302s to vercel.com/sso-api before local assertions.
+    { skipDeploy: true }
+  )
+);
+
+test(
   '[vercel dev] test rewrites and redirects is case sensitive',
   testFixtureStdio('test-routing-case-sensitive', async (testPath: any) => {
     await testPath(200, '/Path', 'UPPERCASE');
@@ -274,7 +311,9 @@ test(
 test(
   '[vercel dev] Should support `*.go` API serverless functions with `go.work` and lib',
   testFixtureStdio('go-work-with-shared', async (testPath: any) => {
-    await testPath(200, `/api`, 'hello:go1.20.14');
+    // `vercel dev` builds with the newest supported toolchain, not the `go`
+    // directive, so assert the shared lib is linked without pinning a version.
+    await testPath(200, `/api`, /^hello:go1\.\d+(\.\d+)?\s*$/);
   })
 );
 

@@ -16,11 +16,20 @@ const projectScopeOption = {
   description: 'Project name or ID (defaults to the linked project).',
 } as const;
 
+const nextOption = {
+  name: 'next',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description: 'Continue from a previous response',
+  argument: 'CURSOR',
+} as const;
+
 const cursorOption = {
   name: 'cursor',
   shorthand: 'c',
   type: String,
-  deprecated: false,
+  deprecated: true,
   description: 'Cursor from a previous page to continue listing from',
   argument: 'STRING',
 } as const;
@@ -43,6 +52,17 @@ const pushOption = {
     'Push the image after building. With Docker this builds and pushes in one step (Buildx enables zstd compression); Podman and Buildah build, then push with zstd compression.',
 } as const;
 
+const publicOption = {
+  name: 'public',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description:
+    'Set the repository visibility: `true` for public, `false` for private.',
+  argument: 'BOOLEAN',
+  choices: ['true', 'false'],
+} as const;
+
 export const listSubcommand = {
   name: 'ls',
   aliases: ['list'],
@@ -51,6 +71,7 @@ export const listSubcommand = {
   options: [
     projectScopeOption,
     limitOption,
+    nextOption,
     cursorOption,
     formatOption,
     jsonOption,
@@ -101,6 +122,30 @@ export const addSubcommand = {
     {
       name: 'Create a repository',
       value: `${packageName} vcr add my-repository`,
+    },
+  ],
+} as const;
+
+export const configSubcommand = {
+  name: 'config',
+  aliases: [],
+  description:
+    "Configure a container registry repository, such as the repository's visibility",
+  arguments: [
+    {
+      name: 'repository',
+      required: true,
+    },
+  ],
+  options: [publicOption, projectScopeOption, formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Make a repository public',
+      value: `${packageName} vcr config my-repository --public true`,
+    },
+    {
+      name: 'Make a repository private',
+      value: `${packageName} vcr config my-repository --public false`,
     },
   ],
 } as const;
@@ -238,6 +283,7 @@ export const vcrCommand = {
     listSubcommand,
     inspectSubcommand,
     addSubcommand,
+    configSubcommand,
     removeSubcommand,
     loginSubcommand,
     buildSubcommand,

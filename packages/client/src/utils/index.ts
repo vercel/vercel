@@ -106,6 +106,32 @@ async function getUserIgnore(cwd: string): Promise<Ignore | null> {
   return ignore().add(clearRelative(ignoreFile));
 }
 
+/**
+ * Source-upload defaults that `--prebuilt` `filePathMap` may re-add even when
+ * the user also listed them in `.vercelignore`. These are dependency / framework
+ * output trees the CLI already skips on a normal deploy; NFT traces files inside
+ * them that hydrate still needs. Secrets (`.env*`), VCS, and `.vercel` are
+ * intentionally not in this list — see `getVercelIgnore`.
+ */
+const FILEPATHMAP_VERCELIGNORE_EXCEPTIONS = [
+  'node_modules',
+  '.next',
+  '.yarn/cache',
+  '.pnp*',
+  '.venv',
+  'venv',
+  '__pycache__',
+  '/target',
+];
+
+const filePathMapVercelignoreExceptions = ignore().add(
+  FILEPATHMAP_VERCELIGNORE_EXCEPTIONS.join('\n')
+);
+
+function isFilePathMapIgnoreException(posixRel: string): boolean {
+  return filePathMapVercelignoreExceptions.ignores(posixRel);
+}
+
 export async function buildFileTree(
   path: string | string[],
   {
@@ -157,9 +183,15 @@ export async function buildFileTree(
       // `filePathMap` values come from the `.vercel/output` build artifact,
       // which in split build/deploy workflows may be produced by a
       // lower-trust job than the one running the deploy. Re-apply the
-      // project's own `.vercelignore` / `.nowignore` rules and reject
-      // values that escape the deployment root, so a tampered artifact
-      // cannot re-add ignored (e.g. secret) files to the upload set.
+      // project's `.vercelignore` / `.nowignore` rules and reject values
+      // that escape the deployment root, so a tampered artifact cannot
+      // re-add ignored files (e.g. `.env`) to the upload set.
+      //
+      // Exception: paths under source-upload defaults like `node_modules/`
+      // and `.next/` — users often copy those into `.vercelignore`, but
+      // they are already ignored on a normal deploy, and `--prebuilt`
+      // must still upload the NFT-traced subset. See
+      // https://github.com/vercel/vercel/issues/17386.
       const userIg = await getUserIgnore(path);
       await Promise.all(
         vcConfigFilePaths.map(async p => {
@@ -169,17 +201,24 @@ export async function buildFileTree(
           for (const v of Object.values(config.filePathMap) as string[]) {
             const absPath = join(path, v);
             const rel = relative(path, absPath);
+            const posixRel = rel.split(sep).join('/');
             if (rel.startsWith('..') || isAbsolute(rel)) {
               debug(
                 `Ignoring "filePathMap" entry "${v}": resolves outside the deployment root`
               );
               continue;
             }
-            if (userIg && userIg.ignores(rel)) {
-              debug(
-                `Ignoring "filePathMap" entry "${v}": matched by a rule in .vercelignore/.nowignore`
-              );
-              continue;
+            if (userIg && userIg.ignores(posixRel)) {
+              if (isFilePathMapIgnoreException(posixRel)) {
+                debug(
+                  `Keeping "filePathMap" entry "${v}": matches a default-ignored dependency/output path`
+                );
+              } else {
+                debug(
+                  `Ignoring "filePathMap" entry "${v}": matched by a rule in .vercelignore/.nowignore`
+                );
+                continue;
+              }
             }
             refs.add(absPath);
           }
@@ -298,13 +337,16 @@ export async function getVercelIgnore(
       throw new Error(`\`cwd\` must be a "string"`);
     }
     const relOutputDir = relative(cwd, vercelOutputDir);
+    // Root-anchor negations: ignore@4 caches regexes by pattern string without
+    // the negation flag, so an unanchored `!.vercel` collides with a positive
+    // `.vercel` compiled earlier and re-includes files meant to stay local.
     ignores = ['*'];
     const parts = relOutputDir.split(sep);
     parts.forEach((_, i) => {
       const level = parts.slice(0, i + 1).join('/');
-      ignores.push(`!${level}`);
+      ignores.push(`!/${level}`);
     });
-    ignores.push(`!${parts.join('/')}/**`);
+    ignores.push(`!/${parts.join('/')}/**`);
     ig.add(ignores.join('\n'));
   } else {
     ignores = [

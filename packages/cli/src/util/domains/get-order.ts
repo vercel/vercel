@@ -11,7 +11,7 @@ type Response = {
   }[];
   status: 'draft' | 'purchasing' | 'completed' | 'failed';
   error?: {
-    code: 'payment_failed' | 'unexpected_error';
+    code: 'payment-failed' | 'unexpected-error';
   };
 };
 

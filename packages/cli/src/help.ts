@@ -51,7 +51,8 @@ export const help = () => `
       blob                 [cmd]       Manages your Blob stores and files
       buy                  [cmd]       Purchase Vercel products for your team
       certs                [cmd]       Manages your SSL certificates
-      connect              [cmd]       Manage connectors [beta]
+      changelog            [cmd]       Show the latest Vercel product updates
+      connect              [cmd]       Manage connectors
       contract                         Show contract information for billing periods
       cron | crons         [cmd]       Manage cron jobs for a project [beta]
       curl                 [url|path]  cURL requests with automatic deployment protection bypass [beta]
@@ -62,11 +63,11 @@ export const help = () => `
       flags                [cmd]       Manage feature flags for a Vercel project
       global-config        [cmd]       Manage Global Config stores
       httpstat             path        Visualize HTTP timing statistics for deployments
+      kms                  [cmd]       Manage KMS issuers, signing keys, and project grants [beta]
       logs                 [url]       Displays the logs for a deployment
       metrics              <metric>    Queries observability metrics for your project or team
       mcp                              Set up MCP agents and configuration
       microfrontends                   Manages your microfrontends
-      oauth-apps           [cmd]       Register Vercel Apps (OAuth) and manage team installations
       projects                         Manages your Projects
       redirects            [cmd]       Manages redirects for your current Project
       rm | remove          [id]        Removes a deployment
@@ -89,6 +90,7 @@ export const help = () => `
 
     -h, --help                     Output usage information
     -v, --version                  Output the version number
+    --changelog                    Show the 5 latest Vercel product updates
     --cwd                          Current working directory
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
       'FILE'
@@ -123,4 +125,12 @@ export const help = () => `
   )}
 
     ${chalk.cyan(`$ ${packageName} help list`)}
+
+  ${chalk.gray('–')} Show the 5 latest Vercel product updates
+
+    ${chalk.cyan(`$ ${packageName} --changelog`)}
+
+  ${chalk.gray('–')} Search Vercel product updates
+
+    ${chalk.cyan(`$ ${packageName} changelog search "AI SDK"`)}
 `;

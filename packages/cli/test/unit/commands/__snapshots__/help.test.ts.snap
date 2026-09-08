@@ -765,10 +765,10 @@ exports[`help command > connex help output snapshots > connex attach subcommand 
   -F,  --format <FORMAT>            Specify the output format (json)                                                         
        --json                       Output as JSON                                                                           
   -p,  --project <NAME_OR_ID>       Project name or ID (default: current linked project)                                     
-       --trigger-branch <BRANCH>    Target a specific git branch for the trigger destination (default: production). Only     
-                                    valid with --triggers.                                                                   
-       --trigger-environment <ENV>  Target a custom environment by slug or stable ID. Mutually exclusive with                
-                                    --trigger-branch and only valid with --triggers.                                         
+       --trigger-branch <BRANCH>    Target a preview deployment by git branch name. Omit the flag to target production.      
+                                    Cannot be combined with --trigger-environment. Only valid with --triggers.               
+       --trigger-environment <ENV>  Target a custom environment by slug or stable ID. Cannot be combined with                
+                                    --trigger-branch. Only valid with --triggers.                                            
        --trigger-path <PATH>        Path on the destination project that receives the forwarded webhook (default:            
                                     /{service}). Only valid with --triggers.                                                 
        --triggers                   Also register this project as a trigger destination so the connector forwards verified   
@@ -828,29 +828,51 @@ exports[`help command > connex help output snapshots > connex attach subcommand 
 
     $ vercel connect attach scl_abc123 --yes --json
 
+  Vercel Connect guide:
+
+    https://vercel.com/kb/guide/vercel-connect
+
 "
 `;
 
 exports[`help command > connex help output snapshots > connex create subcommand > connex create subcommand help column width 120 1`] = `
 "
-  ▲ vercel connect create type [options]
+  ▲ vercel connect create service [options]
 
   Create a new connector                                                                                                
+  Accepts a known service (slack, notion, okta) or the URL of an OAuth or MCP server (mcp.notion.com/mcp). Run \`create  
+  <service> --help\` to see how a specific service can be connected to.                                                  
 
   Options:
 
-       --accent-color <HEX>      Accent color for the connector icon (e.g. #1A2B3C)                                          
-       --background-color <HEX>  Background color for the connector icon (e.g. #1A2B3C)                                      
-       --connector-type <TYPE>   Connector type for non-managed creation. By default, the type is resolved from the service. 
-       --data <JSON>             JSON object for non-managed connector creation. When set, posts directly to the connector   
-                                 create API. Pass \`@<path>\` to read from a file or \`@-\` to read from stdin — recommended for 
-                                 secrets (e.g. client secrets), which leak into shell history when passed inline.            
-  -F,  --format <FORMAT>         Specify the output format (json)                                                            
-       --icon <PATH>             Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)               
-       --json                    Output as JSON                                                                              
-  -n,  --name <NAME>             Name of the connector                                                                       
-       --trigger-event <EVENT>   Webhook event to receive. Repeatable.                                                       
-       --triggers                Enable webhook triggers for this connector                                                  
+       --accent-color <HEX>          Accent color for the connector icon (e.g. #1A2B3C)                                      
+       --background-color <HEX>      Background color for the connector icon (e.g. #1A2B3C)                                  
+       --connection-method <METHOD>  How to connect to the service (e.g. oauth, mcp, api-key). Run without it to choose      
+                                     interactively; the error lists the valid values for a service.                          
+       --connector-type <TYPE>       Connector type for non-managed creation. By default, the type is resolved from the      
+                                     service.                                                                                
+       --data <JSON>                 JSON object for non-managed connector creation. When set, posts directly to the         
+                                     connector create API. Pass \`@<path>\` to read from a file or \`@-\` to read from stdin —   
+                                     recommended for secrets (e.g. client secrets), which leak into shell history when passed
+                                     inline.                                                                                 
+  -F,  --format <FORMAT>             Specify the output format (json)                                                        
+       --icon <PATH>                 Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)           
+       --json                        Output as JSON                                                                          
+  -n,  --name <NAME>                 Name of the connector                                                                   
+       --param <KEY=VALUE>           Value for a connection method template field (e.g. domain=acme.okta.com). Repeatable.   
+       --target <TARGET>             Which of the service's products to connect to (e.g. api, mcp). Only needed when a       
+                                     service exposes more than one.                                                          
+       --trigger-branch <BRANCH>     Target a preview deployment by git branch name. Omit the flag to target production.     
+                                     Cannot be combined with --trigger-environment. Requires --triggers.                     
+       --trigger-environment <ENV>   Target a custom environment by slug or stable ID. Cannot be combined with               
+                                     --trigger-branch. Requires --triggers.                                                  
+       --trigger-event <EVENT>       Webhook event to receive. Repeatable. Requires --triggers and replaces the provider's   
+                                     default events.                                                                         
+       --trigger-path <PATH>         Set the path on the destination project that receives forwarded webhooks. Requires      
+                                     --triggers.                                                                             
+       --trigger-project <PROJECT>   Target a project by name or ID instead of the linked project. Requires --triggers.      
+       --triggers                    Enable webhook triggers for this connector                                              
+  -y,  --yes                         Skip the single-connection-method confirmation prompt                                   
 
 
   Global Options:
@@ -885,9 +907,37 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 
     $ vercel connect create linear --name linear --triggers --trigger-event Issue --trigger-event Comment --trigger-event Project
 
+  - Create with a custom trigger path
+
+    $ vercel connect create github --name github --triggers --trigger-path /eve/v1/github
+
+  - Create with branch-specific trigger routing
+
+    $ vercel connect create github --name github --triggers --trigger-path /api/webhooks --trigger-branch staging
+
+  - Create with trigger routing on another project
+
+    $ vercel connect create github --name github --triggers --trigger-project my-api --trigger-path /api/webhooks
+
   - Create with branding (icon and colors)
 
     $ vercel connect create slack --name my-bot --icon ./logo.png --background-color '#1A2B3C' --accent-color '#FF0066'
+
+  - Create with a specific connection method
+
+    $ vercel connect create notion --connection-method mcp --name notion-mcp
+
+  - Create with an API key, reading it from a file
+
+    $ vercel connect create notion --connection-method api-key --name notion --data @key.json
+
+  - Create from a connection method that needs template values
+
+    $ vercel connect create okta --connection-method custom-server --param domain=acme.okta.com --param auth_server_id=default --name okta --data @creds.json
+
+  - Target a specific product of a service
+
+    $ vercel connect create notion --target api --connection-method oauth --name notion --data @creds.json
 
   - Create a non-managed connector from explicit data
 
@@ -904,6 +954,10 @@ exports[`help command > connex help output snapshots > connex create subcommand 
   - Output as JSON
 
     $ vercel connect create slack --json
+
+  Vercel Connect guide:
+
+    https://vercel.com/kb/guide/vercel-connect
 
 "
 `;
@@ -950,6 +1004,10 @@ exports[`help command > connex help output snapshots > connex detach subcommand 
 
     $ vercel connect detach scl_abc123 --yes --json
 
+  Vercel Connect guide:
+
+    https://vercel.com/kb/guide/vercel-connect
+
 "
 `;
 
@@ -957,13 +1015,16 @@ exports[`help command > connex help output snapshots > connex help column width 
 "
   ▲ vercel connect command
 
-  Manage connectors (Beta).                                                     
-  Vercel Connect is currently in beta. Behavior, commands, and output may       
-  change before general availability.                                           
+  Manage connectors                                                             
 
   Commands:
 
-  create         type       Create a new connector                      
+  create         service    Create a new connector                      
+                            Accepts a known service (slack, notion,     
+                            okta) or the URL of an OAuth or MCP server  
+                            (mcp.notion.com/mcp). Run \`create <service> 
+                            --help\` to see how a specific service can be
+                            connected to.                               
   update         id         Update connector branding (icon and colors) 
   list                      List connectors linked to the current       
                             project (falls back to every connector in   
@@ -978,6 +1039,7 @@ exports[`help command > connex help output snapshots > connex help column width 
   remove         connector  Delete a connector                          
   revoke-tokens  connector  Revoke tokens issued from a connector       
   open           id         Open a connector in the Vercel dashboard    
+  contacts                  Manage phone contacts for connectors        
 
 
   Global Options:
@@ -1017,6 +1079,10 @@ exports[`help command > connex help output snapshots > connex help column width 
   - Open a connector in the dashboard
 
     $ vercel connect open scl_abc123
+
+  Vercel Connect guide:
+
+    https://vercel.com/kb/guide/vercel-connect
 
 "
 `;
@@ -1096,6 +1162,10 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
 
     $ vercel connect list --json
 
+  Vercel Connect guide:
+
+    https://vercel.com/kb/guide/vercel-connect
+
 "
 `;
 
@@ -1138,6 +1208,10 @@ exports[`help command > connex help output snapshots > connex open subcommand > 
   - Print the dashboard URL as JSON
 
     $ vercel connect open scl_abc123 --json
+
+  Vercel Connect guide:
+
+    https://vercel.com/kb/guide/vercel-connect
 
 "
 `;
@@ -1200,6 +1274,10 @@ exports[`help command > connex help output snapshots > connex token subcommand >
 
     $ vercel connect token scl_abc123 --json
 
+  Vercel Connect guide:
+
+    https://vercel.com/kb/guide/vercel-connect
+
 "
 `;
 
@@ -1207,7 +1285,9 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 "
   ▲ vercel deploy [project-path] [options]
 
-  Deploy your project to Vercel. The    
+  Deploy your project to Vercel. Use    
+  \`--temporary\` to create a temporary   
+  deployment without logging in. The    
   \`deploy\` command is the default       
   command for the Vercel CLI, and can   
   be omitted (\`vc deploy my-app\` equals 
@@ -1360,6 +1440,12 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 target  
                                 deploym…
                                 environ…
+       --temporary              Create a
+                                tempora…
+                                deploym…
+                                without 
+                                logging 
+                                in      
        --with-cache             Retain  
                                 build   
                                 cache   
@@ -1460,7 +1546,8 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 "
   ▲ vercel deploy [project-path] [options]
 
-  Deploy your project to Vercel. The \`deploy\` command is the default command    
+  Deploy your project to Vercel. Use \`--temporary\` to create a temporary        
+  deployment without logging in. The \`deploy\` command is the default command    
   for the Vercel CLI, and can be omitted (\`vc deploy my-app\` equals \`vc         
   my-app\`). Use \`--dry\` to inspect the detected framework preset and source     
   files without deploying.                                                      
@@ -1499,6 +1586,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 deployment. You can use \`vc promote\` to complete
                                 the domain-assignment process later             
        --target <TARGET>        Specify the target deployment environment       
+       --temporary              Create a temporary deployment without logging in
        --with-cache             Retain build cache when using "--force"         
   -y,  --yes                    Use default options to skip all prompts         
 
@@ -1557,9 +1645,9 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 "
   ▲ vercel deploy [project-path] [options]
 
-  Deploy your project to Vercel. The \`deploy\` command is the default command for the Vercel CLI, and can be omitted     
-  (\`vc deploy my-app\` equals \`vc my-app\`). Use \`--dry\` to inspect the detected framework preset and source files        
-  without deploying.                                                                                                    
+  Deploy your project to Vercel. Use \`--temporary\` to create a temporary deployment without logging in. The \`deploy\`    
+  command is the default command for the Vercel CLI, and can be omitted (\`vc deploy my-app\` equals \`vc my-app\`). Use    
+  \`--dry\` to inspect the detected framework preset and source files without deploying.                                  
 
   Options:
 
@@ -1582,6 +1670,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
        --skip-domain            Disable the automatic promotion (aliasing) of the relevant domains to a new production  
                                 deployment. You can use \`vc promote\` to complete the domain-assignment process later    
        --target <TARGET>        Specify the target deployment environment                                               
+       --temporary              Create a temporary deployment without logging in                                        
        --with-cache             Retain build cache when using "--force"                                                 
   -y,  --yes                    Use default options to skip all prompts                                                 
 
@@ -1711,52 +1800,68 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
 
   Commands:
 
-  add     domain details   Add a
-                           new  
-                           DNS  
-                           entry
-                           (see 
-                           below
-                           for  
-                           exam…
-  import  domain zonefile  Impo…
-                           a DNS
-                           zone 
-                           file 
-                           (see 
-                           below
-                           for  
-                           exam…
-  list    [domain]         List 
-                           DNS  
-                           entr…
-                           Pass 
-                           a    
-                           doma…
-                           to   
-                           list 
-                           its  
-                           reco…
-                           or   
-                           omit 
-                           the  
-                           argu…
-                           to   
-                           list 
-                           reco…
-                           acro…
-                           every
-                           doma…
-                           on   
-                           the  
-                           scope
-                           (def…
-  remove  id               Remo…
-                           a DNS
-                           entry
-                           using
-                           its  
-                           ID   
+  add      domain details   Add a
+                            new  
+                            DNS  
+                            entry
+                            (see 
+                            below
+                            for  
+                            exam…
+  import   domain zonefile  Impo…
+                            a DNS
+                            zone 
+                            file 
+                            (see 
+                            below
+                            for  
+                            exam…
+  inspect  id               Show 
+                            a DNS
+                            reco…
+                            in   
+                            full 
+                            using
+                            its  
+                            ID   
+  list     [domain]         List 
+                            DNS  
+                            entr…
+                            Pass 
+                            a    
+                            doma…
+                            to   
+                            list 
+                            its  
+                            reco…
+                            or   
+                            omit 
+                            the  
+                            argu…
+                            to   
+                            list 
+                            reco…
+                            acro…
+                            every
+                            doma…
+                            on   
+                            the  
+                            scope
+                            (def…
+  remove   id               Remo…
+                            a DNS
+                            entry
+                            using
+                            its  
+                            ID   
+  update   id               Upda…
+                            an   
+                            exis…
+                            DNS  
+                            reco…
+                            using
+                            its  
+                            ID   
 
 
   Global Options:
@@ -1829,6 +1934,16 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
     $ vercel dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'
     $ vercel dns add zeit.rocks '@' CAA '0 issue "example.com"'
 
+  - Update an existing DNS record using its ID
+
+    $ vercel dns update <ID> --value <VALUE>
+    $ vercel dns update rec_1a2b3c4d5e6f --name api --ttl 300
+
+  - Show a DNS record in full using its ID
+
+    $ vercel dns inspect <ID>
+    $ vercel dns inspect rec_1a2b3c4d5e6f
+
   - Import a Zone file
 
     $ vercel dns import <DOMAIN> <FILE>
@@ -1850,13 +1965,15 @@ exports[`help command > dns help output snapshots > dns help column width 80 1`]
 
   Commands:
 
-  add     domain details   Add a new DNS entry (see below for examples) 
-  import  domain zonefile  Import a DNS zone file (see below for        
-                           examples)                                    
-  list    [domain]         List DNS entries. Pass a domain to list its  
-                           records, or omit the argument to list records
-                           across every domain on the scope (default)   
-  remove  id               Remove a DNS entry using its ID              
+  add      domain details   Add a new DNS entry (see below for examples) 
+  import   domain zonefile  Import a DNS zone file (see below for        
+                            examples)                                    
+  inspect  id               Show a DNS record in full using its ID       
+  list     [domain]         List DNS entries. Pass a domain to list its  
+                            records, or omit the argument to list records
+                            across every domain on the scope (default)   
+  remove   id               Remove a DNS entry using its ID              
+  update   id               Update an existing DNS record using its ID   
 
 
   Global Options:
@@ -1897,6 +2014,16 @@ exports[`help command > dns help output snapshots > dns help column width 80 1`]
     $ vercel dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'
     $ vercel dns add zeit.rocks '@' CAA '0 issue "example.com"'
 
+  - Update an existing DNS record using its ID
+
+    $ vercel dns update <ID> --value <VALUE>
+    $ vercel dns update rec_1a2b3c4d5e6f --name api --ttl 300
+
+  - Show a DNS record in full using its ID
+
+    $ vercel dns inspect <ID>
+    $ vercel dns inspect rec_1a2b3c4d5e6f
+
   - Import a Zone file
 
     $ vercel dns import <DOMAIN> <FILE>
@@ -1918,11 +2045,13 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
 
   Commands:
 
-  add     domain details   Add a new DNS entry (see below for examples)                                         
-  import  domain zonefile  Import a DNS zone file (see below for examples)                                      
-  list    [domain]         List DNS entries. Pass a domain to list its records, or omit the argument to list    
-                           records across every domain on the scope (default)                                   
-  remove  id               Remove a DNS entry using its ID                                                      
+  add      domain details   Add a new DNS entry (see below for examples)                                         
+  import   domain zonefile  Import a DNS zone file (see below for examples)                                      
+  inspect  id               Show a DNS record in full using its ID                                               
+  list     [domain]         List DNS entries. Pass a domain to list its records, or omit the argument to list    
+                            records across every domain on the scope (default)                                   
+  remove   id               Remove a DNS entry using its ID                                                      
+  update   id               Update an existing DNS record using its ID                                           
 
 
   Global Options:
@@ -1960,6 +2089,16 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
 
     $ vercel dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'
     $ vercel dns add zeit.rocks '@' CAA '0 issue "example.com"'
+
+  - Update an existing DNS record using its ID
+
+    $ vercel dns update <ID> --value <VALUE>
+    $ vercel dns update rec_1a2b3c4d5e6f --name api --ttl 300
+
+  - Show a DNS record in full using its ID
+
+    $ vercel dns inspect <ID>
+    $ vercel dns inspect rec_1a2b3c4d5e6f
 
   - Import a Zone file
 
@@ -2240,6 +2379,26 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    a   
                                    Ver…
                                    Team
+  renew        domain              Ren…
+                                   a   
+                                   reg…
+                                   dom…
+                                   bef…
+                                   it  
+                                   exp…
+                                   (ch…
+                                   your
+                                   acc…
+  auto-renew   domain state        Turn
+                                   aut…
+                                   ren…
+                                   on  
+                                   or  
+                                   off 
+                                   for 
+                                   a   
+                                   reg…
+                                   dom…
   verify       domain              Che…
                                    a   
                                    dom…
@@ -2306,6 +2465,18 @@ exports[`help command > domains help output snapshots > domains help column widt
                               number    
 
 
+  Examples:
+
+  - Renew a registered domain before it expires
+
+    $ vercel domains renew <DOMAIN>
+    $ vercel domains renew example.com
+
+  - Turn automatic renewal on or off for a registered domain
+
+    $ vercel domains auto-renew <DOMAIN> <on | off>
+    $ vercel domains auto-renew example.com on
+
 "
 `;
 
@@ -2332,6 +2503,10 @@ exports[`help command > domains help output snapshots > domains help column widt
   transfer-in  domain              Transfer in a domain name to Vercel         
   remove       domain              Remove ownership of a domain name from a    
                                    Vercel Team                                 
+  renew        domain              Renew a registered domain before it expires 
+                                   (charges your account)                      
+  auto-renew   domain state        Turn automatic renewal on or off for a      
+                                   registered domain                           
   verify       domain              Check a domain's DNS configuration and      
                                    explain what to fix when it is misconfigured
                                    or unverified                               
@@ -2352,6 +2527,18 @@ exports[`help command > domains help output snapshots > domains help column widt
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
 
+
+  Examples:
+
+  - Renew a registered domain before it expires
+
+    $ vercel domains renew <DOMAIN>
+    $ vercel domains renew example.com
+
+  - Turn automatic renewal on or off for a registered domain
+
+    $ vercel domains auto-renew <DOMAIN> <on | off>
+    $ vercel domains auto-renew example.com on
 
 "
 `;
@@ -2374,6 +2561,8 @@ exports[`help command > domains help output snapshots > domains help column widt
   search       query               Discover domain-name candidates from a keyword or fragment                          
   transfer-in  domain              Transfer in a domain name to Vercel                                                 
   remove       domain              Remove ownership of a domain name from a Vercel Team                                
+  renew        domain              Renew a registered domain before it expires (charges your account)                  
+  auto-renew   domain state        Turn automatic renewal on or off for a registered domain                            
   verify       domain              Check a domain's DNS configuration and explain what to fix when it is misconfigured 
                                    or unverified                                                                       
 
@@ -2391,6 +2580,18 @@ exports[`help command > domains help output snapshots > domains help column widt
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
+
+  Examples:
+
+  - Renew a registered domain before it expires
+
+    $ vercel domains renew <DOMAIN>
+    $ vercel domains renew example.com
+
+  - Turn automatic renewal on or off for a registered domain
+
+    $ vercel domains auto-renew <DOMAIN> <on | off>
+    $ vercel domains auto-renew example.com on
 
 "
 `;
@@ -2684,35 +2885,35 @@ exports[`help command > domains help output snapshots > domains verify help outp
 
 exports[`help command > env help output snapshots > env add help output snapshots > env add help column width 120 1`] = `
 "
-  ▲ vercel env add name [environment] [git-branch] [options]
+  ▲ vercel env add name [environment] [options]
 
-  Add an Environment Variable                                                                                           
+  Add an Environment Variable
 
   Options:
 
-       --force                    Overwrite an existing variable for the same target                                         
-       --guidance                 Show command suggestions after completion                                                  
-       --no-sensitive             Store the value as non-sensitive when policy allows                                        
-       --project <NAME_OR_ID>     Project name or ID (defaults to the linked project)                                        
-       --sensitive                Store the value as sensitive for Production or Preview                                     
-       --value <VALUE>            Set the variable value for non-interactive use; otherwise use stdin or the prompt          
-       --visibility <VISIBILITY>  Set config/secret visibility (\`config\` or \`secret\`). Inferred from type when omitted and   
-                                  VERCEL_ENV_VAR_CONFIG_SECRET_UI is set                                                     
-  -y,  --yes                      Skip the confirmation prompt when adding an Environment Variable                           
+       --force                 Overwrite an existing variable for the same target
+       --git-branch <NAME>     Set the Git branch for a Preview Environment Variable
+       --guidance              Show command suggestions after completion
+       --no-sensitive          Store the value as Config
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)
+       --sensitive             Store the value as a Secret
+       --type <TYPE>           Set the Environment Variable type (\`config\` or \`secret\`)
+       --value <VALUE>         Set the variable value for non-interactive use; otherwise use stdin or the prompt
+  -y,  --yes                   Accept default choices when adding an Environment Variable
 
 
   Global Options:
 
-       --cwd <DIR>            Sets the current working directory for a single run of a command                          
-  -d,  --debug                Debug mode (default off)                                                                  
-  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
-  -h,  --help                 Output usage information                                                                  
-  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
-       --no-color             No color mode (default off)                                                               
-       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
-  -S,  --scope                Set a custom scope                                                                        
-  -t,  --token <TOKEN>        Login token                                                                               
-  -v,  --version              Output the version number                                                                 
+       --cwd <DIR>            Sets the current working directory for a single run of a command
+  -d,  --debug                Debug mode (default off)
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory
+  -h,  --help                 Output usage information
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file
+       --no-color             No color mode (default off)
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default
+  -S,  --scope                Set a custom scope
+  -t,  --token <TOKEN>        Login token
+  -v,  --version              Output the version number
 
 
   Examples:
@@ -2736,14 +2937,14 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
     $ vercel env add API_TOKEN --force
 
-  - Add a regular (non-sensitive) Environment Variable that remains readable later
+  - Add a Config Environment Variable that remains readable later
 
     $ vercel env add API_TOKEN --no-sensitive
 
   - Add a new Environment Variable for a specific Environment and Git Branch
 
-    $ vercel env add <name> <production | preview | development> <gitbranch>
-    $ vercel env add DB_PASS preview feat1
+    $ vercel env add <name> <production | preview | development> --git-branch <name>
+    $ vercel env add DB_PASS preview --git-branch feat1
 
   - Add a new Environment Variable from stdin
 
@@ -2767,60 +2968,60 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
 
   Commands:
 
-  add     name [environment] [git-branch]  …
-                                           …
-                                           …
-                                           …
-  list    [environment] [git-branch]       …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           a
-                                           …
-  pull    [filename]                       …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           a
-                                           …
-                                           …
-  remove  name [environment]               …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-  run     command                          …
-                                           a
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-  update  name [environment]               …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
-                                           …
+  add     name [environment]          …
+                                      …
+                                      …
+                                      …
+  list    [environment] [git-branch]  …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      a
+                                      …
+  pull    [filename]                  …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      a
+                                      …
+                                      …
+  remove  name [environment]          …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+  run     command                     …
+                                      a
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+  update  name [environment]          …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
 
 
   Global Options:
@@ -2892,20 +3093,20 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
 
   Commands:
 
-  add     name [environment] [git-branch]  Add an Environment Variable     
-  list    [environment] [git-branch]       List all Environment Variables  
-                                           for a Project                   
-  pull    [filename]                       Pull all Development Environment
-                                           Variables from the cloud and    
-                                           write to a file [.env.local]    
-  remove  name [environment]               Remove an Environment Variable  
-                                           (see examples below)            
-  run     command                          Run a command with environment  
-                                           variables from the linked Vercel
-                                           project                         
-  update  name [environment]               Update the value of an existing 
-                                           Environment Variable (see       
-                                           examples below)                 
+  add     name [environment]          Add an Environment Variable         
+  list    [environment] [git-branch]  List all Environment Variables for a
+                                      Project                             
+  pull    [filename]                  Pull all Development Environment    
+                                      Variables from the cloud and write  
+                                      to a file [.env.local]              
+  remove  name [environment]          Remove an Environment Variable (see 
+                                      examples below)                     
+  run     command                     Run a command with environment      
+                                      variables from the linked Vercel    
+                                      project                             
+  update  name [environment]          Update the value of an existing     
+                                      Environment Variable (see examples  
+                                      below)                              
 
 
   Global Options:
@@ -2945,14 +3146,13 @@ exports[`help command > env help output snapshots > env help column width 120 1`
 
   Commands:
 
-  add     name [environment] [git-branch]  Add an Environment Variable                                             
-  list    [environment] [git-branch]       List all Environment Variables for a Project                            
-  pull    [filename]                       Pull all Development Environment Variables from the cloud and write to a
-                                           file [.env.local]                                                       
-  remove  name [environment]               Remove an Environment Variable (see examples below)                     
-  run     command                          Run a command with environment variables from the linked Vercel project 
-  update  name [environment]               Update the value of an existing Environment Variable (see examples      
-                                           below)                                                                  
+  add     name [environment]          Add an Environment Variable                                                 
+  list    [environment] [git-branch]  List all Environment Variables for a Project                                
+  pull    [filename]                  Pull all Development Environment Variables from the cloud and write to a    
+                                      file [.env.local]                                                           
+  remove  name [environment]          Remove an Environment Variable (see examples below)                         
+  run     command                     Run a command with environment variables from the linked Vercel project     
+  update  name [environment]          Update the value of an existing Environment Variable (see examples below)   
 
 
   Global Options:
@@ -5700,6 +5900,9 @@ exports[`help command > project help output snapshots > project help column widt
                                    …
                                    …
                                    …
+                                   …
+                                   …
+                                   …
                                    a
                                    …
   access-groups   [name]           …
@@ -5717,17 +5920,48 @@ exports[`help command > project help output snapshots > project help column widt
                                    …
                                    a
                                    …
-  web-analytics   [name]           …
+  web-analytics   [action] [name]  …
+                                   …
+                                   …
+                                   …
+                                   …
+                                   …
+                                   a
+                                   …
+  speed-insights  [action] [name]  …
+                                   …
+                                   …
                                    …
                                    …
                                    …
                                    a
                                    …
-  speed-insights  [name]           …
+  pause           [project]        …
                                    …
                                    …
                                    …
                                    a
+                                   …
+                                   …
+                                   …
+                                   …
+                                   …
+                                   …
+                                   …
+  observability   action [name]    …
+                                   …
+                                   …
+                                   …
+                                   …
+                                   …
+                                   a
+                                   …
+  resume          [project]        …
+                                   …
+                                   …
+                                   …
+                                   a
+                                   …
                                    …
   update          [name]           …
                                    …
@@ -5803,6 +6037,43 @@ exports[`help command > project help output snapshots > project help column widt
                               number    
 
 
+  Examples:
+
+  - Pause production traffic for a project
+
+    $ vercel project pause [NAME]
+    $ vercel project pause my-project
+
+  - Resume a paused project
+
+    $ vercel project resume [NAME]
+    $ vercel project resume my-project
+
+  - Add a member to a project
+
+    $ vercel project members add [NAME] <EMAIL | UID> --role <ROLE>
+    $ vercel project members add my-project user@example.com --role PROJECT_VIEWER
+
+  - Remove a member from a project
+
+    $ vercel project members remove [NAME] <EMAIL | UID>
+    $ vercel project members remove my-project user@example.com
+
+  - Enable or disable Observability Plus for a project
+
+    $ vercel project observability <enable | disable> [NAME]
+    $ vercel project observability enable my-project
+
+  - Enable Web Analytics for a project
+
+    $ vercel project web-analytics [NAME]
+    $ vercel project web-analytics my-project
+
+  - Enable Speed Insights for a project
+
+    $ vercel project speed-insights [NAME]
+    $ vercel project speed-insights my-project
+
 "
 `;
 
@@ -5814,28 +6085,39 @@ exports[`help command > project help output snapshots > project help column widt
 
   Commands:
 
-  add             name             Add a new project                        
-  access-summary  [name]           Show member counts by team role for      
-                                   project access (requires access groups   
-                                   entitlement)                             
-  checks          [name]           List, add, or remove deployment checks   
-                                   for a project (GET/POST/DELETE           
-                                   /v2/projects/.../checks)                 
-  inspect         [name]           Displays information related to a project
-  list                             Show all projects in the selected scope  
-                                   (default)                                
-  members         [name]           List project members for a project       
-  access-groups   [name]           List access groups for a project         
-  protection      [action] [name]  Show or toggle deployment protection     
-                                   settings for a project                   
-  web-analytics   [name]           Enable Web Analytics for a project       
-  speed-insights  [name]           Enable Speed Insights for a project      
-  update          [name]           Update one or more project settings;     
-                                   omitted settings remain unchanged        
-  rename          name new-name    Rename a project                         
-  remove          name             Delete a project                         
-  token           [name]           Get a development OIDC token for a       
-                                   project                                  
+  add             name             Add a new project                    
+  access-summary  [name]           Show member counts by team role for  
+                                   project access (requires access      
+                                   groups entitlement)                  
+  checks          [name]           List, add, or remove deployment      
+                                   checks for a project (GET/POST/DELETE
+                                   /v2/projects/.../checks)             
+  inspect         [name]           Displays information related to a    
+                                   project                              
+  list                             Show all projects in the selected    
+                                   scope (default)                      
+  members         [name]           List, add, or remove project members 
+                                   for a project                        
+  access-groups   [name]           List access groups for a project     
+  protection      [action] [name]  Show or toggle deployment protection 
+                                   settings for a project               
+  web-analytics   [action] [name]  Enable or disable Web Analytics for a
+                                   project                              
+  speed-insights  [action] [name]  Enable or disable Speed Insights for 
+                                   a project                            
+  pause           [project]        Pause production traffic for a       
+                                   project (visitors will see an error  
+                                   page)                                
+  observability   action [name]    Enable or disable Observability Plus 
+                                   for a project                        
+  resume          [project]        Resume production traffic for a      
+                                   paused project                       
+  update          [name]           Update one or more project settings; 
+                                   omitted settings remain unchanged    
+  rename          name new-name    Rename a project                     
+  remove          name             Delete a project                     
+  token           [name]           Get a development OIDC token for a   
+                                   project                              
 
 
   Global Options:
@@ -5854,6 +6136,43 @@ exports[`help command > project help output snapshots > project help column widt
   -v,  --version              Output the version number                         
 
 
+  Examples:
+
+  - Pause production traffic for a project
+
+    $ vercel project pause [NAME]
+    $ vercel project pause my-project
+
+  - Resume a paused project
+
+    $ vercel project resume [NAME]
+    $ vercel project resume my-project
+
+  - Add a member to a project
+
+    $ vercel project members add [NAME] <EMAIL | UID> --role <ROLE>
+    $ vercel project members add my-project user@example.com --role PROJECT_VIEWER
+
+  - Remove a member from a project
+
+    $ vercel project members remove [NAME] <EMAIL | UID>
+    $ vercel project members remove my-project user@example.com
+
+  - Enable or disable Observability Plus for a project
+
+    $ vercel project observability <enable | disable> [NAME]
+    $ vercel project observability enable my-project
+
+  - Enable Web Analytics for a project
+
+    $ vercel project web-analytics [NAME]
+    $ vercel project web-analytics my-project
+
+  - Enable Speed Insights for a project
+
+    $ vercel project speed-insights [NAME]
+    $ vercel project speed-insights my-project
+
 "
 `;
 
@@ -5865,22 +6184,25 @@ exports[`help command > project help output snapshots > project help column widt
 
   Commands:
 
-  add             name             Add a new project                                                                
-  access-summary  [name]           Show member counts by team role for project access (requires access groups       
-                                   entitlement)                                                                     
-  checks          [name]           List, add, or remove deployment checks for a project (GET/POST/DELETE            
-                                   /v2/projects/.../checks)                                                         
-  inspect         [name]           Displays information related to a project                                        
-  list                             Show all projects in the selected scope (default)                                
-  members         [name]           List project members for a project                                               
-  access-groups   [name]           List access groups for a project                                                 
-  protection      [action] [name]  Show or toggle deployment protection settings for a project                      
-  web-analytics   [name]           Enable Web Analytics for a project                                               
-  speed-insights  [name]           Enable Speed Insights for a project                                              
-  update          [name]           Update one or more project settings; omitted settings remain unchanged           
-  rename          name new-name    Rename a project                                                                 
-  remove          name             Delete a project                                                                 
-  token           [name]           Get a development OIDC token for a project                                       
+  add             name             Add a new project                                                            
+  access-summary  [name]           Show member counts by team role for project access (requires access groups   
+                                   entitlement)                                                                 
+  checks          [name]           List, add, or remove deployment checks for a project (GET/POST/DELETE        
+                                   /v2/projects/.../checks)                                                     
+  inspect         [name]           Displays information related to a project                                    
+  list                             Show all projects in the selected scope (default)                            
+  members         [name]           List, add, or remove project members for a project                           
+  access-groups   [name]           List access groups for a project                                             
+  protection      [action] [name]  Show or toggle deployment protection settings for a project                  
+  web-analytics   [action] [name]  Enable or disable Web Analytics for a project                                
+  speed-insights  [action] [name]  Enable or disable Speed Insights for a project                               
+  pause           [project]        Pause production traffic for a project (visitors will see an error page)     
+  observability   action [name]    Enable or disable Observability Plus for a project                           
+  resume          [project]        Resume production traffic for a paused project                               
+  update          [name]           Update one or more project settings; omitted settings remain unchanged       
+  rename          name new-name    Rename a project                                                             
+  remove          name             Delete a project                                                             
+  token           [name]           Get a development OIDC token for a project                                   
 
 
   Global Options:
@@ -5896,6 +6218,43 @@ exports[`help command > project help output snapshots > project help column widt
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
+
+  Examples:
+
+  - Pause production traffic for a project
+
+    $ vercel project pause [NAME]
+    $ vercel project pause my-project
+
+  - Resume a paused project
+
+    $ vercel project resume [NAME]
+    $ vercel project resume my-project
+
+  - Add a member to a project
+
+    $ vercel project members add [NAME] <EMAIL | UID> --role <ROLE>
+    $ vercel project members add my-project user@example.com --role PROJECT_VIEWER
+
+  - Remove a member from a project
+
+    $ vercel project members remove [NAME] <EMAIL | UID>
+    $ vercel project members remove my-project user@example.com
+
+  - Enable or disable Observability Plus for a project
+
+    $ vercel project observability <enable | disable> [NAME]
+    $ vercel project observability enable my-project
+
+  - Enable Web Analytics for a project
+
+    $ vercel project web-analytics [NAME]
+    $ vercel project web-analytics my-project
+
+  - Enable Speed Insights for a project
+
+    $ vercel project speed-insights [NAME]
+    $ vercel project speed-insights my-project
 
 "
 `;
@@ -5985,6 +6344,49 @@ exports[`help command > project help output snapshots > project list help output
 "
 `;
 
+exports[`help command > project help output snapshots > project pause help output snapshots > project pause help column width 120 1`] = `
+"
+  ▲ vercel project pause [project] [options]
+
+  Pause production traffic for a project (visitors will see an error page)                                              
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Pause the linked project
+
+    $ vercel project pause
+
+  - Pause the project named "my-project"
+
+    $ vercel project pause my-project
+
+  - Pause a project and print the result as JSON
+
+    $ vercel project pause my-project --json
+
+"
+`;
+
 exports[`help command > project help output snapshots > project remove help output snapshots > project remove help column width 120 1`] = `
 "
   ▲ vercel project remove name
@@ -6033,6 +6435,49 @@ exports[`help command > project help output snapshots > project rename help outp
   - Rename a project
 
     $ vercel project rename my-project my-renamed-project
+
+"
+`;
+
+exports[`help command > project help output snapshots > project resume help output snapshots > project resume help column width 120 1`] = `
+"
+  ▲ vercel project resume [project] [options]
+
+  Resume production traffic for a paused project                                                                        
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Resume the linked project
+
+    $ vercel project resume
+
+  - Resume the project named "my-project"
+
+    $ vercel project resume my-project
+
+  - Resume a project and print the result as JSON
+
+    $ vercel project resume my-project --json
 
 "
 `;

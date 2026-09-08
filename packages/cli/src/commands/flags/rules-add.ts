@@ -114,13 +114,18 @@ export default async function rulesAdd(
       environment,
       promptMessage: 'Select an environment to add the rule to:',
       requireActiveFlag: true,
-      fetchSettings: needsFlagRuleOutcomeSettings(outcomeOptions),
+      fetchSettings:
+        needsFlagRuleOutcomeSettings(outcomeOptions) ||
+        conditionInputs.length > 0,
     });
     if (isExitCodeResult(context)) {
       return context.exitCode;
     }
 
-    const conditions = parseFlagRuleConditions(conditionInputs);
+    const conditions = parseFlagRuleConditions(
+      conditionInputs,
+      context.settings
+    );
     const outcome = resolveFlagRuleOutcome(context.flag, context.settings, {
       ...outcomeOptions,
       requireOutcome: true,

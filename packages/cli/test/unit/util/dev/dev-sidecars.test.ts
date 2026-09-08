@@ -1,14 +1,14 @@
 import path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Builder, DevSubscriber } from '@vercel/build-utils';
-import type { BuilderWithPkg } from '../../../../src/util/build/import-builders';
-import { importBuilders } from '../../../../src/util/build/import-builders';
+import type { BuilderWithPkg } from '../../../../src/builders/import-builders';
+import { importBuilders } from '../../../../src/builders/import-builders';
 import {
   collectBuilderDevSidecars,
   toOrchestratorService,
 } from '../../../../src/util/dev/dev-sidecars';
 
-vi.mock('../../../../src/util/build/import-builders', () => ({
+vi.mock('../../../../src/builders/import-builders', () => ({
   importBuilders: vi.fn(),
 }));
 

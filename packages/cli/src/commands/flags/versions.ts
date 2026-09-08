@@ -140,7 +140,7 @@ async function listVersions(
   const [flagArg] = args;
   const environment = flags['--environment'] as string | undefined;
   const limit = flags['--limit'] as number | undefined;
-  const cursor = flags['--cursor'] as string | undefined;
+  const cursor = (flags['--next'] ?? flags['--cursor']) as string | undefined;
   const json = flags['--json'] as boolean | undefined;
   const projectName = getProjectNameFromFlags(flags);
 
@@ -155,7 +155,8 @@ async function listVersions(
   telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliOptionEnvironment(environment);
   telemetryClient.trackCliOptionLimit(limit);
-  telemetryClient.trackCliOptionCursor(cursor);
+  telemetryClient.trackCliOptionNext(flags['--next'] as string | undefined);
+  telemetryClient.trackCliOptionCursor(flags['--cursor'] as string | undefined);
   telemetryClient.trackCliFlagJson(json);
 
   if (
@@ -536,6 +537,7 @@ function buildNextPageCommand(
   const environment = flags['--environment'] as string | undefined;
   const baseFlags = getCommandFlags(flags, [
     '_',
+    '--next',
     '--cursor',
     '--environment',
     '--json',
@@ -543,5 +545,5 @@ function buildNextPageCommand(
   const environmentFlag = environment
     ? ` --environment ${quoteArg(environment)}`
     : '';
-  return `flags versions ${quoteArg(flagArg)}${baseFlags}${environmentFlag} --cursor ${quoteArg(nextCursor)}`;
+  return `flags versions ${quoteArg(flagArg)}${baseFlags}${environmentFlag} --next ${quoteArg(nextCursor)}`;
 }

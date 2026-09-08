@@ -71,4 +71,14 @@ export class EnvUpdateTelemetryClient
       });
     }
   }
+
+  trackCliOptionType(type: string | undefined) {
+    if (type) {
+      const validTypes = ['config', 'secret'];
+      this.trackCliOption({
+        option: 'type',
+        value: validTypes.includes(type) ? type : this.redactedValue,
+      });
+    }
+  }
 }

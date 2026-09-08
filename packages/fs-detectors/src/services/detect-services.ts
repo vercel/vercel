@@ -23,10 +23,10 @@ import type {
   ServiceDetectionWarning,
   ServicesRoutes,
 } from './types';
+import { isFrontendFramework } from './runtimes/framework';
 import {
   getInternalServiceCronPathPrefix,
   getInternalServiceFunctionPath,
-  isFrontendFramework,
   isRouteOwningBuilder,
   isStaticBuild,
   readVercelConfig,

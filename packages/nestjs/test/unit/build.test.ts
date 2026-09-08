@@ -70,44 +70,40 @@ const fixtures = {
   },
 };
 
-describe(
-  'build',
-  () => {
-    for (const [fixtureName, fixtureConfig] of Object.entries(fixtures)) {
-      it(`should build ${fixtureName}`, async () => {
-        const workPath = join(__dirname, '../fixtures', fixtureName);
+describe('build', { timeout: 120000 }, () => {
+  for (const [fixtureName, fixtureConfig] of Object.entries(fixtures)) {
+    it(`should build ${fixtureName}`, async () => {
+      const workPath = join(__dirname, '../fixtures', fixtureName);
 
-        const fileList = readDirectoryRecursively(workPath);
+      const fileList = readDirectoryRecursively(workPath);
 
-        const files = createFiles(workPath, fileList);
-        const result = await build({
-          files,
-          workPath,
-          config,
-          meta,
-          // Entrypoint is just used as the BOA function name
-          entrypoint: 'this value is not used',
-          repoRootPath: workPath,
-        });
-
-        if ('handler' in result.output) {
-          // expect(result.output.handler).toBe(fixtureConfig.handler.join(sep));
-          const file = result.output.files?.[result.output.handler];
-          if (file && 'data' in file) {
-            const content = file.data.toString();
-            const moduleTypeDetected = await detectModuleType(content);
-            expect(moduleTypeDetected).toBe(fixtureConfig.moduleType);
-          } else {
-            throw new Error(`file not found: ${result.output.handler}`);
-          }
-        } else {
-          throw new Error('entrypoint is not defined');
-        }
+      const files = createFiles(workPath, fileList);
+      const result = await build({
+        files,
+        workPath,
+        config,
+        meta,
+        // Entrypoint is just used as the BOA function name
+        entrypoint: 'this value is not used',
+        repoRootPath: workPath,
       });
-    }
-  },
-  { timeout: 120000 }
-);
+
+      if ('handler' in result.output) {
+        // expect(result.output.handler).toBe(fixtureConfig.handler.join(sep));
+        const file = result.output.files?.[result.output.handler];
+        if (file && 'data' in file) {
+          const content = file.data.toString();
+          const moduleTypeDetected = await detectModuleType(content);
+          expect(moduleTypeDetected).toBe(fixtureConfig.moduleType);
+        } else {
+          throw new Error(`file not found: ${result.output.handler}`);
+        }
+      } else {
+        throw new Error('entrypoint is not defined');
+      }
+    });
+  }
+});
 
 async function detectModuleType(content: string): Promise<'cjs' | 'esm'> {
   if (content.startsWith(`"use strict"`)) {

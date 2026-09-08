@@ -137,6 +137,50 @@ describe('inspect', () => {
     // empty line
     line = await lines.next();
     expect(line.value).toEqual('');
+
+    expect(client.stderr.getFullOutput()).not.toContain('Sandbox');
+  });
+
+  it('should show the configured sandbox regions', async () => {
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    const [team] = teams;
+    const { project } = useProject({
+      ...defaultProject,
+      name: 'test_project',
+      accountId: team.id,
+      sandbox: { region: 'sfo1', failoverRegions: ['cle1', 'iad1'] },
+    });
+
+    client.setArgv('project', 'inspect', project.name!);
+    await projects(client);
+
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Sandbox');
+    expect(output).toMatch(/Region\s+sfo1/);
+    expect(output).toMatch(/Failover Regions\s+cle1, iad1/);
+  });
+
+  it('should show the sandbox section with failover regions only', async () => {
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    const [team] = teams;
+    const { project } = useProject({
+      ...defaultProject,
+      name: 'test_project',
+      accountId: team.id,
+      sandbox: { failoverRegions: ['cle1'] },
+    });
+
+    client.setArgv('project', 'inspect', project.name!);
+    await projects(client);
+
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Sandbox');
+    expect(output).toMatch(/Region\s+Auto/);
+    expect(output).toMatch(/Failover Regions\s+cle1/);
   });
 
   it('does not auto-link a matching project in non-interactive mode', async () => {

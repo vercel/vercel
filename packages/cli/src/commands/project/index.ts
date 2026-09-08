@@ -13,9 +13,12 @@ import accessGroups from './access-groups';
 import rename from './rename';
 import update from './update';
 import rm from './rm';
+import pause from './pause';
+import resume from './resume';
 import getOidcToken from './token';
 import speedInsights from './speed-insights';
 import webAnalytics from './web-analytics';
+import observability from './observability';
 import protection from './protection';
 import {
   accessGroupsSubcommand,
@@ -25,11 +28,14 @@ import {
   inspectSubcommand,
   listSubcommand,
   membersSubcommand,
+  pauseSubcommand,
   projectCommand,
   protectionSubcommand,
   renameSubcommand,
   removeSubcommand,
+  resumeSubcommand,
   speedInsightsSubcommand,
+  observabilitySubcommand,
   tokenSubcommand,
   updateSubcommand,
   webAnalyticsSubcommand,
@@ -58,6 +64,9 @@ const COMMAND_CONFIG = {
   token: getCommandAliases(tokenSubcommand),
   speedInsights: getCommandAliases(speedInsightsSubcommand),
   webAnalytics: getCommandAliases(webAnalyticsSubcommand),
+  pause: getCommandAliases(pauseSubcommand),
+  observability: getCommandAliases(observabilitySubcommand),
+  resume: getCommandAliases(resumeSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -156,7 +165,13 @@ export default async function main(client: Client) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(membersSubcommand);
       }
-      telemetry.trackCliSubcommandMembers(subcommandOriginal);
+      telemetry.trackCliSubcommandMembers(
+        args[0] === 'add'
+          ? 'members add'
+          : args[0] === 'remove' || args[0] === 'rm'
+            ? 'members remove'
+            : subcommandOriginal
+      );
       exitCode = await members(client, args);
       break;
     case 'accessGroups':
@@ -186,7 +201,13 @@ export default async function main(client: Client) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(webAnalyticsSubcommand);
       }
-      telemetry.trackCliSubcommandWebAnalytics(subcommandOriginal);
+      telemetry.trackCliSubcommandWebAnalytics(
+        args[0] === 'enable'
+          ? 'web-analytics enable'
+          : args[0] === 'disable'
+            ? 'web-analytics disable'
+            : subcommandOriginal
+      );
       exitCode = await webAnalytics(client, args);
       break;
     case 'speedInsights':
@@ -194,8 +215,44 @@ export default async function main(client: Client) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(speedInsightsSubcommand);
       }
-      telemetry.trackCliSubcommandSpeedInsights(subcommandOriginal);
+      telemetry.trackCliSubcommandSpeedInsights(
+        args[0] === 'enable'
+          ? 'speed-insights enable'
+          : args[0] === 'disable'
+            ? 'speed-insights disable'
+            : subcommandOriginal
+      );
       exitCode = await speedInsights(client, args);
+      break;
+    case 'pause':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(pauseSubcommand);
+      }
+      telemetry.trackCliSubcommandPause(subcommandOriginal);
+      exitCode = await pause(client, args);
+      break;
+    case 'observability':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(observabilitySubcommand);
+      }
+      telemetry.trackCliSubcommandObservability(
+        args[0] === 'enable'
+          ? 'observability enable'
+          : args[0] === 'disable'
+            ? 'observability disable'
+            : subcommandOriginal
+      );
+      exitCode = await observability(client, args);
+      break;
+    case 'resume':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(resumeSubcommand);
+      }
+      telemetry.trackCliSubcommandResume(subcommandOriginal);
+      exitCode = await resume(client, args);
       break;
     case 'token':
       if (needHelp) {

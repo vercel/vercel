@@ -1,0 +1,20 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "framework:vercel_runtime-axum randomness:RANDOMNESS_PLACEHOLDER",
+      "responseHeaders": {
+        "content-type": "/text\\/html/"
+      }
+    },
+    {
+      "path": "/api/data",
+      "status": 200,
+      "mustContain": "\"crate\":\"vercel_runtime\"",
+      "responseHeaders": {
+        "content-type": "/application\\/json/"
+      }
+    }
+  ]
+}

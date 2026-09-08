@@ -92,7 +92,13 @@ async function compileUserCode(
     serverFound();
     return this;
   };
-  let listener = await import(id);
+  let listener;
+  try {
+    listener = await import(id);
+  } catch (error) {
+    http.Server.prototype.listen = originalListen;
+    throw error;
+  }
 
   /**
    * In some cases we might have nested default props due to TS => JS

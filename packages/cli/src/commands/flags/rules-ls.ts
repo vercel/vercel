@@ -16,7 +16,11 @@ import output from '../../output-manager';
 import { FlagsRulesCommandTelemetryClient } from '../../util/telemetry/commands/flags/rules';
 import { rulesListSubcommand } from './command';
 import { isExitCodeResult, resolveRulesCommandContext } from './rules-common';
-import type { FlagRule } from '../../util/flags/types';
+import type {
+  FlagRule,
+  FlagSettings,
+  FlagVariant,
+} from '../../util/flags/types';
 
 export default async function rulesLs(
   client: Client,
@@ -61,6 +65,7 @@ export default async function rulesLs(
       flagArg,
       environment,
       promptMessage: 'Select an environment to list rules for:',
+      fetchSettings: !json,
     });
     if (isExitCodeResult(context)) {
       return context.exitCode;
@@ -101,7 +106,7 @@ export default async function rulesLs(
     output.log(
       `${plural('conditional rule', rules.length, true)} found for ${chalk.bold(context.flag.slug)} in ${environmentLabel} ${chalk.gray(lsStamp())}`
     );
-    printRulesTable(rules, context.flag.variants);
+    printRulesTable(rules, context.flag.variants, context.settings);
   } catch (err) {
     output.stopSpinner();
     printError(err);
@@ -125,13 +130,16 @@ function outputJson(
 
 function printRulesTable(
   rules: FlagRule[],
-  variants: Parameters<typeof formatFlagRuleOutcome>[1]
+  variants: FlagVariant[],
+  settings?: FlagSettings
 ) {
   const headers = ['Position', 'ID', 'Conditions', 'Outcome'];
   const rows = rules.map((rule, index) => [
     String(index + 1),
     chalk.bold(rule.id),
-    rule.conditions.map(formatFlagRuleCondition).join('; '),
+    rule.conditions
+      .map(condition => formatFlagRuleCondition(condition, settings))
+      .join('; '),
     formatFlagRuleOutcome(rule.outcome, variants),
   ]);
 

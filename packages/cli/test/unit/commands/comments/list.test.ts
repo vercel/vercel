@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import comments from '../../../../src/commands/comments';
 import { inferBranch } from '../../../../src/commands/comments/scope';
-import getProjectByNameOrId from '../../../../src/util/projects/get-project-by-id-or-name';
-import { ProjectNotFound } from '../../../../src/util/errors-ts';
+import { APIError } from '../../../../src/util/errors-ts';
+import getOrgById from '../../../../src/util/projects/get-org-by-id';
 import {
   makeMessage,
   makeThread,
@@ -14,8 +14,12 @@ import {
 } from './helpers';
 
 vi.mock('../../../../src/util/projects/link');
-vi.mock('../../../../src/util/get-scope');
-vi.mock('../../../../src/util/projects/get-project-by-id-or-name');
+vi.mock('../../../../src/util/projects/get-org-by-id');
+vi.mock('../../../../src/util/get-scope', async importOriginal => {
+  const actual =
+    await importOriginal<typeof import('../../../../src/util/get-scope')>();
+  return { ...actual, default: vi.fn() };
+});
 vi.mock('../../../../src/commands/comments/scope', async importOriginal => {
   const actual =
     await importOriginal<
@@ -25,7 +29,7 @@ vi.mock('../../../../src/commands/comments/scope', async importOriginal => {
 });
 
 const mockedInferBranch = vi.mocked(inferBranch);
-const mockedGetProject = vi.mocked(getProjectByNameOrId);
+const mockedGetOrgById = vi.mocked(getOrgById);
 
 describe('comments list', () => {
   beforeEach(() => {
@@ -33,6 +37,7 @@ describe('comments list', () => {
     client.reset();
     mockLinkedProject();
     mockTeamScope();
+    mockedGetOrgById.mockResolvedValue(null);
     mockedInferBranch.mockReturnValue({ value: 'feat-x', source: 'git' });
   });
 
@@ -305,6 +310,68 @@ describe('comments list', () => {
     expect(requestQuery?.author).toBe('user_dummy');
   });
 
+  it('filters by recorded page path with --page-path', async () => {
+    let requestQuery: Record<string, unknown> | undefined;
+    client.scenario.get('/toolbar/threads', (req, res) => {
+      requestQuery = req.query;
+      res.json({ pagination: {}, threads: [] });
+    });
+
+    client.setArgv('comments', '--page-path', '/docs/*', '--format', 'json');
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(0);
+    expect(requestQuery?.page).toBe('/docs/*');
+    expect(client.telemetryEventStore.readonlyEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'option:page-path',
+          value: '[REDACTED]',
+        }),
+      ])
+    );
+  });
+
+  it('continues accepting --page as a page-path filter', async () => {
+    let requestQuery: Record<string, unknown> | undefined;
+    client.scenario.get('/toolbar/threads', (req, res) => {
+      requestQuery = req.query;
+      res.json({ pagination: {}, threads: [] });
+    });
+
+    client.setArgv('comments', '--page', '/docs/*', '--format', 'json');
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(0);
+    expect(requestQuery?.page).toBe('/docs/*');
+    expect(client.telemetryEventStore.readonlyEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: 'option:page', value: '[REDACTED]' }),
+      ])
+    );
+  });
+
+  it('rejects --author me for an app principal', async () => {
+    mockedGetScope.mockResolvedValue({
+      contextName: 'my-team',
+      team: { id: 'team_dummy', slug: 'my-team' },
+      user: null,
+      app: { id: 'app_dummy', name: 'Dummy App' },
+    } as never);
+
+    client.setArgv('comments', '--author', 'me', '--format', 'json');
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(1);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      error: {
+        code: 'USER_REQUIRED',
+        message:
+          "Can't resolve `--author me` when authenticated as an app. Use an author ID with `--author`, or authenticate with a user token.",
+      },
+    });
+  });
+
   it('discloses the author filter with an ID hint on empty results', async () => {
     client.scenario.get('/toolbar/threads', (_req, res) => {
       res.json({ pagination: {}, threads: [] });
@@ -335,10 +402,40 @@ describe('comments list', () => {
     expect(stderr).toContain('--project');
   });
 
-  it('resolves an explicit --project against the current team', async () => {
-    mockedGetProject.mockResolvedValue({
-      id: 'prj_other',
-      name: 'other-project',
+  it('uses local metadata to resolve an explicit project owner and infer the branch', async () => {
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'linked',
+      project: { id: 'prj_other', name: 'other-project' },
+      org: { id: 'team_other', slug: 'other-team', type: 'team' },
+      repoRoot: '/repo',
+    } as never);
+    let requestQuery: Record<string, unknown> | undefined;
+    client.scenario.get('/toolbar/threads', (req, res) => {
+      requestQuery = req.query;
+      res.json({ pagination: {}, threads: [makeThread()] });
+    });
+
+    client.setArgv('comments', '--project', 'other-project');
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(0);
+    expect(mockedGetLinkedProject).toHaveBeenCalledWith(
+      client,
+      expect.objectContaining({
+        projectName: 'other-project',
+        projectNameIsExplicit: true,
+      })
+    );
+    expect(requestQuery?.teamId).toBe('team_other');
+    expect(requestQuery?.projectId).toBe('prj_other');
+    expect(requestQuery?.branch).toBe('feat-x');
+  });
+
+  it('does not infer a branch for an explicit project without matching local metadata', async () => {
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'linked',
+      project: { id: 'prj_other', name: 'other-project' },
+      org: { id: 'team_dummy', slug: 'my-team', type: 'team' },
     } as never);
     let requestQuery: Record<string, unknown> | undefined;
     client.scenario.get('/toolbar/threads', (req, res) => {
@@ -350,22 +447,41 @@ describe('comments list', () => {
     const exitCode = await comments(client);
 
     expect(exitCode).toBe(0);
-    expect(mockedGetProject).toHaveBeenCalledWith(
-      client,
-      'other-project',
-      'team_dummy'
-    );
-    expect(requestQuery?.projectId).toBe('prj_other');
-    // Branch inference is gated on link-sourced scope: with an explicit
-    // --project, the cwd's git branch belongs to some unrelated checkout.
     expect(requestQuery?.branch).toBeUndefined();
     expect(client.stderr.getFullOutput()).toContain('all branches');
   });
 
+  it('resolves a local project when the current scope is a personal account', async () => {
+    mockedGetScope.mockResolvedValue({
+      contextName: 'personal-account',
+      team: null,
+      user: { id: 'user_dummy', username: 'personal-account' },
+    } as never);
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'linked',
+      project: { id: 'prj_other', name: 'other-project' },
+      org: { id: 'team_other', slug: 'other-team', type: 'team' },
+      repoRoot: '/repo',
+    } as never);
+    let requestQuery: Record<string, unknown> | undefined;
+    client.scenario.get('/toolbar/threads', (req, res) => {
+      requestQuery = req.query;
+      res.json({ pagination: {}, threads: [makeThread()] });
+    });
+
+    client.setArgv('comments', '--project', 'other-project');
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(0);
+    expect(requestQuery?.teamId).toBe('team_other');
+    expect(requestQuery?.branch).toBe('feat-x');
+  });
+
   it('carries scope flags into the inspect hint', async () => {
-    mockedGetProject.mockResolvedValue({
-      id: 'prj_other',
-      name: 'other-project',
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'linked',
+      project: { id: 'prj_other', name: 'other-project' },
+      org: { id: 'team_dummy', slug: 'my-team', type: 'team' },
     } as never);
     client.scenario.get('/toolbar/threads', (_req, res) => {
       res.json({ pagination: {}, threads: [makeThread()] });
@@ -380,14 +496,79 @@ describe('comments list', () => {
     );
   });
 
-  it('errors when --project is not found in the team', async () => {
-    mockedGetProject.mockResolvedValue(new ProjectNotFound('nope') as never);
+  it('names the resolved scope when --project is not found', async () => {
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'not_linked',
+      org: null,
+      project: null,
+      orgId: 'team_dummy',
+    } as never);
+    mockedGetOrgById.mockResolvedValue({
+      id: 'team_dummy',
+      slug: 'my-team',
+      type: 'team',
+    });
 
     client.setArgv('comments', '--project', 'nope');
     const exitCode = await comments(client);
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain('nope');
+    expect(client.stderr.getFullOutput()).toContain('(my-team)');
+  });
+
+  it('preserves the project context exit code in JSON mode', async () => {
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'error',
+      exitCode: 2,
+    } as never);
+
+    client.setArgv(
+      'comments',
+      '--project',
+      'other-project',
+      '--format',
+      'json'
+    );
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(2);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      error: {
+        code: 'PROJECT_CONTEXT_ERROR',
+        message: 'Could not resolve the project context.',
+      },
+    });
+  });
+
+  it('writes a JSON error when explicit project resolution fails', async () => {
+    mockedGetLinkedProject.mockRejectedValue(
+      new APIError(
+        'Project lookup failed',
+        {
+          status: 500,
+          headers: new Headers(),
+        } as never,
+        { code: 'internal_server_error' }
+      )
+    );
+
+    client.setArgv(
+      'comments',
+      '--project',
+      'other-project',
+      '--format',
+      'json'
+    );
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(1);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      error: {
+        code: 'internal_server_error',
+        message: 'Project lookup failed',
+      },
+    });
   });
 
   it('writes the JSON error envelope to stdout and exits 1 on API failure', async () => {

@@ -1,5 +1,9 @@
 import once from '@tootallnate/once';
-import { cloneEnv } from '@vercel/build-utils';
+import {
+  cloneEnv,
+  getNodeExecPath,
+  getOrCreateBunBinary,
+} from '@vercel/build-utils';
 import type { Config, Meta } from '@vercel/build-utils';
 import {
   ChildProcess,
@@ -10,7 +14,6 @@ import {
 } from 'child_process';
 import { pathToFileURL } from 'url';
 import { join } from 'path';
-import { getOrCreateBunBinary } from './bun-helpers';
 
 export async function forkDevServer(options: {
   tsConfig: any;
@@ -99,7 +102,10 @@ export async function forkDevServer(options: {
       }),
       stdio: options.printLogs ? 'pipe' : undefined,
     };
-    child = fork(devServerPath, [], forkOptions);
+    child = fork(devServerPath, [], {
+      ...forkOptions,
+      execPath: getNodeExecPath(),
+    });
   }
 
   if (options.printLogs) {

@@ -13,11 +13,13 @@ import logging
 import os
 import socket
 import sys
+import threading
 import time
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING, Any, Literal, Never, TextIO
 
+from vercel_runtime import deadline
 from vercel_runtime.cache import (
     SC_HEADERS_ALWAYS_STRIP,
     SC_HEADERS_STRIP_ON_NO_LEAK,
@@ -37,10 +39,12 @@ from vercel_runtime.headers import (
     clear_vercel_headers_context,
     decode_header_bytes,
     get_oidc_token_for_request,
+    is_internal_header,
     normalize_event_header_pairs,
     normalize_event_headers,
     set_vercel_headers_from_asgi_pairs,
     set_vercel_headers_from_http_headers,
+    strip_internal_headers,
 )
 from vercel_runtime.resolver import (
     detect_app_type,
@@ -53,6 +57,13 @@ from vercel_runtime.routing import (
     split_request_target,
 )
 from vercel_runtime.utils import read_wsgi_request_body
+from vercel_runtime.wait_until import (
+    WaitUntilCollector,
+    begin_wait_until,
+    clear_wait_until_context,
+    finish_wait_until,
+    finish_wait_until_async,
+)
 from vercel_runtime.workers import (
     install_queue_integrations,
     is_worker_service,
@@ -71,6 +82,9 @@ type _ASGISend = Callable[[dict[str, Any]], Awaitable[None]]
 type _ASGIApp = Callable[[_ASGIScope, _ASGIReceive, _ASGISend], Awaitable[None]]
 
 _original_stderr = sys.stderr
+
+# Cold start baseline when the trampoline did not set one
+_MODULE_IMPORTED_AT = time.monotonic()
 
 # --- IPC socket & send_message (must be available before _fatal) ----------
 _ipc_sock: socket.socket | None = None
@@ -364,6 +378,122 @@ def flush_init_log_buf_to_stderr() -> None:
 atexit.register(flush_init_log_buf_to_stderr)
 
 
+# --- Cold start phase timings ---------------------------------------------
+_BOOT_START_ENV = "__VC_PY_BOOT_START_MS"
+
+# Contiguous and in bootstrap order, so they sum to initDuration. Named as the
+# node bridge names them, since they share a metric per phase.
+_PHASE_BOOTSTRAP = "bootstrap"
+_PHASE_IMPORT_FN = "import-fn"
+_PHASE_SERVER_READY = "server-ready"
+
+_SERVER_TIMING_HEADER = "x-vercel-internal-timing"
+
+# Readiness probe, answered without invoking user code.
+_PING_PATH = "/_vercel/ping"
+
+
+def _boot_started_at() -> float:
+    """Monotonic baseline (seconds): trampoline stamp, else module start."""
+    raw = os.environ.get(_BOOT_START_ENV)
+    if raw:
+        try:
+            return int(raw) / 1000
+        except ValueError:
+            _stderr(f'invalid "{_BOOT_START_ENV}" value: "{raw}"')
+    return _MODULE_IMPORTED_AT
+
+
+_boot_start = _boot_started_at()
+_phase_marks: dict[str, float] = {}
+
+
+def _mark_phase(name: str) -> None:
+    """Record the monotonic time at which a cold start phase completed."""
+    _phase_marks[name] = time.monotonic()
+
+
+def _elapsed_ms(start: float, end: float) -> int:
+    """Milliseconds between two monotonic readings, clamped at zero."""
+    return max(int((end - start) * 1000), 0)
+
+
+def _cold_start_phases(ready_at: float) -> dict[str, int]:
+    """Duration (ms) of each cold start phase."""
+    bootstrap_end = _phase_marks.get(_PHASE_BOOTSTRAP, _boot_start)
+    import_fn_end = _phase_marks.get(_PHASE_IMPORT_FN, bootstrap_end)
+    return {
+        _PHASE_BOOTSTRAP: _elapsed_ms(_boot_start, bootstrap_end),
+        _PHASE_IMPORT_FN: _elapsed_ms(bootstrap_end, import_fn_end),
+        _PHASE_SERVER_READY: _elapsed_ms(import_fn_end, ready_at),
+    }
+
+
+# The cold start phases as a `Server-Timing` value, awaiting the first response.
+# `None` once emitted, so warm responses carry nothing.
+_pending_server_timing: str | None = None
+_pending_server_timing_lock = threading.Lock()
+
+
+def _format_server_timing(phases: dict[str, int]) -> str:
+    """Format phases the way the node bridge formats its own timings.
+
+    Durations are contiguous, so each offset is the sum of the phases before it.
+    """
+    entries: list[str] = []
+    offset = 0
+    for name, duration in phases.items():
+        entries.append(
+            f'{name};dur={duration};desc="{name}_{offset}+{duration}"'
+            f";offset={offset}"
+        )
+        offset += duration
+    return ",".join(entries)
+
+
+def _take_cold_start_timing() -> str | None:
+    """The cold start timings, for the first response to ask for them."""
+    global _pending_server_timing  # noqa: PLW0603
+    # Warm responses skip the lock entirely.
+    if _pending_server_timing is None:
+        return None
+    with _pending_server_timing_lock:
+        value = _pending_server_timing
+        _pending_server_timing = None
+    return value
+
+
+def _add_cold_start_timing_asgi(message: dict[str, Any]) -> None:
+    """Attach the cold start timings to an ASGI `http.response.start`."""
+    value = _take_cold_start_timing()
+    if value is None:
+        return
+    headers: list[tuple[bytes, bytes]] = list(message.get("headers") or [])
+    headers.append((_SERVER_TIMING_HEADER.encode(), value.encode()))
+    message["headers"] = headers
+
+
+def _send_server_started(http_port: int) -> None:
+    """Complete the runtime handshake and release buffered init logs."""
+    global _pending_server_timing  # noqa: PLW0603
+    ready_at = time.monotonic()
+    phases = _cold_start_phases(ready_at)
+    # The platform reads the breakdown off the first response, so it is only
+    # the user-attributable share that the handshake has to carry.
+    _pending_server_timing = _format_server_timing(phases)
+    send_message(
+        {
+            "type": "server-started",
+            "payload": {
+                "initDuration": _elapsed_ms(_boot_start, ready_at),
+                "httpPort": http_port,
+                "userInitDuration": phases[_PHASE_IMPORT_FN],
+            },
+        }
+    )
+    _flush_init_log_buf()
+
+
 if _ipc_sock is not None:
     setup_logging(send_message, storage)
 
@@ -483,6 +613,8 @@ _extra_path = os.environ.get("VERCEL_RUNTIME_ENV_PATH_PREPEND")
 if _extra_path:
     os.environ["PATH"] = _extra_path + ":" + os.environ.get("PATH", "")
 
+_mark_phase(_PHASE_BOOTSTRAP)
+
 try:
     prepare_worker_environment()
     # Publish-side activation only: subscriber lambdas do the consuming-side
@@ -514,6 +646,8 @@ if is_cron_service():
         _stderr("Error bootstrapping cron service app:")
         _stderr(traceback.format_exc())
         exit(1)
+
+_mark_phase(_PHASE_IMPORT_FN)
 
 _use_legacy_asyncio = sys.version_info < (3, 10)
 
@@ -558,7 +692,7 @@ class ASGIMiddleware:
             await self.app(scope, receive, send)
             return
 
-        if scope_type == "http" and scope.get("path") == "/_vercel/ping":
+        if scope_type == "http" and scope.get("path") == _PING_PATH:
             await send(
                 {
                     "type": "http.response.start",
@@ -582,6 +716,7 @@ class ASGIMiddleware:
         new_headers: list[tuple[bytes, bytes]] = []
         invocation_id = "0"
         request_id = 0
+        deadline_value: str | None = None
         internal_oidc_token: str | None = None
         sc_pairs: list[tuple[bytes, bytes]] = []
         sc_no_header_leak = False
@@ -602,6 +737,9 @@ class ASGIMiddleware:
                 "x-vercel-internal-trace-id",
             ):
                 continue
+            if key == deadline.INTERNAL_DEADLINE_HEADER:
+                deadline_value = val
+                continue
             if key == INTERNAL_OIDC_HEADER_NAME:
                 internal_oidc_token = val
                 continue
@@ -613,6 +751,8 @@ class ASGIMiddleware:
                 sc_pairs.append((key_bytes, val_bytes))
                 if key == SC_NO_HEADER_LEAK_HEADER:
                     sc_no_header_leak = bool(val)
+                continue
+            if is_internal_header(key):
                 continue
             new_headers.append((key_bytes, val_bytes))
 
@@ -648,33 +788,49 @@ class ASGIMiddleware:
                 "requestId": request_id,
             }
         )
+        deadline_token = deadline.set_deadline(deadline_value)
         set_vercel_headers_from_asgi_pairs(new_headers)
         set_runtime_cache_from_asgi_pairs(sc_pairs)
+        wait_until = begin_wait_until()
 
         request_finished = False
 
-        def finish_request() -> None:
+        async def finish_request() -> None:
             nonlocal request_finished
             if request_finished:
                 return
 
             request_finished = True
-            clear_runtime_cache_context()
-            clear_vercel_headers_context()
-            storage.reset(token)
-            send_message(
-                {
-                    "type": "end",
-                    "payload": {
-                        "context": {
-                            "invocationId": invocation_id,
-                            "requestId": request_id,
-                        }
-                    },
-                }
-            )
+            try:
+                await finish_wait_until_async(wait_until)
+            finally:
+                clear_runtime_cache_context()
+                clear_vercel_headers_context()
+                try:
+                    storage.reset(token)
+                except ValueError:
+                    storage.set(None)
+                send_message(
+                    {
+                        "type": "end",
+                        "payload": {
+                            "context": {
+                                "invocationId": invocation_id,
+                                "requestId": request_id,
+                            }
+                        },
+                    }
+                )
 
         async def send_wrapper(message: dict[str, Any]) -> None:
+            # Cheapest check first: after the first response there is nothing to
+            # report, so the message never has to be inspected.
+            if (
+                _pending_server_timing is not None
+                and message.get("type") == "http.response.start"
+            ):
+                _add_cold_start_timing_asgi(message)
+
             await send(message)
 
             if scope_type != "websocket":
@@ -684,28 +840,35 @@ class ASGIMiddleware:
             if message_type == "websocket.accept":
                 # End the request lifecycle once the 101 is sent so the
                 # platform can begin bidirectional WebSocket streaming.
-                finish_request()
+                await finish_request()
                 return
 
             if message_type == "websocket.close":
-                finish_request()
+                await finish_request()
                 return
 
             if (
                 message_type == "websocket.http.response.body"
                 and not message.get("more_body")
             ):
-                finish_request()
+                await finish_request()
 
         try:
             await self.app(new_scope, receive, send_wrapper)
         finally:
-            finish_request()
+            try:
+                await finish_request()
+            finally:
+                # The deadline mirrors Node: it stays readable for the entire
+                # handler, including post-accept WebSocket streaming, because
+                # the platform still enforces maxDuration on the invocation.
+                # Reset here, in the task that created the token, rather than
+                # in finish_request, which WebSocket accepts may run from a
+                # child task with a copied context.
+                deadline.reset_deadline(deadline_token)
 
 
 if "VERCEL_IPC_PATH" in os.environ:
-    start_time = time.time()
-
     # Override urlopen from urllib3 (& requests) to send Request Metrics
     try:
         from urllib.parse import urlparse
@@ -763,6 +926,19 @@ if "VERCEL_IPC_PATH" in os.environ:
         pass
 
     class BaseHandler(BaseHTTPRequestHandler):
+        def end_headers(self) -> None:
+            # Only the first response reports timings, so every response after
+            # it pays one `is not None` and nothing more.
+            if _pending_server_timing is not None:
+                # The readiness ping is not an invocation, so it must not
+                # consume the timings the first real response reports.
+                path = split_request_target(getattr(self, "path", ""))[0]
+                if path != _PING_PATH:
+                    value = _take_cold_start_timing()
+                    if value is not None:
+                        self.send_header(_SERVER_TIMING_HEADER, value)
+            super().end_headers()
+
         # Re-implementation of BaseHTTPRequestHandler's log_message method to
         # log to stdout instead of stderr.
         def log_message(self, format: str, *args: Any) -> None:
@@ -783,30 +959,36 @@ if "VERCEL_IPC_PATH" in os.environ:
             if getattr(self, "_vc_end_sent", False):
                 return
             self._vc_end_sent = True
-            clear_runtime_cache_context()
-            clear_vercel_headers_context()
-            token = getattr(self, "_vc_end_token", None)
-            if token is not None:
-                storage.reset(token)
-            send_message(
-                {
-                    "type": "end",
-                    "payload": {
-                        "context": {
-                            "invocationId": getattr(
-                                self, "_vc_invocation_id", "0"
-                            ),
-                            "requestId": getattr(self, "_vc_request_id", 0),
-                        }
-                    },
-                }
-            )
+            try:
+                wait_until = getattr(self, "_vc_wait_until", None)
+                if isinstance(wait_until, WaitUntilCollector):
+                    finish_wait_until(wait_until)
+            finally:
+                clear_runtime_cache_context()
+                clear_vercel_headers_context()
+                token = getattr(self, "_vc_end_token", None)
+                if token is not None:
+                    storage.reset(token)
+                send_message(
+                    {
+                        "type": "end",
+                        "payload": {
+                            "context": {
+                                "invocationId": getattr(
+                                    self, "_vc_invocation_id", "0"
+                                ),
+                                "requestId": getattr(self, "_vc_request_id", 0),
+                            }
+                        },
+                    }
+                )
 
         # Re-implementation of handle_one_request to send
         # the end message after the response is fully sent.
         def handle_one_request(self) -> None:
             self._vc_end_sent = False
             self._vc_end_token = None
+            self._vc_wait_until = None
             self.raw_requestline = self.rfile.readline(65537)
             if not self.raw_requestline:
                 self.close_connection = True
@@ -814,7 +996,7 @@ if "VERCEL_IPC_PATH" in os.environ:
             if not self.parse_request():
                 return
 
-            if split_request_target(self.path)[0] == "/_vercel/ping":
+            if split_request_target(self.path)[0] == _PING_PATH:
                 self.send_response(200)
                 self.end_headers()
                 return
@@ -838,6 +1020,9 @@ if "VERCEL_IPC_PATH" in os.environ:
             del self.headers["x-vercel-internal-request-id"]
             del self.headers["x-vercel-internal-span-id"]
             del self.headers["x-vercel-internal-trace-id"]
+            deadline_value = self.headers.get(deadline.INTERNAL_DEADLINE_HEADER)
+            with contextlib.suppress(Exception):
+                del self.headers[deadline.INTERNAL_DEADLINE_HEADER]
             raw_internal_oidc_token = self.headers.get(
                 INTERNAL_OIDC_HEADER_NAME
             )
@@ -854,6 +1039,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                 self.headers[OIDC_HEADER_NAME] = oidc_token
             with contextlib.suppress(Exception):
                 del self.headers[INTERNAL_OIDC_HEADER_NAME]
+            strip_internal_headers(self.headers)
 
             sc_no_header_leak = bool(
                 self.headers.get(SC_NO_HEADER_LEAK_HEADER),
@@ -886,12 +1072,22 @@ if "VERCEL_IPC_PATH" in os.environ:
                     "requestId": request_id,
                 }
             )
+            deadline_token = deadline.set_deadline(deadline_value)
             set_vercel_headers_from_http_headers(self.headers)
+            self._vc_wait_until = begin_wait_until()
 
             try:
                 self.handle_request()  # type: ignore[attr-defined]
             finally:
-                self._vc_fire_end_once()
+                try:
+                    self._vc_fire_end_once()
+                finally:
+                    # For a WebSocket upgrade _vc_fire_end_once runs at the
+                    # 101 handshake while this thread keeps driving the
+                    # socket. Keep the deadline readable until the handler
+                    # returns, mirroring Node: the platform still enforces
+                    # maxDuration on the invocation.
+                    deadline.reset_deadline(deadline_token)
 
     try:
         app_name, app_obj = resolve_app(
@@ -1050,16 +1246,7 @@ if "VERCEL_IPC_PATH" in os.environ:
             )
             server = uvicorn.Server(config)
 
-            send_message(
-                {
-                    "type": "server-started",
-                    "payload": {
-                        "initDuration": int((time.time() - start_time) * 1000),
-                        "httpPort": http_port,
-                    },
-                }
-            )
-            _flush_init_log_buf()
+            _send_server_started(http_port)
 
             # Run the server (blocking)
             server.run()
@@ -1068,16 +1255,7 @@ if "VERCEL_IPC_PATH" in os.environ:
 
     if "Handler" in locals():
         server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)  # type: ignore[assignment]
-        send_message(
-            {
-                "type": "server-started",
-                "payload": {
-                    "initDuration": int((time.time() - start_time) * 1000),
-                    "httpPort": server.server_address[1],  # type: ignore[attr-defined]
-                },
-            }
-        )
-        _flush_init_log_buf()
+        _send_server_started(server.server_address[1])  # type: ignore[attr-defined]
         server.serve_forever()  # type: ignore[attr-defined]
 
 try:
@@ -1104,6 +1282,8 @@ if (
         payload = json.loads(event["body"])
         path, _ = apply_service_route_prefix_to_target(payload["path"])
         headers = normalize_event_headers(payload.get("headers", {}))
+        deadline_value = deadline.pop_deadline_header(headers)
+        strip_internal_headers(headers)
         method = payload["method"]
         encoding = payload.get("encoding")
         body = payload.get("body")
@@ -1115,42 +1295,53 @@ if (
         if sc_no_header_leak:
             for sc_header in SC_HEADERS_STRIP_ON_NO_LEAK:
                 headers.pop(sc_header, None)
-
-        # `_thread.start_new_thread` does not propagate contextvars
-        captured_ctx = contextvars.copy_context()
-        _thread.start_new_thread(
-            captured_ctx.run,
-            (server.handle_request,),  # type: ignore[attr-defined]
-        )
-        clear_runtime_cache_context()
-
-        if (body is not None and len(body) > 0) and (
-            encoding is not None and encoding == "base64"
-        ):
-            body = base64.b64decode(body)
-
-        request_body = body.encode("utf-8") if isinstance(body, str) else body
-        conn = http.client.HTTPConnection("127.0.0.1", port)
+        deadline_token = deadline.set_deadline(deadline_value)
+        set_vercel_headers_from_http_headers(headers)
+        wait_until = begin_wait_until()
         try:
-            conn.request(method, path, headers=headers, body=request_body)
-        except (OSError, http.client.HTTPException) as ex:
-            _stderr(f"Request Error: {ex}")
-        res = conn.getresponse()
+            # `_thread.start_new_thread` does not propagate contextvars
+            captured_ctx = contextvars.copy_context()
+            _thread.start_new_thread(
+                captured_ctx.run,
+                (server.handle_request,),  # type: ignore[attr-defined]
+            )
 
-        return_dict: dict[str, Any] = {
-            "statusCode": res.status,
-            "headers": format_headers(res.headers),
-        }
+            if (body is not None and len(body) > 0) and (
+                encoding is not None and encoding == "base64"
+            ):
+                body = base64.b64decode(body)
 
-        data = res.read()
+            request_body = (
+                body.encode("utf-8") if isinstance(body, str) else body
+            )
+            conn = http.client.HTTPConnection("127.0.0.1", port)
+            try:
+                conn.request(method, path, headers=headers, body=request_body)
+            except (OSError, http.client.HTTPException) as ex:
+                _stderr(f"Request Error: {ex}")
+            res = conn.getresponse()
 
-        try:
-            return_dict["body"] = data.decode("utf-8")
-        except UnicodeDecodeError:
-            return_dict["body"] = base64.b64encode(data).decode("utf-8")
-            return_dict["encoding"] = "base64"
+            return_dict: dict[str, Any] = {
+                "statusCode": res.status,
+                "headers": format_headers(res.headers),
+            }
 
-        return return_dict
+            data = res.read()
+
+            try:
+                return_dict["body"] = data.decode("utf-8")
+            except UnicodeDecodeError:
+                return_dict["body"] = base64.b64encode(data).decode("utf-8")
+                return_dict["encoding"] = "base64"
+
+            return return_dict
+        finally:
+            try:
+                finish_wait_until(wait_until)
+            finally:
+                clear_runtime_cache_context()
+                clear_vercel_headers_context()
+                deadline.reset_deadline(deadline_token)
 
 else:
     try:
@@ -1199,6 +1390,8 @@ else:
             payload = json.loads(event["body"])
 
             raw_headers = normalize_event_headers(payload.get("headers", {}))
+            deadline_value = deadline.pop_deadline_header(raw_headers)
+            strip_internal_headers(raw_headers)
 
             sc_no_header_leak = bool(raw_headers.get(SC_NO_HEADER_LEAK_HEADER))
             set_runtime_cache_from_http_headers(raw_headers)
@@ -1256,25 +1449,30 @@ else:
                 if env_key not in ("HTTP_CONTENT_TYPE", "HTTP_CONTENT_LENGTH"):
                     environ[env_key] = value
 
+            deadline_token = deadline.set_deadline(deadline_value)
             set_vercel_headers_from_http_headers(raw_headers)
+            wait_until = begin_wait_until()
             try:
                 response = Response.from_app(wsgi_user_app, environ)
+                return_dict: dict[str, Any] = {
+                    "statusCode": response.status_code,
+                    "headers": format_headers(response.headers),
+                }
+
+                if response.data:
+                    return_dict["body"] = base64.b64encode(
+                        response.data,
+                    ).decode("utf-8")
+                    return_dict["encoding"] = "base64"
+
+                return return_dict
             finally:
-                clear_runtime_cache_context()
-                clear_vercel_headers_context()
-
-            return_dict: dict[str, Any] = {
-                "statusCode": response.status_code,
-                "headers": format_headers(response.headers),
-            }
-
-            if response.data:
-                return_dict["body"] = base64.b64encode(
-                    response.data,
-                ).decode("utf-8")
-                return_dict["encoding"] = "base64"
-
-            return return_dict
+                try:
+                    finish_wait_until(wait_until)
+                finally:
+                    clear_runtime_cache_context()
+                    clear_vercel_headers_context()
+                    deadline.reset_deadline(deadline_token)
 
     else:
         _stderr("using Asynchronous Server Gateway Interface (ASGI)")
@@ -1408,7 +1606,10 @@ else:
                 )
 
                 asgi_instance = app(self.scope, self.receive, self.send)
-                _asgi_runner.run(asgi_instance)
+                _asgi_runner.run(
+                    asgi_instance,
+                    context=contextvars.copy_context(),
+                )
                 return self.response
 
             def put_message(self, message: dict[str, Any]) -> None:
@@ -1493,16 +1694,22 @@ else:
 
             sc_pairs: list[tuple[str, str]] = []
             sc_no_header_leak = False
+            deadline_value: str | None = None
             headers: dict[str, str] = {}
             headers_encoded: list[tuple[bytes, bytes]] = []
             for key, value in header_pairs:
                 key_lower = key.lower()
+                if key_lower == deadline.INTERNAL_DEADLINE_HEADER:
+                    deadline_value = value
+                    continue
                 if key_lower in SC_HEADERS_ALWAYS_STRIP:
                     continue
                 if key_lower in SC_HEADERS_STRIP_ON_NO_LEAK:
                     sc_pairs.append((key_lower, value))
                     if key_lower == SC_NO_HEADER_LEAK_HEADER:
                         sc_no_header_leak = bool(value)
+                    continue
+                if is_internal_header(key_lower):
                     continue
                 headers[key] = value
                 headers_encoded.append((key_lower.encode(), value.encode()))
@@ -1553,11 +1760,18 @@ else:
                 "raw_path": path.encode(),
             }
 
+            deadline_token = deadline.set_deadline(deadline_value)
             set_vercel_headers_from_http_headers(headers)
+            wait_until = begin_wait_until()
             try:
                 asgi_cycle = ASGICycle(scope)
                 response = asgi_cycle(asgi_user_app, body)
                 return response
             finally:
-                clear_runtime_cache_context()
-                clear_vercel_headers_context()
+                try:
+                    _asgi_runner.run(finish_wait_until_async(wait_until))
+                finally:
+                    clear_wait_until_context()
+                    clear_runtime_cache_context()
+                    clear_vercel_headers_context()
+                    deadline.reset_deadline(deadline_token)

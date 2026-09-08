@@ -90,6 +90,18 @@ export function isOverridingEnvironmentToVariant(
   );
 }
 
+export function isServingVariantViaTargeting(
+  envConfig: FlagEnvironmentConfig,
+  variantId: string
+): boolean {
+  return (
+    envConfig.active &&
+    !envConfig.reuse?.active &&
+    envConfig.fallthrough.type === 'variant' &&
+    envConfig.fallthrough.variantId === variantId
+  );
+}
+
 export function isPausingEnvironmentToVariant(
   envConfig: FlagEnvironmentConfig,
   variantId: string
@@ -113,6 +125,88 @@ export function buildVariantOverrideEnvironmentConfig(
       variantId,
     },
   };
+}
+
+export function buildTargetingVariantEnvironmentConfig(
+  envConfig: FlagEnvironmentConfig,
+  variantId: string
+): FlagEnvironmentConfig {
+  return buildOutcomeEnvConfig(envConfig, {
+    outcome: {
+      type: 'variant',
+      variantId,
+    },
+    defaultVariantId: variantId,
+  });
+}
+
+/**
+ * Enable targeting while keeping the effective fallthrough (variant, split, or
+ * rollout). When the environment reuses another environment, the inherited
+ * fallthrough is materialized locally and reuse is disabled.
+ */
+export function buildResumeTargetingEnvironmentConfig(
+  flag: Flag,
+  environment: string
+): FlagEnvironmentConfig {
+  const envConfig = flag.environments[environment];
+  const fallthrough = resolveEffectiveFallthrough(flag, environment);
+  const defaultVariantId = getFallthroughDefaultVariantId(fallthrough);
+
+  return buildOutcomeEnvConfig(envConfig, {
+    outcome: fallthrough,
+    defaultVariantId,
+  });
+}
+
+export function resolveEffectiveFallthrough(
+  flag: Flag,
+  environment: string
+): FlagEnvironmentConfig['fallthrough'] {
+  const envConfig = flag.environments[environment];
+  const inheritedFrom = envConfig.reuse?.active
+    ? envConfig.reuse.environment
+    : undefined;
+
+  if (inheritedFrom) {
+    const inheritedConfig = flag.environments[inheritedFrom];
+    if (inheritedConfig) {
+      return structuredClone(inheritedConfig.fallthrough);
+    }
+  }
+
+  return structuredClone(envConfig.fallthrough);
+}
+
+export function isUsableFallthrough(
+  fallthrough: FlagEnvironmentConfig['fallthrough'],
+  variants: FlagVariant[]
+): boolean {
+  const variantIds = new Set(variants.map(variant => variant.id));
+
+  if (fallthrough.type === 'variant') {
+    return variantIds.has(fallthrough.variantId);
+  }
+
+  if (fallthrough.type === 'split') {
+    return variantIds.has(fallthrough.defaultVariantId);
+  }
+
+  return (
+    variantIds.has(fallthrough.defaultVariantId) &&
+    variantIds.has(fallthrough.rollFromVariantId) &&
+    variantIds.has(fallthrough.rollToVariantId)
+  );
+}
+
+function getFallthroughDefaultVariantId(
+  fallthrough: FlagEnvironmentConfig['fallthrough']
+): string {
+  if (fallthrough.type === 'variant') {
+    return fallthrough.variantId;
+  }
+
+  return fallthrough.defaultVariantId;
 }
 
 export function buildPausedEnvironmentConfig(

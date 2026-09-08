@@ -8,25 +8,17 @@ import type {
   Builder,
   Config,
   BuilderFunctions,
-  ExperimentalServices,
-  ExperimentalServicesV2,
-  Services,
   ProjectSettings,
-  Service,
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
 import {
-  isPythonEntrypoint,
   isNodeEntrypoint,
   BACKEND_BUILDERS,
   UNIFIED_BACKEND_BUILDER,
   isExperimentalBackendsEnabled,
   getMaxDurationLimit,
 } from '@vercel/build-utils';
-import {
-  getServicesBuilders,
-  warnIgnoredDirectories,
-} from './services/get-services-builders';
+import { isPythonEntrypoint } from './python';
 
 /**
  * Pattern for finding all supported middleware files.
@@ -107,9 +99,6 @@ export interface ProxyConfig {
 export interface Options {
   tag?: string;
   functions?: BuilderFunctions;
-  experimentalServices?: ExperimentalServices;
-  services?: Services;
-  experimentalServicesV2?: ExperimentalServicesV2;
   ignoreBuildScript?: boolean;
   projectSettings?: ProjectSettings;
   cleanUrls?: boolean;
@@ -178,39 +167,12 @@ export async function detectBuilders(
   builders: Builder[] | null;
   errors: ErrorResponse[] | null;
   warnings: ErrorResponse[];
-  hostRewriteRoutes?: Route[] | null;
   defaultRoutes: Route[] | null;
-  fallbackRoutes?: Route[] | null;
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
-  services?: Service[];
-  experimentalServicesV2?: Services;
-  useImplicitEnvInjection?: boolean;
 }> {
-  const {
-    experimentalServices: experimentalServicesV1,
-    services,
-    experimentalServicesV2,
-    projectSettings = {},
-  } = options;
-  if (services != null && experimentalServicesV2 != null) {
-    return {
-      builders: null,
-      errors: [
-        {
-          code: 'SERVICES_AND_EXPERIMENTAL_SERVICES_V2',
-          message:
-            'The `services` option cannot be used in conjunction with its deprecated alias `experimentalServicesV2`. Please use only `services`.',
-        },
-      ],
-      warnings: [],
-      defaultRoutes: null,
-      redirectRoutes: null,
-      rewriteRoutes: null,
-      errorRoutes: null,
-    };
-  }
+  const { projectSettings = {} } = options;
   const { framework } = projectSettings;
   const proxyError = validateProxy(options, files, framework);
   if (proxyError) {
@@ -223,40 +185,6 @@ export async function detectBuilders(
       rewriteRoutes: null,
       errorRoutes: null,
     };
-  }
-
-  const servicesConfig = services ?? experimentalServicesV2;
-  const configuredServices = servicesConfig ?? experimentalServicesV1;
-  const configuredServicesType = servicesConfig
-    ? services
-      ? 'services'
-      : 'experimentalServicesV2'
-    : 'experimentalServices';
-  const hasServicesConfig =
-    configuredServices != null && typeof configuredServices === 'object';
-
-  if (hasServicesConfig || framework === 'services') {
-    const result = await getServicesBuilders({
-      workPath: options.workPath,
-      configuredServices: configuredServices,
-      configuredServicesType,
-      projectFramework: framework,
-    });
-
-    if (configuredServices != null) {
-      result.warnings.push(
-        ...warnIgnoredDirectories(files, configuredServices)
-      );
-    }
-
-    if (!result.errors && options.proxy) {
-      result.builders = [
-        getProxyBuilder(options.proxy, options.tag, options.functions),
-        ...(result.builders ?? []),
-      ];
-    }
-
-    return result;
   }
 
   const errors: ErrorResponse[] = [];
@@ -294,7 +222,11 @@ export async function detectBuilders(
 
   const { buildCommand, outputDirectory } = projectSettings;
   const frameworkConfig = slugToFramework.get(framework || '');
-  const ignoreRuntimes = new Set(frameworkConfig?.ignoreRuntimes);
+  // Rust static output keeps `api/**/*.rs` runtimes enabled.
+  const rustStaticOutput = isRustStaticOutput(framework, projectSettings);
+  const ignoreRuntimes = new Set<string>(
+    rustStaticOutput ? undefined : frameworkConfig?.ignoreRuntimes
+  );
   const withTag = options.tag ? `@${options.tag}` : '';
   const apiMatches = getApiMatches()
     .filter(
@@ -410,8 +342,11 @@ export async function detectBuilders(
     apiBuilders.unshift(proxyBuilder);
   }
 
+  const rustStaticPrebuilt = rustStaticOutput && !pkg && !buildCommand;
+
   if (
     !makeFrontendStatic &&
+    !rustStaticPrebuilt &&
     (hasBuildScript(pkg) || buildCommand || framework)
   ) {
     // Framework or Build
@@ -629,7 +564,7 @@ async function maybeGetApiBuilder(
   // For Python files, verify they are valid entrypoints before creating a builder
   if (fileName.endsWith('.py') && options.workPath) {
     const fsPath = join(options.workPath, fileName);
-    const isEntrypoint = await isPythonEntrypoint({ fsPath });
+    const isEntrypoint = await isPythonEntrypoint(fsPath);
     if (!isEntrypoint) {
       return null;
     }
@@ -823,8 +758,8 @@ export function validateProxyConfig(proxy: ProxyConfig): ErrorResponse | null {
   return null;
 }
 
-function validateProxy(
-  options: Options,
+export function validateProxy(
+  options: Pick<Options, 'proxy'>,
   files: string[],
   framework: string | null | undefined
 ): ErrorResponse | null {
@@ -858,6 +793,23 @@ function validateProxy(
 function hasBuildScript(pkg: PackageJson | undefined | null) {
   const { scripts = {} } = pkg || {};
   return Boolean(scripts && scripts['build']);
+}
+
+/**
+ * A Rust project with an explicit output directory (e.g. a Trunk/wasm
+ * frontend) deploys static files, so the runtime preset must not apply.
+ */
+function isRustStaticOutput(
+  framework: string | null | undefined,
+  projectSettings: { outputDirectory?: string | null }
+): boolean {
+  return (
+    framework === 'rust' &&
+    typeof projectSettings.outputDirectory === 'string' &&
+    projectSettings.outputDirectory !== '' &&
+    // The framework preset's display default; not a real directory.
+    projectSettings.outputDirectory !== 'N/A'
+  );
 }
 
 function detectFrontBuilder(
@@ -926,7 +878,7 @@ function detectFrontBuilder(
   }
 
   const f = slugToFramework.get(framework || '');
-  if (f && f.useRuntime) {
+  if (f && f.useRuntime && !isRustStaticOutput(framework, projectSettings)) {
     const { src, use } = f.useRuntime;
     // Replace framework-specific backend builders with the unified backend builder
     // when experimental backends is enabled

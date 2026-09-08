@@ -1,7 +1,7 @@
 import type FileRef from './file-ref';
 import type FileFsRef from './file-fs-ref';
 import type FileBlob from './file-blob';
-import type { Lambda, LambdaArchitecture } from './lambda';
+import type { Lambda, LambdaAffinity, LambdaArchitecture } from './lambda';
 import type { Prerender } from './prerender';
 import type { EdgeFunction } from './edge-function';
 import type { ContainerImage } from './container-image';
@@ -369,6 +369,16 @@ export namespace PackageJson {
     bun?: string;
   }
 
+  export interface DevEnginePackageManager {
+    name?: string;
+    version?: string;
+    onFail?: 'download' | 'error' | 'warn' | 'ignore';
+  }
+
+  export interface DevEngines {
+    packageManager?: DevEnginePackageManager | DevEnginePackageManager[];
+  }
+
   export interface PublishConfig {
     registry?: string;
   }
@@ -410,6 +420,7 @@ export interface PackageJson {
   readonly optionalDependencies?: PackageJson.DependencyMap;
   readonly bundledDependencies?: string[];
   readonly engines?: PackageJson.Engines;
+  readonly devEngines?: PackageJson.DevEngines;
   readonly os?: string[];
   readonly cpu?: string[];
   readonly preferGlobal?: boolean;
@@ -480,6 +491,7 @@ export interface BuilderFunctions {
     architecture?: LambdaArchitecture;
     memory?: number;
     maxDuration?: MaxDuration;
+    affinity?: LambdaAffinity;
     maxConcurrency?: number;
     regions?: string[];
     functionFailoverRegions?: string[];
@@ -653,6 +665,32 @@ export interface BuildResultBuildOutput {
 export interface Cron {
   path: string;
   schedule: string;
+}
+
+export interface ScheduleExpression {
+  /** Cron expression describing when the schedule fires (REQUIRED) */
+  cron: string;
+  /** Maximum random delay applied to each firing, e.g. "5m" (OPTIONAL) */
+  jitter?: string;
+}
+
+export type ScheduleTarget =
+  | {
+      /** Build output path of the function to invoke, e.g. "api/cron" */
+      function: string;
+    }
+  | {
+      /** Name of the queue topic to publish to */
+      topic: string;
+    };
+
+export interface Schedule {
+  /** Unique name of the schedule within the deployment (REQUIRED) */
+  name: string;
+  expression: ScheduleExpression;
+  target: ScheduleTarget;
+  /** Payload delivered with each firing (OPTIONAL) */
+  payload?: unknown;
 }
 
 export interface ServiceQueueTopic {
@@ -930,7 +968,7 @@ export interface Chain {
   headers: Record<string, string>;
 }
 
-interface TriggerEventBase {
+interface QueueTriggerEventBase {
   /** Name of the queue topic to consume from (REQUIRED) */
   topic: string;
 
@@ -967,7 +1005,7 @@ interface TriggerEventBase {
  * Queue trigger input event for v1beta (from vercel.json config).
  * Requires explicit consumer name.
  */
-export interface TriggerEventInputV1 extends TriggerEventBase {
+export interface QueueTriggerEventInputV1 extends QueueTriggerEventBase {
   /** Event type - must be "queue/v1beta" (REQUIRED) */
   type: 'queue/v1beta';
 
@@ -980,28 +1018,43 @@ export interface TriggerEventInputV1 extends TriggerEventBase {
  * Consumer name is implicitly derived from the function path.
  * Only one trigger per function is allowed.
  */
-export interface TriggerEventInputV2 extends TriggerEventBase {
+export interface QueueTriggerEventInputV2 extends QueueTriggerEventBase {
   /** Event type - must be "queue/v2beta" (REQUIRED) */
   type: 'queue/v2beta';
 }
 
+export interface ScheduleTriggerEventInputV1 {
+  /** Event type - must be "schedule/v1beta" (REQUIRED) */
+  type: 'schedule/v1beta';
+}
+
 /**
- * Queue trigger input event from vercel.json config.
+ * Queue or Schedule trigger input event from vercel.json config.
  * v1beta requires explicit consumer, v2beta derives consumer from function path.
  */
-export type TriggerEventInput = TriggerEventInputV1 | TriggerEventInputV2;
+export type TriggerEventInput =
+  | QueueTriggerEventInputV1
+  | QueueTriggerEventInputV2
+  | ScheduleTriggerEventInputV1;
 
 /**
  * Processed queue trigger event for Lambda.
  * Consumer is always present (explicitly provided for v1beta, derived for v2beta).
  */
-export interface TriggerEvent extends TriggerEventBase {
+export interface QueueTriggerEvent extends QueueTriggerEventBase {
   /** Event type */
   type: 'queue/v1beta' | 'queue/v2beta';
 
   /** Name of the consumer group for this trigger (always present in processed output) */
   consumer: string;
 }
+
+/**
+ * Schedule trigger event is the same as the input event.
+ */
+export type ScheduleTriggerEvent = ScheduleTriggerEventInputV1;
+
+export type TriggerEvent = QueueTriggerEvent | ScheduleTriggerEvent;
 
 export type ServiceRuntime =
   | 'node'

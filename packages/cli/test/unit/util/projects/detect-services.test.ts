@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { join } from 'path';
 import { mkdir, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
-import { detectServices, LocalFileSystemDetector } from '@vercel/fs-detectors';
+import { LocalFileSystemDetector } from '@vercel/fs-detectors';
+import { detectServices } from '@vercel-internals/service-topology';
 import {
   getServicesConfigWriteBlocker,
   isExperimentalServicesEnabled,

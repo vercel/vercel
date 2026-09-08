@@ -1,5 +1,4 @@
 import type Client from '../client';
-import setupAndLink from '../link/setup-and-link';
 import param from '../output/param';
 import { getCommandName, getCommandNamePlain } from '../pkg-name';
 import {
@@ -7,7 +6,10 @@ import {
   type ProjectLinkResultWithOrgId,
 } from '../projects/link';
 import { resolveProjectCwd } from '../projects/find-project-root';
-import type { SetupAndLinkOptions } from '../link/setup-and-link';
+import type {
+  ProjectLinkResultWithGitGuidance,
+  SetupAndLinkOptions,
+} from '../link/setup-and-link';
 import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
 import { outputActionRequired, buildCommandWithYes } from '../agent-output';
@@ -22,6 +24,8 @@ interface EnsureLinkOptions extends SetupAndLinkOptions {
    * project but cannot fetch the owner user/team resource.
    */
   allowOwnerLookupFallback?: boolean;
+  /** Uses local link metadata without fetching the owner or project. */
+  skipRemoteLookup?: boolean;
 }
 
 /**
@@ -45,10 +49,16 @@ export async function ensureLink(
   client: Client,
   cwd: string,
   opts: EnsureLinkOptions = {}
-): Promise<ProjectLinked | number> {
+): Promise<
+  | (ProjectLinked &
+      Pick<ProjectLinkResultWithGitGuidance, 'gitConnectOffered'>)
+  | number
+> {
   cwd = await resolveProjectCwd(cwd);
 
-  let link: ProjectLinkResultWithOrgId | undefined = opts.link;
+  let link:
+    | (ProjectLinkResultWithOrgId & ProjectLinkResultWithGitGuidance)
+    | undefined = opts.link;
   // All commands respect global --non-interactive; link can override via opts
   const nonInteractive = opts.nonInteractive ?? client.nonInteractive ?? false;
   opts.nonInteractive = nonInteractive;
@@ -69,6 +79,7 @@ export async function ensureLink(
         projectNameIsExplicit: Boolean(opts.projectName && opts.failIfNotFound),
         scopeIsExplicit: detectExplicitScope(client),
         allowOwnerLookupFallback: opts.allowOwnerLookupFallback,
+        skipRemoteLookup: opts.skipRemoteLookup,
       });
     }
     opts.link = link;
@@ -101,6 +112,7 @@ export async function ensureLink(
       return 1;
     }
 
+    const { default: setupAndLink } = await import('../link/setup-and-link');
     link = await setupAndLink(client, cwd, opts);
 
     if (link.status === 'not_linked') {

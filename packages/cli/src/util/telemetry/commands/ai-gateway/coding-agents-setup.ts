@@ -77,6 +77,12 @@ export class AiGatewayCodingAgentsSetupTelemetryClient
     }
   }
 
+  trackCliFlagNoSessionMigration(noSessionMigration: boolean | undefined) {
+    if (noSessionMigration) {
+      this.trackCliFlag('no-session-migration');
+    }
+  }
+
   trackCliFlagNoKeychain(noKeychain: boolean | undefined) {
     if (noKeychain) {
       this.trackCliFlag('no-keychain');

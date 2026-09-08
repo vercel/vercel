@@ -127,6 +127,21 @@ describe('vcr tag ls', () => {
     );
   });
 
+  it.each([
+    '--next',
+    '--cursor',
+  ])('passes pagination through with %s', async flag => {
+    client.scenario.get('/v1/vcr/repository/my-app/tags', (req, res) => {
+      expect(req.query.cursor).toBe('next_page');
+      res.json({ tags: [] });
+    });
+
+    client.setArgv('vcr', 'tag', 'ls', 'my-app', flag, 'next_page');
+    const exitCode = await vcr(client);
+
+    expect(exitCode).toBe(0);
+  });
+
   it('errors when the repository argument is missing', async () => {
     client.setArgv('vcr', 'tag', 'ls');
     const exitCode = await vcr(client);

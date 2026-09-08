@@ -6,7 +6,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 import type { ProjectLinkResult } from '@vercel-internals/types';
-import getTeamById from '../../util/teams/get-team-by-id';
+import getTeamByIdOrSlug from '../../util/teams/get-team-by-id-or-slug';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import { ProjectNotFound } from '../../util/errors-ts';
 import { outputAgentError } from '../../util/agent-output';
@@ -63,7 +63,7 @@ async function resolveDashboardScope({
   if (scopeFlag) {
     // Team ids start with `team_`; anything else is already a slug.
     if (scopeFlag.startsWith('team_')) {
-      const team = await getTeamById(client, scopeFlag);
+      const team = await getTeamByIdOrSlug(client, scopeFlag);
       teamSlug = team.slug;
     } else {
       teamSlug = scopeFlag;
@@ -183,35 +183,45 @@ export default async function get(
   let teamId: string;
   let projectId: string;
   let linkedProject: ProjectLinkResult | undefined;
-  if (scopeFlag && projectFlag && !openFlag) {
-    teamId = scopeFlag;
-    projectId = projectFlag;
-  } else {
-    linkedProject = await getLinkedProject(client);
-    if (linkedProject.status === 'error') {
-      if (scopeFlag && projectFlag) {
-        // Both flags were provided so we can proceed without a linked project.
-        linkedProject = { status: 'not_linked', org: null, project: null };
-      } else {
-        return linkedProject.exitCode;
-      }
+  linkedProject = await getLinkedProject(client);
+  if (linkedProject.status === 'error') {
+    if (scopeFlag && projectFlag) {
+      // Both flags were provided so we can proceed without a linked project.
+      linkedProject = { status: 'not_linked', org: null, project: null };
+    } else {
+      return linkedProject.exitCode;
     }
-    const scope = resolveScope({
+  }
+  let scope: Awaited<ReturnType<typeof resolveScope>>;
+  try {
+    scope = await resolveScope({
+      client,
       flags: { scope: scopeFlag, project: projectFlag },
       linkedProject,
     });
-    if ('message' in scope) {
-      output.error(scope.message);
-      return 1;
-    }
-    teamId = scope.teamId;
-    projectId = scope.projectId;
+  } catch (err) {
+    printError(err);
+    return 1;
   }
+  if ('message' in scope) {
+    if (client.nonInteractive) {
+      outputAgentError(client, {
+        status: AGENT_STATUS.ERROR,
+        reason: scope.reason,
+        message: scope.message,
+      });
+    }
+    output.error(scope.message);
+    return 1;
+  }
+  teamId = scope.teamId;
+  projectId = scope.projectId;
 
   output.spinner('Fetching trace…');
   let trace;
+  let partial;
   try {
-    ({ trace } = await fetchTrace({
+    ({ trace, partial } = await fetchTrace({
       client,
       teamId,
       projectId,
@@ -223,6 +233,9 @@ export default async function get(
     return 1;
   }
   output.stopSpinner();
+  if (partial) {
+    output.warn('Trace is incomplete because it exceeded the span limit.');
+  }
 
   if (openFlag) {
     if (!linkedProject) {

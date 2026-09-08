@@ -7,6 +7,7 @@ import {
   authConfigHasUsableTokenData,
   deleteAuthConfig,
   getAuthConfigFilePath,
+  getCachePath,
   getLikelyEffectiveCredStorage,
   parseAuthConfig,
   parseGlobalConfig,
@@ -27,6 +28,12 @@ afterEach(() => {
 });
 
 describe('cli-config schema', () => {
+  it('resolves the platform cache directory for the Vercel CLI', () => {
+    expect(getCachePath()).toBe(
+      require('xdg-app-paths')('com.vercel.cli').cache()
+    );
+  });
+
   it('parses global config and preserves unknown properties', () => {
     const config = parseGlobalConfig({
       currentTeam: 'team_123',

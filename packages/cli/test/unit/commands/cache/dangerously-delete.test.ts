@@ -31,12 +31,6 @@ describe('cache dangerously-delete', () => {
     );
   });
 
-  it('should error when project is not linked', async () => {
-    client.setArgv('cache', 'dangerously-delete');
-    const exitCode = await cache(client);
-    expect(exitCode).toEqual(1);
-  });
-
   it('should error without --tag', async () => {
     client.scenario.post(
       `/v1/edge-cache/dangerously-delete-by-tags`,

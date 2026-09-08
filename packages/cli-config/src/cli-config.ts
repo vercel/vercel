@@ -5,11 +5,19 @@ import { authConfigSchema, globalConfigSchema } from './schema';
 import type { AuthConfig, AuthFileConfig, GlobalConfig } from './types';
 import {
   getAuthConfigFilePath,
+  getCachePath,
   getConfigFilePath,
+  getDataPath,
   getGlobalPathConfig,
 } from './paths';
 
-export { getAuthConfigFilePath, getConfigFilePath, getGlobalPathConfig };
+export {
+  getAuthConfigFilePath,
+  getCachePath,
+  getConfigFilePath,
+  getDataPath,
+  getGlobalPathConfig,
+};
 
 const DOCS_URL =
   'https://vercel.com/docs/projects/project-configuration/global-configuration';

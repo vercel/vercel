@@ -9,8 +9,9 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
 import { formatProject } from '../../util/projects/format-project';
+import { formatSandboxRegionList } from '../../util/projects/sandbox-config';
 import stamp from '../../util/output/stamp';
-import getTeamById from '../../util/teams/get-team-by-id';
+import getTeamByIdOrSlug from '../../util/teams/get-team-by-id-or-slug';
 import formatDate from '../../util/format-date';
 import type Client from '../../util/client';
 import { exitWithNonInteractiveError } from '../../util/agent-output';
@@ -78,7 +79,7 @@ export default async function inspect(
     return 1;
   }
 
-  const org = await getTeamById(client, project.accountId);
+  const org = await getTeamByIdOrSlug(client, project.accountId);
   const projectSlugLink = formatProject(org.slug, project.name);
 
   output.log(`Found Project ${projectSlugLink} ${chalk.gray(inspectStamp())}`);
@@ -110,6 +111,18 @@ export default async function inspect(
   output.print(
     `    ${chalk.cyan('Install Command')}\t\t${project.installCommand ?? chalk.dim(framework?.settings?.installCommand.placeholder ?? 'None')}\n`
   );
+
+  const failoverRegions = project.sandbox?.failoverRegions ?? [];
+  if (project.sandbox?.region || failoverRegions.length > 0) {
+    output.print('\n');
+    output.print(chalk.bold('  Sandbox\n\n'));
+    output.print(
+      `    ${chalk.cyan('Region')}\t\t\t${project.sandbox?.region ?? chalk.dim('Auto')}\n`
+    );
+    output.print(
+      `    ${chalk.cyan('Failover Regions')}\t\t${failoverRegions.length > 0 ? formatSandboxRegionList(failoverRegions) : chalk.dim('None')}\n`
+    );
+  }
 
   output.print('\n');
 

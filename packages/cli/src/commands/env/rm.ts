@@ -25,6 +25,12 @@ import {
   buildEnvRmCommandWithPreservedArgs,
   getPreservedArgsForEnvRm,
 } from '../../util/agent-output';
+import { getPublicPrefix } from '../../util/env/validate-env';
+import { shouldConfirmRotationBeforeDelete } from '../../util/env/secret-detection';
+
+function printEnvRmWarning(message: string): void {
+  output.print(`${chalk.yellow('!')} ${message}\n`);
+}
 
 export default async function rm(client: Client, argv: string[]) {
   const telemetryClient = new EnvRmTelemetryClient({
@@ -61,9 +67,9 @@ export default async function rm(client: Client, argv: string[]) {
         {
           status: 'error',
           reason: 'invalid_arguments',
-          message: `Invalid number of arguments. Usage: ${getCommandNamePlain(
+          message: `Invalid number of arguments. Usage: \`${getCommandNamePlain(
             `env rm <name> ${getEnvTargetPlaceholder()} <gitbranch>`
-          )}`,
+          )}\``,
         },
         1
       );
@@ -106,9 +112,9 @@ export default async function rm(client: Client, argv: string[]) {
         {
           status: 'error',
           reason: 'not_linked',
-          message: `Your codebase isn't linked to a project on Vercel. Run ${getCommandNamePlain(
+          message: `Your codebase isn't linked to a project on Vercel. Run \`${getCommandNamePlain(
             'link'
-          )} to begin. Use --yes for non-interactive; use --scope or --project to specify team or project.`,
+          )}\` to begin. Use \`--yes\` for non-interactive; use \`--scope\` or \`--project\` to specify team or project.`,
           next: [
             { command: buildCommandWithYes(linkArgv) },
             { command: buildCommandWithYes(client.argv) },
@@ -137,7 +143,7 @@ export default async function rm(client: Client, argv: string[]) {
           status: 'action_required',
           reason: 'missing_name',
           message:
-            'Provide the variable name as an argument. Example: vercel env rm <name> --yes',
+            'Provide the variable name as an argument. Example: `vercel env rm <name> --yes`',
           next: [
             {
               command: buildEnvRmCommandWithPreservedArgs(
@@ -216,6 +222,16 @@ export default async function rm(client: Client, argv: string[]) {
     envs = envs.filter(env => env.id === id);
   }
   const env = envs[0];
+  const shouldWarnAboutRotation = shouldConfirmRotationBeforeDelete({
+    key: env.key,
+    type: env.type,
+    hasPublicPrefix: getPublicPrefix(env.key) !== null,
+  });
+  const rotationWarning =
+    'Removing this variable from Vercel does not revoke the credential. Rotate or disable it at its provider.';
+  if (shouldWarnAboutRotation) {
+    printEnvRmWarning(rotationWarning);
+  }
 
   const skipConfirmation = opts['--yes'];
   if (!skipConfirmation) {
@@ -225,7 +241,9 @@ export default async function rm(client: Client, argv: string[]) {
         {
           status: 'action_required',
           reason: 'confirmation_required',
-          message: `Removing Environment Variable ${env.key}. Use --yes to confirm.`,
+          message: `Removing Environment Variable ${env.key}. ${
+            shouldWarnAboutRotation ? `${rotationWarning} ` : ''
+          }Use --yes to confirm.`,
           next: [{ command: buildCommandWithYes(client.argv) }],
         },
         1
@@ -233,11 +251,11 @@ export default async function rm(client: Client, argv: string[]) {
     }
     if (
       !(await client.input.confirm(
-        `Removing Environment Variable ${param(env.key)} from ${formatEnvironments(
+        `Remove ${param(env.key)} from ${formatEnvironments(
           link,
           env,
           customEnvironments
-        )} in Project ${chalk.bold(project.name)}. Are you sure?`,
+        )} in Project ${chalk.bold(project.name)}?`,
         false
       ))
     ) {

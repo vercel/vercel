@@ -1597,11 +1597,11 @@ describe('flags update', () => {
         message: 'Select a variant to update:',
         choices: [
           {
-            name: `"control" Control ${chalk.dim('[id: default]')}`,
+            name: `Control ("control") ${chalk.dim('[id: default]')}`,
             value: 'default',
           },
           {
-            name: `"variant-a" Variant A ${chalk.dim('[id: variant-a]')}`,
+            name: `Variant A ("variant-a") ${chalk.dim('[id: variant-a]')}`,
             value: 'variant-a',
           },
         ],

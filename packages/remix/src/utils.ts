@@ -362,6 +362,42 @@ export function getReactRouterCatchAllDest(): 'index' {
 }
 
 /**
+ * When Skew Protection is enabled for the project, returns a route that
+ * makes Vercel's routing layer stamp the `__vdpl` deployment ID cookie
+ * onto every outgoing document response (`continue: true` keeps route
+ * matching going afterwards). Setting the cookie at the routing layer —
+ * rather than in the rendering function's response — keeps the origin
+ * response free of `Set-Cookie`, which would otherwise prevent the CDN
+ * from caching documents (silently defeating `Cache-Control: s-maxage`
+ * from route `headers()` exports). The cookie is applied to CDN cache
+ * HITs and prerendered static files as well.
+ *
+ * Returns `undefined` when Skew Protection is not enabled or no
+ * deployment ID is available.
+ */
+export function getSkewProtectionRoute(env: NodeJS.ProcessEnv = process.env):
+  | {
+      src: string;
+      has: { type: 'header'; key: string; value: string }[];
+      headers: Record<string, string>;
+      continue: true;
+    }
+  | undefined {
+  const deploymentId = env.VERCEL_DEPLOYMENT_ID;
+  if (env.VERCEL_SKEW_PROTECTION_ENABLED !== '1' || !deploymentId) {
+    return undefined;
+  }
+  return {
+    src: '/(.*)',
+    has: [{ type: 'header', key: 'Sec-Fetch-Dest', value: 'document' }],
+    headers: {
+      'Set-Cookie': `__vdpl=${deploymentId}; Path=/; SameSite=Strict; Secure; HttpOnly`,
+    },
+    continue: true,
+  };
+}
+
+/**
  * Updates the `dest` process.env object to match the `source` one.
  * A function is returned to restore the `dest` env back to how
  * it was originally.

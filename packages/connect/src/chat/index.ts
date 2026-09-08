@@ -4,7 +4,7 @@
  * Holds helpers that adapt the Vercel Connect SDK to the Chat SDK
  * (`chat`) platform adapters. Each helper returns a config fragment you
  * spread into the matching `create*Adapter` factory, wiring a Connect
- * connector for both outbound tokens (`getToken`) and inbound
+ * connector for both outbound credentials and inbound
  * trigger-forwarded webhooks (Vercel OIDC verification).
  *
  * The helpers stay decoupled from `@chat-adapter/*`: they return
@@ -27,11 +27,21 @@ export {
 } from './webhook-verifier.js';
 
 export type {
+  ConnectDiscordAdapterConfig,
   ConnectGitHubAdapterConfig,
   ConnectLinearAdapterConfig,
+  ConnectLinqAdapterConfig,
+  ConnectLinqCredentials,
+  ConnectNotionAdapterConfig,
+  ConnectSendblueAdapterConfig,
+  ConnectTelegramAdapterConfig,
   ConnectTokenResolver,
 } from './types.js';
 
+export {
+  connectDiscordAdapter,
+  type ConnectDiscordAdapterParams,
+} from './discord-adapter.js';
 export {
   connectSlackAdapter,
   type ConnectSlackAdapterConfig,
@@ -45,3 +55,19 @@ export {
   connectLinearAdapter,
   type ConnectLinearAdapterParams,
 } from './linear-adapter.js';
+export {
+  connectLinqAdapter,
+  type ConnectLinqAdapterParams,
+} from './linq-adapter.js';
+export {
+  connectNotionAdapter,
+  type ConnectNotionAdapterParams,
+} from './notion-adapter.js';
+export {
+  connectTelegramAdapter,
+  type ConnectTelegramAdapterParams,
+} from './telegram-adapter.js';
+export {
+  connectSendblueAdapter,
+  type ConnectSendblueAdapterParams,
+} from './sendblue-adapter.js';

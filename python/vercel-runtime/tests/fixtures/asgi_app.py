@@ -1,6 +1,9 @@
 """A basic ASGI application for testing."""
 
+import asyncio
 import json
+
+from vercel_runtime import get_deadline
 
 
 async def app(scope, receive, send):
@@ -17,6 +20,21 @@ async def app(scope, receive, send):
             for key, value in scope.get("headers", [])
         }
         body = json.dumps(payload).encode()
+        content_type = b"application/json"
+    elif path == "/deadline":
+        headers = {
+            key.decode().lower(): value.decode()
+            for key, value in scope.get("headers", [])
+        }
+        await asyncio.sleep(float(headers.get("x-test-delay", "0")))
+        deadline = get_deadline()
+        body = json.dumps(
+            {
+                "deadline": deadline.isoformat() if deadline else None,
+                "header": "x-vercel-internal-deadline" in headers,
+                "unknown_header": "x-vercel-internal-unknown" in headers,
+            }
+        ).encode()
         content_type = b"application/json"
     elif path == "/oidc":
         headers = {

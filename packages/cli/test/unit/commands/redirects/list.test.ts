@@ -180,14 +180,14 @@ describe('redirects list', () => {
       client.setArgv('redirects', 'list');
       const exitCode = await redirects(client);
       expect(exitCode, 'exit code for "redirects list"').toEqual(0);
-      await expect(client.stderr).toOutput('redirects list --page 2');
+      await expect(client.stderr).toOutput('redirects list --next 2');
     });
 
     it('should not show next page command on last page', async () => {
       useRedirects(100, true);
-      client.setArgv('redirects', 'list', '--page', '2');
+      client.setArgv('redirects', 'list', '--next', '2');
       const exitCode = await redirects(client);
-      expect(exitCode, 'exit code for "redirects list --page 2"').toEqual(0);
+      expect(exitCode, 'exit code for "redirects list --next 2"').toEqual(0);
       expect(client.stderr).not.toOutput('To display the next page');
     });
 
@@ -199,30 +199,28 @@ describe('redirects list', () => {
       expect(client.stderr).not.toOutput('(page');
     });
 
-    it('should support --page option', async () => {
+    it('should support --next option', async () => {
       useRedirects(100, true);
-      client.setArgv('redirects', 'list', '--page', '2');
+      client.setArgv('redirects', 'list', '--next', '2');
       const exitCode = await redirects(client);
-      expect(exitCode, 'exit code for "redirects list --page 2"').toEqual(0);
+      expect(exitCode, 'exit code for "redirects list --next 2"').toEqual(0);
       await expect(client.stderr).toOutput('(page 2 of 2)');
     });
 
-    it('should support --per-page option', async () => {
+    it('should support --limit option', async () => {
       useRedirects(100, true);
-      client.setArgv('redirects', 'list', '--per-page', '25');
+      client.setArgv('redirects', 'list', '--limit', '25');
       const exitCode = await redirects(client);
-      expect(exitCode, 'exit code for "redirects list --per-page 25"').toEqual(
-        0
-      );
+      expect(exitCode, 'exit code for "redirects list --limit 25"').toEqual(0);
       await expect(client.stderr).toOutput('(page 1 of 4)');
     });
 
-    it('should use default per_page of 50', async () => {
+    it('continues accepting --page and --per-page', async () => {
       useRedirects(100, true);
-      client.setArgv('redirects', 'list');
+      client.setArgv('redirects', 'list', '--page', '2', '--per-page', '25');
       const exitCode = await redirects(client);
-      expect(exitCode, 'exit code for "redirects list"').toEqual(0);
-      await expect(client.stderr).toOutput('(page 1 of 2)');
+      expect(exitCode).toEqual(0);
+      await expect(client.stderr).toOutput('(page 2 of 4)');
     });
 
     it('should handle single page with pagination', async () => {
@@ -234,20 +232,13 @@ describe('redirects list', () => {
       expect(client.stderr).not.toOutput('To display the next page');
     });
 
-    it('should preserve search and per-page in next page command', async () => {
+    it('should preserve search and limit in next page command', async () => {
       useRedirects(100, true);
-      client.setArgv(
-        'redirects',
-        'list',
-        '--search',
-        'test',
-        '--per-page',
-        '25'
-      );
+      client.setArgv('redirects', 'list', '--search', 'test', '--limit', '25');
       const exitCode = await redirects(client);
       expect(exitCode, 'exit code').toEqual(0);
       await expect(client.stderr).toOutput(
-        'redirects list --page 2 --search "test" --per-page 25'
+        'redirects list --next 2 --search "test" --limit 25'
       );
     });
 
@@ -257,16 +248,16 @@ describe('redirects list', () => {
       const exitCode = await redirects(client);
       expect(exitCode, 'exit code').toEqual(0);
       await expect(client.stderr).toOutput(
-        'redirects list --page 2 --search "test"'
+        'redirects list --next 2 --search "test"'
       );
-      expect(client.stderr).not.toOutput('--per-page');
+      expect(client.stderr).not.toOutput('--limit');
     });
 
     it('should handle page numbers correctly', async () => {
       useRedirects(150, true);
-      client.setArgv('redirects', 'list', '--per-page', '50', '--page', '3');
+      client.setArgv('redirects', 'list', '--limit', '50', '--next', '3');
       const exitCode = await redirects(client);
-      expect(exitCode, 'exit code for "redirects list --page 3"').toEqual(0);
+      expect(exitCode, 'exit code for "redirects list --next 3"').toEqual(0);
       await expect(client.stderr).toOutput('(page 3 of 3)');
       expect(client.stderr).not.toOutput('To display the next page');
     });
@@ -275,7 +266,7 @@ describe('redirects list', () => {
   describe('combined features', () => {
     it('should support search with pagination', async () => {
       useRedirects(100, true);
-      client.setArgv('redirects', 'list', '--search', 'path-1', '--page', '1');
+      client.setArgv('redirects', 'list', '--search', 'path-1', '--next', '1');
       const exitCode = await redirects(client);
       expect(exitCode, 'exit code').toEqual(0);
       await expect(client.stderr).toOutput('matching "path-1"');
@@ -284,14 +275,7 @@ describe('redirects list', () => {
 
     it('should support search with custom per-page', async () => {
       useRedirects(100, true);
-      client.setArgv(
-        'redirects',
-        'list',
-        '--search',
-        'old',
-        '--per-page',
-        '10'
-      );
+      client.setArgv('redirects', 'list', '--search', 'old', '--limit', '10');
       const exitCode = await redirects(client);
       expect(exitCode, 'exit code').toEqual(0);
       await expect(client.stderr).toOutput('matching "old"');
@@ -305,9 +289,9 @@ describe('redirects list', () => {
         'list',
         '--search',
         'test',
-        '--page',
+        '--next',
         '2',
-        '--per-page',
+        '--limit',
         '20'
       );
       const exitCode = await redirects(client);
@@ -323,15 +307,15 @@ describe('redirects list', () => {
         'list',
         '--search',
         '/api',
-        '--page',
+        '--next',
         '1',
-        '--per-page',
+        '--limit',
         '20'
       );
       const exitCode = await redirects(client);
       expect(exitCode, 'exit code').toEqual(0);
       await expect(client.stderr).toOutput(
-        'redirects list --page 2 --search "/api" --per-page 20'
+        'redirects list --next 2 --search "/api" --limit 20'
       );
     });
   });

@@ -111,6 +111,20 @@ export interface FlagsListResponse {
   };
 }
 
+export type StaleFlagReason = 'unused' | 'redundant';
+
+export interface StaleFlag {
+  slug: string;
+  reason: StaleFlagReason;
+}
+
+export interface StaleFlagsResponse {
+  data: StaleFlag[];
+  pagination: {
+    next: string | null;
+  };
+}
+
 export interface FlagVersion {
   id: string;
   flagId: string;

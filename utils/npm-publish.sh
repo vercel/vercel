@@ -72,10 +72,27 @@ while IFS=$'\t' read -r name pkg_path; do
 
   # pnpm pack resolves workspace:* to real versions and outputs the full path
   tarball=$(pnpm pack --pack-destination="$TARBALL_DIR" -C "$pkg_path" 2>/dev/null | tail -1)
+  # No --provenance: npm provenance requires a public source repo, and publishes
+  # now come from vercel/vercel-internal (private). Trusted publishing (OIDC)
+  # still authenticates the publish without provenance attestations.
   if [ -n "$NPM_TAG" ]; then
-    npm publish "$tarball" --tag "$NPM_TAG" --access public --provenance
+    npm publish "$tarball" --tag "$NPM_TAG" --access public
   else
-    npm publish "$tarball" --access public --provenance
+    npm publish "$tarball" --access public
+  fi
+
+  # Record the CLI tarball integrity from the bytes we just published so the
+  # release-notes step can store a first-party digest (not a re-fetch from npm).
+  if [ "$name" = "vercel" ]; then
+    script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+    repo_root=$(cd "$script_dir/.." && pwd)
+    integrity_file="$repo_root/.vercel-cli-publish-integrity"
+    integrity="sha512-$(openssl dgst -sha512 -binary "$tarball" | openssl base64 -A)"
+    printf '%s\n' "$integrity" > "$integrity_file"
+    echo "Recorded vercel@$version tarball integrity: $integrity"
+    if [ -n "${GITHUB_ENV:-}" ]; then
+      echo "VERCEL_CLI_PUBLISH_INTEGRITY=$integrity" >> "$GITHUB_ENV"
+    fi
   fi
 
   published=$((published + 1))

@@ -62,6 +62,7 @@ export const pyProjectDependencyGroupsSchema = z.record(
 
 export const pyProjectToolVercelFastapiStaticSectionSchema = z.object({
   cdn: z.boolean().optional(),
+  exclude: z.boolean().optional(),
 });
 
 export const pyProjectToolVercelFastapiSectionSchema = z.object({

@@ -4,7 +4,13 @@ import os
 import unittest
 from unittest.mock import patch
 
-from vercel_runtime.headers import normalize_event_header_pairs
+from vercel_runtime.headers import (
+    clear_vercel_headers_context,
+    current_forwarded_host,
+    normalize_event_header_pairs,
+    set_vercel_headers_from_asgi_pairs,
+    set_vercel_headers_from_http_headers,
+)
 
 
 class TestOidcHeaderNormalization(unittest.TestCase):
@@ -73,3 +79,47 @@ class TestOidcHeaderNormalization(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestForwardedHostContext(unittest.TestCase):
+    """The routed host is trustworthy provenance for "am I promoted" checks."""
+
+    def tearDown(self) -> None:
+        clear_vercel_headers_context()
+
+    def test_http_headers_expose_the_forwarded_host(self) -> None:
+        set_vercel_headers_from_http_headers(
+            {"X-Forwarded-Host": "app.example.com", "host": "ignored.internal"}
+        )
+
+        self.assertEqual(current_forwarded_host(), "app.example.com")
+
+    def test_asgi_pairs_expose_the_forwarded_host(self) -> None:
+        set_vercel_headers_from_asgi_pairs(
+            [(b"x-forwarded-host", b"app.example.com")]
+        )
+
+        self.assertEqual(current_forwarded_host(), "app.example.com")
+
+    def test_host_is_the_fallback(self) -> None:
+        set_vercel_headers_from_http_headers({"host": "app.example.com"})
+
+        self.assertEqual(current_forwarded_host(), "app.example.com")
+
+    def test_clearing_the_context_resets_the_host(self) -> None:
+        set_vercel_headers_from_http_headers({"host": "app.example.com"})
+        clear_vercel_headers_context()
+
+        self.assertIsNone(current_forwarded_host())
+
+    def test_no_request_means_no_host(self) -> None:
+        self.assertIsNone(current_forwarded_host())
+
+
+class TestInvocationHooksReexport(unittest.TestCase):
+    def test_hooks_module_exposes_the_accessor(self) -> None:
+        from vercel_runtime.invocation_hooks import (
+            current_forwarded_host as hook_accessor,
+        )
+
+        self.assertIs(hook_accessor, current_forwarded_host)

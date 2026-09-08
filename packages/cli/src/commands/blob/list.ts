@@ -50,13 +50,16 @@ export default async function list(
 
   const {
     '--limit': limit,
-    '--cursor': cursor,
+    '--next': next,
+    '--cursor': legacyCursor,
     '--prefix': prefix,
     '--mode': modeFlag,
   } = flags;
+  const cursor = next ?? legacyCursor;
 
   telemetryClient.trackCliOptionLimit(limit);
-  telemetryClient.trackCliOptionCursor(cursor);
+  telemetryClient.trackCliOptionNext(next);
+  telemetryClient.trackCliOptionCursor(legacyCursor);
   telemetryClient.trackCliOptionPrefix(prefix);
   telemetryClient.trackCliOptionMode(modeFlag);
 
@@ -111,10 +114,10 @@ export default async function list(
   }
 
   if (list.cursor) {
-    const nextFlags = getCommandFlags(flags, ['_', '--cursor']);
+    const nextFlags = getCommandFlags(flags, ['_', '--next', '--cursor']);
     output.log(
       `To display the next page run ${getCommandName(
-        `blob list${nextFlags} --cursor ${list.cursor}`
+        `blob list${nextFlags} --next ${list.cursor}`
       )}`
     );
   }

@@ -234,7 +234,8 @@ export async function performDeviceCodeFlow(
 
 export async function login(
   client: Client,
-  telemetry: LoginTelemetryClient
+  telemetry: LoginTelemetryClient,
+  standalone = true
 ): Promise<number> {
   const tokens = await performDeviceCodeFlow(client);
 
@@ -284,13 +285,17 @@ export async function login(
 
   o.debug(`Saved credentials in "${hp(client.getGlobalPathConfig())}"`);
 
-  o.print(`
+  if (standalone) {
+    o.print(`
   ${chalk.cyan('Congratulations!')} You are now signed in.
 
   To deploy something, run ${getCommandName()}.
 
   ${emoji('tip')} To deploy every commit automatically,
   connect a Git Repository (${chalk.bold(o.link('vercel.link/git', 'https://vercel.link/git', { color: false }))}).\n`);
+  } else {
+    o.success('Logged in.');
+  }
 
   telemetry.trackState('success');
 

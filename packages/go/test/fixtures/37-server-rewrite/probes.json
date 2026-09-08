@@ -1,0 +1,14 @@
+{
+  "probes": [
+    {
+      "path": "/old",
+      "status": 200,
+      "mustContain": "\"path\":\"/new\""
+    },
+    {
+      "path": "/new",
+      "status": 200,
+      "mustContain": "\"route\":\"new\""
+    }
+  ]
+}

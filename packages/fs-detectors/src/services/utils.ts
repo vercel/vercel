@@ -1,18 +1,15 @@
 import {
-  isBackendFramework,
-  isPythonFramework,
-} from '@vercel/build-utils/dist/framework-helpers';
-import {
   INTERNAL_SERVICE_PREFIX,
   getInternalServiceFunctionPath,
   getInternalServiceCronPathPrefix,
   getInternalServiceCronPath,
+  getInternalServiceWorkerPathPrefix,
+  getInternalServiceWorkerPath,
 } from '@vercel/build-utils';
-import type { Framework } from '@vercel/frameworks';
-import { frameworkList } from '@vercel/frameworks';
 import type { DetectorFilesystem } from '../detectors/filesystem';
+import { STATIC_BUILDERS, ROUTE_OWNING_BUILDERS } from './runtimes/constants';
+import { isFrontendFramework, isBFFFramework } from './runtimes/framework';
 import type {
-  ServiceRuntime,
   ExperimentalServices,
   ExperimentalServicesV2,
   InferredServicesConfig,
@@ -21,40 +18,15 @@ import type {
   ServiceDetectionWarning,
   ResolvedService,
 } from './types';
-import {
-  RUNTIME_BUILDERS,
-  ENTRYPOINT_EXTENSIONS,
-  STATIC_BUILDERS,
-  ROUTE_OWNING_BUILDERS,
-} from './types';
-
-// Runtime frameworks, e.g. Python, Node, Ruby, etc. are currently marked experimental,
-// but service auto-detection should still consider them.
-export const DETECTION_FRAMEWORKS = frameworkList.filter(
-  (framework: Framework) =>
-    !framework.experimental || framework.runtimeFramework
-);
 
 export {
   INTERNAL_SERVICE_PREFIX,
   getInternalServiceFunctionPath,
   getInternalServiceCronPathPrefix,
   getInternalServiceCronPath,
+  getInternalServiceWorkerPathPrefix,
+  getInternalServiceWorkerPath,
 };
-
-/**
- * Removes a trailing slash from an already-`posixPath.normalize`d path.
- *
- * `posixPath.normalize` preserves trailing slashes (`"frontend/"` stays
- * `"frontend/"`), which double-prefixes builder paths when the value is later
- * used as both `builder.config.workspace` and a `posixPath.join` prefix. Strip
- * it so `"frontend/"` and `"frontend"` resolve identically. An empty result or
- * a lone `"/"` collapses to `"."` (matching `normalizeServiceEntrypoint`).
- */
-export function stripTrailingSlash(p: string): string {
-  const stripped = p.replace(/\/+$/, '');
-  return stripped === '' ? '.' : stripped;
-}
 
 export async function hasFile(
   fs: DetectorFilesystem,
@@ -72,37 +44,6 @@ export async function hasFile(
  */
 export const INTERNAL_QUEUES_PREFIX = '/_svc/_queues';
 
-function normalizeInternalServiceEntrypoint(entrypoint: string): string {
-  const normalized = entrypoint
-    .replace(/\\/g, '/')
-    .replace(/^\/+/, '')
-    .replace(/\.[^/.]+$/, '');
-  return normalized || 'index';
-}
-
-export function getInternalServiceWorkerPathPrefix(
-  serviceName: string
-): string {
-  return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/workers`;
-}
-
-export function getInternalServiceWorkerPath(
-  serviceName: string,
-  entrypoint: string,
-  handler = 'worker'
-): string {
-  const normalizedEntrypoint = normalizeInternalServiceEntrypoint(entrypoint);
-  return `${getInternalServiceWorkerPathPrefix(serviceName)}/${normalizedEntrypoint}/${handler}`;
-}
-
-export function getBuilderForRuntime(runtime: ServiceRuntime): string {
-  const builder = RUNTIME_BUILDERS[runtime];
-  if (!builder) {
-    throw new Error(`Unknown runtime: ${runtime}`);
-  }
-  return builder;
-}
-
 export function isStaticBuild(service: ResolvedService): boolean {
   return STATIC_BUILDERS.has(service.builder.use);
 }
@@ -117,134 +58,6 @@ export function isStaticBuild(service: ResolvedService): boolean {
  */
 export function isRouteOwningBuilder(service: ResolvedService): boolean {
   return ROUTE_OWNING_BUILDERS.has(service.builder.use);
-}
-
-/**
- * Infer runtime from a framework slug.
- *
- * Examples:
- * - `python` -> `python`
- * - `fastapi` -> `python`
- * - `express` -> `node`
- */
-export function inferRuntimeFromFramework(
-  framework: string | null | undefined
-): ServiceRuntime | undefined {
-  if (!framework) {
-    return undefined;
-  }
-
-  // Runtime framework slug maps directly to runtime name.
-  if (framework in RUNTIME_BUILDERS) {
-    return framework as ServiceRuntime;
-  }
-
-  if (isPythonFramework(framework)) {
-    return 'python';
-  }
-  if (isBackendFramework(framework)) {
-    return 'node';
-  }
-
-  return undefined;
-}
-
-export function isFrontendFramework(
-  framework: string | null | undefined
-): boolean {
-  if (!framework) {
-    return false;
-  }
-  return !inferRuntimeFromFramework(framework);
-}
-
-/**
- * BFF (Backend-for-Frontend) frameworks have their own server-side API routes
- * (e.g. Next.js `/api/*`, Nuxt `/api/*`). Backend services mounted alongside
- * a BFF frontend need a namespaced prefix like `/api/{name}` to avoid
- * shadowing the frontend's API routes.
- */
-const BFF_FRAMEWORKS = new Set([
-  'nextjs',
-  'nuxtjs',
-  'sveltekit',
-  'remix',
-  'solidstart',
-]);
-
-export function isBFFFramework(framework: string | null | undefined): boolean {
-  return !!framework && BFF_FRAMEWORKS.has(framework);
-}
-
-export function filterFrameworksByRuntime<T extends { slug?: string | null }>(
-  frameworks: readonly T[],
-  runtime?: ServiceRuntime
-): T[] {
-  if (!runtime) {
-    return [...frameworks];
-  }
-
-  return frameworks.filter(
-    framework => inferRuntimeFromFramework(framework.slug) === runtime
-  );
-}
-
-/**
- * Infer runtime from available service configuration.
- *
- * Priority (highest to lowest):
- * 1. Explicit runtime (user specified in config)
- * 2. Runtime framework slug (ruby → ruby, go → go)
- * 3. Framework detection (fastapi → python, express → node)
- * 4. Builder detection (@vercel/python → python)
- * 5. Entrypoint extension (.py → python, .ts → node)
- *
- * @returns The inferred runtime, or undefined if none can be determined.
- */
-export function inferServiceRuntime(config: {
-  runtime?: string;
-  framework?: string;
-  builder?: string;
-  entrypoint?: string;
-}): ServiceRuntime | undefined {
-  // Explicit runtime takes priority
-  if (config.runtime && config.runtime in RUNTIME_BUILDERS) {
-    return config.runtime as ServiceRuntime;
-  }
-
-  const frameworkRuntime = inferRuntimeFromFramework(config.framework);
-  if (frameworkRuntime) {
-    return frameworkRuntime;
-  }
-
-  // Infer from builder
-  if (config.builder) {
-    for (const [runtime, builderName] of Object.entries(RUNTIME_BUILDERS)) {
-      if (config.builder === builderName) {
-        return runtime as ServiceRuntime;
-      }
-    }
-  }
-
-  // Infer from entrypoint extension
-  if (config.entrypoint) {
-    // "pyproject.toml" is the declared-services entrypoint for Python: the
-    // service builds exactly what `[tool.vercel]` in that file declares
-    // (web entrypoint and/or subscribers), with no auto-detection.
-    if (
-      config.entrypoint === 'pyproject.toml' ||
-      config.entrypoint.endsWith('/pyproject.toml')
-    ) {
-      return 'python';
-    }
-    for (const [ext, runtime] of Object.entries(ENTRYPOINT_EXTENSIONS)) {
-      if (config.entrypoint.endsWith(ext)) {
-        return runtime;
-      }
-    }
-  }
-
-  return undefined;
 }
 
 export interface ReadVercelConfigResult {

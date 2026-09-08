@@ -1,0 +1,7 @@
+{
+  "name": "services-proxy",
+  "private": true,
+  "dependencies": {
+    "@vercel/functions": "latest"
+  }
+}

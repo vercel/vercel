@@ -16,14 +16,37 @@ import { useProject } from '../../../mocks/project';
 import * as linkModule from '../../../../src/util/projects/link';
 import { normalize } from 'path';
 
-const { mockStart, devServerInstances, mockedRepoRoots } = vi.hoisted(() => ({
+const {
+  mockStart,
+  mockDetectFramework,
+  mockReadConfig,
+  devServerInstances,
+  mockedRepoRoots,
+} = vi.hoisted(() => ({
   mockStart: vi.fn<() => void>(),
+  mockDetectFramework: vi.fn<(_options: unknown) => Promise<string | null>>(),
+  mockReadConfig: vi.fn<(_dir: string) => Promise<unknown>>(),
   devServerInstances: [] as {
     cwd: string;
     projectId?: string;
     orgId?: string;
+    projectSettings?: { framework?: string | null };
   }[],
   mockedRepoRoots: new Map<string, string>(),
+}));
+
+vi.mock('@vercel/fs-detectors', async () => {
+  const actual = await vi.importActual<typeof import('@vercel/fs-detectors')>(
+    '@vercel/fs-detectors'
+  );
+  return {
+    ...actual,
+    detectFramework: mockDetectFramework,
+  };
+});
+
+vi.mock('../../../../src/util/config/read-config', () => ({
+  default: mockReadConfig,
 }));
 
 vi.mock('../../../../src/util/dev/server', async () => {
@@ -32,11 +55,19 @@ vi.mock('../../../../src/util/dev/server', async () => {
   >('../../../../src/util/dev/server');
   class DevServer {
     devCommand = 'framework dev';
-    constructor(cwd: string, options: { projectId?: string; orgId?: string }) {
+    constructor(
+      cwd: string,
+      options: {
+        projectId?: string;
+        orgId?: string;
+        projectSettings?: { framework?: string | null };
+      }
+    ) {
       devServerInstances.push({
         cwd,
         projectId: options.projectId,
         orgId: options.orgId,
+        projectSettings: options.projectSettings,
       });
     }
     feed() {}
@@ -108,6 +139,10 @@ describe('dev', () => {
   const projectPath = `/user/name/code/${projectName}`;
 
   beforeEach(() => {
+    mockDetectFramework.mockReset();
+    mockDetectFramework.mockResolvedValue(null);
+    mockReadConfig.mockReset();
+    mockReadConfig.mockResolvedValue(null);
     useUser();
     useTeams(orgId);
     useProject({
@@ -241,11 +276,103 @@ describe('dev', () => {
       await expect(client.stderr).toOutput('Running dev server in local mode');
     });
 
+    it.each([
+      {
+        framework: 'vite',
+        files: {
+          'package.json': JSON.stringify({
+            devDependencies: { vite: '7.0.0' },
+          }),
+        },
+      },
+      {
+        framework: 'go',
+        files: {
+          'package.json': '{}',
+          'go.mod': 'module example.com/local-dev',
+          'main.go': 'package main',
+        },
+      },
+    ])('detects the $framework framework for an unlinked zero-config project', async ({
+      framework,
+      files,
+    }) => {
+      const unlinkedPath = `/user/name/code/unlinked-${framework}-project`;
+      vol.fromJSON(files as Record<string, string>, unlinkedPath);
+      mockDetectFramework.mockResolvedValueOnce(framework);
+
+      client.setArgv('dev', '--local', unlinkedPath);
+      await expect(dev(client)).resolves.toEqual(undefined);
+
+      expect(mockDetectFramework).toHaveBeenCalledOnce();
+      expect(devServerInstances).toHaveLength(1);
+      expect(devServerInstances[0].projectSettings).toEqual({ framework });
+    });
+
+    it('does not detect a framework when explicit builds are configured', async () => {
+      const unlinkedPath = '/user/name/code/unlinked-explicit-builds';
+      vol.fromJSON(
+        {
+          'package.json': JSON.stringify({
+            devDependencies: { umi: '4.0.0' },
+          }),
+          'vercel.json': JSON.stringify({
+            builds: [{ src: 'package.json', use: '@vercel/static-build' }],
+          }),
+        },
+        unlinkedPath
+      );
+      mockDetectFramework.mockResolvedValueOnce('umijs');
+      mockReadConfig.mockResolvedValueOnce({
+        builds: [{ src: 'package.json', use: '@vercel/static-build' }],
+      });
+
+      client.setArgv('dev', '--local', unlinkedPath);
+      await expect(dev(client)).resolves.toEqual(undefined);
+
+      expect(mockDetectFramework).not.toHaveBeenCalled();
+      expect(devServerInstances[0].projectSettings).toBeUndefined();
+    });
+
+    it('does not detect a framework when local config explicitly disables it', async () => {
+      const unlinkedPath = '/user/name/code/unlinked-other-framework';
+      vol.fromJSON(
+        {
+          'package.json': '{}',
+          'vercel.json': JSON.stringify({ framework: null }),
+        },
+        unlinkedPath
+      );
+      mockDetectFramework.mockResolvedValueOnce('vite');
+      mockReadConfig.mockResolvedValueOnce({ framework: null });
+
+      client.setArgv('dev', '--local', unlinkedPath);
+      await expect(dev(client)).resolves.toEqual(undefined);
+
+      expect(mockDetectFramework).not.toHaveBeenCalled();
+      expect(devServerInstances[0].projectSettings).toBeUndefined();
+    });
+
+    it('leaves configured services on the services detection path', async () => {
+      const unlinkedPath = '/user/name/code/unlinked-services-project';
+      vol.fromJSON({ 'package.json': '{}' }, unlinkedPath);
+      mockDetectFramework.mockResolvedValueOnce('vite');
+      mockReadConfig.mockResolvedValueOnce({ services: {} });
+
+      client.setArgv('dev', '--local', unlinkedPath);
+      await expect(dev(client)).resolves.toEqual(undefined);
+
+      expect(mockDetectFramework).not.toHaveBeenCalled();
+      expect(devServerInstances[0].projectSettings).toBeUndefined();
+    });
+
     it('does not show local mode warning for linked projects', async () => {
+      mockDetectFramework.mockResolvedValueOnce('vite');
       client.setArgv('dev', '--local', projectPath);
       const exitCodePromise = dev(client);
 
       await expect(exitCodePromise).resolves.toEqual(undefined);
+      expect(mockDetectFramework).not.toHaveBeenCalled();
       await expect(client.stderr).not.toOutput(
         'Running dev server in local mode',
         100

@@ -3,6 +3,7 @@ import {
   connectDiscordCredentials,
   connectGitHubCredentials,
   connectLinearCredentials,
+  connectLinqCredentials,
   connectPhotonCredentials,
   connectSlackCredentials,
 } from '../../src/eve/index.js';
@@ -101,6 +102,44 @@ describe('Eve channel credential helpers', () => {
     });
   });
 
+  it('resolves the GitHub App slug from connector metadata', async () => {
+    fetchMock.mockResolvedValue(
+      jsonConnectorResponse('oauth/github', { appSlug: 'my-agent' })
+    );
+
+    const credentials = connectGitHubCredentials(
+      'oauth/github',
+      {},
+      { vercelToken: 'vercel_token' }
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    await expect(resolveToken(credentials.appSlug)).resolves.toBe('my-agent');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(
+      `https://api.vercel.com/v1/connect/connectors/${encodeURIComponent('oauth/github')}`
+    );
+    expect(init.method).toBe('GET');
+    expect(init.headers).toMatchObject({
+      Authorization: 'Bearer vercel_token',
+    });
+  });
+
+  it('fails clearly when connector metadata has no GitHub App slug', async () => {
+    fetchMock.mockResolvedValue(jsonConnectorResponse('oauth/github', {}));
+
+    const credentials = connectGitHubCredentials(
+      'oauth/github',
+      {},
+      { vercelToken: 'vercel_token' }
+    );
+
+    await expect(resolveToken(credentials.appSlug)).rejects.toThrow(
+      'did not return a GitHub App slug'
+    );
+  });
+
   it('builds Linear credentials backed by an app-scoped Connect token', async () => {
     fetchMock.mockResolvedValue(jsonTokenResponse('linear_token'));
 
@@ -119,6 +158,21 @@ describe('Eve channel credential helpers', () => {
       installationId: 'linear-installation',
       subject: { type: 'app' },
     });
+  });
+
+  it('resolves Linq credentials from an app-scoped Connect token', async () => {
+    fetchMock.mockResolvedValue(jsonTokenResponse('linq-api-key'));
+
+    const credentials = connectLinqCredentials(
+      'linq/my-agent',
+      {},
+      { vercelToken: 'vercel_token' }
+    );
+
+    expect(credentials.webhookVerifier).toEqual(expect.any(Function));
+    expect(fetchMock).not.toHaveBeenCalled();
+    await expect(credentials.apiKey()).resolves.toBe('linq-api-key');
+    expectTokenRequest('linq/my-agent', { subject: { type: 'app' } });
   });
 
   it('resolves Photon credentials from an app-scoped Connect token', async () => {
@@ -201,7 +255,9 @@ describe('Eve channel credential helpers', () => {
     expect(init.headers).toMatchObject({
       Authorization: 'Bearer vercel_token',
     });
-    expect(JSON.parse(init.body as string)).toEqual(body);
+    expect(JSON.parse(init.body as string)).toEqual(
+      body.scopes === undefined ? { ...body, scopes: ['*'] } : body
+    );
   }
 });
 
@@ -212,6 +268,25 @@ async function resolveToken(
     throw new Error('Expected token callback.');
   }
   return token();
+}
+
+function jsonConnectorResponse(
+  uid: string,
+  vendor: Record<string, unknown>
+): Response {
+  return new Response(
+    JSON.stringify({
+      id: 'scl_abc',
+      uid,
+      name: 'Test Connector',
+      type: 'oauth',
+      service: 'github',
+      createdAt: 0,
+      updatedAt: 0,
+      data: vendor,
+    }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } }
+  );
 }
 
 function jsonTokenResponse(

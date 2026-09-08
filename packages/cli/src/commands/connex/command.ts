@@ -9,10 +9,11 @@ import { packageName } from '../../util/pkg-name';
 export const createSubcommand = {
   name: 'create',
   aliases: [],
-  description: 'Create a new connector',
+  description:
+    'Create a new connector\n\nAccepts a known service (slack, notion, okta) or the URL of an OAuth or MCP server (mcp.notion.com/mcp). Run `create <service> --help` to see how a specific service can be connected to.',
   arguments: [
     {
-      name: 'type',
+      name: 'service',
       required: true,
     },
   ],
@@ -40,6 +41,73 @@ export const createSubcommand = {
       deprecated: false,
       description:
         "Webhook event to receive. Repeatable. Requires --triggers and replaces the provider's default events.",
+    },
+    {
+      name: 'trigger-project',
+      shorthand: null,
+      type: String,
+      argument: 'PROJECT',
+      deprecated: false,
+      description:
+        'Target a project by name or ID instead of the linked project. Requires --triggers.',
+    },
+    {
+      name: 'trigger-path',
+      shorthand: null,
+      type: String,
+      argument: 'PATH',
+      deprecated: false,
+      description:
+        'Set the path on the destination project that receives forwarded webhooks. Requires --triggers.',
+    },
+    {
+      name: 'trigger-branch',
+      shorthand: null,
+      type: String,
+      argument: 'BRANCH',
+      deprecated: false,
+      description:
+        'Target a preview deployment by git branch name. Omit the flag to target production. Cannot be combined with --trigger-environment. Requires --triggers.',
+    },
+    {
+      name: 'trigger-environment',
+      shorthand: null,
+      type: String,
+      argument: 'ENV',
+      deprecated: false,
+      description:
+        'Target a custom environment by slug or stable ID. Cannot be combined with --trigger-branch. Requires --triggers.',
+    },
+    {
+      name: 'connection-method',
+      shorthand: null,
+      type: String,
+      argument: 'METHOD',
+      deprecated: false,
+      description:
+        'How to connect to the service (e.g. oauth, mcp, api-key). Run without it to choose interactively; the error lists the valid values for a service.',
+    },
+    {
+      name: 'target',
+      shorthand: null,
+      type: String,
+      argument: 'TARGET',
+      deprecated: false,
+      description:
+        "Which of the service's products to connect to (e.g. api, mcp). Only needed when a service exposes more than one.",
+    },
+    {
+      name: 'param',
+      shorthand: null,
+      type: [String],
+      argument: 'KEY=VALUE',
+      deprecated: false,
+      description:
+        'Value for a connection method template field (e.g. domain=acme.okta.com). Repeatable.',
+    },
+    {
+      ...yesOption,
+      description: 'Skip the single-connection-method confirmation prompt',
     },
     {
       name: 'data',
@@ -105,8 +173,36 @@ export const createSubcommand = {
       value: `${packageName} connect create linear --name linear --triggers --trigger-event Issue --trigger-event Comment --trigger-event Project`,
     },
     {
+      name: 'Create with a custom trigger path',
+      value: `${packageName} connect create github --name github --triggers --trigger-path /eve/v1/github`,
+    },
+    {
+      name: 'Create with branch-specific trigger routing',
+      value: `${packageName} connect create github --name github --triggers --trigger-path /api/webhooks --trigger-branch staging`,
+    },
+    {
+      name: 'Create with trigger routing on another project',
+      value: `${packageName} connect create github --name github --triggers --trigger-project my-api --trigger-path /api/webhooks`,
+    },
+    {
       name: 'Create with branding (icon and colors)',
       value: `${packageName} connect create slack --name my-bot --icon ./logo.png --background-color '#1A2B3C' --accent-color '#FF0066'`,
+    },
+    {
+      name: 'Create with a specific connection method',
+      value: `${packageName} connect create notion --connection-method mcp --name notion-mcp`,
+    },
+    {
+      name: 'Create with an API key, reading it from a file',
+      value: `${packageName} connect create notion --connection-method api-key --name notion --data @key.json`,
+    },
+    {
+      name: 'Create from a connection method that needs template values',
+      value: `${packageName} connect create okta --connection-method custom-server --param domain=acme.okta.com --param auth_server_id=default --name okta --data @creds.json`,
+    },
+    {
+      name: 'Target a specific product of a service',
+      value: `${packageName} connect create notion --target api --connection-method oauth --name notion --data @creds.json`,
     },
     {
       name: 'Create a non-managed connector from explicit data',
@@ -534,7 +630,7 @@ export const attachSubcommand = {
       argument: 'BRANCH',
       deprecated: false,
       description:
-        'Target a specific git branch for the trigger destination (default: production). Only valid with --triggers.',
+        'Target a preview deployment by git branch name. Omit the flag to target production. Cannot be combined with --trigger-environment. Only valid with --triggers.',
     },
     {
       name: 'trigger-environment',
@@ -543,7 +639,7 @@ export const attachSubcommand = {
       argument: 'ENV',
       deprecated: false,
       description:
-        'Target a custom environment by slug or stable ID. Mutually exclusive with --trigger-branch and only valid with --triggers.',
+        'Target a custom environment by slug or stable ID. Cannot be combined with --trigger-branch. Only valid with --triggers.',
     },
     {
       name: 'trigger-path',
@@ -640,11 +736,63 @@ export const detachSubcommand = {
   ],
 } as const;
 
+export const contactsAddSubcommand = {
+  name: 'add',
+  aliases: [],
+  description: 'Add a phone contact that a connector may message',
+  arguments: [
+    {
+      name: 'connector',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'phone-number',
+      shorthand: null,
+      type: String,
+      argument: 'PHONE',
+      deprecated: false,
+      description: 'Contact phone number in E.164 format (e.g. +12025551234)',
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Add a contact by connector ID',
+      value: `${packageName} connect contacts add scl_abc123 --phone-number +12025551234`,
+    },
+    {
+      name: 'Add a contact by connector UID',
+      value: `${packageName} connect contacts add linq/support --phone-number +12025551234`,
+    },
+    {
+      name: 'Output the verification result as JSON',
+      value: `${packageName} connect contacts add scl_abc123 --phone-number +12025551234 --json`,
+    },
+  ],
+} as const;
+
+export const contactsSubcommand = {
+  name: 'contacts',
+  aliases: [],
+  description: 'Manage phone contacts for connectors',
+  arguments: [],
+  options: [],
+  subcommands: [contactsAddSubcommand],
+  examples: [
+    {
+      name: 'Add a contact',
+      value: `${packageName} connect contacts add scl_abc123 --phone-number +12025551234`,
+    },
+  ],
+} as const;
+
 export const connexCommand = {
   name: 'connect',
   aliases: [],
-  description:
-    'Manage connectors (Beta).\n\nVercel Connect is currently in beta. Behavior, commands, and output may change before general availability.',
+  description: 'Manage connectors',
   arguments: [],
   options: [],
   subcommands: [
@@ -657,6 +805,7 @@ export const connexCommand = {
     removeSubcommand,
     revokeTokensSubcommand,
     openSubcommand,
+    contactsSubcommand,
   ],
   examples: [
     {
@@ -680,4 +829,8 @@ export const connexCommand = {
       value: `${packageName} connect open scl_abc123`,
     },
   ],
+  documentation: {
+    label: 'Vercel Connect guide',
+    url: 'https://vercel.com/kb/guide/vercel-connect',
+  },
 } as const;

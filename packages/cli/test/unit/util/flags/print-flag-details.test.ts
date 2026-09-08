@@ -130,6 +130,61 @@ describe('printFlagEnvironmentDetails', () => {
     expect(printed).toContain('if user.plan is (case-insensitive) pro');
   });
 
+  it('shows Timestamp rule values as ISO dates', () => {
+    const signupAt = Date.parse('2026-04-16T09:00:00.000Z');
+    const flag: Flag = {
+      ...testFlag,
+      environments: {
+        ...testFlag.environments,
+        production: {
+          ...testFlag.environments.production,
+          rules: [
+            {
+              id: 'rule_signup',
+              conditions: [
+                {
+                  lhs: {
+                    type: 'entity',
+                    kind: 'user',
+                    attribute: 'signupAt',
+                  },
+                  cmp: 'gt',
+                  rhs: signupAt,
+                },
+              ],
+              outcome: { type: 'variant', variantId: 'control' },
+            },
+          ],
+        },
+      },
+    };
+
+    printFlagEnvironmentDetails(flag, {
+      typeName: 'settings',
+      projectId: 'project_123',
+      enabled: true,
+      environments: ['production'],
+      entities: [
+        {
+          kind: 'user',
+          label: 'User',
+          attributes: [{ key: 'signupAt', type: 'timestamp' }],
+        },
+      ],
+    });
+
+    const printed = stripAnsi(
+      vi
+        .mocked(output.print)
+        .mock.calls.map(([message]) => message)
+        .join('')
+    );
+
+    expect(printed).toContain(
+      'if user.signupAt is after 2026-04-16T09:00:00.000Z'
+    );
+  });
+
   it('shows rollout schedules', () => {
     const flag: Flag = {
       ...testFlag,

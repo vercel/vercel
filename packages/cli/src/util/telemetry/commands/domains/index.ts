@@ -69,6 +69,20 @@ export class DomainsTelemetryClient
     });
   }
 
+  trackCliSubcommandRenew(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'renew',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandAutoRenew(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'auto-renew',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandList(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'list',

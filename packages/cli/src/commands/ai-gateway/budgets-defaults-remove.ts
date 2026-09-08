@@ -2,6 +2,7 @@ import type Client from '../../util/client';
 import {
   deleteScopeBudgetDefault,
   parseBudgetDefaultScope,
+  BUDGET_DEFAULT_COVERED,
 } from '../../util/ai-gateway/budgets';
 import { ensureTeam } from '../../util/ai-gateway/ensure-team';
 import { printAlignedLabel } from '../../util/output/print-aligned-label';
@@ -58,12 +59,13 @@ export default async function remove(client: Client, argv: string[]) {
   }
 
   if (!yes) {
-    if (client.nonInteractive) {
+    if (client.nonInteractive || !client.stdin.isTTY) {
       output.error('To remove in non-interactive mode, re-run with --yes.');
       return 1;
     }
+    const affected = BUDGET_DEFAULT_COVERED[scopeType];
     const confirmed = await client.input.confirm(
-      `Remove the ${scopeType} budget default?`,
+      `Remove the ${scopeType} budget default? ${affected} without their own budget will have no default cap.`,
       false
     );
     if (!confirmed) {

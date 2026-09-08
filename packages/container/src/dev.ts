@@ -85,6 +85,23 @@ function writeEnvFile(env: Record<string, string>): string {
   return file;
 }
 
+function useContainerHost(endpoint: string): string {
+  try {
+    const url = new URL(endpoint);
+    if (
+      url.hostname === 'localhost' ||
+      url.hostname === '127.0.0.1' ||
+      url.hostname === '[::1]'
+    ) {
+      url.hostname = 'host.docker.internal';
+      return url.toString();
+    }
+  } catch {
+    // Leave developer-configured non-URL values unchanged.
+  }
+  return endpoint;
+}
+
 /**
  * Sink for all dev output. `vercel dev` runs many services in parallel and
  * prefixes each service's logs (e.g. `[api]`) by piping through per-service
@@ -509,6 +526,16 @@ async function startContainer(
           mergedEnv[key] = value;
         }
       }
+      const runtimeCacheEndpoint = mergedEnv.RUNTIME_CACHE_ENDPOINT;
+      const containerRuntimeCacheEndpoint = runtimeCacheEndpoint
+        ? useContainerHost(runtimeCacheEndpoint)
+        : undefined;
+      const needsHostGateway =
+        containerRuntimeCacheEndpoint !== undefined &&
+        containerRuntimeCacheEndpoint !== runtimeCacheEndpoint;
+      if (containerRuntimeCacheEndpoint) {
+        mergedEnv.RUNTIME_CACHE_ENDPOINT = containerRuntimeCacheEndpoint;
+      }
       mergedEnv.PORT = String(containerPort);
       const envFilePath = writeEnvFile(mergedEnv);
 
@@ -532,6 +559,9 @@ async function startContainer(
         // an ephemeral host port chosen by Docker when none was requested.
         '-p',
         `127.0.0.1:${requestedHostPort}:${containerPort}`,
+        ...(needsHostGateway
+          ? ['--add-host', 'host.docker.internal:host-gateway']
+          : []),
         '--env-file',
         envFilePath,
         image,

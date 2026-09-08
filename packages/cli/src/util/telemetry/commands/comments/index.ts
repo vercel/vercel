@@ -86,6 +86,12 @@ export class CommentsTelemetryClient
     }
   }
 
+  trackCliOptionPagePath(v: string[] | undefined) {
+    if (v && v.length > 0) {
+      this.trackCliOption({ option: 'page-path', value: this.redactedValue });
+    }
+  }
+
   trackCliOptionAuthor(v: string[] | undefined) {
     if (v && v.length > 0) {
       this.trackCliOption({ option: 'author', value: this.redactedValue });

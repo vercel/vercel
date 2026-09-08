@@ -116,14 +116,6 @@ describe('buildFileTree()', () => {
     expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
       normalizeWindowsPaths(fileList).sort()
     );
-
-    const [folderLinkPath, indexLinkPath] = await Promise.all([
-      fs.lstat(join(cwd, 'folder-link')),
-      fs.lstat(join(cwd, 'index-link.txt')),
-    ]);
-    expect(folderLinkPath.isSymbolicLink());
-    expect(folderLinkPath.isDirectory());
-    expect(indexLinkPath.isSymbolicLink());
   });
 
   it('should include the node_modules using `.vercelignore` allowlist', async () => {
@@ -212,21 +204,127 @@ describe('buildFileTree()', () => {
       noop
     );
 
+    const normalized = normalizeWindowsPaths(fileList);
+    const included = (rel: string) =>
+      normalizeWindowsPaths([join(cwd, rel)])[0];
+
     // `safe-handler.js` is not ignored and must still be included
-    expect(normalizeWindowsPaths(fileList)).toContain(
-      normalizeWindowsPaths([join(cwd, 'safe-handler.js')])[0]
-    );
-    expect(normalizeWindowsPaths(fileList)).toContain(
-      normalizeWindowsPaths([
-        join(cwd, '.vercel/output/functions/api/example.func/.vc-config.json'),
-      ])[0]
+    expect(normalized).toContain(included('safe-handler.js'));
+    expect(normalized).toContain(
+      included('.vercel/output/functions/api/example.func/.vc-config.json')
     );
 
     // `.env` is excluded by `.vercelignore` and must not be re-added
     // through `filePathMap`
-    expect(normalizeWindowsPaths(fileList)).not.toContain(
-      normalizeWindowsPaths([join(cwd, '.env')])[0]
+    expect(normalized).not.toContain(included('.env'));
+  });
+
+  it('should keep `filePathMap` entries under default-ignored dependency dirs when prebuilt=true', async () => {
+    const cwd = fixture('prebuilt-filepathmap-ignore');
+    const extraFuncDir = join(
+      cwd,
+      '.vercel/output/functions/api/collision.func'
     );
+    const extraConfigPath = join(extraFuncDir, '.vc-config.json');
+    await fs.ensureDir(extraFuncDir);
+    await fs.writeJson(extraConfigPath, {
+      runtime: 'nodejs20.x',
+      handler: 'index.js',
+      filePathMap: {
+        'dep.js': 'node_modules/example/index.js',
+        'chunk.js': '.next/server/chunks/foo.js',
+        'yarn.js': '.yarn/cache/foo.zip',
+        'pnp.cjs': '.pnp.cjs',
+        'venv.py': '.venv/lib/python.py',
+        pyc: '__pycache__/foo.pyc',
+        bin: 'target/release/app',
+        'route.js': 'src/app/api/webhooks/supabase/route.ts',
+        'readme.md': 'README.md',
+        'wrangler.toml': 'wrangler.toml',
+        'example.env': '.env.example',
+        'local.env': '.env.local',
+      },
+    });
+
+    try {
+      const { fileList } = await buildFileTree(
+        cwd,
+        {
+          isDirectory: true,
+          prebuilt: true,
+          vercelOutputDir: join(cwd, '.vercel/output'),
+        },
+        noop
+      );
+
+      const normalized = normalizeWindowsPaths(fileList);
+      const included = (rel: string) =>
+        normalizeWindowsPaths([join(cwd, rel)])[0];
+
+      // Duplicate source-upload defaults must not drop NFT-traced deps
+      expect(normalized).toContain(included('node_modules/example/index.js'));
+      expect(normalized).toContain(included('.next/server/chunks/foo.js'));
+      expect(normalized).toContain(included('.yarn/cache/foo.zip'));
+      expect(normalized).toContain(included('.pnp.cjs'));
+      expect(normalized).toContain(included('.venv/lib/python.py'));
+      expect(normalized).toContain(included('__pycache__/foo.pyc'));
+      expect(normalized).toContain(included('target/release/app'));
+      // Custom `.vercelignore` rules are still honored
+      expect(normalized).not.toContain(
+        included('src/app/api/webhooks/supabase/route.ts')
+      );
+      expect(normalized).not.toContain(included('README.md'));
+      expect(normalized).not.toContain(included('wrangler.toml'));
+      expect(normalized).not.toContain(included('.env.example'));
+      expect(normalized).not.toContain(included('.env.local'));
+    } finally {
+      await fs.remove(extraFuncDir);
+    }
+  });
+
+  it('should keep NFT-traced pnpm store files that match `node_modules/` in `.vercelignore` when prebuilt=true', async () => {
+    // Regression: Toyota `arrow-ecommerce-app` (PIPE-7143). After #17211,
+    // `--prebuilt` re-applied `.vercelignore` to `filePathMap`, so a
+    // `node_modules/` rule dropped pnpm store paths Next.js had traced.
+    // Remote hydrate then failed with:
+    // ENOENT: lstat '.../node_modules/.pnpm/@swc+helpers@0.5.15/node_modules/@swc/helpers/cjs/_interop_require_default.cjs'
+    const cwd = fixture('prebuilt-filepathmap-ignore');
+    const pnpmStoreFile =
+      'node_modules/.pnpm/@swc+helpers@0.5.15/node_modules/@swc/helpers/cjs/_interop_require_default.cjs';
+    const extraFuncDir = join(
+      cwd,
+      '.vercel/output/functions/api/pnpm-store.func'
+    );
+    const extraConfigPath = join(extraFuncDir, '.vc-config.json');
+    const storeFilePath = join(cwd, pnpmStoreFile);
+
+    await fs.ensureDir(extraFuncDir);
+    await fs.outputFile(storeFilePath, 'module.exports = {};\n');
+    await fs.writeJson(extraConfigPath, {
+      runtime: 'nodejs20.x',
+      handler: 'index.js',
+      filePathMap: {
+        '_interop_require_default.cjs': pnpmStoreFile,
+      },
+    });
+
+    try {
+      const { fileList } = await buildFileTree(
+        cwd,
+        {
+          isDirectory: true,
+          prebuilt: true,
+          vercelOutputDir: join(cwd, '.vercel/output'),
+        },
+        noop
+      );
+
+      const normalized = normalizeWindowsPaths(fileList);
+      expect(normalized).toContain(normalizeWindowsPaths([storeFilePath])[0]);
+    } finally {
+      await fs.remove(extraFuncDir);
+      await fs.remove(join(cwd, 'node_modules/.pnpm'));
+    }
   });
 
   it('should reject `filePathMap` entries that escape the deployment root when prebuilt=true', async () => {
