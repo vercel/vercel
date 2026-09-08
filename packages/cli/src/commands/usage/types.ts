@@ -52,6 +52,7 @@ export interface CostMetricsResponse {
 }
 
 export interface ServiceAggregation {
+  product: string;
   quantity: number;
   unit?: string;
   cost: number;
@@ -99,7 +100,7 @@ export interface UsageData {
   toDisplay: string;
   usageThrough: string;
   usingDefaults: boolean;
-  costUnit: 'USD';
+  costUnit: 'USD' | 'managed_infrastructure_units';
   credit?: CreditSummary;
   services: Map<string, ServiceAggregation>;
   periodUsage: Map<string, PeriodAggregation>;

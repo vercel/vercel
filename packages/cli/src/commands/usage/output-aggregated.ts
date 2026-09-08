@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import table from '../../util/output/table';
 import output from '../../output-manager';
 import elapsed from '../../util/output/elapsed';
-import { formatCurrency, formatQuantity } from '../../util/billing/format';
+import { formatBillingAmount, formatQuantity } from '../../util/billing/format';
 import type { OutputOptions, ServiceAggregation, UsageData } from './types';
 import {
   outputHiddenServicesHint,
@@ -52,13 +52,13 @@ export function outputAggregated({ data, startTime }: OutputOptions): void {
 
   if (usage.length > 0) {
     log(chalk.bold('Infrastructure'));
-    printTable(print, usage, 'Infrastructure subtotal');
+    printTable(print, usage, 'Infrastructure subtotal', data.costUnit);
     log('');
   }
 
   if (subscriptions.length > 0) {
     log(chalk.bold('Subscription licenses'));
-    printTable(print, subscriptions, 'Subscriptions subtotal');
+    printTable(print, subscriptions, 'Subscriptions subtotal', data.costUnit);
     log('');
   }
 
@@ -66,6 +66,7 @@ export function outputAggregated({ data, startTime }: OutputOptions): void {
     print,
     usage,
     subscriptions,
+    data.costUnit,
     data.credit?.currency === data.costUnit ? data.credit.used : 0
   );
   outputHiddenServicesHint(allServices.length - sortedServices.length);
@@ -81,15 +82,16 @@ function formatCadence(
 }
 
 function formatCredit(amount: number, currency: string): string {
-  return currency === 'USD'
-    ? formatCurrency(amount)
-    : formatQuantity(amount, 'MIUs');
+  return currency === 'managed_infrastructure_units'
+    ? formatQuantity(amount, 'MIUs')
+    : formatBillingAmount(amount, 'USD');
 }
 
 function printBillSummary(
   print: (message: string) => void,
   usage: [string, ServiceAggregation][],
   subscriptions: [string, ServiceAggregation][],
+  costUnit: UsageData['costUnit'],
   creditsApplied = 0
 ): void {
   const subscriptionCost = sumEffectiveCost(subscriptions);
@@ -97,16 +99,19 @@ function printBillSummary(
   const appliedCredit = Math.min(creditsApplied, infrastructureCost);
   const estimatedBill = subscriptionCost + infrastructureCost - appliedCredit;
   const rows = [
-    ['Subscriptions', formatCurrency(subscriptionCost)],
-    ['Infrastructure usage', formatCurrency(infrastructureCost)],
+    ['Subscriptions', formatBillingAmount(subscriptionCost, costUnit)],
+    ['Infrastructure usage', formatBillingAmount(infrastructureCost, costUnit)],
   ];
 
   if (appliedCredit > 0) {
-    rows.push(['Credits applied', `-${formatCurrency(appliedCredit)}`]);
+    rows.push([
+      'Credits applied',
+      `-${formatBillingAmount(appliedCredit, costUnit)}`,
+    ]);
   }
   rows.push([
     chalk.bold('Estimated bill'),
-    chalk.bold(formatCurrency(estimatedBill)),
+    chalk.bold(formatBillingAmount(estimatedBill, costUnit)),
   ]);
 
   const tablePrint = table(rows, { hsep: 4, align: ['l', 'r'] }).replace(
@@ -126,7 +131,8 @@ function sumEffectiveCost(services: [string, ServiceAggregation][]): number {
 function printTable(
   print: (message: string) => void,
   services: [string, ServiceAggregation][],
-  subtotalLabel: string
+  subtotalLabel: string,
+  costUnit: UsageData['costUnit']
 ): void {
   const headers = ['Service', 'Usage', 'Effective Cost'];
   const rows = services.map(([name, service]) => {
@@ -136,11 +142,11 @@ function printTable(
         ? formatQuantity(service.quantity, service.unit ?? 'licenses', {
             compact: true,
           })
-        : formatQuantity(service.quantity, service.unit ?? '', {
+        : formatQuantity(service.quantity, undefined, {
             compact: true,
             showSmallValues: true,
-          }).trim(),
-      formatCurrency(service.effectiveCost),
+          }),
+      formatBillingAmount(service.effectiveCost, costUnit),
     ];
   });
   const subtotal = services.reduce(
@@ -150,7 +156,7 @@ function printTable(
   rows.push([
     chalk.bold(subtotalLabel),
     '',
-    chalk.bold(formatCurrency(subtotal)),
+    chalk.bold(formatBillingAmount(subtotal, costUnit)),
   ]);
 
   const tablePrint = table(

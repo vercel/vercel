@@ -61,7 +61,8 @@ function useBillingCharges(
   charges: FocusCharge[] = [],
   quantityUnit: 'inferred' | 'none' = 'inferred',
   onRequest?: (request: { body: unknown; query: unknown }) => void,
-  detailGroupBy = ['product', 'region', 'project']
+  detailGroupBy = ['product', 'region', 'project'],
+  costUnit: 'USD' | 'managed_infrastructure_units' = 'USD'
 ) {
   client.scenario.post('/v2/billing/costs', (req, res) => {
     onRequest?.({ body: req.body, query: req.query });
@@ -100,7 +101,10 @@ function useBillingCharges(
         {
           slug: 'gross_cost',
           title: 'Cost',
-          unit: { kind: 'standard', name: 'USD' },
+          unit:
+            costUnit === 'USD'
+              ? { kind: 'custom', singular: 'dollar', plural: 'dollars' }
+              : { kind: 'custom', singular: 'MIU', plural: 'MIUs' },
         },
         ...charges.map(charge => ({
           slug: quantityMetricSlug(charge),
@@ -238,13 +242,13 @@ describe('usage', () => {
       expect(output).toContain('Estimated bill          $15.00');
     });
 
-    it('should request USD costs and only request the detail view for group-by', async () => {
+    it('should use the account cost currency and only request the detail view for group-by', async () => {
       const requests: Array<{ body: any; query: any }> = [];
       useBillingCharges([], 'inferred', request => requests.push(request));
 
       client.setArgv('usage', '--from', '2025-12-01', '--to', '2025-12-31');
       expect(await usage(client)).toEqual(0);
-      expect(requests[0].body.currency).toEqual('USD');
+      expect(requests[0].body).not.toHaveProperty('currency');
       expect(requests[0].body.views).toEqual({
         byProduct: { groupBy: ['product'] },
       });
@@ -327,14 +331,20 @@ describe('usage', () => {
       expect(output).toContain('Progress   10%');
     });
 
-    it('should format MIU credits without subtracting them from a USD bill', async () => {
+    it('should display and apply MIU credits to MIU costs', async () => {
       client.config.currentTeam = 'team_dummy';
-      useBillingCharges([
-        createMockCharge({
-          ServiceName: 'Infrastructure usage',
-          BilledCost: 10,
-        }),
-      ]);
+      useBillingCharges(
+        [
+          createMockCharge({
+            ServiceName: 'Infrastructure usage',
+            BilledCost: 10,
+          }),
+        ],
+        'inferred',
+        undefined,
+        ['product', 'region', 'project'],
+        'managed_infrastructure_units'
+      );
       useCommitmentUsage({
         total: 1000,
         remaining: 750,
@@ -347,8 +357,9 @@ describe('usage', () => {
       const output = client.getFullOutput();
       expect(output).toContain('Used       250 MIUs of 1,000 MIUs');
       expect(output).toContain('Remaining  750 MIUs');
-      expect(output).not.toContain('Credits applied');
-      expect(output).toMatch(/Estimated bill\s+\$10\.00/);
+      expect(output).toMatch(/Infrastructure usage\s+10 MIUs/);
+      expect(output).toMatch(/Credits applied\s+-10 MIUs/);
+      expect(output).toMatch(/Estimated bill\s+0 MIUs/);
     });
 
     it('should explain how credits affect the estimated bill', async () => {
@@ -581,10 +592,47 @@ describe('usage', () => {
       expect(json.services).toEqual([
         expect.objectContaining({
           name: 'Edge Requests',
+          product: 'Edge Requests',
           quantity: 12040,
           cost: 2,
           effectiveCost: 2,
           included: false,
+        }),
+      ]);
+    });
+
+    it('should preserve included status when the metered quantity is zero', async () => {
+      useBillingCharges([
+        createMockCharge({
+          ServiceName: 'Edge Requests',
+          ConsumedQuantity: 12000,
+          BilledCost: 0,
+          Tags: { FlatRate: 'true' },
+        }),
+        createMockCharge({
+          ServiceName: 'Edge Requests',
+          ConsumedQuantity: 0,
+          BilledCost: 0,
+        }),
+      ]);
+
+      client.setArgv(
+        'usage',
+        '--from',
+        '2025-12-01',
+        '--to',
+        '2025-12-31',
+        '--format',
+        'json'
+      );
+      expect(await usage(client)).toEqual(0);
+
+      const json = JSON.parse(client.stdout.getFullOutput());
+      expect(json.services).toEqual([
+        expect.objectContaining({
+          product: 'Edge Requests',
+          quantity: 12000,
+          included: true,
         }),
       ]);
     });
@@ -739,6 +787,39 @@ describe('usage', () => {
       // Should show services
       expect(output).toContain('Serverless Function Execution');
       expect(output).toContain('Edge Middleware Invocations');
+    });
+
+    it('should treat subscription quantities as gauges in breakdowns', async () => {
+      useBillingCharges([
+        createMockCharge({
+          ServiceName: 'Pro',
+          ConsumedQuantity: 1,
+          BilledCost: 20,
+          ChargePeriodStart: '2025-12-01T08:00:00.000Z',
+          Tags: { Category: 'Subscription Licenses' },
+        }),
+        createMockCharge({
+          ServiceName: 'Pro',
+          ConsumedQuantity: 1,
+          BilledCost: 0,
+          ChargePeriodStart: '2025-12-02T08:00:00.000Z',
+          Tags: { Category: 'Subscription Licenses' },
+        }),
+      ]);
+
+      client.setArgv(
+        'usage',
+        '--from',
+        '2025-12-01',
+        '--to',
+        '2025-12-31',
+        '--breakdown',
+        'weekly'
+      );
+      expect(await usage(client)).toEqual(0);
+
+      expect(client.getFullOutput()).toMatch(/Pro\s+1 license\s+\$20\.00/);
+      expect(client.getFullOutput()).not.toContain('2 licenses');
     });
 
     it('should display weekly breakdown with --breakdown weekly', async () => {

@@ -2,9 +2,15 @@ export function formatCurrency(amount: number): string {
   return `$${amount.toFixed(2)}`;
 }
 
+export function formatBillingAmount(amount: number, unit: string): string {
+  return unit === 'USD'
+    ? formatCurrency(amount)
+    : formatQuantity(amount, 'MIUs');
+}
+
 export function formatQuantity(
   quantity: number,
-  unit: string,
+  unit = '',
   options: { compact?: boolean; showSmallValues?: boolean } = {}
 ): string {
   if (unit === 'USD') {
@@ -27,7 +33,7 @@ export function formatQuantity(
         : `>${formatter.format(-0.01)}`
       : formattedQuantity;
 
-  return `${displayQuantity} ${displayUnit}`;
+  return displayUnit ? `${displayQuantity} ${displayUnit}` : displayQuantity;
 }
 
 export function extractDatePortion(isoString: string): string {

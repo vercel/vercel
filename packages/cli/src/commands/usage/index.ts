@@ -124,9 +124,9 @@ export default async function usage(client: Client): Promise<number> {
     contextType = scope.team ? 'team' : 'personal account';
     teamId = scope.team?.id;
     billingPeriod = owner.billing?.period;
-    const billing = owner.billing as
-      | { plan?: string; planIteration?: string }
-      | undefined;
+    const billing = owner.billing;
+    // Keep this predicate aligned with `hasPrecommitment` in
+    // api/packages/billing/orb-client/utils/get-precommitment-usage.ts.
     hasPrecommitment =
       billing?.plan === 'enterprise' ||
       billing?.planIteration === 'plus' ||
@@ -182,14 +182,14 @@ export default async function usage(client: Client): Promise<number> {
       };
     }
 
+    const queryString = query.toString();
     const costsRequest = client.fetch<CostMetricsResponse>(
-      `/v2/billing/costs${query.size > 0 ? `?${query}` : ''}`,
+      `/v2/billing/costs${queryString ? `?${queryString}` : ''}`,
       {
         method: 'POST',
         body: {
           from: fromDate,
           to: toDate,
-          currency: 'USD',
           // TODO: Request `net_cost` here once the billing costs API PR lands.
           metrics: [GROSS_COST_METRIC, 'quantity'],
           format: 'timeseries',
@@ -328,6 +328,7 @@ function processCosts(
     const serviceName = productMetadata?.title ?? product;
     const aggregation = aggregateResult(
       result,
+      product,
       undefined,
       productMetadata?.category === 'Subscription Licenses'
     );
@@ -344,6 +345,7 @@ function processCosts(
         const period = periodUsage.get(periodKey) ?? emptyAggregation();
         const sample = aggregateResult(
           result,
+          product,
           index,
           productMetadata?.category === 'Subscription Licenses'
         );
@@ -363,6 +365,7 @@ function processCosts(
       const serviceName = productMetadata?.title ?? product;
       const aggregation = aggregateResult(
         result,
+        product,
         undefined,
         productMetadata?.category === 'Subscription Licenses'
       );
@@ -387,7 +390,7 @@ function processCosts(
     toDisplay,
     usageThrough: getUsageThrough(response.queriedAt, toDisplay),
     usingDefaults,
-    costUnit: 'USD',
+    costUnit: getCostUnit(response),
     services,
     periodUsage,
     groupByUsage,
@@ -398,8 +401,18 @@ function processCosts(
   };
 }
 
+function getCostUnit(response: CostMetricsResponse): UsageData['costUnit'] {
+  const unit = response.metrics.find(
+    metric => metric.slug === GROSS_COST_METRIC
+  )?.unit;
+  return unit?.singular === 'MIU' || unit?.plural === 'MIUs'
+    ? 'managed_infrastructure_units'
+    : 'USD';
+}
+
 function aggregateResult(
   result: CostMetricGroup,
+  product: string,
   sampleIndex?: number,
   isSubscription = false
 ): ServiceAggregation {
@@ -424,6 +437,7 @@ function aggregateResult(
     : undefined;
 
   return {
+    product,
     quantity,
     unit,
     cost,
@@ -443,9 +457,17 @@ function addService(
     services.set(name, { ...value });
     return;
   }
-  existing.quantity += value.quantity;
+  existing.quantity =
+    existing.category === 'subscription'
+      ? Math.max(existing.quantity, value.quantity)
+      : existing.quantity + value.quantity;
   existing.cost += value.cost;
-  existing.included &&= value.included;
+  if (value.quantity !== 0) {
+    existing.included =
+      existing.quantity === value.quantity
+        ? value.included
+        : existing.included && value.included;
+  }
   existing.effectiveCost += value.effectiveCost;
 }
 

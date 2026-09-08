@@ -35,6 +35,7 @@ type Billing = {
   cancelation?: number;
   period: { start: number; end: number };
   plan: string;
+  planIteration?: string;
   platform: string;
   status: 'active' | 'trialing' | 'overdue' | 'canceled' | 'expired';
   trial: { start: number; end: number };

@@ -4,6 +4,7 @@ import type { JsonOutputOptions, ServiceAggregation } from './types';
 function serializeService(name: string, service: ServiceAggregation) {
   return {
     name,
+    product: service.product,
     quantity: service.quantity,
     unit: service.unit,
     cost: service.cost,

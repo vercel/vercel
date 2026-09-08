@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import table from '../../util/output/table';
 import output from '../../output-manager';
 import elapsed from '../../util/output/elapsed';
-import { formatCurrency, formatQuantity } from '../../util/billing/format';
+import { formatBillingAmount, formatQuantity } from '../../util/billing/format';
 import type { OutputOptions, GroupByDimension } from './types';
 import {
   outputHiddenServicesHint,
@@ -46,17 +46,18 @@ export function outputGroupBy({
     if (services.length === 0) continue;
 
     log(
-      `${chalk.bold(chalk.cyan(groupName))} (${formatCurrency(
-        groupData.totalEffectiveCost
+      `${chalk.bold(chalk.cyan(groupName))} (${formatBillingAmount(
+        groupData.totalEffectiveCost,
+        data.costUnit
       )})`
     );
     const rows = services.map(([name, service]) => [
       service.included ? chalk.blue(name) : name,
-      formatQuantity(service.quantity, service.unit ?? '', {
+      formatQuantity(service.quantity, service.unit, {
         compact: true,
         showSmallValues: true,
-      }).trim(),
-      formatCurrency(service.effectiveCost),
+      }),
+      formatBillingAmount(service.effectiveCost, data.costUnit),
     ]);
     const tablePrint = table(
       [
@@ -73,7 +74,7 @@ export function outputGroupBy({
   log('');
   log(
     `${chalk.gray('Estimated total:')} ${chalk.bold(
-      formatCurrency(data.grandTotals.effectiveCost)
+      formatBillingAmount(data.grandTotals.effectiveCost, data.costUnit)
     )}`
   );
   outputHiddenServicesHint(hiddenCount);
