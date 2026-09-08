@@ -63,6 +63,8 @@ export function outputBreakdown({
       formatQuantity(service.quantity, service.unit, {
         compact: true,
         showSmallValues: true,
+        singularUnit: service.singularUnit,
+        unitKind: service.unitKind,
       }),
       formatBillingAmount(service.effectiveCost, data.costUnit),
     ]);

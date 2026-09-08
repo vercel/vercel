@@ -30,6 +30,7 @@ import { outputJson } from './output-json';
 import type {
   BreakdownPeriod,
   CommitmentUsageResponse,
+  CostMetric,
   CostMetricGroup,
   CostMetricsResponse,
   GroupAggregation,
@@ -329,6 +330,7 @@ function processCosts(
     const aggregation = aggregateResult(
       result,
       product,
+      response.metrics,
       undefined,
       productMetadata?.category === 'Subscription Licenses'
     );
@@ -346,6 +348,7 @@ function processCosts(
         const sample = aggregateResult(
           result,
           product,
+          response.metrics,
           index,
           productMetadata?.category === 'Subscription Licenses'
         );
@@ -366,6 +369,7 @@ function processCosts(
       const aggregation = aggregateResult(
         result,
         product,
+        response.metrics,
         undefined,
         productMetadata?.category === 'Subscription Licenses'
       );
@@ -413,12 +417,16 @@ function getCostUnit(response: CostMetricsResponse): UsageData['costUnit'] {
 function aggregateResult(
   result: CostMetricGroup,
   product: string,
+  metrics: CostMetric[],
   sampleIndex?: number,
   isSubscription = false
 ): ServiceAggregation {
   const grossCostIndex = result.metrics.indexOf(GROSS_COST_METRIC);
   const quantityIndex = result.metrics.findIndex(
     metric => metric !== GROSS_COST_METRIC
+  );
+  const quantityMetric = metrics.find(
+    metric => metric.slug === result.metrics[quantityIndex]
   );
   const values =
     sampleIndex === undefined
@@ -430,21 +438,44 @@ function aggregateResult(
   const effectiveCost = included ? 0 : cost;
   const rawQuantity = quantityIndex === -1 ? 0 : (values[quantityIndex] ?? 0);
   const quantity = isSubscription ? rawQuantity || 1 : rawQuantity;
-  const unit = isSubscription
-    ? quantity === 1
-      ? 'license'
-      : 'licenses'
-    : undefined;
+  const units = getQuantityUnits(quantityMetric, product, isSubscription);
 
   return {
     product,
     quantity,
-    unit,
+    ...units,
     cost,
     included,
     category: isSubscription ? 'subscription' : 'usage',
     effectiveCost,
   };
+}
+
+function getQuantityUnits(
+  metric: CostMetric | undefined,
+  product: string,
+  isSubscription: boolean
+): Pick<ServiceAggregation, 'unit' | 'singularUnit' | 'unitKind'> {
+  if (isSubscription) {
+    return { unit: 'licenses', singularUnit: 'license' };
+  }
+
+  if (!metric?.unit) return {};
+  if (metric.unit.kind === 'custom') {
+    const singularUnit = metric.unit.singular;
+    const unit = metric.unit.plural ?? singularUnit;
+    if (!unit || singularUnit === metric.title || unit === metric.title)
+      return {};
+    return { unit, singularUnit };
+  }
+
+  if (metric.unit.kind === 'digitalStorage' && metric.unit.name) {
+    return { unit: metric.unit.name, unitKind: metric.unit.kind };
+  }
+
+  const unit = metric.unit.name;
+  if (!unit || unit === metric.title || unit === product) return {};
+  return { unit, unitKind: metric.unit.kind };
 }
 
 function addService(
@@ -457,14 +488,16 @@ function addService(
     services.set(name, { ...value });
     return;
   }
+  const previousQuantity = existing.quantity;
   existing.quantity =
     existing.category === 'subscription'
-      ? Math.max(existing.quantity, value.quantity)
-      : existing.quantity + value.quantity;
+      ? Math.max(previousQuantity, value.quantity)
+      : previousQuantity + value.quantity;
   existing.cost += value.cost;
   if (value.quantity !== 0) {
+    // Zero-quantity contributors do not decide whether a product is included.
     existing.included =
-      existing.quantity === value.quantity
+      previousQuantity === 0
         ? value.included
         : existing.included && value.included;
   }

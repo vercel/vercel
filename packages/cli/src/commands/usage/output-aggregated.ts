@@ -82,9 +82,7 @@ function formatCadence(
 }
 
 function formatCredit(amount: number, currency: string): string {
-  return currency === 'managed_infrastructure_units'
-    ? formatQuantity(amount, 'MIUs')
-    : formatBillingAmount(amount, 'USD');
+  return formatBillingAmount(amount, currency);
 }
 
 function printBillSummary(
@@ -138,14 +136,12 @@ function printTable(
   const rows = services.map(([name, service]) => {
     return [
       service.included ? chalk.blue(name) : name,
-      service.category === 'subscription'
-        ? formatQuantity(service.quantity, service.unit ?? 'licenses', {
-            compact: true,
-          })
-        : formatQuantity(service.quantity, undefined, {
-            compact: true,
-            showSmallValues: true,
-          }),
+      formatQuantity(service.quantity, service.unit, {
+        compact: true,
+        showSmallValues: service.category === 'usage',
+        singularUnit: service.singularUnit,
+        unitKind: service.unitKind,
+      }),
       formatBillingAmount(service.effectiveCost, costUnit),
     ];
   });

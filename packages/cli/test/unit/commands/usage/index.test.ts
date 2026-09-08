@@ -113,11 +113,13 @@ function useBillingCharges(
             quantityUnit === 'none' ||
             charge.Tags.Category === 'Subscription Licenses'
               ? null
-              : {
-                  kind: 'custom',
-                  singular: charge.ConsumedUnit.replace(/s$/, ''),
-                  plural: charge.ConsumedUnit,
-                },
+              : charge.ConsumedUnit === 'byte'
+                ? { kind: 'digitalStorage', name: 'byte' }
+                : {
+                    kind: 'custom',
+                    singular: charge.ConsumedUnit.replace(/s$/, ''),
+                    plural: charge.ConsumedUnit,
+                  },
         })),
       ],
       from: times.at(0) ?? '2025-12-01T08:00:00.000Z',
@@ -315,6 +317,24 @@ describe('usage', () => {
       expect(requested).toEqual(false);
     });
 
+    it.each([
+      ['plus', { plan: 'pro', planIteration: 'plus' }],
+      ['Pro Flex', { plan: 'pro', planIteration: 'flex' }],
+    ])('should request precommitment usage for %s teams', async (_name, billing) => {
+      client.config.currentTeam = 'team_dummy';
+      Object.assign(team, { billing });
+      useBillingCharges([]);
+      let requested = false;
+      client.scenario.get('/v1/invoices/pre-commitment-usage', (_req, res) => {
+        requested = true;
+        res.json({ creditLedgers: [] });
+      });
+
+      client.setArgv('usage');
+      expect(await usage(client)).toEqual(0);
+      expect(requested).toEqual(true);
+    });
+
     it('should display the current monthly infrastructure credit for a team', async () => {
       client.config.currentTeam = 'team_dummy';
       useBillingCharges([]);
@@ -407,6 +427,30 @@ describe('usage', () => {
       });
     });
 
+    it('should include the account MIU cost unit in JSON output', async () => {
+      useBillingCharges(
+        [createMockCharge({ BilledCost: 10 })],
+        'inferred',
+        undefined,
+        ['product', 'region', 'project'],
+        'managed_infrastructure_units'
+      );
+
+      client.setArgv(
+        'usage',
+        '--from',
+        '2025-12-01',
+        '--to',
+        '2025-12-31',
+        '--format',
+        'json'
+      );
+      expect(await usage(client)).toEqual(0);
+      expect(JSON.parse(client.stdout.getFullOutput()).costUnit).toEqual(
+        'managed_infrastructure_units'
+      );
+    });
+
     it('should continue when current infrastructure credit is unavailable', async () => {
       client.config.currentTeam = 'team_dummy';
       useBillingCharges([]);
@@ -452,9 +496,13 @@ describe('usage', () => {
       expect(await usage(client)).toEqual(0);
 
       const output = client.getFullOutput();
-      expect(output).toMatch(/Small Positive Usage\s+<0\.01\s+\$1\.00/);
-      expect(output).toMatch(/Small Negative Usage\s+>-0\.01\s+\$1\.00/);
-      expect(output).toMatch(/Fixed Fee\s+0\s+\$1\.00/);
+      expect(output).toMatch(
+        /Small Positive Usage\s+<0\.01 GB-Seconds\s+\$1\.00/
+      );
+      expect(output).toMatch(
+        /Small Negative Usage\s+>-0\.01 GB-Seconds\s+\$1\.00/
+      );
+      expect(output).toMatch(/Fixed Fee\s+0 GB-Seconds\s+\$1\.00/);
     });
 
     it('should preserve small nonzero usage in JSON output', async () => {
@@ -507,6 +555,26 @@ describe('usage', () => {
       expect(output).not.toContain('Show all with:');
     });
 
+    it('should pluralize the hidden services hint', async () => {
+      useBillingCharges([
+        createMockCharge({
+          ServiceName: 'Empty Usage',
+          ConsumedQuantity: 0,
+        }),
+        createMockCharge({
+          ServiceName: 'Empty Subscription',
+          ConsumedQuantity: 0,
+          Tags: { Category: 'Subscription Licenses' },
+        }),
+      ]);
+
+      client.setArgv('usage', '--from', '2025-12-01', '--to', '2025-12-31');
+      expect(await usage(client)).toEqual(0);
+      expect(client.getFullOutput()).toContain(
+        '2 services with no usage hidden'
+      );
+    });
+
     it('should omit unknown product units', async () => {
       useBillingCharges(
         [
@@ -552,14 +620,61 @@ describe('usage', () => {
 
       expect(exitCode).toEqual(0);
       const output = client.getFullOutput();
-      expect(output).toContain('12.04K');
-      expect(output).not.toContain('12.04K requests');
+      expect(output).toContain('12.04K requests');
       expect(output).toContain('Edge Requests');
       expect(output).not.toContain('Edge Requests (Flat Rate CDN)');
       expect(output).toContain('Effective Cost');
       expect(output).toContain('$0.00');
       expect(output).not.toContain('Net Cost');
       expect(output).not.toContain('Amount due');
+    });
+
+    it('should use singular custom units', async () => {
+      useBillingCharges([
+        createMockCharge({
+          ServiceName: 'Edge Requests',
+          ConsumedQuantity: 1,
+          ConsumedUnit: 'requests',
+          BilledCost: 1,
+        }),
+      ]);
+
+      client.setArgv('usage', '--from', '2025-12-01', '--to', '2025-12-31');
+      expect(await usage(client)).toEqual(0);
+      expect(client.getFullOutput()).toMatch(
+        /Edge Requests\s+1 request\s+\$1\.00/
+      );
+    });
+
+    it('should format digital storage while preserving raw JSON quantities', async () => {
+      const charge = createMockCharge({
+        ServiceName: 'Data Transfer',
+        ConsumedQuantity: 1_500_000_000,
+        ConsumedUnit: 'byte',
+        BilledCost: 1,
+      });
+      useBillingCharges([charge]);
+
+      client.setArgv('usage', '--from', '2025-12-01', '--to', '2025-12-31');
+      expect(await usage(client)).toEqual(0);
+      expect(client.getFullOutput()).toMatch(
+        /Data Transfer\s+1\.5 GB\s+\$1\.00/
+      );
+
+      client.setArgv(
+        'usage',
+        '--from',
+        '2025-12-01',
+        '--to',
+        '2025-12-31',
+        '--format',
+        'json'
+      );
+      expect(await usage(client)).toEqual(0);
+      const json = JSON.parse(client.stdout.getFullOutput());
+      expect(json.services[0]).toEqual(
+        expect.objectContaining({ quantity: 1_500_000_000, unit: 'byte' })
+      );
     });
 
     it('should merge flat-rate and metered usage into one product row', async () => {
@@ -712,7 +827,7 @@ describe('usage', () => {
       expect(json.costUnit).toEqual('USD');
       expect(json.services[0].name).toEqual('Serverless Function Execution');
       expect(json.services[0].quantity).toEqual(1000000);
-      expect(json.services[0]).not.toHaveProperty('unit');
+      expect(json.services[0].unit).toEqual('GB-Seconds');
       expect(json.services[0]).not.toHaveProperty('pricingQuantity');
       expect(json.services[0]).not.toHaveProperty('billedCost');
       expect(json.totals).toEqual({ cost: 10, effectiveCost: 10 });

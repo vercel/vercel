@@ -55,6 +55,8 @@ export interface ServiceAggregation {
   product: string;
   quantity: number;
   unit?: string;
+  singularUnit?: string;
+  unitKind?: string;
   cost: number;
   included: boolean;
   category: 'usage' | 'subscription';
