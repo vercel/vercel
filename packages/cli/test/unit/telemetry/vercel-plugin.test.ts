@@ -40,6 +40,53 @@ describe('vercel plugin active-session marker', () => {
     ).toEqual({ pluginVersion: '0.42.1' });
   });
 
+  it('reads the install id when the marker carries one', () => {
+    writeMarker({
+      schema: 1,
+      active: true,
+      pluginVersion: '0.49.0',
+      updatedAt: 1000,
+      expiresAt: 2000,
+      installId: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
+    });
+
+    expect(
+      readVercelPluginActiveSessionMarker({
+        filePath: markerFilePath,
+        now: () => 1500,
+      })
+    ).toEqual({
+      pluginVersion: '0.49.0',
+      installId: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
+    });
+  });
+
+  it('keeps the marker when the install id is absent or malformed', () => {
+    for (const installId of [
+      undefined,
+      'not-a-uuid',
+      '',
+      42,
+      '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+    ]) {
+      writeMarker({
+        schema: 1,
+        active: true,
+        pluginVersion: '0.49.0',
+        updatedAt: 1000,
+        expiresAt: 2000,
+        installId,
+      });
+
+      expect(
+        readVercelPluginActiveSessionMarker({
+          filePath: markerFilePath,
+          now: () => 1500,
+        })
+      ).toEqual({ pluginVersion: '0.49.0' });
+    }
+  });
+
   it('ignores a missing, expired, or malformed marker', () => {
     expect(
       readVercelPluginActiveSessionMarker({ filePath: markerFilePath })
@@ -79,6 +126,9 @@ describe('vercel plugin active-session marker', () => {
 
     telemetry.trackVercelPluginActiveSession();
     telemetry.trackVercelPluginVersion('0.42.1');
+    telemetry.trackVercelPluginInstallId(
+      '3f2504e0-4f89-41d3-9a0c-0305e82c3301'
+    );
 
     expect(telemetryEventStore.readonlyEvents).toMatchObject([
       {
@@ -88,6 +138,30 @@ describe('vercel plugin active-session marker', () => {
       {
         key: 'vercel_plugin_version',
         value: '0.42.1',
+      },
+      {
+        key: 'vercel_plugin_install_id',
+        value: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
+      },
+    ]);
+  });
+
+  it('omits the install id event when the marker has none', () => {
+    const telemetryEventStore = new TelemetryEventStore({
+      isDebug: true,
+      config: { enabled: true },
+    });
+    const telemetry = new RootTelemetryClient({
+      opts: { store: telemetryEventStore },
+    });
+
+    telemetry.trackVercelPluginActiveSession();
+    telemetry.trackVercelPluginInstallId(undefined);
+
+    expect(telemetryEventStore.readonlyEvents).toMatchObject([
+      {
+        key: 'vercel_plugin_active_session',
+        value: 'TRUE',
       },
     ]);
   });
