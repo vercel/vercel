@@ -26,6 +26,8 @@ export interface NowOptions {
   withCache?: boolean;
 }
 
+export type BuildMachine = 'basic' | 'standard' | 'enhanced' | 'turbo';
+
 export interface CreateOptions {
   // Legacy
   nowConfig?: VercelConfig;
@@ -43,6 +45,7 @@ export interface CreateOptions {
   quiet?: boolean;
   env: Dictionary<string>;
   build: { env: Dictionary<string> };
+  buildMachine?: BuildMachine;
   forceNew?: boolean;
   withCache?: boolean;
   target?: string | null;
@@ -123,6 +126,7 @@ export default class Now {
       quiet = false,
       env,
       build,
+      buildMachine,
       forceNew = false,
       withCache = false,
       target = null,
@@ -145,6 +149,7 @@ export default class Now {
       ...nowConfig,
       env,
       build,
+      buildMachine,
       name,
       project,
       meta,

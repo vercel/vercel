@@ -19,7 +19,7 @@ import chalk from 'chalk';
 import fs from 'fs-extra';
 import ms from 'ms';
 import { join, resolve } from 'path';
-import Now, { type CreateOptions } from '../../util';
+import Now, { type BuildMachine, type CreateOptions } from '../../util';
 import type Client from '../../util/client';
 import { readLocalConfig } from '../../util/config/files';
 import { compileVercelConfig } from '../../util/compile-vercel-config';
@@ -109,6 +109,20 @@ const COMMAND_CONFIG = {
   init: getCommandAliases(initSubcommand),
   continue: getCommandAliases(continueSubcommand),
 };
+
+const BUILD_MACHINES: BuildMachine[] = [
+  'basic',
+  'standard',
+  'enhanced',
+  'turbo',
+];
+
+function parseBuildMachine(
+  value: string | undefined
+): BuildMachine | undefined {
+  if (value === undefined) return undefined;
+  return BUILD_MACHINES.find(buildMachine => buildMachine === value);
+}
 
 export default async (client: Client): Promise<number> => {
   const telemetryClient = new DeployTelemetryClient({
@@ -959,7 +973,18 @@ async function handleDefaultDeploy(
     return 1;
   }
 
+  const buildMachine = parseBuildMachine(
+    parsedArguments.flags['--build-machine']
+  );
+  if (parsedArguments.flags['--build-machine'] && !buildMachine) {
+    output.error(
+      `\`--build-machine\` must be one of: ${BUILD_MACHINES.join(', ')}`
+    );
+    return 1;
+  }
+
   telemetryClient.trackCliOptionArchive(parsedArguments.flags['--archive']);
+  telemetryClient.trackCliOptionBuildMachine(buildMachine);
   telemetryClient.trackCliOptionEnv(parsedArguments.flags['--env']);
   telemetryClient.trackCliOptionBuildEnv(parsedArguments.flags['--build-env']);
   telemetryClient.trackCliOptionMeta(parsedArguments.flags['--meta']);
@@ -1465,6 +1490,7 @@ async function handleDefaultDeploy(
       project: project.id,
       env: deploymentEnv as Dictionary<string>,
       build: { env: deploymentBuildEnv as Dictionary<string> },
+      buildMachine,
       forceNew: parsedArguments.flags['--force'],
       withCache: parsedArguments.flags['--with-cache'],
       prebuilt,

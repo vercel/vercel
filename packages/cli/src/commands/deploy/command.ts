@@ -200,6 +200,15 @@ export const deployCommand = {
         'Specify environment variables during build-time (e.g. `-b KEY1=value1 -b KEY2=value2`)',
     },
     {
+      name: 'build-machine',
+      shorthand: null,
+      type: String,
+      argument: 'basic|standard|enhanced|turbo',
+      deprecated: false,
+      description: 'Select the build machine size',
+      hidden: true,
+    },
+    {
       name: 'meta',
       shorthand: 'm',
       type: [String],

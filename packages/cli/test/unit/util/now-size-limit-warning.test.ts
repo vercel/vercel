@@ -36,6 +36,24 @@ describe('Now.create — size_limit_exceeded warning', () => {
   // Previously this branch crashed on `hashes[sha].names.pop()` (`hashes` was
   // never populated), so the warning and upgrade CTA were unreachable. Now it
   // should warn about the skipped file and surface the plan upgrade link.
+  it('serializes buildMachine in the deployment creation request', async () => {
+    processDeployment.mockResolvedValue({ id: 'dpl_test' });
+    const now = new Now({ client });
+
+    await now.create(
+      '/tmp/whatever',
+      { ...baseCreateOptions(), buildMachine: 'enhanced' },
+      org,
+      false
+    );
+
+    expect(processDeployment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestBody: expect.objectContaining({ buildMachine: 'enhanced' }),
+      })
+    );
+  });
+
   it('warns about the skipped file and prints the upgrade CTA', async () => {
     // The API returns the deployment with a per-file size warning instead of
     // failing the whole deploy.
