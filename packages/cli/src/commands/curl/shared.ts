@@ -606,7 +606,7 @@ export async function getDeploymentUrlAndToken(
   let baseUrl: string;
 
   if (deploymentFlag) {
-    const accountId = scope.team?.id || scope.user.id;
+    const accountId = scope.team?.id || scope.user?.id;
     const isDirectUrl =
       deploymentFlag.startsWith('http://') ||
       deploymentFlag.startsWith('https://') ||

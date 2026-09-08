@@ -24,7 +24,10 @@ import {
   rulesSchemaSubcommand,
   rulesUpdateSubcommand,
 } from './rules/command';
-import { getRulesAddBodyExamplesHelp } from './rules/add-help';
+import {
+  getRulesAddBodyExamplesHelp,
+  getRulesUpdateBodyExamplesHelp,
+} from './rules/add-help';
 
 const COMMAND_CONFIG = {
   inspect: getCommandAliases(inspectSubcommand),
@@ -236,7 +239,11 @@ export default async function alerts(client: Client): Promise<number> {
         return 0;
       }
       if (nested === 'update' || nested === 'patch') {
-        printHelp(rulesUpdateSubcommand, rulesHelpParent);
+        printHelp(
+          rulesUpdateSubcommand,
+          rulesHelpParent,
+          getRulesUpdateBodyExamplesHelp()
+        );
         return 0;
       }
       output.print(

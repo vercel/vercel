@@ -67,17 +67,17 @@ Current gaps to migrate incrementally:
 
 Link prompt map:
 
-| State                              | Human prompt/output                                                                                                                                                                  | Non-interactive                        |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
-| Multiple teams                     | searchable `Which team?` before project discovery                                                                                                                                    | `action_required: missing_scope` unless explicit signal or single choice |
-| Single team                        | no prompt; aligned `Team` row, then project discovery                                                                                                                                | proceeds with that team                |
-| One folder-name project match      | `Which project?` with the match labeled `(folder name)`, then search/create choices                                                                                                  | link only for explicit/repo-root match |
-| One repository project match       | direct interactive: `Which project?` with the match labeled `(linked by git)`; other paths: `Found existing project`, aligned `Project`/`Source`, then `Link repository to project?` | link only for explicit/repo-root match |
-| No project match                   | `Which project?` with `Search all projects` / `Create a new project`, then `Name?` when creating                                                                                     | require `--yes` or `project_not_found` |
-| Root choices exist                 | `Code directory?`                                                                                                                                                                    | require root flag/config/payload       |
-| Settings differ                    | `Customize settings?`                                                                                                                                                                | require flags/config/payload           |
-| Optional env pull                  | `Pull development environment variables into .env.local?`                                                                                                                            | skip unless explicitly requested       |
-| Stale/deleted link                 | show stale link, then concrete relink choice                                                                                                                                         | `action_required: stale_link`          |
+| State                         | Human prompt/output                                                                                                                                                                  | Non-interactive                                                          |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Multiple teams                | searchable `Which team?` before project discovery                                                                                                                                    | `action_required: missing_scope` unless explicit signal or single choice |
+| Single team                   | no prompt; aligned `Team` row, then project discovery                                                                                                                                | proceeds with that team                                                  |
+| One folder-name project match | `Which project?` with the match labeled `(folder name)`, then search/create choices                                                                                                  | link only for explicit/repo-root match                                   |
+| One repository project match  | direct interactive: `Which project?` with the match labeled `(linked by git)`; other paths: `Found existing project`, aligned `Project`/`Source`, then `Link repository to project?` | link only for explicit/repo-root match                                   |
+| No project match              | `Which project?` with `Search all projects` / `Create a new project`, then `Name?` when creating                                                                                     | require `--yes` or `project_not_found`                                   |
+| Root choices exist            | `Code directory?`                                                                                                                                                                    | require root flag/config/payload                                         |
+| Settings differ               | `Customize settings?`                                                                                                                                                                | require flags/config/payload                                             |
+| Optional env pull             | `Pull development environment variables into .env.local?`                                                                                                                            | skip unless explicitly requested                                         |
+| Stale/deleted link            | show stale link, then concrete relink choice                                                                                                                                         | `action_required: stale_link`                                            |
 
 Link acceptance matrix:
 
@@ -126,6 +126,8 @@ Rules:
 - Validate local path/config/target before first remote mutation.
 - If project is not linked, setup/link, then continue deployment.
 - Running `vc` is deployment intent; do not ask `Set up and deploy "<path>"?`.
+- Eligible unauthenticated `vc` and `vc deploy` runs ask `Deploy temporarily without logging in?` before creating the first temporary deployment. `--yes` skips this prompt, and a valid `.vercel/anonymous.json` records prior confirmation for subsequent deploys.
+- Unauthenticated non-interactive runs without `--yes` return `action_required: confirmation_required` with the exact `--yes` retry command. CI requires credentials even with `--yes`.
 - Do not upload until team, project, root, target, and project settings are resolved.
 - `vc <path>` and `vc deploy <path>` should produce equivalent output after routing.
 - `--prod` prints `▲ Production`; preview prints `Preview` without `▲`.
@@ -135,28 +137,37 @@ Rules:
 - Preview rows keep the blank two-space gutter. `Production` and production `Aliased` rows use the `▲` gutter.
 - End completed deploy flows with `✓ Ready in 47s`.
 - `--no-wait` may print URLs and still-processing note; no `✓ Ready` unless already `READY`.
+- Human deploy output shows post-success `Next steps:` by default. Respect persisted guidance settings.
 - Build/log failures prefer inspect/log commands over blind retry.
 - Retry suggestions after upload/build failure must not risk duplicate deployments unless rerun semantics are intentional.
+- After a deployment is created from a supported local Git repository, recommend `vc git connect` when the remote project is verified to have no Git link. Put `Automatically deploy changes on every push by connecting Git:` first in the `Next steps:` list, followed by the exact context-preserving command. When the deployment is ready, keep useful response-check, log, redeploy, and promote actions after it. While it is still building, show only safe setup and status actions.
+- Stay silent when the local repository or remote project state is unknown, the provider is unsupported, the project is already linked, or it is linked to a different repository. Guidance lookup failures never fail the deployment.
+- Non-interactive guidance must resolve to a runnable command without prompting; suppress it when multiple remotes make `git connect` ambiguous.
 - `deploy init` / `deploy continue` preserve shared URL row, JSON, and ready-status contracts where they share output.
 
 Deploy output map:
 
-| State                        | Human output                                    | Non-interactive / JSON                       |
-| ---------------------------- | ----------------------------------------------- | -------------------------------------------- |
-| Linked project               | deploy without setup prompts                    | deploy using resolved link                   |
-| Unlinked project             | setup/link prompts, then deploy                 | action/error payload with exact next command |
-| Path/config invalid          | validation error before remote calls            | JSON error when path owns contract           |
-| Preview deployment           | `Inspect`, `Preview`, `✓ Ready` when ready      | deployment object + inspect/promote next     |
-| Production deployment        | `Inspect`, `▲ Production`, optional `▲ Aliased` | deployment object + inspect next             |
-| `--no-wait` still building   | URLs plus still-processing note                 | no ready claim                               |
-| Build/check failure          | short failure plus inspect/log command          | deployment context + inspect/log next        |
-| Rate limit/timeout/interrupt | say whether work may still be running           | inspect/status before retry when possible    |
+| State                          | Human output                                    | Non-interactive / JSON                                 |
+| ------------------------------ | ----------------------------------------------- | ------------------------------------------------------ |
+| Linked project                 | deploy without setup prompts                    | deploy using resolved link                             |
+| Local Git, no project Git link | result, then benefit-led `git connect` guidance | deployment payload plus safe `git connect` next action |
+| Unlinked project               | setup/link prompts, then deploy                 | action/error payload with exact next command           |
+| Path/config invalid            | validation error before remote calls            | JSON error when path owns contract                     |
+| Preview deployment             | `Inspect`, `Preview`, `✓ Ready` when ready      | deployment object + inspect/promote next               |
+| Production deployment          | `Inspect`, `▲ Production`, optional `▲ Aliased` | deployment object + inspect next                       |
+| `--no-wait` still building     | URLs plus still-processing note                 | no ready claim                                         |
+| Build/check failure            | short failure plus inspect/log command          | deployment context + inspect/log next                  |
+| Rate limit/timeout/interrupt   | say whether work may still be running           | inspect/status before retry when possible              |
 
 Deploy acceptance matrix:
 
 - bare `vc` and `vc deploy` route equivalence
+- unauthenticated `vc` and `vc deploy` first-deploy confirmation, valid-state reuse, `--yes` bypass, non-interactive action payload, and CI credential requirement
 - explicit deploy path
 - linked project deploy without setup prompts
+- supported local Git repository with verified unlinked, linked, mismatched, and unknown remote project state
+- contextual Git guidance preserves positional path, `--cwd`, team, and explicit project context
+- worktree, submodule, one/multiple/no remote, unsupported provider, guidance opt-out, and anonymous deployment suppression
 - unlinked project setup/link/create, then deploy
 - preview and production URL rows
 - production alias row only when assigned
@@ -181,13 +192,13 @@ rg -n "Link to existing project\\?|Link to different existing project\\?|Link to
 `vc env add` target resolution order:
 
 1. Variable name: positional `name`, otherwise `Name?`.
-2. Variable-key safety: public-prefix warnings, rename/keep/re-enter choice.
-3. Project: existing `.vercel/project.json` link; fail with link next command when missing.
+2. Project: existing `.vercel/project.json` link; fail with link next command when missing.
+3. Variable-key safety: API-global prefixes plus only the linked project's active framework/custom prefix; warn with rename/keep/re-enter choices.
 4. Existing targets: current Environment Variables plus custom Environments.
-5. Sensitivity: explicit `--sensitive`/`--no-sensitive`, Development restrictions, team sensitive-variable policy, otherwise `Store as sensitive?`.
+5. Type: explicit `--type config|secret`, legacy `--sensitive`/`--no-sensitive`, public-prefix inference, safe non-interactive Secret default, or `Environment Variable type?`.
 6. Value: stdin, `--value`, or `Value?`. Mask sensitive values; leave non-sensitive typed values visible; never repeat the value after entry.
 7. Environment targets: positional target (single or comma-separated list, e.g. `production,preview,development`; standard targets and custom Environment slugs/ids) or `Environments?` multiselect.
-8. Preview branch: optional third arg, or `Git branch?` when adding only to Preview.
+8. Preview branch: `--git-branch`, the legacy third positional argument, or `Git branch?` when adding only to Preview interactively without `--yes`.
 9. Mutation: save variable, optional force overwrite.
 10. Result: aligned receipt rows with variable, project, environments, branch, and type.
 
@@ -197,32 +208,43 @@ Rules:
 - Show linked `Project` context only when it changes the next decision or prevents real ambiguity. Prefer no preview over a block that repeats already-known values.
 - Never repeat the Environment Variable value after entry in human output, JSON, debug logs, telemetry, warnings, errors, or suggested commands. Sensitive values must not be visible at all.
 - Do not include actual `--value` contents in agent `next` commands. Use quoted `"<value>"` placeholders in shell commands, even if the user provided a value.
+- Human remediation commands run interactively: put each full command on its own indented line and omit `--yes` and templated `--value` arguments. Agent `next[].command` values stay raw and may use `--yes`; when they contain `"<value>"`, state that it must be replaced before running.
 - The environment positional accepts a comma-separated list producing one multi-target entry. Unknown tokens fail locally with `error: invalid_environment` naming valid targets; custom Environment slugs normalize to ids. A Git branch is only allowed when Preview is the only target (`error: branch_requires_preview_only` otherwise). `missing_environment` and `missing_requirements` payloads must include a comma-separated multi-target `next` suggestion (with `--no-sensitive` when Development is included and sensitivity was not explicit).
+- Prefer `--git-branch <name>` for branch-specific Preview variables. Keep the third positional argument as a compatibility input, reject invocations that provide both forms, and do not advertise the positional form in help or suggestions. When `--yes` or non-interactive mode is active, omitting the branch applies to all Preview branches without prompting.
 - Use masked input for sensitive interactive `Value?` prompts. Use visible text input for non-sensitive `Value?` prompts so users can catch typos before saving.
-- Use `Name?`, `Store as sensitive?`, `Value?`, `Environments?`, and `Git branch?`.
-- Use `Variable name?` for public-prefix warning choices; use `Value?` for value-warning choices.
+- Use `Name?`, `Environment Variable type?`, `Value?`, `Environments?`, and `Git branch?`.
+- Use `How should this variable be stored?` for public-prefix warning choices; use `Value?` for value-warning choices.
 - Public-prefix and value warnings use the warning gutter: `! The NEXT_PUBLIC_ prefix will make API_KEY visible to anyone visiting your site`. Do not use `WARNING!` as a column-0 label.
-- Keep the sensitive-value explanation as dim inline context on the prompt: `Store as sensitive? Sensitive values cannot be read later`. Do not wrap the hint in parentheses, add trailing punctuation, or print it as a separate row above the prompt.
+- Config/Secret safety hard stops use the fatal-error gutter: `✗ <message>`. Do not print an `!` warning immediately before a fatal error for the same condition; print exactly one fatal message.
 - Use checkbox instructions for `Environments?`: `<space> select, <enter> confirm, <a> toggle all, <i> invert` on the prompt line when it fits, with no parentheses.
-- Do not offer Development when the value is sensitive. Do not offer Production/Preview for non-sensitive values when the team policy requires sensitive values there.
+- Allow Development Secrets when the user selects Secret explicitly. Preserve the legacy Config default for an ambiguous Development-only add. Do not offer Production/Preview for non-sensitive values when the team policy requires sensitive values there.
 - If the user declines sensitivity under a team policy, state the resulting constraint before environment selection.
 - Result rows use `✓` for the primary `Added` or `Overrode` receipt. `Project`, `Environments`, optional `Branch`, and `Type` keep the blank gutter.
 - Omit timestamps from default success output unless the command family has a support/debug reason to show one.
 - Keep `--force` semantics as overwrite/upsert, not generic confirmation bypass.
 - Keep non-interactive output stdout-clean JSON/action payloads. Human preview/result rows stay on stderr.
+- Use `Type` with `Config` and `Secret` everywhere in human output; keep the API and JSON field named `visibility` for compatibility. Print exactly one `Type` row.
+- Treat an API record as Secret when either `visibility === 'secret'` or the legacy `type === 'sensitive'`. Use one shared predicate across add/update/list/pull/run/remove flows.
+- Use non-empty Development Secret values returned by the API in `env pull` and `env run`. Never replace a returned value with `[SENSITIVE]`.
+- Treat an empty Secret response as unavailable. Preserve an existing local value during `env pull`; otherwise write `[SENSITIVE]` and explain how to replace it locally. Remove `[SENSITIVE]` before `env run` so it is never injected as a credential.
+- Scope read guidance to the selected environment. Development fallback copy says the value was not returned; it must not claim Development Secrets can never be pulled. Preview, Production, and custom-environment copy may state that Secrets cannot be pulled there.
+- `--type` is canonical. Continue accepting `--visibility` as a hidden deprecated alias, warn once per invocation, accept matching aliases, and reject conflicting values before prompts or API calls.
+- A secret-looking public-prefixed name with no explicit type requires one decision: rename without the prefix and use Secret, keep the public name as Config, or enter another name. `--yes` must not infer browser exposure; fail with both exact next commands instead of prompting.
+- Track whether type came from argv, a prompt, inference, or the default. Explicit Config warns and proceeds; inferred public Config can require a later decision when the entered value looks like a credential. Resolve each key/value signal at most once.
+- When an explicit type is absent and the flow skips prompts, default to Secret and state that after the result. Explain that Secrets stay hidden in the dashboard, Development values can be pulled, and other Environment values are unavailable to pulls. Preserve Config for an ambiguous Development-only add; require `--type secret` or `--sensitive` to create a Development Secret without prompting.
 
 Env add prompt map:
 
 | State                        | Human prompt/output                                                                      | Non-interactive                                      |
 | ---------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | Missing variable name        | `Name?`                                                                                  | `action_required: missing_requirements`              |
-| Public-prefix risky name     | warning, then `Variable name?` with keep/rename/re-enter choices                         | `action_required: env_key_sensitive` when applicable |
 | Linked project resolved      | no default preview; optional compact `Project` context only when ambiguous               | use linked project or `error: not_linked`            |
-| Missing sensitivity decision | `Store as sensitive?` with dim inline sensitive-value explanation                        | infer from flags/policy/defaults                     |
+| Public-prefix risky name     | warning, then `How should this variable be stored?` with keep/rename/re-enter choices    | `action_required: public_prefix_requires_type`        |
+| Missing type decision        | `Environment Variable type?` with Config and Secret choices                             | infer from flags/public prefix or default to Secret  |
 | Missing value                | `Value?`; masked when sensitive, visible when non-sensitive                              | require stdin or `--value`                           |
 | Value warning                | warning, then `Value?` with keep/re-enter/trim choices                                   | warning only, no post-prompt value echo              |
 | Missing environment target   | `Environments?` checkbox                                                                 | `action_required: missing_environment`               |
-| Preview branch unresolved    | `Git branch?` with empty meaning all Preview branches                                    | omit branch for all Preview branches                 |
+| Preview branch unresolved    | `Git branch?` with empty meaning all Preview branches unless `--yes` accepts the default | omit branch for all Preview branches                 |
 | Save succeeds                | aligned `✓ Added`/`✓ Overrode`, `Project`, `Environments`, optional `Branch`, and `Type` | exit 0, no post-prompt value echo                    |
 
 Env add acceptance matrix:
@@ -236,15 +258,25 @@ Env add acceptance matrix:
 - mixed target selection
 - comma-separated multi-target positional (dedupe, trim, invalid token, branch with multiple targets)
 - custom Environment target
-- Preview with a branch and all Preview branches
+- Preview with `--git-branch`, the legacy positional branch, conflicting branch inputs, and all Preview branches
 - team sensitive-variable policy on/off
 - public-prefix name warnings with keep, rename, and re-enter
+- `--type`, deprecated `--visibility`, matching aliases, and conflicting aliases
+- old feature-environment values unset, `0`, and `1` produce identical behavior
 - value warnings with keep, re-enter, and trim
 - `--force` overwrite receipt
 - `--yes`, `--sensitive`, and `--no-sensitive`
 - non-interactive missing name/value/environment
 - non-interactive next commands preserve safe globals and never include actual secret values
 - primary completed-phase gutter: `✓ Added` or `✓ Overrode`; secondary rows keep the blank gutter
+
+## Env Pull + Run Safety
+
+- A redacted remote Secret must never erase a usable local value. `env pull` preserves an existing non-placeholder local Secret and writes `"[SENSITIVE]"` only when no local value is available.
+- `"[SENSITIVE]"` is a reserved transport placeholder, not a credential. `env run` must never pass a local value equal to it to a child process, including when Secret metadata is unavailable or the pull API now returns the real Development value.
+- When Secret metadata is unavailable, continue with the values returned by the pull API, omit reserved local placeholders, and explain only risks the CLI can verify.
+- In non-interactive mode, a missing child command returns `action_required: missing_command`; an unlinked directory returns `action_required: not_linked` with `vercel link` in `next[]`.
+- Test both current `visibility: 'secret'` and legacy `type: 'sensitive'` record shapes.
 
 Env add stale-string sweep:
 

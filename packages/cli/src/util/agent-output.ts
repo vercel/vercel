@@ -7,6 +7,7 @@ import {
   getGlobalFlagsFromArgs,
   suggestionFlagTakesSeparateValue,
 } from './arg-common';
+import { quoteArg } from './flags/quote-arg';
 
 /**
  * Structured payload for "action required" (e.g. scope choice, login passcode).
@@ -112,6 +113,20 @@ export function buildCommandWithYes(
   const hasYes = args.some(a => a === '--yes' || a === '-y');
   const out = hasYes ? args : [...args, '--yes'];
   return `${pkgName} ${out.join(' ')}`.trim();
+}
+
+/** Replaces Environment Variable values in argv before emitting suggestions. */
+export function redactEnvValueArgs(argv: string[]): string[] {
+  const redacted = [...argv];
+  for (let i = 0; i < redacted.length; i++) {
+    if (redacted[i] === '--value' && i + 1 < redacted.length) {
+      redacted[i + 1] = '"<value>"';
+      i++;
+    } else if (redacted[i].startsWith('--value=')) {
+      redacted[i] = '--value="<value>"';
+    }
+  }
+  return redacted;
 }
 
 /** Global flags that should be preserved in suggested "next" commands (e.g. --cwd, --non-interactive). */
@@ -410,7 +425,7 @@ export function buildEnvAddCommandWithPreservedArgs(
   );
   const base = `${pkgName} ${commandTemplate}`;
   if (preserved.length === 0) return base;
-  return `${base} ${preserved.join(' ')}`;
+  return `${base} ${preserved.map(quoteArg).join(' ')}`;
 }
 
 /**
@@ -441,7 +456,7 @@ export function buildEnvRmCommandWithPreservedArgs(
   );
   const base = `${pkgName} ${commandTemplate}`;
   if (preserved.length === 0) return base;
-  return `${base} ${preserved.join(' ')}`;
+  return `${base} ${preserved.map(quoteArg).join(' ')}`;
 }
 
 /**
@@ -465,7 +480,7 @@ export function buildEnvUpdateCommandWithPreservedArgs(
   );
   const base = `${pkgName} ${commandTemplate}`;
   if (preserved.length === 0) return base;
-  return `${base} ${preserved.join(' ')}`;
+  return `${base} ${preserved.map(quoteArg).join(' ')}`;
 }
 
 /**
@@ -647,7 +662,9 @@ export type ExitWithNonInteractiveErrorVariant =
   | 'update'
   | 'speed-insights'
   | 'web-analytics'
+  | 'observability'
   | 'checks'
+  | 'resume'
   | 'global-config'
   | 'list';
 
@@ -733,20 +750,30 @@ function buildNextStepsForProjectSubcommands(
                     template: 'project web-analytics <name>' as const,
                     when: 'Enable Web Analytics by project name (replace <name>)',
                   }
-                : variant === 'checks'
+                : variant === 'observability'
                   ? {
-                      template: 'project checks add <name>' as const,
-                      when: 'Create a deployment check by project name (replace <name>)',
+                      template: 'project observability enable <name>' as const,
+                      when: 'Enable Observability Plus by project name (replace <name>)',
                     }
-                  : variant === 'inspect'
+                  : variant === 'checks'
                     ? {
-                        template: 'project inspect <name>' as const,
-                        when: 'Inspect a project by name (replace <name>)',
+                        template: 'project checks add <name>' as const,
+                        when: 'Create a deployment check by project name (replace <name>)',
                       }
-                    : {
-                        template: 'project members <name>' as const,
-                        when: 'List members by project name (replace <name>)',
-                      };
+                    : variant === 'inspect'
+                      ? {
+                          template: 'project inspect <name>' as const,
+                          when: 'Inspect a project by name (replace <name>)',
+                        }
+                      : variant === 'resume'
+                        ? {
+                            template: 'project resume <name>' as const,
+                            when: 'Resume production traffic by project name (replace <name>)',
+                          }
+                        : {
+                            template: 'project members <name>' as const,
+                            when: 'List members by project name (replace <name>)',
+                          };
   return [
     {
       command: buildCommandWithGlobalFlags(client.argv, 'link'),

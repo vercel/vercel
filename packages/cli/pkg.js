@@ -12,6 +12,13 @@ process.on('warning', warning => {
   if (warning.name === 'DeprecationWarning' && warning.code === 'DEP0169') {
     return;
   }
+  // node:sqlite (pulled in by @vltpkg/graph) is still ExperimentalWarning.
+  if (
+    warning.name === 'ExperimentalWarning' &&
+    warning.message.includes('SQLite')
+  ) {
+    return;
+  }
   for (const listener of defaultWarningListeners) {
     listener(warning);
   }

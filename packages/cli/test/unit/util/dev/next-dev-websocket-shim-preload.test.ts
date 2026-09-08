@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 const shimPath = resolve(
   process.cwd(),
-  'src/util/dev/next-dev-websocket-shim-preload.cjs'
+  'src/runtime-assets/node-preloads/next-dev-websocket.cjs'
 );
 
 async function runShimScenario(scenario: string) {
@@ -66,6 +66,13 @@ describe('next dev websocket shim preload', () => {
     });
   });
 
+  it('closes an unconsumed websocket upgrade after the HTTP response', async () => {
+    await expect(runShimScenario('unhandled-upgrade')).resolves.toMatchObject({
+      body: 'Not a WebSocket endpoint',
+      status: 'HTTP/1.1 200 OK',
+    });
+  });
+
   it('accepts comma-separated Connection upgrade headers', async () => {
     await expect(runShimScenario('connection-list')).resolves.toMatchObject({
       status: 'HTTP/1.1 101 Switching Protocols',
@@ -102,6 +109,16 @@ describe('next dev websocket shim preload', () => {
     ).resolves.toMatchObject({
       closeEvents: 1,
       waitUntilDone: true,
+    });
+  });
+
+  it('lets socket close listeners register response-close work', async () => {
+    await expect(
+      runShimScenario('late-work-from-socket-close')
+    ).resolves.toMatchObject({
+      socketCloseRan: true,
+      responseCloseRan: true,
+      lateWorkDone: true,
     });
   });
 
@@ -216,6 +233,11 @@ const server = http.createServer((req, res) => {
       return;
     }
 
+    if (scenario === 'unhandled-upgrade') {
+      res.end('Not a WebSocket endpoint');
+      return;
+    }
+
     if (scenario === 'upgrade-present') {
       const { socket } = consumeUpgrade();
       socket.end(
@@ -292,6 +314,34 @@ const server = http.createServer((req, res) => {
       return;
     }
 
+    if (scenario === 'late-work-from-socket-close') {
+      const result = {
+        socketCloseRan: false,
+        responseCloseRan: false,
+        lateWorkDone: false,
+      };
+      const { socket } = consumeUpgrade();
+      socket.resume();
+
+      socket.once('close', () => {
+        result.socketCloseRan = true;
+        ctx.waitUntil(
+          new Promise(resolve => {
+            res.once('close', () => {
+              result.responseCloseRan = true;
+              setTimeout(() => {
+                result.lateWorkDone = true;
+                resolve();
+              }, 10);
+            });
+          })
+        );
+        setTimeout(() => finish(result), 30);
+      });
+      setTimeout(() => socket.destroy(), 10);
+      return;
+    }
+
     if (scenario === 'socket-error-after-upgrade') {
       const { socket } = consumeUpgrade();
       setImmediate(() => {
@@ -335,6 +385,16 @@ server.listen(0, '127.0.0.1', async () => {
       return;
     }
 
+    if (scenario === 'unhandled-upgrade') {
+      const response = await rawUpgradeBody(port, '/ws');
+      const [headers, body] = response.split('\r\n\r\n');
+      finish({
+        body,
+        status: headers.split('\r\n')[0],
+      });
+      return;
+    }
+
     if (scenario === 'concurrent-context') {
       const results = await Promise.all([
         websocketRequest(port, '/ws?id=1'),
@@ -353,6 +413,14 @@ server.listen(0, '127.0.0.1', async () => {
 
     if (scenario === 'response-close-after-upgrade') {
       await websocketRequest(port, '/ws');
+      return;
+    }
+
+    if (scenario === 'late-work-from-socket-close') {
+      const client = net.createConnection({ host: '127.0.0.1', port });
+      client.on('error', () => {});
+      await once(client, 'connect');
+      client.write(upgradeRequest('/ws'));
       return;
     }
 

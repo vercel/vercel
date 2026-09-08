@@ -70,9 +70,7 @@ describe('vcr rm', () => {
   });
 
   it('deletes a repository with --yes', async () => {
-    let method = '';
     client.scenario.delete('/v1/vcr/repository/my-app', (req, res) => {
-      method = req.method;
       expect(req.query.projectId).toBe('prj_vcr');
       res.status(202).end();
     });
@@ -80,7 +78,6 @@ describe('vcr rm', () => {
     client.setArgv('vcr', 'rm', 'my-app', '--yes');
     const exitCode = await vcr(client);
     expect(exitCode).toBe(0);
-    expect(method).toBe('DELETE');
     expect(client.stderr.getFullOutput()).toContain('deleted');
   });
 

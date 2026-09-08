@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   parseOutputFormat,
   getOutputFormat,
-  isJsonOutput,
   validateJsonOutput,
-  OUTPUT_FORMATS,
+  shouldPrintVersionBanner,
+  wantsMachineReadableOutput,
 } from '../../../src/util/output-format';
 import { formatOption, jsonOption } from '../../../src/util/arg-common';
 
@@ -68,28 +68,6 @@ describe('output-format', () => {
     });
   });
 
-  describe('isJsonOutput', () => {
-    it('should return true when --format=json', () => {
-      expect(isJsonOutput({ '--format': 'json' })).toBe(true);
-    });
-
-    it('should return true when --json flag is set', () => {
-      expect(isJsonOutput({ '--json': true })).toBe(true);
-    });
-
-    it('should return false when no flags are set', () => {
-      expect(isJsonOutput({})).toBe(false);
-    });
-
-    it('should return false when --json is false', () => {
-      expect(isJsonOutput({ '--json': false })).toBe(false);
-    });
-
-    it('should return true for case-insensitive json', () => {
-      expect(isJsonOutput({ '--format': 'JSON' })).toBe(true);
-    });
-  });
-
   describe('validateJsonOutput', () => {
     it('should return valid result with jsonOutput true when --format=json', () => {
       const result = validateJsonOutput({ '--format': 'json' });
@@ -132,14 +110,106 @@ describe('output-format', () => {
     });
   });
 
-  describe('OUTPUT_FORMATS', () => {
-    it('should contain json format', () => {
-      expect(OUTPUT_FORMATS).toContain('json');
+  describe('wantsMachineReadableOutput / shouldPrintVersionBanner', () => {
+    it('treats vercel api as machine-readable (JSON stdout by default)', () => {
+      expect(
+        wantsMachineReadableOutput('api', ['node', 'vercel', 'api', '/v2/user'])
+      ).toBe(true);
+      expect(
+        shouldPrintVersionBanner('api', ['node', 'vercel', 'api', '/v2/user'])
+      ).toBe(false);
     });
 
-    it('should be a readonly array', () => {
-      expect(Array.isArray(OUTPUT_FORMATS)).toBe(true);
-      expect(OUTPUT_FORMATS.length).toBe(1);
+    it('keeps human chrome for api --help', () => {
+      expect(
+        wantsMachineReadableOutput('api', ['node', 'vercel', 'api', '--help'])
+      ).toBe(false);
+      expect(
+        shouldPrintVersionBanner('api', ['node', 'vercel', 'api', '--help'])
+      ).toBe(true);
+      expect(
+        shouldPrintVersionBanner('api', ['node', 'vercel', 'api', '-h'])
+      ).toBe(true);
+    });
+
+    it('treats --json as machine-readable', () => {
+      expect(
+        wantsMachineReadableOutput('webhooks', [
+          'node',
+          'vercel',
+          'webhooks',
+          'ls',
+          '--json',
+        ])
+      ).toBe(true);
+      expect(
+        shouldPrintVersionBanner('webhooks', [
+          'node',
+          'vercel',
+          'webhooks',
+          'ls',
+          '--json',
+        ])
+      ).toBe(false);
+    });
+
+    it('treats --format=json / --format json as machine-readable', () => {
+      expect(
+        wantsMachineReadableOutput('crons', [
+          'node',
+          'vercel',
+          'crons',
+          'ls',
+          '--format=json',
+        ])
+      ).toBe(true);
+      expect(
+        wantsMachineReadableOutput('crons', [
+          'node',
+          'vercel',
+          'crons',
+          'ls',
+          '--format=JSON',
+        ])
+      ).toBe(true);
+      expect(
+        wantsMachineReadableOutput('crons', [
+          'node',
+          'vercel',
+          'crons',
+          'ls',
+          '--format',
+          'json',
+        ])
+      ).toBe(true);
+      expect(
+        shouldPrintVersionBanner('crons', [
+          'node',
+          'vercel',
+          'crons',
+          'ls',
+          '--format',
+          'JSON',
+        ])
+      ).toBe(false);
+    });
+
+    it('keeps human chrome for normal commands', () => {
+      expect(wantsMachineReadableOutput('deploy', ['node', 'vercel'])).toBe(
+        false
+      );
+      expect(shouldPrintVersionBanner('deploy', ['node', 'vercel'])).toBe(true);
+      expect(
+        wantsMachineReadableOutput('list', ['node', 'vercel', 'list'])
+      ).toBe(false);
+      expect(
+        shouldPrintVersionBanner('curl', [
+          'node',
+          'vercel',
+          'curl',
+          'https://x',
+        ])
+      ).toBe(true);
     });
   });
 

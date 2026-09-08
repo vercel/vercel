@@ -1,0 +1,8 @@
+{
+  "experimentalServicesV2": {
+    "api": {
+      "root": "apps/api",
+      "runtime": "container"
+    }
+  }
+}

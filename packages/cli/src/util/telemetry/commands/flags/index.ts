@@ -34,6 +34,13 @@ export class FlagsTelemetryClient
     });
   }
 
+  trackCliSubcommandStale(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'stale',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandOpen(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'open',
@@ -58,6 +65,13 @@ export class FlagsTelemetryClient
   trackCliSubcommandSet(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'set',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandUseTargeting(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'use-targeting',
       value: actual,
     });
   }

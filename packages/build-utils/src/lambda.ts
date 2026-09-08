@@ -56,6 +56,9 @@ export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
 export type LambdaExecutableRuntimeLanguages = 'rust' | 'go';
 export type LambdaArchitecture = 'x86_64' | 'arm64';
+export interface LambdaAffinity {
+  mode: 'strict';
+}
 
 export interface LambdaOptionsBase {
   handler: string;
@@ -64,6 +67,7 @@ export interface LambdaOptionsBase {
   architecture?: LambdaArchitecture;
   memory?: number;
   maxDuration?: MaxDuration;
+  affinity?: LambdaAffinity;
   maxConcurrency?: number;
   environment?: Env;
   allowQuery?: string[];
@@ -163,6 +167,7 @@ export class Lambda {
   architecture: LambdaArchitecture;
   memory?: number;
   maxDuration?: MaxDuration;
+  affinity?: LambdaAffinity;
   /** Maximum number of requests that one function instance can process concurrently. */
   maxConcurrency?: number;
   environment: Env;
@@ -211,6 +216,7 @@ export class Lambda {
       runtime,
       runtimeLanguage,
       maxDuration,
+      affinity,
       maxConcurrency,
       architecture,
       memory,
@@ -270,6 +276,16 @@ export class Lambda {
       assert(
         typeof maxDuration === 'number' || maxDuration === 'max',
         '"maxDuration" is not a number or "max"'
+      );
+    }
+
+    if (affinity !== undefined) {
+      assert(
+        typeof affinity === 'object' &&
+          affinity !== null &&
+          affinity.mode === 'strict' &&
+          Object.keys(affinity).length === 1,
+        '"affinity" must be an object with only `mode: "strict"`'
       );
     }
 
@@ -352,72 +368,79 @@ export class Lambda {
 
         // Validate required type
         assert(
-          trigger.type === 'queue/v1beta' || trigger.type === 'queue/v2beta',
-          `${prefix}.type must be "queue/v1beta" or "queue/v2beta"`
+          trigger.type === 'queue/v1beta' ||
+            trigger.type === 'queue/v2beta' ||
+            trigger.type === 'schedule/v1beta',
+          `${prefix}.type must be "queue/v1beta", "queue/v2beta", or "schedule/v1beta"`
         );
 
-        // Validate required queue fields
-        assert(
-          typeof trigger.topic === 'string',
-          `${prefix}.topic is required and must be a string`
-        );
-        assert(trigger.topic.length > 0, `${prefix}.topic cannot be empty`);
+        if (
+          trigger.type === 'queue/v1beta' ||
+          trigger.type === 'queue/v2beta'
+        ) {
+          // Validate required queue fields
+          assert(
+            typeof trigger.topic === 'string',
+            `${prefix}.topic is required and must be a string`
+          );
+          assert(trigger.topic.length > 0, `${prefix}.topic cannot be empty`);
 
-        // Consumer is always required (populated by getLambdaOptionsFromFunction for v2beta)
-        assert(
-          typeof trigger.consumer === 'string',
-          `${prefix}.consumer is required and must be a string`
-        );
-        assert(
-          trigger.consumer.length > 0,
-          `${prefix}.consumer cannot be empty`
-        );
+          // Consumer is always required (populated by getLambdaOptionsFromFunction for v2beta)
+          assert(
+            typeof trigger.consumer === 'string',
+            `${prefix}.consumer is required and must be a string`
+          );
+          assert(
+            trigger.consumer.length > 0,
+            `${prefix}.consumer cannot be empty`
+          );
 
-        // Validate optional queue configuration
-        if (trigger.maxDeliveries !== undefined) {
-          assert(
-            typeof trigger.maxDeliveries === 'number',
-            `${prefix}.maxDeliveries must be a number`
-          );
-          assert(
-            Number.isInteger(trigger.maxDeliveries) &&
-              trigger.maxDeliveries >= 1,
-            `${prefix}.maxDeliveries must be at least 1`
-          );
-        }
+          // Validate optional queue configuration
+          if (trigger.maxDeliveries !== undefined) {
+            assert(
+              typeof trigger.maxDeliveries === 'number',
+              `${prefix}.maxDeliveries must be a number`
+            );
+            assert(
+              Number.isInteger(trigger.maxDeliveries) &&
+                trigger.maxDeliveries >= 1,
+              `${prefix}.maxDeliveries must be at least 1`
+            );
+          }
 
-        if (trigger.retryAfterSeconds !== undefined) {
-          assert(
-            typeof trigger.retryAfterSeconds === 'number',
-            `${prefix}.retryAfterSeconds must be a number`
-          );
-          assert(
-            trigger.retryAfterSeconds > 0,
-            `${prefix}.retryAfterSeconds must be a positive number`
-          );
-        }
+          if (trigger.retryAfterSeconds !== undefined) {
+            assert(
+              typeof trigger.retryAfterSeconds === 'number',
+              `${prefix}.retryAfterSeconds must be a number`
+            );
+            assert(
+              trigger.retryAfterSeconds > 0,
+              `${prefix}.retryAfterSeconds must be a positive number`
+            );
+          }
 
-        if (trigger.initialDelaySeconds !== undefined) {
-          assert(
-            typeof trigger.initialDelaySeconds === 'number',
-            `${prefix}.initialDelaySeconds must be a number`
-          );
-          assert(
-            trigger.initialDelaySeconds >= 0,
-            `${prefix}.initialDelaySeconds must be a non-negative number`
-          );
-        }
+          if (trigger.initialDelaySeconds !== undefined) {
+            assert(
+              typeof trigger.initialDelaySeconds === 'number',
+              `${prefix}.initialDelaySeconds must be a number`
+            );
+            assert(
+              trigger.initialDelaySeconds >= 0,
+              `${prefix}.initialDelaySeconds must be a non-negative number`
+            );
+          }
 
-        if (trigger.maxConcurrency !== undefined) {
-          assert(
-            typeof trigger.maxConcurrency === 'number',
-            `${prefix}.maxConcurrency must be a number`
-          );
-          assert(
-            Number.isInteger(trigger.maxConcurrency) &&
-              trigger.maxConcurrency >= 1,
-            `${prefix}.maxConcurrency must be at least 1`
-          );
+          if (trigger.maxConcurrency !== undefined) {
+            assert(
+              typeof trigger.maxConcurrency === 'number',
+              `${prefix}.maxConcurrency must be a number`
+            );
+            assert(
+              Number.isInteger(trigger.maxConcurrency) &&
+                trigger.maxConcurrency >= 1,
+              `${prefix}.maxConcurrency must be at least 1`
+            );
+          }
         }
       }
     }
@@ -438,6 +461,7 @@ export class Lambda {
     this.architecture = getDefaultLambdaArchitecture(architecture);
     this.memory = memory;
     this.maxDuration = maxDuration;
+    this.affinity = affinity;
     this.maxConcurrency = maxConcurrency;
     this.environment = environment;
     this.allowQuery = allowQuery;
@@ -546,6 +570,7 @@ export async function getLambdaOptionsFromFunction({
     | 'architecture'
     | 'memory'
     | 'maxDuration'
+    | 'affinity'
     | 'maxConcurrency'
     | 'regions'
     | 'functionFailoverRegions'
@@ -594,6 +619,7 @@ export async function getLambdaOptionsFromFunction({
           architecture: fn.architecture,
           memory: fn.memory,
           maxDuration: fn.maxDuration,
+          affinity: fn.affinity,
           maxConcurrency: fn.maxConcurrency,
           regions: fn.regions,
           functionFailoverRegions: fn.functionFailoverRegions,

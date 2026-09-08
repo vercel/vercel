@@ -8,6 +8,7 @@ import type {
   Segment,
   SegmentMembershipOperation,
   UpdateFlagRequest,
+  StaleFlag,
 } from '../../src/util/flags/types';
 
 type FlagWithMockEtag = Flag & {
@@ -44,6 +45,10 @@ export const defaultFlagSettings: FlagSettings = {
         {
           key: 'userId',
           type: 'string',
+        },
+        {
+          key: 'signupAt',
+          type: 'timestamp',
         },
       ],
     },
@@ -154,6 +159,17 @@ export const defaultFlags: Flag[] = [
     revision: 2,
     seed: 67890,
     typeName: 'flag',
+  },
+];
+
+export const defaultStaleFlags: StaleFlag[] = [
+  {
+    slug: 'my-feature',
+    reason: 'unused',
+  },
+  {
+    slug: 'another-feature',
+    reason: 'redundant',
   },
 ];
 
@@ -339,7 +355,8 @@ export function useFlags(
   segmentsList: Segment[] = defaultSegments,
   onUpdateFlag?: (request: UpdateFlagRequest) => void,
   onGetSettings?: () => void,
-  versionsList: FlagVersion[] = defaultFlagVersions
+  versionsList: FlagVersion[] = defaultFlagVersions,
+  staleFlagCandidates: Array<StaleFlag | null> = defaultStaleFlags
 ) {
   // Get flag settings
   client.scenario.get(
@@ -425,6 +442,25 @@ export function useFlags(
           hasNext: next !== null,
         },
       });
+    }
+  );
+
+  client.scenario.get(
+    '/v1/projects/:projectId/feature-flags/stale-flags',
+    (req, res) => {
+      const limit = req.query.limit
+        ? Number(req.query.limit)
+        : staleFlagCandidates.length;
+      const offset = req.query.cursor ? Number(req.query.cursor) : 0;
+      const candidatePage = staleFlagCandidates.slice(offset, offset + limit);
+      const page = candidatePage.filter(
+        (flag): flag is StaleFlag => flag !== null
+      );
+      const nextOffset = offset + limit;
+      const next =
+        nextOffset < staleFlagCandidates.length ? String(nextOffset) : null;
+
+      res.json({ data: page, pagination: { next } });
     }
   );
 

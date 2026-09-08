@@ -1,25 +1,105 @@
-import type { ProjectEnvType } from '@vercel-internals/types';
-import { getPublicPrefix } from './validate-env';
+import type {
+  ProjectEnvType,
+  ProjectEnvVariable,
+} from '@vercel-internals/types';
+import { getApiPublicPrefix } from './validate-env';
 
 export type EnvVariableVisibility = 'config' | 'secret';
+export type EnvVariableTypeOptionSource = 'type' | 'visibility';
+export type EnvVariableTypeOptionErrorReason =
+  | 'invalid_type'
+  | 'invalid_visibility'
+  | 'conflicting_type_visibility';
 
-/**
- * Opt-in CLI support for the config/secret env var model (dashboard flag:
- * `env-var-config-secret-ui`). When enabled, the CLI skips legacy Sensitive
- * Environment Variables Policy coercion. Development still disallows secrets.
- */
-export function isEnvVarConfigSecretUiEnabled(): boolean {
-  const raw = process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
-  return (
-    raw === '1' || raw?.toLowerCase() === 'true' || raw?.toLowerCase() === 'on'
-  );
+export const ENV_VISIBILITY_DEPRECATION_MESSAGE =
+  '`--visibility` is deprecated. Use `--type` instead.';
+
+export interface ResolveEnvVarTypeOptionResult {
+  explicitVisibility?: string;
+  source?: EnvVariableTypeOptionSource;
+  usedDeprecatedVisibility: boolean;
+  error?: string;
+  errorReason?: EnvVariableTypeOptionErrorReason;
 }
 
-export function shouldEnforceSensitiveEnvVarPolicy(policyOn: boolean): boolean {
-  return policyOn && !isEnvVarConfigSecretUiEnabled();
+function invalidTypeOptionError(
+  optionName: '--type' | '--visibility',
+  value: string
+): string | undefined {
+  if (value === 'config' || value === 'secret') {
+    return undefined;
+  }
+  if (value === 'sensitive') {
+    return `The \`${optionName}\` flag accepts \`config\` or \`secret\`. Use \`--type secret\` or the legacy \`--sensitive\` flag.`;
+  }
+  if (value === 'plain' || value === 'encrypted') {
+    return `The \`${optionName}\` flag accepts \`config\` or \`secret\`. Use \`--type config\` for readable values.`;
+  }
+  return `The \`${optionName}\` flag must be either \`config\` or \`secret\`.`;
 }
 
-/** Human-readable visibility for CLI output. */
+/** Resolves the canonical `--type` option and its deprecated alias. */
+export function resolveEnvVarTypeOption(options: {
+  type?: string;
+  visibility?: string;
+}): ResolveEnvVarTypeOptionResult {
+  const usedDeprecatedVisibility = options.visibility !== undefined;
+  if (options.type !== undefined) {
+    const error = invalidTypeOptionError('--type', options.type);
+    if (error) {
+      return {
+        usedDeprecatedVisibility,
+        error,
+        errorReason: 'invalid_type',
+      };
+    }
+  }
+  if (options.visibility !== undefined) {
+    const error = invalidTypeOptionError('--visibility', options.visibility);
+    if (error) {
+      return {
+        usedDeprecatedVisibility,
+        error,
+        errorReason: 'invalid_visibility',
+      };
+    }
+  }
+  if (
+    options.type !== undefined &&
+    options.visibility !== undefined &&
+    options.type !== options.visibility
+  ) {
+    return {
+      usedDeprecatedVisibility,
+      error: `\`--type ${options.type}\` conflicts with \`--visibility ${options.visibility}\`. \`--visibility\` is a deprecated alias of \`--type\`; remove it.`,
+      errorReason: 'conflicting_type_visibility',
+    };
+  }
+  if (options.type !== undefined) {
+    return {
+      explicitVisibility: options.type,
+      source: 'type',
+      usedDeprecatedVisibility,
+    };
+  }
+  if (options.visibility !== undefined) {
+    return {
+      explicitVisibility: options.visibility,
+      source: 'visibility',
+      usedDeprecatedVisibility,
+    };
+  }
+  return { usedDeprecatedVisibility };
+}
+
+/** Supports both legacy and Config/Secret API record shapes. */
+export function isSecretEnvVar(
+  env: Pick<ProjectEnvVariable, 'type' | 'visibility'>
+): boolean {
+  return env.type === 'sensitive' || env.visibility === 'secret';
+}
+
+/** Human-readable type for CLI output. */
 export function formatVisibilityLabel(
   visibility: EnvVariableVisibility | undefined,
   type: ProjectEnvType
@@ -60,10 +140,10 @@ export function getPublicPrefixSecretVisibilityError(
   options: {
     visibility?: EnvVariableVisibility;
     type: ProjectEnvType;
-    envTargets: string[];
+    context?: 'add' | 'update';
   }
 ): string | null {
-  const publicPrefix = getPublicPrefix(key);
+  const publicPrefix = getApiPublicPrefix(key);
   if (!publicPrefix) {
     return null;
   }
@@ -74,40 +154,11 @@ export function getPublicPrefixSecretVisibilityError(
     return null;
   }
 
-  const prefixLabel = publicPrefix.replace(/_$/, '');
-  if (hasNonDevelopmentTarget(options.envTargets)) {
-    return `Environment variables with a public framework prefix (${prefixLabel}) cannot use secret visibility on Production or Preview. Target Development only, rename to remove the public prefix, or use \`--visibility config\` with \`--no-sensitive\` on Development.`;
+  const privateKey = key.slice(publicPrefix.length);
+  if (options.context === 'update') {
+    return `\`${publicPrefix}\` exposes this value to anyone visiting your site, so \`${key}\` cannot be a Secret. To keep it private, add \`${privateKey}\` as a Secret, then remove \`${key}\`. If the value is safe to expose, keep it as Config.`;
   }
-
-  return `Environment variables with a public framework prefix (${prefixLabel}) cannot use secret visibility. Rename to remove the public prefix or use \`--visibility config\` with \`--no-sensitive\`.`;
-}
-
-/**
- * Returns a client-side error when secrets are requested for Development.
- */
-export function getDevelopmentSecretVisibilityError(
-  envTargets: string[],
-  options: {
-    type: ProjectEnvType;
-    visibility?: EnvVariableVisibility;
-  }
-): string | null {
-  if (!envTargets.includes('development')) {
-    return null;
-  }
-
-  const wouldBeSecret =
-    options.type === 'sensitive' || options.visibility === 'secret';
-  if (!wouldBeSecret) {
-    return null;
-  }
-
-  const hasNonDevelopment = envTargets.some(target => target !== 'development');
-  if (hasNonDevelopment) {
-    return `Sensitive Environment Variables are not supported on the Development Environment. Add --no-sensitive to store a non-sensitive value for all selected Environments, or run \`vercel env add\` separately for Development.`;
-  }
-
-  return `--sensitive is not allowed with the Development Environment. Sensitive Environment Variables are only supported on Production and Preview.`;
+  return `\`${publicPrefix}\` exposes this value to anyone visiting your site, so \`${key}\` cannot be a Secret. To keep it private, rename the variable to \`${privateKey}\` and keep the Secret type. If the value is safe to expose, use \`--type config\`.`;
 }
 
 /**
@@ -119,7 +170,7 @@ function shouldOmitInferredVisibility(
   envTargets: string[],
   teamSensitivePolicyOn: boolean
 ): boolean {
-  if (!getPublicPrefix(key)) {
+  if (!getApiPublicPrefix(key)) {
     return false;
   }
 
@@ -131,12 +182,13 @@ function shouldOmitInferredVisibility(
 }
 
 export interface ResolveEnvVarVisibilityOptions {
-  configSecretUiEnabled: boolean;
   explicitVisibility?: string;
+  explicitOptionSource?: EnvVariableTypeOptionSource;
   type: ProjectEnvType;
   key: string;
   envTargets: string[];
   teamSensitivePolicyOn: boolean;
+  context?: 'add' | 'update';
 }
 
 export interface ResolveEnvVarVisibilityResult {
@@ -145,23 +197,29 @@ export interface ResolveEnvVarVisibilityResult {
 }
 
 /**
- * Resolves `visibility` for API requests. Uses `--visibility` when set;
+ * Resolves `visibility` for API requests. Uses `--type` when set;
  * otherwise infers from `type` unless that would fail for public-prefixed keys.
  */
 export function resolveEnvVarVisibility(
   options: ResolveEnvVarVisibilityOptions
 ): ResolveEnvVarVisibilityResult {
-  if (!options.configSecretUiEnabled) {
-    return {};
-  }
-
   if (options.explicitVisibility !== undefined) {
     if (
       options.explicitVisibility !== 'config' &&
       options.explicitVisibility !== 'secret'
     ) {
+      const optionName =
+        options.explicitOptionSource === 'visibility'
+          ? '--visibility'
+          : '--type';
       return {
-        error: 'The `--visibility` flag must be either `config` or `secret`.',
+        error:
+          options.explicitVisibility === 'sensitive'
+            ? `The \`${optionName}\` flag accepts \`config\` or \`secret\`. Use \`--type secret\` or the legacy \`--sensitive\` flag.`
+            : options.explicitVisibility === 'plain' ||
+                options.explicitVisibility === 'encrypted'
+              ? `The \`${optionName}\` flag accepts \`config\` or \`secret\`. Use \`--type config\` for readable values.`
+              : `The \`${optionName}\` flag must be either \`config\` or \`secret\`.`,
       };
     }
 
@@ -170,22 +228,11 @@ export function resolveEnvVarVisibility(
       {
         visibility: options.explicitVisibility,
         type: options.type,
-        envTargets: options.envTargets,
+        context: options.context,
       }
     );
     if (publicPrefixError) {
       return { error: publicPrefixError };
-    }
-
-    const developmentError = getDevelopmentSecretVisibilityError(
-      options.envTargets,
-      {
-        type: options.type,
-        visibility: options.explicitVisibility,
-      }
-    );
-    if (developmentError) {
-      return { error: developmentError };
     }
 
     return { visibility: options.explicitVisibility };
@@ -194,17 +241,6 @@ export function resolveEnvVarVisibility(
   const inferred = visibilityFromEnvType(options.type);
   if (inferred === undefined) {
     return {};
-  }
-
-  const developmentError = getDevelopmentSecretVisibilityError(
-    options.envTargets,
-    {
-      type: options.type,
-      visibility: inferred,
-    }
-  );
-  if (developmentError) {
-    return { error: developmentError };
   }
 
   if (
@@ -220,7 +256,7 @@ export function resolveEnvVarVisibility(
   const publicPrefixError = getPublicPrefixSecretVisibilityError(options.key, {
     visibility: inferred,
     type: options.type,
-    envTargets: options.envTargets,
+    context: options.context,
   });
   if (publicPrefixError) {
     return { error: publicPrefixError };

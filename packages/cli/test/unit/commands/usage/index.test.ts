@@ -64,7 +64,7 @@ describe('usage', () => {
       expect(output).toContain('--from');
       expect(output).toContain('--to');
       expect(output).toContain('--breakdown');
-      expect(output).toContain('--format');
+      expect(output).toContain('--json');
     });
   });
 
@@ -100,7 +100,7 @@ describe('usage', () => {
       expect(output).toContain('Edge Middleware Invocations');
     });
 
-    it('should output JSON with --format json', async () => {
+    it('should output JSON with --json', async () => {
       const mockCharges = [
         createMockCharge({
           ServiceName: 'Serverless Function Execution',
@@ -117,8 +117,7 @@ describe('usage', () => {
         '2025-12-01',
         '--to',
         '2025-12-31',
-        '--format',
-        'json'
+        '--json'
       );
       const exitCode = await usage(client);
 
@@ -274,7 +273,7 @@ describe('usage', () => {
       expect(output).toContain('2025-12');
     });
 
-    it('should output JSON with breakdown data when --breakdown daily and --format json', async () => {
+    it('should output JSON with breakdown data when --breakdown daily and --json', async () => {
       const mockCharges = [
         createMockCharge({
           ServiceName: 'Serverless Function Execution',
@@ -301,8 +300,7 @@ describe('usage', () => {
         '2025-12-31',
         '--breakdown',
         'daily',
-        '--format',
-        'json'
+        '--json'
       );
       const exitCode = await usage(client);
 
@@ -518,7 +516,7 @@ describe('usage', () => {
       expect(output).toContain('(global)');
     });
 
-    it('should output JSON with group-by data when --group-by project and --format json', async () => {
+    it('should output JSON with group-by data when --group-by project and --json', async () => {
       const mockCharges = [
         createMockCharge({
           ServiceName: 'Serverless Function Execution',
@@ -545,8 +543,7 @@ describe('usage', () => {
         '2025-12-31',
         '--group-by',
         'project',
-        '--format',
-        'json'
+        '--json'
       );
       const exitCode = await usage(client);
 

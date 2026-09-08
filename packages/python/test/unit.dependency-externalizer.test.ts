@@ -1516,6 +1516,8 @@ version = "8.1.7"
       // bundle; the fallback bundles everything.
       expect(result.alwaysBundledPackages).toBeUndefined();
       expect(result.bundledPublicPackages).toBeUndefined();
+      // No runtime-install tooling ships on the Hive path.
+      expect(result.runtimeToolingBytes).toBeUndefined();
       // Every vendor file is bundled directly.
       expect(files['_vendor/pkg/__init__.py']).toBe(
         allVendorFiles['_vendor/pkg/__init__.py']

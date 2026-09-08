@@ -16,6 +16,7 @@ import {
   isBackendFramework,
   isPythonFramework,
   type BuildResultVX,
+  getNodeExecPath,
 } from '@vercel/build-utils';
 import { isStaticRuntime } from '@vercel/fs-detectors';
 import plural from 'pluralize';
@@ -41,7 +42,7 @@ import type {
 import { normalizeRoutes, type Route } from '@vercel/routing-utils';
 import getUpdateCommand from '../get-update-command';
 import { getTitleName } from '../pkg-name';
-import { importBuilders } from '../build/import-builders';
+import { importBuilders } from '../../builders/import-builders';
 import output from '../../output-manager';
 
 interface BuildMessage {
@@ -176,9 +177,10 @@ async function createBuildProcess(
   output.debug(`Creating build process for "${match.entrypoint}"`);
 
   const builderWorkerPath = join(__dirname, 'builder-worker.cjs');
+  const nodeExecPath = getNodeExecPath();
 
   // Ensure that `node` is in the builder's `PATH`
-  const PATH = `${dirname(process.execPath)}${delimiter}${process.env.PATH}`;
+  const PATH = `${dirname(nodeExecPath)}${delimiter}${process.env.PATH}`;
 
   const env: Env = {
     ...process.env,
@@ -189,6 +191,7 @@ async function createBuildProcess(
   const buildProcess = fork(builderWorkerPath, [], {
     cwd: workPath,
     execArgv: [],
+    execPath: nodeExecPath,
     env,
   });
   match.buildProcess = buildProcess;
@@ -370,6 +373,12 @@ export async function executeBuild(
       );
     }
 
+    if (output.affinity) {
+      throw new Error(
+        'The result of "builder.build()" must not contain `affinity`'
+      );
+    }
+
     if (output.maxConcurrency) {
       throw new Error(
         'The result of "builder.build()" must not contain `maxConcurrency`'
@@ -386,6 +395,10 @@ export async function executeBuild(
       if (src === entrypoint || minimatch(entrypoint, src)) {
         if (func.maxDuration) {
           output.maxDuration = func.maxDuration;
+        }
+
+        if (func.affinity) {
+          output.affinity = func.affinity;
         }
 
         if (func.maxConcurrency) {
@@ -632,6 +645,20 @@ export async function getBuildMatches(
       const existing = goEntrypoints.filter(p => fileList.includes(p));
       if (existing.length > 0) {
         src = existing[0];
+        mapToEntrypoint.set(src, originalSrc);
+      }
+    }
+    // If the Rust preset's `src/main.rs` is absent (e.g. a `[[bin]]`-only
+    // project), match `Cargo.toml` but keep `src/main.rs` as the builder
+    // entrypoint so @vercel/rust resolves the binary via `cargo metadata`.
+    if (
+      buildConfig.config?.framework === 'rust' &&
+      src === 'src/main.rs' &&
+      !fileList.includes(src)
+    ) {
+      const originalSrc = src;
+      if (fileList.includes('Cargo.toml')) {
+        src = 'Cargo.toml';
         mapToEntrypoint.set(src, originalSrc);
       }
     }

@@ -110,6 +110,8 @@ export interface GenerateBundleResult {
   bundledPublicPackages?: string[];
   /** Public packages deferred to the cold-start install. */
   externalizedPublicPackages?: string[];
+  /** Bytes of runtime-install tooling added to the zip. */
+  runtimeToolingBytes?: number;
 }
 
 interface GenerateBundleOptions {
@@ -643,12 +645,26 @@ export class PythonDependencyExternalizer {
       });
     }
 
+    // Measure the tooling actually added to the zip, not the
+    // planning-time estimate above.
+    const toolingFiles: Files = {};
+    for (const key of [
+      `${UV_BUNDLE_DIR}/uv`,
+      `${UV_BUNDLE_DIR}/_runtime_config.json`,
+      `${UV_BUNDLE_DIR}/pyproject.toml`,
+      `${UV_BUNDLE_DIR}/uv.lock`,
+    ]) {
+      if (files[key]) toolingFiles[key] = files[key];
+    }
+    const runtimeToolingBytes = await calculateBundleSize(toolingFiles);
+
     return {
       fellBackToFullBundle: false,
       packingMode,
       alwaysBundledPackages: alwaysBundled,
       bundledPublicPackages: bundledPublic,
       externalizedPublicPackages: externalizedPublic,
+      runtimeToolingBytes,
     };
   }
 

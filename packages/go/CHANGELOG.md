@@ -1,5 +1,116 @@
 # @vercel/go
 
+## 10.0.1
+
+### Patch Changes
+
+- Updated dependencies [1817491]
+  - @vercel/build-utils@14.9.1
+
+## 10.0.0
+
+### Patch Changes
+
+- Updated dependencies [392c759]
+  - @vercel/build-utils@14.9.0
+
+## 9.0.0
+
+### Patch Changes
+
+- Updated dependencies [a652a99]
+  - @vercel/build-utils@14.8.0
+
+## 8.0.0
+
+### Patch Changes
+
+- Updated dependencies [26b891e]
+- Updated dependencies [37ff9da]
+  - @vercel/build-utils@14.7.0
+
+## 7.0.1
+
+### Patch Changes
+
+- Updated dependencies [aad9541]
+  - @vercel/build-utils@14.6.1
+
+## 7.0.0
+
+### Patch Changes
+
+- Updated dependencies [e82de48]
+  - @vercel/build-utils@14.6.0
+
+## 6.0.1
+
+### Patch Changes
+
+- Updated dependencies [a443e57]
+  - @vercel/build-utils@14.5.1
+
+## 6.0.0
+
+### Patch Changes
+
+- Updated dependencies [90afd71]
+  - @vercel/build-utils@14.5.0
+
+## 5.0.1
+
+### Patch Changes
+
+- f880ce2: Install the Go toolchain atomically which will prevent torn installs from being mistaken for complete ones.
+- Updated dependencies [e5b0363]
+  - @vercel/build-utils@14.4.1
+
+## 5.0.0
+
+### Patch Changes
+
+- 90543c2: Serve standalone Go dev servers through the shared dev proxy instead of a
+  Go-compiled wrapper, so `vercel dev` no longer pays a second compile at startup.
+  Dev builds keep their symbols, use the newer of the newest supported Go
+  toolchain and the `go.mod` minimum, and remove cached executables after failed
+  startup attempts. Deployed builds are unchanged.
+- Updated dependencies [f8add0a]
+  - @vercel/build-utils@14.4.0
+
+## 4.0.0
+
+### Patch Changes
+
+- 0d71a61: Declare `@vercel/build-utils` as a peer dependency provided by Vercel CLI so builders load correctly with strict dependency isolation, including pnpm global installs.
+- Updated dependencies [0b08df6]
+- Updated dependencies [cd6b038]
+- Updated dependencies [96444ba]
+  - @vercel/build-utils@14.3.0
+
+## 3.11.0
+
+### Minor Changes
+
+- a7fc7e8: Expose the resolved rewrite destination as the request path observed by standalone Go servers, and warn affected Go projects about the behavior change.
+
+## 3.10.5
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+
+## 3.10.4
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
+## 3.10.3
+
+### Patch Changes
+
+- 5c33351: Go functions now always target the `provided.al2023` Lambda runtime. Previously the runtime was detected from the build host's `/etc/os-release`, so running `vercel build` on an Amazon Linux 2 machine emitted `provided.al2` and the resulting prebuilt deployment failed at deploy time.
+
 ## 3.10.2
 
 ### Patch Changes

@@ -19,7 +19,303 @@ const mockedGetProject = vi.mocked(getProjectModule.default);
 
 let tmpDir: string;
 
-function mockLinkedProject() {
+const builtInRule = {
+  id: 'ar_builtin',
+  type: 'built-in',
+  name: 'Production anomalies',
+  ruleScope: { type: 'all' },
+  triggers: {
+    mode: 'selected',
+    items: [{ type: 'usage_anomaly', filter: 'metrics:edge_requests' }],
+  },
+  matchMinimumSeverityLevel: 'high',
+  notificationSettings: {
+    enableTeamOwnerNotifications: true,
+  },
+  isDefault: false,
+};
+
+const customRule = {
+  id: 'ar_custom',
+  type: 'custom',
+  name: 'Checkout errors',
+  ruleScope: { type: 'project', projectId: 'prj_alerts' },
+  severity: 'high',
+  evaluation: {
+    window: '5m',
+    query: {
+      metrics: {
+        errors: {
+          metric: 'vercel.request.count',
+          aggregation: 'count',
+          filter: 'httpStatus >= 500',
+        },
+      },
+      outputs: ['errors'],
+    },
+  },
+  trigger: {
+    type: 'threshold',
+    output: 'errors',
+    operator: 'gt',
+    threshold: 20,
+  },
+  notificationSettings: {
+    enableTeamOwnerNotifications: true,
+  },
+  isDefault: false,
+  querySupported: true,
+};
+
+const customAuthoringDocument = {
+  schemaVersion: 2,
+  ruleTypes: [
+    {
+      type: 'custom',
+      description: 'One project-scoped metric evaluation.',
+      create: {
+        jsonSchema: {
+          type: 'object',
+          properties: {
+            type: {
+              type: 'string',
+              const: 'custom',
+              description: 'Create a custom metric alert rule.',
+            },
+            name: {
+              type: 'string',
+              description: 'Human-readable alert rule name.',
+            },
+            ruleScope: {
+              type: 'object',
+              description: 'Single project affected by this custom rule.',
+              properties: {
+                type: { type: 'string', const: 'project' },
+                projectId: {
+                  type: 'string',
+                  description: 'ID of the project evaluated by this rule.',
+                },
+              },
+              required: ['type', 'projectId'],
+            },
+            evaluation: {
+              type: 'object',
+              description: 'Window and metric query evaluated by this rule.',
+              properties: {
+                window: {
+                  type: 'string',
+                  enum: ['5m', '1h', '1d'],
+                  description: 'Aggregation granularity and detection cadence.',
+                },
+                query: {
+                  type: 'object',
+                  properties: {
+                    metrics: {
+                      type: 'object',
+                      description: 'Map of aliases to metric selections.',
+                      additionalProperties: {
+                        type: 'object',
+                        properties: {
+                          metric: {
+                            type: 'string',
+                            description: 'Metric ID.',
+                          },
+                          aggregation: {
+                            type: 'string',
+                            enum: ['count', 'sum', 'p95', 'unique'],
+                            description: 'Metric aggregation.',
+                          },
+                        },
+                        required: ['metric', 'aggregation'],
+                      },
+                    },
+                    formulas: {
+                      type: 'object',
+                      description: 'Optional formula map.',
+                      additionalProperties: { type: 'string' },
+                    },
+                    outputs: {
+                      type: 'array',
+                      prefixItems: [{ type: 'string' }],
+                      minItems: 1,
+                      maxItems: 1,
+                      items: false,
+                      description: 'Exactly one query output.',
+                    },
+                  },
+                  required: ['metrics', 'outputs'],
+                },
+              },
+              required: ['window', 'query'],
+            },
+            trigger: {
+              oneOf: [
+                {
+                  type: 'object',
+                  properties: {
+                    type: { type: 'string', const: 'threshold' },
+                    output: { type: 'string' },
+                    threshold: { type: 'number' },
+                  },
+                  required: ['type', 'output', 'threshold'],
+                },
+                {
+                  type: 'object',
+                  properties: {
+                    type: { type: 'string', const: 'anomaly' },
+                    output: { type: 'string' },
+                    standardDeviations: { type: 'number' },
+                  },
+                  required: ['type', 'output', 'standardDeviations'],
+                },
+              ],
+              description: 'Condition that triggers the rule.',
+            },
+          },
+          required: ['type', 'name', 'ruleScope', 'evaluation', 'trigger'],
+          additionalProperties: false,
+        },
+        examples: [
+          {
+            name: 'Create a same-event ratio rule',
+            body: {
+              type: 'custom',
+              name: 'Checkout error rate',
+              ruleScope: { type: 'project', projectId: 'prj_123' },
+              severity: 'high',
+              evaluation: customRule.evaluation,
+              trigger: customRule.trigger,
+            },
+          },
+        ],
+      },
+      update: {
+        jsonSchema: {
+          type: 'object',
+          properties: {
+            name: {
+              type: 'string',
+              description: 'Human-readable alert rule name.',
+            },
+            trigger: {
+              type: 'object',
+              description: 'Condition that triggers the rule.',
+            },
+          },
+          additionalProperties: false,
+        },
+        examples: [
+          {
+            name: 'Update metadata without repeating the rule type',
+            body: { name: 'Critical checkout errors', severity: 'high' },
+          },
+        ],
+      },
+      metricDiscovery: {
+        command: 'vc metrics schema <metric-or-prefix>',
+        description:
+          'Discover current metric IDs, aggregations, dimensions, and filter fields.',
+      },
+      constraints: [
+        {
+          code: 'metric_selection_policy',
+          kind: 'request',
+          appliesTo: ['create', 'update'],
+          paths: ['evaluation.query.metrics.*.aggregation'],
+          description:
+            'per and normalize require count or sum and cannot be combined.',
+        },
+      ],
+    },
+  ],
+};
+
+const builtInAuthoringDocument = {
+  schemaVersion: 2,
+  ruleTypes: [
+    {
+      type: 'built-in',
+      description: 'Pre-defined Vercel alert detectors.',
+      create: {
+        jsonSchema: {
+          type: 'object',
+          properties: {
+            type: { type: 'string', const: 'built-in' },
+            triggers: {
+              oneOf: [
+                {
+                  type: 'object',
+                  properties: { mode: { type: 'string', const: 'all' } },
+                  required: ['mode'],
+                },
+                {
+                  type: 'object',
+                  properties: {
+                    mode: { type: 'string', const: 'selected' },
+                    items: {
+                      type: 'array',
+                      items: {
+                        oneOf: [
+                          {
+                            type: 'object',
+                            properties: {
+                              type: {
+                                type: 'string',
+                                const: 'error_anomaly',
+                              },
+                              filter: {
+                                type: 'string',
+                                description:
+                                  'Must contain statusGroup:4xx or statusGroup:5xx.',
+                              },
+                            },
+                            required: ['type', 'filter'],
+                          },
+                        ],
+                      },
+                    },
+                  },
+                  required: ['mode', 'items'],
+                },
+              ],
+            },
+          },
+          required: ['type', 'triggers'],
+          additionalProperties: false,
+        },
+        examples: [
+          {
+            name: 'Create an error anomaly rule for every project',
+            body: {
+              type: 'built-in',
+              name: 'Production server errors',
+              ruleScope: { type: 'all' },
+              triggers: builtInRule.triggers,
+              matchMinimumSeverityLevel: 'high',
+            },
+          },
+        ],
+      },
+      update: {
+        jsonSchema: { type: 'object', properties: {} },
+        examples: [
+          {
+            name: 'Update metadata',
+            body: { name: 'Critical production errors' },
+          },
+        ],
+      },
+      constraints: [],
+    },
+  ],
+};
+
+function writeBody(name: string, body: unknown): string {
+  writeFileSync(join(tmpDir, name), JSON.stringify(body));
+  return name;
+}
+
+function mockLinkedProject(): void {
   mockedGetLinkedProject.mockResolvedValue({
     status: 'linked',
     project: {
@@ -29,19 +325,27 @@ function mockLinkedProject() {
       updatedAt: Date.now(),
       createdAt: Date.now(),
     },
-    org: {
-      id: 'team_dummy',
-      slug: 'my-team',
-      type: 'team',
-    },
+    org: { id: 'team_dummy', slug: 'my-team', type: 'team' },
   });
 }
 
-function mockTeamScope() {
+function mockTeamScope(): void {
   mockedGetScope.mockResolvedValue({
     contextName: 'my-team',
-    team: { id: 'team_dummy', slug: 'my-team' } as any,
-    user: { id: 'user_dummy' } as any,
+    team: { id: 'team_dummy', slug: 'my-team' },
+    user: { id: 'user_dummy' },
+    app: null,
+  } as any);
+}
+
+function mockAuthoringSchema(
+  document: unknown,
+  expectedType?: 'built-in' | 'custom'
+): void {
+  client.scenario.get('/alerts/v3/alert-rules/schema', (req, res) => {
+    expect(req.query.teamId).toBe('team_dummy');
+    expect(req.query.type).toBe(expectedType);
+    res.json(document);
   });
 }
 
@@ -51,7 +355,7 @@ describe('alerts rules', () => {
     client.reset();
     mockLinkedProject();
     mockTeamScope();
-    tmpDir = setupTmpDir('vercel-alerts-rules');
+    tmpDir = setupTmpDir('vercel-alerts-rules-v3');
     client.cwd = tmpDir;
   });
 
@@ -60,1145 +364,640 @@ describe('alerts rules', () => {
     client.nonInteractive = false;
   });
 
-  it('lists alert rules for linked project', async () => {
-    let path = '';
-    client.scenario.get('/alerts/v2/alert-rules', (req, res) => {
-      path = req.path;
+  it('auto-paginates v3 rules for the linked project', async () => {
+    const cursors: unknown[] = [];
+    client.scenario.get('/alerts/v3/alert-rules', (req, res) => {
+      cursors.push(req.query.cursor);
       expect(req.query.teamId).toBe('team_dummy');
       expect(req.query.projectId).toBe('prj_alerts');
-      res.json([
-        {
-          id: 'ar_1',
-          name: 'My rule',
-          teamId: 'team_dummy',
-          projectId: 'prj_alerts',
-        },
-      ]);
-    });
-
-    client.setArgv('alerts', 'rules', 'ls');
-
-    const exitCode = await alerts(client);
-    expect(exitCode).toBe(0);
-    expect(path).toContain('/alerts/v2/alert-rules');
-    const output = client.stderr.getFullOutput();
-    expect(output).toContain('Name');
-    expect(output).toContain('Rule id');
-    expect(output).toContain('Scope');
-    expect(output).toContain('ar_1');
-    expect(output).toContain('My rule');
-  });
-
-  it('prints add help with built-in and custom body examples', async () => {
-    client.setArgv('alerts', 'rules', 'add', '-help');
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-    const output = stripAnsi(client.stderr.getFullOutput());
-    expect(output).toContain('vercel alerts rules add [options]');
-    expect(output).toContain('Body examples:');
-    expect(output).toContain('Built-in usage anomaly rule:');
-    expect(output).toContain('Built-in 4xx error anomaly rule:');
-    expect(output).toContain('Custom threshold rule:');
-    expect(output).toContain('Custom anomaly rule:');
-    expect(output).toContain('"alertTypes": [{ "type": "custom_alert" }]');
-    expect(output).toContain('queryJsonString');
-    expect(output).toContain('Custom alert metric discovery:');
-    expect(output).toContain('vercel metrics schema');
-    expect(output).toContain('vercel.request.count');
-    expect(output).toContain('event: "incomingRequest"');
-    expect(output).toContain('vercel.function_invocation.count');
-    expect(output).toContain('event: "serverlessFunctionInvocation"');
-    expect(output).toContain('vercel alerts rules schema --type <type>');
-    expect(output).toContain('built-in rules otherwise remain team-wide');
-  });
-
-  it('prints alert rule schema type choices', async () => {
-    client.setArgv('alerts', 'rules', 'schema');
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-    const output = stripAnsi(client.stderr.getFullOutput());
-    expect(output).toContain('Alert rule schema');
-    expect(output).toContain('Type');
-    expect(output).toContain('Description');
-    expect(output).toContain('usage_anomaly');
-    expect(output).toContain('Built-in usage anomaly alerts');
-    expect(output).toContain('vercel alerts rules schema --type <type>');
-  });
-
-  it('prints reference-first schema for error anomaly rules', async () => {
-    client.setArgv('alerts', 'rules', 'schema', '--type', 'error_anomaly');
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-    const output = stripAnsi(client.stderr.getFullOutput());
-    expect(output).toContain('Alert rule schema: error_anomaly');
-    expect(output).toContain('Fields');
-    expect(output).toContain('alertTypes[].type');
-    expect(output).toContain('alertTypes[].filter values');
-    expect(output).toContain('statusGroup');
-    expect(output).toContain('route eq');
-    expect(output).toContain('"projectId": "projectId eq \'prj_123\'"');
-    expect(output).toContain('Filtered to 5xx on one route');
-    expect(output).toContain(
-      '"filter": "statusGroup eq \'5xx\' and route eq \'/api/checkout\'"'
-    );
-  });
-
-  it('prints reference-first schema for custom alert rules', async () => {
-    client.setArgv('alerts', 'rules', 'schema', '--type', 'custom_alert');
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-    const output = stripAnsi(client.stderr.getFullOutput());
-    expect(output).toContain('Alert rule schema: custom_alert');
-    expect(output).toContain('Custom alert fields');
-    expect(output).toContain('customAlert.queryJsonString fields');
-    expect(output).toContain(
-      'Alert query event name, for example incomingRequest'
-    );
-    expect(output).toContain('scope');
-    expect(output).toContain('Project scope');
-    expect(output).toContain('customAlert.queryJsonString before escaping');
-    expect(output).toContain('Custom alert metric discovery');
-    expect(output).toContain('vercel metrics schema <metric-or-prefix>');
-    expect(output).toContain('vercel.function_invocation.count');
-    expect(output).toContain('event: "serverlessFunctionInvocation"');
-    expect(output).toContain('vercel.external_api_request.count');
-    expect(output).toContain('event: "outgoingRequest"');
-    expect(output).toContain('vercel.sandbox.cpu_total_time_ms');
-    expect(output).toContain('event: "sandboxUsage"');
-  });
-
-  it('prints alert rule schema as JSON', async () => {
-    client.setArgv(
-      'alerts',
-      'rules',
-      'schema',
-      '--type',
-      'usage_anomaly',
-      '--format',
-      'json'
-    );
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-    const payload = JSON.parse(client.stdout.getFullOutput());
-    expect(payload.schema.type).toBe('usage_anomaly');
-    expect(payload.schema.fields).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ field: 'name', required: 'yes' }),
-        expect.objectContaining({ field: 'projectId', required: 'no' }),
-        expect.objectContaining({
-          field: 'alertTypes[].type',
-          required: 'yes',
-        }),
-        expect.objectContaining({
-          field: 'alertTypes[].filter',
-          required: 'no',
-        }),
-      ])
-    );
-    expect(payload.schema.alertTypeFilterValues).toEqual([
-      [
-        'metric',
-        'fluid_cpu_duration, fluid_duration, fast_data_transfer, edge_requests, function_invocations',
-      ],
-    ]);
-  });
-
-  it('summarizes custom alert rule details when present', async () => {
-    const queryJsonString = JSON.stringify({
-      event: 'incomingRequest',
-      rollups: {
-        requests: {
-          measure: 'count',
-          aggregation: 'sum',
-        },
-      },
-      groupBy: ['route'],
-      granularity: { minutes: 5 },
-    });
-
-    client.scenario.get('/alerts/v2/alert-rules', (_req, res) => {
-      res.json([
-        {
-          id: 'ar_custom',
-          name: 'Checkout request volume',
-          teamId: 'team_dummy',
-          projectId: 'prj_alerts',
-          alertTypes: [{ type: 'custom_alert' }],
-          customAlert: {
-            queryJsonString,
-            triggerType: 'threshold',
-            triggerOperator: 'gt',
-            triggerThreshold: 120,
-          },
-        },
-      ]);
-    });
-
-    client.setArgv('alerts', 'rules', 'ls');
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-    const output = client.stderr.getFullOutput();
-    expect(output).toContain('Details');
-    expect(output).toContain('ar_custom');
-    expect(output).toContain('Checkout request volume');
-    expect(output).toContain('incoming request sum count by route');
-    expect(output).toContain('threshold > 120');
-    expect(output).toContain('every 5m');
-  });
-
-  it('keeps long rule table values compact', async () => {
-    client.scenario.get('/alerts/v2/alert-rules', (_req, res) => {
-      res.json([
-        {
-          id: 'ar_019ad9b5-ca3a-7249-8597-85abe7590577',
-          name: 'Very long custom alert rule name that would otherwise stretch the table',
-          teamId: 'team_dummy',
-          projectId:
-            "projectId eq 'Qmc52npNy86S8VV4Mt8a8dP1LEkRNbgosW3pBCQytkcgf2'",
-        },
-      ]);
-    });
-
-    client.setArgv('alerts', 'rules', 'ls');
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-    const output = client.stderr.getFullOutput();
-    expect(output).toContain('Very long custom alert rule name that wou...');
-    expect(output).toContain("projectId e...CQytkcgf2'");
-  });
-
-  it('filters listed rules by alert type', async () => {
-    client.scenario.get('/alerts/v2/alert-rules', (_req, res) => {
-      res.json([
-        {
-          id: 'ar_custom',
-          name: 'Custom traffic alert',
-          teamId: 'team_dummy',
-          alertTypes: [{ type: 'custom_alert' }],
-        },
-        {
-          id: 'ar_usage',
-          name: 'Usage alert',
-          teamId: 'team_dummy',
-          alertTypes: [{ type: 'usage_anomaly' }],
-        },
-      ]);
-    });
-
-    client.setArgv('alerts', 'rules', '--all', '--type', 'custom_alert');
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-    const output = client.stderr.getFullOutput();
-    expect(output).toContain('ar_custom');
-    expect(output).toContain('Custom traffic alert');
-    expect(output).not.toContain('ar_usage');
-    expect(output).not.toContain('Usage alert');
-  });
-
-  it('filters JSON rules by alert type', async () => {
-    client.scenario.get('/alerts/v2/alert-rules', (_req, res) => {
-      res.json([
-        {
-          id: 'ar_custom',
-          name: 'Custom traffic alert',
-          teamId: 'team_dummy',
-          alertTypes: [{ type: 'custom_alert' }],
-        },
-        {
-          id: 'ar_usage',
-          name: 'Usage alert',
-          teamId: 'team_dummy',
-          alertTypes: [{ type: 'usage_anomaly' }],
-        },
-      ]);
+      expect(req.query.limit).toBe('100');
+      expect(req.query.type).toBe('custom');
+      if (!req.query.cursor) {
+        res.json({
+          rules: [customRule],
+          pagination: { count: 1, next: 'next' },
+        });
+      } else {
+        res.json({
+          rules: [{ ...customRule, id: 'ar_custom_2', name: 'Latency' }],
+          pagination: { count: 1, next: null },
+        });
+      }
     });
 
     client.setArgv(
       'alerts',
       'rules',
       'ls',
+      '--type',
+      'custom',
+      '--format',
+      'json'
+    );
+
+    expect(await alerts(client)).toBe(0);
+    expect(cursors).toEqual([undefined, 'next']);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    expect(payload.rules.map((rule: { id: string }) => rule.id)).toEqual([
+      'ar_custom',
+      'ar_custom_2',
+    ]);
+  });
+
+  it('lists every accessible team rule with --all', async () => {
+    client.scenario.get('/alerts/v3/alert-rules', (req, res) => {
+      expect(req.query.teamId).toBe('team_dummy');
+      expect(req.query.projectId).toBeUndefined();
+      res.json({ rules: [builtInRule], pagination: { count: 1, next: null } });
+    });
+
+    client.setArgv('alerts', 'rules', '--all');
+
+    expect(await alerts(client)).toBe(0);
+    const rendered = stripAnsi(client.stderr.getFullOutput());
+    expect(rendered).toContain('Rule ID');
+    expect(rendered).toContain('Type');
+    expect(rendered).toContain('Condition');
+    expect(rendered).toContain('ar_builtin');
+    expect(rendered).toContain('minimum high');
+  });
+
+  it("does not combine an explicit team with another team's linked project", async () => {
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'linked',
+      project: {
+        id: 'prj_alerts',
+        name: 'alerts-project',
+        accountId: 'team_linked',
+        updatedAt: Date.now(),
+        createdAt: Date.now(),
+      },
+      org: { id: 'team_linked', slug: 'linked-team', type: 'team' },
+    });
+    mockedGetScope.mockResolvedValue({
+      contextName: 'explicit-team',
+      team: { id: 'team_explicit', slug: 'explicit-team' },
+      user: { id: 'user_dummy' },
+      app: null,
+      explicitScopeProvided: true,
+    } as any);
+    client.scenario.get('/alerts/v3/alert-rules', (req, res) => {
+      expect(req.query.teamId).toBe('team_explicit');
+      expect(req.query.projectId).toBeUndefined();
+      res.json({ rules: [], pagination: { count: 0, next: null } });
+    });
+    client.setArgv('--scope', 'explicit-team', 'alerts', 'rules', 'ls');
+
+    expect(await alerts(client)).toBe(0);
+  });
+
+  it('accepts custom_alert as a compatibility alias for custom rules', async () => {
+    client.scenario.get('/alerts/v3/alert-rules', (req, res) => {
+      expect(req.query.type).toBe('custom');
+      res.json({ rules: [customRule], pagination: { count: 1, next: null } });
+    });
+    client.setArgv(
+      'alerts',
+      'rules',
+      'ls',
+      '--all',
       '--type',
       'custom_alert',
       '--format',
       'json'
     );
 
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
+    expect(await alerts(client)).toBe(0);
     const payload = JSON.parse(client.stdout.getFullOutput());
-    expect(payload.rules).toHaveLength(1);
-    expect(payload.rules[0].id).toBe('ar_custom');
+    expect(payload.rules.map((rule: { id: string }) => rule.id)).toEqual([
+      'ar_custom',
+    ]);
   });
 
-  it('inspects a built-in alert rule with human-readable output', async () => {
-    let requestPath = '';
-    client.scenario.get('/alerts/v2/alert-rules/:ruleId', (req, res) => {
-      requestPath = req.path;
-      expect(req.query.teamId).toBe('team_dummy');
-      res.json({
-        autosubscribeOwnersInKnock: true,
-        autosubscribeProjectAdminsInKnock: true,
-        id: 'ar_builtin',
-        name: 'Vercel Site',
-        owner: '',
-        projectId:
-          "projectId eq 'Qmc52npNy86S8VV4Mt8a8dP1LEkRNbgosW3pBCQytkcgf2'",
-        sensitivityLevel: 3,
-        teamId: 'team_dummy',
-        action: 'trigger',
-      });
-    });
-
-    client.setArgv('alerts', 'rules', 'get', 'ar_builtin');
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-    expect(requestPath).toContain('/alerts/v2/alert-rules/ar_builtin');
-    const output = client.stderr.getFullOutput();
-    expect(output).toContain('Alert rule');
-    expect(output).toContain('Vercel Site');
-    expect(output).toContain('ar_builtin');
-    expect(output).toContain(
-      "projectId eq 'Qmc52npNy86S8VV4Mt8a8dP1LEkRNbgosW3pBCQytkcgf2'"
-    );
-    expect(output).toContain('Notifications');
-    expect(output).toContain('Auto-subscribe owners');
-    expect(output).toContain('yes');
-  });
-
-  it('inspects an alert rule when flags precede the rule id', async () => {
-    let requestPath = '';
-    client.scenario.get('/alerts/v2/alert-rules/:ruleId', (req, res) => {
-      requestPath = req.path;
-      expect(req.query.teamId).toBe('team_dummy');
-      res.json({
-        id: 'ar_builtin',
-        name: 'Vercel Site',
-        teamId: 'team_dummy',
-      });
-    });
-
-    client.setArgv('alerts', 'rules', 'get', '--format', 'json', 'ar_builtin');
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-    expect(requestPath).toContain('/alerts/v2/alert-rules/ar_builtin');
-    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
-      rule: {
-        id: 'ar_builtin',
-        name: 'Vercel Site',
-        teamId: 'team_dummy',
+  it('accepts repeatable and comma-separated legacy detector filters', async () => {
+    const errorRule = {
+      ...builtInRule,
+      id: 'ar_error',
+      triggers: {
+        mode: 'selected',
+        items: [{ type: 'error_anomaly', filter: 'statusGroup:5xx' }],
       },
+    };
+    const buildRule = {
+      ...builtInRule,
+      id: 'ar_build',
+      triggers: {
+        mode: 'selected',
+        items: [{ type: 'buildTime_anomaly' }],
+      },
+    };
+    const allBuiltInRule = {
+      ...builtInRule,
+      id: 'ar_all_built_in',
+      triggers: { mode: 'all' },
+    };
+    client.scenario.get('/alerts/v3/alert-rules', (req, res) => {
+      expect(req.query.type).toBeUndefined();
+      res.json({
+        rules: [builtInRule, errorRule, buildRule, allBuiltInRule, customRule],
+        pagination: { count: 5, next: null },
+      });
+    });
+    client.setArgv(
+      'alerts',
+      'rules',
+      'ls',
+      '--all',
+      '--type',
+      'custom_alert,usage_anomaly',
+      '--type',
+      'error_anomaly',
+      '--format',
+      'json'
+    );
+
+    expect(await alerts(client)).toBe(0);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    expect(payload.rules.map((rule: { id: string }) => rule.id)).toEqual([
+      'ar_builtin',
+      'ar_error',
+      'ar_all_built_in',
+      'ar_custom',
+    ]);
+  });
+
+  it('returns the API-owned custom authoring schema unchanged for agents', async () => {
+    mockAuthoringSchema(customAuthoringDocument, 'custom');
+    client.setArgv(
+      'alerts',
+      'rules',
+      'schema',
+      '--type',
+      'custom',
+      '--format',
+      'json'
+    );
+
+    expect(await alerts(client)).toBe(0);
+    const document = JSON.parse(client.stdout.getFullOutput());
+    expect(document).toEqual(customAuthoringDocument);
+    expect(JSON.stringify(document)).not.toMatch(/\bv3\b/i);
+  });
+
+  it('renders API-owned fields, constraints, and metric discovery', async () => {
+    mockAuthoringSchema(customAuthoringDocument, 'custom');
+    client.setArgv('alerts', 'rules', 'schema', '--type', 'custom');
+
+    expect(await alerts(client)).toBe(0);
+    const rendered = stripAnsi(client.stderr.getFullOutput());
+    expect(rendered).toContain('evaluation.query.metrics.<key>.aggregation');
+    expect(rendered).toContain('count | sum | p95 | unique');
+    expect(rendered).toContain('Metric selection policy · create/update');
+    expect(rendered).toContain('Paths: evaluation.query.metrics.*.aggregation');
+    expect(rendered).toContain('vc metrics schema <metric-or-prefix>');
+    expect(rendered).toContain('--project <name-or-id>');
+    expect(rendered).not.toMatch(/\bv3\b/i);
+  });
+
+  it('shows built-in trigger, scope, and filter guidance', async () => {
+    mockAuthoringSchema(builtInAuthoringDocument, 'built-in');
+    client.setArgv('alerts', 'rules', 'schema', '--type', 'built-in');
+
+    expect(await alerts(client)).toBe(0);
+    const rendered = stripAnsi(client.stderr.getFullOutput());
+    expect(rendered).toContain('triggers.items[].filter');
+    expect(rendered).toContain('statusGroup:4xx or statusGroup:5xx');
+    expect(rendered).toContain('--project <name-or-id>');
+    expect(rendered).toContain('--all');
+    expect(rendered).toContain('vercel alerts rules add --body ./rule.json');
+    expect(rendered).not.toMatch(/\bv3\b/i);
+  });
+
+  it('lists rule types returned by the authoring schema endpoint', async () => {
+    mockAuthoringSchema({
+      schemaVersion: 2,
+      ruleTypes: [
+        ...builtInAuthoringDocument.ruleTypes,
+        ...customAuthoringDocument.ruleTypes,
+      ],
+    });
+    client.setArgv('alerts', 'rules', 'schema');
+
+    expect(await alerts(client)).toBe(0);
+    const rendered = stripAnsi(client.stderr.getFullOutput());
+    expect(rendered).toContain('built-in');
+    expect(rendered).toContain('custom');
+    expect(rendered).toContain('vercel alerts rules schema --type <type>');
+  });
+
+  it('shows complete create guidance in help', async () => {
+    client.setArgv('alerts', 'rules', 'add', '--help');
+
+    expect(await alerts(client)).toBe(0);
+    const rendered = stripAnsi(client.stderr.getFullOutput());
+    expect(rendered).toContain(
+      'Provide ruleScope in the body or use a scope flag, not both.'
+    );
+    expect(rendered).toContain('Built-in body (rule.json)');
+    expect(rendered).toContain('Custom body (rule.json)');
+    expect(rendered).toContain('"type": "error_anomaly"');
+    expect(rendered).toContain('"metric": "vercel.request.count"');
+    expect(rendered).toContain('"filter": "httpStatus >= 500"');
+    expect(rendered).toContain('"matchMinimumSeverityLevel": "high"');
+    expect(rendered).toContain('vercel metrics schema <metric-or-prefix>');
+    expect(rendered).not.toMatch(/\bv3\b/i);
+  });
+
+  it('shows partial-body and scope guidance in update help', async () => {
+    client.setArgv('alerts', 'rules', 'update', '--help');
+
+    expect(await alerts(client)).toBe(0);
+    const rendered = stripAnsi(client.stderr.getFullOutput());
+    expect(rendered).toContain(
+      'type is optional and inferred from the stored rule.'
+    );
+    expect(rendered).toContain(
+      'Use --project or --all to change scope with or without --body.'
+    );
+    expect(rendered).toContain(
+      'vercel alerts rules update ar_abc123 --project my-app'
+    );
+    expect(rendered).toContain(
+      'vercel alerts rules schema --type <built-in|custom>'
+    );
+    expect(rendered).toContain('"matchMinimumSeverityLevel": "critical"');
+    expect(rendered).not.toMatch(/\bv3\b/i);
+  });
+
+  it('creates a custom rule and maps --project to v3 ruleScope', async () => {
+    mockedGetProject.mockResolvedValue({
+      id: 'prj_explicit',
+      name: 'explicit-project',
+    } as any);
+    client.scenario.post('/alerts/v3/alert-rules', (req, res) => {
+      expect(req.query).toEqual({ teamId: 'team_dummy' });
+      expect(req.body.ruleScope).toEqual({
+        type: 'project',
+        projectId: 'prj_explicit',
+      });
+      res.status(201).json({
+        rule: {
+          ...customRule,
+          ruleScope: { type: 'project', projectId: 'prj_explicit' },
+        },
+      });
+    });
+    const bodyPath = writeBody('custom.json', {
+      type: 'custom',
+      name: customRule.name,
+      severity: customRule.severity,
+      evaluation: customRule.evaluation,
+      trigger: customRule.trigger,
+      notificationSettings: customRule.notificationSettings,
+    });
+    client.setArgv(
+      '--scope',
+      'my-team',
+      'alerts',
+      'rules',
+      'add',
+      '--project',
+      'explicit-project',
+      '--body',
+      bodyPath
+    );
+
+    expect(await alerts(client)).toBe(0);
+    const rendered = stripAnsi(client.stderr.getFullOutput());
+    expect(rendered).toContain('Created');
+    expect(rendered).toContain('ar_custom');
+    expect(rendered).toContain('project: prj_explicit');
+    expect(rendered).toContain(
+      'vercel alerts rules inspect ar_custom --scope my-team'
+    );
+  });
+
+  it('maps --all to a built-in all-project scope', async () => {
+    client.scenario.post('/alerts/v3/alert-rules', (req, res) => {
+      expect(req.body.ruleScope).toEqual({ type: 'all' });
+      res.status(201).json({ rule: builtInRule });
+    });
+    const bodyPath = writeBody('built-in.json', {
+      type: 'built-in',
+      name: builtInRule.name,
+      triggers: builtInRule.triggers,
+      matchMinimumSeverityLevel: builtInRule.matchMinimumSeverityLevel,
+    });
+    client.setArgv(
+      'alerts',
+      'rules',
+      'add',
+      '--all',
+      '--body',
+      bodyPath,
+      '--format',
+      'json'
+    );
+
+    expect(await alerts(client)).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      rule: builtInRule,
     });
   });
 
-  it('uses inspect command in scope retry hints', async () => {
-    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
-      throw new Error(`exit:${code ?? 0}`);
-    }) as () => never);
-    mockedGetLinkedProject.mockResolvedValue({
-      status: 'not_linked',
-      org: null,
-      project: null,
+  it('requires an explicit create scope source', async () => {
+    const bodyPath = writeBody('unscoped.json', {
+      type: 'built-in',
+      name: builtInRule.name,
+      triggers: builtInRule.triggers,
+      matchMinimumSeverityLevel: builtInRule.matchMinimumSeverityLevel,
     });
+    client.setArgv('alerts', 'rules', 'add', '--body', bodyPath);
 
+    expect(await alerts(client)).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain('Missing rule scope');
+  });
+
+  it('rejects conflicting body and flag scopes', async () => {
+    const bodyPath = writeBody('scoped.json', {
+      type: 'built-in',
+      name: builtInRule.name,
+      ruleScope: { type: 'all' },
+      triggers: builtInRule.triggers,
+      matchMinimumSeverityLevel: builtInRule.matchMinimumSeverityLevel,
+    });
+    client.setArgv(
+      'alerts',
+      'rules',
+      'add',
+      '--project',
+      'my-app',
+      '--body',
+      bodyPath
+    );
+
+    expect(await alerts(client)).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'either in the body or with --project/--all'
+    );
+  });
+
+  it('returns a friendly migration error for previous request bodies', async () => {
+    const bodyPath = writeBody('legacy.json', {
+      name: 'Legacy',
+      alertTypes: [{ type: 'custom_alert' }],
+      customAlert: { queryJsonString: '{}' },
+    });
+    client.setArgv('alerts', 'rules', 'add', '--all', '--body', bodyPath);
+
+    expect(await alerts(client)).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'previous alert-rules shape'
+    );
+  });
+
+  it('patches metadata without requiring the type discriminator', async () => {
+    client.scenario.patch('/alerts/v3/alert-rules/:ruleId', (req, res) => {
+      expect(req.params.ruleId).toBe('ar_custom');
+      expect(req.query.teamId).toBe('team_dummy');
+      expect(req.body).toEqual({ severity: 'medium' });
+      res.json({ rule: { ...customRule, severity: 'medium' } });
+    });
+    const bodyPath = writeBody('patch.json', { severity: 'medium' });
+    client.setArgv(
+      'alerts',
+      'rules',
+      'update',
+      'ar_custom',
+      '--body',
+      bodyPath,
+      '--format',
+      'json'
+    );
+
+    expect(await alerts(client)).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput()).rule.severity).toBe(
+      'medium'
+    );
+  });
+
+  it('updates a built-in rule scope with --project', async () => {
+    mockedGetProject.mockResolvedValue({
+      id: 'prj_explicit',
+      name: 'explicit-project',
+    } as any);
+    client.scenario.get('/alerts/v3/alert-rules/:ruleId', (_req, res) => {
+      res.json({ rule: builtInRule });
+    });
+    client.scenario.patch('/alerts/v3/alert-rules/:ruleId', (req, res) => {
+      expect(req.body).toEqual({
+        ruleScope: { type: 'include', projectIds: ['prj_explicit'] },
+      });
+      res.json({
+        rule: {
+          ...builtInRule,
+          ruleScope: { type: 'include', projectIds: ['prj_explicit'] },
+        },
+      });
+    });
+    client.setArgv(
+      '--scope',
+      'my-team',
+      'alerts',
+      'rules',
+      'update',
+      'ar_builtin',
+      '--project',
+      'explicit-project'
+    );
+
+    expect(await alerts(client)).toBe(0);
+    const rendered = stripAnsi(client.stderr.getFullOutput());
+    expect(rendered).toContain('Updated');
+    expect(rendered).toContain(
+      'vercel alerts rules inspect ar_builtin --scope my-team'
+    );
+  });
+
+  it('reports an explicit no-op for an unchanged scope-only update', async () => {
+    client.scenario.get('/alerts/v3/alert-rules/:ruleId', (_req, res) => {
+      res.json({ rule: builtInRule });
+    });
+    client.setArgv(
+      'alerts',
+      'rules',
+      'update',
+      'ar_builtin',
+      '--all',
+      '--format',
+      'json'
+    );
+
+    expect(await alerts(client)).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      rule: builtInRule,
+    });
+  });
+
+  it('shows unsupported custom queries as a readable success state', async () => {
+    client.scenario.get('/alerts/v3/alert-rules/:ruleId', (_req, res) => {
+      res.json({
+        rule: {
+          ...customRule,
+          evaluation: null,
+          querySupported: false,
+        },
+      });
+    });
+    client.setArgv('alerts', 'rules', 'inspect', 'ar_custom');
+
+    expect(await alerts(client)).toBe(0);
+    const rendered = stripAnsi(client.stderr.getFullOutput());
+    expect(rendered).toContain('Query unavailable via API');
+    expect(rendered).toContain('update metadata');
+  });
+
+  it('shows built-in conditions when inspecting a rule', async () => {
+    client.scenario.get('/alerts/v3/alert-rules/:ruleId', (_req, res) => {
+      res.json({ rule: builtInRule });
+    });
+    client.setArgv('alerts', 'rules', 'inspect', 'ar_builtin');
+
+    expect(await alerts(client)).toBe(0);
+    const rendered = stripAnsi(client.stderr.getFullOutput());
+    expect(rendered).toContain('Built-in conditions');
+    expect(rendered).toContain('Minimum severity');
+    expect(rendered).toContain('high');
+    expect(rendered.indexOf('Minimum severity')).toBeLessThan(
+      rendered.indexOf('Trigger')
+    );
+  });
+
+  it('accepts deprecated --project while inspecting a rule', async () => {
+    client.scenario.get('/alerts/v3/alert-rules/:ruleId', (req, res) => {
+      expect(req.query.teamId).toBe('team_dummy');
+      res.json({ rule: builtInRule });
+    });
     client.setArgv(
       'alerts',
       'rules',
       'inspect',
       'ar_builtin',
-      '--non-interactive'
-    );
-
-    await expect(alerts(client)).rejects.toThrow('exit:1');
-
-    const payload = JSON.parse(client.stdout.getFullOutput().trim());
-    expect(payload.next).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          command: expect.stringContaining(
-            'alerts rules inspect ar_builtin --project <name_or_id>'
-          ),
-        }),
-      ])
-    );
-  });
-
-  it('inspects a custom alert rule with query details', async () => {
-    const queryJsonString = JSON.stringify({
-      event: 'incomingRequest',
-      rollups: {
-        requests: {
-          measure: 'count',
-          aggregation: 'sum',
-        },
-      },
-      groupBy: ['requestHostname'],
-      granularity: { minutes: 5 },
-    });
-
-    client.scenario.get('/alerts/v2/alert-rules/:ruleId', (_req, res) => {
-      res.json({
-        id: 'ar_custom',
-        name: 'Checkout request volume',
-        teamId: 'team_dummy',
-        projectId: 'prj_alerts',
-        alertTypes: [
-          {
-            type: 'custom_alert',
-            filter: "projectId eq 'prj_alerts'",
-          },
-        ],
-        action: 'trigger',
-        customAlert: {
-          id: 'ca_custom',
-          ruleId: 'ar_custom',
-          title: 'Checkout request volume',
-          queryJsonString,
-          triggerType: 'threshold',
-          triggerOperator: 'gt',
-          triggerThreshold: 120,
-          minThreshold: 10,
-          createdAt: 1772800000000,
-        },
-      });
-    });
-
-    client.setArgv('alerts', 'rules', 'inspect', 'ar_custom');
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-    const output = client.stderr.getFullOutput();
-    expect(output).toContain('Checkout request volume');
-    expect(output).toContain('project: prj_alerts');
-    expect(output).toContain('custom alert');
-    expect(output).toContain('Custom Alert');
-    expect(output).toContain('incoming request sum count by request hostname');
-    expect(output).toContain('threshold > 120');
-    expect(output).toContain('Minimum');
-    expect(output).toContain('10');
-    expect(output).toContain('Granularity');
-    expect(output).toContain('5m');
-  });
-
-  it('passes --all through when rules defaults to ls', async () => {
-    let requestQuery: any;
-    client.scenario.get('/alerts/v2/alert-rules', (req, res) => {
-      requestQuery = req.query;
-      res.json([]);
-    });
-
-    client.setArgv('alerts', 'rules', '--all');
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-    expect(requestQuery.teamId).toBe('team_dummy');
-    expect(requestQuery.projectId).toBeUndefined();
-  });
-
-  it('passes --all through to explicit rules ls', async () => {
-    let requestQuery: any;
-    client.scenario.get('/alerts/v2/alert-rules', (req, res) => {
-      requestQuery = req.query;
-      res.json([]);
-    });
-
-    client.setArgv('alerts', 'rules', 'ls', '--all');
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-    expect(requestQuery.teamId).toBe('team_dummy');
-    expect(requestQuery.projectId).toBeUndefined();
-  });
-
-  it('passes nested rules args when global flags precede alerts', async () => {
-    let requestQuery: any;
-    client.scenario.get('/alerts/v2/alert-rules', (req, res) => {
-      requestQuery = req.query;
-      res.json([]);
-    });
-
-    client.setArgv(
-      '--debug',
-      '--token',
-      'test-token',
-      'alerts',
-      'rules',
-      'ls',
-      '--all'
-    );
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-    expect(requestQuery.teamId).toBe('team_dummy');
-    expect(requestQuery.projectId).toBeUndefined();
-  });
-
-  it('lists team-wide alert rules without a linked project', async () => {
-    mockedGetLinkedProject.mockResolvedValue({
-      status: 'not_linked',
-      org: null,
-      project: null,
-    });
-    client.scenario.get('/alerts/v2/alert-rules', (req, res) => {
-      expect(req.query.teamId).toBe('team_dummy');
-      expect(req.query.projectId).toBeUndefined();
-      res.json([{ id: 'ar_1', name: 'Team rule', teamId: 'team_dummy' }]);
-    });
-
-    client.setArgv('alerts', 'rules', '--all', '--format', 'json');
-
-    const exitCode = await alerts(client);
-    expect(exitCode).toBe(0);
-    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
-      rules: [{ id: 'ar_1', name: 'Team rule', teamId: 'team_dummy' }],
-    });
-    expect(mockedGetLinkedProject).not.toHaveBeenCalled();
-  });
-
-  it('lists alert rules for an explicit project', async () => {
-    mockedGetProject.mockResolvedValue({ id: 'prj_explicit' } as any);
-    client.scenario.get('/alerts/v2/alert-rules', (req, res) => {
-      expect(req.query.teamId).toBe('team_dummy');
-      expect(req.query.projectId).toBe('prj_explicit');
-      res.json([]);
-    });
-
-    client.setArgv(
-      'alerts',
-      'rules',
       '--project',
-      'explicit-project',
+      'legacy-project',
       '--format',
       'json'
     );
 
-    const exitCode = await alerts(client);
-    expect(exitCode).toBe(0);
-    expect(mockedGetProject).toHaveBeenCalledWith(
-      client,
-      'explicit-project',
-      'team_dummy'
-    );
-    expect(mockedGetLinkedProject).not.toHaveBeenCalled();
-  });
-
-  it('creates a rule from the provided JSON body', async () => {
-    let method = '';
-    client.scenario.post('/alerts/v2/alert-rules', (req, res) => {
-      method = req.method;
-      expect(req.query.teamId).toBe('team_dummy');
-      expect(req.query.projectId).toBe('prj_alerts');
-      expect(req.body).toEqual({
-        name: 'from-cli',
-        alertTypes: [{ type: 'usage_anomaly' }],
-        projectId: "projectId eq 'prj_from_body'",
-      });
-      res.status(201).json({
-        id: 'ar_new',
-        name: 'from-cli',
-        teamId: 'team_dummy',
-      });
+    expect(await alerts(client)).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      rule: builtInRule,
     });
-
-    writeFileSync(
-      join(tmpDir, 'rule.json'),
-      JSON.stringify({
-        id: 'ar_copied',
-        name: 'from-cli',
-        teamId: 'team_from_copy',
-        alertTypes: [{ type: 'usage_anomaly' }],
-        projectId: "projectId eq 'prj_from_body'",
-      })
-    );
-    client.setArgv('alerts', 'rules', 'add', '--body', 'rule.json');
-
-    const exitCode = await alerts(client);
-    expect(exitCode).toBe(0);
-    expect(method).toBe('POST');
-    expect(client.stderr.getFullOutput()).toContain('Created alert rule');
   });
 
-  it('reports invalid custom alert query JSON before creating a rule', async () => {
-    writeFileSync(
-      join(tmpDir, 'invalid-custom-rule.json'),
-      JSON.stringify({
-        name: 'custom-rule',
-        projectId: 'prj_alerts',
-        alertTypes: [{ type: 'custom_alert' }],
-        customAlert: {
-          queryJsonString: '{"event":',
-          triggerType: 'anomaly',
-          triggerOperator: 'gt',
-          triggerThreshold: 3,
-        },
-      })
-    );
-    client.setArgv(
-      'alerts',
-      'rules',
-      'add',
-      '--body',
-      'invalid-custom-rule.json'
-    );
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain(
-      'Invalid JSON in customAlert.queryJsonString.'
-    );
-  });
-
-  it('preserves formula rollup keys', async () => {
-    client.scenario.post('/alerts/v2/alert-rules', (req, res) => {
-      const customAlert = req.body.customAlert as {
-        formula: unknown;
-        queryJsonString: string;
-      };
-      const query = JSON.parse(customAlert.queryJsonString);
-      expect(query.rollups).toEqual({
-        errors: { measure: 'count', aggregation: 'sum' },
-        requests: { measure: 'count', aggregation: 'sum' },
-      });
-      expect(customAlert.formula).toEqual({
-        operator: 'divide',
-        left: 'errors',
-        right: 'requests',
-      });
-      res.status(201).json({ id: 'ar_ratio', name: 'ratio-rule' });
-    });
-
-    writeFileSync(
-      join(tmpDir, 'ratio-rule.json'),
-      JSON.stringify({
-        name: 'ratio-rule',
-        projectId: 'prj_alerts',
-        alertTypes: [{ type: 'custom_alert' }],
-        customAlert: {
-          queryJsonString: JSON.stringify({
-            event: 'incomingRequest',
-            rollups: {
-              errors: { measure: 'count', aggregation: 'sum' },
-              requests: { measure: 'count', aggregation: 'sum' },
-            },
-          }),
-          triggerType: 'threshold',
-          triggerOperator: 'gt',
-          triggerThreshold: 0.05,
-          formula: {
-            operator: 'divide',
-            left: 'errors',
-            right: 'requests',
-          },
-        },
-      })
-    );
-    client.setArgv('alerts', 'rules', 'add', '--body', 'ratio-rule.json');
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-  });
-
-  it('preserves a custom alert rollup and adds dashboard project metadata', async () => {
-    const queryJsonString = JSON.stringify({
-      event: 'aiGatewayRequest',
-      rollups: {
-        cost: {
-          measure: 'cost',
-          aggregation: 'sum',
-        },
-      },
-      granularity: { hours: 1 },
-    });
-
-    client.scenario.post('/alerts/v2/alert-rules', (req, res) => {
-      expect(req.body).toEqual({
-        name: 'custom-rule',
-        projectId: 'prj_alerts',
-        alertTypes: [{ type: 'custom_alert' }],
-        customAlert: {
-          queryJsonString: JSON.stringify({
-            event: 'aiGatewayRequest',
-            rollups: {
-              cost: {
-                measure: 'cost',
-                aggregation: 'sum',
-              },
-            },
-            granularity: { hours: 1 },
-            scope: {
-              type: 'project',
-              ownerId: 'team_dummy',
-              projectIds: ['prj_alerts'],
-              projectId: 'prj_alerts',
-              projectName: 'alerts-project',
-            },
-          }),
-          triggerType: 'anomaly',
-          triggerOperator: 'gt',
-          triggerThreshold: 3,
-        },
-      });
-      res.status(201).json({
-        id: 'ar_custom',
-        name: 'custom-rule',
-        teamId: 'team_dummy',
-      });
-    });
-
-    writeFileSync(
-      join(tmpDir, 'custom-rule.json'),
-      JSON.stringify({
-        name: 'custom-rule',
-        alertTypes: [{ type: 'custom_alert' }],
-        customAlert: {
-          queryJsonString,
-          triggerType: 'anomaly',
-          triggerOperator: 'gt',
-          triggerThreshold: 3,
-        },
-      })
-    );
-    client.setArgv('alerts', 'rules', 'add', '--body', 'custom-rule.json');
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-  });
-
-  it('resolves an explicitly provided custom alert project name', async () => {
-    mockedGetProject.mockResolvedValue({
-      id: 'prj_explicit',
-      name: 'explicit-project',
-    } as any);
-    client.scenario.post('/alerts/v2/alert-rules', (req, res) => {
-      const customAlert = req.body.customAlert as {
-        queryJsonString: string;
-      };
-      expect(JSON.parse(customAlert.queryJsonString).scope).toEqual({
-        type: 'project',
-        ownerId: 'team_dummy',
-        projectIds: ['prj_explicit'],
-        projectId: 'prj_explicit',
-        projectName: 'explicit-project',
-      });
-      res.status(201).json({ id: 'ar_custom', name: 'custom-rule' });
-    });
-
-    writeFileSync(
-      join(tmpDir, 'explicit-custom-rule.json'),
-      JSON.stringify({
-        name: 'custom-rule',
-        projectId: 'prj_explicit',
-        alertTypes: [{ type: 'custom_alert' }],
-        customAlert: {
-          queryJsonString: JSON.stringify({
-            event: 'incomingRequest',
-            rollups: {
-              requests: { measure: 'count', aggregation: 'sum' },
-            },
-            granularity: { minutes: 5 },
-          }),
-          triggerType: 'threshold',
-          triggerOperator: 'gt',
-          triggerThreshold: 100,
-        },
-      })
-    );
-    client.setArgv(
-      'alerts',
-      'rules',
-      'add',
-      '--body',
-      'explicit-custom-rule.json'
-    );
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-    expect(mockedGetProject).toHaveBeenCalledWith(
-      client,
-      'prj_explicit',
-      'team_dummy'
-    );
-  });
-
-  it('adds dashboard project metadata to an existing custom alert scope', async () => {
-    mockedGetProject.mockResolvedValue({
-      id: 'prj_explicit',
-      name: 'explicit-project',
-    } as any);
-    client.scenario.post('/alerts/v2/alert-rules', (req, res) => {
-      const customAlert = req.body.customAlert as {
-        queryJsonString: string;
-      };
-      expect(JSON.parse(customAlert.queryJsonString).scope).toEqual({
-        type: 'project',
-        ownerId: 'team_dummy',
-        projectIds: ['prj_explicit'],
-        projectId: 'prj_explicit',
-        projectName: 'explicit-project',
-      });
-      res.status(201).json({ id: 'ar_custom', name: 'custom-rule' });
-    });
-
-    writeFileSync(
-      join(tmpDir, 'scoped-custom-rule.json'),
-      JSON.stringify({
-        name: 'custom-rule',
-        projectId: 'prj_explicit',
-        alertTypes: [{ type: 'custom_alert' }],
-        customAlert: {
-          queryJsonString: JSON.stringify({
-            event: 'incomingRequest',
-            rollups: {
-              requests: { measure: 'count', aggregation: 'sum' },
-            },
-            granularity: { minutes: 5 },
-            scope: {
-              type: 'project',
-              ownerId: 'team_dummy',
-              projectIds: ['prj_explicit'],
-            },
-          }),
-          triggerType: 'threshold',
-          triggerOperator: 'gt',
-          triggerThreshold: 100,
-        },
-      })
-    );
-    client.setArgv(
-      'alerts',
-      'rules',
-      'add',
-      '--body',
-      'scoped-custom-rule.json'
-    );
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-  });
-
-  it('uses an explicit project as the built-in rule target', async () => {
-    mockedGetProject.mockResolvedValue({ id: 'prj_explicit' } as any);
-    client.scenario.post('/alerts/v2/alert-rules', (req, res) => {
-      expect(req.query.teamId).toBe('team_dummy');
-      expect(req.query.projectId).toBe('prj_explicit');
-      expect(req.body).toEqual({
-        name: 'project-rule',
-        alertTypes: [{ type: 'error_anomaly' }],
-        projectId: "projectId eq 'prj_explicit'",
-      });
-      res.status(201).json({
-        id: 'ar_project',
-        name: 'project-rule',
-        teamId: 'team_dummy',
-      });
-    });
-
-    writeFileSync(
-      join(tmpDir, 'project-rule.json'),
-      JSON.stringify({
-        name: 'project-rule',
-        alertTypes: [{ type: 'error_anomaly' }],
-      })
-    );
-    client.setArgv(
-      'alerts',
-      'rules',
-      'add',
-      '--body',
-      'project-rule.json',
-      '--project',
-      'explicit-project'
-    );
-
-    const exitCode = await alerts(client);
-    expect(exitCode).toBe(0);
-    expect(mockedGetProject).toHaveBeenCalledWith(
-      client,
-      'explicit-project',
-      'team_dummy'
-    );
-    expect(mockedGetLinkedProject).not.toHaveBeenCalled();
-  });
-
-  it('keeps a built-in rule team-wide when only a linked project is available', async () => {
-    client.scenario.post('/alerts/v2/alert-rules', (req, res) => {
-      expect(req.body).toEqual({
-        name: 'team-rule',
-        alertTypes: [{ type: 'usage_anomaly' }],
-      });
-      res.status(201).json({
-        id: 'ar_team',
-        name: 'team-rule',
-        teamId: 'team_dummy',
-      });
-    });
-
-    writeFileSync(
-      join(tmpDir, 'team-rule.json'),
-      JSON.stringify({
-        name: 'team-rule',
-        alertTypes: [{ type: 'usage_anomaly' }],
-      })
-    );
-    client.setArgv('alerts', 'rules', 'add', '--body', 'team-rule.json');
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-  });
-
-  it('deletes a rule with --yes', async () => {
-    let method = '';
-    client.scenario.delete('/alerts/v2/alert-rules/:ruleId', (req, res) => {
-      method = req.method;
-      expect(req.params.ruleId).toBe('ar_x');
+  it('accepts deprecated --all while deleting with --yes', async () => {
+    client.scenario.delete('/alerts/v3/alert-rules/:ruleId', (req, res) => {
+      expect(req.params.ruleId).toBe('ar_builtin');
       expect(req.query.teamId).toBe('team_dummy');
       res.json({ success: true });
     });
-
-    client.setArgv('alerts', 'rules', 'rm', 'ar_x', '--yes');
-
-    const exitCode = await alerts(client);
-    expect(exitCode).toBe(0);
-    expect(method).toBe('DELETE');
-    expect(client.stderr.getFullOutput()).toContain('Deleted');
-  });
-
-  it('patches a rule', async () => {
-    let method = '';
-    client.scenario.patch('/alerts/v2/alert-rules/:ruleId', (req, res) => {
-      method = req.method;
-      expect(req.params.ruleId).toBe('ar_x');
-      expect(req.body).toEqual({
-        name: 'patched',
-        projectId: null,
-        customAlert: {
-          minThreshold: null,
-        },
-      });
-      res.json({ id: 'ar_x', name: 'patched' });
-    });
-
-    writeFileSync(
-      join(tmpDir, 'patch.json'),
-      JSON.stringify({
-        name: 'patched',
-        projectId: null,
-        customAlert: {
-          minThreshold: null,
-        },
-      })
+    client.setArgv(
+      'alerts',
+      'rules',
+      'rm',
+      'ar_builtin',
+      '--all',
+      '--yes',
+      '--format',
+      'json'
     );
-    client.setArgv('alerts', 'rules', 'update', 'ar_x', '--body', 'patch.json');
 
-    const exitCode = await alerts(client);
-    expect(exitCode).toBe(0);
-    expect(method).toBe('PATCH');
+    expect(await alerts(client)).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      ok: true,
+      ruleId: 'ar_builtin',
+      deleted: true,
+    });
   });
 
-  it('preserves a rollup and inherits project metadata when updating a custom alert query', async () => {
-    mockedGetProject.mockResolvedValue({
-      id: 'prj_rule',
-      name: 'rule-project',
-    } as any);
-    const queryJsonString = JSON.stringify({
-      event: 'aiGatewayRequest',
-      rollups: {
-        cost: {
-          measure: 'cost',
-          aggregation: 'sum',
-        },
-      },
-      granularity: { hours: 1 },
+  it('prints a deletion receipt when --yes skips the preview', async () => {
+    client.scenario.delete('/alerts/v3/alert-rules/:ruleId', (_req, res) => {
+      res.json({ success: true });
     });
+    client.setArgv('alerts', 'rules', 'rm', 'ar_builtin', '--yes');
 
-    client.scenario.get('/alerts/v2/alert-rules/:ruleId', (req, res) => {
-      expect(req.params.ruleId).toBe('ar_custom');
-      res.json({
-        id: 'ar_custom',
-        teamId: 'team_dummy',
-        projectId: 'prj_rule',
-        alertTypes: [{ type: 'custom_alert' }],
-      });
+    expect(await alerts(client)).toBe(0);
+    const rendered = stripAnsi(client.stderr.getFullOutput());
+    expect(rendered).toContain('✓ Deleted');
+    expect(rendered).toContain('ar_builtin');
+  });
+
+  it('previews the target before interactive deletion', async () => {
+    client.input.confirm = vi.fn().mockResolvedValue(true);
+    client.scenario.get('/alerts/v3/alert-rules/:ruleId', (_req, res) => {
+      res.json({ rule: builtInRule });
     });
-    client.scenario.patch('/alerts/v2/alert-rules/:ruleId', (req, res) => {
-      expect(req.body).toEqual({
-        customAlert: {
-          queryJsonString: JSON.stringify({
-            event: 'aiGatewayRequest',
-            rollups: {
-              cost: {
-                measure: 'cost',
-                aggregation: 'sum',
-              },
+    client.scenario.delete('/alerts/v3/alert-rules/:ruleId', (_req, res) => {
+      res.json({ success: true });
+    });
+    client.setArgv('alerts', 'rules', 'rm', 'ar_builtin');
+
+    expect(await alerts(client)).toBe(0);
+    expect(client.input.confirm).toHaveBeenCalledWith(
+      'Delete alert rule Production anomalies (ar_builtin)? This cannot be undone.',
+      false
+    );
+    const rendered = stripAnsi(client.stderr.getFullOutput());
+    expect(rendered).toContain('Production anomalies');
+    expect(rendered).toContain('Deleted');
+    expect(rendered).not.toContain('alerts rules inspect');
+  });
+
+  it('preserves structured API validation issues in JSON errors', async () => {
+    client.scenario.post('/alerts/v3/alert-rules', (_req, res) => {
+      res.status(400).json({
+        error: {
+          code: 'bad_request',
+          message: 'Invalid custom alert rule query.',
+          issues: [
+            {
+              path: 'evaluation.query.outputs.0',
+              message: 'Output must reference a metric or formula.',
             },
-            granularity: { hours: 1 },
-            scope: {
-              type: 'project',
-              ownerId: 'team_dummy',
-              projectIds: ['prj_rule'],
-              projectId: 'prj_rule',
-              projectName: 'rule-project',
-            },
-          }),
+          ],
         },
       });
-      res.json({ id: 'ar_custom', name: 'custom-rule' });
     });
-
-    writeFileSync(
-      join(tmpDir, 'custom-patch.json'),
-      JSON.stringify({
-        customAlert: {
-          queryJsonString,
-        },
-      })
-    );
+    const bodyPath = writeBody('invalid-query.json', {
+      type: 'custom',
+      name: customRule.name,
+      ruleScope: customRule.ruleScope,
+      severity: customRule.severity,
+      evaluation: customRule.evaluation,
+      trigger: customRule.trigger,
+    });
     client.setArgv(
       'alerts',
       'rules',
-      'update',
-      'ar_custom',
+      'add',
       '--body',
-      'custom-patch.json'
+      bodyPath,
+      '--format',
+      'json'
     );
 
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-  });
-
-  it('preserves an explicit custom alert query scope on update', async () => {
-    const queryJsonString = JSON.stringify({
-      event: 'incomingRequest',
-      rollups: {
-        requests: {
-          measure: 'count',
-          aggregation: 'sum',
-        },
+    expect(await alerts(client)).toBe(1);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      error: {
+        code: 'bad_request',
+        message: 'Invalid custom alert rule query.',
+        issues: [
+          {
+            path: 'evaluation.query.outputs.0',
+            message: 'Output must reference a metric or formula.',
+          },
+        ],
       },
-      granularity: { minutes: 5 },
-      scope: {
-        type: 'project',
-        ownerId: 'team_explicit',
-        projectIds: ['prj_explicit'],
-      },
-    });
-
-    client.scenario.patch('/alerts/v2/alert-rules/:ruleId', (req, res) => {
-      expect(req.body).toEqual({
-        customAlert: {
-          queryJsonString,
-        },
-      });
-      res.json({ id: 'ar_custom', name: 'custom-rule' });
-    });
-
-    writeFileSync(
-      join(tmpDir, 'explicit-scope-patch.json'),
-      JSON.stringify({
-        customAlert: {
-          queryJsonString,
-        },
-      })
-    );
-    client.setArgv(
-      'alerts',
-      'rules',
-      'update',
-      'ar_custom',
-      '--body',
-      'explicit-scope-patch.json'
-    );
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-  });
-
-  it('reports invalid custom alert query JSON before updating a rule', async () => {
-    writeFileSync(
-      join(tmpDir, 'invalid-custom-patch.json'),
-      JSON.stringify({
-        customAlert: {
-          queryJsonString: '{"event":',
-        },
-      })
-    );
-    client.setArgv(
-      'alerts',
-      'rules',
-      'update',
-      'ar_custom',
-      '--body',
-      'invalid-custom-patch.json'
-    );
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain(
-      'Invalid JSON in customAlert.queryJsonString.'
-    );
-  });
-
-  describe('--non-interactive', () => {
-    it('rm without --yes emits confirmation_required JSON', async () => {
-      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
-        throw new Error(`exit:${code ?? 0}`);
-      }) as () => never);
-
-      client.nonInteractive = true;
-      client.setArgv(
-        'alerts',
-        'rules',
-        'rm',
-        'ar_x',
-        '--non-interactive',
-        '--cwd=/tmp/a'
-      );
-
-      await expect(alerts(client)).rejects.toThrow('exit:1');
-
-      const payload = JSON.parse(client.stdout.getFullOutput().trim());
-      expect(payload).toMatchObject({
-        status: 'error',
-        reason: 'confirmation_required',
-      });
-      expect(
-        payload.next?.some((n: { command?: string }) =>
-          String(n.command).includes('--yes')
-        )
-      ).toBe(true);
     });
   });
 });

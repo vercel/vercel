@@ -1,4 +1,5 @@
 import { getContext } from '../get-context';
+import { getDeadline } from '../deadline';
 
 const DEBUG = !!process.env.DEBUG;
 
@@ -154,7 +155,6 @@ function getIdleTimeout(dbPool: DbPool): number {
 let idleTimeout: string | number | NodeJS.Timeout | null | undefined = null;
 let idleTimeoutResolve: (value: void | PromiseLike<void>) => void = () => {};
 
-const bootTime = Date.now();
 const maximumDuration = 15 * 60 * 1000 - 1000; // 15 minutes - 1 second
 
 function waitUntilIdleTimeout(dbPool: DbPool) {
@@ -175,10 +175,15 @@ function waitUntilIdleTimeout(dbPool: DbPool) {
     idleTimeoutResolve = resolve;
   });
 
-  // Don't wait longer than the maximum duration
+  const deadline = getDeadline();
+  const remainingDuration = deadline
+    ? deadline.getTime() - Date.now() - 1000
+    : maximumDuration;
+
+  // Don't wait longer than the current invocation can run.
   const waitTime = Math.min(
     getIdleTimeout(dbPool) + 100,
-    Math.max(100, maximumDuration - (Date.now() - bootTime))
+    Math.max(100, remainingDuration)
   );
   idleTimeout = setTimeout(() => {
     idleTimeoutResolve?.();

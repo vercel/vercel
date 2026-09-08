@@ -120,6 +120,31 @@ describe('getTokenResponse cache', () => {
     vi.restoreAllMocks();
   });
 
+  it('defaults omitted scopes to all default scopes', async () => {
+    fetchMock.mockResolvedValue(tokenResponse('tok_default_scopes'));
+
+    await getTokenResponse('oauth/linear', {
+      subject: { type: 'user', id: 'default_scopes' },
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toMatchObject({ scopes: ['*'] });
+  });
+
+  it('preserves explicitly provided scopes', async () => {
+    fetchMock.mockResolvedValue(tokenResponse('tok_explicit_scopes'));
+
+    await getTokenResponse('oauth/linear', {
+      subject: { type: 'user', id: 'explicit_scopes' },
+      scopes: ['read', 'write'],
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      scopes: ['read', 'write'],
+    });
+  });
+
   it('serves a cached, unexpired token without re-fetching', async () => {
     fetchMock.mockResolvedValue(tokenResponse('tok_a'));
     const params = { subject: { type: 'user' as const, id: 'cache_hit' } };

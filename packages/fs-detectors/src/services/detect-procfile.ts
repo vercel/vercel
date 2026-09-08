@@ -5,7 +5,8 @@ import type {
   ServiceDetectionError,
   ServiceDetectionWarning,
 } from './types';
-import { assignMountPaths, DETECTION_FRAMEWORKS } from './utils';
+import { DETECTION_FRAMEWORKS } from './runtimes/framework';
+import { assignMountPaths } from './utils';
 
 export interface ProcfileDetectResult {
   services: InferredServicesConfig | null;

@@ -1,6 +1,6 @@
 {
   "name": "@vercel/detect-agent",
-  "version": "1.2.3",
+  "version": "1.2.5",
   "description": "Detect if code is running in an AI agent or automated development environment",
   "keywords": [
     "ai",
@@ -51,8 +51,8 @@
   ],
   "dependencies": {},
   "devDependencies": {
-    "vite": "^5.1.6",
-    "vitest": "^2.0.1",
+    "vite": "^6.4.3",
+    "vitest": "^4.1.10",
     "mock-fs": "5.5.0",
     "@types/mock-fs": "4.13.4"
   }

@@ -3,10 +3,10 @@
 import ms from 'ms';
 import { randomBytes } from 'crypto';
 import { directFetch } from '../fetch';
-import type { ExperimentalService } from '@vercel/fs-detectors';
 import {
   getServiceQueueTopicConfigs,
   isQueueBackedService,
+  type ExperimentalService,
   type DevQueueSubscription,
 } from '@vercel/build-utils';
 import output from '../../output-manager';

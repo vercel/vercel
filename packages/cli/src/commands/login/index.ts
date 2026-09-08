@@ -78,5 +78,5 @@ export default async function login(
 
   telemetry.trackState('started');
 
-  return await future(client, telemetry);
+  return await future(client, telemetry, options.shouldParseArgs);
 }

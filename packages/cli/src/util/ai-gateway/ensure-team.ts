@@ -14,10 +14,7 @@ export async function ensureTeam(client: Client): Promise<boolean> {
     return false;
   }
 
-  const org = await selectOrg(
-    client,
-    'Which team owns these AI Gateway resources?'
-  );
+  const org = await selectOrg(client, 'Which team?');
   if (org.type === 'team') {
     client.config.currentTeam = org.id;
     return true;

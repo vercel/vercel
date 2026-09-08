@@ -3,7 +3,6 @@ import { access } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { spawn } from 'node:child_process';
-import chalk from 'chalk';
 import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import { z } from 'zod';
 import type Client from '../client';
@@ -753,26 +752,5 @@ export async function autoInstallVercelPlugin(
     }
   } catch (err) {
     output.debug(`Auto-install agent tooling failed: ${err}`);
-  }
-}
-
-export async function showPluginTipIfNeeded(client: Client): Promise<void> {
-  try {
-    const prefs = await readPrefs(client);
-    if (prefs.pluginDeclined) return;
-
-    const targets = await getPluginTargets(client.agentName, client.cwd);
-    for (const target of targets) {
-      if (!(await isPluginInstalledForTarget(target))) {
-        output.log(
-          chalk.dim(
-            'Tip: Run `npx plugins add vercel/vercel-plugin` to enhance your agent experience'
-          )
-        );
-        return;
-      }
-    }
-  } catch {
-    // ignore
   }
 }

@@ -115,6 +115,7 @@ export interface PyProjectToolVercelFastapiSection {
  */
 export interface PyProjectToolVercelFastapiStaticSection {
   cdn?: boolean;
+  exclude?: boolean;
 }
 
 /**

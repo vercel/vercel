@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import upgrade from '../../../../src/commands/upgrade';
 import * as configFilesUtil from '../../../../src/util/config/files';
+import chars from '../../../../src/util/output/chars';
 
 const writeConfigSpy = vi.spyOn(configFilesUtil, 'writeToConfigFile');
 
@@ -222,6 +223,35 @@ describe('upgrade', () => {
       await expect(client.stderr).toOutput(
         'Native Vercel CLI binary disabled.'
       );
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:disable-binary',
+          value: 'TRUE',
+        },
+      ]);
+    });
+
+    it('fails on a native CLI instead of writing a no-op config change', async () => {
+      process.env.VERCEL_VC_NATIVE = '1';
+      client.config = { useNativeBinary: true };
+      client.setArgv('upgrade', '--disable-binary');
+      const exitCode = await upgrade(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.config.useNativeBinary).toBe(true);
+      expect(writeConfigSpy).not.toHaveBeenCalled();
+
+      const output = client.stderr.getFullOutput();
+      expect(output).toMatch(new RegExp(`^${chars.fatal} `, 'm'));
+      expect(output).toContain(
+        "Can't use `--disable-binary` from the native CLI."
+      );
+      expect(output).toContain(
+        'This flag only opts the Node.js CLI out of launching the native binary.'
+      );
+      expect(output).toContain('npm i -g vercel');
+      expect(output).not.toContain('Error:');
+      expect(output).not.toContain('Native Vercel CLI binary disabled.');
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:disable-binary',

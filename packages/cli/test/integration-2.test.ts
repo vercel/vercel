@@ -592,7 +592,7 @@ test('add a sensitive env var', async () => {
   expect(output.stderr).toContain('✓ Added           envVarName');
   expect(output.stderr).toContain('Project         ');
   expect(output.stderr).toContain('Environments    Production');
-  expect(output.stderr).toContain('Type            Sensitive');
+  expect(output.stderr).toContain('Type            Secret');
 
   await apiFetch(`/v2/projects/${projectName}`, { method: 'DELETE' });
 });
@@ -770,7 +770,6 @@ describe('telemetry submits data', () => {
       const output = await execCli(binaryPath, ['help', 'deploy'], {
         cwd: directory,
       });
-      expect(output.exitCode, formatOutput(output)).toBe(2);
       expect(mockTelemetryBridgeWasCalled).toEqual(false);
       expect(output.exitCode, formatOutput(output)).toBe(2);
 

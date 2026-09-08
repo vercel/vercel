@@ -1,0 +1,30 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "framework:actix-web randomness:RANDOMNESS_PLACEHOLDER",
+      "responseHeaders": {
+        "content-type": "/text\\/html/"
+      }
+    },
+    {
+      "path": "/static/info.txt",
+      "status": 200,
+      "mustContain": "framework=actix-web RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "path": "/api/items/42",
+      "status": 200,
+      "mustContain": "\"name\":\"Sample Item 42\"",
+      "responseHeaders": {
+        "content-type": "/application\\/json/"
+      }
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 404,
+      "mustContain": "not found:actix-web /does-not-exist"
+    }
+  ]
+}

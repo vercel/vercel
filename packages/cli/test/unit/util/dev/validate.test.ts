@@ -71,6 +71,22 @@ describe('validateConfig', () => {
       );
     });
 
+    it('accepts proxy together with services', () => {
+      expect(
+        validateConfig({
+          services: {
+            web: { root: 'apps/web', framework: 'nextjs' },
+            vr: { root: 'apps/vr' },
+          },
+          rewrites: [
+            { source: '/app/(.*)', destination: { service: 'vr' } },
+            { source: '/(.*)', destination: { service: 'web' } },
+          ],
+          proxy: { entrypoint: 'proxy.ts' },
+        })
+      ).toBeNull();
+    });
+
     it('rejects proxy together with builds', () => {
       const error = validateConfig({
         proxy: { entrypoint: 'proxy.ts' },
@@ -450,16 +466,16 @@ describe('validateConfig', () => {
         typeof validateConfig
       >[0];
 
-    it('rejects maxDuration above the default 1800s bound when unset', () => {
-      const error = validateConfig(configWith(1900));
+    it('rejects maxDuration above the default 3600s bound when unset', () => {
+      const error = validateConfig(configWith(3700));
       expect(error).not.toBeNull();
-      expect(error?.message).toMatch(/1800/);
+      expect(error?.message).toMatch(/3600/);
     });
 
-    it('allows maxDuration above 1800s when set to "1" (defers to the server)', () => {
+    it('allows maxDuration above 3600s when set to "1" (defers to the server)', () => {
       process.env[ENV] = '1';
-      expect(validateConfig(configWith(1800))).toBeNull();
-      expect(validateConfig(configWith(1900))).toBeNull();
+      expect(validateConfig(configWith(3600))).toBeNull();
+      expect(validateConfig(configWith(3700))).toBeNull();
     });
 
     it('still enforces the lower bound and integer check when skipped', () => {
@@ -468,11 +484,11 @@ describe('validateConfig', () => {
       expect(validateConfig(configWith(1.5))).not.toBeNull();
     });
 
-    it('re-applies the 1800s bound once the variable is unset again', () => {
+    it('re-applies the 3600s bound once the variable is unset again', () => {
       process.env[ENV] = '1';
-      expect(validateConfig(configWith(2000))).toBeNull();
+      expect(validateConfig(configWith(3700))).toBeNull();
       delete process.env[ENV];
-      expect(validateConfig(configWith(2000))).not.toBeNull();
+      expect(validateConfig(configWith(3700))).not.toBeNull();
     });
   });
 
@@ -512,6 +528,71 @@ describe('validateConfig', () => {
       },
     } as any);
     expect(error).not.toBeNull();
+  });
+
+  it('should reject strict affinity outside a service', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          affinity: { mode: 'strict' },
+        },
+      },
+    });
+    expect(error?.code).toBe('FUNCTION_AFFINITY_REQUIRES_SERVICE');
+  });
+
+  it('should reject strict affinity with the all function region', () => {
+    const error = validateConfig({
+      services: {
+        api: {
+          root: 'api',
+          functions: {
+            'test.js': {
+              affinity: { mode: 'strict' },
+              regions: ['all'],
+            },
+          },
+        },
+      },
+    });
+    expect(error?.code).toBe('INVALID_FUNCTION_AFFINITY_REGIONS');
+  });
+
+  it.each([
+    'services',
+    'experimentalServicesV2',
+  ] as const)('should reject strict affinity with multiple function regions in `%s`', configKey => {
+    const error = validateConfig({
+      [configKey]: {
+        api: {
+          root: 'api',
+          functions: {
+            'test.js': {
+              affinity: { mode: 'strict' },
+              regions: ['iad1', 'sfo1'],
+            },
+          },
+        },
+      },
+    });
+    expect(error?.code).toBe('INVALID_FUNCTION_AFFINITY_REGIONS');
+  });
+
+  it('should allow strict affinity to inherit multiple project regions', () => {
+    const error = validateConfig({
+      regions: ['iad1', 'sfo1'],
+      services: {
+        api: {
+          root: 'api',
+          functions: {
+            'test.js': {
+              affinity: { mode: 'strict' },
+            },
+          },
+        },
+      },
+    });
+    expect(error).toBeNull();
   });
 
   it.each([
@@ -1450,6 +1531,37 @@ describe('validateConfig', () => {
       },
     });
     expect(error).toBeNull();
+  });
+
+  it('should allow strict function affinity', () => {
+    const error = validateConfig({
+      services: {
+        api: {
+          root: 'api',
+          functions: {
+            'test.js': {
+              affinity: { mode: 'strict' },
+            },
+          },
+        },
+      },
+    });
+    expect(error).toBeNull();
+  });
+
+  it.each([
+    {},
+    { mode: 'loose' },
+    { mode: 'strict', extra: true },
+  ])('should reject invalid function affinity %o', affinity => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          affinity: affinity as any,
+        },
+      },
+    });
+    expect(error).not.toBeNull();
   });
 
   it('should error with invalid supportsCancellation type', () => {

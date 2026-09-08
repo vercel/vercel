@@ -50,7 +50,79 @@ describe('ServicesOrchestrator', () => {
       VERCEL_QUEUE_BASE_URL: 'http://localhost:3000/_svc/_queues',
       VERCEL_QUEUE_TOKEN: 'vc-dev-token',
       VERCEL_REGION: 'dev1',
-      VERCEL_DEPLOYMENT_ID: 'dpl_dev',
     });
+  });
+
+  it('points every service at the shared dev Runtime Cache', () => {
+    const frontend: ExperimentalServiceV2 = {
+      schema: 'experimentalServicesV2',
+      name: 'frontend',
+      root: 'frontend',
+      framework: 'nextjs',
+      builder: { use: '@vercel/next', src: 'frontend/package.json' },
+    };
+    const backend: ExperimentalServiceV2 = {
+      schema: 'experimentalServicesV2',
+      name: 'backend',
+      root: 'backend',
+      runtime: 'python',
+      entrypoint: 'pyproject.toml',
+      builder: { use: '@vercel/python', src: 'backend/pyproject.toml' },
+    };
+    const orchestrator = new ServicesOrchestrator({
+      services: [frontend, backend],
+      cwd: '/project',
+      repoRoot: '/project',
+      env: {},
+      proxyOrigin: 'http://localhost:3000',
+      useImplicitEnvInjection: false,
+    }) as unknown as {
+      getV2StartSpec(service: ExperimentalServiceV2): {
+        env: NodeJS.ProcessEnv;
+      };
+    };
+
+    const expected = {
+      RUNTIME_CACHE_ENDPOINT:
+        'http://localhost:3000/_svc/_cache/v1/suspense-cache/',
+      RUNTIME_CACHE_HEADERS: JSON.stringify({
+        authorization: 'Bearer vc-dev-token',
+      }),
+    };
+
+    expect(orchestrator.getV2StartSpec(frontend).env).toMatchObject(expected);
+    expect(orchestrator.getV2StartSpec(backend).env).toMatchObject(expected);
+  });
+
+  it('leaves a developer-configured cache endpoint alone', () => {
+    const service: ExperimentalServiceV2 = {
+      schema: 'experimentalServicesV2',
+      name: 'backend',
+      root: 'backend',
+      runtime: 'python',
+      entrypoint: 'pyproject.toml',
+      builder: { use: '@vercel/python', src: 'backend/pyproject.toml' },
+    };
+    const orchestrator = new ServicesOrchestrator({
+      services: [service],
+      cwd: '/project',
+      repoRoot: '/project',
+      env: {
+        RUNTIME_CACHE_ENDPOINT: 'https://cache.example.com/v1/suspense-cache/',
+      },
+      proxyOrigin: 'http://localhost:3000',
+      useImplicitEnvInjection: false,
+    }) as unknown as {
+      getV2StartSpec(service: ExperimentalServiceV2): {
+        env: NodeJS.ProcessEnv;
+      };
+    };
+
+    const { env } = orchestrator.getV2StartSpec(service);
+
+    expect(env.RUNTIME_CACHE_ENDPOINT).toBe(
+      'https://cache.example.com/v1/suspense-cache/'
+    );
+    expect(env.RUNTIME_CACHE_HEADERS).toBeUndefined();
   });
 });

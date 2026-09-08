@@ -1,7 +1,18 @@
-import { it, expect } from 'vitest';
+import { afterEach, it, expect, vi } from 'vitest';
 import { prepareFilesystem } from './test-utils';
 import { build } from '../../src';
+import {
+  MIDDLEWARE_NODEJS_DEFAULT_ENV,
+  MIDDLEWARE_NODEJS_DEFAULT_SINCE,
+} from '../../src/utils';
 import { NodejsLambda } from '@vercel/build-utils/dist/nodejs-lambda';
+
+const NEW_PROJECT = MIDDLEWARE_NODEJS_DEFAULT_SINCE.getTime();
+const EXISTING_PROJECT = NEW_PROJECT - 1;
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 it.each([
   {
@@ -34,7 +45,41 @@ it.each([
     middlewareRuntime: 'nodejs' as const,
     expectedType: 'Lambda',
   },
-])('$name', async ({ runtime, middlewareRuntime, expectedType }) => {
+  {
+    name: 'use "nodejs" as default runtime for a new project',
+    projectCreatedAt: NEW_PROJECT,
+    nodejsDefault: true,
+    expectedType: 'Lambda',
+  },
+  {
+    name: 'keep "edge" as default runtime for an existing project',
+    projectCreatedAt: EXISTING_PROJECT,
+    nodejsDefault: true,
+    expectedType: 'EdgeFunction',
+  },
+  {
+    name: 'keep "edge" as default runtime for a new project without the flag',
+    projectCreatedAt: NEW_PROJECT,
+    expectedType: 'EdgeFunction',
+  },
+  {
+    name: 'allow opting back into "edge" once the default flipped',
+    runtime: 'edge',
+    projectCreatedAt: NEW_PROJECT,
+    nodejsDefault: true,
+    expectedType: 'EdgeFunction',
+  },
+])('$name', async ({
+  runtime,
+  middlewareRuntime,
+  projectCreatedAt,
+  nodejsDefault,
+  expectedType,
+}) => {
+  if (nodejsDefault) {
+    vi.stubEnv(MIDDLEWARE_NODEJS_DEFAULT_ENV, '1');
+  }
+
   const config = runtime
     ? `export const config = { runtime: '${runtime}' }`
     : '';
@@ -55,6 +100,7 @@ it.each([
     config: {
       middleware: true,
       middlewareRuntime,
+      projectSettings: { createdAt: projectCreatedAt },
     },
     meta: { skipDownload: true },
   });
@@ -129,88 +175,35 @@ it('should throw an error for an unsupported runtime', async () => {
   );
 });
 
-it('nodejs middleware uses Web API interface', async () => {
+it.each([
+  { runtime: undefined, warns: true },
+  { runtime: 'edge', warns: true },
+  { runtime: 'nodejs', warns: false },
+])('runtime="$runtime" warns about the edge deprecation: $warns', async ({
+  runtime,
+  warns,
+}) => {
+  const consoleWarnSpy = vi.spyOn(console, 'warn');
+  const config = runtime
+    ? `export const config = { runtime: '${runtime}' };`
+    : '';
   const filesystem = await prepareFilesystem({
     'middleware.js': `
-      export const config = {
-        runtime: 'nodejs'
-      };
-
-      export default function middleware(request) {
-        // Middleware should receive Web API Request object, not Node.js req
-        const url = new URL(request.url);
-        const headers = new Headers();
-        headers.set('x-middleware-runtime', 'nodejs');
-        headers.set('x-request-type', request.constructor.name);
-
-        return new Response('nodejs middleware with web api', {
-          headers,
-        });
-      };
-    `,
+        ${config}
+        export default () => new Response('middleware');
+      `,
   });
 
-  const buildResult = await build({
+  await build({
     ...filesystem,
     entrypoint: 'middleware.js',
-    config: {
-      middleware: true,
-    },
+    config: { middleware: true },
     meta: { skipDownload: true },
   });
 
-  expect(buildResult.output).toBeDefined();
-  expect(buildResult.output.type).toBe('Lambda');
-  expect((buildResult.output as NodejsLambda).useWebApi).toBe(true);
-  expect(buildResult.routes).toEqual([
-    {
-      src: '^/.*$',
-      middlewareRawSrc: [],
-      middlewarePath: 'middleware.js',
-      continue: true,
-      override: true,
-    },
-  ]);
-});
-
-it('nodejs middleware works fine with streaming mode', async () => {
-  const filesystem = await prepareFilesystem({
-    'middleware.js': `
-      export const config = {
-        runtime: 'nodejs'
-      };
-
-      export default function middleware(request) {
-        // This middleware should be eligible for streaming mode
-        // since it uses web handlers interface
-        return new Response('streaming middleware', {
-          headers: { 'x-middleware-streaming': 'true' },
-        });
-      };
-    `,
-  });
-
-  const buildResult = await build({
-    ...filesystem,
-    entrypoint: 'middleware.js',
-    config: {
-      middleware: true,
-    },
-    meta: { skipDownload: true },
-  });
-
-  expect(buildResult.output).toBeDefined();
-  expect(buildResult.output.type).toBe('Lambda');
-
-  // The key point is that middleware with nodejs runtime should be built successfully
-  // and will be configured to use web handlers interface with streaming capability
-  expect(buildResult.routes).toEqual([
-    {
-      src: '^/.*$',
-      middlewareRawSrc: [],
-      middlewarePath: 'middleware.js',
-      continue: true,
-      override: true,
-    },
-  ]);
+  const warned = consoleWarnSpy.mock.calls.some(([message]) =>
+    String(message).includes('uses the deprecated "edge" runtime')
+  );
+  expect(warned).toBe(warns);
+  consoleWarnSpy.mockRestore();
 });

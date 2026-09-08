@@ -22,7 +22,7 @@ vi.mock('node:child_process', async importOriginal => {
   };
 });
 
-import './test/mocks/matchers/index';
+import '../mocks/matchers/index';
 
 beforeEach(() => {
   vi.unstubAllEnvs();

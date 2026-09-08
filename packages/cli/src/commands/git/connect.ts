@@ -4,6 +4,7 @@ import { join } from 'path';
 import type { Org, Project } from '@vercel-internals/types';
 import type Client from '../../util/client';
 import { parseGitConfig, pluckRemoteUrls } from '../../util/create-git-meta';
+import { getGitConfigPath } from '../../util/git-helpers';
 import link from '../../util/output/link';
 import { getCommandName } from '../../util/pkg-name';
 import {
@@ -95,7 +96,7 @@ export default async function connect(client: Client, argv: string[]) {
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   // get project from .git
-  const gitConfigPath = join(cwd, '.git/config');
+  const gitConfigPath = getGitConfigPath({ cwd }) ?? join(cwd, '.git/config');
   const gitConfig = await parseGitConfig(gitConfigPath);
 
   if (repoArg) {

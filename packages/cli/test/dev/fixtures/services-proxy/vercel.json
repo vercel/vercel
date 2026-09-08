@@ -1,0 +1,21 @@
+{
+  "services": {
+    "web": {
+      "root": "web",
+      "entrypoint": "server.js",
+      "devCommand": "node server.js"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "web"
+      }
+    }
+  ],
+  "proxy": {
+    "entrypoint": "proxy.js"
+  }
+}

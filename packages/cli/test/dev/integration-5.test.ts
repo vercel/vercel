@@ -824,6 +824,35 @@ describe('[vercel dev] experimentalServicesV2 service bindings', () => {
   });
 });
 
+describe('[vercel dev] services with a top-level proxy', () => {
+  test('[vercel dev] proxy runs ahead of service rewrites', async () => {
+    const dir = fixture('services-proxy');
+    const { dev, port, readyResolver } = await testFixture(dir, {}, [
+      '--local',
+    ]);
+
+    try {
+      await readyResolver;
+
+      // The proxy responds directly for its own path.
+      const proxied = await nodeFetch(`http://localhost:${port}/from-proxy`);
+      expect(proxied.status).toBe(200);
+      expect(await proxied.text()).toBe('hi from proxy');
+
+      // Everything else falls through the proxy to the routed service.
+      const web = await nodeFetch(`http://localhost:${port}/`);
+      expect(web.status).toBe(200);
+      expect(await web.text()).toBe('web: /');
+
+      const webPath = await nodeFetch(`http://localhost:${port}/some/path`);
+      expect(webPath.status).toBe(200);
+      expect(await webPath.text()).toBe('web: /some/path');
+    } finally {
+      await dev.kill();
+    }
+  });
+});
+
 describe('[vercel dev] Pyproject queue subscribers', () => {
   const resultsDir = join(
     __dirname,
@@ -890,6 +919,61 @@ describe('[vercel dev] Pyproject queue subscribers', () => {
   });
 });
 
+describe('[vercel dev] APScheduler pyproject subscriber', () => {
+  const resultsDir = join(
+    __dirname,
+    'fixtures',
+    'services-v2-apscheduler',
+    '.results'
+  );
+
+  beforeEach(async () => {
+    await fs.remove(resultsDir);
+  });
+
+  test('[vercel dev] first request activates the scheduler and the wake chain ticks', async () => {
+    const dir = fixture('services-v2-apscheduler');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      // Traffic-driven activation: the first web request publishes the
+      // durable start message; the sidecar starts the scheduler and keeps
+      // it alive through delayed wake messages on the dev queue broker.
+      const res = await nodeFetch(`http://localhost:${port}/`);
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ service: 'web' });
+
+      // Two ticks prove the chain advances (start -> wake -> wake), not
+      // just a single delivery.
+      const ticksPath = join(resultsDir, 'ticks.log');
+      let ticks: string[] = [];
+      for (let i = 0; i < 60; i++) {
+        await sleep(500);
+        if (await fs.pathExists(ticksPath)) {
+          const contents = await fs.readFile(ticksPath, 'utf8');
+          ticks = contents.split('\n').filter(Boolean);
+          if (ticks.length >= 2) break;
+        }
+      }
+
+      expect(ticks.length).toBeGreaterThanOrEqual(2);
+    } finally {
+      await dev.kill();
+    }
+  });
+});
+
 describe('[vercel dev] Worker service', () => {
   const resultsDir = join(__dirname, 'fixtures', 'services-worker', '.results');
 
@@ -949,6 +1033,62 @@ describe('[vercel dev] Worker service', () => {
       expect(wildcardResult).toHaveProperty('received', true);
       expect(wildcardResult.message).toHaveProperty('action', 'test');
       expect(wildcardResult.message).toHaveProperty('value', 42);
+    } finally {
+      await dev.kill();
+    }
+  });
+});
+
+describe('[vercel dev] Queues + Runtime Cache across services', () => {
+  test('[vercel dev] Next.js enqueues, Python completes via the shared Runtime Cache', async () => {
+    const dir = fixture('services-queue-cache');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      // Next.js publishes a message for the Python subscriber.
+      const enqueueRes = await nodeFetch(
+        `http://localhost:${port}/api/enqueue`,
+        {
+          method: 'POST',
+        }
+      );
+      expect(enqueueRes.status).toBe(200);
+      const { taskId, messageId } = await enqueueRes.json();
+      expect(taskId).toBeTruthy();
+      expect(messageId).toBeTruthy();
+
+      // The Python subscriber writes the completion into the Runtime Cache;
+      // Next.js reads it back from the store shared by both processes.
+      let status: any = null;
+      for (let i = 0; i < 60; i++) {
+        await sleep(500);
+        const statusRes = await nodeFetch(
+          `http://localhost:${port}/api/status?taskId=${taskId}`
+        );
+        if (statusRes.status !== 200) continue;
+        const json = await statusRes.json();
+        if (json.status === 'completed') {
+          status = json;
+          break;
+        }
+      }
+
+      expect(status).not.toBeNull();
+      expect(status.completion).toMatchObject({
+        completed: true,
+        messageId,
+      });
     } finally {
       await dev.kill();
     }

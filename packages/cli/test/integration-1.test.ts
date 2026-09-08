@@ -103,7 +103,7 @@ test('default command should deploy directory', async () => {
   expect(stdout).toMatch(/https:\/\/output-.+\.vercel\.app/);
 });
 
-test('default command should warn when deploying with conflicting subdirectory', async () => {
+test('default command should not warn about conflicting subdirectory when cwd is already linked', async () => {
   const projectDir = await setupE2EFixture(
     'deploy-default-with-conflicting-sub-directory'
   );
@@ -123,12 +123,27 @@ test('default command should warn when deploying with conflicting subdirectory',
   );
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  expect(stderr || '').toMatch(
+  expect(stderr || '').not.toMatch(
     /Did you mean to deploy the subdirectory "list"\? Use `vc --cwd list` instead./
   );
 
   const listHeader = /No deployments found/;
   expect(stderr || '').toMatch(listHeader); // ensure `list` command still ran
+});
+
+test('default command should warn about conflicting subdirectory when cwd is not linked', async () => {
+  const projectDir = await setupE2EFixture(
+    'deploy-default-with-conflicting-sub-directory',
+    { removeProjectLink: true }
+  );
+
+  const { stderr } = await execCli(binaryPath, ['list', '--help'], {
+    cwd: projectDir,
+  });
+
+  expect(stderr || '').toMatch(
+    /Did you mean to deploy the subdirectory "list"\? Use `vc --cwd list` instead./
+  );
 });
 
 test('deploy command should not warn when deploying with conflicting subdirectory and using --cwd', async () => {
@@ -196,7 +211,8 @@ test('default command should work with --cwd option', async () => {
 
 test('should allow deploying a directory that was built with a target environment of "preview" and `--prebuilt` is used without specifying a target', async () => {
   const projectDir = await setupE2EFixture(
-    'deploy-default-with-prebuilt-preview'
+    'deploy-default-with-prebuilt-preview',
+    { removeProjectLink: true }
   );
 
   await vcLink(projectDir);
@@ -224,7 +240,9 @@ test('should allow deploying a directory that was built with a target environmen
 });
 
 test('should allow deploying a directory that was prebuilt, but has no builds.json', async () => {
-  const projectDir = await setupE2EFixture('build-output-api-raw');
+  const projectDir = await setupE2EFixture('build-output-api-raw', {
+    removeProjectLink: true,
+  });
 
   await vcLink(projectDir);
 
@@ -495,8 +513,8 @@ test.skip('deploy `api-env` fixture and test `vercel env` command', async () => 
 
     await waitForPrompt(vc, 'Name?');
     vc.stdin?.write(`${promptEnvVar}\n`);
-    await waitForPrompt(vc, 'Store as sensitive?');
-    vc.stdin?.write('n\n');
+    await waitForPrompt(vc, 'Environment Variable type?');
+    vc.stdin?.write('\x1B[B\n'); // Select Config
     await waitForPrompt(vc, 'Value?');
     vc.stdin?.write('my plaintext value\n');
 

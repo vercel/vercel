@@ -37,6 +37,11 @@ export {
   type ConnectLinearCredentialsParams,
 } from './linear-credentials.js';
 export {
+  connectLinqCredentials,
+  type ConnectLinqCredentials,
+  type ConnectLinqCredentialsParams,
+} from './linq-credentials.js';
+export {
   connectPhotonCredentials,
   type ConnectPhotonCredentialProvider,
   type PhotonCredentials,
@@ -46,3 +51,8 @@ export {
   connectSlackCredentials,
   type ConnectSlackCredentialsParams,
 } from './slack-credentials.js';
+export {
+  connectSendblueCredentials,
+  type ConnectSendblueCredentials,
+  type ConnectSendblueCredentialsParams,
+} from './sendblue-credentials.js';

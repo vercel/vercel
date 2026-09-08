@@ -16,6 +16,8 @@ const SEARCH_ALL_PROJECTS = 'search-all-projects' as const;
 const CREATE_NEW_PROJECT = 'create-new-project' as const;
 const BACK_TO_PROJECT_SELECTION = Symbol('back-to-project-selection');
 export const BACK_TO_TEAM_SELECTION = Symbol('back-to-team-selection');
+/** User wants to re-run git-linked suggestions against a different remote. */
+export const SWITCH_GIT_REMOTE = Symbol('switch-git-remote');
 const NO_EXISTING_PROJECTS = Symbol('no-existing-projects');
 
 async function inputProjectDecision(
@@ -222,9 +224,25 @@ export default async function inputProject(
   skipAutoDetect = false,
   showProjectSuggestions = false,
   allowTeamSelectionBack = false,
-  repoMatches: CrossTeamMatch[] = []
-): Promise<Project | CrossTeamMatch | string | typeof BACK_TO_TEAM_SELECTION> {
+  repoMatches: CrossTeamMatch[] = [],
+  /**
+   * When the repo has more than one remote, offer "Switch Git remote" so the
+   * user can change which remote the `(linked by git)` suggestions came from
+   * after seeing the list (instead of being asked before the picker).
+   */
+  gitRemoteOptions?: {
+    remoteNames: string[];
+    currentRemoteName?: string;
+  }
+): Promise<
+  | Project
+  | CrossTeamMatch
+  | string
+  | typeof BACK_TO_TEAM_SELECTION
+  | typeof SWITCH_GIT_REMOTE
+> {
   const slugifiedName = slugify(detectedProjectName);
+  const canSwitchGitRemote = (gitRemoteOptions?.remoteNames.length ?? 0) > 1;
 
   // attempt to auto-detect a project to link
   let detectedProject: Project | null = null;
@@ -297,6 +315,7 @@ export default async function inputProject(
         | CrossTeamMatch
         | typeof SEARCH_ALL_PROJECTS
         | typeof CREATE_NEW_PROJECT
+        | typeof SWITCH_GIT_REMOTE
         | typeof BACK_TO_TEAM_SELECTION;
       const choices: Array<
         | Separator
@@ -336,6 +355,16 @@ export default async function inputProject(
           description: `Create it under ${org.slug}`,
         }
       );
+      if (canSwitchGitRemote) {
+        const current = gitRemoteOptions?.currentRemoteName;
+        choices.push({
+          name: 'Switch Git remote',
+          value: SWITCH_GIT_REMOTE,
+          description: current
+            ? `Suggestions are from ${current}`
+            : 'Search projects linked to a different remote',
+        });
+      }
       if (allowTeamSelectionBack) {
         choices.push({
           name: 'Choose a different team',
@@ -351,6 +380,9 @@ export default async function inputProject(
 
       if (selected === BACK_TO_TEAM_SELECTION) {
         return BACK_TO_TEAM_SELECTION;
+      }
+      if (selected === SWITCH_GIT_REMOTE) {
+        return SWITCH_GIT_REMOTE;
       }
       if (selected === CREATE_NEW_PROJECT) {
         const projectName = await promptForProjectNameWithBack(

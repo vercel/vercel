@@ -70,19 +70,75 @@ describe('ai-gateway budgets defaults', () => {
       expect(await exitCodePromise).toBe(0);
     });
 
-    it('hides scopes the CLI does not surface yet (user)', async () => {
+    it('lists a user default and hides the team tier', async () => {
       const team = useTeam();
       useUser();
-      useListDefaults([userDefault]);
+      useListDefaults([
+        userDefault,
+        {
+          scopeType: 'team',
+          limitAmount: 999,
+          refreshPeriod: 'monthly',
+          active: true,
+          createdAt: 1,
+          updatedAt: 2,
+        },
+      ]);
       client.config.currentTeam = team.id;
       client.setArgv('ai-gateway', 'budgets', 'defaults', 'list');
 
       const exitCodePromise = aiGateway(client);
 
-      // The only default is a user-scope one, which is filtered out, so the
-      // command reports an empty state rather than showing it.
-      await expect(client.stderr).toOutput('No budget defaults set');
+      await expect(client.stdout).toOutput('user');
       expect(await exitCodePromise).toBe(0);
+    });
+
+    it('sets a user default', async () => {
+      const team = useTeam();
+      useUser();
+      useListDefaults([]);
+      const getBody = useUpsertDefault(userDefault);
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'budgets',
+        'defaults',
+        'set',
+        'user',
+        '--limit',
+        '20'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput('every team member');
+      expect(await exitCodePromise).toBe(0);
+      expect(getBody()).toMatchObject({
+        scopeType: 'user',
+        limitAmount: 20,
+        refreshPeriod: 'monthly',
+      });
+    });
+
+    it('removes the user default with --yes', async () => {
+      const team = useTeam();
+      useUser();
+      const getQuery = useDeleteDefault();
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'budgets',
+        'defaults',
+        'remove',
+        'user',
+        '--yes'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput('Removed');
+      expect(await exitCodePromise).toBe(0);
+      expect(getQuery()).toMatchObject({ scopeType: 'user' });
     });
 
     it('reports when there are no defaults', async () => {
@@ -148,9 +204,10 @@ describe('ai-gateway budgets defaults', () => {
       });
     });
 
-    it('defaults the refresh period to monthly', async () => {
+    it('defaults the refresh period to monthly for a new default', async () => {
       const team = useTeam();
       useUser();
+      useListDefaults([]);
       const getBody = useUpsertDefault(apiKeyDefault);
       client.config.currentTeam = team.id;
       client.setArgv(
@@ -170,6 +227,37 @@ describe('ai-gateway budgets defaults', () => {
         scopeType: 'api-key',
         limitAmount: 50,
         refreshPeriod: 'monthly',
+      });
+    });
+
+    it('keeps the existing refresh period when only --limit is given', async () => {
+      const team = useTeam();
+      useUser();
+      // The api-key default is daily; bumping the limit alone must not reset
+      // the cadence to monthly.
+      useListDefaults([apiKeyDefault]);
+      const getBody = useUpsertDefault({ ...apiKeyDefault, limitAmount: 80 });
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'budgets',
+        'defaults',
+        'set',
+        'api-key',
+        '--limit',
+        '80'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput(
+        'every API key without its own budget'
+      );
+      expect(await exitCodePromise).toBe(0);
+      expect(getBody()).toMatchObject({
+        scopeType: 'api-key',
+        limitAmount: 80,
+        refreshPeriod: 'daily',
       });
     });
 
@@ -280,6 +368,37 @@ describe('ai-gateway budgets defaults', () => {
 
       await expect(client.stderr).toOutput('--yes');
       expect(await exitCodePromise).toBe(1);
+    });
+
+    it('requires --yes when stdin is not a TTY', async () => {
+      const team = useTeam();
+      useUser();
+      client.stdin.isTTY = false;
+      client.config.currentTeam = team.id;
+      client.setArgv('ai-gateway', 'budgets', 'defaults', 'remove', 'project');
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput('re-run with --yes');
+      expect(await exitCodePromise).toBe(1);
+    });
+
+    it('states what removing the default means before confirming', async () => {
+      const team = useTeam();
+      useUser();
+      useDeleteDefault();
+      client.config.currentTeam = team.id;
+      client.setArgv('ai-gateway', 'budgets', 'defaults', 'remove', 'project');
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput(
+        'Projects without their own budget will have'
+      );
+      client.stdin.write('n\n');
+
+      await expect(client.stderr).toOutput('Canceled');
+      expect(await exitCodePromise).toBe(0);
     });
 
     it('requires a scope', async () => {

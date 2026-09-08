@@ -2,16 +2,19 @@ import open from 'open';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import traces from '../../../../src/commands/traces';
+import * as fetchTraceModule from '../../../../src/commands/traces/fetch-trace';
 import * as linkModule from '../../../../src/util/projects/link';
 import type { Trace } from '../../../../src/commands/traces/types';
 
 vi.mock('../../../../src/util/projects/link');
+vi.mock('../../../../src/commands/traces/fetch-trace');
 
 vi.mock('open', () => ({
   default: vi.fn(),
 }));
 
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
+const mockedFetchTrace = vi.mocked(fetchTraceModule.fetchTrace);
 const mockedOpen = vi.mocked(open);
 
 function mockLinkedProject() {
@@ -69,21 +72,17 @@ describe('vercel traces get', () => {
     vi.clearAllMocks();
     client.reset();
     mockedOpen.mockResolvedValue(undefined as never);
+    mockedFetchTrace.mockResolvedValue({ trace: sampleTrace, partial: false });
   });
 
   it('prints the markdown summary to stdout for a 200 response', async () => {
     mockLinkedProject();
-    let receivedQuery: Record<string, unknown> | undefined;
-    client.scenario.get('/v1/projects/traces', (req, res) => {
-      receivedQuery = req.query as Record<string, unknown>;
-      res.json({ trace: sampleTrace });
-    });
-
     client.setArgv('traces', 'get', 'req_abc');
     const exitCode = await traces(client);
 
     expect(exitCode).toBe(0);
-    expect(receivedQuery).toEqual({
+    expect(mockedFetchTrace).toHaveBeenCalledWith({
+      client,
       teamId: 'team_dummy',
       projectId: 'prj_test',
       requestId: 'req_abc',
@@ -155,9 +154,11 @@ describe('vercel traces get', () => {
 
   it('works from a non-linked dir with --scope and --project flags', async () => {
     mockNotLinked();
-    let receivedQuery: Record<string, unknown> | undefined;
-    client.scenario.get('/v1/projects/traces', (req, res) => {
-      receivedQuery = req.query as Record<string, unknown>;
+    client.config.currentTeam = 'team_canonical';
+    client.scenario.get('/v9/projects/project-from-flag', (_req, res) => {
+      res.json({ id: 'prj_canonical', name: 'project-from-flag' });
+    });
+    client.scenario.get('/v1/projects/traces', (_req, res) => {
       res.json({ trace: sampleTrace });
     });
 
@@ -173,18 +174,21 @@ describe('vercel traces get', () => {
     const exitCode = await traces(client);
 
     expect(exitCode).toBe(0);
-    expect(receivedQuery).toEqual({
-      teamId: 'team-from-flag',
-      projectId: 'project-from-flag',
+    expect(mockedFetchTrace).toHaveBeenCalledWith({
+      client,
+      teamId: 'team_canonical',
+      projectId: 'prj_canonical',
       requestId: 'req_flags',
     });
   });
 
   it('lets --scope and --project override the linked project', async () => {
     mockLinkedProject();
-    let receivedQuery: Record<string, unknown> | undefined;
-    client.scenario.get('/v1/projects/traces', (req, res) => {
-      receivedQuery = req.query as Record<string, unknown>;
+    client.config.currentTeam = 'team_other';
+    client.scenario.get('/v9/projects/other-project', (_req, res) => {
+      res.json({ id: 'prj_other', name: 'other-project' });
+    });
+    client.scenario.get('/v1/projects/traces', (_req, res) => {
       res.json({ trace: sampleTrace });
     });
 
@@ -200,18 +204,20 @@ describe('vercel traces get', () => {
     const exitCode = await traces(client);
 
     expect(exitCode).toBe(0);
-    expect(receivedQuery).toEqual({
-      teamId: 'other-team',
-      projectId: 'other-project',
+    expect(mockedFetchTrace).toHaveBeenCalledWith({
+      client,
+      teamId: 'team_other',
+      projectId: 'prj_other',
       requestId: 'req_override',
     });
   });
 
   it('falls back to the linked team when only --project is provided', async () => {
     mockLinkedProject();
-    let receivedQuery: Record<string, unknown> | undefined;
-    client.scenario.get('/v1/projects/traces', (req, res) => {
-      receivedQuery = req.query as Record<string, unknown>;
+    client.scenario.get('/v9/projects/other-project', (_req, res) => {
+      res.json({ id: 'prj_other', name: 'other-project' });
+    });
+    client.scenario.get('/v1/projects/traces', (_req, res) => {
       res.json({ trace: sampleTrace });
     });
 
@@ -225,41 +231,46 @@ describe('vercel traces get', () => {
     const exitCode = await traces(client);
 
     expect(exitCode).toBe(0);
-    expect(receivedQuery).toEqual({
+    expect(mockedFetchTrace).toHaveBeenCalledWith({
+      client,
       teamId: 'team_dummy',
-      projectId: 'other-project',
+      projectId: 'prj_other',
       requestId: 'req_partial',
     });
   });
 
-  it('exits 1 on 404 without retrying', async () => {
+  it('exits 1 on a trace lookup error', async () => {
     mockLinkedProject();
-    let calls = 0;
-    client.scenario.get('/v1/projects/traces', (_req, res) => {
-      calls += 1;
-      res.status(404).json({ error: { message: 'not found' } });
-    });
+    mockedFetchTrace.mockRejectedValue(new Error('not found'));
 
     client.setArgv('traces', 'get', 'req_missing');
     const exitCode = await traces(client);
 
-    expect(calls).toBe(1);
+    expect(mockedFetchTrace).toHaveBeenCalledTimes(1);
     expect(exitCode).toBe(1);
   });
 
-  it('exits 1 immediately on 401 without retrying', async () => {
+  it('exits 1 on an authorization error', async () => {
     mockLinkedProject();
-    let calls = 0;
-    client.scenario.get('/v1/projects/traces', (_req, res) => {
-      calls += 1;
-      res.status(401).json({ error: { message: 'unauthorized' } });
-    });
+    mockedFetchTrace.mockRejectedValue(new Error('unauthorized'));
 
     client.setArgv('traces', 'get', 'req_401');
     const exitCode = await traces(client);
 
-    expect(calls).toBe(1);
+    expect(mockedFetchTrace).toHaveBeenCalledTimes(1);
     expect(exitCode).toBe(1);
+  });
+
+  it('warns when the resolved trace is partial without changing JSON stdout', async () => {
+    mockLinkedProject();
+    mockedFetchTrace.mockResolvedValue({ trace: sampleTrace, partial: true });
+
+    client.setArgv('traces', 'get', 'req_partial', '--json');
+    const exitCode = await traces(client);
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual(sampleTrace);
+    expect(client.stderr.getFullOutput()).toContain('Trace is incomplete');
   });
 
   describe('--open', () => {
@@ -384,6 +395,7 @@ describe('vercel traces get', () => {
 
     it('resolves --scope=team_id via /teams/:id to get the slug', async () => {
       mockNotLinked();
+      client.config.currentTeam = 'team_abc';
       client.scenario.get('/teams/team_abc', (_req, res) => {
         res.json({
           id: 'team_abc',
@@ -424,6 +436,7 @@ describe('vercel traces get', () => {
 
     it('uses --scope verbatim when it is already a slug', async () => {
       mockNotLinked();
+      client.config.currentTeam = 'team_abc';
       client.scenario.get('/v9/projects/project-from-flag', (_req, res) => {
         res.json({
           id: 'prj_xyz',
@@ -531,6 +544,7 @@ describe('vercel traces get', () => {
     it('emits not_found JSON when --open --project resolves to an unknown project', async () => {
       const exitSpy = spyExit();
       mockNotLinked();
+      client.config.currentTeam = 'team_abc';
       client.scenario.get('/v1/projects/traces', (_req, res) => {
         res.json({ trace: sampleTrace });
       });

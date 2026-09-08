@@ -7,7 +7,7 @@ import output from '../output-manager';
 import { VERCEL_DIR } from './projects/link';
 import { ConflictingConfigFiles } from './errors-ts';
 import { DeprecatedNowJson } from './errors-ts';
-import { NowBuildError } from '@vercel/build-utils';
+import { getNodeExecPath, NowBuildError } from '@vercel/build-utils';
 import type {
   RouteWithSrc,
   Rewrite,
@@ -337,6 +337,7 @@ export async function compileVercelConfig(
 
     const config = await new Promise((resolve, reject) => {
       const child = fork(loaderPath, [tempOutPath], {
+        execPath: getNodeExecPath(),
         stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
       });
 

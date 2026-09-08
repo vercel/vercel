@@ -19,6 +19,7 @@ import {
 } from '../metrics/time-utils';
 import type {
   Granularity,
+  MetricsApiDataCell,
   MetricsQueryResponse,
   ProjectScope,
 } from '../metrics/types';
@@ -39,6 +40,21 @@ const FLAG_EVALUATIONS_ROLLUP = getRollupColumnName(
 const DISPLAY_GROUP_BY = 'Variants';
 const QUERY_ENGINE_GROUP_BY = 'flagVariant';
 const MAX_VARIANTS = 100;
+const DEFAULT_IN_CODE_VARIANT = 'Default in Code';
+
+function getEvaluationVariantId(
+  variantId: MetricsApiDataCell | undefined
+): string {
+  return variantId === undefined || variantId === null ? '' : String(variantId);
+}
+
+function getEvaluationVariantValue(flag: Flag, variantId: string): unknown {
+  if (!variantId) {
+    return DEFAULT_IN_CODE_VARIANT;
+  }
+
+  return flag.variants.find(variant => variant.id === variantId)?.value ?? null;
+}
 
 function getFlagEvaluationsApiUrl(ownerId: string): string {
   const url = new URL(
@@ -69,8 +85,12 @@ function alignTimeRange(
 }
 
 function getVariantDisplayName(flag: Flag, variantId: string): string {
-  if (!variantId || variantId === '(not set)') {
-    return 'Default in Code';
+  if (
+    !variantId ||
+    variantId === '(not set)' ||
+    variantId === DEFAULT_IN_CODE_VARIANT
+  ) {
+    return DEFAULT_IN_CODE_VARIANT;
   }
 
   const variant = flag.variants.find(item => item.id === variantId);
@@ -120,14 +140,14 @@ function limitEvaluationVariants(response: MetricsQueryResponse): {
 
   const summary = response.summary.slice(0, MAX_VARIANTS);
   const visibleVariants = new Set(
-    summary.map(row => row[QUERY_ENGINE_GROUP_BY])
+    summary.map(row => getEvaluationVariantId(row[QUERY_ENGINE_GROUP_BY]))
   );
   return {
     response: {
       ...response,
       summary,
       data: response.data?.filter(row =>
-        visibleVariants.has(row[QUERY_ENGINE_GROUP_BY])
+        visibleVariants.has(getEvaluationVariantId(row[QUERY_ENGINE_GROUP_BY]))
       ),
     },
     truncated: true,
@@ -152,11 +172,15 @@ function formatEvaluationsJson(
       endTime: endTime.toISOString(),
       granularity,
       truncated,
-      buckets: (response.data ?? []).map(row => ({
-        timestamp: row.timestamp,
-        variant: row[QUERY_ENGINE_GROUP_BY] ?? null,
-        evaluations: row[FLAG_EVALUATIONS_ROLLUP] ?? null,
-      })),
+      buckets: (response.data ?? []).map(row => {
+        const variantId = getEvaluationVariantId(row[QUERY_ENGINE_GROUP_BY]);
+        return {
+          timestamp: row.timestamp,
+          variantId,
+          variantValue: getEvaluationVariantValue(flag, variantId),
+          evaluations: row[FLAG_EVALUATIONS_ROLLUP] ?? null,
+        };
+      }),
     },
     null,
     2
@@ -361,7 +385,9 @@ export default async function evaluations(
           ...limited.response,
           data: limited.response.data?.map(row => ({
             ...row,
-            [DISPLAY_GROUP_BY]: row[QUERY_ENGINE_GROUP_BY] ?? null,
+            [DISPLAY_GROUP_BY]: getEvaluationVariantId(
+              row[QUERY_ENGINE_GROUP_BY]
+            ),
           })),
         },
         {

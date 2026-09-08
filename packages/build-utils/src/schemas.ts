@@ -68,8 +68,24 @@ const triggerEventSchemaV2 = {
   additionalProperties: false,
 };
 
+const scheduleTriggerEventSchemaV1 = {
+  type: 'object',
+  properties: {
+    type: {
+      type: 'string',
+      const: 'schedule/v1beta',
+    },
+  },
+  required: ['type'],
+  additionalProperties: false,
+};
+
 const triggerEventSchema = {
-  oneOf: [triggerEventSchemaV1, triggerEventSchemaV2],
+  oneOf: [
+    triggerEventSchemaV1,
+    triggerEventSchemaV2,
+    scheduleTriggerEventSchemaV1,
+  ],
 };
 
 export const getFunctionsSchema = () => ({
@@ -95,6 +111,17 @@ export const getFunctionsSchema = () => ({
           maximum: 10240,
         },
         maxDuration: getMaxDurationSchema(),
+        affinity: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['mode'],
+          properties: {
+            mode: {
+              type: 'string',
+              const: 'strict',
+            },
+          },
+        },
         maxConcurrency: {
           type: 'integer',
           minimum: 1,
@@ -189,7 +216,13 @@ export const packageManifestSchema = {
     serviceType: {
       type: 'string',
       description:
-        'Service type: one of "web", "schedule", "queue", "workflow".',
+        'Deployment topology for service builds: "web", "schedule", "queue", or "workflow".',
+    },
+    buildType: {
+      type: 'string',
+      enum: ['app', 'api-dir', 'middleware'],
+      description:
+        'What triggered this build: "app" (full application build), "api-dir" (api/ directory build), or "middleware" (middleware build).',
     },
     runtimeVersion: {
       type: 'object',

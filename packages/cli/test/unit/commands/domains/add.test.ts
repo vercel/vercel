@@ -33,7 +33,10 @@ describe('domains add', () => {
       useUser();
       const domain = useDomain();
       client.setArgv('domains', 'add', domain.name);
-      client.scenario.post('/v4/domains', (_req, res) => {
+      client.scenario.post('/v7/domains', (req, res) => {
+        // v7 defaults `zone` to false, so the CLI must opt in explicitly to
+        // keep creating DNS zones.
+        expect(req.body).toEqual({ name: domain.name, zone: true });
         res.json({ domain });
       });
       const exitCode = await domains(client);
@@ -365,7 +368,7 @@ describe('domains add', () => {
           .mockImplementation((() => undefined) as never);
         client.nonInteractive = true;
         client.setArgv('domains', 'add', domain.name, '--non-interactive');
-        client.scenario.post('/v4/domains', (_req, res) => {
+        client.scenario.post('/v7/domains', (_req, res) => {
           res.json({ domain });
         });
 

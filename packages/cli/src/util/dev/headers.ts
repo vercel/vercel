@@ -1,5 +1,9 @@
 import { Headers } from '../fetch';
-import type { IncomingHttpHeaders, OutgoingHttpHeaders } from 'http';
+import type {
+  IncomingHttpHeaders,
+  OutgoingHttpHeaders,
+  ServerResponse,
+} from 'http';
 
 export function nodeHeadersToFetchHeaders(
   nodeHeaders: IncomingHttpHeaders | OutgoingHttpHeaders
@@ -15,6 +19,59 @@ export function nodeHeadersToFetchHeaders(
     }
   }
   return headers;
+}
+
+/**
+ * Response headers that must stay as separate lines. Their values can
+ * contain commas of their own, such as a cookie's `Expires` or an auth
+ * challenge's params, so combining them is unsafe.
+ */
+const NEVER_COMBINE_RESPONSE_HEADERS: ReadonlySet<string> = new Set([
+  'set-cookie',
+  'www-authenticate',
+  'proxy-authenticate',
+]);
+
+/**
+ * Response headers that accumulate instead of overwriting. `vary` is the
+ * practical case. Each middleware may add its own cache-varying header
+ * name.
+ */
+const COMMA_JOIN_RESPONSE_HEADERS: ReadonlySet<string> = new Set(['vary']);
+
+/**
+ * Applies one response header from a middleware onto `res`. Join-style
+ * headers above accumulate across the chain instead of being overwritten
+ * by a later middleware. Everything else is last-write-wins.
+ * `name` is expected lowercased.
+ */
+export function applyChainResponseHeader(
+  res: Pick<ServerResponse, 'getHeader' | 'setHeader'>,
+  name: string,
+  value: string
+): void {
+  if (NEVER_COMBINE_RESPONSE_HEADERS.has(name)) {
+    const existing = res.getHeader(name);
+    const values: string[] = Array.isArray(existing)
+      ? existing.map(String)
+      : existing !== undefined
+        ? [String(existing)]
+        : [];
+    values.push(value);
+    res.setHeader(name, values);
+    return;
+  }
+
+  if (COMMA_JOIN_RESPONSE_HEADERS.has(name)) {
+    const existing = res.getHeader(name);
+    res.setHeader(
+      name,
+      existing !== undefined ? `${existing}, ${value}` : value
+    );
+    return;
+  }
+
+  res.setHeader(name, value);
 }
 
 /**

@@ -1,6 +1,6 @@
 {
   "name": "blog",
   "scripts": {
-    "build": "mkdir -p dist && echo blog > dist/index.txt"
+    "build": "node -e \"require('node:fs').mkdirSync('dist', { recursive: true })\" && echo blog > dist/index.txt"
   }
 }

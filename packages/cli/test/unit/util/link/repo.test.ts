@@ -49,8 +49,6 @@ describe('findProjectsFromPath()', () => {
   it.each([
     { ids: ['root'], path: '.' },
     { ids: ['root'], path: 'lib' },
-    { ids: ['root'], path: 'lib' },
-    { ids: ['site'], path: `apps${sep}site` },
     { ids: ['site'], path: `apps${sep}site` },
     { ids: ['site'], path: `apps${sep}site${sep}components` },
     { ids: ['site2'], path: `apps${sep}site2` },

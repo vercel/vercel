@@ -5,7 +5,7 @@ import { useTeams } from '../../../mocks/team';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import globalConfig from '../../../../src/commands/global-config';
-import { teamCache } from '../../../../src/util/teams/get-team-by-id';
+import { teamCache } from '../../../../src/util/teams/get-team-by-id-or-slug';
 
 describe('global-config', () => {
   beforeEach(() => {

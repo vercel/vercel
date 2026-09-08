@@ -66,8 +66,7 @@ export default async function list(client: Client, argv: string[]) {
 
   output.stopSpinner();
 
-  // Only surface scopes the CLI manages (project, api-key); the API may also
-  // return team/user rows, and the user scope isn't released yet.
+  // The API may also store a team default row, which stays hidden.
   const shown = defaults.filter(d =>
     BUDGET_DEFAULT_SCOPE_TYPES.includes(d.scopeType as BudgetDefaultScopeType)
   );
