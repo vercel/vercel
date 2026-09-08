@@ -254,10 +254,18 @@ export async function* fetchAllRequestLogs(
   let remaining = options.limit ?? 100;
   let hasMore = true;
 
+  // Anchor the initial upper bound to prevent real-time log ingestion
+  // from continuously shifting pagination windows down.
+  let currentUntil = options.until || new Date().toISOString();
+  let lastTimestamp = new Date(currentUntil).getTime();
+
+  const seenIds = new Set<string>();
+
   while (hasMore && remaining > 0) {
     const response = await fetchRequestLogs(client, {
       ...options,
       page,
+      until: currentUntil,
     });
 
     if (!response.logs || response.logs.length === 0) {
@@ -265,6 +273,15 @@ export async function* fetchAllRequestLogs(
     }
 
     for (const log of response.logs) {
+      // Only deduplicate if a valid, non-empty requestId exists.
+      // This prevents logs missing an ID from being completely wiped out.
+      if (log.id && seenIds.has(log.id)) {
+        continue;
+      }
+      if (log.id) {
+        seenIds.add(log.id);
+      }
+
       yield log;
       remaining--;
       if (remaining <= 0) {
@@ -273,6 +290,23 @@ export async function* fetchAllRequestLogs(
     }
 
     hasMore = response.pagination?.hasMore ?? false;
-    page++;
+
+    if (hasMore) {
+      const oldestLogOnPage = response.logs[response.logs.length - 1];
+      const oldestTimestamp = oldestLogOnPage?.timestamp ?? lastTimestamp;
+
+      if (oldestTimestamp === lastTimestamp) {
+        // The page boundary fell inside a same-millisecond timestamp cluster.
+        // Keep the time anchor frozen and increment the page offset to page
+        // through the rest of this specific millisecond block.
+        page++;
+      } else {
+        // The stream advanced past the millisecond cluster.
+        // Update the time anchor to the oldest timestamp seen and reset page back to 0.
+        currentUntil = new Date(oldestTimestamp).toISOString();
+        lastTimestamp = oldestTimestamp;
+        page = 0;
+      }
+    }
   }
 }
