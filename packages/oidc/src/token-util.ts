@@ -215,12 +215,28 @@ export function saveToken(token: VercelTokenResponse, projectId: string): void {
       'Unable to find user data directory. Please reach out to Vercel support.'
     );
   }
-  const tokenPath = path.join(dir, 'com.vercel.token', `${projectId}.json`);
+  const tokenDir = path.join(dir, 'com.vercel.token');
+  const tokenPath = path.join(tokenDir, `${projectId}.json`);
   const tokenJson = JSON.stringify(token);
-  fs.mkdirSync(path.dirname(tokenPath), { mode: 0o770, recursive: true }); // read/write/exec perms for owner/group only, x required for dir ops
-  fs.writeFileSync(tokenPath, tokenJson);
-  fs.chmodSync(tokenPath, 0o660); // read/write perms for owner only
-  return;
+
+  // Write 0600 then rename so the token is never briefly world-readable.
+  fs.mkdirSync(tokenDir, { mode: 0o700, recursive: true });
+
+  const tmpPath = path.join(
+    tokenDir,
+    `.${projectId}.${process.pid}.${Date.now()}.tmp`
+  );
+  try {
+    fs.writeFileSync(tmpPath, tokenJson, { mode: 0o600 });
+    fs.renameSync(tmpPath, tokenPath);
+  } catch (error) {
+    try {
+      fs.unlinkSync(tmpPath);
+    } catch {
+      // ignore cleanup failures
+    }
+    throw error;
+  }
 }
 
 export function loadToken(projectId: string): VercelTokenResponse | null {
