@@ -59,8 +59,8 @@
     "vitest": "4.1.10"
   },
   "peerDependencies": {
-    "@react-router/dev": "7",
-    "@react-router/node": "7",
+    "@react-router/dev": "7 || 8",
+    "@react-router/node": "7 || 8",
     "isbot": "5",
     "react": ">=18",
     "react-dom": ">=18"
