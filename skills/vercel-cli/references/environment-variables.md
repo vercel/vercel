@@ -25,11 +25,13 @@ If CLI output does not include required metadata, use `vercel api` after checkin
 ```bash
 vercel env add API_KEY production                              # interactive prompt for value
 vercel env add API_KEY production --value "secret" --yes       # non-interactive
-echo "secret" | vercel env add TOKEN production --yes          # pipe value from stdin
+printf %s "$VALUE" | vercel env add TOKEN production --yes          # pipe value from stdin
 vercel env ls                                                  # list all
 vercel env update API_KEY production --value "new-secret" --yes  # non-interactive update
 vercel env rm API_KEY preview --yes                            # remove from preview
 ```
+
+Use `printf %s` for stdin values to avoid adding a newline at the source.
 
 Note: `environment` is a **positional argument**, not a flag.
 
