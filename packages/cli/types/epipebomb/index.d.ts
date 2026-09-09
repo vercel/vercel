@@ -1,3 +1,6 @@
 declare module 'epipebomb' {
-  export default function (): void;
+  export default function (
+    stream?: NodeJS.WritableStream,
+    callback?: () => void
+  ): void;
 }
