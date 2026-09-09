@@ -46,6 +46,7 @@ export default async function sandbox(client: Client) {
   ];
   const originalCwd = process.cwd();
   const originalAuthToken = process.env.VERCEL_AUTH_TOKEN;
+  const originalInvocationId = process.env.VERCEL_CLI_INVOCATION_ID;
 
   try {
     if (token) {
@@ -55,6 +56,11 @@ export default async function sandbox(client: Client) {
     } else if (!process.env.VERCEL_AUTH_TOKEN && client.authConfig.token) {
       process.env.VERCEL_AUTH_TOKEN = client.authConfig.token;
     }
+
+    // The sandbox CLI emits its own telemetry; passing our invocation id lets
+    // those events be joined back to this `vercel sandbox` invocation.
+    process.env.VERCEL_CLI_INVOCATION_ID =
+      client.telemetryEventStore.currentInvocationId;
 
     process.chdir(client.cwd);
 
@@ -75,6 +81,12 @@ export default async function sandbox(client: Client) {
       process.env.VERCEL_AUTH_TOKEN = originalAuthToken;
     } else {
       delete process.env.VERCEL_AUTH_TOKEN;
+    }
+
+    if (typeof originalInvocationId === 'string') {
+      process.env.VERCEL_CLI_INVOCATION_ID = originalInvocationId;
+    } else {
+      delete process.env.VERCEL_CLI_INVOCATION_ID;
     }
   }
 }
