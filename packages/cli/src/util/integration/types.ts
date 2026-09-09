@@ -102,6 +102,11 @@ export interface Configuration {
   source: string;
   installationType: InstallationType;
   projects: string[];
+  projectSelection?: 'all' | 'selected';
+  integration?: {
+    name: string;
+    icon?: string;
+  };
 }
 
 export interface Integration {

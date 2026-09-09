@@ -16,6 +16,7 @@ import { connexCommand } from './connex/command';
 import { contractCommand } from './contract/command';
 import { cronsCommand } from './crons/command';
 import { curlCommand } from './curl/command';
+import { deployButtonCommand } from './deploy-button/command';
 import { deployCommand } from './deploy/command';
 import { deployHooksCommand } from './deploy-hooks/command';
 import { devCommand } from './dev/command';
@@ -89,6 +90,7 @@ const commandsStructs = [
   contractCommand,
   cronsCommand,
   curlCommand,
+  deployButtonCommand,
   deployCommand,
   deployHooksCommand,
   devCommand,

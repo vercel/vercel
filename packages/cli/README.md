@@ -51,13 +51,19 @@ cd packages/cli
 
 ### `pnpm vercel <cli-commands...>`
 
-From within the `packages/cli` directory, you can use the "vercel" script to quickly execute Vercel CLI from its TypeScript source code directly (without having to manually compile first). For example:
+From within the `packages/cli` directory, the `vercel` script runs a local build of this package (`pnpm build`) and then executes `dist/vc.js`. You do not need a separate compile step before each run; the script always rebuilds the CLI bundle first.
 
 ```bash
 pnpm vercel deploy
 pnpm vercel whoami
 pnpm vercel login
 pnpm vercel switch --debug
+```
+
+Commands that expect a **linked project** (a `.vercel` directory) resolve paths from the current working directory. To test them while your shell is still in `packages/cli`, point the CLI at a linked app with `--cwd`:
+
+```bash
+pnpm vercel --cwd ~/path/to/your/linked-app deploy-button
 ```
 
 When you are satisfied with your changes, make a commit and create a pull request!
