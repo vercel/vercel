@@ -109,6 +109,16 @@ const BUNDLED_SERVER_NEXT_VERSION = 'v13.5.4';
 const BUNDLED_SERVER_NEXT_PATH =
   'next/dist/compiled/next-server/server.runtime.prod.js';
 
+// Next.js's Turbopack-compiled runtimes (e.g. app-route-turbo.runtime.prod.js,
+// app-page-turbo.runtime.prod.js) load these `*.external.js` modules through
+// Turbopack's `externalRequire`, which the file tracer cannot see statically.
+// Since Next.js 16.2 this causes traced/build-trace-based output to omit
+// required modules (e.g. `incremental-cache/tags-manifest.external.js`),
+// crashing the deployed function at runtime. Always glob these in explicitly,
+// regardless of bundler or whether a build trace file was produced.
+// related issue: https://github.com/vercel/vercel/issues/17554
+const EXTERNAL_MODULES_GLOB = 'dist/server/**/*.external.js';
+
 export async function serverBuild({
   dynamicPages,
   pagesDir,
@@ -673,6 +683,24 @@ export async function serverBuild({
         )
       ).filter((entry): entry is [string, FileFsRef] => !!entry)
     );
+
+    // The file tracer (whether run here or by Next.js's own build trace)
+    // cannot statically discover `*.external.js` modules required through
+    // Turbopack's `externalRequire`, so always include them explicitly.
+    // See the comment on `EXTERNAL_MODULES_GLOB` above for details.
+    try {
+      const nextPackageDir = path.dirname(
+        resolveFrom(projectDir, 'next/package.json')
+      );
+      const externalModuleFiles = await glob(
+        EXTERNAL_MODULES_GLOB,
+        nextPackageDir,
+        path.relative(baseDir, nextPackageDir)
+      );
+      Object.assign(initialTracedFiles, externalModuleFiles);
+    } catch (err) {
+      debug(`Failed to include Next.js *.external.js modules: ${err}`);
+    }
 
     debug('creating initial pseudo layer');
     const initialPseudoLayer = await createPseudoLayer(initialTracedFiles);
