@@ -157,7 +157,7 @@ function printTable(
 
   const tablePrint = table(
     [headers.map(header => chalk.bold(chalk.cyan(header))), ...rows],
-    { hsep: 4, align: ['l', 'r', 'r'] }
+    { hsep: 4, align: ['l', 'l', 'r'] }
   ).replace(/^/gm, '  ');
 
   print(`\n${tablePrint}\n`);

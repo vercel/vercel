@@ -68,7 +68,7 @@ export function outputGroupBy({
         ),
         ...rows,
       ],
-      { hsep: 4, align: ['l', 'r', 'r'] }
+      { hsep: 4, align: ['l', 'l', 'r'] }
     ).replace(/^/gm, '  ');
     print(`${tablePrint}\n`);
   }
