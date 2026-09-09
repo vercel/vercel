@@ -23,6 +23,11 @@ export interface CostMetricGroup {
   flatRate?: boolean;
 }
 
+export interface CostMetricView {
+  groupBy: string[];
+  results: CostMetricGroup[];
+}
+
 export interface CostMetricsResponse {
   metrics: CostMetric[];
   from: string;
@@ -41,13 +46,7 @@ export interface CostMetricsResponse {
         }
       | undefined
     >;
-    views: Record<
-      string,
-      {
-        groupBy: string[];
-        results: CostMetricGroup[];
-      }
-    >;
+    views: Record<string, CostMetricView>;
   };
 }
 

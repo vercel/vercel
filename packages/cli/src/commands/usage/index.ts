@@ -33,6 +33,7 @@ import type {
   CostMetric,
   CostMetricGroup,
   CostMetricsResponse,
+  CostMetricView,
   GroupAggregation,
   GroupByDimension,
   PeriodAggregation,
@@ -41,7 +42,35 @@ import type {
 } from './types';
 
 const GROSS_COST_METRIC = 'gross_cost';
+const SUMMARY_VIEW = 'byProduct';
+const DETAIL_VIEW = 'byProductRegionProject';
 // TODO: Add `net_cost` once the billing costs API contract supports it.
+
+type CostViewRequest = Record<string, { groupBy: string[] }>;
+
+function getCostViews(groupByDimension?: GroupByDimension): {
+  views: CostViewRequest;
+  summaryViewName: string;
+  detailViewName?: string;
+  includeCredit: boolean;
+} {
+  const views: CostViewRequest = {
+    [SUMMARY_VIEW]: { groupBy: ['product'] },
+  };
+
+  if (groupByDimension) {
+    views[DETAIL_VIEW] = {
+      groupBy: ['product', 'region', 'project'],
+    };
+  }
+
+  return {
+    views,
+    summaryViewName: SUMMARY_VIEW,
+    detailViewName: groupByDimension ? DETAIL_VIEW : undefined,
+    includeCredit: true,
+  };
+}
 
 export default async function usage(client: Client): Promise<number> {
   const { print, error, debug, spinner } = output;
@@ -174,14 +203,7 @@ export default async function usage(client: Client): Promise<number> {
   try {
     const query = new URLSearchParams();
     if (teamId) query.set('teamId', teamId);
-    const views: Record<string, { groupBy: string[] }> = {
-      byProduct: { groupBy: ['product'] },
-    };
-    if (groupByDimension) {
-      views.byProductRegionProject = {
-        groupBy: ['product', 'region', 'project'],
-      };
-    }
+    const viewPlan = getCostViews(groupByDimension);
 
     const queryString = query.toString();
     const costsRequest = client.fetch<CostMetricsResponse>(
@@ -194,7 +216,7 @@ export default async function usage(client: Client): Promise<number> {
           // TODO: Request `net_cost` here once the billing costs API PR lands.
           metrics: [GROSS_COST_METRIC, 'quantity'],
           format: 'timeseries',
-          views,
+          views: viewPlan.views,
           userAgent: 'vercel-cli.usage',
         },
         useCurrentTeam: false,
@@ -219,6 +241,10 @@ export default async function usage(client: Client): Promise<number> {
     ]);
 
     const usageData = processCosts(response, {
+      summaryView: response.results.views[viewPlan.summaryViewName],
+      detailView: viewPlan.detailViewName
+        ? response.results.views[viewPlan.detailViewName]
+        : undefined,
       contextName,
       contextType,
       scope: parsedArgs.flags['--scope'],
@@ -228,23 +254,7 @@ export default async function usage(client: Client): Promise<number> {
       breakdownPeriod,
       groupByDimension,
     });
-    const creditLedger = commitmentUsage?.creditLedgers[0];
-    if (creditLedger) {
-      const used = roundToHundredths(
-        creditLedger.total - creditLedger.remaining
-      );
-      usageData.credit = {
-        cadence: commitmentUsage.cadence,
-        currency: creditLedger.currency,
-        allocated: creditLedger.total,
-        used,
-        remaining: creditLedger.remaining,
-        progress:
-          creditLedger.total > 0
-            ? roundToHundredths((used / creditLedger.total) * 100)
-            : 0,
-      };
-    }
+    attachCredit(usageData, commitmentUsage, viewPlan.includeCredit);
 
     if (asJson) {
       outputJson(client, {
@@ -280,9 +290,35 @@ function getUsageThrough(queriedAt: string, toDisplay: string): string {
   return queriedDate < toDisplay ? queriedDate : toDisplay;
 }
 
+function attachCredit(
+  usageData: UsageData,
+  commitmentUsage: CommitmentUsageResponse | null,
+  includeCredit: boolean
+): void {
+  if (!includeCredit) return;
+
+  const creditLedger = commitmentUsage?.creditLedgers[0];
+  if (!creditLedger) return;
+
+  const used = roundToHundredths(creditLedger.total - creditLedger.remaining);
+  usageData.credit = {
+    cadence: commitmentUsage.cadence,
+    currency: creditLedger.currency,
+    allocated: creditLedger.total,
+    used,
+    remaining: creditLedger.remaining,
+    progress:
+      creditLedger.total > 0
+        ? roundToHundredths((used / creditLedger.total) * 100)
+        : 0,
+  };
+}
+
 function processCosts(
   response: CostMetricsResponse,
   options: {
+    summaryView?: CostMetricView;
+    detailView?: CostMetricView;
     contextName: string;
     contextType: 'team' | 'personal account';
     scope?: string;
@@ -294,6 +330,8 @@ function processCosts(
   }
 ): UsageData {
   const {
+    summaryView,
+    detailView,
     contextName,
     contextType,
     scope,
@@ -306,8 +344,6 @@ function processCosts(
   const products = response.results.dimensionsMeta.product?.values ?? {};
   const projects = response.results.dimensionsMeta.project?.values ?? {};
   const regions = response.results.dimensionsMeta.region?.values ?? {};
-  const summaryView = response.results.views.byProduct;
-  const detailView = response.results.views.byProductRegionProject;
   if (
     groupByDimension &&
     (!detailView || !detailView.groupBy.includes(groupByDimension))
