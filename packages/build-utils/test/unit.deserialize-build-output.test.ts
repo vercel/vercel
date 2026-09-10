@@ -8,6 +8,7 @@ import type {
   DeserializeBuildOutputResult,
 } from '../src/deserialize/deserialize-build-output-types';
 import { deserializeBuildOutput } from '../src/deserialize/deserialize-build-output';
+import { deserializeLambda, type SerializedNodejsLambda } from '../src';
 
 type LegacyFlag = {
   key: string;
@@ -60,7 +61,11 @@ async function createOutputFixture(config: Partial<TestConfig> = {}) {
   };
 }
 
-async function writeNodeFunction(outputDir: string, outputPath: string) {
+async function writeNodeFunction(
+  outputDir: string,
+  outputPath: string,
+  config: Partial<SerializedNodejsLambda> = {}
+) {
   const functionDir = join(outputDir, 'functions', `${outputPath}.func`);
   await fs.outputJSON(join(functionDir, '.vc-config.json'), {
     handler: 'index.handler',
@@ -68,9 +73,10 @@ async function writeNodeFunction(outputDir: string, outputPath: string) {
     runtime: 'nodejs20.x',
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: false,
+    ...config,
   });
   await fs.outputFile(
-    join(functionDir, 'index.js'),
+    join(functionDir, 'index.handler'),
     'exports.handler = () => "ok";'
   );
 }
@@ -256,6 +262,56 @@ describe('deserializeBuildOutput()', () => {
       });
 
       expect(result.output[customLambdaKey]).toBeInstanceOf(TestLambda);
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it('reads fileHashes from .vc-config.json', async () => {
+    const fixture = await createOutputFixture();
+
+    try {
+      await fs.outputFile(join(fixture.repoRootPath, 'foo', 'bar.js'), 'hello');
+      await writeNodeFunction(fixture.outputDir, 'api/server-actions', {
+        filePathMap: {
+          'bar.js': 'foo/bar.js',
+        },
+        fileHashes: {
+          'index.handler': 'hash-index',
+          'bar.js': 'hash-barjs',
+        },
+      });
+
+      const result = await deserializeBuildOutput<TestConfig, TestResult>({
+        outputDir: fixture.outputDir,
+        repoRootPath: fixture.repoRootPath,
+        deserializeLambda: deserializeLambda,
+        groupLambdas: async () => ({}),
+        includeDeploymentId: true,
+        getMeta: hasServerActions => ({ hasServerActions }),
+      });
+
+      const lambda = result.output[
+        getOutputKey(result.output, 'api/server-actions')
+      ] as Lambda;
+      expect(lambda.type).toBe('Lambda');
+      const files = lambda.files;
+
+      expect(files).toMatchObject({
+        'bar.js': expect.objectContaining({
+          fsPath: join(fixture.repoRootPath, 'foo', 'bar.js'),
+          contentHash: 'hash-barjs',
+        }),
+        'index.handler': expect.objectContaining({
+          fsPath: normalizeOutputPath(
+            join(
+              fixture.repoRootPath,
+              '.vercel/output/functions/api/server-actions.func/index.handler'
+            )
+          ),
+          contentHash: 'hash-index',
+        }),
+      });
     } finally {
       await fixture.cleanup();
     }

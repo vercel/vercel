@@ -7,7 +7,13 @@ import { mkdtemp, writeFile, rm } from 'fs/promises';
 import { createServer, type Server } from 'http';
 import { pathToFileURL } from 'url';
 import execa from 'execa';
-import { FileFsRef, NodejsLambda, download, glob } from '@vercel/build-utils';
+import {
+  type FileFsRef,
+  NodejsLambda,
+  download,
+  glob,
+  hydrateFilesMap,
+} from '@vercel/build-utils';
 import build from '../../../../src/commands/build';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
@@ -16,21 +22,6 @@ import { useUser } from '../../../mocks/user';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 
 vi.setConfig({ testTimeout: 6 * 60 * 1000 });
-
-/**
- * Hydrate files map by adding FileFsRef entries for each filePathMap entry.
- * Based on the API's hydrateFilesMap function.
- */
-async function hydrateFilesMap(
-  files: Record<string, FileFsRef>,
-  filePathMap: Record<string, string>,
-  repoRootPath: string
-): Promise<void> {
-  for (const [funcPath, projectPath] of Object.entries(filePathMap)) {
-    const fsPath = join(repoRootPath, projectPath);
-    files[funcPath] = await FileFsRef.fromFsPath({ fsPath });
-  }
-}
 
 /**
  * Create a NodejsLambda from a .func directory in the build output.
@@ -56,7 +47,9 @@ async function createLambdaFromFuncDir(
     await hydrateFilesMap(
       files as Record<string, FileFsRef>,
       filePathMap,
-      workPath
+      {},
+      workPath,
+      new Map()
     );
   }
 

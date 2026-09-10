@@ -12,6 +12,7 @@ interface FileFsRefOptions {
   contentType?: string;
   fsPath: string;
   size?: number;
+  contentHash?: string;
 }
 
 interface FromStreamOptions {
@@ -27,12 +28,14 @@ class FileFsRef implements FileBase {
   public fsPath: string;
   public size?: number;
   public contentType: string | undefined;
+  public contentHash?: string;
 
   constructor({
     mode = 0o100644,
     contentType,
     fsPath,
     size,
+    contentHash,
   }: FileFsRefOptions) {
     assert(typeof mode === 'number');
     assert(typeof fsPath === 'string');
@@ -41,6 +44,7 @@ class FileFsRef implements FileBase {
     this.contentType = contentType;
     this.fsPath = fsPath;
     this.size = size;
+    this.contentHash = contentHash;
   }
 
   static async fromFsPath({
@@ -48,6 +52,7 @@ class FileFsRef implements FileBase {
     contentType,
     fsPath,
     size,
+    contentHash,
   }: FileFsRefOptions): Promise<FileFsRef> {
     let m = mode;
     let s = size;
@@ -56,7 +61,13 @@ class FileFsRef implements FileBase {
       m = stat.mode;
       s = stat.size;
     }
-    return new FileFsRef({ mode: m, contentType, fsPath, size: s });
+    return new FileFsRef({
+      mode: m,
+      contentType,
+      fsPath,
+      size: s,
+      contentHash,
+    });
   }
 
   static async fromStream({

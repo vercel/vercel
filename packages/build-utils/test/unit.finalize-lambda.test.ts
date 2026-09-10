@@ -37,7 +37,7 @@ function createNodejsLambda(files?: Record<string, FileBlob>) {
 }
 
 describe('finalizeLambda()', () => {
-  it('returns buffer, digest, and uncompressedBytes', async () => {
+  it('returns buffer, digest, fileCount and uncompressedBytes', async () => {
     const lambda = createBasicLambda();
     const result = await finalizeLambda({
       lambda,
@@ -49,6 +49,7 @@ describe('finalizeLambda()', () => {
     expect(result.buffer?.length).toBeGreaterThan(0);
     expect(result.zipPath).toBeNull();
     expect(result.digest).toEqual(sha256(result.buffer));
+    expect(result.fileCount).toEqual(1);
     expect(result.uncompressedBytes).toEqual(0);
   });
 
@@ -68,7 +69,7 @@ describe('finalizeLambda()', () => {
     const lambda = createBasicLambda();
     const originalFiles = { ...lambda.files };
 
-    await finalizeLambda({
+    const result = await finalizeLambda({
       lambda,
       encryptedEnvFilename: '.env.encrypted',
       encryptedEnvContent: Buffer.from('SECRET=value').toString('base64'),
@@ -81,6 +82,7 @@ describe('finalizeLambda()', () => {
       Object.keys(originalFiles!).length
     );
     expect(lambda.zipBuffer).toBeUndefined();
+    expect(result.fileCount).toBe(Object.keys(originalFiles!).length + 1);
   });
 
   it('skips encrypted env when params are undefined', async () => {
@@ -263,6 +265,7 @@ describe('finalizeLambda()', () => {
         zipPath: '/tmp/lambda.zip',
         digest: 'abc123',
         size: 123,
+        fileCount: 1,
       }),
     });
 
@@ -270,5 +273,6 @@ describe('finalizeLambda()', () => {
     expect(result.zipPath).toEqual('/tmp/lambda.zip');
     expect(result.digest).toEqual('abc123');
     expect(result.size).toEqual(123);
+    expect(result.fileCount).toEqual(1);
   });
 });

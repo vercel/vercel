@@ -103,6 +103,146 @@ describe('Lambda', () => {
     }
   });
 
+  describe('computeDigest', () => {
+    it('returns undefined if any file is missing a contentHash', async () => {
+      let lambda1 = new Lambda({
+        files: {
+          'index.js': new FileBlob({
+            data: 'contents',
+            mode: MODE_FILE,
+          }),
+        },
+        handler: 'index.js',
+        runtime: 'nodejs22.x',
+      });
+      expect(lambda1.computeDigest()).toBeUndefined();
+    });
+
+    it('returns a hash if all files have a contentHash', async () => {
+      let lambda1 = new Lambda({
+        files: {
+          'index.js': new FileBlob({
+            data: 'contents',
+            mode: MODE_FILE,
+            contentHash: 'foo',
+          }),
+          'other.js': new FileBlob({
+            data: 'contents',
+            mode: MODE_FILE,
+            contentHash: 'bar',
+          }),
+        },
+        handler: 'index.js',
+        runtime: 'nodejs22.x',
+      });
+      expect(lambda1.computeDigest()).toBeDefined();
+    });
+
+    it('returns a different hash if the content changes', async () => {
+      let lambda1 = new Lambda({
+        files: {
+          'index.js': new FileBlob({
+            data: 'contents',
+            mode: MODE_FILE,
+            contentHash: 'foo',
+          }),
+        },
+        handler: 'index.js',
+        runtime: 'nodejs22.x',
+      });
+      let lambda2 = new Lambda({
+        files: {
+          'index.js': new FileBlob({
+            data: 'contents1',
+            mode: MODE_FILE,
+            contentHash: 'foo1',
+          }),
+        },
+        handler: 'index.js',
+        runtime: 'nodejs22.x',
+      });
+      expect(lambda1.computeDigest()).toBeDefined();
+      expect(lambda2.computeDigest()).toBeDefined();
+      expect(lambda1.computeDigest()).not.toEqual(lambda2.computeDigest());
+    });
+
+    it('returns a different hash if the file path changes', async () => {
+      let lambda1 = new Lambda({
+        files: {
+          'index.js': new FileBlob({
+            data: 'contents',
+            mode: MODE_FILE,
+            contentHash: 'foo',
+          }),
+          'other.js': new FileBlob({
+            data: 'contents',
+            mode: MODE_FILE,
+            contentHash: 'foo',
+          }),
+        },
+        handler: 'index.js',
+        runtime: 'nodejs22.x',
+      });
+      let lambda2 = new Lambda({
+        files: {
+          'index.js': new FileBlob({
+            data: 'contents',
+            mode: MODE_FILE,
+            contentHash: 'foo',
+          }),
+          'another.js': new FileBlob({
+            data: 'contents',
+            mode: MODE_FILE,
+            contentHash: 'foo',
+          }),
+        },
+        handler: 'index.js',
+        runtime: 'nodejs22.x',
+      });
+      expect(lambda1.computeDigest()).toBeDefined();
+      expect(lambda2.computeDigest()).toBeDefined();
+      expect(lambda1.computeDigest()).not.toEqual(lambda2.computeDigest());
+    });
+
+    it('returns the same hash if the file order is different', async () => {
+      let lambda1 = new Lambda({
+        files: {
+          'index.js': new FileBlob({
+            data: 'contents',
+            mode: MODE_FILE,
+            contentHash: 'foo',
+          }),
+          'other.js': new FileBlob({
+            data: 'contents',
+            mode: MODE_FILE,
+            contentHash: 'foo',
+          }),
+        },
+        handler: 'index.js',
+        runtime: 'nodejs22.x',
+      });
+      let lambda2 = new Lambda({
+        files: {
+          'other.js': new FileBlob({
+            data: 'contents',
+            mode: MODE_FILE,
+            contentHash: 'foo',
+          }),
+          'index.js': new FileBlob({
+            data: 'contents',
+            mode: MODE_FILE,
+            contentHash: 'foo',
+          }),
+        },
+        handler: 'index.js',
+        runtime: 'nodejs22.x',
+      });
+      expect(lambda1.computeDigest()).toBeDefined();
+      expect(lambda2.computeDigest()).toBeDefined();
+      expect(lambda1.computeDigest()).toEqual(lambda2.computeDigest());
+    });
+  });
+
   describe('maxDuration', () => {
     const files: Files = {};
 
