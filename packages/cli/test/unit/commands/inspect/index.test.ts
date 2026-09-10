@@ -237,6 +237,18 @@ describe('inspect', () => {
         );
       });
 
+      it('formats fractional CPU minute usage concisely', async () => {
+        const user = useUser();
+        const deployment = useDeployment({ creator: user });
+        deployment.billedBuildCpuMs = 100_000;
+
+        client.setArgv('inspect', deployment.url);
+        expect(await inspect(client)).toEqual(0);
+        expect(client.getFullOutput()).toContain(
+          'CPU Minutes Usage\t1.67 minutes'
+        );
+      });
+
       it('renders unavailable values instead of inferring them for a running deployment', async () => {
         const user = useUser();
         const deployment = useDeployment({ creator: user, state: 'BUILDING' });

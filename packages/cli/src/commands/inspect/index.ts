@@ -472,9 +472,9 @@ function formatDuration(durationMs: number | undefined): string {
 }
 
 function formatCpuMinutes(billedBuildCpuMs: number | undefined): string {
-  return billedBuildCpuMs === undefined
-    ? 'unavailable'
-    : `${billedBuildCpuMs / 60_000} minutes`;
+  if (billedBuildCpuMs === undefined) return 'unavailable';
+  const minutes = Number((billedBuildCpuMs / 60_000).toFixed(2));
+  return `${minutes} minutes`;
 }
 
 function omitUndefined<T extends object>(value: T): Partial<T> {
