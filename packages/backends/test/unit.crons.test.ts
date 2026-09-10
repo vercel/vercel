@@ -36,6 +36,12 @@ describe('getServiceCrons', () => {
         entrypoint: 'cleanup.ts',
       })
     ).toBeUndefined();
+    expect(
+      await getServiceCrons({
+        service: { type: 'cron', name: 'cleanup', schedule: [] },
+        entrypoint: 'cleanup.ts',
+      })
+    ).toBeUndefined();
   });
 
   it('produces a single entry for a static schedule on a cron service', async () => {
@@ -79,6 +85,30 @@ describe('getServiceCrons', () => {
         service: { type: 'cron', name: 'cleanup', schedule: '0 0 * * *' },
       })
     ).rejects.toThrow(/missing an entrypoint/);
+  });
+
+  it('produces multiple entries for an array of schedules', async () => {
+    expect(
+      await getServiceCrons({
+        service: {
+          type: 'cron',
+          name: 'cleanup',
+          schedule: ['0 0 * * *', '0 12 * * *'],
+        },
+        entrypoint: 'cleanup.ts',
+      })
+    ).toEqual([
+      {
+        path: '/_svc/cleanup/crons/cleanup/cron',
+        schedule: '0 0 * * *',
+        exportName: 'default',
+      },
+      {
+        path: '/_svc/cleanup/crons/cleanup/cron',
+        schedule: '0 12 * * *',
+        exportName: 'default',
+      },
+    ]);
   });
 
   it('throws on a <dynamic> schedule (not yet supported for JS/TS)', async () => {

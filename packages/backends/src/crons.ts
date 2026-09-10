@@ -43,7 +43,13 @@ export async function getServiceCrons(opts: {
   if (!service || !isScheduleTriggeredService(service)) {
     return undefined;
   }
-  if (!service.name || typeof service.schedule !== 'string') {
+  if (
+    !service.name ||
+    !(
+      typeof service.schedule === 'string' ||
+      (Array.isArray(service.schedule) && service.schedule.length > 0)
+    )
+  ) {
     return undefined;
   }
 
@@ -57,11 +63,9 @@ export async function getServiceCrons(opts: {
     );
   }
 
-  return [
-    {
-      path: getInternalServiceCronPath(service.name, entrypoint, 'cron'),
-      schedule: service.schedule,
-      exportName: 'default',
-    },
-  ];
+  const path = getInternalServiceCronPath(service.name, entrypoint, 'cron');
+  const schedules = Array.isArray(service.schedule)
+    ? service.schedule
+    : [service.schedule];
+  return schedules.map(schedule => ({ path, schedule, exportName: 'default' }));
 }
