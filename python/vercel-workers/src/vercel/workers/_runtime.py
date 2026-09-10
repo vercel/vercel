@@ -13,6 +13,7 @@ from .client import (
 if TYPE_CHECKING:
     from celery import Celery as CeleryAppType  # type: ignore[import-untyped]
 
+    from .apscheduler import VercelQueueScheduler as APSchedulerType
     from .dramatiq import VercelQueuesBroker as DramatiqBrokerType
 
 
@@ -26,6 +27,7 @@ def _has_module(module_name: str) -> bool:
 CELERY_AVAILABLE = _has_module("celery")
 DRAMATIQ_AVAILABLE = _has_module("dramatiq")
 DJANGO_TASKS_AVAILABLE = _has_module("django.tasks")
+APSCHEDULER_AVAILABLE = _has_module("apscheduler")
 
 
 def _truthy(value: str | None) -> bool:
@@ -79,6 +81,17 @@ def is_vercel_dramatiq_broker(
     from .dramatiq import VercelQueuesBroker
 
     return isinstance(candidate, VercelQueuesBroker)
+
+
+def is_vercel_apscheduler_scheduler(
+    candidate: object,
+) -> TypeGuard[APSchedulerType]:
+    if not APSCHEDULER_AVAILABLE:
+        return False
+
+    from .apscheduler import VercelQueueScheduler
+
+    return isinstance(candidate, VercelQueueScheduler)
 
 
 def _find_celery_app(module: object) -> CeleryAppType | None:
@@ -149,6 +162,40 @@ def _bootstrap_django_worker_app() -> object | None:
     return get_asgi_app()
 
 
+def _find_apscheduler_scheduler(module: object) -> APSchedulerType | None:
+    matches: list[APSchedulerType] = []
+
+    for name in dir(module):
+        if name.startswith("_"):
+            continue
+
+        with contextlib.suppress(Exception):
+            candidate = getattr(module, name)
+            if is_vercel_apscheduler_scheduler(candidate):
+                matches.append(candidate)
+
+    if len(matches) > 1:
+        raise RuntimeError(
+            "Found multiple exported VercelQueueScheduler instances in the worker "
+            "entrypoint. Export exactly one scheduler object.",
+        )
+
+    return matches[0] if matches else None
+
+
+def _bootstrap_apscheduler_worker_app(module: object) -> object | None:
+    if not APSCHEDULER_AVAILABLE:
+        return None
+
+    scheduler = _find_apscheduler_scheduler(module)
+    if scheduler is None:
+        return None
+
+    from .apscheduler import get_asgi_app
+
+    return get_asgi_app(scheduler)
+
+
 def _bootstrap_generic_worker_app() -> object | None:
     if not has_subscriptions():
         return None
@@ -160,6 +207,7 @@ def _resolve_worker_service_app(module: object) -> object | None:
         ("Celery", lambda: _bootstrap_celery_worker_app(module)),
         ("Dramatiq", lambda: _bootstrap_dramatiq_worker_app(module)),
         ("Django tasks", _bootstrap_django_worker_app),
+        ("APScheduler", lambda: _bootstrap_apscheduler_worker_app(module)),
     )
 
     for label, bootstrap in bootstrappers:
@@ -185,5 +233,5 @@ def maybe_bootstrap_worker_service_app(module: object) -> object | None:
     raise RuntimeError(
         "Unable to bootstrap worker service. "
         "Export an ASGI/WSGI app, or configure "
-        "Celery/Dramatiq/Django via vercel-workers."
+        "Celery/Dramatiq/Django/APScheduler via vercel-workers."
     )
