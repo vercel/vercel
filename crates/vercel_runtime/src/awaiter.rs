@@ -1,14 +1,17 @@
 //! Background work collector for `waitUntil`-style tasks.
 //!
 //! This mirrors the behavior of the Node.js runtime's `Awaiter`
-//! (`packages/node/src/awaiter.ts`). Crucially, `waitUntil` is implemented
-//! entirely in-process: there is **no** dedicated IPC message. The per-request
-//! `end` IPC message is sent immediately after the handler responds and is
-//! **never** delayed by background work. Registered futures are drained only at
-//! process shutdown (SIGTERM). In production the drain is unbounded (background
-//! work runs until it resolves or the function times out); in `vc dev` it is
-//! bounded by [`WAIT_UNTIL_TIMEOUT`] so a hung task cannot keep the dev process
-//! alive.
+//! (`packages/node/src/awaiter.ts`). `waitUntil` is implemented in-process:
+//! there is no dedicated IPC message for registering work. Instead, each
+//! request owns an `Awaiter` (on `AppState`), and the per-request `end` IPC
+//! message is withheld until that request's registered futures settle. Keeping
+//! the invocation open is what keeps the instance from being suspended, so
+//! background work actually runs to completion after the response is sent
+//! (bounded by the function's `maxDuration`), matching the Node.js runtime's
+//! extended-lifecycle behavior. A global `Awaiter` additionally drains
+//! outstanding work at process shutdown (SIGTERM): unbounded in production, and
+//! bounded by [`WAIT_UNTIL_TIMEOUT`] in `vc dev` so a hung task cannot keep the
+//! dev process alive.
 //!
 //! Like the Node implementation:
 //! - A future registered via [`Awaiter::wait_until`] runs regardless of whether
@@ -40,7 +43,9 @@ impl Awaiter {
         Self::default()
     }
 
-    /// Register a background future to be awaited at shutdown.
+    /// Register a background future to be awaited by this set's owner — the
+    /// per-request drain that precedes the `end` IPC message, or the process
+    /// shutdown drain for the global set.
     ///
     /// The future is spawned onto the current Tokio runtime immediately so it
     /// makes progress between requests. Any panic in the future is caught by the
@@ -79,5 +84,56 @@ impl Awaiter {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    #[tokio::test]
+    async fn awaiting_completes_registered_futures() {
+        let awaiter = Awaiter::new();
+        let count = Arc::new(AtomicU32::new(0));
+        for _ in 0..3 {
+            let count = count.clone();
+            awaiter.wait_until(async move {
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                count.fetch_add(1, Ordering::SeqCst);
+            });
+        }
+        awaiter.awaiting().await;
+        assert_eq!(count.load(Ordering::SeqCst), 3);
+    }
+
+    #[tokio::test]
+    async fn awaiting_drains_futures_registered_during_the_drain() {
+        let awaiter = Awaiter::new();
+        let count = Arc::new(AtomicU32::new(0));
+        let nested_awaiter = awaiter.clone();
+        let nested_count = count.clone();
+        awaiter.wait_until(async move {
+            let count = nested_count.clone();
+            nested_awaiter.wait_until(async move {
+                count.fetch_add(1, Ordering::SeqCst);
+            });
+            nested_count.fetch_add(1, Ordering::SeqCst);
+        });
+        awaiter.awaiting().await;
+        assert_eq!(count.load(Ordering::SeqCst), 2);
+    }
+
+    #[tokio::test]
+    async fn a_panicking_future_does_not_abort_the_drain() {
+        let awaiter = Awaiter::new();
+        let count = Arc::new(AtomicU32::new(0));
+        awaiter.wait_until(async { panic!("waitUntil task panic") });
+        let survivor = count.clone();
+        awaiter.wait_until(async move {
+            survivor.fetch_add(1, Ordering::SeqCst);
+        });
+        awaiter.awaiting().await;
+        assert_eq!(count.load(Ordering::SeqCst), 1);
     }
 }
