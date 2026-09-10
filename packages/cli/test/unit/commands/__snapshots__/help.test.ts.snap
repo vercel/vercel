@@ -7071,8 +7071,9 @@ exports[`help command > remove help output snapshots > remove help column width 
 "
   ▲ vercel remove name|deploymentId ... [options]
 
-  Remove deployment(s) by project name  
-  or deployment ID.                     
+  Remove deployment(s) by deployment    
+  ID, or remove project(s) by project   
+  name or project ID.                   
 
   Options:
 
@@ -7135,7 +7136,7 @@ exports[`help command > remove help output snapshots > remove help column width 
 
     $ vercel remove dpl_abcdef123456890
 
-  - Remove all deployments with Project name \`my-app\`
+  - Remove project \`my-app\` (including all deployments and aliases)
 
     $ vercel remove my-app
 
@@ -7150,7 +7151,8 @@ exports[`help command > remove help output snapshots > remove help column width 
 "
   ▲ vercel remove name|deploymentId ... [options]
 
-  Remove deployment(s) by project name or deployment ID.                        
+  Remove deployment(s) by deployment ID, or remove project(s) by project name   
+  or project ID.                                                                
 
   Options:
 
@@ -7180,7 +7182,7 @@ exports[`help command > remove help output snapshots > remove help column width 
 
     $ vercel remove dpl_abcdef123456890
 
-  - Remove all deployments with Project name \`my-app\`
+  - Remove project \`my-app\` (including all deployments and aliases)
 
     $ vercel remove my-app
 
@@ -7195,7 +7197,7 @@ exports[`help command > remove help output snapshots > remove help column width 
 "
   ▲ vercel remove name|deploymentId ... [options]
 
-  Remove deployment(s) by project name or deployment ID.                                                                
+  Remove deployment(s) by deployment ID, or remove project(s) by project name or project ID.                            
 
   Options:
 
@@ -7223,7 +7225,7 @@ exports[`help command > remove help output snapshots > remove help column width 
 
     $ vercel remove dpl_abcdef123456890
 
-  - Remove all deployments with Project name \`my-app\`
+  - Remove project \`my-app\` (including all deployments and aliases)
 
     $ vercel remove my-app
 
