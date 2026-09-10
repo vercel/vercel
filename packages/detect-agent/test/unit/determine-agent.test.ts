@@ -25,6 +25,8 @@ describe('determineAgent', () => {
     vi.stubEnv('COPILOT_MODEL', '');
     vi.stubEnv('COPILOT_ALLOW_ALL', '');
     vi.stubEnv('COPILOT_GITHUB_TOKEN', '');
+    vi.stubEnv('KIRO_AGENT_PATH', '');
+    vi.stubEnv('TERM_PROGRAM', '');
   });
 
   afterEach(() => {
@@ -263,6 +265,52 @@ describe('determineAgent', () => {
     });
   });
 
+  describe('kiro cli detection', () => {
+    describe('KIRO_AGENT_PATH not set', () => {
+      it('returns no agent', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('KIRO_AGENT_PATH set', () => {
+      beforeEach(() => {
+        vi.stubEnv('KIRO_AGENT_PATH', '/Users/user/.local/bin/kiro-cli-chat');
+      });
+
+      it('detects kiro cli', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.KIRO_CLI },
+        });
+      });
+    });
+  });
+
+  describe('kiro detection', () => {
+    describe('TERM_PROGRAM not set to kiro', () => {
+      it('returns no agent', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('TERM_PROGRAM set to kiro', () => {
+      beforeEach(() => {
+        vi.stubEnv('TERM_PROGRAM', 'kiro');
+      });
+
+      it('detects kiro', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.KIRO },
+        });
+      });
+    });
+  });
+
   describe('claude detection', () => {
     describe('CLAUDE_CODE set', () => {
       beforeEach(() => {
@@ -408,6 +456,8 @@ describe('determineAgent', () => {
       vi.stubEnv('COPILOT_MODEL', 'gpt-5');
       vi.stubEnv('COPILOT_ALLOW_ALL', 'true');
       vi.stubEnv('COPILOT_GITHUB_TOKEN', 'ghp_xxx');
+      vi.stubEnv('KIRO_AGENT_PATH', '/Users/user/.local/bin/kiro-cli-chat');
+      vi.stubEnv('TERM_PROGRAM', 'kiro');
       mockFs({
         '/opt/.devin': mockFs.directory({
           mode: 0o755,
@@ -434,6 +484,8 @@ describe('determineAgent', () => {
       vi.stubEnv('COPILOT_MODEL', 'gpt-5');
       vi.stubEnv('COPILOT_ALLOW_ALL', 'true');
       vi.stubEnv('COPILOT_GITHUB_TOKEN', 'ghp_xxx');
+      vi.stubEnv('KIRO_AGENT_PATH', '/Users/user/.local/bin/kiro-cli-chat');
+      vi.stubEnv('TERM_PROGRAM', 'kiro');
       mockFs({
         '/opt/.devin': mockFs.directory({
           mode: 0o755,
@@ -459,6 +511,8 @@ describe('determineAgent', () => {
       vi.stubEnv('COPILOT_MODEL', 'gpt-5');
       vi.stubEnv('COPILOT_ALLOW_ALL', 'true');
       vi.stubEnv('COPILOT_GITHUB_TOKEN', 'ghp_xxx');
+      vi.stubEnv('KIRO_AGENT_PATH', '/Users/user/.local/bin/kiro-cli-chat');
+      vi.stubEnv('TERM_PROGRAM', 'kiro');
       mockFs({
         '/opt/.devin': mockFs.directory({
           mode: 0o755,

@@ -17,6 +17,8 @@ const OPENCODE = 'opencode' as const;
 const GITHUB_COPILOT = 'github-copilot' as const;
 const GITHUB_COPILOT_CLI = 'github-copilot-cli' as const;
 const V0 = 'v0' as const;
+const KIRO = 'kiro' as const;
+const KIRO_CLI = 'kiro-cli' as const;
 
 export type KnownAgentNames =
   | typeof CURSOR
@@ -31,7 +33,9 @@ export type KnownAgentNames =
   | typeof AUGMENT_CLI
   | typeof OPENCODE
   | typeof GITHUB_COPILOT
-  | typeof V0;
+  | typeof V0
+  | typeof KIRO
+  | typeof KIRO_CLI;
 
 export interface KnownAgentDetails {
   name: KnownAgentNames;
@@ -61,6 +65,8 @@ export const KNOWN_AGENTS = {
   OPENCODE,
   GITHUB_COPILOT,
   V0,
+  KIRO,
+  KIRO_CLI,
 } as const;
 
 export async function determineAgent(): Promise<AgentResult> {
@@ -140,6 +146,14 @@ export async function determineAgent(): Promise<AgentResult> {
     process.env.COPILOT_GITHUB_TOKEN
   ) {
     return { isAgent: true, agent: { name: GITHUB_COPILOT } };
+  }
+
+  if (process.env.KIRO_AGENT_PATH) {
+    return { isAgent: true, agent: { name: KIRO_CLI } };
+  }
+
+  if (process.env.TERM_PROGRAM === 'kiro') {
+    return { isAgent: true, agent: { name: KIRO } };
   }
 
   try {
