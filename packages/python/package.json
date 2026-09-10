@@ -46,7 +46,7 @@
     "minimatch": "10.1.1",
     "pip-requirements-js": "1.0.2",
     "semver": "6.3.1",
-    "smol-toml": "1.5.2",
+    "smol-toml": "1.8.0",
     "vitest": "4.1.10",
     "which": "3.0.0"
   }
