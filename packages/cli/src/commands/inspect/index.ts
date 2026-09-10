@@ -286,6 +286,32 @@ async function printDetails({
   }
   print('\n\n');
 
+  print(chalk.bold('  Build Usage\n\n'));
+  const buildUsage = getBuildUsage(deployment);
+  print(
+    `    ${chalk.cyan('build duration')}\t${formatDuration(buildUsage.buildDurationMs)}\n`
+  );
+  print(
+    `    ${chalk.cyan('post-build duration')}\t${formatDuration(buildUsage.postBuildDurationMs)}\n`
+  );
+  print(
+    `    ${chalk.cyan('billable duration')}\t${formatDuration(buildUsage.billableDurationMs)}\n`
+  );
+  print(
+    `    ${chalk.cyan('CPU Minutes Usage')}\t${formatCpuMinutes(buildUsage.billedBuildCpuMs)}\n`
+  );
+  print(
+    `    ${chalk.cyan('requested build machine')}\t${buildUsage.requestedBuildMachine ?? 'unavailable'}\n`
+  );
+  print(
+    `    ${chalk.cyan('actual assigned cores')}\t${
+      buildUsage.assignedCpuCores === undefined
+        ? 'unavailable'
+        : `${buildUsage.assignedCpuCores} vCPU (actual assignment)`
+    }\n`
+  );
+  print('\n\n');
+
   if (aliases !== undefined && aliases.length > 0) {
     print(chalk.bold('  Aliases\n\n'));
     let aliasList = '';
@@ -343,6 +369,7 @@ async function printJson({
       ? await client.fetch<{ builds: Build[] }>(`/v11/deployments/${id}/builds`)
       : { builds: [] };
 
+  const buildUsage = omitUndefined(getBuildUsage(deployment));
   const jsonOutput = {
     id,
     name,
@@ -350,6 +377,7 @@ async function printJson({
     target: customEnvironment?.slug ?? target ?? 'preview',
     readyState,
     createdAt,
+    ...(Object.keys(buildUsage).length > 0 && { buildUsage }),
     ...(aliases && aliases.length > 0 && { aliases }),
     ...(builds.length > 0 && { builds }),
     ...(Array.isArray(routes) && routes.length > 0 && { routes }),
@@ -357,6 +385,102 @@ async function printJson({
   };
 
   client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+}
+
+interface BuildUsage {
+  /** Time from the start of building until the deployment reached a final state. */
+  buildDurationMs?: number;
+  /** Time from the deployment's final state until its build container exited. */
+  postBuildDurationMs?: number;
+  /** Server-billed CPU time converted to wall-clock time using assigned cores. */
+  billableDurationMs?: number;
+  /** Server-calculated billable usage in CPU-core milliseconds. */
+  billedBuildCpuMs?: number;
+  requestedBuildMachine?: NonNullable<
+    Deployment['resourceConfig']
+  >['buildMachine'] extends infer BuildMachine
+    ? BuildMachine extends { purchaseType?: infer PurchaseType }
+      ? PurchaseType
+      : never
+    : never;
+  buildMachineSelection?: NonNullable<
+    Deployment['resourceConfig']
+  >['buildMachine'] extends infer BuildMachine
+    ? BuildMachine extends { machineSelectionType?: infer Selection }
+      ? Selection
+      : never
+    : never;
+  /** Cores actually assigned to the build, which may differ from its requested machine. */
+  assignedCpuCores?: number;
+}
+
+function getBuildUsage(deployment: Deployment): BuildUsage {
+  const buildMachine = deployment.resourceConfig?.buildMachine;
+  const billedBuildCpuMs = validNonNegativeNumber(deployment.billedBuildCpuMs);
+  const assignedCpuCores = validPositiveNumber(buildMachine?.cores);
+
+  return {
+    buildDurationMs: durationBetween(
+      deployment.buildingAt,
+      deployment.readyStateAt
+    ),
+    postBuildDurationMs: durationBetween(
+      deployment.readyStateAt,
+      deployment.buildContainerExitAt
+    ),
+    billableDurationMs:
+      billedBuildCpuMs === undefined || assignedCpuCores === undefined
+        ? undefined
+        : billedBuildCpuMs / assignedCpuCores,
+    billedBuildCpuMs,
+    requestedBuildMachine: buildMachine?.purchaseType,
+    buildMachineSelection: buildMachine?.machineSelectionType,
+    assignedCpuCores,
+  };
+}
+
+function durationBetween(
+  startedAt: number | undefined,
+  finishedAt: number | undefined
+): number | undefined {
+  if (
+    !Number.isFinite(startedAt) ||
+    !Number.isFinite(finishedAt) ||
+    finishedAt! < startedAt!
+  ) {
+    return undefined;
+  }
+  return finishedAt! - startedAt!;
+}
+
+function validNonNegativeNumber(value: number | undefined): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? value
+    : undefined;
+}
+
+function validPositiveNumber(value: number | undefined): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? value
+    : undefined;
+}
+
+function formatDuration(durationMs: number | undefined): string {
+  if (durationMs === undefined) return 'unavailable';
+  if (durationMs === 0) return '0ms';
+  return ms(durationMs);
+}
+
+function formatCpuMinutes(billedBuildCpuMs: number | undefined): string {
+  return billedBuildCpuMs === undefined
+    ? 'unavailable'
+    : `${billedBuildCpuMs / 60_000} minutes`;
+}
+
+function omitUndefined<T extends object>(value: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, field]) => field !== undefined)
+  ) as Partial<T>;
 }
 
 function printLogsJson(client: Client, logs: BuildLog[]): void {

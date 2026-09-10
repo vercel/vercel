@@ -205,6 +205,130 @@ describe('inspect', () => {
       });
     });
 
+    describe('build usage', () => {
+      it('prints authoritative build usage and distinguishes requested machine from assigned cores', async () => {
+        const user = useUser();
+        const deployment = useDeployment({ creator: user });
+        Object.assign(deployment, {
+          buildingAt: 1_000,
+          readyStateAt: 41_000,
+          buildContainerExitAt: 46_000,
+          billedBuildCpuMs: 12 * 60_000,
+          resourceConfig: {
+            buildMachine: {
+              purchaseType: 'enhanced',
+              machineSelectionType: 'elastic',
+              cores: 12,
+            },
+          },
+        });
+
+        client.setArgv('inspect', deployment.url);
+        expect(await inspect(client)).toEqual(0);
+
+        const output = client.getFullOutput();
+        expect(output).toContain('build duration\t40s');
+        expect(output).toContain('post-build duration\t5s');
+        expect(output).toContain('billable duration\t1m');
+        expect(output).toContain('CPU Minutes Usage\t12 minutes');
+        expect(output).toContain('requested build machine\tenhanced');
+        expect(output).toContain(
+          'actual assigned cores\t12 vCPU (actual assignment)'
+        );
+      });
+
+      it('renders unavailable values instead of inferring them for a running deployment', async () => {
+        const user = useUser();
+        const deployment = useDeployment({ creator: user, state: 'BUILDING' });
+        deployment.ready = deployment.buildingAt + 30_000;
+        deployment.resourceConfig = {
+          buildMachine: { purchaseType: 'standard' },
+        };
+
+        client.setArgv('inspect', deployment.url);
+        expect(await inspect(client)).toEqual(0);
+
+        const output = client.getFullOutput();
+        expect(output).toContain('build duration\tunavailable');
+        expect(output).toContain('post-build duration\tunavailable');
+        expect(output).toContain('billable duration\tunavailable');
+        expect(output).toContain('CPU Minutes Usage\tunavailable');
+        expect(output).toContain('actual assigned cores\tunavailable');
+      });
+
+      it('omits unavailable fields from JSON and preserves millisecond units', async () => {
+        const user = useUser();
+        const deployment = useDeployment({ creator: user });
+        Object.assign(deployment, {
+          buildingAt: 1_000,
+          readyStateAt: 41_000,
+          buildContainerExitAt: 46_000,
+          billedBuildCpuMs: 720_000,
+          resourceConfig: {
+            buildMachine: {
+              purchaseType: 'enhanced',
+              machineSelectionType: 'elastic',
+              cores: 12,
+            },
+          },
+        });
+
+        client.setArgv('inspect', deployment.url, '--format=json');
+        expect(await inspect(client)).toEqual(0);
+
+        expect(JSON.parse(client.stdout.getFullOutput()).buildUsage).toEqual({
+          buildDurationMs: 40_000,
+          postBuildDurationMs: 5_000,
+          billableDurationMs: 60_000,
+          billedBuildCpuMs: 720_000,
+          requestedBuildMachine: 'enhanced',
+          buildMachineSelection: 'elastic',
+          assignedCpuCores: 12,
+        });
+      });
+
+      it('omits non-authoritative usage from JSON', async () => {
+        const user = useUser();
+        const deployment = useDeployment({ creator: user });
+        deployment.ready = deployment.buildingAt + 30_000;
+
+        client.setArgv('inspect', deployment.url, '--format=json');
+        expect(await inspect(client)).toEqual(0);
+
+        expect(JSON.parse(client.stdout.getFullOutput())).not.toHaveProperty(
+          'buildUsage'
+        );
+      });
+
+      it('refreshes final usage while waiting for deployment completion', async () => {
+        const user = useUser();
+        const deployment = useDeployment({ creator: user, state: 'BUILDING' });
+        client.setArgv('inspect', deployment.url, '--format=json', '--wait');
+
+        const runInspect = inspect(client);
+        await sleep(100);
+        Object.assign(deployment, {
+          readyState: 'READY',
+          readyStateAt: deployment.buildingAt + 40_000,
+          buildContainerExitAt: deployment.buildingAt + 45_000,
+          billedBuildCpuMs: 4 * 60_000,
+          resourceConfig: {
+            buildMachine: { purchaseType: 'standard', cores: 4 },
+          },
+        });
+
+        expect(await runInspect).toEqual(0);
+        expect(
+          JSON.parse(client.stdout.getFullOutput()).buildUsage
+        ).toMatchObject({
+          buildDurationMs: 40_000,
+          postBuildDurationMs: 5_000,
+          billedBuildCpuMs: 240_000,
+          assignedCpuCores: 4,
+        });
+      });
+    });
+
     describe('--format', async () => {
       it('tracks telemetry for --format json', async () => {
         const user = useUser();

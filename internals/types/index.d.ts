@@ -169,6 +169,10 @@ export type Deployment = {
   builds?: { use: string; src?: string; config?: { [key: string]: any } };
   buildErrorAt?: number;
   buildingAt: number;
+  /** Unix timestamp in milliseconds when the build container exited. */
+  buildContainerExitAt?: number;
+  /** Server-calculated billable CPU usage in CPU-core milliseconds. */
+  billedBuildCpuMs?: number;
   canceledAt?: number;
   checks?: Record<
     string,
@@ -236,7 +240,16 @@ export type Deployment = {
     | 'READY'
     | 'CANCELED';
   regions: string[];
+  resourceConfig?: {
+    buildMachine?: {
+      purchaseType?: 'basic' | 'standard' | 'enhanced' | 'turbo';
+      machineSelectionType?: 'fixed' | 'elastic';
+      cores?: number;
+    };
+  };
   routes?: RouteOrMiddleware[] | null;
+  /** Unix timestamp in milliseconds when the deployment reached its final state. */
+  readyStateAt?: number;
   source?: 'cli' | 'git' | 'import' | 'import/repo' | 'clone/repo';
   status:
     | 'BUILDING'
