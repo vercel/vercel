@@ -18,7 +18,7 @@ import {
   openUrlInBrowserCommand,
   outputAgentError,
 } from '../../util/agent-output';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import { getCommandNamePlain } from '../../util/pkg-name';
 
 export default async function addToGroup(client: Client): Promise<number> {
@@ -98,7 +98,7 @@ export default async function addToGroup(client: Client): Promise<number> {
   if (wouldAffectBilling) {
     if (client.nonInteractive) {
       const settingsUrl = `https://vercel.com/${teamSlug}/${project.name}/settings/microfrontends`;
-      const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+      const flags = getGlobalFlagsFromArgs(client.argv.slice(2));
       const interactiveCmd = getCommandNamePlain(
         `microfrontends add-to-group ${flags.filter(f => f !== '--non-interactive').join(' ')}`.trim()
       );

@@ -15,6 +15,15 @@ export class BlobListTelemetryClient
     }
   }
 
+  trackCliOptionNext(next: string | undefined) {
+    if (next) {
+      this.trackCliOption({
+        option: 'next',
+        value: next,
+      });
+    }
+  }
+
   trackCliOptionCursor(cursor: string | undefined) {
     if (cursor) {
       this.trackCliOption({

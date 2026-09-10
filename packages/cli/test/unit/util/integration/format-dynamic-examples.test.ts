@@ -37,6 +37,10 @@ describe('formatDynamicExamples', () => {
     );
 
     for (const option of addSubcommand.options) {
+      if (!('description' in option)) {
+        continue;
+      }
+
       const longFlag = `--${option.name}`;
       const shortFlag = option.shorthand ? `-${option.shorthand}` : null;
       const hasLong = output.includes(longFlag);
@@ -48,6 +52,8 @@ describe('formatDynamicExamples', () => {
           `Add an example to formatDynamicExamples() for this option.`
       ).toBe(true);
     }
+
+    expect(output).toContain('--format json');
   });
 
   it('should use custom commandName in examples', () => {

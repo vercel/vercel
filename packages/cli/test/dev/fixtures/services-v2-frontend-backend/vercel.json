@@ -87,7 +87,13 @@
     "backend": {
       "root": "backend",
       "framework": "fastapi",
-      "entrypoint": "server.py",
+      "entrypoint": "pyproject.toml",
+      "rewrites": [
+        {
+          "source": "/api/strip/:path(.*)",
+          "destination": "/:path"
+        }
+      ],
       "redirects": [
         {
           "source": "/api/old",

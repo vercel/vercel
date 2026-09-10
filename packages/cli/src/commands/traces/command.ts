@@ -4,6 +4,7 @@ import {
   protectionBypassOption,
   yesOption,
 } from '../../util/arg-common';
+import { tracesConfigCommand } from './config/command';
 
 export const getSubcommand = {
   name: 'get',
@@ -118,7 +119,7 @@ export const tracesCommand = {
   aliases: [],
   description: 'Fetch traces captured for a Vercel project.',
   arguments: [{ name: 'requestId', required: false }],
-  subcommands: [getSubcommand, createSubcommand],
+  subcommands: [getSubcommand, createSubcommand, tracesConfigCommand],
   options: [],
   examples: [
     {
@@ -132,6 +133,10 @@ export const tracesCommand = {
     {
       name: 'Capture a session trace for a request',
       value: `${packageName} traces create /api/hello`,
+    },
+    {
+      name: 'List the trace sampling rules for a project',
+      value: `${packageName} traces config ls`,
     },
   ],
 } as const;

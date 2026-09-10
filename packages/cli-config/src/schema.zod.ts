@@ -43,4 +43,5 @@ export const globalConfigSchema = z.object({
   telemetry: telemetryConfigSchema.optional(),
   guidance: guidanceConfigSchema.optional(),
   updates: updatesConfigSchema.optional(),
+  useNativeBinary: z.boolean().optional(),
 });

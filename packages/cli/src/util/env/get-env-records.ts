@@ -2,6 +2,7 @@ import { URLSearchParams } from 'url';
 import type Client from '../client';
 import type { ProjectEnvVariable } from '@vercel-internals/types';
 import output from '../../output-manager';
+import { withEnvChallengeRecovery } from './challenge-recovery';
 
 /** The CLI command that was used that needs the environment variables. */
 export type EnvRecordsSource =
@@ -60,7 +61,9 @@ export default async function getEnvRecords(
 
   const url = `/v10/projects/${projectId}/env?${query}`;
 
-  return client.fetch<{ envs: ProjectEnvVariable[] }>(url);
+  return withEnvChallengeRecovery(client, () =>
+    client.fetch<{ envs: ProjectEnvVariable[] }>(url)
+  );
 }
 
 interface PullEnvOptions {
@@ -100,8 +103,10 @@ export async function pullEnvRecords(
     url += `?${query}`;
   }
 
-  return client.fetch<{
-    env: Record<string, string>;
-    buildEnv: Record<string, string>;
-  }>(url);
+  return withEnvChallengeRecovery(client, () =>
+    client.fetch<{
+      env: Record<string, string>;
+      buildEnv: Record<string, string>;
+    }>(url)
+  );
 }

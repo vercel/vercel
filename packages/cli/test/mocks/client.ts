@@ -273,9 +273,6 @@ export class MockClient extends Client {
 
     this.scenario = Router();
 
-    this.agent?.destroy();
-    this.agent = undefined;
-
     this.cwd = originalCwd;
     this.telemetryEventStore.reset();
 
@@ -352,6 +349,10 @@ export class MockClient extends Client {
   setArgv(argv: string[]): void;
   setArgv(...argv: string[]): void;
   setArgv(argvOrFirst?: string[] | string, ...rest: string[]) {
+    if (Array.isArray(argvOrFirst) && argvOrFirst[0] === process.execPath) {
+      super.setArgv(argvOrFirst);
+      return;
+    }
     const argv = Array.isArray(argvOrFirst)
       ? argvOrFirst
       : typeof argvOrFirst === 'string'

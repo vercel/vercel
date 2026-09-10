@@ -7,9 +7,11 @@ import { isDeploying } from '../../util/deploy/is-deploying';
 import linkStyle from '../output/link';
 import { prependEmoji, emoji } from '../../util/emoji';
 import output from '../../output-manager';
-import { getCommandName } from '../pkg-name';
-import { suggestNextCommands } from '../suggest-next-commands';
-import { showPluginTipIfNeeded } from '../agent/auto-install-agentic';
+import { withGlobalFlags } from '../agent-output';
+import {
+  suggestNextCommands,
+  type SuggestedNextCommand,
+} from '../suggest-next-commands';
 
 /**
  * `deployStamp()` returns a string formatted like `[47s]` (gray-wrapped).
@@ -49,7 +51,8 @@ export async function printDeploymentStatus(
   deployStamp: () => string,
   noWait: boolean,
   guidanceMode: boolean,
-  isInit?: boolean
+  isInit?: boolean,
+  gitConnectCommand?: string
 ): Promise<number> {
   indications = indications || [];
 
@@ -112,18 +115,55 @@ export async function printDeploymentStatus(
     output.print(message + link);
   }
 
-  if (guidanceMode) {
+  if (gitConnectCommand || guidanceMode) {
     output.print('\n');
-    suggestNextCommands(
-      [
-        getCommandName(`inspect ${url} --logs`),
-        getCommandName(`redeploy ${url}`),
-        target !== 'production' ? getCommandName(`deploy --prod`) : false,
-      ].filter(Boolean) as string[]
-    );
+    const nextCommands: SuggestedNextCommand[] = [];
+    if (gitConnectCommand) {
+      nextCommands.push({
+        description:
+          'Automatically deploy changes on every push by connecting Git',
+        command: gitConnectCommand,
+      });
+    }
+    if (readyState === 'READY') {
+      nextCommands.push({
+        description: 'Check the deployment response',
+        command: withGlobalFlags(client, `curl https://${url}`, {
+          preserveProject: true,
+        }),
+      });
+      nextCommands.push(
+        {
+          description: 'View build logs',
+          command: withGlobalFlags(client, `inspect ${url} --logs`, {
+            preserveProject: true,
+          }),
+        },
+        {
+          description: 'Create a new deployment from the same source',
+          command: withGlobalFlags(client, `redeploy ${url}`, {
+            preserveProject: true,
+          }),
+        }
+      );
+      if (target !== 'production') {
+        nextCommands.push({
+          description: 'Deploy the current project to production',
+          command: withGlobalFlags(client, 'deploy --prod', {
+            preserveProject: true,
+          }),
+        });
+      }
+    } else {
+      nextCommands.push({
+        description: 'Check deployment status',
+        command: withGlobalFlags(client, `inspect ${url}`, {
+          preserveProject: true,
+        }),
+      });
+    }
+    suggestNextCommands(nextCommands);
   }
-
-  await showPluginTipIfNeeded(client);
 
   return 0;
 }

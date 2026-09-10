@@ -7,6 +7,7 @@ import {
   shouldEmitNonInteractiveCommandError,
 } from '../agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../agent-output-constants';
+import getOrgById from './get-org-by-id';
 
 /**
  * Emits a consistent "Project <x> was not found" error that names the scope
@@ -17,14 +18,21 @@ import { AGENT_REASON, AGENT_STATUS } from '../agent-output-constants';
 export async function printProjectNotFoundError(
   client: Client,
   projectNameOrId: string,
-  commandName: string
+  commandName: string,
+  orgId?: string
 ): Promise<void> {
   let contextName: string | undefined;
   try {
-    const scope = await getScope(client);
-    contextName = scope.contextName;
+    if (orgId) {
+      const org = await getOrgById(client, orgId);
+      contextName = org?.slug ?? orgId;
+    } else {
+      const scope = await getScope(client);
+      contextName = scope.contextName;
+    }
   } catch (err) {
-    output.debug(`getScope failed during error reporting: ${err}`);
+    contextName = orgId;
+    output.debug(`Scope lookup failed during error reporting: ${err}`);
   }
 
   const scopeClause = contextName ? ` (${contextName})` : '';

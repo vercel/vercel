@@ -1,0 +1,1 @@
+Runtime Cache is per-process in-memory under vc dev, so the web service cannot see job results the worker wrote (queue delivery itself works)

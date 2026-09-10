@@ -8,10 +8,9 @@ import {
   getNextConfig,
   getServerlessPages,
   normalizePrefetches,
+  getDefaultNextDeploymentId,
   getMaxUncompressedLambdaSize,
   getGroupMaxUncompressedLambdaSize,
-  isLargeFunctionsEnabled,
-  LARGE_FUNCTIONS_ENV,
   getPageLambdaGroups,
   detectLambdaLimitExceeding,
   type LambdaGroup,
@@ -424,6 +423,33 @@ describe('getServerlessPages', () => {
     expect(Object.keys(pages)).toEqual(['_app.js', '_error.js']);
     expect(Object.keys(appPaths)).toEqual(['favicon.ico.js', 'index.js']);
   });
+
+  it('should use posix separators for nested App Router routes (PIPE-7285)', async () => {
+    const dir = await genDir({
+      '.next/server/pages/_app.js': 'test',
+      '.next/server/pages/_error.js': 'test',
+      '.next/server/app/page.js': 'test',
+      '.next/server/app/plana/page.js': 'test',
+      '.next/server/app/prueba-plana/anidada/page.js': 'test',
+    });
+
+    const { appPaths } = await getServerlessPages({
+      pagesDir: path.resolve(path.join(dir, '.next/server/pages')),
+      entryPath: os.tmpdir(),
+      outputDirectory: os.tmpdir(),
+      appPathRoutesManifest: {
+        '/page': '/',
+        '/plana/page': '/plana',
+        '/prueba-plana/anidada/page': '/prueba-plana/anidada',
+      },
+    });
+
+    expect(Object.keys(appPaths).sort()).toEqual([
+      'index.js',
+      'plana.js',
+      'prueba-plana/anidada.js',
+    ]);
+  });
 });
 
 describe('normalizePrefetches', () => {
@@ -495,7 +521,11 @@ function makePseudoFile(uncompressedSize: number): PseudoFile {
  */
 function groupPagesBySize(
   pageSizes: Record<string, number>,
-  runtime = 'nodejs22.x'
+  runtime = 'nodejs22.x',
+  functionsConfigManifest?: Parameters<
+    typeof getPageLambdaGroups
+  >[0]['functionsConfigManifest'],
+  experimentalAllowBundling?: boolean
 ) {
   const pages = Object.keys(pageSizes);
   const compressedPages: Record<string, PseudoFile> = {};
@@ -506,7 +536,7 @@ function groupPagesBySize(
   return getPageLambdaGroups({
     entryPath: os.tmpdir(),
     config: {} as Config,
-    functionsConfigManifest: undefined,
+    functionsConfigManifest,
     pages,
     prerenderRoutes: new Set(),
     experimentalPPRRoutes: undefined,
@@ -517,8 +547,61 @@ function groupPagesBySize(
     initialPseudoLayerUncompressed: 0,
     internalPages: [],
     nodeVersion: { runtime },
+    experimentalAllowBundling,
   });
 }
+
+describe('getPageLambdaGroups maxConcurrency', () => {
+  it('groups routes with the same limit', async () => {
+    const groups = await groupPagesBySize(
+      { 'a.js': MiB, 'b.js': MiB },
+      'nodejs22.x',
+      {
+        version: 1,
+        functions: {
+          '/a': { maxConcurrency: 2 },
+          '/b': { maxConcurrency: 2 },
+        },
+      } as Parameters<typeof getPageLambdaGroups>[0]['functionsConfigManifest']
+    );
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].maxConcurrency).toBe(2);
+  });
+
+  it('does not group routes with different limits', async () => {
+    const groups = await groupPagesBySize(
+      { 'a.js': MiB, 'b.js': MiB },
+      'nodejs22.x',
+      {
+        version: 1,
+        functions: {
+          '/a': { maxConcurrency: 2 },
+          '/b': { maxConcurrency: 8 },
+        },
+      } as Parameters<typeof getPageLambdaGroups>[0]['functionsConfigManifest']
+    );
+
+    expect(groups).toHaveLength(2);
+    expect(groups.map(group => group.maxConcurrency).sort()).toEqual([2, 8]);
+  });
+
+  it('does not add an unconfigured route to a configured group', async () => {
+    const groups = await groupPagesBySize(
+      { 'a.js': MiB, 'b.js': MiB },
+      'nodejs22.x',
+      {
+        version: 1,
+        functions: {
+          '/a': { maxConcurrency: 2 },
+        },
+      } as Parameters<typeof getPageLambdaGroups>[0]['functionsConfigManifest']
+    );
+
+    expect(groups).toHaveLength(2);
+    expect(groups.map(group => group.maxConcurrency)).toEqual([2, undefined]);
+  });
+});
 
 describe('getGroupMaxUncompressedLambdaSize', () => {
   it('returns the default per-runtime limit for normal groups', () => {
@@ -541,52 +624,71 @@ describe('getGroupMaxUncompressedLambdaSize', () => {
   });
 });
 
-describe('isLargeFunctionsEnabled', () => {
-  afterEach(() => {
-    delete process.env[LARGE_FUNCTIONS_ENV];
+describe('getDefaultNextDeploymentId', () => {
+  it('defaults from VERCEL_DEPLOYMENT_ID when skew protection is enabled', () => {
+    expect(
+      getDefaultNextDeploymentId({
+        VERCEL_SKEW_PROTECTION_ENABLED: '1',
+        VERCEL_DEPLOYMENT_ID: 'dpl_123',
+      })
+    ).toBe('dpl_123');
   });
 
-  it('defaults to disabled', () => {
-    delete process.env[LARGE_FUNCTIONS_ENV];
-    expect(isLargeFunctionsEnabled()).toBe(false);
+  it('returns undefined when skew protection is not enabled', () => {
+    expect(
+      getDefaultNextDeploymentId({ VERCEL_DEPLOYMENT_ID: 'dpl_123' })
+    ).toBeUndefined();
+    expect(
+      getDefaultNextDeploymentId({
+        VERCEL_SKEW_PROTECTION_ENABLED: '0',
+        VERCEL_DEPLOYMENT_ID: 'dpl_123',
+      })
+    ).toBeUndefined();
   });
 
-  it('is enabled when the env var is set', () => {
-    process.env[LARGE_FUNCTIONS_ENV] = '1';
-    expect(isLargeFunctionsEnabled()).toBe(true);
+  it('returns undefined when there is no deployment id', () => {
+    expect(
+      getDefaultNextDeploymentId({ VERCEL_SKEW_PROTECTION_ENABLED: '1' })
+    ).toBeUndefined();
+  });
+
+  it('never overrides an explicit NEXT_DEPLOYMENT_ID', () => {
+    expect(
+      getDefaultNextDeploymentId({
+        VERCEL_SKEW_PROTECTION_ENABLED: '1',
+        VERCEL_DEPLOYMENT_ID: 'dpl_123',
+        NEXT_DEPLOYMENT_ID: 'dpl_explicit',
+      })
+    ).toBeUndefined();
   });
 });
 
 describe('getPageLambdaGroups large functions', () => {
-  afterEach(() => {
-    delete process.env[LARGE_FUNCTIONS_ENV];
-  });
+  it('never marks a route large when experimentalAllowBundling defers bundling', async () => {
+    const groups = await groupPagesBySize(
+      {
+        'big-a.js': 300 * MiB,
+        'small-1.js': 10 * MiB,
+        'small-2.js': 10 * MiB,
+        'big-b.js': 300 * MiB,
+      },
+      'nodejs22.x',
+      undefined,
+      true
+    );
 
-  it('keeps existing bundling unchanged when the flag is disabled', async () => {
-    delete process.env[LARGE_FUNCTIONS_ENV];
-
-    const groups = await groupPagesBySize({
-      'big-a.js': 300 * MiB,
-      'small-1.js': 10 * MiB,
-      'small-2.js': 10 * MiB,
-      'big-b.js': 300 * MiB,
-    });
-
-    // No group is flagged large, and the two oversized routes are NOT merged
-    // together — each oversized route gets its own (over-limit) group, exactly
-    // as before this feature existed.
+    // Bundling is deferred upstream, so the split is moot: nothing is measured
+    // against the large ceiling, and every route stands alone as before.
     expect(groups.every(g => !g.isLargeFunctions)).toBe(true);
-    const byPages = groups.map(g => g.pages.slice().sort()).sort();
-    expect(byPages).toEqual([
+    expect(groups.map(g => g.pages).sort()).toEqual([
       ['big-a.js'],
       ['big-b.js'],
-      ['small-1.js', 'small-2.js'],
+      ['small-1.js'],
+      ['small-2.js'],
     ]);
   });
 
   it('emits each over-budget route as its own individual large function', async () => {
-    process.env[LARGE_FUNCTIONS_ENV] = '1';
-
     const groups = await groupPagesBySize({
       'big-a.js': 300 * MiB,
       'small-1.js': 10 * MiB,
@@ -613,8 +715,6 @@ describe('getPageLambdaGroups large functions', () => {
   });
 
   it('does not bundle large routes together even when they would fit the ceiling', async () => {
-    process.env[LARGE_FUNCTIONS_ENV] = '1';
-
     const groups = await groupPagesBySize({
       // Together only 600 MiB (well under the 5 GiB ceiling), yet each large
       // route is still emitted as its own function rather than bundled.
@@ -628,8 +728,6 @@ describe('getPageLambdaGroups large functions', () => {
   });
 
   it('never mixes large and normal routes in the same group', async () => {
-    process.env[LARGE_FUNCTIONS_ENV] = '1';
-
     const groups = await groupPagesBySize({
       'big.js': 260 * MiB,
       'small.js': 50 * MiB,
@@ -643,8 +741,6 @@ describe('getPageLambdaGroups large functions', () => {
   });
 
   it('treats a route within the normal packing budget as normal', async () => {
-    process.env[LARGE_FUNCTIONS_ENV] = '1';
-
     const groups = await groupPagesBySize({
       // 200 MiB is under the 225 MiB budget (250 MiB limit − 25 MiB reserved).
       'within-budget.js': 200 * MiB,
@@ -655,8 +751,6 @@ describe('getPageLambdaGroups large functions', () => {
   });
 
   it('treats a route over the packing budget but under the hard limit as large', async () => {
-    process.env[LARGE_FUNCTIONS_ENV] = '1';
-
     const groups = await groupPagesBySize({
       // 240 MiB is under the 250 MiB limit but over the 225 MiB packing budget,
       // so it cannot be guaranteed to fit a normal function (once post-build
@@ -731,5 +825,33 @@ describe('detectLambdaLimitExceeding with large functions', () => {
       'nodejs22.x'
     );
     expect(loggedOutput()).toContain('size was exceeded');
+  });
+
+  it('still reports per-function sizes for a large group under NEXT_DEBUG_FUNCTION_SIZE', async () => {
+    process.env.NEXT_DEBUG_FUNCTION_SIZE = '1';
+    const size = 1 * 1024 * MiB;
+
+    try {
+      await detectLambdaLimitExceeding(
+        [
+          makeGroup({
+            pages: ['big.js'],
+            uncompressed: size,
+            isLargeFunctions: true,
+          }),
+        ],
+        { 'big.js': makePseudoFile(size) },
+        'nodejs22.x'
+      );
+    } finally {
+      delete process.env.NEXT_DEBUG_FUNCTION_SIZE;
+    }
+
+    // The group is within its ceiling, so this is informational rather than a
+    // warning — the integration tests rely on this to assert size diagnostics.
+    const output = loggedOutput();
+    expect(output).toContain('Serverless function size info');
+    expect(output).toContain("Serverless Function's page: big.js");
+    expect(output).not.toContain('size was exceeded');
   });
 });

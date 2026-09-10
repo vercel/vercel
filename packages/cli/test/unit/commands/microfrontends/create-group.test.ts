@@ -2,7 +2,7 @@ import { describe, beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import microfrontends from '../../../../src/commands/microfrontends';
 import * as linkModule from '../../../../src/util/projects/link';
-import { teamCache } from '../../../../src/util/teams/get-team-by-id';
+import { teamCache } from '../../../../src/util/teams/get-team-by-id-or-slug';
 import type { MicrofrontendsGroupsResponse } from '../../../../src/commands/microfrontends/types';
 
 vi.mock('../../../../src/util/projects/link');
@@ -177,6 +177,9 @@ describe('microfrontends create-group', () => {
       client.stdin.write('n\n');
 
       expect(await exitCodePromise).toBe(0);
+      expect(mockedGetLinkedProject).toHaveBeenCalledWith(client, {
+        cwd: client.cwd,
+      });
       expect(mocks.getPostCalled()).toBe(true);
       expect(mocks.getPostBody()).toEqual({
         groupName: 'My Group',

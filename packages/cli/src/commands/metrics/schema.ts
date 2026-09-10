@@ -6,7 +6,14 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { schemaSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
-import { fetchMetricDetailOrExit, fetchMetricListOrExit } from './schema-api';
+import {
+  fetchCatalogMetricDetailOrExit,
+  fetchCombinedMetricListOrExit,
+  fetchCustomMetricDetailOrExit,
+  fetchMetricCatalogListOrExit,
+  fetchMetricDetailOrExit,
+  type MetricCatalogMetric,
+} from './schema-api';
 import { formatErrorJson } from './output';
 import formatTable from '../../util/format-table';
 import indent from '../../util/output/indent';
@@ -56,27 +63,58 @@ export default async function schema(
     return 1;
   }
 
+  const useMetricsV1 = !process.env.FF_LEGACY_METRICS;
+
   if (metric) {
-    // Metric detail
-    const detailOrExitCode = await fetchMetricDetailOrExit(
-      client,
-      team.id,
-      metric,
-      jsonOutput
-    );
-    // fetchMetricDetailOrExit() returns a numeric exit code when it already
-    // handled the error output for us.
-    if (typeof detailOrExitCode === 'number') {
-      return detailOrExitCode;
+    const isPlatformMetric = metric.startsWith('vercel.');
+    let detail: MetricDetail[] | MetricCatalogMetric[];
+    if (useMetricsV1) {
+      const result = await fetchCatalogMetricDetailOrExit(
+        client,
+        team.id,
+        jsonOutput,
+        metric,
+        isPlatformMetric ? 'system' : 'custom'
+      );
+      if (typeof result === 'number') return result;
+      detail = result;
+    } else if (isPlatformMetric) {
+      const result = await fetchMetricDetailOrExit(
+        client,
+        team.id,
+        metric,
+        jsonOutput
+      );
+      if (typeof result === 'number') return result;
+      detail = result;
+    } else {
+      const result = await fetchCustomMetricDetailOrExit(
+        client,
+        team.id,
+        jsonOutput,
+        metric
+      );
+      if (typeof result === 'number') return result;
+      detail = result;
+    }
+
+    if (detail.length === 0) {
+      const message = `No metrics match "${metric}". Run \`vercel metrics schema\` to see available metrics.`;
+      if (jsonOutput) {
+        client.stdout.write(formatErrorJson('METRIC_NOT_FOUND', message));
+      } else {
+        output.error(message);
+      }
+      return 1;
     }
 
     if (jsonOutput) {
-      client.stdout.write(JSON.stringify(detailOrExitCode, null, 2));
+      client.stdout.write(JSON.stringify(detail, null, 2));
       return 0;
     }
 
     output.log(`Metric: ${metric}`);
-    const metricsTable = formatMetricsTable(detailOrExitCode);
+    const metricsTable = formatMetricsTable(toDisplayMetrics(detail));
     if (metricsTable) {
       output.print(metricsTable);
       output.print('\n');
@@ -86,12 +124,10 @@ export default async function schema(
   }
 
   // Metric list
-  const metricsOrExitCode = await fetchMetricListOrExit(
-    client,
-    team.id,
-    jsonOutput
-  );
-  // fetchMetricListOrExit() returns a numeric exit code when it already
+  const metricsOrExitCode = useMetricsV1
+    ? await fetchMetricCatalogListOrExit(client, team.id, jsonOutput)
+    : await fetchCombinedMetricListOrExit(client, team.id, jsonOutput);
+  // The helper returns a numeric exit code when it already
   // handled the error output for us.
   if (typeof metricsOrExitCode === 'number') {
     return metricsOrExitCode;
@@ -119,13 +155,41 @@ function formatMetricListTable(metrics: MetricListItem[]) {
   );
 }
 
-function formatMetricsTable(metrics: MetricDetail[]) {
+interface DisplayMetric {
+  readonly id: string;
+  readonly description: string;
+  readonly dimensions: readonly string[];
+  readonly unit: string;
+  readonly aggregations: readonly string[];
+}
+
+function toDisplayMetrics(
+  metrics: readonly (MetricDetail | MetricCatalogMetric)[]
+): DisplayMetric[] {
+  return metrics.map(metric => {
+    const dimensions = metric.dimensions.map(dimension =>
+      typeof dimension === 'string' ? dimension : dimension.name
+    );
+    return {
+      id: metric.id,
+      description: metric.description,
+      dimensions,
+      unit: metric.unit,
+      aggregations: metric.aggregations.map(aggregation =>
+        'defaultAggregation' in metric &&
+        aggregation === metric.defaultAggregation
+          ? `${aggregation} (default)`
+          : aggregation
+      ),
+    };
+  });
+}
+
+function formatMetricsTable(metrics: readonly DisplayMetric[]) {
   if (metrics.length === 0) {
     return null;
   }
-  const dimensionsByMetric = metrics.map(metric =>
-    metric.dimensions.map(dimension => dimension.name)
-  );
+  const dimensionsByMetric = metrics.map(metric => metric.dimensions);
   const sharedDimensions = dimensionsByMetric[0]!.filter(dimension =>
     dimensionsByMetric.every(metricDimensions =>
       metricDimensions.includes(dimension)
@@ -134,17 +198,10 @@ function formatMetricsTable(metrics: MetricDetail[]) {
 
   const rows = metrics.map(metric => {
     const extraDimensions = metric.dimensions
-      .map(dimension => dimension.name)
       .filter(dimension => !sharedDimensions.includes(dimension))
       .map(dimension => `+${dimension}`);
 
-    const aggregations = metric.aggregations
-      .map(aggregation =>
-        aggregation === metric.defaultAggregation
-          ? `${aggregation} (default)`
-          : aggregation
-      )
-      .join(', ');
+    const aggregations = metric.aggregations.join(', ');
 
     return {
       metric: metric.id,
@@ -188,7 +245,5 @@ function formatMetricsTable(metrics: MetricDetail[]) {
     1
   );
 
-  return sharedDimensionsLine
-    ? `\n${table}\n\n${sharedDimensionsLine}`
-    : `\n${table}`;
+  return [`\n${table}`, sharedDimensionsLine].filter(Boolean).join('\n\n');
 }

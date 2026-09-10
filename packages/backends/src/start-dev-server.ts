@@ -4,6 +4,7 @@ import type {
   StartDevServer,
   StartDevServerSuccess,
 } from '@vercel/build-utils';
+import { getNodeVersion, isBunVersion } from '@vercel/build-utils';
 import { findEntrypointWithHintOrThrow } from './find-entrypoint.js';
 import { spawnSrvx } from './dev/spawn-srvx.js';
 
@@ -164,11 +165,18 @@ export const startDevServer: StartDevServer = async opts => {
     return null;
   }
 
-  const key = `${opts.workPath}::${opts.entrypoint ?? '<detect>'}`;
   const entrypoint = await findEntrypointWithHintOrThrow(
     opts.workPath,
     opts.entrypoint
   );
+  const runtimeVersion = await getNodeVersion(
+    opts.workPath,
+    undefined,
+    opts.config,
+    opts.meta
+  );
+  const runtime = isBunVersion(runtimeVersion) ? 'bun' : 'node';
+  const key = `${opts.workPath}::${opts.entrypoint ?? '<detect>'}::${runtime}`;
   const env = { ...opts.meta?.env };
   installCleanupHandlers();
 
@@ -225,6 +233,7 @@ export const startDevServer: StartDevServer = async opts => {
       signal: controller.signal,
       onStdout: opts.onStdout,
       onStderr: opts.onStderr,
+      runtime,
     }).then(async result => {
       const server: PersistentDevServer = { files, env, result };
       if (shuttingDown) {

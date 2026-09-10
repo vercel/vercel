@@ -1,23 +1,27 @@
 import fs from 'fs-extra';
-import { join } from 'path';
+import { join, relative, resolve } from 'path';
 import ini from 'ini';
 import git from 'git-last-commit';
 import { exec } from 'child_process';
 import type { GitMetadata, Project } from '@vercel-internals/types';
 import { errorToString, normalizeError } from '@vercel/error-utils';
 import output from '../output-manager';
+import { getGitRootDirectory } from './git-helpers';
 
 export async function createGitMeta(
   directory: string,
   project?: Project | null
 ): Promise<GitMetadata | undefined> {
+  const gitRoot = getGitRootDirectory({ cwd: directory });
+  const gitConfigPath = join(gitRoot || directory, '.git/config');
+
   // If a Git repository is already connected via `vc git`, use that remote url
   let remoteUrl;
   if (project?.link) {
     // in the form of org/repo
     const { repo } = project.link;
 
-    const remoteUrls = await getRemoteUrls(join(directory, '.git/config'));
+    const remoteUrls = await getRemoteUrls(gitConfigPath);
     if (remoteUrls) {
       for (const urlValue of Object.values(remoteUrls)) {
         if (urlValue.includes(repo)) {
@@ -29,7 +33,7 @@ export async function createGitMeta(
 
   // If we couldn't get a remote url from the connected repo, default to the origin url
   if (!remoteUrl) {
-    remoteUrl = await getOriginUrl(join(directory, '.git/config'));
+    remoteUrl = await getOriginUrl(gitConfigPath);
   }
 
   const [commitResult, dirtyResult] = await Promise.allSettled([
@@ -62,7 +66,33 @@ export async function createGitMeta(
     commitRef: commit.branch,
     commitSha: commit.hash,
     dirty,
+    rootDirectory: getRootDirectory(directory, gitRoot),
   };
+}
+
+/**
+ * Returns the deployed directory path relative to the git repository root.
+ * Empty string when `directory` is the repository root.
+ */
+export function getRootDirectory(
+  directory: string,
+  gitRoot: string | null = getGitRootDirectory({ cwd: directory })
+): string | undefined {
+  if (!gitRoot) {
+    return;
+  }
+
+  const rootDirectory = relative(gitRoot, resolve(directory)).replace(
+    /\\/g,
+    '/'
+  );
+
+  // Outside the repository (shouldn't happen when gitRoot was resolved from directory)
+  if (rootDirectory === '..' || rootDirectory.startsWith('../')) {
+    return;
+  }
+
+  return rootDirectory === '.' ? '' : rootDirectory;
 }
 
 function getLastCommit(directory: string): Promise<git.Commit> {

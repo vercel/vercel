@@ -1,0 +1,346 @@
+name: Nightly Tests (No Turbo Cache)
+
+# Temporary workflow while we investigate turborepo cache key issues.
+# Runs the full test suite (all packages, unit + e2e) with the turbo
+# cache fully disabled (TURBO_FORCE, no remote cache setup), so results
+# reflect real test execution rather than cache hits.
+#
+# Alerts by opening (or updating) a GitHub issue when the run fails.
+on:
+  workflow_dispatch:
+  schedule:
+    # 1am Pacific. 08:00 UTC == 1am PDT; during PST (winter) this runs
+    # at midnight Pacific. Close enough for a nightly job.
+    - cron: '0 8 * * *'
+
+permissions:
+  contents: read
+
+env:
+  VERCEL_TELEMETRY_DISABLED: '1'
+  # Force turbo to ignore all caches (local and remote) for every task.
+  TURBO_FORCE: 'true'
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  setup:
+    name: Chunk Tests
+    runs-on: ubuntu-latest
+    outputs:
+      unitTests: ${{ steps['set-tests'].outputs['unitTests'] }}
+      e2eTests: ${{ steps['set-tests'].outputs['e2eTests'] }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: install turbo@2.10.8
+        run: npm i -g turbo@2.10.8
+      - id: set-tests
+        # No TURBO_BASE_SHA here on purpose: chunk-tests.js falls back to
+        # the "test-all" strategy, which is exactly what we want nightly.
+        run: |
+          UNIT_TESTS_ARRAY=$(TEST_TYPE=unit node utils/chunk-tests.js)
+          E2E_TESTS_ARRAY=$(TEST_TYPE=e2e node utils/chunk-tests.js)
+          echo "Unit tests to run:"
+          echo "$UNIT_TESTS_ARRAY"
+          echo "E2E tests to run:"
+          echo "$E2E_TESTS_ARRAY"
+          echo "unitTests=$UNIT_TESTS_ARRAY" >> $GITHUB_OUTPUT
+          echo "e2eTests=$E2E_TESTS_ARRAY" >> $GITHUB_OUTPUT
+
+  unit-test:
+    timeout-minutes: 120
+    runs-on: ${{ matrix.runner }}
+    name: Unit / ${{ matrix.label }}
+    permissions:
+      contents: read
+      id-token: write
+    if: ${{ needs.setup.outputs['unitTests'] != '[]' }}
+    needs:
+      - setup
+    strategy:
+      fail-fast: false
+      max-parallel: 75
+      matrix:
+        include: ${{ fromJson(needs.setup.outputs['unitTests']) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.nodeVersion }}
+
+      - name: Setup Go toolchain
+        if: ${{ matrix.needsGo == true }}
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.23.12'
+          cache: false
+
+      - name: Setup Rust toolchain
+        if: ${{ matrix.needsRust == true }}
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+        with:
+          toolchain: '1.96.1'
+          targets: wasm32-wasip2
+
+      # yarn 1.22.21 introduced a Corepack bug when running tests.
+      # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
+      - name: install yarn@1.22.19
+        run: npm i -g yarn@1.22.19
+
+      - name: install pnpm@10.29.3
+        run: npm i -g pnpm@10.29.3
+
+      - name: install uv@0.10.11
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          version: '0.10.11'
+
+      - run: pnpm install
+
+      - name: Test ${{matrix.packageName}}
+        timeout-minutes: 30
+        run: |
+          echo "Running tests (no turbo cache): ${{matrix.testScript}} ${{matrix.packageName}}"
+
+          # When VITEST_TEST_FILES is set, the test script reads paths from that env var
+          # instead of CLI args, avoiding the Windows cmd.exe ~8191 char arg limit.
+          if [ -n "$VITEST_TEST_FILES" ]; then
+            node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --force --summarize --cache-dir='.turbo' --log-order=stream --filter=${{matrix.packageName}}
+          else
+            node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --force --summarize --cache-dir='.turbo' --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}
+          fi
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          CARGO_NET_GIT_FETCH_WITH_CLI: 'true'
+          FORCE_COLOR: '1'
+          VITEST_TEST_FILES: ${{ matrix.useEnvPaths == true && join(matrix.testPaths, ' ') || '' }}
+
+  e2e-test:
+    timeout-minutes: 120
+    runs-on: ${{ matrix.runner }}
+    name: E2E / ${{ matrix.label }}
+    permissions:
+      contents: read
+      deployments: read
+      id-token: write
+      statuses: read
+    if: ${{ needs.setup.outputs['e2eTests'] != '[]' }}
+    needs:
+      - setup
+    strategy:
+      fail-fast: false
+      max-parallel: 75
+      matrix:
+        include: ${{ fromJson(needs.setup.outputs['e2eTests']) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.nodeVersion }}
+
+      - name: Setup Go toolchain
+        if: ${{ matrix.needsGo == true }}
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.23.12'
+          cache: false
+
+      - name: Setup Rust toolchain
+        if: ${{ matrix.needsRust == true }}
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+        with:
+          toolchain: '1.96.1'
+          targets: wasm32-wasip2
+
+      # yarn 1.22.21 introduced a Corepack bug when running tests.
+      # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
+      - name: install yarn@1.22.19
+        run: npm i -g yarn@1.22.19
+
+      - name: install pnpm@10.29.3
+        run: npm i -g pnpm@10.29.3
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          version: '0.10.11'
+
+      - name: Install Ruby + Bundler
+        if: ${{ matrix.packageName == 'vercel' }}
+        uses: ruby/setup-ruby@9eb537ca036ebaed86729dcb9309076e4c5c3b74 # v1.314.0
+        with:
+          ruby-version: '3.3'
+
+      - run: pnpm install
+
+      - name: Wait for deployment tarballs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          # E2E needs the CLI and Python wheel tarballs produced by the Vercel
+          # deployment for this commit. Main commits are deployed by Vercel,
+          # which reports back via deployment statuses and commit statuses.
+          # We poll those records for candidate URLs, then trust a URL only
+          # after the actual tarball endpoint responds.
+          validate_deployment_url() {
+            local url="${1%/}"
+            if [ -z "$url" ]; then
+              return 1
+            fi
+
+            if curl -fsI "$url/tarballs/vercel.tgz" >/dev/null; then
+              echo "DPL_URL=$url" >> "$GITHUB_ENV"
+              echo "VERCEL_CLI_VERSION=$url/tarballs/vercel.tgz" >> "$GITHUB_ENV"
+              echo "Deployment tarball is ready at $url/tarballs/vercel.tgz"
+              return 0
+            fi
+
+            return 1
+          }
+
+          get_candidate_urls() {
+            gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${HEAD_SHA}&per_page=20" \
+              --jq '.[].id' | while IFS= read -r deployment_id; do
+                gh api "repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses" \
+                  --jq '.[] | select(.state == "success" and .environment_url != null and .environment_url != "") | .environment_url'
+              done
+
+            gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/status" \
+              --jq '.statuses[] | select(.state == "success" and .target_url != null and .target_url != "") | .target_url'
+          }
+
+          for attempt in {1..120}; do
+            while IFS= read -r candidate_url; do
+              if validate_deployment_url "$candidate_url"; then
+                exit 0
+              fi
+            done < <(get_candidate_urls | sort -u)
+
+            echo "Deployment tarball is not ready yet (attempt $attempt/120)."
+            sleep 10
+          done
+
+          echo "Timed out waiting for deployment tarball."
+          exit 1
+      - name: Resolve Python wheel URLs
+        shell: bash
+        run: |
+          DEPLOYMENT_URL="$DPL_URL"
+
+          PACKAGES_JSON="$(node utils/get-python-packages.js)"
+          if [ -z "$PACKAGES_JSON" ] || [ "$PACKAGES_JSON" = "[]" ]; then
+            echo "No Python packages discovered; skipping wheel URL resolution."
+            exit 0
+          fi
+
+          echo "$PACKAGES_JSON" | jq -c '.[]' | while IFS= read -r package; do
+            package_slug="$(echo "$package" | jq -r '.packageDir')"
+            package_name="$(echo "$package" | jq -r '.packageName')"
+
+            wheel_name="$(curl -sf "$DEPLOYMENT_URL/tarballs/$package_slug-wheel.json" | jq -r '.filename' || echo "")"
+            if [ -z "$wheel_name" ]; then
+              continue
+            fi
+
+            env_var="$(printf '%s' "$package_name" | tr -c '[:alnum:]' '_' | tr '[:lower:]' '[:upper:]')_PYTHON"
+            echo "$env_var=$package_name @ $DEPLOYMENT_URL/tarballs/$wheel_name" >> "$GITHUB_ENV"
+          done
+      - name: Test ${{matrix.packageName}}
+        timeout-minutes: 45
+        run: |
+          echo "Running tests (no turbo cache): ${{matrix.testScript}} ${{matrix.packageName}}"
+          node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --force --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}
+        shell: bash
+        env:
+          # Per-package pip install specs (e.g. VERCEL_RUNTIME_PYTHON,
+          # VERCEL_WORKERS_PYTHON) are also available here, injected into
+          # $GITHUB_ENV by the "Resolve Python wheel URLs" step above.
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          FORCE_COLOR: '1'
+
+  alert-on-failure:
+    name: Alert On Failure
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
+    needs:
+      - setup
+      - unit-test
+      - e2e-test
+    permissions:
+      issues: write
+    steps:
+      - name: Check results
+        id: check-all
+        run: |-
+          for status in ${{ join(needs.*.result, ' ') }}
+          do
+            if [ "$status" != "success" ] && [ "$status" != "skipped" ]
+            then
+              echo "Some checks failed"
+              echo "state=failure" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          done
+          echo "state=success" >> $GITHUB_OUTPUT
+      - name: Open or update alert issue
+        if: ${{ steps.check-all.outputs.state == 'failure' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = 'Nightly no-cache test run failed';
+            const runUrl = `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+            const body = [
+              `The nightly full test suite (turbo cache disabled) failed on \`${{ github.sha }}\`.`,
+              '',
+              `Run: ${runUrl}`,
+              '',
+              '_This issue is created automatically by the `Nightly Tests (No Turbo Cache)` workflow while we investigate turborepo cache key issues._',
+            ].join('\n');
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'nightly-no-cache-failure',
+              per_page: 10,
+            });
+
+            const existing = issues.find(issue => issue.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: `Failed again on \`${{ github.sha }}\`: ${runUrl}`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['nightly-no-cache-failure'],
+              });
+            }
+      - name: Fail the job if the run failed
+        if: ${{ steps.check-all.outputs.state == 'failure' }}
+        run: exit 1

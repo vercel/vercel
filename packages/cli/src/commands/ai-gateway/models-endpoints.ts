@@ -74,7 +74,7 @@ const count = (value: number | undefined) =>
 
 // Input column: per-token when present, else fall back to the model's actual
 // unit (image / per-second video / per-character speech / per-request). Full
-// pricing stays in --format json.
+// pricing stays in --json.
 function inputPrice(p: ModelEndpoint['pricing']) {
   if (positive(p?.prompt)) return p?.prompt;
   if (positive(p?.image)) return `${p?.image}/img`;
@@ -98,7 +98,7 @@ function outputPrice(p: ModelEndpoint['pricing']) {
 
 function printEndpointsTable(list: ModelEndpoint[]) {
   // Keep the default view scannable on an 80-col terminal. Throughput, tags,
-  // and the full pricing/metrics stay available via --format json.
+  // and the full pricing/metrics stay available via --json.
   return `${table(
     [
       ['provider', 'context', 'input', 'output', 'p50 ttft', 'uptime'].map(

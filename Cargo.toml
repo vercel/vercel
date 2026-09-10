@@ -1,4 +1,19 @@
 [workspace]
 resolver = "3"
 members = ["crates/vercel_runtime"]
-exclude = ["examples/axum", "examples/actix-web"]
+exclude = [
+  "examples/axum",
+  "examples/actix-web",
+  "packages/rust/test/fixtures/01-standalone-std",
+  "packages/rust/test/fixtures/02-standalone-axum",
+  "packages/rust/test/fixtures/03-standalone-actix",
+  "packages/rust/test/fixtures/04-crate-whole-app",
+  "packages/rust/test/fixtures/05-crate-api-handler",
+  "packages/rust/test/fixtures/06-crate-api-plain",
+  "packages/rust/test/fixtures/07-server-rewrite",
+  "packages/rust/test/fixtures/08-services-server-rewrite/backend",
+  "packages/rust/test/fixtures/09-standalone-bin",
+]
+
+[workspace.metadata]
+name = "vercel-rust-workspace"

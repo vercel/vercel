@@ -1,0 +1,279 @@
+import { describe, expect, test } from 'vitest';
+import { promises as fs } from 'fs';
+import { join } from 'path';
+import type { NodejsLambda } from '@vercel/build-utils';
+import { streamToBuffer } from '@vercel/build-utils';
+import { build } from '../../src';
+import { normalizeFiles, normalizePath, prepareFilesystem } from './test-utils';
+
+const projectSettings = { installCommand: '' };
+const nodeCommand = 'node';
+const writerSource = `
+  const { writeFileSync } = require('fs');
+  const [filename, value] = process.argv.slice(2);
+  writeFileSync(filename, 'module.exports = (_req, res) => res.end(' + JSON.stringify(value) + ');');
+`;
+
+function packageWriteCommand(value: string, filename = 'index.cjs') {
+  return `${nodeCommand} ../write-handler.cjs ${filename} ${value}`;
+}
+
+function rootWriteCommand(value: string, filename: string) {
+  return `${nodeCommand} write-handler.cjs ${filename} ${value}`;
+}
+
+async function readFile(lambda: NodejsLambda, path: string) {
+  return (
+    await streamToBuffer(normalizeFiles(lambda.files)[path].toStream())
+  ).toString();
+}
+
+async function buildScriptFixture(
+  scripts: Record<string, string>,
+  options: {
+    buildCommand?: string;
+    entrypoint?: string;
+    entrypointCallback?: () => Promise<string>;
+    config?: Parameters<typeof build>[0]['config'];
+  } = {}
+) {
+  const entrypoint = options.entrypoint ?? 'api/index.cjs';
+  const filesystem = await prepareFilesystem({
+    'write-handler.cjs': writerSource,
+    'api/package.json': JSON.stringify({ scripts }),
+    [entrypoint]: `module.exports = (_req, res) => res.end('original');`,
+  });
+  const result = await build({
+    ...filesystem,
+    entrypoint,
+    entrypointCallback: options.entrypointCallback,
+    considerBuildCommand: true,
+    config: {
+      ...options.config,
+      projectSettings: {
+        ...projectSettings,
+        buildCommand: options.buildCommand,
+      },
+    },
+    meta: { skipDownload: true },
+  });
+  return { filesystem, lambda: result.output as NodejsLambda };
+}
+
+describe('build lifecycle contract', () => {
+  test('runs a custom install command before the build lifecycle', async () => {
+    const filesystem = await prepareFilesystem({
+      'write-handler.cjs': writerSource,
+      'write-marker.cjs': `require('fs').writeFileSync('install.marker', 'installed');`,
+      'api/package.json': JSON.stringify({
+        scripts: { build: packageWriteCommand('installed-before-build') },
+      }),
+      'api/index.cjs': `module.exports = () => {};`,
+    });
+
+    const result = await build({
+      ...filesystem,
+      entrypoint: 'api/index.cjs',
+      considerBuildCommand: true,
+      entrypointCallback: async () => {
+        expect(
+          await fs.readFile(
+            join(filesystem.workPath, 'api/install.marker'),
+            'utf8'
+          )
+        ).toBe('installed');
+        return 'index.cjs';
+      },
+      config: {
+        projectSettings: {
+          installCommand: `${nodeCommand} ../write-marker.cjs`,
+        },
+      },
+      meta: { skipDownload: true },
+    });
+
+    expect(
+      await readFile(result.output as NodejsLambda, 'api/index.cjs')
+    ).toContain('installed-before-build');
+  });
+
+  test('runs vercel-build before now-build and build', async () => {
+    const { lambda } = await buildScriptFixture({
+      'vercel-build': packageWriteCommand('vercel-build'),
+      'now-build': packageWriteCommand('now-build'),
+      build: packageWriteCommand('build'),
+    });
+
+    expect(await readFile(lambda, 'api/index.cjs')).toContain('vercel-build');
+    expect(await readFile(lambda, 'api/index.cjs')).not.toContain('now-build');
+  });
+
+  test('falls back from vercel-build to now-build', async () => {
+    const { lambda } = await buildScriptFixture({
+      'now-build': packageWriteCommand('now-build'),
+      build: packageWriteCommand('build'),
+    });
+
+    expect(await readFile(lambda, 'api/index.cjs')).toContain('now-build');
+    expect(await readFile(lambda, 'api/index.cjs')).not.toContain(
+      "end('build')"
+    );
+  });
+
+  test('uses build when no Vercel-specific script exists', async () => {
+    const { lambda } = await buildScriptFixture({
+      build: packageWriteCommand('build'),
+    });
+
+    expect(await readFile(lambda, 'api/index.cjs')).toContain('build');
+  });
+
+  test('an explicit project buildCommand takes precedence over package scripts', async () => {
+    const { lambda } = await buildScriptFixture(
+      {
+        'vercel-build': packageWriteCommand('vercel-build'),
+        build: packageWriteCommand('build'),
+      },
+      {
+        buildCommand: rootWriteCommand(
+          'project-build-command',
+          'api/index.cjs'
+        ),
+      }
+    );
+
+    expect(await readFile(lambda, 'api/index.cjs')).toContain(
+      'project-build-command'
+    );
+  });
+
+  test('entrypointCallback selects a file generated by the build script', async () => {
+    let callbackCalls = 0;
+    const filesystem = await prepareFilesystem({
+      'write-handler.cjs': writerSource,
+      'api/package.json': JSON.stringify({
+        scripts: {
+          build: packageWriteCommand('generated', 'generated.cjs'),
+        },
+      }),
+      'api/placeholder.cjs': `module.exports = () => {};`,
+    });
+
+    const result = await build({
+      ...filesystem,
+      entrypoint: 'api/placeholder.cjs',
+      considerBuildCommand: true,
+      entrypointCallback: async () => {
+        callbackCalls++;
+        expect(
+          await fs.readFile(
+            join(filesystem.workPath, 'api/generated.cjs'),
+            'utf8'
+          )
+        ).toContain('generated');
+        return 'generated.cjs';
+      },
+      config: { projectSettings },
+      meta: { skipDownload: true },
+    });
+    const lambda = result.output as NodejsLambda;
+
+    expect(callbackCalls).toBe(1);
+    expect(normalizePath(lambda.handler)).toBe('api/generated.cjs');
+    expect(await readFile(lambda, 'api/generated.cjs')).toContain('generated');
+  });
+
+  test('entrypointCallback merges global and generated-function file rules', async () => {
+    const filesystem = await prepareFilesystem({
+      'write-handler.cjs': writerSource,
+      'api/package.json': JSON.stringify({
+        scripts: {
+          build: packageWriteCommand('generated', 'generated.cjs'),
+        },
+      }),
+      'api/placeholder.cjs': `module.exports = () => {};`,
+      'api/global.txt': 'global include',
+      'api/function.txt': 'function include',
+      'api/excluded-global.txt': 'global exclude',
+      'api/excluded-function.txt': 'function exclude',
+    });
+
+    const result = await build({
+      ...filesystem,
+      entrypoint: 'api/placeholder.cjs',
+      considerBuildCommand: true,
+      entrypointCallback: async () => 'generated.cjs',
+      config: {
+        projectSettings,
+        includeFiles: ['api/global.txt'],
+        excludeFiles: ['api/excluded-global.txt'],
+        functions: {
+          'generated.cjs': {
+            includeFiles: ['api/function.txt'],
+            excludeFiles: ['api/excluded-function.txt'],
+          },
+        },
+      },
+      meta: { skipDownload: true },
+    });
+    const files = Object.keys(
+      normalizeFiles((result.output as NodejsLambda).files)
+    );
+
+    expect(files).toEqual(
+      expect.arrayContaining([
+        'api/generated.cjs',
+        'api/global.txt',
+        'api/function.txt',
+      ])
+    );
+    expect(files).not.toContain('api/excluded-global.txt');
+    expect(files).not.toContain('api/excluded-function.txt');
+  });
+
+  test('invokes checks after static config and runtime detection', async () => {
+    const filesystem = await prepareFilesystem({
+      'api/index.cjs': `module.exports = (_req, res) => res.end('ok');`,
+    });
+    const calls: Array<{ config: unknown; isBun: boolean }> = [];
+
+    await build({
+      ...filesystem,
+      entrypoint: 'api/index.cjs',
+      config: {},
+      checks: project => calls.push(project),
+      meta: { skipDownload: true },
+    });
+
+    expect(calls).toEqual([{ config: {}, isBun: false }]);
+  });
+
+  test('propagates a failing build command without invoking entrypointCallback', async () => {
+    let callbackCalls = 0;
+    const filesystem = await prepareFilesystem({
+      'fail-build.cjs': `process.exit(23);`,
+      'api/package.json': JSON.stringify({ scripts: {} }),
+      'api/index.cjs': `module.exports = () => {};`,
+    });
+
+    await expect(
+      build({
+        ...filesystem,
+        entrypoint: 'api/index.cjs',
+        considerBuildCommand: true,
+        entrypointCallback: async () => {
+          callbackCalls++;
+          return 'generated.cjs';
+        },
+        config: {
+          projectSettings: {
+            installCommand: '',
+            buildCommand: `${nodeCommand} fail-build.cjs`,
+          },
+        },
+        meta: { skipDownload: true },
+      })
+    ).rejects.toThrow('exited with 23');
+    expect(callbackCalls).toBe(0);
+  });
+});

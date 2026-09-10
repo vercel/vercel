@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Celery Jobs</title>
+  </head>
+  <body>
+    <h1>Celery Jobs</h1>
+    <p>Enqueue a background job on the FastAPI service and watch the Celery
+      worker process it.</p>
+    <button id="enqueue">Enqueue job</button>
+    <pre id="result">no job yet</pre>
+    <script>
+      const resultEl = document.getElementById('result');
+
+      async function pollStatus(requestId) {
+        for (let i = 0; i < 20; i++) {
+          const res = await fetch(`/api/status/${requestId}`);
+          const data = await res.json();
+          resultEl.textContent = JSON.stringify(data, null, 2);
+          if (data.processed) return;
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+        resultEl.textContent += '\n(timed out waiting for the worker)';
+      }
+
+      document.getElementById('enqueue').addEventListener('click', async () => {
+        const requestId = Math.random().toString(16).slice(2);
+        resultEl.textContent = `enqueued ${requestId}, waiting for the worker...`;
+        await fetch('/api/enqueue', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ request_id: requestId, x: 2, y: 3 }),
+        });
+        await pollStatus(requestId);
+      });
+    </script>
+  </body>
+</html>

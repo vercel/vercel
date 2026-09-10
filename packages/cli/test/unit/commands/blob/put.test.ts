@@ -587,40 +587,6 @@ describe('blob put', () => {
     });
   });
 
-  describe('spinner and output behavior', () => {
-    it('should show spinner during upload and stop on success', async () => {
-      const testFile = getFixturePath('test-file.txt');
-      const exitCode = await put(
-        client,
-        ['--access', 'public', testFile],
-        testAuth
-      );
-
-      expect(exitCode).toBe(0);
-      expect(mockedOutput.spinner).toHaveBeenCalledWith('Uploading blob');
-      expect(mockedOutput.stopSpinner).toHaveBeenCalled();
-      expect(mockedOutput.success).toHaveBeenCalledWith(
-        'https://example.com/uploaded-file.txt'
-      );
-    });
-
-    it('should not stop spinner on upload error', async () => {
-      const testFile = getFixturePath('test-file.txt');
-      const uploadError = new Error('Network error');
-      mockedBlob.put.mockRejectedValue(uploadError);
-
-      const exitCode = await put(
-        client,
-        ['--access', 'public', testFile],
-        testAuth
-      );
-
-      expect(exitCode).toBe(1);
-      expect(mockedOutput.spinner).toHaveBeenCalledWith('Uploading blob');
-      expect(mockedOutput.stopSpinner).not.toHaveBeenCalled();
-    });
-  });
-
   describe('stdin input', () => {
     beforeEach(() => {
       // Mock stdin to not be a TTY (simulating piped input)

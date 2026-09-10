@@ -3,11 +3,51 @@
   "extends": ["//"],
   "tasks": {
     "build": {
+      "dependsOn": [
+        "@vercel-internals/builder-orchestration#build",
+        "@vercel-internals/cli-builder-integration#build",
+        "@vercel-internals/service-topology#build",
+        "@vercel/build-utils#build",
+        "@vercel/client#build",
+        "@vercel/fs-detectors#build",
+        "@vercel/routing-utils#build"
+      ],
       "outputs": [
         "dist/**",
         "src/util/constants.ts",
         "src/util/dev/templates/*.ts"
       ]
+    },
+    "build-binary": {
+      "cache": false,
+      "dependsOn": ["build:package"]
+    },
+    "build-binary:host": {
+      "cache": false,
+      "dependsOn": ["build:package"]
+    },
+    "test": {
+      "dependsOn": ["build:package", "//#generate:cache-keys"]
+    },
+    "test-e2e": {
+      "dependsOn": ["//#generate:cache-keys"]
+    },
+    "test-e2e-artifacts": {
+      "command": [
+        "node",
+        "scripts/test.mjs",
+        "--run",
+        "test/e2e-curl-deploy.test.ts",
+        "test/e2e-curl-deploy-no-framework.test.ts"
+      ],
+      "dependsOn": ["//#generate:cache-keys"]
+    },
+    "test-dev-artifacts": {
+      "command": ["pnpm", "run", "test-dev"]
+    },
+    "test-unit": {
+      "dependsOn": ["build:package", "//#generate:cache-keys"],
+      "inputs": ["$TURBO_EXTENDS$", "$TURBO_ROOT$/skills/vercel-cli/**"]
     }
   }
 }

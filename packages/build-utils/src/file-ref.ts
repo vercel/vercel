@@ -1,5 +1,6 @@
 import assert from 'assert';
-import nodeFetch from 'node-fetch';
+import { Readable } from 'stream';
+import type { ReadableStream } from 'stream/web';
 import multiStream from 'multistream';
 import retry from 'async-retry';
 import Sema from 'async-sema';
@@ -106,15 +107,17 @@ export default class FileRef implements FileBase {
     try {
       return await retry(
         async () => {
-          const resp = await nodeFetch(url);
-          if (!resp.ok) {
+          const resp = await fetch(url);
+          if (!resp.ok || !resp.body) {
             const error = new BailableError(
               `download: ${resp.status} ${resp.statusText} for ${url}`
             );
             if (resp.status === 403) error.bail = true;
+            // Consume the body so the connection can be released.
+            await resp.body?.cancel().catch(() => {});
             throw error;
           }
-          return resp.body;
+          return Readable.fromWeb(resp.body as ReadableStream<Uint8Array>);
         },
         { factor: 1, retries: 3 }
       );

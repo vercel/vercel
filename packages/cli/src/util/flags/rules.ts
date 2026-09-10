@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { getFlagAttributeType } from './attribute-types';
 import {
   FLAG_CONDITION_RHS_OPTIONAL_COMPARATORS,
   formatFlagConditionComparator,
@@ -8,6 +9,7 @@ import { resolveVariantOrThrow } from './resolve-variant';
 import { resolveFlagSplit } from './split';
 import { resolveFlagRollout } from './rollout';
 import { formatFlagOutcome } from './format-flag-outcome';
+import { coerceTimestampCondition, formatTimestampRhs } from './timestamp';
 import type {
   Flag,
   FlagCondition,
@@ -31,7 +33,10 @@ export interface FlagRuleOutcomeOptions {
   start?: string;
 }
 
-export function parseFlagRuleConditions(inputs: string[]): FlagCondition[] {
+export function parseFlagRuleConditions(
+  inputs: string[],
+  settings?: FlagSettings
+): FlagCondition[] {
   const conditionInputs = inputs.flatMap(input => {
     const trimmed = input.trim();
     if (!trimmed || trimmed.startsWith('{')) {
@@ -49,7 +54,13 @@ export function parseFlagRuleConditions(inputs: string[]): FlagCondition[] {
     );
   }
 
-  return conditionInputs.map(parseFlagRuleConditionInput);
+  return conditionInputs.map(input =>
+    coerceTimestampCondition(
+      parseFlagRuleConditionInput(input),
+      settings,
+      'input'
+    )
+  );
 }
 
 export function parseFlagRuleConditionInput(input: string): FlagCondition {
@@ -322,15 +333,26 @@ export function findFlagRule(rules: FlagRule[], ruleId: string): FlagRule {
   return rule;
 }
 
-export function formatFlagRuleCondition(condition: FlagCondition): string {
+export function formatFlagRuleCondition(
+  condition: FlagCondition,
+  settings?: FlagSettings
+): string {
   const lhs =
     condition.lhs.type === 'segment'
       ? 'segment'
       : `${condition.lhs.kind}.${condition.lhs.attribute}`;
-  const comparator = formatFlagConditionComparator(
-    condition.cmp,
-    condition.cmpOptions
-  );
+  const attributeType =
+    condition.lhs.type === 'entity'
+      ? getFlagAttributeType(
+          settings,
+          condition.lhs.kind,
+          condition.lhs.attribute
+        )
+      : undefined;
+  const comparator = formatFlagConditionComparator(condition.cmp, {
+    ...condition.cmpOptions,
+    attributeType,
+  });
 
   if (condition.rhs === undefined || condition.rhs === null) {
     return `${lhs} ${comparator}`;
@@ -349,7 +371,8 @@ export function formatFlagRuleCondition(condition: FlagCondition): string {
     return `${lhs} ${comparator} ${JSON.stringify(condition.rhs)}`;
   }
 
-  return `${lhs} ${comparator} ${String(condition.rhs)}`;
+  const timestampRhs = formatTimestampRhs(condition.rhs, attributeType);
+  return `${lhs} ${comparator} ${timestampRhs ?? String(condition.rhs)}`;
 }
 
 export function formatFlagRuleOutcome(
@@ -365,7 +388,6 @@ function buildRulesEnvironmentConfig(
 ): FlagEnvironmentConfig {
   const nextConfig: FlagEnvironmentConfig = {
     ...envConfig,
-    active: true,
     rules,
   };
 

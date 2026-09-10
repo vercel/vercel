@@ -1,5 +1,240 @@
 # @vercel/static-build
 
+## 9.0.1
+
+### Patch Changes
+
+- Updated dependencies [1817491]
+  - @vercel/build-utils@14.9.1
+  - @vercel/gatsby-plugin-vercel-builder@2.2.53
+
+## 9.0.0
+
+### Patch Changes
+
+- Updated dependencies [392c759]
+  - @vercel/build-utils@14.9.0
+  - @vercel/gatsby-plugin-vercel-builder@2.2.52
+
+## 8.0.0
+
+### Patch Changes
+
+- Updated dependencies [a652a99]
+  - @vercel/build-utils@14.8.0
+  - @vercel/gatsby-plugin-vercel-builder@2.2.51
+
+## 7.0.0
+
+### Patch Changes
+
+- Updated dependencies [26b891e]
+- Updated dependencies [37ff9da]
+  - @vercel/build-utils@14.7.0
+  - @vercel/gatsby-plugin-vercel-builder@2.2.50
+
+## 6.0.1
+
+### Patch Changes
+
+- Updated dependencies [aad9541]
+  - @vercel/build-utils@14.6.1
+  - @vercel/gatsby-plugin-vercel-builder@2.2.49
+
+## 6.0.0
+
+### Minor Changes
+
+- e82de48: Add strict function affinity configuration and serialize it into function outputs.
+
+### Patch Changes
+
+- Updated dependencies [e82de48]
+  - @vercel/build-utils@14.6.0
+  - @vercel/gatsby-plugin-vercel-builder@2.2.48
+
+## 5.0.3
+
+### Patch Changes
+
+- Updated dependencies [b9e12f0]
+  - @vercel/static-config@3.4.3
+
+## 5.0.2
+
+### Patch Changes
+
+- Updated dependencies [a443e57]
+  - @vercel/build-utils@14.5.1
+  - @vercel/gatsby-plugin-vercel-builder@2.2.47
+
+## 5.0.1
+
+### Patch Changes
+
+- 2c363fd: Use Oxc as `@vercel/static-config`'s primary parser with a traced ts-morph compatibility fallback.
+- Updated dependencies [2c363fd]
+  - @vercel/static-config@3.4.2
+
+## 5.0.0
+
+### Patch Changes
+
+- Updated dependencies [90afd71]
+  - @vercel/build-utils@14.5.0
+  - @vercel/gatsby-plugin-vercel-builder@2.2.46
+
+## 4.0.1
+
+### Patch Changes
+
+- Updated dependencies [e5b0363]
+  - @vercel/build-utils@14.4.1
+  - @vercel/gatsby-plugin-vercel-builder@2.2.45
+
+## 4.0.0
+
+### Patch Changes
+
+- Updated dependencies [f8add0a]
+  - @vercel/build-utils@14.4.0
+  - @vercel/gatsby-plugin-vercel-builder@2.2.44
+
+## 3.0.0
+
+### Patch Changes
+
+- cd6b038: Honor `package.json` pnpm pins without Corepack, and default new projects to pnpm 11.
+
+  When Corepack is off, `devEngines.packageManager` is preferred, then a lockfile-compatible `packageManager` field, then `engines.pnpm` as a selector. Unpinned lockfile `9.0` projects created on or after 2026-08-19 use pnpm 11 (Node 22+) if `/pnpm11` is present in the build image; otherwise they keep pnpm 10.
+
+- 0d71a61: Declare `@vercel/build-utils` as a peer dependency provided by Vercel CLI so builders load correctly with strict dependency isolation, including pnpm global installs.
+- Updated dependencies [0b08df6]
+- Updated dependencies [cd6b038]
+- Updated dependencies [96444ba]
+  - @vercel/build-utils@14.3.0
+  - @vercel/gatsby-plugin-vercel-builder@2.2.43
+
+## 2.12.8
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.42
+
+## 2.12.7
+
+### Patch Changes
+
+- b4f09c1: Support selecting Bun 1.4.x as an explicit runtime and build-time package manager, including local Bun servers.
+  - @vercel/gatsby-plugin-vercel-builder@2.2.41
+
+## 2.12.6
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.40
+
+## 2.12.5
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+  - @vercel/gatsby-plugin-vercel-builder@2.2.39
+
+## 2.12.4
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.38
+
+## 2.12.3
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.37
+
+## 2.12.2
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.36
+
+## 2.12.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/gatsby-plugin-vercel-analytics@1.0.12
+  - @vercel/gatsby-plugin-vercel-builder@2.2.35
+  - @vercel/static-config@3.4.1
+
+## 2.12.0
+
+### Minor Changes
+
+- 5619873: Fix api dir builds receiving incorrect framework or runtime.
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.34
+
+## 2.11.13
+
+### Patch Changes
+
+- a69c714: Propagate per-function `maxConcurrency` configuration into build outputs and keep every configured Next.js route in its own Lambda group, including routes with the same limit.
+  - @vercel/gatsby-plugin-vercel-builder@2.2.33
+
+## 2.11.12
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.32
+
+## 2.11.11
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.31
+
+## 2.11.10
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.30
+
+## 2.11.9
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.29
+
+## 2.11.8
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.28
+
+## 2.11.7
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.27
+
+## 2.11.6
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.26
+
+## 2.11.5
+
+### Patch Changes
+
+- 6b2cfc6: Reject routePrefix path traversal when mounting static build output
+  - @vercel/gatsby-plugin-vercel-builder@2.2.25
+
 ## 2.11.4
 
 ### Patch Changes

@@ -1,13 +1,23 @@
 import { packageName } from '../../util/pkg-name';
-import { yesOption } from '../../util/arg-common';
+import { projectOption, yesOption } from '../../util/arg-common';
+
+export const teamLevelOption = {
+  name: 'team-level',
+  shorthand: null,
+  type: Boolean,
+  deprecated: false,
+  description:
+    'Operate on the team-level firewall configuration, which applies to every project in the team. No linked project required. Cannot be combined with --project',
+} as const;
 
 export const overviewSubcommand = {
   name: 'overview',
   aliases: [],
   description:
-    "Show a summary of your project's firewall configuration, including active rules, IP blocks, bypasses, and any unpublished draft changes",
+    "Show your project's firewall configuration with the last day of activity: traffic by action, the busiest rules, and alerts raised in the same window",
   arguments: [],
   options: [
+    projectOption,
     {
       name: 'json',
       shorthand: null,
@@ -18,8 +28,36 @@ export const overviewSubcommand = {
   ],
   examples: [
     {
-      name: 'Show firewall overview',
+      name: 'Show firewall configuration and recent activity',
       value: `${packageName} firewall overview`,
+    },
+    {
+      name: 'Report the same data as JSON',
+      value: `${packageName} firewall overview --json`,
+    },
+  ],
+} as const;
+
+export const statusSubcommand = {
+  name: 'status',
+  aliases: [],
+  description:
+    'Show firewall configuration in execution order, including managed rulesets and bypass paths',
+  arguments: [],
+  options: [
+    projectOption,
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output as JSON',
+    },
+  ],
+  examples: [
+    {
+      name: 'Show firewall status',
+      value: `${packageName} firewall status`,
     },
   ],
 } as const;
@@ -31,6 +69,8 @@ export const diffSubcommand = {
     'Show draft changes that have been made but are not yet published to production',
   arguments: [],
   options: [
+    projectOption,
+    teamLevelOption,
     {
       name: 'json',
       shorthand: null,
@@ -44,6 +84,10 @@ export const diffSubcommand = {
       name: 'Show unpublished changes',
       value: `${packageName} firewall diff`,
     },
+    {
+      name: 'Show unpublished team-level changes',
+      value: `${packageName} firewall diff --team-level`,
+    },
   ],
 } as const;
 
@@ -53,7 +97,7 @@ export const publishSubcommand = {
   description:
     'Publish all draft firewall changes to production, making them live immediately',
   arguments: [],
-  options: [yesOption],
+  options: [projectOption, teamLevelOption, yesOption],
   examples: [
     {
       name: 'Publish draft changes',
@@ -62,6 +106,10 @@ export const publishSubcommand = {
     {
       name: 'Publish without confirmation',
       value: `${packageName} firewall publish --yes`,
+    },
+    {
+      name: 'Publish team-level draft changes',
+      value: `${packageName} firewall publish --team-level`,
     },
   ],
 } as const;
@@ -72,7 +120,7 @@ export const discardSubcommand = {
   description:
     'Permanently discard all unpublished draft changes, reverting to the current production configuration',
   arguments: [],
-  options: [yesOption],
+  options: [projectOption, teamLevelOption, yesOption],
   examples: [
     {
       name: 'Discard draft changes',
@@ -93,6 +141,7 @@ export const systemBypassListSubcommand = {
     'List all system bypass rules that allow specific IPs to skip firewall checks',
   arguments: [],
   options: [
+    projectOption,
     {
       name: 'json',
       shorthand: null,
@@ -116,6 +165,7 @@ export const systemBypassAddSubcommand = {
     'Add a system bypass rule to allow a specific IP address to skip firewall checks. Takes effect immediately (no publish required)',
   arguments: [{ name: 'ip', required: true }],
   options: [
+    projectOption,
     {
       name: 'domain',
       shorthand: null,
@@ -151,6 +201,7 @@ export const systemBypassRemoveSubcommand = {
     'Remove a system bypass rule so the IP is no longer exempt from firewall checks. Takes effect immediately (no publish required)',
   arguments: [{ name: 'ip', required: true }],
   options: [
+    projectOption,
     {
       name: 'domain',
       shorthand: null,
@@ -204,6 +255,8 @@ export const ipBlocksListSubcommand = {
     'List all IP blocking rules, including any unpublished draft changes',
   arguments: [],
   options: [
+    projectOption,
+    teamLevelOption,
     {
       name: 'json',
       shorthand: null,
@@ -227,6 +280,8 @@ export const ipBlocksBlockSubcommand = {
     'Block an IP address or CIDR range from accessing your project. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'ip', required: true }],
   options: [
+    projectOption,
+    teamLevelOption,
     {
       name: 'hostname',
       shorthand: null,
@@ -267,6 +322,8 @@ export const ipBlocksUnblockSubcommand = {
     'Remove an IP blocking rule to allow the address to access your project again. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'id-or-ip', required: true }],
   options: [
+    projectOption,
+    teamLevelOption,
     {
       name: 'hostname',
       shorthand: null,
@@ -331,6 +388,8 @@ export const rulesListSubcommand = {
     'List all custom firewall rules, including any unpublished draft changes',
   arguments: [],
   options: [
+    projectOption,
+    teamLevelOption,
     {
       name: 'expand',
       shorthand: 'e',
@@ -355,6 +414,10 @@ export const rulesListSubcommand = {
       name: 'List rules with full condition details',
       value: `${packageName} firewall rules list --expand`,
     },
+    {
+      name: 'List team-level rules',
+      value: `${packageName} firewall rules list --team-level`,
+    },
   ],
 } as const;
 
@@ -365,6 +428,8 @@ export const rulesInspectSubcommand = {
     'Show the full configuration of a custom firewall rule, including conditions, action, and rate limit settings',
   arguments: [{ name: 'name-or-id', required: true }],
   options: [
+    projectOption,
+    teamLevelOption,
     {
       name: 'json',
       shorthand: null,
@@ -392,6 +457,8 @@ export const rulesAddSubcommand = {
     'Create a new custom firewall rule using AI, an interactive builder, JSON, or command-line flags. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name', required: false }],
   options: [
+    projectOption,
+    teamLevelOption,
     {
       name: 'ai',
       shorthand: null,
@@ -537,6 +604,8 @@ export const rulesEditSubcommand = {
     'Edit an existing custom firewall rule using AI, an interactive editor, JSON, or command-line flags. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
   options: [
+    projectOption,
+    teamLevelOption,
     {
       name: 'ai',
       shorthand: null,
@@ -691,7 +760,7 @@ export const rulesEnableSubcommand = {
   description:
     'Enable a disabled custom firewall rule. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
-  options: [yesOption],
+  options: [projectOption, teamLevelOption, yesOption],
   examples: [
     {
       name: 'Enable a rule',
@@ -706,7 +775,7 @@ export const rulesDisableSubcommand = {
   description:
     'Disable a custom firewall rule without removing it. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
-  options: [yesOption],
+  options: [projectOption, teamLevelOption, yesOption],
   examples: [
     {
       name: 'Disable a rule',
@@ -721,7 +790,7 @@ export const rulesRemoveSubcommand = {
   description:
     'Remove a custom firewall rule. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
-  options: [yesOption],
+  options: [projectOption, teamLevelOption, yesOption],
   examples: [
     {
       name: 'Remove a rule',
@@ -737,6 +806,8 @@ export const rulesReorderSubcommand = {
     'Change the priority order of a custom firewall rule. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
   options: [
+    projectOption,
+    teamLevelOption,
     {
       name: 'position',
       shorthand: null,
@@ -816,6 +887,7 @@ export const attackModeEnableSubcommand = {
     'Enable attack mode — all visitors will be shown a verification challenge before accessing your site. Takes effect immediately (no publish required)',
   arguments: [],
   options: [
+    projectOption,
     {
       name: 'duration',
       shorthand: null,
@@ -843,7 +915,7 @@ export const attackModeDisableSubcommand = {
   description:
     'Disable attack mode — visitors will no longer be challenged. Takes effect immediately (no publish required)',
   arguments: [],
-  options: [yesOption],
+  options: [projectOption, yesOption],
   examples: [
     {
       name: 'Disable attack mode',
@@ -879,7 +951,7 @@ export const systemMitigationsPauseSubcommand = {
   description:
     'Pause automatic DDoS protection and system-level traffic filtering for 24 hours. Takes effect immediately (no publish required)',
   arguments: [],
-  options: [yesOption],
+  options: [projectOption, yesOption],
   examples: [
     {
       name: 'Pause system mitigations',
@@ -894,7 +966,7 @@ export const systemMitigationsResumeSubcommand = {
   description:
     'Resume automatic DDoS protection and system-level traffic filtering. Takes effect immediately (no publish required)',
   arguments: [],
-  options: [yesOption],
+  options: [projectOption, yesOption],
   examples: [
     {
       name: 'Resume system mitigations',
@@ -922,6 +994,220 @@ export const systemMitigationsSubcommand = {
   ],
 } as const;
 
+const jsonOutputOption = {
+  name: 'json',
+  shorthand: null,
+  type: Boolean,
+  deprecated: false,
+  description: 'Output as JSON',
+} as const;
+
+export const alertsListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description:
+    'List active and resolved firewall alerts for the linked project',
+  arguments: [],
+  options: [
+    projectOption,
+    jsonOutputOption,
+    {
+      name: 'since',
+      shorthand: null,
+      type: String,
+      argument: 'TIME',
+      deprecated: false,
+      description:
+        'Start of the window: relative (24h, 7d) or ISO date (default: 24h ago)',
+    },
+    {
+      name: 'until',
+      shorthand: null,
+      type: String,
+      argument: 'TIME',
+      deprecated: false,
+      description: 'End of the window (default: now)',
+    },
+  ],
+  examples: [
+    {
+      name: 'List alerts from the last day',
+      value: `${packageName} firewall alerts list`,
+    },
+    {
+      name: 'List alerts from the last week',
+      value: `${packageName} firewall alerts list --since 7d`,
+    },
+  ],
+} as const;
+
+export const alertsInspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description:
+    'Show one firewall alert: window, request rate, denied IPs, and top hosts',
+  arguments: [{ name: 'alertid', required: true }],
+  options: [projectOption, jsonOutputOption],
+  examples: [
+    {
+      name: 'Inspect an alert',
+      value: `${packageName} firewall alerts inspect al_abc123`,
+    },
+  ],
+} as const;
+
+export const alertsSubcommand = {
+  name: 'alerts',
+  aliases: [],
+  description:
+    'List and inspect firewall alerts, including DDoS mitigation episodes',
+  arguments: [],
+  subcommands: [alertsListSubcommand, alertsInspectSubcommand],
+  options: [],
+  examples: [
+    {
+      name: 'List alerts',
+      value: `${packageName} firewall alerts list`,
+    },
+    {
+      name: 'Inspect an alert',
+      value: `${packageName} firewall alerts inspect al_abc123`,
+    },
+  ],
+} as const;
+
+export const persistentActionsListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description:
+    'List persistent firewall actions for the linked project (default: last hour)',
+  arguments: [],
+  options: [
+    projectOption,
+    jsonOutputOption,
+    {
+      name: 'since',
+      shorthand: null,
+      type: String,
+      argument: 'TIME',
+      deprecated: false,
+      description:
+        'Start of the window: relative (1h, 6h) or ISO date (default: 1h ago)',
+    },
+    {
+      name: 'until',
+      shorthand: null,
+      type: String,
+      argument: 'TIME',
+      deprecated: false,
+      description: 'End of the window (default: now)',
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      argument: 'NUMBER',
+      deprecated: false,
+      description: 'Number of actions to show (default: 10)',
+    },
+  ],
+  examples: [
+    {
+      name: 'List persistent actions from the last hour',
+      value: `${packageName} firewall persistent-actions list`,
+    },
+    {
+      name: 'List persistent actions from the last six hours',
+      value: `${packageName} firewall persistent-actions list --since 6h`,
+    },
+  ],
+} as const;
+
+export const persistentActionsInspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description:
+    'Show one persistent firewall action: window and requests by action',
+  arguments: [{ name: 'ip', required: true }],
+  options: [
+    projectOption,
+    jsonOutputOption,
+    {
+      name: 'host',
+      shorthand: null,
+      type: String,
+      argument: 'HOSTNAME',
+      deprecated: false,
+      description: 'Narrow to a hostname',
+    },
+    {
+      name: 'action',
+      shorthand: null,
+      type: String,
+      argument: 'ACTION',
+      deprecated: false,
+      description: 'Narrow to an action (challenge, deny, log, …)',
+    },
+    {
+      name: 'since',
+      shorthand: null,
+      type: String,
+      argument: 'TIME',
+      deprecated: false,
+      description:
+        'Start of the window: relative (1h, 6h) or ISO date (default: 1h ago)',
+    },
+    {
+      name: 'until',
+      shorthand: null,
+      type: String,
+      argument: 'TIME',
+      deprecated: false,
+      description: 'End of the window (default: now)',
+    },
+    {
+      name: 'paths',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Include the top request paths',
+    },
+  ],
+  examples: [
+    {
+      name: 'Inspect a persistent action by IP',
+      value: `${packageName} firewall persistent-actions inspect 51.158.168.18 --host vercel.com --action challenge`,
+    },
+    {
+      name: 'Include the paths the client requested',
+      value: `${packageName} firewall persistent-actions inspect 51.158.168.18 --paths`,
+    },
+  ],
+} as const;
+
+export const persistentActionsSubcommand = {
+  name: 'persistent-actions',
+  aliases: [],
+  description:
+    'List and inspect persistent firewall actions taken against specific clients',
+  arguments: [],
+  subcommands: [
+    persistentActionsListSubcommand,
+    persistentActionsInspectSubcommand,
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'List persistent actions',
+      value: `${packageName} firewall persistent-actions list`,
+    },
+    {
+      name: 'Inspect a persistent action',
+      value: `${packageName} firewall persistent-actions inspect 51.158.168.18 --host vercel.com --action challenge`,
+    },
+  ],
+} as const;
+
 export const firewallCommand = {
   name: 'firewall',
   aliases: [],
@@ -930,6 +1216,7 @@ export const firewallCommand = {
   arguments: [],
   subcommands: [
     overviewSubcommand,
+    statusSubcommand,
     diffSubcommand,
     publishSubcommand,
     discardSubcommand,
@@ -938,9 +1225,19 @@ export const firewallCommand = {
     systemBypassSubcommand,
     attackModeSubcommand,
     systemMitigationsSubcommand,
+    alertsSubcommand,
+    persistentActionsSubcommand,
   ],
   options: [],
   examples: [
+    {
+      name: 'List firewall alerts',
+      value: `${packageName} firewall alerts list`,
+    },
+    {
+      name: 'List persistent firewall actions',
+      value: `${packageName} firewall persistent-actions list`,
+    },
     {
       name: 'Show firewall overview',
       value: `${packageName} firewall overview`,

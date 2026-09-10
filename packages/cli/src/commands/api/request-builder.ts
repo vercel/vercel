@@ -195,7 +195,7 @@ export function generateCurlCommand(
   }
 
   // Body
-  if (config.body) {
+  if (config.method !== 'GET' && config.body) {
     const bodyStr =
       typeof config.body === 'string'
         ? config.body

@@ -1,0 +1,98 @@
+{
+  "private": true,
+  "name": "@vercel-internals/cli-builder-integration",
+  "version": "1.0.0",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./backend-rewrite-warning": {
+      "types": "./dist/backend-rewrite-warning.d.ts",
+      "default": "./dist/backend-rewrite-warning.js"
+    },
+    "./build-runner": {
+      "types": "./dist/build-runner.d.ts",
+      "default": "./dist/build-runner.js"
+    },
+    "./manifest": {
+      "types": "./dist/manifest.d.ts",
+      "default": "./dist/manifest.js"
+    },
+    "./framework-detection": {
+      "types": "./dist/framework-detection.d.ts",
+      "default": "./dist/framework-detection.js"
+    },
+    "./detect-builders-with-services": {
+      "types": "./dist/detect-builders-with-services.d.ts",
+      "default": "./dist/detect-builders-with-services.js"
+    },
+    "./get-files": {
+      "types": "./dist/get-files.d.ts",
+      "default": "./dist/get-files.js"
+    },
+    "./service-route-ownership": {
+      "types": "./dist/service-route-ownership.d.ts",
+      "default": "./dist/service-route-ownership.js"
+    },
+    "./service-schedules": {
+      "types": "./dist/service-schedules.d.ts",
+      "default": "./dist/service-schedules.js"
+    },
+    "./validate-cron-secret": {
+      "types": "./dist/validate-cron-secret.d.ts",
+      "default": "./dist/validate-cron-secret.js"
+    },
+    "./validate-package-manifest": {
+      "types": "./dist/validate-package-manifest.d.ts",
+      "default": "./dist/validate-package-manifest.js"
+    },
+    "./validate-build-output": {
+      "types": "./dist/validate-build-output.d.ts",
+      "default": "./dist/validate-build-output.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "dist/*"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node ../../utils/build.mjs",
+    "type-check": "tsc --noEmit",
+    "test-unit": "vitest run --config ../../vitest.config.mts tests/unit/"
+  },
+  "dependencies": {
+    "@vercel-internals/builder-orchestration": "workspace:*",
+    "@vercel-internals/runtimes": "workspace:*",
+    "@vercel-internals/types": "workspace:*",
+    "@vercel/build-utils": "workspace:*",
+    "@vercel/client": "workspace:*",
+    "@vercel/frameworks": "workspace:*",
+    "@vercel/fs-detectors": "workspace:*",
+    "@vercel/prepare-flags-definitions": "0.3.0",
+    "@vercel/routing-utils": "workspace:*",
+    "@vercel-internals/service-topology": "workspace:*",
+    "ajv": "6.12.3",
+    "fs-extra": "10.0.0",
+    "minimatch": "3.1.2",
+    "semver": "5.7.2",
+    "title": "3.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "20.11.0",
+    "@types/fs-extra": "9.0.13",
+    "@types/minimatch": "3.0.3",
+    "@types/semver": "6.0.1",
+    "@types/title": "3.4.1",
+    "@vercel-internals/tsconfig": "workspace:*",
+    "typescript": "5.9.3",
+    "vite": "6.4.3",
+    "vitest": "4.1.10"
+  }
+}

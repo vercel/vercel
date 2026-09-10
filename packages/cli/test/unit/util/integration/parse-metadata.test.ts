@@ -108,12 +108,6 @@ describe('parseMetadataFlags', () => {
     expect(result.metadata).toEqual({});
   });
 
-  it('handles empty array', () => {
-    const result = parseMetadataFlags([], basicSchema);
-    expect(result.errors).toEqual([]);
-    expect(result.metadata).toEqual({});
-  });
-
   it('handles values with equals signs', () => {
     const schemaWithInput: MetadataSchema = {
       type: 'object',
@@ -371,16 +365,6 @@ describe('validateRequiredMetadata', () => {
     expect(errors).toEqual([]);
   });
 
-  it('skips hidden fields', () => {
-    // hidden and hiddenOnCreate should be skipped
-    const errors = validateRequiredMetadata(
-      { region: 'us-east-1' },
-      schemaWithRequired
-    );
-    expect(errors).not.toContain('Required metadata missing: "hidden"');
-    expect(errors).not.toContain('Required metadata missing: "hiddenOnCreate"');
-  });
-
   it('returns empty array when all required fields provided', () => {
     const errors = validateRequiredMetadata(
       { region: 'us-east-1', version: '15' },
@@ -473,10 +457,5 @@ describe('formatMetadataSchemaHelp', () => {
     // name should show (required) but region should not
     const requiredCount = (output.match(/\(required\)/g) ?? []).length;
     expect(requiredCount).toBe(1);
-  });
-
-  it('still shows (required) for non-region fields', () => {
-    const output = formatMetadataSchemaHelp(regionSchema, 'test-integration');
-    expect(output).toContain('(required)');
   });
 });

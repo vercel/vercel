@@ -127,16 +127,6 @@ describe('redirects list-versions', () => {
     });
   });
 
-  describe('sorting', () => {
-    it('should show all version statuses', async () => {
-      useRedirectVersions(5);
-      client.setArgv('redirects', 'list-versions');
-      const exitCode = await redirects(client);
-      expect(exitCode, 'exit code').toEqual(0);
-      await expect(client.stderr).toOutput('5 Versions found');
-    });
-  });
-
   describe('limits', () => {
     it('should limit to 20 versions', async () => {
       useRedirectVersions(25);

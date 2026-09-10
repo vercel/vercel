@@ -1,3 +1,4 @@
+import { getNodeExecPath } from '@vercel/build-utils';
 import type { Framework, FrameworkDetectionItem } from '@vercel/frameworks';
 import { spawnSync } from 'child_process';
 import { DetectorFilesystem } from './detectors/filesystem';
@@ -302,19 +303,13 @@ export function detectFrameworkVersion(
     return;
   }
 
-  return lookupInstalledVersion(
-    process.execPath,
-    firstMatchPackage.matchPackage
-  );
+  return lookupInstalledVersion(firstMatchPackage.matchPackage);
 }
 
-function lookupInstalledVersion(
-  cwd: string,
-  packageName: string
-): string | undefined {
+function lookupInstalledVersion(packageName: string): string | undefined {
   try {
     const script = `require('${packageName}/package.json').version`;
-    return spawnSync(cwd, ['-p', script], {
+    return spawnSync(getNodeExecPath(), ['-p', script], {
       encoding: 'utf-8',
     }).stdout.trim();
   } catch (error) {

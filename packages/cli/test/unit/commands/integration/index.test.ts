@@ -18,6 +18,7 @@ describe('integration', () => {
       contextName: 'my-team',
       team: { id: 'team_dummy', slug: 'my-team' } as any,
       user: { id: 'user_dummy' } as any,
+      app: null,
     });
   });
   describe('--help', () => {

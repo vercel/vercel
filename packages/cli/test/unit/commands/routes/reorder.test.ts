@@ -3,7 +3,10 @@ import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { useStageRoutes } from '../../../mocks/routes';
 import { shellQuoteRouteIdentifierForSuggestion } from '../../../../src/commands/routes/shared';
 import routes from '../../../../src/commands/routes';
@@ -262,6 +265,14 @@ describe('routes reorder', () => {
 
   it('non-interactive: position 0 outputs JSON invalid_arguments with next commands', async () => {
     useStageRoutes();
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject({
+      ...defaultProject,
+      id: 'explicit-routes',
+      name: 'explicit-routes',
+      accountId: 'team_dummy',
+    });
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const exitSpy = vi
       .spyOn(process, 'exit')
@@ -274,7 +285,9 @@ describe('routes reorder', () => {
       '--position',
       '0',
       '--yes',
-      '--non-interactive'
+      '--non-interactive',
+      '--project',
+      'explicit-routes'
     );
     await routes(client);
     const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
@@ -287,6 +300,11 @@ describe('routes reorder', () => {
       payload.next.some(
         (n: { command: string }) =>
           n.command.includes('--first') || n.command.includes('--position 1')
+      )
+    ).toBe(true);
+    expect(
+      payload.next.every((n: { command: string }) =>
+        n.command.includes('--project explicit-routes')
       )
     ).toBe(true);
     expect(exitSpy).toHaveBeenCalledWith(1);

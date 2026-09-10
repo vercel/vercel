@@ -243,4 +243,13 @@ export interface Framework {
    * @example "weak"
    */
   detectionConfidence?: 'weak' | 'strong';
+  /**
+   * The third-party platform a framework variant is associated with (e.g.
+   * projects imported from Lovable). Used to attribute a framework entry to
+   * its source platform.
+   */
+  platform?: {
+    name: string;
+    logo: string;
+  };
 }

@@ -1,0 +1,28 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Celery Jobs"
+    },
+    {
+      "path": "/api",
+      "status": 200,
+      "mustContain": "celery"
+    },
+    {
+      "path": "/api/enqueue",
+      "method": "POST",
+      "body": { "request_id": "RANDOMNESS_PLACEHOLDER", "x": 2, "y": 3 },
+      "status": 200,
+      "mustContain": "RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "path": "/api/status/RANDOMNESS_PLACEHOLDER",
+      "status": 200,
+      "mustContain": "\"sum\":5",
+      "retries": 10,
+      "retryDelay": 3000
+    }
+  ]
+}

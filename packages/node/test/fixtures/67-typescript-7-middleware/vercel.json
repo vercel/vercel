@@ -1,0 +1,18 @@
+{
+  "builds": [
+    {
+      "src": "middleware.ts",
+      "use": "@vercel/node",
+      "config": { "middleware": true }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "RANDOMNESS_PLACEHOLDER:typescript-7-middleware",
+      "responseHeaders": {
+        "x-typescript-version": "7"
+      }
+    }
+  ]
+}

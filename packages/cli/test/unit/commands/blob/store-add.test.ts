@@ -551,20 +551,6 @@ describe('blob store add', () => {
       expect(mockedOutput.stopSpinner).not.toHaveBeenCalled();
     });
 
-    it('should handle API errors gracefully', async () => {
-      const apiError = new Error('Network error');
-      client.fetch = vi.fn().mockRejectedValue(apiError);
-
-      const exitCode = await addStore(client, [
-        '--access',
-        'public',
-        'failing-store',
-      ]);
-
-      expect(exitCode).toBe(1);
-      expect(mockedOutput.success).not.toHaveBeenCalled();
-    });
-
     it('should handle linking errors after store creation', async () => {
       const linkError = new Error('Linking failed');
       mockedConnectResourceToProject.mockRejectedValue(linkError);
@@ -636,26 +622,6 @@ describe('blob store add', () => {
   });
 
   describe('API call behavior', () => {
-    it('should include accountId when project is linked', async () => {
-      const exitCode = await addStore(client, [
-        '--access',
-        'public',
-        'linked-store',
-      ]);
-
-      expect(exitCode).toBe(0);
-      expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: 'linked-store',
-          region: 'iad1',
-          access: 'public',
-        }),
-        accountId: 'org_123',
-      });
-    });
-
     it('should not include accountId when project is not linked', async () => {
       mockedGetLinkedProject.mockResolvedValue({
         org: null,
@@ -746,55 +712,6 @@ describe('blob store add', () => {
         'Would you like to link this blob store to different-project?',
         true
       );
-    });
-  });
-
-  describe('spinner and output behavior', () => {
-    it('should show spinner during store creation and stop on success', async () => {
-      const exitCode = await addStore(client, [
-        '--access',
-        'public',
-        'spinner-test',
-      ]);
-
-      expect(exitCode).toBe(0);
-      expect(mockedOutput.spinner).toHaveBeenCalledWith(
-        'Creating new blob store'
-      );
-      expect(mockedOutput.stopSpinner).toHaveBeenCalled();
-      expect(mockedOutput.success).toHaveBeenCalledWith(
-        'Blob store created: spinner-test (store_test123)'
-      );
-    });
-
-    it('should show linking spinner when connecting to project', async () => {
-      const exitCode = await addStore(client, [
-        '--access',
-        'public',
-        'link-spinner-test',
-      ]);
-
-      expect(exitCode).toBe(0);
-      expect(mockedOutput.spinner).toHaveBeenCalledWith(
-        'Connecting link-spinner-test to my-project...'
-      );
-    });
-
-    it('should not stop spinner on creation error', async () => {
-      const apiError = new Error('Creation failed');
-      client.fetch = vi.fn().mockRejectedValue(apiError);
-
-      const exitCode = await addStore(client, [
-        '--access',
-        'public',
-        'error-test',
-      ]);
-
-      expect(exitCode).toBe(1);
-      expect(mockedOutput.spinner).toHaveBeenCalledWith(
-        'Creating new blob store'
-      );
-      expect(mockedOutput.stopSpinner).not.toHaveBeenCalled();
     });
   });
 

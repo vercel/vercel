@@ -2,7 +2,9 @@ import chalk from 'chalk';
 import ms from 'ms';
 import { resolve, join } from 'path';
 import fs from 'fs-extra';
-import type { Service } from '@vercel/fs-detectors';
+import { detectFramework, LocalFileSystemDetector } from '@vercel/fs-detectors';
+import { frameworkList } from '@vercel/frameworks';
+import type { Service } from '@vercel/build-utils';
 
 import DevServer, { DevCommandExitError } from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
@@ -15,7 +17,7 @@ import { findRepoRoot } from '../../util/link/repo';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import param from '../../util/output/param';
 import cmd from '../../util/output/cmd';
-import { OUTPUT_DIR } from '../../util/build/write-build-result';
+import { OUTPUT_DIR } from '../../builders/write-build-result';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import output from '../../output-manager';
 import { refreshOidcToken } from '../../util/env/refresh-oidc-token';
@@ -29,6 +31,8 @@ import { tryDetectServices } from '../../util/projects/detect-services';
 import { displayDetectedServices } from '../../util/input/display-services';
 import { acquireDevLock, releaseDevLock } from '../../util/dev/dev-lock';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
+import { detectExplicitScope } from '../../util/get-scope';
+import type { VercelConfig } from '../../util/dev/types';
 
 type Options = {
   '--listen': string;
@@ -41,7 +45,8 @@ export default async function dev(
   client: Client,
   opts: Partial<Options>,
   args: string[],
-  telemetry: DevTelemetryClient
+  telemetry: DevTelemetryClient,
+  localConfig: VercelConfig | null
 ) {
   const [dir = '.'] = args;
   let cwd = resolve(dir);
@@ -52,12 +57,12 @@ export default async function dev(
   const projectNameOrId = opts['--project'];
 
   // retrieve dev command
-  let link = await getLinkedProject(
-    client,
+  let link = await getLinkedProject(client, {
     cwd,
-    projectNameOrId,
-    !!projectNameOrId
-  );
+    projectName: projectNameOrId,
+    projectNameIsExplicit: Boolean(projectNameOrId),
+    scopeIsExplicit: detectExplicitScope(client),
+  });
 
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
     if (opts['--local']) {
@@ -68,7 +73,12 @@ export default async function dev(
           `To link your project, run ${getCommandName('dev')} without \`-L\` or \`--local\` or ${getCommandName('link')}.`
       );
     } else if (projectNameOrId) {
-      await printProjectNotFoundError(client, projectNameOrId, 'dev');
+      await printProjectNotFoundError(
+        client,
+        projectNameOrId,
+        'dev',
+        link.orgId
+      );
       return 1;
     } else {
       link = await setupAndLink(client, cwd, {
@@ -159,6 +169,34 @@ export default async function dev(
     services = servicesResult.services;
     displayDetectedServices(services);
     useImplicitServicesEnvInjection = servicesResult.useImplicitEnvInjection;
+  }
+
+  const hasExplicitBuilds = Boolean(localConfig?.builds?.length);
+  const hasExplicitFramework = localConfig?.framework !== undefined;
+  const hasServicesConfig = Boolean(
+    localConfig?.services ??
+      localConfig?.experimentalServicesV2 ??
+      localConfig?.experimentalServices
+  );
+  const shouldDetectFramework =
+    link.status === 'not_linked' &&
+    Boolean(opts['--local']) &&
+    !foundServices &&
+    !hasServicesConfig &&
+    !hasExplicitBuilds &&
+    !hasExplicitFramework;
+
+  if (shouldDetectFramework) {
+    const detectedFramework = await detectFramework({
+      fs: new LocalFileSystemDetector(cwd),
+      frameworkList,
+    });
+    if (detectedFramework) {
+      output.debug(
+        `Detected framework ${detectedFramework} for unlinked local dev`
+      );
+      projectSettings = { framework: detectedFramework };
+    }
   }
 
   let lockAcquired = false;

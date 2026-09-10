@@ -3,12 +3,13 @@ import type Client from '../../../util/client';
 import output from '../../../output-manager';
 import { ipBlocksBlockSubcommand } from '../command';
 import {
+  withGlobalFlags,
   parseSubcommandArgs,
-  ensureProjectLink,
   confirmAction,
   detectExistingDraft,
   offerAutoPublish,
-  withGlobalFlags,
+  resolveFirewallScope,
+  mapFirewallApiError,
 } from '../shared';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
 import {
@@ -63,11 +64,8 @@ export default async function block(client: Client, argv: string[]) {
     }
   }
 
-  const link = await ensureProjectLink(client);
-  if (typeof link === 'number') return link;
-
-  const { project, org } = link;
-  const teamId = org.type === 'team' ? org.id : undefined;
+  const scope = await resolveFirewallScope(client, parsed.flags);
+  if (typeof scope === 'number') return scope;
 
   const hostnameLabel =
     hostname === '*' || hostname === '' ? 'all hosts' : hostname;
@@ -86,41 +84,30 @@ export default async function block(client: Client, argv: string[]) {
   output.spinner('Staging IP block rule');
 
   try {
-    const hadExistingDraft = await detectExistingDraft(
-      client,
-      project.id,
-      teamId
-    );
+    const hadExistingDraft = await detectExistingDraft(client, scope);
 
-    await patchFirewallDraft(
-      client,
-      project.id,
-      {
-        action: 'ip.insert',
-        id: null,
-        value: {
-          ip,
-          hostname,
-          action: 'deny',
-          ...(notes ? { notes } : {}),
-        },
+    await patchFirewallDraft(client, scope, {
+      action: 'ip.insert',
+      id: null,
+      value: {
+        ip,
+        hostname,
+        action: 'deny',
+        ...(notes ? { notes } : {}),
       },
-      { teamId }
-    );
+    });
 
     output.log(
       `${chalk.cyan('Success!')} IP block for ${chalk.bold(ip)} on ${chalk.bold(hostnameLabel)} staged ${chalk.gray(blockStamp())}`
     );
 
-    await offerAutoPublish(client, project.id, hadExistingDraft, {
-      teamId,
+    await offerAutoPublish(client, scope, hadExistingDraft, {
       skipPrompts: parsed.flags['--yes'],
     });
 
     return 0;
   } catch (e: unknown) {
-    const error = e as { message?: string };
-    const msg = error.message || 'Failed to stage IP block rule';
+    const msg = mapFirewallApiError(e, scope, 'Failed to stage IP block rule');
     if (client.nonInteractive) {
       outputAgentError(client, {
         status: 'error',
@@ -130,7 +117,8 @@ export default async function block(client: Client, argv: string[]) {
           {
             command: withGlobalFlags(
               client,
-              `firewall ip-blocks block ${ip}${hostname !== '*' ? ` --hostname ${hostname}` : ''} --yes`
+              `firewall ip-blocks block ${ip}${hostname !== '*' ? ` --hostname ${hostname}` : ''} --yes`,
+              scope
             ),
           },
         ],

@@ -44,7 +44,7 @@ export default async function getProjectByCwdOrLink({
 
   if (forReadOnlyCommand && effectiveNonInteractive) {
     const resolvedCwd = await resolveProjectCwd(cwd ?? client.cwd);
-    const link = await getLinkedProject(client, resolvedCwd);
+    const link = await getLinkedProject(client, { cwd: resolvedCwd });
     if (link.status === 'linked' && link.project) {
       return link.project;
     }

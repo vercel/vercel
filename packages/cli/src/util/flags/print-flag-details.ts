@@ -1,21 +1,18 @@
 import chalk from 'chalk';
 import output from '../../output-manager';
 import formatDate from '../format-date';
-import { formatFlagConditionComparator } from './comparators';
 import { getFlagDashboardUrl } from './dashboard-url';
+import {
+  formatFlagCondition,
+  resolveTargetingLabel,
+} from './format-flag-details';
 import {
   formatFlagOutcome,
   formatFlagSplitWeights,
   formatFlagVariantSummary,
 } from './format-flag-outcome';
-import { formatVariantValue } from './resolve-variant';
-import type {
-  Flag,
-  FlagCondition,
-  FlagEnvironmentConfig,
-  FlagSettings,
-  FlagVariant,
-} from './types';
+import { formatVariantListSummary } from './resolve-variant';
+import type { Flag, FlagEnvironmentConfig, FlagSettings } from './types';
 
 interface PrintFlagDetailsOptions {
   flag: Flag;
@@ -130,7 +127,10 @@ export function printFlagEnvironmentDetails(
           const outcome = formatFlagOutcome(rule.outcome, flag.variants);
           output.print(`        ${chalk.dim('→')} ${outcome}\n`);
           for (const condition of rule.conditions) {
-            const { text, listItems } = formatCondition(condition, settings);
+            const { text, listItems } = formatFlagCondition(
+              condition,
+              settings
+            );
             output.print(`          ${chalk.dim('if')} ${text}\n`);
             if (listItems && listItems.length > 0) {
               for (const item of listItems) {
@@ -209,30 +209,6 @@ function getSortedEnvironmentEntries(
       return aIndex - bIndex;
     });
 }
-function resolveTargetingLabel(
-  settings: FlagSettings | undefined,
-  entityKind: string,
-  attribute: string,
-  value: string
-): string | undefined {
-  if (!settings) {
-    return undefined;
-  }
-
-  const entity = settings.entities.find(e => e.kind === entityKind);
-  if (!entity) {
-    return undefined;
-  }
-
-  const attr = entity.attributes.find(a => a.key === attribute);
-  if (!attr?.labels) {
-    return undefined;
-  }
-
-  const labelEntry = attr.labels.find(l => l.value === value);
-  return labelEntry?.label;
-}
-
 function hasCustomConfigurationEnabled(
   envConfig: FlagEnvironmentConfig
 ): boolean {
@@ -242,80 +218,4 @@ function hasCustomConfigurationEnabled(
     envConfig.fallthrough.type === 'split' ||
     envConfig.fallthrough.type === 'rollout'
   );
-}
-
-function formatVariantListSummary(variant: FlagVariant): string {
-  const value = formatVariantValue(variant.value);
-  if (!variant.label) {
-    return value;
-  }
-
-  return `${value}: ${chalk.gray(variant.label)}`;
-}
-
-function formatCondition(
-  condition: FlagCondition,
-  settings: FlagSettings | undefined
-): { text: string; listItems?: string[] } {
-  let lhs: string;
-  if (condition.lhs.type === 'segment') {
-    lhs = 'segment';
-  } else {
-    lhs = `${condition.lhs.kind}.${condition.lhs.attribute}`;
-  }
-
-  const cmp = chalk.dim(
-    formatFlagConditionComparator(condition.cmp, condition.cmpOptions)
-  );
-
-  if (condition.rhs === undefined || condition.rhs === null) {
-    return { text: `${lhs} ${cmp}` };
-  }
-
-  if (typeof condition.rhs === 'object') {
-    if (
-      (condition.rhs.type === 'list' || condition.rhs.type === 'list/inline') &&
-      Array.isArray(condition.rhs.items)
-    ) {
-      const items = condition.rhs.items.map(item => {
-        const itemValue =
-          typeof item === 'object' && item !== null && 'value' in item
-            ? String((item as { value: unknown }).value)
-            : String(item);
-
-        if (condition.lhs.type === 'entity') {
-          const label = resolveTargetingLabel(
-            settings,
-            condition.lhs.kind,
-            condition.lhs.attribute,
-            itemValue
-          );
-          return label ? `${itemValue} ${chalk.gray(label)}` : itemValue;
-        }
-
-        return itemValue;
-      });
-
-      return { text: `${lhs} ${cmp}`, listItems: items };
-    }
-
-    return { text: `${lhs} ${cmp} ${JSON.stringify(condition.rhs)}` };
-  }
-
-  let rhs: string;
-  if (condition.lhs.type === 'entity') {
-    const label = resolveTargetingLabel(
-      settings,
-      condition.lhs.kind,
-      condition.lhs.attribute,
-      String(condition.rhs)
-    );
-    rhs = label
-      ? `${condition.rhs} ${chalk.gray(label)}`
-      : String(condition.rhs);
-  } else {
-    rhs = String(condition.rhs);
-  }
-
-  return { text: `${lhs} ${cmp} ${rhs}` };
 }

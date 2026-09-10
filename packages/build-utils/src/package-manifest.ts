@@ -13,11 +13,21 @@ export interface PackageManifestDependency {
   sourceUrl?: string;
 }
 
+/**
+ * What triggered this build pipeline entry.
+ *
+ * - `'app'`        — full application build
+ * - `'api-dir'`    — api/ directory build
+ * - `'middleware'` — middleware build
+ */
+export type BuildType = 'app' | 'api-dir' | 'middleware';
+
 export interface PackageManifest {
   version?: string;
   runtime: string;
   framework?: string;
   serviceType?: string;
+  buildType?: BuildType;
   runtimeVersion?: {
     requested?: string;
     requestedSource?: string;

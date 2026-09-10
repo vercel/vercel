@@ -14,6 +14,7 @@ import output from '../../output-manager';
 import { FlagsLsTelemetryClient } from '../../util/telemetry/commands/flags/ls';
 import { listSubcommand } from './command';
 import type { Flag } from '../../util/flags/types';
+import { quoteArg } from '../../util/flags/quote-arg';
 import { formatProject } from '../../util/projects/format-project';
 import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
@@ -151,17 +152,6 @@ function buildNextPageCommand(
   ];
   const suffix = repeatable.length > 0 ? ` ${repeatable.join(' ')}` : '';
   return `flags ls${baseFlags}${suffix} --next ${nextCursor}`;
-}
-
-// Wrap a value in single quotes only when it contains characters the shell
-// would otherwise interpret, so the printed next-page command stays
-// copy-pasteable for tags that include spaces or special characters. The
-// cursor is base64url and therefore always shell-safe.
-function quoteArg(value: string): string {
-  if (/^[A-Za-z0-9_./@:-]+$/.test(value)) {
-    return value;
-  }
-  return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
 function outputJson(client: Client, flags: Flag[], next: string | null) {

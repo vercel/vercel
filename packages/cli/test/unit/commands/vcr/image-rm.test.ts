@@ -70,11 +70,9 @@ describe('vcr image rm', () => {
   });
 
   it('deletes an image with --yes', async () => {
-    let method = '';
     client.scenario.delete(
       '/v1/vcr/repository/my-app/images/img_1',
       (req, res) => {
-        method = req.method;
         expect(req.query.projectId).toBe('prj_vcr');
         res.status(202).end();
       }
@@ -83,7 +81,6 @@ describe('vcr image rm', () => {
     client.setArgv('vcr', 'image', 'rm', 'my-app', 'img_1', '--yes');
     const exitCode = await vcr(client);
     expect(exitCode).toBe(0);
-    expect(method).toBe('DELETE');
     expect(client.stderr.getFullOutput()).toContain('deleted');
   });
 

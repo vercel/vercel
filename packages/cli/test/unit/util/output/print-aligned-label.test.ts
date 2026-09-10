@@ -83,6 +83,23 @@ describe('printAlignedLabel()', () => {
     expect(cols[0]).toBe(VALUE_COL);
   });
 
+  describe('labels at or beyond the column width', () => {
+    it('keeps one space after a label exactly ALIGNED_LABEL_WIDTH long', () => {
+      const label = 'Sixteen Char Lbl';
+      expect(label).toHaveLength(ALIGNED_LABEL_WIDTH);
+      printAlignedLabel(label, 'VALUE');
+      const plain = stripAnsi(lastPrinted());
+      expect(plain).toBe('  Sixteen Char Lbl VALUE\n');
+      expect(plain).not.toContain('LblVALUE');
+    });
+
+    it('keeps one space after a label longer than the column width', () => {
+      printAlignedLabel('Much Longer Label Than Sixteen', 'VALUE');
+      const plain = stripAnsi(lastPrinted());
+      expect(plain).toBe('  Much Longer Label Than Sixteen VALUE\n');
+    });
+  });
+
   describe('gutter option', () => {
     it('renders `▲ Production      <value>` when gutter is set', () => {
       printAlignedLabel('Production', 'https://example.com', { gutter: '▲' });

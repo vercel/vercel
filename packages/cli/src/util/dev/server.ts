@@ -14,7 +14,7 @@ import serveHandler from 'serve-handler';
 import PCRE from 'pcre-to-regexp';
 import { watch, type FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
-import path, { isAbsolute, basename, dirname, extname, join } from 'path';
+import path, { isAbsolute, basename, dirname, extname, join, sep } from 'path';
 import once from '@tootallnate/once';
 import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
@@ -43,6 +43,9 @@ import {
   type Env,
   getNodeBinPaths,
   isQueueBackedService,
+  isExperimentalService,
+  isExperimentalServiceV2,
+  type Service,
   type StartDevServerResult,
   FileFsRef,
   type PackageJson,
@@ -50,14 +53,12 @@ import {
   shouldUseExperimentalBackends,
 } from '@vercel/build-utils';
 import {
-  detectBuilders,
   detectApiDirectory,
   detectApiExtensions,
+  getProxyBuilder,
   isOfficialRuntime,
-  isExperimentalService,
-  isExperimentalServiceV2,
-  type Service,
 } from '@vercel/fs-detectors';
+import { detectBuildersWithServices } from '@vercel-internals/cli-builder-integration/detect-builders-with-services';
 import { frameworkList } from '@vercel/frameworks';
 
 import cmd from '../output/cmd';
@@ -107,11 +108,25 @@ import { treeKill } from '../tree-kill';
 import { ServicesOrchestrator } from './services-orchestrator';
 import { QueueBroker } from './queue-broker';
 import {
+  DEV_RUNTIME_CACHE_ITEM_PREFIX,
+  DEV_RUNTIME_CACHE_PREFIX,
+  HEADER_CACHE_ITEM_NAME,
+  HEADER_CACHE_STATE,
+  HEADER_CACHE_TAGS,
+  HEADER_REVALIDATE,
+  RuntimeCacheStore,
+  getDevRuntimeCacheEnv,
+} from './runtime-cache';
+import {
   collectBuilderDevSidecars,
   toOrchestratorService,
 } from './dev-sidecars';
 import { injectNextDevWebSocketShimIfNeeded } from './next-dev-websocket-shim-injection';
-import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
+import {
+  applyChainResponseHeader,
+  applyOverriddenHeaders,
+  nodeHeadersToFetchHeaders,
+} from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
 import {
   errorToString,
@@ -122,13 +137,18 @@ import {
 import isURL from './is-url';
 import { pickOverrides } from '../projects/project-settings';
 import { replaceLocalhost } from './parse-listen';
-
-const frontendRuntimeSet = new Set(
-  frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
-);
+import {
+  type BulkRedirectTable,
+  getBulkRedirectsSignature,
+  loadBulkRedirects,
+  resolveBulkRedirect,
+  resolveBulkRedirectsPath,
+} from './bulk-redirects';
 
 const DEV_SERVER_PORT_BIND_TIMEOUT = ms('5m');
 const DEV_QUEUES_DEFAULT_VISIBILITY_TIMEOUT_SECONDS = 60;
+const DEV_RUNTIME_CACHE_MAX_ITEM_SIZE = 2 * 1024 * 1024;
+const DEV_RUNTIME_CACHE_ONE_YEAR_SECONDS = 31_536_000;
 
 interface FSEvent {
   type: string;
@@ -138,6 +158,15 @@ interface FSEvent {
 type WithFileNameSymbol<T> = T & {
   [fileNameSymbol]: string;
 };
+
+const frameworkRuntimeSet = new Set(
+  frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
+);
+
+function isApiDirBuild(build: Builder): boolean {
+  const src = build.src?.replace(/^\.\//, '');
+  return typeof src === 'string' && src.startsWith('api/');
+}
 
 function sortBuilders(buildA: Builder, buildB: Builder) {
   if (buildA && buildA.use && isOfficialRuntime('static-build', buildA.use)) {
@@ -205,6 +234,7 @@ export default class DevServer {
   private orchestrator?: ServicesOrchestrator;
   private sidecarOrchestrator?: ServicesOrchestrator;
   private queueBroker?: QueueBroker;
+  private runtimeCache?: RuntimeCacheStore;
   private sidecars?: DevSidecar[];
   private serviceRoutesTable?: Map<string, Route[]>;
 
@@ -212,6 +242,11 @@ export default class DevServer {
   private getVercelConfigPromise: Promise<VercelConfig> | null;
   private blockingBuildsPromise: Promise<void> | null;
   private startPromise: Promise<void> | null;
+  private bulkRedirects: BulkRedirectTable | null;
+  private bulkRedirectsSignature: string | null;
+  private bulkRedirectsLastPath: string | null;
+  private bulkRedirectsResolvedPath: string | null;
+  private bulkRedirectsDirty: boolean;
 
   private envValues: Record<string, string>;
   private useImplicitServicesEnvInjection: boolean;
@@ -237,7 +272,30 @@ export default class DevServer {
       VERCEL_HAS_WORKER_SERVICES: '1',
       VERCEL_QUEUE_BASE_URL: `${this.address.origin}/_svc/_queues`,
       VERCEL_QUEUE_TOKEN: 'vc-dev-token',
+      VERCEL_REGION: 'dev1',
     };
+  }
+
+  /**
+   * Point Runtime Cache clients at the dev server's store, unless the developer
+   * already configured a cache endpoint of their own (in their shell or env
+   * files).
+   */
+  private getDevRuntimeCacheEnv(env: Env): Record<string, string> {
+    if (!this._address || env.RUNTIME_CACHE_ENDPOINT) {
+      return {};
+    }
+
+    if (process.env.RUNTIME_CACHE_ENDPOINT) {
+      return {
+        RUNTIME_CACHE_ENDPOINT: process.env.RUNTIME_CACHE_ENDPOINT,
+        ...(process.env.RUNTIME_CACHE_HEADERS
+          ? { RUNTIME_CACHE_HEADERS: process.env.RUNTIME_CACHE_HEADERS }
+          : {}),
+      };
+    }
+
+    return getDevRuntimeCacheEnv(this.address.origin);
   }
 
   private getSidecarDevMeta(match: BuildMatch): {
@@ -275,6 +333,11 @@ export default class DevServer {
       proxyOrigin: this.address.origin,
       useImplicitEnvInjection: false,
       preferServiceBuilder: true,
+      onQueueSubscriptions: (serviceName, subscriptions) =>
+        this.queueBroker?.updateServiceSubscriptions(
+          serviceName,
+          subscriptions
+        ),
     });
 
     const queueBroker = new QueueBroker(services, name =>
@@ -301,6 +364,19 @@ export default class DevServer {
       )}`
     );
   }
+
+  private shouldBuildInDev = (build: Builder): boolean => {
+    // `api/` builds are standalone serverless functions, never the frontend
+    // build owned by the framework dev command. In services mode, the
+    // orchestrator owns every service build, including services with `api/`
+    // entrypoints.
+    if (!this.shouldUseServicesOrchestrator() && isApiDirBuild(build)) {
+      return true;
+    }
+
+    const { name } = npa(build.use);
+    return !frameworkRuntimeSet.has(name || '');
+  };
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
@@ -369,6 +445,11 @@ export default class DevServer {
     this.getVercelConfigPromise = null;
     this.blockingBuildsPromise = null;
     this.startPromise = null;
+    this.bulkRedirects = null;
+    this.bulkRedirectsSignature = null;
+    this.bulkRedirectsLastPath = null;
+    this.bulkRedirectsResolvedPath = null;
+    this.bulkRedirectsDirty = true;
 
     this.watchAggregationId = null;
     this.watchAggregationEvents = [];
@@ -386,6 +467,13 @@ export default class DevServer {
   }
 
   enqueueFsEvent(type: string, path: string): void {
+    if (
+      this.bulkRedirectsResolvedPath &&
+      (path === this.bulkRedirectsResolvedPath ||
+        path.startsWith(this.bulkRedirectsResolvedPath + sep))
+    ) {
+      this.bulkRedirectsDirty = true;
+    }
     this.watchAggregationEvents.push({ type, path });
     if (this.watchAggregationId === null) {
       this.watchAggregationId = setTimeout(() => {
@@ -730,6 +818,10 @@ export default class DevServer {
       this.readJsonFile<VercelConfig>(configPath),
     ]);
 
+    // Validate what the user actually wrote. Everything below turns
+    // `vercelConfig` into a derived build plan (zero-config builders, the
+    // `proxy` builder, transformed routes), and those derived fields must not
+    // be fed back through a validator whose rules are about authored config.
     await this.validateVercelConfig(vercelConfig);
 
     this.projectSettings = {
@@ -744,14 +836,13 @@ export default class DevServer {
       await this.exit();
     }
     vercelConfig.routes = maybeRoutes || [];
+    const hasServices = (this.services?.length ?? 0) > 0;
 
     // no builds -> zero config
     //
     // Skip zero-config builder detection when the dev server already has
     // resolved services (`experimentalServices`/`experimentalServicesV2`): the
-    // services orchestrator owns building and running them. Without this,
-    // `detectBuilders` runs with the remote `framework: "services"` setting but
-    // no service config threaded in, and errors with "no services declared".
+    // services orchestrator owns building and running them.
     const hasResolvedServices = !!this.services && this.services.length > 0;
     if (
       !vercelConfig.experimentalServices &&
@@ -765,13 +856,15 @@ export default class DevServer {
         relative(this.cwd, f)
       );
 
-      const detectedBuilders = await detectBuilders(files, pkg, {
+      const detectedBuilders = await detectBuildersWithServices(files, pkg, {
         tag: 'latest',
+        bunVersion: vercelConfig.bunVersion,
         functions: vercelConfig.functions,
         projectSettings: projectSettings || this.projectSettings,
         featHandleMiss,
         cleanUrls,
         trailingSlash,
+        proxy: vercelConfig.proxy,
         workPath: this.cwd,
       });
       const {
@@ -845,28 +938,42 @@ export default class DevServer {
       });
       routes.push(...(defaultRoutes || []));
       vercelConfig.routes = routes;
+    } else if (hasResolvedServices && vercelConfig.proxy) {
+      // Service builds are owned by the orchestrator; only the top-level
+      // proxy participates in the dev server's build pipeline.
+      const { entrypoint } = vercelConfig.proxy;
+      if (!(await fs.pathExists(join(this.cwd, entrypoint)))) {
+        output.error(
+          `The proxy entrypoint \`${entrypoint}\` does not exist. Set \`proxy.entrypoint\` to an existing \`.js\` or \`.ts\` file.`
+        );
+        await this.exit();
+      }
+      vercelConfig.builds = vercelConfig.builds || [];
+      vercelConfig.builds.push(
+        getProxyBuilder(vercelConfig.proxy, 'latest', vercelConfig.functions)
+      );
     }
 
     if (this.sidecars === undefined) {
-      this.sidecars = this.shouldUseServicesOrchestrator()
-        ? []
-        : await collectBuilderDevSidecars({
-            builds: vercelConfig.builds ?? [],
-            workPath: this.cwd,
-          });
+      const services = (this.services ?? []).filter(isExperimentalServiceV2);
+      this.sidecars = await collectBuilderDevSidecars({
+        builds: this.shouldUseServicesOrchestrator()
+          ? services.map(service => service.builder)
+          : (vercelConfig.builds ?? []),
+        workPath: this.cwd,
+        services,
+      });
     }
 
     if (Array.isArray(vercelConfig.builds)) {
-      if (this.devCommand || (this.services && this.services.length > 0)) {
-        vercelConfig.builds = vercelConfig.builds.filter(filterFrontendBuilds);
+      if (this.devCommand || hasServices) {
+        vercelConfig.builds = vercelConfig.builds.filter(this.shouldBuildInDev);
       }
 
       // `@vercel/static-build` needs to be the last builder
       // since it might catch all other requests
       vercelConfig.builds.sort(sortBuilders);
     }
-
-    await this.validateVercelConfig(vercelConfig);
 
     // TODO: temporarily strip and warn since `has` is not implemented yet
     vercelConfig.routes = (vercelConfig.routes || []).filter(route => {
@@ -946,6 +1053,9 @@ export default class DevServer {
       Object.assign(runEnv, this.getDevQueueEnv());
     }
 
+    // Functions share the dev server's Runtime Cache store.
+    Object.assign(runEnv, this.getDevRuntimeCacheEnv(runEnv));
+
     this.envConfigs = { buildEnv, runEnv, allEnv };
 
     // Restart the dev process if `devCommand` was modified via project
@@ -955,7 +1065,58 @@ export default class DevServer {
       await this.runDevCommand();
     }
 
+    await this.refreshBulkRedirects(vercelConfig.bulkRedirectsPath);
+
     return vercelConfig;
+  }
+
+  private async refreshBulkRedirects(
+    bulkRedirectsPath?: string | null
+  ): Promise<void> {
+    const configPath = bulkRedirectsPath ?? null;
+
+    // Skip the signature walk unless the config path changed or the
+    // watcher saw a change under the redirects path.
+    if (configPath === this.bulkRedirectsLastPath && !this.bulkRedirectsDirty) {
+      return;
+    }
+
+    this.bulkRedirectsLastPath = configPath;
+    this.bulkRedirectsDirty = false;
+    this.bulkRedirectsResolvedPath = configPath
+      ? resolveBulkRedirectsPath(this.cwd, configPath)
+      : null;
+
+    if (!configPath) {
+      this.bulkRedirects = null;
+      this.bulkRedirectsSignature = null;
+      return;
+    }
+
+    const signature = await getBulkRedirectsSignature(this.cwd, configPath);
+    if (signature === this.bulkRedirectsSignature) {
+      return;
+    }
+    this.bulkRedirectsSignature = signature;
+
+    try {
+      const result = await loadBulkRedirects(this.cwd, configPath);
+      this.bulkRedirects = result.table;
+      for (const warning of result.warnings) {
+        output.warn(warning);
+      }
+      const count = result.table.size;
+      if (count > 0) {
+        output.log(
+          `Loaded ${count} bulk ${plural('redirect', count)} from ${configPath}`
+        );
+      }
+    } catch (err: unknown) {
+      this.bulkRedirects = null;
+      output.warn(
+        `Failed to load bulk redirects from "${configPath}": ${errorToString(err)}`
+      );
+    }
   }
 
   async readJsonFile<T>(
@@ -1080,6 +1241,20 @@ export default class DevServer {
     return Object.keys(files).filter(this.filter);
   }
 
+  /**
+   * `this.filter` expects gitignore-style relative paths but chokidar reports
+   * absolute ones, so without relativizing, anchored patterns never match —
+   * including the default `/target` rule for Cargo projects.
+   */
+  private isWatcherIgnored(fsPath: string): boolean {
+    const relativePath = relative(this.cwd, fsPath);
+    // chokidar tests the watch root itself, which must never be ignored
+    if (relativePath === '') {
+      return false;
+    }
+    return !this.filter(relativePath);
+  }
+
   start(...listenSpec: ListenSpec): Promise<void> {
     if (!this.startPromise) {
       this.startPromise = this._start(...listenSpec).catch(err => {
@@ -1138,6 +1313,10 @@ export default class DevServer {
 
     this._address = new URL(replaceLocalhost(address));
 
+    // One store for the whole project, created before any service starts so
+    // that early reads and writes hit the same cache the rest of the run does.
+    this.runtimeCache = new RuntimeCacheStore();
+
     const vercelConfig = await this.getVercelConfig();
 
     let devCommandPromise: Promise<void> | undefined;
@@ -1150,20 +1329,29 @@ export default class DevServer {
     };
 
     if (this.shouldUseServicesOrchestrator()) {
+      const orchestratorServices = [
+        ...(this.services || []),
+        ...(this.sidecars || []).map(toOrchestratorService),
+      ];
       this.orchestrator = new ServicesOrchestrator({
-        services: this.services || [],
+        services: orchestratorServices,
         cwd: this.cwd,
         repoRoot: this.repoRoot,
         env: this.envConfigs.allEnv,
         proxyOrigin: this.address.origin,
         useImplicitEnvInjection: this.useImplicitServicesEnvInjection,
+        onQueueSubscriptions: (serviceName, subscriptions) =>
+          this.queueBroker?.updateServiceSubscriptions(
+            serviceName,
+            subscriptions
+          ),
       });
       devCommandPromise = this.orchestrator.startAll();
       this.devProcessOrigin = undefined;
 
       // Instantiate the dev queue broker if any queue-backed services exist.
       // Queue-backed services are `experimentalServices` feature only.
-      const queueServices = (this.services || [])
+      const queueServices = orchestratorServices
         .filter(isExperimentalService)
         .filter(isQueueBackedService);
       if (queueServices.length > 0) {
@@ -1244,7 +1432,7 @@ export default class DevServer {
 
     // Start the filesystem watcher
     this.watcher = watch(this.cwd, {
-      ignored: (path: string) => !this.filter(path),
+      ignored: (fsPath: string) => this.isWatcherIgnored(fsPath),
       ignoreInitial: true,
       usePolling: false,
       persistent: true,
@@ -1331,10 +1519,7 @@ export default class DevServer {
       const pathname = url.parse(req.url || '/').pathname || '/';
       for (const match of this.buildMatches.values()) {
         const { builder } = match.builderWithPkg;
-        if (
-          (builder.version === 3 || builder.version === -1) &&
-          typeof builder.startDevServer === 'function'
-        ) {
+        if (typeof builder.startDevServer === 'function') {
           try {
             const result = await builder.startDevServer({
               files: this.files,
@@ -1414,6 +1599,11 @@ export default class DevServer {
 
     if (this.queueBroker) {
       this.queueBroker.stop();
+    }
+
+    if (this.runtimeCache) {
+      this.runtimeCache.stop();
+      this.runtimeCache = undefined;
     }
 
     ops.push(close(this.server));
@@ -1724,9 +1914,13 @@ export default class DevServer {
     ];
     let responseTransformsToApply = responseTransforms;
 
+    const lookupUrl = `${lookupPath}${parsed.search || ''}`;
+    let rewrittenUrl: string | undefined;
+    let externalDestUrl: string | undefined;
+
     if (serviceRoutes.length > 0) {
       const serviceResult = await devRouter(
-        `${lookupPath}${parsed.search || ''}`,
+        lookupUrl,
         req.method,
         serviceRoutes,
         this,
@@ -1765,6 +1959,27 @@ export default class DevServer {
           res.setHeader(name, value);
         }
       }
+
+      if (serviceResult.dest) {
+        // Mix the service route table's dest query params into the dest path
+        const destParsed = url.parse(serviceResult.dest);
+        const destQuery = parseQueryString(destParsed.search);
+        Object.assign(destQuery, serviceResult.query);
+        destParsed.search = formatQueryString(destQuery);
+        const resolvedDest = url.format(destParsed);
+        if (serviceResult.isDestUrl) {
+          externalDestUrl = resolvedDest;
+        } else if (resolvedDest !== lookupUrl) {
+          rewrittenUrl = resolvedDest;
+        }
+      }
+    }
+
+    // Apply the rewritten path so service-level rewrites reach the service.
+    // This happens before request transforms so that `request.path` transforms
+    // operate on the rewritten path.
+    if (rewrittenUrl !== undefined) {
+      req.url = rewrittenUrl;
     }
 
     for (const [name, value] of Object.entries(proxyHeaders)) {
@@ -1779,7 +1994,15 @@ export default class DevServer {
     );
 
     this.setResponseHeaders(res, requestId);
-    debug(`Delegating to service "${serviceName}": ${origin}`);
+
+    if (externalDestUrl) {
+      debug(
+        `Service "${serviceName}" rewrite to external URL: ${externalDestUrl}`
+      );
+      return proxyPass(req, res, externalDestUrl, this, requestId);
+    }
+
+    debug(`Delegating to service "${serviceName}": ${origin}${req.url}`);
     return proxyPass(req, res, origin, this, requestId, false);
   }
 
@@ -2177,6 +2400,185 @@ export default class DevServer {
   };
 
   /**
+   * Handle `/_svc/_cache/*` routes for the dev Runtime Cache store, which mimics
+   * the Runtime Cache API so `getCache()` works unchanged in `vc dev` and is
+   * shared by every service instead of being process-local.
+   */
+  private handleRuntimeCacheRoute = async (
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    pathname: string
+  ) => {
+    const store = this.runtimeCache;
+    if (!store) {
+      res.writeHead(503);
+      res.end('Runtime Cache not initialized');
+      return;
+    }
+
+    if (!pathname.startsWith(DEV_RUNTIME_CACHE_ITEM_PREFIX)) {
+      res.writeHead(404);
+      res.end('Not Found');
+      return;
+    }
+
+    const itemPath = pathname.slice(DEV_RUNTIME_CACHE_ITEM_PREFIX.length);
+    const searchParams = new URL(req.url || '/', 'http://localhost')
+      .searchParams;
+
+    // POST revalidate?tags=a,b&itemId=key - expire tags and/or a single item
+    if (itemPath === 'revalidate') {
+      if (req.method !== 'POST') {
+        res.writeHead(405);
+        res.end('Method Not Allowed');
+        return;
+      }
+
+      const tags = (searchParams.get('tags') || '')
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(Boolean);
+      const itemId = searchParams.get('itemId') || undefined;
+
+      if (tags.length === 0 && !itemId) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'No tags or itemId provided' }));
+        return;
+      }
+
+      if (tags.length > 0) {
+        store.expireTags(tags);
+        output.debug(`runtime cache: expired tags "${tags.join(',')}"`);
+      }
+      if (itemId) {
+        store.delete(itemId);
+        output.debug(`runtime cache: expired item "${itemId}"`);
+      }
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ revalidated: true }));
+      return;
+    }
+
+    // Decode so that clients which escape characters like `$` in the namespace
+    // separator address the same entry as clients which don't.
+    let key: string;
+    try {
+      key = decodeURIComponent(itemPath);
+    } catch {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Invalid cache key' }));
+      return;
+    }
+    if (!key) {
+      res.writeHead(404);
+      res.end('Not Found');
+      return;
+    }
+
+    if (req.method === 'GET') {
+      const hit = store.get(key);
+      if (!hit) {
+        output.debug(`runtime cache: MISS "${key}"`);
+        res.writeHead(404);
+        res.end('Not Found');
+        return;
+      }
+
+      output.debug(`runtime cache: HIT "${key}"`);
+      const headers: http.OutgoingHttpHeaders = {
+        'Content-Type': 'application/json',
+        'Content-Length': hit.value.length,
+        [HEADER_CACHE_STATE]: 'fresh',
+        Age: String(hit.ageSeconds),
+      };
+      if (hit.tags.length > 0) {
+        headers[HEADER_CACHE_TAGS] = hit.tags.join(',');
+      }
+      res.writeHead(200, headers);
+      res.end(hit.value);
+      return;
+    }
+
+    if (req.method === 'POST') {
+      const revalidateHeader = req.headers[HEADER_REVALIDATE] as
+        | string
+        | undefined;
+      let ttlSeconds: number | undefined;
+
+      if (revalidateHeader) {
+        if (
+          revalidateHeader === 'Infinity' ||
+          ['false', 'False', 'FALSE', 'f', 'F'].includes(revalidateHeader)
+        ) {
+          ttlSeconds = DEV_RUNTIME_CACHE_ONE_YEAR_SECONDS;
+        } else if (/^[+-]?\d+$/.test(revalidateHeader)) {
+          const parsedRevalidate = Number(revalidateHeader);
+          if (!Number.isSafeInteger(parsedRevalidate) || parsedRevalidate < 0) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Invalid revalidate value' }));
+            return;
+          }
+          if (parsedRevalidate === 0) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true }));
+            return;
+          }
+          ttlSeconds = parsedRevalidate;
+        } else {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid revalidate value' }));
+          return;
+        }
+      }
+
+      let value: Buffer;
+      try {
+        value = await rawBody(req, {
+          limit: DEV_RUNTIME_CACHE_MAX_ITEM_SIZE,
+        });
+      } catch (err) {
+        if ((err as { statusCode?: number }).statusCode === 413) {
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Cache item is too large' }));
+          return;
+        }
+        throw err;
+      }
+
+      const tagsHeader = req.headers[HEADER_CACHE_TAGS] as string | undefined;
+
+      store.set(key, value, {
+        ttlSeconds,
+        tags: (tagsHeader || '')
+          .split(',')
+          .map(tag => tag.trim())
+          .filter(Boolean),
+      });
+
+      // Keys are hashed by the SDKs; the item name carries the original key.
+      const name = req.headers[HEADER_CACHE_ITEM_NAME] as string | undefined;
+      output.debug(
+        `runtime cache: SET "${key}"${name ? ` (${name})` : ''} ${value.length} bytes`
+      );
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true }));
+      return;
+    }
+
+    if (req.method === 'DELETE') {
+      store.delete(key);
+      output.debug(`runtime cache: DELETE "${key}"`);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true }));
+      return;
+    }
+
+    res.writeHead(405);
+    res.end('Method Not Allowed');
+  };
+
+  /**
    * Serve project directory as a v2 deployment.
    */
   serveProjectAsNowV2 = async (
@@ -2214,6 +2616,38 @@ export default class DevServer {
       const pathname = parsed.pathname || '/';
       if (pathname.startsWith('/_svc/_queues/')) {
         await this.handleQueuesRoute(req, res, pathname);
+        return;
+      }
+    }
+
+    // Handle /_svc/_cache/* routes for the dev Runtime Cache store
+    if (callLevel === 0) {
+      const pathname = parsed.pathname || '/';
+      if (pathname.startsWith(DEV_RUNTIME_CACHE_PREFIX)) {
+        await this.handleRuntimeCacheRoute(req, res, pathname);
+        return;
+      }
+    }
+
+    // Bulk redirects run at the CDN before any other routing. Apply them
+    // on the original incoming request only (not rewritten follow-ups).
+    if (callLevel === 0 && this.bulkRedirects) {
+      const bulkMatch = resolveBulkRedirect(
+        this.bulkRedirects,
+        req.url || '/',
+        typeof req.headers.host === 'string' ? req.headers.host : undefined
+      );
+      if (bulkMatch) {
+        debug(
+          `Bulk redirect ${bulkMatch.statusCode}: ${req.url} -> ${bulkMatch.location}`
+        );
+        await this.sendRedirect(
+          req,
+          res,
+          requestId,
+          bulkMatch.location,
+          bulkMatch.statusCode
+        );
         return;
       }
     }
@@ -2273,18 +2707,20 @@ export default class DevServer {
     let statusCode: number | undefined;
     let prevUrl = req.url;
     let prevHeaders: HttpHeadersConfig = {};
-    let middlewarePid: number | undefined;
     const requestTransforms: Transform[] = [];
     let responseTransforms: Transform[] | undefined;
 
-    // Run the middleware file, if present, and apply any
-    // mutations to the incoming request based on the
-    // result of the middleware invocation.
-    const middleware = [...this.buildMatches.values()].find(
+    // Run the ordered chain of middleware files, if present, and apply any
+    // mutations to the incoming request based on each middleware's
+    // response, before serving the app. A `null` result from
+    // `startDevServer()` means the matcher missed. The loop skips that
+    // middleware and continues to the next one in declared order.
+    const middlewares = [...this.buildMatches.values()].filter(
       m => m.config?.middleware === true
     );
-    if (middleware) {
+    for (const middleware of middlewares) {
       let startMiddlewareResult: StartDevServerResult | undefined;
+      let middlewarePid: number | undefined;
       // TODO: can we add some caching to prevent (re-)starting
       // the middleware server for every HTTP request?
       const { envConfigs, files, devCacheDir, cwd: workPath } = this;
@@ -2296,7 +2732,11 @@ export default class DevServer {
             entrypoint: middleware.entrypoint,
             workPath,
             repoRootPath: this.repoRoot,
-            config: middleware.config || {},
+            // `projectSettings.createdAt` decides the default middleware runtime.
+            config: {
+              projectSettings: this.projectSettings,
+              ...middleware.config,
+            },
             meta: {
               isDev: true,
               devCacheDir,
@@ -2312,6 +2752,8 @@ export default class DevServer {
           middlewarePid = pid;
           this.shutdownCallbacks.set(pid, shutdown);
 
+          debug(`Invoking middleware "${middleware.src}" (port=${port})`);
+
           const middlewareReqHeaders = nodeHeadersToFetchHeaders(req.headers);
 
           // Add the Vercel platform proxy request headers
@@ -2320,8 +2762,13 @@ export default class DevServer {
             middlewareReqHeaders.set(name, value);
           }
 
+          // Recompute the request path on every iteration. An earlier
+          // middleware may have rewritten `req.url`. This middleware must
+          // see that rewritten path.
+          const middlewareReqPath = url.parse(req.url || '/').path || '/';
+
           const middlewareRes = await directFetch(
-            `http://127.0.0.1:${port}${parsed.path}`,
+            `http://127.0.0.1:${port}${middlewareReqPath}`,
             {
               headers: middlewareReqHeaders,
               method: req.method,
@@ -2373,7 +2820,7 @@ export default class DevServer {
               // Any other kind of response header should be included
               // on both the incoming HTTP request (for when proxying
               // to another function) and the outgoing HTTP response.
-              res.setHeader(name, value);
+              applyChainResponseHeader(res, name, value);
               req.headers[name] = value;
             }
           }
@@ -3194,6 +3641,10 @@ export default class DevServer {
       }
     );
 
+    // The dev command hosts the framework's server-side code, so it reads and
+    // writes the same Runtime Cache store as functions and services.
+    Object.assign(env, this.getDevRuntimeCacheEnv(env));
+
     // add the node_modules/.bin directory to the PATH
     const nodeBinPaths = getNodeBinPaths({ base: this.repoRoot, start: cwd });
     const nodeBinPath = nodeBinPaths.join(path.delimiter);
@@ -3567,11 +4018,6 @@ function fileRemoved(
 function needsBlockingBuild(buildMatch: BuildMatch): boolean {
   const { builder } = buildMatch.builderWithPkg;
   return typeof builder.shouldServe !== 'function';
-}
-
-function filterFrontendBuilds(build: Builder) {
-  const { name } = npa(build.use);
-  return !frontendRuntimeSet.has(name || '');
 }
 
 function hasNewRoutingProperties(vercelConfig: VercelConfig) {

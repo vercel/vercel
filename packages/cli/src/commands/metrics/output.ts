@@ -39,7 +39,6 @@ export function formatQueryJson(
       query: queryWithResponseMetadata,
       summary: response.summary ?? [],
       data: response.data ?? [],
-      statistics: response.statistics ?? {},
       ...orderMetadata,
     },
     null,

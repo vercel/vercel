@@ -4,13 +4,13 @@ import stamp from '../output/stamp';
 import { isAPIError } from '../errors-ts';
 
 export interface RenderResourceOptions<T> {
-  /** Whether the caller resolved `--format json`. */
+  /** Whether the caller resolved JSON output. */
   asJson: boolean;
   /** Present-participle spinner text shown while fetching. */
   spinnerText: string;
   /** Fetches the resource from the AI Gateway API. */
   fetch: () => Promise<T>;
-  /** Maps the fetched data to the `--format json` payload. */
+  /** Maps the fetched data to the JSON payload. */
   toJSON: (data: T) => unknown;
   /** True when there is nothing to show in the table. */
   isEmpty: (data: T) => boolean;

@@ -5,7 +5,10 @@ import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
 import { useTeam } from '../../mocks/team';
 import { setupTmpDir } from '../../helpers/setup-unit-fixture';
-import getScope, { applyScopeFromLink } from '../../../src/util/get-scope';
+import getScope, {
+  applyScopeFromLink,
+  detectExplicitScope,
+} from '../../../src/util/get-scope';
 
 describe('resolveScopeContext', () => {
   describe('with no local links', () => {
@@ -23,7 +26,7 @@ describe('resolveScopeContext', () => {
 
       expect(ctx.org.id).toEqual(mockTeam.id);
       expect(ctx.contextName).toEqual(mockTeam.slug);
-      expect(ctx.user.id).toEqual(mockUser.id);
+      expect(ctx.user?.id).toEqual(mockUser.id);
       expect(ctx.team?.id).toEqual(mockTeam.id);
       expect(ctx.linkedRepo).toBeNull();
       expect(ctx.isCrossTeamRepo).toBe(false);
@@ -252,6 +255,13 @@ describe('resolveScopeContext', () => {
 
       expect(ctx.explicitScopeProvided).toBe(false);
     });
+
+    it('should ignore scope flags after the argument delimiter', async () => {
+      client.setArgv('env', 'run', '--', 'child', '--scope', 'child-scope');
+      client.localConfig = {};
+
+      expect(detectExplicitScope(client)).toBe(false);
+    });
   });
 
   describe('northstar user', () => {
@@ -270,7 +280,7 @@ describe('resolveScopeContext', () => {
       const ctx = await getScope(client, { resolveLocalScope: true });
 
       expect(ctx.org.id).toEqual(mockTeam.id);
-      expect(ctx.user.id).toEqual(mockUser.id);
+      expect(ctx.user?.id).toEqual(mockUser.id);
       expect(ctx.team?.id).toEqual(mockTeam.id);
     });
   });

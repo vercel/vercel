@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import json
+
+from vercel_runtime import get_deadline
 
 
 async def app(scope, receive, send):
@@ -42,12 +45,19 @@ async def app(scope, receive, send):
         for key, value in scope.get("headers", [])
     }
 
-    await send({"type": "websocket.accept"})
+    if path.endswith("/child-task"):
+        await asyncio.create_task(send({"type": "websocket.accept"}))
+    else:
+        await send({"type": "websocket.accept"})
+    # Read after the accept: the request lifecycle has already ended, but
+    # the deadline must remain visible for the rest of the handler.
+    deadline = get_deadline()
     await send(
         {
             "type": "websocket.send",
             "text": json.dumps(
                 {
+                    "deadline": (deadline.isoformat() if deadline else None),
                     "path": path,
                     "root_path": scope.get("root_path", ""),
                     "has_internal_invocation_id": (

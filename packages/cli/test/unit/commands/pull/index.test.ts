@@ -5,7 +5,11 @@ import path from 'path';
 import pull from '../../../../src/commands/pull';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
-import { defaultProject, useProject } from '../../../mocks/project';
+import {
+  defaultProject,
+  useProject,
+  useUnknownProject,
+} from '../../../mocks/project';
 import { useTeams, createTeam } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
@@ -91,6 +95,25 @@ describe('pull', () => {
     );
     const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
     expect(devFileHasDevEnv).toBeTruthy();
+  });
+
+  it('should not use owner lookup fallback for pulling', async () => {
+    const cwd = setupUnitFixture('vercel-pull-next');
+
+    useUser();
+    useTeams('team_dummy', { failNoAccess: true });
+    useProject({
+      ...defaultProject,
+      accountId: 'team_dummy',
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+
+    client.setArgv('pull', cwd);
+
+    await expect(pull(client)).rejects.toThrow(
+      'Could not retrieve Project Settings. To link your Project, remove the `.vercel` directory and deploy again.'
+    );
   });
 
   it('should fail with message to pull without a link and without --env', async () => {
@@ -477,7 +500,7 @@ describe('pull', () => {
       const cwd = setupUnitFixture('vercel-pull-unlinked');
       useUser();
       useTeams('team_dummy');
-      // No useProject() — every GET /v9/projects/* will 404.
+      useUnknownProject();
 
       client.setArgv('pull', '--yes', '--project=does-not-exist', cwd);
       const exitCodePromise = pull(client);

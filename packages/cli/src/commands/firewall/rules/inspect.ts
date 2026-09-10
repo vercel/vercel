@@ -4,14 +4,14 @@ import output from '../../../output-manager';
 import { rulesInspectSubcommand } from '../command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   resolveRule,
   outputJson,
   withGlobalFlags,
+  resolveFirewallScope,
+  mapFirewallApiError,
 } from '../shared';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
 import { formatRuleDetail } from '../../../util/firewall/format';
-import { getCommandName } from '../../../util/pkg-name';
 import { outputAgentError } from '../../../util/agent-output';
 
 export default async function inspect(client: Client, argv: string[]) {
@@ -50,23 +50,18 @@ export default async function inspect(client: Client, argv: string[]) {
       );
     }
     output.error(
-      `Rule name or ID is required. Usage: ${getCommandName('firewall rules inspect <name-or-id>')}`
+      `Rule name or ID is required. Usage: ${withGlobalFlags(client, 'firewall rules inspect <name-or-id>')}`
     );
     return 1;
   }
 
-  const link = await ensureProjectLink(client);
-  if (typeof link === 'number') return link;
+  const scope = await resolveFirewallScope(client, parsed.flags);
+  if (typeof scope === 'number') return scope;
 
-  const { project, org } = link;
-  const teamId = org.type === 'team' ? org.id : undefined;
-
-  output.spinner(`Fetching rules for ${chalk.bold(project.name)}`);
+  output.spinner(`Fetching rules for ${chalk.bold(scope.displayName)}`);
 
   try {
-    const { active, draft } = await listFirewallConfigs(client, project.id, {
-      teamId,
-    });
+    const { active, draft } = await listFirewallConfigs(client, scope);
 
     // Resolve against draft (if exists) or active
     const currentRules = draft?.rules || active?.rules || [];
@@ -83,7 +78,7 @@ export default async function inspect(client: Client, argv: string[]) {
             message: `No rule found for "${identifier}".`,
             next: [
               {
-                command: withGlobalFlags(client, 'firewall rules list'),
+                command: withGlobalFlags(client, 'firewall rules list', scope),
                 when: 'list rules',
               },
             ],
@@ -92,7 +87,7 @@ export default async function inspect(client: Client, argv: string[]) {
         );
       }
       output.error(
-        `No rule found for "${identifier}". Run ${chalk.cyan(getCommandName('firewall rules list'))} to view all rules.`
+        `No rule found for "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'firewall rules list', scope))} to view all rules.`
       );
       return 1;
     }
@@ -113,7 +108,8 @@ export default async function inspect(client: Client, argv: string[]) {
               next: matches.map(r => ({
                 command: withGlobalFlags(
                   client,
-                  `firewall rules inspect "${r.id}"`
+                  `firewall rules inspect "${r.id}"`,
+                  scope
                 ),
                 when: `inspect "${r.name}"`,
               })),
@@ -151,8 +147,7 @@ export default async function inspect(client: Client, argv: string[]) {
     output.print(`\n${formatRuleDetail(rule)}\n\n`);
     return 0;
   } catch (e: unknown) {
-    const error = e as { message?: string };
-    const msg = error.message || 'Failed to fetch rules';
+    const msg = mapFirewallApiError(e, scope, 'Failed to fetch rules');
     if (client.nonInteractive) {
       outputAgentError(client, {
         status: 'error',
@@ -162,7 +157,8 @@ export default async function inspect(client: Client, argv: string[]) {
           {
             command: withGlobalFlags(
               client,
-              `firewall rules inspect ${identifier}`
+              `firewall rules inspect ${identifier}`,
+              scope
             ),
           },
         ],

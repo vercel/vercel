@@ -141,6 +141,67 @@ describe('Lambda', () => {
     });
   });
 
+  describe('maxConcurrency', () => {
+    const files: Files = {};
+
+    it('accepts a positive integer', () => {
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'nodejs22.x',
+        maxConcurrency: 8,
+      });
+
+      expect(lambda.maxConcurrency).toBe(8);
+    });
+
+    it.each([0, -1, 1.5])('rejects %s', maxConcurrency => {
+      expect(
+        () =>
+          new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'nodejs22.x',
+            maxConcurrency,
+          })
+      ).toThrow(
+        '"maxConcurrency" must be an integer greater than or equal to 1'
+      );
+    });
+  });
+
+  describe('affinity', () => {
+    const files: Files = {};
+
+    it('accepts strict affinity', () => {
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'nodejs22.x',
+        affinity: { mode: 'strict' },
+      });
+
+      expect(lambda.affinity).toEqual({ mode: 'strict' });
+    });
+
+    it.each([
+      null,
+      {},
+      { mode: 'loose' },
+      { mode: 'strict', extra: true },
+    ])('rejects invalid affinity %o', affinity => {
+      expect(
+        () =>
+          new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'nodejs22.x',
+            affinity: affinity as any,
+          })
+      ).toThrow('"affinity" must be an object with only `mode: "strict"`');
+    });
+  });
+
   describe('TriggerEvent', () => {
     const files: Files = {};
 
@@ -221,6 +282,34 @@ describe('Lambda', () => {
       expect(lambda.experimentalTriggers![0].topic).toBe('user-events');
       expect(lambda.experimentalTriggers![1].topic).toBe('system-events');
       expect(lambda.experimentalTriggers![1].maxDeliveries).toBe(5);
+    });
+
+    it('should create Lambda with schedule trigger', () => {
+      const trigger: TriggerEvent = {
+        type: 'schedule/v1beta',
+      };
+
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'nodejs22.x',
+        experimentalTriggers: [trigger],
+      });
+
+      expect(lambda.experimentalTriggers).toEqual([trigger]);
+      expect(lambda.experimentalTriggers![0].type).toBe('schedule/v1beta');
+    });
+
+    it('should not require queue fields for schedule triggers', () => {
+      expect(
+        () =>
+          new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'nodejs22.x',
+            experimentalTriggers: [{ type: 'schedule/v1beta' } as any],
+          })
+      ).not.toThrow();
     });
 
     describe('v2beta', () => {
@@ -336,7 +425,7 @@ describe('Lambda', () => {
               ],
             })
         ).toThrow(
-          '"experimentalTriggers[0]".type must be "queue/v1beta" or "queue/v2beta"'
+          '"experimentalTriggers[0]".type must be "queue/v1beta", "queue/v2beta", or "schedule/v1beta"'
         );
       });
 
@@ -531,7 +620,7 @@ describe('Lambda', () => {
       const lambda = new Lambda({
         files,
         handler: 'index.handler',
-        runtime: 'provided.al2',
+        runtime: 'provided.al2023',
         runtimeLanguage: 'rust',
       });
 
@@ -543,7 +632,7 @@ describe('Lambda', () => {
       const lambda = new Lambda({
         files,
         handler: 'index.handler',
-        runtime: 'provided.al2',
+        runtime: 'provided.al2023',
         runtimeLanguage: 'go',
       });
 
@@ -568,7 +657,7 @@ describe('Lambda', () => {
           new Lambda({
             files,
             handler: 'index.handler',
-            runtime: 'provided.al2',
+            runtime: 'provided.al2023',
             runtimeLanguage: 'python' as any,
           })
       ).toThrow('"runtimeLanguage" is invalid. Valid options: "rust", "go"');
@@ -581,7 +670,7 @@ describe('Lambda', () => {
           new Lambda({
             files,
             handler: 'index.handler',
-            runtime: 'provided.al2',
+            runtime: 'provided.al2023',
             runtimeLanguage: 123 as any,
           })
       ).toThrow('"runtimeLanguage" is invalid. Valid options: "rust", "go"');
@@ -594,7 +683,7 @@ describe('Lambda', () => {
           new Lambda({
             files,
             handler: 'index.handler',
-            runtime: 'provided.al2',
+            runtime: 'provided.al2023',
             runtimeLanguage: '' as any,
           })
       ).toThrow('"runtimeLanguage" is invalid. Valid options: "rust", "go"');

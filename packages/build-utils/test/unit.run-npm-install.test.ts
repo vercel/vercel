@@ -24,6 +24,46 @@ vi.mock('cross-spawn', () => {
 afterEach(() => {
   spawnExitCode = 0;
   spawnMock.mockClear();
+  delete process.env.VERCEL_INSTALL_COMPLETED;
+  delete process.env.VERCEL_INSTALL_COMPLETED_PATH;
+  delete process.env.NPM_ONLY_PRODUCTION;
+});
+
+it('should skip every default install when `VERCEL_INSTALL_COMPLETED` has no path scope', async () => {
+  const meta: Meta = {};
+  const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
+
+  process.env.VERCEL_INSTALL_COMPLETED = '1';
+
+  const result = await runNpmInstall(fixture, [], undefined, meta);
+  expect(result).toEqual(false);
+  expect(spawnMock.mock.calls.length).toBe(0);
+});
+
+it('should still install a different install root when `VERCEL_INSTALL_COMPLETED_PATH` scopes the marker', async () => {
+  const meta: Meta = {};
+  const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
+
+  process.env.VERCEL_INSTALL_COMPLETED = '1';
+  process.env.VERCEL_INSTALL_COMPLETED_PATH = path.join(
+    __dirname,
+    'fixtures',
+    'some-other-root',
+    'package.json'
+  );
+
+  const run1 = await runNpmInstall(fixture, [], undefined, meta);
+  expect(run1).toEqual(true);
+  expect(spawnMock.mock.calls.length).toBe(1);
+
+  // The install root named by the marker is still skipped.
+  process.env.VERCEL_INSTALL_COMPLETED_PATH = path.join(
+    fixture,
+    'package.json'
+  );
+  const run2 = await runNpmInstall(fixture, [], undefined, {});
+  expect(run2).toEqual(false);
+  expect(spawnMock.mock.calls.length).toBe(1);
 });
 
 it('should only invoke `runNpmInstall()` once per `package.json` file (serial)', async () => {
@@ -156,4 +196,24 @@ it('should not disable global cache for yarn 1', async () => {
   const yarnInstall = spawnMock.mock.calls[0];
   expect(yarnInstall[0]).toEqual('yarn');
   expect(yarnInstall[1]).toEqual(['install']);
+});
+
+it('should not pass --unsafe-perm to pnpm install', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '22-pnpm');
+  expect(await runNpmInstall(fixture, [], undefined, {})).toEqual(true);
+
+  expect(spawnMock.mock.calls.length).toBe(1);
+  const pnpmInstall = spawnMock.mock.calls[0];
+  expect(pnpmInstall[0]).toEqual('pnpm');
+  expect(pnpmInstall[1]).toEqual(['install']);
+  expect(pnpmInstall[1]).not.toContain('--unsafe-perm');
+});
+
+it('should pass --prod to pnpm when NPM_ONLY_PRODUCTION is set', async () => {
+  process.env.NPM_ONLY_PRODUCTION = '1';
+  const fixture = path.join(__dirname, 'fixtures', '22-pnpm');
+  expect(await runNpmInstall(fixture, [], undefined, {})).toEqual(true);
+
+  expect(spawnMock.mock.calls[0][1]).toEqual(['install', '--prod']);
+  delete process.env.NPM_ONLY_PRODUCTION;
 });

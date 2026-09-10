@@ -83,7 +83,7 @@ export default async function members(
 
   const query = new URLSearchParams({ limit: String(limit ?? 20) });
   if (next) {
-    query.set('next', String(next));
+    query.set('until', String(next));
   }
 
   const result = await client.fetch<TeamMembersResponse>(

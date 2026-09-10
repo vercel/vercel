@@ -7,14 +7,14 @@ const BEARER_TOKEN_PATTERN = /^Bearer\s+(.+)$/i;
  * truthy value marks the request as verified; throwing (or returning a
  * falsy value) makes the adapter respond `401`.
  *
- * Mirrors the `webhookVerifier` option accepted by the Slack, GitHub,
- * and Linear adapters from the `chat` package, so the helpers in this
+ * Mirrors the `webhookVerifier` option accepted by the Slack, Discord,
+ * GitHub, and Linear adapters from the `chat` package, so the helpers in this
  * subpath stay decoupled from `@chat-adapter/*` while remaining
  * structurally compatible.
  */
 export type ConnectWebhookVerifier = (
   request: Request,
-  body: string
+  body: string | Uint8Array
 ) => Promise<unknown> | unknown;
 
 /**
@@ -35,8 +35,8 @@ export type ConnectWebhookVerifierOptions = Parameters<
  * the `Authorization` header. This verifier extracts that token and
  * validates it against Vercel's JWKS via
  * {@link verifyVercelOidcToken}, replacing the provider's native
- * signature check (Slack signing secret, GitHub webhook secret, Linear
- * webhook secret).
+ * signature check (Slack signing secret, Discord public key, GitHub webhook
+ * secret, Linear webhook secret).
  *
  * Trust boundary: by default the token must be issued by
  * `https://oidc.vercel.com` (issuer is hard-pinned) and match the
@@ -61,7 +61,10 @@ export type ConnectWebhookVerifierOptions = Parameters<
 export function createConnectWebhookVerifier(
   options?: ConnectWebhookVerifierOptions
 ): ConnectWebhookVerifier {
-  return async (request: Request, _body: string): Promise<true> => {
+  return async (
+    request: Request,
+    _body: string | Uint8Array
+  ): Promise<true> => {
     const token = request.headers
       .get('authorization')
       ?.match(BEARER_TOKEN_PATTERN)?.[1]

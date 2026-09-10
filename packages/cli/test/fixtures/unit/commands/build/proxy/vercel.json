@@ -1,0 +1,12 @@
+{
+  "proxy": {
+    "entrypoint": "proxy.ts",
+    "matcher": "/api/:func*"
+  },
+  "functions": {
+    "proxy.ts": {
+      "maxDuration": 10,
+      "memory": 1024
+    }
+  }
+}

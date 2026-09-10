@@ -1,6 +1,6 @@
 {
   "name": "@vercel/related-projects",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Vercel utilities for working with related projects",
   "files": [
     "dist"
@@ -15,16 +15,14 @@
   "scripts": {
     "build": "node ../../utils/build.mjs",
     "test": "vitest run --config ../../vitest.config.mts --coverage",
-    "test-unit": "pnpm test",
-    "type-check": "tsc --noEmit",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/**/*.test.js' 'test/**/*.test.ts' 'test/**/*.test.mjs' 'test/**/*.test.mts' 'tests/**/*.test.js' 'tests/**/*.test.ts'"
+    "test-unit": "vitest run --config ../../vitest.config.mts --coverage",
+    "type-check": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "20.11.0",
-    "@vitest/coverage-v8": "2.0.3",
+    "@vitest/coverage-v8": "4.1.10",
     "ajv": "^6.12.3",
-    "vitest": "2.0.3"
+    "vitest": "4.1.10"
   },
   "optionalDependencies": {
     "ajv": "^6.12.3"

@@ -6,6 +6,7 @@ import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import connect from '../../../../src/commands/connex';
+import { fakeConnexClient } from '../../../mocks/connex';
 
 vi.setConfig({ testTimeout: 15000 });
 
@@ -24,23 +25,6 @@ async function writeTmpFile(name: string, bytes: Buffer): Promise<string> {
   const path = join(dir, name);
   await writeFile(path, new Uint8Array(bytes));
   return path;
-}
-
-function fakeConnexClient(overrides: Record<string, unknown> = {}) {
-  return {
-    id: 'scl_test123',
-    ownerId: 'team_abc',
-    createdAt: 0,
-    updatedAt: 0,
-    uid: 'slack/my-bot',
-    type: 'slack',
-    name: 'my-bot',
-    data: {},
-    typeName: 'Slack',
-    supportedSubjectTypes: ['user'],
-    supportsInstallation: false,
-    ...overrides,
-  };
 }
 
 describe('connex update', () => {
