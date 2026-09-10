@@ -660,8 +660,8 @@ importers:
         specifier: 6.3.1
         version: 6.3.1
       smol-toml:
-        specifier: 1.5.2
-        version: 1.5.2
+        specifier: 1.8.0
+        version: 1.8.0
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -790,8 +790,8 @@ importers:
         specifier: 4.1.0
         version: 4.1.0
       smol-toml:
-        specifier: 1.5.2
-        version: 1.5.2
+        specifier: 1.8.0
+        version: 1.8.0
       undici:
         specifier: 5.29.0
         version: 5.29.0
@@ -1601,8 +1601,8 @@ importers:
         specifier: 3.13.1
         version: 3.13.1
       smol-toml:
-        specifier: 1.5.2
-        version: 1.5.2
+        specifier: 1.8.0
+        version: 1.8.0
     devDependencies:
       '@types/js-yaml':
         specifier: 3.12.1
@@ -1656,8 +1656,8 @@ importers:
         specifier: 6.3.1
         version: 6.3.1
       smol-toml:
-        specifier: 1.5.2
-        version: 1.5.2
+        specifier: 1.8.0
+        version: 1.8.0
     devDependencies:
       '@types/glob':
         specifier: 7.2.0
@@ -2413,8 +2413,8 @@ importers:
         specifier: 6.3.1
         version: 6.3.1
       smol-toml:
-        specifier: 1.5.2
-        version: 1.5.2
+        specifier: 1.8.0
+        version: 1.8.0
       vitest:
         specifier: 4.1.10
         version: 4.1.10(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.1)(@types/node@20.11.0)(@vitest/coverage-v8@4.1.10)(vite@8.2.1(@types/node@20.11.0)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(tsx@4.21.0)(yaml@2.9.0))
@@ -2440,8 +2440,8 @@ importers:
         specifier: 10.1.1
         version: 10.1.1
       smol-toml:
-        specifier: 1.5.2
-        version: 1.5.2
+        specifier: 1.8.0
+        version: 1.8.0
       zod:
         specifier: 3.22.4
         version: 3.22.4
@@ -2663,8 +2663,8 @@ importers:
         specifier: 5.1.1
         version: 5.1.1
       smol-toml:
-        specifier: 1.5.2
-        version: 1.5.2
+        specifier: 1.8.0
+        version: 1.8.0
     devDependencies:
       '@types/ms':
         specifier: ^0.7.31
@@ -12091,8 +12091,8 @@ packages:
     resolution: {integrity: sha512-94hK0Hh8rPqQl2xXc3HsaBoOXKV20MToPkcXvwbISWLEs+64sBq5kFgn2kJDHb1Pry9yrP0dxrCI9RRci7RXKg==}
     engines: {node: '>= 6.0.0', npm: '>= 3.0.0'}
 
-  smol-toml@1.5.2:
-    resolution: {integrity: sha512-QlaZEqcAH3/RtNyet1IPIYPsEWAaYyXXv1Krsi+1L/QHppjX4Ifm8MQsBISz9vE8cHicIq3clogsheili5vhaQ==}
+  smol-toml@1.8.0:
+    resolution: {integrity: sha512-kCZr2V3ch9i00x8zXRhjUNVcjG9ijES5dDudkXvUVCT5QlJNQWElSJdZqyPemffHoLNUYwOcou0Fy+ojN0uHSQ==}
     engines: {node: '>= 18'}
 
   socks@2.8.9:
@@ -23437,7 +23437,7 @@ snapshots:
   smart-buffer@4.2.0:
     optional: true
 
-  smol-toml@1.5.2: {}
+  smol-toml@1.8.0: {}
 
   socks@2.8.9:
     dependencies:
