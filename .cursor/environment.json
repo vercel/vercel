@@ -1,0 +1,4 @@
+{
+  "name": "Vercel Monorepo",
+  "install": "bash .cursor/install.sh"
+}
