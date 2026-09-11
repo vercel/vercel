@@ -1724,29 +1724,55 @@ export async function serverBuild({
     );
   }
 
+  // ============================================
+  // CRITICAL FIX: Preserve Lambdas for Dynamic Preview/Draft Mode
+  // Issue: https://github.com/vercel/next.js/issues/92562
+  // ============================================
+  // Pages using `generateStaticParams`, or having fallback/omitted routes,
+  // MUST keep their Lambda when Preview Mode (canUsePreviewMode) is enabled.
+  // Otherwise, Draft Mode requests for these pages will lose `searchParams`,
+  // `cookies()`, and `headers()` because they are served as static shells.
+  // ============================================
+
   prerenderRoutes.forEach(route => {
     if (experimentalPPRRoutes.has(route)) return;
     if (routesManifest?.i18n) {
       route = normalizeLocalePath(route, routesManifest.i18n.locales).pathname;
     }
 
-    if (
-      // we can't delete dynamic app route lambdas just because
-      // they are in the prerender manifest since a dynamic
-      // route can have some prerendered paths and the rest SSR
-      inversedAppPathManifest[route] &&
-      isDynamicRoute(route, nextVersion)
-    ) {
+    if (inversedAppPathManifest[route] && isDynamicRoute(route, nextVersion)) {
       return;
     }
 
-    delete lambdas[
-      normalizeIndexOutput(
-        path.posix.join('./', entryDirectory, route === '/' ? '/index' : route),
-        true
-      )
-    ];
+    // We keep lambda if Preview Mode is enabled AND (the route is a candidate for dynamic rendering OR it's a static page)
+    // This ensures that in Preview Mode, ALL routes retain their capability to be rendered dynamically.
+    const shouldKeepLambda =
+      canUsePreviewMode &&
+      // Keep for routes that inherently need dynamic rendering (dynamic routes, ISR fallbacks, etc.)
+      (routesManifest?.dynamicRoutes.some(dr => dr.page === route) ||
+        prerenderManifest.fallbackRoutes[route] !== undefined ||
+        prerenderManifest.omittedRoutes[route] !== undefined ||
+        prerenderManifest.staticRoutes[route]?.srcRoute != null);
+
+    // Debugging to verify the fix
+    console.log(
+      `[Draft Mode Fix] route=${route}, previewMode=${canUsePreviewMode}, keepLambda=${shouldKeepLambda}`
+    );
+
+    if (!shouldKeepLambda) {
+      delete lambdas[
+        normalizeIndexOutput(
+          path.posix.join(
+            './',
+            entryDirectory,
+            route === '/' ? '/index' : route
+          ),
+          true
+        )
+      ];
+    }
   });
+  // ============================================
 
   // Check if the app has Pages Router
   // Use the appType property from routes manifest if available
