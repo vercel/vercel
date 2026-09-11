@@ -74,7 +74,10 @@ import { getCommandName, packageName } from '../../util/pkg-name';
 import { getErrorCta } from '../../util/get-error-cta';
 import link from '../../util/output/link';
 import { AGENT_STATUS } from '../../util/agent-output-constants';
-import { pickOverrides } from '../../util/projects/project-settings';
+import {
+  normalizeRootDirectory,
+  pickOverrides,
+} from '../../util/projects/project-settings';
 import validatePaths, {
   validateRootDirectory,
 } from '../../util/validate-paths';
@@ -301,7 +304,7 @@ async function handleInitDeployment(
   }
 
   const { org, project } = link;
-  const rootDirectory = project.rootDirectory;
+  const rootDirectory = normalizeRootDirectory(project.rootDirectory);
   const sourceFilesOutsideRootDirectory =
     project.sourceFilesOutsideRootDirectory ?? true;
   if (link.repoRoot) {
@@ -1191,7 +1194,7 @@ async function handleDefaultDeploy(
   );
 
   const { org, project } = link;
-  const rootDirectory = project.rootDirectory;
+  const rootDirectory = normalizeRootDirectory(project.rootDirectory);
   const sourceFilesOutsideRootDirectory =
     project.sourceFilesOutsideRootDirectory ?? true;
   const projectCwd = cwd;
