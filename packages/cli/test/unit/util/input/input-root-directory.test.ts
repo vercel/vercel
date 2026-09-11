@@ -13,11 +13,14 @@ describe('inputRootDirectory', () => {
     expect(client.stderr.getFullOutput()).not.toContain('Code directory?');
   });
 
-  it('prompts and returns null when the user submits empty input', async () => {
+  it('prompts and returns null when the current directory is selected', async () => {
     const resultPromise = inputRootDirectory(client, '/tmp', false);
 
-    await expect(client.stderr).toOutput('Code directory?');
-    client.stdin.write('\n');
+    // Wait for the choice list, not just the message: the search prompt
+    // ignores Enter until its source has resolved. Submit with `\r`, since
+    // `@inquirer/search` only treats a carriage return as an enter key.
+    await expect(client.stderr).toOutput('Use this directory');
+    client.stdin.write('\r');
 
     await expect(resultPromise).resolves.toBeNull();
   });

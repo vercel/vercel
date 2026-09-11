@@ -6,6 +6,7 @@ import fs from 'fs-extra';
 import sleep from '../src/util/sleep';
 import waitForPrompt, {
   answerTeamPromptThenWait,
+  selectCodeDirectory,
 } from './helpers/wait-for-prompt';
 import { listTmpDirs } from './helpers/get-tmp-dir';
 import { teamPromise } from './helpers/get-account';
@@ -401,8 +402,7 @@ test('deploy from a nested directory', async () => {
   await waitForPrompt(vc, `Name? (${projectName})`);
   vc.stdin?.write(`\n`);
 
-  await waitForPrompt(vc, 'Code directory?');
-  vc.stdin?.write('app\n');
+  await selectCodeDirectory(vc, 'app');
 
   // This means the framework detection worked!
   await waitForPrompt(vc, 'Detected');
@@ -435,8 +435,7 @@ test('deploy from a nested directory with `--archive=tgz` option', async () => {
   await waitForPrompt(vc, `Name? (${projectName})`);
   vc.stdin?.write(`\n`);
 
-  await waitForPrompt(vc, 'Code directory?');
-  vc.stdin?.write('app\n');
+  await selectCodeDirectory(vc, 'app');
 
   // This means the framework detection worked!
   await waitForPrompt(vc, 'Detected');
