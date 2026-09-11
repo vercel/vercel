@@ -213,7 +213,7 @@ export default async function createGroup(client: Client): Promise<number> {
     const firstPage = await client.fetch<{
       projects: Project[];
       pagination: { count: number; next: number | null };
-    }>(`/v9/projects?limit=100&teamId=${team.id}`, { method: 'GET' });
+    }>(`/v10/projects?limit=100&teamId=${team.id}`, { method: 'GET' });
     output.stopSpinner();
 
     const allProjects = firstPage.projects;

@@ -71,12 +71,12 @@ function setupMocks(options: MockOptions = {}) {
 
   if (patchHandler) {
     client.scenario.patch(
-      '/v10/projects/:projectId/microfrontends',
+      '/v1/projects/:projectId/microfrontends',
       patchHandler
     );
   } else {
     client.scenario.patch(
-      '/v10/projects/:projectId/microfrontends',
+      '/v1/projects/:projectId/microfrontends',
       (req, res) => {
         patchCalled = true;
         patchBody = req.body;

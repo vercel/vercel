@@ -230,7 +230,7 @@ export default async function addToGroup(client: Client): Promise<number> {
 
   try {
     await client.fetch(
-      `/v10/projects/${project.id}/microfrontends?teamId=${teamSlug}`,
+      `/v1/projects/${project.id}/microfrontends?teamId=${teamSlug}`,
       {
         method: 'PATCH',
         body: {

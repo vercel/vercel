@@ -93,12 +93,12 @@ function setupMocks(options: MockOptions = {}) {
 
   if (deleteHandler) {
     client.scenario.delete(
-      '/v2/teams/:teamId/microfrontends/:groupId',
+      '/v1/teams/:teamId/microfrontends/:groupId',
       deleteHandler
     );
   } else {
     client.scenario.delete(
-      '/v2/teams/:teamId/microfrontends/:groupId',
+      '/v1/teams/:teamId/microfrontends/:groupId',
       (req, res) => {
         deleteCalled = true;
         deleteGroupId = req.params.groupId;
