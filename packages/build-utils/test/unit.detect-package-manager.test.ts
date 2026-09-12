@@ -290,6 +290,15 @@ describe('Test `detectPackageManager()`', () => {
           detectedPackageManager: 'bun@1.x',
         },
       },
+      {
+        name: 'returns bun@1.4 path for `bun.lock` lockfileVersion 2 (Bun >= 1.4), even without an explicit bunVersion',
+        args: ['bun', 2],
+        want: {
+          path: '/bun1.4',
+          detectedLockfile: 'bun.lock',
+          detectedPackageManager: 'bun@1.4.x',
+        },
+      },
     ])('$name', ({ args, want }) => {
       const [cliType, lockfileVersion] = args;
       expect(detectPackageManager(cliType, lockfileVersion)).toStrictEqual(

@@ -1039,6 +1039,26 @@ export async function runNpmInstall(
 }
 
 /**
+ * `bun.lock` written by Bun >= 1.4 uses `lockfileVersion: 2`, which requires
+ * Bun >= 1.4 to parse; older Bun binaries silently discard the lockfile and
+ * re-resolve dependencies from scratch instead of failing loudly. Given the
+ * resolved `nodeVersion` (from `config.bunVersion`, `package.json#engines.bun`,
+ * or the "1.x" default) and the detected `lockfileVersion`, return the Bun
+ * version that should actually be used to run the install, bumping to Bun
+ * 1.4 when the lockfile requires it and the resolved version doesn't already
+ * satisfy that.
+ */
+function resolveEffectiveBunVersion(
+  nodeVersion: BunVersion,
+  lockfileVersion: number | undefined
+): BunVersion {
+  const requiresBun14 =
+    lockfileVersion === 2 &&
+    (nodeVersion.minor === undefined || nodeVersion.minor < 4);
+  return requiresBun14 ? getSupportedBunVersion('1.4.x') : nodeVersion;
+}
+
+/**
  * Prepares the input environment based on the used package manager and lockfile
  * versions.
  */
@@ -1100,9 +1120,15 @@ export function getEnvForPackageManager({
 
   const bunRuntimePath =
     nodeVersion && isBunVersion(nodeVersion)
-      ? `/bun${nodeVersion.major}${
-          nodeVersion.minor === undefined ? '' : `.${nodeVersion.minor}`
-        }`
+      ? (() => {
+          const effective = resolveEffectiveBunVersion(
+            nodeVersion,
+            lockfileVersion
+          );
+          return `/bun${effective.major}${
+            effective.minor === undefined ? '' : `.${effective.minor}`
+          }`;
+        })()
       : undefined;
 
   const alreadyInPath = (newPath: string) => {
@@ -1516,11 +1542,17 @@ export function getPathOverrideForPackageManager({
     nodeVersion &&
     isBunVersion(nodeVersion)
   ) {
-    const minor = nodeVersion.minor;
+    const effectiveBunVersion = resolveEffectiveBunVersion(
+      nodeVersion,
+      lockfileVersion
+    );
+    const minor = effectiveBunVersion.minor;
     return {
       ...detectedPackageManger,
-      path: `/bun${nodeVersion.major}${minor === undefined ? '' : `.${minor}`}`,
-      detectedPackageManager: `bun@${nodeVersion.range}`,
+      path: `/bun${effectiveBunVersion.major}${
+        minor === undefined ? '' : `.${minor}`
+      }`,
+      detectedPackageManager: `bun@${effectiveBunVersion.range}`,
     };
   }
 
@@ -1720,12 +1752,26 @@ export function detectPackageManager(
           return undefined;
       }
     }
-    case 'bun':
+    case 'bun': {
+      // `bun.lock` written by Bun >= 1.4 uses `lockfileVersion: 2`, a format
+      // the container's default Bun 1.3.x install (`/bun1`) cannot parse: it
+      // silently discards the lockfile and re-resolves dependencies from
+      // scratch. Route the install to the Bun 1.4 binary whenever the
+      // lockfile itself requires it, mirroring how the pnpm version is
+      // inferred from its `lockfileVersion`.
+      if (lockfileVersion === 2) {
+        return {
+          path: '/bun1.4',
+          detectedLockfile: 'bun.lock',
+          detectedPackageManager: 'bun@1.4.x',
+        };
+      }
       return {
         path: '/bun1',
         detectedLockfile: lockfileVersion === 0 ? 'bun.lockb' : 'bun.lock',
         detectedPackageManager: 'bun@1.x',
       };
+    }
     case 'yarn':
       // yarn always uses the default version in the build container
       // which is why there's no `path` here
