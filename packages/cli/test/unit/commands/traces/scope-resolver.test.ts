@@ -1,6 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProjectLinkResult } from '@vercel-internals/types';
+import type Client from '../../../../src/util/client';
 import { resolveScope } from '../../../../src/commands/traces/scope-resolver';
+import { ProjectNotFound } from '../../../../src/util/errors-ts';
+import getProjectByNameOrId from '../../../../src/util/projects/get-project-by-id-or-name';
+
+vi.mock('../../../../src/util/projects/get-project-by-id-or-name');
+
+const mockedGetProject = vi.mocked(getProjectByNameOrId);
+const client = { config: { currentTeam: 'team_canonical' } } as Client;
 
 function linked(
   overrides: Partial<{
@@ -34,85 +42,119 @@ const NOT_LINKED: ProjectLinkResult = {
 };
 
 describe('resolveScope', () => {
-  it('returns the linked project ids when linked and no flags', () => {
-    const result = resolveScope({
-      linkedProject: linked({ orgId: 'team_xyz', projectId: 'prj_xyz' }),
-    });
-    expect(result).toEqual({ teamId: 'team_xyz', projectId: 'prj_xyz' });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    client.config.currentTeam = 'team_canonical';
+    mockedGetProject.mockResolvedValue({ id: 'prj_canonical' } as never);
   });
 
-  it('uses flags when both --scope and --project are provided without a link', () => {
-    const result = resolveScope({
-      flags: { scope: 'team_flag', project: 'prj_flag' },
-      linkedProject: NOT_LINKED,
-    });
-    expect(result).toEqual({ teamId: 'team_flag', projectId: 'prj_flag' });
+  it('returns linked project ids without flags', async () => {
+    await expect(
+      resolveScope({
+        client,
+        linkedProject: linked({ orgId: 'team_xyz', projectId: 'prj_xyz' }),
+      })
+    ).resolves.toEqual({ teamId: 'team_xyz', projectId: 'prj_xyz' });
+    expect(mockedGetProject).not.toHaveBeenCalled();
   });
 
-  it('lets flags override individual fields of the linked project', () => {
-    const result = resolveScope({
-      flags: { scope: 'other-team', project: 'other-project' },
-      linkedProject: linked({ orgId: 'team_xyz', projectId: 'prj_xyz' }),
+  it('uses the canonical selected team for a scope slug', async () => {
+    await expect(
+      resolveScope({
+        client,
+        flags: { scope: 'team-flag', project: 'project-flag' },
+        linkedProject: NOT_LINKED,
+      })
+    ).resolves.toEqual({
+      teamId: 'team_canonical',
+      projectId: 'prj_canonical',
     });
-    expect(result).toEqual({
-      teamId: 'other-team',
-      projectId: 'other-project',
+    expect(mockedGetProject).toHaveBeenCalledWith(
+      client,
+      'project-flag',
+      'team_canonical'
+    );
+  });
+
+  it('resolves flagged values against the selected team', async () => {
+    await expect(
+      resolveScope({
+        client,
+        flags: { scope: 'other-team', project: 'other-project' },
+        linkedProject: linked({ orgId: 'team_xyz', projectId: 'prj_xyz' }),
+      })
+    ).resolves.toEqual({
+      teamId: 'team_canonical',
+      projectId: 'prj_canonical',
     });
   });
 
-  it('falls back to the linked team when only --project is provided', () => {
-    const result = resolveScope({
-      flags: { project: 'other-project' },
-      linkedProject: linked({ orgId: 'team_xyz', projectId: 'prj_xyz' }),
-    });
-    expect(result).toEqual({
-      teamId: 'team_xyz',
-      projectId: 'other-project',
-    });
+  it('resolves a flagged project against the linked team', async () => {
+    await expect(
+      resolveScope({
+        client,
+        flags: { project: 'other-project' },
+        linkedProject: linked({ orgId: 'team_xyz', projectId: 'prj_xyz' }),
+      })
+    ).resolves.toEqual({ teamId: 'team_xyz', projectId: 'prj_canonical' });
+    expect(mockedGetProject).toHaveBeenCalledWith(
+      client,
+      'other-project',
+      'team_xyz'
+    );
   });
 
-  it('falls back to the linked project when only --scope is provided', () => {
-    const result = resolveScope({
-      flags: { scope: 'other-team' },
-      linkedProject: linked({ orgId: 'team_xyz', projectId: 'prj_xyz' }),
+  it('revalidates a linked project when --scope changes', async () => {
+    await expect(
+      resolveScope({
+        client,
+        flags: { scope: 'other-team' },
+        linkedProject: linked({ orgId: 'team_xyz', projectId: 'prj_xyz' }),
+      })
+    ).resolves.toEqual({
+      teamId: 'team_canonical',
+      projectId: 'prj_canonical',
     });
-    expect(result).toEqual({
-      teamId: 'other-team',
-      projectId: 'prj_xyz',
-    });
+    expect(mockedGetProject).toHaveBeenCalledWith(
+      client,
+      'prj_xyz',
+      'team_canonical'
+    );
   });
 
-  it('returns an actionable error when neither linked nor full flags are present', () => {
-    const result = resolveScope({
-      linkedProject: NOT_LINKED,
-    });
+  it('returns an actionable error without a link or both flags', async () => {
+    const result = await resolveScope({ client, linkedProject: NOT_LINKED });
     expect('message' in result).toBe(true);
     if ('message' in result) {
+      expect(result.reason).toBe('not_linked');
       expect(result.message).toContain('vercel link');
       expect(result.message).toContain('--scope');
       expect(result.message).toContain('--project');
     }
   });
 
-  it('returns the same error when partial flags are provided without a link', () => {
-    const onlyScope = resolveScope({
-      flags: { scope: 'team_flag' },
-      linkedProject: NOT_LINKED,
-    });
-    expect('message' in onlyScope).toBe(true);
+  it('reports a missing project as not found', async () => {
+    mockedGetProject.mockResolvedValue(new ProjectNotFound('missing-project'));
 
-    const onlyProject = resolveScope({
-      flags: { project: 'prj_flag' },
+    const result = await resolveScope({
+      client,
+      flags: { scope: 'team-flag', project: 'missing-project' },
       linkedProject: NOT_LINKED,
     });
-    expect('message' in onlyProject).toBe(true);
+
+    expect(result).toEqual({
+      reason: 'not_found',
+      message: 'Project not found: missing-project',
+    });
   });
 
-  it('treats whitespace-only flag values as missing', () => {
-    const result = resolveScope({
-      flags: { scope: '   ', project: '   ' },
-      linkedProject: linked({ orgId: 'team_xyz', projectId: 'prj_xyz' }),
-    });
-    expect(result).toEqual({ teamId: 'team_xyz', projectId: 'prj_xyz' });
+  it('treats whitespace-only flags as missing', async () => {
+    await expect(
+      resolveScope({
+        client,
+        flags: { scope: '   ', project: '   ' },
+        linkedProject: linked({ orgId: 'team_xyz', projectId: 'prj_xyz' }),
+      })
+    ).resolves.toEqual({ teamId: 'team_xyz', projectId: 'prj_xyz' });
   });
 });

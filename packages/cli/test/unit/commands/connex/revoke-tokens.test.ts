@@ -78,9 +78,7 @@ describe('connex revoke-tokens', () => {
     const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain(
-      '--format=json requires --yes'
-    );
+    expect(client.stderr.getFullOutput()).toContain('--json requires --yes');
   });
 
   it('errors with a friendly message when the connector is not found', async () => {

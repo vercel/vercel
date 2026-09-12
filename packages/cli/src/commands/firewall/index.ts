@@ -5,6 +5,7 @@ import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import { type Command, help } from '../help';
 import overview from './overview';
+import status from './status';
 import diff from './diff';
 import publish from './publish';
 import discard from './discard';
@@ -13,9 +14,12 @@ import attackMode from './attack-mode';
 import systemMitigations from './system-mitigations';
 import ipBlocks from './ip-blocks';
 import rules from './rules';
+import alerts from './alerts';
+import persistentActions from './persistent-actions';
 import {
   firewallCommand,
   overviewSubcommand,
+  statusSubcommand,
   diffSubcommand,
   publishSubcommand,
   discardSubcommand,
@@ -24,14 +28,18 @@ import {
   systemBypassSubcommand,
   attackModeSubcommand,
   systemMitigationsSubcommand,
+  alertsSubcommand,
+  persistentActionsSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import { FirewallTelemetryClient } from '../../util/telemetry/commands/firewall';
+import { getProjectOptionFromArgs } from '../../util/arg-common';
 
 const COMMAND_CONFIG = {
   overview: getCommandAliases(overviewSubcommand),
+  status: getCommandAliases(statusSubcommand),
   rules: getCommandAliases(rulesSubcommand),
   diff: getCommandAliases(diffSubcommand),
   publish: getCommandAliases(publishSubcommand),
@@ -40,6 +48,8 @@ const COMMAND_CONFIG = {
   'system-bypass': getCommandAliases(systemBypassSubcommand),
   'attack-mode': getCommandAliases(attackModeSubcommand),
   'system-mitigations': getCommandAliases(systemMitigationsSubcommand),
+  alerts: getCommandAliases(alertsSubcommand),
+  'persistent-actions': getCommandAliases(persistentActionsSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -83,7 +93,20 @@ export default async function main(client: Client) {
     );
   }
 
+  if (subcommand && !needHelp) {
+    telemetry.trackCliOptionProject(getProjectOptionFromArgs(args));
+    telemetry.trackCliFlagTeamLevel(args.includes('--team-level'));
+  }
+
   switch (subcommand) {
+    case 'status':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
+        printHelp(statusSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandStatus(subcommandOriginal);
+      return status(client, args);
     case 'overview':
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
@@ -119,27 +142,37 @@ export default async function main(client: Client) {
     case 'rules': {
       telemetry.trackCliSubcommandRules(subcommandOriginal);
       const nestedArgs = needHelp ? [...args, '--help'] : args;
-      return rules(client, nestedArgs);
+      return rules(client, nestedArgs, telemetry);
     }
     case 'ip-blocks': {
       telemetry.trackCliSubcommandIpBlocks(subcommandOriginal);
       const nestedArgs = needHelp ? [...args, '--help'] : args;
-      return ipBlocks(client, nestedArgs);
+      return ipBlocks(client, nestedArgs, telemetry);
     }
     case 'system-bypass': {
       telemetry.trackCliSubcommandSystemBypass(subcommandOriginal);
       const nestedArgs = needHelp ? [...args, '--help'] : args;
-      return systemBypass(client, nestedArgs);
+      return systemBypass(client, nestedArgs, telemetry);
     }
     case 'attack-mode': {
       telemetry.trackCliSubcommandAttackMode(subcommandOriginal);
       const nestedArgs = needHelp ? [...args, '--help'] : args;
-      return attackMode(client, nestedArgs);
+      return attackMode(client, nestedArgs, telemetry);
     }
     case 'system-mitigations': {
       telemetry.trackCliSubcommandSystemMitigations(subcommandOriginal);
       const nestedArgs = needHelp ? [...args, '--help'] : args;
-      return systemMitigations(client, nestedArgs);
+      return systemMitigations(client, nestedArgs, telemetry);
+    }
+    case 'alerts': {
+      telemetry.trackCliSubcommandAlerts(subcommandOriginal);
+      const nestedArgs = needHelp ? [...args, '--help'] : args;
+      return alerts(client, nestedArgs, telemetry);
+    }
+    case 'persistent-actions': {
+      telemetry.trackCliSubcommandPersistentActions(subcommandOriginal);
+      const nestedArgs = needHelp ? [...args, '--help'] : args;
+      return persistentActions(client, nestedArgs, telemetry);
     }
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));

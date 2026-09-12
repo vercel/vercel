@@ -3,7 +3,7 @@ import stripAnsi from 'strip-ansi';
 import type {
   ExperimentalService,
   ExperimentalServiceV2,
-} from '@vercel/fs-detectors';
+} from '@vercel/build-utils';
 import { displayDetectedServices } from '../../../../src/util/input/display-services';
 import { client } from '../../../mocks/client';
 

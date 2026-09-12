@@ -228,7 +228,8 @@ export function useProject(
   project: Partial<
     Project & { customEnvironments?: CustomEnvironment[] }
   > = defaultProject,
-  projectEnvs: ProjectEnvVariable[] = envs
+  projectEnvs: ProjectEnvVariable[] = envs,
+  options: { decryptDevelopmentSecrets?: boolean } = {}
 ) {
   client.scenario.get(`/:version/projects/${project.name}`, (_req, res) => {
     res.json(project);
@@ -273,7 +274,8 @@ export function useProject(
           systemEnvs.map(env => env.key),
           project.autoExposeSystemEnvs,
           undefined,
-          target
+          target,
+          options.decryptDevelopmentSecrets
         )
       );
 
@@ -443,7 +445,8 @@ function exposeSystemEnvs(
   systemEnvValues: string[],
   autoExposeSystemEnvs: boolean | undefined,
   vercelUrl?: string,
-  target?: ProjectEnvTarget
+  target?: ProjectEnvTarget,
+  decryptDevelopmentSecrets = false
 ) {
   const envs: Env = {};
 
@@ -459,6 +462,9 @@ function exposeSystemEnvs(
   for (const env of projectEnvs) {
     if (env.type === 'system') {
       envs[env.key] = getSystemEnvValue(env.value, { vercelUrl });
+    } else if (env.type === 'sensitive' || env.visibility === 'secret') {
+      envs[env.key] =
+        decryptDevelopmentSecrets && target === 'development' ? env.value : '';
     } else {
       envs[env.key] = env.value;
     }

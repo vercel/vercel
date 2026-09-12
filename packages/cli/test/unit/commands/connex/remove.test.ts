@@ -194,9 +194,7 @@ describe('connex remove', () => {
     const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain(
-      '--format=json requires --yes'
-    );
+    expect(client.stderr.getFullOutput()).toContain('--json requires --yes');
   });
 
   it('should emit a JSON receipt on success with --format=json --yes', async () => {

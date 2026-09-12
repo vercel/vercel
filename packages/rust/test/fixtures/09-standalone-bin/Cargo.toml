@@ -1,0 +1,11 @@
+[package]
+name = "standalone-bin"
+version = "0.1.0"
+edition = "2021"
+
+# No `src/main.rs` on purpose: the builder must resolve this target.
+[[bin]]
+name = "server"
+path = "src/bin/server.rs"
+
+[dependencies]

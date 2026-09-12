@@ -606,33 +606,6 @@ describe('integration add (auto-provision)', () => {
       );
     });
 
-    it('should skip browser when installation already exists (agent mode)', async () => {
-      // Need fresh mocks since beforeEach registered withInstallation: false
-      client.reset();
-      useUser();
-      const teams = useTeams('team_dummy');
-      const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
-      client.config.currentTeam = t.id;
-
-      useAutoProvision({
-        responseKey: 'provisioned',
-        withInstallation: true,
-      });
-
-      client.isAgent = true;
-      client.setArgv('integration', 'add', 'acme');
-      const exitCodePromise = integrationCommand(client);
-
-      await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
-      // Browser should NOT be opened since installation already exists
-      expect(openMock).not.toHaveBeenCalled();
-    });
-
     it('should include correct params in browser terms URL', async () => {
       client.reset();
       openMock.mockReset().mockResolvedValue(undefined as never);
@@ -1107,27 +1080,6 @@ describe('integration add (auto-provision)', () => {
       );
       await expect(client.stderr).toOutput(
         'Run `vercel integration add acme --help` for all metadata options.'
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(1);
-    });
-
-    it('should show generic message when all required metadata is provided but fallback still occurs', async () => {
-      useAutoProvision({ responseKey: 'metadata' });
-
-      client.setArgv(
-        'integration',
-        'add',
-        'acme',
-        '--metadata',
-        'region=us-east-1'
-      );
-      const exitCodePromise = integrationCommand(client);
-
-      // Required metadata is provided — show generic message (server has other reasons)
-      await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
       );
 
       const exitCode = await exitCodePromise;
@@ -2606,6 +2558,8 @@ describe('integration add (auto-provision)', () => {
           '--skill',
           'shopify-dev',
           '--yes',
+          '--metadata',
+          '{"origin":"vercel-cli","flow":"integration-install","integration":"acme-skills","product":"acme"}',
         ],
         expect.objectContaining({ stdio: 'pipe', reject: false })
       );
@@ -2633,6 +2587,8 @@ describe('integration add (auto-provision)', () => {
           '--skill',
           'shopify-dev',
           '--yes',
+          '--metadata',
+          '{"origin":"vercel-cli","flow":"integration-install","integration":"acme-skills","product":"acme"}',
         ],
         expect.objectContaining({ stdio: 'pipe', reject: false })
       );
@@ -2670,6 +2626,8 @@ describe('integration add (auto-provision)', () => {
           '--skill',
           'shopify-dev',
           '--yes',
+          '--metadata',
+          '{"origin":"vercel-cli","flow":"integration-install","integration":"acme-skills","product":"acme"}',
         ],
         expect.objectContaining({ stdio: 'pipe', reject: false })
       );

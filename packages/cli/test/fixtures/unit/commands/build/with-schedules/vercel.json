@@ -1,0 +1,23 @@
+{
+  "schedules": [
+    {
+      "name": "daily-report",
+      "expression": {
+        "cron": "0 0 * * *"
+      },
+      "target": {
+        "function": "api/scheduled-job"
+      }
+    },
+    {
+      "name": "hourly-jobs",
+      "expression": {
+        "cron": "0 * * * *",
+        "jitter": "5m"
+      },
+      "target": {
+        "topic": "hourly-jobs"
+      }
+    }
+  ]
+}

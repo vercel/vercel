@@ -4,18 +4,23 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import { isAPIError } from '../../util/errors-ts';
 import { getCommandName } from '../../util/pkg-name';
-import { getFlag } from '../../util/flags/get-flags';
+import { fetchFlagForUpdate, updateFlag } from '../../util/flags/update-flag';
 import {
   formatVariantForDisplay,
   formatVariantValue,
   resolveVariant,
 } from '../../util/flags/resolve-variant';
-import { updateFlag } from '../../util/flags/update-flag';
 import {
   normalizeOptionalInput,
   resolveOptionalInput,
 } from '../../util/flags/normalize-optional-input';
+import { findVariantReferencePaths } from '../../util/flags/variant-reference-paths';
+import {
+  parseVariantInput,
+  validateVariantValue,
+} from '../../util/flags/variant-input';
 import output from '../../output-manager';
 import { FlagsUpdateTelemetryClient } from '../../util/telemetry/commands/flags/update';
 import { updateSubcommand } from './command';
@@ -32,6 +37,12 @@ interface VariantUpdateInput {
   selector?: string;
   valueInput?: string;
   label?: string;
+}
+
+interface VariantMutationPlan {
+  variants: FlagVariant[];
+  addedVariants: FlagVariant[];
+  removedVariants: FlagVariant[];
 }
 
 const DEFAULT_UPDATE_MESSAGE = 'Updated via CLI';
@@ -64,6 +75,11 @@ export default async function update(
     flags['--value'] as string | undefined
   );
   const label = normalizeOptionalInput(flags['--label'] as string | undefined);
+  const addVariantInputs =
+    (flags['--add-variant'] as string[] | undefined) || [];
+  const removeVariantSelectors =
+    (flags['--remove-variant'] as string[] | undefined) || [];
+  const skipConfirmation = flags['--yes'] as boolean | undefined;
   const message = normalizeOptionalInput(
     flags['--message'] as string | undefined
   );
@@ -82,7 +98,22 @@ export default async function update(
   telemetryClient.trackCliOptionVariant(variantSelector);
   telemetryClient.trackCliOptionValue(valueInput);
   telemetryClient.trackCliOptionLabel(label);
+  telemetryClient.trackCliOptionAddVariant(addVariantInputs);
+  telemetryClient.trackCliOptionRemoveVariant(removeVariantSelectors);
   telemetryClient.trackCliOptionMessage(message);
+  telemetryClient.trackCliFlagYes(skipConfirmation);
+
+  const hasVariantMutations =
+    addVariantInputs.length > 0 || removeVariantSelectors.length > 0;
+  if (
+    hasVariantMutations &&
+    hasLegacyVariantEditOptions(variantSelector, valueInput, label)
+  ) {
+    output.error(
+      'Cannot mix --variant, --value, or --label with --add-variant or --remove-variant.'
+    );
+    return 1;
+  }
 
   const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
@@ -100,68 +131,328 @@ export default async function update(
   const { project } = link;
 
   try {
-    output.spinner('Fetching flag...');
-    const flag = await getFlag(client, project.id, flagArg);
-    output.stopSpinner();
-
-    if (flag.state === 'archived') {
-      output.error(
-        `Flag ${chalk.bold(flag.slug)} is archived and cannot be updated`
-      );
-      return 1;
+    if (hasVariantMutations) {
+      return await updateFlagVariants(client, project.id, flagArg, {
+        addVariantInputs,
+        removeVariantSelectors,
+        skipConfirmation: skipConfirmation || false,
+        message,
+      });
     }
 
-    const variantUpdate = await collectVariantUpdate(client, flag, {
+    return await updateExistingVariant(client, project.id, flagArg, {
       selector: variantSelector,
       valueInput,
       label,
-    });
-
-    const { variants, changedVariants } = applyVariantUpdates(flag, [
-      variantUpdate,
-    ]);
-
-    if (changedVariants.length === 0) {
-      output.warn(`Flag ${chalk.bold(flag.slug)} is already up to date`);
-      return 0;
-    }
-
-    const updateMessage = await resolveOptionalInput(
-      client,
       message,
-      DEFAULT_UPDATE_MESSAGE,
-      'Enter a message for this update:'
-    );
-
-    output.spinner('Updating flag...');
-    await updateFlag(
-      client,
-      project.id,
-      flagArg,
-      updateMessage
-        ? {
-            variants,
-            message: updateMessage,
-          }
-        : {
-            variants,
-          }
-    );
-    output.stopSpinner();
-
-    output.success(`Feature flag ${chalk.bold(flag.slug)} has been updated`);
-    for (const variant of changedVariants) {
-      output.log(
-        `  ${chalk.dim('Variant:')} ${formatVariantForDisplay(variant)}`
-      );
-    }
+    });
   } catch (err) {
     output.stopSpinner();
+
+    if (isAPIError(err) && err.status === 412) {
+      output.error('Flag changed while updating; re-run the command.');
+      return 1;
+    }
+
     printError(err);
     return 1;
   }
+}
+
+async function updateExistingVariant(
+  client: Client,
+  projectId: string,
+  flagArg: string,
+  input: VariantUpdateInput & { message?: string }
+): Promise<number> {
+  output.spinner('Fetching flag...');
+  const { flag, etag } = await fetchFlagForUpdate(client, projectId, flagArg);
+  output.stopSpinner();
+
+  if (flag.state === 'archived') {
+    output.error(
+      `Flag ${chalk.bold(flag.slug)} is archived and cannot be updated`
+    );
+    return 1;
+  }
+
+  const variantUpdate = await collectVariantUpdate(client, flag, input);
+  const { variants, changedVariants } = applyVariantUpdates(flag, [
+    variantUpdate,
+  ]);
+
+  if (changedVariants.length === 0) {
+    output.warn(`Flag ${chalk.bold(flag.slug)} is already up to date`);
+    return 0;
+  }
+
+  const updateMessage = await resolveOptionalInput(
+    client,
+    input.message,
+    DEFAULT_UPDATE_MESSAGE,
+    'Enter a message for this update:'
+  );
+
+  output.spinner('Updating flag...');
+  await updateFlag(
+    client,
+    projectId,
+    flagArg,
+    {
+      variants,
+      message: updateMessage,
+    },
+    {
+      ifMatch: etag,
+    }
+  );
+  output.stopSpinner();
+
+  output.success(`Feature flag ${chalk.bold(flag.slug)} has been updated`);
+  for (const variant of changedVariants) {
+    output.log(
+      `  ${chalk.dim('Variant:')} ${formatVariantForDisplay(variant)}`
+    );
+  }
 
   return 0;
+}
+
+async function updateFlagVariants(
+  client: Client,
+  projectId: string,
+  flagArg: string,
+  input: {
+    addVariantInputs: string[];
+    removeVariantSelectors: string[];
+    skipConfirmation: boolean;
+    message?: string;
+  }
+): Promise<number> {
+  output.spinner('Fetching flag...');
+  const { flag, etag } = await fetchFlagForUpdate(client, projectId, flagArg);
+  output.stopSpinner();
+
+  if (flag.state === 'archived') {
+    output.error(
+      `Flag ${chalk.bold(flag.slug)} is archived and cannot be updated`
+    );
+    return 1;
+  }
+
+  if (flag.kind === 'boolean') {
+    output.error(
+      'Boolean flags do not support --add-variant or --remove-variant.'
+    );
+    return 1;
+  }
+
+  const plan = buildVariantMutationPlan(
+    flag,
+    input.addVariantInputs,
+    input.removeVariantSelectors
+  );
+
+  if (
+    plan.removedVariants.length > 0 &&
+    !(await confirmVariantRemoval(
+      client,
+      flag,
+      plan.removedVariants,
+      input.skipConfirmation
+    ))
+  ) {
+    output.log('Aborted');
+    return 0;
+  }
+
+  const updateMessage = await resolveOptionalInput(
+    client,
+    input.message,
+    DEFAULT_UPDATE_MESSAGE,
+    'Enter a message for this update:'
+  );
+
+  output.spinner('Updating flag...');
+  await updateFlag(
+    client,
+    projectId,
+    flagArg,
+    {
+      variants: plan.variants,
+      message: updateMessage,
+    },
+    {
+      ifMatch: etag,
+    }
+  );
+  output.stopSpinner();
+
+  output.success(`Feature flag ${chalk.bold(flag.slug)} has been updated`);
+
+  for (const variant of plan.addedVariants) {
+    output.log(`  ${chalk.dim('Added:')} ${formatVariantForLog(variant)}`);
+  }
+
+  for (const variant of plan.removedVariants) {
+    output.log(`  ${chalk.dim('Removed:')} ${formatVariantForLog(variant)}`);
+  }
+
+  return 0;
+}
+
+function hasLegacyVariantEditOptions(
+  variantSelector: string | undefined,
+  valueInput: string | undefined,
+  label: string | undefined
+): boolean {
+  return (
+    variantSelector !== undefined ||
+    valueInput !== undefined ||
+    label !== undefined
+  );
+}
+
+function buildVariantMutationPlan(
+  flag: Flag,
+  addVariantInputs: string[],
+  removeVariantSelectors: string[]
+): VariantMutationPlan {
+  const removedVariants = resolveRemovedVariants(
+    flag.variants,
+    removeVariantSelectors
+  );
+  assertVariantRemovalsAreAllowed(flag, removedVariants);
+
+  // Base the default JSON auto-label index on the variant count after
+  // removals so labels like "Variant N" reflect the resulting list, not the
+  // list before removals were applied.
+  const baseIndex = flag.variants.length - removedVariants.length;
+  const addedVariants = parseAddedVariants(flag, addVariantInputs, baseIndex);
+
+  const removedVariantIds = new Set(removedVariants.map(variant => variant.id));
+  const variants = flag.variants
+    .filter(variant => !removedVariantIds.has(variant.id))
+    .map(variant => ({ ...variant }));
+
+  variants.push(...addedVariants);
+  assertUniqueVariantValues(variants);
+
+  return {
+    variants,
+    addedVariants,
+    removedVariants,
+  };
+}
+
+function parseAddedVariants(
+  flag: Flag,
+  addVariantInputs: string[],
+  baseIndex: number
+): FlagVariant[] {
+  const kind = flag.kind;
+  if (kind === 'boolean') {
+    throw new Error('Boolean flags do not support adding variants.');
+  }
+
+  return addVariantInputs.map((input, index) =>
+    parseVariantInput(input, kind, baseIndex + index)
+  );
+}
+
+function resolveRemovedVariants(
+  variants: FlagVariant[],
+  removeVariantSelectors: string[]
+): FlagVariant[] {
+  const removedVariantIds = new Set<string>();
+
+  return removeVariantSelectors.map(selector => {
+    const result = resolveVariant(selector, variants);
+    if (result.error || !result.variant) {
+      throw new Error(result.error || `Variant "${selector}" not found`);
+    }
+
+    if (removedVariantIds.has(result.variant.id)) {
+      throw new Error(
+        `Duplicate --remove-variant selector ${chalk.bold(selector)} resolves to ${formatVariantForLog(result.variant)}.`
+      );
+    }
+
+    removedVariantIds.add(result.variant.id);
+    return result.variant;
+  });
+}
+
+function assertVariantRemovalsAreAllowed(
+  flag: Flag,
+  removedVariants: FlagVariant[]
+) {
+  const referencePaths = findVariantReferencePaths(
+    flag,
+    removedVariants.map(variant => variant.id)
+  );
+
+  if (referencePaths.size === 0) {
+    return;
+  }
+
+  const referencedVariants = removedVariants.filter(variant =>
+    referencePaths.has(variant.id)
+  );
+  const detailLines = referencedVariants.map(variant => {
+    const paths = referencePaths.get(variant.id) ?? [];
+    return `  - ${formatVariantForLog(variant)} referenced by ${paths.join(', ')}`;
+  });
+
+  throw new Error(
+    `Cannot remove variant${referencedVariants.length === 1 ? '' : 's'} because ${referencedVariants.length === 1 ? 'it is' : 'they are'} still referenced:\n${detailLines.join('\n')}`
+  );
+}
+
+function assertUniqueVariantValues(variants: FlagVariant[]) {
+  for (let index = 0; index < variants.length; index++) {
+    const variant = variants[index];
+    const duplicateVariant = variants
+      .slice(0, index)
+      .find(candidate => deepEqual(candidate.value, variant.value));
+
+    if (!duplicateVariant) {
+      continue;
+    }
+
+    throw new Error(
+      `Variant value ${formatVariantValue(variant.value)} would be duplicated by ${formatVariantForLog(duplicateVariant)} and ${formatVariantForLog(variant)}.`
+    );
+  }
+}
+
+async function confirmVariantRemoval(
+  client: Client,
+  flag: Flag,
+  removedVariants: FlagVariant[],
+  skipConfirmation: boolean
+): Promise<boolean> {
+  if (skipConfirmation) {
+    return true;
+  }
+
+  if (!client.stdin.isTTY) {
+    throw new Error(
+      'Missing required flag --yes. Use --yes to skip the removal confirmation prompt in non-interactive mode.'
+    );
+  }
+
+  const promptLines = removedVariants
+    .map(variant => `  - ${formatVariantForLog(variant)}`)
+    .join('\n');
+  return client.input.confirm(
+    `Remove ${removedVariants.length} variant${removedVariants.length === 1 ? '' : 's'} from ${chalk.bold(flag.slug)}?\n${promptLines}`,
+    false
+  );
+}
+
+function formatVariantForLog(variant: FlagVariant): string {
+  return `${formatVariantForDisplay(variant)} ${chalk.dim(`[id: ${variant.id}]`)}`;
 }
 
 async function collectVariantUpdate(
@@ -237,7 +528,7 @@ async function resolveSelectedVariant(
   const selectedVariantId = await client.input.select({
     message: 'Select a variant to update:',
     choices: flag.variants.map(variant => ({
-      name: `${formatVariantForDisplay(variant)} ${chalk.dim(`[id: ${variant.id}]`)}`,
+      name: formatVariantForLog(variant),
       value: variant.id,
     })),
   });
@@ -356,37 +647,4 @@ function parseUpdatedVariantValue(
   }
 
   return valueInput;
-}
-
-function validateVariantValue(
-  value: string,
-  kind: Flag['kind']
-): string | null {
-  if (!value.trim()) {
-    return 'Variant value cannot be empty';
-  }
-
-  if (kind === 'boolean') {
-    const loweredValue = value.toLowerCase();
-    if (loweredValue !== 'true' && loweredValue !== 'false') {
-      return 'Boolean variant values must be true or false';
-    }
-  }
-
-  if (kind === 'number') {
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed)) {
-      return 'Number variants must be valid numeric values';
-    }
-  }
-
-  if (kind === 'json') {
-    try {
-      JSON.parse(value);
-    } catch {
-      return 'JSON variant values must be valid JSON';
-    }
-  }
-
-  return null;
 }

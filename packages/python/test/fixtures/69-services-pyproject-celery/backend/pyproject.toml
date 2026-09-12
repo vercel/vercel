@@ -14,7 +14,7 @@ dependencies = [
 [tool.vercel]
 entrypoint = "main:app"
 
-# The topic must match the Celery queue published to in tasks.py.
+# With no "topics" filter, the subscriber consumes every subscription
+# introspected from the Celery app's queues.
 [[tool.vercel.subscribers]]
 entrypoint = "worker:app"
-topics = ["celery"]

@@ -1,6 +1,12 @@
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
-import { forceOption, formatOption, yesOption } from '../../util/arg-common';
+import {
+  forceOption,
+  formatOption,
+  jsonOption,
+  projectOption,
+  yesOption,
+} from '../../util/arg-common';
 
 const targetPlaceholder = getEnvTargetPlaceholder();
 
@@ -20,6 +26,8 @@ export const listSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
+    projectOption,
     {
       name: 'guidance',
       description: 'Receive command suggestions once command is complete',
@@ -44,25 +52,46 @@ export const addSubcommand = {
       name: 'environment',
       required: false,
     },
-    {
-      name: 'git-branch',
-      required: false,
-    },
   ],
   options: [
+    projectOption,
+    {
+      name: 'git-branch',
+      description: 'Set the Git branch for a Preview Environment Variable',
+      shorthand: null,
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+    },
     {
       name: 'sensitive',
-      description: 'Store the value as sensitive for Production or Preview',
+      description: 'Store the value as a Secret',
       shorthand: null,
       type: Boolean,
       deprecated: false,
     },
     {
       name: 'no-sensitive',
-      description: 'Store the value as non-sensitive when policy allows',
+      description: 'Store the value as Config',
       shorthand: null,
       type: Boolean,
       deprecated: false,
+    },
+    {
+      name: 'type',
+      description: 'Set the Environment Variable type (`config` or `secret`)',
+      shorthand: null,
+      type: String,
+      argument: 'TYPE',
+      deprecated: false,
+    },
+    {
+      name: 'visibility',
+      description: 'Deprecated alias for `--type`',
+      shorthand: null,
+      type: String,
+      argument: 'VISIBILITY',
+      deprecated: true,
     },
     {
       ...forceOption,
@@ -71,8 +100,7 @@ export const addSubcommand = {
     },
     {
       ...yesOption,
-      description:
-        'Skip the confirmation prompt when adding an Environment Variable',
+      description: 'Accept default choices when adding an Environment Variable',
     },
     {
       name: 'guidance',
@@ -93,7 +121,7 @@ export const addSubcommand = {
   ],
   examples: [
     {
-      name: 'Add a new variable to all Environments',
+      name: 'Add a new variable (prompts for value and Environments)',
       value: [
         `${packageName} env add <name>`,
         `${packageName} env add API_TOKEN`,
@@ -107,18 +135,25 @@ export const addSubcommand = {
       ],
     },
     {
+      name: 'Add one variable to multiple Environments (comma-separated)',
+      value: [
+        `${packageName} env add <name> <environment>[,<environment>]`,
+        `${packageName} env add API_URL production,preview,development`,
+      ],
+    },
+    {
       name: 'Override an existing Environment Variable of same target (production, preview, deployment)',
       value: `${packageName} env add API_TOKEN --force`,
     },
     {
-      name: 'Add a regular (non-sensitive) Environment Variable that remains readable later',
+      name: 'Add a Config Environment Variable that remains readable later',
       value: `${packageName} env add API_TOKEN --no-sensitive`,
     },
     {
       name: 'Add a new Environment Variable for a specific Environment and Git Branch',
       value: [
-        `${packageName} env add <name> ${targetPlaceholder} <gitbranch>`,
-        `${packageName} env add DB_PASS preview feat1`,
+        `${packageName} env add <name> ${targetPlaceholder} --git-branch <name>`,
+        `${packageName} env add DB_PASS preview --git-branch feat1`,
       ],
     },
     {
@@ -151,6 +186,7 @@ export const removeSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description:
@@ -194,6 +230,7 @@ export const pullSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       description: 'Set the Environment when pulling Environment Variables',
@@ -254,6 +291,7 @@ export const runSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       description:
@@ -301,12 +339,29 @@ export const updateSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'sensitive',
-      description: 'Update to a sensitive Environment Variable',
+      description: 'Store the updated value as a Secret',
       shorthand: null,
       type: Boolean,
       deprecated: false,
+    },
+    {
+      name: 'type',
+      description: 'Set the Environment Variable type (`config` or `secret`)',
+      shorthand: null,
+      type: String,
+      argument: 'TYPE',
+      deprecated: false,
+    },
+    {
+      name: 'visibility',
+      description: 'Deprecated alias for `--type`',
+      shorthand: null,
+      type: String,
+      argument: 'VISIBILITY',
+      deprecated: true,
     },
     {
       ...yesOption,
@@ -374,6 +429,10 @@ export const envCommand = {
     {
       name: 'Run a command with Environment Variables from the linked Project',
       value: `${packageName} env run -- <command>`,
+    },
+    {
+      name: 'Add one variable to multiple Environments',
+      value: `${packageName} env add API_URL production,preview,development`,
     },
   ],
 } as const;

@@ -1,6 +1,9 @@
 import { join } from 'path';
-import { detectServices, LocalFileSystemDetector } from '../src';
-import type { ExperimentalServiceV2 } from '../src';
+import {
+  LocalFileSystemDetector,
+  detectServices,
+  type ExperimentalServiceV2,
+} from '../src';
 
 const FIXTURES_DIR = join(__dirname, 'fixtures', 'services-container');
 

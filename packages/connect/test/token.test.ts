@@ -120,6 +120,31 @@ describe('getTokenResponse cache', () => {
     vi.restoreAllMocks();
   });
 
+  it('defaults omitted scopes to all default scopes', async () => {
+    fetchMock.mockResolvedValue(tokenResponse('tok_default_scopes'));
+
+    await getTokenResponse('oauth/linear', {
+      subject: { type: 'user', id: 'default_scopes' },
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toMatchObject({ scopes: ['*'] });
+  });
+
+  it('preserves explicitly provided scopes', async () => {
+    fetchMock.mockResolvedValue(tokenResponse('tok_explicit_scopes'));
+
+    await getTokenResponse('oauth/linear', {
+      subject: { type: 'user', id: 'explicit_scopes' },
+      scopes: ['read', 'write'],
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      scopes: ['read', 'write'],
+    });
+  });
+
   it('serves a cached, unexpired token without re-fetching', async () => {
     fetchMock.mockResolvedValue(tokenResponse('tok_a'));
     const params = { subject: { type: 'user' as const, id: 'cache_hit' } };
@@ -169,6 +194,35 @@ describe('getTokenResponse cache', () => {
     expect(first.token).toBe('tok_old');
     expect(second.token).toBe('tok_new');
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('sends token exchange subjects and uses them for cache keying', async () => {
+    fetchMock.mockResolvedValue(tokenResponse('tok_passport'));
+
+    const first = await getTokenResponse('oauth/linear', {
+      subject: {
+        type: 'token',
+        token: 'passport.jwt',
+      },
+    });
+    const second = await getTokenResponse('oauth/linear', {
+      subject: {
+        type: 'token',
+        token: 'passport.jwt',
+      },
+    });
+
+    expect(first.token).toBe('tok_passport');
+    expect(second.token).toBe('tok_passport');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      subject: {
+        type: 'token',
+        token: 'passport.jwt',
+      },
+    });
   });
 
   it('surfaces a revoked grant on re-check instead of serving the cached bearer', async () => {

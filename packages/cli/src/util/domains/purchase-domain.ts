@@ -59,11 +59,11 @@ export default async function purchaseDomain(
       }
     }
 
-    if (order.error?.code === 'visa_payment_failed') {
+    if (order.error?.code === 'visa-payment-failed') {
       return new ERRORS.VisaPaymentError();
     }
 
-    if (order.error?.code === 'payment_failed') {
+    if (order.error?.code === 'payment-failed') {
       return new ERRORS.DomainPaymentError();
     }
 

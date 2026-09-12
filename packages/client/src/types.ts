@@ -1,10 +1,10 @@
-import type { Agent } from 'http';
 import type {
   Builder,
   BuilderFunctions,
   Images,
   ProjectSettings,
   Cron,
+  Schedule,
   ExperimentalServices,
   ExperimentalServiceGroups,
   ExperimentalServicesV2,
@@ -14,8 +14,22 @@ import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
 
 export { DeploymentEventType } from './utils';
 
+/**
+ * Minimal interface of an undici `Dispatcher` (e.g. `undici.ProxyAgent`),
+ * passed to `fetch` as the non-standard `dispatcher` init option to customize
+ * connection handling, such as routing requests through an HTTP(S) proxy.
+ */
+export interface FetchDispatcher {
+  dispatch(options: unknown, handler: unknown): boolean;
+}
+
 export interface Dictionary<T> {
   [key: string]: T;
+}
+
+export interface ProxyConfig {
+  entrypoint: string;
+  matcher?: string | string[];
 }
 
 export const VALID_ARCHIVE_FORMATS = ['tgz'] as const;
@@ -56,7 +70,7 @@ export interface VercelClientOptions {
   isDirectory?: boolean;
   skipAutoDetectionConfirmation?: boolean;
   archive?: ArchiveFormat;
-  agent?: Agent;
+  dispatcher?: FetchDispatcher;
   projectName?: string;
   /**
    * Path to a file containing bulk redirects (relative to the project root).
@@ -209,7 +223,9 @@ export interface VercelConfig {
   outputDirectory?: string | null;
   images?: Images;
   crons?: Cron[];
+  schedules?: Schedule[];
   bunVersion?: string;
+  proxy?: ProxyConfig;
   /**
    * Path to a file containing bulk redirects (relative to the project root).
    * This file will be included in prebuilt deployments.
@@ -240,6 +256,11 @@ export interface GitMetadata {
   commitSha?: string | undefined;
   dirty?: boolean | undefined;
   remoteUrl?: string;
+  /**
+   * Path of the deployed directory relative to the detected git repository
+   * root. Empty string when deploying from the repository root.
+   */
+  rootDirectory?: string;
 }
 
 /**

@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { confirmOption, yesOption } from '../../util/arg-common';
+import { confirmOption, projectOption, yesOption } from '../../util/arg-common';
 
 export const connectSubcommand = {
   name: 'connect',
@@ -12,7 +12,7 @@ export const connectSubcommand = {
       required: false,
     },
   ],
-  options: [yesOption, confirmOption],
+  options: [projectOption, yesOption, confirmOption],
   examples: [
     {
       name: 'Connect your Vercel Project to your Git repository defined in your local `.git` config',
@@ -30,7 +30,7 @@ export const disconnectSubcommand = {
   aliases: [],
   description: 'Disconnect the Git repository from your Vercel Project',
   arguments: [],
-  options: [yesOption, confirmOption],
+  options: [projectOption, yesOption, confirmOption],
   examples: [
     {
       name: 'Disconnect the Git repository',

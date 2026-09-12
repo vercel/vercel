@@ -97,11 +97,34 @@ export type DependencyGroupEntry = string | DependencyGroupInclude;
 export type PyProjectDependencyGroups = Record<string, DependencyGroupEntry[]>;
 
 /**
+ * [tool.vercel] section.
+ */
+export interface PyProjectToolVercelSection {
+  fastapi?: PyProjectToolVercelFastapiSection;
+}
+
+/**
+ * [tool.vercel.fastapi] section.
+ */
+export interface PyProjectToolVercelFastapiSection {
+  static?: PyProjectToolVercelFastapiStaticSection;
+}
+
+/**
+ * [tool.vercel.fastapi.static] section.
+ */
+export interface PyProjectToolVercelFastapiStaticSection {
+  cdn?: boolean;
+  exclude?: boolean;
+}
+
+/**
  * [tool.FOO] section.
  * @passthrough
  */
 export interface PyProjectToolSection {
   uv?: UvConfig;
+  vercel?: PyProjectToolVercelSection;
 }
 
 /**

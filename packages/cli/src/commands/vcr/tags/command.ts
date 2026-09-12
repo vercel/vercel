@@ -1,5 +1,6 @@
 import {
   formatOption,
+  jsonOption,
   limitOption,
   projectOption,
 } from '../../../util/arg-common';
@@ -11,11 +12,20 @@ const projectScopeOption = {
   description: 'Project name or ID (defaults to the linked project).',
 } as const;
 
+const nextOption = {
+  name: 'next',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description: 'Continue from a previous response',
+  argument: 'CURSOR',
+} as const;
+
 const cursorOption = {
   name: 'cursor',
   shorthand: 'c',
   type: String,
-  deprecated: false,
+  deprecated: true,
   description: 'Cursor from a previous page to continue listing from',
   argument: 'STRING',
 } as const;
@@ -54,8 +64,10 @@ export const tagsLsSubcommand = {
       choices: TAGS_SORT_ORDER_CHOICES,
     },
     limitOption,
+    nextOption,
     cursorOption,
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -79,7 +91,7 @@ export const tagsInspectSubcommand = {
       required: true,
     },
   ],
-  options: [projectScopeOption, formatOption],
+  options: [projectScopeOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Inspect a tag by name',

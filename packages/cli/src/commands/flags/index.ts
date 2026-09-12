@@ -8,15 +8,20 @@ import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import { FlagsTelemetryClient } from '../../util/telemetry/commands/flags';
 import ls from './ls';
+import stale from './stale';
 import inspect from './inspect';
+import versions from './versions';
+import evaluations from './evaluations';
 import create from './add';
 import openFlag from './open';
 import update from './update';
 import set from './set';
+import useTargeting from './use-targeting';
 import split from './split';
 import rollout from './rollout';
 import rm from './rm';
 import archive from './archive';
+import unarchive from './unarchive';
 import disable from './disable';
 import enable from './enable';
 import { sdkKeys } from './sdk-keys';
@@ -25,15 +30,20 @@ import { rules } from './rules';
 import {
   flagsCommand,
   listSubcommand,
+  staleSubcommand,
   inspectSubcommand,
+  versionsSubcommand,
+  evaluationsSubcommand,
   createSubcommand,
   openSubcommand,
   updateSubcommand,
   setSubcommand,
+  useTargetingSubcommand,
   splitSubcommand,
   rolloutSubcommand,
   removeSubcommand,
   archiveSubcommand,
+  unarchiveSubcommand,
   disableSubcommand,
   prepareSubcommand,
   enableSubcommand,
@@ -47,15 +57,20 @@ import override from './override';
 
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
+  stale: getCommandAliases(staleSubcommand),
   inspect: getCommandAliases(inspectSubcommand),
+  versions: getCommandAliases(versionsSubcommand),
+  evaluations: getCommandAliases(evaluationsSubcommand),
   create: getCommandAliases(createSubcommand),
   open: getCommandAliases(openSubcommand),
   update: getCommandAliases(updateSubcommand),
   set: getCommandAliases(setSubcommand),
+  'use-targeting': getCommandAliases(useTargetingSubcommand),
   split: getCommandAliases(splitSubcommand),
   rollout: getCommandAliases(rolloutSubcommand),
   rm: getCommandAliases(removeSubcommand),
   archive: getCommandAliases(archiveSubcommand),
+  unarchive: getCommandAliases(unarchiveSubcommand),
   disable: getCommandAliases(disableSubcommand),
   enable: getCommandAliases(enableSubcommand),
   rules: getCommandAliases(rulesSubcommand),
@@ -120,6 +135,25 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
       return inspect(client, args);
+    case 'versions':
+      telemetry.trackCliSubcommandVersions(subcommandOriginal);
+      return versions(client, needHelp ? [...args, '--help'] : args);
+    case 'evaluations':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(evaluationsSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandEvaluations(subcommandOriginal);
+      return evaluations(client, args);
+    case 'stale':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(staleSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandStale(subcommandOriginal);
+      return stale(client, args);
     case 'open':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);
@@ -152,6 +186,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandSet(subcommandOriginal);
       return set(client, args);
+    case 'use-targeting':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(useTargetingSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandUseTargeting(subcommandOriginal);
+      return useTargeting(client, args);
     case 'split':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);
@@ -184,6 +226,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandArchive(subcommandOriginal);
       return archive(client, args);
+    case 'unarchive':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(unarchiveSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandUnarchive(subcommandOriginal);
+      return unarchive(client, args);
     case 'disable':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);

@@ -20,6 +20,27 @@ export class FlagsTelemetryClient
     });
   }
 
+  trackCliSubcommandVersions(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'versions',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandEvaluations(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'evaluations',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandStale(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'stale',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandOpen(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'open',
@@ -48,6 +69,13 @@ export class FlagsTelemetryClient
     });
   }
 
+  trackCliSubcommandUseTargeting(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'use-targeting',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandSplit(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'split',
@@ -72,6 +100,13 @@ export class FlagsTelemetryClient
   trackCliSubcommandArchive(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'archive',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandUnarchive(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'unarchive',
       value: actual,
     });
   }

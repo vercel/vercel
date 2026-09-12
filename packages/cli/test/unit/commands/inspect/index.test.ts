@@ -401,35 +401,6 @@ describe('inspect', () => {
       await expect(client.stderr).toOutput(`Invalid timeout "bar"`);
     });
 
-    it('should wait for a deployment to finish', async () => {
-      const user = useUser();
-      const deployment = useDeployment({ creator: user, state: 'BUILDING' });
-      client.setArgv('inspect', deployment.url, '--wait');
-
-      let exitCode: number | null = null;
-      const startTime = Date.now();
-
-      const runInspect = async () => {
-        exitCode = await inspect(client);
-        await expect(client.stderr).toOutput(
-          `> Fetched deployment "${deployment.url}" in ${user.username}`
-        );
-      };
-
-      const slowlyDeploy = async () => {
-        await sleep(1234);
-        expect(exitCode).toBeNull();
-        deployment.readyState = 'READY';
-      };
-
-      await Promise.all<void>([runInspect(), slowlyDeploy()]);
-
-      expect(exitCode).toEqual(0);
-
-      const delta = Date.now() - startTime;
-      expect(delta).toBeGreaterThan(1234);
-    });
-
     it('should print no build logs for a queued deployment', async () => {
       const user = useUser();
       const deployment = useDeployment({ creator: user, state: 'QUEUED' });
@@ -529,6 +500,7 @@ describe('inspect', () => {
       it('sets team scope from dashboard URL', async () => {
         const user = useUser();
         const team = useTeam();
+        team.slug = 'dashboard-team';
         const deployment = useDeployment({ creator: user });
 
         client.setArgv(
@@ -543,6 +515,7 @@ describe('inspect', () => {
       it('does not override explicit --scope flag', async () => {
         const user = useUser();
         const team = useTeam();
+        team.slug = 'dashboard-team';
         const deployment = useDeployment({ creator: user });
 
         client.config.currentTeam = team.id;

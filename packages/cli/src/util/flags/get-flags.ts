@@ -1,5 +1,12 @@
 import type Client from '../client';
-import type { Flag, FlagsListResponse, FlagSettings } from './types';
+import type {
+  Flag,
+  FlagsListResponse,
+  FlagSettings,
+  FlagVersion,
+  FlagVersionsResponse,
+} from './types';
+import { flagUrl } from './update-flag';
 import output from '../../output-manager';
 
 export interface GetFlagsOptions {
@@ -26,9 +33,21 @@ export interface GetFlagsResult {
   next: string | null;
 }
 
+export interface GetFlagVersionsOptions {
+  environment?: string;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface GetFlagVersionsResult {
+  versions: FlagVersion[];
+  next: string | null;
+}
+
 // The v2 endpoint caps the page size at 100, so request that much when
 // fetching the full list to minimize round-trips.
 export const MAX_FLAGS_PAGE_LIMIT = 100;
+export const MAX_FLAG_VERSIONS_PAGE_LIMIT = 100;
 
 export async function getFlags(
   client: Client,
@@ -101,7 +120,7 @@ export async function getFlag(
     `Fetching feature flag ${flagIdOrSlug} for project ${projectId}`
   );
 
-  const url = `/v1/projects/${encodeURIComponent(projectId)}/feature-flags/flags/${encodeURIComponent(flagIdOrSlug)}`;
+  const url = flagUrl(projectId, flagIdOrSlug);
   const response = await client.fetch<Flag>(url);
 
   return response;
@@ -117,4 +136,39 @@ export async function getFlagSettings(
   const response = await client.fetch<FlagSettings>(url);
 
   return response;
+}
+
+export async function getFlagVersions(
+  client: Client,
+  projectId: string,
+  flagIdOrSlug: string,
+  options: GetFlagVersionsOptions = {}
+): Promise<GetFlagVersionsResult> {
+  output.debug(
+    `Fetching feature flag versions for ${flagIdOrSlug} in project ${projectId}`
+  );
+
+  const query = new URLSearchParams();
+  query.set('withMetadata', 'true');
+  if (options.environment) {
+    query.set('environment', options.environment);
+  }
+  if (options.limit !== undefined) {
+    query.set('limit', String(options.limit));
+  }
+  if (options.cursor) {
+    query.set('cursor', options.cursor);
+  }
+
+  const url = `/v1/projects/${encodeURIComponent(projectId)}/feature-flags/flags/${encodeURIComponent(flagIdOrSlug)}/versions?${query.toString()}`;
+  const response = await client.fetch<FlagVersionsResponse>(url);
+  const next =
+    response.pagination?.next ??
+    (response.pagination?.hasNext ? response.pagination.cursor : null) ??
+    null;
+
+  return {
+    versions: response.versions,
+    next,
+  };
 }

@@ -53,7 +53,9 @@ import param from './util/output/param';
 import highlight from './util/output/highlight';
 import { parseArguments } from './util/get-args';
 import getUser from './util/get-user';
+import { isAppPrincipalEnabled, resolveAppTokenScope } from './util/app';
 import getTeams from './util/teams/get-teams';
+import getTeamByIdOrSlug from './util/teams/get-team-by-id-or-slug';
 import Client from './util/client';
 import { setFetchDispatcher } from './util/fetch';
 import { printError } from './util/error';
@@ -70,10 +72,12 @@ import {
   canAutoUpdate,
   hasAutoUpdatePreference,
   isNativeBinaryInstall,
+  isVersionPinned,
   setAutoUpdate,
 } from './util/updates';
-import { getCommandName, getTitleName } from './util/pkg-name';
-import login from './commands/login';
+import { getTitleName } from './util/pkg-name';
+import { BUILD_LABEL } from './util/constants';
+import promptMissingCredentials from './util/login/prompt-missing-credentials';
 import type {
   AuthConfig,
   GlobalConfig,
@@ -81,7 +85,6 @@ import type {
   User,
 } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
-import { Agent as HttpsAgent } from 'https';
 import box from './util/output/box';
 import { TelemetryEventStore } from './util/telemetry';
 import { RootTelemetryClient } from './util/telemetry/root';
@@ -89,9 +92,17 @@ import { readVercelPluginActiveSessionMarker } from './util/telemetry/vercel-plu
 import { help } from './args';
 import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
+import {
+  shouldPrintVersionBanner,
+  wantsMachineReadableOutput,
+} from './util/output-format';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
-import { getLinkFromDir, getVercelDirectory } from './util/projects/link';
+import {
+  getLinkFromDir,
+  getVercelDirectory,
+  hasLocalProjectLink,
+} from './util/projects/link';
 import {
   getPlatformEnv,
   Span,
@@ -205,6 +216,7 @@ const main = async () => {
       {
         '--version': Boolean,
         '-v': '--version',
+        '--changelog': Boolean,
         '--non-interactive': Boolean,
       },
       { permissive: true }
@@ -256,18 +268,26 @@ const main = async () => {
   //
   //  * a path to deploy (as in: `vercel path/`)
   //  * a subcommand (as in: `vercel ls`)
-  const targetOrSubcommand = parsedArgs.args[2];
+  const targetOrSubcommand =
+    parsedArgs.args[2] ||
+    (parsedArgs.flags['--changelog'] ? 'changelog' : undefined);
   const subSubCommand = parsedArgs.args[3];
 
   // If empty, leave this code here for easy adding of beta commands later
-  const betaCommands: string[] = ['api', 'crons', 'curl', 'webhooks'];
+  const betaCommands: string[] = ['api', 'crons', 'curl', 'kms', 'webhooks'];
+  // Short build label stamped by CI for non-release builds (e.g. "pr-115"
+  // from "pr-115 abc1234"). The full label is shown by `vc --version`.
+  const shortBuildLabel = BUILD_LABEL ? ` (${BUILD_LABEL.split(' ')[0]})` : '';
   const versionBanner = isNativeBinaryInstall()
-    ? `${getTitleName()} CLI ${pkg.version}`
-    : `${getTitleName()} CLI ${pkg.version} (Node.js ${process.versions.node})`;
-  const msg = betaCommands.includes(targetOrSubcommand)
-    ? `${versionBanner} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
-    : versionBanner;
-  output.print(`${chalk.dim(msg)}\n`);
+    ? `${getTitleName()} CLI ${pkg.version}${shortBuildLabel}`
+    : `${getTitleName()} CLI ${pkg.version}${shortBuildLabel} (Node.js ${process.versions.node})`;
+  const msg =
+    targetOrSubcommand && betaCommands.includes(targetOrSubcommand)
+      ? `${versionBanner} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
+      : versionBanner;
+  if (shouldPrintVersionBanner(targetOrSubcommand, process.argv)) {
+    output.print(`${chalk.dim(msg)}\n`);
+  }
 
   // Handle `--version` directly
   if (!targetOrSubcommand && parsedArgs.flags['--version']) {
@@ -545,18 +565,12 @@ const main = async () => {
   );
 
   // Only load proxy support if proxy env vars are configured (saves startup time).
-  const proxyConfigured = hasProxyConfig();
-  const agent = proxyConfigured
-    ? new (await import('proxy-agent')).ProxyAgent({ keepAlive: true })
-    : new HttpsAgent({ keepAlive: true });
-
-  if (proxyConfigured) {
+  if (hasProxyConfig()) {
     const { EnvProxyDispatcher } = await import('./util/fetch-proxy');
     setFetchDispatcher(new EnvProxyDispatcher());
   }
 
   client = new Client({
-    agent,
     apiUrl,
     stdin: process.stdin,
     stdout: process.stdout,
@@ -597,7 +611,9 @@ const main = async () => {
       targetPathExists &&
       subcommandExists &&
       !parsedArgs.flags['--cwd'] &&
-      !process.env.NOW_BUILDER
+      !process.env.NOW_BUILDER &&
+      !wantsMachineReadableOutput(targetOrSubcommand, process.argv) &&
+      !(await hasLocalProjectLink(client, cwd))
     ) {
       output.warn(
         `Did you mean to deploy the subdirectory "${targetOrSubcommand}"? ` +
@@ -653,11 +669,15 @@ const main = async () => {
     'help',
     'init',
     'build',
+    'changelog',
+    'deploy',
     'sandbox',
     'telemetry',
     'upgrade',
+    'version',
     'skills',
     'agent',
+    'whoami',
   ];
 
   if (process.env.FF_GUIDANCE_MODE) {
@@ -690,41 +710,12 @@ const main = async () => {
     subcommand &&
     !subcommandsWithoutToken.includes(subcommand)
   ) {
-    if (isTTY) {
-      output.log(`No existing credentials found. Please log in:`);
-      try {
-        const result = await login(client, { shouldParseArgs: false });
-        // The login function failed, so it returned an exit code
-        if (result !== 0) return finishWithExitCode(result);
-      } catch (error) {
-        printError(error);
-        trackAgenticErrorTelemetry(error);
-        return finishWithExitCode(1);
-      }
-
-      output.debug(`Saved credentials in "${hp(VERCEL_DIR)}"`);
-    } else if (isAgent) {
-      // Agent detected without credentials — auto-launch device code login flow.
-      // The login flow handles non-TTY: prints auth URL, opens browser if possible, polls.
-      output.log('No existing credentials found. Starting login flow...');
-      try {
-        const result = await login(client, { shouldParseArgs: false });
-        if (result !== 0) return finishWithExitCode(result);
-      } catch (error) {
-        printError(error);
-        trackAgenticErrorTelemetry(error);
-        return finishWithExitCode(1);
-      }
-
-      output.debug(`Saved credentials in "${hp(VERCEL_DIR)}"`);
-    } else {
-      output.prettyError({
-        message:
-          'No existing credentials found. Please run ' +
-          `${getCommandName('login')} or pass ${param('--token')}`,
-        link: 'https://err.sh/vercel/no-credentials-found',
-      });
-      return finishWithExitCode(1);
+    const result = await promptMissingCredentials(
+      client,
+      trackAgenticErrorTelemetry
+    );
+    if (result !== 0) {
+      return finishWithExitCode(result);
     }
   }
 
@@ -791,11 +782,17 @@ const main = async () => {
     parsedArgs.flags['--scope'] ||
     parsedArgs.flags['--team'] ||
     localConfig?.scope;
+  const separatorIndex = client.argv.indexOf('--');
+  const cliArgs =
+    separatorIndex === -1 ? client.argv : client.argv.slice(0, separatorIndex);
+  const buildNeedsRemoteProjectScope =
+    targetCommand === 'build' &&
+    cliArgs.some(arg => arg === '--project' || arg.startsWith('--project='));
 
   if (
     typeof scope === 'string' &&
     targetCommand !== 'login' &&
-    targetCommand !== 'build' &&
+    (targetCommand !== 'build' || buildNeedsRemoteProjectScope) &&
     targetCommand !== 'sandbox'
   ) {
     let user = null;
@@ -808,87 +805,114 @@ const main = async () => {
         output.debug(err.stack || err.toString());
       }
 
-      if (isErrnoException(err) && err.code === 'NOT_AUTHORIZED') {
-        output.prettyError({
-          message: `You do not have access to the specified account`,
-          link: 'https://err.sh/vercel/scope-not-accessible',
-        });
+      // App tokens cannot fetch the user; resolve the scope against the
+      // token's own team instead.
+      const appTokenScopeResolved =
+        isErrnoException(err) &&
+        err.code === 'NOT_AUTHORIZED' &&
+        isAppPrincipalEnabled() &&
+        (await resolveAppTokenScope(client, scope));
 
-        trackAgenticErrorTelemetry(err);
-        return finishWithExitCode(1);
-      }
+      if (!appTokenScopeResolved) {
+        if (isErrnoException(err) && err.code === 'NOT_AUTHORIZED') {
+          output.prettyError({
+            message: `You do not have access to the specified account`,
+            link: 'https://err.sh/vercel/scope-not-accessible',
+          });
 
-      output.error(
-        `Not able to load user because of unexpected error: ${errorToString(err)}`
-      );
-      trackAgenticErrorTelemetry(err);
-      return finishWithExitCode(1);
-    }
+          trackAgenticErrorTelemetry(err);
+          return finishWithExitCode(1);
+        }
 
-    const scopeMatchesUserIdentity =
-      user.id === scope || user.email === scope || user.username === scope;
-
-    let teams: Team[] = [];
-
-    try {
-      teams = await getTeams(client);
-    } catch (err: unknown) {
-      // If the scope clearly refers to the user's own identity we don't need
-      // the teams list to resolve it, so swallow any failure and fall through
-      // to personal-account handling. Otherwise the teams list is required, so
-      // surface the error.
-      if (scopeMatchesUserIdentity) {
-        output.debug(
-          `Ignoring failure to load teams; scope matches the current user's identity`
+        output.error(
+          `Not able to load user because of unexpected error: ${errorToString(err)}`
         );
-      } else if (isErrnoException(err) && err.code === 'not_authorized') {
-        output.prettyError({
-          message: `You do not have access to the specified team`,
-          link: 'https://err.sh/vercel/scope-not-accessible',
-        });
-
-        trackAgenticErrorTelemetry(err);
-        return finishWithExitCode(1);
-      } else if (isErrnoException(err) && err.code === 'rate_limited') {
-        output.prettyError({
-          message:
-            'Rate limited. Too many requests to the same endpoint: /teams',
-        });
-
-        trackAgenticErrorTelemetry(err);
-        return finishWithExitCode(1);
-      } else {
-        output.error('Not able to load teams');
         trackAgenticErrorTelemetry(err);
         return finishWithExitCode(1);
       }
     }
 
-    // A scope string can be ambiguous: a Northstar user's username may also be
-    // the slug of a team they own (the team backing their default scope). In
-    // that case the team must win — otherwise the user could never target it by
-    // name, since the personal-account check below would reject it. So resolve
-    // teams first and only fall back to personal-account handling when no team
-    // matches the scope.
-    const related =
-      teams && teams.find(team => team.id === scope || team.slug === scope);
+    if (user) {
+      const scopeMatchesUserIdentity =
+        user.id === scope || user.email === scope || user.username === scope;
 
-    if (related) {
-      client.config.currentTeam = related.id;
-    } else if (scopeMatchesUserIdentity) {
-      if (user.version === 'northstar') {
-        output.error('You cannot set your Personal Account as the scope.');
-        return finishWithExitCode(1);
+      let teams: Team[] = [];
+
+      try {
+        teams = await getTeams(client);
+      } catch (err: unknown) {
+        // If the scope clearly refers to the user's own identity we don't need
+        // the teams list to resolve it, so swallow any failure and fall through
+        // to personal-account handling. Otherwise the teams list is required, so
+        // surface the error.
+        if (scopeMatchesUserIdentity) {
+          output.debug(
+            `Ignoring failure to load teams; scope matches the current user's identity`
+          );
+        } else if (isErrnoException(err) && err.code === 'not_authorized') {
+          output.prettyError({
+            message: `You do not have access to the specified team`,
+            link: 'https://err.sh/vercel/scope-not-accessible',
+          });
+
+          trackAgenticErrorTelemetry(err);
+          return finishWithExitCode(1);
+        } else if (isErrnoException(err) && err.code === 'rate_limited') {
+          output.prettyError({
+            message:
+              'Rate limited. Too many requests to the same endpoint: /teams',
+          });
+
+          trackAgenticErrorTelemetry(err);
+          return finishWithExitCode(1);
+        } else {
+          output.error('Not able to load teams');
+          trackAgenticErrorTelemetry(err);
+          return finishWithExitCode(1);
+        }
       }
 
-      delete client.config.currentTeam;
-    } else {
-      output.prettyError({
-        message: 'The specified scope does not exist',
-        link: 'https://err.sh/vercel/scope-not-existent',
-      });
+      // A scope string can be ambiguous: a Northstar user's username may also be
+      // the slug of a team they own (the team backing their default scope). In
+      // that case the team must win. Otherwise the user could not target the
+      // team by name because the personal account check would reject it.
+      let related = teams.find(
+        team => team.id === scope || team.slug === scope
+      );
 
-      return finishWithExitCode(1);
+      // The `/teams` list only contains teams where the user is a direct
+      // member. The user can also hold a virtual membership to a team. In
+      // that case the list omits the team, but `GET /teams/:id` still resolves
+      // it. Look up the scope directly before we reject it.
+      if (!related && !scopeMatchesUserIdentity) {
+        try {
+          related = await getTeamByIdOrSlug(client, scope, {
+            useCurrentTeam: false,
+          });
+        } catch (err: unknown) {
+          output.debug(
+            `Direct team lookup for scope "${scope}" failed: ${errorToString(err)}`
+          );
+        }
+      }
+
+      if (related) {
+        client.config.currentTeam = related.id;
+      } else if (scopeMatchesUserIdentity) {
+        if (user.version === 'northstar') {
+          output.error('You cannot set your Personal Account as the scope.');
+          return finishWithExitCode(1);
+        }
+
+        delete client.config.currentTeam;
+      } else {
+        output.prettyError({
+          message: 'The specified scope does not exist',
+          link: 'https://err.sh/vercel/scope-not-existent',
+        });
+
+        return finishWithExitCode(1);
+      }
     }
   }
 
@@ -1021,6 +1045,14 @@ const main = async () => {
           telemetry.trackCliCommandCerts(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).certs;
           break;
+        case 'changelog':
+          telemetry.trackCliCommandChangelog(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).changelog;
+          break;
+        case 'comments':
+          telemetry.trackCliCommandComments(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).comments;
+          break;
         case 'crons':
         case 'cron':
           telemetry.trackCliCommandCrons(userSuppliedSubCommand);
@@ -1039,9 +1071,9 @@ const main = async () => {
           telemetry.trackCliCommandDeployHooks(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).deployHooks;
           break;
-        case 'edge-config':
-          telemetry.trackCliCommandEdgeConfig(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).edgeConfig;
+        case 'global-config':
+          telemetry.trackCliCommandGlobalConfig(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).globalConfig;
           break;
         case 'domains':
           telemetry.trackCliCommandDomains(userSuppliedSubCommand);
@@ -1083,6 +1115,10 @@ const main = async () => {
         case 'integration-resource':
           telemetry.trackCliCommandIntegrationResource(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).integrationResource;
+          break;
+        case 'kms':
+          telemetry.trackCliCommandKms(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).kms;
           break;
         case 'mcp':
           func = (await import('./commands-bulk.js')).mcp;
@@ -1160,6 +1196,10 @@ const main = async () => {
           telemetry.trackCliCommandSandbox(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).sandbox;
           break;
+        case 'security':
+          telemetry.trackCliCommandSecurity(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).security;
+          break;
         case 'skills':
           telemetry.trackCliCommandSkills(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).skills;
@@ -1187,6 +1227,10 @@ const main = async () => {
         case 'upgrade':
           telemetry.trackCliCommandUpgrade(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).upgrade;
+          break;
+        case 'version':
+          telemetry.trackCliCommandVersion(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).version;
           break;
         case 'webhooks':
           telemetry.trackCliCommandWebhooks(userSuppliedSubCommand);
@@ -1390,7 +1434,13 @@ main()
     // Skip the update notification after `vc upgrade`: the process still has
     // the pre-upgrade version in memory, so it would prompt the user to
     // upgrade again right after the upgrade completed.
-    if (cachedLatest && resolvedCommandForUpdate !== 'upgrade') {
+    // Also skip it entirely while a version is pinned (`vc version use`):
+    // the user explicitly chose this version, so don't nag or auto-update.
+    if (
+      cachedLatest &&
+      resolvedCommandForUpdate !== 'upgrade' &&
+      !(await isVersionPinned())
+    ) {
       const originalExitCode = typeof exitCode === 'number' ? exitCode : 0;
 
       // Await the fresh registry lookup to verify the exact version before

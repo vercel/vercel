@@ -4,9 +4,10 @@ import output from '../../output-manager';
 import { discardSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   confirmAction,
   withGlobalFlags,
+  resolveFirewallScope,
+  mapFirewallApiError,
 } from './shared';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import deleteFirewallDraft from '../../util/firewall/delete-firewall-draft';
@@ -18,18 +19,13 @@ export default async function discard(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, discardSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
-  if (typeof link === 'number') return link;
+  const scope = await resolveFirewallScope(client, parsed.flags);
+  if (typeof scope === 'number') return scope;
 
-  const { project, org } = link;
-  const teamId = org.type === 'team' ? org.id : undefined;
-
-  output.spinner(`Fetching draft changes for ${chalk.bold(project.name)}`);
+  output.spinner(`Fetching draft changes for ${chalk.bold(scope.displayName)}`);
 
   try {
-    const { active, draft } = await listFirewallConfigs(client, project.id, {
-      teamId,
-    });
+    const { active, draft } = await listFirewallConfigs(client, scope);
 
     if (!draft || draft.changes.length === 0) {
       output.warn('No draft changes to discard.');
@@ -59,7 +55,7 @@ export default async function discard(client: Client, argv: string[]) {
     const updateStamp = stamp();
     output.spinner('Discarding draft changes');
 
-    await deleteFirewallDraft(client, project.id, { teamId });
+    await deleteFirewallDraft(client, scope);
 
     output.log(
       `${chalk.cyan('Success!')} Draft changes discarded ${chalk.gray(updateStamp())}`
@@ -67,14 +63,19 @@ export default async function discard(client: Client, argv: string[]) {
 
     return 0;
   } catch (e: unknown) {
-    const error = e as { message?: string };
-    const msg = error.message || 'Failed to discard draft changes';
+    const msg = mapFirewallApiError(
+      e,
+      scope,
+      'Failed to discard draft changes'
+    );
     if (client.nonInteractive) {
       outputAgentError(client, {
         status: 'error',
         reason: 'api_error',
         message: msg,
-        next: [{ command: withGlobalFlags(client, 'firewall discard --yes') }],
+        next: [
+          { command: withGlobalFlags(client, 'firewall discard --yes', scope) },
+        ],
       });
       process.exit(1);
       return 1;

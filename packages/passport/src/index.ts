@@ -121,6 +121,13 @@ export interface PassportIdentityOptions {
   verifyOptions?: PassportVerifyOptions;
 }
 
+export type VerifyIdentityInput =
+  | string
+  | RequestLike
+  | HeadersLike
+  | HeaderRecord
+  | PassportIdentityInput;
+
 const PASSPORT_ISSUER = 'https://passport.vercel.com';
 const VERCEL_OIDC_ISSUER = 'https://oidc.vercel.com';
 const PASSPORT_JWKS = createRemoteJWKSet(
@@ -198,6 +205,49 @@ export async function getIdentity(
   }
 
   return null;
+}
+
+/**
+ * Verify a Passport identity token and return its identity claims.
+ *
+ * Use this helper when a Passport token is forwarded to another backend, such
+ * as through an `Authorization: Bearer <token>` header. Unlike `getIdentity`,
+ * this helper always verifies the token and never synthesizes a local
+ * development identity.
+ */
+export async function verifyIdentity(
+  input: VerifyIdentityInput,
+  options: PassportVerifyOptions = {}
+): Promise<PassportIdentity> {
+  const normalized =
+    typeof input === 'string' ? { token: input } : normalizeInput(input);
+  const headers = normalized.headers;
+  const tokenFromInput = normalized.token;
+  const authorizationToken = getAuthorizationBearer(headers);
+  const headerToken = getHeader(headers, PASSPORT_HEADER_NAME);
+  const cookieHeader = normalized.cookieHeader ?? getHeader(headers, 'cookie');
+  const cookieToken = getCookie(
+    normalized.cookies,
+    cookieHeader,
+    PASSPORT_COOKIE_NAME
+  );
+  const token =
+    tokenFromInput ?? authorizationToken ?? headerToken ?? cookieToken;
+
+  if (!token) {
+    throw new PassportIdentityError('Passport identity token was not found.');
+  }
+
+  const tokenSource: TokenSource = tokenFromInput
+    ? 'local'
+    : authorizationToken || headerToken
+      ? 'header'
+      : cookieToken
+        ? 'cookie'
+        : 'local';
+  const payload = await verifyPassportToken(token, options);
+
+  return createIdentity(token, tokenSource, true, payload);
 }
 
 function createIdentity(
@@ -298,6 +348,15 @@ function getHeader(
   )?.[1];
 
   return Array.isArray(value) ? value[0] : value;
+}
+
+function getAuthorizationBearer(
+  headers: HeadersLike | HeaderRecord | undefined
+): string | undefined {
+  const authorization = getHeader(headers, 'authorization');
+  const match = authorization?.match(/^Bearer\s+(.+)$/i);
+
+  return match?.[1];
 }
 
 function getCookie(

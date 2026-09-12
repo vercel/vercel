@@ -4,7 +4,7 @@ import {
   NodejsLambda,
 } from '@vercel/build-utils';
 import { build } from '../src/index';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import execa from 'execa';
 import { describe, expect, it } from 'vitest';
 import { pathToRegexp } from 'path-to-regexp';
@@ -164,9 +164,10 @@ describe('successful builds', async () => {
 
         const lambda = result.output.index as unknown as NodejsLambda;
 
-        await expect(
-          JSON.stringify(result.routes, null, 2)
-        ).toMatchFileSnapshot(join(fixtureSource, 'routes.json'));
+        const expectedRoutes = JSON.parse(
+          await readFile(join(fixtureSource, 'routes.json'), 'utf-8')
+        );
+        expect(result.routes).toEqual(expectedRoutes);
 
         if (lambda.files) {
           // Assert includeFiles: if files.json exists, every listed file must be in the lambda
@@ -209,25 +210,6 @@ describe('successful builds', async () => {
       50000
     ); // copying fixture and running npm install so it takes a while
   }
-
-  // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
-  it.skip(`builds workflow-server`, async () => {
-    const workPath = resolve(process.env.HOME!, 'code/workflow-server');
-
-    const result = (await build({
-      files: {},
-      workPath,
-      config: defaultConfig,
-      meta,
-      entrypoint: 'package.json',
-      repoRootPath: workPath,
-    })) as BuildResultV2Typical;
-
-    const lambda = result.output.index as unknown as NodejsLambda;
-    const tempDir = await mkdtemp(join(tmpdir(), 'workflow-server-'));
-
-    await extractAndExecuteLambda(lambda, tempDir);
-  }, 20000);
 });
 
 it.skipIf(process.platform === 'win32')(
@@ -608,6 +590,45 @@ it('prefixes emitted service route sources with routePrefix', async () => {
   expect(lambda.handler).toContain('__vc_service_vc_init');
   expect(lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX).toBe('/api/js');
   expect(lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX_STRIP).toBe('1');
+}, 30000);
+
+it('emits a prefixed request.path transform so the runtime shim strips once', async () => {
+  const fixtureName = '01-express-index-ts-esm';
+  const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+  const { workDir } = await getWorkDir(fixtureName, fixtureSource);
+
+  const result = (await build({
+    files: {},
+    workPath: workDir,
+    config: {
+      ...defaultConfig,
+      routePrefix: 'api/js',
+      serviceName: 'js-api',
+    },
+    meta,
+    entrypoint: 'package.json',
+    repoRootPath: workDir,
+  })) as BuildResultV2Typical;
+
+  // The catch-all capture group only matches the segment after the prefix, so
+  // the transform must re-include the prefix. The runtime shim then performs
+  // the single prefix strip, avoiding a double-strip when the suffix begins
+  // with the prefix segment (e.g. `/api/js/api/js/...`).
+  expect(result.routes).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        src: '^/api/js(?:/(.*))?$',
+        dest: '/_svc/js-api/index',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/api/js/$1',
+          },
+        ],
+      }),
+    ])
+  );
 }, 30000);
 
 it('does not double-prefix routes already authored with routePrefix', async () => {

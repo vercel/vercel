@@ -1,34 +1,132 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
-import { outputAgentError, buildCommandWithYes } from '../../util/agent-output';
+import {
+  outputAgentError,
+  buildCommandWithYes,
+  withGlobalFlags as withClientGlobalFlags,
+} from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getGlobalFlagsFromArgs } from '../../util/arg-common';
+import { isAPIError } from '../../util/errors-ts';
 import type { Command } from '../help';
+import {
+  parseSubcommandArguments,
+  type ParsedSubcommandArguments,
+} from '../../util/command-arguments';
 import type { FirewallIpRule, FirewallRule } from '../../util/firewall/types';
+import type { FirewallScope } from '../../util/firewall/scope';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import activateFirewallConfig from '../../util/firewall/activate-firewall-config';
+import getScope from '../../util/get-scope';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import stamp from '../../util/output/stamp';
-
-export interface ParsedSubcommand {
-  args: string[];
-  flags: { [key: string]: any };
-}
 
 /**
  * Plain suggested command with global flags from argv (--cwd, --non-interactive, etc.).
+ * Suggested follow-ups must keep targeting the team config, so team scope appends --team-level.
  */
 export function withGlobalFlags(
   client: Client,
-  commandTemplate: string
+  commandTemplate: string,
+  scope?: FirewallScope
 ): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+  const template =
+    scope?.type === 'team'
+      ? `${commandTemplate} --team-level`
+      : commandTemplate;
+  return withClientGlobalFlags(client, template, {
+    preserveProject: true,
+  });
+}
+
+/**
+ * Resolves the firewall config to operate on: the team-level config when
+ * --team-level is passed (no linked project required), else the linked or
+ * --project project. Returns an exit code on failure.
+ */
+export async function resolveFirewallScope(
+  client: Client,
+  flags: { '--project'?: string; '--team-level'?: boolean }
+): Promise<FirewallScope | number> {
+  if (flags['--team-level'] && flags['--project']) {
+    const message =
+      'Cannot specify both --team-level and --project. Use one or the other.';
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message,
+        },
+        1
+      );
+      return 1;
+    }
+    output.error(message);
+    return 1;
+  }
+
+  if (flags['--team-level']) {
+    const { team } = await getScope(client);
+    if (!team) {
+      const message =
+        'Team-level firewall requires a team scope. Personal accounts are not supported. Run `vercel switch` to select a team or pass --scope <team>.';
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: AGENT_STATUS.ERROR,
+            reason: AGENT_REASON.MISSING_SCOPE,
+            message,
+          },
+          1
+        );
+        return 1;
+      }
+      output.error(message);
+      return 1;
+    }
+    return { type: 'team', teamId: team.id, displayName: team.slug };
+  }
+
+  const link = await requireProjectContext(
+    client,
+    'firewall',
+    flags['--project']
+  );
+  if (typeof link === 'number') return link;
+  const { project, org } = link;
+  return {
+    type: 'project',
+    projectId: project.id,
+    teamId: org.type === 'team' ? org.id : undefined,
+    displayName: project.name,
+  };
+}
+
+/**
+ * User-facing message for firewall API errors. Team scope maps the two 403
+ * causes (plan gate, owner-only ACL) to actionable messages; everything else
+ * surfaces the server message so gated-feature errors (e.g. 401 Security Plus)
+ * stay verbatim.
+ */
+export function mapFirewallApiError(
+  e: unknown,
+  scope: FirewallScope,
+  fallback: string
+): string {
+  const err = e as { status?: number; code?: string; message?: string };
+  if (scope.type === 'team' && err.status === 403) {
+    if (err.code === 'plan_not_supported') {
+      return `Team-level firewall requires an Enterprise plan (current team: "${scope.displayName}"). Pass --scope <team> or run \`vercel switch\` to target a different team.`;
+    }
+    return `You need to be a team owner to manage the team-level firewall for "${scope.displayName}".${err.message ? ` (${err.message})` : ''}`;
+  }
+  return err.message || fallback;
 }
 
 export async function parseSubcommandArgs(
@@ -36,18 +134,18 @@ export async function parseSubcommandArgs(
   command: Command,
   client?: Client,
   commandPath?: string
-): Promise<ParsedSubcommand | number> {
+): Promise<ParsedSubcommandArguments | number> {
   let parsedArgs;
-  const flagsSpecification = getFlagsSpecification(command.options);
   const fullPath = commandPath || command.name;
 
   try {
-    // @ts-expect-error - TypeScript complains about the flags specification type
-    parsedArgs = parseArguments(argv, flagsSpecification);
+    parsedArgs = parseSubcommandArguments(argv, command);
   } catch (err) {
     if (client?.nonInteractive) {
       const rawMessage = err instanceof Error ? err.message : String(err);
-      const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+      const flags = getGlobalFlagsFromArgs(client.argv.slice(2), {
+        preserveProject: true,
+      });
       outputAgentError(
         client,
         {
@@ -72,46 +170,6 @@ export async function parseSubcommandArgs(
   }
 
   return parsedArgs;
-}
-
-export async function ensureProjectLink(client: Client) {
-  const link = await getLinkedProject(client);
-
-  if (link.status === 'error') {
-    return link.exitCode;
-  } else if (link.status === 'not_linked') {
-    if (client.nonInteractive) {
-      const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-      const cmd = getCommandNamePlain(`link ${flags.join(' ')}`.trim());
-      outputAgentError(
-        client,
-        {
-          status: AGENT_STATUS.ERROR,
-          reason: AGENT_REASON.NOT_LINKED,
-          userActionRequired: true,
-          message:
-            'Your codebase is not linked to a Vercel project. Run link first, then retry firewall commands.',
-          next: [
-            {
-              command: cmd,
-              when: 'to link this directory to a project',
-            },
-          ],
-        },
-        1
-      );
-      return 1;
-    }
-    output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
-    );
-    return 1;
-  }
-
-  client.config.currentTeam =
-    link.org.type === 'team' ? link.org.id : undefined;
-
-  return link;
 }
 
 export async function confirmAction(
@@ -145,6 +203,98 @@ export async function confirmAction(
   return await client.input.confirm(message, false);
 }
 
+export function firewallPermissionMessage(
+  action: string,
+  projectName: string
+): string {
+  return `You don't have permission to ${action} for ${projectName}. Ask a team owner to grant access.`;
+}
+
+/**
+ * Human error, or a JSON agent payload when non-interactive.
+ *
+ * `nextCommand` is offered only when re-running could plausibly succeed, so
+ * omit it for failures a retry cannot clear.
+ */
+export function failFirewall(
+  client: Client,
+  opts: {
+    message: string;
+    nextCommand?: string;
+    reason?: string;
+  }
+): number {
+  if (client.nonInteractive) {
+    outputAgentError(client, {
+      status: AGENT_STATUS.ERROR,
+      reason: opts.reason ?? AGENT_REASON.INVALID_ARGUMENTS,
+      message: opts.message,
+      next: opts.nextCommand
+        ? [{ command: withGlobalFlags(client, opts.nextCommand) }]
+        : [],
+    });
+    return 1;
+  }
+  output.error(opts.message);
+  return 1;
+}
+
+/**
+ * Whether re-running could plausibly succeed. Suggesting a retry for a
+ * permission or validation failure sends an agent round a loop it cannot
+ * escape, so only transient failures get one.
+ */
+export function isRetryableApiError(error: unknown): boolean {
+  return isAPIError(error) && (error.status >= 500 || error.status === 429);
+}
+
+/**
+ * Report a failed firewall request, keeping permission denials and timeouts
+ * distinct from generic API failures so an agent can tell what to do next.
+ *
+ * Shared by `firewall status` and `firewall overview` so the two cannot drift
+ * on how a failure is classified, or on which failures are worth retrying.
+ */
+export function failFirewallApi(
+  client: Client,
+  e: unknown,
+  opts: {
+    fallback: string;
+    nextCommand: string;
+    permissionAction: string;
+    projectName: string;
+    timeoutJob?: string;
+  }
+): number {
+  if (isAPIError(e) && (e.status === 401 || e.status === 403)) {
+    // No retry: the same credentials will be refused again.
+    return failFirewall(client, {
+      message: firewallPermissionMessage(
+        opts.permissionAction,
+        opts.projectName
+      ),
+      reason: AGENT_REASON.PERMISSION_DENIED,
+    });
+  }
+  if (
+    e instanceof Error &&
+    (e.name === 'TimeoutError' || e.name === 'AbortError')
+  ) {
+    const job = opts.timeoutJob ?? 'firewall data';
+    return failFirewall(client, {
+      message: `Timed out waiting for ${job}. Re-run the command — the next try is usually faster.`,
+      nextCommand: opts.nextCommand,
+      reason: AGENT_REASON.API_ERROR,
+    });
+  }
+  const msg = e instanceof Error && e.message ? e.message : opts.fallback;
+  return failFirewall(client, {
+    message: msg,
+    nextCommand: isRetryableApiError(e) ? opts.nextCommand : undefined,
+    reason: AGENT_REASON.API_ERROR,
+  });
+}
+
 export function outputJson(client: Client, data: unknown): void {
   output.stopSpinner();
   client.stdout.write(JSON.stringify(data, null, 2) + '\n');
@@ -156,10 +306,9 @@ export function outputJson(client: Client, data: unknown): void {
  */
 export async function detectExistingDraft(
   client: Client,
-  projectId: string,
-  teamId?: string
+  scope: FirewallScope
 ): Promise<boolean> {
-  const { draft } = await listFirewallConfigs(client, projectId, { teamId });
+  const { draft } = await listFirewallConfigs(client, scope);
   return draft !== null && draft.changes.length > 0;
 }
 
@@ -169,12 +318,12 @@ export async function detectExistingDraft(
  */
 export async function offerAutoPublish(
   client: Client,
-  projectId: string,
+  scope: FirewallScope,
   hadExistingDraft: boolean,
-  opts: { teamId?: string; skipPrompts?: boolean }
+  opts: { skipPrompts?: boolean }
 ): Promise<void> {
   output.print(
-    `\n  ${chalk.gray(`This change is staged. Run ${chalk.cyan(getCommandName('firewall publish'))} to make it live, or ${chalk.cyan(getCommandName('firewall discard'))} to undo.`)}\n`
+    `\n  ${chalk.gray(`This change is staged. Run ${chalk.cyan(withGlobalFlags(client, 'firewall publish', scope))} to make it live, or ${chalk.cyan(withGlobalFlags(client, 'firewall discard', scope))} to undo.`)}\n`
   );
 
   if (
@@ -194,22 +343,19 @@ export async function offerAutoPublish(
       output.spinner('Publishing to production');
 
       try {
-        await activateFirewallConfig(client, projectId, 'draft', {
-          teamId: opts.teamId,
-        });
+        await activateFirewallConfig(client, scope, 'draft');
         output.log(
           `${chalk.cyan('Published')} to production ${chalk.gray(publishStamp())}`
         );
       } catch (e: unknown) {
-        const err = e as { message?: string };
         output.error(
-          `Failed to publish to production: ${err.message || 'Unknown error'}`
+          `Failed to publish to production: ${mapFirewallApiError(e, scope, 'Unknown error')}`
         );
       }
     }
   } else if (hadExistingDraft) {
     output.warn(
-      `There are other draft changes. Review with ${chalk.cyan(getCommandName('firewall diff'))} before publishing.`
+      `There are other draft changes. Review with ${chalk.cyan(withGlobalFlags(client, 'firewall diff', scope))} before publishing.`
     );
   }
 }

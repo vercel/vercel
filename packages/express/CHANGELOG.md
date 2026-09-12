@@ -1,5 +1,266 @@
 # @vercel/express
 
+## 7.0.2
+
+### Patch Changes
+
+- Updated dependencies [1817491]
+  - @vercel/build-utils@14.9.1
+  - @vercel/node@12.0.1
+  - @vercel/cervel@0.1.61
+
+## 7.0.1
+
+### Patch Changes
+
+- @vercel/cervel@0.1.60
+
+## 7.0.0
+
+### Patch Changes
+
+- Updated dependencies [392c759]
+  - @vercel/build-utils@14.9.0
+  - @vercel/node@12.0.0
+  - @vercel/cervel@0.1.59
+
+## 6.0.0
+
+### Patch Changes
+
+- Updated dependencies [a652a99]
+  - @vercel/build-utils@14.8.0
+  - @vercel/node@11.0.0
+  - @vercel/cervel@0.1.58
+
+## 5.0.0
+
+### Patch Changes
+
+- Updated dependencies [26b891e]
+- Updated dependencies [37ff9da]
+  - @vercel/build-utils@14.7.0
+  - @vercel/node@10.0.0
+  - @vercel/cervel@0.1.57
+
+## 4.0.1
+
+### Patch Changes
+
+- Updated dependencies [aad9541]
+  - @vercel/build-utils@14.6.1
+  - @vercel/node@9.0.1
+  - @vercel/cervel@0.1.56
+
+## 4.0.0
+
+### Patch Changes
+
+- Updated dependencies [e82de48]
+  - @vercel/build-utils@14.6.0
+  - @vercel/node@9.0.0
+  - @vercel/cervel@0.1.55
+
+## 3.0.3
+
+### Patch Changes
+
+- Updated dependencies [b9e12f0]
+  - @vercel/static-config@3.4.3
+  - @vercel/node@8.1.2
+  - @vercel/cervel@0.1.54
+
+## 3.0.2
+
+### Patch Changes
+
+- Updated dependencies [a443e57]
+  - @vercel/build-utils@14.5.1
+  - @vercel/node@8.1.1
+  - @vercel/cervel@0.1.53
+
+## 3.0.1
+
+### Patch Changes
+
+- Updated dependencies [44be84d]
+- Updated dependencies [2c363fd]
+  - @vercel/node@8.1.0
+  - @vercel/static-config@3.4.2
+  - @vercel/cervel@0.1.52
+
+## 3.0.0
+
+### Minor Changes
+
+- 90afd71: Expose the resolved rewrite destination as the request path observed by Node backend framework applications (express, hono, h3, koa, nestjs, fastify, elysia) and the unified backends builder, and warn affected backend projects about the behavior change.
+
+### Patch Changes
+
+- Updated dependencies [90afd71]
+  - @vercel/build-utils@14.5.0
+  - @vercel/node@8.0.0
+  - @vercel/cervel@0.1.51
+
+## 2.0.1
+
+### Patch Changes
+
+- Updated dependencies [1c3e6e9]
+- Updated dependencies [e5b0363]
+  - @vercel/node@7.0.1
+  - @vercel/build-utils@14.4.1
+  - @vercel/cervel@0.1.50
+
+## 2.0.0
+
+### Patch Changes
+
+- Updated dependencies [f8add0a]
+  - @vercel/build-utils@14.4.0
+  - @vercel/node@7.0.0
+  - @vercel/cervel@0.1.49
+
+## 1.0.0
+
+### Patch Changes
+
+- 0d71a61: Declare `@vercel/build-utils` as a peer dependency provided by Vercel CLI so builders load correctly with strict dependency isolation, including pnpm global installs.
+- Updated dependencies [0b08df6]
+- Updated dependencies [cd6b038]
+- Updated dependencies [0d71a61]
+- Updated dependencies [96444ba]
+  - @vercel/build-utils@14.3.0
+  - @vercel/node@6.0.0
+  - @vercel/cervel@0.1.48
+
+## 0.1.130
+
+### Patch Changes
+
+- @vercel/node@5.10.2
+- @vercel/cervel@0.1.47
+
+## 0.1.129
+
+### Patch Changes
+
+- Updated dependencies [b4f09c1]
+  - @vercel/node@5.10.1
+  - @vercel/cervel@0.1.46
+
+## 0.1.128
+
+### Patch Changes
+
+- Updated dependencies [852e1a0]
+  - @vercel/node@5.10.0
+  - @vercel/cervel@0.1.45
+
+## 0.1.127
+
+### Patch Changes
+
+- Updated dependencies [2da7809]
+  - @vercel/node@5.9.9
+  - @vercel/cervel@0.1.44
+
+## 0.1.126
+
+### Patch Changes
+
+- Updated dependencies [e829b31]
+  - @vercel/node@5.9.8
+  - @vercel/cervel@0.1.43
+
+## 0.1.125
+
+### Patch Changes
+
+- @vercel/node@5.9.7
+- @vercel/cervel@0.1.42
+
+## 0.1.124
+
+### Patch Changes
+
+- @vercel/node@5.9.6
+- @vercel/cervel@0.1.41
+
+## 0.1.123
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/cervel@0.1.40
+  - @vercel/node@5.9.5
+  - @vercel/static-config@3.4.1
+
+## 0.1.122
+
+### Patch Changes
+
+- @vercel/cervel@0.1.39
+- @vercel/node@5.9.4
+
+## 0.1.121
+
+### Patch Changes
+
+- @vercel/node@5.9.3
+- @vercel/cervel@0.1.38
+
+## 0.1.120
+
+### Patch Changes
+
+- @vercel/node@5.9.2
+- @vercel/cervel@0.1.37
+
+## 0.1.119
+
+### Patch Changes
+
+- @vercel/node@5.9.1
+- @vercel/cervel@0.1.36
+
+## 0.1.118
+
+### Patch Changes
+
+- Updated dependencies [4502520]
+  - @vercel/node@5.9.0
+  - @vercel/cervel@0.1.35
+
+## 0.1.117
+
+### Patch Changes
+
+- @vercel/node@5.8.27
+- @vercel/cervel@0.1.34
+
+## 0.1.116
+
+### Patch Changes
+
+- @vercel/node@5.8.26
+- @vercel/cervel@0.1.33
+
+## 0.1.115
+
+### Patch Changes
+
+- @vercel/node@5.8.25
+- @vercel/cervel@0.1.32
+
+## 0.1.114
+
+### Patch Changes
+
+- @vercel/node@5.8.24
+- @vercel/cervel@0.1.31
+
 ## 0.1.113
 
 ### Patch Changes

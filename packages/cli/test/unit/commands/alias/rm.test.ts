@@ -25,9 +25,8 @@ describe('alias rm', () => {
   describe('no argument', () => {
     it.todo('errors');
   });
-  describe('[ALIAS]', () => {
-    it.todo('removes the alias');
 
+  describe('[ALIAS]', () => {
     it('tracks argument', async () => {
       useUser();
       client.scenario.get(`/now/aliases/:aliasOrId`, (request, response) => {
@@ -62,38 +61,6 @@ describe('alias rm', () => {
 
     describe('the alias cannot be found', () => {
       it.todo('errors');
-    });
-
-    describe('--yes', () => {
-      it.todo('skips confirmation step');
-
-      it('tracks flag', async () => {
-        useUser();
-        client.scenario.get(`/now/aliases/:aliasOrId`, (request, response) => {
-          response.json({});
-        });
-        client.scenario.delete(`/now/aliases/:id`, (request, response) => {
-          response.json({});
-        });
-        client.setArgv('alias', 'rm', 'custom', '--yes');
-        const exitCode = await alias(client);
-        expect(exitCode, 'exit code for "alias"').toEqual(0);
-
-        expect(client.telemetryEventStore).toHaveTelemetryEvents([
-          {
-            key: 'subcommand:rm',
-            value: 'rm',
-          },
-          {
-            key: 'flag:yes',
-            value: 'TRUE',
-          },
-          {
-            key: 'argument:alias',
-            value: '[REDACTED]',
-          },
-        ]);
-      });
     });
   });
 });

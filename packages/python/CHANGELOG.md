@@ -1,5 +1,278 @@
 # @vercel/python
 
+## 13.0.1
+
+### Patch Changes
+
+- Updated dependencies [1817491]
+  - @vercel/build-utils@14.9.1
+
+## 13.0.0
+
+### Patch Changes
+
+- Updated dependencies [392c759]
+  - @vercel/build-utils@14.9.0
+
+## 12.0.0
+
+### Patch Changes
+
+- Updated dependencies [a652a99]
+  - @vercel/build-utils@14.8.0
+
+## 11.0.0
+
+### Patch Changes
+
+- Updated dependencies [26b891e]
+- Updated dependencies [37ff9da]
+  - @vercel/build-utils@14.7.0
+
+## 10.0.1
+
+### Patch Changes
+
+- Updated dependencies [aad9541]
+  - @vercel/build-utils@14.6.1
+
+## 10.0.0
+
+### Patch Changes
+
+- Updated dependencies [e82de48]
+  - @vercel/build-utils@14.6.0
+
+## 9.2.0
+
+### Minor Changes
+
+- a4a3c28: Promote fastapi frontend to CDN when cdn=true.
+
+## 9.1.0
+
+### Minor Changes
+
+- d9dca36: Skip static file collection for fastapi mounts with middleware.
+- 697834c: Default to not excluding static files from the lambda when promoting to CDN.
+
+## 9.0.1
+
+### Patch Changes
+
+- Updated dependencies [a443e57]
+  - @vercel/build-utils@14.5.1
+
+## 9.0.0
+
+### Patch Changes
+
+- Updated dependencies [90afd71]
+  - @vercel/build-utils@14.5.0
+
+## 8.1.0
+
+### Minor Changes
+
+- a341730: Fix FastAPI static discovery for apps that use imports.
+
+### Patch Changes
+
+- Updated dependencies [e5b0363]
+  - @vercel/build-utils@14.4.1
+
+## 8.0.0
+
+### Patch Changes
+
+- Updated dependencies [f8add0a]
+  - @vercel/build-utils@14.4.0
+
+## 7.0.0
+
+### Patch Changes
+
+- cd6b038: Honor `package.json` pnpm pins without Corepack, and default new projects to pnpm 11.
+
+  When Corepack is off, `devEngines.packageManager` is preferred, then a lockfile-compatible `packageManager` field, then `engines.pnpm` as a selector. Unpinned lockfile `9.0` projects created on or after 2026-08-19 use pnpm 11 (Node 22+) if `/pnpm11` is present in the build image; otherwise they keep pnpm 10.
+
+- d7b6ff5: Serve Python queue subscribers through a runtime-owned callback handler instead of the removed `vercel.queue.asgi_app()` SDK API.
+- 0d71a61: Declare `@vercel/build-utils` as a peer dependency provided by Vercel CLI so builders load correctly with strict dependency isolation, including pnpm global installs.
+- Updated dependencies [0b08df6]
+- Updated dependencies [cd6b038]
+- Updated dependencies [96444ba]
+  - @vercel/build-utils@14.3.0
+
+## 6.58.0
+
+### Minor Changes
+
+- ac3120d: Exclude fastapi static files from build output and add tool.vercel.fastapi.static.exclude setting to pyproject.toml.
+
+### Patch Changes
+
+- Updated dependencies [ac3120d]
+  - @vercel/python-analysis@0.14.0
+
+## 6.57.1
+
+### Patch Changes
+
+- 596868c: Recognize the standalone `vercel-workflow` distribution when deciding whether to serve workflows through vercel-queue
+
+## 6.57.0
+
+### Minor Changes
+
+- de992e6: Fix FastAPI static/frontend route precedence on the CDN.
+
+## 6.56.2
+
+### Patch Changes
+
+- 7846a8c: Connect the JavaScript runtime builds to their native Python and Rust build tasks.
+- 962d043: Report the full function footprint (source + venv + runtime-install tooling) as `python.bundle.totalSizeBytes`, and the shipped zip size as `python.bundle.shippedSizeBytes`.
+- 15e0a8e: Report a cold start phase breakdown from the Python runtime.
+
+  The `server-started` handshake now includes `userInitDuration` and a `phases`
+  breakdown (`bootstrap`, `importFn`, `serverReady`), and `initDuration` is
+  measured from a timestamp stamped by the generated handler before it does any
+  work, so it covers the `vercel_runtime` import chain and the user code import
+  instead of starting after them.
+
+## 6.56.1
+
+### Patch Changes
+
+- a8fee66: Install all matching `vercel-*` Python packages from a local SDK checkout.
+- Updated dependencies [2da7809]
+  - @vercel/python-analysis@0.13.2
+
+## 6.56.0
+
+### Minor Changes
+
+- 4e2c621: Discover durable APScheduler subscribers, inject their stable runtime
+  identities, and activate the integration consistently in web and queue
+  Functions. Production schedulers activate on their first request, and
+  opted-in previews use request activity to renew a durable scheduling
+  deadline configured in pyproject.toml.
+
+### Patch Changes
+
+- eee4afc: Only inject and activate the queue adapter when the project declares `[[tool.vercel.subscribers]]`, instead of for any project depending on Celery or Dramatiq.
+- d0f5927: Accept bare module paths as `[[tool.vercel.subscribers]]` entrypoints. vercel-queue subscribers only need their module imported (subscriptions register globally on import), so `entrypoint = "tasks"` or `entrypoint = "pkg.tasks"` now works alongside `entrypoint = "module:object"`. File paths like `tasks.py` are rejected with a pointer to the equivalent import path. The legacy vercel-workers schema still requires `module:object` because it serves the named object directly.
+- bacf4ff: Skip integration ownership probes for subscribers declared with a bare module entrypoint.
+
+## 6.55.3
+
+### Patch Changes
+
+- a61bdfc: Allow multiple `[[tool.vercel.workflows]]` entrypoints with namespaced registries
+  Queue-served workflow Lambdas already attach the topics their registry
+  registers, so namespaced registries (`Workflows(namespace="billing")`) get
+  their `__billing_wkf_*` triggers from introspection with no extra detection
+  step. The builder now recognizes namespaced topics when partitioning
+  subscriptions between subscriber and workflow Lambdas, rejects entrypoints
+  whose topics overlap, and keeps the single-entrypoint requirement only for
+  the legacy vercel-workers serving mode where every consumer shares `__wkf_*`.
+
+## 6.55.2
+
+### Patch Changes
+
+- c446421: Generalize queue adapter injection to per-adapter dependency checks and
+  support installing an integration before the subscriber module imports.
+
+## 6.55.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/python-analysis@0.13.1
+
+## 6.55.0
+
+### Minor Changes
+
+- 08a2618: Rank precompiled bytecode by cold-start value instead of size. On every bytecode fill path (standard, runtime-install knapsack, bytecode-first, large functions), when `.pyc` files overflow the zip's fill capacity, selection is now per file: bytecode for modules the app actually imports at startup first (from a new static AST import closure in `@vercel/python-analysis` — no user code runs at build time), ranked by measured compile cost per byte, then everything else by the same ranking. Compile timings are now measured per file during `compileall`. Falls back to density-only, then per-file size ordering, so no build is worse than the old per-package size knapsack. When all bytecode fits, everything ships with no analysis. The import closure is bounded by a 30s timeout, and setting `VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS=1` disables the closure and timing-based ranking entirely, reverting selection to per-file size ordering.
+
+### Patch Changes
+
+- Updated dependencies [08a2618]
+  - @vercel/python-analysis@0.13.0
+
+## 6.54.1
+
+### Patch Changes
+
+- 5858c35: Validate every configured Python queue subscriber topic against build-time introspected subscriptions. The `topics` field remains optional and, when omitted, all introspected subscriptions are used.
+
+## 6.54.0
+
+### Minor Changes
+
+- 17ee736: Replace the vercel-workers integration for Python queue subscribers and workflows with the new vercel-queue SDK:
+
+  - `[[tool.vercel.subscribers]]` entrypoints are introspected at build time via `vercel.queue.get_subscriptions()` and served through generated `vercel.queue.asgi_app()` handler modules, with `queue/v2beta` triggers carrying the SDK-registered consumer groups and per-subscription tuning.
+  - Celery and Dramatiq projects get the matching `vercel-celery`/`vercel-dramatiq` integration package injected automatically (bundled variant unless `vercel-queue` is an explicit dependency), in builds and in `vercel dev`.
+  - `[[tool.vercel.workflows]]` entrypoints follow the SDK generation: projects on `vercel` >= 0.8.0 are served through vercel-queue like subscribers; older or undeterminable versions keep the legacy vercel-workers serving (worker env markers, injected pinned `vercel-workers`).
+  - Projects that depend on `vercel-workers` directly keep the legacy integration wholesale: legacy subscriber schema, direct entrypoint serving, worker env markers.
+  - `vercel dev` serves queue sidecars through `vercel.queue.asgi_app()` for new-SDK projects, and its queue broker delivers with the SDK-registered consumer groups introspected at sidecar startup (matching production trigger behavior); legacy projects keep the vercel-workers bootstrap.
+  - The CLI no longer injects `config.hasWorkerServices`; the Python builder makes all queue-serving decisions from project metadata.
+
+## 6.53.0
+
+### Minor Changes
+
+- 6aa29e5: Add [tool.vercel.fastapi.static] cdn opt-out flag.
+
+### Patch Changes
+
+- Updated dependencies [6aa29e5]
+  - @vercel/python-analysis@0.12.0
+
+## 6.52.0
+
+### Minor Changes
+
+- bfa1873: Reduce Python bytecode compilation work by compiling bundled application and dependency sources in a single subprocess.
+- 9a4f1e7: Collect fastapi static files to serve via CDN.
+- ae12b01: Expose the resolved rewrite destination as the request path observed by Python framework applications, and warn affected Python projects about the behavior change.
+
+## 6.51.1
+
+### Patch Changes
+
+- 393645b: Refactor installed Python distribution handling into a dedicated component and simplify dependency externalizer configuration.
+- 41a3f2f: fix 70-workflow-pyproject integration test
+
+## 6.51.0
+
+### Minor Changes
+
+- c555d3a: Make vc dev support pyproject.toml entrypoints
+- 238543c: Support Python services that declare their web app and development workflow sidecars through a `pyproject.toml` entrypoint in `vercel dev`.
+
+### Patch Changes
+
+- b0ed8e5: Always run bytecode precompilation when `VERCEL_PYTHON_COMPILEALL` is enabled, removing the coverage-ratio heuristic that skipped compiles when the estimated bytecode would not sufficiently fit the remaining zip capacity.
+- f97e2e0: Report the final bundle size (including compiled bytecode and runtime-install tooling) and the packing mode (`standard` | `runtime-install` | `hive`) on the `vc.builder.python.bundle` trace span. The source-only size is still recorded before size-limit enforcement so oversized builds that fail remain tagged.
+
+## 6.50.0
+
+### Minor Changes
+
+- 7bbfd48: Support `"entrypoint": "pyproject.toml"` for services. A service may now set `entrypoint: "pyproject.toml"` to build exactly what that file declares: the web app from `tool.vercel.entrypoint` (when present) and queue subscribers from `[[tool.vercel.subscribers]]`. Filename-based entrypoint auto-detection never runs in this mode, and subscribers-only services (no web function) are supported.
+- f11c4c4: Bytecode-first packing for runtime-dependency-install builds (>225 MB) when `VERCEL_PYTHON_COMPILEALL` is enabled.
+
+  The zip bundles only the mandatory packages plus a `sys.pycache_prefix` bytecode tree covering the app and all dependencies including those installed into `/tmp` at cold start, and defers every other public package to the cold-start `uv sync`. Falls back to knapsack packing (now with a slack-capacity bytecode fill) when the externalized set would not fit Lambda ephemeral storage.
+
+### Patch Changes
+
+- 9637ae6: Add support for declaring the workflow entrypoint via `tool.vercel.workflows` in `pyproject.toml`.
+
 ## 6.49.0
 
 ### Minor Changes

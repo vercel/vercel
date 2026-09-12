@@ -55,4 +55,6 @@ export interface GlobalConfig {
   telemetry?: TelemetryConfig;
   guidance?: GuidanceConfig;
   updates?: UpdatesConfig;
+  /** Opt-in to running the native Vercel CLI binary when one is installed. */
+  useNativeBinary?: boolean;
 }

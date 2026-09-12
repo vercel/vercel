@@ -11,7 +11,11 @@ import {
   setupUnitFixture,
   setupTmpDir,
 } from '../../../helpers/setup-unit-fixture';
-import { defaultProject, useProject } from '../../../mocks/project';
+import {
+  defaultProject,
+  useProject,
+  useUnknownProject,
+} from '../../../mocks/project';
 import { useDeployment, useBuildLogs } from '../../../mocks/deployment';
 import { useTeams, createTeam } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
@@ -93,7 +97,7 @@ describe('deploy', () => {
 
       const helpOutput = client.stderr.getFullOutput();
       expect(helpOutput).toContain('--dry');
-      expect(helpOutput).toContain('vercel deploy --dry --format=json');
+      expect(helpOutput).toContain('vercel deploy --dry --json');
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
@@ -848,6 +852,297 @@ describe('deploy', () => {
     expect(
       uploadingLines[4].startsWith('Uploading [====================]')
     ).toEqual(true);
+  });
+
+  it('should keep passing teamId for normal linked team deploys', async () => {
+    const originalVercelTeamId = process.env.VERCEL_TEAM_ID;
+    delete process.env.VERCEL_TEAM_ID;
+
+    try {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      let createTeamId: unknown;
+      client.scenario.post(`/v13/deployments`, (req, res) => {
+        createTeamId = req.query.teamId;
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_normal_team',
+          url: 'normal-team.vercel.app',
+          readyState: 'READY',
+          aliasAssigned: true,
+          alias: [],
+          target: 'preview',
+        });
+      });
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy');
+      const exitCode = await deploy(client);
+
+      expect(exitCode).toEqual(0);
+      expect(createTeamId).toEqual('team_dummy');
+    } finally {
+      if (originalVercelTeamId === undefined) {
+        delete process.env.VERCEL_TEAM_ID;
+      } else {
+        process.env.VERCEL_TEAM_ID = originalVercelTeamId;
+      }
+    }
+  });
+
+  it('starts a linked project lookup without delaying deployment creation', async () => {
+    const cwd = setupUnitFixture('commands/deploy/static');
+    await fs.writeJSON(join(cwd, '.vercel/project.json'), {
+      orgId: 'team_dummy',
+      projectId: 'prj_static',
+      projectName: 'static',
+    });
+
+    let startProjectLookup!: () => void;
+    const projectLookupStarted = new Promise<void>(resolve => {
+      startProjectLookup = resolve;
+    });
+    let finishProjectLookup!: () => void;
+    const projectLookupFinished = new Promise<void>(resolve => {
+      finishProjectLookup = resolve;
+    });
+    client.scenario.get(`/v9/projects/prj_static`, async (_req, res) => {
+      startProjectLookup();
+      await projectLookupFinished;
+      res.json({
+        ...defaultProject,
+        accountId: 'team_dummy',
+        id: 'prj_static',
+        name: 'static',
+        rollingRelease: {
+          enabled: true,
+          advancementType: 'automatic',
+        },
+      });
+    });
+
+    let startDeploymentRequest!: () => void;
+    const deploymentRequestStarted = new Promise<void>(resolve => {
+      startDeploymentRequest = resolve;
+    });
+    let createTeamId: unknown;
+    let createBody: Record<string, unknown> | undefined;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      startDeploymentRequest();
+      createTeamId = req.query.teamId;
+      createBody = req.body;
+      res.json({
+        creator: {
+          uid: 'user_dummy',
+          username: 'user_dummy',
+        },
+        id: 'dpl_local_link',
+        url: 'local-link.vercel.app',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+        target: 'preview',
+      });
+    });
+
+    client.cwd = cwd;
+    client.setArgv('deploy');
+
+    const originalVercelTeamId = process.env.VERCEL_TEAM_ID;
+    delete process.env.VERCEL_TEAM_ID;
+    let exitCode: number;
+    try {
+      const exitCodePromise = deploy(client);
+
+      await Promise.all([projectLookupStarted, deploymentRequestStarted]);
+      finishProjectLookup();
+      exitCode = await exitCodePromise;
+    } finally {
+      if (originalVercelTeamId === undefined) {
+        delete process.env.VERCEL_TEAM_ID;
+      } else {
+        process.env.VERCEL_TEAM_ID = originalVercelTeamId;
+      }
+    }
+
+    expect(exitCode).toEqual(0);
+    expect(createTeamId).toEqual('team_dummy');
+    expect(createBody?.project).toEqual('prj_static');
+    expect(client.stderr.getFullOutput()).toContain('Deploying static');
+    expect(client.stderr.getFullOutput()).not.toContain('team_dummy/static');
+    expect(client.stderr.getFullOutput()).toContain('Releasing');
+  });
+
+  it('surfaces deployment authorization errors when using local project metadata', async () => {
+    const cwd = setupUnitFixture('commands/deploy/static');
+    await fs.writeJSON(join(cwd, '.vercel/project.json'), {
+      orgId: 'team_dummy',
+      projectId: 'prj_static',
+      projectName: 'static',
+    });
+    client.scenario.get(`/v9/projects/prj_static`, (_req, res) => {
+      res.json({
+        ...defaultProject,
+        accountId: 'team_dummy',
+        id: 'prj_static',
+        name: 'static',
+      });
+    });
+    client.scenario.post(`/v13/deployments`, (_req, res) => {
+      res.status(403).json({
+        error: {
+          code: 'forbidden',
+          message: 'Not authorized to deploy this project.',
+        },
+      });
+    });
+
+    client.cwd = cwd;
+    client.setArgv('deploy');
+    const exitCodePromise = deploy(client);
+
+    await expect(client.stderr).toOutput(
+      'Error: Not authorized to deploy this project.\n'
+    );
+    expect(await exitCodePromise).toEqual(1);
+  });
+
+  it('does not send a repo root mapping as the Project rootDirectory', async () => {
+    const cwd = setupUnitFixture('commands/deploy/static');
+    await fs.remove(join(cwd, '.vercel'));
+    await fs.outputJSON(join(cwd, '.vercel/repo.json'), {
+      remoteName: 'origin',
+      projects: [
+        {
+          id: 'prj_static',
+          name: 'static',
+          orgId: 'team_dummy',
+          directory: '.',
+        },
+      ],
+    });
+
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      accountId: 'team_dummy',
+      id: 'prj_static',
+      name: 'static',
+      rootDirectory: null,
+    });
+
+    let createBody: Record<string, unknown> | undefined;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      createBody = req.body;
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_local_link',
+        url: 'local-link.vercel.app',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+        target: 'preview',
+      });
+    });
+
+    client.cwd = cwd;
+    client.setArgv('deploy');
+    const exitCode = await deploy(client);
+
+    expect(exitCode).toEqual(0);
+    expect(createBody?.projectSettings).toMatchObject({
+      rootDirectory: null,
+      sourceFilesOutsideRootDirectory: true,
+    });
+  });
+
+  it('should deploy a linked project when owner lookup is unavailable', async () => {
+    const originalVercelTeamId = process.env.VERCEL_TEAM_ID;
+    delete process.env.VERCEL_TEAM_ID;
+
+    try {
+      useTeams('team_dummy', { failNoAccess: true });
+      client.config.currentTeam = 'team_dummy';
+
+      const projectLookupTeamIds: unknown[] = [];
+      client.scenario.get(`/v9/projects/static`, (req, res) => {
+        projectLookupTeamIds.push(req.query.teamId);
+        res.json({
+          ...defaultProject,
+          accountId: 'team_dummy',
+          name: 'static',
+          id: 'static',
+        });
+      });
+
+      let createTeamId: unknown;
+      const statusTeamIds: unknown[] = [];
+      client.scenario.post(`/v13/deployments`, (req, res) => {
+        createTeamId = req.query.teamId;
+        res.json({
+          creator: {
+            uid: 'user_dummy',
+            username: 'user_dummy',
+          },
+          id: 'dpl_scoped_token',
+          url: 'scoped-token.vercel.app',
+          readyState: 'BUILDING',
+          aliasAssigned: false,
+          alias: [],
+          target: 'preview',
+        });
+      });
+      client.scenario.get(`/v13/deployments/dpl_scoped_token`, (req, res) => {
+        statusTeamIds.push(req.query.teamId);
+        res.json({
+          creator: {
+            uid: 'user_dummy',
+            username: 'user_dummy',
+          },
+          id: 'dpl_scoped_token',
+          url: 'scoped-token.vercel.app',
+          readyState: 'READY',
+          aliasAssigned: true,
+          alias: [],
+          target: 'preview',
+        });
+      });
+      client.scenario.get(
+        `/v3/now/deployments/dpl_scoped_token/events`,
+        (_req, res) => {
+          res.end();
+        }
+      );
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy');
+      const exitCode = await deploy(client);
+
+      expect(exitCode).toEqual(0);
+      expect(projectLookupTeamIds).toEqual(['team_dummy']);
+      expect(createTeamId).toBeUndefined();
+      expect(statusTeamIds).toEqual([undefined]);
+      expect(client.config.currentTeam).toBeUndefined();
+    } finally {
+      if (originalVercelTeamId === undefined) {
+        delete process.env.VERCEL_TEAM_ID;
+      } else {
+        process.env.VERCEL_TEAM_ID = originalVercelTeamId;
+      }
+    }
   });
 
   it('should deploy project linked with `repo.json`', async () => {
@@ -1637,11 +1932,30 @@ describe('deploy', () => {
       const exitCode = await deploy(client);
       expect(exitCode).toEqual(0);
 
+      expect(client.stderr.getFullOutput()).toContain('Next steps:');
+
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:guidance', value: 'TRUE' },
         { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
+    });
+    it('shows post-deploy guidance by default', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(client.stderr.getFullOutput()).toContain('Next steps:');
+    });
+    it('respects disabled guidance settings', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.config.guidance = { enabled: false };
+      client.setArgv('deploy');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(client.stderr.getFullOutput()).not.toContain('Next steps:');
     });
     it('--name', async () => {
       client.cwd = setupUnitFixture('commands/deploy/static');
@@ -1918,9 +2232,6 @@ describe('deploy', () => {
         await expect(client.stderr).toOutput('Customize settings?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Customize advanced settings?');
-        client.stdin.write('\n');
-
         const exitCode = await exitCodePromise;
         expect(exitCode).toEqual(0);
         const output = client.stderr.getFullOutput();
@@ -1958,9 +2269,6 @@ describe('deploy', () => {
         await expect(client.stderr).toOutput('Code directory?');
         client.stdin.write('\n');
         await expect(client.stderr).toOutput('Customize settings?');
-        client.stdin.write('\n');
-
-        await expect(client.stderr).toOutput('Customize advanced settings?');
         client.stdin.write('\n');
 
         const exitCode = await exitCodePromise;
@@ -3212,7 +3520,7 @@ describe('deploy', () => {
       const cwd = setupTmpDir();
       useUser();
       useTeams('team_dummy');
-      // Intentionally no useProject() — every API lookup will 404.
+      useUnknownProject();
 
       client.cwd = cwd;
       client.setArgv('deploy', '--yes', '--project=does-not-exist');
@@ -3223,6 +3531,111 @@ describe('deploy', () => {
       );
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "deploy"').toEqual(1);
+    });
+  });
+
+  describe('first deployment production notice', () => {
+    const deploymentUrl = 'first-deploy-abc123.vercel.app';
+    const deploymentId = 'dpl_first_deploy';
+
+    beforeEach(() => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.post(`/v13/deployments`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: deploymentId,
+          url: deploymentUrl,
+          readyState: 'READY',
+          // API returns production even though no --prod was passed (first deploy)
+          target: 'production',
+        });
+      });
+      client.scenario.get(`/v13/deployments/${deploymentId}`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: deploymentId,
+          url: deploymentUrl,
+          readyState: 'READY',
+          target: 'production',
+          aliasAssigned: true,
+          alias: [],
+        });
+      });
+    });
+
+    it('prints a notice when a non-prod deploy returns a production deployment (TTY)', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--yes');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).toContain('first deployment');
+      expect(stderrOutput).toContain('assigned to production');
+      expect(stderrOutput).toContain('--prod');
+    });
+
+    it('includes a hint and omits "Promote to production" in non-interactive JSON', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+      client.setArgv('deploy', '--non-interactive');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      const stdoutOutput = client.stdout.getFullOutput().trim();
+      const payload = JSON.parse(stdoutOutput);
+      expect(payload.status).toBe('ok');
+      expect(payload.hint).toContain('first deployment');
+      expect(payload.hint).toContain('assigned to production');
+      // "Promote to production" is not useful when already production
+      expect(payload.next).not.toContainEqual(
+        expect.objectContaining({ when: 'Promote to production' })
+      );
+      // Inspect is still offered
+      expect(payload.next).toContainEqual(
+        expect.objectContaining({ when: 'Inspect deployment' })
+      );
+      expect(payload.next).toContainEqual({
+        command: `vercel curl https://${deploymentUrl}`,
+        when: 'Verify deployment, including when Deployment Protection is enabled',
+      });
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('does not print the notice when --prod is explicitly used (TTY)', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--yes');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).not.toContain('first deployment');
+    });
+
+    it('does not include the hint when --prod is explicitly used (non-interactive)', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+      client.setArgv('deploy', '--prod', '--non-interactive');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      const stdoutOutput = client.stdout.getFullOutput().trim();
+      const payload = JSON.parse(stdoutOutput);
+      expect(payload.hint).toBeUndefined();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
     });
   });
 });

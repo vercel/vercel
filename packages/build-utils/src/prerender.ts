@@ -1,15 +1,27 @@
 import type { File, HasField, Chain } from './types';
 import { Lambda } from './lambda';
 
-function assertOptionalBoolean(
-  value: unknown,
-  name: string
-): asserts value is boolean | undefined {
-  if (value !== undefined && typeof value !== 'boolean') {
-    throw new Error(
-      `The \`${name}\` argument for \`Prerender\` must be a boolean or undefined.`
-    );
-  }
+/**
+ * The framework's own description of what it prerendered at build time,
+ * rather than re-deriving it from build artifacts. These are *initial*
+ * values: revalidation can regenerate a route's output over the lifetime of
+ * a deployment, so readers must treat them as the state as of the build,
+ * not as live state.
+ */
+export interface PrerenderInitialMetadata {
+  /**
+   * What has to happen at request time to finish the response, as of build
+   * time: `static` needs no server compute, `resuming` streams the static
+   * response while the server resumes postponed work, and `blocking` cannot
+   * start the response until request-time compute starts.
+   */
+  compute: 'blocking' | 'resuming' | 'static';
+  /**
+   * Byte size of the prerendered HTML shell, when the entry has one. `0` is
+   * a real size — a shell that postponed everything — and `undefined` means
+   * there is no HTML shell to measure (route handlers, Pages Router).
+   */
+  htmlSize?: number;
 }
 
 interface PrerenderOptions {
@@ -30,10 +42,7 @@ interface PrerenderOptions {
   chain?: Chain;
   exposeErrBody?: boolean;
   partialFallback?: boolean;
-  hasPostponed?: boolean;
-  hasFallback?: boolean;
-  htmlSize?: number;
-  isDynamicRoute?: boolean;
+  initialMetadata?: PrerenderInitialMetadata;
 }
 
 export class Prerender {
@@ -65,31 +74,12 @@ export class Prerender {
   public exposeErrBody?: boolean;
   public partialFallback?: boolean;
   /**
-   * Set to `true` when the route's `.meta` postponed state is present (React
-   * suspended during build prerender). `false` when the framework prerendered
-   * a Prerender route without postponing. `undefined` when the framework did
-   * not provide the signal.
+   * The framework's build-time serving metadata for this prerender.
+   * `undefined` when the framework did not provide it, which is legitimate:
+   * not-found routes, Pages Router `fallback: false` templates, and builds
+   * from frameworks that predate the field carry none.
    */
-  public hasPostponed?: boolean;
-  /**
-   * `true` when the route's dynamic template had a static fallback page (the
-   * prerender-manifest `fallback` was a string). `false` for blocking/omitted
-   * dynamic templates (manifest `fallback` was `null`/`false`). `undefined` for
-   * concrete prerenders, where the notion of a fallback doesn't apply.
-   */
-  public hasFallback?: boolean;
-  /**
-   * Byte size on disk of the route's prerendered `.html` shell. `0` for an
-   * empty shell (PPR template that postponed everything). `undefined` when
-   * there's no `.html` on disk (pages router, route handlers, edge).
-   */
-  public htmlSize?: number;
-  /**
-   * `true` when this entry came from a dynamic route template (the
-   * prerender-manifest `dynamicRoutes` section: fallback, blocking, or omitted)
-   * rather than a concrete prerender.
-   */
-  public isDynamicRoute?: boolean;
+  public initialMetadata?: PrerenderInitialMetadata;
 
   constructor({
     expiration,
@@ -109,39 +99,17 @@ export class Prerender {
     chain,
     exposeErrBody,
     partialFallback,
-    hasPostponed,
-    hasFallback,
-    htmlSize,
-    isDynamicRoute,
+    initialMetadata,
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
     this.staleExpiration = staleExpiration;
     this.sourcePath = sourcePath;
-    // These tri-state flags are assigned unconditionally (like
-    // `staleExpiration`) so `true` | `false` | `undefined` round-trips intact.
-    // Do not adopt the `partialFallback`/`exposeErrBody` idiom below, which
-    // collapses `false` into `undefined`: for `hasFallback`, `false` (blocking
-    // / omitted template) must stay distinct from `undefined` (concrete
-    // prerender, no fallback concept).
-    assertOptionalBoolean(hasPostponed, 'hasPostponed');
-    this.hasPostponed = hasPostponed;
-
-    assertOptionalBoolean(hasFallback, 'hasFallback');
-    this.hasFallback = hasFallback;
-
-    assertOptionalBoolean(isDynamicRoute, 'isDynamicRoute');
-    this.isDynamicRoute = isDynamicRoute;
-
-    if (
-      htmlSize !== undefined &&
-      (!Number.isInteger(htmlSize) || htmlSize < 0)
-    ) {
-      throw new Error(
-        'The `htmlSize` argument for `Prerender` must be a non-negative integer or undefined.'
-      );
-    }
-    this.htmlSize = htmlSize;
+    // Deliberately unvalidated: producers in this repo are trusted, and a
+    // compute mode added by a future framework release must not hard-fail a
+    // deploy. Untrusted input — a `.prerender-config.json` supplied by
+    // `vercel deploy --prebuilt` — is sanitized by the platform instead.
+    this.initialMetadata = initialMetadata;
 
     this.lambda = lambda;
     if (this.lambda) {

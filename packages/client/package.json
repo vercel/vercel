@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "17.6.4",
+  "version": "18.3.2",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -15,11 +15,10 @@
   },
   "scripts": {
     "build": "node ../../utils/build.mjs",
-    "test": "vitest run --config ../../vitest.config.mts",
-    "vitest-run": "vitest -c ./vitest.config.mts",
-    "vitest-unit": "glob --absolute 'tests/unit.*.test.ts'",
-    "vitest-e2e": "glob --absolute 'tests/integration-*.test.ts'",
-    "type-check": "tsc --noEmit"
+    "test": "vitest run --config ./vitest.config.mts",
+    "test-e2e": "vitest run --config ./vitest.config.mts tests/integration-",
+    "type-check": "tsc --noEmit",
+    "test-unit": "vitest run --config ./vitest.config.mts tests/unit."
   },
   "engines": {
     "node": ">= 20"
@@ -30,10 +29,9 @@
     "@types/minimatch": "3.0.5",
     "@types/ms": "0.7.30",
     "@types/node": "20.11.0",
-    "@types/node-fetch": "2.5.4",
     "@types/recursive-readdir": "2.2.0",
     "@types/tar-fs": "1.16.1",
-    "vitest": "2.0.1"
+    "vitest": "4.1.10"
   },
   "dependencies": {
     "@vercel/build-utils": "workspace:*",
@@ -46,7 +44,6 @@
     "ignore": "4.0.6",
     "minimatch": "5.0.1",
     "ms": "2.1.2",
-    "node-fetch": "2.6.7",
     "querystring": "^0.2.0",
     "sleep-promise": "8.0.1",
     "tar-fs": "1.16.3"

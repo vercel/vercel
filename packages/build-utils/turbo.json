@@ -1,0 +1,92 @@
+{
+  "$schema": "https://turborepo.org/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "test": {
+      "dependsOn": ["build", "//#generate:cache-keys"]
+    },
+    "test-unit": {
+      "dependsOn": ["build", "//#generate:cache-keys"]
+    },
+    "test-e2e": {
+      "command": ["node", "-e", "process.exit(0)"],
+      "dependsOn": [
+        "test-e2e:1",
+        "test-e2e:2",
+        "test-e2e:3",
+        "test-e2e:4",
+        "//#generate:cache-keys"
+      ]
+    },
+    "test-e2e-artifacts": {
+      "command": ["node", "-e", "process.exit(0)"],
+      "dependsOn": [
+        "test-e2e:1",
+        "test-e2e:2",
+        "test-e2e:3",
+        "test-e2e:4",
+        "//#generate:cache-keys"
+      ]
+    },
+    "test-e2e:1": {
+      "command": ["node", "test/run-integration-group.mjs", "1"],
+      "dependsOn": ["build", "//#generate:cache-keys"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/test/lib/**",
+        {
+          "mode": "dependencyOutputs",
+          "globs": ["turbo-platform-cache-key.json"],
+          "from": ["//#generate:cache-keys"]
+        },
+        "$TURBO_ROOT$/vitest.config.mts"
+      ],
+      "outputLogs": "new-only"
+    },
+    "test-e2e:2": {
+      "command": ["node", "test/run-integration-group.mjs", "2"],
+      "dependsOn": ["build", "//#generate:cache-keys"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/test/lib/**",
+        {
+          "mode": "dependencyOutputs",
+          "globs": ["turbo-platform-cache-key.json"],
+          "from": ["//#generate:cache-keys"]
+        },
+        "$TURBO_ROOT$/vitest.config.mts"
+      ],
+      "outputLogs": "new-only"
+    },
+    "test-e2e:3": {
+      "command": ["node", "test/run-integration-group.mjs", "3"],
+      "dependsOn": ["build", "//#generate:cache-keys"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/test/lib/**",
+        {
+          "mode": "dependencyOutputs",
+          "globs": ["turbo-platform-cache-key.json"],
+          "from": ["//#generate:cache-keys"]
+        },
+        "$TURBO_ROOT$/vitest.config.mts"
+      ],
+      "outputLogs": "new-only"
+    },
+    "test-e2e:4": {
+      "command": ["node", "test/run-integration-group.mjs", "4"],
+      "dependsOn": ["build", "//#generate:cache-keys"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/test/lib/**",
+        {
+          "mode": "dependencyOutputs",
+          "globs": ["turbo-platform-cache-key.json"],
+          "from": ["//#generate:cache-keys"]
+        },
+        "$TURBO_ROOT$/vitest.config.mts"
+      ],
+      "outputLogs": "new-only"
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import getTeamById from '../../../../src/util/teams/get-team-by-id';
+import getTeamByIdOrSlug from '../../../../src/util/teams/get-team-by-id-or-slug';
 import getTeams from '../../../../src/util/teams/get-teams';
 import { client } from '../../../mocks/client';
 import { createTeam } from '../../../mocks/team';
@@ -35,7 +35,7 @@ describe('getTeams', () => {
     });
 
     await getTeams(client);
-    const fetchedTeam = await getTeamById(client, team.id);
+    const fetchedTeam = await getTeamByIdOrSlug(client, team.id);
 
     expect(fetchedTeam).toEqual(team);
     expect(listFetchCount).toBe(1);

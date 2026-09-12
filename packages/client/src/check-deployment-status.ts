@@ -177,9 +177,8 @@ export async function* checkDeploymentStatus(
           {
             apiUrl,
             userAgent,
-            agent: clientOptions.agent,
-            // node-fetch's bundled AbortSignal type predates the native one.
-            signal: aliasAssignedSignal as any,
+            dispatcher: clientOptions.dispatcher,
+            signal: aliasAssignedSignal,
           }
         );
       } catch (error) {

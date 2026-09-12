@@ -22,10 +22,13 @@ import { listSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
+import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import { determineAgent } from '@vercel/detect-agent';
 import { suggestNextCommands } from '../../util/suggest-next-commands';
+import { isGuidanceEnabled } from '../../util/guidance/is-enabled';
 import { validateLsArgs } from '../../util/validate-ls-args';
+import { withGlobalFlags } from '../../util/agent-output';
+import { isSecretEnvVar } from '../../util/env/env-var-config-secret-ui';
 
 export default async function ls(client: Client, argv: string[]) {
   const telemetryClient = new EnvLsTelemetryClient({
@@ -69,13 +72,19 @@ export default async function ls(client: Client, argv: string[]) {
   telemetryClient.trackCliArgumentGitBranch(envGitBranch);
   telemetryClient.trackCliFlagGuidance(flags['--guidance']);
   telemetryClient.trackCliOptionFormat(flags['--format']);
+  const projectName = flags['--project'];
+  telemetryClient.trackCliOptionProject(projectName);
 
-  const link = await getLinkedProject(client);
+  const link = await resolveProjectContext({
+    client,
+    projectNameOrId: projectName,
+    commandName: 'env ls',
+  });
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
-      `Your codebase isn’t linked to a project on Vercel. ${client.nonInteractive ? `Run ${getCommandName('link --yes --team <team-id> --project <project-id>')} to link non-interactively.` : `Run ${getCommandName('link')} to begin.`}`
+      `Your codebase isn’t linked to a project on Vercel. Pass --project <name>, or ${client.nonInteractive ? `run ${getCommandName('link --yes --team <team-id> --project <project-id>')} to link non-interactively.` : `run ${getCommandName('link')} to begin.`}`
     );
     return 1;
   }
@@ -102,8 +111,9 @@ export default async function ls(client: Client, argv: string[]) {
     const jsonOutput = {
       envs: envs.map(env => ({
         key: env.key,
-        value: env.type === 'plain' ? env.value : undefined,
+        value: isSecretEnvVar(env) ? undefined : env.value,
         type: env.type,
+        visibility: env.visibility,
         target: env.target,
         gitBranch: env.gitBranch,
         configurationId: env.configurationId,
@@ -125,12 +135,31 @@ export default async function ls(client: Client, argv: string[]) {
 
   if (!asJson) {
     const { isAgent } = await determineAgent();
-    const guidanceMode = parsedArgs.flags['--guidance'] ?? isAgent;
+    const guidanceMode = isGuidanceEnabled(
+      client,
+      parsedArgs.flags['--guidance'],
+      isAgent
+    );
     if (guidanceMode) {
       suggestNextCommands([
-        getCommandName(`env add`),
-        getCommandName('env rm'),
-        getCommandName(`env pull`),
+        {
+          description: 'Add an Environment Variable',
+          command: withGlobalFlags(client, 'env add', {
+            preserveProject: true,
+          }),
+        },
+        {
+          description: 'Remove an Environment Variable',
+          command: withGlobalFlags(client, 'env rm', {
+            preserveProject: true,
+          }),
+        },
+        {
+          description: 'Pull Development Environment Variables into .env.local',
+          command: withGlobalFlags(client, 'env pull', {
+            preserveProject: true,
+          }),
+        },
       ]);
     }
   }
@@ -147,7 +176,7 @@ function getTable(
     ? 'environments (git branch)'
     : 'environments';
   return formatTable(
-    ['name', 'value', label, 'created'],
+    ['name', 'value', 'type', label, 'created'],
     ['l', 'l', 'l', 'l', 'l'],
     [
       {
@@ -164,23 +193,36 @@ function getRow(
   customEnvironments: CustomEnvironment[]
 ) {
   let value: string;
-  if (env.type === 'plain') {
+  if (isSecretEnvVar(env)) {
+    value = chalk.gray.italic('Hidden');
+  } else if (env.type === 'system') {
+    value = chalk.gray.italic(env.value);
+  } else {
     // replace space characters (line-break, etc.) with simple spaces
     // to make sure the displayed value is a single line
     const singleLineValue = env.value.replace(/\s/g, ' ');
 
     value = chalk.gray(ellipsis(singleLineValue, 19));
-  } else if (env.type === 'system') {
-    value = chalk.gray.italic(env.value);
-  } else {
-    value = chalk.gray.italic('Encrypted');
   }
 
   const now = Date.now();
   return [
     chalk.bold(env.key),
     value,
+    getEnvironmentVariableTypeLabel(env),
     formatEnvironments(link, env, customEnvironments),
     env.createdAt ? `${ms(now - env.createdAt)} ago` : '',
   ];
+}
+
+function getEnvironmentVariableTypeLabel(
+  env: ProjectEnvVariable
+): 'Config' | 'Secret' | 'System' {
+  if (isSecretEnvVar(env)) {
+    return 'Secret';
+  }
+  if (env.type === 'system') {
+    return 'System';
+  }
+  return 'Config';
 }

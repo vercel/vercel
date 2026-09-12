@@ -1,0 +1,50 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "framework:std randomness:RANDOMNESS_PLACEHOLDER",
+      "responseHeaders": {
+        "content-type": "/text\\/html/"
+      }
+    },
+    {
+      "path": "/api/method",
+      "status": 200,
+      "mustContain": "method:GET"
+    },
+    {
+      "path": "/api/method",
+      "method": "POST",
+      "status": 200,
+      "mustContain": "method:POST"
+    },
+    {
+      "path": "/api/query?alpha=1&beta=two",
+      "status": 200,
+      "mustContain": "query:alpha=1&beta=two"
+    },
+    {
+      "path": "/api/echo",
+      "method": "POST",
+      "body": {
+        "hello": "world"
+      },
+      "status": 200,
+      "mustContain": "{\"body\":{\"hello\":\"world\"}}",
+      "responseHeaders": {
+        "content-type": "/application\\/json/"
+      }
+    },
+    {
+      "path": "/api/boom",
+      "status": 500,
+      "mustContain": "boom:std"
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 404,
+      "mustContain": "not found:std /does-not-exist"
+    }
+  ]
+}

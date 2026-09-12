@@ -9,22 +9,19 @@ export async function ensureTeam(client: Client): Promise<boolean> {
 
   if (!client.stdin.isTTY) {
     output.error(
-      'No team selected. Use `vercel --scope <team-slug> ai-gateway rules …` or run `vercel switch` first.'
+      'No team selected. Use `vercel --scope <team-slug> ai-gateway …` or run `vercel switch` first.'
     );
     return false;
   }
 
-  const org = await selectOrg(
-    client,
-    'Which team owns these AI Gateway rules?'
-  );
+  const org = await selectOrg(client, 'Which team?');
   if (org.type === 'team') {
     client.config.currentTeam = org.id;
     return true;
   }
 
   output.error(
-    'AI Gateway rules are managed per team. Switch to a team scope and try again.'
+    'AI Gateway resources are managed per team. Switch to a team scope and try again.'
   );
   return false;
 }

@@ -7,7 +7,13 @@
  */
 
 import { spawn } from 'child_process';
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'fs';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
@@ -17,6 +23,12 @@ import {
   getEvalVariants,
   setup,
 } from './hooks';
+import {
+  ALLOWED_EVAL_TEAM_ID,
+  assertAllowedEvalTeam,
+  getVerifiedEvalToken,
+} from './team-guard';
+import { filterDisabledEvals } from './disabled-evals';
 import type {
   AuthVariant,
   EvalRunContext,
@@ -100,7 +112,16 @@ function selectEvals(discovered: string[]): string[] {
     evalName => discoveredSet.has(evalName) && !excluded.has(evalName)
   );
 
-  return selected;
+  // Safety: hard-disabled evals are dropped even when explicitly requested
+  // (see disabled-evals.ts for why).
+  const { allowed, dropped } = filterDisabledEvals(selected);
+  if (dropped.length > 0) {
+    process.stderr.write(
+      `Skipping hard-disabled evals (see evals/disabled-evals.ts): ${dropped.join(', ')}\n`
+    );
+  }
+
+  return allowed;
 }
 
 const populateOIDCToken = async () => {
@@ -169,6 +190,44 @@ const populateOIDCToken = async () => {
       )
     : new Error('Failed to populate OIDC token via "vc/vercel env pull -y".');
 };
+
+/**
+ * HARD SAFETY GUARD (see team-guard.ts): live eval runs may only target the
+ * dedicated Agentic Zero Conf evals team. Enforces, fail-closed:
+ * - CLI_EVAL_TEAM_ID / VERCEL_TEAM_ID must be the allowed team (CLI_EVAL_TEAM_ID
+ *   defaults to it when unset — it can never legally be anything else).
+ * - The sandbox project link (used for OIDC via `vc env pull`) must belong to
+ *   the allowed team.
+ * Throws EvalTeamGuardError on any violation.
+ */
+function enforceEvalTeamGuard(): void {
+  if (!process.env.CLI_EVAL_TEAM_ID) {
+    process.env.CLI_EVAL_TEAM_ID = ALLOWED_EVAL_TEAM_ID;
+  }
+  assertAllowedEvalTeam(process.env.CLI_EVAL_TEAM_ID, 'CLI_EVAL_TEAM_ID');
+  if (process.env.VERCEL_TEAM_ID) {
+    assertAllowedEvalTeam(process.env.VERCEL_TEAM_ID, 'VERCEL_TEAM_ID');
+  }
+  if (process.env.VERCEL_ORG_ID) {
+    assertAllowedEvalTeam(process.env.VERCEL_ORG_ID, 'VERCEL_ORG_ID');
+  }
+
+  const sandboxProjectJson = join(
+    __dirname,
+    'sandbox-project',
+    '.vercel',
+    'project.json'
+  );
+  if (existsSync(sandboxProjectJson)) {
+    const linked = JSON.parse(readFileSync(sandboxProjectJson, 'utf8')) as {
+      orgId?: string;
+    };
+    assertAllowedEvalTeam(
+      linked.orgId,
+      `sandbox-project/.vercel/project.json orgId`
+    );
+  }
+}
 
 /** Recursively discover eval dirs (have PROMPT.md + EVAL.ts + package.json). Returns relative paths e.g. "build", "env/ls", "env/add". */
 function discoverEvals(): string[] {
@@ -281,6 +340,16 @@ async function main() {
     process.exit(0);
   }
 
+  // HARD SAFETY GUARD: everything past this point can hit the live Vercel
+  // API. Refuse to continue unless every team reference is the dedicated
+  // evals team (see team-guard.ts; no bypass).
+  try {
+    enforceEvalTeamGuard();
+  } catch (err: any) {
+    process.stderr.write(`${err?.message ?? String(err)}\n`);
+    process.exit(1);
+  }
+
   try {
     await populateOIDCToken();
   } catch (err: any) {
@@ -300,6 +369,21 @@ async function main() {
       'Evals require AI_GATEWAY_API_KEY and either VERCEL_OIDC_TOKEN or VERCEL_TOKEN (set in .env or CI secrets, or use --dry to preview).\n'
     );
     process.exit(1);
+  }
+
+  // HARD SAFETY GUARD: the token itself must be scoped to ONLY the dedicated
+  // evals team, so even buggy eval/teardown code physically cannot reach any
+  // other team. Fail closed: verification failure aborts the run.
+  if (process.env.VERCEL_TOKEN) {
+    try {
+      await getVerifiedEvalToken();
+      process.stdout.write(
+        '\nTeam guard: VERCEL_TOKEN verified as scoped to the dedicated evals team only.\n'
+      );
+    } catch (err: any) {
+      process.stderr.write(`${err?.message ?? String(err)}\n`);
+      process.exit(1);
+    }
   }
 
   // When OIDC wasn't available we fell back to VERCEL_TOKEN; smoke uses the Vercel sandbox and requires OIDC, so skip it.

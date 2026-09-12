@@ -1,8 +1,10 @@
 import { projectOption, yesOption } from '../../util/arg-common';
+import { TIMESTAMP_IDENTIFY_HELP } from '../../util/flags/attribute-types';
 import { formatFlagConditionComparatorList } from '../../util/flags/comparators';
 import { packageName } from '../../util/pkg-name';
+import { FLAG_EVALUATIONS_GRANULARITIES } from './evaluations-config';
 
-const segmentRuleOperatorDescription = `Valid operators: ${formatFlagConditionComparatorList()}`;
+const segmentRuleOperatorDescription = `Valid operators: ${formatFlagConditionComparatorList()}. Timestamp attributes also accept after, before, on-or-after, and on-or-before with an ISO 8601 date and time (for example 2026-04-16T09:00:00Z) or epoch milliseconds. after and before are exclusive; use on-or-after or on-or-before for inclusive boundaries. Date/times without a timezone use this machine's timezone. ${TIMESTAMP_IDENTIFY_HELP}`;
 
 export const listSubcommand = {
   name: 'list',
@@ -99,6 +101,68 @@ export const listSubcommand = {
   ],
 } as const;
 
+export const staleSubcommand = {
+  name: 'stale',
+  aliases: [],
+  description: 'List stale feature flags for the current project',
+  hidden: true,
+  arguments: [],
+  options: [
+    projectOption,
+    {
+      name: 'stale-after',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Consider flags stale after this relative day duration (default: 30d, max: 90d)',
+      argument: 'DURATION',
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description:
+        'Return one page of at most NUMBER stale flags (default: 50, max: 100)',
+      argument: 'NUMBER',
+    },
+    {
+      name: 'next',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Pagination cursor from a previous stale response',
+      argument: 'CURSOR',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'List stale flags',
+      value: `${packageName} flags stale`,
+    },
+    {
+      name: 'List flags that have been stale for 14 days',
+      value: `${packageName} flags stale --stale-after 14d`,
+    },
+    {
+      name: 'List the next page using the cursor from the previous page',
+      value: `${packageName} flags stale --limit 10 --next <cursor>`,
+    },
+    {
+      name: 'List stale flags as JSON',
+      value: `${packageName} flags stale --json`,
+    },
+  ],
+} as const;
+
 export const inspectSubcommand = {
   name: 'inspect',
   aliases: [],
@@ -114,6 +178,199 @@ export const inspectSubcommand = {
     {
       name: 'Show details of a feature flag',
       value: `${packageName} flags inspect my-feature-flag`,
+    },
+  ],
+} as const;
+
+export const versionsListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  default: true,
+  description: 'List version history for a feature flag',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description: 'Filter versions by changed environment',
+      argument: 'ENV',
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Return at most NUMBER versions (1-100)',
+      argument: 'NUMBER',
+    },
+    {
+      name: 'next',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Continue from a previous response',
+      argument: 'CURSOR',
+    },
+    {
+      name: 'cursor',
+      shorthand: null,
+      type: String,
+      deprecated: true,
+      description: 'Pagination cursor from a previous versions response',
+      argument: 'CURSOR',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'List version history for a feature flag',
+      value: `${packageName} flags versions my-feature-flag`,
+    },
+    {
+      name: 'List version history using the explicit list subcommand',
+      value: `${packageName} flags versions list my-feature-flag`,
+    },
+    {
+      name: 'List production version history',
+      value: `${packageName} flags versions my-feature-flag --environment production`,
+    },
+    {
+      name: 'List the next page of version history',
+      value: `${packageName} flags versions my-feature-flag --limit 10 --next <cursor>`,
+    },
+    {
+      name: 'List version history as JSON',
+      value: `${packageName} flags versions my-feature-flag --json`,
+    },
+  ],
+} as const;
+
+export const versionsDiffSubcommand = {
+  name: 'diff',
+  aliases: [],
+  description: 'Show changes introduced by a feature flag version',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'revision',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Revision number to compare with the previous revision',
+      argument: 'NUMBER',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output the diff in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'Show what changed in a revision',
+      value: `${packageName} flags versions diff my-feature-flag --revision 4`,
+    },
+    {
+      name: 'Show the revision diff as JSON',
+      value: `${packageName} flags versions diff my-feature-flag --revision 4 --json`,
+    },
+  ],
+} as const;
+
+export const versionsSubcommand = {
+  name: 'versions',
+  aliases: [],
+  description: 'List and compare version history for a feature flag',
+  arguments: [],
+  subcommands: [versionsListSubcommand, versionsDiffSubcommand],
+  options: [],
+  examples: [
+    {
+      name: 'List version history for a feature flag',
+      value: `${packageName} flags versions my-feature-flag`,
+    },
+    {
+      name: 'Show what changed in a revision',
+      value: `${packageName} flags versions diff my-feature-flag --revision 4`,
+    },
+  ],
+} as const;
+
+export const evaluationsSubcommand = {
+  name: 'evaluations',
+  aliases: [],
+  description: 'Display evaluation metrics for a feature flag',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'since',
+      shorthand: 's',
+      type: String,
+      deprecated: false,
+      description:
+        'Start time: relative (1h, 30m, 2d) or ISO date (default: 1h)',
+      argument: 'TIME',
+    },
+    {
+      name: 'until',
+      shorthand: 'u',
+      type: String,
+      deprecated: false,
+      description: 'End time (default: now)',
+      argument: 'TIME',
+    },
+    {
+      name: 'granularity',
+      shorthand: 'g',
+      type: String,
+      deprecated: false,
+      description: `Time bucket size: ${FLAG_EVALUATIONS_GRANULARITIES.join(', ')} (default: auto)`,
+      argument: 'SIZE',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'Show evaluations by variant for the last hour',
+      value: `${packageName} flags evaluations my-feature`,
+    },
+    {
+      name: 'Show evaluation metrics as JSON',
+      value: `${packageName} flags evaluations my-feature --since 24h --json`,
     },
   ],
 } as const;
@@ -237,12 +494,33 @@ export const updateSubcommand = {
       argument: 'LABEL',
     },
     {
+      name: 'add-variant',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description:
+        'Add a variant as VALUE[=LABEL] (repeatable for string, number, and json flags)',
+      argument: 'VALUE[=LABEL]',
+    },
+    {
+      name: 'remove-variant',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description: 'Remove a variant by ID or value (repeatable)',
+      argument: 'VARIANT',
+    },
+    {
       name: 'message',
       shorthand: null,
       type: String,
       deprecated: false,
       description: 'Optional revision message for the update',
       argument: 'TEXT',
+    },
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when removing a variant',
     },
   ],
   examples: [
@@ -257,6 +535,14 @@ export const updateSubcommand = {
     {
       name: 'Rename a boolean variant label',
       value: `${packageName} flags update my-feature --variant false --label "Disabled"`,
+    },
+    {
+      name: 'Add a new variant',
+      value: `${packageName} flags update my-feature --add-variant treatment="New onboarding"`,
+    },
+    {
+      name: 'Remove variants by value or ID',
+      value: `${packageName} flags update my-feature --remove-variant control --remove-variant var_123 --yes`,
     },
   ],
 } as const;
@@ -311,6 +597,62 @@ export const setSubcommand = {
     {
       name: 'Set a boolean flag to true in development',
       value: `${packageName} flags set my-feature -e development --variant true`,
+    },
+  ],
+} as const;
+
+export const useTargetingSubcommand = {
+  name: 'use-targeting',
+  aliases: [],
+  description:
+    'Enable targeting for a feature flag environment; keeps the current fallthrough unless --default-variant is set',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment to enable targeting in (production, preview, or development)',
+      argument: 'ENV',
+    },
+    {
+      name: 'default-variant',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Replace the fallthrough with this variant when no targeting rules match',
+      argument: 'VARIANT',
+    },
+    {
+      name: 'message',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Optional revision message for the update',
+      argument: 'TEXT',
+    },
+  ],
+  examples: [
+    {
+      name: 'Enable targeting and keep the current fallthrough',
+      value: `${packageName} flags use-targeting my-feature --environment production`,
+    },
+    {
+      name: 'Enable targeting with a static default Off',
+      value: `${packageName} flags use-targeting my-feature --environment production --default-variant false`,
+    },
+    {
+      name: 'Enable targeting with a string default',
+      value: `${packageName} flags use-targeting welcome-message -e production --default-variant control`,
     },
   ],
 } as const;
@@ -376,7 +718,7 @@ export const splitSubcommand = {
   examples: [
     {
       name: 'Split a boolean flag in production',
-      value: `${packageName} flags split redesigned-checkout --environment production --by user.userId --weight off=95 --weight on=5`,
+      value: `${packageName} flags split redesigned-checkout --environment production --by user.userId --weight false=95 --weight true=5`,
     },
     {
       name: 'Split a string flag with a fallback variant',
@@ -584,6 +926,7 @@ export const rulesListSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -624,6 +967,7 @@ export const rulesAddSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -662,8 +1006,12 @@ export const rulesAddSubcommand = {
       value: `${packageName} flags rules add my-feature -e production --condition segment:eq:seg_beta123 --variant on`,
     },
     {
+      name: 'Add a rule with a timestamp condition',
+      value: `${packageName} flags rules add my-feature -e production --condition user.signupAt:after:2026-04-16T09:00:00Z --variant on`,
+    },
+    {
       name: 'Add a split rule at the top',
-      value: `${packageName} flags rules add my-feature -e production --condition user.plan:eq:pro --by user.userId --weight off=90 --weight on=10 --position 1`,
+      value: `${packageName} flags rules add my-feature -e production --condition user.plan:eq:pro --by user.userId --weight false=90 --weight true=10 --position 1`,
     },
   ],
 } as const;
@@ -683,6 +1031,7 @@ export const rulesUpdateSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -730,6 +1079,7 @@ export const rulesRemoveSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -764,6 +1114,7 @@ export const rulesMoveSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -861,6 +1212,35 @@ export const archiveSubcommand = {
     {
       name: 'Archive without confirmation',
       value: `${packageName} flags archive my-feature-flag --yes`,
+    },
+  ],
+} as const;
+
+export const unarchiveSubcommand = {
+  name: 'unarchive',
+  aliases: [],
+  description: 'Unarchive a feature flag',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when unarchiving a flag',
+    },
+  ],
+  examples: [
+    {
+      name: 'Unarchive a feature flag',
+      value: `${packageName} flags unarchive my-feature-flag`,
+    },
+    {
+      name: 'Unarchive without confirmation',
+      value: `${packageName} flags unarchive my-feature-flag --yes`,
     },
   ],
 } as const;
@@ -1090,8 +1470,8 @@ export const segmentsCreateSubcommand = {
       value: `${packageName} flags segments create beta-users --label "Beta users" --add include:user.id=user_123 --add include:user.id=user_456`,
     },
     {
-      name: 'Create a segment from rules',
-      value: `${packageName} flags segments create enterprise-users --label "Enterprise users" --add rule:user.plan:eq:enterprise`,
+      name: 'Create a segment using a timestamp condition',
+      value: `${packageName} flags segments create early-adopters --add rule:user.signupAt:before:2026-04-16T09:00:00Z`,
     },
     {
       name: 'Create a segment from full JSON data',
@@ -1181,6 +1561,10 @@ export const segmentsUpdateSubcommand = {
     {
       name: 'Add and remove rules',
       value: `${packageName} flags segments update enterprise-users --add rule:user.email:ends-with:@company.com --remove rule:user.plan:eq:pro`,
+    },
+    {
+      name: 'Add a timestamp condition',
+      value: `${packageName} flags segments update early-adopters --add rule:user.signupAt:before:2026-04-16T09:00:00Z`,
     },
   ],
 } as const;
@@ -1407,15 +1791,20 @@ export const flagsCommand = {
   arguments: [],
   subcommands: [
     listSubcommand,
+    staleSubcommand,
     inspectSubcommand,
+    versionsSubcommand,
+    evaluationsSubcommand,
     createSubcommand,
     openSubcommand,
     updateSubcommand,
     setSubcommand,
+    useTargetingSubcommand,
     splitSubcommand,
     rolloutSubcommand,
     removeSubcommand,
     archiveSubcommand,
+    unarchiveSubcommand,
     disableSubcommand,
     enableSubcommand,
     rulesSubcommand,

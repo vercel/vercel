@@ -6,6 +6,19 @@ export class FirewallTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof firewallCommand>
 {
+  trackCliFlagTeamLevel(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('team-level');
+    }
+  }
+
+  trackCliSubcommandStatus(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'status',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandOverview(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'overview',
@@ -191,6 +204,48 @@ export class FirewallTelemetryClient
   trackCliSubcommandSystemMitigationsResume(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'system-mitigations:resume',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandAlerts(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'alerts',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandAlertsList(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'alerts:list',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandAlertsInspect(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'alerts:inspect',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandPersistentActions(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'persistent-actions',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandPersistentActionsList(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'persistent-actions:list',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandPersistentActionsInspect(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'persistent-actions:inspect',
       value: actual,
     });
   }

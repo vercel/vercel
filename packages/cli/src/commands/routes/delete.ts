@@ -1,10 +1,10 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { deleteSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   resolveRoutes,
   offerAutoPromote,
   withGlobalFlags,
@@ -15,14 +15,17 @@ import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import deleteRoutes from '../../util/routes/delete-routes';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
 import { getRouteTypeLabel } from '../../util/routes/types';
 
 export default async function deleteRoute(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, deleteSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -52,7 +55,7 @@ export default async function deleteRoute(client: Client, argv: string[]) {
       );
     }
     output.error(
-      `At least one route name or ID is required. Usage: ${getCommandName('routes delete <name-or-id> [...]')}`
+      `At least one route name or ID is required. Usage: ${withGlobalFlags(client, 'routes delete <name-or-id> [...]')}`
     );
     return 1;
   }

@@ -45,6 +45,7 @@ import type {
   ConnectTokenSubject,
 } from '../token.js';
 import {
+  ConnectError,
   ConnectorInstallationRequiredError,
   deleteTokenCacheEntry,
   getTokenResponse,
@@ -187,17 +188,18 @@ export interface EveAuthorizationOptions {
 
   /**
    * Create or link the declared connector against the deploying Vercel
-   * project before the first token / authorization call. Defaults to
-   * `true`.
+   * project when a token / authorization call reports that the connector
+   * is missing or not linked. Defaults to `false`; set this to `true` to
+   * opt in to runtime provisioning.
    *
    * The provision request is authenticated with the deployment OIDC token
    * and carries the eve connection's `url` plus this connector UID. Connect
    * creates the managed OAuth connector when missing, links an existing
    * OAuth connector when the UID already exists, and scopes the new project
-   * link to the OIDC token's environment and higher promotion targets.
+   * link to the OIDC token's authenticated environment.
    *
-   * Set this to `false` for callers that intentionally manage the connector
-   * linkage elsewhere. Opaque connector ids (`scl_...`) and connections
+   * Existing linked connectors are always used directly without a
+   * provisioning request. Opaque connector ids (`scl_...`) and connections
    * without a URL are skipped automatically.
    */
   readonly autoProvision?: boolean;
@@ -439,11 +441,16 @@ function buildInteractiveDefinition(
       connection,
     }: GetTokenOptions): Promise<TokenResult> {
       try {
-        await autoProvisionConnectorIfEnabled(options, connection);
-        const response = await getTokenResponse(
-          options.connector,
-          await buildTokenParams(options, principal, connection),
-          getTokenConnectOptions(options)
+        const params = await buildTokenParams(options, principal, connection);
+        const response = await withConnectorProvisioningFallback(
+          options,
+          connection,
+          () =>
+            getTokenResponse(
+              options.connector,
+              params,
+              getTokenConnectOptions(options)
+            )
         );
         return { token: response.token, expiresAt: response.expiresAt };
       } catch (error) {
@@ -460,7 +467,6 @@ function buildInteractiveDefinition(
       challenge: ConnectionAuthorizationChallengeWithDisplayName;
     }> {
       try {
-        await autoProvisionConnectorIfEnabled(options, connection);
         // eve's `webhook` parameter is also the browser-redirect
         // target when `callbackUrl` is absent — the orchestrator mints
         // it via `createWebhook({ respondWith:
@@ -480,15 +486,17 @@ function buildInteractiveDefinition(
         // OIDC, which is what lets per-workflow dynamic webhook URLs
         // work without an OAuth-style redirect-URI allowlist.
         const completionWebhook = connectCompletionWebhook(webhook);
-        const response = await startAuthorization(
-          options.connector,
-          await buildTokenParams(options, principal, connection),
-          {
-            ...options.connectOptions,
-            callbackUrl: callbackUrl ?? webhook,
-            ...(completionWebhook ? { webhook: completionWebhook } : null),
-            deviceCode: true,
-          }
+        const params = await buildTokenParams(options, principal, connection);
+        const response = await withConnectorProvisioningFallback(
+          options,
+          connection,
+          () =>
+            startAuthorization(options.connector, params, {
+              ...options.connectOptions,
+              callbackUrl: callbackUrl ?? webhook,
+              ...(completionWebhook ? { webhook: completionWebhook } : null),
+              deviceCode: true,
+            })
         );
         // Sign-in buttons name the destination service ("Sign in with
         // Salesforce"), matching the OAuth idiom — the consent screen
@@ -522,11 +530,12 @@ function buildInteractiveDefinition(
       connection,
     }: CompleteAuthorizationOptions): Promise<TokenResult> {
       try {
-        await autoProvisionConnectorIfEnabled(options, connection);
-        const response = await getTokenResponse(
-          options.connector,
-          await buildTokenParams(options, principal, connection),
-          options.connectOptions
+        const params = await buildTokenParams(options, principal, connection);
+        const response = await withConnectorProvisioningFallback(
+          options,
+          connection,
+          () =>
+            getTokenResponse(options.connector, params, options.connectOptions)
         );
         return { token: response.token, expiresAt: response.expiresAt };
       } catch (error) {
@@ -557,11 +566,16 @@ function buildNonInteractiveDefinition(
       connection,
     }: GetTokenOptions): Promise<TokenResult> {
       try {
-        await autoProvisionConnectorIfEnabled(options, connection);
-        const response = await getTokenResponse(
-          options.connector,
-          await buildTokenParams(options, principal, connection),
-          getTokenConnectOptions(options)
+        const params = await buildTokenParams(options, principal, connection);
+        const response = await withConnectorProvisioningFallback(
+          options,
+          connection,
+          () =>
+            getTokenResponse(
+              options.connector,
+              params,
+              getTokenConnectOptions(options)
+            )
         );
         return { token: response.token, expiresAt: response.expiresAt };
       } catch (error) {
@@ -571,18 +585,44 @@ function buildNonInteractiveDefinition(
   };
 }
 
-async function autoProvisionConnectorIfEnabled(
+async function withConnectorProvisioningFallback<T>(
   options: EveAuthorizationOptions,
-  connection: EveConnectionAuthorizationContext
-): Promise<void> {
-  if (options.autoProvision === false) {
-    return;
+  connection: EveConnectionAuthorizationContext,
+  operation: () => Promise<T>
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    if (
+      options.autoProvision !== true ||
+      !isMissingConnectorOrProjectLink(error)
+    ) {
+      throw error;
+    }
   }
+
   await provisionEveOAuthConnector({
     connector: options.connector,
     connection,
     connectOptions: options.connectOptions,
   });
+  return operation();
+}
+
+function isMissingConnectorOrProjectLink(error: unknown): boolean {
+  if (!(error instanceof ConnectError)) {
+    return false;
+  }
+
+  if (error.status === 404 && error.code === 'not_found') {
+    return true;
+  }
+
+  return (
+    error.status === 403 &&
+    error.code === 'forbidden' &&
+    /connector is not linked to this project/i.test(error.message)
+  );
 }
 
 /**

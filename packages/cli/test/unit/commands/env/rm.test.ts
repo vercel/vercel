@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import env from '../../../../src/commands/env';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
@@ -50,6 +53,84 @@ describe('env rm', () => {
         },
       ]);
     });
+  });
+
+  it('removes a variable from the project selected by --project', async () => {
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject(
+      {
+        ...defaultProject,
+        id: 'explicit-env-rm',
+        name: 'explicit-env-rm',
+        accountId: 'team_dummy',
+      },
+      [
+        {
+          type: 'encrypted',
+          id: 'explicit-env',
+          key: 'ENVIRONMENT_NAME',
+          value: 'value',
+          target: ['development'],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+      ]
+    );
+    client.setArgv(
+      'env',
+      'rm',
+      'ENVIRONMENT_NAME',
+      'development',
+      '--yes',
+      '--project',
+      'explicit-env-rm'
+    );
+
+    await expect(env(client)).resolves.toEqual(0);
+  });
+
+  it('warns that deleting a credential does not revoke it', async () => {
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject(
+      {
+        ...defaultProject,
+        id: 'explicit-secret-rm',
+        name: 'explicit-secret-rm',
+        accountId: 'team_dummy',
+      },
+      [
+        {
+          type: 'sensitive',
+          visibility: 'secret',
+          id: 'secret-rm-id',
+          key: 'STRIPE_SECRET_KEY',
+          value: '',
+          target: ['production'],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+      ]
+    );
+    client.setArgv(
+      'env',
+      'rm',
+      'STRIPE_SECRET_KEY',
+      '--yes',
+      '--project',
+      'explicit-secret-rm'
+    );
+
+    const exitCodePromise = env(client);
+    await expect(client.stderr).toOutput(
+      '! Removing this variable from Vercel does not revoke the credential'
+    );
+    await expect(exitCodePromise).resolves.toBe(0);
   });
 
   describe('non-interactive', () => {

@@ -5,196 +5,524 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { inspectSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
-import getScope from '../../util/get-scope';
-import { getLinkedProject } from '../../util/projects/link';
-import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
-import { isAPIError, ProjectNotFound } from '../../util/errors-ts';
-import {
-  outputError,
-  handleValidationError,
-  validateAllProjectMutualExclusivity,
-} from '../../util/command-validation';
+import { isAPIError } from '../../util/errors-ts';
+import { outputError } from '../../util/command-validation';
 import {
   buildCommandWithGlobalFlags,
   outputAgentError,
 } from '../../util/agent-output';
 import { AGENT_REASON } from '../../util/agent-output-constants';
 import { packageName } from '../../util/pkg-name';
-import { emitAlertsScopeError } from './resolve-alerts-scope';
+import { resolveAlertsScope } from './resolve-alerts-scope';
+import formatDate from '../../util/format-date';
 import chalk from 'chalk';
+import {
+  formatTriggerOperator,
+  getGroupStartedAt,
+  getGroupTitle,
+  getGroupType,
+  humanizeReference,
+  normalizeTimestamp,
+  renderAlertTable,
+} from './format';
+import { truncateEnd, truncateMiddle } from '../../util/output/truncate';
+import type {
+  Alert,
+  AlertFieldValue,
+  AlertGroup,
+  CustomAlertRollup,
+} from './types';
+import { formatGranularity } from '../../util/output/format-granularity';
 
-type AlertScope = { teamId: string; projectId?: string };
+const aggregationLabels: Record<string, string> = {
+  sum: 'Sum',
+  avg: 'Average',
+  min: 'Min',
+  max: 'Max',
+  p50: 'P50',
+  p75: 'P75',
+  p90: 'P90',
+  p95: 'P95',
+  p99: 'P99',
+  stddev: 'Std Dev',
+  unique: 'Unique',
+  persecond: 'Per Second',
+  percent: 'Percent',
+};
 
-async function resolveInspectScope(
-  client: Client,
-  flags: {
-    '--project'?: string;
-    '--all'?: boolean;
-  },
-  jsonOutput: boolean
-): Promise<AlertScope | number> {
-  const mutual = validateAllProjectMutualExclusivity(
-    flags['--all'],
-    flags['--project']
-  );
-  if (!mutual.valid) {
-    outputAgentError(
-      client,
-      {
-        status: 'error',
-        reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: mutual.message,
-        next: [
-          {
-            command: buildCommandWithGlobalFlags(
-              client.argv,
-              'alerts inspect <groupId> --help'
-            ),
-            when: 'Use either `--project` or `--all`, not both',
-          },
-        ],
-      },
-      1
-    );
-    return handleValidationError(mutual, jsonOutput, client);
+const formatCustomAlertRatioBelowFivePercent = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 2,
+  minimumFractionDigits: 2,
+  style: 'percent',
+});
+const formatCustomAlertRatioThresholdValue = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 4,
+  minimumFractionDigits: 0,
+  style: 'percent',
+});
+
+function getGroupStatus(group: AlertGroup): string {
+  if (group.status) {
+    return group.status;
   }
 
-  if (flags['--all']) {
-    const { team } = await getScope(client);
-    if (!team) {
-      const msg =
-        'No team context found. Run `vercel switch` to select a team, or use `vercel link`.';
-      return emitAlertsScopeError(client, jsonOutput, 'NO_TEAM', msg, {
-        reason: AGENT_REASON.MISSING_SCOPE,
-        next: [
-          {
-            command: buildCommandWithGlobalFlags(client.argv, 'whoami'),
-            when: 'See current user and team',
-          },
-          {
-            command: buildCommandWithGlobalFlags(client.argv, 'teams switch'),
-            when: 'Switch to a team that owns the project',
-          },
-        ],
-      });
-    }
-    return { teamId: team.id };
+  const alerts = group.alerts ?? [];
+  if (alerts.some(alert => alert.status === 'active')) {
+    return 'active';
+  }
+  if (alerts.length > 0) {
+    return 'resolved';
   }
 
-  if (flags['--project']) {
-    const { team } = await getScope(client);
-    if (!team) {
-      const msg =
-        'No team context found. Run `vercel switch` to select a team.';
-      return emitAlertsScopeError(client, jsonOutput, 'NO_TEAM', msg, {
-        reason: AGENT_REASON.MISSING_SCOPE,
-        next: [
-          {
-            command: buildCommandWithGlobalFlags(client.argv, 'whoami'),
-            when: 'See current user and team',
-          },
-          {
-            command: buildCommandWithGlobalFlags(client.argv, 'teams switch'),
-            when: 'Switch to a team that owns the project',
-          },
-        ],
-      });
-    }
-    try {
-      const p = await getProjectByNameOrId(client, flags['--project'], team.id);
-      if (p instanceof ProjectNotFound) {
-        const msg = `Project "${flags['--project']}" was not found.`;
-        return emitAlertsScopeError(
-          client,
-          jsonOutput,
-          'PROJECT_NOT_FOUND',
-          msg,
-          {
-            reason: AGENT_REASON.NOT_FOUND,
-            next: [
-              {
-                command: buildCommandWithGlobalFlags(
-                  client.argv,
-                  'alerts inspect <groupId> --project <name_or_id>'
-                ),
-                when: 'Retry with a valid project (replace placeholders)',
-              },
-            ],
-          }
-        );
-      }
-      return { teamId: team.id, projectId: p.id };
-    } catch (err) {
-      if (isAPIError(err)) {
-        const msg =
-          err.serverMessage ||
-          (err.status === 403
-            ? `You do not have permission to access project "${flags['--project']}" in team "${team.slug}".`
-            : `API error (${err.status}).`);
-        const reason =
-          err.status === 401
-            ? 'not_authorized'
-            : err.status === 403
-              ? 'forbidden'
-              : AGENT_REASON.API_ERROR;
-        return emitAlertsScopeError(
-          client,
-          jsonOutput,
-          err.code || 'API_ERROR',
-          msg,
-          {
-            reason,
-            next: [
-              {
-                command: buildCommandWithGlobalFlags(
-                  client.argv,
-                  'alerts inspect <groupId> --project <name_or_id>'
-                ),
-                when: 'Retry with a project you can access',
-              },
-            ],
-          }
-        );
-      }
-      throw err;
+  return '-';
+}
+
+function humanizeLabel(value: string): string {
+  return humanizeReference(value, { case: 'title' });
+}
+
+function formatAlertFieldValue(
+  value: AlertFieldValue | undefined,
+  maxLength = 64
+): string | undefined {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+  const displayValue =
+    typeof value === 'number' ? formatNumber(value) : String(value);
+  if (!displayValue) {
+    return undefined;
+  }
+
+  return truncateMiddle(displayValue, maxLength);
+}
+
+function formatNumber(value: number): string {
+  const absValue = Math.abs(value);
+  const sign = value < 0 ? '-' : '';
+  for (const [threshold, suffix] of [
+    [1_000_000_000, 'B'],
+    [1_000_000, 'M'],
+    [1_000, 'k'],
+  ] as const) {
+    if (absValue >= threshold) {
+      return `${sign}${(absValue / threshold)
+        .toFixed(1)
+        .replace(/\.0$/, '')}${suffix}`;
     }
   }
 
-  const linked = await getLinkedProject(client);
-  if (linked.status === 'error') {
-    return linked.exitCode;
+  return Number.isInteger(value)
+    ? String(value)
+    : value.toFixed(2).replace(/\.?0+$/, '');
+}
+
+function parseFormattedNumber(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
   }
-  if (linked.status === 'not_linked') {
-    const msg =
-      'No linked project. Run `vercel link` or pass --project <name> or --all.';
-    return emitAlertsScopeError(client, jsonOutput, 'NOT_LINKED', msg, {
-      reason: AGENT_REASON.NOT_LINKED,
-      next: [
-        {
-          command: buildCommandWithGlobalFlags(client.argv, 'link'),
-          when: 'Link this directory to a Vercel project',
-        },
-        {
-          command: buildCommandWithGlobalFlags(
-            client.argv,
-            'alerts inspect <groupId> --project <name_or_id>'
-          ),
-          when: 'Inspect using an explicit project',
-        },
-        {
-          command: buildCommandWithGlobalFlags(
-            client.argv,
-            'alerts inspect <groupId> --all'
-          ),
-          when: 'Inspect using team-wide scope',
-        },
-      ],
-    });
+
+  const number = Number(trimmed.replace(/,/g, ''));
+  return Number.isFinite(number) ? number : undefined;
+}
+
+function formatRatio(value: string): string {
+  if (value.trim().endsWith('%')) {
+    return value;
   }
-  return {
-    teamId: linked.org.id,
-    projectId: linked.project.id,
+
+  const number = parseFormattedNumber(value);
+  if (number === undefined) {
+    return value;
+  }
+
+  const percent = number * 100;
+  if (percent >= 5) {
+    return `${Math.floor(percent)}%`;
+  }
+
+  return formatCustomAlertRatioBelowFivePercent.format(number);
+}
+
+function formatRatioThreshold(value: string): string {
+  if (value.trim().endsWith('%')) {
+    return value;
+  }
+
+  const number = parseFormattedNumber(value);
+  return number === undefined
+    ? value
+    : formatCustomAlertRatioThresholdValue.format(number);
+}
+
+function getAlertSonarQuery(alert: Alert) {
+  return alert.sonarQuery ?? alert.data?.sonarQuery;
+}
+
+function getCustomAlertBaselineTitle(alert: Alert): string {
+  const granularity = getAlertSonarQuery(alert)?.granularity;
+  const baseline =
+    granularity && ('hours' in granularity || 'days' in granularity)
+      ? '7-day baseline'
+      : '24-hour baseline';
+
+  return baseline.replace(/\b[a-z]/g, character => character.toUpperCase());
+}
+
+function appendUnit(value: string, unit: string | undefined): string {
+  if (!unit || unit === 'score') {
+    return value;
+  }
+  if (unit === 'ratio') {
+    return formatRatio(value);
+  }
+  if (unit === '%') {
+    return value.endsWith('%') ? value : `${value}%`;
+  }
+  if (value.toLowerCase().includes(unit.toLowerCase())) {
+    return value;
+  }
+
+  return `${value} ${unit}`;
+}
+
+function formatThreshold(alert: Alert): string | undefined {
+  const data = alert.data;
+  const formatted =
+    alert.formattedValues?.formattedThreshold ??
+    (data?.triggerThreshold === undefined
+      ? undefined
+      : formatNumber(data.triggerThreshold));
+  if (!formatted) {
+    return undefined;
+  }
+
+  const operator = formatTriggerOperator(data?.triggerOperator);
+  const threshold =
+    data?.triggerType === 'anomaly'
+      ? `${formatted} z-score`
+      : alert.unit === 'ratio'
+        ? formatRatioThreshold(formatted)
+        : appendUnit(formatted, alert.unit);
+
+  return [operator, threshold].filter(Boolean).join(' ');
+}
+
+function getRuleIds(alert: Alert): string[] {
+  const ids = new Set<string>();
+  const dataRuleId = alert.data?.ruleId;
+  if (dataRuleId) {
+    ids.add(dataRuleId);
+  }
+  for (const ruleId of alert.rules ?? []) {
+    if (ruleId) {
+      ids.add(ruleId);
+    }
+  }
+
+  return [...ids];
+}
+
+function getAlertResolvedAt(alert: Alert): number | undefined {
+  return normalizeTimestamp(alert.recordedResolvedAt ?? alert.resolvedAt);
+}
+
+function getSignalRows(alert: Alert): string[][] {
+  const rows: string[][] = [];
+  const formattedValues = alert.formattedValues ?? {};
+  const observed = formattedValues.formattedCount;
+  const baseline = formattedValues.formattedAvg;
+  const change = [formattedValues.changeDirection, formattedValues.changeAmount]
+    .filter(Boolean)
+    .join(' ');
+  const zscore = alert.data?.zscore;
+  const threshold = formatThreshold(alert);
+  const minThreshold = alert.data?.minThreshold;
+  const isRatioFormulaAlert = Boolean(getCustomAlertFormula(alert));
+
+  if (alert.eventLabel) {
+    rows.push(['Event', alert.eventLabel]);
+  }
+  if (alert.measureLabel) {
+    rows.push(['Measure', alert.measureLabel]);
+  }
+  if (observed) {
+    rows.push(['Observed Value', appendUnit(observed, alert.unit)]);
+  }
+  if (baseline) {
+    rows.push([
+      alert.type === 'custom_alert' && alert.data?.triggerType === 'anomaly'
+        ? getCustomAlertBaselineTitle(alert)
+        : 'Baseline',
+      appendUnit(baseline, alert.unit),
+    ]);
+  }
+  if (change) {
+    rows.push(['Change', change]);
+  }
+  if (zscore !== undefined) {
+    rows.push(['Observed Deviation', `${formatNumber(zscore)} z-score`]);
+  }
+  if (threshold) {
+    rows.push(['Threshold', threshold]);
+  }
+  if (minThreshold !== undefined && !isRatioFormulaAlert) {
+    rows.push([
+      'Minimum',
+      alert.unit === 'ratio'
+        ? formatNumber(minThreshold)
+        : appendUnit(formatNumber(minThreshold), alert.unit),
+    ]);
+  }
+  if (formattedValues.errorRate) {
+    rows.push(['Error Rate', formattedValues.errorRate]);
+  }
+  if (formattedValues.avgErrorRate) {
+    rows.push(['Baseline Error Rate', formattedValues.avgErrorRate]);
+  }
+  rows.push(...getFieldRows(alert));
+
+  return rows;
+}
+
+function getFieldRows(alert: Alert): string[][] {
+  const fields = alert.data?.fields;
+  if (!fields) {
+    return [];
+  }
+
+  const groupBy = getAlertSonarQuery(alert)?.groupBy ?? [];
+  const fieldKeys = [
+    ...groupBy,
+    ...Object.keys(fields).filter(key => !groupBy.includes(key)),
+  ];
+
+  return fieldKeys.flatMap(key => {
+    const value = fields[key];
+    const displayValue = formatAlertFieldValue(value);
+    return displayValue ? [[humanizeLabel(key), displayValue]] : [];
+  });
+}
+
+function formatAggregation(value: string | undefined): string | undefined {
+  return value ? (aggregationLabels[value] ?? humanizeLabel(value)) : undefined;
+}
+
+function formatQueryReference(value: string | undefined): string | undefined {
+  return value ? humanizeLabel(value) : undefined;
+}
+
+function formatRollupDetail(
+  rollup: CustomAlertRollup | undefined,
+  fallbackMeasure?: string
+): string | undefined {
+  if (!rollup) {
+    return undefined;
+  }
+
+  const aggregation = formatAggregation(rollup.aggregation);
+  const measure = fallbackMeasure ?? formatQueryReference(rollup.measure);
+  const detail = [aggregation, measure].filter(Boolean).join(' ');
+
+  return detail || undefined;
+}
+
+function getPrimaryRollup(
+  rollups: Record<string, CustomAlertRollup> | undefined
+): CustomAlertRollup | undefined {
+  return Object.values(rollups ?? {})[0];
+}
+
+function getCustomAlertFormula(
+  alert: Alert
+): { operator: 'divide'; left: string; right: string } | undefined {
+  const formula = alert.data?.formula;
+  if (formula?.operator === 'divide' && formula.left && formula.right) {
+    return {
+      operator: formula.operator,
+      left: formula.left,
+      right: formula.right,
+    };
+  }
+
+  return undefined;
+}
+
+function getQueryRows(alert: Alert): string[][] {
+  if (alert.type !== 'custom_alert') {
+    return [];
+  }
+
+  const query = getAlertSonarQuery(alert);
+  if (!query) {
+    return [];
+  }
+
+  const formula = getCustomAlertFormula(alert);
+  const rows: string[][] = [];
+  const addRow = (label: string, value: string | undefined) => {
+    if (value) {
+      rows.push([label, truncateMiddle(value, 120)]);
+    }
   };
+
+  addRow('Event', alert.eventLabel ?? formatQueryReference(query.event));
+
+  if (formula) {
+    addRow('Numerator', formatRollupDetail(query.rollups?.[formula.left]));
+    addRow('Denominator', formatRollupDetail(query.rollups?.[formula.right]));
+  } else {
+    const primaryRollup = getPrimaryRollup(query.rollups);
+    addRow(
+      'Measure',
+      alert.measureLabel ?? formatQueryReference(primaryRollup?.measure)
+    );
+    addRow('Aggregation', formatAggregation(primaryRollup?.aggregation));
+  }
+
+  addRow('Granularity', formatGranularity(query.granularity));
+
+  const groupBy = query.groupBy?.filter(Boolean) ?? [];
+  if (groupBy.length > 0) {
+    addRow('Group by', groupBy.map(humanizeLabel).join(', '));
+  }
+
+  if (formula && typeof alert.data?.minThreshold === 'number') {
+    addRow('Minimum Numerator', formatNumber(alert.data.minThreshold));
+  }
+
+  addRow('Filter by', query.filter?.trim());
+
+  if (formula) {
+    for (const [label, rollupName] of [
+      ['Numerator filter', formula.left],
+      ['Denominator filter', formula.right],
+    ] as const) {
+      addRow(label, query.rollups?.[rollupName]?.filter?.trim());
+    }
+  }
+
+  return rows;
+}
+
+function getDetailRows(alert: Alert): string[][] {
+  const data = alert.data;
+  if (!data) {
+    return [];
+  }
+
+  const rows: string[][] = [];
+  const addRow = (label: string, value: AlertFieldValue | undefined) => {
+    const displayValue = formatAlertFieldValue(value);
+    if (displayValue) {
+      rows.push([label, displayValue]);
+    }
+  };
+
+  addRow('Route', data.route);
+  addRow('Status Group', data.statusGroup);
+  addRow('Deployment ID', data.deploymentId);
+
+  return rows;
+}
+
+function renderAlertSections(alert: Alert): string {
+  const lines: string[] = [];
+
+  const signalRows = getSignalRows(alert);
+  if (signalRows.length > 0) {
+    lines.push(chalk.cyan('Signals'));
+    lines.push(renderAlertTable(signalRows, 3));
+  }
+
+  const queryRows = getQueryRows(alert);
+  if (queryRows.length > 0) {
+    lines.push(chalk.cyan('Query'));
+    lines.push(renderAlertTable(queryRows, 3));
+  }
+
+  return lines.join('\n');
+}
+
+function renderAlert(alert: Alert, index: number, totalAlerts: number): string {
+  const title = alert.title || `Alert ${index + 1}`;
+  const ruleIds = getRuleIds(alert);
+  const resolvedAt = getAlertResolvedAt(alert);
+  const sections = renderAlertSections(alert);
+  const summaryRows: string[][] = [
+    ['Alert id', alert.id || '-'],
+    ['Type', alert.type || '-'],
+    ['Status', alert.status || '-'],
+    [
+      'Started At',
+      formatDate(
+        normalizeTimestamp(alert.recordedStartedAt ?? alert.startedAt)
+      ),
+    ],
+    ...(resolvedAt !== undefined
+      ? [['Resolved At', formatDate(resolvedAt)]]
+      : []),
+    ...(ruleIds.length > 0
+      ? [['Rule id', ruleIds.map(id => truncateMiddle(id, 48)).join(', ')]]
+      : []),
+    ...getDetailRows(alert),
+  ];
+
+  return [
+    chalk.bold(totalAlerts > 1 ? `Alert ${index + 1}: ${title}` : title),
+    renderAlertTable(summaryRows, 3),
+    ...(sections ? [sections] : []),
+  ].join('\n');
+}
+
+function printAlertGroup(group: AlertGroup, groupId: string) {
+  const alerts = group.alerts ?? [];
+  const singleAlert = alerts.length === 1 ? alerts[0] : undefined;
+  const singleAlertRuleIds = singleAlert ? getRuleIds(singleAlert) : [];
+  const singleAlertResolvedAt = singleAlert
+    ? getAlertResolvedAt(singleAlert)
+    : undefined;
+  const summaryRows: string[][] = [
+    ['Title', truncateEnd(getGroupTitle(group), 80)],
+    ['Group id', group.id || groupId],
+    ['Type', getGroupType(group)],
+    ['Status', getGroupStatus(group)],
+    ['Started At', formatDate(getGroupStartedAt(group))],
+    ...(singleAlertResolvedAt !== undefined
+      ? [['Resolved At', formatDate(singleAlertResolvedAt)]]
+      : []),
+    ['Alerts', String(alerts.length)],
+    ...(singleAlert?.id ? [['Alert id', singleAlert.id]] : []),
+    ...(singleAlertRuleIds.length > 0
+      ? [
+          [
+            'Rule id',
+            singleAlertRuleIds.map(id => truncateMiddle(id, 48)).join(', '),
+          ],
+        ]
+      : []),
+    ...(singleAlert ? getDetailRows(singleAlert) : []),
+  ];
+  const renderedAlerts =
+    alerts.length > 0
+      ? alerts.length === 1
+        ? renderAlertSections(alerts[0])
+        : alerts
+            .map((alert, index) => renderAlert(alert, index, alerts.length))
+            .join('\n\n')
+      : 'No alerts in this group.';
+
+  output.print(
+    [
+      '',
+      `${chalk.bold('Alert group')} ${chalk.cyan(group.id || groupId)}`,
+      renderAlertTable(summaryRows, 3),
+      '',
+      renderedAlerts,
+      '',
+    ].join('\n')
+  );
 }
 
 export default async function inspect(
@@ -286,14 +614,12 @@ export default async function inspect(
     );
   }
 
-  const scope = await resolveInspectScope(
-    client,
-    {
-      '--project': parsedArgs.flags['--project'] as string | undefined,
-      '--all': parsedArgs.flags['--all'] as boolean | undefined,
-    },
-    fr.jsonOutput
-  );
+  const scope = await resolveAlertsScope(client, {
+    project: parsedArgs.flags['--project'] as string | undefined,
+    all: parsedArgs.flags['--all'] as boolean | undefined,
+    jsonOutput: fr.jsonOutput,
+    command: `alerts inspect ${groupId}`,
+  });
   if (typeof scope === 'number') {
     return scope;
   }
@@ -306,12 +632,11 @@ export default async function inspect(
   const path = `/alerts/v3/groups/${encodeURIComponent(groupId)}?${query.toString()}`;
   output.spinner('Fetching alert group...');
   try {
-    const group = await client.fetch<Record<string, unknown>>(path);
+    const group = await client.fetch<AlertGroup>(path);
     if (fr.jsonOutput) {
       client.stdout.write(`${JSON.stringify({ group }, null, 2)}\n`);
     } else {
-      output.log(`${chalk.bold('Alert group')} ${chalk.cyan(groupId)}`);
-      client.stdout.write(`${JSON.stringify(group, null, 2)}\n`);
+      printAlertGroup(group, groupId);
     }
     return 0;
   } catch (err) {

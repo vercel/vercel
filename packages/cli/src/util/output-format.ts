@@ -22,7 +22,8 @@ export function parseOutputFormat(value: string): OutputFormat {
 
 /**
  * Determines the output format from parsed CLI flags.
- * Handles both --format and deprecated --json flags.
+ * Handles the documented --json flag and the supported --format compatibility
+ * path.
  *
  * @param flags - Parsed CLI flags object
  * @returns The output format if specified, undefined for default human output
@@ -79,4 +80,42 @@ export function validateJsonOutput(flags: {
   } catch (err) {
     return { valid: false, error: (err as Error).message };
   }
+}
+
+/** True when stdout is expected to be machine-parsed (suppress human chrome). */
+export function wantsMachineReadableOutput(
+  subcommand: string | undefined,
+  argv: readonly string[]
+): boolean {
+  if (argv.includes('--help') || argv.includes('-h')) {
+    return false;
+  }
+
+  if (subcommand === 'api') {
+    return true;
+  }
+
+  if (argv.includes('--json')) {
+    return true;
+  }
+
+  for (const arg of argv) {
+    if (arg.toLowerCase() === '--format=json') {
+      return true;
+    }
+  }
+
+  const formatIdx = argv.indexOf('--format');
+  if (formatIdx !== -1 && argv[formatIdx + 1]?.toLowerCase() === 'json') {
+    return true;
+  }
+
+  return false;
+}
+
+export function shouldPrintVersionBanner(
+  subcommand: string | undefined,
+  argv: readonly string[]
+): boolean {
+  return !wantsMachineReadableOutput(subcommand, argv);
 }

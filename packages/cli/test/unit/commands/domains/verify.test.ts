@@ -43,7 +43,7 @@ function useDomainConfig(
 }
 
 function useOwnedDomainNotFound(domain = DOMAIN) {
-  client.scenario.get(`/v4/domains/${domain}`, (_req, res) => {
+  client.scenario.get(`/v5/domains/${domain}`, (_req, res) => {
     res.status(404).json({
       error: { code: 'not_found', message: 'Domain not found' },
     });
@@ -51,7 +51,7 @@ function useOwnedDomainNotFound(domain = DOMAIN) {
 }
 
 function useOwnedDomain(domain = DOMAIN) {
-  client.scenario.get(`/v4/domains/${domain}`, (_req, res) => {
+  client.scenario.get(`/v5/domains/${domain}`, (_req, res) => {
     res.json({
       domain: {
         name: domain,
@@ -70,7 +70,7 @@ function useNoProjectDomain(domain = DOMAIN) {
 }
 
 function useOwnedDomainForbidden() {
-  client.scenario.get(`/v4/domains/${DOMAIN}`, (_req, res) => {
+  client.scenario.get(`/v5/domains/${DOMAIN}`, (_req, res) => {
     res.status(403).json({
       error: {
         code: 'forbidden',
@@ -739,7 +739,7 @@ describe('domains verify', () => {
         when: 'List teams to find the scope that owns the domain',
       },
       {
-        command: `vercel domains verify ${DOMAIN} --project my-site --format=json --scope <team>`,
+        command: `vercel domains verify ${DOMAIN} --project my-site --json --scope <team>`,
         when: 'Replace <team> with the owning team and retry',
       },
     ]);

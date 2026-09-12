@@ -1,5 +1,270 @@
 # @vercel/fs-detectors
 
+## 7.2.1
+
+### Patch Changes
+
+- Updated dependencies [1817491]
+  - @vercel/build-utils@14.9.1
+
+## 7.2.0
+
+### Minor Changes
+
+- 07e0218: Restored service topology detection (`detectServices` and related types) on the public `@vercel/fs-detectors` API.
+
+## 7.1.7
+
+### Patch Changes
+
+- Updated dependencies [f2c588f]
+- Updated dependencies [392c759]
+  - @vercel/frameworks@3.34.0
+  - @vercel/build-utils@14.9.0
+
+## 7.1.6
+
+### Patch Changes
+
+- Updated dependencies [a652a99]
+  - @vercel/build-utils@14.8.0
+
+## 7.1.5
+
+### Patch Changes
+
+- Updated dependencies [26b891e]
+- Updated dependencies [37ff9da]
+  - @vercel/build-utils@14.7.0
+
+## 7.1.4
+
+### Patch Changes
+
+- aad9541: Run on-disk JavaScript workers with a lazily resolved system Node.js executable in native CLI installations, and install the matching Build Utils preview tarball for dynamically installed Builders.
+- Updated dependencies [aad9541]
+  - @vercel/build-utils@14.6.1
+
+## 7.1.3
+
+### Patch Changes
+
+- Updated dependencies [e82de48]
+  - @vercel/build-utils@14.6.0
+
+## 7.1.2
+
+### Patch Changes
+
+- Updated dependencies [a443e57]
+  - @vercel/build-utils@14.5.1
+
+## 7.1.1
+
+### Patch Changes
+
+- Updated dependencies [90afd71]
+  - @vercel/build-utils@14.5.0
+
+## 7.1.0
+
+### Minor Changes
+
+- 359a57c: Mark the Rust framework as stable. Detection stays keyed on `src/main.rs` so `api/**/*.rs` function projects (which declare a `[[bin]]` per handler) remain framework-less and build zero-config; `[[bin]]`-only servers and cargo workspaces are supported by setting the Rust preset manually. Projects with an explicit output directory (e.g. wasm frontends built with Trunk) keep the static-build path instead of the Rust runtime, while preserving `api/**/*.rs` functions, and committed prebuilt output is served directly when no build command is configured.
+
+### Patch Changes
+
+- 5ba8c6c: Run e2e services tests against vc dev also
+- Updated dependencies [359a57c]
+- Updated dependencies [e5b0363]
+  - @vercel/frameworks@3.33.0
+  - @vercel/build-utils@14.4.1
+
+## 7.0.1
+
+### Patch Changes
+
+- Updated dependencies [f8add0a]
+  - @vercel/build-utils@14.4.0
+
+## 7.0.0
+
+### Major Changes
+
+- 19c9259: Moved service topology detection to a private internal package. Service APIs previously exported by `@vercel/fs-detectors` are no longer available.
+- b923215: Moved service-aware builder coordination to the internal CLI builder integration package.
+
+### Patch Changes
+
+- 0b08df6: Canonicalized internal service contract ownership.
+- Updated dependencies [0b08df6]
+- Updated dependencies [cd6b038]
+- Updated dependencies [96444ba]
+  - @vercel/build-utils@14.3.0
+
+## 6.15.10
+
+### Patch Changes
+
+- Updated dependencies [e340c58]
+  - @vercel/build-utils@14.2.0
+
+## 6.15.9
+
+### Patch Changes
+
+- Updated dependencies [ac3120d]
+- Updated dependencies [bd5f1a7]
+  - @vercel/python-analysis@0.14.0
+  - @vercel/frameworks@3.32.0
+
+## 6.15.8
+
+### Patch Changes
+
+- Updated dependencies [b4f09c1]
+  - @vercel/build-utils@14.1.1
+
+## 6.15.7
+
+### Patch Changes
+
+- Updated dependencies [852e1a0]
+  - @vercel/routing-utils@6.5.0
+  - @vercel/build-utils@14.1.0
+  - @vercel/frameworks@3.31.0
+
+## 6.15.6
+
+### Patch Changes
+
+- Updated dependencies [a7fc7e8]
+  - @vercel/frameworks@3.31.0
+
+## 6.15.5
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+- Updated dependencies [2da7809]
+  - @vercel/build-utils@14.0.5
+
+## 6.15.4
+
+### Patch Changes
+
+- Updated dependencies [13f81ac]
+  - @vercel/build-utils@14.0.4
+
+## 6.15.3
+
+### Patch Changes
+
+- Updated dependencies [d72826e]
+  - @vercel/build-utils@14.0.3
+
+## 6.15.2
+
+### Patch Changes
+
+- Updated dependencies [b82e2a8]
+- Updated dependencies [b7ec19b]
+  - @vercel/frameworks@3.30.9
+  - @vercel/build-utils@14.0.2
+
+## 6.15.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/build-utils@14.0.1
+  - @vercel/error-utils@2.2.1
+  - @vercel/frameworks@3.30.8
+  - @vercel/routing-utils@6.4.1
+
+## 6.15.0
+
+### Minor Changes
+
+- 5619873: Fix api dir builds receiving incorrect framework or runtime.
+
+### Patch Changes
+
+- Updated dependencies [b747ab4]
+- Updated dependencies [5c33351]
+- Updated dependencies [5619873]
+  - @vercel/build-utils@14.0.0
+
+## 6.14.3
+
+### Patch Changes
+
+- Updated dependencies [a69c714]
+- Updated dependencies [654e898]
+  - @vercel/build-utils@13.36.3
+
+## 6.14.2
+
+### Patch Changes
+
+- Updated dependencies [2c75803]
+  - @vercel/build-utils@13.36.2
+
+## 6.14.1
+
+### Patch Changes
+
+- Updated dependencies [17ee736]
+  - @vercel/build-utils@13.36.1
+
+## 6.14.0
+
+### Minor Changes
+
+- 4502520: Support Node.js Routing Middleware entrypoints through `proxy.entrypoint`, with optional path matching through `proxy.matcher`. The matcher may be configured in the entrypoint source or `vercel.json`, but not both.
+- 506487b: Removed the `VERCEL_TOML_CONFIG_ENABLED` feature flag. `vercel.toml` configuration file support is now always enabled.
+
+### Patch Changes
+
+- Updated dependencies [4502520]
+  - @vercel/build-utils@13.36.0
+
+## 6.13.3
+
+### Patch Changes
+
+- Updated dependencies [7dd4301]
+  - @vercel/build-utils@13.35.0
+
+## 6.13.2
+
+### Patch Changes
+
+- a55e7df: Replace user-facing `experimentalServices` references with `services` in error/warning messages and rename error codes (`NO_EXPERIMENTAL_SERVICES_CONFIGURED` → `NO_SERVICES_CONFIGURED`, `MISSING_EXPERIMENTAL_SERVICES` → `MISSING_SERVICES`). The deprecated v1 config key should no longer appear in guidance shown to users.
+- Updated dependencies [238543c]
+  - @vercel/build-utils@13.34.0
+
+## 6.13.1
+
+### Patch Changes
+
+- Updated dependencies [def07fc]
+- Updated dependencies [fa14ee9]
+  - @vercel/build-utils@13.33.1
+  - @vercel/frameworks@3.30.7
+
+## 6.13.0
+
+### Minor Changes
+
+- 7bbfd48: Support `"entrypoint": "pyproject.toml"` for services. A service may now set `entrypoint: "pyproject.toml"` to build exactly what that file declares: the web app from `tool.vercel.entrypoint` (when present) and queue subscribers from `[[tool.vercel.subscribers]]`. Filename-based entrypoint auto-detection never runs in this mode, and subscribers-only services (no web function) are supported.
+
+### Patch Changes
+
+- Updated dependencies [607f0ef]
+  - @vercel/build-utils@13.33.0
+
 ## 6.12.1
 
 ### Patch Changes

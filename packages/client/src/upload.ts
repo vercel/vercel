@@ -1,5 +1,3 @@
-import http from 'http';
-import https from 'https';
 import { createReadStream } from 'fs';
 import { Readable, Transform } from 'stream';
 import { EventEmitter } from 'node:events';
@@ -10,28 +8,36 @@ import { DeploymentFile, FilesMap } from './utils/hashes';
 import { fetchApi, API_FILES, createDebug } from './utils';
 import { DeploymentError } from './errors';
 import { deploy } from './deploy';
-import type { Agent } from 'http';
 import type {
+  FetchDispatcher,
   VercelClientOptions,
   DeploymentOptions,
   DeploymentEventType,
 } from './types';
 
-const isClientNetworkError = (err: Error) => {
+const isClientNetworkError = (err: unknown): boolean => {
+  if (!(err instanceof Error)) {
+    return false;
+  }
+
   if (err.message) {
     // These are common network errors that may happen occasionally and we should retry if we encounter these
-    return (
+    const matches =
       err.message.includes('ETIMEDOUT') ||
       err.message.includes('ECONNREFUSED') ||
       err.message.includes('ENOTFOUND') ||
       err.message.includes('ECONNRESET') ||
       err.message.includes('EAI_FAIL') ||
       err.message.includes('socket hang up') ||
-      err.message.includes('network socket disconnected')
-    );
+      err.message.includes('network socket disconnected');
+    if (matches) {
+      return true;
+    }
   }
 
-  return false;
+  // Native `fetch` reports network failures as `TypeError: fetch failed` and
+  // carries the underlying error (with the code) in `cause`.
+  return isClientNetworkError((err as { cause?: unknown }).cause);
 };
 
 export async function* upload(
@@ -88,7 +94,7 @@ export async function* upload(
   };
 
   const uploadGenerator = uploadFiles({
-    agent: clientOptions.agent,
+    dispatcher: clientOptions.dispatcher,
     apiUrl: clientOptions.apiUrl,
     debug: clientOptions.debug,
     teamId: clientOptions.teamId,
@@ -133,7 +139,7 @@ export async function* upload(
  * Uploads files to the /v2/files endpoint with retry and fault tolerance.
  */
 export async function* uploadFiles(options: {
-  agent?: Agent;
+  dispatcher?: FetchDispatcher;
   apiUrl?: string;
   debug?: boolean;
   files: FilesMap;
@@ -149,9 +155,6 @@ export async function* uploadFiles(options: {
   debug('Building an upload list...');
 
   const semaphore = new Sema(50, { capacity: 50 });
-  const defaultAgent = options.apiUrl?.startsWith('https://')
-    ? new https.Agent({ keepAlive: true })
-    : new http.Agent({ keepAlive: true });
   const abortControllers = new Set<AbortController>();
   let aborted = false;
 
@@ -181,41 +184,36 @@ export async function* uploadFiles(options: {
         let body: Readable;
         let contentLength: number;
 
+        // Count bytes for progress reporting as chunks flow through, instead
+        // of intercepting reads: native `fetch` may drain the entire stream
+        // in a single `read()`, which would collapse progress to one jump.
+        const counter = new Transform({
+          transform(chunk, _encoding, callback) {
+            uploadProgress.bytesUploaded += chunk.length;
+            uploadProgress.emit('progress');
+            callback(null, chunk);
+          },
+        });
+
         if (typeof data !== 'undefined') {
           contentLength = data.length;
 
           // Split the in-memory buffer out into chunks.
-          const buffered = new Readable();
-          const originalRead = buffered.read.bind(buffered);
-          buffered.read = function (...args) {
-            const chunk = originalRead(...args);
-            if (chunk) {
-              uploadProgress.bytesUploaded += chunk.length;
-              uploadProgress.emit('progress');
-            }
-            return chunk;
-          };
-
           const chunkSize = 16384; /* 16kb - default Node.js `highWaterMark` */
-          for (let i = 0; i < data.length; i += chunkSize) {
-            const chunk = data.slice(i, i + chunkSize);
-            buffered.push(chunk);
+          function* chunks() {
+            for (let i = 0; i < data!.length; i += chunkSize) {
+              yield data!.slice(i, i + chunkSize);
+            }
           }
-          buffered.push(null);
-          body = buffered;
+          const buffered = Readable.from(chunks());
+          buffered.on('error', err => counter.destroy(err));
+          body = buffered.pipe(counter);
         } else if (typeof size === 'number') {
           // File too large to hold in memory (see hashes.ts): stream it from
           // disk. A fresh stream is created on each `retry` attempt, and bytes
           // are counted as they flow through for progress reporting.
           contentLength = size;
           const fileStream = createReadStream(names[0]);
-          const counter = new Transform({
-            transform(chunk, _encoding, callback) {
-              uploadProgress.bytesUploaded += chunk.length;
-              uploadProgress.emit('progress');
-              callback(null, chunk);
-            },
-          });
           fileStream.on('error', err => counter.destroy(err));
           counter.on('close', () => fileStream.destroy());
           body = fileStream.pipe(counter);
@@ -239,19 +237,18 @@ export async function* uploadFiles(options: {
             API_FILES,
             options.token,
             {
-              agent: options.agent || defaultAgent,
+              dispatcher: options.dispatcher,
               method: 'POST',
               headers: {
                 'Content-Type': 'application/octet-stream',
-                'Content-Length': contentLength,
+                'Content-Length': String(contentLength),
                 'x-now-digest': sha,
-                'x-now-size': contentLength,
+                'x-now-size': String(contentLength),
               },
               body,
               teamId: options.teamId,
               apiUrl: options.apiUrl,
               userAgent: options.userAgent,
-              // @ts-expect-error: typescript is getting confused with the signal types from node (web & server) and node-fetch (server only)
               signal: abortController.signal,
             },
             options.debug
@@ -284,7 +281,9 @@ export async function* uploadFiles(options: {
           }
         } catch (e: any) {
           debug(`An unexpected error occurred in upload promise:\n${e}`);
-          err = new Error(e);
+          // Preserve the original error: native `fetch` reports the network
+          // error code in `cause`, which wrapping would discard.
+          err = e instanceof Error ? e : new Error(String(e));
         }
 
         semaphore.release();

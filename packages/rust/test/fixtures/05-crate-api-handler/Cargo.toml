@@ -1,0 +1,15 @@
+[package]
+name = "crate-api-handler"
+version = "0.1.0"
+edition = "2021"
+
+# Each handler is its own binary, mirroring the published `rust/axum` example.
+[[bin]]
+name = "axum"
+path = "api/axum.rs"
+
+[dependencies]
+axum = "0.8"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tower = "0.5"
+vercel_runtime = { version = "2", features = ["axum"] }

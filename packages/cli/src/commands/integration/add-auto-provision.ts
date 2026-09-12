@@ -574,7 +574,7 @@ export async function addAutoProvision(
   );
 
   // Install the product's declared agent skills (from `agentSkills`) in all
-  // modes, including --format=json, where the human-readable summary is
+  // modes, including --json, where the human-readable summary is
   // suppressed and each skill's `installed` status is reported in the payload.
   const skills = resolveProductSkills(product);
   const failedSkills: ResolvedSkill[] = [];
@@ -583,10 +583,22 @@ export async function addAutoProvision(
     if (!options.asJson) {
       output.spinner(`Installing agent skills for ${product.name}...`);
     }
+    // Provenance for the skills CLI's install telemetry: attributes the
+    // install to the marketplace flow and its integration/product. Everything
+    // else (agent, CI, versions) is detected by the skills CLI itself.
+    const skillsTelemetryMetadata = JSON.stringify({
+      origin: 'vercel-cli',
+      flow: 'integration-install',
+      integration: integration.slug,
+      product: product.slug,
+    });
     for (const skill of skills) {
       // Both `--yes` flags are needed in non-interactive (agent/CI) contexts:
       // the first stops `npx` from prompting to install the `skills` package,
       // the second makes `skills add` accept its defaults instead of asking.
+      // `--metadata` requires skills >= 1.5.16; older resolved versions
+      // silently ignore the flag and still install successfully (verified
+      // against 1.5.15), so no attribution is logged but nothing fails.
       const args = [
         '--yes',
         'skills',
@@ -594,6 +606,8 @@ export async function addAutoProvision(
         skill.repoUrl,
         ...(skill.skill ? ['--skill', skill.skill] : []),
         '--yes',
+        '--metadata',
+        skillsTelemetryMetadata,
       ];
       const result = await execa('npx', args, {
         cwd: client.cwd,

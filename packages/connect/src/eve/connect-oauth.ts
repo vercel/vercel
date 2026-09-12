@@ -4,10 +4,7 @@ import {
   type VerifyOidcConfig,
   verifyOidc,
 } from 'eve/channels/auth';
-
-declare const process:
-  | { readonly env?: Readonly<Record<string, string | undefined>> }
-  | undefined;
+import { readNonEmptyEnv } from '../internal/env.js';
 
 export const CONNECT_OAUTH_ISSUER = 'https://connect.vercel.com';
 
@@ -233,12 +230,6 @@ function buildClaimMatchers(
       : { installationId: opts.installationIds }),
     typ: ['at'],
   };
-}
-
-function readNonEmptyEnv(name: string): string | undefined {
-  const value =
-    typeof process === 'undefined' ? undefined : process.env?.[name]?.trim();
-  return value === undefined || value.length === 0 ? undefined : value;
 }
 
 function extractAudiences(payload: Record<string, unknown>): readonly string[] {

@@ -4,6 +4,8 @@ import base64
 import hashlib
 import struct
 
+from vercel_runtime import get_deadline
+
 # Mirrors how simple-websocket (the engine behind flask-sock) drives a
 # WebSocket connection in "werkzeug" mode: it pulls the raw connection socket
 # out of the WSGI environ, writes the 101 handshake to it directly (bypassing
@@ -115,6 +117,14 @@ def app(environ, start_response):
             break
         if opcode == 0x1:  # text
             text = payload.decode("utf-8")
-            _write_frame(sock, 0x1, f"echo:{text}".encode())
+            if text == "deadline":
+                # The request lifecycle ended at the 101 handshake, but the
+                # deadline must remain visible while this thread drives the
+                # socket.
+                deadline = get_deadline()
+                reply = deadline.isoformat() if deadline else "none"
+                _write_frame(sock, 0x1, f"deadline:{reply}".encode())
+            else:
+                _write_frame(sock, 0x1, f"echo:{text}".encode())
 
     return []

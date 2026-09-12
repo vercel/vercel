@@ -2,7 +2,6 @@ import Ajv from 'ajv';
 import assert from 'assert';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { isString } from 'util';
 import nodeFetch from 'node-fetch';
 import { URL } from 'url';
 import frameworkList from '../src/frameworks';
@@ -11,6 +10,7 @@ import frameworkList from '../src/frameworks';
 vi.setConfig({ testTimeout: 15 * 1000, hookTimeout: 15 * 1000 });
 
 const logoPrefix = 'https://api-frameworks.vercel.sh/framework-logos/';
+const isString = (value: unknown): value is string => typeof value === 'string';
 
 const SchemaFrameworkDetectionItem = {
   type: 'array',
@@ -243,8 +243,17 @@ describe('frameworks', () => {
     'hydrogen',
     'storybook',
     'eve', // examples/fixtures live in github.com/vercel/ash
+    'factory-eve', // Factory variant, no dedicated example
     'tanstack-start-lovable', // platform variant, no dedicated example
+    'services', // project-level preset, no dedicated framework example
   ];
+
+  it('marks Services as stable', () => {
+    const services = frameworkList.find(f => f.slug === 'services');
+
+    expect(services).toBeDefined();
+    expect(services?.experimental).toBeUndefined();
+  });
 
   it('ensure there is an example for every framework', async () => {
     const root = join(__dirname, '..', '..', '..');
@@ -305,7 +314,12 @@ describe('frameworks', () => {
 
   it('ensure logo file exists in ./packages/frameworks/logos/', async () => {
     const missing = frameworkList
-      .map(f => f.logo)
+      .flatMap(f => [
+        f.logo,
+        f.darkModeLogo,
+        (f as { platform?: { logo: string } }).platform?.logo,
+      ])
+      .filter(isString)
       .filter(logo => {
         const filename = logo.slice(logoPrefix.length);
         const filepath = join(__dirname, '..', 'logos', filename);

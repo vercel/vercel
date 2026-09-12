@@ -21,6 +21,7 @@ import {
   pluckIdentifiersFromDeploymentList,
 } from '../../../helpers/parse-table';
 import output from '../../../../src/output-manager';
+import * as linkModule from '../../../../src/util/projects/link';
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/commands/list', name);
@@ -463,6 +464,7 @@ describe('list', () => {
   });
 
   it('should get deployments from a project linked by a directory', async () => {
+    const getLinkedProjectSpy = vi.spyOn(linkModule, 'getLinkedProject');
     const user = useUser();
     const teams = useTeams('team_dummy');
     assert(Array.isArray(teams));
@@ -475,6 +477,10 @@ describe('list', () => {
 
     client.cwd = fixture('with-team');
     await list(client);
+    expect(getLinkedProjectSpy).toHaveBeenCalledWith(client, {
+      cwd: client.cwd,
+    });
+    getLinkedProjectSpy.mockRestore();
 
     const lines = createLineIterator(client.stderr);
 

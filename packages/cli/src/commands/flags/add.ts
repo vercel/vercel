@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
@@ -11,26 +10,18 @@ import { FlagsCreateTelemetryClient } from '../../util/telemetry/commands/flags/
 import { createSubcommand } from './command';
 import { formatProject } from '../../util/projects/format-project';
 import { printFlagDetails } from '../../util/flags/print-flag-details';
+import {
+  generateVariantId,
+  parseVariantInput,
+  validateVariantValue,
+} from '../../util/flags/variant-input';
 import type {
   CreateFlagRequest,
   FlagEnvironmentConfig,
   FlagKind,
   FlagVariant,
-  FlagVariantValue,
 } from '../../util/flags/types';
 import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
-
-// Generate a variant ID (21 chars, alphanumeric)
-function variantId(size = 21): string {
-  const alphabet =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const bytes = randomBytes(size);
-  let id = '';
-  for (let i = 0; i < size; i++) {
-    id += alphabet[bytes[i] % alphabet.length];
-  }
-  return id;
-}
 
 export default async function create(
   client: Client,
@@ -245,134 +236,18 @@ function formatVariantInput(valueInput: string, label: string): string {
   return trimmedLabel ? `${valueInput}=${trimmedLabel}` : valueInput;
 }
 
-function parseVariantInput(
-  input: string,
-  kind: 'string' | 'number' | 'json',
-  index: number
-): FlagVariant {
-  const { rawValue, rawLabel } = splitVariantInput(input, kind);
-
-  const validationError = validateVariantValue(rawValue, kind);
-  if (validationError) {
-    throw new Error(`Invalid variant "${input}": ${validationError}`);
-  }
-
-  return {
-    id: variantId(),
-    value: parseVariantValue(rawValue, kind),
-    label: getVariantLabel(rawLabel, kind, index),
-    description: '',
-  };
-}
-
-function splitVariantInput(
-  input: string,
-  kind: 'string' | 'number' | 'json'
-): { rawValue: string; rawLabel?: string } {
-  if (kind !== 'json') {
-    const separatorIndex = input.indexOf('=');
-    return {
-      rawValue:
-        separatorIndex === -1
-          ? input.trim()
-          : input.slice(0, separatorIndex).trim(),
-      rawLabel:
-        separatorIndex === -1
-          ? undefined
-          : input.slice(separatorIndex + 1).trim() || undefined,
-    };
-  }
-
-  const trimmed = input.trim();
-  if (isValidJsonVariantValue(trimmed)) {
-    return { rawValue: trimmed };
-  }
-
-  for (let index = trimmed.length - 1; index >= 0; index--) {
-    if (trimmed[index] !== '=') {
-      continue;
-    }
-
-    const rawValue = trimmed.slice(0, index).trim();
-    const rawLabel = trimmed.slice(index + 1).trim();
-    if (!rawValue || !isValidJsonVariantValue(rawValue)) {
-      continue;
-    }
-
-    return {
-      rawValue,
-      rawLabel: rawLabel || undefined,
-    };
-  }
-
-  return { rawValue: trimmed };
-}
-
-function getVariantLabel(
-  rawLabel: string | undefined,
-  kind: 'string' | 'number' | 'json',
-  index: number
-): string | undefined {
-  if (rawLabel) {
-    return rawLabel;
-  }
-
-  if (kind === 'json') {
-    return `Variant ${index + 1}`;
-  }
-
-  return undefined;
-}
-
-function validateVariantValue(
-  value: string,
-  kind: 'string' | 'number' | 'json'
-): string | null {
-  if (!value.trim()) {
-    return 'value cannot be empty';
-  }
-
-  if (kind === 'number') {
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed)) {
-      return 'number variants must be valid numeric values';
-    }
-  }
-
-  if (kind === 'json' && !isValidJsonVariantValue(value)) {
-    return 'JSON variants must be valid JSON';
-  }
-
-  return null;
-}
-
-function parseVariantValue(
-  value: string,
-  kind: 'string' | 'number' | 'json'
-): FlagVariantValue {
-  if (kind === 'number') {
-    return Number(value);
-  }
-
-  if (kind === 'json') {
-    return JSON.parse(value) as FlagVariantValue;
-  }
-
-  return value;
-}
-
 function getDefaultVariants(kind: FlagKind): FlagVariant[] {
   switch (kind) {
     case 'boolean':
       return [
         {
-          id: variantId(),
+          id: generateVariantId(),
           value: false,
           label: 'Off',
           description: 'not enabled',
         },
         {
-          id: variantId(),
+          id: generateVariantId(),
           value: true,
           label: 'On',
           description: 'enabled',
@@ -382,14 +257,5 @@ function getDefaultVariants(kind: FlagKind): FlagVariant[] {
     case 'number':
     case 'json':
       throw new Error(`Default variants are not supported for kind: ${kind}`);
-  }
-}
-
-function isValidJsonVariantValue(value: string): boolean {
-  try {
-    JSON.parse(value);
-    return true;
-  } catch {
-    return false;
   }
 }

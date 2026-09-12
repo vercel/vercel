@@ -43,7 +43,8 @@ export default async function selectOrg(
   autoConfirm?: boolean,
   searchable = false,
   /** Filled with resolution details for callers that adjust follow-up UI. */
-  meta?: { choiceCount?: number }
+  meta?: { choiceCount?: number },
+  description?: string
 ): Promise<Org> {
   const {
     config: { currentTeam },
@@ -198,9 +199,13 @@ export default async function selectOrg(
     return choices[0].value;
   }
 
+  const descriptionLine = description
+    ? `\n${chalk.dim(`  ${description}`)}`
+    : '';
+
   if (!searchable) {
     return await client.input.select({
-      message: question,
+      message: `${question}${descriptionLine}`,
       choices,
       default: choices[defaultChoiceIndex].value,
     });
@@ -218,7 +223,7 @@ export default async function selectOrg(
       : '';
 
   return await client.input.search<Org>({
-    message: `${question}${countHint}`,
+    message: `${question}${countHint}${descriptionLine}`,
     pageSize,
     source: term => {
       const searchTerm = term?.trim().toLowerCase();

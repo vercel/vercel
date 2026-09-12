@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import type Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
-import { getLinkedProjectOrFail } from '../../util/projects/get-linked-project-or-fail';
+import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import output from '../../output-manager';
 import { CronsRunTelemetryClient } from '../../util/telemetry/commands/crons/run';
 import { runSubcommand } from './command';
@@ -35,7 +35,10 @@ export default async function run(client: Client, argv: string[]) {
   telemetry.trackCliOptionProject(projectName);
   telemetry.trackCliArgumentPath(cronPath);
 
-  const link = await getLinkedProjectOrFail(client, projectName);
+  const link = await resolveProjectContext({
+    client,
+    projectNameOrId: projectName,
+  });
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {

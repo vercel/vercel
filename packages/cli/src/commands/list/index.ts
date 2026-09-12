@@ -214,7 +214,7 @@ export default async function list(client: Client) {
     showAllProjects = true;
   } else {
     // No app argument and no --all flag: try to get linked project
-    const link = await getLinkedProject(client, client.cwd);
+    const link = await getLinkedProject(client, { cwd: client.cwd });
     if (link.status === 'error') {
       return link.exitCode;
     }

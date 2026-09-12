@@ -53,6 +53,7 @@ export async function generateProjectManifest({
     const pkgById = new Map(packages.map(p => [p.id, p]));
 
     const rootId = resolve.root;
+    if (!rootId) return;
     const rootNode = resolve.nodes.find(n => n.id === rootId);
     if (!rootNode) return;
 

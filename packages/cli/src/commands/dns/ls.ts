@@ -29,7 +29,7 @@ import {
   AGENT_REASON,
   AGENT_STATUS,
 } from '../../util/agent-output-constants';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import { getCommandNamePlain } from '../../util/pkg-name';
 
 export default async function ls(client: Client, argv: string[]) {
@@ -55,7 +55,7 @@ export default async function ls(client: Client, argv: string[]) {
   const { args, flags: opts } = parsedArgs;
 
   if (client.nonInteractive && args.length > 1) {
-    const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+    const flags = getGlobalFlagsFromArgs(client.argv.slice(2));
     const cmd = getCommandNamePlain(
       `dns ls <domain> ${flags.join(' ')}`.trim()
     );
@@ -116,12 +116,12 @@ export default async function ls(client: Client, argv: string[]) {
     const data = await getDomainDNSRecords(
       client,
       domainName,
-      4,
+      5,
       ...paginationOptions
     );
     if (data instanceof DomainNotFound) {
       if (client.nonInteractive) {
-        const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+        const flags = getGlobalFlagsFromArgs(client.argv.slice(2));
         const cmd = getCommandNamePlain(`dns ls ${flags.join(' ')}`.trim());
         outputAgentError(
           client,

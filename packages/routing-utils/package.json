@@ -1,6 +1,6 @@
 {
   "name": "@vercel/routing-utils",
-  "version": "6.4.0",
+  "version": "6.5.0",
   "description": "Vercel routing utilities",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,10 +16,8 @@
   "scripts": {
     "build": "node ../../utils/build.mjs",
     "test": "vitest run --config ../../vitest.config.mts",
-    "test-unit": "pnpm test",
-    "type-check": "tsc --noEmit",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/**/*.test.js' 'test/**/*.test.ts' 'test/**/*.test.mjs' 'test/**/*.test.mts' 'tests/**/*.test.js' 'tests/**/*.test.ts'"
+    "test-unit": "vitest run --config ../../vitest.config.mts",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "path-to-regexp-updated": "npm:path-to-regexp@6.3.0",
@@ -28,7 +26,7 @@
   "devDependencies": {
     "@types/node": "20.11.0",
     "ajv": "^6.12.3",
-    "vitest": "2.0.3"
+    "vitest": "4.1.10"
   },
   "optionalDependencies": {
     "ajv": "^6.12.3"

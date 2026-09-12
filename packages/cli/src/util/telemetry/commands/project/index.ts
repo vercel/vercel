@@ -1,6 +1,9 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { projectCommand } from '../../../../commands/project/command';
+import {
+  PROJECT_MEMBER_ROLES,
+  type projectCommand,
+} from '../../../../commands/project/command';
 
 export class ProjectTelemetryClient
   extends TelemetryClient
@@ -76,6 +79,35 @@ export class ProjectTelemetryClient
     });
   }
 
+  trackCliArgumentProject(project: string | undefined) {
+    if (project) {
+      this.trackCliArgument({
+        arg: 'project',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliArgumentMember(member: string | undefined) {
+    if (member) {
+      this.trackCliArgument({
+        arg: 'member',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionRole(role: string | undefined) {
+    if (role) {
+      this.trackCliOption({
+        option: 'role',
+        value: (PROJECT_MEMBER_ROLES as readonly string[]).includes(role)
+          ? role
+          : this.redactedValue,
+      });
+    }
+  }
+
   trackCliSubcommandAccessGroups(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'access-groups',
@@ -100,6 +132,27 @@ export class ProjectTelemetryClient
   trackCliSubcommandSpeedInsights(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'speed-insights',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandPause(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'pause',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandObservability(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'observability',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandResume(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'resume',
       value: actual,
     });
   }

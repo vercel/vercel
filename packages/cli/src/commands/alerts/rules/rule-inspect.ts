@@ -5,21 +5,18 @@ import { printError } from '../../../util/error';
 import output from '../../../output-manager';
 import { validateJsonOutput } from '../../../util/output-format';
 import { isAPIError } from '../../../util/errors-ts';
-import {
-  buildCommandWithGlobalFlags,
-  outputAgentError,
-} from '../../../util/agent-output';
-import { AGENT_REASON } from '../../../util/agent-output-constants';
 import { packageName } from '../../../util/pkg-name';
 import { rulesInspectSubcommand } from './command';
-import { parseRulesFlagsAndScope } from './parse-scope';
+import { printRule } from './format';
+import { resolveRulesTeam } from './parse-scope';
 import {
   emitRulesArgParseError,
+  fetchRule,
   handleRulesApiError,
-  rulesItemPath,
+  outputRulesError,
 } from './util';
 
-export default async function ruleInspect(
+export default async function inspectRule(
   client: Client,
   argv: string[]
 ): Promise<number> {
@@ -29,89 +26,44 @@ export default async function ruleInspect(
       argv,
       getFlagsSpecification(rulesInspectSubcommand.options)
     );
-  } catch (e) {
-    emitRulesArgParseError(
-      client,
-      e,
-      'alerts rules inspect <ruleId> --project <name-or-id>'
-    );
-    printError(e);
+  } catch (error) {
+    emitRulesArgParseError(client, error, 'alerts rules inspect <rule-id>');
+    printError(error);
     return 1;
+  }
+
+  const format = validateJsonOutput(parsedArgs.flags);
+  if (!format.valid) {
+    return outputRulesError(client, false, 'INVALID_ARGUMENTS', format.error);
   }
 
   const ruleId = parsedArgs.args[0];
-  const fr = validateJsonOutput(parsedArgs.flags);
-  if (!fr.valid) {
-    outputAgentError(
-      client,
-      {
-        status: 'error',
-        reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: fr.error,
-      },
-      1
-    );
-    output.error(fr.error);
-    return 1;
-  }
-
   if (!ruleId) {
-    outputAgentError(
+    return outputRulesError(
       client,
-      {
-        status: 'error',
-        reason: AGENT_REASON.MISSING_ARGUMENTS,
-        message: `Missing rule id. Example: ${packageName} alerts rules inspect <ruleId>`,
-        next: [
-          {
-            command: buildCommandWithGlobalFlags(
-              client.argv,
-              'alerts rules inspect <ruleId>'
-            ),
-            when: 'Replace <ruleId> with an id from `alerts rules ls`',
-          },
-          {
-            command: buildCommandWithGlobalFlags(
-              client.argv,
-              'alerts rules ls'
-            ),
-            when: 'List rule ids in the current scope',
-          },
-        ],
-      },
-      1
+      format.jsonOutput,
+      'MISSING_ARGUMENTS',
+      `Missing rule ID. Example: ${packageName} alerts rules inspect <rule-id>`
     );
-    output.error('Usage: `vercel alerts rules inspect <ruleId>`');
-    return 1;
   }
 
-  const scope = await parseRulesFlagsAndScope(
-    client,
-    {
-      '--project': parsedArgs.flags['--project'] as string | undefined,
-      '--all': parsedArgs.flags['--all'] as boolean | undefined,
-    },
-    fr.jsonOutput
-  );
-  if (typeof scope === 'number') {
-    return scope;
-  }
+  const scope = await resolveRulesTeam(client, format.jsonOutput);
+  if (typeof scope === 'number') return scope;
 
-  const path = rulesItemPath(scope, ruleId);
-  output.spinner('Fetching alert rule...');
+  output.spinner('Fetching alert rule…');
   try {
-    const rule = await client.fetch<Record<string, unknown>>(path);
-    if (fr.jsonOutput) {
+    const rule = await fetchRule(client, scope, ruleId);
+    if (format.jsonOutput) {
       client.stdout.write(`${JSON.stringify({ rule }, null, 2)}\n`);
     } else {
-      client.stdout.write(`${JSON.stringify(rule, null, 2)}\n`);
+      printRule(rule);
     }
     return 0;
-  } catch (err) {
-    if (isAPIError(err)) {
-      return handleRulesApiError(client, err, fr.jsonOutput);
+  } catch (error) {
+    if (isAPIError(error)) {
+      return handleRulesApiError(client, error, format.jsonOutput);
     }
-    throw err;
+    throw error;
   } finally {
     output.stopSpinner();
   }

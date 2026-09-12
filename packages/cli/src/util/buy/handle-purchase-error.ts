@@ -60,6 +60,13 @@ export function handlePurchaseError(
       tryOpenBillingPage(teamSlug, openBrowser);
       return 1;
     }
+    if (err.code === 'invalid_v0_subscription') {
+      const pricingUrl = 'https://v0.app/pricing';
+      output.error(
+        `Your team must have a paid v0 plan to purchase v0 credits. Upgrade at ${output.link(pricingUrl, pricingUrl)}`
+      );
+      return 1;
+    }
     if (err.code === 'invalid_plan') {
       output.error("Your team's current plan does not support this purchase.");
       return 1;

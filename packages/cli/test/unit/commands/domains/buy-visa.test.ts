@@ -190,7 +190,7 @@ describe('domains buy --visa', () => {
     expect(capturedBody.expectedPrice).toBe(100);
   });
 
-  it('shows a Visa-specific error when the order fails with visa_payment_failed', async () => {
+  it('shows a Visa-specific error when the order fails with visa-payment-failed', async () => {
     useUser();
     process.env.VERCEL_VISA_CREDENTIAL = 'test_vtok_declined';
 
@@ -222,7 +222,7 @@ describe('domains buy --visa', () => {
         orderId: 'ord_declined',
         status: 'failed',
         domains: [{ domainName: 'example.com', status: 'failed' }],
-        error: { code: 'visa_payment_failed' },
+        error: { code: 'visa-payment-failed' },
       });
     });
 
