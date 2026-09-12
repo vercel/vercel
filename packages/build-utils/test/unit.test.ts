@@ -1064,6 +1064,15 @@ it('should return cliType bun and correct lock file for bun v1 with bun.lock', a
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
+it('should return lockfileVersion 2 for a real bun.lock with lockfileVersion: 2 (Bun >= 1.4)', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '33-bun-v1.4-lock');
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('bun');
+  expect(result.lockfileVersion).toEqual(2);
+  expect(result.lockfilePath).toEqual(path.join(fixture, 'bun.lock'));
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+});
+
 it('should return lockfileVersion 2 with npm7', async () => {
   const fixture = path.join(__dirname, 'fixtures', '20-npm-7');
   const result = await scanParentDirs(fixture);
