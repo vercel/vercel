@@ -1,0 +1,14 @@
+{
+  "lockfileVersion": 2,
+  "workspaces": {
+    "": {
+      "dependencies": {
+        "cowsay": "1.5.0"
+      }
+    }
+  },
+  "packages": {
+    "cowsay": ["cowsay@1.5.0", "", { "dependencies": { "get-stdin": "8.0.0", "string-width": "~2.1.1", "strip-final-newline": "2.0.0", "yargs": "15.4.1" } }, "sha512-8Ipzr54Z8zROr/62C8f0PdhQcDusS05gKTS87xxdji8VbWefWly0k8BwGK7+VqamOrkv3eGsCkPtvlHzrhWsCA=="],
+    "get-stdin": ["get-stdin@8.0.0", "", {}, "sha512-sY22aA6xchAzprjyqmSEQv4UbAAzRN0L2dQB0NlN5acTTK9Don6nhoc3eAbUnpZiCANAMfd/+40kVdKfFygohg=="]
+  }
+}
