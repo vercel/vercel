@@ -67,7 +67,11 @@ export async function ensureLink(
       // When `forceDelete` is enabled we will always run the interactive
       // setup/link flow. Avoid an eager `getLinkedProject()` call, since it can
       // trigger additional prompts (for example when `.vercel/repo.json` exists
-      // and the repo-linked project is ambiguous).
+      // and the repo-linked project is ambiguous). An explicit `--project` name
+      // is still validated: `setupAndLink` -> `inputProject` throws
+      // `ProjectNotFound` for it once the org is resolved (see the
+      // `PROJECT_NOT_FOUND` handling below), instead of silently offering to
+      // create a new project for a typo.
       link = { status: 'not_linked', org: null, project: null };
     } else {
       // `failIfNotFound` doubles as the opt-in for API-based name/ID
@@ -91,7 +95,12 @@ export async function ensureLink(
   ) {
     // Explicit `--project` was provided but could not be resolved; bail out
     // before `setupAndLink` would offer to create a new project for a typo.
+    // Skipped for `forceDelete`: its placeholder `link` is always
+    // `not_linked` (see above), not a real signal, so that path is validated
+    // later instead, once `setupAndLink` has resolved the org (see the
+    // `PROJECT_NOT_FOUND` handling below).
     if (
+      !opts.forceDelete &&
       link.status === 'not_linked' &&
       opts.failIfNotFound &&
       opts.projectName
@@ -122,6 +131,20 @@ export async function ensureLink(
   }
 
   if (link.status === 'error') {
+    // `setupAndLink` -> `inputProject` throws `ProjectNotFound` for an
+    // explicit `--project` name once the org is resolved (the `forceDelete`
+    // path can't validate this earlier without duplicating org resolution;
+    // see the comment above). Report it the same way as the eager check
+    // above, since `setupAndLink` doesn't have `commandName` to do so itself.
+    if (link.reason === 'PROJECT_NOT_FOUND' && opts.projectName) {
+      await printProjectNotFoundError(
+        client,
+        opts.projectName,
+        commandName,
+        link.orgId
+      );
+      return 1;
+    }
     if (link.reason === 'HEADLESS') {
       if (nonInteractive) {
         outputActionRequired(

@@ -42,7 +42,7 @@ import {
   type PartialProjectSettings,
 } from '../input/edit-project-settings';
 import type { EmojiLabel } from '../emoji';
-import { CantParseJSONFile, isAPIError } from '../errors-ts';
+import { CantParseJSONFile, isAPIError, ProjectNotFound } from '../errors-ts';
 import output from '../../output-manager';
 import { detectProjects } from '../projects/detect-projects';
 import readConfig from '../config/read-config';
@@ -302,6 +302,7 @@ export default async function setupAndLink(
     nonInteractive = false,
     pullEnv = true,
     v0,
+    failIfNotFound = false,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResultWithGitGuidance> {
   const { config } = client;
@@ -445,9 +446,22 @@ export default async function setupAndLink(
         {
           remoteNames: gitRemoteNames,
           currentRemoteName: currentGitRemoteName,
-        }
+        },
+        Boolean(gitProjectName && failIfNotFound)
       );
     } catch (err) {
+      if (err instanceof ProjectNotFound) {
+        // Explicit `--project` name didn't resolve under the now-known org;
+        // bail instead of falling through to project creation for a typo.
+        // `ensureLink` reports this (it has `commandName`, which this
+        // function doesn't receive).
+        return {
+          status: 'error',
+          exitCode: 1,
+          reason: 'PROJECT_NOT_FOUND',
+          orgId: org.id,
+        };
+      }
       if (
         err instanceof Error &&
         (err as NodeJS.ErrnoException).code === 'HEADLESS'

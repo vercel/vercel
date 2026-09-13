@@ -508,7 +508,10 @@ export type ProjectLinkedError = {
     | 'TEAM_DELETED'
     | 'PATH_IS_FILE'
     | 'INVALID_ROOT_DIRECTORY'
-    | 'TOO_MANY_PROJECTS';
+    | 'TOO_MANY_PROJECTS'
+    | 'PROJECT_NOT_FOUND';
+  /** The org a `PROJECT_NOT_FOUND` lookup was attempted against, if resolved. */
+  orgId?: string;
 };
 
 export type ProjectLinkResult =

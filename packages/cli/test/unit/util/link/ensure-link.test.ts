@@ -88,6 +88,72 @@ describe('ensureLink', () => {
     expect(getLinkedProject.mock.calls[0][1].skipRemoteLookup).toBe(true);
   });
 
+  it('reports PROJECT_NOT_FOUND from setupAndLink via printProjectNotFoundError (forceDelete path)', async () => {
+    vi.mocked(setupAndLink).mockResolvedValue({
+      status: 'error',
+      exitCode: 1,
+      reason: 'PROJECT_NOT_FOUND',
+      orgId: 'team_1',
+    });
+    const projectNotFoundModule = await import(
+      '../../../../src/util/projects/project-not-found-error'
+    );
+    const printSpy = vi
+      .spyOn(projectNotFoundModule, 'printProjectNotFoundError')
+      .mockResolvedValue(undefined);
+
+    const result = await ensureLink('link', client, '/cwd', {
+      forceDelete: true,
+      projectName: 'my-proejct',
+      failIfNotFound: true,
+    });
+
+    expect(getLinkedProject).not.toHaveBeenCalled();
+    expect(printSpy).toHaveBeenCalledWith(
+      client,
+      'my-proejct',
+      'link',
+      'team_1'
+    );
+    expect(result).toBe(1);
+
+    printSpy.mockRestore();
+  });
+
+  it('does not eagerly call getLinkedProject for forceDelete with an explicit --project name', async () => {
+    vi.mocked(setupAndLink).mockResolvedValue({
+      status: 'linked',
+      org: { id: 'o1', slug: 'team', type: 'team' as const },
+      project: { id: 'p1', name: 'proj' },
+    });
+
+    const result = await ensureLink('link', client, '/cwd', {
+      forceDelete: true,
+      projectName: 'proj',
+      failIfNotFound: true,
+    });
+
+    // The `not_linked` placeholder link is used as-is; existence is
+    // validated later by `setupAndLink` -> `inputProject`, once the org is
+    // resolved (see `PROJECT_NOT_FOUND` handling).
+    expect(getLinkedProject).not.toHaveBeenCalled();
+    expect(setupAndLink).toHaveBeenCalledWith(
+      client,
+      '/cwd',
+      expect.objectContaining({
+        link: { status: 'not_linked', org: null, project: null },
+        forceDelete: true,
+        projectName: 'proj',
+        failIfNotFound: true,
+      })
+    );
+    expect(result).toEqual({
+      status: 'linked',
+      org: { id: 'o1', slug: 'team', type: 'team' },
+      project: { id: 'p1', name: 'proj' },
+    });
+  });
+
   it('returns action_required payload when not linked and setupAndLink returns action_required', async () => {
     const actionRequiredPayload = {
       status: 'action_required' as const,

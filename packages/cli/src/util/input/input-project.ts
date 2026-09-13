@@ -233,7 +233,15 @@ export default async function inputProject(
   gitRemoteOptions?: {
     remoteNames: string[];
     currentRemoteName?: string;
-  }
+  },
+  /**
+   * When true, `detectedProjectName` came from an explicit user-supplied
+   * name (e.g. `--project`) instead of a folder-name fallback: throw
+   * `ProjectNotFound` instead of offering to create a new project when it
+   * doesn't resolve, so a typo fails fast rather than silently creating an
+   * unwanted project.
+   */
+  failIfNotFound = false
 ): Promise<
   | Project
   | CrossTeamMatch
@@ -268,6 +276,10 @@ export default async function inputProject(
     }
 
     output.stopSpinner();
+  }
+
+  if (failIfNotFound && !detectedProject) {
+    throw new ProjectNotFound(detectedProjectName);
   }
 
   if (autoConfirm) {

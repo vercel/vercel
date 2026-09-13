@@ -179,11 +179,17 @@ async function linkProject(client: Client) {
     const linkNonInteractive =
       client.nonInteractive || client.argv.includes('--non-interactive');
 
+    const projectName = parsedArgs.flags['--project'];
+
     const link = await ensureLink('link', client, cwd, {
       autoConfirm: yes,
       forceDelete: true,
       selectedOrg,
-      projectName: parsedArgs.flags['--project'],
+      projectName,
+      // An explicit `--project` name is validated against the API instead
+      // of silently creating a new project when it doesn't match anything
+      // (see `ensureLink`'s `forceDelete` + explicit-name handling).
+      failIfNotFound: !!projectName,
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
       pullEnv: false,

@@ -733,6 +733,85 @@ describe('link', () => {
         },
       ]);
     });
+
+    it('should error instead of creating a project when `--project` does not match an existing project', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      let createCalled = false;
+      client.scenario.post(`/:version/projects`, (_req, _res, next) => {
+        createCalled = true;
+        next();
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('--project', 'my-proejct', '--yes');
+      const exitCode = await link(client);
+
+      expect(exitCode, 'exit code for "link"').toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Project "my-proejct" was not found in the current scope'
+      );
+      expect(createCalled).toBe(false);
+      expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
+    });
+
+    it("should error instead of creating a project for a typo'd `--project` name, interactively", async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      let createCalled = false;
+      client.scenario.post(`/:version/projects`, (_req, _res, next) => {
+        createCalled = true;
+        next();
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('--project', 'my-proejct');
+      const exitCode = await link(client);
+
+      expect(exitCode, 'exit code for "link"').toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Project "my-proejct" was not found in the current scope'
+      );
+      // The interactive "Project?" create-or-link picker must never be
+      // reached for an explicit, unresolved `--project` name.
+      expect(client.stderr.getFullOutput()).not.toContain('Project?');
+      expect(createCalled).toBe(false);
+      expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
+    });
+
+    it('should re-link `--project` to a different existing project without wrongly reporting not-found', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      const [team] = useTeams('team_dummy') as Team[];
+      const { project } = useProject({
+        ...defaultProject,
+        id: 'new-project',
+        name: 'new-project',
+      });
+      useUnknownProject();
+
+      // Directory is already linked to a different project; `--project`
+      // asks to re-link it to `new-project` instead.
+      await mkdirp(join(cwd, '.vercel'));
+      await writeJSON(join(cwd, '.vercel/project.json'), {
+        orgId: 'org_before',
+        projectId: 'proj_before',
+      });
+
+      client.cwd = cwd;
+      client.setArgv('--project', project.name!, '--yes');
+      const exitCode = await link(client);
+
+      expect(exitCode, 'exit code for "link"').toEqual(0);
+      expect(await readJSON(join(cwd, '.vercel/project.json'))).toMatchObject({
+        orgId: team.id,
+        projectId: project.id,
+      });
+    });
   });
 
   describe('--yes', () => {
