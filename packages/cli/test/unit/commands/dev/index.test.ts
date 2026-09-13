@@ -554,6 +554,47 @@ describe('dev', () => {
       getLinkedProjectSpy.mockRestore();
     });
 
+    it('omits runtime-only project fields from DevServer projectSettings', async () => {
+      const settingsProjectId = 'prj_settings123';
+      const settingsProjectName = 'settings-project';
+      const settingsProjectPath = `/user/name/code/${settingsProjectName}`;
+
+      useProject({
+        id: settingsProjectId,
+        name: settingsProjectName,
+        framework: 'nextjs',
+        env: [
+          {
+            key: 'BRANCH_SECRET',
+            value: 'x'.repeat(1024),
+          },
+        ],
+        latestDeployments: [{ id: 'dpl_test' }],
+      } as Parameters<typeof useProject>[0]);
+
+      vol.fromJSON(
+        {
+          '.vercel/project.json': JSON.stringify({
+            projectId: settingsProjectId,
+            orgId,
+          }),
+        },
+        settingsProjectPath
+      );
+
+      client.setArgv('dev', settingsProjectPath);
+      await expect(dev(client)).resolves.toEqual(undefined);
+
+      expect(devServerInstances).toHaveLength(1);
+      expect(devServerInstances[0].projectSettings).toMatchObject({
+        framework: 'nextjs',
+      });
+      expect(devServerInstances[0].projectSettings).not.toHaveProperty('env');
+      expect(devServerInstances[0].projectSettings).not.toHaveProperty(
+        'latestDeployments'
+      );
+    });
+
     it('omits the IDs for unlinked projects in --local mode', async () => {
       const unlinkedPath = '/user/name/code/unlinked-project';
       vol.fromJSON({}, unlinkedPath);

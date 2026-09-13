@@ -149,7 +149,11 @@ export default async function dev(
 
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-    projectSettings = project;
+    const settings = { ...project };
+    delete (settings as typeof settings & { env?: unknown }).env;
+    delete settings.latestDeployments;
+    projectSettings = settings;
+
     projectId = project.id;
     orgId = org.id;
 
