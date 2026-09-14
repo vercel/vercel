@@ -2,7 +2,7 @@ import type Client from '../client';
 import type { Org } from '@vercel-internals/types';
 import { isAPIError } from '../errors-ts';
 import getUser from '../get-user';
-import getTeamById from '../teams/get-team-by-id';
+import getTeamByIdOrSlug from '../teams/get-team-by-id-or-slug';
 
 /**
  * Resolves a `team_*` ID to a team `Org`, or a user ID to a user `Org`.
@@ -14,7 +14,7 @@ export default async function getOrgById(
 ): Promise<Org | null> {
   if (orgId.startsWith('team_')) {
     try {
-      const team = await getTeamById(client, orgId);
+      const team = await getTeamByIdOrSlug(client, orgId);
       if (!team) return null;
       return { type: 'team', id: team.id, slug: team.slug };
     } catch (err) {

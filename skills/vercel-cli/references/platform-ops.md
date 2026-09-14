@@ -42,7 +42,7 @@ vercel telemetry status
 vercel telemetry enable
 vercel telemetry disable
 vercel upgrade
-vercel whoami
+vercel whoami --format json
 ```
 
 `vercel upgrade` changes the installed global CLI. Prefer the project-pinned CLI or package-manager invocation when one exists, unless the user asked to update a global install.
@@ -52,7 +52,6 @@ vercel whoami
 ```bash
 vercel activity --help
 vercel teams --help
-vercel oauth-apps --help
 ```
 
 If an account operation is not available through a first-class command, use `vercel api` as a fallback.

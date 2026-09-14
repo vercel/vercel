@@ -17,7 +17,6 @@ import type Client from '../client';
 import type { Framework } from '@vercel/frameworks';
 import type { Project } from '@vercel-internals/types';
 import createProject from '../projects/create-project';
-import { detectProjects } from '../projects/detect-projects';
 import { repoInfoToUrl } from '../git/repo-info-to-url';
 import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
 import { getGitConfigPath, getGitRootDirectory } from '../git-helpers';
@@ -248,10 +247,12 @@ async function discoverRepoProjects(
 > {
   // Detect the projects on the filesystem out of band, so that
   // they will be ready by the time the projects are listed
-  const detectedProjectsPromise = detectProjects(rootPath).catch(err => {
-    output.debug(`Failed to detect local projects: ${err}`);
-    return new Map<string, Framework[]>();
-  });
+  const detectedProjectsPromise = import('../projects/detect-projects')
+    .then(({ detectProjects }) => detectProjects(rootPath))
+    .catch(err => {
+      output.debug(`Failed to detect local projects: ${err}`);
+      return new Map<string, Framework[]>();
+    });
 
   const promptAction = existingRemoteName ? 'add' : 'link';
   const confirmMessage =

@@ -34,6 +34,7 @@ export {
   compilePathToRegexpTemplate,
   convertRewrites,
   getCleanUrls,
+  pathToRegexp,
   sourceToRegex,
 } from './superstatic';
 export * from './types';

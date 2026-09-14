@@ -11,6 +11,9 @@
 ## Contents
 
 - [Overview](#overview)
+- [Status](#status)
+- [Alerts](#alerts)
+- [Persistent Actions](#persistent-actions)
 - [Custom Rules](#custom-rules)
 - [IP Blocks](#ip-blocks)
 - [System Bypass](#system-bypass)
@@ -28,6 +31,48 @@ vercel firewall overview --json                       # JSON output
 vercel firewall diff                                  # show unpublished draft changes
 vercel firewall diff --json                           # JSON diff
 ```
+
+`overview` renders the configuration block described under [Status](#status) and then adds the last 24 hours beneath it: requests by action, the busiest rules, and any alerts raised in that window. The activity section needs Observability Plus and a team scope; without either, the configuration block is reported on its own.
+
+## Status
+
+```bash
+vercel firewall status                                # configuration in execution order
+vercel firewall status --json                         # JSON, including the request pipeline
+```
+
+Reports what is configured, in the order a request meets it: bypass, system mitigations, attack mode, IP blocks, custom rules, bot protection, AI bots, then OWASP. Use it to answer "what is on, and what does a bypass skip" without also querying traffic.
+
+`--json` adds `requestFlow`, the stages in order with what each one skips, and `bypasses`, the bypass kinds with the stages they skip. Two fields explain an absent value rather than leaving it `null`: `bypassUnavailable` when the plan does not include IP Bypass, and `owasp.requiresUpgrade` when OWASP is off because the plan cannot enable it rather than because it is disabled.
+
+## Alerts
+
+```bash
+vercel firewall alerts list                           # active and resolved alerts (last 24h)
+vercel firewall alerts list --since 7d                # last 7 days
+vercel firewall alerts list --json                    # JSON: { active, resolved }
+vercel firewall alerts inspect al_abc123              # window, rates, sparkline, IPs, hosts
+vercel firewall alerts inspect al_abc123 --json       # JSON detail
+```
+
+Lists DDoS and other firewall anomaly alerts from both the alerts API and legacy attack-status history. Default window matches `overview` (last 24 hours). `--since` / `--until` accept relative times (`7d`, `24h`) or ISO dates.
+
+`inspect` takes an alert id from the list (`al_…` or the constructed legacy id). It fetches the alert first, then one traffic timeseries and one events request in parallel. Traffic and events need Observability Plus; without it the header still prints.
+
+## Persistent Actions
+
+```bash
+vercel firewall persistent-actions list                 # last hour
+vercel firewall persistent-actions list --since 6h      # last 6 hours
+vercel firewall persistent-actions list --limit 50      # more rows (default 10)
+vercel firewall persistent-actions list --json          # JSON: { actions, shown, total }
+vercel firewall persistent-actions inspect 51.158.168.18 --host vercel.com --action challenge
+vercel firewall persistent-actions inspect 51.158.168.18 --json
+```
+
+Lists persistent WAF actions (challenge/deny against a client IP) from the last hour by default. `--since` / `--until` accept relative times (`1h`, `6h`) or ISO dates.
+
+`inspect` takes an IP from the list. `--host` and `--action` disambiguate when the same IP appears more than once; otherwise the most recent match is shown. Traffic charts need Observability Plus; without it the header still prints.
 
 ## Custom Rules
 
@@ -327,7 +372,7 @@ vercel firewall discard --yes                         # throw away all draft cha
 
 - **Pass `--yes`** for commands that prompt for confirmation (rule/IP block mutations, publish, discard)
 - **Publish after staging rules/IP blocks**: `vercel firewall publish --yes`
-- **Use `--json` for structured output**: `vercel firewall rules list --json`
+- **Use `--json` for structured output**: `vercel firewall rules list --json`, `vercel firewall alerts list --json`, `vercel firewall persistent-actions list --json`
 - Project must be linked first (`vercel link`)
 
 ## Anti-Patterns

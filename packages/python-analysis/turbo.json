@@ -1,0 +1,29 @@
+{
+  "$schema": "https://turborepo.org/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["generate:schemas", "build:wasm", "^build"],
+      "inputs": ["$TURBO_DEFAULT$", "!src/**/schema.zod.ts"],
+      "outputs": ["dist/**", "!dist/wasm/**"]
+    },
+    "generate:schemas": {
+      "inputs": ["$TURBO_DEFAULT$", "!src/**/schema.zod.ts"],
+      "outputs": ["src/**/schema.zod.ts"]
+    },
+    "build:wasm": {
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$", "!src/**/schema.zod.ts"],
+      "outputs": ["dist/wasm/**"]
+    },
+    "type-check": {
+      "dependsOn": ["$TURBO_EXTENDS$", "build:wasm"]
+    },
+    "test": {
+      "dependsOn": ["build", "//#generate:cache-keys"]
+    },
+    "test-unit": {
+      "dependsOn": ["build", "//#generate:cache-keys"]
+    }
+  }
+}

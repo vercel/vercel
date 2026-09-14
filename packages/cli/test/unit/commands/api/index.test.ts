@@ -247,7 +247,12 @@ describe('api', () => {
   });
 
   describe('--spec-url', () => {
-    it('lists endpoints from the custom spec only', async () => {
+    it.each([
+      { label: '--format json', outputArgs: ['--format', 'json'] },
+      { label: '--json', outputArgs: ['--json'] },
+    ])('lists endpoints from the custom spec only with $label', async ({
+      outputArgs,
+    }) => {
       vi.stubGlobal(
         'fetch',
         vi.fn().mockResolvedValue(
@@ -278,8 +283,7 @@ describe('api', () => {
         'ls',
         '--spec-url',
         'https://api.vercel.tools/openapi.json',
-        '--format',
-        'json'
+        ...outputArgs
       );
 
       const exitCode = await api(client);

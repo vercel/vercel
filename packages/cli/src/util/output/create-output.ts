@@ -7,6 +7,7 @@ import { errorToString } from '@vercel/error-utils';
 import { removeEmoji } from '../emoji';
 import type * as tty from 'tty';
 import { inspect } from 'util';
+import chars from './chars';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 
@@ -134,6 +135,13 @@ export class Output {
     if (details) {
       this.print(`${chalk.bold(action)}: ${renderLink(details)}\n`);
     }
+  };
+
+  /**
+   * Prints a fatal error. This does not exit; the caller owns the exit code.
+   */
+  fatal = (str: string) => {
+    this.print(`${chalk.red(chars.fatal)} ${str.replace(/\n/g, '\n  ')}\n`);
   };
 
   prettyError = (err: unknown) => {

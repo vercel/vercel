@@ -30,15 +30,15 @@ export class AiGatewayBudgetsSetTelemetryClient
     }
   }
 
-  trackCliFlagIncludeByok(includeByok: boolean | undefined) {
-    if (includeByok) {
-      this.trackCliFlag('include-byok');
-    }
-  }
-
   trackCliOptionFormat(format: string | undefined) {
     if (format) {
       this.trackCliOption({ option: 'format', value: format });
+    }
+  }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
     }
   }
 }

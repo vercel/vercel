@@ -1,12 +1,18 @@
 export {
+  builderToFrameworks,
   detectBuilders,
   detectOutputDirectory,
   detectApiDirectory,
   detectApiExtensions,
+  getProxyBuilder,
+  validateProxyConfig,
+  validateProxy,
   type Options as DetectBuildersOptions,
+  type ProxyConfig,
 } from './detect-builders';
 export {
   detectServices,
+  generateServiceRewrites,
   generateServicesRoutes,
 } from './services/detect-services';
 export {
@@ -33,7 +39,6 @@ export {
   getInternalServiceWorkerPath,
   getInternalServiceWorkerPathPrefix,
 } from './services/utils';
-export { getServicesBuilders } from './services/get-services-builders';
 export type {
   DetectServicesOptions,
   DetectServicesResult,
@@ -54,6 +59,8 @@ export type {
   Services,
   ServicesRoutes,
   ServiceDetectionError,
+  ConfiguredServices,
+  ConfiguredServicesType,
 } from './services/types';
 export { detectFileSystemAPI } from './detect-file-system-api';
 export {

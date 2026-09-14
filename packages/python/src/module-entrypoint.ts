@@ -4,9 +4,17 @@ import fs from 'fs';
 const MODULE_ATTR_RE =
   /^([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*):([A-Za-z_][\w]*)$/;
 
+const MODULE_RE = /^[A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*$/;
+
 export interface ModuleEntrypoint {
   moduleName: string;
   variableName: string;
+  filePath: string;
+}
+
+export interface BareModuleEntrypoint {
+  moduleName: string;
+  variableName?: undefined;
   filePath: string;
 }
 
@@ -24,14 +32,33 @@ export function parseModuleEntrypoint(value: string): ModuleEntrypoint | null {
   };
 }
 
+/**
+ * Parses a dotted `pkg.module` entrypoint string with no object attr, or
+ * returns null if malformed. The module is imported by this name, so
+ * relative imports and `__package__` behave exactly as they do at runtime.
+ */
+export function parseBareModuleEntrypoint(
+  value: string
+): BareModuleEntrypoint | null {
+  if (!MODULE_RE.test(value)) {
+    return null;
+  }
+
+  return {
+    moduleName: value,
+    filePath: `${value.replace(/\./g, '/')}.py`,
+  };
+}
+
 export function getModuleEntrypointName({
   moduleName,
   variableName,
 }: {
   moduleName: string;
-  variableName: string;
+  variableName?: string;
 }): string {
-  return `${moduleName.replace(/\./g, '-')}_${variableName}`;
+  const base = moduleName.replace(/\./g, '-');
+  return variableName === undefined ? base : `${base}_${variableName}`;
 }
 
 export function safePathSegment(value: string): string {

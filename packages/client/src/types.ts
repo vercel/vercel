@@ -4,6 +4,7 @@ import type {
   Images,
   ProjectSettings,
   Cron,
+  Schedule,
   ExperimentalServices,
   ExperimentalServiceGroups,
   ExperimentalServicesV2,
@@ -24,6 +25,11 @@ export interface FetchDispatcher {
 
 export interface Dictionary<T> {
   [key: string]: T;
+}
+
+export interface ProxyConfig {
+  entrypoint: string;
+  matcher?: string | string[];
 }
 
 export const VALID_ARCHIVE_FORMATS = ['tgz'] as const;
@@ -217,7 +223,9 @@ export interface VercelConfig {
   outputDirectory?: string | null;
   images?: Images;
   crons?: Cron[];
+  schedules?: Schedule[];
   bunVersion?: string;
+  proxy?: ProxyConfig;
   /**
    * Path to a file containing bulk redirects (relative to the project root).
    * This file will be included in prebuilt deployments.
@@ -248,6 +256,11 @@ export interface GitMetadata {
   commitSha?: string | undefined;
   dirty?: boolean | undefined;
   remoteUrl?: string;
+  /**
+   * Path of the deployed directory relative to the detected git repository
+   * root. Empty string when deploying from the repository root.
+   */
+  rootDirectory?: string;
 }
 
 /**

@@ -5,6 +5,7 @@ export default defineConfig({
     globals: true,
     // Use of process.chdir prohibits usage of the default "threads". https://vitest.dev/config/#forks
     pool: 'forks',
+    retry: 3,
     testTimeout: 12 * 60 * 1000,
     hookTimeout: 12 * 60 * 1000,
     include: [

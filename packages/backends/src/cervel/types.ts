@@ -30,6 +30,7 @@ export type TypescriptOptions = {
   entrypoint: string;
   workPath: string;
   span: Span;
+  nodeVersionMajor?: number;
 };
 
 /**

@@ -11,9 +11,8 @@ describe('getMaxDurationLimit', () => {
     delete process.env[SKIP_MAX_DURATION_LIMIT_ENV];
   });
 
-  it('returns the default 1800s limit when the flag is unset', () => {
-    expect(getMaxDurationLimit()).toBe(DEFAULT_MAX_DURATION_LIMIT);
-    expect(DEFAULT_MAX_DURATION_LIMIT).toBe(1800);
+  it('returns the default 3600s limit when the flag is unset', () => {
+    expect(getMaxDurationLimit()).toBe(3600);
   });
 
   it('returns undefined (no client-side limit) when the flag is enabled', () => {
@@ -32,11 +31,11 @@ describe('getMaxDurationSchema', () => {
     delete process.env[SKIP_MAX_DURATION_LIMIT_ENV];
   });
 
-  it('includes a 1800 maximum on the integer branch by default', () => {
+  it('includes a 3600 maximum on the integer branch by default', () => {
     const schema = getMaxDurationSchema();
     expect(schema).toEqual({
       oneOf: [
-        { type: 'integer', minimum: 1, maximum: 1800 },
+        { type: 'integer', minimum: 1, maximum: 3600 },
         { type: 'string', enum: ['max'] },
       ],
     });

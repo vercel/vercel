@@ -5,6 +5,7 @@ mod bindings {
 }
 mod dist_metadata;
 mod entrypoint;
+mod imports;
 mod pep508;
 mod requirements_txt;
 
@@ -21,10 +22,11 @@ use uv_distribution_filename::WheelFilename;
 use uv_pep508::{MarkerEnvironmentBuilder, MarkerTree};
 use uv_platform_tags::{Arch, Os, Platform, Tags};
 
-use crate::bindings::{DirectUrlInfo, DistMetadata, ParsedReqEntry, ParsedRequirementsTxt, RecordEntry};
+use crate::bindings::{DirectUrlInfo, DistMetadata, ImportStmt, ParsedReqEntry, ParsedRequirementsTxt, RecordEntry};
 use crate::entrypoint::{
     find_app_or_handler_impl, contains_top_level_callable_impl, get_string_constant_impl,
 };
+use crate::imports::extract_imports_impl;
 
 /// Single-poll executor for WASM: all stub I/O resolves synchronously via host-bridge,
 /// so the future is guaranteed to be ready on the first poll.
@@ -64,6 +66,13 @@ impl crate::bindings::Guest for PythonAnalyzer {
     /// value, or None if not found or the value is not a string literal.
     fn get_string_constant(source: String, name: String) -> Option<String> {
         get_string_constant_impl(&source, &name)
+    }
+
+    /// Extract every import statement in Python source with its syntactic
+    /// context (module-level / TYPE_CHECKING). Returns an empty list for
+    /// invalid Python syntax.
+    fn extract_imports(source: String) -> Vec<ImportStmt> {
+        extract_imports_impl(&source)
     }
 
     fn parse_dist_metadata(content: Vec<u8>) -> Result<DistMetadata, String> {

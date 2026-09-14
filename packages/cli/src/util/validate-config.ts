@@ -15,6 +15,7 @@ import {
   getPrettyError,
 } from '@vercel/build-utils';
 import { fileNameSymbol } from '@vercel/client';
+import { validateProxyConfig } from '@vercel/fs-detectors';
 import { getConfigValidator } from './config-validator';
 
 const imagesSchema = {
@@ -152,6 +153,68 @@ const cronsSchema = {
         minLength: 9,
         maxLength: 256,
       },
+    },
+  },
+};
+
+// Mirrors the server-side Build Output API `schedules` schema.
+const schedulesSchema = {
+  type: 'array',
+  minItems: 0,
+  maxItems: 100,
+  items: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['expression', 'target', 'name'],
+    properties: {
+      expression: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['cron'],
+        properties: {
+          cron: {
+            type: 'string',
+          },
+          jitter: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 256,
+          },
+        },
+      },
+      target: {
+        oneOf: [
+          {
+            type: 'object',
+            additionalProperties: false,
+            required: ['function'],
+            properties: {
+              function: {
+                type: 'string',
+                minLength: 1,
+              },
+            },
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            required: ['topic'],
+            properties: {
+              topic: {
+                type: 'string',
+                minLength: 1,
+                maxLength: 256,
+              },
+            },
+          },
+        ],
+      },
+      name: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 256,
+      },
+      payload: {},
     },
   },
 };
@@ -503,9 +566,13 @@ const servicesServiceNamePattern = '^[a-z]([a-z_-]*[a-z])?$';
 const servicesBindingSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['type', 'service', 'format', 'env'],
+  required: ['service', 'format', 'env'],
   properties: {
-    type: { const: 'service' },
+    type: {
+      description:
+        'Optional binding type marker. Currently the only supported type is `service`. When present this must be `service`.',
+      const: 'service',
+    },
     service: {
       type: 'string',
       minLength: 1,
@@ -571,6 +638,34 @@ const getServicesSchema = () => ({
   additionalProperties: getServicesServiceConfigSchema(),
 });
 
+const proxySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['entrypoint'],
+  properties: {
+    entrypoint: {
+      type: 'string',
+      minLength: 1,
+    },
+    matcher: {
+      oneOf: [
+        {
+          type: 'string',
+          minLength: 1,
+        },
+        {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'string',
+            minLength: 1,
+          },
+        },
+      ],
+    },
+  },
+};
+
 export function buildVercelConfigSchema() {
   return {
     type: 'object',
@@ -588,7 +683,9 @@ export function buildVercelConfigSchema() {
       functions: getFunctionsSchema(),
       images: imagesSchema,
       crons: cronsSchema,
+      schedules: schedulesSchema,
       bunVersion: { type: 'string' },
+      proxy: proxySchema,
       experimentalServices: getExperimentalServicesSchema(),
       experimentalServiceGroups: experimentalServiceGroupsSchema,
       services: getServicesSchema(),
@@ -609,12 +706,67 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
     }
   }
 
+  for (const [pattern, fn] of Object.entries(config.functions ?? {})) {
+    if (fn.affinity !== undefined) {
+      return new NowBuildError({
+        code: 'FUNCTION_AFFINITY_REQUIRES_SERVICE',
+        message: `Function affinity can only be configured under a service. Move functions[${JSON.stringify(
+          pattern
+        )}].affinity into the relevant service's functions configuration.`,
+        link: 'https://vercel.com/docs/concepts/projects/project-configuration#functions',
+      });
+    }
+  }
+
+  const functionMaps = [
+    config.functions,
+    ...Object.values(config.services ?? {}).map(service => service.functions),
+    ...Object.values(config.experimentalServicesV2 ?? {}).map(
+      service => service.functions
+    ),
+  ];
+  for (const functions of functionMaps) {
+    for (const [pattern, fn] of Object.entries(functions ?? {})) {
+      const regions = [...new Set(fn.regions)];
+      if (
+        fn.affinity?.mode === 'strict' &&
+        (regions.includes('all') || regions.length > 1)
+      ) {
+        return new NowBuildError({
+          code: 'INVALID_FUNCTION_AFFINITY_REGIONS',
+          message: `Function affinity mode "strict" requires at most one statically configured region. Update \`functions[${JSON.stringify(
+            pattern
+          )}].regions\` to contain a single region.`,
+          link: 'https://vercel.com/docs/concepts/projects/project-configuration#functions',
+        });
+      }
+    }
+  }
+
+  if (config.proxy) {
+    const proxyError = validateProxyConfig(config.proxy);
+    if (proxyError) {
+      return new NowBuildError({
+        code: proxyError.code.toUpperCase(),
+        message: proxyError.message,
+      });
+    }
+  }
+
   if (config.functions && config.builds) {
     return new NowBuildError({
       code: 'FUNCTIONS_AND_BUILDS',
       message:
         'The `functions` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
       link: 'https://vercel.link/functions-and-builds',
+    });
+  }
+
+  if (config.proxy && config.builds) {
+    return new NowBuildError({
+      code: 'PROXY_AND_BUILDS',
+      message:
+        'The `proxy` property cannot be used with the `builds` property. Remove `builds` to use an explicit proxy entrypoint.',
     });
   }
 

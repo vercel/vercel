@@ -47,10 +47,13 @@ import { getConfig, type BaseFunctionConfig } from '@vercel/static-config';
 import { Register, register } from './typescript';
 import { generateProjectManifest } from './diagnostics';
 import {
-  validateConfiguredRuntime,
+  edgeMiddlewareDeprecationWarning,
   entrypointToOutputPath,
   getRegExpFromMatchers,
   isEdgeRuntime,
+  resolveMiddlewareMatcher,
+  resolveMiddlewareRuntime,
+  validateMiddlewareRuntime,
 } from './utils';
 
 interface DownloadOptions {
@@ -88,6 +91,7 @@ async function downloadInstallAndBundle({
     lockfilePath,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
     turboSupportsCorepackHome,
   } = await scanParentDirs(entrypointFsDirname, true);
 
@@ -95,6 +99,8 @@ async function downloadInstallAndBundle({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
+    nodeVersion,
     env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -189,17 +195,21 @@ async function compile(
   }
 
   let tsCompile: Register;
-  function compileTypeScript(path: string, source: string): string {
+  async function compileTypeScript(
+    path: string,
+    source: string
+  ): Promise<string> {
     const relPath = relative(baseDir, path);
     if (!tsCompile) {
       tsCompile = register({
         basePath: workPath, // The base is the same as root now.json dir
         project: path, // Resolve tsconfig.json from entrypoint dir
+        rootDir: baseDir,
         files: true, // Include all files such as global `.d.ts`
         nodeVersionMajor: nodeVersion.major,
       });
     }
-    const { code, map } = tsCompile(source, path);
+    const { code, map } = await tsCompile(source, path);
     tsCompiled.add(relPath);
     preparedFiles[renameTStoJS(relPath) + '.map'] = new FileBlob({
       data: JSON.stringify(map),
@@ -278,7 +288,7 @@ async function compile(
             fsPath.endsWith('.mts') ||
             fsPath.endsWith('.cts')
           ) {
-            source = compileTypeScript(fsPath, source.toString());
+            source = await compileTypeScript(fsPath, source.toString());
           }
 
           if (!entry) {
@@ -435,6 +445,7 @@ export const build = async ({
   config = {},
   meta = {},
   service,
+  span,
   considerBuildCommand = false,
   entrypointCallback,
   checks = () => {},
@@ -519,15 +530,34 @@ export const build = async ({
   }
 
   const isMiddleware = config.middleware === true;
-  let isEdgeFunction = isMiddleware;
 
   const project = new Project();
-  const staticConfig = getConfig(project, entrypointPath);
+  const staticConfig = getConfig(project, entrypointPath, undefined, span);
 
   const runtime = staticConfig?.runtime;
-  validateConfiguredRuntime(runtime, entrypoint);
+  validateMiddlewareRuntime(
+    runtime,
+    entrypoint,
+    isMiddleware ? config.middlewareRuntime : undefined
+  );
 
-  if (runtime) {
+  let isEdgeFunction = false;
+  if (isMiddleware) {
+    const middleware = resolveMiddlewareRuntime({
+      configuredRuntime: runtime,
+      middlewareRuntime: config.middlewareRuntime,
+      projectCreatedAt: config.projectSettings?.createdAt,
+      isDev: meta.isDev,
+      env: process.env,
+    });
+    isEdgeFunction = middleware.runtime === 'edge';
+    debug(
+      `Middleware runtime for "${entrypoint}": ${middleware.runtime} (${middleware.reason})`
+    );
+    if (isEdgeFunction) {
+      console.warn(edgeMiddlewareDeprecationWarning(entrypoint));
+    }
+  } else if (runtime) {
     isEdgeFunction = isEdgeRuntime(runtime);
   }
 
@@ -558,14 +588,19 @@ export const build = async ({
   // Add a `route` for Middleware
   if (isMiddleware) {
     // Middleware is a catch-all for all paths unless a `matcher` property is defined
-    const src = getRegExpFromMatchers(staticConfig?.matcher);
+    const matcher = resolveMiddlewareMatcher(
+      config.middlewareMatcher,
+      staticConfig?.matcher,
+      entrypoint
+    );
+    const src = getRegExpFromMatchers(matcher);
 
     const middlewareRawSrc: string[] = [];
-    if (staticConfig?.matcher) {
-      if (Array.isArray(staticConfig.matcher)) {
-        middlewareRawSrc.push(...staticConfig.matcher);
+    if (matcher) {
+      if (Array.isArray(matcher)) {
+        middlewareRawSrc.push(...matcher);
       } else {
-        middlewareRawSrc.push(staticConfig.matcher as string);
+        middlewareRawSrc.push(matcher as string);
       }
     }
 

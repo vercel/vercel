@@ -1,1 +1,1 @@
-framework=gin version=go1.26.1 RANDOMNESS_PLACEHOLDER
+framework=gin RANDOMNESS_PLACEHOLDER

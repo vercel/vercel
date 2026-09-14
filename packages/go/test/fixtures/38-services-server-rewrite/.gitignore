@@ -1,0 +1,4 @@
+.vercel
+.gocache/
+.gomodcache/
+.gopath/

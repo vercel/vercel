@@ -26,7 +26,7 @@ vercel remove my-app --safe          # skip aliased deployments
 ## Teams
 
 ```bash
-vercel whoami                        # current user and team
+vercel whoami --format json          # current user and effective team
 vercel teams ls                      # list teams
 vercel teams switch                  # interactive team picker
 vercel teams switch my-team          # switch by slug
@@ -38,7 +38,7 @@ vercel teams invite user@example.com # invite member
 Use these commands when the user has not specified a team or project and the task is read-only:
 
 ```bash
-vercel whoami
+vercel whoami --format json
 vercel teams ls --format json
 vercel project ls --scope <team-slug> --format json
 vercel list <project-name> --scope <team-slug> --status READY --format json

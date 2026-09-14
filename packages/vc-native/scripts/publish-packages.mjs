@@ -36,7 +36,10 @@ for (const packageDir of packageDirs) {
     continue;
   }
 
-  const args = ['publish', packageDir, '--access', 'public', '--provenance'];
+  // No --provenance: npm provenance requires a public source repo; publishes
+  // now come from vercel/vercel-internal (private). Trusted publishing (OIDC)
+  // still authenticates without provenance attestations.
+  const args = ['publish', packageDir, '--access', 'public'];
   if (tag) {
     args.push('--tag', tag);
   }

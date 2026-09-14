@@ -1,5 +1,15 @@
 import { getVercelOidcToken } from '@vercel/oidc';
-import type { ConnectTokenParams } from './token.js';
+import {
+  isDetachedInteractiveAuth,
+  validateCallbackUrl,
+  validateWebhookUrl,
+} from './internal/url-validation.js';
+import { withDefaultScopes } from './internal/default-scopes.js';
+import { resolveBaseUrl } from './internal/base-url.js';
+import {
+  createConnectErrorFromResponse,
+  type ConnectTokenParams,
+} from './token.js';
 
 export interface ConnectAuthorizationOptions {
   vercelToken?: string;
@@ -7,6 +17,14 @@ export interface ConnectAuthorizationOptions {
   webhook?: string;
   deviceCode?: boolean;
   expiresInMs?: number;
+  /** OAuth prompt value to pass to the connector's authorization server. */
+  prompt?: string;
+  /**
+   * Region to send the request to, e.g. `sfo1`. Defaults to the
+   * `VERCEL_REGION` environment variable; override it to target a
+   * different region.
+   */
+  region?: string;
 }
 
 export interface ConnectAuthorizationResponse {
@@ -40,9 +58,6 @@ export interface ConnectAuthorizationResponse {
   };
 }
 
-const DETACHED_INTERACTIVE_AUTH_MODE = 'detached';
-const INTERACTIVE_AUTH_MODE_ENV = 'VERCEL_CONNECT_INTERACTIVE_AUTH_MODE';
-
 export async function startAuthorization(
   connector: string,
   params: ConnectTokenParams,
@@ -51,8 +66,7 @@ export async function startAuthorization(
   if (!connector) {
     throw new Error('connector is required');
   }
-  const detachedInteractiveAuth =
-    process.env[INTERACTIVE_AUTH_MODE_ENV] === DETACHED_INTERACTIVE_AUTH_MODE;
+  const detachedInteractiveAuth = isDetachedInteractiveAuth();
   if (!detachedInteractiveAuth && options?.callbackUrl !== undefined) {
     validateCallbackUrl(options.callbackUrl);
   }
@@ -61,7 +75,8 @@ export async function startAuthorization(
   }
 
   const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
-  const endpoint = `https://api.vercel.com/v1/connect/authorize/${encodeURIComponent(connector)}`;
+  const baseUrl = resolveBaseUrl(options);
+  const endpoint = `${baseUrl}/v1/connect/authorize/${encodeURIComponent(connector)}`;
   const deviceCode =
     options?.deviceCode ?? (detachedInteractiveAuth ? true : undefined);
   const returnUrl =
@@ -70,7 +85,7 @@ export async function startAuthorization(
       : {};
 
   const body = {
-    ...params,
+    ...withDefaultScopes(params),
     ...returnUrl,
     ...(options?.webhook !== undefined && { webhook: options.webhook }),
     ...(deviceCode !== undefined && {
@@ -79,6 +94,7 @@ export async function startAuthorization(
     ...(options?.expiresInMs !== undefined && {
       expiresInMs: options.expiresInMs,
     }),
+    ...(options?.prompt !== undefined && { prompt: options.prompt }),
   };
 
   const response = await fetch(endpoint, {
@@ -92,51 +108,12 @@ export async function startAuthorization(
   });
 
   if (!response.ok) {
-    let errorText: string | undefined;
-    try {
-      errorText = await response.text();
-    } catch {}
-    throw new Error(
-      `Failed to start authorization: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`
+    throw await createConnectErrorFromResponse(
+      response,
+      'Failed to start authorization'
     );
   }
 
   const data: ConnectAuthorizationResponse = await response.json();
   return data;
-}
-
-function validateCallbackUrl(value: string): void {
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new Error(`Invalid callbackUrl: ${value}`);
-  }
-  if (url.protocol === 'https:') return;
-  if (url.protocol === 'http:' && isLocalHttpCallbackHostname(url.hostname)) {
-    return;
-  }
-  throw new Error(
-    `callbackUrl must be https://, http://localhost, or http://*.localhost, got: ${value}`
-  );
-}
-
-function isLocalHttpCallbackHostname(hostname: string): boolean {
-  return (
-    hostname === 'localhost' ||
-    hostname.endsWith('.localhost') ||
-    hostname === '127.0.0.1'
-  );
-}
-
-function validateWebhookUrl(value: string): void {
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new Error(`Invalid webhook URL: ${value}`);
-  }
-  if (url.protocol !== 'https:') {
-    throw new Error(`webhook must be https://, got: ${value}`);
-  }
 }

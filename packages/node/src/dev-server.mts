@@ -15,7 +15,12 @@ import {
   createServerlessEventHandler,
   HTTP_METHODS,
 } from './serverless-functions/serverless-handler.mjs';
-import { isEdgeRuntime, logError, validateConfiguredRuntime } from './utils.js';
+import {
+  isEdgeRuntime,
+  logError,
+  resolveMiddlewareRuntime,
+  validateConfiguredRuntime,
+} from './utils.js';
 import { init, parse as parseEsm } from 'es-module-lexer';
 import { parse as parseCjs } from 'cjs-module-lexer';
 import { getConfig } from '@vercel/static-config';
@@ -29,7 +34,10 @@ const parseConfig = (entryPointPath: string) =>
 async function createEventHandler(
   entrypoint: string,
   config: Config,
-  options: { shouldAddHelpers: boolean }
+  options: {
+    shouldAddHelpers: boolean;
+    buildEnv: Record<string, string | undefined>;
+  }
 ): Promise<{
   handler: (request: IncomingMessage) => Promise<VercelProxyResponse>;
   onExit: (() => Promise<void>) | undefined;
@@ -54,8 +62,15 @@ async function createEventHandler(
 
   const isMiddleware = config.middleware === true;
 
-  // middleware is edge by default, otherwise respect the runtime
-  const useEdgeRuntime = (isMiddleware && !runtime) || isEdgeRuntime(runtime);
+  const useEdgeRuntime = isMiddleware
+    ? resolveMiddlewareRuntime({
+        configuredRuntime: runtime,
+        middlewareRuntime: config.middlewareRuntime,
+        projectCreatedAt: config.projectSettings?.createdAt,
+        isDev: true,
+        env: { ...process.env, ...options.buildEnv },
+      }).runtime === 'edge'
+    : isEdgeRuntime(runtime);
 
   if (useEdgeRuntime) {
     return createEdgeEventHandler(
@@ -117,6 +132,7 @@ async function main() {
   try {
     const result = await createEventHandler(entrypoint!, config, {
       shouldAddHelpers,
+      buildEnv,
     });
     handleEvent = result.handler;
     onExit = result.onExit;

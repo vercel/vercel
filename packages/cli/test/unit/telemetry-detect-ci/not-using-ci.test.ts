@@ -1,9 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import './test/mocks/matchers';
+import '../../mocks/matchers';
 import { TelemetryEventStore } from '../../../src/util/telemetry';
 import { RootTelemetryClient } from '../../../src/util/telemetry/root';
-
-import './test/mocks/matchers';
 
 vi.mock('ci-info', () => {
   return {

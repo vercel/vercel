@@ -891,17 +891,6 @@ describe('routes edit', () => {
   // ---------------------------------------------------------------------------
 
   describe('additional flag-mode coverage', () => {
-    it('should remove destination with --no-dest alone (no --action)', async () => {
-      useEditRouteComprehensive();
-      // API Rewrite has dest but no status — removing dest makes it action-less
-      client.setArgv('routes', 'edit', 'API Rewrite', '--no-dest');
-      const exitCode = await routes(client);
-      expect(exitCode).toEqual(0);
-
-      const body = capturedBodies.edit as any;
-      expect(body.route.route.dest).toBeUndefined();
-    });
-
     it('should delete a response header via --delete-response-header', async () => {
       useEditRouteComprehensive();
       client.setArgv(

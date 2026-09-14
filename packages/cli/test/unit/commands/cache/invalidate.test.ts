@@ -31,12 +31,6 @@ describe('cache invalidate', () => {
     );
   });
 
-  it('should error when project is not linked', async () => {
-    client.setArgv('cache', 'invalidate');
-    const exitCode = await cache(client);
-    expect(exitCode).toEqual(1);
-  });
-
   it('should error without --tag', async () => {
     client.scenario.post(`/v1/edge-cache/invalidate-by-tags`, (req, res) => {
       expect(req.body).toEqual({

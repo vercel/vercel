@@ -1,16 +1,14 @@
 import { frameworkList } from '@vercel/frameworks';
-import type {
-  ExperimentalService,
-  ExperimentalServiceV2,
-  Service,
-  ServiceDetectionError,
-} from '@vercel/fs-detectors';
+import type { ServiceDetectionError } from '@vercel-internals/service-topology';
 import {
   getServiceQueueTopics,
   isExperimentalServiceV2,
   isQueueTriggeredService,
   isScheduleTriggeredService,
   isWorkflowTriggeredService,
+  type ExperimentalService,
+  type ExperimentalServiceV2,
+  type Service,
 } from '@vercel/build-utils';
 import output from '../../output-manager';
 import table from '../output/table';

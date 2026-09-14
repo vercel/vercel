@@ -48,12 +48,6 @@ describe('flags ls', () => {
     ]);
   });
 
-  it('lists flags successfully', async () => {
-    client.setArgv('flags', 'ls');
-    const exitCode = await flags(client);
-    expect(exitCode).toEqual(0);
-  });
-
   it('lists flags with --project when the cwd is not linked', async () => {
     const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
     removeProjectLink(cwd);

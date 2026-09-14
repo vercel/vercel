@@ -40,7 +40,7 @@ describe('clientSegmentCache prerender headers', () => {
     }
   });
 
-  it('should surface hasPostponed as a tri-state on Prerender outputs', async () => {
+  it('should surface initialMetadata on Prerender outputs', async () => {
     const fixturePath = path.join(__dirname, 'segment-cache-cc');
 
     const {
@@ -52,88 +52,76 @@ describe('clientSegmentCache prerender headers', () => {
       expect(output[key].type).toBe('Prerender');
       return output[key];
     };
-
-    // App-router PPR route that postpones (Suspense around an async component
-    // reading `headers()`): the static shell is generated and the dynamic hole
-    // is postponed, so its `.meta` carries a postponed state.
-    expect(prerender('dynamic-suspense').hasPostponed).toBe(true);
-    // The signal mirrors onto the route's data (`.rsc`) and segment outputs.
-    expect(prerender('dynamic-suspense.rsc').hasPostponed).toBe(true);
-    expect(
-      prerender('dynamic-suspense.segments/_full.segment.rsc').hasPostponed
-    ).toBe(true);
-
-    // `cacheComponents: true` route that fully prerenders (no postpone). PPR
-    // machinery still exists, but `hasPostponed` distinguishes it as static.
-    expect(prerender('index').hasPostponed).toBe(false);
-    expect(prerender('index.rsc').hasPostponed).toBe(false);
-    expect(prerender('careers').hasPostponed).toBe(false);
-    // A prerendered dynamic param (from `generateStaticParams`) is static too.
-    expect(prerender('careers/foobar-1').hasPostponed).toBe(false);
-
-    // The `[slug]` dynamic fallback shell postpones, matching existing PPR
-    // fallback machinery.
-    expect(prerender('careers/[slug]').hasPostponed).toBe(true);
-    expect(prerender('careers/[slug].rsc').hasPostponed).toBe(true);
-
-    // Pages-router route: `hasPostponed` is an app-router signal, so it is left
-    // `undefined` on both the HTML prerender and its data route.
-    expect(prerender('legacy').hasPostponed).toBeUndefined();
-    expect(
-      prerender('_next/data/' + buildId(output) + '/legacy.json').hasPostponed
-    ).toBeUndefined();
-  });
-
-  it('should surface hasFallback, htmlSize and isDynamicRoute on Prerender outputs', async () => {
-    const fixturePath = path.join(__dirname, 'segment-cache-cc');
-
-    const {
-      buildResult: { output },
-    } = await runBuildLambda(fixturePath);
-
-    const prerender = key => {
-      expect(output[key], `expected output[${key}] to exist`).toBeDefined();
-      expect(output[key].type).toBe('Prerender');
-      return output[key];
+    // `htmlSize` is a byte count that shifts with every Next.js release, so
+    // assert on its presence rather than its value.
+    const initialMetadata = key => {
+      const actual = prerender(key).initialMetadata;
+      expect(actual, `expected initialMetadata on ${key}`).toBeDefined();
+      const { htmlSize, ...rest } = actual;
+      return { ...rest, htmlSize: typeof htmlSize };
     };
 
-    // Concrete prerenders (manifest `routes`): not dynamic templates, so
-    // `isDynamicRoute` is `false` and `hasFallback` doesn't apply (`undefined`).
-    // Their HTML shell exists on disk, so `htmlSize` is a byte count.
+    // `cacheComponents: true` app routes that fully prerender: the whole
+    // response is in the shell and nothing is left to compute per-request.
     for (const key of ['index', 'careers', 'careers/foobar-1']) {
-      expect(prerender(key).isDynamicRoute).toBe(false);
-      expect(prerender(key).hasFallback).toBeUndefined();
-      expect(typeof prerender(key).htmlSize).toBe('number');
-      expect(prerender(key).htmlSize).toBeGreaterThan(0);
+      expect(initialMetadata(key)).toEqual({
+        compute: 'static',
+        htmlSize: 'number',
+      });
     }
 
-    // PPR route that postpones but is still a concrete prerender.
-    expect(prerender('dynamic-suspense').isDynamicRoute).toBe(false);
-    expect(prerender('dynamic-suspense').hasFallback).toBeUndefined();
-    expect(typeof prerender('dynamic-suspense').htmlSize).toBe('number');
+    // Suspense around an async component reading `headers()`: the shell is
+    // prerendered and the dynamic hole is postponed, so the request resumes
+    // the response on the server.
+    expect(initialMetadata('dynamic-suspense')).toEqual({
+      compute: 'resuming',
+      htmlSize: 'number',
+    });
 
-    // The two route-level booleans mirror onto the data (`.rsc`) outputs, but
-    // `htmlSize` is HTML-only — the `.rsc` entry isn't an HTML shell.
-    expect(prerender('dynamic-suspense.rsc').isDynamicRoute).toBe(false);
-    expect(prerender('dynamic-suspense.rsc').hasFallback).toBeUndefined();
-    expect(prerender('dynamic-suspense.rsc').htmlSize).toBeUndefined();
+    // `[slug]` is a dynamic template with a prerendered fallback shell that
+    // postponed work, so serving it resumes on the server too.
+    expect(initialMetadata('careers/[slug]')).toEqual({
+      compute: 'resuming',
+      htmlSize: 'number',
+    });
 
-    // `[slug]` dynamic template with a static fallback shell: it lives in the
-    // manifest `dynamicRoutes`/`fallbackRoutes` section, so `isDynamicRoute` is
-    // `true` and `hasFallback` is `true`.
-    expect(prerender('careers/[slug]').isDynamicRoute).toBe(true);
-    expect(prerender('careers/[slug]').hasFallback).toBe(true);
-    expect(typeof prerender('careers/[slug]').htmlSize).toBe('number');
-    expect(prerender('careers/[slug].rsc').isDynamicRoute).toBe(true);
-    expect(prerender('careers/[slug].rsc').hasFallback).toBe(true);
-    expect(prerender('careers/[slug].rsc').htmlSize).toBeUndefined();
+    // Pages-router ISR route: fully static per request, and there is no app
+    // HTML shell to measure.
+    expect(initialMetadata('legacy')).toEqual({
+      compute: 'static',
+      htmlSize: 'undefined',
+    });
 
-    // Pages-router route: not from the app `dynamicRoutes` section, and there's
-    // no app `.html` shell, so `isDynamicRoute` is `false` and both
-    // `hasFallback` and `htmlSize` are `undefined`.
-    expect(prerender('legacy').isDynamicRoute).toBe(false);
-    expect(prerender('legacy').hasFallback).toBeUndefined();
-    expect(prerender('legacy').htmlSize).toBeUndefined();
+    // Next.js also emits `routeType` and `response`, but the platform
+    // consumes `compute` and `htmlSize` only — the rest must not ride
+    // along into the Prerender output.
+    expect(prerender('careers/[slug]').initialMetadata).not.toHaveProperty(
+      'routeType'
+    );
+    expect(prerender('careers/[slug]').initialMetadata).not.toHaveProperty(
+      'response'
+    );
+
+    // A route in the manifest's `notFoundRoutes` gets no taxonomy from
+    // Next.js, and must not be given a synthesized one.
+    expect(prerender('missing').initialMetadata).toBeUndefined();
+
+    // Only the primary output of a route group carries the metadata — the
+    // sibling data, prefetch and segment prerenders are grouped back to it
+    // downstream via `sourcePath`, and must not each contribute a row.
+    for (const key of [
+      'index.rsc',
+      'dynamic-suspense.rsc',
+      'dynamic-suspense.segments/_full.segment.rsc',
+      'careers/[slug].rsc',
+      'careers/[slug].segments/_tree.segment.rsc',
+      '_next/data/' + buildId(output) + '/legacy.json',
+    ]) {
+      expect(
+        prerender(key).initialMetadata,
+        `expected no initialMetadata on ${key}`
+      ).toBeUndefined();
+    }
   });
 });
 

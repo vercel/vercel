@@ -8,9 +8,11 @@ vi.mock('@vercel/oidc', () => ({
 
 describe('createConnectWebhookVerifier', () => {
   beforeEach(() => {
-    vi.mocked(verifyVercelOidcToken).mockResolvedValue(
-      {} as Awaited<ReturnType<typeof verifyVercelOidcToken>>
-    );
+    vi.mocked(verifyVercelOidcToken)
+      .mockReset()
+      .mockResolvedValue(
+        {} as Awaited<ReturnType<typeof verifyVercelOidcToken>>
+      );
   });
 
   afterEach(() => {
@@ -24,6 +26,21 @@ describe('createConnectWebhookVerifier', () => {
     });
 
     await expect(verifier(request, '{}')).resolves.toBe(true);
+    expect(verifyVercelOidcToken).toHaveBeenCalledWith(
+      'connect_oidc_token',
+      undefined
+    );
+  });
+
+  it('accepts a raw byte body', async () => {
+    const verifier = createConnectWebhookVerifier();
+    const request = new Request('https://example.com/api/webhooks/linq', {
+      headers: { authorization: 'Bearer connect_oidc_token' },
+    });
+
+    await expect(verifier(request, new Uint8Array([123, 125]))).resolves.toBe(
+      true
+    );
     expect(verifyVercelOidcToken).toHaveBeenCalledWith(
       'connect_oidc_token',
       undefined

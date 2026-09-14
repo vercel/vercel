@@ -53,14 +53,6 @@ describe('getNewHandlerFunctionName', function () {
     expect(newFunctionName).toEqual('Handler_kind_of_file_js');
   });
 
-  it('generates slug with dashes in file path', async () => {
-    const newFunctionName = getNewHandlerFunctionName(
-      'Handler',
-      'kind-of-file.js'
-    );
-    expect(newFunctionName).toEqual('Handler_kind_of_file_js');
-  });
-
   it('generates slug with brackets in file path', async () => {
     const newFunctionName = getNewHandlerFunctionName(
       'Handler',

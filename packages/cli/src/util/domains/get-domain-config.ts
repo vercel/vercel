@@ -5,7 +5,7 @@ import { isAPIError } from '../errors-ts';
 export async function getDomainConfig(client: Client, domainName: string) {
   try {
     const config = await client.fetch<DomainConfig>(
-      `/v4/domains/${domainName}/config`
+      `/v6/domains/${domainName}/config`
     );
 
     return config;

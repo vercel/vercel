@@ -8,7 +8,21 @@ import type {
   Segment,
   SegmentMembershipOperation,
   UpdateFlagRequest,
+  StaleFlag,
 } from '../../src/util/flags/types';
+
+type FlagWithMockEtag = Flag & {
+  etag?: string;
+  ifMatch?: string;
+};
+
+function getFlagEtag(flag: FlagWithMockEtag): string {
+  return flag.etag ?? `"${flag.id}-${flag.revision}"`;
+}
+
+function getExpectedIfMatch(flag: FlagWithMockEtag): string {
+  return flag.ifMatch ?? getFlagEtag(flag);
+}
 
 export const defaultFlagSettings: FlagSettings = {
   typeName: 'settings',
@@ -31,6 +45,10 @@ export const defaultFlagSettings: FlagSettings = {
         {
           key: 'userId',
           type: 'string',
+        },
+        {
+          key: 'signupAt',
+          type: 'timestamp',
         },
       ],
     },
@@ -141,6 +159,17 @@ export const defaultFlags: Flag[] = [
     revision: 2,
     seed: 67890,
     typeName: 'flag',
+  },
+];
+
+export const defaultStaleFlags: StaleFlag[] = [
+  {
+    slug: 'my-feature',
+    reason: 'unused',
+  },
+  {
+    slug: 'another-feature',
+    reason: 'redundant',
   },
 ];
 
@@ -326,7 +355,8 @@ export function useFlags(
   segmentsList: Segment[] = defaultSegments,
   onUpdateFlag?: (request: UpdateFlagRequest) => void,
   onGetSettings?: () => void,
-  versionsList: FlagVersion[] = defaultFlagVersions
+  versionsList: FlagVersion[] = defaultFlagVersions,
+  staleFlagCandidates: Array<StaleFlag | null> = defaultStaleFlags
 ) {
   // Get flag settings
   client.scenario.get(
@@ -415,6 +445,25 @@ export function useFlags(
     }
   );
 
+  client.scenario.get(
+    '/v1/projects/:projectId/feature-flags/stale-flags',
+    (req, res) => {
+      const limit = req.query.limit
+        ? Number(req.query.limit)
+        : staleFlagCandidates.length;
+      const offset = req.query.cursor ? Number(req.query.cursor) : 0;
+      const candidatePage = staleFlagCandidates.slice(offset, offset + limit);
+      const page = candidatePage.filter(
+        (flag): flag is StaleFlag => flag !== null
+      );
+      const nextOffset = offset + limit;
+      const next =
+        nextOffset < staleFlagCandidates.length ? String(nextOffset) : null;
+
+      res.json({ data: page, pagination: { next } });
+    }
+  );
+
   // Get single flag
   client.scenario.get(
     '/v1/projects/:projectId/feature-flags/flags/:flagIdOrSlug',
@@ -424,7 +473,18 @@ export function useFlags(
         f => f.id === flagIdOrSlug || f.slug === flagIdOrSlug
       );
       if (flag) {
-        res.json(flag);
+        const etag = getFlagEtag(flag as FlagWithMockEtag);
+        if (etag) {
+          res.setHeader('ETag', etag);
+          res.json(flag);
+        } else {
+          // Express auto-generates a weak ETag inside res.json() whenever the
+          // header is unset, so write the body directly to simulate a server
+          // that omits the ETag header (a flag with `etag: ''` opts in).
+          res.status(200);
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(flag));
+        }
       } else {
         res.status(404).json({ error: { message: 'Flag not found' } });
       }
@@ -471,6 +531,21 @@ export function useFlags(
       if (flagIndex !== -1) {
         onUpdateFlag?.(req.body as UpdateFlagRequest);
         const flag = flagsList[flagIndex];
+        const ifMatch = req.headers['if-match'];
+        const expectedIfMatch = getExpectedIfMatch(flag as FlagWithMockEtag);
+
+        if (
+          ifMatch &&
+          (Array.isArray(ifMatch) ? ifMatch[0] : ifMatch) !== expectedIfMatch
+        ) {
+          res.status(412).json({
+            error: {
+              message: 'Precondition Failed',
+            },
+          });
+          return;
+        }
+
         const updatedFlag = {
           ...flag,
           ...req.body,
@@ -494,6 +569,7 @@ export function useFlags(
           }
         }
         flagsList[flagIndex] = updatedFlag;
+        res.setHeader('ETag', getFlagEtag(updatedFlag as FlagWithMockEtag));
         res.json(updatedFlag);
       } else {
         res.status(404).json({ error: { message: 'Flag not found' } });

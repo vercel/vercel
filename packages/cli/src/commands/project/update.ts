@@ -1,129 +1,90 @@
-import { frameworkList, type Framework } from '@vercel/frameworks';
-import type { JSONObject, Project } from '@vercel-internals/types';
+import chalk from 'chalk';
+import type { Project } from '@vercel-internals/types';
 import type Client from '../../util/client';
 import didYouMean from '../../util/did-you-mean';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { validateJsonOutput } from '../../util/output-format';
 import {
   buildCommandWithGlobalFlags,
   exitWithNonInteractiveError,
+  outputActionRequired,
   outputAgentError,
+  shouldEmitNonInteractiveCommandError,
 } from '../../util/agent-output';
+import {
+  AGENT_ACTION,
+  AGENT_REASON,
+  AGENT_STATUS,
+} from '../../util/agent-output-constants';
+import { canPrompt } from '../../util/can-prompt';
+import { quoteArg } from '../../util/flags/quote-arg';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
+import {
+  parseSandboxRegionList,
+  validateSandboxConfig,
+} from '../../util/projects/sandbox-config';
+import getScope from '../../util/get-scope';
 import { printAlignedLabel } from '../../util/output/print-aligned-label';
+import { stripSensitiveAuthArgs } from '../../util/redact-args';
+import getTeamByIdOrSlug from '../../util/teams/get-team-by-id-or-slug';
 import { ProjectUpdateTelemetryClient } from '../../util/telemetry/commands/project/update';
 import output from '../../output-manager';
 import { updateSubcommand } from './command';
-
-const OTHER_FRAMEWORK_SLUG = 'other';
-const MAX_SETTING_LENGTH = 256;
-const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/;
-const frameworkSlugs = frameworkList.map(
-  framework => framework.slug ?? OTHER_FRAMEWORK_SLUG
-);
-
-const buildSettingDefinitions = [
-  {
-    key: 'buildCommand',
-    flag: '--build-command',
-    autoDetect: 'build-command',
-    label: 'Build Command',
-  },
-  {
-    key: 'devCommand',
-    flag: '--dev-command',
-    autoDetect: 'dev-command',
-    label: 'Dev Command',
-  },
-  {
-    key: 'installCommand',
-    flag: '--install-command',
-    autoDetect: 'install-command',
-    label: 'Install Command',
-  },
-  {
-    key: 'outputDirectory',
-    flag: '--output-directory',
-    autoDetect: 'output-directory',
-    label: 'Output Directory',
-  },
-] as const;
-
-type BuildSettingDefinition = (typeof buildSettingDefinitions)[number];
-type BuildSettingKey = BuildSettingDefinition['key'];
-type AutoDetectSetting = BuildSettingDefinition['autoDetect'];
-type ProjectSettingKey = 'framework' | BuildSettingKey;
-
-interface ProjectSettingsUpdate {
-  framework?: string | null;
-  buildCommand?: string | null;
-  devCommand?: string | null;
-  installCommand?: string | null;
-  outputDirectory?: string | null;
-}
-
-const settingOrder: readonly ProjectSettingKey[] = [
-  'framework',
-  ...buildSettingDefinitions.map(setting => setting.key),
-];
-const autoDetectSettings = buildSettingDefinitions.map(
-  setting => setting.autoDetect
-);
-const settingLabels: Record<ProjectSettingKey, string> = {
-  framework: 'Framework',
-  buildCommand: 'Build Command',
-  devCommand: 'Dev Command',
-  installCommand: 'Install Command',
-  outputDirectory: 'Output Directory',
-};
-
-function resolveFramework(input: string): Framework | undefined {
-  const slug = input.trim().toLowerCase();
-  return frameworkList.find(
-    framework => (framework.slug ?? OTHER_FRAMEWORK_SLUG) === slug
-  );
-}
-
-function formatFramework(slug: string | null): string {
-  const framework = frameworkList.find(item => item.slug === slug);
-  if (!framework) {
-    return slug ?? OTHER_FRAMEWORK_SLUG;
-  }
-  return `${framework.name} (${framework.slug ?? OTHER_FRAMEWORK_SLUG})`;
-}
-
-function formatSettingValue(
-  key: ProjectSettingKey,
-  value: string | null
-): string {
-  if (key === 'framework') {
-    return formatFramework(value);
-  }
-  if (value === null) {
-    return 'Auto';
-  }
-  return value === '' ? '""' : value;
-}
-
-function getCurrentSetting(
-  project: Project,
-  key: ProjectSettingKey
-): string | null {
-  return project[key] ?? null;
-}
-
-function hasSetting(
-  settings: ProjectSettingsUpdate,
-  key: ProjectSettingKey
-): boolean {
-  return Object.prototype.hasOwnProperty.call(settings, key);
-}
+import {
+  advancedSettingDefinitions,
+  autoDetectSettings,
+  buildSettingDefinitions,
+  displayAdvanced,
+  frameworkSlugs,
+  hasSetting,
+  parseAdvanced,
+  parseAutoDetectSettings,
+  resolveFramework,
+  settingOrder,
+  validateSettingValue,
+  type AutoDetectSetting,
+  type ProjectSettingsUpdate,
+  type ProvidedAdvancedSetting,
+} from './update-setting-definitions';
+import { computeSettingsChanges, patchProjectSettings } from './update-changes';
+import { printChangePreview, writeUpdateResult } from './update-output';
 
 function getUpdateCommand(framework = '<slug>') {
   return `project update <name> --framework ${framework}`;
+}
+
+function buildUpdateRetryCommand(
+  client: Client,
+  { interactive, withYes }: { interactive: boolean; withYes: boolean }
+): string {
+  const args = stripSensitiveAuthArgs(client.argv.slice(2));
+  const nextArgs: string[] = [];
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index];
+    if (arg === '--yes' || arg === '-y') {
+      continue;
+    }
+    if (
+      interactive &&
+      (arg === '--non-interactive' || arg.startsWith('--non-interactive='))
+    ) {
+      if (
+        arg === '--non-interactive' &&
+        (args[index + 1] === 'true' || args[index + 1] === 'false')
+      ) {
+        index++;
+      }
+      continue;
+    }
+    nextArgs.push(arg);
+  }
+  if (withYes) {
+    nextArgs.push('--yes');
+  }
+  return getCommandNamePlain(nextArgs.map(quoteArg).join(' '));
 }
 
 function printUsageError(
@@ -152,70 +113,122 @@ function printUsageError(
   return exitCode;
 }
 
-function validateSettingValue(
-  definition: BuildSettingDefinition,
-  value: string
-): string | undefined {
-  if (value.length > MAX_SETTING_LENGTH) {
-    return `${definition.label} must be ${MAX_SETTING_LENGTH} characters or fewer.`;
-  }
-  if (CONTROL_CHARACTERS.test(value)) {
-    return `${definition.label} can't contain control characters.`;
-  }
-}
-
-function parseAutoDetectSettings(inputs: string[]): string[] {
-  return inputs.flatMap(input => input.split(',')).map(input => input.trim());
-}
-
-function writeResult({
-  changedSettings,
-  project,
-  previousSettings,
-  requestedSettings,
-  asJson,
-  client,
-}: {
-  changedSettings: ProjectSettingKey[];
-  project: Project;
-  previousSettings: ProjectSettingsUpdate;
-  requestedSettings: ProjectSettingsUpdate;
-  asJson: boolean;
-  client: Client;
-}) {
-  const changed = changedSettings.length > 0;
-  if (asJson) {
-    client.stdout.write(
-      `${JSON.stringify(
+function printPlanError(
+  client: Client,
+  message: string,
+  teamOwned: boolean
+): number {
+  const nextCommand = teamOwned ? 'buy pro' : 'teams switch';
+  outputAgentError(
+    client,
+    {
+      status: AGENT_STATUS.ERROR,
+      reason: AGENT_REASON.PLAN_UPGRADE_REQUIRED,
+      message,
+      userActionRequired: true,
+      next: [
         {
-          changed,
-          changedSettings,
-          projectId: project.id,
-          projectName: project.name,
-          settings: requestedSettings,
+          command: buildCommandWithGlobalFlags(
+            client.argv,
+            nextCommand,
+            undefined,
+            { excludeFlags: ['--non-interactive', '--yes'] }
+          ),
+          when: teamOwned
+            ? 'Upgrade this team interactively'
+            : 'Switch to a Pro or Enterprise team',
         },
-        null,
-        2
-      )}\n`
-    );
+      ],
+    },
+    1
+  );
+  output.error(message);
+  output.log(
+    teamOwned
+      ? `Upgrade with ${getCommandName('buy pro')}.`
+      : `Switch teams with ${getCommandName('teams switch')}.`
+  );
+  return 1;
+}
+
+function printConfirmationRequiredError(
+  client: Client,
+  hasCostImpact: boolean
+): number {
+  const nextCommand = buildUpdateRetryCommand(client, {
+    interactive: hasCostImpact,
+    withYes: !hasCostImpact,
+  });
+  outputActionRequired(
+    client,
+    {
+      status: AGENT_STATUS.ACTION_REQUIRED,
+      reason: hasCostImpact
+        ? AGENT_REASON.INTERACTIVE_CONFIRMATION_REQUIRED
+        : AGENT_REASON.CONFIRMATION_REQUIRED,
+      action: AGENT_ACTION.CONFIRMATION_REQUIRED,
+      message: hasCostImpact
+        ? 'These project settings may affect charges and require interactive confirmation.'
+        : 'Updating project settings requires confirmation. Re-run with --yes to apply the changes.',
+      userActionRequired: hasCostImpact,
+      next: [
+        {
+          command: nextCommand,
+          when: hasCostImpact
+            ? 'Review and confirm the charge-sensitive settings in a terminal'
+            : 'Apply the requested settings without prompting',
+        },
+      ],
+    },
+    1
+  );
+  output.error(
+    hasCostImpact
+      ? 'Confirmation required. These settings may affect charges and must be confirmed in an interactive terminal.'
+      : 'Confirmation required. Re-run with --yes or in an interactive terminal.'
+  );
+  return 1;
+}
+
+function getSandboxValidationError(
+  project: Project,
+  requestedSettings: ProjectSettingsUpdate
+): string | undefined {
+  if (
+    !hasSetting(requestedSettings, 'sandboxRegion') &&
+    !hasSetting(requestedSettings, 'sandboxFailoverRegions')
+  ) {
     return;
   }
 
-  printAlignedLabel(changed ? 'Updated' : 'Unchanged', 'Project Settings', {
-    gutter: '✓',
-  });
-  printAlignedLabel('Project', project.name);
-  for (const key of settingOrder) {
-    if (!hasSetting(requestedSettings, key)) {
-      continue;
+  const mergedSandbox = { ...project.sandbox };
+  if (hasSetting(requestedSettings, 'sandboxRegion')) {
+    const region = requestedSettings.sandboxRegion;
+    if (region === null || region === undefined) {
+      delete mergedSandbox.region;
+    } else {
+      mergedSandbox.region = region;
     }
-    const previous = previousSettings[key] ?? null;
-    const next = requestedSettings[key] ?? null;
-    const value = changedSettings.includes(key)
-      ? `${formatSettingValue(key, previous)} → ${formatSettingValue(key, next)}`
-      : formatSettingValue(key, next);
-    printAlignedLabel(settingLabels[key], value);
   }
+  if (hasSetting(requestedSettings, 'sandboxFailoverRegions')) {
+    mergedSandbox.failoverRegions =
+      requestedSettings.sandboxFailoverRegions ?? [];
+  }
+  return validateSandboxConfig(mergedSandbox);
+}
+
+async function refreshProjectForNestedUpdate(
+  client: Client,
+  project: Project,
+  body: Record<string, unknown>
+): Promise<Project> {
+  if (body.resourceConfig === undefined && body.sandbox === undefined) {
+    return project;
+  }
+  return client.fetch<Project>(
+    `/v9/projects/${encodeURIComponent(project.id)}`,
+    { accountId: project.accountId }
+  );
 }
 
 export default async function update(
@@ -258,10 +271,22 @@ export default async function update(
   telemetry.trackCliOptionDevCommand(flags['--dev-command']);
   telemetry.trackCliOptionInstallCommand(flags['--install-command']);
   telemetry.trackCliOptionOutputDirectory(flags['--output-directory']);
+  telemetry.trackCliOptionRootDirectory(flags['--root-directory']);
   telemetry.trackCliOptionAutoDetect(
     flags['--auto-detect'] as [string] | undefined
   );
+  telemetry.trackCliOptionSandboxRegion(flags['--sandbox-region']);
+  telemetry.trackCliOptionSandboxFailoverRegions(
+    flags['--sandbox-failover-regions']
+  );
   telemetry.trackCliOptionFormat(flags['--format']);
+  telemetry.trackCliFlagJson(flags['--json']);
+  telemetry.trackCliFlagYes(flags['--yes']);
+  telemetry.trackCliOptionFluidCompute(flags['--fluid-compute']);
+  telemetry.trackCliOptionFunctionCpu(flags['--function-cpu']);
+  telemetry.trackCliOptionBuildMachine(flags['--build-machine']);
+  telemetry.trackCliOptionElasticConcurrency(flags['--elastic-concurrency']);
+  telemetry.trackCliOptionNodeVersion(flags['--node-version']);
 
   if (args.length > 1) {
     return printUsageError(
@@ -352,10 +377,47 @@ export default async function update(
     }
   }
 
-  if (settingOrder.every(key => !hasSetting(requestedSettings, key))) {
+  const sandboxRegionInput = flags['--sandbox-region'];
+  if (sandboxRegionInput !== undefined) {
+    const normalizedRegion = sandboxRegionInput.trim().toLowerCase();
+    requestedSettings.sandboxRegion =
+      normalizedRegion === '' ? null : normalizedRegion;
+  }
+
+  const sandboxFailoverInput = flags['--sandbox-failover-regions'];
+  if (sandboxFailoverInput !== undefined) {
+    requestedSettings.sandboxFailoverRegions =
+      parseSandboxRegionList(sandboxFailoverInput);
+  }
+
+  const providedAdvanced: ProvidedAdvancedSetting[] = [];
+  for (const definition of advancedSettingDefinitions) {
+    const raw = (flags as Record<string, unknown>)[definition.flag] as
+      | string
+      | undefined;
+    if (raw === undefined) {
+      continue;
+    }
+    const result = parseAdvanced(definition, raw);
+    if (!result.ok) {
+      return printUsageError(
+        client,
+        result.message,
+        1,
+        'invalid_arguments',
+        `project update <name> ${definition.flag} <value>`
+      );
+    }
+    providedAdvanced.push({ definition, value: result.value });
+  }
+
+  if (
+    settingOrder.every(key => !hasSetting(requestedSettings, key)) &&
+    providedAdvanced.length === 0
+  ) {
     return printUsageError(
       client,
-      'Provide at least one setting option: --framework, --build-command, --dev-command, --install-command, --output-directory, or --auto-detect.',
+      'Provide at least one setting option. Run "vercel project update --help" to see every available option.',
       2,
       'missing_arguments'
     );
@@ -375,31 +437,136 @@ export default async function update(
     return 1;
   }
 
-  const previousSettings: ProjectSettingsUpdate = {};
-  const changedSettings: ProjectSettingKey[] = [];
-  const changedUpdates: ProjectSettingsUpdate = {};
-  for (const key of settingOrder) {
-    if (!hasSetting(requestedSettings, key)) {
-      continue;
+  const sandboxError = getSandboxValidationError(project, requestedSettings);
+  if (sandboxError) {
+    return printUsageError(client, sandboxError, 1, 'invalid_arguments');
+  }
+
+  let changes = computeSettingsChanges(
+    project,
+    requestedSettings,
+    providedAdvanced
+  );
+  const changeCount = changes.changedSettings.length;
+  const gatedProvided = providedAdvanced.filter(
+    ({ definition, value }) =>
+      changes.changedSettings.includes(definition.key) &&
+      definition.requiresPaidPlan?.(value)
+  );
+
+  if (gatedProvided.length > 0) {
+    let team;
+    let user;
+    const teamOwned = project.accountId.startsWith('team_');
+    try {
+      if (projectNameOrId) {
+        ({ team, user } = await getScope(client));
+      } else {
+        ({ team, user } = await getScope(client, { resolveLocalScope: true }));
+      }
+      if (teamOwned && team?.id !== project.accountId) {
+        team = await getTeamByIdOrSlug(client, project.accountId);
+      }
+    } catch (error) {
+      exitWithNonInteractiveError(client, error, 1, { variant: 'update' });
+      printError(error);
+      return 1;
     }
-    const previous = getCurrentSetting(project, key);
-    const next = requestedSettings[key] ?? null;
-    previousSettings[key] = previous;
-    if (previous !== next) {
-      changedSettings.push(key);
-      Object.assign(changedUpdates, { [key]: next });
+    const plan = (teamOwned ? team?.billing : user?.billing)?.plan;
+    const hasPaidPlan = plan === 'pro' || plan === 'enterprise';
+    if (!hasPaidPlan) {
+      const phrases = gatedProvided.map(
+        ({ definition, value }) =>
+          `${definition.label} "${displayAdvanced(definition, value)}"`
+      );
+      const list =
+        phrases.length === 1
+          ? phrases[0]
+          : `${phrases.slice(0, -1).join(', ')} and ${phrases[phrases.length - 1]}`;
+      const verb = phrases.length > 1 ? 'require' : 'requires';
+      return printPlanError(
+        client,
+        `${list} ${verb} a Pro or Enterprise plan.`,
+        teamOwned
+      );
     }
   }
 
-  let updatedProject = project;
-  if (changedSettings.length > 0) {
+  const hasCostImpact = providedAdvanced.some(
+    ({ definition, value }) =>
+      changes.changedSettings.includes(definition.key) &&
+      definition.hasCostImpact?.(value)
+  );
+
+  if (changeCount > 0) {
+    const skipConfirmation = Boolean(flags['--yes']) && !hasCostImpact;
+    if (!skipConfirmation) {
+      if (!canPrompt(client)) {
+        return printConfirmationRequiredError(client, hasCostImpact);
+      }
+      printChangePreview({
+        project,
+        previousSettings: changes.previousSettings,
+        requestedSettings,
+        changedSettings: changes.changedSettings,
+        advancedRows: changes.advancedRows,
+      });
+      if (hasCostImpact) {
+        printAlignedLabel(
+          'Charges',
+          'These settings may affect your Vercel charges.',
+          { gutter: '!' }
+        );
+      }
+      const confirmed = await client.input.confirm(
+        `Update ${changeCount} ${changeCount === 1 ? 'setting' : 'settings'} for ${chalk.bold(project.name)}?`,
+        false
+      );
+      if (!confirmed) {
+        output.log('Canceled');
+        return 0;
+      }
+    }
+  }
+
+  if (changeCount > 0) {
     try {
-      updatedProject = await client.fetch<Project>(
-        `/v9/projects/${encodeURIComponent(project.id)}`,
-        {
-          method: 'PATCH',
-          body: changedUpdates as JSONObject,
-        }
+      project = await refreshProjectForNestedUpdate(
+        client,
+        project,
+        changes.body
+      );
+    } catch (error) {
+      exitWithNonInteractiveError(client, error, 1, { variant: 'update' });
+      printError(error);
+      return 1;
+    }
+    const refreshedSandboxError = getSandboxValidationError(
+      project,
+      requestedSettings
+    );
+    if (refreshedSandboxError) {
+      return printUsageError(
+        client,
+        refreshedSandboxError,
+        1,
+        'invalid_arguments'
+      );
+    }
+    changes = computeSettingsChanges(
+      project,
+      requestedSettings,
+      providedAdvanced
+    );
+  }
+
+  let updatedProject = project;
+  if (changes.changedSettings.length > 0) {
+    try {
+      updatedProject = await patchProjectSettings(
+        client,
+        project,
+        changes.body
       );
     } catch (error) {
       exitWithNonInteractiveError(client, error, 1, { variant: 'update' });
@@ -408,12 +575,14 @@ export default async function update(
     }
   }
 
-  writeResult({
-    changedSettings,
+  writeUpdateResult({
+    changedSettings: changes.changedSettings,
     project: updatedProject,
-    previousSettings,
+    previousSettings: changes.previousSettings,
     requestedSettings,
-    asJson: formatResult.jsonOutput,
+    advancedRows: changes.advancedRows,
+    asJson:
+      formatResult.jsonOutput || shouldEmitNonInteractiveCommandError(client),
     client,
   });
   return 0;

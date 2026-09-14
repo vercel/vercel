@@ -1,0 +1,1 @@
+ruby dev shim requires rack/handler/webrick, removed in Rack 3 (fixture pins rack ~> 3.0); the rb-api service crashes vc dev at startup

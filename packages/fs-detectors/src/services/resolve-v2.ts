@@ -8,19 +8,23 @@ import type {
   ServiceDetectionError,
   ServiceRuntime,
 } from './types';
-import { RUNTIME_BUILDERS, STATIC_BUILDERS } from './types';
+import {
+  RUNTIME_BUILDERS,
+  STATIC_BUILDERS,
+  CONTAINER_ENTRYPOINT_CANDIDATES,
+} from './runtimes/constants';
+import { inferRuntimeFromFramework } from './runtimes/framework';
+import { getBuilderForRuntime, inferRuntime } from './runtimes/runtime';
+import {
+  isDockerfileEntrypoint,
+  parsePyModuleAttrEntrypoint,
+  stripTrailingSlash,
+} from './runtimes/entrypoint';
 import {
   getServiceFs,
   resolveEntrypointPath,
   detectFrameworkFromWorkspace,
-  parsePyModuleAttrEntrypoint,
 } from './resolve';
-import {
-  getBuilderForRuntime,
-  inferRuntimeFromFramework,
-  inferServiceRuntime,
-  stripTrailingSlash,
-} from './utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
@@ -36,40 +40,6 @@ function isValidServiceName(name: string): boolean {
 
 function getInvalidServiceNameMessage(name: string): string {
   return `Service name "${name}" is invalid. Names must be 1-${MAX_SERVICE_NAME_LENGTH} characters, start and end with a lowercase letter, and contain only lowercase letters, hyphens, and underscores.`;
-}
-
-/**
- * The blessed Dockerfile names for container services: bare `Dockerfile` /
- * `Containerfile` and the `.vercel` opt-in markers. Both the supplied-entrypoint
- * check and the `runtime: "container"` auto-detection use this single set, so a
- * suffixed name like `Dockerfile.prod` is never matched.
- *
- * Ordered so the `.vercel` opt-in markers are probed first during
- * auto-detection: a project that ships both gets to use the `.vercel` marker as
- * the explicit "deploy this as a container" signal, matching the `container`
- * framework preset.
- */
-const CONTAINER_ENTRYPOINT_CANDIDATES = [
-  'Dockerfile.vercel',
-  'Containerfile.vercel',
-  'Dockerfile',
-  'Containerfile',
-];
-
-const CONTAINER_ENTRYPOINT_BASENAMES = new Set(
-  CONTAINER_ENTRYPOINT_CANDIDATES.map(name => name.toLowerCase())
-);
-
-/**
- * Whether a supplied `entrypoint` names a blessed Dockerfile, used to infer
- * `runtime: "container"`. Matches only the basenames `Dockerfile`,
- * `Containerfile`, `Dockerfile.vercel`, and `Containerfile.vercel` — a suffixed
- * name such as `Dockerfile.prod` is not a container entrypoint.
- */
-function isDockerfileEntrypoint(entrypoint: string): boolean {
-  return CONTAINER_ENTRYPOINT_BASENAMES.has(
-    posixPath.basename(entrypoint).toLowerCase()
-  );
 }
 
 /**
@@ -314,7 +284,7 @@ export async function resolveConfiguredServiceV2(
       ? undefined
       : normalizedEntrypoint;
 
-  let inferredRuntime = inferServiceRuntime({
+  let inferredRuntime = inferRuntime({
     runtime: config.runtime,
     framework: config.framework,
     entrypoint: entrypointFile,
@@ -338,7 +308,7 @@ export async function resolveConfiguredServiceV2(
     }
     framework = detection.framework;
     detectedFramework = Boolean(framework);
-    inferredRuntime = inferServiceRuntime({
+    inferredRuntime = inferRuntime({
       runtime: config.runtime,
       framework,
       entrypoint: entrypointFile,

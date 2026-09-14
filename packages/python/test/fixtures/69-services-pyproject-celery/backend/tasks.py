@@ -5,7 +5,6 @@ import os
 from celery import Celery
 from vercel.cache import get_cache
 
-# Must match the topic configured in [tool.vercel.subscribers] in pyproject.toml.
 QUEUE_NAME = "celery"
 CACHE_NAMESPACE = "celery-jobs"
 

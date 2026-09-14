@@ -9,13 +9,12 @@ import type {
   ServiceDetectionWarning,
   ServiceType,
 } from './types';
-import { RUNTIME_BUILDERS } from './types';
+import { RUNTIME_BUILDERS } from './runtimes/constants';
 import {
-  assignMountPaths,
-  combineBuildCommand,
   isFrontendFramework,
   DETECTION_FRAMEWORKS,
-} from './utils';
+} from './runtimes/framework';
+import { assignMountPaths, combineBuildCommand } from './utils';
 
 export interface RenderDetectResult {
   services: InferredServicesConfig | null;

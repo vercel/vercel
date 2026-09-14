@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import type Client from '../../../util/client';
-import { requireProjectContext } from '../../../util/projects/require-project-context';
 import output from '../../../output-manager';
 import { rulesEditSubcommand } from '../command';
 import {
@@ -11,9 +10,13 @@ import {
   offerAutoPublish,
   resolveRule,
   printActionImpactWarning,
+  resolveFirewallScope,
+  mapFirewallApiError,
 } from '../shared';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
+import type { FirewallScope } from '../../../util/firewall/scope';
+import { projectScope } from '../../../util/firewall/scope';
 import generateFirewallRule from '../../../util/firewall/generate-firewall-rule';
 import { parseConditionFlags } from '../../../util/firewall/parse-conditions';
 import {
@@ -42,22 +45,13 @@ export default async function edit(client: Client, argv: string[]) {
 
   let identifier = parsed.args[0] as string | undefined;
 
-  const link = await requireProjectContext(
-    client,
-    'firewall',
-    parsed.flags['--project']
-  );
-  if (typeof link === 'number') return link;
-
-  const { project, org } = link;
-  const teamId = org.type === 'team' ? org.id : undefined;
+  const scope = await resolveFirewallScope(client, parsed.flags);
+  if (typeof scope === 'number') return scope;
 
   // Resolve the rule
-  output.spinner(`Fetching rules for ${chalk.bold(project.name)}`);
+  output.spinner(`Fetching rules for ${chalk.bold(scope.displayName)}`);
 
-  const { active, draft } = await listFirewallConfigs(client, project.id, {
-    teamId,
-  });
+  const { active, draft } = await listFirewallConfigs(client, scope);
 
   const currentRules = draft?.rules || active?.rules || [];
 
@@ -67,7 +61,7 @@ export default async function edit(client: Client, argv: string[]) {
 
     if (client.nonInteractive || !client.stdin.isTTY) {
       output.error(
-        `Missing required argument: <name-or-id>. Run ${chalk.cyan(withGlobalFlags(client, 'firewall rules list'))} to see all rules.`
+        `Missing required argument: <name-or-id>. Run ${chalk.cyan(withGlobalFlags(client, 'firewall rules list', scope))} to see all rules.`
       );
       return 1;
     }
@@ -99,7 +93,7 @@ export default async function edit(client: Client, argv: string[]) {
 
   if (matches.length === 0) {
     output.error(
-      `No rule found for "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'firewall rules list'))} to view all rules.`
+      `No rule found for "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'firewall rules list', scope))} to view all rules.`
     );
     return 1;
   }
@@ -151,6 +145,14 @@ export default async function edit(client: Client, argv: string[]) {
 
   // AI mode — blocked for agents/non-interactive (AI output requires human review)
   if (aiPrompt) {
+    // AI generation is project-only (its endpoint requires a project)
+    if (scope.type === 'team') {
+      output.error(
+        'AI mode is not available with --team-level. Use --json or flag-based editing instead.'
+      );
+      return 1;
+    }
+
     if (client.nonInteractive || !client.stdin.isTTY) {
       if (client.nonInteractive) {
         outputAgentError(client, {
@@ -182,22 +184,21 @@ export default async function edit(client: Client, argv: string[]) {
       return 1;
     }
 
-    return handleAIEdit(client, project, teamId, originalRule, {
-      prompt: aiPrompt,
-      skipPrompts: !!parsed.flags['--yes'],
-    });
+    return handleAIEdit(
+      client,
+      { id: scope.projectId, name: scope.displayName },
+      scope.teamId,
+      originalRule,
+      {
+        prompt: aiPrompt,
+        skipPrompts: !!parsed.flags['--yes'],
+      }
+    );
   }
 
   // JSON mode
   if (jsonInput) {
-    return handleJsonEdit(
-      client,
-      parsed,
-      originalRule,
-      jsonInput,
-      project,
-      teamId
-    );
+    return handleJsonEdit(client, parsed, originalRule, jsonInput, scope);
   }
 
   // Flag overrides
@@ -218,7 +219,7 @@ export default async function edit(client: Client, argv: string[]) {
     parsed.flags['--redirect-permanent'];
 
   if (hasEditFlags) {
-    return handleFlagEdit(client, parsed, originalRule, argv, project, teamId);
+    return handleFlagEdit(client, parsed, originalRule, argv, scope);
   }
 
   // Interactive mode
@@ -230,15 +231,24 @@ export default async function edit(client: Client, argv: string[]) {
     const mode = await client.input.select({
       message: 'How would you like to edit this rule?',
       choices: [
-        { value: 'ai', name: 'Describe changes (AI-powered)' },
+        // AI generation is project-only (its endpoint requires a project)
+        ...(scope.type === 'project'
+          ? [{ value: 'ai', name: 'Describe changes (AI-powered)' }]
+          : []),
         { value: 'manual', name: 'Edit manually (field by field)' },
       ],
     });
 
-    if (mode === 'ai') {
-      return handleAIEdit(client, project, teamId, originalRule, {
-        skipPrompts: false,
-      });
+    if (mode === 'ai' && scope.type === 'project') {
+      return handleAIEdit(
+        client,
+        { id: scope.projectId, name: scope.displayName },
+        scope.teamId,
+        originalRule,
+        {
+          skipPrompts: false,
+        }
+      );
     }
 
     // Manual edit
@@ -254,7 +264,7 @@ export default async function edit(client: Client, argv: string[]) {
       return 0;
     }
 
-    return saveEdit(client, project, teamId, originalRule, modified, parsed, {
+    return saveEdit(client, scope, originalRule, modified, parsed, {
       skipConfirm: true,
     });
   }
@@ -410,9 +420,15 @@ async function handleAIEdit(
 
   // Auto-save with --yes
   if (opts.skipPrompts) {
-    return saveEdit(client, project, teamId, originalRule, currentRule, {
-      flags: { '--yes': true },
-    });
+    return saveEdit(
+      client,
+      projectScope(project, teamId),
+      originalRule,
+      currentRule,
+      {
+        flags: { '--yes': true },
+      }
+    );
   }
 
   // Review menu
@@ -435,8 +451,7 @@ async function handleAIEdit(
     if (choice === 'save') {
       return saveEdit(
         client,
-        project,
-        teamId,
+        projectScope(project, teamId),
         originalRule,
         currentRule,
         {
@@ -507,8 +522,7 @@ async function handleJsonEdit(
   parsed: { args: string[]; flags: Record<string, unknown> },
   originalRule: FirewallRule,
   jsonStr: string,
-  project: { id: string; name: string },
-  teamId: string | undefined
+  scope: FirewallScope
 ): Promise<number> {
   let ruleData: Record<string, unknown>;
   try {
@@ -573,7 +587,7 @@ async function handleJsonEdit(
     action: ruleData.action as FirewallRule['action'],
   };
 
-  return saveEdit(client, project, teamId, originalRule, modified, parsed);
+  return saveEdit(client, scope, originalRule, modified, parsed);
 }
 
 // --- Flag Edit ---
@@ -603,8 +617,7 @@ async function handleFlagEdit(
   parsed: { args: string[]; flags: Record<string, unknown> },
   originalRule: FirewallRule,
   rawArgv: string[],
-  project: { id: string; name: string },
-  teamId: string | undefined
+  scope: FirewallScope
 ): Promise<number> {
   // Clone the original rule
   const modified: FirewallRule = JSON.parse(JSON.stringify(originalRule));
@@ -694,15 +707,14 @@ async function handleFlagEdit(
     return 0;
   }
 
-  return saveEdit(client, project, teamId, originalRule, modified, parsed);
+  return saveEdit(client, scope, originalRule, modified, parsed);
 }
 
 // --- Shared save logic ---
 
 async function saveEdit(
   client: Client,
-  project: { id: string; name: string },
-  teamId: string | undefined,
+  scope: FirewallScope,
   originalRule: FirewallRule,
   modified: FirewallRule,
   parsed: { flags: Record<string, unknown> },
@@ -728,43 +740,32 @@ async function saveEdit(
   output.spinner('Staging changes');
 
   try {
-    const hadExistingDraft = await detectExistingDraft(
-      client,
-      project.id,
-      teamId
-    );
+    const hadExistingDraft = await detectExistingDraft(client, scope);
 
-    await patchFirewallDraft(
-      client,
-      project.id,
-      {
-        action: 'rules.update',
-        id: originalRule.id,
-        value: {
-          name: modified.name,
-          description: modified.description,
-          active: modified.active,
-          conditionGroup: modified.conditionGroup,
-          action: modified.action,
-        },
+    await patchFirewallDraft(client, scope, {
+      action: 'rules.update',
+      id: originalRule.id,
+      value: {
+        name: modified.name,
+        description: modified.description,
+        active: modified.active,
+        conditionGroup: modified.conditionGroup,
+        action: modified.action,
       },
-      { teamId }
-    );
+    });
 
     output.log(
       `${chalk.cyan('Success!')} Rule "${chalk.bold(modified.name)}" updated and staged ${chalk.gray(editStamp())}`
     );
     printActionImpactWarning(modified.action);
 
-    await offerAutoPublish(client, project.id, hadExistingDraft, {
-      teamId,
+    await offerAutoPublish(client, scope, hadExistingDraft, {
       skipPrompts: parsed.flags['--yes'] as boolean,
     });
 
     return 0;
   } catch (e: unknown) {
-    const error = e as { message?: string };
-    const msg = error.message || 'Failed to stage rule changes';
+    const msg = mapFirewallApiError(e, scope, 'Failed to stage rule changes');
     if (client.nonInteractive) {
       outputAgentError(client, {
         status: 'error',
@@ -774,7 +775,8 @@ async function saveEdit(
           {
             command: withGlobalFlags(
               client,
-              `firewall rules edit "${originalRule.name}" --yes`
+              `firewall rules edit "${originalRule.name}" --yes`,
+              scope
             ),
           },
         ],

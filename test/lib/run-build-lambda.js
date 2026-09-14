@@ -5,6 +5,42 @@ const json5 = require('json5');
 const { glob } = require('@vercel/build-utils');
 
 exports.createRunBuildLambda = function (builder) {
+  // Track every workPath we create so they can be deleted once tests are
+  // done with them. Without this, each build leaks a full Next.js build
+  // (node_modules + .next output) into os.tmpdir(), which exhausts the
+  // ~14 GB free disk on GitHub-hosted runners during long e2e chunks.
+  const testScopedDirs = [];
+  const hookScopedDirs = [];
+  let insideTest = false;
+
+  const remove = async dirs => {
+    await Promise.all(
+      dirs.splice(0).map(dir =>
+        fs.remove(dir).catch(() => {
+          /* best-effort cleanup */
+        })
+      )
+    );
+  };
+
+  if (typeof beforeEach !== 'undefined') {
+    beforeEach(() => {
+      insideTest = true;
+    });
+  }
+  if (typeof afterEach !== 'undefined') {
+    afterEach(async () => {
+      insideTest = false;
+      await remove(testScopedDirs);
+    });
+  }
+  if (typeof afterAll !== 'undefined') {
+    afterAll(async () => {
+      await remove(hookScopedDirs);
+      await remove(testScopedDirs);
+    });
+  }
+
   return async inputPath => {
     const inputFiles = await glob('**', inputPath);
     const nowJsonRef = inputFiles['vercel.json'] || inputFiles['now.json'];
@@ -30,6 +66,7 @@ exports.createRunBuildLambda = function (builder) {
     await fs.ensureDir(workPath);
 
     workPath = await fs.realpath(workPath);
+    (insideTest ? testScopedDirs : hookScopedDirs).push(workPath);
     console.log('building in', workPath);
 
     const buildResult = await builder.build({

@@ -4,6 +4,8 @@ import {
   repositoriesPath,
   repositoryImagesPath,
   repositoryPath,
+  repositoryPermissionsClearPath,
+  repositoryPermissionsPath,
   repositoryTagPath,
   repositoryTagsPath,
 } from '../../../../../src/commands/vcr/utils/paths';
@@ -106,6 +108,42 @@ describe('repositoryTagPath', () => {
   it('url-encodes the repository name and tag', () => {
     expect(repositoryTagPath(scope, 'my app', 'v1.0/beta')).toBe(
       '/v1/vcr/repository/my%20app/tags/v1.0%2Fbeta?teamId=team_dummy&projectId=prj_vcr'
+    );
+  });
+});
+
+describe('repositoryPermissionsPath', () => {
+  it('builds the permissions path for a repository', () => {
+    expect(repositoryPermissionsPath(scope, 'my-app')).toBe(
+      '/v1/vcr/repository/my-app/permissions?teamId=team_dummy&projectId=prj_vcr'
+    );
+  });
+
+  it('includes limit and cursor when provided', () => {
+    expect(
+      repositoryPermissionsPath(scope, 'my-app', { limit: 20, cursor: 'abc' })
+    ).toBe(
+      '/v1/vcr/repository/my-app/permissions?teamId=team_dummy&projectId=prj_vcr&limit=20&cursor=abc'
+    );
+  });
+
+  it('url-encodes the repository name', () => {
+    expect(repositoryPermissionsPath(scope, 'my app')).toBe(
+      '/v1/vcr/repository/my%20app/permissions?teamId=team_dummy&projectId=prj_vcr'
+    );
+  });
+});
+
+describe('repositoryPermissionsClearPath', () => {
+  it('builds the clear-all permissions path for a repository', () => {
+    expect(repositoryPermissionsClearPath(scope, 'my-app')).toBe(
+      '/v1/vcr/repository/my-app/permissions/all?teamId=team_dummy&projectId=prj_vcr'
+    );
+  });
+
+  it('url-encodes the repository name', () => {
+    expect(repositoryPermissionsClearPath(scope, 'my app')).toBe(
+      '/v1/vcr/repository/my%20app/permissions/all?teamId=team_dummy&projectId=prj_vcr'
     );
   });
 });

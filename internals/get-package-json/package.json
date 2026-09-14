@@ -10,15 +10,14 @@
   "scripts": {
     "build": "node ../../utils/build.mjs",
     "test": "vitest run --config ../../vitest.config.mts",
-    "test-unit": "pnpm test tests/unit",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'tests/unit'"
+    "test-unit": "vitest run --config ../../vitest.config.mts tests/unit/"
   },
   "devDependencies": {
     "@types/node": "20.11.0",
     "@vercel-internals/tsconfig": "workspace:*",
     "@vercel/style-guide": "4.0.2",
     "typescript": "5.9.3",
-    "vitest": "2.0.3"
+    "vite": "6.4.3",
+    "vitest": "4.1.10"
   }
 }

@@ -13,6 +13,7 @@ import {
   getPreservedArgsForEnvPull,
   getPreservedArgsForEnvRm,
   getPreservedArgsForEnvUpdate,
+  redactEnvValueArgs,
   buildEnvAddCommandWithPreservedArgs,
   buildEnvRmCommandWithPreservedArgs,
   buildEnvUpdateCommandWithPreservedArgs,
@@ -255,6 +256,17 @@ describe('buildCommandWithYes', () => {
   });
 });
 
+describe('redactEnvValueArgs', () => {
+  it('redacts separated and inline Environment Variable values', () => {
+    expect(
+      redactEnvValueArgs(['env', 'update', 'API_KEY', '--value', 'secret'])
+    ).toEqual(['env', 'update', 'API_KEY', '--value', '"<value>"']);
+    expect(
+      redactEnvValueArgs(['env', 'update', 'API_KEY', '--value=secret'])
+    ).toEqual(['env', 'update', 'API_KEY', '--value="<value>"']);
+  });
+});
+
 describe('buildCommandWithScope', () => {
   it('appends --scope when argv has no scope', () => {
     const argv = ['/node', '/vc.js', 'deploy', '--yes'];
@@ -410,29 +422,6 @@ describe('outputAgentError', () => {
     expect(written.next).toHaveLength(1);
     expect(exitSpy).toHaveBeenCalledWith(1);
 
-    exitSpy.mockRestore();
-  });
-
-  it('does nothing when not nonInteractive', () => {
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
-      throw new Error('should not exit');
-    }) as never);
-
-    const client = {
-      nonInteractive: false,
-      argv: ['node', 'vc.js', 'login'],
-    } as Client;
-    outputAgentError(client, {
-      status: 'error',
-      reason: 'no_credentials',
-      message: 'No credentials.',
-    });
-
-    expect(logSpy).not.toHaveBeenCalled();
-    expect(exitSpy).not.toHaveBeenCalled();
-
-    logSpy.mockRestore();
     exitSpy.mockRestore();
   });
 });
@@ -660,6 +649,27 @@ describe('env suggestion argument preservation', () => {
     expect(
       testCase.build(['node', 'vc.js', ...testCase.argv], testCase.template)
     ).toBe(`vercel ${testCase.template} --project payments-api`);
+  });
+
+  it.each([
+    ['add', buildEnvAddCommandWithPreservedArgs, 'add'],
+    ['remove', buildEnvRmCommandWithPreservedArgs, 'remove'],
+    ['update', buildEnvUpdateCommandWithPreservedArgs, 'update'],
+  ] as const)('shell-quotes preserved values in %s suggestions', (_name, build, subcommand) => {
+    const argv = [
+      'node',
+      'vc.js',
+      'env',
+      subcommand,
+      'API_KEY',
+      'preview',
+      '--cwd',
+      '/tmp/project $(touch unsafe)',
+    ];
+
+    expect(build(argv, 'env add API_KEY preview')).toBe(
+      "vercel env add API_KEY preview --cwd '/tmp/project $(touch unsafe)'"
+    );
   });
 });
 

@@ -10,13 +10,11 @@ try {
   }
 } catch {}
 
-// Native-first: spawn a @vercel/vc-native-{platform}-{arch} binary when
-// present and exit with its result, otherwise fall through to the JS CLI.
-// The native package is declared as an os/cpu-filtered optionalDependency
-// so at most one platform binary downloads per install.
+// Spawn the @vercel/vc-native-{platform}-{arch} binary when it's present and
+// the user has opted in (`useNativeBinary`); otherwise run the JS CLI.
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -44,29 +42,61 @@ function resolveNative() {
   }
 }
 
+// Read `--global-config`/`-Q` without loading the full CLI arg parser.
+function globalConfigDirFromArgv() {
+  const argv = process.argv.slice(2);
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--global-config' || arg === '-Q') {
+      return argv[i + 1];
+    }
+    if (arg.startsWith('--global-config=')) {
+      return arg.slice('--global-config='.length);
+    }
+  }
+  return undefined;
+}
+
+// Any failure to read config counts as "not opted in".
+async function isNativeBinaryOptedIn() {
+  const envOverride = process.env.VERCEL_CLI_USE_NATIVE_BINARY;
+  if (envOverride === '1' || envOverride === 'true') return true;
+  if (envOverride === '0' || envOverride === 'false') return false;
+
+  try {
+    // Zod-free subpath to avoid loading zod + schemas on this hot path.
+    const config = await import('@vercel/cli-config/paths');
+    const argDir = globalConfigDirFromArgv();
+    const configDir = argDir
+      ? resolve(process.cwd(), argDir)
+      : config.getGlobalPathConfig();
+    const configPath = config.getConfigFilePath(configDir);
+    return config.readGlobalConfigFlag(configPath, 'useNativeBinary') === true;
+  } catch {
+    return false;
+  }
+}
+
 const bin = resolveNative();
 
-if (bin) {
+if (bin && (await isNativeBinaryOptedIn())) {
   process.env.VERCEL_VC_NATIVE = '1';
+  // Do not fall through to JS on spawn/loader failures — surface them so
+  // native binary issues (e.g. glibc mismatch) are visible.
   const r = spawnSync(bin, process.argv.slice(2), {
     stdio: 'inherit',
     windowsHide: true,
   });
-  if (r.error && (r.error.code === 'ENOENT' || r.error.code === 'EACCES')) {
-    delete process.env.VERCEL_VC_NATIVE;
-    // fall through to JS
-  } else {
-    if (r.error) {
-      console.error(r.error.message);
-      process.exit(1);
-    }
-    if (r.signal) {
-      try {
-        process.kill(process.pid, r.signal);
-      } catch {}
-    }
-    process.exit(r.status ?? 1);
+  if (r.error) {
+    console.error(r.error.message);
+    process.exit(1);
   }
+  if (r.signal) {
+    try {
+      process.kill(process.pid, r.signal);
+    } catch {}
+  }
+  process.exit(r.status ?? 1);
 }
 
 // Fast path for --version to avoid loading the entire CLI
@@ -74,9 +104,13 @@ if (
   process.argv.length === 3 &&
   (process.argv[2] === '--version' || process.argv[2] === '-v')
 ) {
-  const { version } = await import('./version.mjs');
-  const binaryLabel = process.env.VERCEL_VC_NATIVE === '1' ? ' (native)' : '';
-  console.error(`Vercel CLI ${version}${binaryLabel}`);
+  const { version, buildLabel } = await import('./version.mjs');
+  const labels = [];
+  if (process.env.VERCEL_VC_NATIVE === '1') labels.push('native');
+  // Optional build metadata stamped by CI (e.g. "pr-115 abc1234").
+  if (buildLabel) labels.push(buildLabel);
+  const suffix = labels.length > 0 ? ` (${labels.join(', ')})` : '';
+  console.error(`Vercel CLI ${version}${suffix}`);
   console.log(version);
   process.exit(0);
 }

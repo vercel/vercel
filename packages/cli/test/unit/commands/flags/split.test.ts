@@ -99,6 +99,29 @@ describe('flags split', () => {
     ]);
   });
 
+  it('rejects Timestamp attributes for --by', async () => {
+    client.setArgv(
+      'flags',
+      'split',
+      testFlags[0].slug,
+      '--environment',
+      'production',
+      '--by',
+      'user.signupAt',
+      '--weight',
+      'off=95',
+      '--weight',
+      'on=5'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(1);
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      'Attribute user.signupAt is a Timestamp and cannot be used for bucketing'
+    );
+  });
+
   it('configures a boolean split with an inferred fallback variant', async () => {
     client.setArgv(
       'flags',
@@ -135,14 +158,14 @@ describe('flags split', () => {
       },
     });
     expect((testFlags[0] as Flag & { message?: string }).message).toEqual(
-      'Configure split for production: false Off: 95%, true On: 5%'
+      'Configure split for production: Off (false): 95%, On (true): 5%'
     );
 
     const output = stripAnsi(client.stderr.getFullOutput());
     expect(output).toContain('split has been updated in production');
     expect(output).toContain('Based on: user.userId');
-    expect(output).toContain('Fallback: false Off');
-    expect(output).toContain('Weights: false Off: 95%, true On: 5%');
+    expect(output).toContain('Fallback: Off (false)');
+    expect(output).toContain('Weights: Off (false): 95%, On (true): 5%');
   });
 
   it('prompts for the fallback variant when configuring a boolean split interactively', async () => {
@@ -418,7 +441,7 @@ describe('flags split', () => {
 
     expect(exitCode).toEqual(1);
     expect(stripAnsi(client.stderr.getFullOutput())).toContain(
-      'Missing weights for variants: false Off'
+      'Missing weights for variants: Off (false)'
     );
   });
 
@@ -545,14 +568,14 @@ describe('flags split', () => {
     expect(textMock).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
-        message: 'Weight for "control" Control:',
+        message: 'Weight for Control ("control"):',
         default: '75',
       })
     );
     expect(textMock).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
-        message: 'Weight for "treatment" Treatment:',
+        message: 'Weight for Treatment ("treatment"):',
         default: '25',
       })
     );

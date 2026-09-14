@@ -141,6 +141,11 @@ export class DeployTelemetryClient
       this.trackCliFlag('prod');
     }
   }
+  trackCliFlagTemporary(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('temporary');
+    }
+  }
 
   trackTargetEnvironment(target: string | undefined) {
     super.trackTargetEnvironment(

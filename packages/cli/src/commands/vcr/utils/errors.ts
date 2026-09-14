@@ -5,6 +5,12 @@ import {
   outputAgentError,
 } from '../../../util/agent-output';
 import { AGENT_REASON } from '../../../util/agent-output-constants';
+import {
+  AUTH_FAILURE,
+  resolveRegistry,
+  stderrTail,
+  type VcrEngine,
+} from './engine';
 
 type VcrApiError = { status: number; code?: string; serverMessage?: string };
 
@@ -91,6 +97,70 @@ export function handleVcrApiError(
   );
 
   return outputError(client, jsonOutput, err.code || 'API_ERROR', message);
+}
+
+/**
+ * Reports a non-auth engine command failure (a build, or a push that failed for
+ * a reason other than credentials), surfacing the engine's exit code and stderr
+ * tail. Always returns 1.
+ */
+export function reportEngineCommandFailure(
+  client: Client,
+  engine: VcrEngine,
+  verb: string,
+  result: { exitCode: number; stderr: string }
+): number {
+  const tail = stderrTail(result.stderr);
+  const message = `\`${engine} ${verb}\` failed (exit code ${result.exitCode}).${
+    tail ? `\n${tail}` : ''
+  }`;
+  outputAgentError(
+    client,
+    {
+      status: 'error',
+      reason: 'command_failed',
+      message,
+    },
+    1
+  );
+  return outputError(client, false, 'COMMAND_FAILED', message);
+}
+
+/**
+ * Reports a failed engine operation that talks to the registry (a push, or a
+ * fused Buildx build+push). An auth-failure signature hints re-login; anything
+ * else surfaces the engine's exit code and stderr tail. Always returns 1.
+ */
+export function reportEnginePushFailure(
+  client: Client,
+  engine: VcrEngine,
+  verb: string,
+  result: { exitCode: number; stderr: string }
+): number {
+  if (AUTH_FAILURE.test(result.stderr)) {
+    const message = `Push to ${resolveRegistry()} was rejected. Your registry credentials may be missing or expired.`;
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: 'not_authorized',
+        message,
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `vcr login ${engine}`
+            ),
+            when: 'Refresh registry credentials (valid ~12 hours)',
+          },
+        ],
+      },
+      1
+    );
+    return outputError(client, false, 'NOT_AUTHORIZED', message);
+  }
+
+  return reportEngineCommandFailure(client, engine, verb, result);
 }
 
 export function emitVcrArgParseError(

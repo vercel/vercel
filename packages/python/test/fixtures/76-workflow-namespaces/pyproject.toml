@@ -1,0 +1,17 @@
+[project]
+name = "workflow-namespaces"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "vercel>=0.8.1",
+]
+
+# Each entrypoint is compiled into its own queue-triggered Lambda alongside
+# the FastAPI app. Distinct namespaces keep their workflow and step queue
+# topics disjoint.
+[[tool.vercel.workflows]]
+entrypoint = "flows:workflows"
+
+[[tool.vercel.workflows]]
+entrypoint = "multiplication_flows:workflows"

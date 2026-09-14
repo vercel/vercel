@@ -7,6 +7,7 @@ import {
   getGlobalFlagsFromArgs,
   suggestionFlagTakesSeparateValue,
 } from './arg-common';
+import { quoteArg } from './flags/quote-arg';
 
 /**
  * Structured payload for "action required" (e.g. scope choice, login passcode).
@@ -112,6 +113,20 @@ export function buildCommandWithYes(
   const hasYes = args.some(a => a === '--yes' || a === '-y');
   const out = hasYes ? args : [...args, '--yes'];
   return `${pkgName} ${out.join(' ')}`.trim();
+}
+
+/** Replaces Environment Variable values in argv before emitting suggestions. */
+export function redactEnvValueArgs(argv: string[]): string[] {
+  const redacted = [...argv];
+  for (let i = 0; i < redacted.length; i++) {
+    if (redacted[i] === '--value' && i + 1 < redacted.length) {
+      redacted[i + 1] = '"<value>"';
+      i++;
+    } else if (redacted[i].startsWith('--value=')) {
+      redacted[i] = '--value="<value>"';
+    }
+  }
+  return redacted;
 }
 
 /** Global flags that should be preserved in suggested "next" commands (e.g. --cwd, --non-interactive). */
@@ -410,7 +425,7 @@ export function buildEnvAddCommandWithPreservedArgs(
   );
   const base = `${pkgName} ${commandTemplate}`;
   if (preserved.length === 0) return base;
-  return `${base} ${preserved.join(' ')}`;
+  return `${base} ${preserved.map(quoteArg).join(' ')}`;
 }
 
 /**
@@ -441,7 +456,7 @@ export function buildEnvRmCommandWithPreservedArgs(
   );
   const base = `${pkgName} ${commandTemplate}`;
   if (preserved.length === 0) return base;
-  return `${base} ${preserved.join(' ')}`;
+  return `${base} ${preserved.map(quoteArg).join(' ')}`;
 }
 
 /**
@@ -465,7 +480,7 @@ export function buildEnvUpdateCommandWithPreservedArgs(
   );
   const base = `${pkgName} ${commandTemplate}`;
   if (preserved.length === 0) return base;
-  return `${base} ${preserved.join(' ')}`;
+  return `${base} ${preserved.map(quoteArg).join(' ')}`;
 }
 
 /**
@@ -615,18 +630,18 @@ export function outputAgentSuccess(
   process.exit(exitCode);
 }
 
-/** Suggested follow-ups for `edge-config` failures (only callers of exitWithNonInteractiveError). */
-function buildNextStepsForEdgeConfig(
+/** Suggested follow-ups for `global-config` failures (only callers of exitWithNonInteractiveError). */
+function buildNextStepsForGlobalConfig(
   client: Client
 ): NonNullable<AgentErrorPayload['next']> {
   return [
     {
-      command: buildCommandWithGlobalFlags(client.argv, 'edge-config list'),
-      when: 'List Edge Config stores in the current team scope',
+      command: buildCommandWithGlobalFlags(client.argv, 'global-config list'),
+      when: 'List Global Config stores in the current team scope',
     },
     {
       command: buildCommandWithGlobalFlags(client.argv, 'teams switch'),
-      when: 'Switch to the team that owns the Edge Config',
+      when: 'Switch to the team that owns the Global Config',
     },
     {
       command: buildCommandWithGlobalFlags(client.argv, 'whoami'),
@@ -635,24 +650,27 @@ function buildNextStepsForEdgeConfig(
   ];
 }
 
-const EDGE_CONFIG_NON_INTERACTIVE_HINT =
-  'Edge Config commands use your current team scope. Pass --scope or run `vercel teams switch` if the store is missing.';
+const GLOBAL_CONFIG_NON_INTERACTIVE_HINT =
+  'Global Config commands use your current team scope. Pass --scope or run `vercel teams switch` if the store is missing.';
 
 export type ExitWithNonInteractiveErrorVariant =
   | 'members'
+  | 'inspect'
   | 'access-groups'
   | 'access-summary'
   | 'protection'
   | 'update'
   | 'speed-insights'
   | 'web-analytics'
+  | 'observability'
   | 'checks'
-  | 'edge-config'
+  | 'resume'
+  | 'global-config'
   | 'list';
 
 type ProjectExitWithNonInteractiveVariant = Exclude<
   ExitWithNonInteractiveErrorVariant,
-  'edge-config' | 'list'
+  'global-config' | 'list'
 >;
 
 const LIST_ERROR_HINT =
@@ -732,15 +750,30 @@ function buildNextStepsForProjectSubcommands(
                     template: 'project web-analytics <name>' as const,
                     when: 'Enable Web Analytics by project name (replace <name>)',
                   }
-                : variant === 'checks'
+                : variant === 'observability'
                   ? {
-                      template: 'project checks add <name>' as const,
-                      when: 'Create a deployment check by project name (replace <name>)',
+                      template: 'project observability enable <name>' as const,
+                      when: 'Enable Observability Plus by project name (replace <name>)',
                     }
-                  : {
-                      template: 'project members <name>' as const,
-                      when: 'List members by project name (replace <name>)',
-                    };
+                  : variant === 'checks'
+                    ? {
+                        template: 'project checks add <name>' as const,
+                        when: 'Create a deployment check by project name (replace <name>)',
+                      }
+                    : variant === 'inspect'
+                      ? {
+                          template: 'project inspect <name>' as const,
+                          when: 'Inspect a project by name (replace <name>)',
+                        }
+                      : variant === 'resume'
+                        ? {
+                            template: 'project resume <name>' as const,
+                            when: 'Resume production traffic by project name (replace <name>)',
+                          }
+                        : {
+                            template: 'project members <name>' as const,
+                            when: 'List members by project name (replace <name>)',
+                          };
   return [
     {
       command: buildCommandWithGlobalFlags(client.argv, 'link'),
@@ -764,10 +797,10 @@ function resolveNonInteractiveDefaults(
   client: Client,
   variant: ExitWithNonInteractiveErrorVariant
 ): Pick<AgentErrorPayload, 'next' | 'hint'> {
-  if (variant === 'edge-config') {
+  if (variant === 'global-config') {
     return {
-      next: buildNextStepsForEdgeConfig(client),
-      hint: EDGE_CONFIG_NON_INTERACTIVE_HINT,
+      next: buildNextStepsForGlobalConfig(client),
+      hint: GLOBAL_CONFIG_NON_INTERACTIVE_HINT,
     };
   }
   if (variant === 'list') {
@@ -847,18 +880,18 @@ export function exitWithNonInteractiveError(
   }
   const { variant } = options;
   if (isLinkRequiredLike(err)) {
-    if (variant === 'edge-config') {
+    if (variant === 'global-config') {
       writeAgentErrorPayloadAndExit(
         client,
         {
           status: 'error',
           reason: 'link_required',
           message: err instanceof Error ? err.message : String(err),
-          next: buildNextStepsForEdgeConfig(client),
-          hint: EDGE_CONFIG_NON_INTERACTIVE_HINT,
+          next: buildNextStepsForGlobalConfig(client),
+          hint: GLOBAL_CONFIG_NON_INTERACTIVE_HINT,
         },
         exitCode,
-        'edge-config'
+        'global-config'
       );
       return;
     }
@@ -899,7 +932,7 @@ export function exitWithNonInteractiveError(
         : err.status === 401
           ? 'not_authorized'
           : err.status === 404
-            ? variant === 'edge-config'
+            ? variant === 'global-config'
               ? 'not_found'
               : 'project_not_found'
             : err.status === 429

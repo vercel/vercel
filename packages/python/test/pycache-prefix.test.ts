@@ -74,9 +74,11 @@ describe('explicit-list compilation layout (real CPython)', () => {
       fs.writeFileSync(srcPath, 'X = 1\n');
     }
 
-    await expect(
-      runCompileAll({ pythonBin, sourceFiles: sourcePaths })
-    ).resolves.toBe(true);
+    const result = await runCompileAll({ pythonBin, sourceFiles: sourcePaths });
+    expect(result.success).toBe(true);
+    for (const srcPath of sourcePaths) {
+      expect(result.timings?.get(srcPath)).toBeGreaterThan(0);
+    }
 
     for (const srcPath of sourcePaths) {
       expect(
@@ -105,13 +107,15 @@ describe('explicit-list compilation layout (real CPython)', () => {
       fs.writeFileSync(srcPath, 'X = 1\n');
     }
 
-    await expect(
-      runCompileAll({
-        pythonBin,
-        sourceFiles: sourcePaths,
-        pycachePrefix: stagingDir,
-      })
-    ).resolves.toBe(true);
+    const result = await runCompileAll({
+      pythonBin,
+      sourceFiles: sourcePaths,
+      pycachePrefix: stagingDir,
+    });
+    expect(result.success).toBe(true);
+    for (const srcPath of sourcePaths) {
+      expect(result.timings?.get(srcPath)).toBeGreaterThan(0);
+    }
 
     for (const srcPath of sourcePaths) {
       const derived = deriveStagedPycFsPath(stagingDir, srcPath, major, minor);
@@ -144,13 +148,15 @@ describe('explicit-list compilation layout (real CPython)', () => {
     fs.writeFileSync(validSource, 'X = 1\n');
     fs.writeFileSync(invalidSource, 'def invalid syntax\n');
 
-    await expect(
-      runCompileAll({
-        pythonBin,
-        sourceFiles: [validSource, invalidSource],
-        pycachePrefix: stagingDir,
-      })
-    ).resolves.toBe(true);
+    const result = await runCompileAll({
+      pythonBin,
+      sourceFiles: [validSource, invalidSource],
+      pycachePrefix: stagingDir,
+    });
+    expect(result.success).toBe(true);
+    // The failed source contributes no timing entry.
+    expect(result.timings?.get(validSource)).toBeGreaterThan(0);
+    expect(result.timings?.has(invalidSource)).toBe(false);
 
     const validBytecode = deriveStagedPycFsPath(
       stagingDir,

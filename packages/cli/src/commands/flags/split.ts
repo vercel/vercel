@@ -19,6 +19,7 @@ import {
 } from '../../util/flags/split';
 import { canPrompt } from '../../util/can-prompt';
 import { formatFlagBucketingBaseSelector } from '../../util/flags/bucketing-base';
+import { isBucketingAttribute } from '../../util/flags/attribute-types';
 import { formatVariantForDisplay } from '../../util/flags/resolve-variant';
 import type {
   Flag,
@@ -67,7 +68,7 @@ export default async function split(
   if (!flagArg) {
     output.error('Please provide a flag slug or ID to split');
     output.log(
-      `Example: ${getCommandName('flags split my-feature --environment production --by user.userId --weight off=95 --weight on=5')}`
+      `Example: ${getCommandName('flags split my-feature --environment production --by user.userId --weight false=95 --weight true=5')}`
     );
     return 1;
   }
@@ -235,7 +236,7 @@ async function resolveBaseSelector(
   }
 
   const choices = settings.entities.flatMap(entity =>
-    entity.attributes.map(attribute => ({
+    entity.attributes.filter(isBucketingAttribute).map(attribute => ({
       name: `${entity.label} › ${attribute.key}`,
       value: `${entity.kind}.${attribute.key}`,
     }))

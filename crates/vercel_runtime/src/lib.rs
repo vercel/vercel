@@ -2,6 +2,7 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn as hyper_service_fn;
 use hyper_util::rt::TokioIo;
 use std::convert::Infallible;
+use std::env;
 use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
@@ -41,7 +42,6 @@ use {
     crate::ipc::core::{EndMessage, StartMessage},
     crate::ipc::log::{Level, LogMessage},
     crate::ipc_utils::{IPC_READY, enqueue_or_send_message, flush_init_log_buffer, send_message},
-    std::env,
     std::os::unix::net::UnixStream,
     std::sync::atomic::Ordering,
     std::sync::{Arc, Mutex},

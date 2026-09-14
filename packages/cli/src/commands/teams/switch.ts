@@ -138,31 +138,13 @@ export default async function change(client: Client, argv: string[]) {
     ? teams.find(team => team.id === currentTeamId)
     : undefined;
 
+  // The persisted team can be stale (deleted, or membership revoked). Never
+  // hard-fail on it: this command is the way to switch away from it, so warn
+  // and continue with no current selection.
   if (!personalScopeSelected && !currentTeam) {
-    if (client.nonInteractive) {
-      outputAgentError(
-        client,
-        {
-          status: 'error',
-          reason: 'current_team_invalid',
-          message:
-            'You are not a member of the current team anymore. Switch to a valid team or personal scope.',
-          next: [
-            {
-              command: withGlobalFlags(client, 'teams list'),
-              when: 'to list teams and slugs you can switch to',
-            },
-            {
-              command: withGlobalFlags(client, 'login'),
-              when: 'to re-authenticate if your session or team membership changed',
-            },
-          ],
-        },
-        1
-      );
-    }
-    output.error(`You are not a member of the current team anymore.`);
-    return 1;
+    output.warn(
+      'You are no longer a member of the previously selected team. Choose another scope to continue.'
+    );
   }
 
   if (!desiredSlug) {
