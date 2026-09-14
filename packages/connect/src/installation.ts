@@ -6,6 +6,7 @@ import {
 } from './internal/url-validation.js';
 import type { ConnectTokenParams } from './token.js';
 import { createConnectErrorFromResponse } from './token.js';
+import { resolveBaseUrl } from './internal/base-url.js';
 
 export type ConnectInstallationParams = Omit<ConnectTokenParams, 'subject'>;
 
@@ -16,6 +17,12 @@ export interface ConnectInstallationOptions {
   tenantId?: string;
   deviceCode?: boolean;
   expiresInMs?: number;
+  /**
+   * Region to send the request to, e.g. `sfo1`. Defaults to the
+   * `VERCEL_REGION` environment variable; override it to target a
+   * different region.
+   */
+  region?: string;
 }
 
 export interface ConnectInstallationResponse {
@@ -69,7 +76,8 @@ export async function experimental_startInstallation(
   }
 
   const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
-  const endpoint = `https://api.vercel.com/v1/connect/install/${encodeURIComponent(connector)}`;
+  const baseUrl = resolveBaseUrl(options);
+  const endpoint = `${baseUrl}/v1/connect/install/${encodeURIComponent(connector)}`;
   const deviceCode =
     options?.deviceCode ?? (detachedInteractiveAuth ? true : undefined);
   const returnUrl =

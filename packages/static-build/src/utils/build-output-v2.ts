@@ -8,6 +8,7 @@ import {
   glob,
   EdgeFunction,
   BuildResultV2,
+  type Span,
 } from '@vercel/build-utils';
 import { isObjectEmpty } from './_shared';
 import { Project } from 'ts-morph';
@@ -61,8 +62,10 @@ export async function getBuildOutputDirectory(
  */
 export async function readBuildOutputDirectory({
   workPath,
+  span,
 }: {
   workPath: string;
+  span?: Span;
 }) {
   // Functions are not supported, but are used to support Middleware
   const functions: Record<string, EdgeFunction> = {};
@@ -83,7 +86,12 @@ export async function readBuildOutputDirectory({
       regions: (() => {
         try {
           const project = new Project();
-          const config = getConfig(project, middleware.file.fsPath);
+          const config = getConfig(
+            project,
+            middleware.file.fsPath,
+            undefined,
+            span
+          );
           return config?.regions;
         } catch (_err) {
           return undefined;
@@ -174,13 +182,15 @@ async function readStaticFiles({
 }
 
 export async function createBuildOutput(
-  workPath: string
+  workPath: string,
+  span?: Span
 ): Promise<BuildResultV2> {
   let output: Files = {};
   const routes: Route[] = [];
 
   const extraOutputs = await readBuildOutputDirectory({
     workPath,
+    span,
   });
 
   if (extraOutputs.routes) {

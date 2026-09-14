@@ -5,8 +5,16 @@
 // therefore the publish) if any entry cannot be pinned exactly.
 import { copyFileSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { readdirSync, existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+const require = createRequire(import.meta.url);
+const {
+  previewTarballFilename,
+} = require('../../../utils/preview-tarball-filename.js');
+
+export { previewTarballFilename };
 
 const cliRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const pkgJsonPath = join(cliRoot, 'package.json');
@@ -25,16 +33,28 @@ export function getWorkspaceVersions(packagesDir) {
   return versions;
 }
 
-export function pinBuilders(pkg, workspaceVersions) {
+export function getBuildUtilsSpec(pkg, workspaceVersions) {
+  const spec = pkg.dependencies?.['@vercel/build-utils'];
+  return spec?.startsWith('workspace:')
+    ? workspaceVersions.get('@vercel/build-utils')
+    : spec;
+}
+
+export function pinBuilders(pkg, workspaceVersions, previewTarballBaseUrl) {
   const builders = pkg.builders;
   if (!builders || Object.keys(builders).length === 0) {
     throw new Error('package.json has no `builders` manifest to pin');
   }
   const pinned = {};
+  const tarballBaseUrl = previewTarballBaseUrl?.replace(/\/$/, '');
   for (const [name, marker] of Object.entries(builders)) {
     if (!marker.startsWith('workspace:')) {
       // Already rewritten (e.g. to a tarball URL by utils/pack.ts)
       pinned[name] = marker;
+      continue;
+    }
+    if (tarballBaseUrl) {
+      pinned[name] = `${tarballBaseUrl}/${previewTarballFilename(name)}`;
       continue;
     }
     const version = workspaceVersions.get(name);
@@ -59,7 +79,7 @@ function main() {
     copyFileSync(pkgJsonPath, backupPath);
     writeFileSync(pkgJsonPath, `${JSON.stringify(pinned, null, 2)}\n`);
     console.log(
-      `pin-builders: pinned ${Object.keys(pinned.builders).length} builders`
+      `pin-builders: pinned ${Object.keys(pinned.builders).length} Builders`
     );
   } else if (mode === 'restore') {
     if (existsSync(backupPath)) {

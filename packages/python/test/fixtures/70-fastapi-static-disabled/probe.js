@@ -14,9 +14,12 @@ module.exports = async ({ deploymentUrl, fetch }) => {
     }
   }
 
-  // CDN disabled — Lambda handles all requests, FastAPI semantics apply throughout.
+  // The CDN opt-in env var is set, but `tool.vercel.fastapi.static.cdn = false`
+  // overrides it, so the CDN stays off and the Lambda handles everything — full
+  // FastAPI semantics (middleware runs, method handling intact).
   await check({ name: 'API route wins over frontend file', path: '/api/collision.txt', status: 200, bodyIncludes: 'API_ROUTE_WON' });
   await check({ name: 'middleware runs for static file', path: '/asset.txt', status: 200, bodyIncludes: 'FRONTEND_ASSET' });
+  await check({ name: 'HEAD static file is 200', path: '/asset.txt', method: 'HEAD', status: 200 });
   await check({ name: 'POST to static file is 405', path: '/asset.txt', method: 'POST', status: 405 });
 
   if (failures.length > 0) throw new Error(failures.join('\n'));

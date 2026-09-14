@@ -21,10 +21,13 @@ When changing CLI UX behavior:
 - cover internal local state files through tests, debug output, machine output, or help text instead of default human success output when they are not user-actionable
 - cover prompt/action separation: values appear in preview rows, then prompts ask for the action
 - cover vertical rhythm: phase breaks use at most one blank line, and related rows remain contiguous
-- cover raw gutter glyphs, not only stripped output: `▲` for production rows, `✓` for the primary completed phase, `!` for warnings, and blank gutter for previews, progress, and secondary receipt rows
+- cover raw gutter glyphs, not only stripped output: `▲` for production rows, `✓` for the primary completed phase, `!` for warnings, `✗` for fatal errors, and blank gutter for previews, progress, and secondary receipt rows
 - cover `--no-color`, `NO_COLOR`, and no ANSI where machine output is involved
 - cover `--yes`, `--force`, typed confirmation, and `--dry-run` when the command family supports them
 - cover retry/no-duplicate behavior for remote mutations
+- cover contextual recommendations after durable results: eligibility, exact benefit-led copy, command safety, context preservation, opt-out, and suppression for unknown or already-complete state
+- cover that a contextual recommendation appears before unrelated useful next actions, while duplicate actions are removed
+- cover that suggested commands preserve project context and that in-progress work does not suggest retry, redeploy, or promote actions
 - cover timeout, rate-limit, and interrupted polling when changing long-running remote work
 - cover streaming stdout/stderr split, Ctrl-C behavior, and JSON/JSONL parseability when changing follow/live output
 - cover permission-denied disclosure boundaries when changing auth/access behavior
@@ -44,6 +47,7 @@ Before editing shared prompt/output/link helpers, inspect call sites and tests f
 - `setupAndLink()` changes affect direct setup callers and unlinked flows reached through `ensureLink()`, including `vc dev`.
 - `linkFolderToProject()` changes affect any command that links before continuing work, including deploy, dev, pull/env, git connect/disconnect, open, target, and other project-scoped commands.
 - `printAlignedLabel()` changes affect deploy result rows and every command adopting aligned rows.
+- `Output.fatal()` changes affect every command adopting fatal-error rows. Test the helper directly, then test at least one command path for the raw glyph, unchanged nonzero exit, and absence of human output in its machine/JSON path.
 
 Use `rg` before editing and testing:
 
@@ -75,6 +79,15 @@ When warning output changes:
 expect(stripAnsi(output)).toMatch(/^! .+/m);
 expect(stripAnsi(output)).not.toContain('WARNING!');
 ```
+
+When fatal error output changes:
+
+```ts
+expect(stripAnsi(output)).toMatch(/^✗ .+/m);
+expect(stripAnsi(output)).not.toContain('Error:');
+```
+
+Also lock legacy `output.error()` output where untouched so gradual adoption does not become an accidental global change.
 
 For exact blank-gutter spacing, prefer `printAlignedLabel()` unit tests or a direct `output.print` mock:
 
@@ -116,6 +129,7 @@ Reject or fix changes that:
 - put `▲` on preview/setup/link/local file rows, or omit it from production rows
 - use `✓` as decoration, on every row, or on discovery/progress rows instead of only the primary completed phase
 - print warnings with a column-0 `WARNING!` label instead of the warning gutter
+- print a new or touched fatal human error with a column-0 `Error:` label instead of the fatal-error gutter
 - use `scope` where `team` works
 - add emoji to primary result or progress rows
 - put timing on URL rows

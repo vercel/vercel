@@ -1,69 +1,98 @@
-import { CUSTOM_ALERT_EVENT_HELP } from './schema-help';
+import indent from '../../../util/output/indent';
+
+const builtInBody = {
+  type: 'built-in',
+  name: 'Production server errors',
+  triggers: {
+    mode: 'selected',
+    items: [
+      {
+        type: 'error_anomaly',
+        filter: 'statusGroup:5xx AND route:/api/*',
+      },
+    ],
+  },
+  matchMinimumSeverityLevel: 'high',
+};
+
+const customBody = {
+  type: 'custom',
+  name: 'Checkout server errors',
+  severity: 'high',
+  evaluation: {
+    window: '5m',
+    query: {
+      metrics: {
+        errors: {
+          metric: 'vercel.request.count',
+          aggregation: 'count',
+          filter: 'httpStatus >= 500',
+        },
+      },
+      outputs: ['errors'],
+    },
+  },
+  trigger: {
+    type: 'threshold',
+    output: 'errors',
+    operator: 'gt',
+    threshold: 20,
+  },
+};
 
 export function getRulesAddBodyExamplesHelp(): string {
   return [
-    '  Body examples:',
-    '  The alert rules API validates the rule body and returns schema errors.',
-    '  Run `vercel alerts rules schema --type <type>` for a field reference.',
+    'Scope',
     '',
-    '  Custom alert metric discovery:',
-    ...CUSTOM_ALERT_EVENT_HELP.map(line => `  ${line}`),
+    '  Provide ruleScope in the body or use a scope flag, not both.',
+    '  --project maps to one included project for built-in rules and the required project for custom rules.',
+    '  --all applies only to built-in rules and maps to every project in the team.',
     '',
-    '  Built-in usage anomaly rule:',
+    'Built-in body (rule.json)',
     '',
-    '    {',
-    '      "name": "Production usage anomalies",',
-    '      "alertTypes": [{ "type": "usage_anomaly" }],',
-    '      "projectId": "projectId in (\'prj_123\')",',
-    '      "autosubscribeOwnersInKnock": true',
-    '    }',
+    indent(JSON.stringify(builtInBody, null, 2), 2),
     '',
-    '  Built-in 4xx error anomaly rule:',
+    '  vercel alerts rules add --project my-app --body ./rule.json',
     '',
-    '    {',
-    '      "name": "Production 4xx error anomalies",',
-    '      "alertTypes": [',
-    '        {',
-    '          "type": "error_anomaly",',
-    '          "filter": "statusGroup eq \'4xx\'"',
-    '        }',
-    '      ],',
-    '      "projectId": "projectId in (\'prj_123\')"',
-    '    }',
+    'Custom body (rule.json)',
     '',
-    '  Custom threshold rule:',
+    indent(JSON.stringify(customBody, null, 2), 2),
     '',
-    '    {',
-    '      "name": "Checkout error rate",',
-    '      "alertTypes": [{ "type": "custom_alert" }],',
-    '      "customAlert": {',
-    '        "queryJsonString": "{\\"event\\":\\"incomingRequest\\",\\"rollups\\":{\\"errors\\":{\\"measure\\":\\"count\\",\\"aggregation\\":\\"sum\\",\\"filter\\":\\"httpStatus ge 500\\"},\\"requests\\":{\\"measure\\":\\"count\\",\\"aggregation\\":\\"sum\\"}},\\"granularity\\":{\\"hours\\":1}}",',
-    '        "triggerType": "threshold",',
-    '        "triggerOperator": "gt",',
-    '        "triggerThreshold": 0.05,',
-    '        "formula": { "operator": "divide", "left": "errors", "right": "requests" },',
-    '        "minThreshold": 20',
-    '      }',
-    '    }',
+    '  vercel alerts rules add --project my-app --body ./rule.json',
     '',
-    '  Custom anomaly rule:',
+    'Authoring reference',
     '',
-    '    {',
-    '      "name": "Edge request volume anomaly",',
-    '      "alertTypes": [{ "type": "custom_alert" }],',
-    '      "customAlert": {',
-    '        "queryJsonString": "{\\"event\\":\\"incomingRequest\\",\\"rollups\\":{\\"requests\\":{\\"measure\\":\\"count\\",\\"aggregation\\":\\"sum\\"}},\\"groupBy\\":[\\"route\\"],\\"granularity\\":{\\"minutes\\":5}}",',
-    '        "triggerType": "anomaly",',
-    '        "triggerOperator": "gt",',
-    '        "triggerThreshold": 3',
-    '      }',
-    '    }',
+    '  vercel alerts rules schema --type <built-in|custom>',
+    '  vercel metrics schema <metric-or-prefix>',
     '',
-    '  Save one body to a JSON file, replace placeholders, then run:',
+  ].join('\n');
+}
+
+export function getRulesUpdateBodyExamplesHelp(): string {
+  const patchBody = {
+    name: 'Critical production errors',
+    matchMinimumSeverityLevel: 'critical',
+  };
+
+  return [
+    'Update body',
     '',
-    '    $ vercel alerts rules add --body ./rule.json',
+    '  Include only the fields to change. type is optional and inferred from the stored rule.',
+    '  Use --project or --all to change scope with or without --body.',
+    '  Do not combine a ruleScope field in the body with --project or --all.',
+    '  --all applies only to built-in rules.',
     '',
-    '  Custom alert project targeting defaults to --project or the linked project.',
+    'Partial body (patch.json)',
+    '',
+    indent(JSON.stringify(patchBody, null, 2), 2),
+    '',
+    '  vercel alerts rules update ar_abc123 --body ./patch.json',
+    '  vercel alerts rules update ar_abc123 --project my-app',
+    '',
+    'Authoring reference',
+    '',
+    '  vercel alerts rules schema --type <built-in|custom>',
+    '  vercel metrics schema <metric-or-prefix>',
     '',
   ].join('\n');
 }

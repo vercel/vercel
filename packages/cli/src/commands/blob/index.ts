@@ -16,6 +16,7 @@ import {
   deleteStoreSubcommand,
   getStoreInfoSubcommand,
   listStoresSubcommand,
+  putImageSubcommand,
   signedTokenSubcommand,
   emptyStoreSubcommand,
 } from './command';
@@ -24,6 +25,7 @@ import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import { BlobTelemetryClient } from '../../util/telemetry/commands/blob';
 import put from './put';
+import putImage from './put-image';
 import get from './get';
 import del from './del';
 import copy from './copy';
@@ -40,6 +42,7 @@ import { findFlagValue, getBlobRWToken } from '../../util/blob/token';
 const COMMAND_CONFIG = {
   list: getCommandAliases(listSubcommand),
   put: getCommandAliases(putSubcommand),
+  'put-image': getCommandAliases(putImageSubcommand),
   get: getCommandAliases(getSubcommand),
   del: getCommandAliases(delSubcommand),
   copy: getCommandAliases(copySubcommand),
@@ -126,6 +129,21 @@ export default async function main(client: Client) {
       }
 
       return put(client, args, token);
+    case 'put-image':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('blob', subcommandOriginal);
+        printHelp(putImageSubcommand);
+        return 2;
+      }
+
+      telemetry.trackCliSubcommandPutImage(subcommandOriginal);
+
+      if (!token.success) {
+        printError(token.error);
+        return 1;
+      }
+
+      return putImage(client, args, token);
     case 'get':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);

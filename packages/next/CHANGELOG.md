@@ -1,5 +1,199 @@
 # @vercel/next
 
+## 11.0.2
+
+### Patch Changes
+
+- Updated dependencies [1817491]
+  - @vercel/build-utils@14.9.1
+
+## 11.0.1
+
+### Patch Changes
+
+- ac6a489: Fix `vercel build` on Windows for nested static App Router routes (`NEXT_MISSING_LAMBDA`). Lambda keys from `getServerlessPages` now use posix separators so routes like `/a/b` look up correctly.
+
+## 11.0.0
+
+### Patch Changes
+
+- Updated dependencies [392c759]
+  - @vercel/build-utils@14.9.0
+
+## 10.0.0
+
+### Patch Changes
+
+- 45738e7: Restore normal Lambda grouping for functions that set `maxConcurrency`.
+- 8b2cdbb: Emit one action metadata route per server action id, and set rather than append `x-server-action-name`.
+
+  An action id is a hash of its source file and export name with no runtime component, so an action reachable from both a Node and an Edge entry was listed under the same id in both maps of the server reference manifest and routed twice, adding `x-server-action-name` twice.
+
+- Updated dependencies [a652a99]
+  - @vercel/build-utils@14.8.0
+
+## 9.0.0
+
+### Patch Changes
+
+- 1e2ac0d: Update `@next-community/adapter-vercel` to `0.0.1-beta.29` to include the latest downstream fixes.
+- Updated dependencies [26b891e]
+- Updated dependencies [37ff9da]
+  - @vercel/build-utils@14.7.0
+
+## 8.0.1
+
+### Patch Changes
+
+- Updated dependencies [aad9541]
+  - @vercel/build-utils@14.6.1
+
+## 8.0.0
+
+### Patch Changes
+
+- Updated dependencies [e82de48]
+  - @vercel/build-utils@14.6.0
+
+## 7.0.1
+
+### Patch Changes
+
+- Updated dependencies [a443e57]
+  - @vercel/build-utils@14.5.1
+
+## 7.0.0
+
+### Patch Changes
+
+- Updated dependencies [90afd71]
+  - @vercel/build-utils@14.5.0
+
+## 6.0.1
+
+### Patch Changes
+
+- Updated dependencies [e5b0363]
+  - @vercel/build-utils@14.4.1
+
+## 6.0.0
+
+### Minor Changes
+
+- f8add0a: Replace `prerenderClassification` on `Prerender` with `initialMetadata`.
+
+  The platform consumes only the request-time compute mode and the HTML shell
+  size, so the flattened four-field taxonomy (`routeType`, `response`,
+  `compute`, `htmlSize`) is reduced to a single grouped field:
+
+  ```ts
+  initialMetadata?: {
+    compute: 'blocking' | 'resuming' | 'static';
+    htmlSize?: number;
+  }
+  ```
+
+  The group is named `initialMetadata` because the values describe the
+  deployment as it was built: revalidation can regenerate a route's output over
+  the deployment's lifetime, so readers must treat them as initial values, not
+  live state. `@vercel/next` reads `compute` and `htmlSize` off the v4
+  prerender-manifest taxonomy and deliberately ignores `routeType` and
+  `response`; the values are still carried unvalidated so a compute mode added
+  by a future framework release cannot hard-fail a deploy, and they are still
+  set only on the primary output of each prerender group. `htmlSize: 0` is a
+  real size (a shell that postponed everything); `htmlSize` is absent when
+  there is no HTML shell to measure (route handlers, Pages Router). Absence of
+  the whole group remains legitimate (`notFoundRoutes`, Pages Router
+  `fallback: false`, older frameworks).
+
+### Patch Changes
+
+- Updated dependencies [f8add0a]
+  - @vercel/build-utils@14.4.0
+
+## 5.0.0
+
+### Patch Changes
+
+- cd6b038: Honor `package.json` pnpm pins without Corepack, and default new projects to pnpm 11.
+
+  When Corepack is off, `devEngines.packageManager` is preferred, then a lockfile-compatible `packageManager` field, then `engines.pnpm` as a selector. Unpinned lockfile `9.0` projects created on or after 2026-08-19 use pnpm 11 (Node 22+) if `/pnpm11` is present in the build image; otherwise they keep pnpm 10.
+
+- 0d71a61: Declare `@vercel/build-utils` as a peer dependency provided by Vercel CLI so builders load correctly with strict dependency isolation, including pnpm global installs.
+- Updated dependencies [0b08df6]
+- Updated dependencies [cd6b038]
+- Updated dependencies [96444ba]
+  - @vercel/build-utils@14.3.0
+
+## 4.21.7
+
+### Patch Changes
+
+- ed9797e: Clean up the `NEXT_EXPERIMENTAL_LARGE_FUNCTIONS` flag: routes that individually exceed the default packing budget are now always emitted as their own function, no opt-in required.
+
+## 4.21.6
+
+### Patch Changes
+
+- bded29c: Declare the postponed state length of a partially prerendered output in bytes, so the CDN splits the output at the right offset when the state contains a multi-byte character.
+- a684b77: Update `@next-community/adapter-vercel` to `0.0.1-beta.27`, which includes the postponed state byte-length fix for partially prerendered output.
+
+## 4.21.5
+
+### Patch Changes
+
+- b4f09c1: Support selecting Bun 1.4.x as an explicit runtime and build-time package manager, including local Bun servers.
+
+## 4.21.4
+
+### Patch Changes
+
+- 7ddf258: Remove obsolete shared-lambda size coverage for an unsupported dependency stack.
+- b517588: Update the Next.js adapter to 0.0.1-beta.26.
+
+## 4.21.3
+
+### Patch Changes
+
+- 0dd2105: Update to latest Next.js adapter
+- 4a1b21c: Infer `NEXT_DEPLOYMENT_ID` from `VERCEL_DEPLOYMENT_ID` for non-adapter builds when Skew Protection is enabled, so Next.js builds resolved per-service still use the deployment id for skew-protected requests.
+
+## 4.21.2
+
+### Patch Changes
+
+- d72826e: Prevented unit tests and generated outputs from changing Turborepo task inputs during CI, and removed the redundant affected Unit test retry.
+
+## 4.21.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
+## 4.21.0
+
+### Minor Changes
+
+- b747ab4: Replace the inferred PPR fields on `Prerender` with the Next.js prerender taxonomy.
+
+  `hasPostponed`, `hasFallback`, `isDynamicRoute` and `htmlSize` were derived by
+  `@vercel/next` from build artifacts (the `.meta` postponed state, which manifest
+  section a route came from, and a `statSync` of the `.html` shell). Next.js
+  `>= 16.3.0-canary.96` publishes its own classification in the prerender
+  manifest, so those four fields are removed in favour of a single optional
+  `prerenderClassification` on `Prerender` / `PrerenderOptions`:
+
+  - `routeType` — `'route' | 'page' | 'shell' | 'fallback'`
+  - `response` — `'empty' | 'initial' | 'complete'`
+  - `compute` — `'blocking' | 'resuming' | 'static'`
+  - `htmlSize` — byte size of the prerendered HTML shell, when the entry has one
+
+  The values are carried through unvalidated so a taxonomy value added by a future
+  Next.js release cannot hard-fail a deploy. `@vercel/next` sets the field only
+  when Next.js supplied the complete group — absence is legitimate for
+  `notFoundRoutes` and Pages Router `fallback: false` templates — and only on the
+  primary output of each prerender group, so a route is classified exactly once.
+
 ## 4.20.5
 
 ### Patch Changes

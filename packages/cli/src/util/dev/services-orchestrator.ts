@@ -4,19 +4,13 @@ import { Transform, Writable, type TransformCallback } from 'stream';
 import type { ChildProcess } from 'child_process';
 import getPort from 'get-port';
 import chalk from 'chalk';
+import { frameworkList, type Framework } from '@vercel/frameworks';
+import { getNextCronDelay } from './cron';
 import {
   getInternalServiceCronPath,
   getInternalServiceCronPathPrefix,
   getInternalServiceWorkerPathPrefix,
   isExperimentalServiceV2,
-  type ExperimentalService,
-  type ExperimentalServiceV2,
-  type Service,
-} from '@vercel/fs-detectors';
-import type { Cron, DevQueueSubscription } from '@vercel/build-utils';
-import { frameworkList, type Framework } from '@vercel/frameworks';
-import { getNextCronDelay } from './cron';
-import {
   isExperimentalService,
   isQueueBackedService,
   isQueueTriggeredService,
@@ -34,13 +28,19 @@ import {
   type BuilderVX,
   type Config,
   type StartDevServerOptions,
+  type Cron,
+  type DevQueueSubscription,
+  type ExperimentalService,
+  type ExperimentalServiceV2,
+  type Service,
 } from '@vercel/build-utils';
 import { checkForPort } from './port-utils';
-import { importBuilders } from '../build/import-builders';
-import { getStaticServiceSchedules } from '../service-schedules';
+import { importBuilders } from '../../builders/import-builders';
+import { getStaticServiceSchedules } from '@vercel-internals/cli-builder-integration/service-schedules';
 import output from '../../output-manager';
 import { treeKill } from '../tree-kill';
 import { injectNextDevWebSocketShimIfNeeded } from './next-dev-websocket-shim-injection';
+import { getDevRuntimeCacheEnv } from './runtime-cache';
 
 const STARTUP_TIMEOUT = ms('5m');
 
@@ -645,6 +645,18 @@ export class ServicesOrchestrator {
     });
   }
 
+  /**
+   * Every service shares the dev server's Runtime Cache store, so a value one
+   * service writes is readable by the others, like in a deployment. A cache
+   * endpoint the developer configured themselves takes precedence.
+   */
+  private applyRuntimeCacheEnv(env: NodeJS.ProcessEnv): void {
+    if (env.RUNTIME_CACHE_ENDPOINT) {
+      return;
+    }
+    Object.assign(env, getDevRuntimeCacheEnv(this.proxyOrigin));
+  }
+
   private getV1StartSpec(service: ExperimentalService): ServiceStartSpec {
     const framework = frameworkList.find(f => f.slug === service.framework);
     const effectiveProcessEnv = cloneEnv(this.envFilesValues, process.env);
@@ -700,8 +712,9 @@ export class ServicesOrchestrator {
       env.VERCEL_QUEUE_BASE_URL = `${this.proxyOrigin}/_svc/_queues`;
       env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
       env.VERCEL_REGION = 'dev1';
-      env.VERCEL_DEPLOYMENT_ID = 'dpl_dev';
     }
+
+    this.applyRuntimeCacheEnv(env);
 
     if (service.routePrefix && service.routePrefix !== '/') {
       env.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
@@ -779,8 +792,9 @@ export class ServicesOrchestrator {
       env.VERCEL_QUEUE_BASE_URL = `${this.proxyOrigin}/_svc/_queues`;
       env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
       env.VERCEL_REGION = 'dev1';
-      env.VERCEL_DEPLOYMENT_ID = 'dpl_dev';
     }
+
+    this.applyRuntimeCacheEnv(env);
 
     const root = service.root || '.';
     return {

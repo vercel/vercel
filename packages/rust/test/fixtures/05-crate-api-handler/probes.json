@@ -1,0 +1,25 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "handler:api-axum randomness:RANDOMNESS_PLACEHOLDER",
+      "responseHeaders": {
+        "content-type": "/text\\/html/"
+      }
+    },
+    {
+      "path": "/data",
+      "status": 200,
+      "mustContain": "\"handler\":\"api-axum\"",
+      "responseHeaders": {
+        "content-type": "/application\\/json/"
+      }
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 404,
+      "mustContain": "not found:api-axum /does-not-exist"
+    }
+  ]
+}

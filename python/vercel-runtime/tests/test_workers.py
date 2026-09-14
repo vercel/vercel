@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import os
 import sys
 import types
 import unittest
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import Mock, patch
 
 import vercel_runtime.workers as vrw
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Mapping
 
 
 class TestIsWorkerService(unittest.TestCase):
@@ -93,31 +98,234 @@ class TestIsDevQueueServing(unittest.TestCase):
             self.assertFalse(vrw.is_dev_queue_serving())
 
 
-class TestBootstrapQueueServiceApp(unittest.TestCase):
-    def test_returns_vercel_queue_asgi_app(self) -> None:
-        expected_app = object()
+class TestCreateQueueServiceApp(unittest.TestCase):
+    def test_creates_runtime_callback_app_from_public_sdk_apis(self) -> None:
+        async def accept_and_handle(
+            body: AsyncIterator[bytes], headers: Mapping[str, str]
+        ) -> None:
+            del body, headers
+            await asyncio.sleep(0)
+
+        class ProtocolError(Exception):
+            pass
+
+        class HeadersContext:
+            def __init__(self, headers: Mapping[str, str]) -> None:
+                self.headers = headers
+
+            def use(self) -> contextlib.AbstractContextManager[None]:
+                return contextlib.nullcontext()
+
         queue_mod = types.ModuleType("vercel.queue")
-        cast("Any", queue_mod).asgi_app = Mock(return_value=expected_app)
-        vercel_mod = types.ModuleType("vercel")
-        cast("Any", vercel_mod).queue = queue_mod
+        cast("Any", queue_mod).ProtocolError = ProtocolError
+        cast("Any", queue_mod).accept_and_handle = accept_and_handle
+        headers_mod = types.ModuleType("vercel.headers")
+        cast("Any", headers_mod).HeadersContext = HeadersContext
+        cast("Any", headers_mod).headers_from_asgi_scope = Mock(return_value={})
 
         with patch.dict(
-            sys.modules, {"vercel": vercel_mod, "vercel.queue": queue_mod}
+            sys.modules,
+            {
+                "vercel.headers": headers_mod,
+                "vercel.queue": queue_mod,
+            },
+        ):
+            app = vrw.create_queue_service_app()
+
+        self.assertIsInstance(app, vrw._QueueCallbackApp)
+
+    def test_raises_when_vercel_queue_is_missing(self) -> None:
+        with (
+            patch.dict(
+                sys.modules,
+                {"vercel.headers": None, "vercel.queue": None},
+            ),
+            self.assertRaisesRegex(
+                RuntimeError,
+                "Unable to create queue service because "
+                '"vercel-queue" is missing',
+            ),
+        ):
+            vrw.create_queue_service_app()
+
+
+class TestQueueCallbackApp(unittest.IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        self.calls: list[tuple[list[bytes], dict[str, str]]] = []
+        self.context_headers: list[dict[str, str]] = []
+
+        async def accept_and_handle(
+            body: AsyncIterator[bytes], headers: Mapping[str, str]
+        ) -> None:
+            self.calls.append(([chunk async for chunk in body], dict(headers)))
+
+        @contextlib.contextmanager
+        def headers_context(
+            headers: Mapping[str, str],
+        ) -> Any:
+            self.context_headers.append(dict(headers))
+            yield
+
+        self.accept_and_handle = accept_and_handle
+        self.headers_context = headers_context
+
+    def make_app(self) -> vrw._QueueCallbackApp:
+        return vrw._QueueCallbackApp(
+            accept_and_handle=self.accept_and_handle,
+            headers_from_scope=lambda scope: {
+                key.decode("latin-1"): value.decode("latin-1")
+                for key, value in scope.get("headers", [])
+            },
+            headers_context=self.headers_context,
+            bad_request_exceptions=(ValueError, TypeError),
+        )
+
+    async def call_app(
+        self,
+        *,
+        method: str = "POST",
+        messages: list[dict[str, Any]] | None = None,
+    ) -> list[dict[str, Any]]:
+        received = list(
+            messages
+            or [
+                {"type": "http.request", "body": b"payload"},
+            ]
+        )
+        sent: list[dict[str, Any]] = []
+
+        async def receive() -> dict[str, Any]:
+            await asyncio.sleep(0)
+            return received.pop(0)
+
+        async def send(message: dict[str, Any]) -> None:
+            await asyncio.sleep(0)
+            sent.append(message)
+
+        await self.make_app()(
+            {
+                "type": "http",
+                "method": method,
+                "headers": [(b"ce-type", b"com.vercel.queue.v2beta")],
+            },
+            receive,
+            send,
+        )
+        return sent
+
+    async def test_streams_body_and_headers_to_accept_and_handle(self) -> None:
+        sent = await self.call_app(
+            messages=[
+                {
+                    "type": "http.request",
+                    "body": b"pay",
+                    "more_body": True,
+                },
+                {"type": "http.request", "body": b"load"},
+            ]
+        )
+
+        self.assertEqual(
+            self.calls,
+            [
+                (
+                    [b"pay", b"load"],
+                    {"ce-type": "com.vercel.queue.v2beta"},
+                )
+            ],
+        )
+        self.assertEqual(self.context_headers, [self.calls[0][1]])
+        self.assertEqual(sent[0]["status"], 204)
+
+    async def test_rejects_non_post_requests(self) -> None:
+        sent = await self.call_app(method="GET")
+
+        self.assertEqual(sent[0]["status"], 405)
+        self.assertEqual(sent[0]["headers"], [(b"allow", b"POST")])
+        self.assertEqual(self.calls, [])
+
+    async def test_returns_bad_request_for_invalid_callback(self) -> None:
+        async def reject(
+            body: AsyncIterator[bytes], headers: Mapping[str, str]
+        ) -> None:
+            del body, headers
+            await asyncio.sleep(0)
+            raise ValueError("bad callback")
+
+        self.accept_and_handle = reject
+        with self.assertLogs("vercel.queue", level="WARNING"):
+            sent = await self.call_app()
+
+        self.assertEqual(sent[0]["status"], 400)
+
+    async def test_returns_server_error_for_handler_failure(self) -> None:
+        async def fail(
+            body: AsyncIterator[bytes], headers: Mapping[str, str]
+        ) -> None:
+            del body, headers
+            await asyncio.sleep(0)
+            raise RuntimeError("handler failed")
+
+        self.accept_and_handle = fail
+        with self.assertLogs("vercel.queue", level="ERROR"):
+            sent = await self.call_app()
+
+        self.assertEqual(sent[0]["status"], 500)
+
+    async def test_handles_lifespan_startup_and_shutdown(self) -> None:
+        received = [
+            {"type": "lifespan.startup"},
+            {"type": "lifespan.shutdown"},
+        ]
+        sent: list[dict[str, Any]] = []
+
+        async def receive() -> dict[str, Any]:
+            await asyncio.sleep(0)
+            return received.pop(0)
+
+        async def send(message: dict[str, Any]) -> None:
+            await asyncio.sleep(0)
+            sent.append(message)
+
+        await self.make_app()({"type": "lifespan"}, receive, send)
+
+        self.assertEqual(
+            sent,
+            [
+                {"type": "lifespan.startup.complete"},
+                {"type": "lifespan.shutdown.complete"},
+            ],
+        )
+
+
+class TestBootstrapQueueServiceApp(unittest.TestCase):
+    def test_activates_integrations_before_creating_app(self) -> None:
+        expected_app = object()
+        calls: list[str] = []
+
+        def create_app() -> object:
+            calls.append("create")
+            return expected_app
+
+        def install_integrations(*, queue_serving: bool) -> None:
+            calls.append(f"install:{queue_serving}")
+
+        with (
+            patch.object(
+                vrw,
+                "install_queue_integrations",
+                side_effect=install_integrations,
+            ),
+            patch.object(
+                vrw,
+                "create_queue_service_app",
+                side_effect=create_app,
+            ),
         ):
             app = vrw.bootstrap_queue_service_app()
 
         self.assertIs(app, expected_app)
-
-    def test_raises_when_vercel_queue_is_missing(self) -> None:
-        with (
-            patch.dict(sys.modules, {"vercel": None, "vercel.queue": None}),
-            self.assertRaisesRegex(
-                RuntimeError,
-                "Unable to bootstrap queue service because "
-                '"vercel-queue" is missing',
-            ),
-        ):
-            vrw.bootstrap_queue_service_app()
+        self.assertEqual(calls, ["install:True", "create"])
 
 
 class TestInstallQueueIntegrations(unittest.TestCase):

@@ -251,7 +251,7 @@ it.skip('Should opt-out of shared lambdas when routes are detected', async () =>
   expect(hasUnderScoreErrorStaticFile).toBeTruthy();
 });
 
-it('Should provide lambda info when limit is hit (shared lambdas)', async () => {
+it('Should provide lambda info for over-budget routes (shared lambdas)', async () => {
   let logs = '';
 
   const origLog = console.log;
@@ -260,22 +260,20 @@ it('Should provide lambda info when limit is hit (shared lambdas)', async () => 
     logs += args.join(' ');
     origLog(...args);
   };
+  // `api/both.js` is over the normal packing budget, so it is emitted as its
+  // own large function under the 5 GB ceiling and the build no longer warns
+  // about the 250 MB limit — force the size report to keep the diagnostics.
+  process.env.NEXT_DEBUG_FUNCTION_SIZE = '1';
 
   try {
     await runBuildLambda(
       path.join(__dirname, '..', 'test-limit-exceeded-shared-lambdas')
     );
-  } catch (err) {
-    console.error(err);
+  } finally {
+    console.log = origLog;
+    delete process.env.NEXT_DEBUG_FUNCTION_SIZE;
   }
-  console.log = origLog;
 
-  expect(logs).toContain(
-    'Max serverless function size was exceeded for 1 function'
-  );
-  expect(logs).toContain(
-    'Max serverless function size of 250 MB uncompressed reached'
-  );
   expect(logs).toContain(`Serverless Function's page: api/both.js`);
   expect(logs).toMatch(/Large Dependencies.*?Uncompressed size/);
   expect(logs).toMatch(/node_modules\/chrome-aws-lambda\/bin.*?\d{2}.*?MB/);

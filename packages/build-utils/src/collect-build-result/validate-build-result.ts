@@ -17,6 +17,7 @@ export const SUPPORTED_AL2023_RUNTIMES = [
   'python3.13',
   'python3.14',
   'ruby3.3',
+  'bun1.4.x',
   'bun1.x',
   'executable',
 ] as const;

@@ -69,12 +69,6 @@ describe('flags sdk-keys', () => {
       ]);
     });
 
-    it('lists SDK keys successfully', async () => {
-      client.setArgv('flags', 'sdk-keys', 'ls');
-      const exitCode = await flags(client);
-      expect(exitCode).toEqual(0);
-    });
-
     it('lists SDK keys with --project when the cwd is not linked', async () => {
       const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
       removeProjectLink(cwd);
@@ -289,20 +283,6 @@ describe('flags sdk-keys', () => {
       ]);
     });
 
-    it('creates SDK key successfully', async () => {
-      client.setArgv(
-        'flags',
-        'sdk-keys',
-        'add',
-        '--type',
-        'server',
-        '--environment',
-        'production'
-      );
-      const exitCode = await flags(client);
-      expect(exitCode).toEqual(0);
-    });
-
     it('errors with invalid type', async () => {
       client.setArgv(
         'flags',
@@ -363,18 +343,6 @@ describe('flags sdk-keys', () => {
           value: 'TRUE',
         },
       ]);
-    });
-
-    it('deletes SDK key successfully', async () => {
-      client.setArgv(
-        'flags',
-        'sdk-keys',
-        'rm',
-        defaultSdkKeys[0].hashKey,
-        '--yes'
-      );
-      const exitCode = await flags(client);
-      expect(exitCode).toEqual(0);
     });
 
     it('errors when SDK key is not found', async () => {

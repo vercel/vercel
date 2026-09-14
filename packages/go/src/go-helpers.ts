@@ -12,7 +12,16 @@ import {
   copy,
 } from 'fs-extra';
 import fs from 'fs';
-import { basename, delimiter, dirname, join } from 'path';
+import {
+  basename,
+  delimiter,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+  sep,
+} from 'path';
 import stringArgv from 'string-argv';
 import { cloneEnv, debug } from '@vercel/build-utils';
 import { pipeline } from 'stream';
@@ -25,7 +34,8 @@ import type { Env } from '@vercel/build-utils';
 const streamPipeline = promisify(pipeline);
 
 const versionMap = new Map([
-  ['1.26', '1.26.1'],
+  ['1.27', '1.27.1'],
+  ['1.26', '1.26.8'],
   ['1.25', '1.25.8'],
   ['1.24', '1.24.13'],
   ['1.23', '1.23.12'],
@@ -50,6 +60,9 @@ export const localCacheDir = join('.vercel', 'cache', 'golang');
 const GO_FLAGS = process.platform === 'win32' ? [] : ['-ldflags', '-s -w'];
 const GO_MIN_MAJOR_VERSION = 1;
 const GO_MIN_MINOR_VERSION = 13;
+
+// Written last so incomplete toolchain installs are not reused.
+const GO_INSTALL_MARKER = '.vercel-go-install-complete';
 
 /**
  * Determines the URL to download the Golang SDK.
@@ -212,18 +225,30 @@ export interface GoModJson {
   }>;
 }
 
+/** Where the selected Go version came from, for build log messages. */
+export type GoVersionSource =
+  | { kind: 'go.mod' | 'go.work'; file: string; directive: 'go' | 'toolchain' }
+  | { kind: 'default' };
+
 export class GoWrapper {
   private env: Env;
   private opts: execa.Options;
   readonly resolvedVersion: string;
+  readonly versionSource: GoVersionSource;
 
-  constructor(env: Env, opts: execa.Options = {}, resolvedVersion: string) {
+  constructor(
+    env: Env,
+    opts: execa.Options = {},
+    resolvedVersion: string,
+    versionSource: GoVersionSource = { kind: 'default' }
+  ) {
     if (!opts.cwd) {
       opts.cwd = process.cwd();
     }
     this.env = env;
     this.opts = opts;
     this.resolvedVersion = resolvedVersion;
+    this.versionSource = versionSource;
   }
 
   private async execute(...args: string[]) {
@@ -303,12 +328,22 @@ export class GoWrapper {
     return this.env;
   }
 
-  build(src: string | string[], dest: string, { vendorMode = false } = {}) {
-    debug(`Building optimized 'go' binary ${src} -> ${dest}`);
+  build(
+    src: string | string[],
+    dest: string,
+    { vendorMode = false, release = true } = {}
+  ) {
+    debug(
+      `Building ${release ? 'optimized' : 'debug'} 'go' binary ${src} -> ${dest}`
+    );
     const sources = Array.isArray(src) ? src : [src];
 
     const envGoBuildFlags = (this.env || this.opts.env).GO_BUILD_FLAGS;
-    const flags = envGoBuildFlags ? stringArgv(envGoBuildFlags) : [...GO_FLAGS];
+    // `GO_FLAGS` strips symbols, which a deployed binary wants but dev does not.
+    const defaultFlags = release ? GO_FLAGS : [];
+    const flags = envGoBuildFlags
+      ? stringArgv(envGoBuildFlags)
+      : [...defaultFlags];
 
     if (vendorMode && !envGoBuildFlags) {
       flags.push('-mod=vendor');
@@ -319,49 +354,208 @@ export class GoWrapper {
 }
 
 type CreateGoOptions = {
+  /** Directory containing the `go.mod`, if any. */
   modulePath?: string;
+  /** Active workspace file; its directives take precedence over `go.mod`. */
+  workspaceFile?: string;
   opts?: execa.Options;
   workPath: string;
+  /** Treat the `go` directive as a minimum, as upstream `go` does. */
+  preferNewestToolchain?: boolean;
 };
 
+// `versionMap` is ordered newest-first.
+export function newestSupportedGoVersion(): string {
+  return Array.from(versionMap.values())[0];
+}
+
 /**
- * Initializes a `GoWrapper` instance.
- *
- * This function determines the Go version to use by first looking in the
- * `go.mod`, if exists, otherwise uses the latest version from the version
- * map.
- *
- * Next it will attempt to find the desired Go version by checking the
- * following locations:
- *   1. The "local" project cache directory (e.g. `.vercel/cache/golang`)
- *   2. The "global" cache directory (e.g. `~/.cache/com.vercel.com/golang`)
- *   3. The system PATH
- *
- * If the Go version is not found, it's downloaded and installed in the
- * global cache directory so it can be shared across projects. When using
- * Linux or macOS, it creates a symlink from the global cache to the local
- * cache directory so that `prepareCache` will persist it.
- *
- * @param modulePath The path possibly containing a `go.mod` file
- * @param opts `execa` options (`cwd`, `env`, `stdio`, etc)
- * @param workPath The path to the project to be built
- * @returns An initialized `GoWrapper` instance
+ * Searches within `stopDir`, from `startDir` through the boundary (inclusive).
+ */
+async function findFileInAncestors(
+  startDir: string,
+  stopDir: string,
+  filename: string
+): Promise<string | undefined> {
+  let dir = resolve(startDir);
+  const boundary = resolve(stopDir);
+  const fromBoundary = relative(boundary, dir);
+  if (
+    fromBoundary === '..' ||
+    fromBoundary.startsWith(`..${sep}`) ||
+    isAbsolute(fromBoundary)
+  ) {
+    return undefined;
+  }
+
+  let reachedTop = false;
+  while (!reachedTop) {
+    const candidate = join(dir, filename);
+    if (await pathExists(candidate)) {
+      debug(`Found ${candidate}`);
+      return candidate;
+    }
+    const parent = dirname(dir);
+    reachedTop = relative(boundary, dir) === '' || parent === dir;
+    dir = parent;
+  }
+  return undefined;
+}
+
+/** Finds the nearest `go.mod` up to `stopDir` (inclusive). */
+export function findGoModPath(
+  startDir: string,
+  stopDir: string
+): Promise<string | undefined> {
+  return findFileInAncestors(startDir, stopDir, 'go.mod');
+}
+
+/**
+ * Honors `GOWORK`, otherwise searches from the Go command's cwd through
+ * `stopDir` (inclusive).
+ */
+export async function findGoWorkPath(
+  startDir: string,
+  stopDir: string,
+  goWork?: string
+): Promise<string | undefined> {
+  if (goWork === 'off') return undefined;
+  if (goWork && goWork !== 'auto') {
+    if (!isAbsolute(goWork)) {
+      throw new Error('GOWORK must be an absolute path');
+    }
+    return goWork;
+  }
+  return findFileInAncestors(startDir, stopDir, 'go.work');
+}
+
+function compareGoVersions(left: string, right: string): number {
+  const leftParts = left.split('.').map(part => parseInt(part, 10));
+  const rightParts = right.split('.').map(part => parseInt(part, 10));
+
+  for (
+    let index = 0;
+    index < Math.max(leftParts.length, rightParts.length);
+    index++
+  ) {
+    const difference = (leftParts[index] ?? 0) - (rightParts[index] ?? 0);
+    if (difference !== 0) {
+      return difference;
+    }
+  }
+
+  return 0;
+}
+
+/** An explicit `toolchain` directive always wins; `go` is a pin or a minimum. */
+export function selectGoVersion(
+  preferred: GoVersions | undefined,
+  { preferNewestToolchain = false } = {}
+): string {
+  if (preferred?.toolchain) {
+    return preferred.toolchain;
+  }
+  if (preferred && !preferNewestToolchain) {
+    return preferred.go;
+  }
+
+  const newestSupported = newestSupportedGoVersion();
+  if (preferred && compareGoVersions(preferred.go, newestSupported) > 0) {
+    return preferred.go;
+  }
+
+  return newestSupported;
+}
+
+// Older Go builds binaries that abort at exec on recent macOS. Verified on
+// 26.6 (arm64): 1.22.12 aborts, 1.23.12 runs.
+const MIN_DARWIN_RUNNABLE_GO = { major: 1, minor: 23 };
+
+export function isBelowMinDarwinRunnable(version: string): boolean {
+  const [major, minor] = version.split('.').map(part => parseInt(part, 10));
+  if (!Number.isFinite(major) || !Number.isFinite(minor)) return false;
+  if (major !== MIN_DARWIN_RUNNABLE_GO.major) {
+    return major < MIN_DARWIN_RUNNABLE_GO.major;
+  }
+  return minor < MIN_DARWIN_RUNNABLE_GO.minor;
+}
+
+/**
+ * Probes the binary on `env.PATH`; `GOTOOLCHAIN=local` prevents module or
+ * workspace directives from switching toolchains during `go version`.
+ */
+export async function getInstalledGoVersion(env: Env) {
+  const { stdout } = await execa('go', ['version'], {
+    env: { ...env, GOTOOLCHAIN: 'local' },
+    extendEnv: false,
+  });
+  return parseGoVersionString(stdout);
+}
+
+/** Prefers workspace directives over those in the module's `go.mod`. */
+async function resolvePreferredGoVersion({
+  modulePath,
+  workspaceFile,
+}: Pick<CreateGoOptions, 'modulePath' | 'workspaceFile'>): Promise<
+  { versions: GoVersions; file: string; kind: 'go.mod' | 'go.work' } | undefined
+> {
+  if (workspaceFile) {
+    const versions = await parseGoVersionFile(workspaceFile);
+    if (versions) {
+      return { versions, file: workspaceFile, kind: 'go.work' };
+    }
+  }
+  if (modulePath) {
+    const file = join(modulePath, 'go.mod');
+    const versions = await parseGoVersionFile(file);
+    if (versions) {
+      return { versions, file, kind: 'go.mod' };
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Creates a wrapper for the selected Go version, checking the local cache,
+ * global cache, then PATH before downloading to the global cache.
  */
 export async function createGo({
   modulePath,
+  workspaceFile,
   opts = {},
   workPath,
+  preferNewestToolchain = false,
 }: CreateGoOptions): Promise<GoWrapper> {
-  // parse the `go.mod`, if exists
-  let goPreferredVersion: GoVersions | undefined;
-  if (modulePath) {
-    goPreferredVersion = await parseGoModVersionFromModule(modulePath);
+  const preferred = await resolvePreferredGoVersion({
+    modulePath,
+    workspaceFile,
+  });
+  const goPreferredVersion = preferred?.versions;
+
+  const goSelectedVersion = selectGoVersion(goPreferredVersion, {
+    preferNewestToolchain,
+  });
+
+  let versionSource: GoVersionSource = { kind: 'default' };
+  if (preferred && preferred.versions.toolchain === goSelectedVersion) {
+    const { kind, file } = preferred;
+    versionSource = { kind, file, directive: 'toolchain' };
+  } else if (preferred && preferred.versions.go === goSelectedVersion) {
+    const { kind, file } = preferred;
+    versionSource = { kind, file, directive: 'go' };
   }
 
-  // default to newest (first) supported go version
-  const goSelectedVersion = goPreferredVersion
-    ? goPreferredVersion.toolchain || goPreferredVersion.go
-    : Array.from(versionMap.values())[0];
+  if (
+    preferNewestToolchain &&
+    process.platform === 'darwin' &&
+    isBelowMinDarwinRunnable(goSelectedVersion)
+  ) {
+    console.warn(
+      `Warning: your \`${preferred?.kind ?? 'go.mod'}\` pins Go ${goSelectedVersion} via \`toolchain\`. Binaries built ` +
+        `with Go older than ${MIN_DARWIN_RUNNABLE_GO.major}.${MIN_DARWIN_RUNNABLE_GO.minor} do not start on recent macOS. ` +
+        `Remove the directive to use Go ${newestSupportedGoVersion()} locally.`
+    );
+  }
 
   const env = opts.env ? cloneEnv(opts.env) : cloneEnv(process.env);
   const { PATH } = env;
@@ -372,8 +566,8 @@ export async function createGo({
   );
   const goCacheDir = join(workPath, localCacheDir);
 
-  if (goPreferredVersion) {
-    debug(`Preferred go version ${goSelectedVersion} (from go.mod)`);
+  if (preferred) {
+    debug(`Preferred go version ${goSelectedVersion} (from ${preferred.file})`);
     env.GO111MODULE = 'on';
   } else {
     debug(
@@ -445,19 +639,23 @@ export async function createGo({
   for (const [label, goDir] of Object.entries(goDirs)) {
     try {
       const goBinDir = goDir && join(goDir, 'bin');
-      if (goBinDir && !(await pathExists(goBinDir))) {
-        debug(`Go not found in ${label}`);
-        continue;
+      if (goBinDir) {
+        if (!(await pathExists(goBinDir))) {
+          debug(`Go not found in ${label}`);
+          continue;
+        }
+        if (!(await pathExists(join(goDir, GO_INSTALL_MARKER)))) {
+          debug(
+            `Go install in ${label} is incomplete, ignoring this installation`
+          );
+          continue;
+        }
       }
 
       env.GOROOT = goDir || undefined;
       env.PATH = goBinDir || PATH;
 
-      const { stdout } = await execa('go', ['version'], {
-        env,
-        extendEnv: false,
-      });
-      const { major, minor, short, version } = parseGoVersionString(stdout);
+      const { major, minor, short, version } = await getInstalledGoVersion(env);
 
       if (
         major < GO_MIN_MAJOR_VERSION ||
@@ -469,7 +667,7 @@ export async function createGo({
         debug(`Selected go ${version} (from ${label})`);
 
         await setGoEnv(goDir);
-        return new GoWrapper(env, opts, version);
+        return new GoWrapper(env, opts, version, versionSource);
       } else {
         debug(`Found go ${version} in ${label}, but need ${goSelectedVersion}`);
       }
@@ -485,15 +683,11 @@ export async function createGo({
   });
 
   await setGoEnv(goGlobalCacheDir);
-  return new GoWrapper(env, opts, goSelectedVersion);
+  return new GoWrapper(env, opts, goSelectedVersion, versionSource);
 }
 
 /**
- * Download and installs the Go distribution.
- *
- * @param dest The directory to install Go into. If directory exists, it is
- * first deleted before installing.
- * @param version The Go version to download
+ * Extracts Go into a private sibling directory, then renames it into `dest`.
  */
 async function download({ dest, version }: { dest: string; version: string }) {
   const { filename, url } = getGoUrl(version);
@@ -504,50 +698,68 @@ async function download({ dest, version }: { dest: string; version: string }) {
     throw new Error(`Failed to download: ${url} (${res.status})`);
   }
 
-  debug(`Installing go ${version} to ${dest}`);
+  const tmpSuffix = `${process.pid}-${Math.random().toString(36).slice(2)}`;
+  const tmpDest = `${dest}.tmp-${tmpSuffix}`;
+  debug(`Installing go ${version} to ${dest} (via ${tmpDest})`);
 
-  await remove(dest);
-  await mkdirp(dest);
+  await mkdirp(tmpDest);
+  try {
+    if (/\.zip$/.test(filename)) {
+      const zipFile = join(tmpdir(), `${tmpSuffix}-${filename}`);
+      try {
+        await streamPipeline(res.body, createWriteStream(zipFile));
+        const zip = await yauzl.open(zipFile);
+        let entry = await zip.readEntry();
+        while (entry) {
+          const fileName = entry.fileName.split('/').slice(1).join('/');
 
-  if (/\.zip$/.test(filename)) {
-    const zipFile = join(tmpdir(), filename);
-    try {
-      await streamPipeline(res.body, createWriteStream(zipFile));
-      const zip = await yauzl.open(zipFile);
-      let entry = await zip.readEntry();
-      while (entry) {
-        const fileName = entry.fileName.split('/').slice(1).join('/');
+          if (fileName) {
+            const destPath = join(tmpDest, fileName);
 
-        if (fileName) {
-          const destPath = join(dest, fileName);
-
-          if (/\/$/.test(fileName)) {
-            await mkdirp(destPath);
-          } else {
-            const [entryStream] = await Promise.all([
-              entry.openReadStream(),
-              mkdirp(dirname(destPath)),
-            ]);
-            const out = createWriteStream(destPath);
-            await streamPipeline(entryStream, out);
+            if (/\/$/.test(fileName)) {
+              await mkdirp(destPath);
+            } else {
+              const [entryStream] = await Promise.all([
+                entry.openReadStream(),
+                mkdirp(dirname(destPath)),
+              ]);
+              const out = createWriteStream(destPath);
+              await streamPipeline(entryStream, out);
+            }
           }
+
+          entry = await zip.readEntry();
         }
-
-        entry = await zip.readEntry();
+      } finally {
+        await remove(zipFile);
       }
-    } finally {
-      await remove(zipFile);
+    } else {
+      await new Promise((resolve, reject) => {
+        res.body
+          .on('error', reject)
+          .pipe(extract({ cwd: tmpDest, strip: 1 }))
+          .on('error', reject)
+          .on('finish', resolve);
+      });
     }
-    return;
-  }
 
-  await new Promise((resolve, reject) => {
-    res.body
-      .on('error', reject)
-      .pipe(extract({ cwd: dest, strip: 1 }))
-      .on('error', reject)
-      .on('finish', resolve);
-  });
+    await fs.promises.writeFile(join(tmpDest, GO_INSTALL_MARKER), version);
+
+    // Remove an incomplete install before renaming the completed tree into place.
+    if (!(await pathExists(join(dest, GO_INSTALL_MARKER)))) {
+      await remove(dest);
+    }
+    try {
+      await fs.promises.rename(tmpDest, dest);
+    } catch (err) {
+      // Reuse a completed installation if another build won the rename.
+      if (!(await pathExists(join(dest, GO_INSTALL_MARKER)))) {
+        throw err;
+      }
+    }
+  } finally {
+    await remove(tmpDest);
+  }
 }
 
 const goVersionRegExp = /(\d+)\.(\d+)(?:\.(\d+))?/;
@@ -581,16 +793,13 @@ interface GoVersions {
 }
 
 /**
- * Attempts to parse the preferred Go version from the `go.mod` file.
- *
- * @param modulePath The directory containing the `go.mod` file
- * @returns
+ * Reads `go` and `toolchain` directives from `go.mod` or `go.work`.
+ * Returns `undefined` if the file or `go` directive is missing.
  */
-async function parseGoModVersionFromModule(
-  modulePath: string
+async function parseGoVersionFile(
+  file: string
 ): Promise<GoVersions | undefined> {
   let version: GoVersions | undefined;
-  const file = join(modulePath, 'go.mod');
 
   try {
     const content = await readFile(file, 'utf8');
@@ -610,13 +819,6 @@ async function parseGoModVersionFromModule(
   return version;
 }
 
-/**
- * Attempts to parse the preferred Go version from the `go.mod` file.
- *
- * @param content The content of the `go.mod` file
- * @returns The version in { go: `${major}.${minor}.${patch}`, toolchain: `${major}.${minor}.${patch}` | undefined } format, or undefined if no version was found
- * @throws GoError If the go version is not supported
- */
 /**
  * Checks if a file is an ELF binary by reading the 4-byte magic header.
  */
@@ -749,6 +951,10 @@ export async function findGoBinary(
   );
 }
 
+/**
+ * Parses `go` and `toolchain` directives from `go.mod` or `go.work` content.
+ * Returns `undefined` without a `go` directive; throws for unsupported versions.
+ */
 export function parseGoModVersion(content: string): GoVersions | undefined {
   const goMatches = /^\s*go\s+(\d+)\.(\d+)(?:\.(\d+))?\s*(?:\/\/.*)?$/gm.exec(
     content
@@ -776,6 +982,16 @@ export function parseGoModVersion(content: string): GoVersions | undefined {
     if (full) {
       return {
         go: full,
+        toolchain,
+      };
+    }
+    // Map future `go 1.N` directives to their first release, `1.N.0`.
+    if (
+      major === GO_MIN_MAJOR_VERSION &&
+      compareGoVersions(`${major}.${minor}`, newestSupportedGoVersion()) > 0
+    ) {
+      return {
+        go: `${major}.${minor}.0`,
         toolchain,
       };
     }

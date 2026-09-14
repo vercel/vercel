@@ -25,8 +25,8 @@ export default async function list(client: Client, argv: string[]) {
   const { flags } = parsed;
   const teamId = org.type === 'team' ? org.id : undefined;
   const search = flags['--search'];
-  const page = flags['--page'];
-  const perPage = flags['--per-page'];
+  const page = flags['--next'] ?? flags['--page'];
+  const perPage = flags['--limit'] ?? flags['--per-page'];
   const staging = flags['--staging'];
   const versionIdFlag = flags['--version'];
 
@@ -170,12 +170,12 @@ export default async function list(client: Client, argv: string[]) {
 
   if (pagination && pagination.page < pagination.numPages) {
     const nextPage = pagination.page + 1;
-    let command = `redirects list --page ${nextPage}`;
+    let command = `redirects list --next ${nextPage}`;
     if (search) {
       command += ` --search "${search}"`;
     }
     if (perPage) {
-      command += ` --per-page ${perPage}`;
+      command += ` --limit ${perPage}`;
     }
     output.log(
       `To display the next page, run ${withGlobalFlags(client, command)}`

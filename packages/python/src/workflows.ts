@@ -18,9 +18,31 @@ const WORKFLOW_OUTPUT_DIR = '_py_workflows';
  * Workflow runs and steps are delivered on `__wkf_`-prefixed topics whose
  * names embed the workflow id, so a workflow consumer subscribes to the
  * wildcard pattern — the same one assigned to workflow-triggered job services
- * (see `@vercel/fs-detectors` service resolution).
+ * (see `@vercel/fs-detectors` service resolution). Queue-served workflows
+ * attach their introspected topics instead, so this pattern only backs the
+ * legacy vercel-workers serving mode.
  */
 export const WORKFLOW_TOPIC_PATTERN = '__wkf_*';
+
+/**
+ * Dev sidecar placeholder covering namespaced workflow topics too; the dev
+ * queue broker expands `*` anywhere in a pattern, and replaces these topics
+ * with the SDK-registered subscriptions once the sidecar starts.
+ */
+export const WORKFLOW_DEV_TOPIC_PATTERN = '__*wkf_*';
+
+/**
+ * A `vercel.workflow.Workflows` registry subscribes on `__wkf_*` topics, or
+ * `__{namespace}_wkf_*` when constructed with a namespace (lowercase
+ * alphanumeric, per the SDK's validation). The namespace is only known to
+ * the SDK, so workflow subscriptions are selected by topic shape rather
+ * than a declared pattern.
+ */
+const WORKFLOW_QUEUE_TOPIC_RE = /^__(?:[a-z][a-z0-9]*_)?wkf_/;
+
+export function isWorkflowQueueTopic(topic: string): boolean {
+  return WORKFLOW_QUEUE_TOPIC_RE.test(topic);
+}
 
 export interface PyprojectWorkflow {
   name: string;
@@ -67,18 +89,21 @@ export async function getPyprojectWorkflows(
   if (!Array.isArray(workflows)) {
     throw workflowError('"tool.vercel.workflows" must be an array');
   }
-  // Every workflow consumer receives every `__wkf_*` message, so a second
-  // Lambda would fail on runs registered only in the first. All workflows
-  // must be importable from a single entrypoint module.
-  if (workflows.length > 1) {
-    throw workflowError(
-      '"tool.vercel.workflows" must declare a single entrypoint that registers every workflow'
-    );
-  }
-
-  return Promise.all(
+  const parsedWorkflows = await Promise.all(
     workflows.map((config, index) => parseWorkflow(workPath, index, config))
   );
+
+  const seenNames = new Set<string>();
+  for (const workflow of parsedWorkflows) {
+    if (seenNames.has(workflow.name)) {
+      throw workflowError(
+        `workflow "${workflow.name}" is declared more than once`
+      );
+    }
+    seenNames.add(workflow.name);
+  }
+
+  return parsedWorkflows;
 }
 
 async function parseWorkflow(

@@ -10,10 +10,6 @@ vi.mock('../../../../src/output-manager', () => ({
   },
 }));
 
-vi.mock('../../../../src/util/agent/auto-install-agentic', () => ({
-  showPluginTipIfNeeded: vi.fn().mockResolvedValue(undefined),
-}));
-
 import output from '../../../../src/output-manager';
 import { printDeploymentStatus } from '../../../../src/util/deploy/print-deployment-status';
 
@@ -23,8 +19,8 @@ function allPrintedLines(): string[] {
     .mock.calls.map(call => stripAnsi(call[0]).trim());
 }
 
-function fakeClient(): any {
-  return { argv: ['node', 'vercel'] };
+function fakeClient(argv = ['node', 'vercel']): any {
+  return { argv };
 }
 
 describe('printDeploymentStatus() — ready terminal state', () => {
@@ -154,6 +150,112 @@ describe('printDeploymentStatus() — ready terminal state', () => {
     expect(allPrintedLines().join('\n')).toContain(
       'vercel curl https://x.vercel.app'
     );
+  });
+
+  it('recommends Git with its deployment benefit and exact command', async () => {
+    await printDeploymentStatus(
+      fakeClient(),
+      {
+        readyState: 'READY',
+        alias: [],
+        aliasError: undefined as any,
+        target: 'preview',
+        indications: [],
+        url: 'x.vercel.app',
+      },
+      () => '12s',
+      false,
+      true,
+      undefined,
+      'vercel git connect'
+    );
+
+    const printed = allPrintedLines().join('\n');
+    expect(printed).toContain(
+      'Next steps:\n- Automatically deploy changes on every push by connecting Git:\n  vercel git connect'
+    );
+    expect(printed).toContain(
+      '- Check the deployment response:\n  vercel curl https://x.vercel.app'
+    );
+    expect(printed).toContain(
+      '- View build logs:\n  vercel inspect x.vercel.app --logs'
+    );
+    expect(printed).toContain(
+      '- Create a new deployment from the same source:\n  vercel redeploy x.vercel.app'
+    );
+    expect(printed).toContain(
+      '- Deploy the current project to production:\n  vercel deploy --prod'
+    );
+  });
+
+  it('shows only safe status guidance while a deployment is still building', async () => {
+    await printDeploymentStatus(
+      fakeClient(),
+      {
+        readyState: 'BUILDING',
+        alias: [],
+        aliasError: undefined as any,
+        target: 'preview',
+        indications: [],
+        url: 'x.vercel.app',
+      },
+      () => '12s',
+      true,
+      true,
+      undefined,
+      'vercel git connect'
+    );
+
+    const printed = allPrintedLines().join('\n');
+    expect(printed).toContain(
+      '- Automatically deploy changes on every push by connecting Git:\n  vercel git connect'
+    );
+    expect(printed).toContain(
+      '- Check deployment status:\n  vercel inspect x.vercel.app'
+    );
+    expect(printed).not.toContain('vercel curl');
+    expect(printed).not.toContain('--logs');
+    expect(printed).not.toContain('vercel redeploy');
+    expect(printed).not.toContain('vercel deploy --prod');
+  });
+
+  it('preserves project context in every deployment command', async () => {
+    await printDeploymentStatus(
+      fakeClient([
+        'node',
+        'vercel',
+        'deploy',
+        '--cwd',
+        '/tmp/my-app',
+        '--scope',
+        'acme',
+        '--project',
+        'my-app',
+      ]),
+      {
+        readyState: 'READY',
+        alias: [],
+        aliasError: undefined as any,
+        target: 'production',
+        indications: [],
+        url: 'x.vercel.app',
+      },
+      () => '12s',
+      false,
+      true
+    );
+
+    const printed = allPrintedLines().join('\n');
+    expect(printed).toContain(
+      'vercel curl https://x.vercel.app --cwd /tmp/my-app --scope acme --project my-app'
+    );
+    expect(printed).toContain(
+      'vercel inspect x.vercel.app --logs --cwd /tmp/my-app --scope acme --project my-app'
+    );
+    expect(printed).toContain(
+      'vercel redeploy x.vercel.app --cwd /tmp/my-app --scope acme --project my-app'
+    );
+    expect(printed).not.toContain('vercel deploy --prod');
   });
 
   it('Ready line has a leading blank line (separates from Aliased row)', async () => {

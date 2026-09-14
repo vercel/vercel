@@ -1,0 +1,23 @@
+import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { removeSubcommand } from '../../../../commands/kms/command';
+
+export class KmsRmTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof removeSubcommand>
+{
+  trackCliArgumentIssuerId(issuerId: string | undefined) {
+    if (issuerId) {
+      this.trackCliArgument({
+        arg: 'issuerId',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliFlagYes(yes: boolean | undefined) {
+    if (yes) {
+      this.trackCliFlag('yes');
+    }
+  }
+}

@@ -53,7 +53,12 @@ describe('getUpdateCommandInfo install detection', () => {
 
       const info = await getUpdateCommandInfo();
 
-      expect(info).toEqual({ command: 'npm i -g vercel@latest', global: true });
+      expect(info).toEqual({
+        command: 'npm i -g vercel@latest',
+        global: true,
+        packageManager: 'npm',
+        assumed: false,
+      });
     });
 
     it('detects a global pnpm install via the symlinked content-addressable store', async () => {
@@ -77,6 +82,8 @@ describe('getUpdateCommandInfo install detection', () => {
       expect(info).toEqual({
         command: 'pnpm i -g vercel@latest --allow-build=esbuild',
         global: true,
+        packageManager: 'pnpm',
+        assumed: false,
       });
     });
 
@@ -94,6 +101,8 @@ describe('getUpdateCommandInfo install detection', () => {
       expect(info).toEqual({
         command: 'yarn global add vercel@latest',
         global: true,
+        packageManager: 'yarn',
+        assumed: false,
       });
     });
 
@@ -132,6 +141,8 @@ describe('getUpdateCommandInfo install detection', () => {
         expect(info).toEqual({
           command: 'npm i -g vercel@latest',
           global: true,
+          packageManager: 'npm',
+          assumed: true,
         });
       } finally {
         process.argv = originalArgv;
@@ -161,6 +172,8 @@ describe('getUpdateCommandInfo install detection', () => {
         expect(info).toEqual({
           command: 'pnpm i vercel@latest',
           global: false,
+          packageManager: 'pnpm',
+          assumed: false,
         });
       } finally {
         process.argv = originalArgv;
@@ -180,7 +193,12 @@ describe('getUpdateCommandInfo install detection', () => {
 
         const info = await getUpdateCommandInfo();
 
-        expect(info).toEqual({ command: 'npm i vercel@latest', global: false });
+        expect(info).toEqual({
+          command: 'npm i vercel@latest',
+          global: false,
+          packageManager: 'npm',
+          assumed: false,
+        });
       } finally {
         process.argv = originalArgv;
       }
@@ -202,6 +220,8 @@ describe('getUpdateCommandInfo install detection', () => {
         expect(info).toEqual({
           command: 'yarn add vercel@latest',
           global: false,
+          packageManager: 'yarn',
+          assumed: false,
         });
       } finally {
         process.argv = originalArgv;
@@ -233,6 +253,8 @@ describe('getUpdateCommandInfo install detection', () => {
         expect(info).toEqual({
           command: 'npm i -g vercel@latest',
           global: true,
+          packageManager: 'npm',
+          assumed: true,
         });
       } finally {
         process.argv = originalArgv;
@@ -259,6 +281,8 @@ describe('getUpdateCommandInfo install detection', () => {
       expect(info).toEqual({
         command: 'npm i -g @vercel/vc-native@latest --force',
         global: true,
+        packageManager: 'npm',
+        assumed: true,
       });
     });
   });

@@ -61,6 +61,9 @@ const NOTABLE_DEPS = new Set([
   'zod',
   'convex',
   'upstash',
+  'flags',
+  '@flags-sdk/vercel',
+  '@vercel/flags',
 ]);
 
 interface SkillResult {

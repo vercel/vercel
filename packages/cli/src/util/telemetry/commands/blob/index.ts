@@ -43,6 +43,13 @@ export class BlobTelemetryClient
     });
   }
 
+  trackCliSubcommandPutImage(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'put-image',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandSignedToken(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'signed-token',

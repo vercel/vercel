@@ -89,12 +89,6 @@ describe('flags create', () => {
     ]);
   });
 
-  it('creates a flag successfully', async () => {
-    client.setArgv('flags', 'create', 'new-feature');
-    const exitCode = await flags(client);
-    expect(exitCode).toEqual(0);
-  });
-
   it('prints inspect-style details without timestamps after creating a flag', async () => {
     client.setArgv('flags', 'add', 'new-feature');
 

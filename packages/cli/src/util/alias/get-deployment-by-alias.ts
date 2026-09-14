@@ -10,14 +10,16 @@ import output from '../../output-manager';
 async function getAppLastDeployment(
   client: Client,
   appName: string,
-  user: User,
+  user: User | null,
   contextName: string
 ) {
   output.debug(`Looking for deployments matching app ${appName}`);
   const deployments = await getDeploymentsByAppName(client, appName);
   const deploymentItem = deployments
     .sort((a, b) => b.created - a.created)
-    .filter(dep => dep.state === 'READY' && dep.creator.uid === user.id)[0];
+    .filter(
+      dep => dep.state === 'READY' && (!user || dep.creator.uid === user.id)
+    )[0];
 
   // Try to fetch deployment details
   if (deploymentItem) {
@@ -30,7 +32,7 @@ async function getAppLastDeployment(
 export async function getDeploymentForAlias(
   client: Client,
   localConfigPath: string | undefined,
-  user: User,
+  user: User | null,
   contextName: string,
   localConfig?: VercelConfig
 ) {

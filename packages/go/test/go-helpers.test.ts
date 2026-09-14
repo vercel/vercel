@@ -5,17 +5,30 @@ vi.mock('execa', () => {
   return { __esModule: true, default: execa };
 });
 
+vi.mock('node-fetch', () => ({
+  default: vi.fn(() => {
+    throw new Error('Unexpected Go download');
+  }),
+}));
+
 import fs from 'fs';
 import { tmpdir } from 'os';
-import { join } from 'path';
+import { join, relative, sep } from 'path';
 import { mkdirp, remove, writeFile } from 'fs-extra';
 import execa from 'execa';
 import type { Mock, MockedFunction } from 'vitest';
 import {
   GoWrapper,
+  createGo,
   isElfBinary,
   getGoModuleName,
   findGoBinary,
+  findGoModPath,
+  findGoWorkPath,
+  getInstalledGoVersion,
+  isBelowMinDarwinRunnable,
+  newestSupportedGoVersion,
+  selectGoVersion,
 } from '../src/go-helpers';
 
 const mockedExeca = execa as unknown as MockedFunction<typeof execa> & {
@@ -29,8 +42,8 @@ function createRejectedSubprocess(error: Error) {
   });
 }
 
-function createResolvedSubprocess() {
-  return Object.assign(Promise.resolve({ stdout: '', stderr: '' }), {
+function createResolvedSubprocess(stdout = '') {
+  return Object.assign(Promise.resolve({ stdout, stderr: '' }), {
     stdout: undefined,
     stderr: undefined,
   });
@@ -125,6 +138,32 @@ describe('GoWrapper', () => {
     expect(mockedExeca).toHaveBeenCalledWith(
       'go',
       ['build', '-ldflags', '-s -w', '-mod=vendor', '-o', '/tmp/out', '.'],
+      expect.objectContaining({ stdio: 'pipe' })
+    );
+  });
+
+  it('omits the stripping flags for a debug build', async () => {
+    mockedExeca.mockReturnValue(createResolvedSubprocess() as any);
+
+    const go = new GoWrapper(process.env as any);
+    await go.build('.', '/tmp/out', { release: false });
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'go',
+      ['build', '-o', '/tmp/out', '.'],
+      expect.objectContaining({ stdio: 'pipe' })
+    );
+  });
+
+  it('keeps -mod=vendor for a debug build', async () => {
+    mockedExeca.mockReturnValue(createResolvedSubprocess() as any);
+
+    const go = new GoWrapper(process.env as any);
+    await go.build('.', '/tmp/out', { vendorMode: true, release: false });
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'go',
+      ['build', '-mod=vendor', '-o', '/tmp/out', '.'],
       expect.objectContaining({ stdio: 'pipe' })
     );
   });
@@ -314,5 +353,239 @@ describe('findGoBinary', () => {
     await expect(findGoBinary(testDir, destPath, undefined, 0)).rejects.toThrow(
       'No compiled Go binary found'
     );
+  });
+});
+
+describe('selectGoVersion', () => {
+  it('pins the `go` directive for deployed builds', () => {
+    expect(selectGoVersion({ go: '1.21.13', toolchain: undefined })).toBe(
+      '1.21.13'
+    );
+  });
+
+  it('treats the `go` directive as a minimum when asked', () => {
+    expect(
+      selectGoVersion(
+        { go: '1.21.13', toolchain: undefined },
+        { preferNewestToolchain: true }
+      )
+    ).toBe(newestSupportedGoVersion());
+  });
+
+  it('keeps a `go` directive newer than the newest supported version', () => {
+    const [major, minor, patch] = newestSupportedGoVersion()
+      .split('.')
+      .map(Number);
+    const newerVersion = `${major}.${minor}.${patch + 1}`;
+
+    expect(
+      selectGoVersion(
+        { go: newerVersion, toolchain: undefined },
+        { preferNewestToolchain: true }
+      )
+    ).toBe(newerVersion);
+  });
+
+  it('honors an explicit `toolchain` directive in both modes', () => {
+    const preferred = { go: '1.21.13', toolchain: '1.22.1' };
+
+    expect(selectGoVersion(preferred)).toBe('1.22.1');
+    expect(selectGoVersion(preferred, { preferNewestToolchain: true })).toBe(
+      '1.22.1'
+    );
+  });
+
+  it('uses the newest supported version without a `go.mod`', () => {
+    expect(selectGoVersion(undefined)).toBe(newestSupportedGoVersion());
+    expect(selectGoVersion(undefined, { preferNewestToolchain: true })).toBe(
+      newestSupportedGoVersion()
+    );
+  });
+});
+
+describe('findGoModPath / findGoWorkPath', () => {
+  // repo/
+  //   go.mod, go.work
+  //   services/api/cmd/server/
+  //   services/worker/go.mod
+  const repo = join(tmpdir(), 'vercel-go-test-find-go-mod');
+  const api = join(repo, 'services', 'api');
+  const apiEntrypointDir = join(api, 'cmd', 'server');
+  const worker = join(repo, 'services', 'worker');
+
+  beforeEach(async () => {
+    await mkdirp(apiEntrypointDir);
+    await mkdirp(worker);
+    await writeFile(join(repo, 'go.work'), 'go 1.27.0\n\nuse ./services/api\n');
+    await writeFile(
+      join(repo, 'go.mod'),
+      'module example.com/repo\n\ngo 1.27.0\n'
+    );
+    await writeFile(
+      join(worker, 'go.mod'),
+      'module example.com/worker\n\ngo 1.26.0\n'
+    );
+  });
+
+  afterEach(async () => {
+    await remove(repo);
+  });
+
+  it('finds a go.mod above the service root when allowed to search to the repo root', async () => {
+    expect(await findGoModPath(apiEntrypointDir, repo)).toBe(
+      join(repo, 'go.mod')
+    );
+  });
+
+  it('stops at the service root when that is the search boundary', async () => {
+    expect(await findGoModPath(apiEntrypointDir, api)).toBeUndefined();
+  });
+
+  it('prefers the nearest go.mod', async () => {
+    expect(await findGoModPath(worker, repo)).toBe(join(worker, 'go.mod'));
+  });
+
+  it('finds the file in the boundary directory itself', async () => {
+    expect(await findGoModPath(repo, repo)).toBe(join(repo, 'go.mod'));
+  });
+
+  it('finds a go.work the same way', async () => {
+    expect(await findGoWorkPath(apiEntrypointDir, repo)).toBe(
+      join(repo, 'go.work')
+    );
+    expect(await findGoWorkPath(apiEntrypointDir, api)).toBeUndefined();
+  });
+
+  it('disables workspace discovery when GOWORK=off', async () => {
+    expect(await findGoWorkPath(api, repo, 'off')).toBeUndefined();
+  });
+
+  it('uses an explicit workspace file even outside the search boundary', async () => {
+    const workspaceFile = join(repo, 'ci.work');
+    await writeFile(workspaceFile, 'go 1.27.0\n\nuse .\n');
+    expect(await findGoWorkPath(api, api, workspaceFile)).toBe(workspaceFile);
+  });
+
+  it('rejects relative GOWORK paths like the go command', async () => {
+    await expect(findGoWorkPath(api, repo, './ci.work')).rejects.toThrow(
+      'GOWORK must be an absolute path'
+    );
+  });
+
+  describe.each([
+    { filename: 'go.mod', search: findGoModPath },
+    { filename: 'go.work', search: findGoWorkPath },
+  ])('$filename boundary enforcement', ({ filename, search }) => {
+    it.each([
+      ['trailing start separator', `${api}${sep}`, api],
+      ['trailing boundary separator', apiEntrypointDir, `${api}${sep}`],
+      ['relative boundary', apiEntrypointDir, relative(process.cwd(), api)],
+      ['start above boundary', repo, api],
+      ['unrelated boundary', api, worker],
+      ['shared path prefix', worker, join(repo, 'services', 'work')],
+    ])('does not return out-of-bounds files with %s', async (_case, start, stop) => {
+      expect(await search(start, stop)).toBeUndefined();
+    });
+
+    it('resolves relative paths and includes the normalized boundary', async () => {
+      expect(
+        await search(relative(process.cwd(), apiEntrypointDir), repo)
+      ).toBe(join(repo, filename));
+      expect(await search(`${repo}${sep}`, `${repo}${sep}`)).toBe(
+        join(repo, filename)
+      );
+    });
+  });
+});
+
+describe('createGo', () => {
+  const workPath = join(tmpdir(), 'vercel-go-test-workspace-version');
+
+  beforeEach(async () => {
+    mockedExeca.mockReset();
+    await mkdirp(workPath);
+  });
+
+  afterEach(async () => {
+    await remove(workPath);
+  });
+
+  it('reads the selected workspace file rather than assuming it is named go.work', async () => {
+    const workspaceFile = join(workPath, 'ci.work');
+    await writeFile(workspaceFile, 'go 1.99.0\ntoolchain go1.99.3\n');
+    await writeFile(join(workPath, 'go.work'), 'go 1.26.0\n');
+    await writeFile(
+      join(workPath, 'go.mod'),
+      'module example.com/api\ngo 1.25.0\n'
+    );
+    mockedExeca.mockReturnValue(
+      createResolvedSubprocess('go version go1.99.3 linux/amd64') as any
+    );
+
+    const go = await createGo({
+      modulePath: workPath,
+      workspaceFile,
+      workPath,
+    });
+
+    expect(go.resolvedVersion).toBe('1.99.3');
+    expect(go.versionSource).toEqual({
+      kind: 'go.work',
+      file: workspaceFile,
+      directive: 'toolchain',
+    });
+  });
+});
+
+describe('getInstalledGoVersion', () => {
+  beforeEach(() => {
+    mockedExeca.mockReset();
+  });
+
+  it('asks the installed toolchain for its own version', async () => {
+    mockedExeca.mockReturnValue(
+      Object.assign(
+        Promise.resolve({ stdout: 'go version go1.26.8 linux/amd64' }),
+        { stdout: undefined, stderr: undefined }
+      ) as any
+    );
+
+    const env = { PATH: '/cache/go/bin', GOROOT: '/cache/go' };
+    const version = await getInstalledGoVersion(env);
+
+    expect(version).toMatchObject({
+      version: '1.26.8',
+      short: '1.26',
+      major: 1,
+      minor: 26,
+      patch: 8,
+    });
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'go',
+      ['version'],
+      expect.objectContaining({
+        env: { ...env, GOTOOLCHAIN: 'local' },
+        extendEnv: false,
+      })
+    );
+    // The probe must not leak the pin into the env used for the build.
+    expect(env).not.toHaveProperty('GOTOOLCHAIN');
+  });
+});
+
+describe('isBelowMinDarwinRunnable', () => {
+  // Verified on macOS 26.6 (arm64): 1.22.12 aborts at exec, 1.23.12 runs.
+  it.each([
+    ['1.21.13', true],
+    ['1.22.12', true],
+    ['1.23.12', false],
+    ['1.26.1', false],
+    ['2.0.0', false],
+  ])('reports %s as below the minimum: %s', (version, expected) => {
+    expect(isBelowMinDarwinRunnable(version)).toBe(expected);
+  });
+
+  it('does not flag an unparseable version', () => {
+    expect(isBelowMinDarwinRunnable('tip')).toBe(false);
   });
 });

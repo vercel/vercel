@@ -2,7 +2,7 @@ import { FileFsRef } from '@vercel/build-utils';
 import { promises as fs } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
-import type { Files } from '@vercel/build-utils';
+import type { File, Files } from '@vercel/build-utils';
 import { glob } from 'glob';
 
 export type Fs = Record<string, Buffer | string | { copy: string }>;
@@ -12,6 +12,16 @@ export type Filesystem = {
   repoRootPath: string;
   files: Files;
 };
+
+export function normalizePath(value: string): string {
+  return value.replace(/\\/g, '/');
+}
+
+export function normalizeFiles(files: Files): Files {
+  return Object.fromEntries(
+    Object.entries(files).map(([path, file]) => [normalizePath(path), file])
+  ) as Record<string, File>;
+}
 
 export async function prepareFilesystem(
   files: Fs,

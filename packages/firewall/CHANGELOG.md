@@ -1,5 +1,23 @@
 # @vercel/firewall
 
+## 1.2.5
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+
+## 1.2.4
+
+### Patch Changes
+
+- b4b3dd2: Run Firewall end-to-end tests on the default Node.js version.
+
+## 1.2.3
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
 ## 1.2.2
 
 ### Patch Changes

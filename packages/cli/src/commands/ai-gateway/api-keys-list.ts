@@ -12,6 +12,10 @@ import { printError } from '../../util/error';
 import { getCommandName } from '../../util/pkg-name';
 import { validateJsonOutput } from '../../util/output-format';
 import { renderResource } from '../../util/ai-gateway/output';
+import {
+  listScopeBudgetDefaults,
+  type ScopeBudgetDefault,
+} from '../../util/ai-gateway/budgets';
 
 export default async function list(client: Client, argv: string[]) {
   const telemetry = new AiGatewayApiKeysListTelemetryClient({
@@ -42,6 +46,17 @@ export default async function list(client: Client, argv: string[]) {
     return 1;
   }
 
+  // Default-capped keys render `$50 (default)`, not a dash reading as unlimited.
+  let keyDefault: ScopeBudgetDefault | undefined;
+  if (!formatResult.jsonOutput) {
+    try {
+      const defaults = await listScopeBudgetDefaults(client);
+      keyDefault = defaults.find(
+        d => d.scopeType === 'api-key' && d.active !== false
+      );
+    } catch {}
+  }
+
   return renderResource<ApiKey[]>(client, {
     asJson: formatResult.jsonOutput,
     spinnerText: 'Fetching API keys',
@@ -50,11 +65,11 @@ export default async function list(client: Client, argv: string[]) {
     isEmpty: apiKeys => apiKeys.length === 0,
     emptyMessage: `No API keys found. Create one with ${getCommandName('ai-gateway api-keys create')}.`,
     header: () => 'API keys',
-    renderTable: printApiKeysTable,
+    renderTable: apiKeys => printApiKeysTable(apiKeys, keyDefault),
   });
 }
 
-function printApiKeysTable(apiKeys: ApiKey[]) {
+function printApiKeysTable(apiKeys: ApiKey[], keyDefault?: ScopeBudgetDefault) {
   return `${table(
     [
       ['id', 'name', 'key', 'budget', 'spend', 'refresh', 'created'].map(
@@ -64,9 +79,15 @@ function printApiKeysTable(apiKeys: ApiKey[]) {
         apiKey.id,
         apiKey.name || chalk.gray('–'),
         apiKey.partialKey ? `…${apiKey.partialKey}` : chalk.gray('–'),
-        apiKey.quota ? `$${apiKey.quota.limitAmount}` : chalk.gray('–'),
+        apiKey.quota
+          ? `$${apiKey.quota.limitAmount}`
+          : keyDefault
+            ? `$${keyDefault.limitAmount} ${chalk.gray('(default)')}`
+            : chalk.gray('–'),
         apiKey.quota ? `$${apiKey.quota.currentSpend}` : chalk.gray('–'),
-        apiKey.quota?.refreshPeriod ?? chalk.gray('–'),
+        apiKey.quota?.refreshPeriod ??
+          keyDefault?.refreshPeriod ??
+          chalk.gray('–'),
         apiKey.createdAt
           ? new Date(apiKey.createdAt).toLocaleDateString()
           : chalk.gray('–'),

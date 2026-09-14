@@ -57,6 +57,22 @@ export const createSubcommand = {
       description:
         'Expiry for the key: 7d, 30d, 60d, 90d, 1y, or none (default: none)',
     },
+    {
+      name: 'zdr-exempt',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        "Exempt the key from the team's ZDR-only model restriction (team owners only)",
+    },
+    {
+      name: 'bypass-all-settings',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        "Exempt the key from all of the team's restrictions: ZDR-only models, the provider/model allowlist, and the HIPAA and prompt-training filters (team owners only)",
+    },
   ],
   examples: [
     {
@@ -70,6 +86,14 @@ export const createSubcommand = {
     {
       name: 'Create a key that expires and alerts on spend',
       value: `${packageName} ai-gateway api-keys create --budget 500 --alert-thresholds 75,100 --expiration 90d`,
+    },
+    {
+      name: 'Create a ZDR-exempt key (team owners only)',
+      value: `${packageName} ai-gateway api-keys create --name escape-hatch --zdr-exempt --expiration 7d`,
+    },
+    {
+      name: 'Create a key that bypasses all team restrictions (team owners only)',
+      value: `${packageName} ai-gateway api-keys create --name escape-hatch --bypass-all-settings --expiration 7d`,
     },
   ],
 } as const;
@@ -397,6 +421,14 @@ export const setupSubcommand = {
       description: 'Do not write .bak backups of changed files',
     },
     {
+      name: 'no-session-migration',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Do not copy existing Codex Desktop sessions for use with the Vercel AI Gateway provider.',
+    },
+    {
       name: 'no-keychain',
       shorthand: null,
       type: Boolean,
@@ -521,7 +553,7 @@ export const budgetsSetSubcommand = {
   name: 'set',
   aliases: [],
   description:
-    'Create or update an AI Gateway budget for a scope (team or project <name>)',
+    'Create or update an AI Gateway budget for a scope (team, project <name>, user <email>, or api-key <name>)',
   arguments: [
     { name: 'scope', required: true },
     { name: 'name', required: false },
@@ -544,13 +576,6 @@ export const budgetsSetSubcommand = {
       description:
         'Budget refresh cadence: daily, weekly, monthly, or none (default: monthly)',
     },
-    {
-      name: 'include-byok',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      description: 'Include BYOK usage in the budget (default: false)',
-    },
     formatOption,
     jsonOption,
   ],
@@ -562,6 +587,36 @@ export const budgetsSetSubcommand = {
     {
       name: 'Set a project budget',
       value: `${packageName} ai-gateway budgets set project my-project --limit 200`,
+    },
+    {
+      name: "Set a user's budget",
+      value: `${packageName} ai-gateway budgets set user teammate@example.com --limit 100`,
+    },
+    {
+      name: "Set an API key's budget",
+      value: `${packageName} ai-gateway budgets set api-key my-key --limit 50`,
+    },
+  ],
+} as const;
+
+export const budgetsInspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description:
+    'Show one AI Gateway budget for a scope (team, project <name>, user <email>, or api-key <name>)',
+  arguments: [
+    { name: 'scope', required: true },
+    { name: 'name', required: false },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: "Inspect a user's budget",
+      value: `${packageName} ai-gateway budgets inspect user teammate@example.com`,
+    },
+    {
+      name: 'Inspect a project budget as JSON',
+      value: `${packageName} ai-gateway budgets inspect project my-project --format json`,
     },
   ],
 } as const;
@@ -584,7 +639,7 @@ export const budgetsRemoveSubcommand = {
   name: 'remove',
   aliases: ['rm', 'delete'],
   description:
-    'Remove an AI Gateway budget for a scope (team or project <name>)',
+    'Remove an AI Gateway budget for a scope (team, project <name>, user <email>, or api-key <name>)',
   arguments: [
     { name: 'scope', required: true },
     { name: 'name', required: false },
@@ -598,6 +653,14 @@ export const budgetsRemoveSubcommand = {
     {
       name: 'Remove a project budget',
       value: `${packageName} ai-gateway budgets rm project my-project`,
+    },
+    {
+      name: "Remove a user's budget",
+      value: `${packageName} ai-gateway budgets rm user teammate@example.com`,
+    },
+    {
+      name: "Remove an API key's budget",
+      value: `${packageName} ai-gateway budgets rm api-key my-key`,
     },
   ],
 } as const;
@@ -692,7 +755,7 @@ export const budgetsDefaultsSetSubcommand = {
   name: 'set',
   aliases: [],
   description:
-    'Create or update the AI Gateway budget default for a scope (project or api-key), applied to resources of that scope without an explicit budget',
+    'Create or update the AI Gateway budget default for a scope (project, api-key, or user), applied to resources of that scope without an explicit budget',
   arguments: [{ name: 'scope', required: true }],
   options: [
     {
@@ -723,6 +786,10 @@ export const budgetsDefaultsSetSubcommand = {
       name: 'Set the per-api-key default',
       value: `${packageName} ai-gateway budgets defaults set api-key --limit 50`,
     },
+    {
+      name: 'Set the per-member default',
+      value: `${packageName} ai-gateway budgets defaults set user --limit 50`,
+    },
   ],
 } as const;
 
@@ -730,7 +797,7 @@ export const budgetsDefaultsRemoveSubcommand = {
   name: 'remove',
   aliases: ['rm', 'delete'],
   description:
-    'Remove the AI Gateway budget default for a scope (project or api-key)',
+    'Remove the AI Gateway budget default for a scope (project, api-key, or user)',
   arguments: [{ name: 'scope', required: true }],
   options: [yesOption, formatOption],
   examples: [
@@ -745,7 +812,7 @@ export const budgetsDefaultsSubcommand = {
   name: 'defaults',
   aliases: [],
   description:
-    'Manage AI Gateway budget defaults (per-project and per-api-key spend limits applied by default)',
+    'Manage AI Gateway budget defaults (per-project, per-api-key, and per-member spend limits applied by default)',
   arguments: [],
   subcommands: [
     budgetsDefaultsListSubcommand,
@@ -764,6 +831,7 @@ export const budgetsSubcommand = {
   subcommands: [
     budgetsSetSubcommand,
     budgetsListSubcommand,
+    budgetsInspectSubcommand,
     budgetsRemoveSubcommand,
     budgetsDefaultsSubcommand,
   ],

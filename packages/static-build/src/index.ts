@@ -363,6 +363,7 @@ export const build: BuildV2 = async ({
   config,
   meta = {},
   service,
+  span,
 }) => {
   await download(files, workPath, meta);
 
@@ -517,6 +518,7 @@ export const build: BuildV2 = async ({
       lockfilePath,
       lockfileVersion,
       packageJsonPackageManager,
+      packageJsonDevEngines,
       turboSupportsCorepackHome,
     } = await scanParentDirs(entrypointDir, true);
 
@@ -524,6 +526,8 @@ export const build: BuildV2 = async ({
       cliType,
       lockfileVersion,
       packageJsonPackageManager,
+      packageJsonDevEngines,
+      nodeVersion,
       env: process.env,
       turboSupportsCorepackHome,
       projectCreatedAt: config.projectSettings?.createdAt,
@@ -837,7 +841,7 @@ export const build: BuildV2 = async ({
       const buildOutputPathV2 =
         await BuildOutputV2.getBuildOutputDirectory(outputDirPrefix);
       if (buildOutputPathV2) {
-        return await BuildOutputV2.createBuildOutput(workPath);
+        return await BuildOutputV2.createBuildOutput(workPath, span);
       }
 
       const extraOutputs = await BuildOutputV1.readBuildOutputDirectory({

@@ -3,7 +3,12 @@ import { isAPIError } from '../../errors-ts';
 import { outputAgentError } from '../../agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../agent-output-constants';
 import { UNSUPPORTED_AGENTS } from './agents';
-import { buildSetupPlan, applyPlan, type SetupPlan } from './apply';
+import {
+  buildSetupPlan,
+  applyPlan,
+  applySessionMigrations,
+  type SetupPlan,
+} from './apply';
 import { buildAgentPrompt } from './render';
 import { storeKeyInKeychain } from './keychain';
 import type { KeySource } from './key-source';
@@ -54,7 +59,7 @@ export async function runMachine(args: {
           status: AGENT_STATUS.OK,
           reason: 'dry_run',
           message:
-            'Previewing AI Gateway coding-agent setup. No files written.',
+            'Previewing AI Gateway coding-agent setup. No changes applied.',
           changes: previewPlan.changes.map(c => ({
             agent: c.owners.join(', '),
             file: c.path,
@@ -65,6 +70,15 @@ export async function runMachine(args: {
                   ? 'would_update'
                   : c.status,
             ...(c.symlink ? { symlink: true } : {}),
+          })),
+          migrations: previewPlan.migrations.map(m => ({
+            agent: m.agentId,
+            label: m.label,
+            action: 'would_copy',
+            sessions: m.itemCount,
+            bytes: m.totalBytes,
+            sourceRoots: m.sourceRoots,
+            destinationRoots: m.destinationRoots,
           })),
           skipped,
           warnings: args.warnings,
@@ -129,11 +143,54 @@ export async function runMachine(args: {
     return 0;
   }
 
+  const sessionOnly =
+    !args.keySource &&
+    !args.reconfigure &&
+    previewPlan.changes.every(c => c.status === 'unchanged') &&
+    previewPlan.migrations.length > 0;
+  if (sessionOnly) {
+    if (args.promptMode) {
+      writeJson(client, {
+        status: AGENT_STATUS.OK,
+        reason: 'agent_prompt',
+        message:
+          'Generated a Codex Desktop session migration prompt. No changes were applied.',
+        prompt: buildAgentPrompt(previewPlan, ''),
+        configured: [],
+        skipped,
+        warnings: args.warnings,
+      });
+      return 0;
+    }
+
+    const migrated = await applySessionMigrations(previewPlan);
+    writeJson(client, {
+      status: migrated.errors.length > 0 ? AGENT_STATUS.ERROR : AGENT_STATUS.OK,
+      reason:
+        migrated.errors.length > 0
+          ? 'session_migration_failed'
+          : 'sessions_migrated',
+      message:
+        migrated.errors.length > 0
+          ? 'One or more Codex Desktop session copies failed. Original sessions were left unchanged.'
+          : 'Copied existing Codex Desktop sessions into the AI Gateway provider. Original sessions remain unchanged.',
+      configured: [],
+      migrated: migrated.results,
+      skipped: [...skipped, ...migrationSkips(migrated.errors)],
+      warnings: args.warnings,
+    });
+    return migrated.errors.length > 0 ? 1 : 0;
+  }
+
   const applicable = previewPlan.changes.filter(
     c =>
       (c.status === 'create' || c.status === 'update') && c.format !== 'shell'
   );
-  if (applicable.length === 0 && errored.length > 0) {
+  if (
+    applicable.length === 0 &&
+    errored.length > 0 &&
+    (args.promptMode || previewPlan.migrations.length === 0)
+  ) {
     client.stdout.write(
       `${JSON.stringify(
         {
@@ -150,6 +207,36 @@ export async function runMachine(args: {
     return 1;
   }
 
+  const migrated = args.promptMode
+    ? { results: [], errors: [] }
+    : await applySessionMigrations(previewPlan);
+  if (migrated.errors.length > 0) {
+    writeJson(client, {
+      status: AGENT_STATUS.ERROR,
+      reason: 'session_migration_failed',
+      message:
+        'No agent configuration was changed because one or more Codex Desktop session copies failed. Original sessions were left unchanged.',
+      configured: [],
+      migrated: migrated.results,
+      skipped: [...skipped, ...migrationSkips(migrated.errors)],
+      warnings: args.warnings,
+    });
+    return 1;
+  }
+  if (applicable.length === 0 && errored.length > 0) {
+    writeJson(client, {
+      status: AGENT_STATUS.ERROR,
+      reason: 'unparseable_config',
+      message:
+        "Copied the eligible sessions, but couldn't write any agent configurations.",
+      configured: [],
+      migrated: migrated.results,
+      skipped,
+      warnings: args.warnings,
+    });
+    return 1;
+  }
+
   let key: string;
   try {
     key = args.keySource ? args.keySource.key : await args.createKey();
@@ -159,6 +246,7 @@ export async function runMachine(args: {
         status: AGENT_STATUS.ERROR,
         reason: err.status === 403 ? 'forbidden' : AGENT_REASON.API_ERROR,
         message: err.message,
+        hint: `Session migrations: ${JSON.stringify(migrated.results)}`,
       });
     }
     throw err;
@@ -166,14 +254,18 @@ export async function runMachine(args: {
 
   const useKeychain = args.useKeychain && storeKeyInKeychain(key);
 
-  const finalPlan = await buildSetupPlan(selected, {
-    apiKey: key,
-    home,
-    useKeychain,
-    overrides: args.overrides,
-    shellRcOverride: args.shellRcOverride,
-    baseUrlOverride: args.baseUrlOverride,
-  });
+  const finalPlan = await buildSetupPlan(
+    selected,
+    {
+      apiKey: key,
+      home,
+      useKeychain,
+      overrides: args.overrides,
+      shellRcOverride: args.shellRcOverride,
+      baseUrlOverride: args.baseUrlOverride,
+    },
+    previewPlan.migrations
+  );
 
   if (args.promptMode) {
     if (!useKeychain) {
@@ -234,6 +326,7 @@ export async function runMachine(args: {
           action: r.action,
           backup: r.backupPath,
         })),
+        migrated: migrated.results,
         skipped,
         warnings: args.warnings,
         notes: finalPlan.notes.flatMap(n =>
@@ -245,4 +338,18 @@ export async function runMachine(args: {
     )}\n`
   );
   return 0;
+}
+
+function migrationSkips(
+  errors: Array<{ agentId: string; message: string }>
+): Array<{ target: string; reason: string; message: string }> {
+  return errors.map(error => ({
+    target: error.agentId,
+    reason: 'session_migration_failed',
+    message: error.message,
+  }));
+}
+
+function writeJson(client: Client, value: unknown): void {
+  client.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }

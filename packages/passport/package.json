@@ -15,7 +15,7 @@
       "require": "./dist/index.js"
     }
   },
-  "version": "1.0.0",
+  "version": "1.0.1",
   "repository": {
     "directory": "packages/passport",
     "type": "git",
@@ -28,7 +28,7 @@
     "jose": "5.9.6"
   },
   "devDependencies": {
-    "vitest": "2.0.1"
+    "vitest": "4.1.10"
   },
   "engines": {
     "node": ">= 20"
@@ -37,7 +37,7 @@
     "build": "node ../../utils/build.mjs",
     "test": "vitest run --config ../../vitest.config.mts",
     "type-check": "tsc --noEmit",
-    "vitest-unit": "pnpm test"
+    "test-unit": "vitest run --config ../../vitest.config.mts"
   },
   "license": "Apache-2.0",
   "publishConfig": {

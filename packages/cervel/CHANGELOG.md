@@ -1,5 +1,155 @@
 # @vercel/cervel
 
+## 0.1.61
+
+### Patch Changes
+
+- @vercel/backends@7.0.2
+
+## 0.1.60
+
+### Patch Changes
+
+- Updated dependencies [1453e3a]
+  - @vercel/backends@7.0.1
+
+## 0.1.59
+
+### Patch Changes
+
+- @vercel/backends@7.0.0
+
+## 0.1.58
+
+### Patch Changes
+
+- @vercel/backends@6.0.0
+
+## 0.1.57
+
+### Patch Changes
+
+- @vercel/backends@5.0.0
+
+## 0.1.56
+
+### Patch Changes
+
+- Updated dependencies [aad9541]
+  - @vercel/backends@4.0.1
+
+## 0.1.55
+
+### Patch Changes
+
+- @vercel/backends@4.0.0
+
+## 0.1.54
+
+### Patch Changes
+
+- @vercel/backends@3.0.3
+
+## 0.1.53
+
+### Patch Changes
+
+- @vercel/backends@3.0.2
+
+## 0.1.52
+
+### Patch Changes
+
+- @vercel/backends@3.0.1
+
+## 0.1.51
+
+### Patch Changes
+
+- Updated dependencies [90afd71]
+  - @vercel/backends@3.0.0
+
+## 0.1.50
+
+### Patch Changes
+
+- @vercel/backends@2.0.1
+
+## 0.1.49
+
+### Patch Changes
+
+- @vercel/backends@2.0.0
+
+## 0.1.48
+
+### Patch Changes
+
+- Updated dependencies [cd6b038]
+- Updated dependencies [0d71a61]
+  - @vercel/backends@1.0.0
+
+## 0.1.47
+
+### Patch Changes
+
+- @vercel/backends@0.8.39
+
+## 0.1.46
+
+### Patch Changes
+
+- Updated dependencies [b4f09c1]
+  - @vercel/backends@0.8.38
+
+## 0.1.45
+
+### Patch Changes
+
+- @vercel/backends@0.8.37
+
+## 0.1.44
+
+### Patch Changes
+
+- Updated dependencies [2da7809]
+  - @vercel/backends@0.8.36
+
+## 0.1.43
+
+### Patch Changes
+
+- @vercel/backends@0.8.35
+
+## 0.1.42
+
+### Patch Changes
+
+- @vercel/backends@0.8.34
+
+## 0.1.41
+
+### Patch Changes
+
+- @vercel/backends@0.8.33
+
+## 0.1.40
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/backends@0.8.32
+
+## 0.1.39
+
+### Patch Changes
+
+- Updated dependencies [ce2eba4]
+- Updated dependencies [ce2eba4]
+- Updated dependencies [3586b18]
+  - @vercel/backends@0.8.31
+
 ## 0.1.38
 
 ### Patch Changes

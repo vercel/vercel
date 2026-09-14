@@ -181,82 +181,58 @@ it.skip('Should not exceed function limit for large dependencies (server build)'
   expect(logs).toContain('node_modules/chrome-aws-lambda/bin');
 });
 
-// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
-it.skip('Should not exceed function limit for large dependencies (shared lambda)', async () => {
+/**
+ * Runs a build with the per-function size report forced on, returning the
+ * captured `console.log` output alongside the build output.
+ *
+ * Over-budget routes are emitted as their own large functions measured against
+ * the 5 GB ceiling, so a build like this no longer warns about the 250 MB
+ * limit — `NEXT_DEBUG_FUNCTION_SIZE` keeps the size diagnostics printed.
+ */
+async function runBuildWithSizeInfo(fixture) {
   let logs = '';
 
   const origLog = console.log;
-
   console.log = function (...args) {
     logs += args.join(' ');
     origLog(...args);
   };
-
-  const {
-    buildResult: { output },
-  } = await runBuildLambda(
-    path.join(__dirname, '../fixtures/00-test-limit-shared-lambdas')
-  );
-  console.log = origLog;
-
-  expect(output['index']).toBeDefined();
-  expect(output['__NEXT_API_LAMBDA_0']).toBeDefined();
-  expect(output['__NEXT_API_LAMBDA_1']).toBeDefined();
-  expect(output['__NEXT_API_LAMBDA_2']).not.toBeDefined();
-  expect(output['__NEXT_PAGE_LAMBDA_0']).toBeDefined();
-  expect(output['__NEXT_PAGE_LAMBDA_1']).not.toBeDefined();
-
-  const filePaths = Object.keys(output);
-
-  const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
-    filePath.match(/static.*\/pages\/_app-.*\.js$/)
-  );
-  const hasUnderScoreErrorStaticFile = filePaths.some(filePath =>
-    filePath.match(/static.*\/pages\/_error-.*\.js$/)
-  );
-  expect(hasUnderScoreAppStaticFile).toBeTruthy();
-  expect(hasUnderScoreErrorStaticFile).toBeTruthy();
-
-  const lambdas = new Set();
-
-  filePaths.forEach(filePath => {
-    if (output[filePath].type === 'Lambda') {
-      lambdas.add(output[filePath]);
-    }
-  });
-  expect(lambdas.size).toBe(3);
-
-  expect(logs).toContain(
-    'Warning: Max serverless function size of 50 MB compressed or 250 MB uncompressed almost reached'
-  );
-  expect(logs).toContain('node_modules/chrome-aws-lambda/bin');
-});
-
-it('Should provide lambda info when limit is hit (server build)', async () => {
-  let logs = '';
-
-  const origLog = console.log;
-
-  console.log = function (...args) {
-    logs += args.join(' ');
-    origLog(...args);
-  };
+  process.env.NEXT_DEBUG_FUNCTION_SIZE = '1';
 
   try {
-    await runBuildLambda(
-      path.join(__dirname, 'test-limit-exceeded-server-build')
-    );
-  } catch (err) {
-    console.error(err);
+    const {
+      buildResult: { output },
+    } = await runBuildLambda(path.join(__dirname, fixture));
+    return { logs, output };
+  } finally {
+    console.log = origLog;
+    delete process.env.NEXT_DEBUG_FUNCTION_SIZE;
   }
-  console.log = origLog;
+}
 
-  expect(logs).toContain(
-    'Max serverless function size was exceeded for 2 functions'
+/**
+ * The routes sharing `page`'s function. Pages bundled into the same group point
+ * at the same `Lambda`, so a single-entry result means the route was emitted on
+ * its own.
+ */
+function routesSharingFunction(output, page) {
+  expect(output[page]).toBeDefined();
+  return Object.keys(output)
+    .filter(key => output[key] === output[page])
+    .sort();
+}
+
+it('Should provide lambda info for over-budget routes (server build)', async () => {
+  const { logs, output } = await runBuildWithSizeInfo(
+    'test-limit-exceeded-server-build'
   );
-  expect(logs).toContain(
-    'Max serverless function size of 250 MB uncompressed reached'
-  );
+
+  // `api/both.js` traces both chrome-aws-lambda and firebase on top of the
+  // shared public/ files, putting it over the normal packing budget, so it is
+  // emitted as its own large function rather than bundled with another route.
+  expect(routesSharingFunction(output, 'api/both')).toEqual(['api/both']);
+  expect(routesSharingFunction(output, 'api/chrome')).toEqual(['api/chrome']);
+
   expect(logs).toContain(`Serverless Function's page: api/both.js`);
   expect(logs).toMatch(/Large Dependencies.*?Uncompressed size/);
   expect(logs).toMatch(/node_modules\/chrome-aws-lambda\/bin.*?\d{2}.*?MB/);
@@ -265,28 +241,11 @@ it('Should provide lambda info when limit is hit (server build)', async () => {
   expect(logs).toMatch(/big-image-2/);
 });
 
-it('Should provide lambda info when limit is hit for internal pages (server build)', async () => {
-  let logs = '';
-
-  const origLog = console.log;
-
-  console.log = function (...args) {
-    logs += args.join(' ');
-    origLog(...args);
-  };
-
-  try {
-    await runBuildLambda(
-      path.join(__dirname, 'test-limit-exceeded-internal-files-server-build')
-    );
-  } catch (err) {
-    console.error(err);
-  }
-  console.log = origLog;
-
-  expect(logs).toContain(
-    'Max serverless function size of 250 MB uncompressed reached'
+it('Should provide lambda info for over-budget routes with internal pages (server build)', async () => {
+  const { logs } = await runBuildWithSizeInfo(
+    'test-limit-exceeded-internal-files-server-build'
   );
+
   // expect(logs).toContain(`Serverless Function's page: api/firebase.js`);
   expect(logs).toContain(`Serverless Function's page: api/chrome.js`);
   expect(logs).toContain(`Serverless Function's page: api/both.js`);
@@ -297,31 +256,15 @@ it('Should provide lambda info when limit is hit for internal pages (server buil
   expect(logs).toMatch(/public\/big-image-2\.jpg/);
 });
 
-it('Should provide lambda info when limit is hit (uncompressed)', async () => {
-  let logs = '';
-
-  const origLog = console.log;
-
-  console.log = function (...args) {
-    logs += args.join(' ');
-    origLog(...args);
-  };
-
-  try {
-    await runBuildLambda(
-      path.join(__dirname, 'test-limit-exceeded-404-static-files')
-    );
-  } catch (err) {
-    console.error(err);
-  }
-  console.log = origLog;
-
-  expect(logs).toContain(
-    'Max serverless function size was exceeded for 1 function'
+it('Should provide lambda info for over-budget routes (uncompressed)', async () => {
+  const { logs, output } = await runBuildWithSizeInfo(
+    'test-limit-exceeded-404-static-files'
   );
-  expect(logs).toContain(
-    'Max serverless function size of 250 MB uncompressed reached'
-  );
+
+  // The 200 MB `data.txt` is traced into `/api/hello` only, so that route is
+  // the one pushed over the budget and split out on its own.
+  expect(routesSharingFunction(output, 'api/hello')).toEqual(['api/hello']);
+
   expect(logs).toContain(`Serverless Function's page: api/hello.js`);
   expect(logs).toMatch(/Large Dependencies.*?Uncompressed size/);
   expect(logs).toMatch(/data\.txt/);
@@ -777,6 +720,45 @@ describe('action-headers', () => {
     }
     expect(foundActionNames.length).toBe(5);
     expect(foundActionNames.sort()).toMatchSnapshot();
+  });
+
+  it('should set rather than append the action name', async () => {
+    const ops = new Set(
+      (buildResult.routes || [])
+        .filter(route => route.has?.[0].key === 'next-action')
+        .flatMap(route => route.transforms.map(({ op }) => op))
+    );
+
+    // `append` would preserve a client-supplied `x-server-action-name`
+    // alongside the resolved name.
+    expect([...ops]).toEqual(['set']);
+  });
+});
+
+describe('action-headers with an action shared across runtimes', () => {
+  /**
+   * @type {import('@vercel/build-utils').BuildResultV2Typical}
+   */
+  let buildResult;
+
+  beforeAll(async () => {
+    const result = await runBuildLambda(
+      path.join(__dirname, 'app-dir-actions-shared-runtime')
+    );
+    buildResult = result.buildResult;
+  });
+
+  it('should only route each action id once', async () => {
+    const foundActionIds = (buildResult.routes || [])
+      .filter(route => route.has?.[0].key === 'next-action')
+      .map(route => route.has[0].value);
+
+    // `app/counter.js` is rendered by both a Node and an Edge page, so
+    // `increment` is listed in both the `node` and `edge` maps of the server
+    // reference manifest under the same id. Routing it twice would match a
+    // single request twice and add `x-server-action-name` twice.
+    expect(foundActionIds.length).toBeGreaterThan(0);
+    expect(foundActionIds).toEqual([...new Set(foundActionIds)]);
   });
 });
 

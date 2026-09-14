@@ -23,8 +23,10 @@ async function performAddRequest(client: Client, domainName: string) {
   return retry(
     async () => {
       try {
-        const { domain } = await client.fetch<Response>('/v4/domains', {
-          body: { name: domainName },
+        const { domain } = await client.fetch<Response>('/v7/domains', {
+          // `zone` must be sent explicitly: the API only defaults it to `true`
+          // on v4 and below, so omitting it here would stop creating DNS zones.
+          body: { name: domainName, zone: true },
           method: 'POST',
         });
         return domain;

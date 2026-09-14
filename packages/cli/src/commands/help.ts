@@ -41,6 +41,10 @@ export interface Command {
   readonly options: ReadonlyArray<CommandOption>;
   readonly examples: ReadonlyArray<CommandExample>;
   readonly disabledGlobalOptions?: ReadonlyArray<string>;
+  readonly documentation?: {
+    readonly label: string;
+    readonly url: string;
+  };
 }
 
 // https://github.com/cli-table/cli-table3/pull/303 adds
@@ -317,6 +321,27 @@ export function buildCommandExampleLines(command: Command) {
   return outputArrayToString(outputArray);
 }
 
+export function buildCommandDocumentationLines(
+  command: Command,
+  options: BuildHelpOutputOptions
+) {
+  if (options.omitDocumentation) {
+    return null;
+  }
+
+  const documentation = command.documentation ?? options.parent?.documentation;
+  if (!documentation) {
+    return null;
+  }
+
+  return outputArrayToString([
+    `${INDENT}${chalk.dim(`${documentation.label}:`)}`,
+    '',
+    lineToString([INDENT, INDENT, chalk.cyan(documentation.url)]),
+    '',
+  ]);
+}
+
 function buildDescriptionLine(
   command: Command,
   options: BuildHelpOutputOptions
@@ -325,10 +350,9 @@ function buildDescriptionLine(
   return `${wrappingText}${NEWLINE}`;
 }
 
-interface BuildHelpOutputOptions {
+type BuildHelpOutputOptions = Omit<HelpOptions, 'columns'> & {
   columns: number;
-  parent?: Command;
-}
+};
 
 export function buildHelpOutput(
   command: Command,
@@ -348,6 +372,7 @@ export function buildHelpOutput(
     buildCommandOptionLines(command.options, options, 'Options'),
     buildCommandOptionLines(filteredGlobalOptions, options, 'Global Options'),
     buildCommandExampleLines(command),
+    buildCommandDocumentationLines(command, options),
     '',
   ];
 
@@ -357,6 +382,7 @@ export function buildHelpOutput(
 export interface HelpOptions {
   columns?: number;
   parent?: Command;
+  omitDocumentation?: true;
 }
 
 export function help(command: Command, options: HelpOptions) {

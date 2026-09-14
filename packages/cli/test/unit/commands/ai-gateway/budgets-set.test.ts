@@ -29,6 +29,66 @@ function useSetBudget(response: unknown = teamBudget) {
   return () => body;
 }
 
+const apiKey = {
+  id: 'key_123',
+  name: 'prod-key',
+  purpose: 'ai-gateway',
+};
+
+const apiKeyQuota = {
+  quotaEntityId: 'api_key_id_key_123',
+  limitAmount: 50,
+  currentSpend: 0,
+  currentByokSpend: 0,
+  includeByokInQuota: false,
+  refreshPeriod: 'monthly',
+  active: true,
+  archived: false,
+  createdAt: 1,
+  updatedAt: 2,
+};
+
+function useGetApiKey(key = apiKey) {
+  client.scenario.get(`/v1/api-keys/${key.id}`, (_req, res) => {
+    res.json({ apiKey: key });
+  });
+}
+
+function useApiKeyNotFound(id: string) {
+  client.scenario.get(`/v1/api-keys/${id}`, (_req, res) => {
+    res.statusCode = 404;
+    res.json({ error: { code: 'not_found', message: 'API key not found' } });
+  });
+}
+
+function useListApiKeys(apiKeys: unknown[]) {
+  client.scenario.get('/v1/api-keys', (_req, res) => {
+    res.json({ apiKeys, pagination: { count: apiKeys.length, next: null } });
+  });
+}
+
+function useUpdateApiKeyQuota(quota: unknown = apiKeyQuota) {
+  let body: unknown;
+  client.scenario.patch('/v1/api-keys/:id/quota', (req, res) => {
+    body = req.body;
+    res.json({ apiKey, quota });
+  });
+  return () => body;
+}
+
+const teamMember = {
+  uid: 'usr_member',
+  email: 'teammate@example.com',
+  username: 'teammate',
+  role: 'MEMBER',
+};
+
+function useTeamMembers(teamId: string, members = [teamMember]) {
+  client.scenario.get(`/v2/teams/${teamId}/members`, (_req, res) => {
+    res.json({ members, pagination: { count: members.length, next: null } });
+  });
+}
+
 describe('ai-gateway budgets set', () => {
   describe('--help', () => {
     it('returns exit code 2', async () => {
@@ -161,11 +221,144 @@ describe('ai-gateway budgets set', () => {
   });
 
   it('rejects an unknown scope', async () => {
-    client.setArgv('ai-gateway', 'budgets', 'set', 'user', '--limit', '100');
+    client.setArgv('ai-gateway', 'budgets', 'set', 'org', '--limit', '100');
 
     const exitCodePromise = aiGateway(client);
 
     await expect(client.stderr).toOutput('Unknown scope');
+    expect(await exitCodePromise).toBe(1);
+  });
+
+  it('sets an api-key budget via the key id', async () => {
+    const team = useTeam();
+    useUser();
+    useGetApiKey();
+    const getBody = useUpdateApiKeyQuota();
+    client.config.currentTeam = team.id;
+    client.setArgv(
+      'ai-gateway',
+      'budgets',
+      'set',
+      'api-key',
+      'key_123',
+      '--limit',
+      '50'
+    );
+
+    const exitCode = await aiGateway(client);
+
+    expect(exitCode).toBe(0);
+    expect(getBody()).toMatchObject({
+      limitAmount: 50,
+      active: true,
+      archived: false,
+    });
+  });
+
+  it('sets an api-key budget, resolving the key name to an id', async () => {
+    const team = useTeam();
+    useUser();
+    useApiKeyNotFound('prod-key');
+    useListApiKeys([apiKey]);
+    const getBody = useUpdateApiKeyQuota();
+    client.config.currentTeam = team.id;
+    client.setArgv(
+      'ai-gateway',
+      'budgets',
+      'set',
+      'api-key',
+      'prod-key',
+      '--limit',
+      '50'
+    );
+
+    const exitCode = await aiGateway(client);
+
+    expect(exitCode).toBe(0);
+    expect(getBody()).toMatchObject({ limitAmount: 50 });
+  });
+
+  it('errors when the api key cannot be resolved', async () => {
+    const team = useTeam();
+    useUser();
+    useApiKeyNotFound('ghost');
+    useListApiKeys([]);
+    client.config.currentTeam = team.id;
+    client.setArgv(
+      'ai-gateway',
+      'budgets',
+      'set',
+      'api-key',
+      'ghost',
+      '--limit',
+      '50'
+    );
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput('API key not found');
+    expect(await exitCodePromise).toBe(1);
+  });
+
+  it('sets a user budget, resolving the identifier to a user id', async () => {
+    const team = useTeam();
+    useUser();
+    useTeamMembers(team.id);
+    const getBody = useSetBudget({
+      ...teamBudget,
+      quotaEntityId: `api_key_id_${teamMember.uid}`,
+      scopeType: 'user',
+      scopeId: teamMember.uid,
+      limitAmount: 100,
+    });
+    client.config.currentTeam = team.id;
+    client.setArgv(
+      'ai-gateway',
+      'budgets',
+      'set',
+      'user',
+      teamMember.email,
+      '--limit',
+      '100'
+    );
+
+    const exitCode = await aiGateway(client);
+
+    expect(exitCode).toBe(0);
+    expect(getBody()).toMatchObject({
+      scopeType: 'user',
+      userId: teamMember.uid,
+      limitAmount: 100,
+    });
+  });
+
+  it('errors when the user identifier cannot be resolved', async () => {
+    const team = useTeam();
+    useUser();
+    useTeamMembers(team.id, []);
+    client.config.currentTeam = team.id;
+    client.setArgv(
+      'ai-gateway',
+      'budgets',
+      'set',
+      'user',
+      'nobody@example.com',
+      '--limit',
+      '100'
+    );
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput('Team member not found');
+    expect(await exitCodePromise).toBe(1);
+  });
+
+  it('requires a user identifier', async () => {
+    client.setArgv('ai-gateway', 'budgets', 'set', 'user', '--limit', '100');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput('user scope requires');
     expect(await exitCodePromise).toBe(1);
   });
 

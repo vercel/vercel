@@ -12,6 +12,7 @@ import type Client from '../../util/client';
 import { UpgradeTelemetryClient } from '../../util/telemetry/commands/upgrade';
 import { isAutoUpdateEnabled, setAutoUpdate } from '../../util/updates';
 import { setUseNativeBinary } from '../../util/native-binary';
+import { isNativeBinaryInstall } from '../../util/native-install';
 
 export default async function upgrade(client: Client): Promise<number> {
   let parsedArgs = null;
@@ -69,6 +70,13 @@ export default async function upgrade(client: Client): Promise<number> {
   }
 
   if (enableBinary || disableBinary) {
+    if (disableBinary && isNativeBinaryInstall()) {
+      output.fatal(
+        "Can't use `--disable-binary` from the native CLI.\nThis flag only opts the Node.js CLI out of launching the native binary. Install the Node.js CLI with `npm i -g vercel`."
+      );
+      return 1;
+    }
+
     const enabled = Boolean(enableBinary);
     setUseNativeBinary(client, enabled);
     output.success(

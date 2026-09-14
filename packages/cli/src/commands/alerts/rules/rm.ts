@@ -6,17 +6,24 @@ import output from '../../../output-manager';
 import { validateJsonOutput } from '../../../util/output-format';
 import { isAPIError } from '../../../util/errors-ts';
 import {
-  buildCommandWithGlobalFlags,
   buildCommandWithYes,
   outputAgentError,
 } from '../../../util/agent-output';
 import { AGENT_REASON } from '../../../util/agent-output-constants';
 import { packageName } from '../../../util/pkg-name';
 import { rulesRmSubcommand } from './command';
-import { parseRulesFlagsAndScope } from './parse-scope';
+import {
+  printRuleDeletionReceipt,
+  printRuleMutationReceipt,
+  printRulePreview,
+} from './format';
+import { resolveRulesTeam } from './parse-scope';
+import type { PublicAlertRule } from './types';
 import {
   emitRulesArgParseError,
+  fetchRule,
   handleRulesApiError,
+  outputRulesError,
   rulesItemPath,
 } from './util';
 
@@ -30,117 +37,79 @@ export default async function rm(
       argv,
       getFlagsSpecification(rulesRmSubcommand.options)
     );
-  } catch (e) {
-    emitRulesArgParseError(
-      client,
-      e,
-      'alerts rules rm <ruleId> --project <name-or-id> --yes'
-    );
-    printError(e);
+  } catch (error) {
+    emitRulesArgParseError(client, error, 'alerts rules rm <rule-id> --yes');
+    printError(error);
     return 1;
+  }
+
+  const format = validateJsonOutput(parsedArgs.flags);
+  if (!format.valid) {
+    return outputRulesError(client, false, 'INVALID_ARGUMENTS', format.error);
   }
 
   const ruleId = parsedArgs.args[0];
-  const fr = validateJsonOutput(parsedArgs.flags);
-  if (!fr.valid) {
-    outputAgentError(
+  if (!ruleId) {
+    return outputRulesError(
       client,
-      {
-        status: 'error',
-        reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: fr.error,
-      },
-      1
+      format.jsonOutput,
+      'MISSING_ARGUMENTS',
+      `Missing rule ID. Example: ${packageName} alerts rules rm <rule-id> --yes`
     );
-    output.error(fr.error);
-    return 1;
   }
 
-  if (!ruleId) {
-    outputAgentError(
-      client,
-      {
-        status: 'error',
-        reason: AGENT_REASON.MISSING_ARGUMENTS,
-        message: `Missing rule id. Example: ${packageName} alerts rules rm <ruleId> --yes`,
-        next: [
-          {
-            command: buildCommandWithGlobalFlags(
-              client.argv,
-              'alerts rules rm <ruleId> --yes'
-            ),
-            when: 'Replace <ruleId> with an id from `alerts rules ls`',
-          },
-          {
-            command: buildCommandWithGlobalFlags(
-              client.argv,
-              'alerts rules ls'
-            ),
-            when: 'List rule ids in the current scope',
-          },
-        ],
-      },
-      1
-    );
-    output.error('Usage: `vercel alerts rules rm <ruleId>`');
-    return 1;
-  }
+  const scope = await resolveRulesTeam(client, format.jsonOutput);
+  if (typeof scope === 'number') return scope;
 
   const skipConfirmation = Boolean(parsedArgs.flags['--yes']);
-
-  const scope = await parseRulesFlagsAndScope(
-    client,
-    {
-      '--project': parsedArgs.flags['--project'] as string | undefined,
-      '--all': parsedArgs.flags['--all'] as boolean | undefined,
-    },
-    fr.jsonOutput,
-    `alerts rules rm ${ruleId}`
-  );
-  if (typeof scope === 'number') {
-    return scope;
-  }
-
-  if (!skipConfirmation) {
-    outputAgentError(
-      client,
-      {
-        status: 'error',
-        reason: AGENT_REASON.CONFIRMATION_REQUIRED,
-        message:
-          'Removing an alert rule requires confirmation. Re-run with --yes.',
-        next: [{ command: buildCommandWithYes(client.argv) }],
-      },
-      1
-    );
-    if (
-      !(await client.input.confirm(
-        `Delete alert rule ${ruleId}? This cannot be undone.`,
-        false
-      ))
-    ) {
-      output.log('Canceled');
-      return 0;
-    }
-  }
-
-  const path = rulesItemPath(scope, ruleId);
-  output.spinner('Deleting alert rule...');
+  let prefetchedRule: PublicAlertRule | undefined;
   try {
-    await client.fetch(path, { method: 'DELETE' });
-    if (fr.jsonOutput) {
+    if (!skipConfirmation) {
+      output.spinner('Fetching alert rule…');
+      prefetchedRule = await fetchRule(client, scope, ruleId);
+      output.stopSpinner();
+      printRulePreview(prefetchedRule);
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: AGENT_REASON.CONFIRMATION_REQUIRED,
+          message:
+            'Removing an alert rule requires confirmation. Re-run with --yes.',
+          next: [{ command: buildCommandWithYes(client.argv) }],
+        },
+        1
+      );
+      if (
+        !(await client.input.confirm(
+          `Delete alert rule ${prefetchedRule.name} (${ruleId})? This cannot be undone.`,
+          false
+        ))
+      ) {
+        output.log('Canceled');
+        return 0;
+      }
+    }
+
+    output.spinner('Deleting alert rule…');
+    await client.fetch(rulesItemPath(scope.teamId, ruleId), {
+      method: 'DELETE',
+    });
+    if (format.jsonOutput) {
       client.stdout.write(
         `${JSON.stringify({ ok: true, ruleId, deleted: true }, null, 2)}\n`
       );
+    } else if (prefetchedRule) {
+      printRuleMutationReceipt('Deleted', prefetchedRule, client.argv);
     } else {
-      output.success(`Deleted alert rule ${ruleId}`);
+      printRuleDeletionReceipt(ruleId);
     }
     return 0;
-  } catch (err) {
-    if (isAPIError(err)) {
-      return handleRulesApiError(client, err, fr.jsonOutput);
+  } catch (error) {
+    if (isAPIError(error)) {
+      return handleRulesApiError(client, error, format.jsonOutput);
     }
-    throw err;
+    throw error;
   } finally {
     output.stopSpinner();
   }

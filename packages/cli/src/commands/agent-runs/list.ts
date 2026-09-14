@@ -51,18 +51,21 @@ export default async function list(client: Client): Promise<number> {
     '--since': since,
     '--until': until,
     '--search': search,
-    '--page': page,
+    '--next': next,
+    '--page': legacyPage,
     '--limit': limit,
     '--json': json,
     '--scope': scopeFlag,
   } = parsedArgs.flags;
+  const page = next ?? legacyPage;
 
   telemetry.trackCliOptionProject(projectFlag);
   telemetry.trackCliOptionEnvironment(environment);
   telemetry.trackCliOptionSince(since);
   telemetry.trackCliOptionUntil(until);
   telemetry.trackCliOptionSearch(search);
-  telemetry.trackCliOptionPage(page);
+  telemetry.trackCliOptionNext(next);
+  telemetry.trackCliOptionPage(legacyPage);
   telemetry.trackCliOptionLimit(limit);
   telemetry.trackCliFlagJson(json);
 
@@ -142,7 +145,7 @@ export default async function list(client: Client): Promise<number> {
       'vercel agent-runs list',
       scopeFlag ? `--scope ${scopeFlag}` : '',
       projectFlag ? `--project ${projectFlag}` : '',
-      `--page ${(page ?? 1) + 1}`,
+      `--next ${(page ?? 1) + 1}`,
     ]
       .filter(Boolean)
       .join(' ');

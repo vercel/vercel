@@ -260,8 +260,8 @@ describe('flags disable', () => {
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
     const output = client.stderr.getFullOutput();
-    expect(stripAnsi(output)).toContain('Serving variant: false Off');
-    expect(output).toContain(chalk.dim('Off'));
+    expect(stripAnsi(output)).toContain('Serving variant: Off (false)');
+    expect(output).toContain(chalk.dim('false'));
     expect((testFlags[0] as Flag & { message?: string }).message).toEqual(
       'Disabled for production via CLI'
     );
@@ -376,8 +376,8 @@ describe('flags disable', () => {
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
     const output = client.stderr.getFullOutput();
-    expect(stripAnsi(output)).toContain('Serving variant: false Off');
-    expect(output).toContain(chalk.dim('Off'));
+    expect(stripAnsi(output)).toContain('Serving variant: Off (false)');
+    expect(output).toContain(chalk.dim('false'));
     expect(testFlags[0].environments.production).toMatchObject({
       pausedOutcome: { type: 'variant', variantId: 'abc123xyz' },
     });
@@ -402,8 +402,8 @@ describe('flags disable', () => {
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
     const output = client.stderr.getFullOutput();
-    expect(stripAnsi(output)).toContain('Serving variant: false Disabled');
-    expect(output).toContain(chalk.dim('Disabled'));
+    expect(stripAnsi(output)).toContain('Serving variant: Disabled (false)');
+    expect(output).toContain(chalk.dim('false'));
     expect(testFlags[0].environments.production).toMatchObject({
       pausedOutcome: { type: 'variant', variantId: 'random_id_1' },
     });
@@ -476,8 +476,8 @@ describe('flags disable', () => {
       })
     );
     const output = client.stderr.getFullOutput();
-    expect(stripAnsi(output)).toContain('Serving variant: false Off');
-    expect(output).toContain(chalk.dim('Off'));
+    expect(stripAnsi(output)).toContain('Serving variant: Off (false)');
+    expect(output).toContain(chalk.dim('false'));
     expect(testFlags[0].environments.production).toMatchObject({
       pausedOutcome: { type: 'variant', variantId: 'off' },
       fallthrough: { type: 'variant', variantId: 'off' },
@@ -506,8 +506,8 @@ describe('flags disable', () => {
       `vercel flags set ${testFlags[1].slug} --environment production --variant <VARIANT>`
     );
     expect(output).toContain('Available variants:');
-    expect(output).toContain('"control" Control');
-    expect(output).toContain('"variant-a" Variant A');
+    expect(output).toContain('Control ("control")');
+    expect(output).toContain('Variant A ("variant-a")');
     expect(output).toContain(`vercel flags inspect ${testFlags[1].slug}`);
     // Should show dashboard link
     expect(output).toContain('https://vercel.com/');

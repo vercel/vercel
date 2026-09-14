@@ -37,7 +37,12 @@ export async function readConfigFile<T>(
         } else if (name.endsWith('.toml')) {
           return tomlParse(str) as unknown as T;
         } else if (name.endsWith('.yaml') || name.endsWith('.yml')) {
-          return yaml.safeLoad(str, { filename: name }) as T;
+          const docs: Array<T | null> = [];
+          yaml.safeLoadAll(str, doc => docs.push(doc as T | null), {
+            filename: name,
+          });
+          const parsedYaml = docs.at(-1);
+          return parsedYaml ?? null;
         }
       } catch (_error: unknown) {
         console.log(`Error while parsing config file: "${name}"`);

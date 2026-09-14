@@ -5,7 +5,9 @@ import { mkdirp, writeJSON } from 'fs-extra';
 import {
   getLinkFromDir,
   getLinkedProject,
+  hasLocalProjectLink,
   isOwnerLookupUnavailableLink,
+  isRemoteLookupSkippedLink,
 } from '../../../../src/util/projects/link';
 import { client } from '../../../mocks/client';
 
@@ -56,7 +58,188 @@ describe('getLinkFromDir', () => {
   });
 });
 
+describe('hasLocalProjectLink', () => {
+  it('returns false when cwd has no .vercel directory', async () => {
+    const cwd = setupTmpDir('unlinked-cwd');
+    await expect(hasLocalProjectLink(client, cwd)).resolves.toBe(false);
+  });
+
+  it('returns true when cwd has a valid project.json link', async () => {
+    const cwd = setupTmpDir('linked-cwd');
+    await mkdirp(join(cwd, '.vercel'));
+    await writeJSON(join(cwd, '.vercel/project.json'), {
+      orgId: 'team_x',
+      projectId: 'prj_x',
+      projectName: 'linked',
+    });
+
+    await expect(hasLocalProjectLink(client, cwd)).resolves.toBe(true);
+  });
+
+  it('returns true when cwd has a repo.json link', async () => {
+    const cwd = setupTmpDir('repo-linked-cwd');
+    await mkdirp(join(cwd, '.vercel'));
+    await writeJSON(join(cwd, '.vercel/repo.json'), {
+      remoteName: 'origin',
+      projects: [
+        {
+          id: 'prj_repo',
+          name: 'repo-project',
+          orgId: 'team_x',
+          directory: '.',
+        },
+      ],
+    });
+
+    await expect(hasLocalProjectLink(client, cwd)).resolves.toBe(true);
+  });
+
+  it('returns true when cwd matches a repo.json project directory', async () => {
+    const repoRoot = setupTmpDir('repo-linked-ancestor');
+    const cwd = join(repoRoot, 'apps', 'web');
+    await mkdirp(cwd);
+    await mkdirp(join(repoRoot, '.vercel'));
+    await writeJSON(join(repoRoot, '.vercel/repo.json'), {
+      remoteName: 'origin',
+      projects: [
+        {
+          id: 'prj_repo',
+          name: 'repo-project',
+          orgId: 'team_x',
+          directory: 'apps/web',
+        },
+      ],
+    });
+
+    await expect(hasLocalProjectLink(client, cwd)).resolves.toBe(true);
+  });
+
+  it('returns false when repo.json exists but cwd is not a listed project', async () => {
+    const repoRoot = setupTmpDir('repo-unlisted-cwd');
+    const cwd = join(repoRoot, 'apps', 'other');
+    await mkdirp(cwd);
+    await mkdirp(join(repoRoot, '.vercel'));
+    await writeJSON(join(repoRoot, '.vercel/repo.json'), {
+      remoteName: 'origin',
+      projects: [
+        {
+          id: 'prj_web',
+          name: 'web',
+          orgId: 'team_x',
+          directory: 'apps/web',
+        },
+      ],
+    });
+
+    await expect(hasLocalProjectLink(client, cwd)).resolves.toBe(false);
+    await expect(hasLocalProjectLink(client, repoRoot)).resolves.toBe(false);
+  });
+
+  it('returns false for settings-only project.json', async () => {
+    const cwd = setupTmpDir('settings-only-link');
+    await mkdirp(join(cwd, '.vercel'));
+    await writeJSON(join(cwd, '.vercel/project.json'), {
+      settings: {
+        createdAt: 1555413045188,
+        framework: null,
+      },
+    });
+
+    await expect(hasLocalProjectLink(client, cwd)).resolves.toBe(false);
+  });
+
+  it('returns false when project.json is invalid rather than throwing', async () => {
+    const cwd = setupTmpDir('invalid-local-link');
+    await mkdirp(join(cwd, '.vercel'));
+    await writeJSON(join(cwd, '.vercel/project.json'), {
+      orgId: 'team_x',
+      projectId: 'prj_x',
+      projectName: 123,
+    });
+
+    await expect(hasLocalProjectLink(client, cwd)).resolves.toBe(false);
+  });
+});
+
 describe('getLinkedProject', () => {
+  it('uses project.json settings when the remote lookup is skipped', async () => {
+    const cwd = setupTmpDir('local-project-link');
+    await mkdirp(join(cwd, '.vercel'));
+    await writeJSON(join(cwd, '.vercel/project.json'), {
+      orgId: 'team_local',
+      projectId: 'prj_local',
+      projectName: 'local-project',
+      settings: {
+        createdAt: 123,
+        framework: 'nextjs',
+        rootDirectory: 'app',
+      },
+    });
+
+    const link = await getLinkedProject(client, {
+      cwd,
+      skipRemoteLookup: true,
+    });
+
+    expect(link).toMatchObject({
+      status: 'linked',
+      org: {
+        id: 'team_local',
+        slug: '',
+        type: 'team',
+      },
+      project: {
+        id: 'prj_local',
+        accountId: 'team_local',
+        name: 'local-project',
+        framework: 'nextjs',
+        rootDirectory: 'app',
+      },
+      orgId: 'team_local',
+    });
+    expect(link.status === 'linked' && isRemoteLookupSkippedLink(link)).toBe(
+      true
+    );
+  });
+
+  it.each([
+    { directory: '.', expectedRootDirectory: null },
+    { directory: 'apps/web', expectedRootDirectory: 'apps/web' },
+  ])('maps repo directory $directory to project root $expectedRootDirectory', async ({
+    directory,
+    expectedRootDirectory,
+  }) => {
+    const repoRoot = setupTmpDir(`repo-project-link-${directory}`);
+    const projectCwd = directory === '.' ? repoRoot : join(repoRoot, directory);
+    await mkdirp(projectCwd);
+    await mkdirp(join(repoRoot, '.vercel'));
+    await writeJSON(join(repoRoot, '.vercel/repo.json'), {
+      remoteName: 'origin',
+      projects: [
+        {
+          id: 'prj_repo',
+          name: 'repo-project',
+          orgId: 'team_local',
+          directory,
+        },
+      ],
+    });
+
+    const link = await getLinkedProject(client, {
+      cwd: projectCwd,
+      skipRemoteLookup: true,
+    });
+
+    expect(link).toMatchObject({
+      status: 'linked',
+      project: {
+        id: 'prj_repo',
+        rootDirectory: expectedRootDirectory,
+      },
+      projectRootDirectory: directory,
+    });
+  });
+
   it('should fail to return a link when token is missing', async () => {
     const cwd = fixture('vercel-pull-next');
 

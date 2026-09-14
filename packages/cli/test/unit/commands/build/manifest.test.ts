@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { FileBlob, type Files } from '@vercel/build-utils';
-import { writeManifests } from '../../../../src/commands/build/manifest';
+import type { FileBlob, Files } from '@vercel/build-utils';
+import { writeManifests } from '@vercel-internals/cli-builder-integration/manifest';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -111,8 +111,12 @@ describe('writeManifests', () => {
         outputDir
       );
 
-      expect(diagnostics['deploy-manifest.json']).toBeInstanceOf(FileBlob);
-      expect(diagnostics['project-manifest.json']).toBeInstanceOf(FileBlob);
+      expect(diagnostics['deploy-manifest.json']).toMatchObject({
+        type: 'FileBlob',
+      });
+      expect(diagnostics['project-manifest.json']).toMatchObject({
+        type: 'FileBlob',
+      });
     });
   });
 });

@@ -1,5 +1,3 @@
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
 import type { JSONObject } from '@vercel-internals/types';
 import type Client from '../../../util/client';
 import { parseArguments } from '../../../util/get-args';
@@ -8,25 +6,99 @@ import { printError } from '../../../util/error';
 import output from '../../../output-manager';
 import { validateJsonOutput } from '../../../util/output-format';
 import { isAPIError } from '../../../util/errors-ts';
-import {
-  buildCommandWithGlobalFlags,
-  outputAgentError,
-} from '../../../util/agent-output';
-import { AGENT_REASON } from '../../../util/agent-output-constants';
 import { packageName } from '../../../util/pkg-name';
-import type { AlertRule } from '../types';
 import { rulesUpdateSubcommand } from './command';
+import { printRuleMutationReceipt } from './format';
 import {
-  parseCustomAlertQueryBody,
-  resolveCustomAlertProjectName,
-  setMissingCustomAlertProjectScope,
-} from './custom-alert-query';
-import { parseRulesFlagsAndScope } from './parse-scope';
+  resolveRulesProject,
+  resolveRulesTeam,
+  type AlertsScope,
+} from './parse-scope';
+import type {
+  AlertRuleEnvelope,
+  PublicAlertRule,
+  PublicAlertRuleType,
+} from './types';
 import {
   emitRulesArgParseError,
+  fetchRule,
   handleRulesApiError,
+  outputRulesError,
+  readRuleBody,
   rulesItemPath,
 } from './util';
+
+interface UpdateFlags {
+  '--project'?: string;
+  '--all'?: boolean;
+  '--body'?: string;
+  '--format'?: string;
+  '--json'?: boolean;
+}
+
+function sameScope(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function scopeForRule(
+  client: Client,
+  type: PublicAlertRuleType,
+  scope: AlertsScope,
+  flags: UpdateFlags,
+  jsonOutput: boolean
+): JSONObject | number {
+  if (flags['--project']) {
+    return type === 'custom'
+      ? { type: 'project', projectId: scope.projectId! }
+      : { type: 'include', projectIds: [scope.projectId!] };
+  }
+  if (type === 'custom') {
+    return outputRulesError(
+      client,
+      jsonOutput,
+      'INVALID_SCOPE',
+      'Custom alert rules must target one project. Use --project <name-or-id>.'
+    );
+  }
+  return { type: 'all' };
+}
+
+async function resolveUpdateScope(
+  client: Client,
+  flags: UpdateFlags,
+  jsonOutput: boolean,
+  ruleId: string
+): Promise<AlertsScope | number> {
+  if (flags['--project'] && flags['--all']) {
+    return outputRulesError(
+      client,
+      jsonOutput,
+      'MUTUAL_EXCLUSIVITY',
+      'Cannot specify both --all and --project. Use one or the other.'
+    );
+  }
+  return flags['--project']
+    ? resolveRulesProject(
+        client,
+        flags['--project'],
+        jsonOutput,
+        `alerts rules update ${ruleId}`
+      )
+    : resolveRulesTeam(client, jsonOutput);
+}
+
+function writeRuleResult(
+  client: Client,
+  jsonOutput: boolean,
+  action: 'Updated' | 'Unchanged',
+  rule: PublicAlertRule
+): void {
+  if (jsonOutput) {
+    client.stdout.write(`${JSON.stringify({ rule }, null, 2)}\n`);
+  } else {
+    printRuleMutationReceipt(action, rule, client.argv);
+  }
+}
 
 export default async function update(
   client: Client,
@@ -38,177 +110,111 @@ export default async function update(
       argv,
       getFlagsSpecification(rulesUpdateSubcommand.options)
     );
-  } catch (e) {
+  } catch (error) {
     emitRulesArgParseError(
       client,
-      e,
-      'alerts rules update <ruleId> --project <name-or-id> --body <path>'
+      error,
+      'alerts rules update <rule-id> --project <name-or-id>'
     );
-    printError(e);
+    printError(error);
     return 1;
+  }
+
+  const flags = parsedArgs.flags as UpdateFlags;
+  const format = validateJsonOutput(flags);
+  if (!format.valid) {
+    return outputRulesError(client, false, 'INVALID_ARGUMENTS', format.error);
   }
 
   const ruleId = parsedArgs.args[0];
-  const fr = validateJsonOutput(parsedArgs.flags);
-  if (!fr.valid) {
-    outputAgentError(
-      client,
-      {
-        status: 'error',
-        reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: fr.error,
-      },
-      1
-    );
-    output.error(fr.error);
-    return 1;
-  }
-
   if (!ruleId) {
-    outputAgentError(
+    return outputRulesError(
       client,
-      {
-        status: 'error',
-        reason: AGENT_REASON.MISSING_ARGUMENTS,
-        message: `Missing rule id. Example: ${packageName} alerts rules update <ruleId> --body <file>`,
-        next: [
-          {
-            command: buildCommandWithGlobalFlags(
-              client.argv,
-              'alerts rules update <ruleId> --body <file>'
-            ),
-            when: 'Replace <ruleId> and <file> with id and JSON patch path',
-          },
-        ],
-      },
-      1
+      format.jsonOutput,
+      'MISSING_ARGUMENTS',
+      `Missing rule ID. Example: ${packageName} alerts rules update <rule-id> --body <file>`
     );
-    output.error('Usage: `vercel alerts rules update <ruleId> --body <PATH>`');
-    return 1;
   }
 
-  const bodyPath = parsedArgs.flags['--body'] as string | undefined;
-  if (!bodyPath) {
-    outputAgentError(
+  const hasScopeFlag = Boolean(flags['--project'] || flags['--all']);
+  if (!flags['--body'] && !hasScopeFlag) {
+    return outputRulesError(
       client,
-      {
-        status: 'error',
-        reason: AGENT_REASON.MISSING_ARGUMENTS,
-        message: `Missing required flag --body. Example: ${packageName} alerts rules update ${ruleId} --body <file>`,
-        next: [
-          {
-            command: buildCommandWithGlobalFlags(
-              client.argv,
-              `alerts rules update ${ruleId} --body <file>`
-            ),
-            when: 'Replace <file> with a path to JSON patch payload',
-          },
-        ],
-      },
-      1
+      format.jsonOutput,
+      'MISSING_ARGUMENTS',
+      'Provide --body <PATH>, --project <name-or-id>, or --all.'
     );
-    output.error('Missing required flag: --body <PATH> (JSON patch payload).');
-    return 1;
   }
 
-  const scope = await parseRulesFlagsAndScope(
+  const body = flags['--body']
+    ? readRuleBody(client, flags['--body'], format.jsonOutput)
+    : ({} as JSONObject);
+  if (typeof body === 'number') return body;
+
+  if (
+    Object.hasOwn(body, 'type') &&
+    body.type !== 'built-in' &&
+    body.type !== 'custom'
+  ) {
+    return outputRulesError(
+      client,
+      format.jsonOutput,
+      'INVALID_RULE_TYPE',
+      'When provided, update body type must be built-in or custom.'
+    );
+  }
+  if (hasScopeFlag && Object.hasOwn(body, 'ruleScope')) {
+    return outputRulesError(
+      client,
+      format.jsonOutput,
+      'SCOPE_CONFLICT',
+      'Specify rule scope either in the body or with --project/--all, not both.'
+    );
+  }
+
+  const scope = await resolveUpdateScope(
     client,
-    {
-      '--project': parsedArgs.flags['--project'] as string | undefined,
-      '--all': parsedArgs.flags['--all'] as boolean | undefined,
-    },
-    fr.jsonOutput,
-    `alerts rules update ${ruleId}`
+    flags,
+    format.jsonOutput,
+    ruleId
   );
-  if (typeof scope === 'number') {
-    return scope;
-  }
+  if (typeof scope === 'number') return scope;
 
-  let raw: string;
   try {
-    raw = readFileSync(resolve(client.cwd, bodyPath), 'utf8');
-  } catch {
-    outputAgentError(
-      client,
-      {
-        status: 'error',
-        reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: `Could not read --body file: ${bodyPath}`,
-      },
-      1
-    );
-    output.error(`Could not read --body file: ${bodyPath}`);
-    return 1;
-  }
+    let existing: PublicAlertRule | undefined;
+    if (hasScopeFlag) {
+      output.spinner('Fetching alert rule…');
+      existing = await fetchRule(client, scope, ruleId);
+      const desiredScope = scopeForRule(
+        client,
+        existing.type,
+        scope,
+        flags,
+        format.jsonOutput
+      );
+      if (typeof desiredScope === 'number') return desiredScope;
 
-  let body: JSONObject;
-  try {
-    body = JSON.parse(raw) as JSONObject;
-  } catch {
-    outputAgentError(
-      client,
-      {
-        status: 'error',
-        reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: 'Invalid JSON in --body file.',
-      },
-      1
-    );
-    output.error('Invalid JSON in --body file.');
-    return 1;
-  }
-
-  const parsedCustomAlertQuery = parseCustomAlertQueryBody(client, body);
-  if (typeof parsedCustomAlertQuery === 'number') {
-    return parsedCustomAlertQuery;
-  }
-
-  delete body.id;
-  delete body.teamId;
-
-  const path = rulesItemPath(scope, ruleId);
-  output.spinner('Updating alert rule...');
-  try {
-    if (
-      parsedCustomAlertQuery &&
-      !Object.hasOwn(parsedCustomAlertQuery.query, 'scope')
-    ) {
-      let projectId =
-        typeof body.projectId === 'string' ? body.projectId : undefined;
-      if (!projectId) {
-        const rule = await client.fetch<AlertRule>(path);
-        projectId = rule.projectId;
-      }
-      if (projectId) {
-        const projectName = await resolveCustomAlertProjectName(
-          client,
-          scope,
-          projectId
-        );
-        setMissingCustomAlertProjectScope(
-          parsedCustomAlertQuery,
-          scope.teamId,
-          projectId,
-          projectName
-        );
+      if (!sameScope(existing.ruleScope, desiredScope)) {
+        body.ruleScope = desiredScope;
+      } else if (Object.keys(body).length === 0) {
+        output.stopSpinner();
+        writeRuleResult(client, format.jsonOutput, 'Unchanged', existing);
+        return 0;
       }
     }
 
-    const updated = await client.fetch<JSONObject>(path, {
-      method: 'PATCH',
-      body,
-    });
-    if (fr.jsonOutput) {
-      client.stdout.write(`${JSON.stringify({ rule: updated }, null, 2)}\n`);
-    } else {
-      output.success(`Updated alert rule ${ruleId}`);
-    }
+    output.spinner('Updating alert rule…');
+    const response = await client.fetch<AlertRuleEnvelope>(
+      rulesItemPath(scope.teamId, ruleId),
+      { method: 'PATCH', body }
+    );
+    writeRuleResult(client, format.jsonOutput, 'Updated', response.rule);
     return 0;
-  } catch (err) {
-    if (isAPIError(err)) {
-      return handleRulesApiError(client, err, fr.jsonOutput);
+  } catch (error) {
+    if (isAPIError(error)) {
+      return handleRulesApiError(client, error, format.jsonOutput);
     }
-    throw err;
+    throw error;
   } finally {
     output.stopSpinner();
   }

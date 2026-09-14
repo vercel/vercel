@@ -159,6 +159,36 @@ describe('vcr ls', () => {
     expect(client.stderr.getFullOutput()).toContain('--limit');
   });
 
+  it('continues from --next', async () => {
+    client.scenario.get('/v1/vcr/repository', (req, res) => {
+      expect(req.query.cursor).toBe('next_page');
+      res.json({ repositories: [] });
+    });
+
+    client.setArgv('vcr', 'ls', '--next', 'next_page');
+    const exitCode = await vcr(client);
+    expect(exitCode).toBe(0);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:ls', value: 'ls' },
+      { key: 'option:next', value: '[REDACTED]' },
+    ]);
+  });
+
+  it('continues accepting --cursor', async () => {
+    client.scenario.get('/v1/vcr/repository', (req, res) => {
+      expect(req.query.cursor).toBe('next_page');
+      res.json({ repositories: [] });
+    });
+
+    client.setArgv('vcr', 'ls', '--cursor', 'next_page');
+    const exitCode = await vcr(client);
+    expect(exitCode).toBe(0);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:ls', value: 'ls' },
+      { key: 'option:cursor', value: '[REDACTED]' },
+    ]);
+  });
+
   it('errors when there is no linked project', async () => {
     mockNotLinked();
     client.setArgv('vcr', 'ls');

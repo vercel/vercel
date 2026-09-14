@@ -4,6 +4,7 @@ import type {
   Images,
   ProjectSettings,
   Cron,
+  Schedule,
   ExperimentalServices,
   ExperimentalServiceGroups,
   ExperimentalServicesV2,
@@ -222,6 +223,7 @@ export interface VercelConfig {
   outputDirectory?: string | null;
   images?: Images;
   crons?: Cron[];
+  schedules?: Schedule[];
   bunVersion?: string;
   proxy?: ProxyConfig;
   /**

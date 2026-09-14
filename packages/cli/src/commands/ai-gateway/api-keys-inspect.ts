@@ -12,6 +12,11 @@ import { printError } from '../../util/error';
 import { getCommandName } from '../../util/pkg-name';
 import { validateJsonOutput } from '../../util/output-format';
 import { renderResource } from '../../util/ai-gateway/output';
+import {
+  listScopeBudgetDefaults,
+  formatBudgetCap,
+  type ScopeBudgetDefault,
+} from '../../util/ai-gateway/budgets';
 
 export default async function inspect(client: Client, argv: string[]) {
   const telemetry = new AiGatewayApiKeysInspectTelemetryClient({
@@ -51,6 +56,17 @@ export default async function inspect(client: Client, argv: string[]) {
     return 1;
   }
 
+  // Name the api-key default instead of "budget none"; JSON stays the raw key.
+  let keyDefault: ScopeBudgetDefault | undefined;
+  if (!formatResult.jsonOutput) {
+    try {
+      const defaults = await listScopeBudgetDefaults(client);
+      keyDefault = defaults.find(
+        d => d.scopeType === 'api-key' && d.active !== false
+      );
+    } catch {}
+  }
+
   return renderResource<ApiKey>(client, {
     asJson: formatResult.jsonOutput,
     spinnerText: 'Fetching API key',
@@ -59,7 +75,7 @@ export default async function inspect(client: Client, argv: string[]) {
     isEmpty: () => false,
     emptyMessage: '',
     header: apiKey => `API key ${chalk.bold(apiKey.name || apiKey.id)}`,
-    renderTable: printApiKeyDetails,
+    renderTable: apiKey => printApiKeyDetails(apiKey, keyDefault),
   });
 }
 
@@ -71,7 +87,7 @@ function yesNo(value: boolean) {
   return value ? 'yes' : 'no';
 }
 
-function printApiKeyDetails(apiKey: ApiKey) {
+function printApiKeyDetails(apiKey: ApiKey, keyDefault?: ScopeBudgetDefault) {
   const rows: string[][] = [
     ['id', apiKey.id],
     ['name', apiKey.name || dim('–')],
@@ -97,6 +113,14 @@ function printApiKeyDetails(apiKey: ApiKey) {
     ['created by', apiKey.createdBy || dim('–')],
   ];
 
+  if (apiKey.metadata?.zdr?.enableNonZdrModels) {
+    rows.push(['zdr exempt', 'yes']);
+  }
+
+  if (apiKey.metadata?.bypassAll) {
+    rows.push(['bypass all settings', 'yes']);
+  }
+
   const quota = apiKey.quota;
   if (quota) {
     rows.push(
@@ -113,6 +137,11 @@ function printApiKeyDetails(apiKey: ApiKey) {
       ],
       ['active', yesNo(quota.active)]
     );
+  } else if (keyDefault) {
+    rows.push([
+      'budget',
+      `${formatBudgetCap(keyDefault.limitAmount, keyDefault.refreshPeriod)} ${dim('(default)')}`,
+    ]);
   } else {
     rows.push(['budget', dim('none')]);
   }

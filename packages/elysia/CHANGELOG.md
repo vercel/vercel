@@ -1,5 +1,181 @@
 # @vercel/elysia
 
+## 7.0.1
+
+### Patch Changes
+
+- Updated dependencies [1817491]
+  - @vercel/build-utils@14.9.1
+  - @vercel/node@12.0.1
+
+## 7.0.0
+
+### Patch Changes
+
+- Updated dependencies [392c759]
+  - @vercel/build-utils@14.9.0
+  - @vercel/node@12.0.0
+
+## 6.0.0
+
+### Patch Changes
+
+- Updated dependencies [a652a99]
+  - @vercel/build-utils@14.8.0
+  - @vercel/node@11.0.0
+
+## 5.0.0
+
+### Patch Changes
+
+- Updated dependencies [26b891e]
+- Updated dependencies [37ff9da]
+  - @vercel/build-utils@14.7.0
+  - @vercel/node@10.0.0
+
+## 4.0.1
+
+### Patch Changes
+
+- Updated dependencies [aad9541]
+  - @vercel/build-utils@14.6.1
+  - @vercel/node@9.0.1
+
+## 4.0.0
+
+### Patch Changes
+
+- Updated dependencies [e82de48]
+  - @vercel/build-utils@14.6.0
+  - @vercel/node@9.0.0
+
+## 3.0.3
+
+### Patch Changes
+
+- Updated dependencies [b9e12f0]
+  - @vercel/static-config@3.4.3
+  - @vercel/node@8.1.2
+
+## 3.0.2
+
+### Patch Changes
+
+- Updated dependencies [a443e57]
+  - @vercel/build-utils@14.5.1
+  - @vercel/node@8.1.1
+
+## 3.0.1
+
+### Patch Changes
+
+- Updated dependencies [44be84d]
+- Updated dependencies [2c363fd]
+  - @vercel/node@8.1.0
+  - @vercel/static-config@3.4.2
+
+## 3.0.0
+
+### Minor Changes
+
+- 90afd71: Expose the resolved rewrite destination as the request path observed by Node backend framework applications (express, hono, h3, koa, nestjs, fastify, elysia) and the unified backends builder, and warn affected backend projects about the behavior change.
+
+### Patch Changes
+
+- Updated dependencies [90afd71]
+  - @vercel/build-utils@14.5.0
+  - @vercel/node@8.0.0
+
+## 2.0.1
+
+### Patch Changes
+
+- Updated dependencies [1c3e6e9]
+- Updated dependencies [e5b0363]
+  - @vercel/node@7.0.1
+  - @vercel/build-utils@14.4.1
+
+## 2.0.0
+
+### Patch Changes
+
+- Updated dependencies [f8add0a]
+  - @vercel/build-utils@14.4.0
+  - @vercel/node@7.0.0
+
+## 1.0.0
+
+### Patch Changes
+
+- 0d71a61: Declare `@vercel/build-utils` as a peer dependency provided by Vercel CLI so builders load correctly with strict dependency isolation, including pnpm global installs.
+- Updated dependencies [0b08df6]
+- Updated dependencies [cd6b038]
+- Updated dependencies [0d71a61]
+- Updated dependencies [96444ba]
+  - @vercel/build-utils@14.3.0
+  - @vercel/node@6.0.0
+
+## 0.1.116
+
+### Patch Changes
+
+- @vercel/node@5.10.2
+
+## 0.1.115
+
+### Patch Changes
+
+- Updated dependencies [b4f09c1]
+  - @vercel/node@5.10.1
+
+## 0.1.114
+
+### Patch Changes
+
+- Updated dependencies [852e1a0]
+  - @vercel/node@5.10.0
+
+## 0.1.113
+
+### Patch Changes
+
+- Updated dependencies [2da7809]
+  - @vercel/node@5.9.9
+
+## 0.1.112
+
+### Patch Changes
+
+- Updated dependencies [e829b31]
+  - @vercel/node@5.9.8
+
+## 0.1.111
+
+### Patch Changes
+
+- @vercel/node@5.9.7
+
+## 0.1.110
+
+### Patch Changes
+
+- @vercel/node@5.9.6
+
+## 0.1.109
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/node@5.9.5
+  - @vercel/static-config@3.4.1
+
+## 0.1.108
+
+### Patch Changes
+
+- @vercel/node@5.9.4
+
 ## 0.1.107
 
 ### Patch Changes

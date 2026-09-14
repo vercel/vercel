@@ -30,9 +30,8 @@ import { tmpdir } from 'node:os';
  * fake native is installed as a sibling, the CLI spawns it and exits with its
  * exit code — but only when the user has opted in (via the `useNativeBinary`
  * global config or the VERCEL_CLI_USE_NATIVE_BINARY env override); otherwise
- * it must fall through to JS. Falling through to JS on EACCES must not leave
- * VERCEL_VC_NATIVE=1 set (otherwise the version banner would claim
- * "(native)" while JS is running).
+ * it must fall through to JS. When opted in, spawn/loader failures must
+ * surface (no silent JS fallback).
  */
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -196,7 +195,7 @@ describe('dist/vc.js native resolution', () => {
   );
 
   it.runIf(process.platform !== 'win32')(
-    'falls through to JS when the native binary is not executable',
+    'surfaces spawn errors when the native binary is not executable',
     () => {
       const { vcJs } = buildInstall({
         platform: process.platform,
@@ -208,11 +207,30 @@ describe('dist/vc.js native resolution', () => {
         encoding: 'utf8',
         env: optInEnv(),
       });
-      // EACCES fall-through hits the JS --version fast path. Must not be
-      // mislabeled as native — VERCEL_VC_NATIVE must be cleared on fallback.
-      expect(r.status).toBe(0);
-      expect(r.stdout.trim()).toBe(cliVersion);
+      expect(r.status).not.toBe(0);
+      expect(r.stdout.trim()).not.toBe(cliVersion);
       expect(r.stderr).not.toContain('(native)');
+    }
+  );
+
+  it.runIf(process.platform !== 'win32')(
+    'surfaces native exit status on loader-style failures (no JS fallback)',
+    () => {
+      const { vcJs } = buildInstall({
+        platform: process.platform,
+        arch: process.arch,
+        body:
+          '#!/bin/sh\n' +
+          'echo "version \'GLIBC_2.38\' not found (required by native)" >&2\n' +
+          'exit 127\n',
+      });
+      const r = spawnSync(process.execPath, [vcJs, '--version'], {
+        encoding: 'utf8',
+        env: optInEnv(),
+      });
+      expect(r.status).toBe(127);
+      expect(r.stderr).toContain('GLIBC_2.38');
+      expect(r.stdout.trim()).not.toBe(cliVersion);
     }
   );
 });

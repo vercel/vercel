@@ -53,6 +53,16 @@ describe('validateBuildResult()', () => {
     await expect(
       validateBuildResult({
         buildConfig: {},
+        buildResponse: createBuildResponse('bun1.4.x'),
+      })
+    ).resolves.toMatchObject({
+      buildOutputMap: expect.any(Object),
+      customFunctionConfiguration: undefined,
+    });
+
+    await expect(
+      validateBuildResult({
+        buildConfig: {},
         buildResponse: createBuildResponse('python3.13'),
       })
     ).resolves.toMatchObject({

@@ -5,6 +5,7 @@
   "out": "docs",
   "githubPages": false,
   "gitRevision": "main",
+  "sourceLinkTemplate": "https://github.com/vercel/vercel/blob/{gitRevision}/{path}#L{line}",
   "readme": "none",
   "hideBreadcrumbs": true
 }

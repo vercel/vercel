@@ -88,13 +88,21 @@ export const listSubcommand = {
       description: 'unresolved (default), resolved, or all',
     },
     {
-      name: 'page',
+      name: 'page-path',
       shorthand: null,
       type: [String],
       argument: 'PATH',
       deprecated: false,
       description:
         'Filter by recorded page path or glob (repeatable). Note: rewrites may record a different path than the browser URL',
+    },
+    {
+      name: 'page',
+      shorthand: null,
+      type: [String],
+      argument: 'PATH',
+      deprecated: true,
+      description: 'Filter by recorded page path or glob',
     },
     {
       name: 'author',

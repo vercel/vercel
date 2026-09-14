@@ -110,4 +110,33 @@ describe('ai-gateway api-keys list', () => {
     await expect(client.stderr).toOutput('No team selected');
     expect(await exitCodePromise).toBe(1);
   });
+
+  it('renders the api-key default for keys without their own budget', async () => {
+    const team = useTeam();
+    useUser();
+    const { quota, ...noQuota } = sampleApiKey;
+    void quota;
+    useListApiKeys([noQuota]);
+    client.scenario.get('/ai-gateway/budgets/defaults/list', (_req, res) => {
+      res.json({
+        defaults: [
+          {
+            scopeType: 'api-key',
+            limitAmount: 50,
+            refreshPeriod: 'monthly',
+            active: true,
+            createdAt: 1,
+            updatedAt: 2,
+          },
+        ],
+      });
+    });
+    client.config.currentTeam = team.id;
+    client.setArgv('ai-gateway', 'api-keys', 'list');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stdout).toOutput('$50 (default)');
+    expect(await exitCodePromise).toBe(0);
+  });
 });

@@ -1,2 +1,8 @@
+[dependency-groups]
+dev = ["ruff~=0.15.1"]
+
+[tool.turbo]
+name = "vercel-python-workspace"
+
 [tool.uv.workspace]
 members = ["python/vercel-runtime", "python/vercel-workers"]

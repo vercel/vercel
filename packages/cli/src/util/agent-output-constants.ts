@@ -20,6 +20,7 @@ export const AGENT_REASON = {
   MISSING_ARGUMENTS: 'missing_arguments',
   INVALID_ARGUMENTS: 'invalid_arguments',
   CONFIRMATION_REQUIRED: 'confirmation_required',
+  INTERACTIVE_CONFIRMATION_REQUIRED: 'interactive_confirmation_required',
   LOGIN_REQUIRED: 'login_required',
   PROJECT_SETTINGS_REQUIRED: 'project_settings_required',
   NOT_LINKED: 'not_linked',
@@ -88,11 +89,29 @@ export const AGENT_REASON = {
    * not `confirmation_required` — re-running with --yes would loop forever.
    */
   REQUIRES_CONSENT: 'requires_consent',
+  // KMS
+  MISSING_ISSUER_ID: 'missing_issuer_id',
+  MISSING_KEY: 'missing_key',
+  MISSING_KEY_ID: 'missing_key_id',
+  MISSING_PROJECT: 'missing_project',
+  ISSUER_NOT_FOUND: 'issuer_not_found',
+  /** The issuer is provisioned by another Vercel service and is read-only here. */
+  ISSUER_MANAGED: 'issuer_managed',
+  /** Keys for an imported issuer must be imported too, so `add-key` cannot serve it. */
+  ISSUER_REQUIRES_IMPORTED_KEY: 'issuer_requires_imported_key',
+  /** Vercel generates the keys for this issuer, so `import-key` cannot serve it. */
+  ISSUER_REQUIRES_GENERATED_KEY: 'issuer_requires_generated_key',
+  /** Immediate revocation only applies to a key already scheduled for revocation. */
+  KEY_NOT_REVOKING: 'key_not_revoking',
+  NO_CHANGES_REQUESTED: 'no_changes_requested',
   // Redirects
   REDIRECT_NOT_FOUND: 'redirect_not_found',
   VERSION_NOT_FOUND: 'version_not_found',
   VERSION_ALREADY_LIVE: 'version_already_live',
   VERSION_IS_STAGING: 'version_is_staging',
+  PLAN_UPGRADE_REQUIRED: 'plan_upgrade_required',
+  NOT_TEAM_MEMBER: 'not_team_member',
+  INVALID_ROLE_COMBINATION: 'invalid_role_combination',
 } as const;
 
 /** action field for ActionRequiredPayload (what kind of action is needed) */

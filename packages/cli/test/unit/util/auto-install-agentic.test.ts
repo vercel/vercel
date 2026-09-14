@@ -272,6 +272,7 @@ describe('autoInstallVercelPlugin', () => {
 
   afterEach(() => {
     fetchSpy.mockRestore();
+    vi.restoreAllMocks();
     client.reset();
   });
 

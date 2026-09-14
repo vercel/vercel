@@ -1,9 +1,10 @@
 import { projectOption, yesOption } from '../../util/arg-common';
+import { TIMESTAMP_IDENTIFY_HELP } from '../../util/flags/attribute-types';
 import { formatFlagConditionComparatorList } from '../../util/flags/comparators';
 import { packageName } from '../../util/pkg-name';
 import { FLAG_EVALUATIONS_GRANULARITIES } from './evaluations-config';
 
-const segmentRuleOperatorDescription = `Valid operators: ${formatFlagConditionComparatorList()}`;
+const segmentRuleOperatorDescription = `Valid operators: ${formatFlagConditionComparatorList()}. Timestamp attributes also accept after, before, on-or-after, and on-or-before with an ISO 8601 date and time (for example 2026-04-16T09:00:00Z) or epoch milliseconds. after and before are exclusive; use on-or-after or on-or-before for inclusive boundaries. Date/times without a timezone use this machine's timezone. ${TIMESTAMP_IDENTIFY_HELP}`;
 
 export const listSubcommand = {
   name: 'list',
@@ -100,6 +101,68 @@ export const listSubcommand = {
   ],
 } as const;
 
+export const staleSubcommand = {
+  name: 'stale',
+  aliases: [],
+  description: 'List stale feature flags for the current project',
+  hidden: true,
+  arguments: [],
+  options: [
+    projectOption,
+    {
+      name: 'stale-after',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Consider flags stale after this relative day duration (default: 30d, max: 90d)',
+      argument: 'DURATION',
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description:
+        'Return one page of at most NUMBER stale flags (default: 50, max: 100)',
+      argument: 'NUMBER',
+    },
+    {
+      name: 'next',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Pagination cursor from a previous stale response',
+      argument: 'CURSOR',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'List stale flags',
+      value: `${packageName} flags stale`,
+    },
+    {
+      name: 'List flags that have been stale for 14 days',
+      value: `${packageName} flags stale --stale-after 14d`,
+    },
+    {
+      name: 'List the next page using the cursor from the previous page',
+      value: `${packageName} flags stale --limit 10 --next <cursor>`,
+    },
+    {
+      name: 'List stale flags as JSON',
+      value: `${packageName} flags stale --json`,
+    },
+  ],
+} as const;
+
 export const inspectSubcommand = {
   name: 'inspect',
   aliases: [],
@@ -149,10 +212,18 @@ export const versionsListSubcommand = {
       argument: 'NUMBER',
     },
     {
-      name: 'cursor',
+      name: 'next',
       shorthand: null,
       type: String,
       deprecated: false,
+      description: 'Continue from a previous response',
+      argument: 'CURSOR',
+    },
+    {
+      name: 'cursor',
+      shorthand: null,
+      type: String,
+      deprecated: true,
       description: 'Pagination cursor from a previous versions response',
       argument: 'CURSOR',
     },
@@ -179,7 +250,7 @@ export const versionsListSubcommand = {
     },
     {
       name: 'List the next page of version history',
-      value: `${packageName} flags versions my-feature-flag --limit 10 --cursor <cursor>`,
+      value: `${packageName} flags versions my-feature-flag --limit 10 --next <cursor>`,
     },
     {
       name: 'List version history as JSON',
@@ -530,6 +601,62 @@ export const setSubcommand = {
   ],
 } as const;
 
+export const useTargetingSubcommand = {
+  name: 'use-targeting',
+  aliases: [],
+  description:
+    'Enable targeting for a feature flag environment; keeps the current fallthrough unless --default-variant is set',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment to enable targeting in (production, preview, or development)',
+      argument: 'ENV',
+    },
+    {
+      name: 'default-variant',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Replace the fallthrough with this variant when no targeting rules match',
+      argument: 'VARIANT',
+    },
+    {
+      name: 'message',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Optional revision message for the update',
+      argument: 'TEXT',
+    },
+  ],
+  examples: [
+    {
+      name: 'Enable targeting and keep the current fallthrough',
+      value: `${packageName} flags use-targeting my-feature --environment production`,
+    },
+    {
+      name: 'Enable targeting with a static default Off',
+      value: `${packageName} flags use-targeting my-feature --environment production --default-variant false`,
+    },
+    {
+      name: 'Enable targeting with a string default',
+      value: `${packageName} flags use-targeting welcome-message -e production --default-variant control`,
+    },
+  ],
+} as const;
+
 export const splitSubcommand = {
   name: 'split',
   aliases: [],
@@ -591,7 +718,7 @@ export const splitSubcommand = {
   examples: [
     {
       name: 'Split a boolean flag in production',
-      value: `${packageName} flags split redesigned-checkout --environment production --by user.userId --weight off=95 --weight on=5`,
+      value: `${packageName} flags split redesigned-checkout --environment production --by user.userId --weight false=95 --weight true=5`,
     },
     {
       name: 'Split a string flag with a fallback variant',
@@ -879,8 +1006,12 @@ export const rulesAddSubcommand = {
       value: `${packageName} flags rules add my-feature -e production --condition segment:eq:seg_beta123 --variant on`,
     },
     {
+      name: 'Add a rule with a timestamp condition',
+      value: `${packageName} flags rules add my-feature -e production --condition user.signupAt:after:2026-04-16T09:00:00Z --variant on`,
+    },
+    {
       name: 'Add a split rule at the top',
-      value: `${packageName} flags rules add my-feature -e production --condition user.plan:eq:pro --by user.userId --weight off=90 --weight on=10 --position 1`,
+      value: `${packageName} flags rules add my-feature -e production --condition user.plan:eq:pro --by user.userId --weight false=90 --weight true=10 --position 1`,
     },
   ],
 } as const;
@@ -1339,8 +1470,8 @@ export const segmentsCreateSubcommand = {
       value: `${packageName} flags segments create beta-users --label "Beta users" --add include:user.id=user_123 --add include:user.id=user_456`,
     },
     {
-      name: 'Create a segment from rules',
-      value: `${packageName} flags segments create enterprise-users --label "Enterprise users" --add rule:user.plan:eq:enterprise`,
+      name: 'Create a segment using a timestamp condition',
+      value: `${packageName} flags segments create early-adopters --add rule:user.signupAt:before:2026-04-16T09:00:00Z`,
     },
     {
       name: 'Create a segment from full JSON data',
@@ -1430,6 +1561,10 @@ export const segmentsUpdateSubcommand = {
     {
       name: 'Add and remove rules',
       value: `${packageName} flags segments update enterprise-users --add rule:user.email:ends-with:@company.com --remove rule:user.plan:eq:pro`,
+    },
+    {
+      name: 'Add a timestamp condition',
+      value: `${packageName} flags segments update early-adopters --add rule:user.signupAt:before:2026-04-16T09:00:00Z`,
     },
   ],
 } as const;
@@ -1656,6 +1791,7 @@ export const flagsCommand = {
   arguments: [],
   subcommands: [
     listSubcommand,
+    staleSubcommand,
     inspectSubcommand,
     versionsSubcommand,
     evaluationsSubcommand,
@@ -1663,6 +1799,7 @@ export const flagsCommand = {
     openSubcommand,
     updateSubcommand,
     setSubcommand,
+    useTargetingSubcommand,
     splitSubcommand,
     rolloutSubcommand,
     removeSubcommand,

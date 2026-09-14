@@ -1,5 +1,173 @@
 # @vercel/client
 
+## 18.3.2
+
+### Patch Changes
+
+- Updated dependencies [1817491]
+  - @vercel/build-utils@14.9.1
+
+## 18.3.1
+
+### Patch Changes
+
+- Updated dependencies [392c759]
+  - @vercel/build-utils@14.9.0
+
+## 18.3.0
+
+### Minor Changes
+
+- a652a99: Propagate top-level `schedules` from vercel.json into the Build Output API `config.json` during `vercel build`, and validate the property against the schedules schema
+
+### Patch Changes
+
+- Updated dependencies [a652a99]
+  - @vercel/build-utils@14.8.0
+
+## 18.2.22
+
+### Patch Changes
+
+- Updated dependencies [26b891e]
+- Updated dependencies [37ff9da]
+  - @vercel/build-utils@14.7.0
+
+## 18.2.21
+
+### Patch Changes
+
+- Updated dependencies [aad9541]
+  - @vercel/build-utils@14.6.1
+
+## 18.2.20
+
+### Patch Changes
+
+- Updated dependencies [e82de48]
+  - @vercel/build-utils@14.6.0
+
+## 18.2.19
+
+### Patch Changes
+
+- Updated dependencies [a443e57]
+  - @vercel/build-utils@14.5.1
+
+## 18.2.18
+
+### Patch Changes
+
+- Updated dependencies [90afd71]
+  - @vercel/build-utils@14.5.0
+
+## 18.2.17
+
+### Patch Changes
+
+- Updated dependencies [e5b0363]
+  - @vercel/build-utils@14.4.1
+
+## 18.2.16
+
+### Patch Changes
+
+- Updated dependencies [f8add0a]
+  - @vercel/build-utils@14.4.0
+
+## 18.2.15
+
+### Patch Changes
+
+- Updated dependencies [0b08df6]
+- Updated dependencies [cd6b038]
+- Updated dependencies [96444ba]
+  - @vercel/build-utils@14.3.0
+
+## 18.2.14
+
+### Patch Changes
+
+- Updated dependencies [e340c58]
+  - @vercel/build-utils@14.2.0
+
+## 18.2.13
+
+### Patch Changes
+
+- f497896: Keep `--prebuilt` `filePathMap` entries under default-ignored dependency/output directories (`node_modules`, `.next`, Yarn PnP, Python venv, Rust `target`) even when those paths are also listed in `.vercelignore`. Other ignore rules, including `.env*` secrets, are still applied.
+
+## 18.2.12
+
+### Patch Changes
+
+- Updated dependencies [b4f09c1]
+  - @vercel/build-utils@14.1.1
+
+## 18.2.11
+
+### Patch Changes
+
+- Updated dependencies [852e1a0]
+  - @vercel/routing-utils@6.5.0
+  - @vercel/build-utils@14.1.0
+
+## 18.2.10
+
+### Patch Changes
+
+- 299d5cd: Root-anchor the prebuilt deploy ignore negations so files under `.vercel` other than `.vercel/output` are not accidentally re-included when a positive `.vercel` pattern was compiled earlier in the same process (e.g. an in-process `vercel build`).
+
+## 18.2.9
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+- Updated dependencies [2da7809]
+  - @vercel/build-utils@14.0.5
+
+## 18.2.8
+
+### Patch Changes
+
+- Updated dependencies [13f81ac]
+  - @vercel/build-utils@14.0.4
+
+## 18.2.7
+
+### Patch Changes
+
+- Updated dependencies [d72826e]
+  - @vercel/build-utils@14.0.3
+
+## 18.2.6
+
+### Patch Changes
+
+- Updated dependencies [b7ec19b]
+  - @vercel/build-utils@14.0.2
+
+## 18.2.5
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/build-utils@14.0.1
+  - @vercel/error-utils@2.2.1
+  - @vercel/routing-utils@6.4.1
+
+## 18.2.4
+
+### Patch Changes
+
+- 4584bbd: Send eligible small static deployments inline so the API can use the instant static deployment path.
+- 17d9eba: Include the deploy path relative to the detected git repository root in `gitMetadata.rootDirectory`.
+- Updated dependencies [b747ab4]
+- Updated dependencies [5c33351]
+- Updated dependencies [5619873]
+  - @vercel/build-utils@14.0.0
+
 ## 18.2.3
 
 ### Patch Changes

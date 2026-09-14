@@ -2,6 +2,7 @@ import type Client from '../../util/client';
 import {
   upsertScopeBudgetDefault,
   parseBudgetDefaultScope,
+  listScopeBudgetDefaults,
   type BudgetRefreshPeriod,
 } from '../../util/ai-gateway/budgets';
 import { ensureTeam } from '../../util/ai-gateway/ensure-team';
@@ -83,11 +84,23 @@ export default async function set(client: Client, argv: string[]) {
 
   output.spinner('Setting budget default…');
 
+  // Keep the existing cadence when --refresh-period is omitted on an update.
+  let effectiveRefresh = refreshPeriod as BudgetRefreshPeriod | undefined;
+  if (!effectiveRefresh) {
+    try {
+      const defaults = await listScopeBudgetDefaults(client);
+      effectiveRefresh = defaults.find(
+        d => d.scopeType === scopeType && d.active !== false
+      )?.refreshPeriod;
+    } catch {}
+    effectiveRefresh ??= 'monthly';
+  }
+
   try {
     const budgetDefault = await upsertScopeBudgetDefault(client, {
       scopeType,
       limitAmount: limit,
-      refreshPeriod: (refreshPeriod as BudgetRefreshPeriod) ?? 'monthly',
+      refreshPeriod: effectiveRefresh,
     });
 
     output.stopSpinner();
@@ -98,6 +111,12 @@ export default async function set(client: Client, argv: string[]) {
       printAlignedLabel('Set default', scopeType, { gutter: '✓' });
       printAlignedLabel('Limit', `$${budgetDefault.limitAmount}`);
       printAlignedLabel('Refresh', budgetDefault.refreshPeriod);
+      const appliesTo = {
+        project: 'every project without its own budget',
+        'api-key': 'every API key without its own budget',
+        user: 'every team member without their own budget',
+      }[scopeType];
+      printAlignedLabel('Applies to', `${appliesTo}, including existing ones`);
     }
 
     return 0;

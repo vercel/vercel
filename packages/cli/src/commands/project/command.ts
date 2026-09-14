@@ -7,6 +7,26 @@ import {
   yesOption,
 } from '../../util/arg-common';
 
+const sandboxRegionOption = {
+  name: 'sandbox-region',
+  shorthand: null,
+  type: String,
+  argument: 'REGION',
+  description:
+    'Set the default region for sandboxes created in the project. See the Vercel docs for available regions. Use "" to clear',
+  deprecated: false,
+} as const;
+
+const sandboxFailoverRegionsOption = {
+  name: 'sandbox-failover-regions',
+  shorthand: null,
+  type: String,
+  argument: 'REGIONS',
+  description:
+    'Set the ordered, comma-separated failover regions for sandboxes created in the project. Requires a primary region and must not include it. Use "" to clear',
+  deprecated: false,
+} as const;
+
 export const addSubcommand = {
   name: 'add',
   aliases: [],
@@ -26,7 +46,6 @@ export const addSubcommand = {
   ],
 } as const;
 
-/** Shared `--blocks` enum for list (query) and `checks add` (request body). */
 const checksBlocksOption = {
   name: 'blocks',
   shorthand: null,
@@ -36,7 +55,6 @@ const checksBlocksOption = {
   deprecated: false,
 } as const;
 
-/** Flags for `vercel project checks add` (also merged into `checks` help). */
 export const checksAddFlags = [
   formatOption,
   jsonOption,
@@ -194,6 +212,61 @@ export const listSubcommand = {
   ],
 } as const;
 
+export const pauseSubcommand = {
+  name: 'pause',
+  aliases: [],
+  description:
+    'Pause production traffic for a project (visitors will see an error page)',
+  arguments: [
+    {
+      name: 'project',
+      required: false,
+    },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Pause the linked project',
+      value: `${packageName} project pause`,
+    },
+    {
+      name: 'Pause the project named "my-project"',
+      value: `${packageName} project pause my-project`,
+    },
+    {
+      name: 'Pause a project and print the result as JSON',
+      value: `${packageName} project pause my-project --json`,
+    },
+  ],
+} as const;
+
+export const resumeSubcommand = {
+  name: 'resume',
+  aliases: ['unpause'],
+  description: 'Resume production traffic for a paused project',
+  arguments: [
+    {
+      name: 'project',
+      required: false,
+    },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Resume the linked project',
+      value: `${packageName} project resume`,
+    },
+    {
+      name: 'Resume the project named "my-project"',
+      value: `${packageName} project resume my-project`,
+    },
+    {
+      name: 'Resume a project and print the result as JSON',
+      value: `${packageName} project resume my-project --json`,
+    },
+  ],
+} as const;
+
 export const removeSubcommand = {
   name: 'remove',
   aliases: ['rm'],
@@ -301,6 +374,56 @@ export const updateSubcommand = {
         'Reset a setting to automatic detection; repeat for build-command, dev-command, install-command, output-directory, or root-directory',
       deprecated: false,
     },
+    {
+      name: 'fluid-compute',
+      shorthand: null,
+      type: String,
+      argument: 'on|off',
+      description: 'Enable or disable Fluid compute',
+      deprecated: false,
+    },
+    {
+      name: 'function-cpu',
+      shorthand: null,
+      type: String,
+      argument: 'TIER',
+      description:
+        'Set the default function CPU/memory tier: standard_legacy, standard, performance, or performance_xl',
+      deprecated: false,
+    },
+    sandboxRegionOption,
+    sandboxFailoverRegionsOption,
+    {
+      name: 'build-machine',
+      shorthand: null,
+      type: String,
+      argument: 'TYPE',
+      description:
+        'Set the build machine type: basic, standard, enhanced, turbo, or elastic',
+      deprecated: false,
+    },
+    {
+      name: 'elastic-concurrency',
+      shorthand: null,
+      type: String,
+      argument: 'on|off',
+      description: 'Enable or disable elastic concurrency for builds',
+      deprecated: false,
+    },
+    {
+      name: 'node-version',
+      shorthand: null,
+      type: String,
+      argument: 'VERSION',
+      description:
+        'Set the Node.js version: 24.x, 22.x, 20.x, 18.x, 16.x, 14.x, 12.x, or 10.x',
+      deprecated: false,
+    },
+    {
+      ...yesOption,
+      description:
+        'Apply settings that do not affect charges without prompting',
+    },
     formatOption,
     jsonOption,
   ],
@@ -322,8 +445,20 @@ export const updateSubcommand = {
       value: `${packageName} project update my-project --auto-detect build-command --auto-detect output-directory`,
     },
     {
+      name: 'Enable Fluid compute and set the function CPU tier',
+      value: `${packageName} project update my-project --fluid-compute on --function-cpu performance`,
+    },
+    {
       name: 'Clear the framework preset and return JSON',
       value: `${packageName} project update my-project --framework other --json`,
+    },
+    {
+      name: 'Update a setting without an interactive prompt',
+      value: `${packageName} project update my-project --framework vite --yes`,
+    },
+    {
+      name: 'Set the sandbox default and failover regions',
+      value: `${packageName} project update my-project --sandbox-region sfo1 --sandbox-failover-regions cle1,iad1`,
     },
   ],
 } as const;
@@ -379,10 +514,34 @@ export const accessSummarySubcommand = {
   ],
 } as const;
 
+export const membersRemoveFlags = [formatOption, jsonOption] as const;
+
+export const PROJECT_MEMBER_ROLES = [
+  'ADMIN',
+  'PROJECT_DEVELOPER',
+  'PROJECT_VIEWER',
+  'PROJECT_GUEST',
+] as const;
+
+const memberRoleOption = {
+  name: 'role',
+  shorthand: null,
+  type: String,
+  argument: 'ROLE',
+  description: `Project role when adding a member: ${PROJECT_MEMBER_ROLES.join(', ')}`,
+  deprecated: false,
+} as const;
+
+export const membersAddFlags = [
+  formatOption,
+  jsonOption,
+  memberRoleOption,
+] as const;
+
 export const membersSubcommand = {
   name: 'members',
   aliases: ['member'],
-  description: 'List project members for a project',
+  description: 'List, add, or remove project members for a project',
   arguments: [
     {
       name: 'name',
@@ -406,6 +565,8 @@ export const membersSubcommand = {
       description: 'Limit number of project members returned (1-100)',
       deprecated: false,
     },
+    nextOption,
+    memberRoleOption,
   ],
   examples: [
     {
@@ -415,6 +576,14 @@ export const membersSubcommand = {
     {
       name: 'List members for a named project as JSON',
       value: `${packageName} project members my-project --json`,
+    },
+    {
+      name: 'Add a member to a project by email with a role',
+      value: `${packageName} project members add my-project user@example.com --role PROJECT_VIEWER`,
+    },
+    {
+      name: 'Remove a member from a project',
+      value: `${packageName} project members remove my-project user@example.com`,
     },
   ],
 } as const;
@@ -614,26 +783,28 @@ export const accessGroupsSubcommand = {
 export const webAnalyticsSubcommand = {
   name: 'web-analytics',
   aliases: [],
-  description: 'Enable Web Analytics for a project',
+  description: 'Enable or disable Web Analytics for a project',
   arguments: [
-    {
-      name: 'name',
-      required: false,
-    },
+    { name: 'action', required: false },
+    { name: 'name', required: false },
   ],
   options: [formatOption, jsonOption],
   examples: [
     {
-      name: 'Enable Web Analytics for the linked project',
+      name: 'Enable Web Analytics for the linked project (omitting the action defaults to enable)',
       value: `${packageName} project web-analytics`,
     },
     {
       name: 'Enable Web Analytics for a named project',
-      value: `${packageName} project web-analytics my-project`,
+      value: `${packageName} project web-analytics enable my-project`,
     },
     {
-      name: 'Confirm enablement as JSON (non-interactive / agents)',
-      value: `${packageName} project web-analytics --json`,
+      name: 'Disable Web Analytics for a named project',
+      value: `${packageName} project web-analytics disable my-project`,
+    },
+    {
+      name: 'Disable Web Analytics and print the result as JSON (non-interactive / agents)',
+      value: `${packageName} project web-analytics disable my-project --json`,
     },
   ],
 } as const;
@@ -641,12 +812,10 @@ export const webAnalyticsSubcommand = {
 export const speedInsightsSubcommand = {
   name: 'speed-insights',
   aliases: [],
-  description: 'Enable Speed Insights for a project',
+  description: 'Enable or disable Speed Insights for a project',
   arguments: [
-    {
-      name: 'name',
-      required: false,
-    },
+    { name: 'action', required: false },
+    { name: 'name', required: false },
   ],
   options: [formatOption, jsonOption],
   examples: [
@@ -656,11 +825,46 @@ export const speedInsightsSubcommand = {
     },
     {
       name: 'Enable Speed Insights for a named project',
-      value: `${packageName} project speed-insights my-project`,
+      value: `${packageName} project speed-insights enable my-project`,
     },
     {
-      name: 'Confirm enablement as JSON (non-interactive / agents)',
-      value: `${packageName} project speed-insights --json`,
+      name: 'Disable Speed Insights for a named project',
+      value: `${packageName} project speed-insights disable my-project`,
+    },
+    {
+      name: 'Disable Speed Insights and print the result as JSON',
+      value: `${packageName} project speed-insights disable my-project --json`,
+    },
+  ],
+} as const;
+
+export const observabilitySubcommand = {
+  name: 'observability',
+  aliases: [],
+  description: 'Enable or disable Observability Plus for a project',
+  arguments: [
+    {
+      name: 'action',
+      required: true,
+    },
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Enable Observability Plus for the linked project',
+      value: `${packageName} project observability enable`,
+    },
+    {
+      name: 'Disable Observability Plus for a named project',
+      value: `${packageName} project observability disable my-project`,
+    },
+    {
+      name: 'Enable Observability Plus and print the result as JSON',
+      value: `${packageName} project observability enable my-project --json`,
     },
   ],
 } as const;
@@ -681,11 +885,64 @@ export const projectCommand = {
     protectionSubcommand,
     webAnalyticsSubcommand,
     speedInsightsSubcommand,
+    pauseSubcommand,
+    observabilitySubcommand,
+    resumeSubcommand,
     updateSubcommand,
     renameSubcommand,
     removeSubcommand,
     tokenSubcommand,
   ],
   options: [],
-  examples: [],
+  examples: [
+    {
+      name: 'Pause production traffic for a project',
+      value: [
+        `${packageName} project pause [NAME]`,
+        `${packageName} project pause my-project`,
+      ],
+    },
+    {
+      name: 'Resume a paused project',
+      value: [
+        `${packageName} project resume [NAME]`,
+        `${packageName} project resume my-project`,
+      ],
+    },
+    {
+      name: 'Add a member to a project',
+      value: [
+        `${packageName} project members add [NAME] <EMAIL | UID> --role <ROLE>`,
+        `${packageName} project members add my-project user@example.com --role PROJECT_VIEWER`,
+      ],
+    },
+    {
+      name: 'Remove a member from a project',
+      value: [
+        `${packageName} project members remove [NAME] <EMAIL | UID>`,
+        `${packageName} project members remove my-project user@example.com`,
+      ],
+    },
+    {
+      name: 'Enable or disable Observability Plus for a project',
+      value: [
+        `${packageName} project observability <enable | disable> [NAME]`,
+        `${packageName} project observability enable my-project`,
+      ],
+    },
+    {
+      name: 'Enable Web Analytics for a project',
+      value: [
+        `${packageName} project web-analytics [NAME]`,
+        `${packageName} project web-analytics my-project`,
+      ],
+    },
+    {
+      name: 'Enable Speed Insights for a project',
+      value: [
+        `${packageName} project speed-insights [NAME]`,
+        `${packageName} project speed-insights my-project`,
+      ],
+    },
+  ],
 } as const;

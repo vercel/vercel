@@ -1,5 +1,201 @@
 # @vercel/build-utils
 
+## 14.9.1
+
+### Patch Changes
+
+- 1817491: Delay the pnpm 11 created-at default so unpinned lockfile 9.0 projects stay on pnpm 10. pnpm 11's default `minimumReleaseAge` of 1 day was breaking installs of freshly published packages. Explicit `packageManager` / `devEngines` pins to pnpm 11 are unchanged.
+
+## 14.9.0
+
+### Minor Changes
+
+- 392c759: Honor pnpm 12 pins without auto-adopting, and stop passing `--unsafe-perm` to `pnpm install`.
+
+  When Corepack is off, a lockfile-compatible `packageManager` / `devEngines.packageManager` / `engines.pnpm` pin for 12.x selects `/pnpm12` if that directory exists. Unpinned lockfile `9.0` still defaults to pnpm 9/10/11 by project creation date. `pnpm install` no longer includes `--unsafe-perm`, which pnpm 12's Rust CLI rejects.
+
+## 14.8.0
+
+### Minor Changes
+
+- a652a99: Propagate top-level `schedules` from vercel.json into the Build Output API `config.json` during `vercel build`, and validate the property against the schedules schema
+
+## 14.7.0
+
+### Minor Changes
+
+- 37ff9da: Add build type to deploy manifest.
+
+### Patch Changes
+
+- 26b891e: Accept `schedule/v1beta` triggers in the `Lambda` runtime validation and the functions config schema
+
+## 14.6.1
+
+### Patch Changes
+
+- aad9541: Run on-disk JavaScript workers with a lazily resolved system Node.js executable in native CLI installations, and install the matching Build Utils preview tarball for dynamically installed Builders.
+
+## 14.6.0
+
+### Minor Changes
+
+- e82de48: Add strict function affinity configuration and serialize it into function outputs.
+
+## 14.5.1
+
+### Patch Changes
+
+- a443e57: Revert dependency install log rewriting that piped pnpm stdout through an unread Transform and could hang large installs.
+
+## 14.5.0
+
+### Minor Changes
+
+- 90afd71: Expose the resolved rewrite destination as the request path observed by Node backend framework applications (express, hono, h3, koa, nestjs, fastify, elysia) and the unified backends builder, and warn affected backend projects about the behavior change.
+
+## 14.4.1
+
+### Patch Changes
+
+- e5b0363: Add `Span.reportChildEvents()` so a tree of trace events produced in another process (e.g. a forked build worker) can be reported under an existing span. Its root events are reparented to that span while links internal to the set are preserved, keeping trace nesting intact.
+
+## 14.4.0
+
+### Minor Changes
+
+- f8add0a: Replace `prerenderClassification` on `Prerender` with `initialMetadata`.
+
+  The platform consumes only the request-time compute mode and the HTML shell
+  size, so the flattened four-field taxonomy (`routeType`, `response`,
+  `compute`, `htmlSize`) is reduced to a single grouped field:
+
+  ```ts
+  initialMetadata?: {
+    compute: 'blocking' | 'resuming' | 'static';
+    htmlSize?: number;
+  }
+  ```
+
+  The group is named `initialMetadata` because the values describe the
+  deployment as it was built: revalidation can regenerate a route's output over
+  the deployment's lifetime, so readers must treat them as initial values, not
+  live state. `@vercel/next` reads `compute` and `htmlSize` off the v4
+  prerender-manifest taxonomy and deliberately ignores `routeType` and
+  `response`; the values are still carried unvalidated so a compute mode added
+  by a future framework release cannot hard-fail a deploy, and they are still
+  set only on the primary output of each prerender group. `htmlSize: 0` is a
+  real size (a shell that postponed everything); `htmlSize` is absent when
+  there is no HTML shell to measure (route handlers, Pages Router). Absence of
+  the whole group remains legitimate (`notFoundRoutes`, Pages Router
+  `fallback: false`, older frameworks).
+
+## 14.3.0
+
+### Minor Changes
+
+- cd6b038: Honor `package.json` pnpm pins without Corepack, and default new projects to pnpm 11.
+
+  When Corepack is off, `devEngines.packageManager` is preferred, then a lockfile-compatible `packageManager` field, then `engines.pnpm` as a selector. Unpinned lockfile `9.0` projects created on or after 2026-08-19 use pnpm 11 (Node 22+) if `/pnpm11` is present in the build image; otherwise they keep pnpm 10.
+
+### Patch Changes
+
+- 0b08df6: Canonicalized internal service contract ownership.
+- 96444ba: Simplify dependency installation logs to show the selected package manager and version.
+
+## 14.2.0
+
+### Minor Changes
+
+- e340c58: Add schedules/v1beta to TriggerEvent types
+
+## 14.1.1
+
+### Patch Changes
+
+- b4f09c1: Support selecting Bun 1.4.x as an explicit runtime and build-time package manager, including local Bun servers.
+
+## 14.1.0
+
+### Minor Changes
+
+- 852e1a0: Move middleware matcher utils from node builder to general build utils.
+
+## 14.0.5
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+- Updated dependencies [2da7809]
+  - @vercel/python-analysis@0.13.2
+
+## 14.0.4
+
+### Patch Changes
+
+- 13f81ac: Support pnpm lockfiles containing multiple YAML documents.
+
+## 14.0.3
+
+### Patch Changes
+
+- d72826e: Prevented unit tests and generated outputs from changing Turborepo task inputs during CI, and removed the redundant affected Unit test retry.
+
+## 14.0.2
+
+### Patch Changes
+
+- b7ec19b: Scope the pre-compilation install's `VERCEL_INSTALL_COMPLETED` marker to the `package.json` it installed. Previously, a `vercel.toml`/`vercel.ts` config caused `vc build` to install at the repo root and then silently skip every later default install, so services whose install root is a different workspace (its own `package.json`/lockfile) built without dependencies.
+
+## 14.0.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/python-analysis@0.13.1
+
+## 14.0.0
+
+### Major Changes
+
+- 5c33351: Remove `getOsRelease()`, and stop deriving the provided runtime from the build host.
+
+  `getProvidedRuntime()` is retained and now always resolves to `'provided.al2023'`. It previously read `/etc/os-release` and returned `'provided.al2'` on Amazon Linux 2 hosts, so the emitted runtime depended on where the build ran — a `vercel build` on an AL2 machine produced output that is rejected at deploy time, because `provided.al2` is no longer an accepted Lambda runtime. Custom runtimes calling `getProvidedRuntime()` need no changes and are fixed by this release.
+
+  `getOsRelease()` is removed with no replacement.
+
+  `validateBuildResult()` no longer accepts an `osRelease` option. Its runtime allowlist check was previously skipped unless the caller passed `osRelease.VERSION === '2023'`; it now always runs.
+
+### Minor Changes
+
+- b747ab4: Replace the inferred PPR fields on `Prerender` with the Next.js prerender taxonomy.
+
+  `hasPostponed`, `hasFallback`, `isDynamicRoute` and `htmlSize` were derived by
+  `@vercel/next` from build artifacts (the `.meta` postponed state, which manifest
+  section a route came from, and a `statSync` of the `.html` shell). Next.js
+  `>= 16.3.0-canary.96` publishes its own classification in the prerender
+  manifest, so those four fields are removed in favour of a single optional
+  `prerenderClassification` on `Prerender` / `PrerenderOptions`:
+
+  - `routeType` — `'route' | 'page' | 'shell' | 'fallback'`
+  - `response` — `'empty' | 'initial' | 'complete'`
+  - `compute` — `'blocking' | 'resuming' | 'static'`
+  - `htmlSize` — byte size of the prerendered HTML shell, when the entry has one
+
+  The values are carried through unvalidated so a taxonomy value added by a future
+  Next.js release cannot hard-fail a deploy. `@vercel/next` sets the field only
+  when Next.js supplied the complete group — absence is legitimate for
+  `notFoundRoutes` and Pages Router `fallback: false` templates — and only on the
+  primary output of each prerender group, so a route is classified exactly once.
+
+- 5619873: Fix api dir builds receiving incorrect framework or runtime.
+
+### Patch Changes
+
+- Updated dependencies [08a2618]
+  - @vercel/python-analysis@0.13.0
+
 ## 13.36.3
 
 ### Patch Changes

@@ -5,12 +5,14 @@ import getSubcommand from '../../util/get-subcommand';
 import { type Command, help } from '../help';
 import set from './budgets-set';
 import list from './budgets-list';
+import inspect from './budgets-inspect';
 import remove from './budgets-remove';
 import budgetsDefaults from './budgets-defaults';
 import {
   budgetsSubcommand,
   budgetsSetSubcommand,
   budgetsListSubcommand,
+  budgetsInspectSubcommand,
   budgetsRemoveSubcommand,
   budgetsDefaultsSubcommand,
 } from './command';
@@ -23,6 +25,7 @@ import { printError } from '../../util/error';
 const COMMAND_CONFIG = {
   set: getCommandAliases(budgetsSetSubcommand),
   list: getCommandAliases(budgetsListSubcommand),
+  inspect: getCommandAliases(budgetsInspectSubcommand),
   remove: getCommandAliases(budgetsRemoveSubcommand),
   defaults: getCommandAliases(budgetsDefaultsSubcommand),
 };
@@ -85,6 +88,14 @@ export default async function budgets(client: Client) {
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return list(client, args);
+    case 'inspect':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('ai-gateway budgets', subcommandOriginal);
+        printHelp(budgetsInspectSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandInspect(subcommandOriginal);
+      return inspect(client, args);
     case 'remove':
       if (needHelp) {
         telemetry.trackCliFlagHelp('ai-gateway budgets', subcommandOriginal);

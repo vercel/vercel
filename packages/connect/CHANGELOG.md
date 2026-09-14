@@ -1,5 +1,84 @@
 # @vercel/connect
 
+## 2.0.2
+
+### Patch Changes
+
+- c028593: Update the Core SDK documentation to show how to start an authorization request.
+
+## 2.0.1
+
+### Patch Changes
+
+- 2ecb357: `connectGitHubCredentials` now resolves the GitHub App slug from the connector's metadata and exposes it as `appSlug` on the returned credentials, so eve's `githubChannel` can derive its invocation token (`botName`) without extra configuration.
+
+## 2.0.0
+
+### Major Changes
+
+- 42938f9: Make Eve connector provisioning opt-in with `autoProvision: true`. When enabled, try token and authorization requests before provisioning, then provision and retry once only when the connector is missing or not linked to the project.
+
+## 1.1.0
+
+### Minor Changes
+
+- b9fab7c: Add Sendblue credential helpers for Eve-native channels and the Chat SDK adapter, including Connect trigger-forwarded webhook verification for Chat SDK users.
+
+## 1.0.0
+
+### Major Changes
+
+- 9b55136: Default omitted scopes to `['*']` in token and authorization requests.
+
+### Minor Changes
+
+- 4199902: Send Vercel API requests to the region from `VERCEL_REGION`, with a `region` option to override it.
+
+## 0.9.0
+
+### Minor Changes
+
+- 46a5aaa: Add Linq helpers for Eve and Chat SDK applications. `connectLinqCredentials` resolves an app-scoped Linq API key, and `connectLinqAdapter` adds trusted Connect OIDC verification for trigger-forwarded Linq webhooks while retaining the provider signing secret within Connect.
+
+## 0.8.1
+
+### Patch Changes
+
+- @vercel/oidc@3.8.5
+
+## 0.8.0
+
+### Minor Changes
+
+- 9476255: Add `connectNotionAdapter` for outbound Chat SDK Notion credentials while retaining native webhook verification.
+- 52de67d: Add `connectTelegramAdapter` for outbound Chat SDK Telegram credentials while retaining native webhook verification or polling.
+
+## 0.7.0
+
+### Minor Changes
+
+- fff606d: Add `connectDiscordAdapter` for Chat SDK Discord credentials and Connect-verified webhooks.
+
+### Patch Changes
+
+- 52b82cc: Allow authorization callers to pass an OAuth prompt to the connector's authorization server.
+- Updated dependencies [2da7809]
+  - @vercel/oidc@3.8.4
+
+## 0.6.2
+
+### Patch Changes
+
+- @vercel/oidc@3.8.3
+
+## 0.6.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/oidc@3.8.2
+
 ## 0.6.0
 
 ### Minor Changes

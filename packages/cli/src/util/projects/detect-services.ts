@@ -1,12 +1,13 @@
 import { readFile, writeFile } from 'fs/promises';
 import { basename, join } from 'path';
 import { parse as tomlParse, stringify as tomlStringify } from 'smol-toml';
+import { LocalFileSystemDetector } from '@vercel/fs-detectors';
 import {
   detectServices,
-  LocalFileSystemDetector,
+  generateServiceRewrites,
   type DetectServicesResult,
-} from '@vercel/fs-detectors';
-import type { InferredServicesConfig } from '@vercel/fs-detectors';
+  type InferredServicesConfig,
+} from '@vercel-internals/service-topology';
 import type { Rewrite } from '@vercel/routing-utils';
 import type { Services } from '@vercel/build-utils';
 import type { VercelConfig } from '../dev/types';
@@ -127,29 +128,7 @@ function toProjectServicesConfigPatch(
       ...(buildCommand ? { buildCommand } : {}),
     };
   }
-  // Top-level rewrites route public traffic into web services by mountPath.
-  // Non-web services (workers, crons) don't get public HTTP rewrites.
-  // Ordered longest-first so specific paths match before catch-all.
-  const rewrites: Rewrite[] = Object.entries(config)
-    .filter(
-      ([, svc]) =>
-        typeof svc.mountPath === 'string' && (!svc.type || svc.type === 'web')
-    )
-    .sort(([, a], [, b]) => b.mountPath!.length - a.mountPath!.length)
-    .map(([name, svc]) => {
-      const mountPath = svc.mountPath!;
-      if (mountPath === '/') {
-        return {
-          source: '/(.*)',
-          destination: { type: 'service' as const, service: name },
-        };
-      }
-      const prefix = mountPath.startsWith('/') ? mountPath.slice(1) : mountPath;
-      return {
-        source: `/${prefix}(/.*)?`,
-        destination: { type: 'service' as const, service: name },
-      };
-    });
+  const rewrites: Rewrite[] = generateServiceRewrites(config);
   return {
     services,
     ...(rewrites.length > 0 ? { rewrites } : {}),

@@ -149,4 +149,9 @@ export class MetricsTelemetryClient
       this.trackCliFlag('json');
     }
   }
+
+  trackCliError(code: string, status?: number) {
+    this.trackErrorCode(code);
+    this.trackErrorStatus(status);
+  }
 }

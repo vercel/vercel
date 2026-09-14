@@ -8,7 +8,7 @@ import {
   sanitizeConsumerName,
 } from './lambda';
 import { NodejsLambda, type NodejsLambdaOptions } from './nodejs-lambda';
-import { Prerender, type PrerenderClassification } from './prerender';
+import { Prerender, type PrerenderInitialMetadata } from './prerender';
 import download, {
   downloadFile,
   DownloadedFiles,
@@ -57,6 +57,7 @@ import {
   getSupportedBunVersion,
 } from './fs/node-version';
 import streamToBuffer, { streamToBufferChunks } from './fs/stream-to-buffer';
+import { getOrCreateBunBinary } from './fs/bun-helpers';
 import debug from './debug';
 import getIgnoreFilter from './get-ignore-filter';
 import { getPlatformEnv } from './get-platform-env';
@@ -67,9 +68,11 @@ import {
 } from './get-service-url-env-vars';
 import { cloneEnv } from './clone-env';
 import { hardLinkDir } from './hard-link-dir';
+import { getNodeExecPath } from './get-node-exec-path';
 import { validateNpmrc } from './validate-npmrc';
 
-export type { NodejsLambdaOptions, PrerenderClassification };
+export type { NodejsLambdaOptions, PrerenderInitialMetadata };
+export type { LambdaAffinity } from './lambda';
 
 export {
   FileBlob,
@@ -95,9 +98,11 @@ export {
   walkParentDirs,
   getNodeBinPath,
   getNodeBinPaths,
+  getNodeExecPath,
   getSupportedNodeVersion,
   isBunVersion,
   getSupportedBunVersion,
+  getOrCreateBunBinary,
   detectPackageManager,
   runNpmInstall,
   NpmInstallOutput,
@@ -174,6 +179,11 @@ export { defaultCachePathGlob } from './default-cache-path-glob';
 export { generateNodeBuilderFunctions } from './generate-node-builder-functions';
 
 export {
+  getRegExpFromMatchers,
+  resolveMiddlewareMatcher,
+} from './middleware-matcher';
+
+export {
   BACKEND_FRAMEWORKS,
   BACKEND_BUILDERS,
   UNIFIED_BACKEND_BUILDER,
@@ -189,7 +199,6 @@ export {
   isPythonFramework,
 } from './framework-helpers';
 
-export * from './python';
 export * from './node-entrypoint';
 export * from './service-path-utils';
 

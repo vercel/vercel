@@ -8,6 +8,7 @@ import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import { FlagsTelemetryClient } from '../../util/telemetry/commands/flags';
 import ls from './ls';
+import stale from './stale';
 import inspect from './inspect';
 import versions from './versions';
 import evaluations from './evaluations';
@@ -15,6 +16,7 @@ import create from './add';
 import openFlag from './open';
 import update from './update';
 import set from './set';
+import useTargeting from './use-targeting';
 import split from './split';
 import rollout from './rollout';
 import rm from './rm';
@@ -28,6 +30,7 @@ import { rules } from './rules';
 import {
   flagsCommand,
   listSubcommand,
+  staleSubcommand,
   inspectSubcommand,
   versionsSubcommand,
   evaluationsSubcommand,
@@ -35,6 +38,7 @@ import {
   openSubcommand,
   updateSubcommand,
   setSubcommand,
+  useTargetingSubcommand,
   splitSubcommand,
   rolloutSubcommand,
   removeSubcommand,
@@ -53,6 +57,7 @@ import override from './override';
 
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
+  stale: getCommandAliases(staleSubcommand),
   inspect: getCommandAliases(inspectSubcommand),
   versions: getCommandAliases(versionsSubcommand),
   evaluations: getCommandAliases(evaluationsSubcommand),
@@ -60,6 +65,7 @@ const COMMAND_CONFIG = {
   open: getCommandAliases(openSubcommand),
   update: getCommandAliases(updateSubcommand),
   set: getCommandAliases(setSubcommand),
+  'use-targeting': getCommandAliases(useTargetingSubcommand),
   split: getCommandAliases(splitSubcommand),
   rollout: getCommandAliases(rolloutSubcommand),
   rm: getCommandAliases(removeSubcommand),
@@ -140,6 +146,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandEvaluations(subcommandOriginal);
       return evaluations(client, args);
+    case 'stale':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(staleSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandStale(subcommandOriginal);
+      return stale(client, args);
     case 'open':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);
@@ -172,6 +186,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandSet(subcommandOriginal);
       return set(client, args);
+    case 'use-targeting':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(useTargetingSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandUseTargeting(subcommandOriginal);
+      return useTargeting(client, args);
     case 'split':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);

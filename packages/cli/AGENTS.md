@@ -1,18 +1,19 @@
 # Vercel CLI Agent Guide
 
-Always-loaded guidance for work inside `packages/cli`. Keep this file small. The CLI UX design system lives in `packages/cli/.agents/skills/cli-ux/` and should be loaded only when the task touches user-facing CLI behavior.
+Always-loaded guidance for work inside `packages/cli`. Keep this file small. The CLI UX design system lives in `packages/cli/.agents/skills/cli-ux/` and should be loaded only when the task or code review touches user-facing CLI behavior.
 
 ## First Steps
 
 1. Inspect the current source and tests before changing behavior.
-2. Identify whether the task changes implementation only, or CLI UX/copy/output/help/errors/prompts/non-interactive behavior.
-3. For CLI UX work, use `packages/cli/.agents/skills/cli-ux/SKILL.md` and its references. The `cli-ux` skill folder is the canonical source for CLI design, copywriting, output layout, prompts, machine-readable output, agent behavior, and command-specific UX contracts.
+2. Identify whether the task or review changes implementation only, or CLI UX/copy/output/help/errors/prompts/non-interactive behavior.
+3. For CLI UX implementation or review, use `packages/cli/.agents/skills/cli-ux/SKILL.md` and its references. The `cli-ux` skill folder is the canonical source for CLI design, copywriting, output layout, prompts, machine-readable output, agent behavior, and command-specific UX contracts.
 4. Reuse local helpers and command-family patterns before adding new abstractions.
 5. Preserve compatibility for command names, flags, exit codes, env vars, config files, JSON fields, parseable stdout, and telemetry semantics unless the change intentionally migrates them with tests.
 
 ## Task Routing
 
 - UX/copy/prompt/output/help/error/JSON/agent behavior: use `packages/cli/.agents/skills/cli-ux/SKILL.md` and load the references it names.
+- Vercel Agent Review and any other code review of those surfaces: load the `cli-ux` skill before assessing the diff or posting findings, even when the review makes no edits.
 - New or changed command metadata: update `src/commands/<name>/command.ts`, telemetry, help snapshots, and tests.
 - Command implementation: follow the surrounding command family in `src/commands/<name>/` and shared helpers in `src/util/`.
 - Shared output, prompt, target resolution, or remote-mutation behavior: inspect parallel command paths before editing one path.
@@ -70,7 +71,6 @@ Focused examples:
 ```bash
 cd packages/cli
 pnpm test test/unit/commands/<name>/<file>.test.ts
-pnpm vitest-run test/unit/commands/<name>/<file>.test.ts
 ```
 
 Repo-level checks when appropriate:

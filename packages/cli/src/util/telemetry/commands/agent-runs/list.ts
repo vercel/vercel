@@ -15,6 +15,15 @@ export class AgentRunsListTelemetryClient
     }
   }
 
+  trackCliOptionNext(value: number | undefined) {
+    if (typeof value === 'number') {
+      this.trackCliOption({
+        option: 'next',
+        value: String(value),
+      });
+    }
+  }
+
   trackCliOptionPage(value: number | undefined) {
     if (typeof value === 'number') {
       this.trackCliOption({

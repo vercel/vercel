@@ -1,6 +1,10 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import type { ExperimentalService } from '@vercel/fs-detectors';
-import type { ServiceQueueTopic, ServiceTopics } from '@vercel/build-utils';
+import type { Mock } from 'vitest';
+import type {
+  ExperimentalService,
+  ServiceQueueTopic,
+  ServiceTopics,
+} from '@vercel/build-utils';
 import {
   QueueBroker,
   topicPatternToRegex,
@@ -111,7 +115,7 @@ describe('topicPatternToRegex', () => {
 
 describe('QueueBroker', () => {
   let broker: QueueBroker;
-  let getServiceOrigin: ReturnType<typeof vi.fn>;
+  let getServiceOrigin: Mock<(name: string) => string | null>;
 
   beforeEach(() => {
     vi.useFakeTimers();

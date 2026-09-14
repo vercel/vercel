@@ -51,10 +51,11 @@ describe('output', () => {
 
       const result = JSON.parse(formatQueryJson(query, response));
 
-      expect(result.query).toEqual(query);
-      expect(result.data).toEqual(response.data);
-      expect(result.summary).toEqual(response.summary);
-      expect(result.statistics).toEqual(response.statistics);
+      expect(result).toEqual({
+        query,
+        data: response.data,
+        summary: response.summary,
+      });
     });
 
     it('should handle missing optional fields', () => {
@@ -72,9 +73,7 @@ describe('output', () => {
         formatQueryJson(query, { summary: [], statistics: {} })
       );
 
-      expect(result.data).toEqual([]);
-      expect(result.summary).toEqual([]);
-      expect(result.statistics).toEqual({});
+      expect(result).toEqual({ query, data: [], summary: [] });
     });
 
     it('should include returned ordering metadata', () => {
