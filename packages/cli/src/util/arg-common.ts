@@ -227,8 +227,8 @@ export const jsonOption = {
   name: 'json',
   shorthand: null,
   type: Boolean,
-  deprecated: true,
-  description: 'DEPRECATED: Use --format=json instead',
+  deprecated: false,
+  description: 'Output as JSON',
 } as const;
 
 export const nonInteractiveOption = {

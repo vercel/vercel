@@ -1,5 +1,58 @@
 # @vercel/frameworks
 
+## 3.34.0
+
+### Minor Changes
+
+- f2c588f: Detect projects with both `eve` and `@vercel/factory` dependencies as the new Factory (Eve) framework instead of Eve.
+
+## 3.33.0
+
+### Minor Changes
+
+- 359a57c: Mark the Rust framework as stable. Detection stays keyed on `src/main.rs` so `api/**/*.rs` function projects (which declare a `[[bin]]` per handler) remain framework-less and build zero-config; `[[bin]]`-only servers and cargo workspaces are supported by setting the Rust preset manually. Projects with an explicit output directory (e.g. wasm frontends built with Trunk) keep the static-build path instead of the Rust runtime, while preserving `api/**/*.rs` functions, and committed prebuilt output is served directly when no build command is configured.
+
+## 3.32.0
+
+### Minor Changes
+
+- bd5f1a7: Add standalone server mode for Rust, matching the Go framework preset. A project
+  that is not an `api/**` handler and does not depend on the `vercel_runtime` crate
+  now deploys as a plain HTTP server listening on `$PORT`, adapted to the
+  executable runtime by the shared IPC proxy. The binary comes from `Cargo.toml`;
+  for a multi-binary crate or workspace, point the entrypoint at the binary or set
+  `default-run`.
+
+  Projects using `vercel_runtime` are unaffected. `waitUntil` and request-scoped
+  logs still require `vercel_runtime`. Cargo's `target` directory is now excluded
+  from the files the builder downloads.
+
+## 3.31.0
+
+### Minor Changes
+
+- a7fc7e8: Expose the resolved rewrite destination as the request path observed by standalone Go servers, and warn affected Go projects about the behavior change.
+
+## 3.30.9
+
+### Patch Changes
+
+- b82e2a8: Serve the Dojo, Parcel, Scully, VuePress, Zola and FastHTML preset logos as SVG
+  These were the only six presets still pointing at raster logos. `next/image`
+  skips image optimization for `.svg` sources unless `dangerouslyAllowSVG` is
+  enabled, so these six were the only preset logos routed through the optimizer in
+  consumers such as the project settings framework picker, which made them the only
+  ones that could fail to render. Serving them as vectors puts all presets on the
+  same direct-load path and cuts the six logos from 373 KB to 33 KB.
+
+## 3.30.8
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/error-utils@2.2.1
+
 ## 3.30.7
 
 ### Patch Changes

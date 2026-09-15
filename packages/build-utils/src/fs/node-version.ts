@@ -66,6 +66,12 @@ export const NODE_VERSIONS: NodeVersion[] = [
 export const BUN_VERSIONS: BunVersion[] = [
   new BunVersion({
     major: 1,
+    minor: 4,
+    range: '1.4.x',
+    runtime: 'bun1.4.x',
+  }),
+  new BunVersion({
+    major: 1,
     range: '1.x',
     runtime: 'bun1.x',
   }),
@@ -200,12 +206,21 @@ export async function getSupportedNodeVersion(
 export function getSupportedBunVersion(engineRange: string): BunVersion {
   if (validRange(engineRange)) {
     const selected = BUN_VERSIONS.find(version => {
-      return intersects(version.range, engineRange);
+      if (!intersects(version.range, engineRange)) {
+        return false;
+      }
+
+      // Minor-specific runtimes require an explicit opt-in because Bun minor
+      // releases can contain breaking changes.
+      return version.minor === undefined
+        ? true
+        : !intersects(`<${version.major}.${version.minor}.0`, engineRange);
     });
 
     if (selected) {
       return new BunVersion({
         major: selected.major,
+        minor: selected.minor,
         range: selected.range,
         runtime: selected.runtime,
       });

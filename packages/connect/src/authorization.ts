@@ -4,7 +4,12 @@ import {
   validateCallbackUrl,
   validateWebhookUrl,
 } from './internal/url-validation.js';
-import type { ConnectTokenParams } from './token.js';
+import { withDefaultScopes } from './internal/default-scopes.js';
+import { resolveBaseUrl } from './internal/base-url.js';
+import {
+  createConnectErrorFromResponse,
+  type ConnectTokenParams,
+} from './token.js';
 
 export interface ConnectAuthorizationOptions {
   vercelToken?: string;
@@ -12,6 +17,14 @@ export interface ConnectAuthorizationOptions {
   webhook?: string;
   deviceCode?: boolean;
   expiresInMs?: number;
+  /** OAuth prompt value to pass to the connector's authorization server. */
+  prompt?: string;
+  /**
+   * Region to send the request to, e.g. `sfo1`. Defaults to the
+   * `VERCEL_REGION` environment variable; override it to target a
+   * different region.
+   */
+  region?: string;
 }
 
 export interface ConnectAuthorizationResponse {
@@ -62,7 +75,8 @@ export async function startAuthorization(
   }
 
   const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
-  const endpoint = `https://api.vercel.com/v1/connect/authorize/${encodeURIComponent(connector)}`;
+  const baseUrl = resolveBaseUrl(options);
+  const endpoint = `${baseUrl}/v1/connect/authorize/${encodeURIComponent(connector)}`;
   const deviceCode =
     options?.deviceCode ?? (detachedInteractiveAuth ? true : undefined);
   const returnUrl =
@@ -71,7 +85,7 @@ export async function startAuthorization(
       : {};
 
   const body = {
-    ...params,
+    ...withDefaultScopes(params),
     ...returnUrl,
     ...(options?.webhook !== undefined && { webhook: options.webhook }),
     ...(deviceCode !== undefined && {
@@ -80,6 +94,7 @@ export async function startAuthorization(
     ...(options?.expiresInMs !== undefined && {
       expiresInMs: options.expiresInMs,
     }),
+    ...(options?.prompt !== undefined && { prompt: options.prompt }),
   };
 
   const response = await fetch(endpoint, {
@@ -93,12 +108,9 @@ export async function startAuthorization(
   });
 
   if (!response.ok) {
-    let errorText: string | undefined;
-    try {
-      errorText = await response.text();
-    } catch {}
-    throw new Error(
-      `Failed to start authorization: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`
+    throw await createConnectErrorFromResponse(
+      response,
+      'Failed to start authorization'
     );
   }
 

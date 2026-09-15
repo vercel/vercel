@@ -91,7 +91,7 @@ describe('agent-runs list', () => {
       'list',
       '--search',
       'checkout',
-      '--page',
+      '--next',
       '2',
       '--limit',
       '50',
@@ -115,6 +115,21 @@ describe('agent-runs list', () => {
     expect(client.stderr.getFullOutput()).toContain(
       'No Agent Runs match the current filters.'
     );
+  });
+
+  it('continues accepting --page', async () => {
+    useLinkedProject();
+    let receivedQuery: Record<string, string> | undefined;
+    client.scenario.get('/api/observability/agent-runs', (req, res) => {
+      receivedQuery = req.query as Record<string, string>;
+      res.json({ runs: [] });
+    });
+
+    client.setArgv('agent-runs', 'list', '--page', '2');
+    const exitCode = await agentRuns(client);
+
+    expect(exitCode).toBe(0);
+    expect(receivedQuery?.page).toBe('2');
   });
 
   it('prints the raw response with --json', async () => {
@@ -243,13 +258,22 @@ describe('agent-runs list', () => {
       res.json({ runs: [] });
     });
 
-    client.setArgv('agent-runs', 'list', '--json', '--search', 'checkout');
+    client.setArgv(
+      'agent-runs',
+      'list',
+      '--json',
+      '--search',
+      'checkout',
+      '--next',
+      '2'
+    );
     const exitCode = await agentRuns(client);
 
     expect(exitCode).toBe(0);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'subcommand:list', value: 'list' },
       { key: 'option:search', value: '[REDACTED]' },
+      { key: 'option:next', value: '2' },
       { key: 'flag:json', value: 'TRUE' },
     ]);
   });

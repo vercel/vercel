@@ -2,9 +2,9 @@ import { getVercelOidcToken } from '@vercel/oidc';
 import type { ConnectOptions } from '../token.js';
 import { ConnectError, createConnectErrorFromResponse } from '../token.js';
 import type { EveConnectionAuthorizationContext } from './connection-authorization.js';
+import { resolveBaseUrl } from '../internal/base-url.js';
 
-const MANAGED_OAUTH_CONNECTOR_ENDPOINT =
-  'https://api.vercel.com/v1/connect/connectors/managed/oauth';
+const MANAGED_OAUTH_CONNECTOR_PATH = '/v1/connect/connectors/managed/oauth';
 
 const RESERVED_UID_PATTERN = /^(vc\/|[^/]*\.vercel\.com\/)/;
 const ALLOWED_RESERVED_UID_PREFIXES = ['mcp.vercel.com/'];
@@ -31,9 +31,11 @@ export async function provisionEveOAuthConnector({
 
   const vercelToken =
     connectOptions?.vercelToken ?? (await getVercelOidcToken());
+  const endpoint = `${resolveBaseUrl(connectOptions)}${MANAGED_OAUTH_CONNECTOR_PATH}`;
   const cacheKey = JSON.stringify({
     connector,
     serverUrl,
+    endpoint,
     token: await tokenCacheKeyPart(vercelToken),
   });
   let promise = provisionCache.get(cacheKey);
@@ -42,6 +44,7 @@ export async function provisionEveOAuthConnector({
       connector,
       serverUrl,
       vercelToken,
+      endpoint,
     }).catch(error => {
       if (isNonOAuthConnectorConflict(error)) {
         return;
@@ -123,12 +126,14 @@ async function provisionManagedOAuthConnector({
   connector,
   serverUrl,
   vercelToken,
+  endpoint,
 }: {
   readonly connector: string;
   readonly serverUrl: string;
   readonly vercelToken: string;
+  readonly endpoint: string;
 }): Promise<void> {
-  const response = await fetch(MANAGED_OAUTH_CONNECTOR_ENDPOINT, {
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       Accept: 'application/json',

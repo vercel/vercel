@@ -244,6 +244,31 @@ describe('detectFramework()', () => {
     expect(await detectFramework({ fs, frameworkList })).toBe('nextjs');
   });
 
+  it('Detect Factory (Eve) instead of Eve', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          eve: 'latest',
+          '@vercel/factory': 'latest',
+        },
+      }),
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('factory-eve');
+  });
+
+  it('Do not detect Factory (Eve) without Eve', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          '@vercel/factory': 'latest',
+        },
+      }),
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe(null);
+  });
+
   it.each([
     'Dockerfile.vercel',
     'Containerfile.vercel',
@@ -261,24 +286,6 @@ describe('detectFramework()', () => {
   ])('Prefer the container framework over others when `%s` is present', async marker => {
     // A project may also be a Next.js app, but the explicit container marker
     // is an opt-in to deploy it as a container instead.
-    const fs = new VirtualFilesystem({
-      'package.json': JSON.stringify({
-        dependencies: {
-          next: '14.0.0',
-        },
-      }),
-      [marker]: 'FROM node:20\nCMD ["node", "server.js"]',
-    });
-
-    expect(await detectFramework({ fs, frameworkList })).toBe('container');
-  });
-
-  it.each([
-    'Dockerfile.vercel',
-    'Containerfile.vercel',
-  ])('Detects the container framework via `%s` even without the experimental flag', async marker => {
-    // The container preset is no longer experimental, so the explicit marker
-    // wins over a co-present framework (here Next.js) without any flag.
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({
         dependencies: {
@@ -399,6 +406,106 @@ describe('detectFramework()', () => {
         useExperimentalFrameworks: true,
       })
     ).toBeNull();
+  });
+
+  it('Detect Rust via `src/main.rs` without experimental frameworks', async () => {
+    const fs = new VirtualFilesystem({
+      'Cargo.toml': '[package]\nname = "my-app"\nversion = "0.1.0"\n',
+      'src/main.rs': 'fn main() {}',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('rust');
+  });
+
+  it('Rust is not detected for a `[[bin]]` target without `src/main.rs`', async () => {
+    // `[[bin]]`-only servers set the Rust preset manually.
+    const fs = new VirtualFilesystem({
+      'Cargo.toml': [
+        '[package]',
+        'name = "my-app"',
+        'version = "0.1.0"',
+        '',
+        '[[bin]]',
+        'name = "server"',
+        'path = "src/bin/server.rs"',
+      ].join('\n'),
+      'src/bin/server.rs': 'fn main() {}',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBeNull();
+  });
+
+  it('Rust is not detected for `api/**/*.rs` function projects', async () => {
+    // api-function projects declare a `[[bin]]` per handler and must stay
+    // framework-less so the api runtime builders apply.
+    const fs = new VirtualFilesystem({
+      'Cargo.toml': [
+        '[package]',
+        'name = "crate-api-handler"',
+        'version = "0.1.0"',
+        'edition = "2021"',
+        '',
+        '[[bin]]',
+        'name = "hello"',
+        'path = "api/hello.rs"',
+        '',
+        '[dependencies]',
+        'tokio = { version = "1", features = ["macros", "rt-multi-thread"] }',
+        'vercel_runtime = "2"',
+      ].join('\n'),
+      'api/hello.rs': 'fn main() {}',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBeNull();
+  });
+
+  it('Rust is not detected for a library-only crate', async () => {
+    const fs = new VirtualFilesystem({
+      'Cargo.toml': '[package]\nname = "my-lib"\nversion = "0.1.0"\n',
+      'src/lib.rs': 'pub fn add(a: u32, b: u32) -> u32 { a + b }',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBeNull();
+  });
+
+  it('Rust is not detected for a commented-out `[[bin]]`', async () => {
+    const fs = new VirtualFilesystem({
+      'Cargo.toml': [
+        '[package]',
+        'name = "my-lib"',
+        'version = "0.1.0"',
+        '',
+        '# Declare binaries with a [[bin]] table, e.g.:',
+        '# [[bin]]',
+        '# name = "server"',
+      ].join('\n'),
+      'src/lib.rs': 'pub fn add(a: u32, b: u32) -> u32 { a + b }',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBeNull();
+  });
+
+  it('Axum and Actix Web remain gated behind experimental frameworks', async () => {
+    const fs = new VirtualFilesystem({
+      'Cargo.toml': [
+        '[package]',
+        'name = "my-app"',
+        'version = "0.1.0"',
+        '',
+        '[dependencies]',
+        'axum = "0.8"',
+      ].join('\n'),
+      'src/main.rs': 'fn main() {}',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('rust');
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        useExperimentalFrameworks: true,
+      })
+    ).toBe('axum');
   });
 
   it('Detect Nuxt.js', async () => {
@@ -761,7 +868,6 @@ describe('detectFrameworks()', () => {
     const importSyntaxes = [
       'import { Hono } from "hono"',
       "import { Hono } from 'hono'",
-      'const H = require("hono")',
       'const H = require("hono")',
       'import("hono")',
     ];

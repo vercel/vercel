@@ -35,6 +35,7 @@ import {
 import output from '../../output-manager';
 import { renderCard, renderTable, parseArrayColumns } from './display-columns';
 import { packageName } from '../../util/pkg-name';
+import { validateJsonOutput } from '../../util/output-format';
 import type {
   ParsedFlags,
   EndpointInfo,
@@ -68,7 +69,7 @@ export default async function api(client: Client): Promise<number> {
   // Check for 'ls' or 'list' subcommand first (before general --help)
   const firstArg = args[1];
   if (firstArg === 'ls' || firstArg === 'list') {
-    // Re-parse with listSubcommand options to capture --format
+    // Re-parse with listSubcommand options to capture output flags
     const lsFlagsSpec = getFlagsSpecification(listSubcommand.options);
     let lsParsedArgs;
     try {
@@ -91,17 +92,24 @@ export default async function api(client: Client): Promise<number> {
       return 2;
     }
 
+    const formatResult = validateJsonOutput(lsFlags);
+    if (!formatResult.valid) {
+      output.error(formatResult.error);
+      return 1;
+    }
+
     telemetryClient.trackCliSubcommandList();
     if (lsFlags['--refresh']) telemetryClient.trackCliFlagRefresh(true);
     if (lsFlags['--format'])
       telemetryClient.trackCliOptionFormat(lsFlags['--format']);
+    telemetryClient.trackCliFlagJson(lsFlags['--json']);
     if (lsFlags['--spec-url'])
       telemetryClient.trackCliOptionSpecUrl(lsFlags['--spec-url']);
     return listEndpoints(
       client,
       lsFlags['--refresh'] ?? false,
       lsFlags['--spec-url'],
-      lsFlags['--format'] ?? 'table'
+      formatResult.jsonOutput ? 'json' : 'table'
     );
   }
 
@@ -562,7 +570,7 @@ function printTagOperationResolveError(
     const tags = [...new Set(allEndpoints.flatMap(ep => ep.tags || []))].sort();
     const preview = tags.slice(0, 25).join(', ');
     output.error(
-      `No operations use tag "${result.tag}".${tags.length > 0 ? ` Example tags: ${preview}${tags.length > 25 ? ', …' : ''}.` : ''} Run \`vercel api ls --format json\` to inspect tags.`
+      `No operations use tag "${result.tag}".${tags.length > 0 ? ` Example tags: ${preview}${tags.length > 25 ? ', …' : ''}.` : ''} Run \`vercel api ls --json\` to inspect tags.`
     );
     return;
   }

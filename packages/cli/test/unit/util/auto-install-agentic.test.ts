@@ -272,6 +272,7 @@ describe('autoInstallVercelPlugin', () => {
 
   afterEach(() => {
     fetchSpy.mockRestore();
+    vi.restoreAllMocks();
     client.reset();
   });
 
@@ -284,6 +285,23 @@ describe('autoInstallVercelPlugin', () => {
       await writeFile(join(configDir, 'agent-preferences.json'), '{', 'utf8');
 
       await expect(autoInstallVercelPlugin(client)).resolves.toBeUndefined();
+    } finally {
+      await rm(configDir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not prompt when the command is non-interactive', async () => {
+    const configDir = await mkdtemp(join(tmpdir(), 'vercel-cli-agent-prefs-'));
+
+    try {
+      client.setArgv('--global-config', configDir, '--non-interactive');
+      client.agentName = KNOWN_AGENTS.CLAUDE;
+      client.nonInteractive = true;
+      const confirmSpy = vi.spyOn(client.input, 'confirm');
+
+      await autoInstallVercelPlugin(client);
+
+      expect(confirmSpy).not.toHaveBeenCalled();
     } finally {
       await rm(configDir, { recursive: true, force: true });
     }

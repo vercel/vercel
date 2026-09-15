@@ -6,6 +6,7 @@ import { formatGranularity } from '../../util/output/format-granularity';
 import { ellipsizeMiddle } from '../../util/output/truncate';
 import { getResolvedOrderMetadata, getRollupColumnName } from './output';
 import { toGranularityMsFromDuration } from './time-utils';
+import { normalizeMetricUnit } from './metric-units';
 import type {
   Aggregation,
   Granularity,
@@ -15,8 +16,6 @@ import type {
   OrderDirection,
   Scope,
 } from './types';
-
-export type MeasureType = 'count' | 'duration' | 'bytes' | 'ratio';
 
 export interface TimeSeriesPoint {
   timestamp: string;
@@ -46,10 +45,10 @@ interface SummaryTableRow {
 interface SummaryTableOptions {
   rows: SummaryTableRow[];
   groupByFields: string[];
-  measureType: MeasureType;
   aggregation: Aggregation;
   periodStart: Date;
   periodEnd: Date;
+  formatValue: MetricValueFormatter;
   ansiAwareGroupValues?: boolean;
 }
 
@@ -67,7 +66,6 @@ interface MetadataHeaderOptions {
   scope: Scope;
   projectName?: string;
   teamName?: string;
-  unit?: string;
   groupCount?: number;
   compact?: boolean;
 }
@@ -102,29 +100,52 @@ const MAX_SPARKLINE_LENGTH = 120;
 
 type TableAlignment = 'l' | 'c' | 'r';
 type StatColumn = 'total' | 'avg' | 'min' | 'max';
+type MetricValueFormatter = (
+  value: number,
+  opts?: { preserveFractionalCount?: boolean }
+) => string;
 
-const COUNT_UNITS = new Set(['count', 'usd', 'us dollars', 'dollars']);
-const DURATION_UNITS = new Set(['milliseconds', 'seconds']);
-const BYTES_UNITS = new Set([
-  'bytes',
-  'megabytes',
-  'gigabyte hour',
-  'gigabyte_hour',
-  'gigabyte hours',
-  'gigabyte_hours',
-]);
-const RATIO_UNITS = new Set(['ratio', 'percent']);
+const DURATION_SCALE_MS: Readonly<Record<string, number>> = {
+  seconds: 1_000,
+  minutes: 60_000,
+  hours: 3_600_000,
+  days: 86_400_000,
+};
+const BYTE_SCALE: Readonly<Record<string, number>> = {
+  bytes: 1,
+  kilobytes: 1_000,
+  megabytes: 1_000_000,
+  gigabytes: 1_000_000_000,
+  terabytes: 1_000_000_000_000,
+  petabytes: 1_000_000_000_000_000,
+};
+const COMPACT_NUMBER_FORMATTER = new Intl.NumberFormat('en-US', {
+  notation: 'compact',
+  compactDisplay: 'short',
+});
+const TWO_FRACTION_NUMBER_FORMATTER = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 2,
+});
+const TWO_SIGNIFICANT_NUMBER_FORMATTER = new Intl.NumberFormat('en-US', {
+  minimumSignificantDigits: 2,
+  maximumSignificantDigits: 2,
+  maximumFractionDigits: 2,
+});
+const PERCENTAGE_FORMATTER = new Intl.NumberFormat('en-US', {
+  style: 'unit',
+  unit: 'percent',
+  unitDisplay: 'narrow',
+  maximumFractionDigits: 1,
+});
+const USD_FORMATTER = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 
 export const BLOCKS = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'] as const;
 export const MISSING_CHAR = '·';
-
-/** Normalizes schema unit strings to a stable lookup key. */
-function normalizeUnit(unit: string): string {
-  return unit
-    .trim()
-    .toLowerCase()
-    .replace(/[_\s]+/g, ' ');
-}
 
 /**
  * An aggregation may carry a dimension qualifier (e.g. `unique/visitor_id`),
@@ -182,65 +203,9 @@ function formatPeriodSpan(startInput: string, endInput: string): string | null {
   return elapsed(durationMs);
 }
 
-/** Converts verbose units to compact labels for metadata output. */
-function formatUnitLabel(unit: string): string {
-  switch (normalizeUnit(unit)) {
-    case 'milliseconds':
-      return 'ms';
-    case 'seconds':
-      return 's';
-    case 'usd':
-    case 'us dollars':
-      return 'USD';
-    case 'gigabyte hour':
-    case 'gigabyte hours':
-      return 'GB-h';
-    default:
-      return unit;
-  }
-}
-
-/**
- * Returns true only for total-count style output:
- * - `measureType=count` and `aggregation=sum` -> integer display
- * - everything else (`persecond`, `percent`, durations, ratios, bytes) -> decimal
- */
-function isCountIntegerDisplay(
-  measureType: MeasureType,
-  aggregation: Aggregation
-): boolean {
-  // Count + sum should read like totals (integers), while count-persecond /
-  // count-percent stay decimal.
-  return measureType === 'count' && aggregation === 'sum';
-}
-
-/**
- * Formats numbers by measure/aggregation with an optional override for count averages.
- * Default behavior:
- * - count+sum -> integer formatting via `formatCount()`
- * - everything else -> decimal formatting via `formatDecimal()`
- *
- * When `preserveFractionalCountSum` is true, count+sum values like `1.5`
- * stay decimal (used for `avg` only).
- */
-function formatNumber(
-  value: number,
-  measureType: MeasureType,
-  aggregation: Aggregation,
-  opts?: { preserveFractionalCountSum?: boolean }
-): string {
-  if (isCountIntegerDisplay(measureType, aggregation)) {
-    if (opts?.preserveFractionalCountSum && !Number.isInteger(value)) {
-      return formatDecimal(value);
-    }
-    return formatCount(value);
-  }
-  return formatDecimal(value);
-}
-
 /** Chooses summary statistic columns based on aggregation. */
 function getStatColumns(aggregation: Aggregation): StatColumn[] {
-  if (aggregation === 'sum') {
+  if (aggregation === 'sum' || aggregation === 'count') {
     return ['total', 'avg', 'min', 'max'];
   }
   return ['avg', 'min', 'max'];
@@ -303,17 +268,16 @@ function normalizeTimestampToIso(timestamp: string): string | null {
 function formatStatCell(
   column: StatColumn,
   stats: GroupStats,
-  measureType: MeasureType,
-  aggregation: Aggregation,
   periodStart: Date,
-  periodEnd: Date
+  periodEnd: Date,
+  formatValue: MetricValueFormatter
 ): string {
   switch (column) {
     case 'total':
-      return formatNumber(stats.total, measureType, aggregation);
+      return formatValue(stats.total);
     case 'avg':
-      return formatNumber(stats.avg, measureType, aggregation, {
-        preserveFractionalCountSum: true,
+      return formatValue(stats.avg, {
+        preserveFractionalCount: true,
       });
     case 'min': {
       const ts = formatMinMaxTimestamp(
@@ -321,7 +285,7 @@ function formatStatCell(
         periodStart,
         periodEnd
       );
-      return `${formatNumber(stats.min.value, measureType, aggregation)} at ${ts}`;
+      return `${formatValue(stats.min.value)} at ${ts}`;
     }
     case 'max': {
       const ts = formatMinMaxTimestamp(
@@ -329,7 +293,7 @@ function formatStatCell(
         periodStart,
         periodEnd
       );
-      return `${formatNumber(stats.max.value, measureType, aggregation)} at ${ts}`;
+      return `${formatValue(stats.max.value)} at ${ts}`;
     }
   }
 }
@@ -409,30 +373,6 @@ function buildSeriesTimestamps(
 }
 
 /**
- * Classifies a schema unit into formatting behavior:
- * - `count`: count/USD-like values (integer totals for `sum`)
- * - `duration`: time units (ms/s)
- * - `bytes`: storage/bandwidth-like units
- * - `ratio`: percentages/ratios and unknown units (safe decimal fallback)
- */
-export function getMeasureType(unit: string): MeasureType {
-  const normalized = normalizeUnit(unit);
-  if (COUNT_UNITS.has(normalized)) {
-    return 'count';
-  }
-  if (DURATION_UNITS.has(normalized)) {
-    return 'duration';
-  }
-  if (BYTES_UNITS.has(normalized)) {
-    return 'bytes';
-  }
-  if (RATIO_UNITS.has(normalized)) {
-    return 'ratio';
-  }
-  return 'ratio';
-}
-
-/**
  * Formats count-like values as rounded integers with `en-US` separators.
  * Example: `17880.2 -> "17,880"`.
  */
@@ -473,6 +413,116 @@ export function formatDecimal(n: number): string {
     .replace(/\.$/, '');
 
   return `${sign}${trimmed}`;
+}
+
+function formatDuration(durationMs: number): string {
+  const durationSeconds = durationMs / 1_000;
+  if (durationMs < 1_000) {
+    return `${durationMs.toFixed(0)}ms`;
+  }
+  if (durationMs < 5_000) {
+    return `${Math.round(durationSeconds * 100) / 100}s`;
+  }
+  if (durationSeconds < 60) {
+    return `${durationSeconds.toFixed(0)}s`;
+  }
+  if (durationSeconds < 3_600) {
+    return `${(durationSeconds / 60).toFixed(0)}m`;
+  }
+  return `${(durationSeconds / 3_600).toFixed(0)}h`;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) {
+    return '0 Bytes';
+  }
+
+  const units = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB'] as const;
+  const absoluteBytes = Math.abs(bytes);
+  let unitIndex = Math.min(
+    units.length - 1,
+    Math.max(0, Math.floor(Math.log(absoluteBytes) / Math.log(1_000)))
+  );
+  let value = bytes / 1_000 ** unitIndex;
+
+  if (unitIndex === 1 || unitIndex === 2) {
+    value = Math.round(value);
+    if (Math.abs(value) === 1_000 && unitIndex < units.length - 1) {
+      value /= 1_000;
+      unitIndex += 1;
+    }
+  }
+
+  return `${TWO_FRACTION_NUMBER_FORMATTER.format(value)} ${units[unitIndex]}`;
+}
+
+/** Formats metric values with the same unit semantics as the dashboard query builder. */
+export function formatMetricValue(
+  value: number,
+  baseUnit: string | undefined,
+  aggregation: Aggregation,
+  opts?: { preserveFractionalCount?: boolean }
+): string {
+  const formatCountValue = () =>
+    opts?.preserveFractionalCount && !Number.isInteger(value)
+      ? formatDecimal(value)
+      : formatCount(value);
+
+  if (isAggregationWithDimension(aggregation) || aggregation === 'count') {
+    return formatCountValue();
+  }
+
+  const unit = normalizeMetricUnit(baseUnit ?? 'units');
+  if (aggregation === 'percent' || unit === 'percent') {
+    return PERCENTAGE_FORMATTER.format(value);
+  }
+  if (aggregation === 'unique') {
+    return COMPACT_NUMBER_FORMATTER.format(value);
+  }
+
+  const withRateSuffix = (formatted: string) =>
+    aggregation === 'persecond' ? `${formatted}/s` : formatted;
+
+  if (unit === 'milliseconds') {
+    return withRateSuffix(formatDuration(value));
+  }
+
+  const durationScale = DURATION_SCALE_MS[unit];
+  if (durationScale) {
+    return withRateSuffix(formatDuration(value * durationScale));
+  }
+
+  if (unit === 'nanoseconds' || unit === 'microseconds') {
+    const suffix = unit === 'nanoseconds' ? ' ns' : ' µs';
+    const formatted = TWO_FRACTION_NUMBER_FORMATTER.format(value);
+    return withRateSuffix(`${formatted}${suffix}`);
+  }
+
+  const byteScale = BYTE_SCALE[unit];
+  if (byteScale) {
+    return withRateSuffix(formatBytes(value * byteScale));
+  }
+
+  if (unit === 'gigabyte hour' || unit === 'gigabyte hours') {
+    const formatted = TWO_SIGNIFICANT_NUMBER_FORMATTER.format(value);
+    return withRateSuffix(`${formatted} GB-hrs`);
+  }
+
+  if (unit === 'usd' || unit === 'us dollars' || unit === 'dollars') {
+    return withRateSuffix(USD_FORMATTER.format(value));
+  }
+
+  if (unit === 'count' && aggregation === 'sum') {
+    return formatCountValue();
+  }
+
+  const formatted = COMPACT_NUMBER_FORMATTER.format(value);
+  const unitLabel = baseUnit?.trim();
+  if (!unitLabel || unit === 'units' || unit === 'count' || unit === 'ratio') {
+    return withRateSuffix(formatted);
+  }
+
+  return withRateSuffix(`${formatted} ${unitLabel}`);
 }
 
 /**
@@ -768,10 +818,6 @@ export function formatMetadataHeader(opts: MetadataHeaderOptions): string {
     });
   }
 
-  if (opts.unit && normalizeUnit(opts.unit) !== 'count') {
-    rows.push({ key: 'Units', value: formatUnitLabel(opts.unit) });
-  }
-
   if (!opts.compact && typeof opts.groupCount === 'number') {
     rows.push({ key: 'Groups', value: String(opts.groupCount) });
   }
@@ -804,10 +850,9 @@ export function formatSummaryTable(opts: SummaryTableOptions): string {
         formatStatCell(
           column,
           row.stats,
-          opts.measureType,
-          opts.aggregation,
           opts.periodStart,
-          opts.periodEnd
+          opts.periodEnd,
+          opts.formatValue
         )
       )
     );
@@ -863,40 +908,6 @@ export function formatSparklineSection(
 }
 
 /**
- * Computes the display unit and measure type based on the base unit and
- * aggregation. Certain aggregations transform the output semantics:
- * - an aggregation with a dimension (e.g. `unique/visitor_id`) → values are
- *   distinct counts, unit is hidden
- * - `percent` → values are 0-100 percentages regardless of base unit
- * - `persecond` → values are rates in base unit per second
- * - all others → values stay in the original unit
- */
-export function getEffectiveDisplay(
-  baseUnit: string | undefined,
-  aggregation: Aggregation
-): { displayUnit: string | undefined; measureType: MeasureType } {
-  if (isAggregationWithDimension(aggregation)) {
-    return { displayUnit: undefined, measureType: 'count' };
-  }
-  switch (aggregation) {
-    case 'percent':
-      return { displayUnit: '%', measureType: 'ratio' };
-    case 'persecond': {
-      const label = baseUnit ? formatUnitLabel(baseUnit) : undefined;
-      return {
-        displayUnit: label ? `${label}/s` : undefined,
-        measureType: getMeasureType(baseUnit ?? 'ratio'),
-      };
-    }
-    default:
-      return {
-        displayUnit: baseUnit,
-        measureType: getMeasureType(baseUnit ?? 'ratio'),
-      };
-  }
-}
-
-/**
  * Composes final text output:
  * metadata + summary table + sparklines.
  * If there is no data, returns metadata and a deterministic `No data` line.
@@ -906,10 +917,8 @@ export function formatText(
   opts: FormatTextOptions
 ): string {
   const rollupColumn = getRollupColumnName(opts.metric, opts.aggregation);
-  const { displayUnit, measureType } = getEffectiveDisplay(
-    opts.metricUnit,
-    opts.aggregation
-  );
+  const formatValue: MetricValueFormatter = (value, formatOptions) =>
+    formatMetricValue(value, opts.metricUnit, opts.aggregation, formatOptions);
   const granularityMs = toGranularityMsFromDuration(opts.granularity);
   const orderMetadata = getResolvedOrderMetadata(opts, response);
 
@@ -949,7 +958,6 @@ export function formatText(
     scope: opts.scope,
     projectName: opts.projectName,
     teamName: opts.teamName,
-    unit: displayUnit,
     groupCount: opts.groupBy.length > 0 ? groups.length : undefined,
     compact: opts.presentation?.compact,
   });
@@ -983,10 +991,10 @@ export function formatText(
   const summaryTable = formatSummaryTable({
     rows: summaryRows,
     groupByFields: opts.groupBy,
-    measureType,
     aggregation: opts.aggregation,
     periodStart: new Date(opts.periodStart),
     periodEnd: new Date(opts.periodEnd),
+    formatValue,
     ansiAwareGroupValues: opts.presentation?.compact,
   });
 

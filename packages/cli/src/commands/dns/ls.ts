@@ -116,7 +116,7 @@ export default async function ls(client: Client, argv: string[]) {
     const data = await getDomainDNSRecords(
       client,
       domainName,
-      4,
+      5,
       ...paginationOptions
     );
     if (data instanceof DomainNotFound) {

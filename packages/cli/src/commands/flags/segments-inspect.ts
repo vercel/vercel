@@ -3,6 +3,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getCommandName } from '../../util/pkg-name';
+import { getFlagSettings } from '../../util/flags/get-flags';
 import { getSegment } from '../../util/flags/segments';
 import { printSegmentDetails } from '../../util/flags/print-segment-details';
 import output from '../../output-manager';
@@ -67,7 +68,10 @@ export default async function segmentsInspect(
 
   try {
     output.spinner('Fetching segment...');
-    const segment = await getSegment(client, project.id, segmentArg, true);
+    const [segment, settings] = await Promise.all([
+      getSegment(client, project.id, segmentArg, true),
+      getFlagSettings(client, project.id),
+    ]);
     output.stopSpinner();
 
     if (json) {
@@ -76,6 +80,7 @@ export default async function segmentsInspect(
       printSegmentDetails({
         segment,
         projectSlugLink,
+        settings,
       });
     }
   } catch (err) {

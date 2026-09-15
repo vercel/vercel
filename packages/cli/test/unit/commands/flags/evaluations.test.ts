@@ -201,6 +201,7 @@ describe('flags evaluations', () => {
     expect(stdout).toContain('false: Off');
     expect(stdout).toContain('true: On');
     expect(stdout).toContain('Default in Code');
+    expect(stdout).not.toContain('(not set)');
     expect(stdout).not.toContain('Chart:');
     expect(stdout).not.toContain('  Chart');
     expect(stdout).not.toContain('sparklines:');
@@ -273,7 +274,9 @@ describe('flags evaluations', () => {
     const exitCode = await flags(client);
 
     expect(exitCode).toBe(0);
-    const json = JSON.parse(client.stdout.getFullOutput());
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).not.toContain('"variant":');
+    const json = JSON.parse(stdout);
     expect(json).toEqual({
       flag: 'my-feature',
       variants: { off: false, on: true },
@@ -284,12 +287,14 @@ describe('flags evaluations', () => {
       buckets: [
         {
           timestamp: '2026-07-10T10:00:00.000Z',
-          variant: 'off',
+          variantId: 'off',
+          variantValue: false,
           evaluations: 3,
         },
         {
           timestamp: '2026-07-10T10:01:00.000Z',
-          variant: '',
+          variantId: '',
+          variantValue: 'Default in Code',
           evaluations: 1,
         },
       ],
@@ -303,6 +308,48 @@ describe('flags evaluations', () => {
       { key: 'option:since', value: '[REDACTED]' },
       { key: 'option:until', value: '[REDACTED]' },
       { key: 'flag:json', value: 'TRUE' },
+    ]);
+  });
+
+  it('keeps default-in-code buckets when the API omits the variant id', async () => {
+    useEvaluationsResponse({
+      summary: [
+        { flagVariant: '', [ROLLUP]: 59 },
+        ...Array.from({ length: 100 }, (_, index) => ({
+          flagVariant: `variant-${index}`,
+          [ROLLUP]: 100 - index,
+        })),
+      ],
+      data: [
+        {
+          timestamp: '2026-07-10T10:00:00.000Z',
+          flagVariant: null,
+          [ROLLUP]: 59,
+        },
+      ],
+    });
+    client.setArgv(
+      'flags',
+      'evaluations',
+      'my-feature',
+      '--since',
+      '2026-07-10T10:00:00.000Z',
+      '--until',
+      '2026-07-10T11:00:00.000Z',
+      '--json'
+    );
+
+    expect(await flags(client)).toBe(0);
+
+    const json = JSON.parse(client.stdout.getFullOutput());
+    expect(json.truncated).toBe(true);
+    expect(json.buckets).toEqual([
+      {
+        timestamp: '2026-07-10T10:00:00.000Z',
+        variantId: '',
+        variantValue: 'Default in Code',
+        evaluations: 59,
+      },
     ]);
   });
 
@@ -388,10 +435,10 @@ describe('flags evaluations', () => {
     const json = JSON.parse(client.stdout.getFullOutput());
     expect(json.truncated).toBe(true);
     expect(
-      json.buckets.map((bucket: { variant: string }) => bucket.variant)
+      json.buckets.map((bucket: { variantId: string }) => bucket.variantId)
     ).toEqual(['variant-99', 'variant-0']);
     expect(json.buckets).not.toContainEqual(
-      expect.objectContaining({ variant: 'variant-100' })
+      expect.objectContaining({ variantId: 'variant-100' })
     );
   });
 

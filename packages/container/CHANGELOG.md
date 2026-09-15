@@ -1,5 +1,104 @@
 # @vercel/container
 
+## 7.0.1
+
+### Patch Changes
+
+- Updated dependencies [1817491]
+  - @vercel/build-utils@14.9.1
+
+## 7.0.0
+
+### Patch Changes
+
+- Updated dependencies [392c759]
+  - @vercel/build-utils@14.9.0
+
+## 6.0.0
+
+### Patch Changes
+
+- Updated dependencies [a652a99]
+  - @vercel/build-utils@14.8.0
+
+## 5.0.0
+
+### Patch Changes
+
+- Updated dependencies [26b891e]
+- Updated dependencies [37ff9da]
+  - @vercel/build-utils@14.7.0
+
+## 4.0.1
+
+### Patch Changes
+
+- Updated dependencies [aad9541]
+  - @vercel/build-utils@14.6.1
+
+## 4.0.0
+
+### Patch Changes
+
+- Updated dependencies [e82de48]
+  - @vercel/build-utils@14.6.0
+
+## 3.0.2
+
+### Patch Changes
+
+- f42a78a: Serve a shared Runtime Cache from `vercel dev`. Every service, sidecar, function, and framework dev command is pointed at one in-memory store owned by the dev server, so a value written by one process is readable by the others the way it is in a deployment. Previously each process fell back to its own in-process cache and cross-service reads always missed. A `RUNTIME_CACHE_ENDPOINT` you set yourself still takes precedence.
+
+## 3.0.1
+
+### Patch Changes
+
+- Updated dependencies [a443e57]
+  - @vercel/build-utils@14.5.1
+
+## 3.0.0
+
+### Patch Changes
+
+- Updated dependencies [90afd71]
+  - @vercel/build-utils@14.5.0
+
+## 2.0.1
+
+### Patch Changes
+
+- Updated dependencies [e5b0363]
+  - @vercel/build-utils@14.4.1
+
+## 2.0.0
+
+### Patch Changes
+
+- Updated dependencies [f8add0a]
+  - @vercel/build-utils@14.4.0
+
+## 1.0.0
+
+### Patch Changes
+
+- 0d71a61: Declare `@vercel/build-utils` as a peer dependency provided by Vercel CLI so builders load correctly with strict dependency isolation, including pnpm global installs.
+- Updated dependencies [0b08df6]
+- Updated dependencies [cd6b038]
+- Updated dependencies [96444ba]
+  - @vercel/build-utils@14.3.0
+
+## 0.2.0
+
+### Minor Changes
+
+- 28a2dd0: Expose the resolved rewrite destination as the request path observed by containers, and warn affected container projects about the behavior change.
+
+## 0.1.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
 ## 0.1.0
 
 ### Minor Changes

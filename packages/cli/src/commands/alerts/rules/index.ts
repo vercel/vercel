@@ -9,6 +9,7 @@ import { AGENT_REASON } from '../../../util/agent-output-constants';
 
 const RULES_CONFIG = {
   ls: ['ls', 'list'],
+  schema: ['schema'],
   add: ['add', 'create'],
   inspect: ['inspect', 'get'],
   rm: ['rm', 'remove', 'delete'],
@@ -56,6 +57,8 @@ export default async function rules(
   switch (subcommand) {
     case 'ls':
       return (await import('./ls')).default(client, args);
+    case 'schema':
+      return (await import('./schema')).default(client, args);
     case 'add':
       return (await import('./add')).default(client, args);
     case 'inspect':

@@ -75,6 +75,18 @@ export interface Team {
    * Preview Environment Variables to `sensitive` on create.
    */
   sensitiveEnvironmentVariablePolicy?: 'default' | 'on' | 'off';
+  /** Require Production Secret values to be stored separately. */
+  disjunctiveProductionSecretPolicy?: 'default' | 'on' | 'off';
+  /**
+   * Team-wide Security+ subscription. Absent when the team has never had it.
+   * A project can also carry Security+ on its own, so this is not the whole
+   * entitlement — see `resolveFirewallEntitlements`.
+   */
+  securityPlus?: {
+    enabled: boolean;
+    updatedAt: number;
+    firstEnabledAt?: number;
+  };
 }
 
 export type Domain = {
@@ -322,6 +334,7 @@ export interface ProjectEnvVariable {
   key: string;
   value: string;
   type: ProjectEnvType;
+  visibility?: 'config' | 'secret';
   configurationId?: string | null;
   createdAt?: number;
   updatedAt?: number;
@@ -371,6 +384,34 @@ export type ProjectProtectionBypass = Record<
   AutomationProtectionBypass | IntegrationAutomationProtectionBypass
 >;
 
+export interface ProjectSandboxConfig {
+  region?: string;
+  failoverRegions?: string[];
+}
+
+/**
+ * One trace sampling rule. `rate` is a fraction from 0 to 1. A rule with no
+ * `env` applies to every environment, and a rule with no `requestPath` applies
+ * to every path in that environment.
+ */
+export interface ProjectTracingSamplingRule {
+  rate: number;
+  env?: 'production' | 'preview';
+  requestPath?: string;
+  /** Tracing destination: Vercel internal or customer external drain. */
+  destination?: 'internal' | 'external';
+}
+
+/**
+ * Tracing configuration for a project. `domains` is a comma-separated list of
+ * drain endpoint domains. The API caps `samplingRules` at ten items.
+ */
+export interface ProjectTracing {
+  domains?: string;
+  ignorePaths?: string[];
+  samplingRules?: ProjectTracingSamplingRule[];
+}
+
 export interface Project extends ProjectSettings {
   id: string;
   analytics?: {
@@ -392,6 +433,8 @@ export interface Project extends ProjectSettings {
   customEnvironments?: CustomEnvironment[];
   rollingRelease?: ProjectRollingRelease;
   protectionBypass?: ProjectProtectionBypass;
+  sandbox?: ProjectSandboxConfig;
+  tracing?: ProjectTracing | null;
 }
 
 export interface Org {
@@ -520,6 +563,11 @@ export interface GitMetadata {
   commitSha?: string | undefined;
   dirty?: boolean | undefined;
   remoteUrl?: string;
+  /**
+   * Path of the deployed directory relative to the detected git repository
+   * root. Empty string when deploying from the repository root.
+   */
+  rootDirectory?: string;
 }
 
 /**

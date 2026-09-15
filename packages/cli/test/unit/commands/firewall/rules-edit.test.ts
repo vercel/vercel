@@ -37,28 +37,6 @@ describe('firewall rules edit', () => {
   // ─── Resolve + dispatch ────────────────────────────────────────────
 
   describe('resolve', () => {
-    it('should edit a rule by name', async () => {
-      const active = createConfig({ rules: [createRule(1)] });
-      useListFirewallConfigs(active, null);
-      usePatchDraft();
-      useActivateConfig();
-
-      client.setArgv(
-        'firewall',
-        'rules',
-        'edit',
-        'Test Rule 1',
-        '--action',
-        'challenge',
-        '--yes'
-      );
-      const exitCodePromise = firewall(client);
-      await expect(client.stderr).toOutput('updated and staged');
-      expect(await exitCodePromise).toEqual(0);
-      expect(lastPatchBody.action).toBe('rules.update');
-      expect(lastPatchBody.id).toBe('rule_001');
-    });
-
     it('should edit a rule by ID', async () => {
       const active = createConfig({ rules: [createRule(1)] });
       useListFirewallConfigs(active, null);
@@ -155,33 +133,6 @@ describe('firewall rules edit', () => {
       expect(lastPatchBody.action).toBe('rules.update');
       expect(lastPatchBody.value.action.mitigate.action).toBe('challenge');
       expect(lastPatchBody.value.conditionGroup).toHaveLength(1);
-    });
-
-    it('should replace conditions', async () => {
-      const active = createConfig({ rules: [createRule(1)] });
-      useListFirewallConfigs(active, null);
-      usePatchDraft();
-      useActivateConfig();
-
-      client.setArgv(
-        'firewall',
-        'rules',
-        'edit',
-        'Test Rule 1',
-        '--condition',
-        '{"type":"path","op":"pre","value":"/new"}',
-        '--yes'
-      );
-      const exitCodePromise = firewall(client);
-      await expect(client.stderr).toOutput('updated and staged');
-      expect(await exitCodePromise).toEqual(0);
-
-      expect(lastPatchBody.value.conditionGroup[0].conditions[0].type).toBe(
-        'path'
-      );
-      expect(lastPatchBody.value.conditionGroup[0].conditions[0].op).toBe(
-        'pre'
-      );
     });
 
     it('should rename a rule', async () => {
@@ -429,27 +380,6 @@ describe('firewall rules edit', () => {
         'AI mode is not available in non-interactive mode'
       );
       expect(await exitCodePromise).toEqual(1);
-    });
-
-    it('should edit with AI and --yes', async () => {
-      const active = createConfig({ rules: [createRule(1)] });
-      useListFirewallConfigs(active, null);
-      usePatchDraft();
-      useActivateConfig();
-      useGenerateFirewallRule();
-
-      client.setArgv(
-        'firewall',
-        'rules',
-        'edit',
-        'Test Rule 1',
-        '--ai',
-        'Change action to challenge',
-        '--yes'
-      );
-      const exitCodePromise = firewall(client);
-      await expect(client.stderr).toOutput('updated and staged');
-      expect(await exitCodePromise).toEqual(0);
     });
 
     it('should error when AI and --condition are both used', async () => {

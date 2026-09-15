@@ -58,15 +58,31 @@ const FLAG_CONDITION_COMPARATOR_LABELS = {
   lte: 'is less than or equal to',
 } as const satisfies Record<FlagConditionComparator, string>;
 
+const TIMESTAMP_FLAG_CONDITION_COMPARATOR_LABELS: Partial<
+  Record<FlagConditionComparator, string>
+> = {
+  gt: 'is after',
+  gte: 'is on or after',
+  lt: 'is before',
+  lte: 'is on or before',
+};
+
 const LEGACY_FLAG_CONDITION_COMPARATOR_LABELS: Record<string, string> = {
   notContains: FLAG_CONDITION_COMPARATOR_LABELS['!contains'],
 };
 
 export function formatFlagConditionComparator(
   comparator: string,
-  options?: { ignoreCase?: boolean }
+  options?: { ignoreCase?: boolean; attributeType?: string }
 ): string {
+  const timestampLabel =
+    options?.attributeType === 'timestamp'
+      ? TIMESTAMP_FLAG_CONDITION_COMPARATOR_LABELS[
+          comparator as FlagConditionComparator
+        ]
+      : undefined;
   const label =
+    timestampLabel ??
     FLAG_CONDITION_COMPARATOR_LABELS[comparator as FlagConditionComparator] ??
     LEGACY_FLAG_CONDITION_COMPARATOR_LABELS[comparator] ??
     comparator;

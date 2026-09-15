@@ -1,0 +1,14 @@
+{
+  "services": {
+    "api-ok": {
+      "root": "services/api-ok",
+      "runtime": "node",
+      "entrypoint": "index.js"
+    },
+    "api-fail": {
+      "root": "services/api-fail",
+      "runtime": "node",
+      "entrypoint": "index.js"
+    }
+  }
+}

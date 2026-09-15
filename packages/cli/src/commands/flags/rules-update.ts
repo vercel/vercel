@@ -118,7 +118,9 @@ export default async function rulesUpdate(
       environment,
       promptMessage: 'Select an environment containing the rule:',
       requireActiveFlag: true,
-      fetchSettings: needsFlagRuleOutcomeSettings(outcomeOptions),
+      fetchSettings:
+        needsFlagRuleOutcomeSettings(outcomeOptions) ||
+        conditionInputs.length > 0,
     });
     if (isExitCodeResult(context)) {
       return context.exitCode;
@@ -132,7 +134,7 @@ export default async function rulesUpdate(
     const hasOutcomeOptions = hasFlagRuleOutcomeOptions(outcomeOptions);
     const nextConditions =
       conditionInputs.length > 0
-        ? parseFlagRuleConditions(conditionInputs)
+        ? parseFlagRuleConditions(conditionInputs, context.settings)
         : undefined;
     const resolvedOutcome = hasOutcomeOptions
       ? resolveFlagRuleOutcome(context.flag, context.settings, {
@@ -177,7 +179,7 @@ export default async function rulesUpdate(
     );
     output.log(
       `  ${chalk.dim('Conditions:')} ${nextRule.conditions
-        .map(formatFlagRuleCondition)
+        .map(condition => formatFlagRuleCondition(condition, context.settings))
         .join(', ')}`
     );
     output.log(

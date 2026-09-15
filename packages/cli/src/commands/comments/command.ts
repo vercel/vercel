@@ -1,6 +1,7 @@
 import { packageName } from '../../util/pkg-name';
 import {
   formatOption,
+  jsonOption,
   limitOption,
   projectOption,
   yesOption,
@@ -87,13 +88,21 @@ export const listSubcommand = {
       description: 'unresolved (default), resolved, or all',
     },
     {
-      name: 'page',
+      name: 'page-path',
       shorthand: null,
       type: [String],
       argument: 'PATH',
       deprecated: false,
       description:
         'Filter by recorded page path or glob (repeatable). Note: rewrites may record a different path than the browser URL',
+    },
+    {
+      name: 'page',
+      shorthand: null,
+      type: [String],
+      argument: 'PATH',
+      deprecated: true,
+      description: 'Filter by recorded page path or glob',
     },
     {
       name: 'author',
@@ -122,6 +131,7 @@ export const listSubcommand = {
     limitOption,
     nextCursorOption,
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -134,7 +144,7 @@ export const listSubcommand = {
     },
     {
       name: 'List comments as JSON',
-      value: `${packageName} comments --format json | jq '.threads[].id'`,
+      value: `${packageName} comments --json | jq '.threads[].id'`,
     },
   ],
 } as const;
@@ -154,6 +164,7 @@ export const inspectSubcommand = {
       description: 'Include framework and device context',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -200,6 +211,7 @@ export const replySubcommand = {
     fileOption,
     attachOption,
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -223,6 +235,7 @@ export const resolveSubcommand = {
     messageContentOption,
     yesOption,
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -241,7 +254,7 @@ export const reopenSubcommand = {
   aliases: [],
   description: 'Reopen resolved comment threads',
   arguments: [{ name: 'thread', required: true, multiple: true }],
-  options: [commentsProjectOption, yesOption, formatOption],
+  options: [commentsProjectOption, yesOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Reopen a comment',
@@ -263,6 +276,7 @@ export const editSubcommand = {
     messageContentOption,
     fileOption,
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -280,7 +294,7 @@ export const deleteSubcommand = {
     { name: 'thread', required: true },
     { name: 'message-id', required: true },
   ],
-  options: [commentsProjectOption, yesOption, formatOption],
+  options: [commentsProjectOption, yesOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Delete a message',

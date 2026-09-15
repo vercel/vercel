@@ -1,0 +1,42 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "framework:axum randomness:RANDOMNESS_PLACEHOLDER",
+      "responseHeaders": {
+        "content-type": "/text\\/html/"
+      }
+    },
+    {
+      "path": "/static/info.txt",
+      "status": 200,
+      "mustContain": "framework=axum RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "path": "/api/items/42",
+      "status": 200,
+      "mustContain": "\"name\":\"Sample Item 42\"",
+      "responseHeaders": {
+        "content-type": "/application\\/json/"
+      }
+    },
+    {
+      "path": "/api/echo",
+      "method": "POST",
+      "body": { "hello": "world" },
+      "status": 200,
+      "mustContain": "{\"body\":{\"hello\":\"world\"}}"
+    },
+    {
+      "path": "/api/boom",
+      "status": 500,
+      "mustContain": "boom:axum"
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 404,
+      "mustContain": "not found:axum /does-not-exist"
+    }
+  ]
+}

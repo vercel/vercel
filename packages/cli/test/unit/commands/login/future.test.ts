@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import login from '../../../../src/commands/login';
 import { performDeviceCodeFlow } from '../../../../src/commands/login/future';
 import { client } from '../../../mocks/client';
@@ -53,6 +53,13 @@ function simulateTokenPolling(pollCount: number, finalResponse: Response) {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.stubEnv('CI', '');
+  // `open` is mocked to resolve a process-like object so `.on('error')` is safe.
+  vi.mocked(open.default).mockResolvedValue({ on: vi.fn() } as never);
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe('login', () => {
@@ -147,7 +154,6 @@ describe('login', () => {
     expect(tokenAfter).toBe(tokenResult.access_token);
   });
 
-  it.todo('Authorization request error');
   it.todo('Token request error');
 
   it('sends provided acr values for step-up device authorization requests', async () => {
@@ -187,92 +193,105 @@ describe('login', () => {
       'The "offline_access" scope is required for step-up authorization.',
     ],
   ])('starts a full device login when step-up returns %s', async (error, errorDescription) => {
-    const authorizationResult = {
-      device_code: randomUUID(),
-      user_code: 'ABCD-EFGH',
-      verification_uri: 'https://vercel.com/device',
-      verification_uri_complete:
-        'https://vercel.com/oauth/device?user_code=ABCD-EFGH',
-      expires_in: 30,
-      interval: 0.005,
-    };
+    // Login skips `open()` when `CI` is set (GHA always sets it). These tests
+    // assert the browser-open path, so clear CI for the duration of the case.
+    const previousCi = process.env.CI;
+    delete process.env.CI;
 
-    const tokenResult = {
-      access_token: 'vca_recovered',
-      token_type: 'Bearer' as const,
-      expires_in: 3600,
-      refresh_token: 'vcr_recovered',
-      scope: 'openid offline_access',
-    };
+    try {
+      const authorizationResult = {
+        device_code: randomUUID(),
+        user_code: 'ABCD-EFGH',
+        verification_uri: 'https://vercel.com/device',
+        verification_uri_complete:
+          'https://vercel.com/oauth/device?user_code=ABCD-EFGH',
+        expires_in: 30,
+        interval: 0.005,
+      };
 
-    fetch.mockImplementation(async (_url, init) => {
-      if (!init?.body) {
-        return mockResponse({
-          issuer: 'https://vercel.com',
-          device_authorization_endpoint: 'https://vercel.com',
-          token_endpoint: 'https://vercel.com',
-          revocation_endpoint: 'https://vercel.com',
-          jwks_uri: 'https://vercel.com',
-          introspection_endpoint: 'https://vercel.com',
-        });
-      }
-
-      const body = init?.body?.toString();
-      if (body?.includes('refresh_token=vcr_stale')) {
-        return mockResponse(
-          {
-            error,
-            error_description: errorDescription,
-          },
-          false
-        );
-      }
-      if (
-        body?.includes(
-          'grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code'
-        )
-      ) {
-        return mockResponse(tokenResult);
-      }
-      return mockResponse(authorizationResult);
-    });
-
-    const result = await performDeviceCodeFlow(client, {
-      refreshToken: 'vcr_stale',
-      acrValues: 'urn:vercel:loa:sudo',
-      fallbackToLoginOnStepUpFailure: true,
-    });
-
-    expect(result).toEqual({
-      access_token: tokenResult.access_token,
-      expires_in: tokenResult.expires_in,
-      refresh_token: tokenResult.refresh_token,
-    });
-    const requestBodies = fetch.mock.calls.map(([, init]) =>
-      init?.body?.toString()
-    );
-    expect(requestBodies).toContain(
-      new URLSearchParams({
-        client_id: oauth.VERCEL_CLI_CLIENT_ID,
-        refresh_token: 'vcr_stale',
-        acr_values: 'urn:vercel:loa:sudo',
-      }).toString()
-    );
-    expect(requestBodies).toContain(
-      new URLSearchParams({
-        client_id: oauth.VERCEL_CLI_CLIENT_ID,
+      const tokenResult = {
+        access_token: 'vca_recovered',
+        token_type: 'Bearer' as const,
+        expires_in: 3600,
+        refresh_token: 'vcr_recovered',
         scope: 'openid offline_access',
-      }).toString()
-    );
-    expect(open.default).toHaveBeenCalledWith(
-      authorizationResult.verification_uri_complete
-    );
-    expect(client.getFullOutput()).toContain(
-      "Couldn't refresh the saved login. Starting a new login."
-    );
-    expect(client.getFullOutput()).not.toContain(
-      'Device authorization request failed'
-    );
+      };
+
+      fetch.mockImplementation(async (_url, init) => {
+        if (!init?.body) {
+          return mockResponse({
+            issuer: 'https://vercel.com',
+            device_authorization_endpoint: 'https://vercel.com',
+            token_endpoint: 'https://vercel.com',
+            revocation_endpoint: 'https://vercel.com',
+            jwks_uri: 'https://vercel.com',
+            introspection_endpoint: 'https://vercel.com',
+          });
+        }
+
+        const body = init?.body?.toString();
+        if (body?.includes('refresh_token=vcr_stale')) {
+          return mockResponse(
+            {
+              error,
+              error_description: errorDescription,
+            },
+            false
+          );
+        }
+        if (
+          body?.includes(
+            'grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code'
+          )
+        ) {
+          return mockResponse(tokenResult);
+        }
+        return mockResponse(authorizationResult);
+      });
+
+      const result = await performDeviceCodeFlow(client, {
+        refreshToken: 'vcr_stale',
+        acrValues: 'urn:vercel:loa:sudo',
+        fallbackToLoginOnStepUpFailure: true,
+      });
+
+      expect(result).toEqual({
+        access_token: tokenResult.access_token,
+        expires_in: tokenResult.expires_in,
+        refresh_token: tokenResult.refresh_token,
+      });
+      const requestBodies = fetch.mock.calls.map(([, init]) =>
+        init?.body?.toString()
+      );
+      expect(requestBodies).toContain(
+        new URLSearchParams({
+          client_id: oauth.VERCEL_CLI_CLIENT_ID,
+          refresh_token: 'vcr_stale',
+          acr_values: 'urn:vercel:loa:sudo',
+        }).toString()
+      );
+      expect(requestBodies).toContain(
+        new URLSearchParams({
+          client_id: oauth.VERCEL_CLI_CLIENT_ID,
+          scope: 'openid offline_access',
+        }).toString()
+      );
+      expect(open.default).toHaveBeenCalledWith(
+        authorizationResult.verification_uri_complete
+      );
+      expect(client.getFullOutput()).toContain(
+        "Couldn't refresh the saved login. Starting a new login."
+      );
+      expect(client.getFullOutput()).not.toContain(
+        'Device authorization request failed'
+      );
+    } finally {
+      if (previousCi === undefined) {
+        delete process.env.CI;
+      } else {
+        process.env.CI = previousCi;
+      }
+    }
   });
 
   it('prints the OAuth error description when device authorization cannot recover', async () => {
@@ -367,6 +386,13 @@ describe('login', () => {
 
     async function setupDeviceCodeFlow() {
       vi.resetModules();
+      // `resetModules` loads a fresh output-manager singleton; re-bind it to the
+      // mock stderr so assertions can see login warnings/success messages.
+      const freshOutput = await import('../../../../src/output-manager');
+      freshOutput.default.initialize({
+        stream: client.stderr,
+        supportsHyperlink: false,
+      });
       const freshOauth = await import('../../../../src/util/oauth');
       const { default: freshLogin } = await import(
         '../../../../src/commands/login'
@@ -453,7 +479,9 @@ describe('login', () => {
 
       expect(exitCode).toBe(0);
       expect(client.config.currentTeam).toBe('team_default');
-      await expect(client.stderr).toOutput(
+      // Prefer getFullOutput: login already finished, so toOutput can miss
+      // bytes that were already flushed before the waiter started.
+      expect(client.getFullOutput()).toContain(
         'Your previously selected team is no longer accessible'
       );
 

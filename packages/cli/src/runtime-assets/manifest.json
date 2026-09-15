@@ -1,0 +1,6 @@
+{
+  "nextDevWebSocketPreload": {
+    "source": "node-preloads/next-dev-websocket.cjs",
+    "destination": "node-preloads/next-dev-websocket.cjs"
+  }
+}

@@ -157,6 +157,68 @@ const cronsSchema = {
   },
 };
 
+// Mirrors the server-side Build Output API `schedules` schema.
+const schedulesSchema = {
+  type: 'array',
+  minItems: 0,
+  maxItems: 100,
+  items: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['expression', 'target', 'name'],
+    properties: {
+      expression: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['cron'],
+        properties: {
+          cron: {
+            type: 'string',
+          },
+          jitter: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 256,
+          },
+        },
+      },
+      target: {
+        oneOf: [
+          {
+            type: 'object',
+            additionalProperties: false,
+            required: ['function'],
+            properties: {
+              function: {
+                type: 'string',
+                minLength: 1,
+              },
+            },
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            required: ['topic'],
+            properties: {
+              topic: {
+                type: 'string',
+                minLength: 1,
+                maxLength: 256,
+              },
+            },
+          },
+        ],
+      },
+      name: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 256,
+      },
+      payload: {},
+    },
+  },
+};
+
 const experimentalServicesMountSchema = {
   oneOf: [
     {
@@ -621,6 +683,7 @@ export function buildVercelConfigSchema() {
       functions: getFunctionsSchema(),
       images: imagesSchema,
       crons: cronsSchema,
+      schedules: schedulesSchema,
       bunVersion: { type: 'string' },
       proxy: proxySchema,
       experimentalServices: getExperimentalServicesSchema(),
@@ -640,6 +703,43 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
       const niceError = getPrettyError(error);
       niceError.message = `Invalid ${fileName} - ${niceError.message}`;
       return niceError;
+    }
+  }
+
+  for (const [pattern, fn] of Object.entries(config.functions ?? {})) {
+    if (fn.affinity !== undefined) {
+      return new NowBuildError({
+        code: 'FUNCTION_AFFINITY_REQUIRES_SERVICE',
+        message: `Function affinity can only be configured under a service. Move functions[${JSON.stringify(
+          pattern
+        )}].affinity into the relevant service's functions configuration.`,
+        link: 'https://vercel.com/docs/concepts/projects/project-configuration#functions',
+      });
+    }
+  }
+
+  const functionMaps = [
+    config.functions,
+    ...Object.values(config.services ?? {}).map(service => service.functions),
+    ...Object.values(config.experimentalServicesV2 ?? {}).map(
+      service => service.functions
+    ),
+  ];
+  for (const functions of functionMaps) {
+    for (const [pattern, fn] of Object.entries(functions ?? {})) {
+      const regions = [...new Set(fn.regions)];
+      if (
+        fn.affinity?.mode === 'strict' &&
+        (regions.includes('all') || regions.length > 1)
+      ) {
+        return new NowBuildError({
+          code: 'INVALID_FUNCTION_AFFINITY_REGIONS',
+          message: `Function affinity mode "strict" requires at most one statically configured region. Update \`functions[${JSON.stringify(
+            pattern
+          )}].regions\` to contain a single region.`,
+          link: 'https://vercel.com/docs/concepts/projects/project-configuration#functions',
+        });
+      }
     }
   }
 

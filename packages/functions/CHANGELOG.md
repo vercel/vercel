@@ -1,5 +1,57 @@
 # @vercel/functions
 
+## 3.9.5
+
+### Patch Changes
+
+- 282f1c0: Use the current invocation deadline when waiting for database pool idle timers.
+
+## 3.9.4
+
+### Patch Changes
+
+- @vercel/oidc@3.8.5
+
+## 3.9.3
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+- Updated dependencies [2da7809]
+  - @vercel/oidc@3.8.4
+
+## 3.9.2
+
+### Patch Changes
+
+- @vercel/oidc@3.8.3
+
+## 3.9.1
+
+### Patch Changes
+
+- d72826e: Prevented unit tests and generated outputs from changing Turborepo task inputs during CI, and removed the redundant affected Unit test retry.
+
+## 3.9.0
+
+### Minor Changes
+
+- 0b0a4a8: Add a `metric()` helper for reporting custom metrics from Vercel Functions.
+
+## 3.8.0
+
+### Minor Changes
+
+- 8fb6c4f: Adds getDeadline
+
+## 3.7.7
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/oidc@3.8.2
+
 ## 3.7.6
 
 ### Patch Changes

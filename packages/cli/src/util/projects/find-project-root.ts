@@ -2,10 +2,6 @@ import chalk from 'chalk';
 import { stat } from 'fs/promises';
 import { join, dirname } from 'path';
 import { pathExists } from 'fs-extra';
-import {
-  isExperimentalServicesEnabled,
-  tryDetectServices,
-} from './detect-services';
 import output from '../../output-manager';
 
 /**
@@ -67,6 +63,11 @@ export async function resolveProjectCwd(cwd: string): Promise<string> {
   const projectRoot = await findProjectRoot(cwd);
   if (!projectRoot || projectRoot === cwd) return cwd;
 
+  // Loaded lazily: `detect-services` pulls in `@vercel/fs-detectors` and the
+  // config validator, which most commands never need.
+  const { isExperimentalServicesEnabled, tryDetectServices } = await import(
+    './detect-services'
+  );
   const isServicesEnabled = await isExperimentalServicesEnabled(projectRoot);
   if (!isServicesEnabled) {
     return cwd;

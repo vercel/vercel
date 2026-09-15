@@ -1,4 +1,4 @@
-import { formatOption, yesOption } from '../../util/arg-common';
+import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 import {
   claimSubcommand,
@@ -105,6 +105,7 @@ export const addSubcommand = {
         'If the new resource is a sandbox, skip the offer to claim it (only print a hint)',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -172,7 +173,7 @@ export const addSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} integration add acme --format=json`,
+      value: `${packageName} integration add acme --json`,
     },
     {
       name: 'Show available products for an integration',
@@ -196,7 +197,7 @@ export const acceptTermsSubcommand = {
       required: true,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Accept terms interactively, then install on the team',
@@ -207,7 +208,7 @@ export const acceptTermsSubcommand = {
     },
     {
       name: 'Output result as JSON',
-      value: `${packageName} integration accept-terms neon --format=json`,
+      value: `${packageName} integration accept-terms neon --json`,
     },
   ],
 } as const;
@@ -243,7 +244,7 @@ export const openSubcommand = {
       required: false,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: "Open a marketplace integration's dashboard",
@@ -262,8 +263,8 @@ export const openSubcommand = {
     {
       name: 'Get the SSO link as JSON',
       value: [
-        `${packageName} integration open acme --format=json`,
-        `${packageName} integration open acme my-acme-store --format=json`,
+        `${packageName} integration open acme --json`,
+        `${packageName} integration open acme my-acme-store --json`,
       ],
     },
   ],
@@ -285,6 +286,7 @@ export const installationsSubcommand = {
       argument: 'SLUG_OR_ID',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -297,7 +299,7 @@ export const installationsSubcommand = {
     },
     {
       name: 'JSON output',
-      value: [`${packageName} integration installations --format json`],
+      value: [`${packageName} integration installations --json`],
     },
   ],
 } as const;
@@ -330,6 +332,7 @@ export const listSubcommand = {
       deprecated: false,
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -353,7 +356,7 @@ export const listSubcommand = {
     },
     {
       name: 'List resources as JSON',
-      value: [`${packageName} integration list --format=json`],
+      value: [`${packageName} integration list --json`],
     },
   ],
 } as const;
@@ -379,6 +382,7 @@ export const discoverSubcommand = {
         'Filter integrations by category (can be repeated; e.g., -c storage -c authentication). Run `vercel integration categories` for valid slugs.',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -412,7 +416,7 @@ export const discoverSubcommand = {
     },
     {
       name: 'Discover marketplace integrations as JSON',
-      value: [`${packageName} integration discover --format=json`],
+      value: [`${packageName} integration discover --json`],
     },
   ],
 } as const;
@@ -423,7 +427,7 @@ export const categoriesSubcommand = {
   description:
     'List marketplace integration categories (slugs valid for `integration discover --category`)',
   arguments: [],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'List marketplace categories',
@@ -431,7 +435,7 @@ export const categoriesSubcommand = {
     },
     {
       name: 'List categories as JSON',
-      value: [`${packageName} integration categories --format=json`],
+      value: [`${packageName} integration categories --json`],
     },
     {
       name: 'Use a category slug to filter discover results',
@@ -451,7 +455,7 @@ export const balanceSubcommand = {
       required: true,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Show the balance(s) & threshold(s) of a marketplace integration',
@@ -462,7 +466,7 @@ export const balanceSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} integration balance acme --format=json`,
+      value: `${packageName} integration balance acme --json`,
     },
   ],
 } as const;
@@ -519,6 +523,7 @@ export const updateSubcommand = {
         'Configuration ID when multiple marketplace installations exist for this integration',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -542,7 +547,7 @@ export const updateSubcommand = {
     },
     {
       name: 'Output result as JSON',
-      value: `${packageName} integration update neon --projects all --format=json`,
+      value: `${packageName} integration update neon --projects all --json`,
     },
     {
       name: 'Non-interactive (JSON success and errors on stdout)',
@@ -569,6 +574,7 @@ export const removeSubcommand = {
         'Skip the confirmation prompt when uninstalling an integration',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -584,7 +590,7 @@ export const removeSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} integration remove acme --format=json --yes`,
+      value: `${packageName} integration remove acme --json --yes`,
     },
   ],
 } as const;

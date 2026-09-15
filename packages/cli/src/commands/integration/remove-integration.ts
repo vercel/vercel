@@ -51,7 +51,7 @@ export async function remove(client: Client, argv: string[]) {
   telemetry.trackCliOptionFormat(parsedArguments.flags['--format']);
 
   if (asJson && !skipConfirmation) {
-    output.error('--format=json requires --yes to skip confirmation prompts');
+    output.error('--json requires --yes to skip confirmation prompts');
     return 1;
   }
 
@@ -199,9 +199,9 @@ export async function remove(client: Client, argv: string[]) {
         const approvalHint =
           'Remove each resource with --disconnect-all (non-interactive: include --yes). Get user approval before destructive resource removal.';
         const resourceTail = asJson
-          ? '--disconnect-all --yes --format=json'
+          ? '--disconnect-all --yes --json'
           : '--disconnect-all --yes';
-        const integrationRemoveTail = asJson ? `--yes --format=json` : '--yes';
+        const integrationRemoveTail = asJson ? `--yes --json` : '--yes';
         /** Template already includes `--yes`; omit it from prepended globals to avoid duplicates. */
         const suggestNextOpts = {
           prependGlobalFlags: true as const,

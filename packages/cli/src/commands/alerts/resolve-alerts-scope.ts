@@ -38,6 +38,7 @@ export function emitAlertsScopeError(
 export interface AlertsScope {
   teamId: string;
   projectId?: string;
+  projectName?: string;
 }
 
 export async function resolveAlertsScope(
@@ -144,6 +145,7 @@ export async function resolveAlertsScope(
     return {
       teamId: team.id,
       projectId: projectResult.id,
+      projectName: projectResult.name,
     };
   }
 
@@ -178,5 +180,6 @@ export async function resolveAlertsScope(
   return {
     teamId: linkedProject.org.id,
     projectId: linkedProject.project.id,
+    projectName: linkedProject.project.name,
   };
 }

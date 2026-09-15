@@ -154,6 +154,12 @@ export class ApiTelemetryClient
     }
   }
 
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
+    }
+  }
+
   /**
    * Normalize endpoint by replacing IDs with placeholders for privacy
    */

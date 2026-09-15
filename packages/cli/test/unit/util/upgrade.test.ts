@@ -28,9 +28,12 @@ vi.mock('../../../src/output-manager', () => ({
 
 // Mock get-update-command
 vi.mock('../../../src/util/get-update-command', () => ({
-  getUpdateCommandInfo: vi
-    .fn()
-    .mockResolvedValue({ command: 'npm i -g vercel@latest', global: true }),
+  getUpdateCommandInfo: vi.fn().mockResolvedValue({
+    command: 'npm i -g vercel@latest',
+    global: true,
+    packageManager: 'npm',
+    assumed: false,
+  }),
 }));
 
 const spawnMock = vi.mocked(spawn);
@@ -362,6 +365,8 @@ describe('executeUpgrade', () => {
     getUpdateCommandInfoMock.mockResolvedValueOnce({
       command: 'pnpm i vercel@latest',
       global: false,
+      packageManager: 'pnpm',
+      assumed: false,
     });
     const mockProcess = createMockProcess();
     spawnMock.mockReturnValue(mockProcess as any);
@@ -383,6 +388,8 @@ describe('executeUpgrade', () => {
     getUpdateCommandInfoMock.mockResolvedValueOnce({
       command: 'npm i -g @vercel/vc-native@latest --force',
       global: true,
+      packageManager: 'npm',
+      assumed: false,
     });
     const mockProcess = createMockProcess();
     spawnMock.mockReturnValue(mockProcess as any);
@@ -429,6 +436,8 @@ describe('executeUpgrade', () => {
     getUpdateCommandInfoMock.mockResolvedValueOnce({
       command: 'npm i -g @vercel/vc-native@latest --force',
       global: true,
+      packageManager: 'npm',
+      assumed: false,
     });
     mockLatestVersion(pkg.version);
 

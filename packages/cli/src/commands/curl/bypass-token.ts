@@ -92,8 +92,9 @@ export function getAutomationBypassToken(
 
 export async function getOrCreateDeploymentProtectionToken(
   client: Client,
-  { project, org }: ProjectLinked
-): Promise<string> {
+  { project, org }: ProjectLinked,
+  { createIfMissing = true }: { createIfMissing?: boolean } = {}
+): Promise<string | null> {
   if (process.env.VERCEL_AUTOMATION_BYPASS_SECRET) {
     output.debug('Using protection bypass secret from environment variable');
     return process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
@@ -103,7 +104,18 @@ export async function getOrCreateDeploymentProtectionToken(
     project.protectionBypass &&
     Object.values(project.protectionBypass).length
   ) {
-    const protectionBypass = getAutomationBypassToken(project.protectionBypass);
+    let protectionBypass: string;
+    try {
+      protectionBypass = getAutomationBypassToken(project.protectionBypass);
+    } catch (error) {
+      if (!createIfMissing) {
+        output.debug(
+          `No existing automation bypass token found for project ${project.id}`
+        );
+        return null;
+      }
+      throw error;
+    }
     if (protectionBypass) {
       output.debug(
         `Using existing protection bypass token from project settings: ${protectionBypass}`
@@ -111,6 +123,14 @@ export async function getOrCreateDeploymentProtectionToken(
       return protectionBypass;
     }
   }
+
+  if (!createIfMissing) {
+    output.debug(
+      `Not creating an automation bypass token for project ${project.id}`
+    );
+    return null;
+  }
+
   const token = await createDeploymentProtectionToken(
     client,
     project.id,

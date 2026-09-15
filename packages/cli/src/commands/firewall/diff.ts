@@ -1,9 +1,14 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { diffSubcommand } from './command';
-import { parseSubcommandArgs, outputJson, withGlobalFlags } from './shared';
+import {
+  parseSubcommandArgs,
+  outputJson,
+  withGlobalFlags,
+  resolveFirewallScope,
+  mapFirewallApiError,
+} from './shared';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import { formatDiffOutput } from '../../util/firewall/format';
 import { outputAgentError } from '../../util/agent-output';
@@ -12,22 +17,13 @@ export default async function diff(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, diffSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await requireProjectContext(
-    client,
-    'firewall',
-    parsed.flags['--project']
-  );
-  if (typeof link === 'number') return link;
+  const scope = await resolveFirewallScope(client, parsed.flags);
+  if (typeof scope === 'number') return scope;
 
-  const { project, org } = link;
-  const teamId = org.type === 'team' ? org.id : undefined;
-
-  output.spinner(`Fetching draft changes for ${chalk.bold(project.name)}`);
+  output.spinner(`Fetching draft changes for ${chalk.bold(scope.displayName)}`);
 
   try {
-    const { active, draft } = await listFirewallConfigs(client, project.id, {
-      teamId,
-    });
+    const { active, draft } = await listFirewallConfigs(client, scope);
 
     if (!draft || draft.changes.length === 0) {
       if (parsed.flags['--json']) {
@@ -52,19 +48,18 @@ export default async function diff(client: Client, argv: string[]) {
     output.print(formatDiffOutput(draft.changes, activeRulesMap));
     output.print('\n\n');
     output.print(
-      `  Run ${chalk.cyan(withGlobalFlags(client, 'firewall publish'))} to publish, or ${chalk.cyan(withGlobalFlags(client, 'firewall discard'))} to discard.\n\n`
+      `  Run ${chalk.cyan(withGlobalFlags(client, 'firewall publish', scope))} to publish, or ${chalk.cyan(withGlobalFlags(client, 'firewall discard', scope))} to discard.\n\n`
     );
 
     return 0;
   } catch (e: unknown) {
-    const error = e as { message?: string };
-    const msg = error.message || 'Failed to fetch draft changes';
+    const msg = mapFirewallApiError(e, scope, 'Failed to fetch draft changes');
     if (client.nonInteractive) {
       outputAgentError(client, {
         status: 'error',
         reason: 'api_error',
         message: msg,
-        next: [{ command: withGlobalFlags(client, 'firewall diff') }],
+        next: [{ command: withGlobalFlags(client, 'firewall diff', scope) }],
       });
       process.exit(1);
       return 1;

@@ -71,6 +71,16 @@ The canonical product terms in [`core.md`](core.md#voice--copy) override adjacen
 - Route permission and plan denials to the resolver: team owner, login, team switch, settings, docs, support, or upgrade.
 - Do not suggest a retry when work may still be running or retrying could duplicate a remote mutation. Provide an inspect/status command first.
 - End a completed flow with the result or an exact safe next command, not a generic farewell.
+- For optional setup guidance, put the action and immediate user-visible benefit in the first line. Assume the reader does not already know why the setup matters. Keep secondary benefits in help or docs unless they change the decision.
+- When showing multiple next actions, describe the outcome of each action instead of relying on command names to explain themselves. Use one `Next steps:` list, put the exact command on the next line, and order the most relevant action first.
+
+```text
+Avoid:
+Connect detected Git repository?
+
+Use:
+Connect this Git repository to automatically deploy changes on every push?
+```
 
 ## Surface Rules
 
@@ -101,12 +111,13 @@ The canonical product terms in [`core.md`](core.md#voice--copy) override adjacen
 
 Errors include what failed, the constraint or cause when known, and the recovery step when one exists.
 
+- New or touched fatal human errors use the `✗` gutter without an additional `Error:` label. The glyph carries the error state; the sentence carries the meaning.
 - Use `Failed to` or `{Noun} failed` for system, API, build, deploy, network, and infrastructure failures.
 - Use `Couldn't` or `Can't` for validation, permission, and user-state failures.
 - Never use `Unable to`, `An error occurred`, or raw upstream error objects.
 - Preserve an actionable marketplace-partner message with attribution when exact partner wording helps supportability; otherwise translate upstream errors into Vercel voice.
 - Pair platform/system failures with the correctly labeled stable `Request ID`, `Deployment ID`, `Build ID`, `Run ID`, or `Trace ID` when available. Do not add IDs to ordinary validation or permission errors.
-- Warnings state the nonfatal condition, why it matters, and the fix when one exists. Do not warn when the command should fail or stay silent.
+- Warnings use the `!` gutter and state the nonfatal condition, why it matters, and the fix when one exists. Do not warn when the command should fail or stay silent.
 - Never use humor, exclamation marks, or apology preambles in errors.
 
 ## Banned + Avoided Language
@@ -136,7 +147,7 @@ Use `please` or an apology only when Vercel is at fault, asking an inconvenient 
 - Use sentence case for prompts, help descriptions, errors, warnings, progress, and explanatory prose.
 - Use stable Title Case labels in aligned output: `Project`, `Team`, `Directory`, `Production`, `Request ID`.
 - Omit periods on fragments, labels, statuses, progress lines, and compact result rows. Punctuate full explanations and errors.
-- Use straight quotes and backticks for commands, paths, IDs, and copyable literals. CLI source strings may use ASCII apostrophes. Do not import the dashboard's curly-quote rule.
+- Use straight quotes and backticks for command names, flags, paths, IDs, and copyable literals in prose. Put full runnable commands on their own indented lines without backticks or a shell prompt so the line is safely copyable. CLI source strings may use ASCII apostrophes. Do not import the dashboard's curly-quote rule.
 - Use `…`, never `...`, for ongoing prose or progress. Preserve `...` only in literal syntax.
 - Use decimal units by default and the spacing rules in [`core.md`](core.md#data-mechanics).
 - Respect singular/plural interpolation. Never use `item(s)`.

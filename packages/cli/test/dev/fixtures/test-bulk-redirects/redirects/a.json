@@ -1,0 +1,6 @@
+[
+  { "source": "/old-blog", "destination": "/blog", "permanent": true },
+  { "source": "/conflict", "destination": "/from-bulk" },
+  { "source": "/drop-query", "destination": "/dropped" },
+  { "source": "/keep-query", "destination": "/kept", "preserveQueryParams": true }
+]

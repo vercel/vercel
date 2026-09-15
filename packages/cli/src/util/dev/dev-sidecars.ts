@@ -1,10 +1,11 @@
 import path from 'path';
 import type {
+  Builder,
+  DevSidecar,
   ExperimentalService,
   ExperimentalServiceV2,
-} from '@vercel/fs-detectors';
-import type { Builder, DevSidecar } from '@vercel/build-utils';
-import { importBuilders } from '../build/import-builders';
+} from '@vercel/build-utils';
+import { importBuilders } from '../../builders/import-builders';
 
 type OrchestratorSidecar = ExperimentalService & { consumer?: string };
 

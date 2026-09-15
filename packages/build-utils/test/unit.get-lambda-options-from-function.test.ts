@@ -13,6 +13,8 @@ describe('getLambdaOptionsFromFunction', () => {
           architecture: 'arm64',
           memory: 1024,
           maxDuration: 60,
+          affinity: { mode: 'strict' },
+          maxConcurrency: 8,
           regions: ['sfo1', 'iad1'],
           functionFailoverRegions: ['dub1'],
         },
@@ -28,6 +30,8 @@ describe('getLambdaOptionsFromFunction', () => {
       architecture: 'arm64',
       memory: 1024,
       maxDuration: 60,
+      affinity: { mode: 'strict' },
+      maxConcurrency: 8,
       regions: ['sfo1', 'iad1'],
       functionFailoverRegions: ['dub1'],
     });

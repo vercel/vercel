@@ -90,7 +90,7 @@ export function humanizeReference(
 }
 
 export function formatRuleScope(
-  projectId: string | undefined,
+  rule: Pick<AlertRule, 'projectId' | 'alertTypes' | 'customAlert'>,
   {
     projectIdMaxLength = 48,
     filterMaxLength = 80,
@@ -99,19 +99,16 @@ export function formatRuleScope(
     filterMaxLength?: number;
   } = {}
 ): string {
+  const { projectId } = rule;
   if (!projectId) {
     return 'team-wide';
   }
 
-  const projectIdMatch = projectId.match(/^projectId eq '([^']+)'$/);
-  if (projectIdMatch?.[1]) {
-    return `project: ${truncateMiddle(projectIdMatch[1], projectIdMaxLength)}`;
-  }
-  if (!/\s/.test(projectId)) {
+  if (isCustomAlertRule(rule)) {
     return `project: ${truncateMiddle(projectId, projectIdMaxLength)}`;
   }
 
-  return `project filter: ${truncateMiddle(projectId, filterMaxLength)}`;
+  return truncateMiddle(projectId, filterMaxLength);
 }
 
 export function isCustomAlertRule(rule: {

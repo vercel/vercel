@@ -24,16 +24,30 @@ async function findEntrypointInOutputDir(
   }
 }
 
+/**
+ * `outputDirectory` reaches the builder as `config.outputDirectory` for
+ * zero-config builds (copied from project settings by `fs-detectors`), but
+ * wrapper builders (e.g. `@vercel/express`) read
+ * `config.projectSettings.outputDirectory` — accept both.
+ */
+export const getOutputDirectorySetting = (
+  config: BuildOptions['config']
+): string | undefined => {
+  const setting =
+    config.outputDirectory ?? config.projectSettings?.outputDirectory;
+  return typeof setting === 'string' && setting !== '' ? setting : undefined;
+};
+
 export const maybeDoBuildCommand = async (
   args: BuildOptions,
   downloadResult: Awaited<ReturnType<typeof downloadInstallAndBundle>>
 ) => {
   const buildCommandResult = await maybeExecBuildCommand(args, downloadResult);
-  const outputSetting = args.config.outputDirectory;
+  const outputSetting = getOutputDirectorySetting(args.config);
 
   let outputDir: string | undefined;
   let entrypoint: string | undefined;
-  if (buildCommandResult && outputSetting) {
+  if (buildCommandResult) {
     if (outputSetting) {
       const _outputDir = join(args.workPath, outputSetting);
       // Skip when `outputDirectory` is the project root itself (e.g. `.`):

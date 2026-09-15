@@ -5,7 +5,7 @@ SDK for obtaining scoped tokens for third-party services on behalf of apps or us
 Seven entrypoints, all ESM:
 
 - `@vercel/connect` — core token / authorization SDK
-- `@vercel/connect/chat` — adapter helpers for the [Chat SDK](https://chat-sdk.dev) (`chat`): `connectSlackAdapter`, `connectGitHubAdapter`, `connectLinearAdapter` (no Chat SDK dependency — returns structural config)
+- `@vercel/connect/chat` — adapter helpers for the [Chat SDK](https://chat-sdk.dev) (`chat`): `connectSlackAdapter`, `connectDiscordAdapter`, `connectGitHubAdapter`, `connectLinearAdapter`, `connectNotionAdapter`, `connectTelegramAdapter`, `connectSendblueAdapter` (no Chat SDK dependency — returns structural config)
 - `@vercel/connect/ai-sdk` — [Vercel AI SDK](https://ai-sdk.dev) glue: re-exports `connectAuthProvider` for MCP transports (optional peers: `ai`, `@ai-sdk/mcp`)
 - `@vercel/connect/mcp` — canonical MCP-spec `OAuthClientProvider` for any MCP client (optional peer: `@ai-sdk/mcp`)
 - `@vercel/connect/eve` — adapter helpers for [Eve](https://github.com/vercel/eve) connections (optional peer: `eve`)
@@ -30,27 +30,23 @@ const token = await getToken(process.env.CONNECTOR_LINEAR!, {
 });
 ```
 
-To create an operator installation request for an app-scoped connector, use the
-experimental install helper:
-
-This feature is gated while experimental. Contact Vercel to enable access
-before using it.
+To start an authorization request for a user, use `startAuthorization`:
 
 ```ts
-import { experimental_startInstallation } from '@vercel/connect';
+import { startAuthorization } from '@vercel/connect';
 
-const { url } = await experimental_startInstallation(
-  process.env.CONNECTOR_SLACK!,
-  {},
-  { returnUrl: 'https://example.com/settings/integrations' }
+const { url } = await startAuthorization(
+  process.env.CONNECTOR_LINEAR!,
+  { subject: { type: 'user', id: 'user_123' } },
+  { callbackUrl: 'https://example.com/settings/integrations' }
 );
 ```
 
 ### Chat SDK
 
 Spread the helper into the matching `create*Adapter` factory. Each helper
-wires both outbound app-scoped tokens and inbound Connect trigger-forwarded
-webhook verification (Vercel OIDC), so no provider secret lives in your env.
+wires outbound app-scoped tokens; trigger-capable providers also receive
+inbound Connect webhook verification via Vercel OIDC.
 
 ```ts
 import { createSlackAdapter } from '@chat-adapter/slack';
@@ -62,8 +58,14 @@ createSlackAdapter({
 });
 ```
 
-`connectGitHubAdapter` (`installationToken`) and `connectLinearAdapter`
-(`accessToken`) follow the same shape. See the
+`connectDiscordAdapter` (`botToken` and `applicationId`),
+`connectGitHubAdapter` (`installationToken`), and `connectLinearAdapter`
+(`accessToken`) follow the same shape. `connectSendblueAdapter` supplies a
+lazy Sendblue `accessToken` and Connect OIDC webhook verifier.
+`connectNotionAdapter` supplies only the outbound `token`; native Notion
+webhooks still require `NOTION_VERIFICATION_TOKEN`. `connectTelegramAdapter`
+supplies only `botToken`; Telegram retains native webhook verification or
+polling. See the
 [Chat SDK integration guide](https://github.com/vercel/vercel/blob/main/packages/connect/docs/chat-integration.md)
 for connector setup, trigger forwarding, and per-platform examples.
 
@@ -106,7 +108,21 @@ SDK's `toolApproval` option or `wrapMcpTools` from `@ai-sdk/policy-opa`.
 Non-AI-SDK MCP clients (the official MCP TypeScript SDK, Mastra, etc.)
 can import the same `connectAuthProvider` from `@vercel/connect/mcp`.
 
-### eve
+### Eve
+
+Use `connectSendblueCredentials` with Eve's native Sendblue channel. It
+resolves the app-scoped bearer token and managed sending line together, and
+includes Vercel OIDC webhook verification. When the connector has multiple
+lines, pass `fromNumber` to choose one.
+
+```ts
+import { connectSendblueCredentials } from '@vercel/connect/eve';
+import { sendblueChannel } from 'eve/channels/sendblue';
+
+export default sendblueChannel({
+  credentials: connectSendblueCredentials('sendblue/my-agent'),
+});
+```
 
 ```ts
 import { defineMcpClientConnection } from 'eve/connections';
@@ -114,13 +130,15 @@ import { connect } from '@vercel/connect/eve';
 
 export default defineMcpClientConnection({
   url: 'https://mcp.linear.app/sse',
-  auth: connect('linear'),
+  auth: connect({ connector: 'linear', autoProvision: true }),
 });
 ```
 
-By default, `connect()` provisions or links the connector for the deploying
-Vercel project on first use. Pass `autoProvision: false` when the connector is
-managed elsewhere.
+By default, `connect()` only uses connectors already linked to the project and
+does not provision or modify connectors at runtime. Pass `autoProvision: true`
+to opt in. When enabled, `connect()` first tries the token or authorization
+request; if the connector is missing or not linked, it provisions or links the
+connector and retries the request once.
 
 ### Better Auth
 

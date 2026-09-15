@@ -36,6 +36,13 @@ export class TracesTelemetryClient
     }
   }
 
+  trackCliSubcommandConfig(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'config',
+      value: actual,
+    });
+  }
+
   trackCliOptionView(view: string | undefined) {
     if (view) {
       this.trackCliOption({

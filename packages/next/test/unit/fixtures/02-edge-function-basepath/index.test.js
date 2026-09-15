@@ -7,17 +7,23 @@ const { FileFsRef } = require('@vercel/build-utils');
 vi.setConfig({ testTimeout: ms('6m'), hookTimeout: ms('6m') });
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
+  let restoreIndexPage;
+
+  afterEach(async () => {
+    await restoreIndexPage?.();
+    restoreIndexPage = undefined;
+  });
+
   it('should normalize routes in build results output', async () => {
     // TODO: remove after bug with edge functions on Windows
     // is resolved upstream in Next.js
     if (process.platform === 'win32') {
       const indexPage = path.join(__dirname, 'pages/index.tsx');
+      const originalIndexPage = await fs.readFile(indexPage, 'utf8');
+      restoreIndexPage = () => fs.writeFile(indexPage, originalIndexPage);
       await fs.writeFile(
         indexPage,
-        (await fs.readFile(indexPage, 'utf8')).replace(
-          'runtime: ',
-          '// runtime: '
-        )
+        originalIndexPage.replace('runtime: ', '// runtime: ')
       );
     }
 

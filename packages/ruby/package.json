@@ -1,7 +1,7 @@
 {
   "name": "@vercel/ruby",
   "author": "Nathan Cahill <nathan@nathancahill.com>",
-  "version": "2.5.1",
+  "version": "9.0.1",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/ruby",
@@ -19,20 +19,24 @@
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
     "test": "vitest run --config ../../vitest.config.mts",
-    "test-e2e": "pnpm test",
-    "type-check": "tsc --noEmit",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-e2e": "glob --absolute 'test/**/*.test.js' 'test/**/*.test.ts' 'tests/**/*.test.js' 'tests/**/*.test.ts'"
+    "test-e2e": "vitest run --config ../../vitest.config.mts test/test.js",
+    "test-e2e-builder": "pnpm run test-e2e",
+    "test-unit": "pnpm test test/unit.diagnostics.test.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "@vercel/build-utils": "workspace:*"
   },
   "devDependencies": {
+    "@vercel/build-utils": "workspace:*",
     "@types/fs-extra": "8.0.0",
     "@types/semver": "6.0.0",
     "@types/which": "3.0.0",
-    "@vercel/build-utils": "workspace:*",
     "execa": "2.0.4",
     "fs-extra": "^7.0.1",
     "semver": "6.3.1",
-    "vitest": "2.0.3",
+    "vitest": "4.1.10",
     "which": "3.0.0"
   }
 }

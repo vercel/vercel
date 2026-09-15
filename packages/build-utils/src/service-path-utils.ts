@@ -34,3 +34,18 @@ export function getInternalServiceCronPath(
   const normalizedEntrypoint = normalizeInternalServiceEntrypoint(entrypoint);
   return `${getInternalServiceCronPathPrefix(serviceName)}/${normalizedEntrypoint}/${handler}`;
 }
+
+export function getInternalServiceWorkerPathPrefix(
+  serviceName: string
+): string {
+  return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/workers`;
+}
+
+export function getInternalServiceWorkerPath(
+  serviceName: string,
+  entrypoint: string,
+  handler = 'worker'
+): string {
+  const normalizedEntrypoint = normalizeInternalServiceEntrypoint(entrypoint);
+  return `${getInternalServiceWorkerPathPrefix(serviceName)}/${normalizedEntrypoint}/${handler}`;
+}

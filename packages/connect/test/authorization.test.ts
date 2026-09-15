@@ -26,6 +26,41 @@ describe('startAuthorization', () => {
     vi.restoreAllMocks();
   });
 
+  it('defaults omitted scopes to all default scopes', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        request: 'req_123',
+        verifier: 'verifier_123',
+        url: 'https://connect.vercel.com/authorize/req_123',
+      })
+    );
+
+    await startAuthorization(CONNECTOR, PARAMS);
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toMatchObject({ scopes: ['*'] });
+  });
+
+  it('preserves explicitly provided scopes', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        request: 'req_123',
+        verifier: 'verifier_123',
+        url: 'https://connect.vercel.com/authorize/req_123',
+      })
+    );
+
+    await startAuthorization(CONNECTOR, {
+      ...PARAMS,
+      scopes: ['read', 'write'],
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      scopes: ['read', 'write'],
+    });
+  });
+
   it('accepts localhost subdomains as local callback URLs', async () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({
@@ -108,6 +143,23 @@ describe('startAuthorization', () => {
         type: 'token',
         token: 'passport.jwt',
       },
+    });
+  });
+
+  it('forwards the OAuth prompt on authorization requests', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        request: 'req_123',
+        verifier: 'verifier_123',
+        url: 'https://connect.vercel.com/authorize/req_123',
+      })
+    );
+
+    await startAuthorization(CONNECTOR, PARAMS, { prompt: 'consent' });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      prompt: 'consent',
     });
   });
 

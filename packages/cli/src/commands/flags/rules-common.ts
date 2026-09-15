@@ -3,6 +3,7 @@ import type Client from '../../util/client';
 import { getCommandName } from '../../util/pkg-name';
 import { getFlag, getFlagSettings } from '../../util/flags/get-flags';
 import { resolveFlagEnvironment } from '../../util/flags/environment-variant';
+import { quoteArg } from '../../util/flags/quote-arg';
 import { formatVariantForDisplay } from '../../util/flags/resolve-variant';
 import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import output from '../../output-manager';
@@ -114,6 +115,10 @@ export function warnIfRuleChangesAreBypassed(
       ? chalk.bold(variantId)
       : 'a fixed variant';
   output.print(
-    `${chalk.yellow('!')} This rule update was saved, but ${chalk.bold(environment)} is serving ${serving}. Rule changes will not affect flag evaluation until the environment uses targeting again.\n`
+    `${chalk.yellow('!')} This rule update was saved, but ${chalk.bold(environment)} is serving ${serving}. Rule changes will not affect flag evaluation until targeting is active again.\n`
+  );
+  output.print(`  Enable targeting (keeps the current fallthrough):\n`);
+  output.print(
+    `  ${getCommandName(`flags use-targeting ${quoteArg(flag.slug)} --environment ${environment}`)}\n`
   );
 }

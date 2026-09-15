@@ -1,0 +1,4 @@
+.vercel/
+.venv/
+.results/
+*.egg-info
