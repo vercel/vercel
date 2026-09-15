@@ -380,18 +380,91 @@ jobs:
         include: ${{ fromJson(needs.setup.outputs['unitTestsExtra']) }}
     steps: *unit-test-steps
 
+  deployment-artifacts:
+    name: Find Deployment Artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      deployments: read
+      statuses: read
+    if: ${{ needs.setup.outputs['e2eTests'] != '[]' }}
+    needs:
+      - setup
+    outputs:
+      deploymentUrl: ${{ steps.artifacts.outputs.deploymentUrl }}
+    steps:
+      - name: Wait for deployment tarballs
+        id: artifacts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ needs.setup.outputs.headSha }}
+        run: |
+          set -euo pipefail
+
+          # E2E needs the CLI and Python wheel tarballs produced by the Vercel
+          # preview deployment, but the workflow now starts on pull_request so
+          # tests can begin before the deployment-ready repository_dispatch.
+          # Vercel already reports successful deployments back to GitHub via
+          # deployment statuses and commit statuses. We poll those GitHub-owned
+          # records for candidate public URLs, then trust a URL only after the
+          # actual tarball endpoint responds. That final HTTP check is the
+          # readiness gate, so stale/unrelated status URLs are harmless.
+          validate_deployment_url() {
+            local url="${1%/}"
+            if [ -z "$url" ]; then
+              return 1
+            fi
+
+            if curl -fsI "$url/tarballs/vercel.tgz" >/dev/null; then
+              echo "deploymentUrl=$url" >> "$GITHUB_OUTPUT"
+              echo "Deployment tarball is ready at $url/tarballs/vercel.tgz"
+              return 0
+            fi
+
+            return 1
+          }
+
+          get_candidate_urls() {
+            gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${HEAD_SHA}&per_page=20" \
+              --jq '.[].id' | while IFS= read -r deployment_id; do
+                gh api "repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses" \
+                  --jq '.[] | select(.state == "success" and .environment_url != null and .environment_url != "") | .environment_url'
+              done
+
+            gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/status" \
+              --jq '.statuses[] | select(.state == "success" and .target_url != null and .target_url != "") | .target_url'
+          }
+
+          for attempt in {1..120}; do
+            while IFS= read -r candidate_url; do
+              if validate_deployment_url "$candidate_url"; then
+                exit 0
+              fi
+            done < <(get_candidate_urls | sort -u)
+
+            echo "Deployment tarball is not ready yet (attempt $attempt/120)."
+            sleep 10
+          done
+
+          echo "Timed out waiting for deployment tarball."
+          exit 1
+
   e2e-test:
     timeout-minutes: 120
     runs-on: ${{ matrix.runner }}
     name: E2E / ${{ matrix.label }}
     permissions:
       contents: read
-      deployments: read
       id-token: write
-      statuses: read
     if: ${{ needs.setup.outputs['e2eTests'] != '[]' }}
     needs:
       - setup
+      - deployment-artifacts
+    env:
+      DPL_URL: ${{ needs.deployment-artifacts.outputs.deploymentUrl }}
+      VERCEL_CLI_VERSION: ${{ needs.deployment-artifacts.outputs.deploymentUrl }}/tarballs/vercel.tgz
     strategy:
       fail-fast: false
       max-parallel: 75
@@ -444,62 +517,6 @@ jobs:
 
       - run: pnpm install
 
-      - name: Wait for deployment tarballs
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HEAD_SHA: ${{ needs.setup.outputs.headSha }}
-        run: |
-          set -euo pipefail
-
-          # E2E needs the CLI and Python wheel tarballs produced by the Vercel
-          # preview deployment, but the workflow now starts on pull_request so
-          # tests can begin before the deployment-ready repository_dispatch.
-          # Vercel already reports successful deployments back to GitHub via
-          # deployment statuses and commit statuses. We poll those GitHub-owned
-          # records for candidate public URLs, then trust a URL only after the
-          # actual tarball endpoint responds. That final HTTP check is the
-          # readiness gate, so stale/unrelated status URLs are harmless.
-          validate_deployment_url() {
-            local url="${1%/}"
-            if [ -z "$url" ]; then
-              return 1
-            fi
-
-            if curl -fsI "$url/tarballs/vercel.tgz" >/dev/null; then
-              echo "DPL_URL=$url" >> "$GITHUB_ENV"
-              echo "VERCEL_CLI_VERSION=$url/tarballs/vercel.tgz" >> "$GITHUB_ENV"
-              echo "Deployment tarball is ready at $url/tarballs/vercel.tgz"
-              return 0
-            fi
-
-            return 1
-          }
-
-          get_candidate_urls() {
-            gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${HEAD_SHA}&per_page=20" \
-              --jq '.[].id' | while IFS= read -r deployment_id; do
-                gh api "repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses" \
-                  --jq '.[] | select(.state == "success" and .environment_url != null and .environment_url != "") | .environment_url'
-              done
-
-            gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/status" \
-              --jq '.statuses[] | select(.state == "success" and .target_url != null and .target_url != "") | .target_url'
-          }
-
-          for attempt in {1..120}; do
-            while IFS= read -r candidate_url; do
-              if validate_deployment_url "$candidate_url"; then
-                exit 0
-              fi
-            done < <(get_candidate_urls | sort -u)
-
-            echo "Deployment tarball is not ready yet (attempt $attempt/120)."
-            sleep 10
-          done
-
-          echo "Timed out waiting for deployment tarball."
-          exit 1
       - name: Resolve Python wheel URLs
         shell: bash
         run: |
@@ -575,6 +592,7 @@ jobs:
       - setup
       - unit-test
       - unit-test-extra
+      - deployment-artifacts
       - e2e-test
     permissions:
       statuses: write
