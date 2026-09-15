@@ -14,4 +14,12 @@ describe('browser export', () => {
       Object.keys(DefaultImports).sort()
     );
   });
+
+  test('should reject token exchange in browser environments', async () => {
+    await expect(
+      BrowserImports.exchangeVercelOidcToken({ token: 'test-token' })
+    ).rejects.toThrow(
+      'exchangeVercelOidcToken is not supported in browser environments'
+    );
+  });
 });

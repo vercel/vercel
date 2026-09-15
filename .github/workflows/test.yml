@@ -31,7 +31,7 @@ jobs:
       statuses: write
     outputs:
       unitTests: ${{ steps['set-tests'].outputs['unitTests'] }}
-      unitTestsNode24: ${{ steps['set-tests'].outputs['unitTestsNode24'] }}
+      unitTestsExtra: ${{ steps['set-tests'].outputs['unitTestsExtra'] }}
       e2eTests: ${{ steps['set-tests'].outputs['e2eTests'] }}
       baseSha: ${{ steps.pr-context.outputs.baseSha }}
       headSha: ${{ steps.pr-context.outputs.headSha }}
@@ -362,22 +362,22 @@ jobs:
           DD_PROFILING_ENABLED: 'false'
           DD_NATIVE_METRICS: 'false'
 
-  # Split Node 24 to keep the full OS/Node coverage below 256 cells per matrix.
-  unit-test-node-24:
+  # A second matrix preserves all OS/Node coverage beyond the first 256 cells.
+  unit-test-extra:
     timeout-minutes: 120
     runs-on: ${{ matrix.runner }}
     name: Unit / ${{ matrix.label }}
     permissions:
       contents: read
       id-token: write
-    if: ${{ needs.setup.outputs['unitTestsNode24'] != '[]' }}
+    if: ${{ needs.setup.outputs['unitTestsExtra'] != '[]' }}
     needs:
       - setup
     strategy:
       fail-fast: false
       max-parallel: 75
       matrix:
-        include: ${{ fromJson(needs.setup.outputs['unitTestsNode24']) }}
+        include: ${{ fromJson(needs.setup.outputs['unitTestsExtra']) }}
     steps: *unit-test-steps
 
   e2e-test:
@@ -574,7 +574,7 @@ jobs:
     needs:
       - setup
       - unit-test
-      - unit-test-node-24
+      - unit-test-extra
       - e2e-test
     permissions:
       statuses: write

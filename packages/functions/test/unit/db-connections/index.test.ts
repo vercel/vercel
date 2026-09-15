@@ -1,14 +1,15 @@
 import { expect, test, vi, describe, beforeEach, afterEach } from 'vitest';
-import { attachDatabasePool } from '../../../src/db-connections';
 import { SYMBOL_FOR_REQ_CONTEXT } from '../../../src/get-context';
 
 describe('db-connections', () => {
-  const vercelUrl = process.env.VERCEL_URL;
-  const vercelRegion = process.env.VERCEL_REGION;
+  let attachDatabasePool: typeof import('../../../src/db-connections').attachDatabasePool;
 
-  beforeEach(() => {
-    process.env.VERCEL_URL = 'test.vercel.app';
-    process.env.VERCEL_REGION = 'iad1';
+  beforeEach(async () => {
+    vi.stubEnv('VERCEL_URL', 'test.vercel.app');
+    vi.stubEnv('VERCEL_REGION', 'iad1');
+    vi.stubEnv('DEBUG', '1');
+    vi.resetModules();
+    ({ attachDatabasePool } = await import('../../../src/db-connections'));
     vi.useFakeTimers();
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -16,11 +17,10 @@ describe('db-connections', () => {
 
   afterEach(() => {
     vi.clearAllTimers();
+    vi.restoreAllMocks();
     vi.useRealTimers();
-    vi.clearAllMocks();
+    vi.unstubAllEnvs();
     delete globalThis[SYMBOL_FOR_REQ_CONTEXT];
-    process.env.VERCEL_URL = vercelUrl;
-    process.env.VERCEL_REGION = vercelRegion;
   });
 
   describe('supported pool types', () => {
@@ -167,7 +167,7 @@ describe('db-connections', () => {
       releaseCallback();
 
       expect(console.warn).toHaveBeenCalledWith(
-        'Pool release event triggered outside of request scope'
+        'Pool release event triggered outside of request scope.'
       );
     });
 
@@ -323,7 +323,30 @@ describe('db-connections', () => {
       vi.advanceTimersByTime(200);
       await waitPromise;
 
-      expect(console.log).toHaveBeenCalledWith('idle timeout expired');
+      expect(console.log).toHaveBeenCalledWith(
+        'Database pool idle timeout reached. Releasing connections.'
+      );
+    });
+
+    test('keeps debug logs disabled when DEBUG is unset', async () => {
+      vi.stubEnv('DEBUG', undefined);
+      vi.resetModules();
+      ({ attachDatabasePool } = await import('../../../src/db-connections'));
+      const waitUntilMock = vi.fn();
+      globalThis[SYMBOL_FOR_REQ_CONTEXT] = {
+        get: () => ({ waitUntil: waitUntilMock }),
+      };
+      const pgPool = {
+        options: { idleTimeoutMillis: 100 },
+        on: vi.fn(),
+      };
+
+      attachDatabasePool(pgPool);
+      pgPool.on.mock.calls[0][1]();
+      vi.advanceTimersByTime(200);
+
+      expect(waitUntilMock).toHaveBeenCalledWith(expect.any(Promise));
+      expect(console.log).not.toHaveBeenCalled();
     });
   });
 
@@ -443,12 +466,15 @@ describe('db-connections', () => {
   });
 
   describe('edge cases', () => {
-    test('handles pools with missing optional properties', () => {
+    test('rejects pools without identifying properties', () => {
       const minimalPool = {
         on: vi.fn(),
       };
 
-      expect(() => attachDatabasePool(minimalPool)).not.toThrow();
+      expect(() => attachDatabasePool(minimalPool)).toThrow(
+        'Unsupported database pool type'
+      );
+      expect(minimalPool.on).not.toHaveBeenCalled();
     });
 
     test('handles pools with undefined config properties', () => {
@@ -462,13 +488,15 @@ describe('db-connections', () => {
       expect(() => attachDatabasePool(poolWithUndefinedConfig)).not.toThrow();
     });
 
-    test('handles pools with on method but no matching properties', () => {
+    test('rejects pools with on method but no matching properties', () => {
       const poolWithOnOnly = {
         on: vi.fn(),
         someOtherProp: 'value',
       };
 
-      attachDatabasePool(poolWithOnOnly);
+      expect(() => attachDatabasePool(poolWithOnOnly)).toThrow(
+        'Unsupported database pool type'
+      );
 
       expect(poolWithOnOnly.on).not.toHaveBeenCalled();
     });

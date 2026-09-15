@@ -84,7 +84,7 @@ describe('test planning', () => {
       ],
     });
     expect(plan.unitTests).toEqual([]);
-    expect(plan.unitTestsNode24).toEqual([]);
+    expect(plan.unitTestsExtra).toEqual([]);
     expect(
       plan.e2eTests.find(cell => cell.scriptName === 'test').testPaths
     ).toEqual(
@@ -98,22 +98,93 @@ describe('test planning', () => {
     );
   });
 
+  it.each([
+    'test/test.js',
+    'test/',
+  ])('targets Hydrogen legacy tests through %s without running fixture-owned Playwright suites', async filter => {
+    const hydrogen = {
+      package: '@vercel/hydrogen',
+      directory: 'packages/hydrogen',
+      task: 'test',
+      command: 'vitest run --config ../../vitest.config.mts',
+    };
+    const plan = await createTestPlan({
+      tasks: [
+        hydrogen,
+        {
+          ...hydrogen,
+          task: 'test-e2e',
+          command: `${hydrogen.command} ${filter}`,
+        },
+      ],
+    });
+    expect(plan.e2eTests.length).toBeGreaterThan(0);
+    expect(plan.e2eTests.every(cell => cell.testPaths.length > 0)).toBe(true);
+    expect(
+      plan.e2eTests.every(cell =>
+        cell.testPaths.every(file => file === 'test/test.js')
+      )
+    ).toBe(true);
+  });
+
+  it('omits empty Gatsby and Redwood JavaScript suites while retaining root and native tasks', async () => {
+    const emptySuites = [
+      'gatsby-plugin-vercel-analytics',
+      'redwood',
+      'oidc-aws-credentials-provider',
+    ].map(name => ({
+      package: `@vercel/${name}`,
+      directory: `packages/${name}`,
+      task: 'test',
+      command: 'vitest',
+    }));
+    const plan = await createTestPlan({
+      tasks: [...emptySuites, root, native],
+    });
+    expect(plan.unitTests.map(cell => cell.packageName)).toEqual([
+      '//',
+      'vercel_runtime',
+    ]);
+    expect(plan).toMatchObject({ count: 2, total: 2 });
+  });
+
+  it('retains JavaScript tests outside the test directory', async () => {
+    const tasks = ['config', 'cli-exec'].map(name => ({
+      package: `@vercel/${name}`,
+      directory: `packages/${name}`,
+      task: 'test-unit',
+      command: 'vitest run --config ../../vitest.config.mts',
+    }));
+    const plan = await createTestPlan({ tasks });
+    expect(
+      plan.unitTests.find(cell => cell.packageName === '@vercel/config')
+        .testPaths
+    ).toContain('src/router.test.ts');
+    expect(
+      plan.unitTests.find(cell => cell.packageName === '@vercel/cli-exec')
+        .testPaths
+    ).toContain('tests/index.test.ts');
+  });
+
   it('preserves every OS, Node version, and chunk when splitting unit matrices', async () => {
-    const tasks = [cliUnit, cliE2E, root, native];
+    const tasks = [
+      cliUnit,
+      cliE2E,
+      root,
+      native,
+      ...Array.from({ length: 260 }, (_, index) => ({
+        ...native,
+        package: `native-${index}`,
+      })),
+    ];
     const chunks = await getChunkedTests(tasks);
     const plan = await createTestPlan({ tasks });
-    const cells = [
-      ...plan.unitTests,
-      ...plan.unitTestsNode24,
-      ...plan.e2eTests,
-    ];
+    const cells = [...plan.unitTests, ...plan.unitTestsExtra, ...plan.e2eTests];
     expect(cells).toHaveLength(chunks.length);
     expect(cells).toEqual(expect.arrayContaining(chunks));
-    expect(plan.unitTests.every(cell => cell.nodeVersion !== '24')).toBe(true);
-    expect(plan.unitTestsNode24.every(cell => cell.nodeVersion === '24')).toBe(
-      true
-    );
-    expect(plan.unitTestsNode24.length).toBeGreaterThan(0);
+    expect(plan.unitTests).toHaveLength(256);
+    expect(plan.unitTestsExtra.length).toBeLessThanOrEqual(256);
+    expect(plan.unitTestsExtra.length).toBeGreaterThan(0);
     expect(plan.e2eTests.every(cell => cell.scriptName === cliE2E.task)).toBe(
       true
     );
@@ -135,7 +206,7 @@ describe('test planning', () => {
     const plan = await createTestPlan(all, { tasks: [] });
     expect(plan).toMatchObject({
       unitTests: [],
-      unitTestsNode24: [],
+      unitTestsExtra: [],
       e2eTests: [],
       count: 0,
       total: 1,
@@ -150,7 +221,7 @@ describe('test planning', () => {
   });
 
   it('fails before emitting a matrix that GitHub cannot schedule', async () => {
-    const tasks = Array.from({ length: 257 }, (_, index) => ({
+    const tasks = Array.from({ length: 513 }, (_, index) => ({
       ...native,
       package: `native-${index}`,
     }));

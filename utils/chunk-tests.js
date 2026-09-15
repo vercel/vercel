@@ -227,7 +227,16 @@ const runnerSchedulePriority = {
   'windows-latest-8-core': 1,
 };
 
-const DEFAULT_TEST_FILE_EXTENSIONS = ['js', 'ts', 'mjs', 'mts'];
+const DEFAULT_TEST_FILE_EXTENSIONS = [
+  'js',
+  'ts',
+  'jsx',
+  'tsx',
+  'mjs',
+  'mts',
+  'cjs',
+  'cts',
+];
 const DEFAULT_TEST_NAME_PATTERNS = ['test', 'spec'];
 
 // Packages whose build requires the Go toolchain.
@@ -371,7 +380,10 @@ function getScriptTestPatterns(packageJson, scriptName, taskCommand) {
     return getDefaultTestPatterns();
   }
 
-  const vitestPatterns = getPatternsAfterCommand(script, 'vitest run');
+  const vitestCommand = script.match(/(?:^|\s)(vitest(?: run)?)(?=\s|$)/)?.[1];
+  const vitestPatterns = vitestCommand
+    ? getPatternsAfterCommand(script, vitestCommand)
+    : [];
   if (vitestPatterns.length > 0) {
     return normalizeTestPatterns(scriptName, vitestPatterns);
   }
@@ -467,11 +479,15 @@ function isLikelyTestPattern(pattern) {
 }
 
 function getDefaultTestPatterns() {
-  return DEFAULT_TEST_NAME_PATTERNS.flatMap(testName =>
-    DEFAULT_TEST_FILE_EXTENSIONS.map(
-      extension => `test/**/*.${testName}.${extension}`
-    )
-  );
+  return [
+    // Match the legacy entrypoint included by the root Vitest configuration.
+    'test/test.js',
+    ...DEFAULT_TEST_NAME_PATTERNS.flatMap(testName =>
+      DEFAULT_TEST_FILE_EXTENSIONS.map(
+        extension => `**/*.${testName}.${extension}`
+      )
+    ),
+  ];
 }
 
 function getTestPathsForPackage(rootPath, packagePath, patterns) {
@@ -568,6 +584,7 @@ async function getChunkedTests(
    */
   const testsToRun = {};
   const wholeTasks = new Set();
+  const emptyTasks = new Set();
 
   let packageManifests = [...packageDirectories].map(
     ([turboPackageName, directory]) => {
@@ -605,6 +622,13 @@ async function getChunkedTests(
         const testPaths = isNative
           ? []
           : getTestPathsForPackage(rootPath, packagePath, patterns);
+        // Some packages retain generic test scripts after their tests are
+        // removed. Omit only suites with recognized filters and no files;
+        // opaque commands and native tasks must still run in full.
+        if (!isNative && patterns.length > 0 && testPaths.length === 0) {
+          emptyTasks.add(`${packageName}#${scriptName}`);
+          continue;
+        }
         if (testPaths.length === 0) {
           wholeTasks.add(`${packageName}#${scriptName}`);
         }
@@ -718,7 +742,7 @@ async function getChunkedTests(
   const missingTasks = [...tasksByPackage].flatMap(([packageName, tasks]) =>
     [...tasks]
       .map(([task]) => `${packageName}#${task}`)
-      .filter(task => !scheduledTasks.has(task))
+      .filter(task => !scheduledTasks.has(task) && !emptyTasks.has(task))
   );
   if (missingTasks.length > 0) {
     throw new Error(

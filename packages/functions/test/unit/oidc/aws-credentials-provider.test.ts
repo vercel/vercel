@@ -1,21 +1,25 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { awsCredentialsProvider } from '../../../src/oidc';
 
 const getVercelOidcTokenSyncMock = vi.fn().mockReturnValue('token');
 const fromWebTokenExectionMock = vi.fn();
 const fromWebTokenMock = vi.fn().mockReturnValue(fromWebTokenExectionMock);
 
-describe('awsCredentialsProvider', () => {
-  vi.mock('../../../src/oidc/get-vercel-oidc-token-sync', () => {
-    return {
-      getVercelOidcTokenSync: async () => getVercelOidcTokenSyncMock(),
-    };
-  });
+vi.mock('@vercel/oidc', () => {
+  return {
+    getVercelOidcTokenSync: () => getVercelOidcTokenSyncMock(),
+  };
+});
 
-  vi.mock('@aws-sdk/credential-provider-web-identity', () => {
-    return {
-      fromWebToken: (...args: any[]) => fromWebTokenMock(...args),
-    };
+vi.mock('@aws-sdk/credential-provider-web-identity', () => {
+  return {
+    fromWebToken: (...args: any[]) => fromWebTokenMock(...args),
+  };
+});
+
+describe('awsCredentialsProvider', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
   it('returns a function', () => {

@@ -56,6 +56,11 @@ async function createTestPlan(allSummary, affectedSummary = allSummary) {
   }
   const selectedTests = selectTestTasks(affectedSummary, allTasks);
   const chunks = await getChunkedTests(selectedTests);
+  const allChunks =
+    allSummary === affectedSummary ? chunks : await getChunkedTests(allTests);
+  if (allChunks.length === 0) {
+    throw new Error('Turbo did not report any executable test tasks');
+  }
   // A generic fallback can also include integration tests. Schedule it with
   // deployment artifacts whenever that package has a dedicated E2E lane.
   const e2ePackages = new Set(
@@ -69,8 +74,8 @@ async function createTestPlan(allSummary, affectedSummary = allSummary) {
       (chunk.scriptName === 'test' && !e2ePackages.has(chunk.packageName))
   );
   const matrices = {
-    unitTests: unitTests.filter(chunk => chunk.nodeVersion !== '24'),
-    unitTestsNode24: unitTests.filter(chunk => chunk.nodeVersion === '24'),
+    unitTests: unitTests.slice(0, 256),
+    unitTestsExtra: unitTests.slice(256),
     e2eTests: chunks.filter(chunk => !unitTests.includes(chunk)),
   };
   for (const [name, cells] of Object.entries(matrices)) {
@@ -78,8 +83,10 @@ async function createTestPlan(allSummary, affectedSummary = allSummary) {
       throw new Error(`${name} exceeds GitHub's 256-job matrix limit`);
     }
   }
-  const packages = [...new Set(selectedTests.map(task => task.package))].sort();
-  const allPackages = [...new Set(allTests.map(task => task.package))].sort();
+  const packages = [...new Set(chunks.map(chunk => chunk.packageName))].sort();
+  const allPackages = [
+    ...new Set(allChunks.map(chunk => chunk.packageName)),
+  ].sort();
   return {
     ...matrices,
     packages: packages.join(','),
