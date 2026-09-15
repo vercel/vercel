@@ -30,15 +30,6 @@ export class CacheDangerouslyDeleteTelemetryClient
     }
   }
 
-  trackCliOptionImmutableStaticPath(path: string | undefined) {
-    if (path) {
-      this.trackCliOption({
-        option: 'immutable-static-path',
-        value: path,
-      });
-    }
-  }
-
   trackCliOptionRevalidationDeadlineSeconds(seconds: number | undefined) {
     if (seconds) {
       this.trackCliOption({

@@ -26,4 +26,11 @@ export class CacheTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandDangerouslyDeleteImmutableStatic(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'dangerously-delete-immutable-static',
+      value: actual,
+    });
+  }
 }

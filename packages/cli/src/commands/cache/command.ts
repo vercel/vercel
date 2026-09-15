@@ -107,15 +107,6 @@ export const dangerouslyDeleteSubcommand = {
       argument: 'REVALIDATION-DEADLINE-SECONDS',
       deprecated: false,
     },
-    {
-      name: 'immutable-static-path',
-      description:
-        'Immutable static asset to permanently delete from storage (serves 410 for 7 days, then 404)',
-      shorthand: null,
-      type: String,
-      argument: 'PATH',
-      deprecated: false,
-    },
   ],
   examples: [
     {
@@ -134,9 +125,25 @@ export const dangerouslyDeleteSubcommand = {
       name: 'Dangerously delete all cached content associated with a source image if not accessed in the next hour',
       value: `${packageName} cache dangerously-delete --srcimg /api/avatar/1 --revalidation-deadline-seconds 3600`,
     },
+  ],
+} as const;
+
+export const dangerouslyDeleteImmutableStaticSubcommand = {
+  name: 'dangerously-delete-immutable-static',
+  aliases: [],
+  description:
+    'Permanently delete an immutable static asset from storage (cannot be undone; its URL serves 410 for 7 days, then 404)',
+  arguments: [
+    {
+      name: 'path',
+      required: true,
+    },
+  ],
+  options: [yesOption, projectOption],
+  examples: [
     {
       name: 'Permanently delete an immutable static asset from storage',
-      value: `${packageName} cache dangerously-delete --immutable-static-path _next/static/immutable/chunks/example.js`,
+      value: `${packageName} cache dangerously-delete-immutable-static _next/static/immutable/chunks/example.js`,
     },
   ],
 } as const;
@@ -150,6 +157,7 @@ export const cacheCommand = {
     purgeSubcommand,
     invalidateSubcommand,
     dangerouslyDeleteSubcommand,
+    dangerouslyDeleteImmutableStaticSubcommand,
   ],
   options: [],
   examples: [],
