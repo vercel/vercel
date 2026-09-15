@@ -42,7 +42,7 @@
     "dist"
   ],
   "engines": {
-    "node": ">= 18"
+    "node": "^22.11.0 || >=24.10.0"
   },
   "dependencies": {
     "@vercel/backends": "workspace:*",

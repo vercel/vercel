@@ -1,14 +1,14 @@
 import assert from 'node:assert';
 
 import type { Pep440Version, Pep440Constraint } from '@renovatebot/pep440';
-import { stringify as stringifyVersion } from '@renovatebot/pep440/lib/version';
+import { stringify as stringifyVersion } from '@renovatebot/pep440/lib/version.js';
 
 export type { Pep440Version, Pep440Constraint } from '@renovatebot/pep440';
 export { parse as parsePep440Version } from '@renovatebot/pep440';
 export {
   parse as parsePep440Constraint,
   satisfies as pep440Satisfies,
-} from '@renovatebot/pep440/lib/specifier';
+} from '@renovatebot/pep440/lib/specifier.js';
 
 export function pep440ConstraintFromVersion(
   v: Pep440Version
