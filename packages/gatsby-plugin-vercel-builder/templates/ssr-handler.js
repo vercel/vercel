@@ -1,15 +1,28 @@
-import os from 'os';
 import etag from 'etag';
 import { join } from 'path';
 import { copySync, existsSync } from 'fs-extra';
-import { getPageName } from './utils';
+import { getPageName, redirectGatsbyCachesToWritableDir } from './utils';
 
-const TMP_DATA_PATH = join(os.tmpdir(), 'data/datastore');
+// Point Gatsby's writable cache locations at the OS temp dir BEFORE the query
+// engine is imported below (it resolves its LMDB cache path at module load).
+// See `redirectGatsbyCachesToWritableDir` in ./utils for the full rationale.
+const TMP_DIR = redirectGatsbyCachesToWritableDir();
+
+const TMP_DATA_PATH = join(TMP_DIR, 'data/datastore');
 const CUR_DATA_PATH = join(__dirname, '.cache/data/datastore');
 
 if (!existsSync(TMP_DATA_PATH)) {
   // Copies executable `data` files to the writable /tmp directory.
   copySync(CUR_DATA_PATH, TMP_DATA_PATH);
+}
+
+// Seed the writable cache dir with caches produced at build time so warm
+// resolver caches still hit at runtime (mirrors the datastore copy above).
+const TMP_CACHES_PATH = join(TMP_DIR, '.cache/caches');
+const CUR_CACHES_PATH = join(__dirname, '.cache/caches');
+
+if (!existsSync(TMP_CACHES_PATH) && existsSync(CUR_CACHES_PATH)) {
+  copySync(CUR_CACHES_PATH, TMP_CACHES_PATH);
 }
 
 async function getGraphQLEngine() {
