@@ -1,0 +1,6 @@
+{
+  "site": {
+    "title": "Motion-first",
+    "tagline": "This site was scaffolded by create-modulato. Every number you see move lives in a motion.ts file - open the \\u2726 motion overlay and drag it around."
+  }
+}

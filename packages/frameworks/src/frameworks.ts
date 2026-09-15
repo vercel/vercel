@@ -1915,6 +1915,43 @@ export const frameworks = [
     getOutputDirName: async () => 'dist',
   },
   {
+    name: 'Modulato',
+    slug: 'modulato',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/modulato.svg',
+    tagline:
+      'Modulato is a visual-design-first React framework for making websites, leveraging custom transitions and animations.',
+    description: 'A Modulato site, animation-first and server-rendered.',
+    website: 'https://modulato.org',
+    supersedes: ['vite'],
+    envPrefix: 'VITE_',
+    detectors: {
+      every: [
+        {
+          matchPackage: 'modulato',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `modulato build`',
+        value: 'modulato build',
+      },
+      devCommand: {
+        placeholder: 'modulato dev',
+        value: 'modulato dev --port $PORT',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    dependency: 'modulato',
+    getOutputDirName: async () => 'dist',
+  },
+  {
     name: 'Vite',
     slug: 'vite',
     demo: 'https://vite-vue-template.vercel.app',
