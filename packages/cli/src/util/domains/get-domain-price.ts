@@ -8,9 +8,15 @@ type Response = {
   years: number;
 };
 
-export default async function getDomainPrice(client: Client, name: string) {
+export default async function getDomainPrice(
+  client: Client,
+  name: string,
+  opts: { bailOn429?: boolean } = {}
+) {
   try {
-    return await client.fetch<Response>(`/v1/registrar/domains/${name}/price`);
+    return await client.fetch<Response>(`/v1/registrar/domains/${name}/price`, {
+      bailOn429: opts.bailOn429,
+    });
   } catch (err: unknown) {
     if (isAPIError(err)) {
       if (err.code === 'tld_not_supported') {

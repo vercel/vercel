@@ -38,7 +38,7 @@ describe('getCache', () => {
     expect(mockCache.set).toHaveBeenCalledWith('b876d32', 'value', {
       name: 'key',
     });
-    expect(mockCache.get).toHaveBeenCalledWith('b876d32', undefined);
+    expect(mockCache.get).toHaveBeenCalledWith('b876d32');
   });
 
   test('should return the same cache instance for multiple calls to getCache when no context cache is available', async () => {
@@ -89,7 +89,7 @@ describe('getCache', () => {
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');
-    expect(mockCache.get).toHaveBeenCalledWith('b876d32', undefined);
+    expect(mockCache.get).toHaveBeenCalledWith('b876d32');
   });
 
   test('should use the provided namespace and separator', async () => {
@@ -103,7 +103,7 @@ describe('getCache', () => {
     expect(mockCache.set).toHaveBeenCalledWith('test:b876d32', 'value', {
       name: 'key',
     });
-    expect(mockCache.get).toHaveBeenCalledWith('test:b876d32', undefined);
+    expect(mockCache.get).toHaveBeenCalledWith('test:b876d32');
   });
 
   test('should use the default namespace separator if none is provided', async () => {
@@ -119,10 +119,7 @@ describe('getCache', () => {
         name: 'key',
       }
     );
-    expect(mockCache.get).toHaveBeenCalledWith(
-      `${namespace}$b876d32`,
-      undefined
-    );
+    expect(mockCache.get).toHaveBeenCalledWith(`${namespace}$b876d32`);
   });
 
   test('should default options.name to the original key when not provided', async () => {

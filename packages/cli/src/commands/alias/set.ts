@@ -261,6 +261,13 @@ function handleSetupDomainError<T>(error: SetupDomainError | T): T | 1 {
     return 1;
   }
 
+  if (error instanceof ERRORS.DomainRegistrationContactInfoRequired) {
+    output.error(
+      `Registering ${error.meta.domain} requires additional contact information that the CLI cannot collect. Use the Vercel dashboard to complete the purchase.`
+    );
+    return 1;
+  }
+
   return error;
 }
 

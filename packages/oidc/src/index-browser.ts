@@ -1,3 +1,6 @@
+import type { ExchangeVercelOidcTokenOptions } from './exchange-vercel-oidc-token';
+
+export type { ExchangeVercelOidcTokenOptions } from './exchange-vercel-oidc-token';
 export { getContext } from './get-context';
 export {
   verifyVercelOidcToken,
@@ -18,4 +21,12 @@ export function getVercelOidcTokenSync(): string {
 
 export async function getVercelToken(): Promise<string> {
   throw new Error('getVercelToken is not supported in browser environments');
+}
+
+export async function exchangeVercelOidcToken(
+  _options: ExchangeVercelOidcTokenOptions
+): Promise<string> {
+  throw new Error(
+    'exchangeVercelOidcToken is not supported in browser environments'
+  );
 }

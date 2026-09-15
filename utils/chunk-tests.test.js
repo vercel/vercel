@@ -79,7 +79,7 @@ describe('getScriptTestPatterns', () => {
     };
 
     expect(getScriptTestPatterns(packageJson, 'test-unit')).toContain(
-      'test/**/*.test.ts'
+      '**/*.test.ts'
     );
   });
 

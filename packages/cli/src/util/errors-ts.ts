@@ -370,6 +370,23 @@ export class TLDNotSupportedViaCLI extends NowError<
 }
 
 /**
+ * Returned when the registrar requires additional contact information for the
+ * TLD that the CLI cannot collect; the purchase must be completed in the dashboard.
+ */
+export class DomainRegistrationContactInfoRequired extends NowError<
+  'ADDITIONAL_CONTACT_INFO_REQUIRED',
+  { domain: string }
+> {
+  constructor(domain: string) {
+    super({
+      code: 'ADDITIONAL_CONTACT_INFO_REQUIRED',
+      meta: { domain },
+      message: `Registering ${domain} requires additional contact information that the CLI cannot collect. Use the Vercel dashboard to complete the purchase.`,
+    });
+  }
+}
+
+/**
  * Returned when the user tries to purchase a domain but the API returns
  * an error telling that it is not available.
  */
