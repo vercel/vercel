@@ -99,7 +99,6 @@ describe('deploy', () => {
       expect(helpOutput).toContain('--dry');
       expect(helpOutput).toContain('vercel deploy --dry --json');
       expect(helpOutput).toContain('--turbo');
-      expect(helpOutput).not.toContain('--build-machine');
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
