@@ -8,6 +8,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { CacheDangerouslyDeleteTelemetryClient } from '../../util/telemetry/commands/cache/dangerously-delete';
+import { isAPIError } from '../../util/errors-ts';
 import plural from 'pluralize';
 
 export default async function dangerouslyDelete(
@@ -56,13 +57,23 @@ export default async function dangerouslyDelete(
   const tag = parsedArgs.flags['--tag'];
   const srcimg = parsedArgs.flags['--srcimg'];
   const revalidate = parsedArgs.flags['--revalidation-deadline-seconds'];
+  const immutableStaticPath = parsedArgs.flags['--immutable-static-path'];
   telemetry.trackCliFlagYes(yes);
   telemetry.trackCliOptionTag(tag);
   telemetry.trackCliOptionSrcimg(srcimg);
   telemetry.trackCliOptionRevalidationDeadlineSeconds(revalidate);
+  telemetry.trackCliOptionImmutableStaticPath(immutableStaticPath);
 
-  if (tag && srcimg) {
-    output.error(`Cannot use both --tag and --srcimg options`);
+  if ([tag, srcimg, immutableStaticPath].filter(Boolean).length > 1) {
+    output.error(
+      `Can only use one of the --tag, --srcimg, and --immutable-static-path options`
+    );
+    return 1;
+  }
+  if (immutableStaticPath && typeof revalidate !== 'undefined') {
+    output.error(
+      `Cannot use --revalidation-deadline-seconds with --immutable-static-path`
+    );
     return 1;
   }
 
@@ -83,12 +94,22 @@ export default async function dangerouslyDelete(
     flag = '--srcimg';
     postUrl = '/v1/edge-cache/dangerously-delete-by-src-images';
     postBody = { srcImages: [srcimg], revalidationDeadlineSeconds: revalidate };
+  } else if (immutableStaticPath) {
+    itemName = 'immutable static asset';
+    itemValue = immutableStaticPath;
+    flag = '--immutable-static-path';
+    postUrl = '/v1/edge-cache/dangerously-delete-immutable-static';
+    postBody = { path: immutableStaticPath };
   } else {
-    output.error(`The --tag or --srcimg option is required`);
+    output.error(
+      `The --tag, --srcimg, or --immutable-static-path option is required`
+    );
     return 1;
   }
 
-  const msg = `You are about to dangerously delete all cached content associated with ${itemName} ${itemValue} for project ${project.name}`;
+  const msg = immutableStaticPath
+    ? `You are about to permanently delete immutable static asset ${itemValue} from storage for project ${project.name}. This cannot be undone and its URL will serve 410 for 7 days`
+    : `You are about to dangerously delete all cached content associated with ${itemName} ${itemValue} for project ${project.name}`;
 
   if (!yes) {
     if (!process.stdin.isTTY) {
@@ -109,15 +130,27 @@ export default async function dangerouslyDelete(
     }
   }
 
-  await client.fetch(`${postUrl}?projectIdOrName=${project.id}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(postBody),
-  });
+  try {
+    await client.fetch(`${postUrl}?projectIdOrName=${project.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(postBody),
+    });
+  } catch (err) {
+    if (isAPIError(err) && err.code === 'challenge_required') {
+      output.error(
+        `This action requires a recent authentication. Run ${getCommandName('login')} and retry.`
+      );
+      return 1;
+    }
+    throw err;
+  }
 
   output.print(
     prependEmoji(
-      `Successfully deleted all cached content associated with ${itemName} ${itemValue}`,
+      immutableStaticPath
+        ? `Successfully deleted immutable static asset ${itemValue}; its URL now serves 410`
+        : `Successfully deleted all cached content associated with ${itemName} ${itemValue}`,
       emoji('success')
     ) + `\n`
   );

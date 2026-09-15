@@ -45,7 +45,7 @@ describe('cache dangerously-delete', () => {
     const exitCode = await cache(client);
     expect(exitCode).toEqual(1);
     await expect(client.stderr).toOutput(
-      'The --tag or --srcimg option is required'
+      'The --tag, --srcimg, or --immutable-static-path option is required'
     );
   });
 
@@ -246,7 +246,65 @@ describe('cache dangerously-delete', () => {
     const exitCode = await cache(client);
     expect(exitCode).toEqual(1);
     await expect(client.stderr).toOutput(
-      'Cannot use both --tag and --srcimg options'
+      'Can only use one of the --tag, --srcimg, and --immutable-static-path options'
+    );
+  });
+
+  it('should succeed with --immutable-static-path', async () => {
+    client.scenario.post(
+      `/v1/edge-cache/dangerously-delete-immutable-static`,
+      (req, res) => {
+        expect(req.body).toEqual({
+          path: '_next/static/immutable/chunks/example.js',
+        });
+        res.end();
+      }
+    );
+    client.setArgv(
+      'cache',
+      'dangerously-delete',
+      '--immutable-static-path=_next/static/immutable/chunks/example.js',
+      '--yes'
+    );
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput(
+      'Successfully deleted immutable static asset _next/static/immutable/chunks/example.js; its URL now serves 410'
+    );
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:dangerously-delete', value: 'dangerously-delete' },
+      { key: 'flag:yes', value: 'TRUE' },
+      {
+        key: 'option:immutable-static-path',
+        value: '_next/static/immutable/chunks/example.js',
+      },
+    ]);
+  });
+
+  it('should print the permanent-delete warning for --immutable-static-path without --yes', async () => {
+    client.setArgv(
+      'cache',
+      'dangerously-delete',
+      '--immutable-static-path=_next/static/immutable/chunks/example.js'
+    );
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput(
+      `You are about to permanently delete immutable static asset _next/static/immutable/chunks/example.js from storage for project ${projectId}. This cannot be undone and its URL will serve 410 for 7 days. To continue, run \`vercel cache dangerously-delete --immutable-static-path _next/static/immutable/chunks/example.js --yes\`.`
+    );
+  });
+
+  it('should error when --immutable-static-path is combined with --revalidation-deadline-seconds', async () => {
+    client.setArgv(
+      'cache',
+      'dangerously-delete',
+      '--immutable-static-path=_next/static/immutable/chunks/example.js',
+      '--revalidation-deadline-seconds=60'
+    );
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput(
+      'Cannot use --revalidation-deadline-seconds with --immutable-static-path'
     );
   });
 });
