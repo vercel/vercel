@@ -1,6 +1,9 @@
+import { existsSync } from 'fs';
+import { join } from 'path';
 import didYouMean from './did-you-mean';
 import param from './output/param';
 import output from '../output-manager';
+import { getCommandName } from './pkg-name';
 
 /**
  * Handles typo detection for invalid commands and provides helpful error messages.
@@ -30,6 +33,35 @@ export function handleCommandTypo({
   if (suggestion) {
     output.error(
       `${param(command)} is not a valid target directory or subcommand. Did you mean ${param(suggestion)}?`
+    );
+    return true;
+  }
+
+  return false;
+}
+
+export function handleUnknownCommand({
+  command,
+  availableCommands,
+  cwd,
+  threshold,
+}: {
+  command: string | undefined;
+  availableCommands: string[];
+  cwd: string;
+  threshold?: number;
+}): boolean {
+  if (!command || command.startsWith('-')) {
+    return false;
+  }
+
+  if (handleCommandTypo({ command, availableCommands, threshold })) {
+    return true;
+  }
+
+  if (!existsSync(join(cwd, command))) {
+    output.error(
+      `${param(command)} is not a vercel command, and no directory named ${param(command)} exists to deploy. Run ${getCommandName('help')} to see all commands.`
     );
     return true;
   }
