@@ -16,6 +16,17 @@ export function buildArgFlags(params: { buildArgs?: Record<string, string> }) {
   return flags;
 }
 
+/** Build `--secret id=KEY,env=VALUE` flags from the params' project build secrets. */
+export function buildSecretFlags(params: {
+  buildSecrets?: Record<string, string>;
+}) {
+  const flags: string[] = [];
+  for (const [id, envVarName] of Object.entries(params.buildSecrets ?? {})) {
+    flags.push('--secret', `id=${id},env=${envVarName}`);
+  }
+  return flags;
+}
+
 export interface BuildPushParams {
   contextDir: string;
   dockerfilePath: string;
@@ -33,6 +44,12 @@ export interface BuildPushParams {
    * internal environment.
    */
   buildArgs?: Record<string, string>;
+  /**
+   * Project build secrets (from `config.buildSecrets`) forwarded to the image
+   * build as `--secret id=KEY,env=VALUE`. The actual secret values are injected
+   * into the Buildah child process environment.
+   */
+  buildSecrets?: Record<string, string>;
   span?: Span;
 }
 
