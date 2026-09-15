@@ -1,6 +1,7 @@
 # @vercel/passport
 
-Runtime helpers for reading and verifying Passport identity.
+Runtime helpers for reading and verifying
+[Passport](https://vercel.com/passport) identity.
 
 ## Usage
 
