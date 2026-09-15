@@ -26,7 +26,7 @@ export interface NowOptions {
   withCache?: boolean;
 }
 
-export type BuildMachine = 'basic' | 'standard' | 'enhanced' | 'turbo';
+export type BuildMachine = 'turbo';
 
 export interface CreateOptions {
   // Legacy
