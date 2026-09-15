@@ -12,6 +12,7 @@ export { default as aiGateway } from './commands/ai-gateway';
 export { default as alerts } from './commands/alerts';
 export { default as alias } from './commands/alias';
 export { default as api } from './commands/api';
+export { default as ask } from './commands/ask';
 export { default as bisect } from './commands/bisect';
 export { default as blob } from './commands/blob';
 export { default as buy } from './commands/buy';

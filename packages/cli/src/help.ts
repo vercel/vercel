@@ -47,6 +47,7 @@ export const help = () => `
       alerts                           List alerts for a project or team
       alias                [cmd]       Manages your domain aliases
       api                  [endpoint]  Make authenticated HTTP requests to the Vercel API [beta]
+      ask                  [prompt]    Ask Vercel Agent a question and wait for the answer [beta]
       bisect                           Use binary search to find the deployment that introduced a bug
       blob                 [cmd]       Manages your Blob stores and files
       buy                  [cmd]       Purchase Vercel products for your team
