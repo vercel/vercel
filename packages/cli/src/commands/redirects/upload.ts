@@ -179,6 +179,9 @@ export default async function upload(client: Client, argv: string[]) {
         output.error(`Invalid CSV: ${csvValidation.error}`);
         return 1;
       }
+      for (const warning of csvValidation.warnings ?? []) {
+        output.warn(warning);
+      }
 
       const form = new FormData();
       form.append('teamId', teamId || org.id);
