@@ -15,6 +15,7 @@ import type {
   ProjectLinked,
 } from '@vercel-internals/types';
 import { parseArguments } from '../../util/get-args';
+import { globalCommandOptions } from '../../util/arg-common';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { help } from '../help';
@@ -63,8 +64,35 @@ function orgFromOwner(id: string, slug = id): ProjectLinked['org'] {
 }
 
 const VC_STRING_FLAGS = new Set(['--deployment', '--protection-bypass']);
-const VC_IGNORED_STRING_FLAGS = new Set(['--scope', '--team']);
 const VC_BOOLEAN_FLAGS = new Set(['--yes', '--help', '--trace', '--json']);
+
+// `--help` is handled above as a vc flag, and `--version` is left for curl
+// because the root CLI only acts on it when no subcommand is given.
+const VC_GLOBAL_FLAGS_HANDLED_ELSEWHERE = new Set(['--help', '--version']);
+
+/**
+ * Global CLI flags, by value type. Other commands get these stripped for free
+ * by `parseArguments`, which merges the global spec; this parser is hand-rolled
+ * (curl's arbitrary flags would break `arg`) so it has to consume them itself.
+ * Only long names are matched: the global shorthands (`-t`, `-S`, `-A`, ...)
+ * collide with curl's own short flags.
+ */
+function globalFlagNames(
+  type: BooleanConstructor | StringConstructor
+): Set<string> {
+  return new Set(
+    globalCommandOptions
+      .filter(
+        option =>
+          option.type === type &&
+          !VC_GLOBAL_FLAGS_HANDLED_ELSEWHERE.has(`--${option.name}`)
+      )
+      .map(option => `--${option.name}`)
+  );
+}
+
+const VC_IGNORED_STRING_FLAGS = globalFlagNames(String);
+const VC_IGNORED_BOOLEAN_FLAGS = globalFlagNames(Boolean);
 
 function flagName(arg: string): string {
   const eqIdx = arg.indexOf('=');
@@ -87,13 +115,20 @@ function getCurlLikeArgs(rawArgs: string[], commandName: string): string[] {
     return rawArgs.slice(1);
   }
 
-  // The root CLI permits --scope/--team before the command token. Skip only
-  // those known prefixes; other global-flag interactions are outside this
-  // command's parser and curl's short flags must remain untouched.
+  // The root CLI permits global flags (--cwd, --scope, --team, ...) before the
+  // command token. Skip only those known prefixes; curl's short flags must
+  // remain untouched.
   let commandIndex = 0;
   while (commandIndex < rawArgs.length) {
     const arg = rawArgs[commandIndex];
-    if (!VC_IGNORED_STRING_FLAGS.has(flagName(arg))) {
+    const name = flagName(arg);
+
+    if (VC_IGNORED_BOOLEAN_FLAGS.has(name)) {
+      commandIndex++;
+      continue;
+    }
+
+    if (!VC_IGNORED_STRING_FLAGS.has(name)) {
       break;
     }
 
@@ -155,11 +190,27 @@ export function parseCurlLikeArgs(
       continue;
     }
 
-    // These flags are parsed and applied by the root CLI. Consume them here
-    // so they do not leak into the underlying curl invocation.
+    // These flags are parsed and applied by the root CLI (e.g. `--cwd` sets
+    // `client.cwd`). Consume them — and any value they carry — here so they do
+    // not leak into the underlying curl invocation, and so a value such as the
+    // `--cwd` directory is not mistaken for the target URL.
     if (VC_IGNORED_STRING_FLAGS.has(name)) {
       const value = flagValue(beforeSeparator, i);
       if (!arg.includes('=') && value !== undefined) {
+        i++;
+      }
+      continue;
+    }
+
+    if (VC_IGNORED_BOOLEAN_FLAGS.has(name)) {
+      // `--non-interactive` is the one global boolean the root CLI also accepts
+      // with an explicit value, so consume that token too.
+      if (
+        name === '--non-interactive' &&
+        !arg.includes('=') &&
+        (beforeSeparator[i + 1] === 'true' ||
+          beforeSeparator[i + 1] === 'false')
+      ) {
         i++;
       }
       continue;
