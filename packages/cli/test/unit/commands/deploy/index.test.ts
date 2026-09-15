@@ -98,6 +98,7 @@ describe('deploy', () => {
       const helpOutput = client.stderr.getFullOutput();
       expect(helpOutput).toContain('--dry');
       expect(helpOutput).toContain('vercel deploy --dry --json');
+      expect(helpOutput).toContain('--turbo');
       expect(helpOutput).not.toContain('--build-machine');
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -108,18 +109,7 @@ describe('deploy', () => {
     });
   });
 
-  it('rejects an invalid --build-machine value', async () => {
-    client.setArgv('deploy', '--build-machine', 'large');
-
-    const exitCode = await deploy(client);
-
-    expect(exitCode).toEqual(1);
-    expect(client.stderr.getFullOutput()).toContain(
-      'Error: `--build-machine` must be one of: basic, standard, enhanced, turbo'
-    );
-  });
-
-  it('sends buildMachine in the deployment creation request', async () => {
+  it('sends buildMachine turbo in the deployment creation request', async () => {
     const user = useUser();
     useTeams('team_dummy');
     useProject({
@@ -143,10 +133,10 @@ describe('deploy', () => {
     });
 
     client.cwd = setupUnitFixture('commands/deploy/static');
-    client.setArgv('deploy', '--build-machine', 'enhanced', '--no-wait');
+    client.setArgv('deploy', '--turbo', '--no-wait');
 
     expect(await deploy(client)).toEqual(0);
-    expect(body).toMatchObject({ buildMachine: 'enhanced' });
+    expect(body).toMatchObject({ buildMachine: 'turbo' });
   });
 
   it('should reject deploying a single file', async () => {
@@ -1701,21 +1691,16 @@ describe('deploy', () => {
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
-    it.each([
-      'basic',
-      'standard',
-      'enhanced',
-      'turbo',
-    ] as const)('--build-machine=%s', async buildMachine => {
+    it('--turbo', async () => {
       client.cwd = setupUnitFixture('commands/deploy/static');
-      client.setArgv('deploy', '--build-machine', buildMachine);
+      client.setArgv('deploy', '--turbo');
       const exitCode = await deploy(client);
       expect(exitCode).toEqual(0);
 
       expect(mock).toHaveBeenCalledWith(
         ...Object.values({
           ...baseCreateDeployArgs,
-          createArgs: expect.objectContaining({ buildMachine }),
+          createArgs: expect.objectContaining({ buildMachine: 'turbo' }),
         })
       );
     });

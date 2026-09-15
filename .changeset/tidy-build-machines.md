@@ -2,4 +2,4 @@
 'vercel': minor
 ---
 
-Add a hidden `--build-machine` option to `vercel deploy`.
+Add a `--turbo` option to `vercel deploy` for using a Turbo build machine.

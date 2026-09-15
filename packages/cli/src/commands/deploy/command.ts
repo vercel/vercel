@@ -200,13 +200,11 @@ export const deployCommand = {
         'Specify environment variables during build-time (e.g. `-b KEY1=value1 -b KEY2=value2`)',
     },
     {
-      name: 'build-machine',
+      name: 'turbo',
       shorthand: null,
-      type: String,
-      argument: 'basic|standard|enhanced|turbo',
+      type: Boolean,
       deprecated: false,
-      description: 'Select the build machine size',
-      hidden: true,
+      description: 'Use a Turbo build machine for this deployment',
     },
     {
       name: 'meta',

@@ -30,12 +30,9 @@ export class DeployTelemetryClient
       });
     }
   }
-  trackCliOptionBuildMachine(buildMachine: string | undefined) {
-    if (buildMachine) {
-      this.trackCliOption({
-        option: 'build-machine',
-        value: buildMachine,
-      });
+  trackCliFlagTurbo(turbo: boolean | undefined) {
+    if (turbo) {
+      this.trackCliFlag('turbo');
     }
   }
   trackCliOptionBuildEnv(buildEnv: string[] | undefined) {

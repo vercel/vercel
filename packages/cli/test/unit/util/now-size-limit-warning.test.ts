@@ -42,14 +42,14 @@ describe('Now.create — size_limit_exceeded warning', () => {
 
     await now.create(
       '/tmp/whatever',
-      { ...baseCreateOptions(), buildMachine: 'enhanced' },
+      { ...baseCreateOptions(), buildMachine: 'turbo' },
       org,
       false
     );
 
     expect(processDeployment).toHaveBeenCalledWith(
       expect.objectContaining({
-        requestBody: expect.objectContaining({ buildMachine: 'enhanced' }),
+        requestBody: expect.objectContaining({ buildMachine: 'turbo' }),
       })
     );
   });
