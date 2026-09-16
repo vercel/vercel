@@ -40,7 +40,8 @@ export async function GET() {
 
 `getIdentity` reads the `x-vercel-oidc-passport-token` header injected by
 Vercel after Passport validates the visitor. For tests and local debugging, you
-can also pass the `_vercel_passport` cookie explicitly.
+can also pass the `_vercel_passport` cookie explicitly. Both legacy single
+cookies and chunked Passport session cookies are supported.
 
 By default, request tokens are verified against Vercel's OIDC JWKS. The helper
 only accepts the dedicated `https://passport.vercel.com/{owner}` issuer. It also

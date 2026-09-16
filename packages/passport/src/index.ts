@@ -134,6 +134,10 @@ const PASSPORT_JWKS = createRemoteJWKSet(
   new URL(`${VERCEL_OIDC_ISSUER}/.well-known/jwks`)
 );
 const DEFAULT_ALGORITHMS = ['RS256'];
+const PASSPORT_CHUNKED_COOKIE_PREFIX = '__vc_chunked_v1:';
+const PASSPORT_COOKIE_CHUNK_SIZE = 3500;
+const PASSPORT_COOKIE_GENERATION_LENGTH = 32;
+const PASSPORT_COOKIE_MAX_CHUNKS = 10;
 const SYMBOL_FOR_REQ_CONTEXT = Symbol.for('@vercel/request-context');
 let hasWarnedAboutDevelopmentIdentity = false;
 
@@ -167,11 +171,10 @@ export async function getIdentity(
   const tokenFromInput = normalized.token;
   const headerToken = getHeader(headers, PASSPORT_HEADER_NAME);
   const cookieHeader = normalized.cookieHeader ?? getHeader(headers, 'cookie');
-  const cookieToken = getCookie(
-    normalized.cookies,
-    cookieHeader,
-    PASSPORT_COOKIE_NAME
-  );
+  const cookieToken =
+    tokenFromInput || headerToken
+      ? undefined
+      : await getCookie(normalized.cookies, cookieHeader, PASSPORT_COOKIE_NAME);
   const token =
     tokenFromInput ?? headerToken ?? cookieToken ?? getEnvToken(options);
   const tokenSource: TokenSource = tokenFromInput
@@ -226,11 +229,10 @@ export async function verifyIdentity(
   const authorizationToken = getAuthorizationBearer(headers);
   const headerToken = getHeader(headers, PASSPORT_HEADER_NAME);
   const cookieHeader = normalized.cookieHeader ?? getHeader(headers, 'cookie');
-  const cookieToken = getCookie(
-    normalized.cookies,
-    cookieHeader,
-    PASSPORT_COOKIE_NAME
-  );
+  const cookieToken =
+    tokenFromInput || authorizationToken || headerToken
+      ? undefined
+      : await getCookie(normalized.cookies, cookieHeader, PASSPORT_COOKIE_NAME);
   const token =
     tokenFromInput ?? authorizationToken ?? headerToken ?? cookieToken;
 
@@ -359,7 +361,88 @@ function getAuthorizationBearer(
   return match?.[1];
 }
 
-function getCookie(
+async function getCookie(
+  cookies: CookieLike | undefined,
+  cookieHeader: string | undefined,
+  name: string
+): Promise<string | undefined> {
+  const storedValue = getCookieValue(cookies, cookieHeader, name);
+  if (!storedValue?.startsWith(PASSPORT_CHUNKED_COOKIE_PREFIX)) {
+    return storedValue;
+  }
+
+  const match = storedValue.match(/^__vc_chunked_v1:([0-9]+):([0-9a-f]{64})$/);
+  const count = Number(match?.[1]);
+  const checksum = match?.[2];
+  if (
+    !Number.isInteger(count) ||
+    count < 1 ||
+    count > PASSPORT_COOKIE_MAX_CHUNKS ||
+    !checksum
+  ) {
+    throw new PassportIdentityError(
+      'Passport session cookie manifest is invalid.'
+    );
+  }
+
+  const generation = checksum.slice(0, PASSPORT_COOKIE_GENERATION_LENGTH);
+  const chunks: string[] = [];
+  for (let index = 1; index <= count; index++) {
+    const chunk = getCookieValue(
+      cookies,
+      cookieHeader,
+      `${name}.${index}.${generation}`
+    );
+    if (chunk === undefined) {
+      throw new PassportIdentityError(
+        `Passport session cookie is missing chunk ${index} of ${count}.`
+      );
+    }
+    if (chunk.length > PASSPORT_COOKIE_CHUNK_SIZE) {
+      throw new PassportIdentityError(
+        `Passport session cookie chunk ${index} exceeds the maximum size.`
+      );
+    }
+    chunks.push(chunk);
+  }
+
+  const value = chunks.join('');
+  const actualChecksum = await sha256(value);
+  if (actualChecksum !== checksum) {
+    throw new PassportIdentityError(
+      'Passport session cookie checksum does not match its chunks.'
+    );
+  }
+
+  return value;
+}
+
+async function sha256(value: string): Promise<string> {
+  const runtimeCrypto = (
+    globalThis as typeof globalThis & {
+      crypto?: {
+        subtle: {
+          digest(algorithm: string, data: Uint8Array): Promise<ArrayBuffer>;
+        };
+      };
+    }
+  ).crypto;
+  if (!runtimeCrypto) {
+    throw new PassportIdentityError(
+      'Passport session cookie verification is unavailable in this runtime.'
+    );
+  }
+
+  const digest = await runtimeCrypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(value)
+  );
+  return [...new Uint8Array(digest)]
+    .map(byte => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function getCookieValue(
   cookies: CookieLike | undefined,
   cookieHeader: string | undefined,
   name: string
