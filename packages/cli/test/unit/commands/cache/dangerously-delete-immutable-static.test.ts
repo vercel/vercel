@@ -1,4 +1,4 @@
-import { describe, it, beforeEach, expect } from 'vitest';
+import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import cache from '../../../../src/commands/cache';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
@@ -11,6 +11,11 @@ import { outputFile } from 'fs-extra';
 describe('cache dangerously-delete-immutable-static', () => {
   const assetPath = '_next/static/immutable/chunks/example.js';
   let projectId = 'wat';
+  afterEach(() => {
+    vi.restoreAllMocks();
+    client.nonInteractive = false;
+  });
+
   beforeEach(async () => {
     useUser();
     useTeam('team_dummy');
@@ -30,29 +35,34 @@ describe('cache dangerously-delete-immutable-static', () => {
   });
 
   it('should error without a path argument', async () => {
-    client.setArgv('cache', 'dangerously-delete-immutable-static', '--yes');
+    client.setArgv('cache', 'dangerously-delete-immutable-static');
     const exitCode = await cache(client);
     expect(exitCode).toEqual(1);
     await expect(client.stderr).toOutput('Missing required argument');
   });
 
-  it('should succeed with a path and --yes', async () => {
+  it('should delete after the typed path confirmation', async () => {
+    let deleteCalled = false;
     client.scenario.post(
       `/v1/edge-cache/dangerously-delete-immutable-static`,
       (req, res) => {
+        deleteCalled = true;
         expect(req.query.projectIdOrName).toEqual(projectId);
         expect(req.body).toEqual({ path: assetPath });
         res.end();
       }
     );
-    client.setArgv(
-      'cache',
-      'dangerously-delete-immutable-static',
-      assetPath,
-      '--yes'
+    client.setArgv('cache', 'dangerously-delete-immutable-static', assetPath);
+    const exitCodePromise = cache(client);
+
+    await expect(client.stderr).toOutput(
+      `Deleting immutable static asset ${assetPath} for project ${projectId} permanently removes it from storage`
     );
-    const exitCode = await cache(client);
-    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput(`Type ${assetPath}`);
+    client.stdin.write(`${assetPath}\n`);
+
+    await expect(exitCodePromise).resolves.toEqual(0);
+    expect(deleteCalled).toBe(true);
     await expect(client.stderr).toOutput(
       `Successfully deleted immutable static asset ${assetPath}; its URL now serves 410`
     );
@@ -62,16 +72,38 @@ describe('cache dangerously-delete-immutable-static', () => {
         value: 'dangerously-delete-immutable-static',
       },
       { key: 'argument:path', value: assetPath },
-      { key: 'flag:yes', value: 'TRUE' },
     ]);
   });
 
-  it('should print the permanent-delete warning without --yes', async () => {
-    client.setArgv('cache', 'dangerously-delete-immutable-static', assetPath);
-    const exitCode = await cache(client);
-    expect(exitCode).toEqual(1);
-    await expect(client.stderr).toOutput(
-      `You are about to permanently delete immutable static asset ${assetPath} from storage for project ${projectId}. This cannot be undone and its URL will serve 410 for 7 days. To continue, run \`vercel cache dangerously-delete-immutable-static ${assetPath} --yes\`.`
+  it('does not delete when the typed path does not match', async () => {
+    let deleteCalled = false;
+    client.scenario.post(
+      `/v1/edge-cache/dangerously-delete-immutable-static`,
+      (req, res) => {
+        deleteCalled = true;
+        res.end();
+      }
     );
+    client.setArgv('cache', 'dangerously-delete-immutable-static', assetPath);
+    const exitCodePromise = cache(client);
+
+    await expect(client.stderr).toOutput(`Type ${assetPath}`);
+    client.stdin.write('_next/static/immutable/chunks/other.js\n');
+
+    await expect(exitCodePromise).resolves.toEqual(0);
+    await expect(client.stderr).toOutput('Canceled');
+    expect(deleteCalled).toBe(false);
+  });
+
+  it('rejects non-interactive mode with a structured payload', async () => {
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code ?? 0}`);
+    }) as () => never);
+    client.nonInteractive = true;
+    client.setArgv('cache', 'dangerously-delete-immutable-static', assetPath);
+
+    await expect(cache(client)).rejects.toThrow('exit:1');
+    const payload = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(payload.status).toBe('action_required');
   });
 });

@@ -139,7 +139,7 @@ export const dangerouslyDeleteImmutableStaticSubcommand = {
       required: true,
     },
   ],
-  options: [yesOption, projectOption],
+  options: [projectOption],
   examples: [
     {
       name: 'Permanently delete an immutable static asset from storage',

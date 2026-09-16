@@ -4,11 +4,19 @@ import { printError } from '../../util/error';
 import { dangerouslyDeleteImmutableStaticSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { CacheDangerouslyDeleteImmutableStaticTelemetryClient } from '../../util/telemetry/commands/cache/dangerously-delete-immutable-static';
 import { isAPIError } from '../../util/errors-ts';
+import { getGlobalFlagsFromArgs } from '../../util/arg-common';
+import { outputActionRequired } from '../../util/agent-output';
+import { canPrompt } from '../../util/can-prompt';
+import {
+  AGENT_ACTION,
+  AGENT_REASON,
+  AGENT_STATUS,
+} from '../../util/agent-output-constants';
 
 export default async function dangerouslyDeleteImmutableStatic(
   client: Client,
@@ -43,6 +51,39 @@ export default async function dangerouslyDeleteImmutableStatic(
   const projectName = parsedArgs.flags['--project'];
   telemetry.trackCliOptionProject(projectName);
 
+  if (!canPrompt(client)) {
+    const globalFlags = getGlobalFlagsFromArgs(client.argv.slice(2)).filter(
+      flag => flag !== '--non-interactive'
+    );
+    const interactiveCommand = getCommandNamePlain(
+      `cache dangerously-delete-immutable-static ${path} ${globalFlags.join(' ')}`.trim()
+    );
+    outputActionRequired(
+      client,
+      {
+        status: AGENT_STATUS.ACTION_REQUIRED,
+        reason: AGENT_REASON.INTERACTIVE_CONFIRMATION_REQUIRED,
+        action: AGENT_ACTION.CONFIRMATION_REQUIRED,
+        message:
+          'Deleting an immutable static asset permanently removes it from storage and cannot be undone; its URL will serve 410 for 7 days, then 404. ' +
+          'This cannot be confirmed non-interactively: the user must run this command in a terminal and type the asset path to confirm.',
+        userActionRequired: true,
+        hint: 'Surface this to the user; the confirmation cannot be automated.',
+        next: [
+          {
+            command: interactiveCommand,
+            when: 'user runs this command in an interactive terminal',
+          },
+        ],
+      },
+      1
+    );
+    output.error(
+      'This command must be run interactively because it permanently deletes the asset from storage.'
+    );
+    return 1;
+  }
+
   const link = await resolveProjectContext({
     client,
     projectNameOrId: projectName,
@@ -61,24 +102,19 @@ export default async function dangerouslyDeleteImmutableStatic(
 
   const { project, org } = link;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
-  const yes = Boolean(parsedArgs.flags['--yes']);
-  telemetry.trackCliFlagYes(yes);
 
-  const msg = `You are about to permanently delete immutable static asset ${path} from storage for project ${project.name}. This cannot be undone and its URL will serve 410 for 7 days`;
-
-  if (!yes) {
-    if (!process.stdin.isTTY) {
-      const projectFlag = projectName ? ` --project ${projectName}` : '';
-      output.print(
-        `${msg}. To continue, run ${getCommandName(`cache dangerously-delete-immutable-static ${path}${projectFlag} --yes`)}.`
-      );
-      return 1;
-    }
-    const confirmed = await client.input.confirm(`${msg}. Continue?`, false);
-    if (!confirmed) {
-      output.print(`Canceled.\n`);
-      return 0;
-    }
+  output.print(
+    prependEmoji(
+      `Deleting immutable static asset ${path} for project ${project.name} permanently removes it from storage for the production and preview environments. This cannot be undone; its URL will serve 410 for 7 days, then 404.\n`,
+      emoji('warning')
+    )
+  );
+  const entered = await client.input.text({
+    message: `Type ${path} to confirm the permanent deletion:`,
+  });
+  if (entered !== path) {
+    output.log('Canceled');
+    return 0;
   }
 
   try {

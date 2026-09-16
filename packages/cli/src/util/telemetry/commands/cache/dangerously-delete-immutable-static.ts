@@ -7,12 +7,6 @@ export class CacheDangerouslyDeleteImmutableStaticTelemetryClient
   implements
     TelemetryMethods<typeof dangerouslyDeleteImmutableStaticSubcommand>
 {
-  trackCliFlagYes(yes: boolean | undefined) {
-    if (yes) {
-      this.trackCliFlag('yes');
-    }
-  }
-
   trackCliArgumentPath(path: string | undefined) {
     if (path) {
       this.trackCliArgument({
