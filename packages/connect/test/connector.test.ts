@@ -15,6 +15,11 @@ const CONNECTOR = {
   clientUrl: 'https://ACME-XY123.snowflakecomputing.com',
   createdAt: 1000,
   updatedAt: 2000,
+  createdBy: 'user_abc123',
+  updatedBy: 'user_abc123',
+  ownerId: 'team_abc123',
+  ownerTenantId: 'tenant_abc123',
+  redirectUri: 'https://vercel.com/api/connect/oauth/callback',
   data: {
     accountIdentifier: 'ACME-XY123',
     defaultSessionRole: 'REPORTER',
@@ -81,6 +86,31 @@ describe('getConnectorMetadata', () => {
     expect(connector.vendor.accountIdentifier).toBe('ACME-XY123');
     expect(connector.vendor.defaultSessionRole).toBe('REPORTER');
     expect('data' in connector).toBe(false);
+  });
+
+  it('only returns the fields declared on ConnectorMetadata', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(CONNECTOR));
+
+    const connector = await getConnectorMetadata('snowflake/analytics');
+
+    expect(Object.keys(connector).sort()).toEqual(
+      [
+        'id',
+        'uid',
+        'name',
+        'type',
+        'service',
+        'clientUrl',
+        'createdAt',
+        'updatedAt',
+        'vendor',
+      ].sort()
+    );
+    expect('createdBy' in connector).toBe(false);
+    expect('updatedBy' in connector).toBe(false);
+    expect('ownerId' in connector).toBe(false);
+    expect('ownerTenantId' in connector).toBe(false);
+    expect('redirectUri' in connector).toBe(false);
   });
 
   it('throws a ConnectError on a non-ok response', async () => {
