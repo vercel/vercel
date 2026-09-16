@@ -78,6 +78,16 @@ type CancelablePrompt<T> = Promise<T> & {
   cancel?: () => void;
 };
 
+/** Raised when a command reaches a prompt that is unavailable in this invocation. */
+export class PromptUnavailableError extends Error {
+  constructor() {
+    super(
+      'Cannot prompt in non-interactive mode. Provide the required command options instead.'
+    );
+    this.name = 'PromptUnavailableError';
+  }
+}
+
 export interface FetchOptions extends Omit<RequestInit, 'body'> {
   body?: BodyInit | JSONObject;
   json?: boolean;
@@ -187,43 +197,43 @@ export default class Client extends EventEmitter implements Stdio {
     };
     this.input = {
       text: (opts: Parameters<typeof input>[0]) =>
-        this.runPrompt(
+        this.prompt(() =>
           input({ theme, ...opts }, { input: this.stdin, output: this.stderr })
         ),
       password: (opts: Parameters<typeof password>[0]) =>
-        this.runPrompt(
+        this.prompt(() =>
           password(
             { theme, ...opts },
             { input: this.stdin, output: this.stderr }
           )
         ),
       checkbox: <T>(opts: Parameters<typeof checkbox<T>>[0]) =>
-        this.runPrompt(
+        this.prompt(() =>
           checkbox<T>(
             { theme, ...opts },
             { input: this.stdin, output: this.stderr }
           )
         ),
       expand: (opts: Parameters<typeof expand>[0]) =>
-        this.runPrompt(
+        this.prompt(() =>
           expand({ theme, ...opts }, { input: this.stdin, output: this.stderr })
         ),
       confirm: (message: string, default_value: boolean) =>
-        this.runPrompt(
+        this.prompt(() =>
           confirm(
             { theme, message, default: default_value },
             { input: this.stdin, output: this.stderr }
           )
         ),
       select: <T>(opts: Parameters<typeof select<T>>[0]) =>
-        this.runPrompt(
+        this.prompt(() =>
           select<T>(
             { theme, ...opts },
             { input: this.stdin, output: this.stderr }
           )
         ),
       search: <T>(opts: Parameters<typeof search<T>>[0]) =>
-        this.runPrompt(
+        this.prompt(() =>
           search<T>(
             { theme, ...opts },
             { input: this.stdin, output: this.stderr }
@@ -248,6 +258,13 @@ export default class Client extends EventEmitter implements Stdio {
     } finally {
       this.promptBackNavigationDepth--;
     }
+  }
+
+  private prompt<T>(create: () => CancelablePrompt<T>): Promise<T> {
+    if (this.nonInteractive || !this.stdin.isTTY) {
+      return Promise.reject(new PromptUnavailableError());
+    }
+    return this.runPrompt(create());
   }
 
   private runPrompt<T>(prompt: CancelablePrompt<T>): Promise<T> {
