@@ -7,11 +7,13 @@ import { type Command, help } from '../help';
 import purge from './purge';
 import invalidate from './invalidate';
 import dangerouslyDelete from './dangerously-delete';
+import dangerouslyDeleteImmutableStatic from './dangerously-delete-immutable-static';
 import {
   cacheCommand,
   purgeSubcommand,
   invalidateSubcommand,
   dangerouslyDeleteSubcommand,
+  dangerouslyDeleteImmutableStaticSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
@@ -22,6 +24,9 @@ const COMMAND_CONFIG = {
   purge: getCommandAliases(purgeSubcommand),
   invalidate: getCommandAliases(invalidateSubcommand),
   'dangerously-delete': getCommandAliases(dangerouslyDeleteSubcommand),
+  'dangerously-delete-immutable-static': getCommandAliases(
+    dangerouslyDeleteImmutableStaticSubcommand
+  ),
 };
 
 export default async function main(client: Client) {
@@ -85,6 +90,15 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandDangerouslyDelete(subcommandOriginal);
       return dangerouslyDelete(client, args);
+    case 'dangerously-delete-immutable-static':
+      if (needHelp) {
+        printHelp(dangerouslyDeleteImmutableStaticSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandDangerouslyDeleteImmutableStatic(
+        subcommandOriginal
+      );
+      return dangerouslyDeleteImmutableStatic(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(cacheCommand, { columns: client.stderr.columns }));
