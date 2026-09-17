@@ -174,6 +174,30 @@ describe('startAuthorization', () => {
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it('rejects when called with an already-aborted signal', async () => {
+    fetchMock.mockImplementation((_url: string, init: RequestInit) => {
+      if (init.signal?.aborted) {
+        return Promise.reject(new DOMException('Aborted', 'AbortError'));
+      }
+      return Promise.resolve(
+        jsonResponse({
+          request: 'req_123',
+          verifier: 'verifier_123',
+          url: 'https://connect.vercel.com/authorize/req_123',
+        })
+      );
+    });
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      startAuthorization(CONNECTOR, PARAMS, { signal: controller.signal })
+    ).rejects.toMatchObject({ name: 'AbortError' });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.signal).toBe(controller.signal);
+  });
 });
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {

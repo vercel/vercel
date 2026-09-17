@@ -155,6 +155,26 @@ describe('experimental_startInstallation', () => {
       message: 'Missing permission to install connector',
     });
   });
+
+  it('rejects when called with an already-aborted signal', async () => {
+    fetchMock.mockImplementation((_url: string, init: RequestInit) => {
+      if (init.signal?.aborted) {
+        return Promise.reject(new DOMException('Aborted', 'AbortError'));
+      }
+      return Promise.resolve(installationResponse());
+    });
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      experimental_startInstallation(CONNECTOR, undefined, {
+        signal: controller.signal,
+      })
+    ).rejects.toMatchObject({ name: 'AbortError' });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.signal).toBe(controller.signal);
+  });
 });
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {

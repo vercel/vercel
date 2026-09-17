@@ -104,6 +104,24 @@ describe('revokeToken', () => {
       message: 'Missing permission to revoke tokens',
     });
   });
+
+  it('rejects when called with an already-aborted signal', async () => {
+    fetchMock.mockImplementation((_url: string, init: RequestInit) => {
+      if (init.signal?.aborted) {
+        return Promise.reject(new DOMException('Aborted', 'AbortError'));
+      }
+      return Promise.resolve(jsonResponse(RESULT));
+    });
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      revokeToken(CONNECTOR, PARAMS, { signal: controller.signal })
+    ).rejects.toMatchObject({ name: 'AbortError' });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.signal).toBe(controller.signal);
+  });
 });
 
 describe('getTokenResponse cache', () => {
@@ -248,6 +266,34 @@ describe('getTokenResponse cache', () => {
     await expect(
       getTokenResponse('oauth/linear', params, { forceRefresh: true })
     ).rejects.toBeInstanceOf(UserAuthorizationRequiredError);
+  });
+
+  it('rejects and skips the cache write when called with an already-aborted signal', async () => {
+    fetchMock.mockImplementation((_url: string, init: RequestInit) => {
+      if (init.signal?.aborted) {
+        return Promise.reject(new DOMException('Aborted', 'AbortError'));
+      }
+      return Promise.resolve(tokenResponse('tok_should_not_cache'));
+    });
+    const controller = new AbortController();
+    controller.abort();
+    const params = { subject: { type: 'user' as const, id: 'aborted' } };
+
+    await expect(
+      getTokenResponse('oauth/linear', params, { signal: controller.signal })
+    ).rejects.toMatchObject({ name: 'AbortError' });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.signal).toBe(controller.signal);
+
+    // The aborted call must not have populated the cache: a follow-up call
+    // without the signal re-fetches instead of serving a stale/absent entry.
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(tokenResponse('tok_after_abort'))
+    );
+    const result = await getTokenResponse('oauth/linear', params);
+    expect(result.token).toBe('tok_after_abort');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
 

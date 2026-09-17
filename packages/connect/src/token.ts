@@ -151,6 +151,14 @@ export interface ConnectOptions {
    * different region.
    */
   region?: string;
+
+  /**
+   * Abort the request. When the signal fires before the response is
+   * received, the underlying `fetch` rejects and the call throws without
+   * writing to the in-process token cache — {@link getTokenResponse} only
+   * caches on a successful response.
+   */
+  signal?: AbortSignal;
 }
 
 export async function getToken(
@@ -198,6 +206,7 @@ export async function getTokenResponse(
       Authorization: `Bearer ${vercelToken}`,
     },
     body: JSON.stringify(requestParams),
+    signal: options?.signal,
   });
 
   if (!response.ok) {
@@ -234,6 +243,7 @@ export async function revokeToken(
       Authorization: `Bearer ${vercelToken}`,
     },
     body: JSON.stringify(params),
+    signal: options?.signal,
   });
 
   if (!response.ok) {
