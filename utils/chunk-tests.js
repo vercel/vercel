@@ -536,9 +536,10 @@ function getPackageDisplayName(packageName) {
   }
 }
 
-async function getChunkedTests() {
+async function getChunkedTests(
+  taskEntries = JSON.parse(process.env.TURBO_TASKS || '[]')
+) {
   const rootPath = path.resolve(__dirname, '..');
-  const taskEntries = JSON.parse(process.env.TURBO_TASKS || '[]');
   if (!Array.isArray(taskEntries)) {
     throw new Error('TURBO_TASKS must be a JSON array');
   }

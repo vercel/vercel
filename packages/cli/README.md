@@ -32,6 +32,8 @@ Finally, [connect your Git repository to Vercel](https://vercel.com/docs/git) an
 
 For details on how to use Vercel CLI, check out our [documentation](https://vercel.com/docs/cli).
 
+For an automated Resend DNS handoff, see [Configure Resend DNS records](docs/resend-dns.md).
+
 ## Local Development
 
 To develop Vercel CLI, first check out the source code, install dependencies, and build all packages:

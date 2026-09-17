@@ -2,6 +2,7 @@ import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import add from './add';
+import configure from './configure';
 import importZone from './import';
 import inspect from './inspect';
 import ls from './ls';
@@ -9,6 +10,7 @@ import rm from './rm';
 import update from './update';
 import {
   addSubcommand,
+  configureSubcommand,
   dnsCommand,
   importSubcommand,
   inspectSubcommand,
@@ -25,6 +27,7 @@ import { getCommandAliases } from '..';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
+  configure: getCommandAliases(configureSubcommand),
   import: getCommandAliases(importSubcommand),
   inspect: getCommandAliases(inspectSubcommand),
   ls: getCommandAliases(listSubcommand),
@@ -80,6 +83,14 @@ export default async function dns(client: Client) {
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
+    case 'configure':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('dns', subcommandOriginal);
+        printHelp(configureSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandConfigure(subcommandOriginal);
+      return configure(client, args);
     case 'import':
       if (needHelp) {
         telemetry.trackCliFlagHelp('dns', subcommandOriginal);

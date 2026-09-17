@@ -202,6 +202,11 @@ describe('help command', () => {
   });
 
   describe('dns help output snapshots', () => {
+    it('dns configure help', () => {
+      expect(
+        help(dns.configureSubcommand, { columns: 120, parent: dns.dnsCommand })
+      ).toMatchSnapshot();
+    });
     it('dns help column width 40', () => {
       expect(help(dns.dnsCommand, { columns: 40 })).toMatchSnapshot();
     });

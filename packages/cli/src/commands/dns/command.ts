@@ -7,6 +7,48 @@ import {
   yesOption,
 } from '../../util/arg-common';
 
+export const configureSubcommand = {
+  name: 'configure',
+  aliases: [],
+  description: 'Add missing DNS records from a Resend domain response',
+  arguments: [{ name: 'domain', required: true }],
+  options: [
+    {
+      name: 'resend',
+      shorthand: null,
+      type: String,
+      argument: 'FILE',
+      deprecated: false,
+      description:
+        'JSON file from Resend domains get (TXT, MX, and CNAME records)',
+    },
+    {
+      name: 'dry-run',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Preview missing records without changing DNS',
+    },
+    { ...yesOption, description: 'Add the missing records without prompting' },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Export a domain from the authenticated Resend CLI',
+      value: 'resend domains get <ID> --json > resend-domain.json',
+    },
+    {
+      name: 'Preview DNS changes in a Vercel team',
+      value: `${packageName} dns configure example.com --resend resend-domain.json --scope my-team --dry-run`,
+    },
+    {
+      name: 'Add missing records, preserving existing DNS',
+      value: `${packageName} dns configure example.com --resend resend-domain.json --scope my-team --yes --json`,
+    },
+  ],
+} as const;
+
 export const importSubcommand = {
   name: 'import',
   aliases: [],
@@ -221,6 +263,7 @@ export const dnsCommand = {
   arguments: [],
   subcommands: [
     addSubcommand,
+    configureSubcommand,
     importSubcommand,
     inspectSubcommand,
     listSubcommand,
