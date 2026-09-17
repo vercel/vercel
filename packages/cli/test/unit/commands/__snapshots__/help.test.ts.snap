@@ -2315,6 +2315,18 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    rel…
                                    to a
                                    dom…
+  update       domain              Upd…
+                                   DNS 
+                                   zone
+                                   and 
+                                   Enc…
+                                   Cli…
+                                   Hel…
+                                   set…
+                                   for 
+                                   an  
+                                   apex
+                                   dom…
   add          domain [project]    Add 
                                    a   
                                    dom…
@@ -2490,6 +2502,8 @@ exports[`help command > domains help output snapshots > domains help column widt
 
   list                             Show all domains in a list (default)        
   inspect      domain              Displays information related to a domain    
+  update       domain              Update DNS zone and Encrypted Client Hello  
+                                   settings for an apex domain                 
   add          domain [project]    Add a domain name that you already own to a 
                                    Vercel Team                                 
   buy          domain              Purchase a new domain name                  
@@ -2553,6 +2567,7 @@ exports[`help command > domains help output snapshots > domains help column widt
 
   list                             Show all domains in a list (default)                                                
   inspect      domain              Displays information related to a domain                                            
+  update       domain              Update DNS zone and Encrypted Client Hello settings for an apex domain              
   add          domain [project]    Add a domain name that you already own to a Vercel Team                             
   buy          domain              Purchase a new domain name                                                          
   check        domain              Check if a domain is available to buy                                               
@@ -2830,6 +2845,51 @@ exports[`help command > domains help output snapshots > domains transfer-in help
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
+
+"
+`;
+
+exports[`help command > domains help output snapshots > domains update help output snapshots > domains update help column width 120 1`] = `
+"
+  ▲ vercel domains update domain [options]
+
+  Update DNS zone and Encrypted Client Hello settings for an apex domain                                                
+
+  Options:
+
+       --ech-mode <auto|disabled>  Let Vercel manage Encrypted Client Hello enrollment, or opt out                           
+  -F,  --format <FORMAT>           Specify the output format (json)                                                          
+       --json                      Output as JSON                                                                            
+       --zone <true|false>         Whether the domain intends to use Vercel's nameservers                                    
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Configure a domain to use Vercel DNS
+
+    $ vercel domains update example.com --zone true
+
+  - Opt out of Encrypted Client Hello enrollment
+
+    $ vercel domains update example.com --ech-mode disabled
+
+  - Update both settings and print JSON
+
+    $ vercel domains update example.com --zone true --ech-mode auto --json
 
 "
 `;
