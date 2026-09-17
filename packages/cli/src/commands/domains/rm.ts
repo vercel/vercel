@@ -7,6 +7,7 @@ import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
+import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
 import removeDomainByName from '../../util/domains/remove-domain-by-name';
 import stamp from '../../util/output/stamp';
 import * as ERRORS from '../../util/errors-ts';
@@ -62,6 +63,35 @@ export default async function rm(client: Client, argv: string[]) {
 
   const domain = await getDomainByName(client, contextName, domainName);
   if (domain instanceof DomainNotFound || domain.name !== domainName) {
+    let alias;
+    try {
+      alias = await findAliasByAliasOrId(client, domainName);
+    } catch (err: unknown) {
+      if (!ERRORS.isAPIError(err) || err.status !== 404) {
+        throw err;
+      }
+    }
+
+    if (alias) {
+      const skipConfirmation = opts['--yes'] || false;
+      if (
+        !skipConfirmation &&
+        !(await client.input.confirm(
+          `Domain not found, but an alias ${param(domainName)} exists. Are you sure you want to remove it?`,
+          false
+        ))
+      ) {
+        output.log('Canceled');
+        return 0;
+      }
+      const removeStamp = stamp();
+      await removeAliasById(client, alias.uid);
+      output.success(
+        `Alias ${chalk.bold(alias.alias)} removed ${removeStamp()}`
+      );
+      return 0;
+    }
+
     output.error(
       `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`
     );
