@@ -13,6 +13,8 @@ export interface ProjectDomain {
   apexName: string;
   projectId: string;
   redirect?: string | null;
+  redirectStatusCode?: number | null;
+  customEnvironmentId?: string | null;
   gitBranch?: string | null;
   verified: boolean;
   verification?: ProjectDomainVerification[];

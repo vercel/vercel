@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { addDomainRedirect } from './add-redirect';
 
 import * as ERRORS from '../../util/errors-ts';
 import { isAPIError } from '../../util/errors-ts';
@@ -194,6 +195,22 @@ export default async function add(client: Client, argv: string[]) {
 
   const force = opts['--force'];
   telemetry.trackCliFlagForce(force);
+  telemetry.trackCliOptionRedirect(opts['--redirect']);
+  telemetry.trackCliOptionRedirectStatusCode(opts['--redirect-status-code']);
+  if (
+    opts['--redirect'] !== undefined ||
+    opts['--redirect-status-code'] !== undefined
+  ) {
+    telemetry.trackCliArgumentDomain(args[0]);
+    telemetry.trackCliArgumentProject(args[1]);
+    return addDomainRedirect(
+      client,
+      args,
+      opts['--redirect'],
+      opts['--redirect-status-code'],
+      force
+    );
+  }
   // Scope the mutation to the linked project's team (like `domains ls`) so a
   // stale ambient team can't be targeted.
   const { contextName } = await getScope(client, { resolveLocalScope: true });
