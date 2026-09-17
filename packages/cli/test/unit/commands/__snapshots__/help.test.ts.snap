@@ -1791,6 +1791,52 @@ exports[`help command > dns help output snapshots > dns add help output snapshot
 "
 `;
 
+exports[`help command > dns help output snapshots > dns configure help 1`] = `
+"
+  ▲ vercel dns configure domain [options]
+
+  Add missing DNS records from a Resend domain response                                                                 
+
+  Options:
+
+       --dry-run          Preview missing records without changing DNS                                                  
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON                                                                                
+       --resend <FILE>    JSON file from Resend domains get (TXT, MX, and CNAME records)                                
+  -y,  --yes              Add the missing records without prompting                                                     
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Export a domain from the authenticated Resend CLI
+
+    $ resend domains get <ID> --json > resend-domain.json
+
+  - Preview DNS changes in a Vercel team
+
+    $ vercel dns configure example.com --resend resend-domain.json --scope my-team --dry-run
+
+  - Add missing records, preserving existing DNS
+
+    $ vercel dns configure example.com --resend resend-domain.json --scope my-team --yes --json
+
+"
+`;
+
 exports[`help command > dns help output snapshots > dns help column width 40 1`] = `
 "
   ▲ vercel dns [command]
@@ -1800,68 +1846,77 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
 
   Commands:
 
-  add      domain details   Add a
-                            new  
-                            DNS  
-                            entry
-                            (see 
-                            below
-                            for  
-                            exam…
-  import   domain zonefile  Impo…
-                            a DNS
-                            zone 
-                            file 
-                            (see 
-                            below
-                            for  
-                            exam…
-  inspect  id               Show 
-                            a DNS
-                            reco…
-                            in   
-                            full 
-                            using
-                            its  
-                            ID   
-  list     [domain]         List 
-                            DNS  
-                            entr…
-                            Pass 
-                            a    
-                            doma…
-                            to   
-                            list 
-                            its  
-                            reco…
-                            or   
-                            omit 
-                            the  
-                            argu…
-                            to   
-                            list 
-                            reco…
-                            acro…
-                            every
-                            doma…
-                            on   
-                            the  
-                            scope
-                            (def…
-  remove   id               Remo…
-                            a DNS
-                            entry
-                            using
-                            its  
-                            ID   
-  update   id               Upda…
-                            an   
-                            exis…
-                            DNS  
-                            reco…
-                            using
-                            its  
-                            ID   
+  add        domain details   Add a
+                              new  
+                              DNS  
+                              entry
+                              (see 
+                              below
+                              for  
+                              exam…
+  configure  domain           Add  
+                              miss…
+                              DNS  
+                              reco…
+                              from 
+                              a    
+                              Rese…
+                              doma…
+                              resp…
+  import     domain zonefile  Impo…
+                              a DNS
+                              zone 
+                              file 
+                              (see 
+                              below
+                              for  
+                              exam…
+  inspect    id               Show 
+                              a DNS
+                              reco…
+                              in   
+                              full 
+                              using
+                              its  
+                              ID   
+  list       [domain]         List 
+                              DNS  
+                              entr…
+                              Pass 
+                              a    
+                              doma…
+                              to   
+                              list 
+                              its  
+                              reco…
+                              or   
+                              omit 
+                              the  
+                              argu…
+                              to   
+                              list 
+                              reco…
+                              acro…
+                              every
+                              doma…
+                              on   
+                              the  
+                              scope
+                              (def…
+  remove     id               Remo…
+                              a DNS
+                              entry
+                              using
+                              its  
+                              ID   
+  update     id               Upda…
+                              an   
+                              exis…
+                              DNS  
+                              reco…
+                              using
+                              its  
+                              ID   
 
 
   Global Options:
@@ -1965,15 +2020,17 @@ exports[`help command > dns help output snapshots > dns help column width 80 1`]
 
   Commands:
 
-  add      domain details   Add a new DNS entry (see below for examples) 
-  import   domain zonefile  Import a DNS zone file (see below for        
-                            examples)                                    
-  inspect  id               Show a DNS record in full using its ID       
-  list     [domain]         List DNS entries. Pass a domain to list its  
-                            records, or omit the argument to list records
-                            across every domain on the scope (default)   
-  remove   id               Remove a DNS entry using its ID              
-  update   id               Update an existing DNS record using its ID   
+  add        domain details   Add a new DNS entry (see below for examples) 
+  configure  domain           Add missing DNS records from a Resend domain 
+                              response                                     
+  import     domain zonefile  Import a DNS zone file (see below for        
+                              examples)                                    
+  inspect    id               Show a DNS record in full using its ID       
+  list       [domain]         List DNS entries. Pass a domain to list its  
+                              records, or omit the argument to list records
+                              across every domain on the scope (default)   
+  remove     id               Remove a DNS entry using its ID              
+  update     id               Update an existing DNS record using its ID   
 
 
   Global Options:
@@ -2045,13 +2102,14 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
 
   Commands:
 
-  add      domain details   Add a new DNS entry (see below for examples)                                         
-  import   domain zonefile  Import a DNS zone file (see below for examples)                                      
-  inspect  id               Show a DNS record in full using its ID                                               
-  list     [domain]         List DNS entries. Pass a domain to list its records, or omit the argument to list    
-                            records across every domain on the scope (default)                                   
-  remove   id               Remove a DNS entry using its ID                                                      
-  update   id               Update an existing DNS record using its ID                                           
+  add        domain details   Add a new DNS entry (see below for examples)                                         
+  configure  domain           Add missing DNS records from a Resend domain response                                
+  import     domain zonefile  Import a DNS zone file (see below for examples)                                      
+  inspect    id               Show a DNS record in full using its ID                                               
+  list       [domain]         List DNS entries. Pass a domain to list its records, or omit the argument to list    
+                              records across every domain on the scope (default)                                   
+  remove     id               Remove a DNS entry using its ID                                                      
+  update     id               Update an existing DNS record using its ID                                           
 
 
   Global Options:
