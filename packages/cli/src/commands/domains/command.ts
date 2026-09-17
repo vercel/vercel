@@ -41,7 +41,7 @@ export const inspectSubcommand = {
 export const addSubcommand = {
   name: 'add',
   aliases: [],
-  description: 'Add a domain name that you already own to a Vercel Team',
+  description: 'Add a domain you own to a team or configure a project redirect',
   arguments: [
     {
       name: 'domain',
@@ -53,6 +53,22 @@ export const addSubcommand = {
     },
   ],
   options: [
+    {
+      name: 'redirect',
+      shorthand: null,
+      type: String,
+      argument: 'DOMAIN',
+      deprecated: false,
+      description: 'Redirect to a domain already on the selected project',
+    },
+    {
+      name: 'redirect-status-code',
+      shorthand: null,
+      type: String,
+      argument: 'CODE',
+      deprecated: false,
+      description: 'Redirect status: 301, 302, 307, or 308 (default: 307)',
+    },
     {
       ...forceOption,
       shorthand: null,
@@ -68,6 +84,10 @@ export const addSubcommand = {
         "Make sure the domain's DNS nameservers are at least 2 of the ones listed on https://vercel.com/edge-network",
         `NOTE: Running ${packageName} alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')`,
       ],
+    },
+    {
+      name: 'Add or update a project domain redirect (destination must already be on the project)',
+      value: `${packageName} domains add example.com my-project --redirect www.example.com --redirect-status-code 308`,
     },
   ],
 } as const;

@@ -2198,11 +2198,13 @@ exports[`help command > domains help output snapshots > domains add help output 
 "
   ▲ vercel domains add domain [project] [options]
 
-  Add a domain name that you already own to a Vercel Team                                                               
+  Add a domain you own to a team or configure a project redirect                                                        
 
   Options:
 
-   --force  Force a domain name for a project and remove it from an existing one                                         
+   --force                        Force a domain name for a project and remove it from an existing one                   
+   --redirect <DOMAIN>            Redirect to a domain already on the selected project                                   
+   --redirect-status-code <CODE>  Redirect status: 301, 302, 307, or 308 (default: 307)                                  
 
 
   Global Options:
@@ -2226,6 +2228,10 @@ exports[`help command > domains help output snapshots > domains add help output 
     $ vercel domains add domain-name.com
     $ Make sure the domain's DNS nameservers are at least 2 of the ones listed on https://vercel.com/edge-network
     $ NOTE: Running vercel alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')
+
+  - Add or update a project domain redirect (destination must already be on the project)
+
+    $ vercel domains add example.com my-project --redirect www.example.com --redirect-status-code 308
 
 "
 `;
@@ -2318,14 +2324,15 @@ exports[`help command > domains help output snapshots > domains help column widt
   add          domain [project]    Add 
                                    a   
                                    dom…
-                                   name
-                                   that
                                    you 
-                                   alr…
                                    own 
                                    to a
-                                   Ver…
-                                   Team
+                                   team
+                                   or  
+                                   con…
+                                   a   
+                                   pro…
+                                   red…
   buy          domain              Pur…
                                    a   
                                    new 
@@ -2490,8 +2497,8 @@ exports[`help command > domains help output snapshots > domains help column widt
 
   list                             Show all domains in a list (default)        
   inspect      domain              Displays information related to a domain    
-  add          domain [project]    Add a domain name that you already own to a 
-                                   Vercel Team                                 
+  add          domain [project]    Add a domain you own to a team or configure 
+                                   a project redirect                          
   buy          domain              Purchase a new domain name                  
   check        domain              Check if a domain is available to buy       
   move         domain destination  Move ownership of a domain name to another  
@@ -2553,7 +2560,7 @@ exports[`help command > domains help output snapshots > domains help column widt
 
   list                             Show all domains in a list (default)                                                
   inspect      domain              Displays information related to a domain                                            
-  add          domain [project]    Add a domain name that you already own to a Vercel Team                             
+  add          domain [project]    Add a domain you own to a team or configure a project redirect                      
   buy          domain              Purchase a new domain name                                                          
   check        domain              Check if a domain is available to buy                                               
   move         domain destination  Move ownership of a domain name to another Vercel Team                              
