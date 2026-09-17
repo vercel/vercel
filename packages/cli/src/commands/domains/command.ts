@@ -24,6 +24,49 @@ export const listSubcommand = {
   ],
 } as const;
 
+export const updateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description:
+    'Update DNS zone and Encrypted Client Hello settings for an apex domain',
+  arguments: [{ name: 'domain', required: true }],
+  options: [
+    {
+      name: 'zone',
+      shorthand: null,
+      type: String,
+      argument: 'true|false',
+      description: "Whether the domain intends to use Vercel's nameservers",
+      deprecated: false,
+    },
+    {
+      name: 'ech-mode',
+      shorthand: null,
+      type: String,
+      argument: 'auto|disabled',
+      description:
+        'Let Vercel manage Encrypted Client Hello enrollment, or opt out',
+      deprecated: false,
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Configure a domain to use Vercel DNS',
+      value: `${packageName} domains update example.com --zone true`,
+    },
+    {
+      name: 'Opt out of Encrypted Client Hello enrollment',
+      value: `${packageName} domains update example.com --ech-mode disabled`,
+    },
+    {
+      name: 'Update both settings and print JSON',
+      value: `${packageName} domains update example.com --zone true --ech-mode auto --json`,
+    },
+  ],
+} as const;
+
 export const inspectSubcommand = {
   name: 'inspect',
   aliases: [],
@@ -392,6 +435,7 @@ export const domainsCommand = {
   subcommands: [
     listSubcommand,
     inspectSubcommand,
+    updateSubcommand,
     addSubcommand,
     buySubcommand,
     checkSubcommand,

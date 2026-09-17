@@ -20,6 +20,10 @@ export class DomainsTelemetryClient
     });
   }
 
+  trackCliSubcommandUpdate(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'update', value: actual });
+  }
+
   trackCliSubcommandMove(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'move',

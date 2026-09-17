@@ -301,6 +301,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('domains update help output snapshots', () => {
+      it('domains update help column width 120', () => {
+        expect(
+          help(domains.updateSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
     describe('domains inspect help output snapshots', () => {
       it('domains inspect help column width 120', () => {
         expect(
