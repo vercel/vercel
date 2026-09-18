@@ -87,7 +87,7 @@ export async function collectDeploymentFiles(
     filesMap =
       clientOptions.archive === 'tgz'
         ? await createTgzFiles(workPath, fileList, debug)
-        : await hashes(fileList);
+        : await hashes(fileList, undefined, workPath);
   } catch (err: unknown) {
     if (
       clientOptions.prebuilt &&

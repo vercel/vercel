@@ -448,8 +448,13 @@ describe('manual deployment', () => {
         [provisionPath]
       );
 
-      // hashes should be called for the excluded provision.json
-      expect(mockHashes).toHaveBeenCalledWith([provisionPath]);
+      // hashes should be called for the excluded provision.json, with the
+      // deployment root so symlink targets are resolved against it
+      expect(mockHashes).toHaveBeenCalledWith(
+        [provisionPath],
+        undefined,
+        testPath
+      );
 
       // The request body should contain both the archive and provision.json
       const body = JSON.parse(mockFetch.mock.calls[0][2].body as string);

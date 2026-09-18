@@ -70,13 +70,17 @@ export async function* continueDeployment(options: {
     files = await createTgzFiles(options.path, fileList, debug, unbundledFiles);
     // Hash excluded files individually and merge them into the FilesMap
     if (unbundledFiles.length > 0) {
-      const individualFiles = await hashes(unbundledFiles);
+      const individualFiles = await hashes(
+        unbundledFiles,
+        undefined,
+        options.path
+      );
       for (const [sha, entry] of individualFiles) {
         files.set(sha, entry);
       }
     }
   } else {
-    files = await hashes(fileList);
+    files = await hashes(fileList, undefined, options.path);
   }
   debug(`Calculated ${files.size} unique hashes`);
   yield { type: 'hashes-calculated', payload: mapToObject(files) };
