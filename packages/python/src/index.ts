@@ -609,9 +609,11 @@ function getTargetPlatform(isDev: boolean): TargetPlatform {
 async function getPythonLambdaOptions({
   config,
   entrypoint,
+  isDev,
 }: {
   config: BuildOptions['config'];
   entrypoint: string;
+  isDev?: boolean;
 }) {
   if (!config?.functions) {
     return {};
@@ -632,6 +634,18 @@ async function getPythonLambdaOptions({
       // Python resolves the target wheel platform before the Lambda is created,
       // so the Lambda architecture must stay aligned with that build target.
       delete lambdaOptions.architecture;
+
+      if (isDev) {
+        // In `vercel dev`, the CLI's builder normalizer re-applies the
+        // matching `functions` config on top of the build output itself
+        // and throws if the builder already set these fields, so leave
+        // them for the CLI to apply instead of setting them here.
+        delete lambdaOptions.maxDuration;
+        delete lambdaOptions.memory;
+        delete lambdaOptions.affinity;
+        delete lambdaOptions.maxConcurrency;
+      }
+
       return lambdaOptions;
     }
   }
@@ -2002,6 +2016,7 @@ export const build: BuildVX = async ({
     const lambdaOptions = await getPythonLambdaOptions({
       config,
       entrypoint,
+      isDev: meta.isDev,
     });
 
     output = new Lambda({

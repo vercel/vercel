@@ -2641,7 +2641,7 @@ describe('fastapi entrypoint discovery - positive cases', () => {
       workPath,
       files,
       entrypoint: '<detect>',
-      meta: { isDev: true },
+      meta: { isDev: false },
       config: {
         framework: 'fastapi',
         functions: {
@@ -2657,6 +2657,50 @@ describe('fastapi entrypoint discovery - positive cases', () => {
     const lambda = getBuildOutputV2Lambda(result) as any;
     expect(lambda.memory).toBe(512);
     expect(lambda.maxDuration).toBe(30);
+
+    fs.removeSync(workPath);
+  });
+
+  it('does not apply maxDuration/memory from functions config in dev mode', async () => {
+    // `vercel dev`'s CLI-side builder normalizer (packages/cli/src/util/dev/builder.ts)
+    // re-applies the matching `functions` config to the build output itself and
+    // throws if the builder's result already contains `maxDuration`/`memory`, so
+    // the Python builder must leave those fields unset when `meta.isDev` is true.
+    // See https://github.com/vercel/vercel/issues/17620
+    const workPath = path.join(
+      tmpdir(),
+      `python-fastapi-functions-config-dev-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'app/main.py': new FileBlob({
+        data: 'from fastapi import FastAPI\napp = FastAPI()\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, workPath);
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: '<detect>',
+      meta: { isDev: true },
+      config: {
+        framework: 'fastapi',
+        functions: {
+          'app/main.py': {
+            memory: 512,
+            maxDuration: 30,
+          },
+        },
+      },
+      repoRootPath: workPath,
+    });
+
+    const lambda = getBuildOutputV2Lambda(result) as any;
+    expect(lambda.memory).toBeUndefined();
+    expect(lambda.maxDuration).toBeUndefined();
 
     fs.removeSync(workPath);
   });
