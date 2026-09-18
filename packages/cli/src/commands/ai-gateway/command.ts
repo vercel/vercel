@@ -328,8 +328,7 @@ export const rulesSubcommand = {
 export const setupSubcommand = {
   name: 'setup',
   aliases: [],
-  description:
-    'Connect local coding agents (Claude Code, Codex, OpenCode, Pi) to the AI Gateway',
+  description: 'Connect local coding agents to the AI Gateway',
   arguments: [],
   options: [
     {
@@ -339,7 +338,7 @@ export const setupSubcommand = {
       argument: 'NAME',
       deprecated: false,
       description:
-        'Coding agent to configure, repeatable (claude-code, codex, opencode, pi)',
+        'Configure a coding agent; repeat to configure more than one',
     },
     {
       name: 'all',

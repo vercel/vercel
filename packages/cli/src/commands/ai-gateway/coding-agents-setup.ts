@@ -437,14 +437,8 @@ export default async function codingAgentsSetup(
       }
     }
   }
-  if (
-    baseUrl &&
-    !machine &&
-    !agents.some(a => a.id === 'codex' || a.id === 'claude-code')
-  ) {
-    printWarning(
-      '--base-url has no effect for the selected agents; only Claude Code and Codex write a gateway base URL.'
-    );
+  if (baseUrl && !machine && !agents.some(a => a.honorsBaseUrl)) {
+    printWarning('--base-url has no effect for the selected agents.');
   }
 
   const previewPlan = await buildSetupPlan(
