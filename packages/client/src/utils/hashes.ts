@@ -1,6 +1,8 @@
 import { createHash } from 'crypto';
 import fs from 'fs-extra';
 import { Sema } from 'async-sema';
+import { normalizePath } from '@vercel/build-utils';
+import { dirname, isAbsolute, relative, resolve } from 'node:path';
 
 export interface DeploymentFile {
   names: string[];
@@ -60,15 +62,57 @@ export const mapToObject = (map: FilesMap): Record<string, DeploymentFile> => {
 };
 
 /**
+ * Rewrites a symlink target into the form the deployment needs. Two Windows
+ * shapes would otherwise be stored verbatim and dangle on the Linux runtime:
+ *
+ * 1. Absolute targets. Windows falls back to a junction whenever it cannot
+ *    create a directory symlink, and a junction always records an absolute
+ *    target (`D:\repo\node_modules\...`). Next.js relies on one for
+ *    `.next/node_modules/<pkg>-<hash>`, the link that makes a
+ *    `serverExternalPackages` entry resolvable inside the lambda. Re-expressing
+ *    it relative to the link reproduces exactly what a Linux build emits.
+ * 2. Backslash separators in relative targets (pnpm's `node_modules` links, the
+ *    `.func` links under `.vercel/output`). The deployment filesystem is POSIX,
+ *    so `a\b` would arrive as one filename rather than two path segments.
+ *
+ * Targets resolving outside `workPath` are left alone; they are not uploaded.
+ *
+ * @param linkPath - absolute path of the symlink itself
+ * @param target - raw `fs.readlink()` result, not yet normalized
+ * @param workPath - deployment root; without it only separators are fixed
+ */
+export function normalizeSymlinkTarget(
+  linkPath: string,
+  target: string,
+  workPath?: string
+): string {
+  let normalized = target;
+
+  if (workPath && isAbsolute(normalized)) {
+    const absoluteTarget = resolve(dirname(linkPath), normalized);
+    const fromRoot = relative(workPath, absoluteTarget);
+    const insideRoot =
+      fromRoot !== '' && !fromRoot.startsWith('..') && !isAbsolute(fromRoot);
+    if (insideRoot) {
+      normalized = relative(dirname(linkPath), absoluteTarget);
+    }
+  }
+
+  return normalizePath(normalized);
+}
+
+/**
  * Computes hashes for the contents of each file given.
  *
  * @param files - absolute file paths
  * @param map - optional map of files to append
+ * @param workPath - absolute deployment root, used to normalize symlink targets
  * @return Map of hash digest to file object
  */
 export async function hashes(
   files: string[],
-  map = new Map<string | undefined, DeploymentFile>()
+  map = new Map<string | undefined, DeploymentFile>(),
+  workPath?: string
 ): Promise<FilesMap> {
   const semaphore = new Sema(100);
 
@@ -87,7 +131,11 @@ export async function hashes(
 
       if (!isDirectory) {
         if (stat.isSymbolicLink()) {
-          const link = await fs.readlink(name);
+          const link = normalizeSymlinkTarget(
+            name,
+            await fs.readlink(name),
+            workPath
+          );
           data = Buffer.from(link, 'utf8');
           size = data.length;
           h = hash(data);

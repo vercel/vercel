@@ -1,12 +1,18 @@
 import { createHash } from 'crypto';
 import { tmpdir } from 'os';
-import { join } from 'path';
+import { join, sep } from 'path';
 import fs from 'fs-extra';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { hashes } from '../src/utils/hashes';
+import { hashes, normalizeSymlinkTarget } from '../src/utils/hashes';
 
 const sha1 = (buf: Buffer) =>
   createHash('sha1').update(Uint8Array.from(buf)).digest('hex');
+
+// `join()` yields a host-absolute path on both POSIX and Windows, so these
+// cases exercise the absolute-target branch on either platform. The separator
+// branch is Windows-only by construction (a backslash is a legal filename
+// character on POSIX) and cannot be asserted from a POSIX CI runner.
+const toPosix = (p: string) => p.split(sep).join('/');
 
 describe('hashes()', () => {
   afterEach(() => {
@@ -56,6 +62,66 @@ describe('hashes()', () => {
       expect(readFileSpy).not.toHaveBeenCalled();
     } finally {
       await fs.remove(file);
+    }
+  });
+});
+
+describe('normalizeSymlinkTarget()', () => {
+  const workPath = join(tmpdir(), 'vercel-client-norm');
+  const linkPath = join(workPath, 'nested', 'link');
+
+  it('rewrites an absolute target inside workPath as relative to the link', () => {
+    // A Windows junction always records an absolute target; stored verbatim it
+    // would point at the build machine's filesystem from inside the lambda.
+    const target = join(workPath, 'pkg', 'real');
+    expect(normalizeSymlinkTarget(linkPath, target, workPath)).toBe(
+      '../pkg/real'
+    );
+  });
+
+  it('leaves an absolute target outside workPath alone', () => {
+    // Not part of the upload, so there is no correct relative form for it.
+    const target = join(tmpdir(), 'somewhere-else', 'real');
+    expect(normalizeSymlinkTarget(linkPath, target, workPath)).toBe(
+      toPosix(target)
+    );
+  });
+
+  it('leaves an absolute target alone when no workPath is known', () => {
+    const target = join(workPath, 'pkg', 'real');
+    expect(normalizeSymlinkTarget(linkPath, target)).toBe(toPosix(target));
+  });
+
+  it('preserves a relative target', () => {
+    expect(normalizeSymlinkTarget(linkPath, '../pkg/real', workPath)).toBe(
+      '../pkg/real'
+    );
+  });
+});
+
+describe('hashes() symlinks', () => {
+  it('stores an absolute symlink target relative to the link', async () => {
+    const workPath = await fs.mkdtemp(join(tmpdir(), 'vercel-client-link-'));
+    const real = join(workPath, 'pkg', 'real.txt');
+    const link = join(workPath, 'nested', 'link.txt');
+    await fs.outputFile(real, 'content');
+    await fs.ensureDir(join(workPath, 'nested'));
+
+    try {
+      await fs.symlink(real, link);
+    } catch (err) {
+      // Creating a symlink on Windows needs elevation or Developer Mode.
+      await fs.remove(workPath);
+      if ((err as NodeJS.ErrnoException).code === 'EPERM') return;
+      throw err;
+    }
+
+    try {
+      const map = await hashes([link], undefined, workPath);
+      const stored = [...map.values()][0].data?.toString('utf8');
+      expect(stored).toBe('../pkg/real.txt');
+    } finally {
+      await fs.remove(workPath);
     }
   });
 });
