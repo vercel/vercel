@@ -118,6 +118,9 @@ function claudeSettingsPath() {
 function codexConfigPath() {
   return join(home, '.codex', 'config.toml');
 }
+function commandCodeProvidersPath() {
+  return join(home, '.commandcode', 'providers.json');
+}
 function bashrcPath() {
   // Mirror detectShellRc: macOS bash login shells read ~/.bash_profile.
   return join(
@@ -175,10 +178,15 @@ afterEach(() => {
 
 describe('ai-gateway coding-agents setup', () => {
   describe('--help', () => {
-    it('returns exit code 2', async () => {
+    it('describes agent selection without a stale support list', async () => {
       client.setArgv('ai-gateway', 'coding-agents', 'setup', '--help');
       const exitCode = await aiGateway(client);
       expect(exitCode).toBe(2);
+      const output = client.stderr.getFullOutput();
+      expect(output).toContain('Connect local coding agents to the AI Gateway');
+      expect(output).toContain('Configure a coding agent; repeat to configure');
+      expect(output).toContain('more than one');
+      expect(output).not.toContain('Claude Code, Codex, OpenCode, Pi');
     });
   });
 
@@ -477,6 +485,62 @@ describe('ai-gateway coding-agents setup', () => {
       expect(config.lastUsedProvider).toBe('vercel-ai-gateway');
     });
 
+    it.skipIf(process.platform === 'win32')(
+      'configures Command Code through BYOK and preserves existing providers',
+      async () => {
+        useUser();
+        client.nonInteractive = true;
+        mkdirSync(join(home, '.commandcode'), { recursive: true });
+        writeFileSync(
+          commandCodeProvidersPath(),
+          JSON.stringify(
+            {
+              provider: {
+                work: {
+                  name: 'Work models',
+                  baseURL: 'https://models.example.com/v1',
+                  apiKey: '$WORK_API_KEY',
+                  models: { 'example/chat': {} },
+                },
+              },
+            },
+            null,
+            2
+          ),
+          'utf8'
+        );
+        client.setArgv(
+          'ai-gateway',
+          'coding-agents',
+          'setup',
+          '--key',
+          'vck_DummyKeyCommandCode',
+          '--agent',
+          'command-code'
+        );
+
+        expect(await aiGateway(client)).toBe(0);
+
+        const raw = readFileSync(commandCodeProvidersPath(), 'utf8');
+        const config = JSON.parse(raw);
+        expect(config.provider.work.models['example/chat']).toEqual({});
+        expect(config.provider.vercel).toMatchObject({
+          name: 'Vercel AI Gateway',
+          baseURL: 'https://ai-gateway.vercel.sh/coding-agent/v1',
+          apiKey: '$AI_GATEWAY_API_KEY',
+        });
+        expect(
+          config.provider.vercel.models['anthropic/claude-fable-5']
+        ).toEqual({});
+        expect(raw).not.toContain('vck_DummyKeyCommandCode');
+
+        const bashrc = readFileSync(bashrcPath(), 'utf8');
+        expect(bashrc).toContain(
+          "export AI_GATEWAY_API_KEY='vck_DummyKeyCommandCode'"
+        );
+      }
+    );
+
     it('configures Hermes via config.yaml with key_env, preserving existing entries', async () => {
       useUser();
       client.nonInteractive = true;
@@ -569,6 +633,37 @@ describe('ai-gateway coding-agents setup', () => {
         'https://preview.ai-gateway.vercel.sh/v1'
       );
     });
+
+    it.skipIf(process.platform === 'win32')(
+      'writes a --base-url override into Command Code without warning',
+      async () => {
+        useUser();
+        client.setArgv(
+          'ai-gateway',
+          'coding-agents',
+          'setup',
+          '--key',
+          'vck_DummyKeyCommandCode',
+          '--agent',
+          'command-code',
+          '--base-url',
+          'https://preview.ai-gateway.vercel.sh/coding-agent/v1',
+          '--yes'
+        );
+
+        expect(await aiGateway(client)).toBe(0);
+        const config = JSON.parse(
+          readFileSync(commandCodeProvidersPath(), 'utf8')
+        );
+        expect(config.provider.vercel.baseURL).toBe(
+          'https://preview.ai-gateway.vercel.sh/coding-agent/v1'
+        );
+        expect(statSync(commandCodeProvidersPath()).mode & 0o777).toBe(0o600);
+        expect(client.stderr.getFullOutput()).not.toContain(
+          '--base-url has no effect'
+        );
+      }
+    );
 
     it('writes a --base-url override verbatim into Claude Code settings', async () => {
       useUser();

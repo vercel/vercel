@@ -69,6 +69,8 @@ export interface CodingAgent {
   id: string;
   displayName: string;
   experimental?: boolean;
+  /** Whether `--base-url` changes this agent's setup plan or guidance. */
+  honorsBaseUrl?: boolean;
   detect(home: string): Promise<boolean>;
   configPath(ctx: SetupContext): string;
   buildPlan(ctx: SetupContext): AgentPlan;

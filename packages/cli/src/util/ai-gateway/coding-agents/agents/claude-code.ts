@@ -29,6 +29,7 @@ function claudeDir(home: string): string {
 export const claudeCode: CodingAgent = {
   id: 'claude-code',
   displayName: 'Claude Code',
+  honorsBaseUrl: true,
   sessionMigration: {
     plan: ({ home }) => planClaudeDesktopSessionMigration(home),
   },

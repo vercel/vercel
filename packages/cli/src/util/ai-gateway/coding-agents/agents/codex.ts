@@ -29,6 +29,7 @@ function codexDir(home: string): string {
 export const codex: CodingAgent = {
   id: 'codex',
   displayName: 'Codex',
+  honorsBaseUrl: true,
   sessionMigration: { plan: ({ home }) => planCodexSessionMigration(home) },
 
   async detect(home) {

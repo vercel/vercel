@@ -26,6 +26,7 @@ function asObject(value: unknown): YamlObject {
 export const hermes: CodingAgent = {
   id: 'hermes',
   displayName: 'Hermes',
+  honorsBaseUrl: true,
 
   async detect(home) {
     return pathExists(join(home, '.hermes'));
