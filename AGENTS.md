@@ -174,3 +174,14 @@ This runs your local CLI build against any project without needing to install it
 2. **Don't skip CI hooks** - Lint and type checks run in pre-commit
 3. **Don't forget type-check** - Run `pnpm type-check` before pushing
 4. **Don't modify examples for testing** - They're used for integration tests
+
+## Cursor Cloud specific instructions
+
+Dependency installation is handled automatically by the environment update script; the notes below are durable runtime caveats for Cloud Agents. This repo installs and runs fully in the Cloud VM (all packages are public — no npm token needed).
+
+- **Node version**: Node 22 (`.nvmrc`). Cloud VMs manage Node with `nvm`, and a `/exec-daemon/node` shim precedes `nvm` on `PATH`. Prepend the desired version explicitly before running `node`/`pnpm`, e.g. `export PATH="$HOME/.nvm/versions/node/$(nvm version 22)/bin:$PATH"`.
+- **pnpm via corepack**: the pnpm version is pinned in `packageManager`. In non-interactive shells set `COREPACK_ENABLE_DOWNLOAD_PROMPT=0` so corepack fetches pnpm without prompting.
+- **Build before tests**: every turbo test task `dependsOn build`, so run `pnpm build` once after install before `pnpm test-unit` or per-package tests. `pnpm build` also compiles the Rust crate for `@vercel/python-analysis` (cargo is available); the first build downloads crates.
+- **Fast smoke test**: `cd packages/error-utils && pnpm test` (self-contained, no `workspace:*` deps).
+- **Running the CLI**: after `pnpm build`, run `node packages/cli/dist/vc.js --version` / `--help`, and `node packages/cli/dist/vc.js init <example> <name>` to scaffold a project offline. Auth-dependent commands (`vc build`, `vc deploy`) need a valid `VERCEL_TOKEN`; the injected token may be stale, so `env -u VERCEL_TOKEN` avoids a "token is not valid" error on offline commands.
+- e2e/integration tests deploy to a live Vercel account and need real credentials — not runnable in a sandbox; stick to unit tests.
