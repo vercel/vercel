@@ -509,8 +509,23 @@ class VisibilityExtender:
                                 "error": repr(exc),
                             },
                         )
-                    # Fail fast; we'll rely on the current visibility timeout.
-                    return
+                    if isinstance(
+                        exc,
+                        (
+                            MessageNotAvailableError,
+                            MessageNotFoundError,
+                            UnauthorizedError,
+                        ),
+                    ):
+                        # Terminal: the lease is gone (409 expired / handle mismatch,
+                        # 404) or we're not authorized (401) — the receipt handle can
+                        # never be renewed, so stop; the message is already (being)
+                        # redelivered elsewhere.
+                        return
+                    # Transient (network, timeout, 5xx, throttle): the lease is likely
+                    # still alive, so keep trying on the next tick rather than risking
+                    # premature redelivery. The self._stop.wait() above is the backoff.
+                    continue
 
 
 __all__ = [
