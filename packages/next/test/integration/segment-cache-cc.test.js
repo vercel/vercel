@@ -7,6 +7,7 @@ const {
   createRunBuildLambda,
 } = require('../../../../test/lib/run-build-lambda');
 
+process.env.NEXT_ENABLE_ADAPTER = '1';
 const runBuildLambda = createRunBuildLambda(builder);
 
 describe('clientSegmentCache prerender headers', () => {
