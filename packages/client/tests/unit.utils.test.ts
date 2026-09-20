@@ -1,12 +1,14 @@
 import { join, resolve } from 'path';
 import fs from 'fs-extra';
+import { MockAgent } from 'undici';
 import {
   buildFileTree,
+  fetchApi,
   prepareFiles,
   shouldInlineStaticFiles,
 } from '../src/utils';
 import type { FilesMap } from '../src/utils/hashes';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const fixture = (name: string) => resolve(__dirname, 'fixtures', name);
 const noop = () => {};
@@ -544,5 +546,45 @@ describe('buildFileTree()', () => {
       )[0];
       expect(normalized).toContain(expected);
     });
+  });
+});
+
+describe('fetchApi()', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('routes requests through the bundled undici fetch when a dispatcher is provided, not the native fetch', async () => {
+    const mockAgent = new MockAgent();
+    mockAgent.disableNetConnect();
+    mockAgent
+      .get('https://api.vercel.com')
+      .intercept({ path: '/v2/now/deployments', method: 'GET' })
+      .reply(200, { ok: true });
+
+    const nativeFetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    const res = await fetchApi('/v2/now/deployments', 'token', {
+      dispatcher: mockAgent,
+    });
+
+    expect(res.status).toBe(200);
+    // A configured dispatcher (e.g. the CLI's proxy-aware
+    // `EnvProxyDispatcher`) must never be handed to the runtime's native
+    // `fetch`, since its handler shape may not match the undici major
+    // version embedded by that particular Node release. See
+    // vercel/vercel#17629 and vercel/vercel#17634.
+    expect(nativeFetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('uses the native fetch when no dispatcher is provided', async () => {
+    const nativeFetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(JSON.stringify({ ok: true })));
+
+    const res = await fetchApi('/v2/now/deployments', 'token');
+
+    expect(res.status).toBe(200);
+    expect(nativeFetchSpy).toHaveBeenCalledOnce();
   });
 });
