@@ -1,6 +1,6 @@
 import { Readable } from 'node:stream';
 import type { ReadableStream } from 'node:stream/web';
-import type { Dispatcher } from 'undici';
+import { fetch as undiciFetch, type Dispatcher } from 'undici';
 
 type NativeRequestInit = NonNullable<Parameters<typeof globalThis.fetch>[1]>;
 type NativeResponse = InstanceType<typeof globalThis.Response>;
@@ -71,6 +71,29 @@ export default function fetch(
 
   if (init?.body instanceof Readable) {
     options.duplex = 'half';
+  }
+
+  if (fetchDispatcher) {
+    // A custom dispatcher is configured (e.g. `EnvProxyDispatcher`, used for
+    // `HTTP_PROXY`/`HTTPS_PROXY` support). Issue the request through the
+    // CLI's *bundled* `undici` package's own `fetch()` instead of the
+    // runtime's native `globalThis.fetch`.
+    //
+    // Node's native fetch is backed by whichever `undici` major version
+    // ships internally with that Node release, and the shape of the
+    // dispatcher/handler objects it passes around is not a stable,
+    // cross-version public API. Handing it a dispatcher built from a
+    // *different* undici major than the one powering `globalThis.fetch` can
+    // throw (e.g. Node 26 embeds undici 8, which removed the legacy handler
+    // wrappers that undici 5 -- the version the CLI bundles -- relies on,
+    // causing `TypeError: fetch failed` / `UND_ERR_INVALID_ARG`). Using the
+    // bundled undici's own `fetch` guarantees the dispatcher and the fetch
+    // implementation always agree on the handler shape, regardless of the
+    // Node version the CLI runs on. See vercel/vercel#17629.
+    return undiciFetch(
+      input as any,
+      options as any
+    ) as unknown as Promise<Response>;
   }
 
   return globalThis.fetch(
