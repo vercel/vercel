@@ -3,10 +3,29 @@ import { packageName } from '../../util/pkg-name';
 
 export const contractCommand = {
   name: 'contract',
-  aliases: [],
+  aliases: ['billing'],
   description: 'Show contract information for all billing periods',
   arguments: [],
-  options: [formatOption, jsonOption],
+  options: [
+    formatOption,
+    jsonOption,
+    {
+      name: 'installation-id',
+      shorthand: null,
+      type: String,
+      argument: 'ID',
+      description: 'Marketplace installation id for payment-method commands',
+      deprecated: false,
+    },
+    {
+      name: 'payment-method-id',
+      shorthand: null,
+      type: String,
+      argument: 'ID',
+      description: 'Payment method id for payment-method commands',
+      deprecated: false,
+    },
+  ],
   examples: [
     {
       name: 'Show contract information for all billing periods',
