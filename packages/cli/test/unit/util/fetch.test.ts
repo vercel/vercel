@@ -76,6 +76,27 @@ describe('native fetch', () => {
     expect(responseBody).toBe('native fetch');
   });
 
+  it('routes requests through the bundled undici fetch when a dispatcher is configured, not the native fetch', async () => {
+    const mockAgent = new MockAgent();
+    mockAgent.disableNetConnect();
+    mockAgent
+      .get('http://example.test')
+      .intercept({ path: '/', method: 'GET' })
+      .reply(200, 'via bundled undici');
+    setFetchDispatcher(mockAgent);
+    destroyDispatcher = () => mockAgent.close();
+
+    const nativeFetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    const response = await fetch('http://example.test/');
+
+    expect(await response.text()).toBe('via bundled undici');
+    // A configured dispatcher must never be handed to the runtime's native
+    // `fetch`, since its handler shape may not match the undici major
+    // version embedded by that particular Node release (vercel/vercel#17629).
+    expect(nativeFetchSpy).not.toHaveBeenCalled();
+  });
+
   it('does not apply a configured dispatcher to direct requests', async () => {
     const proxyDispatcher = trackedDispatcher('proxy', []);
     setFetchDispatcher(proxyDispatcher);
