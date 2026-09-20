@@ -135,6 +135,7 @@ export type RouteWithSrc = {
    */
   middleware?: number;
   respectOriginCacheControl?: boolean;
+  allowedFunctionRegions?: string[];
 };
 
 export type RouteWithHandle = {
@@ -186,6 +187,7 @@ export interface Rewrite {
   statusCode?: number;
   env?: string[];
   respectOriginCacheControl?: boolean;
+  allowedFunctionRegions?: string[];
 }
 
 export interface Redirect {
