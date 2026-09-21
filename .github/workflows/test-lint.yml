@@ -57,6 +57,10 @@ jobs:
           targets: wasm32-wasip2
       - name: install pnpm@10.29.3
         run: npm i -g pnpm@10.29.3
+      - name: install uv@0.10.11
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          version: '0.10.11'
       - run: pnpm install
       - name: Biome lint
         run: pnpm run lint
