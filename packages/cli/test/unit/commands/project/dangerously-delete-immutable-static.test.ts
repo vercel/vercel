@@ -1,5 +1,5 @@
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
-import cache from '../../../../src/commands/cache';
+import project from '../../../../src/commands/project';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { defaultProject, useProject } from '../../../mocks/project';
@@ -8,7 +8,7 @@ import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import { basename, join } from 'path';
 import { outputFile } from 'fs-extra';
 
-describe('cache dangerously-delete-immutable-static', () => {
+describe('project dangerously-delete-immutable-static', () => {
   const assetPath = '_next/static/immutable/chunks/example.js';
   let projectId = 'wat';
   afterEach(() => {
@@ -35,8 +35,8 @@ describe('cache dangerously-delete-immutable-static', () => {
   });
 
   it('should error without a path argument', async () => {
-    client.setArgv('cache', 'dangerously-delete-immutable-static');
-    const exitCode = await cache(client);
+    client.setArgv('project', 'dangerously-delete-immutable-static');
+    const exitCode = await project(client);
     expect(exitCode).toEqual(1);
     await expect(client.stderr).toOutput('Missing required argument');
   });
@@ -52,8 +52,8 @@ describe('cache dangerously-delete-immutable-static', () => {
         res.end();
       }
     );
-    client.setArgv('cache', 'dangerously-delete-immutable-static', assetPath);
-    const exitCodePromise = cache(client);
+    client.setArgv('project', 'dangerously-delete-immutable-static', assetPath);
+    const exitCodePromise = project(client);
 
     await expect(client.stderr).toOutput(
       `Deleting immutable static asset ${assetPath} for project ${projectId} permanently removes it from storage`
@@ -84,8 +84,8 @@ describe('cache dangerously-delete-immutable-static', () => {
         res.end();
       }
     );
-    client.setArgv('cache', 'dangerously-delete-immutable-static', assetPath);
-    const exitCodePromise = cache(client);
+    client.setArgv('project', 'dangerously-delete-immutable-static', assetPath);
+    const exitCodePromise = project(client);
 
     await expect(client.stderr).toOutput(`Type ${assetPath}`);
     client.stdin.write('_next/static/immutable/chunks/other.js\n');
@@ -100,9 +100,9 @@ describe('cache dangerously-delete-immutable-static', () => {
       throw new Error(`exit:${code ?? 0}`);
     }) as () => never);
     client.nonInteractive = true;
-    client.setArgv('cache', 'dangerously-delete-immutable-static', assetPath);
+    client.setArgv('project', 'dangerously-delete-immutable-static', assetPath);
 
-    await expect(cache(client)).rejects.toThrow('exit:1');
+    await expect(project(client)).rejects.toThrow('exit:1');
     const payload = JSON.parse(client.stdout.getFullOutput().trim());
     expect(payload.status).toBe('action_required');
   });

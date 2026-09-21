@@ -1,4 +1,5 @@
 import { packageName } from '../../util/pkg-name';
+import { projectOption } from '../../util/arg-common';
 import {
   formatOption,
   jsonOption,
@@ -869,6 +870,26 @@ export const observabilitySubcommand = {
   ],
 } as const;
 
+export const dangerouslyDeleteImmutableStaticSubcommand = {
+  name: 'dangerously-delete-immutable-static',
+  aliases: [],
+  description:
+    'Permanently delete an immutable static asset from storage (cannot be undone; its URL serves 410 for 7 days, then 404)',
+  arguments: [
+    {
+      name: 'path',
+      required: true,
+    },
+  ],
+  options: [projectOption],
+  examples: [
+    {
+      name: 'Permanently delete an immutable static asset from storage',
+      value: `${packageName} project dangerously-delete-immutable-static _next/static/immutable/chunks/example.js`,
+    },
+  ],
+} as const;
+
 export const projectCommand = {
   name: 'project',
   aliases: ['projects'],
@@ -892,6 +913,7 @@ export const projectCommand = {
     renameSubcommand,
     removeSubcommand,
     tokenSubcommand,
+    dangerouslyDeleteImmutableStaticSubcommand,
   ],
   options: [],
   examples: [

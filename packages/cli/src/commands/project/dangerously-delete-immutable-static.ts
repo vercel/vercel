@@ -7,7 +7,7 @@ import output from '../../output-manager';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import { emoji, prependEmoji } from '../../util/emoji';
-import { CacheDangerouslyDeleteImmutableStaticTelemetryClient } from '../../util/telemetry/commands/cache/dangerously-delete-immutable-static';
+import { CacheDangerouslyDeleteImmutableStaticTelemetryClient } from '../../util/telemetry/commands/project/dangerously-delete-immutable-static';
 import { isAPIError } from '../../util/errors-ts';
 import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import { outputActionRequired } from '../../util/agent-output';
@@ -42,7 +42,7 @@ export default async function dangerouslyDeleteImmutableStatic(
   const [path] = parsedArgs.args;
   if (!path) {
     output.error(
-      `Missing required argument. Usage: ${getCommandName('cache dangerously-delete-immutable-static <path>')}`
+      `Missing required argument. Usage: ${getCommandName('project dangerously-delete-immutable-static <path>')}`
     );
     return 1;
   }
@@ -56,7 +56,7 @@ export default async function dangerouslyDeleteImmutableStatic(
       flag => flag !== '--non-interactive'
     );
     const interactiveCommand = getCommandNamePlain(
-      `cache dangerously-delete-immutable-static ${path} ${globalFlags.join(' ')}`.trim()
+      `project dangerously-delete-immutable-static ${path} ${globalFlags.join(' ')}`.trim()
     );
     outputActionRequired(
       client,

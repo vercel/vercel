@@ -143,6 +143,13 @@ export class ProjectTelemetryClient
     });
   }
 
+  trackCliSubcommandDangerouslyDeleteImmutableStatic(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'dangerously-delete-immutable-static',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandObservability(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'observability',

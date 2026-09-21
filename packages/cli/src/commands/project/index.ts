@@ -13,6 +13,7 @@ import accessGroups from './access-groups';
 import rename from './rename';
 import update from './update';
 import rm from './rm';
+import dangerouslyDeleteImmutableStatic from './dangerously-delete-immutable-static';
 import pause from './pause';
 import resume from './resume';
 import getOidcToken from './token';
@@ -29,6 +30,7 @@ import {
   listSubcommand,
   membersSubcommand,
   pauseSubcommand,
+  dangerouslyDeleteImmutableStaticSubcommand,
   projectCommand,
   protectionSubcommand,
   renameSubcommand,
@@ -65,6 +67,9 @@ const COMMAND_CONFIG = {
   speedInsights: getCommandAliases(speedInsightsSubcommand),
   webAnalytics: getCommandAliases(webAnalyticsSubcommand),
   pause: getCommandAliases(pauseSubcommand),
+  'dangerously-delete-immutable-static': getCommandAliases(
+    dangerouslyDeleteImmutableStaticSubcommand
+  ),
   observability: getCommandAliases(observabilitySubcommand),
   resume: getCommandAliases(resumeSubcommand),
 };
@@ -231,6 +236,16 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandPause(subcommandOriginal);
       exitCode = await pause(client, args);
+      break;
+    case 'dangerously-delete-immutable-static':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(dangerouslyDeleteImmutableStaticSubcommand);
+      }
+      telemetry.trackCliSubcommandDangerouslyDeleteImmutableStatic(
+        subcommandOriginal
+      );
+      exitCode = await dangerouslyDeleteImmutableStatic(client, args);
       break;
     case 'observability':
       if (needHelp) {
