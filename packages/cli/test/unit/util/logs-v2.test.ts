@@ -50,6 +50,57 @@ describe('logs-v2 utility', () => {
   });
 
   describe('fetchRequestLogs', () => {
+    it('paginates app logs through the configured API with filters and explicit team scope', async () => {
+      client.config.currentTeam = 'team_stale';
+      const pages: number[] = [];
+      client.scenario.get('/v1/projects/prj_test/request-logs', (req, res) => {
+        expect(req.query).toMatchObject({
+          projectId: 'prj_test',
+          ownerId: 'team_test',
+          teamId: 'team_test',
+          deploymentId: 'dpl_test123',
+          environment: 'production',
+          level: 'error,warning',
+          statusCode: '5xx',
+          source: 'serverless,edge-function',
+          startDate: String(Date.parse('2026-09-21T09:00:00Z')),
+          endDate: String(Date.parse('2026-09-21T10:00:00Z')),
+          search: 'failed request',
+          requestId: 'req_test',
+          branch: 'main',
+        });
+        const page = Number(req.query.page);
+        pages.push(page);
+        res.json({
+          rows: [createMockApiLog({ requestId: `log_${page}` })],
+          hasMoreRows: page === 0,
+        });
+      });
+
+      const logs: RequestLogEntry[] = [];
+      for await (const log of fetchAllRequestLogs(client, {
+        projectId: 'prj_test',
+        ownerId: 'team_test',
+        isAppPrincipal: true,
+        deploymentId: 'dpl_test123',
+        environment: 'production',
+        level: ['error', 'warning'],
+        statusCode: '5xx',
+        source: ['serverless', 'edge-function'],
+        since: '2026-09-21T09:00:00Z',
+        until: '2026-09-21T10:00:00Z',
+        search: 'failed request',
+        requestId: 'req_test',
+        branch: 'main',
+        limit: 2,
+      })) {
+        logs.push(log);
+      }
+
+      expect(pages).toEqual([0, 1]);
+      expect(logs.map(log => log.id)).toEqual(['log_0', 'log_1']);
+    });
+
     it('should fetch logs with projectId and ownerId', async () => {
       const mockLogs = [createMockApiLog()];
       client.scenario.get('/api/logs/request-logs', (req, res) => {

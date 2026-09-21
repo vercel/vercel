@@ -652,9 +652,12 @@ export default async function logs(client: Client) {
   }
 
   let contextName: string;
+  let isAppPrincipal: boolean;
 
   try {
-    ({ contextName } = await getScope(client));
+    const scope = await getScope(client);
+    contextName = scope.contextName;
+    isAppPrincipal = !scope.user && Boolean(scope.app);
   } catch (err: unknown) {
     if (
       isErrnoException(err) &&
@@ -784,6 +787,7 @@ export default async function logs(client: Client) {
     for await (const log of fetchAllRequestLogs(client, {
       projectId,
       ownerId,
+      isAppPrincipal,
       deploymentId,
       environment: environmentOption,
       level: levels.length > 0 ? levels : undefined,

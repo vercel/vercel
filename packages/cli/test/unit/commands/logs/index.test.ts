@@ -1,11 +1,18 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeam, useTeams } from '../../../mocks/team';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useDeployment, useRuntimeLogs } from '../../../mocks/deployment';
 import logs from '../../../../src/commands/logs';
+import { introspectToken } from '../../../../src/util/introspect-token';
 import { join } from 'path';
+
+vi.mock('../../../../src/util/introspect-token', () => ({
+  introspectToken: vi.fn(),
+}));
+
+const introspectTokenMock = vi.mocked(introspectToken);
 
 const logsFixturesDir = join(__dirname, '../../../fixtures/unit/commands/logs');
 
@@ -119,6 +126,93 @@ function useActiveProductionDeployment(
 }
 
 describe('logs', () => {
+  describe('app principals', () => {
+    beforeEach(() => {
+      vi.stubEnv('APP_PRINCIPAL_ENABLED', '1');
+      const team = useTeam(logsProject.accountId);
+      introspectTokenMock.mockResolvedValue({
+        active: true,
+        client_id: 'app_dummy',
+        team: { id: team.id, slug: team.slug },
+      });
+      useProject(logsProject);
+      client.setArgv('logs', '--project', logsProject.id, '--json');
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      introspectTokenMock.mockReset();
+    });
+
+    function useAppPrincipal() {
+      client.scenario.get('/v2/user', (_req, res) => {
+        res.status(403).json({ error: { message: 'forbidden' } });
+      });
+    }
+
+    it('reads project logs with the app token team and preserves JSON output', async () => {
+      useAppPrincipal();
+      client.config.currentTeam = 'team_stale';
+      client.scenario.get(
+        `/v1/projects/${logsProject.id}/request-logs`,
+        (req, res) => {
+          expect(req.query.teamId).toEqual(logsProject.accountId);
+          expect(req.query.ownerId).toEqual(logsProject.accountId);
+          res.json({
+            rows: [createMockLog({ message: 'App log message' })],
+            hasMoreRows: false,
+          });
+        }
+      );
+
+      expect(await logs(client)).toEqual(0);
+      expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+        id: 'log_123',
+        projectId: logsProject.id,
+        deploymentId: 'dpl_test123',
+        message: 'App log message',
+        level: 'info',
+        source: 'serverless',
+        requestPath: '/api/test',
+        responseStatusCode: 200,
+        logs: [{ level: 'info', message: 'App log message' }],
+      });
+    });
+
+    it('surfaces denied project access without falling back to Front', async () => {
+      useAppPrincipal();
+      const frontRequest = vi.fn((_req, res) => {
+        res.json({ rows: [], hasMoreRows: false });
+      });
+      client.scenario.get('/api/logs/request-logs', frontRequest);
+      client.scenario.get(
+        `/v1/projects/${logsProject.id}/request-logs`,
+        (_req, res) => {
+          res.status(403).json({
+            error: { code: 'forbidden', message: 'Cannot read project logs' },
+          });
+        }
+      );
+
+      expect(await logs(client)).toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Cannot read project logs'
+      );
+      expect(client.stdout.getFullOutput()).toEqual('');
+      expect(frontRequest).not.toHaveBeenCalled();
+    });
+
+    it('keeps user principals on Front even when introspection returns an app', async () => {
+      useUser();
+      useRequestLogs([createMockLog({ message: 'User log message' })]);
+
+      expect(await logs(client)).toEqual(0);
+      expect(JSON.parse(client.stdout.getFullOutput()).message).toEqual(
+        'User log message'
+      );
+    });
+  });
+
   describe('--help', () => {
     it('should display help and track telemetry', async () => {
       client.setArgv('logs', '--help');

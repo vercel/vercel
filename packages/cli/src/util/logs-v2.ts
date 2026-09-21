@@ -40,6 +40,7 @@ export interface RequestLogsResponse {
 export interface FetchRequestLogsOptions {
   projectId: string;
   ownerId: string;
+  isAppPrincipal?: boolean;
   deploymentId?: string;
   environment?: string;
   level?: string[];
@@ -171,13 +172,18 @@ export async function fetchRequestLogs(
     query.set('branch', branch);
   }
 
-  // The request-logs API is on vercel.com, not api.vercel.com
-  // In tests, client.apiUrl points to the mock server, so use that
+  // Front's logs endpoint requires a user principal. App principals use
+  // the project API, while users retain Front's additional cache metadata.
   const baseUrl =
     client.apiUrl === 'https://api.vercel.com'
       ? 'https://vercel.com'
       : client.apiUrl;
-  const url = `${baseUrl}/api/logs/request-logs?${query.toString()}`;
+  if (options.isAppPrincipal) {
+    query.set('teamId', ownerId);
+  }
+  const url = options.isAppPrincipal
+    ? `/v1/projects/${encodeURIComponent(projectId)}/request-logs?${query.toString()}`
+    : `${baseUrl}/api/logs/request-logs?${query.toString()}`;
 
   interface ApiLogEntry {
     requestId?: string;
