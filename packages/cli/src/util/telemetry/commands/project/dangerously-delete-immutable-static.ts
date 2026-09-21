@@ -4,8 +4,7 @@ import type { dangerouslyDeleteImmutableStaticSubcommand } from '../../../../com
 
 export class CacheDangerouslyDeleteImmutableStaticTelemetryClient
   extends TelemetryClient
-  implements
-    TelemetryMethods<typeof dangerouslyDeleteImmutableStaticSubcommand>
+  implements TelemetryMethods<typeof dangerouslyDeleteImmutableStaticSubcommand>
 {
   trackCliArgumentPath(path: string | undefined) {
     if (path) {

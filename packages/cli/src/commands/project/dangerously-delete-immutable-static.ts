@@ -55,8 +55,9 @@ export default async function dangerouslyDeleteImmutableStatic(
     const globalFlags = getGlobalFlagsFromArgs(client.argv.slice(2)).filter(
       flag => flag !== '--non-interactive'
     );
+    const projectFlag = projectName ? ` --project ${projectName}` : '';
     const interactiveCommand = getCommandNamePlain(
-      `project dangerously-delete-immutable-static ${path} ${globalFlags.join(' ')}`.trim()
+      `project dangerously-delete-immutable-static ${path}${projectFlag} ${globalFlags.join(' ')}`.trim()
     );
     outputActionRequired(
       client,
