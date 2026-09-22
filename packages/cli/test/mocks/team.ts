@@ -1,7 +1,7 @@
 import chance from 'chance';
 import { client } from './client';
 import { beforeEach } from 'vitest';
-import { teamCache } from '../../src/util/teams/get-team-by-id';
+import { teamCache } from '../../src/util/teams/get-team-by-id-or-slug';
 import assert from 'assert';
 
 export type Team = {

@@ -7,8 +7,7 @@ import output from '../output-manager';
 import { VERCEL_DIR } from './projects/link';
 import { ConflictingConfigFiles } from './errors-ts';
 import { DeprecatedNowJson } from './errors-ts';
-import { NowBuildError } from '@vercel/build-utils';
-import { isVercelTomlEnabled } from './is-vercel-toml-enabled';
+import { getNodeExecPath, NowBuildError } from '@vercel/build-utils';
 import type {
   RouteWithSrc,
   Rewrite,
@@ -166,11 +165,9 @@ export async function findSourceVercelConfigFile(
       return basename(configPath);
     }
   }
-  if (isVercelTomlEnabled()) {
-    const tomlPath = join(workPath, 'vercel.toml');
-    if (await fileExists(tomlPath)) {
-      return 'vercel.toml';
-    }
+  const tomlPath = join(workPath, 'vercel.toml');
+  if (await fileExists(tomlPath)) {
+    return 'vercel.toml';
   }
   return null;
 }
@@ -226,8 +223,7 @@ export async function compileVercelConfig(
   const vercelTomlPath = join(workPath, 'vercel.toml');
   const hasVercelJson = await fileExists(vercelJsonPath);
   const hasNowJson = await fileExists(nowJsonPath);
-  const hasVercelToml =
-    isVercelTomlEnabled() && (await fileExists(vercelTomlPath));
+  const hasVercelToml = await fileExists(vercelTomlPath);
 
   const vercelConfigPath = await findVercelConfigFile(workPath);
   const vercelDir = join(workPath, VERCEL_DIR);
@@ -341,6 +337,7 @@ export async function compileVercelConfig(
 
     const config = await new Promise((resolve, reject) => {
       const child = fork(loaderPath, [tempOutPath], {
+        execPath: getNodeExecPath(),
         stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
       });
 
@@ -443,7 +440,7 @@ export async function getVercelConfigPath(workPath: string): Promise<string> {
     return vercelJsonPath;
   }
 
-  if (isVercelTomlEnabled() && (await fileExists(vercelTomlPath))) {
+  if (await fileExists(vercelTomlPath)) {
     return vercelTomlPath;
   }
 

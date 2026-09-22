@@ -77,6 +77,12 @@ export class AiGatewayCodingAgentsSetupTelemetryClient
     }
   }
 
+  trackCliFlagNoSessionMigration(noSessionMigration: boolean | undefined) {
+    if (noSessionMigration) {
+      this.trackCliFlag('no-session-migration');
+    }
+  }
+
   trackCliFlagNoKeychain(noKeychain: boolean | undefined) {
     if (noKeychain) {
       this.trackCliFlag('no-keychain');
@@ -96,6 +102,18 @@ export class AiGatewayCodingAgentsSetupTelemetryClient
   trackCliOptionShellRc(shellRc: string | undefined) {
     if (shellRc) {
       this.trackCliOption({ option: 'shell-rc', value: this.redactedValue });
+    }
+  }
+
+  trackCliOptionApply(apply: string | undefined) {
+    if (apply) {
+      this.trackCliOption({ option: 'apply', value: apply });
+    }
+  }
+
+  trackCliOptionBaseUrl(baseUrl: string | undefined) {
+    if (baseUrl) {
+      this.trackCliOption({ option: 'base-url', value: this.redactedValue });
     }
   }
 

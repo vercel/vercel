@@ -9,6 +9,14 @@ export interface ResolveProjectContextOptions {
   cwd?: string;
   projectNameOrId?: string;
   commandName?: string;
+  /**
+   * Controls who handles an unresolved explicit project. `report` emits the
+   * standard project-not-found error; `return` leaves the result as
+   * `not_linked` so the caller can provide its own output.
+   *
+   * @default 'report'
+   */
+  projectNotFoundHandling?: 'report' | 'return';
 }
 
 function getInvokingCommandFromArgv(argv: string[]): string {
@@ -31,6 +39,7 @@ export async function resolveProjectContext({
   cwd = client.cwd,
   projectNameOrId,
   commandName = '',
+  projectNotFoundHandling = 'report',
 }: ResolveProjectContextOptions): Promise<ProjectLinkResultWithOrgId> {
   const context = await getLinkedProject(client, {
     cwd,
@@ -39,7 +48,11 @@ export async function resolveProjectContext({
     scopeIsExplicit: detectExplicitScope(client),
   });
 
-  if (context.status === 'not_linked' && projectNameOrId) {
+  if (
+    context.status === 'not_linked' &&
+    projectNameOrId &&
+    projectNotFoundHandling === 'report'
+  ) {
     await printProjectNotFoundError(
       client,
       projectNameOrId,

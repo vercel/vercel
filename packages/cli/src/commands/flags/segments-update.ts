@@ -9,6 +9,7 @@ import {
   outputAgentError,
 } from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
+import { getFlagSettings } from '../../util/flags/get-flags';
 import {
   applySegmentOperations,
   buildSegmentOperations,
@@ -23,6 +24,10 @@ import {
   getSegments,
   updateSegment,
 } from '../../util/flags/segments';
+import {
+  coerceTimestampOperations,
+  coerceTimestampSegmentData,
+} from '../../util/flags/timestamp';
 import { printSegmentDetails } from '../../util/flags/print-segment-details';
 import output from '../../output-manager';
 import { formatProject } from '../../util/projects/format-project';
@@ -121,10 +126,14 @@ export default async function segmentsUpdate(
       }
     }
 
-    const operations = buildOperations({
-      addInputs,
-      removeInputs,
-    });
+    const settings = await getFlagSettings(client, project.id);
+    const operations = coerceTimestampOperations(
+      buildOperations({
+        addInputs,
+        removeInputs,
+      }),
+      settings
+    );
     const hasChanges =
       label !== undefined ||
       description !== undefined ||
@@ -137,7 +146,7 @@ export default async function segmentsUpdate(
       output.spinner('Fetching segment...');
       const segment = await getSegment(client, project.id, segmentArg, true);
       output.stopSpinner();
-      request = await collectUpdateInteractively(client, segment);
+      request = await collectUpdateInteractively(client, segment, settings);
     } else {
       request = await buildUpdateRequest(client, project.id, segmentArg, {
         label,
@@ -145,8 +154,11 @@ export default async function segmentsUpdate(
         hint,
         dataInput,
         operations,
+        settings,
       });
     }
+
+    request = coerceTimestampUpdateRequest(request, settings);
 
     if (!hasUpdateRequestChanges(request)) {
       if (client.nonInteractive) {
@@ -208,6 +220,7 @@ export default async function segmentsUpdate(
       segment,
       projectSlugLink,
       showTimestamps: false,
+      settings,
     });
   } catch (err) {
     output.stopSpinner();
@@ -291,6 +304,7 @@ async function buildUpdateRequest(
     hint?: string;
     dataInput?: string;
     operations: SegmentOperation[];
+    settings: Awaited<ReturnType<typeof getFlagSettings>>;
   }
 ): Promise<UpdateSegmentRequest> {
   const request: UpdateSegmentRequest = {};
@@ -305,7 +319,11 @@ async function buildUpdateRequest(
   }
 
   if (input.dataInput) {
-    request.data = parseSegmentDataInput(input.dataInput);
+    request.data = coerceTimestampSegmentData(
+      parseSegmentDataInput(input.dataInput),
+      input.settings,
+      'input'
+    );
   }
 
   if (request.data) {
@@ -354,7 +372,8 @@ function isMembershipOperation(
 
 async function collectUpdateInteractively(
   client: Client,
-  segment: Segment
+  segment: Segment,
+  settings: Awaited<ReturnType<typeof getFlagSettings>>
 ): Promise<UpdateSegmentRequest> {
   const request: UpdateSegmentRequest = {};
   let data: SegmentData | undefined;
@@ -437,7 +456,12 @@ async function collectUpdateInteractively(
           replacingRules = true;
         }
         data = normalizeSegmentData(data ?? segment.data);
-        data.rules = (data.rules ?? []).concat(parseSegmentRuleInput(rule));
+        const [coercedRule] = coerceTimestampSegmentData(
+          { rules: [parseSegmentRuleInput(rule)] },
+          settings,
+          'input'
+        ).rules!;
+        data.rules = (data.rules ?? []).concat(coercedRule);
         break;
       }
       case 'include':
@@ -460,7 +484,11 @@ async function collectUpdateInteractively(
         const value = await client.input.text({
           message: 'Enter full segment data JSON:',
         });
-        data = parseSegmentDataInput(value);
+        data = coerceTimestampSegmentData(
+          parseSegmentDataInput(value),
+          settings,
+          'input'
+        );
         break;
       }
       case 'done':
@@ -473,12 +501,18 @@ async function collectUpdateInteractively(
     }
   }
 
+  const coercedOperations = coerceTimestampOperations(
+    operations,
+    settings,
+    'input'
+  );
+
   if (data) {
-    request.data = applySegmentOperations(data, operations);
-  } else if (hasRuleOperations(operations)) {
-    request.data = applySegmentOperations(segment.data, operations);
-  } else if (operations.length > 0) {
-    request.operations = operations.filter(isMembershipOperation);
+    request.data = applySegmentOperations(data, coercedOperations);
+  } else if (hasRuleOperations(coercedOperations)) {
+    request.data = applySegmentOperations(segment.data, coercedOperations);
+  } else if (coercedOperations.length > 0) {
+    request.operations = coercedOperations.filter(isMembershipOperation);
   }
 
   return request;
@@ -492,4 +526,18 @@ function hasUpdateRequestChanges(request: UpdateSegmentRequest): boolean {
     request.data !== undefined ||
     Boolean(request.operations?.length)
   );
+}
+
+function coerceTimestampUpdateRequest(
+  request: UpdateSegmentRequest,
+  settings: Awaited<ReturnType<typeof getFlagSettings>>
+): UpdateSegmentRequest {
+  if (!request.data) {
+    return request;
+  }
+
+  return {
+    ...request,
+    data: coerceTimestampSegmentData(request.data, settings),
+  };
 }

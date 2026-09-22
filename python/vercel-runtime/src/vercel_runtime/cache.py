@@ -161,8 +161,8 @@ def clear_runtime_cache_context() -> None:
 # we'll configure caches, otherwise we skip the behaviour
 def _load_vercel_cache_modules() -> Any | None:
     with contextlib.suppress(ImportError):
-        import vercel.cache.cache_build as cache_build  # type: ignore[import-not-found]  # noqa: PLC0415  # pyright: ignore[reportMissingImports]
-        import vercel.cache.context as context  # type: ignore[import-not-found]  # noqa: PLC0415  # pyright: ignore[reportMissingImports]
+        import vercel.cache.cache_build as cache_build  # noqa: PLC0415  # pyright: ignore[reportMissingTypeStubs]
+        import vercel.cache.context as context  # noqa: PLC0415  # pyright: ignore[reportMissingTypeStubs]
 
         return cache_build, context
     return None

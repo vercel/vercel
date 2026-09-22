@@ -1,11 +1,20 @@
 import { join } from 'node:path';
-import type { CodingAgent, EnvExport, FileFormat, SetupContext } from './types';
+import type {
+  CodingAgent,
+  EnvExport,
+  FileFormat,
+  SessionMigrationContext,
+  SessionMigrationPlan,
+  SetupContext,
+} from './types';
 import {
   readFileOrNull,
   backupFile,
   writeConfigFile,
   upsertManagedBlock,
   isSymlink,
+  MANAGED_BLOCK_START,
+  MANAGED_BLOCK_END,
 } from './config-files';
 import { KEY_PLACEHOLDER } from './gateway';
 import { keychainLookup } from './keychain';
@@ -31,11 +40,44 @@ export interface AgentNotes {
   notes: string[];
 }
 
+export interface PlannedSessionMigration extends SessionMigrationPlan {
+  agentId: string;
+  agent: string;
+}
+
+export interface SessionMigrationError {
+  agentId: string;
+  agent: string;
+  message: string;
+}
+
 export interface SetupPlan {
   changes: PlannedChange[];
   notes: AgentNotes[];
   envExports: EnvExport[];
   shellRcPath?: string;
+  migrations: PlannedSessionMigration[];
+}
+
+export async function planSessionMigrations(
+  agents: CodingAgent[],
+  ctx: SessionMigrationContext
+): Promise<PlannedSessionMigration[]> {
+  const migrations: PlannedSessionMigration[] = [];
+
+  for (const agent of agents) {
+    if (!agent.sessionMigration) continue;
+    const migration = await agent.sessionMigration.plan(ctx);
+    if (migration && migration.itemCount > 0) {
+      migrations.push({
+        ...migration,
+        agentId: agent.id,
+        agent: agent.displayName,
+      });
+    }
+  }
+
+  return migrations;
 }
 
 export function detectShellRc(home: string, override?: string): string {
@@ -93,6 +135,24 @@ function envBlockBody(
   return lines.join('\n');
 }
 
+function preservedEnvLines(
+  current: string | null,
+  writtenNames: ReadonlySet<string>
+): string[] {
+  if (!current) return [];
+  const start = current.indexOf(MANAGED_BLOCK_START);
+  const end = current.indexOf(MANAGED_BLOCK_END);
+  if (start === -1 || end === -1 || end <= start) return [];
+  const kept: string[] = [];
+  for (const line of current.slice(start, end).split('\n')) {
+    const match = /^(?:export|set -gx) ([A-Za-z_][A-Za-z0-9_]*)[ =]/.exec(
+      line.trim()
+    );
+    if (match && !writtenNames.has(match[1])) kept.push(line.trim());
+  }
+  return kept;
+}
+
 interface PendingChange {
   path: string;
   label: string;
@@ -123,7 +183,8 @@ function matchesWithStoredKey(current: string, templated: string): boolean {
 
 export async function buildSetupPlan(
   agents: CodingAgent[],
-  ctx: SetupContext
+  ctx: SetupContext,
+  migrations: PlannedSessionMigration[] = []
 ): Promise<SetupPlan> {
   const pending: PendingChange[] = [];
   const envExports: EnvExport[] = [];
@@ -171,12 +232,19 @@ export async function buildSetupPlan(
       ctx.useKeychain,
       shellRcPath.endsWith('.fish')
     );
+    const writtenNames = new Set(envExports.map(e => e.name));
     pending.push({
       path: shellRcPath,
       label: 'Shell environment',
       format: 'shell',
       owner: 'Environment',
-      transform: current => upsertManagedBlock(current, body),
+      transform: current => {
+        const preserved = preservedEnvLines(current, writtenNames);
+        return upsertManagedBlock(
+          current,
+          preserved.length > 0 ? `${body}\n${preserved.join('\n')}` : body
+        );
+      },
     });
   }
 
@@ -246,7 +314,13 @@ export async function buildSetupPlan(
     });
   }
 
-  return { changes, notes, envExports, shellRcPath };
+  return {
+    changes,
+    notes,
+    envExports,
+    shellRcPath,
+    migrations,
+  };
 }
 
 export interface ApplyResult {
@@ -283,4 +357,52 @@ export async function applyPlan(
     });
   }
   return results;
+}
+
+export interface AppliedSessionMigration {
+  agentId: string;
+  agent: string;
+  label: string;
+  copied: number;
+  skipped: number;
+}
+
+export interface SessionMigrationApplyResult {
+  results: AppliedSessionMigration[];
+  errors: SessionMigrationError[];
+}
+
+export async function applySessionMigrations(
+  plan: SetupPlan
+): Promise<SessionMigrationApplyResult> {
+  const results: AppliedSessionMigration[] = [];
+  const errors: SessionMigrationError[] = [];
+
+  for (const migration of plan.migrations) {
+    try {
+      const result = await migration.apply();
+      const { errors: copyErrors = [], ...counts } = result;
+      results.push({
+        agentId: migration.agentId,
+        agent: migration.agent,
+        label: migration.label,
+        ...counts,
+      });
+      errors.push(
+        ...copyErrors.map(message => ({
+          agentId: migration.agentId,
+          agent: migration.agent,
+          message,
+        }))
+      );
+    } catch (error) {
+      errors.push({
+        agentId: migration.agentId,
+        agent: migration.agent,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return { results, errors };
 }

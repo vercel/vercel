@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../../util/client';
-import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
+import { requireProjectContext } from '../../../util/projects/require-project-context';
 import output from '../../../output-manager';
 import { attackModeEnableSubcommand } from '../command';
 import { parseSubcommandArgs, confirmAction, withGlobalFlags } from '../shared';
@@ -64,7 +64,11 @@ export default async function enable(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await ensureProjectLink(client, 'firewall');
+  const link = await requireProjectContext(
+    client,
+    'firewall',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project } = link;

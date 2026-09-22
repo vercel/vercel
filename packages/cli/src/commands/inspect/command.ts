@@ -60,7 +60,7 @@ export const inspectCommand = {
     },
     {
       name: 'Get deployment information as JSON',
-      value: `${packageName} inspect my-deployment.vercel.app --format=json`,
+      value: `${packageName} inspect my-deployment.vercel.app --json`,
     },
   ],
 } as const;

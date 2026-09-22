@@ -2,6 +2,132 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { validateConfig } from '../../../../src/util/validate-config';
 
 describe('validateConfig', () => {
+  describe('proxy', () => {
+    it.each([
+      'proxy.js',
+      'src/proxy.ts',
+    ])('accepts the supported entrypoint %s', entrypoint => {
+      expect(validateConfig({ proxy: { entrypoint } })).toBeNull();
+    });
+
+    it.each([
+      '/api/:func*',
+      ['/api/:func*', '/dashboard/:path*'],
+    ])('accepts the matcher %j', matcher => {
+      expect(
+        validateConfig({ proxy: { entrypoint: 'proxy.ts', matcher } })
+      ).toBeNull();
+    });
+
+    it('accepts functions configuration for the proxy', () => {
+      expect(
+        validateConfig({
+          proxy: { entrypoint: 'proxy.ts' },
+          functions: {
+            'proxy.ts': {
+              maxDuration: 10,
+              memory: 1024,
+            },
+          },
+        })
+      ).toBeNull();
+    });
+
+    it.each([
+      'proxy.ts',
+      '**/*.ts',
+    ])('accepts a functions runtime targeting the proxy through %s', pattern => {
+      expect(
+        validateConfig({
+          proxy: { entrypoint: 'proxy.ts' },
+          functions: {
+            [pattern]: {
+              runtime: 'some-runtime@1.0.0',
+            },
+          },
+        })
+      ).toBeNull();
+    });
+
+    it('requires an entrypoint', () => {
+      const error = validateConfig({
+        // @ts-expect-error - testing invalid configuration
+        proxy: {},
+      });
+
+      expect(error?.message).toBe(
+        'Invalid vercel.json - `proxy` missing required property `entrypoint`.'
+      );
+    });
+
+    it('rejects unsupported entrypoint extensions', () => {
+      const error = validateConfig({
+        proxy: { entrypoint: 'proxy.mjs' },
+      });
+
+      expect(error?.code).toBe('INVALID_PROXY_ENTRYPOINT');
+      expect(error?.message).toBe(
+        'The `proxy.entrypoint` path must end in `.js` or `.ts` and reference an executable file.'
+      );
+    });
+
+    it('accepts proxy together with services', () => {
+      expect(
+        validateConfig({
+          services: {
+            web: { root: 'apps/web', framework: 'nextjs' },
+            vr: { root: 'apps/vr' },
+          },
+          rewrites: [
+            { source: '/app/(.*)', destination: { service: 'vr' } },
+            { source: '/(.*)', destination: { service: 'web' } },
+          ],
+          proxy: { entrypoint: 'proxy.ts' },
+        })
+      ).toBeNull();
+    });
+
+    it('rejects proxy together with builds', () => {
+      const error = validateConfig({
+        proxy: { entrypoint: 'proxy.ts' },
+        builds: [{ src: 'api/index.ts', use: '@vercel/node' }],
+      });
+
+      expect(error?.code).toBe('PROXY_AND_BUILDS');
+      expect(error?.message).toBe(
+        'The `proxy` property cannot be used with the `builds` property. Remove `builds` to use an explicit proxy entrypoint.'
+      );
+    });
+
+    it.each([
+      '/proxy.ts',
+      '../proxy.ts',
+      'src\\proxy.ts',
+      'proxy.ts?x=1',
+    ])('rejects the unsafe entrypoint %s', entrypoint => {
+      const error = validateConfig({ proxy: { entrypoint } });
+
+      expect(error?.code).toBe('INVALID_PROXY_ENTRYPOINT');
+      expect(error?.message).toBe(
+        'The `proxy.entrypoint` path must be relative to the project root and cannot contain traversal, query, fragment, or control characters.'
+      );
+    });
+
+    it.each([
+      'api/:func*',
+      ['/api/:func*', 'dashboard/:path*'],
+    ])('rejects the invalid matcher %j', matcher => {
+      const error = validateConfig({
+        proxy: { entrypoint: 'proxy.ts', matcher },
+      });
+
+      expect(error?.code).toBe('INVALID_PROXY_MATCHER');
+      expect(error?.message).toBe(
+        'The `proxy.matcher` value must be a path matcher starting with `/`, or an array of path matchers starting with `/`.'
+      );
+    });
+  });
+
   describe('services', () => {
     it('should not error with a valid canonical config', () => {
       const error = validateConfig({
@@ -187,6 +313,19 @@ describe('validateConfig', () => {
       );
     });
 
+    it('should accept a binding with `type` omitted', () => {
+      const error = validateConfig({
+        services: {
+          web: { root: '.' },
+          api: {
+            root: 'api/',
+            bindings: [{ service: 'web', format: 'url', env: 'WEB_URL' }],
+          },
+        },
+      } as any);
+      expect(error).toBeNull();
+    });
+
     it('should reject a binding missing a required field', () => {
       const error = validateConfig({
         experimentalServicesV2: {
@@ -281,7 +420,9 @@ describe('validateConfig', () => {
       rewrites: [{ source: '/help', destination: '/support' }],
       redirects: [{ source: '/kb', destination: 'https://example.com' }],
       trailingSlash: false,
-      functions: { 'api/user.go': { memory: 128, maxDuration: 5 } },
+      functions: {
+        'api/user.go': { memory: 128, maxDuration: 5, maxConcurrency: 8 },
+      },
     };
     const error = validateConfig(config);
     expect(error).toBeNull();
@@ -296,6 +437,16 @@ describe('validateConfig', () => {
     } as unknown as Parameters<typeof validateConfig>[0];
     const error = validateConfig(config);
     expect(error).toBeNull();
+  });
+
+  it.each([
+    0, -1, 1.5,
+  ])('should reject maxConcurrency set to %s', maxConcurrency => {
+    const error = validateConfig({
+      functions: { 'api/user.go': { maxConcurrency } },
+    } as Parameters<typeof validateConfig>[0]);
+    expect(error).not.toBeNull();
+    expect(error?.message).toContain('maxConcurrency');
   });
 
   // Regression test for honoring the env var when it is set *after* this module
@@ -315,15 +466,16 @@ describe('validateConfig', () => {
         typeof validateConfig
       >[0];
 
-    it('rejects maxDuration above the default 1800s bound when unset', () => {
-      const error = validateConfig(configWith(1900));
+    it('rejects maxDuration above the default 3600s bound when unset', () => {
+      const error = validateConfig(configWith(3700));
       expect(error).not.toBeNull();
-      expect(error?.message).toMatch(/1800/);
+      expect(error?.message).toMatch(/3600/);
     });
 
-    it('allows maxDuration above 1800s when set to "1" (defers to the server)', () => {
+    it('allows maxDuration above 3600s when set to "1" (defers to the server)', () => {
       process.env[ENV] = '1';
-      expect(validateConfig(configWith(1800))).toBeNull();
+      expect(validateConfig(configWith(3600))).toBeNull();
+      expect(validateConfig(configWith(3700))).toBeNull();
     });
 
     it('still enforces the lower bound and integer check when skipped', () => {
@@ -332,11 +484,11 @@ describe('validateConfig', () => {
       expect(validateConfig(configWith(1.5))).not.toBeNull();
     });
 
-    it('re-applies the 1800s bound once the variable is unset again', () => {
+    it('re-applies the 3600s bound once the variable is unset again', () => {
       process.env[ENV] = '1';
-      expect(validateConfig(configWith(2000))).toBeNull();
+      expect(validateConfig(configWith(3700))).toBeNull();
       delete process.env[ENV];
-      expect(validateConfig(configWith(2000))).not.toBeNull();
+      expect(validateConfig(configWith(3700))).not.toBeNull();
     });
   });
 
@@ -376,6 +528,71 @@ describe('validateConfig', () => {
       },
     } as any);
     expect(error).not.toBeNull();
+  });
+
+  it('should reject strict affinity outside a service', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          affinity: { mode: 'strict' },
+        },
+      },
+    });
+    expect(error?.code).toBe('FUNCTION_AFFINITY_REQUIRES_SERVICE');
+  });
+
+  it('should reject strict affinity with the all function region', () => {
+    const error = validateConfig({
+      services: {
+        api: {
+          root: 'api',
+          functions: {
+            'test.js': {
+              affinity: { mode: 'strict' },
+              regions: ['all'],
+            },
+          },
+        },
+      },
+    });
+    expect(error?.code).toBe('INVALID_FUNCTION_AFFINITY_REGIONS');
+  });
+
+  it.each([
+    'services',
+    'experimentalServicesV2',
+  ] as const)('should reject strict affinity with multiple function regions in `%s`', configKey => {
+    const error = validateConfig({
+      [configKey]: {
+        api: {
+          root: 'api',
+          functions: {
+            'test.js': {
+              affinity: { mode: 'strict' },
+              regions: ['iad1', 'sfo1'],
+            },
+          },
+        },
+      },
+    });
+    expect(error?.code).toBe('INVALID_FUNCTION_AFFINITY_REGIONS');
+  });
+
+  it('should allow strict affinity to inherit multiple project regions', () => {
+    const error = validateConfig({
+      regions: ['iad1', 'sfo1'],
+      services: {
+        api: {
+          root: 'api',
+          functions: {
+            'test.js': {
+              affinity: { mode: 'strict' },
+            },
+          },
+        },
+      },
+    });
+    expect(error).toBeNull();
   });
 
   it.each([
@@ -1314,6 +1531,37 @@ describe('validateConfig', () => {
       },
     });
     expect(error).toBeNull();
+  });
+
+  it('should allow strict function affinity', () => {
+    const error = validateConfig({
+      services: {
+        api: {
+          root: 'api',
+          functions: {
+            'test.js': {
+              affinity: { mode: 'strict' },
+            },
+          },
+        },
+      },
+    });
+    expect(error).toBeNull();
+  });
+
+  it.each([
+    {},
+    { mode: 'loose' },
+    { mode: 'strict', extra: true },
+  ])('should reject invalid function affinity %o', affinity => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          affinity: affinity as any,
+        },
+      },
+    });
+    expect(error).not.toBeNull();
   });
 
   it('should error with invalid supportsCancellation type', () => {

@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
 import type Client from '../../util/client';
-import { ensureProjectLink } from '../../util/projects/ensure-project-link';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { listVersionsSubcommand } from './command';
 import { parseSubcommandArgs } from './shared';
@@ -15,7 +15,11 @@ export default async function listVersions(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, listVersionsSubcommand);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client, 'redirects');
+  const link = await requireProjectContext(
+    client,
+    'redirects',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

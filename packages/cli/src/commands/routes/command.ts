@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { yesOption } from '../../util/arg-common';
+import { projectOption, yesOption } from '../../util/arg-common';
 
 export const listSubcommand = {
   name: 'list',
@@ -8,6 +8,7 @@ export const listSubcommand = {
     'List all routing rules for the current project. These routes apply to all deployments and environments.',
   arguments: [],
   options: [
+    projectOption,
     {
       name: 'search',
       description: 'Search by name, description, source, or destination',
@@ -89,6 +90,7 @@ export const listVersionsSubcommand = {
   description: 'List all versions of routing rules',
   arguments: [],
   options: [
+    projectOption,
     {
       name: 'count',
       description: 'Number of versions to fetch (default: 20, max: 100)',
@@ -121,6 +123,7 @@ export const inspectSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'diff',
       description: 'Compare staged changes against production for this route',
@@ -156,6 +159,7 @@ export const addSubcommand = {
     },
   ],
   options: [
+    projectOption,
     // Path & Matching
     {
       name: 'src',
@@ -381,6 +385,7 @@ export const publishSubcommand = {
   description: 'Publish staged routing changes to production',
   arguments: [],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when publishing',
@@ -409,6 +414,7 @@ export const restoreSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when restoring',
@@ -432,6 +438,7 @@ export const discardSubcommand = {
   description: 'Discard staged routing changes',
   arguments: [],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when discarding',
@@ -461,6 +468,7 @@ export const deleteSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when deleting',
@@ -496,7 +504,7 @@ export const enableSubcommand = {
       required: true,
     },
   ],
-  options: [],
+  options: [projectOption],
   examples: [
     {
       name: 'Enable a route by name',
@@ -519,7 +527,7 @@ export const disableSubcommand = {
       required: true,
     },
   ],
-  options: [],
+  options: [projectOption],
   examples: [
     {
       name: 'Disable a route by name',
@@ -543,6 +551,7 @@ export const reorderSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'position',
       description:
@@ -606,6 +615,7 @@ export const editSubcommand = {
     },
   ],
   options: [
+    projectOption,
     // Metadata
     {
       name: 'name',
@@ -848,6 +858,7 @@ export const exportSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'output',
       description: 'Output file format: .json (default) or .ts',

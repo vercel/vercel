@@ -34,6 +34,7 @@ export interface CreateOptions {
   name: string;
   project?: string;
   prebuilt?: boolean;
+  anonymous?: boolean;
   vercelOutputDir?: string;
   rootDirectory?: string | null;
   meta: Dictionary<string>;
@@ -55,6 +56,7 @@ export interface CreateOptions {
   manual?: boolean;
   jsonOutput?: boolean;
   linkedProject?: Project;
+  linkedProjectIsPartial?: boolean;
 }
 
 export interface RemoveOptions {
@@ -112,6 +114,7 @@ export default class Now {
       name,
       project,
       prebuilt = false,
+      anonymous = false,
       vercelOutputDir,
       rootDirectory,
       meta,
@@ -132,6 +135,7 @@ export default class Now {
       manual,
       jsonOutput = false,
       linkedProject,
+      linkedProjectIsPartial,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
@@ -174,6 +178,7 @@ export default class Now {
       archive,
       skipAutoDetectionConfirmation,
       prebuilt,
+      anonymous,
       vercelOutputDir,
       rootDirectory,
       noWait,
@@ -182,6 +187,7 @@ export default class Now {
       manual,
       jsonOutput,
       linkedProject,
+      linkedProjectIsPartial,
     });
 
     if (deployment && deployment.warnings) {

@@ -292,7 +292,7 @@ describe('flags set', () => {
 
     expect(exitCode).toEqual(0);
     expect(stripAnsi(client.stderr.getFullOutput())).toContain(
-      'Serving variant: "treatment" Treatment'
+      'Serving variant: Treatment ("treatment")'
     );
     expect((testFlags[1] as Flag & { message?: string }).message).toEqual(
       'Set variant for production via CLI'
@@ -320,7 +320,7 @@ describe('flags set', () => {
 
     expect(exitCode).toEqual(0);
     expect(stripAnsi(client.stderr.getFullOutput())).toContain(
-      'Serving variant: 20 Large'
+      'Serving variant: Large (20)'
     );
     expect(testFlags[2].environments.preview).toMatchObject({
       active: false,
@@ -345,7 +345,7 @@ describe('flags set', () => {
 
     expect(exitCode).toEqual(0);
     expect(stripAnsi(client.stderr.getFullOutput())).toContain(
-      'Serving variant: 20 Large'
+      'Serving variant: Large (20)'
     );
     expect((testFlags[2] as Flag & { message?: string }).message).toEqual(
       'Set variant for preview via CLI'
@@ -373,7 +373,7 @@ describe('flags set', () => {
 
     expect(exitCode).toEqual(0);
     expect(stripAnsi(client.stderr.getFullOutput())).toContain(
-      'Serving variant: ["dark","compact"] Dark'
+      'Serving variant: Dark (["dark","compact"])'
     );
     expect((testFlags[3] as Flag & { message?: string }).message).toEqual(
       'Set variant for preview via CLI'
@@ -427,7 +427,7 @@ describe('flags set', () => {
     expect(exitCode).toEqual(0);
     const output = client.stderr.getFullOutput();
     expect(output).toContain('has been enabled');
-    expect(stripAnsi(output)).toContain('Serving variant: true On');
+    expect(stripAnsi(output)).toContain('Serving variant: On (true)');
     expect((testFlags[0] as Flag & { message?: string }).message).toEqual(
       'Enabled for production via CLI'
     );
@@ -455,7 +455,7 @@ describe('flags set', () => {
     expect(exitCode).toEqual(0);
     const output = client.stderr.getFullOutput();
     expect(output).toContain('has been disabled');
-    expect(stripAnsi(output)).toContain('Serving variant: false Off');
+    expect(stripAnsi(output)).toContain('Serving variant: Off (false)');
     expect((testFlags[0] as Flag & { message?: string }).message).toEqual(
       'Disabled for development via CLI'
     );
@@ -465,7 +465,6 @@ describe('flags set', () => {
       fallthrough: { type: 'variant', variantId: 'off' },
     });
   });
-
   it('prompts for environment and variant when not specified', async () => {
     selectMock
       .mockResolvedValueOnce('preview')
@@ -602,7 +601,7 @@ describe('flags set', () => {
 
     expect(exitCode).toEqual(0);
     expect(stripAnsi(client.stderr.getFullOutput())).toContain(
-      'already serving "control" Control in development'
+      'already serving Control ("control") in development'
     );
     expect(testFlags[1].environments.development).toEqual(originalEnvironment);
     expect((testFlags[1] as Flag & { message?: string }).message).toEqual(
@@ -701,13 +700,13 @@ describe('flags set', () => {
     expect(variantChoices).toEqual([
       {
         value: 'default',
-        name: '"control" Control',
+        name: 'Control ("control")',
       },
       {
         value: 'variant-a',
-        name: '"treatment" Treatment',
+        name: 'Treatment ("treatment")',
       },
     ]);
-    expect(client.stderr.getFullOutput()).toContain(chalk.dim('Treatment'));
+    expect(client.stderr.getFullOutput()).toContain(chalk.dim('"treatment"'));
   });
 });

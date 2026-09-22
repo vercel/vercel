@@ -6,7 +6,7 @@ import { printError } from '../../util/error';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getSubcommand from '../../util/get-subcommand';
 import { ConnexTelemetryClient } from '../../util/telemetry/commands/connex';
-import { type Command, help } from '../help';
+import { type Command, type HelpOptions, help } from '../help';
 import {
   createSubcommand,
   updateSubcommand,
@@ -17,9 +17,11 @@ import {
   removeSubcommand,
   revokeTokensSubcommand,
   openSubcommand,
+  contactsSubcommand,
   connexCommand,
 } from './command';
 import { create } from './create';
+import { printCreateDynamicHelp } from './create-help';
 import { update } from './update';
 import { list } from './list';
 import { token } from './token';
@@ -28,6 +30,7 @@ import { detach } from './detach';
 import { remove } from './remove';
 import { revokeTokens } from './revoke-tokens';
 import { openClient } from './open';
+import { contacts } from './contacts';
 import {
   buildCommandWithGlobalFlags,
   outputAgentError,
@@ -45,6 +48,7 @@ const COMMAND_CONFIG = {
   remove: getCommandAliases(removeSubcommand),
   'revoke-tokens': getCommandAliases(revokeTokensSubcommand),
   open: getCommandAliases(openSubcommand),
+  contacts: getCommandAliases(contactsSubcommand),
 };
 
 export default async function connex(client: Client): Promise<number> {
@@ -68,9 +72,10 @@ export default async function connex(client: Client): Promise<number> {
 
   const needHelp = flags['--help'];
 
-  function printHelp(command: Command) {
+  function printHelp(command: Command, options?: HelpOptions) {
     output.print(
       help(command, {
+        ...options,
         columns: client.stderr.columns,
         parent: connexCommand,
       })
@@ -78,7 +83,7 @@ export default async function connex(client: Client): Promise<number> {
   }
 
   if (!subcommand && needHelp) {
-    telemetry.trackCliFlagHelp('connex');
+    telemetry.trackCliFlagHelp('connect');
     output.print(
       help(connexCommand, {
         columns: client.stderr.columns,
@@ -91,8 +96,21 @@ export default async function connex(client: Client): Promise<number> {
     switch (subcommand) {
       case 'create': {
         if (needHelp) {
-          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
-          printHelp(createSubcommand);
+          telemetry.trackCliFlagHelp('connect', subcommandOriginal);
+
+          // `create <service> --help` describes that service's connection
+          // methods. Falls back to static help when the service is unknown or
+          // the API is unreachable, so `--help` never depends on the network.
+          const printed = await printCreateDynamicHelp(
+            client,
+            findHelpServiceArg(subArgs),
+            createSubcommand,
+            (cmd, helpOptions) => printHelp(cmd, helpOptions)
+          );
+
+          if (!printed) {
+            printHelp(createSubcommand);
+          }
           return 0;
         }
         telemetry.trackCliSubcommandCreate(subcommandOriginal);
@@ -102,6 +120,8 @@ export default async function connex(client: Client): Promise<number> {
           normalizeCreateDataArgs(subArgs),
           createFlagsSpec
         );
+        telemetry.trackCliArgumentService(createParsedArgs.args[0]);
+        telemetry.trackCliOptionName(createParsedArgs.flags['--name']);
         telemetry.trackCliOptionIcon(createParsedArgs.flags['--icon']);
         telemetry.trackCliOptionBackgroundColor(
           createParsedArgs.flags['--background-color']
@@ -113,6 +133,29 @@ export default async function connex(client: Client): Promise<number> {
         telemetry.trackCliOptionConnectorType(
           createParsedArgs.flags['--connector-type']
         );
+        telemetry.trackCliOptionTriggerEvent(
+          createParsedArgs.flags['--trigger-event']
+        );
+        telemetry.trackCliOptionConnectionMethod(
+          createParsedArgs.flags['--connection-method']
+        );
+        telemetry.trackCliOptionTarget(createParsedArgs.flags['--target']);
+        telemetry.trackCliOptionParam(createParsedArgs.flags['--param']);
+        telemetry.trackCliFlagYes(createParsedArgs.flags['--yes']);
+        telemetry.trackCliFlagTriggers(createParsedArgs.flags['--triggers']);
+        telemetry.trackCliOptionTriggerPath(
+          createParsedArgs.flags['--trigger-path']
+        );
+        telemetry.trackCliOptionTriggerProject(
+          createParsedArgs.flags['--trigger-project']
+        );
+        telemetry.trackCliOptionTriggerBranch(
+          createParsedArgs.flags['--trigger-branch']
+        );
+        telemetry.trackCliOptionTriggerEnvironment(
+          createParsedArgs.flags['--trigger-environment']
+        );
+        telemetry.trackCliOptionFormat(createParsedArgs.flags['--format']);
         return await create(
           client,
           createParsedArgs.args,
@@ -121,7 +164,7 @@ export default async function connex(client: Client): Promise<number> {
       }
       case 'update': {
         if (needHelp) {
-          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          telemetry.trackCliFlagHelp('connect', subcommandOriginal);
           printHelp(updateSubcommand);
           return 0;
         }
@@ -146,7 +189,7 @@ export default async function connex(client: Client): Promise<number> {
       }
       case 'list': {
         if (needHelp) {
-          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          telemetry.trackCliFlagHelp('connect', subcommandOriginal);
           printHelp(listSubcommand);
           return 0;
         }
@@ -167,7 +210,7 @@ export default async function connex(client: Client): Promise<number> {
       }
       case 'token': {
         if (needHelp) {
-          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          telemetry.trackCliFlagHelp('connect', subcommandOriginal);
           printHelp(tokenSubcommand);
           return 0;
         }
@@ -175,11 +218,19 @@ export default async function connex(client: Client): Promise<number> {
 
         const tokenFlagsSpec = getFlagsSpecification(tokenSubcommand.options);
         const tokenParsedArgs = parseArguments(subArgs, tokenFlagsSpec);
+        telemetry.trackCliArgumentId(tokenParsedArgs.args[0]);
+        telemetry.trackCliOptionSubject(tokenParsedArgs.flags['--subject']);
+        telemetry.trackCliOptionInstallationId(
+          tokenParsedArgs.flags['--installation-id']
+        );
+        telemetry.trackCliOptionScopes(tokenParsedArgs.flags['--scopes']);
+        telemetry.trackCliFlagYes(tokenParsedArgs.flags['--yes']);
+        telemetry.trackCliOptionFormat(tokenParsedArgs.flags['--format']);
         return await token(client, tokenParsedArgs.args, tokenParsedArgs.flags);
       }
       case 'attach': {
         if (needHelp) {
-          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          telemetry.trackCliFlagHelp('connect', subcommandOriginal);
           printHelp(attachSubcommand);
           return 0;
         }
@@ -196,6 +247,9 @@ export default async function connex(client: Client): Promise<number> {
         telemetry.trackCliOptionTriggerBranch(
           attachParsedArgs.flags['--trigger-branch']
         );
+        telemetry.trackCliOptionTriggerEnvironment(
+          attachParsedArgs.flags['--trigger-environment']
+        );
         telemetry.trackCliOptionTriggerPath(
           attachParsedArgs.flags['--trigger-path']
         );
@@ -209,7 +263,7 @@ export default async function connex(client: Client): Promise<number> {
       }
       case 'detach': {
         if (needHelp) {
-          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          telemetry.trackCliFlagHelp('connect', subcommandOriginal);
           printHelp(detachSubcommand);
           return 0;
         }
@@ -229,7 +283,7 @@ export default async function connex(client: Client): Promise<number> {
       }
       case 'remove': {
         if (needHelp) {
-          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          telemetry.trackCliFlagHelp('connect', subcommandOriginal);
           printHelp(removeSubcommand);
           return 0;
         }
@@ -251,7 +305,7 @@ export default async function connex(client: Client): Promise<number> {
       }
       case 'revoke-tokens': {
         if (needHelp) {
-          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          telemetry.trackCliFlagHelp('connect', subcommandOriginal);
           printHelp(revokeTokensSubcommand);
           return 0;
         }
@@ -281,9 +335,13 @@ export default async function connex(client: Client): Promise<number> {
           revokeTokensParsedArgs.flags
         );
       }
+      case 'contacts': {
+        telemetry.trackCliSubcommandContacts(subcommandOriginal);
+        return await contacts(client);
+      }
       case 'open': {
         if (needHelp) {
-          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          telemetry.trackCliFlagHelp('connect', subcommandOriginal);
           printHelp(openSubcommand);
           return 0;
         }
@@ -334,6 +392,26 @@ export default async function connex(client: Client): Promise<number> {
   } catch (err) {
     printError(err);
     return 1;
+  }
+}
+
+/**
+ * The service positional in a `create … --help` invocation. Parses
+ * permissively so `--help` and any typo'd flag stay harmless, and so a flag
+ * value (`--name my-bot`) is never mistaken for the service. Returns
+ * undefined when there is no positional, which prints static help.
+ */
+function findHelpServiceArg(subArgs: string[]): string | undefined {
+  try {
+    const { args } = parseArguments(
+      normalizeCreateDataArgs(subArgs),
+      getFlagsSpecification(createSubcommand.options),
+      { permissive: true }
+    );
+    return args.find(arg => !arg.startsWith('-'));
+    /* c8 ignore next 4 -- permissive parsing has no known throwing input */
+  } catch {
+    return undefined;
   }
 }
 

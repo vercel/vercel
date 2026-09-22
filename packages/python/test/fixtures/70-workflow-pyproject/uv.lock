@@ -2,10 +2,6 @@ version = 1
 revision = 3
 requires-python = ">=3.12"
 
-[options]
-exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for backwards compatibility when using relative exclude-newer values.
-exclude-newer-span = "P2D"
-
 [[package]]
 name = "annotated-doc"
 version = "0.0.4"
@@ -283,7 +279,7 @@ wheels = [
 
 [[package]]
 name = "vercel"
-version = "0.6.0"
+version = "0.7.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -291,36 +287,65 @@ dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
     { name = "python-dotenv" },
+    { name = "vercel-cache" },
     { name = "vercel-headers" },
+    { name = "vercel-internal-telemetry" },
     { name = "vercel-oidc" },
     { name = "vercel-workers" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e9/e8/03b28af09c4885d21449c27e721007529a842faa5b1c3228622c8761b852/vercel-0.6.0.tar.gz", hash = "sha256:c540bb463cb8c262bd352aa21ecde27811a1e33393c96c720bd112c952322e6b", size = 106602, upload-time = "2026-06-29T18:55:42.505Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b1/1c/853fce420affd46a72a14cf37ac415951c8e8a0666bec19cc27ea5c7dfd9/vercel-0.7.2.tar.gz", hash = "sha256:ccee833cb3b9f53ce4afd18a5a399d25f5e89005bfc7ffab2ce8843203e7d9c7", size = 185547, upload-time = "2026-07-21T21:06:01.746Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/38/32/3547b12e0ebc8e2758a0893fece1c86478b61a0d96b57bf7c3b891a6f52b/vercel-0.6.0-py3-none-any.whl", hash = "sha256:fb2e3ecea1e153e3bace829ae8254760ed4916e36998e4a8ce1e1af7091861a0", size = 145183, upload-time = "2026-06-29T18:55:41.116Z" },
+    { url = "https://files.pythonhosted.org/packages/77/40/836f9b42b0c1bcf371f26a9eb571e4bc47269404ac61165dd79a4a3c28fd/vercel-0.7.2-py3-none-any.whl", hash = "sha256:fceab7b354a19d088e2dd6463d3c9f1358ec71bdad2d9452e10ffa9092101066", size = 211802, upload-time = "2026-07-21T21:06:00.539Z" },
+]
+
+[[package]]
+name = "vercel-cache"
+version = "0.7.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "vercel-headers" },
+    { name = "vercel-internal-telemetry" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d2/77/72a93d0c59d1a6ab4970532f7af2b9e348bcc5003613c996c887ce86c28d/vercel_cache-0.7.1.tar.gz", hash = "sha256:2664f79442849bdaee89c300181f07d3c5b601d52665889263f9f90a32319489", size = 9210, upload-time = "2026-07-16T14:47:31.732Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/70/94/349467bc8b9388763ce17bd4393db239719ea5f89d06ea56f814397715fa/vercel_cache-0.7.1-py3-none-any.whl", hash = "sha256:c0ef0fd76be697c2e2069399c9634581d25b93be5dba3d6b9484ab9a66f96fc9", size = 10346, upload-time = "2026-07-16T14:47:30.955Z" },
 ]
 
 [[package]]
 name = "vercel-headers"
-version = "0.6.0"
+version = "0.7.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/4e/2e/d18dbc7b32a309daf6494a5d51d5a1ddfce9cc702600a852eb671cc21802/vercel_headers-0.6.0.tar.gz", hash = "sha256:77794510ea746c7ee086c85490028bf084a7fc924ab46cc1d746eb89040fbba7", size = 3048, upload-time = "2026-06-29T18:09:22.43Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/20/50/2fbe5563b1f710c5cec3076efe94df887dd89c7ce0f4238b81f169f5d733/vercel_headers-0.7.1.tar.gz", hash = "sha256:46e63a99a3095f3b4fa324c80e5aeee5886ca474ef5ecbfe6eabb5f2bd64928a", size = 5410, upload-time = "2026-07-16T14:23:35.768Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/db/fa/7fd5641c2cdbccee9538eb64eabb587ebcad2332307542a28f506f79a2c9/vercel_headers-0.6.0-py3-none-any.whl", hash = "sha256:d16c97626ef669b8c036898b08b43efa689b63aa66f187c14f52584793f87a51", size = 3365, upload-time = "2026-06-29T18:09:21.669Z" },
+    { url = "https://files.pythonhosted.org/packages/28/b8/5484e7ecf876c031831623efc547edcf94e2e33db4251d17c2d117c18cb0/vercel_headers-0.7.1-py3-none-any.whl", hash = "sha256:6ef65f0baffdf19775b693265d6118e125251456fb192324f4006dd341c77abc", size = 3907, upload-time = "2026-07-16T14:23:34.942Z" },
+]
+
+[[package]]
+name = "vercel-internal-telemetry"
+version = "0.7.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "vercel-oidc" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/40/d4/74e3ad2f737b182b337aa6adbdb96a474bf8241940006a6cf725ba0b3c5f/vercel_internal_telemetry-0.7.1.tar.gz", hash = "sha256:486edae45db9a9a340324509b824534c29bf91564e79e701d907200c79dac136", size = 8467, upload-time = "2026-07-16T14:28:09.337Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/91/e7/9fb15e1be9a7c3384948fb09285a54f56f2e4d7aeff41758310b8686d89d/vercel_internal_telemetry-0.7.1-py3-none-any.whl", hash = "sha256:28ee2ebf91ba882e1ae368abd21813e36d7fadd54f7f404a598d0e767d5cc249", size = 8252, upload-time = "2026-07-16T14:28:08.436Z" },
 ]
 
 [[package]]
 name = "vercel-oidc"
-version = "0.6.0"
+version = "0.7.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "vercel-headers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/eb/6d/51d875207ebbb0709ef01a1ceff6706bd3dd966c1edff732225824ed1f45/vercel_oidc-0.6.0.tar.gz", hash = "sha256:53d3af9fcf40dee0803db213c41f374d0df10fc81f33018230ce6525ba41ab5e", size = 5978, upload-time = "2026-06-29T18:12:57.711Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b0/1e/e46268d09daaf31222fd3961238056168916036fb84ee12f4dc1d9a115f4/vercel_oidc-0.7.1.tar.gz", hash = "sha256:1014faaed74d4f74ade0c350d4c5c2f01c25153d8aa086ba840f91feb86f88bb", size = 8060, upload-time = "2026-07-16T14:25:29.896Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bb/6c/89129d15ae215cae7938b7cc5e54d7687c3ba624771e0aa85dfbaeb7b083/vercel_oidc-0.6.0-py3-none-any.whl", hash = "sha256:7db018b5a970f2d30a5c2b7fc62a21c5c79c06921bd9295c34b0960c9550d992", size = 7662, upload-time = "2026-06-29T18:12:56.9Z" },
+    { url = "https://files.pythonhosted.org/packages/3c/bc/d62d569e508eb48131d001a49b1b62a98c1fa84217e845106fc7c63b88c6/vercel_oidc-0.7.1-py3-none-any.whl", hash = "sha256:db9fb82b01daf2fb3ed2c0190906a6c4f5b8f0f3bb86c08aafeffa74f765733c", size = 8052, upload-time = "2026-07-16T14:25:28.845Z" },
 ]
 
 [[package]]
@@ -396,5 +421,5 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi" },
-    { name = "vercel" },
+    { name = "vercel", specifier = ">=0.7.2" },
 ]

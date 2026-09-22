@@ -19,6 +19,7 @@ interface ApiLogEntry {
   domain?: string;
   cache?: string;
   cacheReason?: string;
+  pprState?: string;
   logs?: Array<{
     level?: string;
     message?: string;
@@ -66,9 +67,13 @@ describe('logs-v2 utility', () => {
       expect(result.logs[0].id).toEqual('log_123');
     });
 
-    it('should pass through cache status and cacheReason', async () => {
+    it('should pass through cache status, cacheReason, and pprState', async () => {
       const mockLogs = [
-        createMockApiLog({ cache: 'BYPASS', cacheReason: 'draft_mode' }),
+        createMockApiLog({
+          cache: 'BYPASS',
+          cacheReason: 'draft_mode',
+          pprState: 'partially_dynamic',
+        }),
       ];
       client.scenario.get('/api/logs/request-logs', (req, res) => {
         res.json({ rows: mockLogs, hasMoreRows: false });
@@ -82,6 +87,7 @@ describe('logs-v2 utility', () => {
       expect(result.logs).toHaveLength(1);
       expect(result.logs[0].cache).toEqual('BYPASS');
       expect(result.logs[0].cacheReason).toEqual('draft_mode');
+      expect(result.logs[0].pprState).toEqual('partially_dynamic');
     });
 
     it('should include deploymentId in query when provided', async () => {

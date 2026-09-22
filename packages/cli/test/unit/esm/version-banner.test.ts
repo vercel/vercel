@@ -42,4 +42,37 @@ describe('vc.js version banner', () => {
     expect(stdout.trim()).toBe('1.2.3');
     expect(stderr.trim()).toBe('Vercel CLI 1.2.3 (native)');
   });
+
+  it('includes the CI build label when version.mjs exports one', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'vc-version-banner-'));
+    await copyFile('src/vc.js', join(dir, 'vc.js'));
+    await writeFile(
+      join(dir, 'version.mjs'),
+      'export const version = "1.2.3";\nexport const buildLabel = "pr-115 abc1234";\n'
+    );
+
+    const {
+      NODE_PATH: _np,
+      NODE_OPTIONS: _no,
+      VITEST: _v,
+      VITEST_POOL_ID: _vp,
+      ...rest
+    } = process.env as Record<string, string | undefined>;
+    const cleanEnv: Record<string, string> = {};
+    for (const [k, v] of Object.entries(rest)) if (v != null) cleanEnv[k] = v;
+
+    const { stdout, stderr } = await execFileAsync(
+      process.execPath,
+      [join(dir, 'vc.js'), '--version'],
+      {
+        env: {
+          ...cleanEnv,
+          VERCEL_VC_NATIVE: '1',
+        },
+      }
+    );
+
+    expect(stdout.trim()).toBe('1.2.3');
+    expect(stderr.trim()).toBe('Vercel CLI 1.2.3 (native, pr-115 abc1234)');
+  });
 });

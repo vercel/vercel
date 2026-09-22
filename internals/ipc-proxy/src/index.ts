@@ -3,6 +3,8 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { Lambda, FileBlob, type Files } from '@vercel/build-utils';
 
+export * from './dev-proxy';
+
 export type LambdaArchitecture = 'x86_64' | 'arm64';
 
 export type LambdaExecutableRuntimeLanguages = 'rust' | 'go';

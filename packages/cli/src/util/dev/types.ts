@@ -12,13 +12,13 @@ import type {
   FileBlob,
   FileFsRef,
   Lambda,
+  Service,
 } from '@vercel/build-utils';
 import { VercelConfig } from '@vercel/client';
 import type { HandleValue, Route } from '@vercel/routing-utils';
 import type { Transform } from './transforms';
 import type { ProjectSettings } from '@vercel-internals/types';
-import type { Service } from '@vercel/fs-detectors';
-import type { BuilderWithPkg } from '../build/import-builders';
+import type { BuilderWithPkg } from '../../builders/import-builders';
 
 export { VercelConfig };
 

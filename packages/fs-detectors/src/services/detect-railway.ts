@@ -10,11 +10,11 @@ import type {
   ServiceDetectionWarning,
 } from './types';
 import {
-  assignMountPaths,
   DETECTION_FRAMEWORKS,
   inferRuntimeFromFramework,
   isFrontendFramework,
-} from './utils';
+} from './runtimes/framework';
+import { assignMountPaths } from './utils';
 
 export interface RailwayDetectResult {
   services: InferredServicesConfig | null;

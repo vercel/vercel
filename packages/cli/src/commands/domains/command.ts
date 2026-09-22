@@ -2,6 +2,7 @@ import { packageName } from '../../util/pkg-name';
 import {
   forceOption,
   formatOption,
+  jsonOption,
   limitOption,
   nextOption,
   projectOption,
@@ -14,7 +15,7 @@ export const listSubcommand = {
   description: 'Show all domains in a list',
   default: true,
   arguments: [],
-  options: [limitOption, nextOption, formatOption],
+  options: [limitOption, nextOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch',
@@ -101,7 +102,7 @@ export const priceSubcommand = {
       multiple: true,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Price quote for a domain',
@@ -113,7 +114,7 @@ export const priceSubcommand = {
     },
     {
       name: 'JSON output',
-      value: `${packageName} domains price example.com --format json`,
+      value: `${packageName} domains price example.com --json`,
     },
   ],
 } as const;
@@ -171,6 +172,7 @@ export const searchSubcommand = {
       deprecated: false,
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -191,7 +193,7 @@ export const searchSubcommand = {
     },
     {
       name: 'JSON output',
-      value: `${packageName} domains search acme --format=json`,
+      value: `${packageName} domains search acme --json`,
     },
   ],
 } as const;
@@ -221,7 +223,7 @@ export const checkSubcommand = {
       multiple: true,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Check if a domain is available',
@@ -233,7 +235,7 @@ export const checkSubcommand = {
     },
     {
       name: 'JSON output',
-      value: `${packageName} domains check example.com --format json`,
+      value: `${packageName} domains check example.com --json`,
     },
   ],
 } as const;
@@ -283,6 +285,61 @@ export const transferInSubcommand = {
   examples: [],
 } as const;
 
+export const autoRenewSubcommand = {
+  name: 'auto-renew',
+  aliases: [],
+  description: 'Turn automatic renewal on or off for a registered domain',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+    {
+      name: 'state',
+      required: true,
+    },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Turn automatic renewal on',
+      value: `${packageName} domains auto-renew example.com on`,
+    },
+    {
+      name: 'Turn automatic renewal off',
+      value: `${packageName} domains auto-renew example.com off`,
+    },
+    {
+      name: 'JSON output',
+      value: `${packageName} domains auto-renew example.com on --json`,
+    },
+  ],
+} as const;
+
+export const renewSubcommand = {
+  name: 'renew',
+  aliases: [],
+  description:
+    'Renew a registered domain before it expires (charges your account)',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Renew a domain (shows the renewal price and asks to confirm)',
+      value: `${packageName} domains renew example.com`,
+    },
+    {
+      name: 'JSON output (renewal still requires interactive confirmation)',
+      value: `${packageName} domains renew example.com --json`,
+    },
+  ],
+} as const;
+
 export const verifySubcommand = {
   name: 'verify',
   aliases: [],
@@ -305,6 +362,7 @@ export const verifySubcommand = {
         'Check DNS for the exact domain only, without falling back to the parent zone configuration',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -317,7 +375,7 @@ export const verifySubcommand = {
     },
     {
       name: 'JSON output (the exit code is non-zero when the domain is misconfigured or unverified)',
-      value: `${packageName} domains verify example.com --format json`,
+      value: `${packageName} domains verify example.com --json`,
     },
     {
       name: 'Agent-friendly output with status, reason, and suggested next commands',
@@ -342,8 +400,25 @@ export const domainsCommand = {
     searchSubcommand,
     transferInSubcommand,
     removeSubcommand,
+    renewSubcommand,
+    autoRenewSubcommand,
     verifySubcommand,
   ],
   options: [],
-  examples: [],
+  examples: [
+    {
+      name: 'Renew a registered domain before it expires',
+      value: [
+        `${packageName} domains renew <DOMAIN>`,
+        `${packageName} domains renew example.com`,
+      ],
+    },
+    {
+      name: 'Turn automatic renewal on or off for a registered domain',
+      value: [
+        `${packageName} domains auto-renew <DOMAIN> <on | off>`,
+        `${packageName} domains auto-renew example.com on`,
+      ],
+    },
+  ],
 } as const;

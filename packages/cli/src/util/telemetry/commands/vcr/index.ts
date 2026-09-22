@@ -27,6 +27,13 @@ export class VcrTelemetryClient
     });
   }
 
+  trackCliSubcommandConfig(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'config',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandRm(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'rm',
@@ -41,6 +48,20 @@ export class VcrTelemetryClient
     });
   }
 
+  trackCliSubcommandBuild(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'build',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandPush(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'push',
+      value: actual,
+    });
+  }
+
   trackCliArgumentEngine(value: string | undefined) {
     if (value) {
       // Engine is a bounded enum (docker|podman|buildah), so it is safe to
@@ -48,6 +69,36 @@ export class VcrTelemetryClient
       this.trackCliArgument({
         arg: 'engine',
         value,
+      });
+    }
+  }
+
+  trackCliArgumentPath(value: string | undefined) {
+    if (value) {
+      this.trackCliArgument({
+        arg: 'path',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliArgumentName(value: string | undefined) {
+    if (value) {
+      this.trackCliArgument({
+        arg: 'name',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionPlatform(value: string | undefined) {
+    if (value) {
+      // Platform is effectively a bounded set; record the common values and
+      // redact anything else so custom platform strings never leak.
+      const known = value === 'linux/amd64' || value === 'linux/arm64';
+      this.trackCliOption({
+        option: 'platform',
+        value: known ? value : this.redactedValue,
       });
     }
   }
@@ -66,10 +117,26 @@ export class VcrTelemetryClient
     });
   }
 
+  trackCliSubcommandPermissions(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'permissions',
+      value: actual,
+    });
+  }
+
   trackCliOptionLimit(value: number | undefined) {
     if (typeof value === 'number') {
       this.trackCliOption({
         option: 'limit',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionNext(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'next',
         value: this.redactedValue,
       });
     }
@@ -102,6 +169,17 @@ export class VcrTelemetryClient
     }
   }
 
+  trackCliOptionPublic(value: string | undefined) {
+    // Visibility is a bounded boolean ("true" | "false"), so it is safe to
+    // record the actual value; anything else is never recorded.
+    if (value === 'true' || value === 'false') {
+      this.trackCliOption({
+        option: 'public',
+        value,
+      });
+    }
+  }
+
   trackCliFlagUntagged(value: boolean | undefined) {
     if (value) {
       this.trackCliFlag('untagged');
@@ -111,6 +189,12 @@ export class VcrTelemetryClient
   trackCliFlagYes(value: boolean | undefined) {
     if (value) {
       this.trackCliFlag('yes');
+    }
+  }
+
+  trackCliFlagPush(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('push');
     }
   }
 }

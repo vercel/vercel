@@ -84,3 +84,25 @@ export function repositoryTagPath(
 ): string {
   return `/v1/vcr/repository/${encodeURIComponent(idOrName)}/tags/${encodeURIComponent(tag)}?${baseQuery(scope).toString()}`;
 }
+
+export function repositoryPermissionsPath(
+  scope: VcrScope,
+  idOrName: string,
+  opts: { limit?: number; cursor?: string } = {}
+): string {
+  const query = baseQuery(scope);
+  if (opts.limit !== undefined) {
+    query.set('limit', String(opts.limit));
+  }
+  if (opts.cursor) {
+    query.set('cursor', opts.cursor);
+  }
+  return `/v1/vcr/repository/${encodeURIComponent(idOrName)}/permissions?${query.toString()}`;
+}
+
+export function repositoryPermissionsClearPath(
+  scope: VcrScope,
+  idOrName: string
+): string {
+  return `/v1/vcr/repository/${encodeURIComponent(idOrName)}/permissions/all?${baseQuery(scope).toString()}`;
+}

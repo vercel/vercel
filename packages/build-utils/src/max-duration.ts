@@ -8,7 +8,7 @@
  * this client-side bound is intentionally coarse — it exists only to give fast
  * local feedback on obviously-invalid values.
  */
-export const DEFAULT_MAX_DURATION_LIMIT = 1800;
+export const DEFAULT_MAX_DURATION_LIMIT = 3600;
 
 /**
  * Internal env var used to skip the client-side `maxDuration` upper-bound check.
@@ -22,10 +22,11 @@ export const SKIP_MAX_DURATION_LIMIT_ENV = 'VERCEL_CLI_SKIP_MAX_DURATION_LIMIT';
 // TODO: Once `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT` is fully rolled out and the
 // server-side limit is authoritative for everyone, drop the client-side upper
 // bound entirely: remove this env var, `getMaxDurationLimit`, the `maximum`
-// branch of `getMaxDurationSchema`, and the lazy per-limit validator machinery
-// in the CLI (`packages/cli/src/util/validate-config.ts`). The `vercel.json`
-// schema can then be compiled once again with no `maxDuration` maximum, and the
-// lower-bound/integer checks become the only client-side validation.
+// branch of `getMaxDurationSchema`, and the dynamic maximum handling in the CLI
+// (`packages/cli/scripts/precompile-config-validator.mjs` and
+// `packages/cli/src/util/config-validator.ts`). The `vercel.json` schema can
+// then be compiled with no `maxDuration` maximum, leaving only the lower-bound
+// and integer checks on the client.
 
 /**
  * Returns the client-side upper bound for `maxDuration` in seconds, or

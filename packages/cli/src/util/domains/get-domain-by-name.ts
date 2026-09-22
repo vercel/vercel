@@ -28,7 +28,7 @@ export default async function getDomainByName(
   }
   try {
     const { domain } = await client.fetch<Response>(
-      `/v4/domains/${encodeURIComponent(domainName)}`,
+      `/v5/domains/${encodeURIComponent(domainName)}`,
       { bailOn429: options.bailOn429 }
     );
     return domain;

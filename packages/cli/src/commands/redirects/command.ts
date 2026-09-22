@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { yesOption } from '../../util/arg-common';
+import { projectOption, yesOption } from '../../util/arg-common';
 
 export const listSubcommand = {
   name: 'list',
@@ -8,6 +8,7 @@ export const listSubcommand = {
     'List all redirects for the current project. These redirects apply to all deployments and environments. There may also be redirects defined in a deployment that are not listed here.',
   arguments: [],
   options: [
+    projectOption,
     {
       name: 'search',
       description: 'Search for redirects by source or destination',
@@ -17,12 +18,28 @@ export const listSubcommand = {
       deprecated: false,
     },
     {
+      name: 'next',
+      description: 'Continue from a previous response',
+      shorthand: null,
+      type: Number,
+      argument: 'NUMBER',
+      deprecated: false,
+    },
+    {
+      name: 'limit',
+      description: 'Number of redirects per page (default: 50)',
+      shorthand: null,
+      type: Number,
+      argument: 'NUMBER',
+      deprecated: false,
+    },
+    {
       name: 'page',
       description: 'Page number to display',
       shorthand: null,
       type: Number,
       argument: 'NUMBER',
-      deprecated: false,
+      deprecated: true,
     },
     {
       name: 'per-page',
@@ -30,7 +47,7 @@ export const listSubcommand = {
       shorthand: null,
       type: Number,
       argument: 'NUMBER',
-      deprecated: false,
+      deprecated: true,
     },
     {
       name: 'staging',
@@ -59,11 +76,11 @@ export const listSubcommand = {
     },
     {
       name: 'List redirects on page 2',
-      value: `${packageName} redirects list --page 2`,
+      value: `${packageName} redirects list --next 2`,
     },
     {
       name: 'List redirects with custom page size',
-      value: `${packageName} redirects list --per-page 25`,
+      value: `${packageName} redirects list --limit 25`,
     },
   ],
 } as const;
@@ -73,7 +90,7 @@ export const listVersionsSubcommand = {
   aliases: ['ls-versions'],
   description: 'List all versions of redirects',
   arguments: [],
-  options: [],
+  options: [projectOption],
   examples: [
     {
       name: 'List all redirect versions',
@@ -97,6 +114,7 @@ export const addSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'status',
       description: 'HTTP status code (301, 302, 307, or 308)',
@@ -163,6 +181,7 @@ export const uploadSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip confirmation prompt',
@@ -206,6 +225,7 @@ export const removeSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when removing a redirect',
@@ -230,6 +250,7 @@ export const promoteSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when promoting',
@@ -254,6 +275,7 @@ export const restoreSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when restoring',

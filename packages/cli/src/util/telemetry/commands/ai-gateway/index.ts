@@ -13,6 +13,13 @@ export class AiGatewayTelemetryClient
     });
   }
 
+  trackCliSubcommandBudgets(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'budgets',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandRules(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'rules',
@@ -30,6 +37,13 @@ export class AiGatewayTelemetryClient
   trackCliSubcommandModels(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'models',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandLeaderboard(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'leaderboard',
       value: actual,
     });
   }

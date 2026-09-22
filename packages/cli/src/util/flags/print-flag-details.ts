@@ -11,13 +11,8 @@ import {
   formatFlagSplitWeights,
   formatFlagVariantSummary,
 } from './format-flag-outcome';
-import { formatVariantValue } from './resolve-variant';
-import type {
-  Flag,
-  FlagEnvironmentConfig,
-  FlagSettings,
-  FlagVariant,
-} from './types';
+import { formatVariantListSummary } from './resolve-variant';
+import type { Flag, FlagEnvironmentConfig, FlagSettings } from './types';
 
 interface PrintFlagDetailsOptions {
   flag: Flag;
@@ -223,13 +218,4 @@ function hasCustomConfigurationEnabled(
     envConfig.fallthrough.type === 'split' ||
     envConfig.fallthrough.type === 'rollout'
   );
-}
-
-function formatVariantListSummary(variant: FlagVariant): string {
-  const value = formatVariantValue(variant.value);
-  if (!variant.label) {
-    return value;
-  }
-
-  return `${value}: ${chalk.gray(variant.label)}`;
 }

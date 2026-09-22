@@ -1,1 +1,1 @@
-framework=net-http version=go1.25.8 RANDOMNESS_PLACEHOLDER
+framework=net-http RANDOMNESS_PLACEHOLDER

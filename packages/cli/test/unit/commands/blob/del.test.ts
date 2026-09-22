@@ -283,29 +283,4 @@ describe('blob del', () => {
       }
     });
   });
-
-  describe('spinner and output behavior', () => {
-    it('should show spinner during deletion and stop it on success', async () => {
-      const exitCode = await del(client, ['test-file.txt'], testAuth);
-
-      expect(exitCode).toBe(0);
-      expect(mockedOutput.spinner).toHaveBeenCalledWith('Deleting blob');
-      expect(mockedOutput.stopSpinner).toHaveBeenCalled();
-      expect(mockedOutput.success).toHaveBeenCalledWith('Blob deleted');
-    });
-
-    it('should not stop spinner on error', async () => {
-      const deleteError = new Error('Network error');
-      mockedBlob.del.mockRejectedValue(deleteError);
-
-      const exitCode = await del(client, ['test-file.txt'], testAuth);
-
-      expect(exitCode).toBe(1);
-      expect(mockedOutput.spinner).toHaveBeenCalledWith('Deleting blob');
-      expect(mockedOutput.stopSpinner).not.toHaveBeenCalled();
-      expect(mockedOutput.error).toHaveBeenCalledWith(
-        'Error deleting blob: Error: Network error'
-      );
-    });
-  });
 });

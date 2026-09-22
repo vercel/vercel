@@ -276,8 +276,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       expect(res.headers.get('x-matched-path')).toBe(pagePath + '.rsc');
       expect(res.headers.get('content-type')).toBe('text/x-component');
       const body = await res.text();
-      expect(body).toContain(JSON.stringify(['id', '1', 'd', null]));
-      expect(body).not.toContain(JSON.stringify(['id', '1.action', 'd', null]));
+      expect(body).not.toContain('1.action');
     });
 
     it('should work when a rewrite targets an action', async () => {

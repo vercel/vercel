@@ -1,8 +1,6 @@
 import { spawnAsync } from '@vercel/build-utils';
-import assert from 'assert';
 import { resolve, delimiter } from 'path';
 import {
-  sleep,
   shouldSkip,
   fetchWithRetry,
   fixture,
@@ -21,14 +19,7 @@ test('[vercel dev] 02-angular-node', async () => {
     '--debug',
   ]);
 
-  let stderr = '';
-
   try {
-    assert(dev.stderr);
-    dev.stderr.on('data', async (data: any) => {
-      stderr += data.toString();
-    });
-
     // start `vercel dev` detached in child_process
     dev.unref();
 
@@ -44,23 +35,7 @@ test('[vercel dev] 02-angular-node', async () => {
   } finally {
     await dev.kill();
   }
-
-  await sleep(5000);
-
-  stderr.includes('@now/build-utils@latest');
 });
-
-// https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
-test.skip(
-  '[vercel dev] 03-aurelia',
-  testFixtureStdio(
-    '03-aurelia',
-    async (testPath: any) => {
-      await testPath(200, '/', /Aurelia Navigation Skeleton/m);
-    },
-    { skipDeploy: true }
-  )
-);
 
 test(
   '[vercel dev] 04-create-react-app',
@@ -174,40 +149,6 @@ test(
   )
 );
 
-// https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
-test.skip(
-  '[vercel dev] 16-vue-node',
-  testFixtureStdio(
-    '16-vue-node',
-    async (testPath: any) => {
-      await testPath(200, '/', /Vue.js \+ Node.js API/m);
-      await testPath(
-        200,
-        '/api/date',
-        new RegExp(new Date().getFullYear() + '')
-      );
-    },
-    { skipDeploy: true }
-  )
-);
-
-// https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
-test.skip(
-  '[vercel dev] 17-vuepress-node',
-  testFixtureStdio(
-    '17-vuepress-node',
-    async (testPath: any) => {
-      await testPath(200, '/', /VuePress \+ Node.js API/m);
-      await testPath(
-        200,
-        '/api/date',
-        new RegExp(new Date().getFullYear() + '')
-      );
-    },
-    { skipDeploy: true }
-  )
-);
-
 test(
   '[vercel dev] double slashes redirect',
   testFixtureStdio(
@@ -270,18 +211,6 @@ test(
   )
 );
 
-// https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
-test.skip(
-  '[vercel dev] 19-mithril',
-  testFixtureStdio(
-    '19-mithril',
-    async (testPath: any) => {
-      await testPath(200, '/', /Mithril on Vercel/m);
-    },
-    { skipDeploy: true }
-  )
-);
-
 test(
   '[vercel dev] 20-riot',
   testFixtureStdio(
@@ -299,18 +228,6 @@ test(
     '22-brunch',
     async (testPath: any) => {
       await testPath(200, '/', /Bon Appétit./m);
-    },
-    { skipDeploy: true }
-  )
-);
-
-// https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
-test.skip(
-  '[vercel dev] 23-docusaurus',
-  testFixtureStdio(
-    '23-docusaurus',
-    async (testPath: any) => {
-      await testPath(200, '/', /My Site/m);
     },
     { skipDeploy: true }
   )

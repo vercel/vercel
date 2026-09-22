@@ -133,7 +133,7 @@ function parseWeightInput(input: string) {
   const separatorIndex = input.lastIndexOf('=');
   if (separatorIndex <= 0 || separatorIndex === input.length - 1) {
     throw new Error(
-      `Invalid weight ${chalk.bold(input)}. Use --weight <VARIANT=WEIGHT>, for example --weight on=5.`
+      `Invalid weight ${chalk.bold(input)}. Use --weight <VARIANT=WEIGHT>, for example --weight true=5.`
     );
   }
 
@@ -226,7 +226,7 @@ function formatSplitSummary(
 
 function formatPlainVariant(variant: FlagVariant): string {
   const value = formatVariantValue(variant.value);
-  return variant.label ? `${value} ${variant.label}` : value;
+  return variant.label ? `${variant.label} (${value})` : value;
 }
 
 function formatPercentage(percentage: number): string {

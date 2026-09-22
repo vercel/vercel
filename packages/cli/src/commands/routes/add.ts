@@ -1,9 +1,14 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import { ensureProjectLink } from '../../util/projects/ensure-project-link';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { addSubcommand } from './command';
-import { parseSubcommandArgs, parsePosition, offerAutoPromote } from './shared';
+import {
+  parseSubcommandArgs,
+  parsePosition,
+  offerAutoPromote,
+  withGlobalFlags,
+} from './shared';
 import addRoute from '../../util/routes/add-route';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import { parseConditions } from '../../util/routes/parse-conditions';
@@ -19,10 +24,8 @@ import {
 } from '../../util/routes/ai-transform';
 import { runInteractiveEditLoop } from './edit-interactive';
 import stamp from '../../util/output/stamp';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import { RoutesAddTelemetryClient } from '../../util/telemetry/commands/routes';
 import {
   MAX_NAME_LENGTH,
@@ -46,11 +49,6 @@ import type {
   SrcSyntax,
   RoutePosition,
 } from '../../util/routes/types';
-
-function withGlobalFlags(client: Client, commandTemplate: string): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
-}
 
 /**
  * Shell-quote a token if it contains spaces or special chars.
@@ -123,7 +121,11 @@ export default async function add(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, addSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client, 'routes');
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -291,7 +293,7 @@ export default async function add(client: Client, argv: string[]) {
       );
     }
     output.error(
-      `Route name is required when using --yes. Usage: ${getCommandName('routes add "Route Name" --src "/path" --action rewrite --dest "/destination" --yes')}`
+      `Route name is required when using --yes. Usage: ${withGlobalFlags(client, 'routes add "Route Name" --src "/path" --action rewrite --dest "/destination" --yes')}`
     );
     return 1;
   } else {
@@ -375,7 +377,7 @@ export default async function add(client: Client, argv: string[]) {
       );
     }
     output.error(
-      `Source path is required when using --yes. Usage: ${getCommandName('routes add "Name" --src "/path" --action rewrite --dest "/dest" --yes')}`
+      `Source path is required when using --yes. Usage: ${withGlobalFlags(client, 'routes add "Name" --src "/path" --action rewrite --dest "/dest" --yes')}`
     );
     return 1;
   } else {
@@ -1021,7 +1023,7 @@ async function handleAIAdd(
       );
     }
     output.error(
-      `Cannot interactively confirm route creation in a non-TTY environment. Use full route flags with ${getCommandName('routes add <name> --src ... --yes')}, or run in a TTY.`
+      `Cannot interactively confirm route creation in a non-TTY environment. Use full route flags with ${withGlobalFlags(client, 'routes add <name> --src ... --yes')}, or run in a TTY.`
     );
     return 1;
   }

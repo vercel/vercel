@@ -425,6 +425,21 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         },
       }),
     },
+    'repo-root-next-js': {
+      'pages/index.js':
+        'export default () => <div><h1>Repo root deployment</h1></div>',
+      'package.json': JSON.stringify({
+        private: true,
+        scripts: {
+          build: 'next build',
+        },
+        dependencies: {
+          next: 'latest',
+          react: 'latest',
+          'react-dom': 'latest',
+        },
+      }),
+    },
     'zero-config-next-js-functions-warning': {
       'pages/index.js':
         'export default () => <div><h1>Vercel CLI test</h1><p>Zero-config + Next.js</p></div>',

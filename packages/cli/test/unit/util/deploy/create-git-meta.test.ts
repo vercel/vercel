@@ -8,6 +8,7 @@ import {
   createGitMeta,
   getOriginUrl,
   getRemoteUrls,
+  getRootDirectory,
   isDirty,
 } from '../../../../src/util/create-git-meta';
 import { client } from '../../../mocks/client';
@@ -201,6 +202,7 @@ describe('createGitMeta', () => {
         commitSha: '0499dbfa2f58cd8b3b3ce5b2c02a24200862ac97',
         dirty: false,
         remoteUrl: undefined,
+        rootDirectory: '',
       });
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
@@ -238,8 +240,28 @@ describe('createGitMeta', () => {
         commitRef: 'master',
         commitSha: '0499dbfa2f58cd8b3b3ce5b2c02a24200862ac97',
         dirty: false,
+        rootDirectory: '',
       });
     } finally {
+      await fs.rename(join(directory, '.git'), join(directory, 'git'));
+    }
+  });
+  it('gets rootDirectory relative to the git repository root', async () => {
+    const directory = fixture('test-github');
+    const nestedDirectory = join(directory, 'apps', 'web');
+    try {
+      await fs.rename(join(directory, 'git'), join(directory, '.git'));
+      await fs.mkdirp(nestedDirectory);
+      const data = await createGitMeta(nestedDirectory);
+      expect(data).toMatchObject({
+        remoteUrl: 'https://github.com/user/repo.git',
+        commitSha: '0499dbfa2f58cd8b3b3ce5b2c02a24200862ac97',
+        rootDirectory: 'apps/web',
+      });
+      expect(getRootDirectory(nestedDirectory)).toEqual('apps/web');
+      expect(getRootDirectory(directory)).toEqual('');
+    } finally {
+      await fs.remove(join(directory, 'apps'));
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }
   });

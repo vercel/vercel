@@ -74,7 +74,7 @@ function printTags(list: TagList): void {
 
   if (list.nextCursor) {
     output.log(
-      `More results available. Re-run with \`--cursor ${list.nextCursor}\`.`
+      `More results available. Re-run with \`--next ${list.nextCursor}\`.`
     );
   }
 }
@@ -107,14 +107,17 @@ export default async function ls(
 
   const repository = parsedArgs.args[0];
   const project = parsedArgs.flags['--project'] as string | undefined;
-  const cursor = parsedArgs.flags['--cursor'] as string | undefined;
+  const cursor = (parsedArgs.flags['--next'] ?? parsedArgs.flags['--cursor']) as
+    | string
+    | undefined;
   const limitFlag = parsedArgs.flags['--limit'] as number | undefined;
   const sortBy = parsedArgs.flags['--sort-by'] as string | undefined;
   const sortOrder = parsedArgs.flags['--sort-order'] as string | undefined;
 
   telemetry.trackCliOptionProject(project);
   telemetry.trackCliOptionLimit(limitFlag);
-  telemetry.trackCliOptionCursor(cursor);
+  telemetry.trackCliOptionNext(parsedArgs.flags['--next']);
+  telemetry.trackCliOptionCursor(parsedArgs.flags['--cursor']);
   telemetry.trackCliOptionSortBy(sortBy);
   telemetry.trackCliOptionSortOrder(sortOrder);
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);

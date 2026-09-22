@@ -1,7 +1,7 @@
 import type { ExperimentalService } from '@vercel/build-utils';
 import type { Route } from '@vercel/routing-utils';
 import { describe, expect, test } from 'vitest';
-import { scopeRoutesToServiceOwnership } from '../../../../src/util/build/service-route-ownership';
+import { scopeRoutesToServiceOwnership } from '@vercel-internals/cli-builder-integration/service-route-ownership';
 
 function createWebService(
   name: string,

@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { ACTION_COLORS } from './format-utils';
 import type {
   FirewallConfigResponse,
   FirewallConfigChange,
@@ -9,7 +10,10 @@ import type {
   FirewallRuleAction,
   FirewallIpRule,
   BypassRule,
+  ManagedRuleConfig,
+  ManagedRulesResponse,
 } from './types';
+import { formatAlignedLabel } from '../output/print-aligned-label';
 
 export interface AttackModeStatus {
   enabled: boolean;
@@ -17,18 +21,114 @@ export interface AttackModeStatus {
   activeUntil?: number | null;
 }
 
+/**
+ * Shown in place of a value the account's plan has no access to.
+ *
+ * Names the qualifying plans rather than only reporting the absence, so the
+ * row says what to do about it. The API's own 402 message says the same thing
+ * at greater length; it is deliberately not used here, because this renders as
+ * a fixed-width table cell that unbounded server-controlled text would break.
+ * The JSON output carries that message instead.
+ */
+const PLAN_UNAVAILABLE = 'Requires Pro or Enterprise';
+
+const MS_PER_SECOND = 1000;
+const MS_PER_MINUTE = 60 * MS_PER_SECOND;
+const MS_PER_HOUR = 60 * MS_PER_MINUTE;
+
+/** Render a duration as `1h 30m`. */
+function formatDuration(ms: number): string {
+  const hours = Math.floor(ms / MS_PER_HOUR);
+  const minutes = Math.floor((ms % MS_PER_HOUR) / MS_PER_MINUTE);
+  return `${hours}h ${minutes}m`;
+}
+
 export function isAllSourcesBypass(ip: string): boolean {
   return ip === '0.0.0.0/0' || ip === '::/0';
 }
 
-export function isMitigationsPaused(bypass: BypassRule[]): boolean {
-  const now = Math.floor(Date.now() / 1000);
-  return bypass.some(
-    b =>
-      isAllSourcesBypass(b.Ip) &&
-      b.Domain === '*' &&
-      (b.ExpiresAt === null || b.ExpiresAt === undefined || b.ExpiresAt > now)
+export type MitigationsStatus =
+  | { paused: false }
+  /** `resumesAt` is epoch seconds; absent for a bypass with no expiry. */
+  | { paused: true; resumesAt?: number };
+
+/**
+ * Latest expiry that can plausibly be epoch seconds, guarding against a value
+ * in different units being read as a date tens of thousands of years out.
+ */
+const MAX_EXPIRY_SECONDS = 4102444800; // 2100-01-01
+
+/**
+ * Parse the expiry of a project bypass entry, in epoch seconds.
+ *
+ * Returns `null` when the bypass is open-ended: either it carries no expiry, or
+ * the expiry cannot be interpreted. An uninterpretable expiry is deliberately
+ * not discarded — the entry still proves a bypass exists, and on a plan-gated
+ * account this is the only evidence of one, so reporting mitigations as active
+ * would be the more dangerous reading.
+ */
+function parseExpirySeconds(expiry: string | undefined): number | null {
+  if (!expiry || !/^\d+$/.test(expiry)) return null;
+
+  const seconds = Number(expiry);
+  return Number.isSafeInteger(seconds) && seconds <= MAX_EXPIRY_SECONDS
+    ? seconds
+    : null;
+}
+
+/**
+ * Expiry of every all-sources bypass in effect, in epoch seconds, using `null`
+ * for one that is open-ended.
+ *
+ * Both sources are read. The project's `firewallBypassIps` is not plan-gated,
+ * so it is the only source on plans without IP Bypass; the bypass API is
+ * consulted when readable so that a bypass which was never mirrored onto the
+ * project is still accounted for.
+ */
+function allSourcesBypassExpiries(
+  firewallBypassIps: string[] = [],
+  bypass: BypassRule[] | null = []
+): (number | null)[] {
+  const expiries: (number | null)[] = [];
+
+  // Entries are encoded as `<cidr>#<epoch-seconds>` by the bypass API, the
+  // expiry omitted when the bypass is permanent. They carry no domain: the API
+  // only records them on the project for a project-scoped bypass, which its
+  // request schema makes mutually exclusive with a domain-scoped one.
+  for (const entry of firewallBypassIps) {
+    const [ip, expiry] = entry.split('#');
+    if (!isAllSourcesBypass(ip)) continue;
+    expiries.push(parseExpirySeconds(expiry));
+  }
+
+  for (const rule of bypass ?? []) {
+    if (!isAllSourcesBypass(rule.Ip) || rule.Domain !== '*') continue;
+    expiries.push(rule.ExpiresAt ?? null);
+  }
+
+  return expiries;
+}
+
+/**
+ * Whether system mitigations are paused, which is the case while an all-sources
+ * system bypass is in effect. A permanent bypass keeps them paused indefinitely;
+ * otherwise they resume when the last bypass expires.
+ */
+export function getMitigationsStatus(
+  firewallBypassIps?: string[],
+  bypass?: BypassRule[] | null
+): MitigationsStatus {
+  const expiries = allSourcesBypassExpiries(firewallBypassIps, bypass);
+  if (expiries.includes(null)) return { paused: true };
+
+  const nowSeconds = Date.now() / MS_PER_SECOND;
+  const unexpired = expiries.filter(
+    (expiry): expiry is number => expiry !== null && expiry > nowSeconds
   );
+
+  return unexpired.length
+    ? { paused: true, resumesAt: Math.max(...unexpired) }
+    : { paused: false };
 }
 
 export function formatAttackModeStatus(status: AttackModeStatus): string {
@@ -40,81 +140,128 @@ export function formatAttackModeStatus(status: AttackModeStatus): string {
     if (remainingMs <= 0) {
       return chalk.dim('Off (expired)');
     }
-    const hours = Math.floor(remainingMs / (60 * 60 * 1000));
-    const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
-    return chalk.red(`On (expires in ${hours}h ${minutes}m)`);
+    return chalk.red(`On (expires in ${formatDuration(remainingMs)})`);
   }
   return chalk.red('On');
 }
 
-export function formatMitigationsStatus(bypass: BypassRule[]): string {
-  if (isMitigationsPaused(bypass)) {
-    const entry = bypass.find(
-      b => isAllSourcesBypass(b.Ip) && b.Domain === '*'
-    );
-    if (entry?.ExpiresAt) {
-      const remainingMs = entry.ExpiresAt * 1000 - Date.now();
-      if (remainingMs > 0) {
-        const hours = Math.floor(remainingMs / (60 * 60 * 1000));
-        const minutes = Math.floor(
-          (remainingMs % (60 * 60 * 1000)) / (60 * 1000)
-        );
-        return chalk.yellow(`Paused (auto-resumes in ${hours}h ${minutes}m)`);
-      }
+export function formatMitigationsStatus(status: MitigationsStatus): string {
+  if (!status.paused) return chalk.green('Active');
+
+  if (status.resumesAt !== undefined) {
+    const remainingMs = status.resumesAt * MS_PER_SECOND - Date.now();
+    if (remainingMs > 0) {
+      return chalk.yellow(
+        `Paused (auto-resumes in ${formatDuration(remainingMs)})`
+      );
     }
-    return chalk.yellow('Paused');
   }
-  return chalk.green('Active');
+  return chalk.yellow('Paused');
 }
 
-export function formatStatusOutput(
-  active: FirewallConfigResponse | null,
-  draft: FirewallConfigResponse | null,
-  bypass: BypassRule[],
-  attackMode?: AttackModeStatus
-): string {
+/**
+ * Firewall configuration in execution order:
+ * Bypass -> Mitigations -> Attack Mode -> IP Blocks -> Rules -> Bot Protection
+ * -> AI Bots -> OWASP.
+ *
+ * Shared by `firewall status` and `firewall overview`, which renders this
+ * block and then adds traffic and alert activity beneath it.
+ */
+export function formatStatusOutput(opts: {
+  active: FirewallConfigResponse | null;
+  draft: FirewallConfigResponse | null;
+  /** Bypass rules, or `null` when the bypass API is gated on the plan. */
+  bypass: BypassRule[] | null;
+  attackMode?: AttackModeStatus;
+  /** Decides whether OWASP reports the upgrade it needs. */
+  planInfo?: FirewallPlanInfo;
+  /**
+   * The project's `security.firewallBypassIps`. Not plan-gated, so it carries
+   * mitigation status even when `bypass` is unavailable.
+   */
+  firewallBypassIps?: string[];
+}): string {
+  const { active, draft, bypass, attackMode, planInfo, firewallBypassIps } =
+    opts;
   const lines: string[] = [];
 
-  if (active) {
-    const enabled = active.firewallEnabled;
+  lines.push(
+    formatAlignedLabel(
+      'Firewall',
+      active
+        ? active.firewallEnabled
+          ? chalk.green('Enabled')
+          : chalk.red('Disabled')
+        : chalk.dim('Not configured')
+    )
+  );
+
+  if (bypass === null) {
+    lines.push(formatAlignedLabel('Bypass', chalk.dim(PLAN_UNAVAILABLE)));
+  } else {
+    // The all-sources bypass represents system mitigations, reported below.
+    const regularBypasses = bypass.filter(b => !isAllSourcesBypass(b.Ip));
     lines.push(
-      `  ${chalk.bold('Firewall:')}             ${enabled ? chalk.green('Enabled') : chalk.red('Disabled')}`
+      formatAlignedLabel(
+        'Bypass',
+        `${regularBypasses.length} IP${regularBypasses.length !== 1 ? 's' : ''}`
+      )
     );
+  }
+  lines.push(
+    formatAlignedLabel(
+      'Mitigations',
+      formatMitigationsStatus(getMitigationsStatus(firewallBypassIps, bypass))
+    )
+  );
+
+  if (attackMode) {
+    lines.push(
+      formatAlignedLabel('Attack Mode', formatAttackModeStatus(attackMode))
+    );
+  }
+
+  if (active) {
+    lines.push(formatAlignedLabel('IP Blocks', String(active.ips.length)));
 
     const activeRules = active.rules.filter(r => r.active).length;
     const inactiveRules = active.rules.filter(r => !r.active).length;
-    const totalRules = active.rules.length;
     lines.push(
-      `  ${chalk.bold('Custom Rules:')}         ${activeRules} active, ${inactiveRules} inactive (${totalRules} total)`
-    );
-
-    lines.push(`  ${chalk.bold('IP Blocks:')}            ${active.ips.length}`);
-  } else {
-    lines.push(
-      `  ${chalk.bold('Firewall:')}             ${chalk.dim('Not configured')}`
+      formatAlignedLabel(
+        'Rules',
+        `${activeRules} active, ${inactiveRules} inactive (${active.rules.length} total)`
+      )
     );
   }
 
-  // Filter out the allSources bypass (system mitigations) from the count
-  const regularBypasses = bypass.filter(b => !isAllSourcesBypass(b.Ip));
   lines.push(
-    `  ${chalk.bold('System Bypass:')}        ${regularBypasses.length} IP${regularBypasses.length !== 1 ? 's' : ''}`
+    formatAlignedLabel(
+      'Bot Protection',
+      formatBotProtectionStatus(getBotProtectionConfig(active?.managedRules))
+    )
   );
-
-  lines.push('');
-  if (attackMode) {
-    lines.push(
-      `  ${chalk.bold('Attack Mode:')}          ${formatAttackModeStatus(attackMode)}`
-    );
-  }
   lines.push(
-    `  ${chalk.bold('System Mitigations:')}   ${formatMitigationsStatus(bypass)}`
+    formatAlignedLabel(
+      'AI Bots',
+      formatAiBotsStatus(active?.managedRules?.ai_bots)
+    )
+  );
+  lines.push(
+    formatAlignedLabel(
+      'OWASP',
+      formatOwaspStatus(active?.managedRules?.owasp, planInfo)
+    )
   );
 
   if (draft && draft.changes.length > 0) {
     lines.push('');
     lines.push(
-      `  ${chalk.bold('Pending Draft:')}        ${chalk.yellow(`${draft.changes.length} unpublished change${draft.changes.length !== 1 ? 's' : ''}`)}`
+      formatAlignedLabel(
+        'Draft',
+        chalk.yellow(
+          `${draft.changes.length} unpublished change${draft.changes.length !== 1 ? 's' : ''}`
+        )
+      )
     );
     const activeRulesMap = new Map((active?.rules || []).map(r => [r.id, r]));
     lines.push(formatDiffOutput(draft.changes, activeRulesMap));
@@ -911,4 +1058,497 @@ export function formatRuleDetail(rule: FirewallRule): string {
   }
 
   return lines.join('\n');
+}
+
+/** Plan entitlements that affect how firewall status is reported. */
+export interface FirewallPlanInfo {
+  isEnterprise?: boolean;
+  hasSecurityPlus?: boolean;
+}
+
+function hasOwaspEntitlement(planInfo?: FirewallPlanInfo): boolean {
+  return Boolean(planInfo?.hasSecurityPlus || planInfo?.isEnterprise);
+}
+
+/** Bot Protection lives under either legacy `bot_filter` or `bot_protection`. */
+export function getBotProtectionConfig(
+  managedRules?: ManagedRulesResponse | null
+): ManagedRuleConfig | undefined {
+  return managedRules?.bot_filter ?? managedRules?.bot_protection;
+}
+
+export function formatBotProtectionStatus(
+  ruleset: ManagedRuleConfig | undefined
+): string {
+  if (!ruleset?.active) {
+    return chalk.dim('Off');
+  }
+  if (ruleset.action === 'log') {
+    return ACTION_COLORS.log('Log');
+  }
+  if (ruleset.action === 'deny') {
+    return ACTION_COLORS.deny('Deny');
+  }
+  // Challenge is what enabling Bot Protection sets, so it also stands in for
+  // a ruleset the API returned without an action.
+  return ACTION_COLORS.challenge('Challenge');
+}
+
+export function formatAiBotsStatus(
+  ruleset: ManagedRuleConfig | undefined
+): string {
+  if (!ruleset?.active) {
+    return chalk.dim('Allow');
+  }
+  if (ruleset.action === 'log') {
+    return ACTION_COLORS.log('Log');
+  }
+  if (ruleset.action === 'challenge') {
+    return ACTION_COLORS.challenge('Challenge');
+  }
+  return ACTION_COLORS.deny('Deny');
+}
+
+export function formatOwaspStatus(
+  ruleset: ManagedRuleConfig | undefined,
+  planInfo?: FirewallPlanInfo
+): string {
+  if (!ruleset?.active) {
+    if (!hasOwaspEntitlement(planInfo)) {
+      return `${chalk.dim('Off')}  ${chalk.dim('\u00b7 requires Security+')}`;
+    }
+    return chalk.dim('Off');
+  }
+  const groups = ruleset.ruleGroups
+    ? Object.values(ruleset.ruleGroups)
+    : undefined;
+  if (groups && groups.length > 0) {
+    const activeGroups = groups.filter(g => g.active).length;
+    return chalk.green(`On (${activeGroups} of ${groups.length} groups)`);
+  }
+  return chalk.green('On');
+}
+
+/**
+ * OWASP status for `--json`. A ruleset that is off and unavailable on the plan
+ * reports the upgrade needed, so an agent can tell "disabled" from "not
+ * purchasable here".
+ */
+export function owaspJsonStatus(
+  ruleset: ManagedRuleConfig | undefined,
+  planInfo?: FirewallPlanInfo
+): {
+  enabled: boolean;
+  action: string | null;
+  requiresUpgrade?: boolean;
+  upgrade?: 'security-plus';
+} {
+  const enabled = Boolean(ruleset?.active);
+  const action = enabled ? (ruleset?.action ?? null) : null;
+  if (enabled || hasOwaspEntitlement(planInfo)) {
+    return { enabled, action };
+  }
+  return {
+    enabled: false,
+    action: null,
+    requiresUpgrade: true,
+    upgrade: 'security-plus',
+  };
+}
+
+/**
+ * The stages a request passes through, named as the dashboard's firewall
+ * pipeline diagram names them so the two can be read against each other.
+ */
+export type FirewallStageId =
+  | 'system-rules'
+  | 'attack-mode'
+  | 'ip-blocking'
+  | 'custom-rules'
+  | 'bot-management'
+  | 'managed-rulesets'
+  | 'deployment-routing'
+  | 'response-returned';
+
+/**
+ * The dashboard groups consecutive stages and states its bypass rules per
+ * group. `attack-mode` sits between two groups and belongs to neither.
+ */
+export type FirewallStageGroup =
+  | 'system-rules'
+  | 'custom-rules'
+  | 'managed-rulesets'
+  | 'routing';
+
+/**
+ * The two ways a request skips stages: a system bypass entry matching its IP,
+ * or a custom firewall rule whose action is `bypass`.
+ */
+export type FirewallBypassKind = 'system' | 'custom';
+
+export type FirewallStageState =
+  /** Configured and running. */
+  | 'active'
+  /** Runs, but nothing is configured or it is switched off. */
+  | 'inactive'
+  /** A stage of several rulesets, some on and some off. */
+  | 'partial'
+  /** The plan cannot read this stage's configuration. */
+  | 'unknown'
+  /** Not configurable; the request has left the firewall. */
+  | 'terminal';
+
+export interface FirewallRulesetState {
+  id: string;
+  label: string;
+  state: 'active' | 'inactive' | 'unavailable';
+  action?: string | null;
+  /** Present when `state` is `unavailable`, saying what would enable it. */
+  unavailable?: { reason: 'plan'; upgrade: 'security-plus' };
+}
+
+/**
+ * One stage of the pipeline.
+ *
+ * The first six fields are static topology: identical for every project, and
+ * safe to treat as schema. `state` and below are this project's configuration.
+ * Keep the split — an earlier revision hardcoded `skippedBy`, which made a
+ * stage report that a bypass *could* skip it as though one *did*.
+ */
+export interface FirewallPipelineStage {
+  // Static topology.
+  id: FirewallStageId;
+  order: number;
+  group: FirewallStageGroup | null;
+  label: string;
+  description: string;
+  /** Whether the project can change this stage at all. */
+  configurable: boolean;
+  /** Bypass kinds that are able to skip this stage. */
+  skippableBy: FirewallBypassKind[];
+
+  // Live state.
+  state: FirewallStageState;
+  /** Entries configured, where the stage is a collection. */
+  count?: number;
+  /** Mitigation action, where the stage has one. */
+  action?: string | null;
+  /** Members of a stage that runs several rulesets. */
+  rulesets?: FirewallRulesetState[];
+  /** Bypass kinds that skip this stage *given the current configuration*. */
+  skippedBy?: FirewallBypassKind[];
+}
+
+export interface FirewallBypassState {
+  /** `unknown` when the plan cannot read the bypass list. */
+  state: 'active' | 'inactive' | 'unknown';
+  /** Absent when `state` is `unknown`; absence is not zero. */
+  count?: number;
+  /** Stages this kind of bypass skips. */
+  skips: FirewallStageId[];
+}
+
+export interface FirewallPipeline {
+  bypasses: Record<FirewallBypassKind, FirewallBypassState>;
+  /**
+   * The stages a request passes through, in the order it passes through them.
+   * Ends with the routing stages, so "nothing blocked it" is a reported
+   * outcome rather than the end of the array.
+   */
+  requestFlow: FirewallPipelineStage[];
+}
+
+/** Static topology, in execution order. Copy for the wording lives in the dashboard diagram. */
+const PIPELINE_TOPOLOGY: Omit<
+  FirewallPipelineStage,
+  'state' | 'count' | 'action' | 'rulesets' | 'skippedBy'
+>[] = [
+  {
+    id: 'system-rules',
+    order: 1,
+    group: 'system-rules',
+    label: 'System Rules',
+    description:
+      'Vercel-managed protections covering multiple threat categories',
+    configurable: false,
+    skippableBy: ['system'],
+  },
+  {
+    id: 'attack-mode',
+    order: 2,
+    group: null,
+    label: 'Attack Challenge Mode',
+    description:
+      'Challenges all visitors with a verification page when enabled',
+    configurable: true,
+    skippableBy: [],
+  },
+  {
+    id: 'ip-blocking',
+    order: 3,
+    group: 'custom-rules',
+    label: 'IP Blocking',
+    description: 'User-configured IP and CIDR block rules',
+    configurable: true,
+    skippableBy: [],
+  },
+  {
+    id: 'custom-rules',
+    order: 4,
+    group: 'custom-rules',
+    label: 'Custom Firewall Rules',
+    description: 'User-configured firewall rules',
+    configurable: true,
+    skippableBy: [],
+  },
+  {
+    id: 'bot-management',
+    order: 5,
+    group: 'managed-rulesets',
+    label: 'Bot Management',
+    description: 'Automated bot detection and verification',
+    configurable: true,
+    skippableBy: ['system', 'custom'],
+  },
+  {
+    id: 'managed-rulesets',
+    order: 6,
+    group: 'managed-rulesets',
+    label: 'Managed Rulesets',
+    description: 'OWASP Top 10 and other curated security rulesets',
+    configurable: true,
+    skippableBy: ['custom'],
+  },
+  {
+    id: 'deployment-routing',
+    order: 7,
+    group: 'routing',
+    label: 'Deployment Routing',
+    description:
+      'The request is routed to the deployment and the response is generated',
+    configurable: false,
+    skippableBy: [],
+  },
+  {
+    id: 'response-returned',
+    order: 8,
+    group: 'routing',
+    label: 'Response Returned',
+    description: 'If no rules blocked the request, the response is returned',
+    configurable: false,
+    skippableBy: [],
+  },
+];
+
+/** Bot Protection is its own stage, so it is not one of the managed rulesets. */
+const BOT_PROTECTION_KEYS = new Set(['bot_filter', 'bot_protection']);
+
+const RULESET_LABELS: Record<string, string> = {
+  owasp: 'OWASP',
+  ai_bots: 'AI Bots',
+  traffic_sources: 'Traffic Sources',
+  vercel_ruleset: 'Vercel Ruleset',
+};
+
+/**
+ * Rulesets the stage always reports, present in the config or not. A project
+ * that has never touched OWASP has no `owasp` key, but the ruleset still
+ * exists and can still be plan-gated, so omitting it would report a different
+ * pipeline for an untouched project than for one explicitly switched off.
+ */
+const ALWAYS_REPORTED_RULESETS = ['owasp', 'ai_bots'] as const;
+
+/** `ai_bots` -> `ai-bots`, so ruleset ids read like stage ids. */
+function rulesetId(key: string): string {
+  return key.replace(/_/g, '-');
+}
+
+function rulesetLabel(key: string): string {
+  return (
+    RULESET_LABELS[key] ??
+    key
+      .split('_')
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ')
+  );
+}
+
+/** Active rules whose action is `bypass`; these skip all later stages. */
+function countCustomBypassRules(active: FirewallConfigResponse | null): number {
+  return (
+    active?.rules.filter(
+      r => r.active && r.action.mitigate?.action === 'bypass'
+    ).length ?? 0
+  );
+}
+
+function getManagedRulesetStates(
+  managedRules: ManagedRulesResponse | undefined,
+  planInfo: FirewallPlanInfo | undefined
+): FirewallRulesetState[] {
+  const keys = [
+    ...ALWAYS_REPORTED_RULESETS,
+    ...Object.keys(managedRules ?? {}).filter(
+      key =>
+        !BOT_PROTECTION_KEYS.has(key) &&
+        !ALWAYS_REPORTED_RULESETS.includes(
+          key as (typeof ALWAYS_REPORTED_RULESETS)[number]
+        )
+    ),
+  ];
+
+  return keys
+    .map(key => [key, managedRules?.[key]] as const)
+    .map(([key, value]) => {
+      const id = rulesetId(key);
+      const label = rulesetLabel(key);
+
+      // OWASP is the one ruleset a plan can withhold, so "off" and "not
+      // purchasable here" have to stay distinguishable.
+      if (key === 'owasp') {
+        const owasp = owaspJsonStatus(value, planInfo);
+        if (owasp.requiresUpgrade) {
+          return {
+            id,
+            label,
+            state: 'unavailable' as const,
+            unavailable: { reason: 'plan' as const, upgrade: owasp.upgrade! },
+          };
+        }
+        return {
+          id,
+          label,
+          state: owasp.enabled ? ('active' as const) : ('inactive' as const),
+          action: owasp.action,
+        };
+      }
+
+      return {
+        id,
+        label,
+        state: value?.active ? ('active' as const) : ('inactive' as const),
+        action: value?.active ? (value.action ?? null) : null,
+      };
+    });
+}
+
+function getManagedRulesetsState(
+  rulesets: FirewallRulesetState[]
+): FirewallStageState {
+  const configurable = rulesets.filter(r => r.state !== 'unavailable');
+  const active = configurable.filter(r => r.state === 'active').length;
+  if (active === 0) return 'inactive';
+  return active === configurable.length ? 'active' : 'partial';
+}
+
+/**
+ * The firewall pipeline as the dashboard diagram models it: ordered stages,
+ * the groups they belong to, and the two kinds of bypass that skip them.
+ *
+ * Reports the same model the human summary implies, in a form an agent can act
+ * on without parsing rows. Shared by `firewall status` and `firewall overview`
+ * so the two cannot disagree about execution order.
+ */
+export function getFirewallPipeline(opts: {
+  active: FirewallConfigResponse | null;
+  /** Bypass rules, or `null` when the bypass API is gated on the plan. */
+  bypass: BypassRule[] | null;
+  attackMode?: AttackModeStatus;
+  planInfo?: FirewallPlanInfo;
+  firewallBypassIps?: string[];
+}): FirewallPipeline {
+  const { active, bypass, attackMode, planInfo, firewallBypassIps } = opts;
+
+  // An all-sources bypass represents paused mitigations rather than a bypass
+  // entry, and is reported through the `system-rules` stage instead.
+  const systemBypassIps = bypass?.filter(b => !isAllSourcesBypass(b.Ip)) ?? [];
+  const customBypassRules = countCustomBypassRules(active);
+
+  const bypasses: Record<FirewallBypassKind, FirewallBypassState> = {
+    system:
+      bypass === null
+        ? { state: 'unknown', skips: [] }
+        : {
+            state: systemBypassIps.length > 0 ? 'active' : 'inactive',
+            count: systemBypassIps.length,
+            skips: [],
+          },
+    custom: {
+      state: customBypassRules > 0 ? 'active' : 'inactive',
+      count: customBypassRules,
+      skips: [],
+    },
+  };
+
+  // Derived from the topology rather than restated, so the two directions of
+  // the same edge cannot drift apart.
+  for (const kind of ['system', 'custom'] as const) {
+    bypasses[kind].skips = PIPELINE_TOPOLOGY.filter(s =>
+      s.skippableBy.includes(kind)
+    ).map(s => s.id);
+  }
+
+  const mitigationsPaused = getMitigationsStatus(
+    firewallBypassIps,
+    bypass
+  ).paused;
+  const botProtection = getBotProtectionConfig(active?.managedRules);
+  const managedRulesets = getManagedRulesetStates(
+    active?.managedRules,
+    planInfo
+  );
+  const activeRules = active?.rules.filter(r => r.active).length ?? 0;
+  const ipBlocks = active?.ips.length ?? 0;
+
+  const requestFlow = PIPELINE_TOPOLOGY.map(
+    (topology): FirewallPipelineStage => {
+      // Only a bypass that is actually configured skips anything.
+      const skippedBy = topology.skippableBy.filter(
+        kind => bypasses[kind].state === 'active'
+      );
+      const base = { ...topology, skippedBy };
+
+      switch (topology.id) {
+        case 'system-rules':
+          return { ...base, state: mitigationsPaused ? 'inactive' : 'active' };
+        case 'attack-mode':
+          return {
+            ...base,
+            state: attackMode?.enabled ? 'active' : 'inactive',
+          };
+        case 'ip-blocking':
+          return {
+            ...base,
+            state: ipBlocks > 0 ? 'active' : 'inactive',
+            count: ipBlocks,
+          };
+        case 'custom-rules':
+          return {
+            ...base,
+            state:
+              active?.firewallEnabled && activeRules > 0
+                ? 'active'
+                : 'inactive',
+            count: activeRules,
+          };
+        case 'bot-management':
+          return {
+            ...base,
+            state: botProtection?.active ? 'active' : 'inactive',
+            action: botProtection?.action ?? null,
+          };
+        case 'managed-rulesets':
+          return {
+            ...base,
+            state: getManagedRulesetsState(managedRulesets),
+            count: managedRulesets.filter(r => r.state === 'active').length,
+            rulesets: managedRulesets,
+          };
+        default:
+          return { ...base, state: 'terminal' };
+      }
+    }
+  );
+
+  return { bypasses, requestFlow };
 }

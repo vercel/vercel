@@ -23,10 +23,10 @@ import type {
   ServiceDetectionWarning,
   ServicesRoutes,
 } from './types';
+import { isFrontendFramework } from './runtimes/framework';
 import {
   getInternalServiceCronPathPrefix,
   getInternalServiceFunctionPath,
-  isFrontendFramework,
   isRouteOwningBuilder,
   isStaticBuild,
   readVercelConfig,
@@ -274,9 +274,8 @@ export async function detectServices(
     rewrites: [],
     errors: [
       {
-        code: 'NO_EXPERIMENTAL_SERVICES_CONFIGURED',
-        message:
-          'No services configured. Add `experimentalServices` to vercel.json.',
+        code: 'NO_SERVICES_CONFIGURED',
+        message: 'No services configured. Add `services` to vercel.json.',
       },
     ],
     warnings: [],

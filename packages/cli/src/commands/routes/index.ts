@@ -28,6 +28,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import { RoutesTelemetryClient } from '../../util/telemetry/commands/routes';
+import { getProjectOptionFromArgs } from '../../util/arg-common';
 
 const COMMAND_CONFIG = {
   list: getCommandAliases(listSubcommand),
@@ -84,6 +85,10 @@ export default async function main(client: Client) {
         columns: client.stderr.columns,
       })
     );
+  }
+
+  if (subcommand && !needHelp) {
+    telemetry.trackCliOptionProject(getProjectOptionFromArgs(args));
   }
 
   switch (subcommand) {

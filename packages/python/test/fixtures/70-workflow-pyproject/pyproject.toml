@@ -4,7 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi",
-    "vercel",
+    "vercel>=0.7.2",
 ]
 
 # Declares the workflow entrypoint compiled into a queue-triggered Lambda

@@ -1,5 +1,23 @@
 # @vercel/static-config
 
+## 3.4.3
+
+### Patch Changes
+
+- b9e12f0: Lazy-load `oxc-parser` so a native binding or `require(esm)` failure falls back to ts-morph instead of crashing config extraction. Load failures are tagged on `vc.builder.static_config` as `static_config.oxc_error:load`.
+
+## 3.4.2
+
+### Patch Changes
+
+- 2c363fd: Use Oxc as `@vercel/static-config`'s primary parser with a traced ts-morph compatibility fallback.
+
+## 3.4.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
 ## 3.4.0
 
 ### Minor Changes

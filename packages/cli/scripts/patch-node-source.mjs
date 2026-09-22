@@ -26,8 +26,11 @@ const patchedWindowsSmallIcuGenccodeAction = `                  # build final .d
  * does. ClangCL cannot generate the data object without that value.
  * See https://github.com/nodejs/node/issues/58751.
  *
- * Keep this replacement exact so a future Node source change requires us to
- * re-evaluate or remove the workaround instead of patching an unrelated block.
+ * Unused while the CLI embeds full-icu Node (the default genccode action
+ * already passes `-c <(target_arch)`). Keep this replacement exact so a
+ * future Node source change requires us to re-evaluate or remove the
+ * workaround instead of patching an unrelated block if we ever revert to
+ * small-icu.
  */
 export function patchWindowsSmallIcuGenccodeGyp(source) {
   const unpatchedMatches = countOccurrences(
