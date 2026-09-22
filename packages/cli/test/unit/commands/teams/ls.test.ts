@@ -63,12 +63,20 @@ describe('teams ls', () => {
     });
 
     it('--next option should be tracked', async () => {
-      client.setArgv('teams', 'list', '--next', '1584722256178');
+      client.setArgv(
+        'teams',
+        'list',
+        '--next',
+        '1584722256178',
+        '--limit',
+        '5'
+      );
       const exitCode = await teams(client);
       expect(exitCode, 'exit code for "teams"').toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:list', value: 'list' },
         { key: 'option:next', value: '[REDACTED]' },
+        { key: 'option:limit', value: '[REDACTED]' },
       ]);
     });
 

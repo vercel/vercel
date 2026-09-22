@@ -1,0 +1,18 @@
+[project]
+name = "services-queue-cache-backend"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.133.0",
+    "vercel-cache",
+    "vercel-queue",
+]
+
+[tool.setuptools]
+py-modules = ["main", "subscribers"]
+
+[tool.vercel]
+entrypoint = "main:app"
+
+[[tool.vercel.subscribers]]
+entrypoint = "subscribers"

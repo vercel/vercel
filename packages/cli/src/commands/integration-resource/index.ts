@@ -12,6 +12,7 @@ import {
   connectSubcommand,
   createThresholdSubcommand,
   disconnectSubcommand,
+  inspectSubcommand,
   integrationResourceCommand,
   removeSubcommand,
 } from './command';
@@ -19,6 +20,7 @@ import { claim } from './claim';
 import { connect } from './connect';
 import { createThreshold } from './create-threshold';
 import { disconnect } from './disconnect';
+import { inspect } from './inspect';
 import { remove } from './remove-resource';
 
 const COMMAND_CONFIG = {
@@ -27,6 +29,7 @@ const COMMAND_CONFIG = {
   connect: getCommandAliases(connectSubcommand),
   'create-threshold': getCommandAliases(createThresholdSubcommand),
   claim: getCommandAliases(claimSubcommand),
+  inspect: getCommandAliases(inspectSubcommand),
 };
 
 interface DispatchOptions {
@@ -114,6 +117,15 @@ export async function dispatchResourceSubcommand(
       }
       telemetry.trackCliSubcommandClaim(subcommandOriginal);
       return claim(client, innerArgs);
+    }
+    case 'inspect': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp(options.helpBreadcrumb, subcommandOriginal);
+        printHelp(inspectSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandInspect(subcommandOriginal);
+      return inspect(client, innerArgs);
     }
     default: {
       output.error(getInvalidSubcommand(COMMAND_CONFIG));

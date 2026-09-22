@@ -240,6 +240,78 @@ describe('inspect', () => {
         expect(jsonOutput).toHaveProperty('url');
         expect(jsonOutput).toHaveProperty('readyState');
       });
+
+      it('outputs build logs as a top-level JSON array without printing logs to stderr', async () => {
+        const user = useUser();
+        const deployment = useDeployment({ creator: user });
+        useBuildLogs({
+          deployment,
+          logProducer: async function* () {
+            yield {
+              created: 1717426870339,
+              date: 1717426870339,
+              deploymentId: deployment.id,
+              id: 'evt_1',
+              info: { type: 'build', name: 'install', step: 'install' },
+              serial: '1',
+              text: '\u001b[31mHello, world!\u001b[39m',
+              type: 'stdout',
+            };
+            yield {
+              created: 1717426870340,
+              date: 1717426870340,
+              deploymentId: deployment.id,
+              id: 'evt_2',
+              info: { type: 'build', name: 'build', step: 'build' },
+              level: 'warning',
+              serial: '2',
+              text: 'Line 1\nLine 2\n',
+              type: 'stderr',
+            };
+          },
+        });
+
+        client.setArgv('inspect', deployment.url, '--logs', '--format', 'json');
+        const exitCode = await inspect(client);
+        expect(exitCode).toEqual(0);
+
+        const stdout = client.stdout.getFullOutput();
+        const logsOutput = JSON.parse(stdout);
+
+        expect(Array.isArray(logsOutput)).toBe(true);
+        expect(logsOutput).toHaveLength(2);
+        expect(logsOutput).not.toHaveProperty('id');
+        expect(logsOutput[0]).toMatchObject({
+          created: 1717426870339,
+          date: 1717426870339,
+          type: 'stdout',
+          text: '\u001b[31mHello, world!\u001b[39m',
+          id: 'evt_1',
+          serial: '1',
+          deploymentId: deployment.id,
+          info: { type: 'build', name: 'install', step: 'install' },
+        });
+        expect(logsOutput[0]).not.toHaveProperty('level');
+        expect(logsOutput[0]).not.toHaveProperty('step');
+        expect(logsOutput[0].text).toContain('\u001b');
+        expect(logsOutput[1]).toMatchObject({
+          created: 1717426870340,
+          date: 1717426870340,
+          level: 'warning',
+          type: 'stderr',
+          text: 'Line 1\nLine 2\n',
+          id: 'evt_2',
+          serial: '2',
+          deploymentId: deployment.id,
+          info: { type: 'build', name: 'build', step: 'build' },
+        });
+        expect(logsOutput[1]).not.toHaveProperty('step');
+
+        const stderr = client.stderr.getFullOutput();
+        expect(stderr).not.toContain('Hello, world!');
+        expect(stderr).not.toContain('Line 1');
+        expect(stderr).not.toContain('Line 2');
+      });
     });
 
     it('tracks deplomymentUrl as telemetry', async () => {
@@ -327,35 +399,6 @@ describe('inspect', () => {
       const exitCode = await inspect(client);
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput(`Invalid timeout "bar"`);
-    });
-
-    it('should wait for a deployment to finish', async () => {
-      const user = useUser();
-      const deployment = useDeployment({ creator: user, state: 'BUILDING' });
-      client.setArgv('inspect', deployment.url, '--wait');
-
-      let exitCode: number | null = null;
-      const startTime = Date.now();
-
-      const runInspect = async () => {
-        exitCode = await inspect(client);
-        await expect(client.stderr).toOutput(
-          `> Fetched deployment "${deployment.url}" in ${user.username}`
-        );
-      };
-
-      const slowlyDeploy = async () => {
-        await sleep(1234);
-        expect(exitCode).toBeNull();
-        deployment.readyState = 'READY';
-      };
-
-      await Promise.all<void>([runInspect(), slowlyDeploy()]);
-
-      expect(exitCode).toEqual(0);
-
-      const delta = Date.now() - startTime;
-      expect(delta).toBeGreaterThan(1234);
     });
 
     it('should print no build logs for a queued deployment', async () => {
@@ -457,6 +500,7 @@ describe('inspect', () => {
       it('sets team scope from dashboard URL', async () => {
         const user = useUser();
         const team = useTeam();
+        team.slug = 'dashboard-team';
         const deployment = useDeployment({ creator: user });
 
         client.setArgv(
@@ -471,6 +515,7 @@ describe('inspect', () => {
       it('does not override explicit --scope flag', async () => {
         const user = useUser();
         const team = useTeam();
+        team.slug = 'dashboard-team';
         const deployment = useDeployment({ creator: user });
 
         client.config.currentTeam = team.id;

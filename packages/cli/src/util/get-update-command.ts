@@ -11,6 +11,15 @@ const nativePackageName = '@vercel/vc-native';
 const execFileAsync = promisify(execFile);
 
 type GlobalCliType = 'npm' | 'pnpm' | 'yarn';
+export type PackageManagerName = GlobalCliType | 'bun' | 'vlt';
+
+export interface UpdateCommandInfo {
+  command: string;
+  global: boolean;
+  packageManager: PackageManagerName;
+  /** True when the package manager was not detected and npm is the fallback. */
+  assumed: boolean;
+}
 
 const globalRootQueries: Record<
   GlobalCliType,
@@ -105,6 +114,35 @@ async function getConfigPrefix() {
   return null;
 }
 
+/**
+ * Detects a pnpm global install: the CLI runs from inside `PNPM_HOME`.
+ * Works across pnpm's global layout changes, unlike `pnpm root -g`
+ * (see pnpm/pnpm#11528).
+ */
+async function isPnpmHomeInstall(installPath: string): Promise<boolean> {
+  const pnpmHome = process.env.PNPM_HOME;
+  if (!pnpmHome) {
+    return false;
+  }
+
+  const candidates = [pnpmHome];
+  try {
+    candidates.push(await realpath(pnpmHome));
+  } catch (_) {
+    // unresolvable; check the raw value only
+  }
+
+  const entrypoint = process.argv[1];
+  for (const home of candidates) {
+    const prefix = home.endsWith(sep) ? home : home + sep;
+    if (entrypoint?.startsWith(prefix) || installPath.startsWith(prefix)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function isGlobalByPath(installPath: string): boolean {
   // This is true for e.g. nvm, node path will be equal to now path
   if (dirname(process.argv[0]) === dirname(process.argv[1])) {
@@ -118,6 +156,14 @@ function isGlobalByPath(installPath: string): boolean {
   }
 
   if (installPath.includes(['', 'pnpm', 'global', ''].join(sep))) {
+    return true;
+  }
+
+  // pnpm 11+ global virtual store (`.../pnpm/store/v{N}/links/...`)
+  if (
+    installPath.includes(['', 'pnpm', 'store', ''].join(sep)) &&
+    installPath.includes(sep + 'links' + sep)
+  ) {
     return true;
   }
 
@@ -150,25 +196,61 @@ async function isGlobalByPrefix(installPath: string): Promise<boolean> {
   }
 }
 
-async function resolveInstall() {
+function asPackageManager(cliType: string): PackageManagerName {
+  if (
+    cliType === 'npm' ||
+    cliType === 'pnpm' ||
+    cliType === 'yarn' ||
+    cliType === 'bun' ||
+    cliType === 'vlt'
+  ) {
+    return cliType;
+  }
+  return 'npm';
+}
+
+async function resolveInstall(): Promise<{
+  packageManager: PackageManagerName;
+  global: boolean;
+  assumed: boolean;
+}> {
   const pkg = isNativeBinaryInstall() ? nativePackageName : packageName;
   const installPath = await realpath(resolve(__dirname));
 
-  const globalCliType = await detectGlobalCliType(installPath, pkg);
-  if (globalCliType) {
-    return { cliType: globalCliType, global: true };
+  if (await isPnpmHomeInstall(installPath)) {
+    return { packageManager: 'pnpm', global: true, assumed: false };
   }
 
-  const entrypoint = await realpath(process.argv[1]);
-  const { cliType, lockfilePath } = await scanParentDirs(
-    dirname(dirname(entrypoint))
-  );
+  const globalCliType = await detectGlobalCliType(installPath, pkg);
+  if (globalCliType) {
+    return { packageManager: globalCliType, global: true, assumed: false };
+  }
 
+  let lockfileCliType: string | undefined;
+  try {
+    const entrypoint = await realpath(process.argv[1]);
+    const { cliType, lockfilePath } = await scanParentDirs(
+      dirname(dirname(entrypoint))
+    );
+    if (lockfilePath) {
+      lockfileCliType = cliType;
+    }
+  } catch (_) {
+    // entrypoint may not resolve on disk (e.g. virtual filesystem snapshot)
+  }
+
+  // No lockfile above the install — never guess "local": a wrong local
+  // install runs in (and mutates) the user's cwd. Default to global npm.
+  if (!lockfileCliType) {
+    return { packageManager: 'npm', global: true, assumed: true };
+  }
+
+  const packageManager = asPackageManager(lockfileCliType);
   return {
-    // Global installs for npm do not have a lockfile
-    cliType: lockfilePath ? cliType : 'npm',
+    packageManager,
     global:
       isGlobalByPath(installPath) || (await isGlobalByPrefix(installPath)),
+    assumed: packageManager !== lockfileCliType,
   };
 }
 
@@ -181,10 +263,7 @@ export async function isGlobal(): Promise<boolean> {
   }
 }
 
-export async function getUpdateCommandInfo(): Promise<{
-  command: string;
-  global: boolean;
-}> {
+export async function getUpdateCommandInfo(): Promise<UpdateCommandInfo> {
   const nativeInstall = isNativeBinaryInstall();
   const pkgAndVersion = `${nativeInstall ? nativePackageName : packageName}@latest`;
 
@@ -192,29 +271,49 @@ export async function getUpdateCommandInfo(): Promise<{
     // The native binary's process.argv[1] points into its virtual filesystem
     // snapshot, so detect the package manager from the real install location.
     const segments = process.execPath.split(sep);
-    let cliType: GlobalCliType = 'npm';
+    let packageManager: GlobalCliType = 'npm';
     if (segments.includes('pnpm') || segments.includes('.pnpm')) {
-      cliType = 'pnpm';
+      packageManager = 'pnpm';
     } else if (segments.includes('yarn') || segments.includes('.yarn')) {
-      cliType = 'yarn';
+      packageManager = 'yarn';
     }
-    const install = cliType === 'yarn' ? 'global add' : 'i -g';
-    const force = cliType === 'npm' ? ' --force' : '';
+    const install = packageManager === 'yarn' ? 'global add' : 'i -g';
+    const force = packageManager === 'npm' ? ' --force' : '';
+    const allowBuild = pnpmAllowBuildFlag(packageManager, nativePackageName);
     return {
-      command: `${cliType} ${install} ${pkgAndVersion}${force}`,
+      command: `${packageManager} ${install} ${pkgAndVersion}${force}${allowBuild}`,
       global: true,
+      packageManager,
+      // Native path detection only positively identifies pnpm/yarn.
+      assumed: packageManager === 'npm',
     };
   }
 
-  const { cliType, global } = await resolveInstall();
-  const yarn = cliType === 'yarn';
+  const { packageManager, global, assumed } = await resolveInstall();
+  const yarn = packageManager === 'yarn';
 
   let install = yarn ? 'add' : 'i';
   if (global) {
     install = yarn ? 'global add' : 'i -g';
   }
 
-  return { command: `${cliType} ${install} ${pkgAndVersion}`, global };
+  // Global-only: on a local install pnpm would persist the approval into
+  // the project's pnpm-workspace.yaml, which belongs to the project owner.
+  const allowBuild = global
+    ? pnpmAllowBuildFlag(packageManager, 'esbuild')
+    : '';
+  return {
+    command: `${packageManager} ${install} ${pkgAndVersion}${allowBuild}`,
+    global,
+    packageManager,
+    assumed,
+  };
+}
+
+// pnpm v10+ skips dependency build scripts (e.g. esbuild's postinstall)
+// without approval; pre-approve the one this install needs
+function pnpmAllowBuildFlag(cliType: string, pkg: string): string {
+  return cliType === 'pnpm' ? ` --allow-build=${pkg}` : '';
 }
 
 export default async function getUpdateCommand(): Promise<string> {

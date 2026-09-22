@@ -84,6 +84,7 @@ export const build: BuildV2 = async ({
   config,
   meta = {},
   service,
+  span,
 }) => {
   const { installCommand, buildCommand } = config;
 
@@ -106,6 +107,7 @@ export const build: BuildV2 = async ({
     lockfileVersion,
     lockfilePath,
     packageJsonPackageManager,
+    packageJsonDevEngines,
     turboSupportsCorepackHome,
   } = await scanParentDirs(entrypointFsDirname, true);
 
@@ -123,6 +125,8 @@ export const build: BuildV2 = async ({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
+    nodeVersion,
     env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -206,7 +210,7 @@ export const build: BuildV2 = async ({
   >();
   for (const route of remixRoutes) {
     const routePath = join(remixConfig.appDirectory, route.file);
-    let staticConfig = getConfig(project, routePath);
+    let staticConfig = getConfig(project, routePath, undefined, span);
     if (staticConfig && isHydrogen2) {
       console.log(
         'WARN: `export const config` is currently not supported for Hydrogen v2 apps'

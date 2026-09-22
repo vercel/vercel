@@ -6,6 +6,7 @@ import type {
 } from '@vercel-internals/types';
 import {
   type ArchiveFormat,
+  type DeploymentAliasAssignedEvent,
   type DeploymentOptions,
   type VercelClientOptions,
   createDeployment,
@@ -13,7 +14,7 @@ import {
 import { isErrorLike } from '@vercel/error-utils';
 import bytes from 'bytes';
 import chalk from 'chalk';
-import type { Agent } from 'http';
+import { getFetchDispatcher } from '../fetch';
 import type Now from '../../util';
 import { displayBuildLogs, type BuildLog, parseLogLines } from '../logs';
 import { progress } from '../output/progress';
@@ -42,10 +43,11 @@ export default async function processDeployment({
   skipAutoDetectionConfirmation,
   noWait,
   withFullLogs,
-  agent,
+  anonymous,
   manual,
   jsonOutput,
   linkedProject,
+  linkedProjectIsPartial,
   ...args
 }: {
   now: Now;
@@ -64,11 +66,12 @@ export default async function processDeployment({
   rootDirectory?: string | null;
   noWait?: boolean;
   withFullLogs?: boolean;
-  agent?: Agent;
+  anonymous?: boolean;
   bulkRedirectsPath?: string | null;
   manual?: boolean;
   jsonOutput?: boolean;
   linkedProject?: Project;
+  linkedProjectIsPartial?: boolean;
 }) {
   const {
     now,
@@ -97,8 +100,13 @@ export default async function processDeployment({
     throw new Error('Missing authentication token');
   }
 
+  const aliasAssignedController = new AbortController();
+  const onAliasAssigned = (event: DeploymentAliasAssignedEvent) => {
+    aliasAssignedController.abort(event);
+  };
+
   const clientOptions: VercelClientOptions = {
-    teamId: org.type === 'team' ? org.id : undefined,
+    teamId: now.currentTeam ?? undefined,
     apiUrl: now._apiUrl,
     token,
     debug: output.isDebugEnabled(),
@@ -111,15 +119,18 @@ export default async function processDeployment({
     rootDirectory,
     skipAutoDetectionConfirmation,
     archive,
-    agent,
+    dispatcher: getFetchDispatcher(),
     projectName,
     bulkRedirectsPath,
     manual,
+    aliasAssignedSignal: aliasAssignedController.signal,
   };
 
   const deployingSpinnerVal = isSettingUpProject
     ? 'Setting up project'
-    : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`;
+    : `Deploying ${chalk.bold(
+        org.slug ? `${org.slug}/${projectName}` : projectName
+      )}`;
   output.spinner(deployingSpinnerVal, 0);
 
   // collect indications to show the user once
@@ -133,10 +144,35 @@ export default async function processDeployment({
     output.stopSpinner();
   }
 
+  const linkedProjectLookup =
+    linkedProjectIsPartial && linkedProject && !noWait
+      ? getProjectByNameOrId(
+          client,
+          linkedProject.id,
+          linkedProject.accountId
+        ).then(
+          project => ({ project }) as const,
+          error => ({ error }) as const
+        )
+      : undefined;
   let rollingRelease: ProjectRollingRelease | undefined =
     linkedProject?.rollingRelease;
-  let project: Project | ProjectNotFound | undefined = linkedProject;
+  let project: Project | ProjectNotFound | undefined = linkedProjectLookup
+    ? undefined
+    : linkedProject;
   let latestLogMessage = '';
+
+  async function resolveProject(): Promise<Project | ProjectNotFound> {
+    if (!linkedProjectLookup) {
+      return getProjectByNameOrId(client, projectName);
+    }
+
+    const result = await linkedProjectLookup;
+    if ('error' in result) {
+      throw result.error;
+    }
+    return result.project;
+  }
 
   try {
     for await (const event of createDeployment(clientOptions, requestBody)) {
@@ -209,45 +245,69 @@ export default async function processDeployment({
 
         stopSpinner();
 
-        printInspectUrl(deployment.inspectorUrl);
+        // Anonymous deployment URLs sit behind the pool team's auth wall;
+        // the production alias printed on `alias-assigned` is the only
+        // reachable URL.
+        if (!anonymous) {
+          printInspectUrl(deployment.inspectorUrl);
 
-        const isProdDeployment = deployment.target === 'production';
-        const previewUrl = `https://${deployment.url}`;
+          const isProdDeployment = deployment.target === 'production';
+          const previewUrl = `https://${deployment.url}`;
 
-        printAlignedLabel(
-          isProdDeployment ? 'Production' : 'Preview',
-          chalk.cyan(previewUrl),
-          isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
-        );
+          // When the user did not explicitly request a production deployment
+          // (no `--prod` / `--target=production`) but the API returned one
+          // anyway, surface a notice. This happens on a project's first
+          // deployment because the API assigns it to production when no prior
+          // production deployment exists.
+          if (isProdDeployment && !requestBody.target) {
+            indications.push({
+              type: 'notice',
+              payload:
+                'This is your project\u2019s first deployment, so it was assigned to production. Future deployments will be preview deployments unless you use --prod.',
+              link: 'https://vercel.com/docs/deployments/environments',
+            });
+          }
 
-        if (!jsonOutput && (quiet || process.env.FORCE_TTY === '1')) {
-          process.stdout.write(`https://${event.payload.url}`);
+          printAlignedLabel(
+            isProdDeployment ? 'Production' : 'Preview',
+            chalk.cyan(previewUrl),
+            isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
+          );
+
+          if (!jsonOutput && (quiet || process.env.FORCE_TTY === '1')) {
+            process.stdout.write(`https://${event.payload.url}`);
+          }
         }
 
         if (noWait) {
+          (
+            deployment as Deployment & { indications: typeof indications }
+          ).indications = indications;
           return deployment;
         }
 
         latestLogMessage =
           deployment.readyState === 'QUEUED' ? 'Queued…' : 'Building…';
 
-        if (withFullLogs) {
+        if (withFullLogs && !anonymous) {
           let promise: Promise<void>;
           ({ abortController, promise } = displayBuildLogs(
             client,
             deployment,
-            true
+            true,
+            onAliasAssigned
           ));
           promise.catch(error =>
             output.warn(`Failed to read build logs: ${error}`)
           );
-        } else {
+        } else if (!anonymous) {
           abortController = new AbortController();
           const promise = printEvents(
             client,
             deployment.id,
             {
               mode: 'logs',
+              onAliasAssigned,
               onEvent: (event: BuildLog) => {
                 if (!event.created) return;
                 const lines = parseLogLines(event);
@@ -278,14 +338,18 @@ export default async function processDeployment({
         return event.payload;
       }
 
-      if (project === undefined) {
-        project = await getProjectByNameOrId(client, projectName);
+      if (
+        project === undefined &&
+        (!linkedProjectLookup || event.type === 'ready')
+      ) {
+        project = await resolveProject();
         rollingRelease = (project as Project)?.rollingRelease;
       }
 
       if (event.type === 'ready' && rollingRelease) {
         output.spinner('Releasing…', 0);
         stopSpinner();
+        event.payload.indications = indications;
         return event.payload;
       }
 
@@ -296,15 +360,18 @@ export default async function processDeployment({
         const v2ChecksPending =
           event.payload.checks?.['deployment-alias']?.state === 'pending';
 
-        stopSpinner();
-        process.stderr.write(eraseLines(2));
-        const isProdDeployment = event.payload.target === 'production';
-        const previewUrl = `https://${event.payload.url}`;
-        printAlignedLabel(
-          isProdDeployment ? 'Production' : 'Preview',
-          chalk.cyan(previewUrl),
-          isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
-        );
+        // Keep the event stream open while polling waits for alias assignment.
+        output.stopSpinner();
+        if (!anonymous) {
+          process.stderr.write(eraseLines(2));
+          const isProdDeployment = event.payload.target === 'production';
+          const previewUrl = `https://${event.payload.url}`;
+          printAlignedLabel(
+            isProdDeployment ? 'Production' : 'Preview',
+            chalk.cyan(previewUrl),
+            isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
+          );
+        }
 
         if (v1ChecksPending || v2ChecksPending) {
           output.spinner('Running Checks…', 0);
@@ -366,7 +433,24 @@ export default async function processDeployment({
         ) {
           const primaryDomain = event.payload.alias[0];
           const prodUrl = `https://${primaryDomain}`;
-          printAlignedLabel('Aliased', chalk.cyan(prodUrl), { gutter: '▲' });
+          if (anonymous) {
+            // Separates the URL from whatever the local build just printed.
+            output.print('\n');
+          }
+          printAlignedLabel(
+            anonymous ? 'Temporary' : 'Aliased',
+            chalk.cyan(prodUrl),
+            {
+              gutter: '▲',
+            }
+          );
+          if (
+            anonymous &&
+            !jsonOutput &&
+            (quiet || process.env.FORCE_TTY === '1')
+          ) {
+            process.stdout.write(prodUrl);
+          }
         }
 
         event.payload.indications = indications;

@@ -1,0 +1,8 @@
+[project]
+name = "fixture-68-standard-compileall"
+version = "0.0.1"
+requires-python = ">=3.12"
+dependencies = [
+  "flask",
+  "pydantic",
+]

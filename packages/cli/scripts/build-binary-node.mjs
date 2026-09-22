@@ -7,7 +7,6 @@ import { availableParallelism, platform, arch, tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { pipeline } from 'node:stream/promises';
 import { promisify } from 'node:util';
-import { patchWindowsSmallIcuGenccode } from './patch-node-source.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -17,7 +16,18 @@ const nodeTag = `v${nodeVersion}`;
 const nodePlatform =
   process.env.VERCEL_CLI_NODE_PLATFORM ?? nodePlatformForHost(platform());
 const nodeArch = process.env.VERCEL_CLI_NODE_ARCH ?? nodeArchForHost(arch());
-const runtimeName = `node-${nodeTag}-${nodePlatform}-${nodeArch}-small-icu`;
+// 'musl' builds a runtime linked against musl libc (Alpine and other
+// musl-based distros). Must run on a musl host (e.g. an Alpine container).
+const nodeLibc = process.env.VERCEL_CLI_NODE_LIBC ?? '';
+if (nodeLibc !== '' && nodeLibc !== 'musl') {
+  throw new Error(`Unsupported VERCEL_CLI_NODE_LIBC: ${nodeLibc}`);
+}
+if (nodeLibc === 'musl' && nodePlatform !== 'linux') {
+  throw new Error('VERCEL_CLI_NODE_LIBC=musl requires a linux target');
+}
+const runtimeName = `node-${nodeTag}-${nodePlatform}-${nodeArch}${
+  nodeLibc ? `-${nodeLibc}` : ''
+}-full-icu`;
 const outputNode = join(
   packageRoot,
   '.node-runtime',
@@ -36,7 +46,10 @@ if (
   );
 }
 
-if (await isExpectedNode(outputNode, nodePlatform, nodeArch)) {
+if (
+  (await isExpectedNode(outputNode, nodePlatform, nodeArch)) &&
+  (await isFullIcu(outputNode))
+) {
   console.log(`Custom CLI Node runtime already exists: ${outputNode}`);
   process.exit(0);
 }
@@ -48,10 +61,6 @@ const sourceDir = join(buildRoot, `node-${nodeTag}`);
 try {
   await downloadAndVerifySource(sourceArchive);
   await run('tar', ['-xzf', sourceArchive], buildRoot);
-
-  if (nodePlatform === 'win') {
-    await patchWindowsSmallIcuGenccode(sourceDir);
-  }
 
   const builtNode = await buildNode(sourceDir);
   await fs.mkdir(dirname(outputNode), { recursive: true });
@@ -65,6 +74,18 @@ try {
     );
   }
 
+  if (!(await isFullIcu(outputNode))) {
+    throw new Error(
+      `Built runtime does not include full ICU locale data: ${outputNode}`
+    );
+  }
+
+  if (nodeLibc === 'musl' && !(await isMuslNode(outputNode))) {
+    throw new Error(
+      `Built runtime is not linked against musl libc: ${outputNode}`
+    );
+  }
+
   await fs.writeFile(
     join(dirname(outputNode), 'metadata.json'),
     JSON.stringify(
@@ -72,8 +93,8 @@ try {
         nodeVersion: nodeTag,
         platform: nodePlatform,
         arch: nodeArch,
-        intl: 'small-icu',
-        locales: ['en'],
+        ...(nodeLibc ? { libc: nodeLibc } : {}),
+        intl: 'full-icu',
         stripped,
         configure: configureFlags(),
       },
@@ -98,7 +119,7 @@ async function buildNode(sourceDir) {
       [
         'release',
         nodeArch,
-        'small-icu',
+        'full-icu',
         'nonpm',
         'nocorepack',
         'openssl-no-asm',
@@ -144,12 +165,17 @@ function configureFlags() {
   return [
     `--dest-cpu=${nodeArch}`,
     `--dest-os=${configureOsForNodePlatform(nodePlatform)}`,
-    '--with-intl=small-icu',
-    '--with-icu-locales=en',
+    '--with-intl=full-icu',
+    // Official Node ships full ICU. small-icu (en-only) could SIGSEGV when
+    // the process locale or a dependency requested a locale that was not
+    // compiled in — including `vc sandbox ls` on the native CLI binary.
     '--without-inspector',
     '--without-npm',
     '--without-corepack',
-    '--without-sqlite',
+    // musl: statically link libgcc/libstdc++ so the runtime only depends on
+    // musl itself (/lib/ld-musl-*), which every Alpine install has. Keeps
+    // dlopen working for native addons, unlike --fully-static.
+    ...(nodeLibc === 'musl' ? ['--partly-static'] : []),
   ];
 }
 
@@ -270,6 +296,20 @@ function nodeBinPath() {
   return nodePlatform === 'win' ? 'node.exe' : join('bin', 'node');
 }
 
+async function isMuslNode(nodePath) {
+  try {
+    const { stdout } = await execFileAsync(nodePath, [
+      '-p',
+      "JSON.stringify(require('node:process').report.getReport().header)",
+    ]);
+    const header = JSON.parse(stdout);
+    // Musl builds report no glibc version in the diagnostic report header.
+    return !header.glibcVersionRuntime;
+  } catch {
+    return false;
+  }
+}
+
 async function isExpectedNode(nodePath, expectedPlatform, expectedArch) {
   try {
     const { stdout } = await execFileAsync(nodePath, [
@@ -282,6 +322,18 @@ async function isExpectedNode(nodePath, expectedPlatform, expectedArch) {
       metadata.platform === hostPlatformForNodePlatform(expectedPlatform) &&
       metadata.arch === expectedArch
     );
+  } catch {
+    return false;
+  }
+}
+
+async function isFullIcu(nodePath) {
+  try {
+    const { stdout } = await execFileAsync(nodePath, [
+      '-p',
+      "Intl.NumberFormat.supportedLocalesOf(['fr','de','ja','zh']).length === 4",
+    ]);
+    return stdout.trim() === 'true';
   } catch {
     return false;
   }

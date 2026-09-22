@@ -3,7 +3,6 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { getFlag } from '../../util/flags/get-flags';
 import {
@@ -22,6 +21,7 @@ import output from '../../output-manager';
 import { FlagsSetTelemetryClient } from '../../util/telemetry/commands/flags/set';
 import { setSubcommand } from './command';
 import type { Flag, FlagVariant } from '../../util/flags/types';
+import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
 export default async function set(
   client: Client,
@@ -51,6 +51,7 @@ export default async function set(
   const message = normalizeOptionalInput(
     flags['--message'] as string | undefined
   );
+  const projectName = getProjectNameFromFlags(flags);
 
   if (!flagArg) {
     output.error('Please provide a flag slug or ID to set');
@@ -61,16 +62,17 @@ export default async function set(
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
+  telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliOptionEnvironment(environment);
   telemetryClient.trackCliOptionVariant(variantSelector);
   telemetryClient.trackCliOptionMessage(message);
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
+      `Your codebase isn't linked to a project on Vercel. Pass --project <name>, or run ${getCommandName('link')} to link it.`
     );
     return 1;
   }

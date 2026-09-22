@@ -4,7 +4,6 @@ import { isAPIError } from '../../util/errors-ts';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import {
   buildCommandWithGlobalFlags,
@@ -19,6 +18,7 @@ import {
 import output from '../../output-manager';
 import { FlagsSegmentsRmTelemetryClient } from '../../util/telemetry/commands/flags/segments';
 import { segmentsRemoveSubcommand } from './command';
+import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
 export default async function segmentsRm(
   client: Client,
@@ -44,11 +44,13 @@ export default async function segmentsRm(
   const { args, flags } = parsedArgs;
   let segmentArg: string | undefined = args[0];
   const skipConfirmation = flags['--yes'] as boolean | undefined;
+  const projectName = getProjectNameFromFlags(flags);
 
   telemetryClient.trackCliArgumentSegment(segmentArg);
+  telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliFlagYes(skipConfirmation);
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
@@ -71,7 +73,7 @@ export default async function segmentsRm(
       return 1;
     }
     output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
+      `Your codebase isn't linked to a project on Vercel. Pass --project <name>, or run ${getCommandName('link')} to link it.`
     );
     return 1;
   }

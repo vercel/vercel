@@ -376,7 +376,10 @@ describe('help command', () => {
     describe('env add help output snapshots', () => {
       it('env add help column width 120', () => {
         expect(
-          help(env.addSubcommand, { columns: 120, parent: env.envCommand })
+          help(env.addSubcommand, {
+            columns: 120,
+            parent: env.envCommand,
+          }).replace(/[ \t]+$/gm, '')
         ).toMatchSnapshot();
       });
     });
@@ -768,6 +771,26 @@ describe('help command', () => {
       it('project rename help column width 120', () => {
         expect(
           help(project.renameSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('project pause help output snapshots', () => {
+      it('project pause help column width 120', () => {
+        expect(
+          help(project.pauseSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('project resume help output snapshots', () => {
+      it('project resume help column width 120', () => {
+        expect(
+          help(project.resumeSubcommand, {
             columns: 120,
             parent: project.projectCommand,
           })

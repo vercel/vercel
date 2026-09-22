@@ -1,6 +1,7 @@
 import { lstat } from 'fs-extra';
 import chalk from 'chalk';
 import { homedir } from 'os';
+import { resolve, sep } from 'path';
 import toHumanPath from './humanize-path';
 import type Client from './client';
 import output from '../output-manager';
@@ -34,7 +35,10 @@ export async function validateRootDirectory(
     return false;
   }
 
-  if (!path.startsWith(cwd)) {
+  // Normalize first: a raw `startsWith` lets `<cwd>-evil` / `<cwd>/../x` through.
+  const base = resolve(cwd);
+  const target = resolve(path);
+  if (target !== base && !target.startsWith(base + sep)) {
     output.error(
       `The provided path ${chalk.cyan(
         `“${toHumanPath(path)}”`

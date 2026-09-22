@@ -5,7 +5,7 @@ import getProjectByIdOrName from './get-project-by-id-or-name';
 import { ProjectNotFound } from '../errors-ts';
 import slugify from '@sindresorhus/slugify';
 import output from '../../output-manager';
-import { relative } from 'path';
+import { join, relative } from 'path';
 import {
   fetchProjectsForRepoUrl,
   findProjectsFromPath,
@@ -13,6 +13,9 @@ import {
   resolveGitRemote,
   type ResolvedGitRemote,
 } from '../link/repo';
+import { isPromptCanceledError } from '../input/prompt-cancellation';
+import { getRemoteUrls } from '../create-git-meta';
+import { getGitConfigPath } from '../git-helpers';
 
 export interface CrossTeamMatch {
   project: Project;
@@ -30,19 +33,27 @@ export interface CrossTeamSearchResult {
   skippedLimitedTeams: Team[];
 }
 
+export interface RepoRootSearchResult {
+  matches: CrossTeamMatch[];
+  /** Remote used for the `/v9/projects?repoUrl=` query, when one resolved. */
+  remote?: ResolvedGitRemote;
+  /**
+   * All remotes in the repo. Length > 1 means the project picker can offer
+   * "Switch Git remote" so the user can change what the suggestions came from
+   * without being asked before they see the list.
+   */
+  remoteNames: string[];
+}
+
 export default async function searchProjectAcrossTeams(
   client: Client,
   projectName: string,
   cwd: string,
   {
-    autoConfirm = false,
-    nonInteractive = false,
     teams,
     skipLimited,
     gitProjectName,
   }: {
-    autoConfirm?: boolean;
-    nonInteractive?: boolean;
     teams?: Team[];
     skipLimited?: boolean;
     gitProjectName?: string;
@@ -84,8 +95,6 @@ export default async function searchProjectAcrossTeams(
     cwd,
     gitProjectName,
     orgs,
-    autoConfirm,
-    nonInteractive,
   });
 
   const slugifiedName = slugify(projectName);
@@ -106,12 +115,12 @@ export default async function searchProjectAcrossTeams(
     )
   );
 
-  const [repoMatches, folderNameMatches] = await Promise.all([
+  const [repoSearch, folderNameMatches] = await Promise.all([
     repoMatchesPromise,
     Promise.all(folderNameSearchPromises),
   ]);
 
-  const results = [...repoMatches, ...folderNameMatches];
+  const results = [...repoSearch.matches, ...folderNameMatches];
 
   const seen = new Set<string>();
   const matches: CrossTeamMatch[] = [];
@@ -130,40 +139,52 @@ export default async function searchProjectAcrossTeams(
   };
 }
 
-async function searchProjectsByRepoRoot({
+export async function searchProjectsByRepoRoot({
   client,
   cwd,
   gitProjectName,
   orgs,
-  autoConfirm,
-  nonInteractive,
+  remoteName,
 }: {
   client: Client;
   cwd: string;
   gitProjectName?: string;
   orgs: Org[];
-  autoConfirm: boolean;
-  nonInteractive: boolean;
-}): Promise<CrossTeamMatch[]> {
+  /** When set, search this remote instead of the default (`origin` / first). */
+  remoteName?: string;
+}): Promise<RepoRootSearchResult> {
+  const empty: RepoRootSearchResult = { matches: [], remoteNames: [] };
   const rootPath = await findRepoRoot(cwd);
   if (!rootPath) {
-    return [];
+    return empty;
   }
+
+  const gitConfigPath =
+    getGitConfigPath({ cwd: rootPath }) ?? join(rootPath, '.git/config');
+  const remoteUrls = await getRemoteUrls(gitConfigPath);
+  const remoteNames = remoteUrls ? Object.keys(remoteUrls).sort() : [];
 
   let remote: ResolvedGitRemote | undefined;
   try {
+    // Suggestion search only decides what to *show* in the project picker.
+    // Never block on remote disambiguation here — pick the default remote
+    // (`origin` when present, else the first), or the remote the user chose
+    // via "Switch Git remote". `--project` used to be the only escape hatch
+    // because it skips this search entirely.
     remote = await resolveGitRemote(client, rootPath, {
-      yes: autoConfirm || nonInteractive,
+      yes: true,
+      existingRemoteName: remoteName,
     });
   } catch (error) {
-    output.debug(
-      `Failed to resolve Git remote for cross-team search: ${error}`
-    );
-    return [];
+    if (isPromptCanceledError(error)) {
+      throw error;
+    }
+    output.debug(`Failed to resolve Git remote for project search: ${error}`);
+    return { matches: [], remoteNames };
   }
 
   if (!remote) {
-    return [];
+    return { matches: [], remoteNames };
   }
 
   const relativePath = relative(rootPath, cwd);
@@ -210,6 +231,9 @@ async function searchProjectsByRepoRoot({
           })
           .filter(Boolean) as CrossTeamMatch[];
       } catch (error) {
+        if (isPromptCanceledError(error)) {
+          throw error;
+        }
         output.debug(
           `Failed to search Git-linked projects under ${org.slug}: ${error}`
         );
@@ -218,5 +242,9 @@ async function searchProjectsByRepoRoot({
     })
   );
 
-  return results.flat();
+  return {
+    matches: results.flat(),
+    remote,
+    remoteNames,
+  };
 }

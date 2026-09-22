@@ -18,9 +18,7 @@ export async function fetchPlanInfo(client: Client): Promise<PlanInfo> {
     if (team) {
       return {
         isEnterprise: team.billing.plan === 'enterprise',
-        hasSecurityPlus:
-          (team as unknown as { securityPlus?: { enabled?: boolean } })
-            .securityPlus?.enabled === true,
+        hasSecurityPlus: team.securityPlus?.enabled === true,
       };
     }
   } catch {

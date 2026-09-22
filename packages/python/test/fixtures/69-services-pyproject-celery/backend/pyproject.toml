@@ -1,0 +1,20 @@
+[project]
+name = "services-pyproject-celery"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "celery>=5.3.0",
+    "vercel",
+]
+
+# The "backend" service in vercel.json uses `entrypoint: "pyproject.toml"`,
+# so this file declares everything the service builds: the FastAPI web app
+# below and the Celery worker as a queue subscriber.
+[tool.vercel]
+entrypoint = "main:app"
+
+# With no "topics" filter, the subscriber consumes every subscription
+# introspected from the Celery app's queues.
+[[tool.vercel.subscribers]]
+entrypoint = "worker:app"

@@ -9,13 +9,12 @@ import type {
   ServiceDetectionWarning,
   ServiceType,
 } from './types';
-import { RUNTIME_BUILDERS } from './types';
+import { RUNTIME_BUILDERS } from './runtimes/constants';
 import {
-  assignMountPaths,
-  combineBuildCommand,
   isFrontendFramework,
   DETECTION_FRAMEWORKS,
-} from './utils';
+} from './runtimes/framework';
+import { assignMountPaths, combineBuildCommand } from './utils';
 
 export interface RenderDetectResult {
   services: InferredServicesConfig | null;
@@ -200,7 +199,7 @@ export async function detectRenderServices(options: {
     if (frameworks.length === 0) {
       warnings.push({
         code: 'SERVICE_SKIPPED',
-        message: `Skipped Render service "${serviceName}": no framework detected. Configure it manually in experimentalServices.`,
+        message: `Skipped Render service "${serviceName}": no framework detected. Configure it manually in services.`,
       });
       continue;
     }
@@ -209,7 +208,7 @@ export async function detectRenderServices(options: {
       const names = frameworks.map(f => f.name).join(', ');
       errors.push({
         code: 'MULTIPLE_FRAMEWORKS_SERVICE',
-        message: `Multiple frameworks detected for Render service "${serviceName}": ${names}. Use explicit experimentalServices config.`,
+        message: `Multiple frameworks detected for Render service "${serviceName}": ${names}. Use explicit services config.`,
         serviceName,
       });
       continue;

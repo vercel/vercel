@@ -209,8 +209,8 @@ describe('flags enable', () => {
     expect(exitCode).toEqual(0);
     const output = client.stderr.getFullOutput();
     expect(output).toContain('has been enabled');
-    expect(stripAnsi(output)).toContain('Serving variant: true On');
-    expect(output).toContain(chalk.dim('On'));
+    expect(stripAnsi(output)).toContain('Serving variant: On (true)');
+    expect(output).toContain(chalk.dim('true'));
     expect((testFlags[0] as Flag & { message?: string }).message).toEqual(
       'Enabled for production via CLI'
     );
@@ -513,8 +513,8 @@ describe('flags enable', () => {
     );
     expect(output).not.toContain('--variant <VARIANT>');
     expect(output).toContain('Available variants:');
-    expect(output).toContain('"control" Control');
-    expect(output).toContain('"variant-a" Variant A');
+    expect(output).toContain('Control ("control")');
+    expect(output).toContain('Variant A ("variant-a")');
     expect(output).toContain(`vercel flags inspect ${testFlags[1].slug}`);
     // Should show dashboard link
     expect(output).toContain('https://vercel.com/');

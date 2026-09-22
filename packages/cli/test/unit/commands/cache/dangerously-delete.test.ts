@@ -4,7 +4,10 @@ import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeam } from '../../../mocks/team';
-import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
+import {
+  removeProjectLink,
+  setupTmpDir,
+} from '../../../helpers/setup-unit-fixture';
 import { basename, join } from 'path';
 import { outputFile } from 'fs-extra';
 
@@ -20,17 +23,12 @@ describe('cache dangerously-delete', () => {
       ...defaultProject,
       id: projectId,
       name: projectId,
+      accountId: 'team_dummy',
     });
     await outputFile(
       join(cwd, '.vercel', 'project.json'),
       JSON.stringify({ projectId, orgId: 'team_dummy' })
     );
-  });
-
-  it('should error when project is not linked', async () => {
-    client.setArgv('cache', 'dangerously-delete');
-    const exitCode = await cache(client);
-    expect(exitCode).toEqual(1);
   });
 
   it('should error without --tag', async () => {
@@ -67,6 +65,38 @@ describe('cache dangerously-delete', () => {
     await expect(client.stderr).toOutput(
       'Successfully deleted all cached content associated with tag foo'
     );
+  });
+
+  it('should succeed with --project when cwd is not linked', async () => {
+    removeProjectLink(client.cwd);
+    client.scenario.post(
+      `/v1/edge-cache/dangerously-delete-by-tags`,
+      (req, res) => {
+        expect(req.query.projectIdOrName).toEqual(projectId);
+        expect(req.body).toEqual({
+          tags: 'foo',
+        });
+        res.end();
+      }
+    );
+
+    client.setArgv(
+      'cache',
+      'dangerously-delete',
+      '--project',
+      projectId,
+      '--tag=foo',
+      '--yes'
+    );
+    const exitCode = await cache(client);
+
+    expect(exitCode).toEqual(0);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:dangerously-delete', value: 'dangerously-delete' },
+      { key: 'option:project', value: '[REDACTED]' },
+      { key: 'flag:yes', value: 'TRUE' },
+      { key: 'option:tag', value: 'foo' },
+    ]);
   });
 
   it('should succeed with multiple tags', async () => {

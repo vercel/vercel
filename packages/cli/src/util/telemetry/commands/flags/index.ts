@@ -20,6 +20,27 @@ export class FlagsTelemetryClient
     });
   }
 
+  trackCliSubcommandVersions(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'versions',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandEvaluations(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'evaluations',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandStale(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'stale',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandOpen(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'open',
@@ -44,6 +65,13 @@ export class FlagsTelemetryClient
   trackCliSubcommandSet(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'set',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandUseTargeting(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'use-targeting',
       value: actual,
     });
   }
@@ -76,6 +104,13 @@ export class FlagsTelemetryClient
     });
   }
 
+  trackCliSubcommandUnarchive(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'unarchive',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandDisable(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'disable',
@@ -100,6 +135,13 @@ export class FlagsTelemetryClient
   trackCliSubcommandSegments(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'segments',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRules(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules',
       value: actual,
     });
   }

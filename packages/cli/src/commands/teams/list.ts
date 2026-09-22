@@ -16,6 +16,7 @@ import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import { TeamsListTelemetryClient } from '../../util/telemetry/commands/teams/list';
 import { validateLsArgs } from '../../util/validate-ls-args';
+import { getPaginationOpts } from '../../util/get-pagination-opts';
 
 export default async function list(
   client: Client,
@@ -59,6 +60,7 @@ export default async function list(
   }
 
   const next = parsedArgs.flags['--next'];
+  const limit = parsedArgs.flags['--limit'];
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
@@ -67,6 +69,7 @@ export default async function list(
   const asJson = formatResult.jsonOutput;
 
   telemetry.trackCliOptionNext(next);
+  telemetry.trackCliOptionLimit(limit);
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
   telemetry.trackCliOptionCount(parsedArgs.flags['--count']);
   telemetry.trackCliOptionUntil(parsedArgs.flags['--until']);
@@ -76,10 +79,17 @@ export default async function list(
     output.error('Please provide a number for flag `--next`');
     return 1;
   }
+  try {
+    getPaginationOpts(parsedArgs.flags);
+  } catch (error) {
+    output.error(error instanceof Error ? error.message : String(error));
+    return 1;
+  }
 
   output.spinner('Fetching teams');
   const { teams, pagination } = await getTeams(client, {
     next,
+    limit,
     apiVersion: 2,
   });
   let { currentTeam } = config;
@@ -153,7 +163,7 @@ export default async function list(
     );
     client.stderr.write('\n');
 
-    if (pagination?.count === 20) {
+    if (pagination?.next) {
       const flags = getCommandFlags(parsedArgs.flags, [
         '--next',
         '-N',

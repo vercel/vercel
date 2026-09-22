@@ -3,7 +3,6 @@ import type { Deployment } from '@vercel-internals/types';
 import chalk from 'chalk';
 import format from 'date-fns/format';
 import type Client from '../../util/client';
-import { createGitMeta } from '../../util/create-git-meta';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -15,6 +14,7 @@ import {
   DeploymentNotFound,
   InvalidDeploymentId,
   ProjectNotFound,
+  isAPIError,
 } from '../../util/errors-ts';
 import { displayRuntimeLogs } from '../../util/logs';
 import {
@@ -23,19 +23,24 @@ import {
   type RequestLogMessage,
 } from '../../util/logs-v2';
 import getDeployment from '../../util/get-deployment';
+import getUser from '../../util/get-user';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { LogsTelemetryClient } from '../../util/telemetry/commands/logs';
 import { help } from '../help';
 import { logsCommand } from './command';
 import output from '../../output-manager';
 
-interface LatestDeployment {
+interface DeploymentSummary {
   id: string;
   url: string;
 }
 
 interface DeploymentResponse {
   deployments: Array<{ uid: string; url: string }>;
+}
+
+interface ProductionDeploymentResponse {
+  deployment: DeploymentSummary;
 }
 
 type LogsTargetSource = 'deployment' | 'explicit-project' | 'linked-project';
@@ -57,49 +62,24 @@ interface ResolveLogsTargetOptions {
 
 type ResolveLogsTargetResult = LogsTarget | { exitCode: number };
 
-async function getLatestDeploymentByBranch(
+async function getLatestDeployment(
   client: Client,
   projectId: string,
-  branch: string
-): Promise<LatestDeployment | null> {
-  // Different git providers use different metadata keys for the branch
-  const branchMetaKeys = [
-    'githubCommitRef',
-    'gitlabCommitRef',
-    'bitbucketCommitRef',
-  ];
-
-  for (const metaKey of branchMetaKeys) {
-    const query = new URLSearchParams();
-    query.set('projectId', projectId);
-    query.set('limit', '1');
-    query.set('state', 'READY');
-    query.set(`meta-${metaKey}`, branch);
-
-    const { deployments } = await client.fetch<DeploymentResponse>(
-      `/v6/deployments?${query}`
-    );
-
-    if (deployments.length > 0) {
-      return {
-        id: deployments[0].uid,
-        url: deployments[0].url,
-      };
-    }
-  }
-
-  return null;
-}
-
-async function getLatestProductionDeployment(
-  client: Client,
-  projectId: string
-): Promise<LatestDeployment | null> {
+  filters: { branch?: string; userId?: string; target?: string } = {}
+): Promise<DeploymentSummary | null> {
   const query = new URLSearchParams();
   query.set('projectId', projectId);
   query.set('limit', '1');
   query.set('state', 'READY');
-  query.set('target', 'production');
+  if (filters.branch) {
+    query.set('branch', filters.branch);
+  }
+  if (filters.userId) {
+    query.set('users', filters.userId);
+  }
+  if (filters.target) {
+    query.set('target', filters.target);
+  }
 
   const { deployments } = await client.fetch<DeploymentResponse>(
     `/v6/deployments?${query}`
@@ -115,47 +95,28 @@ async function getLatestProductionDeployment(
   };
 }
 
-interface ResolveBranchFilterOptions {
-  client: Client;
-  explicitBranch?: string;
-  logsTarget: LogsTarget;
-  noBranch?: boolean;
-}
-
-async function resolveBranchFilter({
-  client,
-  explicitBranch,
-  logsTarget,
-  noBranch,
-}: ResolveBranchFilterOptions): Promise<string | undefined> {
-  if (explicitBranch) {
-    return explicitBranch;
-  }
-
-  if (
-    noBranch ||
-    logsTarget.deployment ||
-    logsTarget.targetSource !== 'linked-project'
-  ) {
-    return;
-  }
-
+async function getActiveProductionDeployment(
+  client: Client,
+  projectId: string
+): Promise<DeploymentSummary | null> {
   try {
-    const gitMeta = await createGitMeta(client.cwd);
-    if (gitMeta?.commitRef) {
-      output.debug(`Detected git branch: ${gitMeta.commitRef}`);
-      return gitMeta.commitRef;
+    const { deployment } = await client.fetch<ProductionDeploymentResponse>(
+      `/projects/${encodeURIComponent(projectId)}/production-deployment`
+    );
+    return deployment;
+  } catch (err: unknown) {
+    if (isAPIError(err) && err.status === 404) {
+      return null;
     }
-  } catch {
-    // Not in a git repo or git not available, continue without branch filter
+    throw err;
   }
 }
 
 interface ResolveFollowDeploymentOptions {
   branch?: string;
   client: Client;
+  environment?: string;
   logsTarget: LogsTarget;
-  noBranch?: boolean;
 }
 
 type ResolveFollowDeploymentResult =
@@ -165,20 +126,49 @@ type ResolveFollowDeploymentResult =
 async function resolveFollowDeployment({
   branch,
   client,
+  environment,
   logsTarget,
-  noBranch,
 }: ResolveFollowDeploymentOptions): Promise<ResolveFollowDeploymentResult> {
-  const { deployment, orgSlug, projectId, projectSlug, targetSource } =
-    logsTarget;
-  const deploymentId = deployment?.id;
+  const { deployment, orgSlug, projectId, projectSlug } = logsTarget;
 
-  if (deploymentId) {
-    return { deploymentId, label: 'deployment' };
+  // 1. Explicit --deployment / positional
+  if (deployment?.id) {
+    return { deploymentId: deployment.id, label: 'deployment' };
   }
 
-  if (targetSource === 'explicit-project' && !branch) {
-    output.spinner('Finding latest production deployment', 1000);
-    const productionDeployment = await getLatestProductionDeployment(
+  // 2. Explicit --branch → latest matching READY deployment, else error
+  if (branch) {
+    output.spinner(`Finding latest deployment for branch "${branch}"`, 1000);
+    const branchDeployment = await getLatestDeployment(client, projectId, {
+      branch,
+      target: environment,
+    });
+    output.stopSpinner();
+
+    if (branchDeployment) {
+      output.debug(
+        `Found deployment ${branchDeployment.id} for branch ${branch}`
+      );
+      return {
+        deploymentId: branchDeployment.id,
+        label: `latest deployment on branch "${branch}"`,
+      };
+    }
+
+    const environmentLabel = environment ? ` ${environment}` : '';
+    const deployHint = environment
+      ? `Deploy that branch to ${environment} first`
+      : 'Deploy that branch first';
+    output.error(
+      `No READY${environmentLabel} deployments found for branch "${branch}" in ${formatProject(orgSlug, projectSlug)}. ${deployHint} or specify a deployment with ${chalk.bold('--deployment')}.`
+    );
+    return { exitCode: 1 };
+  }
+
+  // 3. --environment production → active production deployment, else error
+  if (environment === 'production') {
+    output.spinner('Finding production deployment', 1000);
+    const productionDeployment = await getActiveProductionDeployment(
       client,
       projectId
     );
@@ -186,51 +176,87 @@ async function resolveFollowDeployment({
 
     if (!productionDeployment) {
       output.error(
-        `No READY production deployments found for ${formatProject(orgSlug, projectSlug)}. Deploy to production first, specify a deployment with ${chalk.bold('--deployment')}, or select a preview branch with ${chalk.bold('--branch')}.`
+        `No active production deployment found for ${formatProject(orgSlug, projectSlug)}. Deploy or promote to production first, or specify a deployment with ${chalk.bold('--deployment')}.`
       );
       return { exitCode: 1 };
     }
 
     output.debug(
-      `Found latest production deployment ${productionDeployment.id} (${productionDeployment.url})`
+      `Found production deployment ${productionDeployment.id} (${productionDeployment.url})`
     );
     return {
       deploymentId: productionDeployment.id,
-      label: 'latest production deployment',
+      label: 'production deployment',
     };
   }
 
-  if (noBranch) {
+  // 4. --environment preview → your latest READY preview, else error
+  if (environment === 'preview') {
+    const user = await getUser(client);
+    output.spinner('Finding your latest deployment', 1000);
+    const userDeployment = await getLatestDeployment(client, projectId, {
+      userId: user.id,
+      target: 'preview',
+    });
+    output.stopSpinner();
+
+    if (userDeployment) {
+      output.debug(
+        `Found latest deployment ${userDeployment.id} (${userDeployment.url}) created by current user`
+      );
+      return {
+        deploymentId: userDeployment.id,
+        label: 'your latest deployment',
+      };
+    }
+
     output.error(
-      `The ${chalk.bold('--follow')} flag requires a deployment. Specify one with ${chalk.bold('--deployment')} or remove ${chalk.bold('--no-branch')} to auto-detect from the current git branch.`
+      `No READY preview deployments found for ${formatProject(orgSlug, projectSlug)}. Deploy a preview first or specify a deployment with ${chalk.bold('--deployment')}.`
     );
     return { exitCode: 1 };
   }
 
-  if (!branch) {
-    output.error(
-      `The ${chalk.bold('--follow')} flag requires a deployment. Specify one with ${chalk.bold('--deployment')} or run from within a git repository.`
-    );
-    return { exitCode: 1 };
-  }
-
-  output.spinner(`Finding latest deployment for branch "${branch}"`, 1000);
-  const branchDeployment = await getLatestDeploymentByBranch(
+  // 5. No environment specified → active production deployment, if found
+  output.spinner('Finding production deployment', 1000);
+  const productionDeployment = await getActiveProductionDeployment(
     client,
-    projectId,
-    branch
+    projectId
   );
   output.stopSpinner();
 
-  if (!branchDeployment) {
-    output.error(
-      `No deployments found for branch "${branch}". Deploy this branch first or specify a deployment with ${chalk.bold('--deployment')}.`
+  if (productionDeployment) {
+    output.debug(
+      `Found production deployment ${productionDeployment.id} (${productionDeployment.url})`
     );
-    return { exitCode: 1 };
+    return {
+      deploymentId: productionDeployment.id,
+      label: 'production deployment',
+    };
   }
 
-  output.debug(`Found deployment ${branchDeployment.id} for branch ${branch}`);
-  return { deploymentId: branchDeployment.id, label: 'deployment' };
+  // 6. No active production exists → your latest READY deployment, if found
+  const user = await getUser(client);
+  output.spinner('Finding your latest deployment', 1000);
+  const userDeployment = await getLatestDeployment(client, projectId, {
+    userId: user.id,
+  });
+  output.stopSpinner();
+
+  if (userDeployment) {
+    output.debug(
+      `Found latest deployment ${userDeployment.id} (${userDeployment.url}) created by current user`
+    );
+    return {
+      deploymentId: userDeployment.id,
+      label: 'your latest deployment',
+    };
+  }
+
+  // 7. Otherwise → error
+  output.error(
+    `No READY deployments found for ${formatProject(orgSlug, projectSlug)}. Deploy first or specify a deployment with ${chalk.bold('--deployment')}.`
+  );
+  return { exitCode: 1 };
 }
 
 const TIME_ONLY_FORMAT = 'HH:mm:ss.SS';
@@ -575,6 +601,7 @@ export default async function logs(client: Client) {
   const requestIdOption = parsedArguments.flags['--request-id'];
   const expandOption = parsedArguments.flags['--expand'];
   const branchFlagValue = parsedArguments.flags['--branch'];
+  const noBranchFlagValue = parsedArguments.flags['--no-branch'];
 
   const noFollowFlagValue = parsedArguments.flags['--no-follow'];
   const followOption = parsedArguments.flags['--follow'];
@@ -597,10 +624,10 @@ export default async function logs(client: Client) {
   telemetry.trackCliOptionRequestId(requestIdOption);
   telemetry.trackCliFlagExpand(expandOption);
   telemetry.trackCliOptionBranch(branchFlagValue);
+  telemetry.trackCliFlagNoBranch(noBranchFlagValue);
 
   if (followOption) {
     const incompatibleFlags = [
-      { flag: '--environment', value: environmentOption },
       { flag: '--level', value: levelOption },
       { flag: '--status-code', value: statusCodeOption },
       { flag: '--source', value: sourceOption },
@@ -672,25 +699,25 @@ export default async function logs(client: Client) {
     return 1;
   }
 
-  // Determine branch filter:
-  // - If --branch is explicitly set (string), use it
-  // - If --no-branch is set, don't filter by branch
-  // - Otherwise, auto-detect the current git branch only for a linked project
-  const noBranchFlagValue = parsedArguments.flags['--no-branch'];
-  const branchOption = await resolveBranchFilter({
-    client,
-    explicitBranch:
-      typeof branchFlagValue === 'string' ? branchFlagValue : undefined,
-    logsTarget,
-    noBranch: noBranchFlagValue,
-  });
+  const branchOption =
+    typeof branchFlagValue === 'string' ? branchFlagValue : undefined;
+
+  if (
+    environmentOption &&
+    !['production', 'preview'].includes(environmentOption)
+  ) {
+    output.error(
+      `Invalid environment: ${environmentOption}. Must be "production" or "preview".`
+    );
+    return 1;
+  }
 
   if (followOption) {
     const followDeployment = await resolveFollowDeployment({
       branch: branchOption,
       client,
+      environment: environmentOption,
       logsTarget,
-      noBranch: noBranchFlagValue,
     });
     if ('exitCode' in followDeployment) {
       return followDeployment.exitCode;
@@ -711,16 +738,6 @@ export default async function logs(client: Client) {
       },
       abortController
     );
-  }
-
-  if (
-    environmentOption &&
-    !['production', 'preview'].includes(environmentOption)
-  ) {
-    output.error(
-      `Invalid environment: ${environmentOption}. Must be "production" or "preview".`
-    );
-    return 1;
   }
 
   const validLevels = ['error', 'warning', 'info', 'fatal'];
@@ -757,6 +774,10 @@ export default async function logs(client: Client) {
   const terminalWidth = client.stderr.isTTY
     ? client.stderr.columns || 120
     : 120;
+
+  // Non-interactive consumers (agents, pipes, CI) get full log messages by
+  // default, as if --expand was passed
+  const expand = expandOption || !client.stderr.isTTY;
 
   const logs: RequestLogEntry[] = [];
   try {
@@ -856,7 +877,7 @@ export default async function logs(client: Client) {
         },
       ];
 
-      const columns: ColumnDef<RowData>[] = expandOption
+      const columns: ColumnDef<RowData>[] = expand
         ? baseColumns
         : [
             ...baseColumns,
@@ -884,7 +905,7 @@ export default async function logs(client: Client) {
         rows: rowData,
         tableWidth: terminalWidth,
         formatHeader: header => chalk.dim(header),
-        formatRow: expandOption
+        formatRow: expand
           ? (rowStr, row) => {
               if (row.logs.length > 0) {
                 const renderedLogs = row.logs

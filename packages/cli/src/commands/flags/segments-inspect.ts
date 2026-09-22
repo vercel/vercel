@@ -2,14 +2,15 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
+import { getFlagSettings } from '../../util/flags/get-flags';
 import { getSegment } from '../../util/flags/segments';
 import { printSegmentDetails } from '../../util/flags/print-segment-details';
 import output from '../../output-manager';
 import { formatProject } from '../../util/projects/format-project';
 import { FlagsSegmentsInspectTelemetryClient } from '../../util/telemetry/commands/flags/segments';
 import { segmentsInspectSubcommand } from './command';
+import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
 export default async function segmentsInspect(
   client: Client,
@@ -35,6 +36,7 @@ export default async function segmentsInspect(
   const { args, flags } = parsedArgs;
   const [segmentArg] = args;
   const json = flags['--json'] as boolean | undefined;
+  const projectName = getProjectNameFromFlags(flags);
 
   if (!segmentArg) {
     output.error('Please provide a segment slug or ID to inspect');
@@ -45,14 +47,15 @@ export default async function segmentsInspect(
   }
 
   telemetryClient.trackCliArgumentSegment(segmentArg);
+  telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliFlagJson(json);
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
+      `Your codebase isn't linked to a project on Vercel. Pass --project <name>, or run ${getCommandName('link')} to link it.`
     );
     return 1;
   }
@@ -65,7 +68,10 @@ export default async function segmentsInspect(
 
   try {
     output.spinner('Fetching segment...');
-    const segment = await getSegment(client, project.id, segmentArg, true);
+    const [segment, settings] = await Promise.all([
+      getSegment(client, project.id, segmentArg, true),
+      getFlagSettings(client, project.id),
+    ]);
     output.stopSpinner();
 
     if (json) {
@@ -74,6 +80,7 @@ export default async function segmentsInspect(
       printSegmentDetails({
         segment,
         projectSlugLink,
+        settings,
       });
     }
   } catch (err) {

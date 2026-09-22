@@ -20,3 +20,14 @@ export function isValidEnvTarget(
 export function getEnvTargetPlaceholder() {
   return `<${envTargetChoices.map(c => c.value).join(' | ')}>`;
 }
+
+export function parseEnvTargetArg(arg: string): string[] {
+  return Array.from(
+    new Set(
+      arg
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean)
+    )
+  );
+}

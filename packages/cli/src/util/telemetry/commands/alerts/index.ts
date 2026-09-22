@@ -76,4 +76,10 @@ export class AlertsTelemetryClient
       });
     }
   }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
+    }
+  }
 }

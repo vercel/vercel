@@ -3,7 +3,6 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import {
   buildCommandWithGlobalFlags,
@@ -15,6 +14,7 @@ import output from '../../output-manager';
 import { FlagsSdkKeysAddTelemetryClient } from '../../util/telemetry/commands/flags/sdk-keys';
 import { sdkKeysAddSubcommand } from './command';
 import type { CreateSdkKeyRequest } from '../../util/flags/types';
+import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
 const VALID_TYPES = ['server', 'client', 'mobile'] as const;
 const VALID_ENVIRONMENTS = ['production', 'preview', 'development'];
@@ -44,12 +44,14 @@ export default async function sdkKeysAdd(
   let sdkKeyType = flags['--type'] as (typeof VALID_TYPES)[number] | undefined;
   let environment = flags['--environment'] as string | undefined;
   const label = flags['--label'] as string | undefined;
+  const projectName = getProjectNameFromFlags(flags);
 
+  telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliOptionType(sdkKeyType);
   telemetryClient.trackCliOptionEnvironment(environment);
   telemetryClient.trackCliOptionLabel(label);
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
@@ -72,7 +74,7 @@ export default async function sdkKeysAdd(
       return 1;
     }
     output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
+      `Your codebase isn't linked to a project on Vercel. Pass --project <name>, or run ${getCommandName('link')} to link it.`
     );
     return 1;
   }

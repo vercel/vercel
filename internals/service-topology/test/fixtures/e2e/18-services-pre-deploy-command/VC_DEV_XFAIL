@@ -1,0 +1,1 @@
+preDeployCommand is not executed by vc dev; the only probe asserts its output

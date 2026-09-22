@@ -1,40 +1,37 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, parse, relative } from 'node:path';
-import { getGitRootDirectory } from '../git-helpers';
+import yaml from 'js-yaml';
+import minimatch from 'minimatch';
 
 /**
- * Resolves the repository root containing `cwd`, preferring a workspace marker
- * (which doesn't need `.git`, unlike CI/prebuilt flows), then the git root,
- * then `cwd`. The result is always an ancestor of (or equal to) `cwd`.
+ * Workspace manager types whose member declarations we can read and match.
+ * A marker we can't interpret (e.g. a bare `lerna.json`) is intentionally not
+ * a candidate: membership can't be verified, so the build must not re-anchor
+ * onto it.
  */
-export function resolveRepoRoot({ cwd }: { cwd: string }): string {
-  const workspaceRoot = findWorkspaceRoot(cwd);
-  if (workspaceRoot) {
-    return workspaceRoot;
-  }
-
-  const gitRoot = getGitRootDirectory({ cwd });
-  if (gitRoot) {
-    return gitRoot;
-  }
-
-  return cwd;
-}
+export type WorkspaceRootCandidate = {
+  dir: string;
+  type: 'pnpm' | 'npm';
+};
 
 /**
- * Walks up from `startDir` and returns the *highest* ancestor with a workspace
- * marker (so nested workspaces resolve to the outermost root, where deps are
- * hoisted), or `null` if none.
+ * Walks up from `startDir` and returns every ancestor (including `startDir`
+ * itself) that carries a workspace marker, ordered outermost first — so the
+ * first candidate that *claims* a directory is the root where dependencies
+ * are hoisted.
  */
-export function findWorkspaceRoot(startDir: string): string | null {
+export function findWorkspaceRootCandidates(
+  startDir: string
+): WorkspaceRootCandidate[] {
   const { root } = parse(startDir);
+  const candidates: WorkspaceRootCandidate[] = [];
   let dir = startDir;
-  let highestMatch: string | null = null;
 
   // Bound the traversal to avoid pathological loops.
   for (let i = 0; i < 64; i++) {
-    if (isWorkspaceRoot(dir)) {
-      highestMatch = dir;
+    const type = workspaceTypeOf(dir);
+    if (type) {
+      candidates.unshift({ dir, type });
     }
     if (dir === root) break;
     const parent = dirname(dir);
@@ -42,19 +39,16 @@ export function findWorkspaceRoot(startDir: string): string | null {
     dir = parent;
   }
 
-  return highestMatch;
+  return candidates;
 }
 
 /**
- * Returns true when `dir` looks like the root of a workspace/monorepo.
+ * Returns the workspace manager type when `dir` looks like the root of a
+ * workspace/monorepo whose member declarations can be read, or `null`.
  */
-function isWorkspaceRoot(dir: string): boolean {
-  if (
-    existsSync(join(dir, 'pnpm-workspace.yaml')) ||
-    existsSync(join(dir, 'lerna.json')) ||
-    existsSync(join(dir, 'rush.json'))
-  ) {
-    return true;
+function workspaceTypeOf(dir: string): WorkspaceRootCandidate['type'] | null {
+  if (existsSync(join(dir, 'pnpm-workspace.yaml'))) {
+    return 'pnpm';
   }
 
   // npm / yarn / bun workspaces are declared via `workspaces` in package.json.
@@ -70,14 +64,105 @@ function isWorkspaceRoot(dir: string): boolean {
           Array.isArray(workspaces.packages) &&
           workspaces.packages.length > 0)
       ) {
-        return true;
+        return 'npm';
       }
     } catch {
       // Malformed package.json — ignore and keep walking.
     }
   }
 
-  return false;
+  return null;
+}
+
+/**
+ * Reads the workspace member patterns declared by the manager manifest at
+ * `candidate.dir`. Returns `null` when the manifest can't be read or parsed
+ * (treated as "claims nothing" by the caller).
+ */
+function readWorkspacePatterns(
+  candidate: WorkspaceRootCandidate
+): string[] | null {
+  try {
+    if (candidate.type === 'pnpm') {
+      const doc = yaml.load(
+        readFileSync(join(candidate.dir, 'pnpm-workspace.yaml'), 'utf8')
+      ) as { packages?: unknown } | null | undefined;
+      const packages = doc?.packages;
+      return Array.isArray(packages)
+        ? packages.filter((p): p is string => typeof p === 'string')
+        : null;
+    }
+
+    const pkg = JSON.parse(
+      readFileSync(join(candidate.dir, 'package.json'), 'utf8')
+    );
+    const { workspaces } = pkg;
+    const packages = Array.isArray(workspaces)
+      ? workspaces
+      : workspaces?.packages;
+    return Array.isArray(packages)
+      ? packages.filter((p: unknown): p is string => typeof p === 'string')
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether the workspace rooted at `candidate.dir` claims `memberDir` as one
+ * of its member packages.
+ *
+ * Membership is decided by matching the member's root-relative path against
+ * the manifest's own declared patterns (pure string matching — no filesystem
+ * traversal, so a huge `node_modules` or a hostile `**` pattern costs
+ * nothing), then confirming the directory is a real package (it has a
+ * `package.json`, mirroring how package managers expand workspace globs).
+ *
+ * Negated patterns (`!apps/legacy`) exclude: a path matching any negation is
+ * not a member even when a positive pattern matches, following pnpm/yarn
+ * semantics.
+ *
+ * Membership must be exact: a directory merely *nested inside* a member
+ * package (e.g. a fixture or example under `packages/cli/...` when the
+ * workspace declares `packages/*`) is NOT claimed — such a directory is not a
+ * workspace package and its dependencies are not hoisted for it, so
+ * re-anchoring would only distort its build. (`apps/*` does not match
+ * `apps/api/test/fixture` because `*` never crosses `/`.)
+ */
+function workspaceClaims(
+  candidate: WorkspaceRootCandidate,
+  memberDir: string
+): boolean {
+  const rel = normalizeRelative(relative(candidate.dir, memberDir));
+  if (rel === '') {
+    // A workspace root trivially contains itself, but there is nothing to
+    // re-anchor in that case.
+    return false;
+  }
+
+  const patterns = readWorkspacePatterns(candidate);
+  if (!patterns || patterns.length === 0) {
+    return false;
+  }
+
+  const positives: string[] = [];
+  const negatives: string[] = [];
+  for (const pattern of patterns) {
+    if (pattern.startsWith('!')) {
+      negatives.push(normalizeRelative(pattern.slice(1)));
+    } else {
+      positives.push(normalizeRelative(pattern));
+    }
+  }
+
+  const matches = (pattern: string) => minimatch(rel, pattern, { dot: false });
+  if (!positives.some(matches) || negatives.some(matches)) {
+    return false;
+  }
+
+  // The pattern names this directory; confirm it is a real package, the same
+  // way package managers expand workspace globs against `<dir>/package.json`.
+  return existsSync(join(memberDir, 'package.json'));
 }
 
 export interface PerDirectoryLinkRoot {
@@ -90,8 +175,16 @@ export interface PerDirectoryLinkRoot {
 }
 
 /**
- * Resolves a per-directory link (`<dir>/.vercel/project.json`) against the repo
- * root, returning the project's root directory relative to it.
+ * Resolves a per-directory link (`<dir>/.vercel/project.json`) against the
+ * workspace root that claims it, returning the project's root directory
+ * relative to that root.
+ *
+ * The build is only re-anchored when an ancestor workspace actually declares
+ * the linked directory as a member package (e.g. `apps/api` matching an
+ * `apps/*` workspace glob). A project that merely *sits inside* an unrelated
+ * repository — a fixture, a vendored folder, a scratch project in a company
+ * monorepo — is left untouched and builds from its own directory, exactly as
+ * an unlinked-root build would.
  *
  * The `rootDirectory` setting is interpreted relative to the link's own
  * location (`anchorDir`): if `anchorDir/<setting>` exists, it is honored;
@@ -104,10 +197,17 @@ export function resolvePerDirectoryLinkRoot(
   anchorDir: string,
   rootDirectorySetting: string | null | undefined
 ): PerDirectoryLinkRoot {
-  const repoRoot = resolveRepoRoot({ cwd: anchorDir });
+  let repoRoot = anchorDir;
+  for (const candidate of findWorkspaceRootCandidates(anchorDir)) {
+    if (workspaceClaims(candidate, anchorDir)) {
+      repoRoot = candidate.dir;
+      break;
+    }
+  }
   const linkLocation = normalizeRelative(relative(repoRoot, anchorDir));
 
-  // Link at (or above) the root: nothing to resolve.
+  // No workspace claims this directory (or the link is at the root itself):
+  // nothing to resolve.
   if (linkLocation === '') {
     return { repoRoot, resolvedRootDirectory: '' };
   }
@@ -141,11 +241,12 @@ export function resolvePerDirectoryLinkRoot(
   };
 }
 
-/** Normalizes a relative path: strips leading `./`, trailing slashes, and `.`. */
+/** Normalizes a relative path: strips leading `/`, `./`, trailing slashes, and `.`. */
 function normalizeRelative(p: string): string {
   const normalized = p
     .replace(/\\/g, '/')
     .replace(/^\.\//, '')
+    .replace(/^\/+/, '')
     .replace(/\/+$/, '');
   return normalized === '.' ? '' : normalized;
 }

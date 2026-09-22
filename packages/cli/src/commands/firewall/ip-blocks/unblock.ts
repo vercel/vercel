@@ -3,16 +3,16 @@ import type Client from '../../../util/client';
 import output from '../../../output-manager';
 import { ipBlocksUnblockSubcommand } from '../command';
 import {
+  withGlobalFlags,
   parseSubcommandArgs,
-  ensureProjectLink,
   confirmAction,
   offerAutoPublish,
   resolveIpRule,
-  withGlobalFlags,
+  resolveFirewallScope,
+  mapFirewallApiError,
 } from '../shared';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
-import { getCommandName } from '../../../util/pkg-name';
 import stamp from '../../../util/output/stamp';
 import { outputAgentError } from '../../../util/agent-output';
 
@@ -31,18 +31,15 @@ export default async function unblock(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await ensureProjectLink(client);
-  if (typeof link === 'number') return link;
+  const scope = await resolveFirewallScope(client, parsed.flags);
+  if (typeof scope === 'number') return scope;
 
-  const { project, org } = link;
-  const teamId = org.type === 'team' ? org.id : undefined;
-
-  output.spinner(`Fetching IP blocking rules for ${chalk.bold(project.name)}`);
+  output.spinner(
+    `Fetching IP blocking rules for ${chalk.bold(scope.displayName)}`
+  );
 
   try {
-    const { active, draft } = await listFirewallConfigs(client, project.id, {
-      teamId,
-    });
+    const { active, draft } = await listFirewallConfigs(client, scope);
 
     // Resolve against draft (if exists) or active — draft includes draft-added rules
     const currentIps = draft?.ips || active?.ips || [];
@@ -61,7 +58,7 @@ export default async function unblock(client: Client, argv: string[]) {
 
     if (matches.length === 0) {
       output.error(
-        `No IP block found for "${identifier}". Run ${chalk.cyan(getCommandName('firewall ip-blocks list'))} to view all rules.`
+        `No IP block found for "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'firewall ip-blocks list', scope))} to view all rules.`
       );
       return 1;
     }
@@ -82,7 +79,8 @@ export default async function unblock(client: Client, argv: string[]) {
               next: matches.map(r => ({
                 command: withGlobalFlags(
                   client,
-                  `firewall ip-blocks unblock "${identifier}" --hostname "${r.hostname}" --yes`
+                  `firewall ip-blocks unblock "${identifier}" --hostname "${r.hostname}" --yes`,
+                  scope
                 ),
                 when: `unblock on ${r.hostname === '*' ? 'all hosts' : r.hostname}`,
               })),
@@ -136,30 +134,27 @@ export default async function unblock(client: Client, argv: string[]) {
     // Use the draft data we already fetched (avoid a second API call)
     const hadExistingDraft = draft !== null && draft.changes.length > 0;
 
-    await patchFirewallDraft(
-      client,
-      project.id,
-      {
-        action: 'ip.remove',
-        id: rule.id,
-        value: null,
-      },
-      { teamId }
-    );
+    await patchFirewallDraft(client, scope, {
+      action: 'ip.remove',
+      id: rule.id,
+      value: null,
+    });
 
     output.log(
       `${chalk.cyan('Success!')} IP block removal for ${chalk.bold(rule.ip)} staged ${chalk.gray(unblockStamp())}`
     );
 
-    await offerAutoPublish(client, project.id, hadExistingDraft, {
-      teamId,
+    await offerAutoPublish(client, scope, hadExistingDraft, {
       skipPrompts: parsed.flags['--yes'],
     });
 
     return 0;
   } catch (e: unknown) {
-    const error = e as { message?: string };
-    const msg = error.message || 'Failed to stage IP block removal';
+    const msg = mapFirewallApiError(
+      e,
+      scope,
+      'Failed to stage IP block removal'
+    );
     if (client.nonInteractive) {
       outputAgentError(client, {
         status: 'error',
@@ -169,7 +164,8 @@ export default async function unblock(client: Client, argv: string[]) {
           {
             command: withGlobalFlags(
               client,
-              `firewall ip-blocks unblock ${identifier} --yes`
+              `firewall ip-blocks unblock ${identifier} --yes`,
+              scope
             ),
           },
         ],

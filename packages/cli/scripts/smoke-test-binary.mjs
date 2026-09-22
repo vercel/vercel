@@ -2,26 +2,43 @@ import { spawn } from 'node:child_process';
 import { isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// Verify that the packaged native binary can load representative commands,
+// exit as expected, and produce output. This is not functional CLI coverage;
+// command behavior is covered by the regular unit and E2E suites.
 const packageRoot = resolve(fileURLToPath(new URL('../', import.meta.url)));
 
 const binArg = process.argv[2] ?? 'dist-bin/vercel';
 const binPath = isAbsolute(binArg) ? binArg : join(packageRoot, binArg);
 
+// `--help` exits 0 in some command families and 2 (usage) in others. Both are
+// established CLI behavior; the smoke test only cares that the command loaded
+// and printed help, so accept either.
+const HELP_EXIT_CODES = [0, 2];
+
 const COMMANDS = [
-  ['--version'],
-  ['help'],
-  ['login', '--help'],
-  ['logout', '--help'],
-  ['whoami'],
-  ['deploy', '--help'],
-  ['build', '--help'],
-  ['dev', '--help'],
-  ['env', '--help'],
-  ['pull', '--help'],
-  ['link', '--help'],
-  ['project', 'ls', '--help'],
-  ['git', '--help'],
-  ['domains', '--help'],
+  {
+    args: ['--version'],
+    outputPattern: /Vercel CLI \d+\.\d+\.\d+/,
+  },
+  { args: ['help'] },
+  { args: ['login', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
+  { args: ['logout', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
+  {
+    args: ['whoami'],
+    acceptedExitCodes: [1],
+    outputPattern: /Logged out\./,
+  },
+  { args: ['deploy', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
+  { args: ['build', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
+  { args: ['dev', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
+  { args: ['env', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
+  { args: ['pull', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
+  { args: ['link', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
+  { args: ['project', 'ls', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
+  { args: ['git', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
+  { args: ['domains', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
+  { args: ['sandbox', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
+  { args: ['sandbox', 'ls', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
 ];
 
 const FAILURE_PATTERNS = [
@@ -47,8 +64,10 @@ function runCommand(args) {
         CI: '1',
         NO_COLOR: '1',
         NO_UPDATE_NOTIFIER: '1',
+        VERCEL_AUTH_TOKEN: '',
         VERCEL_CLI_DISABLE_UPDATE_NOTIFIER: '1',
         VERCEL_DIR: join(packageRoot, '.smoke-test-home'),
+        VERCEL_TOKEN: '',
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -80,9 +99,11 @@ function runCommand(args) {
   });
 }
 
-function evaluate(args, result) {
-  const label = `vc ${args.join(' ')}`;
+export function evaluateCommand(command, result) {
+  const label = `vc ${command.args.join(' ')}`;
   const reasons = [];
+  const acceptedExitCodes = command.acceptedExitCodes ?? [0];
+  const outputPattern = command.outputPattern ?? /\S/;
 
   for (const pattern of FAILURE_PATTERNS) {
     if (pattern.test(result.output)) {
@@ -94,6 +115,15 @@ function evaluate(args, result) {
   }
   if (result.signal === 'SPAWN_ERROR') {
     reasons.push('failed to spawn binary');
+  } else if (!result.signal && !acceptedExitCodes.includes(result.code)) {
+    reasons.push(
+      `exited with code ${result.code} (expected ${acceptedExitCodes.join(
+        ' or '
+      )})`
+    );
+  }
+  if (!outputPattern.test(result.output)) {
+    reasons.push(`output did not match ${outputPattern}`);
   }
 
   return { label, ok: reasons.length === 0, reasons };
@@ -103,9 +133,9 @@ async function main() {
   console.log(`Smoke testing binary: ${binPath}\n`);
 
   const failures = [];
-  for (const args of COMMANDS) {
-    const result = await runCommand(args);
-    const verdict = evaluate(args, result);
+  for (const command of COMMANDS) {
+    const result = await runCommand(command.args);
+    const verdict = evaluateCommand(command, result);
 
     if (verdict.ok) {
       console.log(`  PASS  ${verdict.label}`);
@@ -125,7 +155,7 @@ async function main() {
   console.log('');
   if (failures.length > 0) {
     console.error(
-      `Smoke test FAILED: ${failures.length}/${COMMANDS.length} command(s) produced a fatal error:`
+      `Smoke test FAILED: ${failures.length}/${COMMANDS.length} command(s) failed validation:`
     );
     for (const failure of failures) {
       console.error(`  - ${failure.label}: ${failure.reasons.join('; ')}`);
@@ -134,11 +164,13 @@ async function main() {
   }
 
   console.log(
-    `Smoke test PASSED: all ${COMMANDS.length} commands ran without fatal errors.`
+    `Smoke test PASSED: all ${COMMANDS.length} commands completed successfully.`
   );
 }
 
-main().catch(error => {
-  console.error('Smoke test harness crashed:', error);
-  process.exit(1);
-});
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch(error => {
+    console.error('Smoke test harness crashed:', error);
+    process.exit(1);
+  });
+}

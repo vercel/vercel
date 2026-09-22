@@ -4,24 +4,31 @@ import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeam } from '../../../mocks/team';
-import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
+import {
+  removeProjectLink,
+  setupTmpDir,
+} from '../../../helpers/setup-unit-fixture';
 import { basename, join } from 'path';
 import { outputFile } from 'fs-extra';
 
 describe('cache purge', () => {
+  let projectId = 'wat';
+
   beforeEach(async () => {
     useUser();
     useTeam('team_dummy');
     const cwd = setupTmpDir();
     client.cwd = cwd;
+    projectId = basename(cwd);
     useProject({
       ...defaultProject,
-      id: basename(cwd),
-      name: basename(cwd),
+      id: projectId,
+      name: projectId,
+      accountId: 'team_dummy',
     });
     await outputFile(
       join(cwd, '.vercel', 'project.json'),
-      JSON.stringify({ projectId: basename(cwd), orgId: 'team_dummy' })
+      JSON.stringify({ projectId, orgId: 'team_dummy' })
     );
   });
 
@@ -71,5 +78,31 @@ describe('cache purge', () => {
     client.setArgv('cache', 'purge', '--type=data', '--yes');
     const exitCode = await cache(client);
     expect(exitCode).toEqual(0);
+  });
+
+  it('should succeed with --project when cwd is not linked', async () => {
+    removeProjectLink(client.cwd);
+    client.scenario.post(`/v1/edge-cache/purge-all`, (req, res) => {
+      expect(req.query.projectIdOrName).toEqual(projectId);
+      res.end();
+    });
+
+    client.setArgv(
+      'cache',
+      'purge',
+      '--project',
+      projectId,
+      '--type=cdn',
+      '--yes'
+    );
+    const exitCode = await cache(client);
+
+    expect(exitCode).toEqual(0);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:purge', value: 'purge' },
+      { key: 'option:project', value: '[REDACTED]' },
+      { key: 'flag:yes', value: 'TRUE' },
+      { key: 'option:type', value: 'cdn' },
+    ]);
   });
 });

@@ -1,0 +1,49 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "web"
+    },
+    {
+      "path": "/ticks?min_count=2",
+      "status": 200,
+      "mustContain": "\"ok\":true",
+      "retries": 5,
+      "retryDelay": 3000
+    },
+    {
+      "delay": 35000
+    },
+    {
+      "path": "/verify-idle?min_quiet=8",
+      "status": 200,
+      "mustContain": "\"ok\":true"
+    },
+    {
+      "path": "/reset",
+      "status": 200,
+      "mustContain": "\"ok\":true"
+    },
+    {
+      "path": "/ticks?min_count=2",
+      "status": 200,
+      "mustContain": "\"ok\":true",
+      "retries": 5,
+      "retryDelay": 3000
+    },
+    {
+      "path": "/stop",
+      "status": 200,
+      "mustContain": "\"ok\":true"
+    },
+    {
+      "delay": 15000
+    },
+    {
+      "path": "/verify-stopped",
+      "status": 200,
+      "mustContain": "\"ok\":true"
+    }
+  ]
+}

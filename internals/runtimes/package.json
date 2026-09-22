@@ -1,0 +1,45 @@
+{
+  "private": true,
+  "name": "@vercel-internals/runtimes",
+  "version": "1.0.0",
+  "description": "Runtime, framework, and entrypoint classification utilities",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    "./constants": {
+      "types": "./dist/constants.d.ts",
+      "default": "./dist/constants.js"
+    },
+    "./framework": {
+      "types": "./dist/framework.d.ts",
+      "default": "./dist/framework.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime.d.ts",
+      "default": "./dist/runtime.js"
+    },
+    "./entrypoint": {
+      "types": "./dist/entrypoint.d.ts",
+      "default": "./dist/entrypoint.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "dist/*"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node ../../utils/build.mjs",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vercel/build-utils": "workspace:*",
+    "@vercel/frameworks": "workspace:*"
+  },
+  "devDependencies": {
+    "@vercel-internals/tsconfig": "workspace:*"
+  }
+}

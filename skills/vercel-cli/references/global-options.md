@@ -17,4 +17,6 @@ Key flags available on every `vercel` command:
 
 Even with `--non-interactive`, commands that perform a confirmed mutation still require `--yes` separately.
 
+For machine-readable output, prefer `--format json` where a command documents it; the boolean `--json` is deprecated on commands that also support `--format`.
+
 Prefer `VERCEL_TOKEN` env var over `--token` to avoid leaking secrets in shell history.

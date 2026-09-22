@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import upgrade from '../../../../src/commands/upgrade';
 import * as configFilesUtil from '../../../../src/util/config/files';
+import chars from '../../../../src/util/output/chars';
 
 const writeConfigSpy = vi.spyOn(configFilesUtil, 'writeToConfigFile');
 
@@ -186,6 +187,88 @@ describe('upgrade', () => {
         },
       ]);
     });
+  });
+
+  describe('--enable-binary', () => {
+    it('opts in to the native binary in the global config', async () => {
+      client.setArgv('upgrade', '--enable-binary');
+      const exitCode = await upgrade(client);
+
+      expect(exitCode).toBe(0);
+      expect(client.config.useNativeBinary).toBe(true);
+      expect(writeConfigSpy).toHaveBeenCalledWith({
+        useNativeBinary: true,
+      });
+      await expect(client.stderr).toOutput('Native Vercel CLI binary enabled.');
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:enable-binary',
+          value: 'TRUE',
+        },
+      ]);
+    });
+  });
+
+  describe('--disable-binary', () => {
+    it('opts out of the native binary in the global config', async () => {
+      client.config = { useNativeBinary: true };
+      client.setArgv('upgrade', '--disable-binary');
+      const exitCode = await upgrade(client);
+
+      expect(exitCode).toBe(0);
+      expect(client.config.useNativeBinary).toBe(false);
+      expect(writeConfigSpy).toHaveBeenCalledWith({
+        useNativeBinary: false,
+      });
+      await expect(client.stderr).toOutput(
+        'Native Vercel CLI binary disabled.'
+      );
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:disable-binary',
+          value: 'TRUE',
+        },
+      ]);
+    });
+
+    it('fails on a native CLI instead of writing a no-op config change', async () => {
+      process.env.VERCEL_VC_NATIVE = '1';
+      client.config = { useNativeBinary: true };
+      client.setArgv('upgrade', '--disable-binary');
+      const exitCode = await upgrade(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.config.useNativeBinary).toBe(true);
+      expect(writeConfigSpy).not.toHaveBeenCalled();
+
+      const output = client.stderr.getFullOutput();
+      expect(output).toMatch(new RegExp(`^${chars.fatal} `, 'm'));
+      expect(output).toContain(
+        "Can't use `--disable-binary` from the native CLI."
+      );
+      expect(output).toContain(
+        'This flag only opts the Node.js CLI out of launching the native binary.'
+      );
+      expect(output).toContain('npm i -g vercel');
+      expect(output).not.toContain('Error:');
+      expect(output).not.toContain('Native Vercel CLI binary disabled.');
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:disable-binary',
+          value: 'TRUE',
+        },
+      ]);
+    });
+  });
+
+  it('rejects mutually exclusive binary flags', async () => {
+    client.setArgv('upgrade', '--enable-binary', '--disable-binary');
+    const result = await upgrade(client);
+
+    expect(result).toBe(1);
+    await expect(client.stderr).toOutput(
+      'Cannot use --enable-binary and --disable-binary together'
+    );
   });
 
   it('rejects mutually exclusive auto-update flags', async () => {

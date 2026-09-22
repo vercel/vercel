@@ -192,6 +192,26 @@ const integrations: Record<string, Integration> = {
       },
     ],
   },
+  'acme-skills': {
+    id: 'acme-skills',
+    name: 'Acme Integration With Skills',
+    slug: 'acme-skills',
+    eulaDocUri: 'https://example.com/eula',
+    privacyDocUri: 'https://example.com/privacy',
+    products: [
+      {
+        id: 'acme-product',
+        name: 'Acme Product',
+        slug: 'acme',
+        type: 'storage',
+        shortDescription: 'The Acme product',
+        metadataSchema: metadataSchema1,
+        agentSkills: [
+          'https://github.com/Shopify/Shopify-AI-Toolkit/blob/main/skills/shopify-dev/SKILL.md',
+        ],
+      },
+    ],
+  },
   'acme-two-products': {
     id: 'acme-two-products',
     name: 'Acme Integration Two Products',

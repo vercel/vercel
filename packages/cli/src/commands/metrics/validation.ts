@@ -1,17 +1,4 @@
-import type {
-  OrderBy,
-  OrderDirection,
-  ValidationResult,
-  ValidatedResult,
-} from './types';
-import { validateAllProjectMutualExclusivity } from '../../util/command-validation';
-
-export function validateMutualExclusivity(
-  all: boolean | undefined,
-  project: string | undefined
-): ValidationResult {
-  return validateAllProjectMutualExclusivity(all, project);
-}
+import type { OrderBy, OrderDirection, ValidatedResult } from './types';
 
 export function validateRequiredMetric(
   metric: string | undefined

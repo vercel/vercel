@@ -1,0 +1,37 @@
+{
+  "uploadNowJson": true,
+  "projectSettings": {
+    "framework": "services"
+  },
+  "rewrites": [
+    {
+      "source": "/api(/.*)?",
+      "destination": {
+        "type": "service",
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "frontend"
+      }
+    }
+  ],
+  "services": {
+    "frontend": {
+      "root": "frontend/",
+      "rewrites": [
+        {
+          "source": "/(.*)",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    "backend": {
+      "root": "backend/",
+      "entrypoint": "pyproject.toml"
+    }
+  }
+}

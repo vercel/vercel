@@ -1,10 +1,7 @@
 {
   "probes": [
     {
-      "logMustNotContain": "Compiling Python application bytecode"
-    },
-    {
-      "logMustNotContain": "Compiling Python dependency bytecode"
+      "logMustContain": "Compiling Python bytecode"
     },
     {
       "path": "/",

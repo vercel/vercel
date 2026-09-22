@@ -8,25 +8,17 @@ import type {
   Builder,
   Config,
   BuilderFunctions,
-  ExperimentalServices,
-  ExperimentalServicesV2,
-  Services,
   ProjectSettings,
-  Service,
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
 import {
-  isPythonEntrypoint,
   isNodeEntrypoint,
   BACKEND_BUILDERS,
   UNIFIED_BACKEND_BUILDER,
   isExperimentalBackendsEnabled,
   getMaxDurationLimit,
 } from '@vercel/build-utils';
-import {
-  getServicesBuilders,
-  warnIgnoredDirectories,
-} from './services/get-services-builders';
+import { isPythonEntrypoint } from './python';
 
 /**
  * Pattern for finding all supported middleware files.
@@ -37,7 +29,7 @@ export const REGEX_MIDDLEWARE_FILES = 'middleware.[jt]s';
  * Pattern for files that the Vercel platform cares about separately from frameworks.
  * These files are excluded from static file serving.
  */
-export const REGEX_VERCEL_PLATFORM_FILES = [
+const VERCEL_PLATFORM_FILES = [
   'api/**',
   'node_modules/**',
   REGEX_MIDDLEWARE_FILES,
@@ -49,16 +41,48 @@ export const REGEX_VERCEL_PLATFORM_FILES = [
   'bun.lockb',
   '.gitignore',
   'README.md',
-].join(',');
+];
+
+export const REGEX_VERCEL_PLATFORM_FILES = VERCEL_PLATFORM_FILES.join(',');
+
+function escapeMinimatchPath(path: string): string {
+  return path.replace(/([\\,*?[\]{}()!+@])/g, '\\$1');
+}
+
+function getStaticFilesPattern(additionalExclusions: string[] = []): string {
+  return `!{${[
+    ...VERCEL_PLATFORM_FILES,
+    ...additionalExclusions.map(escapeMinimatchPath),
+  ].join(',')}}`;
+}
 
 /**
  * Pattern for non-Vercel platform files.
  */
-export const REGEX_NON_VERCEL_PLATFORM_FILES = `!{${REGEX_VERCEL_PLATFORM_FILES}}`;
+export const REGEX_NON_VERCEL_PLATFORM_FILES = getStaticFilesPattern();
 
 const slugToFramework = new Map<string | null, Framework>(
   frameworkList.map(f => [f.slug, f])
 );
+
+/**
+ * Maps each builder name to the frameworks it handles.
+ */
+export const builderToFrameworks: ReadonlyMap<string, readonly Framework[]> =
+  (() => {
+    const map = new Map<string, Framework[]>();
+    for (const f of frameworkList) {
+      if (!f.useRuntime?.use) continue;
+      const builder = f.useRuntime.use;
+      const entry = map.get(builder);
+      if (entry) {
+        entry.push(f);
+      } else {
+        map.set(builder, [f]);
+      }
+    }
+    return map;
+  })();
 
 export interface ErrorResponse {
   code: string;
@@ -67,12 +91,14 @@ export interface ErrorResponse {
   link?: string;
 }
 
+export interface ProxyConfig {
+  entrypoint: string;
+  matcher?: string | string[];
+}
+
 export interface Options {
   tag?: string;
   functions?: BuilderFunctions;
-  experimentalServices?: ExperimentalServices;
-  services?: Services;
-  experimentalServicesV2?: ExperimentalServicesV2;
   ignoreBuildScript?: boolean;
   projectSettings?: ProjectSettings;
   cleanUrls?: boolean;
@@ -80,6 +106,7 @@ export interface Options {
   featHandleMiss?: boolean;
   bunVersion?: string;
   workPath?: string;
+  proxy?: ProxyConfig;
 }
 
 // We need to sort the file paths by alphabet to make
@@ -140,65 +167,24 @@ export async function detectBuilders(
   builders: Builder[] | null;
   errors: ErrorResponse[] | null;
   warnings: ErrorResponse[];
-  hostRewriteRoutes?: Route[] | null;
   defaultRoutes: Route[] | null;
-  fallbackRoutes?: Route[] | null;
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
-  services?: Service[];
-  experimentalServicesV2?: Services;
-  useImplicitEnvInjection?: boolean;
 }> {
-  const {
-    experimentalServices: experimentalServicesV1,
-    services,
-    experimentalServicesV2,
-    projectSettings = {},
-  } = options;
-  if (services != null && experimentalServicesV2 != null) {
+  const { projectSettings = {} } = options;
+  const { framework } = projectSettings;
+  const proxyError = validateProxy(options, files, framework);
+  if (proxyError) {
     return {
       builders: null,
-      errors: [
-        {
-          code: 'SERVICES_AND_EXPERIMENTAL_SERVICES_V2',
-          message:
-            'The `services` option cannot be used in conjunction with its deprecated alias `experimentalServicesV2`. Please use only `services`.',
-        },
-      ],
+      errors: [proxyError],
       warnings: [],
       defaultRoutes: null,
       redirectRoutes: null,
       rewriteRoutes: null,
       errorRoutes: null,
     };
-  }
-  const { framework } = projectSettings;
-  const servicesConfig = services ?? experimentalServicesV2;
-  const configuredServices = servicesConfig ?? experimentalServicesV1;
-  const configuredServicesType = servicesConfig
-    ? services
-      ? 'services'
-      : 'experimentalServicesV2'
-    : 'experimentalServices';
-  const hasServicesConfig =
-    configuredServices != null && typeof configuredServices === 'object';
-
-  if (hasServicesConfig || framework === 'services') {
-    const result = await getServicesBuilders({
-      workPath: options.workPath,
-      configuredServices: configuredServices,
-      configuredServicesType,
-      projectFramework: framework,
-    });
-
-    if (configuredServices != null) {
-      result.warnings.push(
-        ...warnIgnoredDirectories(files, configuredServices)
-      );
-    }
-
-    return result;
   }
 
   const errors: ErrorResponse[] = [];
@@ -236,7 +222,11 @@ export async function detectBuilders(
 
   const { buildCommand, outputDirectory } = projectSettings;
   const frameworkConfig = slugToFramework.get(framework || '');
-  const ignoreRuntimes = new Set(frameworkConfig?.ignoreRuntimes);
+  // Rust static output keeps `api/**/*.rs` runtimes enabled.
+  const rustStaticOutput = isRustStaticOutput(framework, projectSettings);
+  const ignoreRuntimes = new Set<string>(
+    rustStaticOutput ? undefined : frameworkConfig?.ignoreRuntimes
+  );
   const withTag = options.tag ? `@${options.tag}` : '';
   const apiMatches = getApiMatches()
     .filter(
@@ -268,6 +258,12 @@ export async function detectBuilders(
 
   // API
   for (const fileName of sortedFiles) {
+    // The proxy entrypoint is built by the explicitly configured proxy
+    // builder below, not by file-convention detection.
+    if (fileName === options.proxy?.entrypoint) {
+      continue;
+    }
+
     const apiBuilder = await maybeGetApiBuilder(fileName, apiMatches, options);
 
     if (apiBuilder) {
@@ -336,8 +332,21 @@ export async function detectBuilders(
     }
   }
 
+  if (options.proxy) {
+    const proxyBuilder = getProxyBuilder(
+      options.proxy,
+      options.tag,
+      options.functions
+    );
+    addToUsedFunctions(proxyBuilder);
+    apiBuilders.unshift(proxyBuilder);
+  }
+
+  const rustStaticPrebuilt = rustStaticOutput && !pkg && !buildCommand;
+
   if (
     !makeFrontendStatic &&
+    !rustStaticPrebuilt &&
     (hasBuildScript(pkg) || buildCommand || framework)
   ) {
     // Framework or Build
@@ -385,12 +394,36 @@ export async function detectBuilders(
       // and package.json can be served as static files
       frontendBuilder = {
         use: '@vercel/static',
-        src: REGEX_NON_VERCEL_PLATFORM_FILES,
+        src: getStaticFilesPattern(
+          options.proxy ? [options.proxy.entrypoint] : []
+        ),
         config: {
           zeroConfig: true,
         },
       };
     }
+  }
+
+  if (
+    options.proxy &&
+    frontendBuilder &&
+    isOfficialRuntime('next', frontendBuilder.use)
+  ) {
+    return {
+      builders: null,
+      errors: [
+        {
+          code: 'proxy_framework_conflict',
+          message:
+            'The `proxy` property cannot be used with Next.js because the framework builds its own routing middleware.',
+        },
+      ],
+      warnings,
+      defaultRoutes: null,
+      redirectRoutes: null,
+      rewriteRoutes: null,
+      errorRoutes: null,
+    };
   }
 
   const unusedFunctionError = checkUnusedFunctions(
@@ -496,8 +529,11 @@ async function maybeGetApiBuilder(
   apiMatches: Builder[],
   options: Options
 ): Promise<Builder | null> {
+  // Root-level Middleware files are superseded by an explicitly
+  // configured proxy entrypoint.
   const middleware =
-    fileName === 'middleware.js' || fileName === 'middleware.ts';
+    !options.proxy &&
+    (fileName === 'middleware.js' || fileName === 'middleware.ts');
 
   // Root-level Middleware file is handled by `@vercel/next`, so don't
   // schedule a separate Builder when "nextjs" framework is selected
@@ -528,7 +564,7 @@ async function maybeGetApiBuilder(
   // For Python files, verify they are valid entrypoints before creating a builder
   if (fileName.endsWith('.py') && options.workPath) {
     const fsPath = join(options.workPath, fileName);
-    const isEntrypoint = await isPythonEntrypoint({ fsPath });
+    const isEntrypoint = await isPythonEntrypoint(fsPath);
     if (!isEntrypoint) {
       return null;
     }
@@ -609,6 +645,39 @@ function getFunction(fileName: string, { functions = {} }: Options) {
     : { fnPattern: null, func: null };
 }
 
+export function getProxyBuilder(
+  proxy: ProxyConfig,
+  tag?: string,
+  functions: BuilderFunctions = {}
+): Builder {
+  const { fnPattern, func } = getFunction(proxy.entrypoint, { functions });
+  const runtime = func?.runtime;
+  const config: Config = {
+    zeroConfig: true,
+    middleware: true,
+    ...(!runtime ? { middlewareRuntime: 'nodejs' as const } : {}),
+    ...(proxy.matcher ? { middlewareMatcher: proxy.matcher } : {}),
+  };
+
+  if (fnPattern && func) {
+    config.functions = { [fnPattern]: func };
+
+    if (func.includeFiles) {
+      config.includeFiles = func.includeFiles;
+    }
+
+    if (func.excludeFiles) {
+      config.excludeFiles = func.excludeFiles;
+    }
+  }
+
+  return {
+    src: proxy.entrypoint,
+    use: runtime || `@vercel/node${tag ? `@${tag}` : ''}`,
+    config,
+  };
+}
+
 function getApiMatches(): Builder[] {
   const config = { zeroConfig: true };
 
@@ -626,9 +695,121 @@ function getApiMatches(): Builder[] {
   ];
 }
 
+/**
+ * Validates a `proxy` config value in isolation, without knowledge of the
+ * project's files or framework. Also used by the CLI to validate
+ * `vercel.json` before builders are detected.
+ */
+export function validateProxyConfig(proxy: ProxyConfig): ErrorResponse | null {
+  if (
+    typeof proxy !== 'object' ||
+    typeof proxy.entrypoint !== 'string' ||
+    !proxy.entrypoint
+  ) {
+    return {
+      code: 'invalid_proxy',
+      message:
+        'The `proxy` property must contain an `entrypoint` string that references a `.js` or `.ts` file.',
+    };
+  }
+
+  const entrypoint = proxy.entrypoint;
+  const segments = entrypoint.split('/');
+  if (
+    entrypoint.startsWith('/') ||
+    entrypoint.includes('\\') ||
+    segments.includes('.') ||
+    segments.includes('..') ||
+    /[?#\u0000-\u001f]/.test(entrypoint)
+  ) {
+    return {
+      code: 'invalid_proxy_entrypoint',
+      message:
+        'The `proxy.entrypoint` path must be relative to the project root and cannot contain traversal, query, fragment, or control characters.',
+    };
+  }
+
+  if (!/\.(?:js|ts)$/.test(entrypoint) || entrypoint.endsWith('.d.ts')) {
+    return {
+      code: 'invalid_proxy_entrypoint',
+      message:
+        'The `proxy.entrypoint` path must end in `.js` or `.ts` and reference an executable file.',
+    };
+  }
+
+  if (proxy.matcher !== undefined) {
+    const matchers = Array.isArray(proxy.matcher)
+      ? proxy.matcher
+      : [proxy.matcher];
+    if (
+      matchers.length === 0 ||
+      matchers.some(
+        matcher => typeof matcher !== 'string' || !matcher.startsWith('/')
+      )
+    ) {
+      return {
+        code: 'invalid_proxy_matcher',
+        message:
+          'The `proxy.matcher` value must be a path matcher starting with `/`, or an array of path matchers starting with `/`.',
+      };
+    }
+  }
+
+  return null;
+}
+
+export function validateProxy(
+  options: Pick<Options, 'proxy'>,
+  files: string[],
+  framework: string | null | undefined
+): ErrorResponse | null {
+  const { proxy } = options;
+  if (!proxy) {
+    return null;
+  }
+
+  const configError = validateProxyConfig(proxy);
+  if (configError) {
+    return configError;
+  }
+
+  if (!files.includes(proxy.entrypoint)) {
+    return {
+      code: 'proxy_entrypoint_not_found',
+      message: `The proxy entrypoint \`${proxy.entrypoint}\` does not exist. Set \`proxy.entrypoint\` to an existing \`.js\` or \`.ts\` file.`,
+    };
+  }
+
+  if (framework === 'nextjs' || framework === 'astro') {
+    return {
+      code: 'proxy_framework_conflict',
+      message: `The \`proxy\` property cannot be used with ${framework === 'nextjs' ? 'Next.js' : 'Astro'} because the framework builds its own routing middleware.`,
+    };
+  }
+
+  return null;
+}
+
 function hasBuildScript(pkg: PackageJson | undefined | null) {
   const { scripts = {} } = pkg || {};
   return Boolean(scripts && scripts['build']);
+}
+
+/**
+ * A Rust project with an explicit output directory (e.g. a Trunk/wasm
+ * frontend) deploys static files, so the runtime preset must not apply.
+ */
+function isRustStaticOutput(
+  framework: string | null | undefined,
+  projectSettings: { outputDirectory?: string | null }
+): boolean {
+  return (
+    framework === 'rust' &&
+    typeof projectSettings.outputDirectory === 'string' &&
+    projectSettings.outputDirectory !== '' &&
+    // The framework preset's display default; not a real directory.
+    projectSettings.outputDirectory !== 'N/A'
+  );
 }
 
 function detectFrontBuilder(
@@ -697,7 +878,7 @@ function detectFrontBuilder(
   }
 
   const f = slugToFramework.get(framework || '');
-  if (f && f.useRuntime) {
+  if (f && f.useRuntime && !isRustStaticOutput(framework, projectSettings)) {
     const { src, use } = f.useRuntime;
     // Replace framework-specific backend builders with the unified backend builder
     // when experimental backends is enabled

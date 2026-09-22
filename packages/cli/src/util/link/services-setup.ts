@@ -1,13 +1,15 @@
-import { normalizePath } from '@vercel/build-utils';
-import { join, relative } from 'path';
 import {
-  detectServices,
   isExperimentalService,
   isExperimentalServiceV2,
-  LocalFileSystemDetector,
-  type DetectServicesResult,
+  normalizePath,
   type Service,
-} from '@vercel/fs-detectors';
+} from '@vercel/build-utils';
+import { join, relative } from 'path';
+import { LocalFileSystemDetector } from '@vercel/fs-detectors';
+import {
+  detectServices,
+  type DetectServicesResult,
+} from '@vercel-internals/service-topology';
 import output from '../../output-manager';
 import type Client from '../client';
 import {

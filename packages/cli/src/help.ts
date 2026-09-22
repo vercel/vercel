@@ -42,6 +42,8 @@ export const help = () => `
 
       activity                         List user activity events
       agent                [init]      Generate AGENTS.md with Vercel best practices
+      ai-gateway           [cmd]       Manage AI Gateway resources
+      agent-runs           [cmd]       Inspect Agent Runs observability data
       alerts                           List alerts for a project or team
       alias                [cmd]       Manages your domain aliases
       api                  [endpoint]  Make authenticated HTTP requests to the Vercel API [beta]
@@ -49,16 +51,19 @@ export const help = () => `
       blob                 [cmd]       Manages your Blob stores and files
       buy                  [cmd]       Purchase Vercel products for your team
       certs                [cmd]       Manages your SSL certificates
-      connect              [cmd]       Manage connectors [beta]
+      changelog            [cmd]       Show the latest Vercel product updates
+      connect              [cmd]       Manage connectors
       contract                         Show contract information for billing periods
       cron | crons         [cmd]       Manage cron jobs for a project [beta]
-      curl                 [path]      cURL requests to your linked project's deployment [beta]
+      curl                 [url|path]  cURL requests with automatic deployment protection bypass [beta]
       deploy-hooks         [cmd]       Manage deploy hooks for Git-triggered builds
       dns                  [name]      Manages your DNS records
       domains              [name]      Manages your domain names
       firewall             [cmd]       Manages Vercel Firewall configuration and custom rules
       flags                [cmd]       Manage feature flags for a Vercel project
+      global-config        [cmd]       Manage Global Config stores
       httpstat             path        Visualize HTTP timing statistics for deployments
+      kms                  [cmd]       Manage KMS issuers, signing keys, and project grants [beta]
       logs                 [url]       Displays the logs for a deployment
       metrics              <metric>    Queries observability metrics for your project or team
       mcp                              Set up MCP agents and configuration
@@ -68,13 +73,16 @@ export const help = () => `
       rm | remove          [id]        Removes a deployment
       routes               [cmd]       Manages routing rules for your current Project
       rr | rolling-release [cmd]       Manage rolling releases for gradual traffic shifting
+      sandbox                          Interact with Vercel Sandbox
       skills               [query]     Discover agent skills relevant to your project
       target               [cmd]       Manage custom environments for your Project
       teams                            Manages your teams
       telemetry            [cmd]       Enable or disable telemetry collection
+      tokens               [cmd]       Manage your personal Vercel authentication tokens
       traces               [cmd]       Fetch and capture traces for your project's deployment
       upgrade                          Upgrade the Vercel CLI to the latest version
       usage                            Show billing usage for the current billing period
+      vcr                  [cmd]       Manages your Container Registry repositories and images
       webhooks             [cmd]       Manages webhooks [beta]
       whoami                           Shows the username of the currently logged in user
 
@@ -82,6 +90,7 @@ export const help = () => `
 
     -h, --help                     Output usage information
     -v, --version                  Output the version number
+    --changelog                    Show the 5 latest Vercel product updates
     --cwd                          Current working directory
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
       'FILE'
@@ -116,4 +125,12 @@ export const help = () => `
   )}
 
     ${chalk.cyan(`$ ${packageName} help list`)}
+
+  ${chalk.gray('–')} Show the 5 latest Vercel product updates
+
+    ${chalk.cyan(`$ ${packageName} --changelog`)}
+
+  ${chalk.gray('–')} Search Vercel product updates
+
+    ${chalk.cyan(`$ ${packageName} changelog search "AI SDK"`)}
 `;

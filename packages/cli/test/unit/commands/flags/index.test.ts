@@ -2,27 +2,46 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import flags from '../../../../src/commands/flags';
 import * as ls from '../../../../src/commands/flags/ls';
 import * as openFlag from '../../../../src/commands/flags/open';
+import * as evaluationsFlag from '../../../../src/commands/flags/evaluations';
 import * as rolloutFlag from '../../../../src/commands/flags/rollout';
 import * as segmentsFlag from '../../../../src/commands/flags/segments';
 import * as splitFlag from '../../../../src/commands/flags/split';
+import * as staleFlag from '../../../../src/commands/flags/stale';
 import * as updateFlag from '../../../../src/commands/flags/update';
+import * as useTargetingFlag from '../../../../src/commands/flags/use-targeting';
+import * as versionsFlag from '../../../../src/commands/flags/versions';
+import * as unarchiveFlag from '../../../../src/commands/flags/unarchive';
 import { client } from '../../../mocks/client';
 
 describe('flags', () => {
   const lsSpy = vi.spyOn(ls, 'default').mockResolvedValue(0);
   const openSpy = vi.spyOn(openFlag, 'default').mockResolvedValue(0);
+  const evaluationsSpy = vi
+    .spyOn(evaluationsFlag, 'default')
+    .mockResolvedValue(0);
   const rolloutSpy = vi.spyOn(rolloutFlag, 'default').mockResolvedValue(0);
   const segmentsSpy = vi.spyOn(segmentsFlag, 'segments').mockResolvedValue(0);
   const splitSpy = vi.spyOn(splitFlag, 'default').mockResolvedValue(0);
+  const staleSpy = vi.spyOn(staleFlag, 'default').mockResolvedValue(0);
   const updateSpy = vi.spyOn(updateFlag, 'default').mockResolvedValue(0);
+  const useTargetingSpy = vi
+    .spyOn(useTargetingFlag, 'default')
+    .mockResolvedValue(0);
+  const versionsSpy = vi.spyOn(versionsFlag, 'default').mockResolvedValue(0);
+  const unarchiveSpy = vi.spyOn(unarchiveFlag, 'default').mockResolvedValue(0);
 
   afterEach(() => {
     lsSpy.mockClear();
     openSpy.mockClear();
+    evaluationsSpy.mockClear();
     rolloutSpy.mockClear();
     segmentsSpy.mockClear();
     splitSpy.mockClear();
+    staleSpy.mockClear();
     updateSpy.mockClear();
+    useTargetingSpy.mockClear();
+    versionsSpy.mockClear();
+    unarchiveSpy.mockClear();
   });
 
   describe('--help', () => {
@@ -39,6 +58,14 @@ describe('flags', () => {
           value: command,
         },
       ]);
+    });
+
+    it('does not list hidden stale subcommand', async () => {
+      client.setArgv('flags', '--help');
+      const exitCode = await flags(client);
+      expect(exitCode).toEqual(2);
+
+      expect(client.stderr.getFullOutput()).not.toContain('stale');
     });
   });
 
@@ -68,6 +95,22 @@ describe('flags', () => {
     expect(openSpy).toHaveBeenCalledWith(client, args);
   });
 
+  it('routes to evaluations subcommand', async () => {
+    const args: string[] = ['my-feature', '--since', '1h'];
+
+    client.setArgv('flags', 'evaluations', ...args);
+    await flags(client);
+    expect(evaluationsSpy).toHaveBeenCalledWith(client, args);
+  });
+
+  it('routes to stale subcommand', async () => {
+    const args: string[] = ['--limit', '10'];
+
+    client.setArgv('flags', 'stale', ...args);
+    await flags(client);
+    expect(staleSpy).toHaveBeenCalledWith(client, args);
+  });
+
   it('routes to update subcommand', async () => {
     const args: string[] = [
       'my-feature',
@@ -80,6 +123,14 @@ describe('flags', () => {
     client.setArgv('flags', 'update', ...args);
     await flags(client);
     expect(updateSpy).toHaveBeenCalledWith(client, args);
+  });
+
+  it('routes to versions subcommand', async () => {
+    const args: string[] = ['my-feature', '--limit', '10'];
+
+    client.setArgv('flags', 'versions', ...args);
+    await flags(client);
+    expect(versionsSpy).toHaveBeenCalledWith(client, args);
   });
 
   it('routes to rollout subcommand', async () => {
@@ -116,11 +167,33 @@ describe('flags', () => {
     expect(splitSpy).toHaveBeenCalledWith(client, args);
   });
 
+  it('routes to use-targeting subcommand', async () => {
+    const args: string[] = [
+      'my-feature',
+      '--environment',
+      'production',
+      '--default-variant',
+      'false',
+    ];
+
+    client.setArgv('flags', 'use-targeting', ...args);
+    await flags(client);
+    expect(useTargetingSpy).toHaveBeenCalledWith(client, args);
+  });
+
   it('routes to segments subcommand', async () => {
     const args: string[] = ['ls'];
 
     client.setArgv('flags', 'segments', ...args);
     await flags(client);
     expect(segmentsSpy).toHaveBeenCalledWith(client);
+  });
+
+  it('routes to unarchive subcommand', async () => {
+    const args: string[] = ['my-feature', '--yes'];
+
+    client.setArgv('flags', 'unarchive', ...args);
+    await flags(client);
+    expect(unarchiveSpy).toHaveBeenCalledWith(client, args);
   });
 });

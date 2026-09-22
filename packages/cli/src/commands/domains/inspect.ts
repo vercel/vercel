@@ -122,16 +122,10 @@ export default async function inspect(client: Client, argv: string[]) {
       ['l', 'l'],
       [
         {
-          rows: projects.map(project => {
-            const name = project.name;
-
-            const domains = (project.targets?.production?.alias || []).filter(
-              alias => alias.endsWith(domainName)
-            );
-
+          rows: projects.map(({ project, domains }) => {
             const cols = domains.length ? domains.join(', ') : '-';
 
-            return [name, cols];
+            return [project.name, cols];
           }),
         },
       ]
@@ -170,7 +164,7 @@ export default async function inspect(client: Client, argv: string[]) {
 
     const contextNameConst = contextName;
     const projectNames = Array.from(
-      new Set(projects.map(project => project.name))
+      new Set(projects.map(({ project }) => project.name))
     );
 
     if (projectNames.length) {

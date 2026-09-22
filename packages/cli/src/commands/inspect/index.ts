@@ -5,7 +5,11 @@ import ms from 'ms';
 import title from 'title';
 import type Client from '../../util/client';
 import { isDeploying } from '../../util/deploy/is-deploying';
-import { displayBuildLogs } from '../../util/logs';
+import {
+  type BuildLog,
+  collectBuildLogs,
+  displayBuildLogs,
+} from '../../util/logs';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
@@ -127,22 +131,44 @@ export default async function inspect(client: Client) {
   }
   const asJson = formatResult.jsonOutput;
   const startTimestamp = Date.now();
-  output.spinner(
-    `Fetching deployment "${deploymentIdOrHost}" in ${chalk.bold(contextName)}`
-  );
+  if (!(asJson && withLogs)) {
+    output.spinner(
+      `Fetching deployment "${deploymentIdOrHost}" in ${chalk.bold(
+        contextName
+      )}`
+    );
+  }
 
   // resolve the deployment, since we might have been given an alias
   let deployment = await getDeployment(client, contextName, deploymentIdOrHost);
 
   let abortController: AbortController | undefined;
-  if (withLogs && !asJson) {
-    let promise: Promise<void>;
-    ({ abortController, promise } = displayBuildLogs(client, deployment, wait));
-    if (wait) {
-      // when waiting for the deployment's end, we don't wait for the logs to finish
-      promise.catch(error => warn(`Failed to read build logs: ${error}`));
+  let buildLogsPromise: Promise<BuildLog[]> | undefined;
+  if (withLogs) {
+    if (asJson) {
+      let promise: Promise<BuildLog[]>;
+      ({ abortController, promise } = collectBuildLogs(
+        client,
+        deployment,
+        wait
+      ));
+      buildLogsPromise = promise.catch(error => {
+        warn(`Failed to read build logs: ${error}`);
+        return [];
+      });
     } else {
-      await promise;
+      let promise: Promise<void>;
+      ({ abortController, promise } = displayBuildLogs(
+        client,
+        deployment,
+        wait
+      ));
+      if (wait) {
+        // when waiting for the deployment's end, we don't wait for the logs to finish
+        promise.catch(error => warn(`Failed to read build logs: ${error}`));
+      } else {
+        await promise;
+      }
     }
   }
   while (wait) {
@@ -162,7 +188,11 @@ export default async function inspect(client: Client) {
 
   if (asJson) {
     output.stopSpinner();
-    await printJson({ deployment, contextName, client });
+    if (withLogs) {
+      printLogsJson(client, (await buildLogsPromise) ?? []);
+    } else {
+      await printJson({ deployment, contextName, client });
+    }
   } else if (withLogs) {
     print(`${chalk.cyan('status')}\t${stateString(deployment.readyState)}\n`);
   } else {
@@ -327,6 +357,10 @@ async function printJson({
   };
 
   client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+}
+
+function printLogsJson(client: Client, logs: BuildLog[]): void {
+  client.stdout.write(`${JSON.stringify(logs, null, 2)}\n`);
 }
 
 function exitCode(state: Deployment['readyState']) {

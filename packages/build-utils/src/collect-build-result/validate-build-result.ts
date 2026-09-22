@@ -17,6 +17,7 @@ export const SUPPORTED_AL2023_RUNTIMES = [
   'python3.13',
   'python3.14',
   'ruby3.3',
+  'bun1.4.x',
   'bun1.x',
   'executable',
 ] as const;
@@ -35,7 +36,6 @@ export interface ValidateBuildResultParams {
   allowInvalidRuntime?: boolean;
   buildConfig?: BuildConfigWithVercelConfig;
   buildResponse: BuildResultV2Typical | BuildResultV3;
-  osRelease?: OsRelease | null;
   vercelBaseUrl?: string;
 }
 
@@ -50,13 +50,10 @@ function isSupportedAl2023Runtime(
   return SUPPORTED_AL2023_RUNTIMES.some(supported => supported === runtime);
 }
 
-type OsRelease = Record<string, string>;
-
 export async function validateBuildResult({
   allowInvalidRuntime = false,
   buildConfig,
   buildResponse,
-  osRelease,
   vercelBaseUrl,
 }: ValidateBuildResultParams): Promise<ValidateBuildResultResult> {
   if (!('output' in buildResponse)) {
@@ -76,37 +73,35 @@ export async function validateBuildResult({
 
   const buildOutputMap = getAndVerifyOutputLambdasOrEdgeFuncs(buildResponse);
 
-  if (osRelease?.VERSION === '2023') {
-    const invalidRuntimes: { name: string; lambda: Lambda }[] = [];
+  const invalidRuntimes: { name: string; lambda: Lambda }[] = [];
 
-    for (const [name, entry] of Object.entries(buildOutputMap)) {
-      let lambda: Lambda | undefined;
+  for (const [name, entry] of Object.entries(buildOutputMap)) {
+    let lambda: Lambda | undefined;
 
-      if (entry.type === 'Prerender') {
-        lambda = entry.lambda;
-      } else if (entry.type === 'Lambda') {
-        lambda = entry;
-      }
-
-      if (!lambda) continue;
-
-      if (!isSupportedAl2023Runtime(lambda.runtime)) {
-        invalidRuntimes.push({ name, lambda });
-      }
+    if (entry.type === 'Prerender') {
+      lambda = entry.lambda;
+    } else if (entry.type === 'Lambda') {
+      lambda = entry;
     }
 
-    if (invalidRuntimes.length > 0 && !allowInvalidRuntime) {
-      throw new NowBuildError({
-        code: 'NOW_SANDBOX_WORKER_INVALID_RUNTIME',
-        message: `The following Serverless Functions contain an invalid "runtime":\n${invalidRuntimes
-          .map(({ name, lambda }) => `  - ${name} (${lambda.runtime})`)
-          .join('\n')}`,
-        link: getVercelUrl(
-          '/docs/functions/runtimes#official-runtimes',
-          vercelBaseUrl
-        ),
-      });
+    if (!lambda) continue;
+
+    if (!isSupportedAl2023Runtime(lambda.runtime)) {
+      invalidRuntimes.push({ name, lambda });
     }
+  }
+
+  if (invalidRuntimes.length > 0 && !allowInvalidRuntime) {
+    throw new NowBuildError({
+      code: 'NOW_SANDBOX_WORKER_INVALID_RUNTIME',
+      message: `The following Serverless Functions contain an invalid "runtime":\n${invalidRuntimes
+        .map(({ name, lambda }) => `  - ${name} (${lambda.runtime})`)
+        .join('\n')}`,
+      link: getVercelUrl(
+        '/docs/functions/runtimes#official-runtimes',
+        vercelBaseUrl
+      ),
+    });
   }
 
   const customFunctionConfiguration = getCustomFunctionConfigMaybe(buildConfig);

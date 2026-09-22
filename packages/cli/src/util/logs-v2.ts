@@ -23,6 +23,7 @@ export interface RequestLogEntry {
   branch?: string;
   cache?: string;
   cacheReason?: string;
+  pprState?: string;
   traceId?: string;
   messageTruncated?: boolean;
   logs: RequestLogMessage[];
@@ -189,6 +190,7 @@ export async function fetchRequestLogs(
     branch?: string;
     cache?: string;
     cacheReason?: string;
+    pprState?: string;
     traceId?: string;
     logs?: Array<{
       level?: string;
@@ -230,6 +232,7 @@ export async function fetchRequestLogs(
       branch: row.branch,
       cache: row.cache,
       cacheReason: row.cacheReason,
+      pprState: row.pprState,
       traceId: row.traceId,
       logs: requestLogs,
     };

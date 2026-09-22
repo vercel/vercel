@@ -15,6 +15,15 @@ export class TeamsListTelemetryClient
     }
   }
 
+  trackCliOptionLimit(value: number | undefined) {
+    if (value && value > 0) {
+      this.trackCliOption({
+        option: 'limit',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionUntil(value: string | undefined) {
     if (value) {
       this.trackCliOption({
@@ -39,6 +48,12 @@ export class TeamsListTelemetryClient
         option: 'count',
         value: this.redactedValue,
       });
+    }
+  }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
     }
   }
 }

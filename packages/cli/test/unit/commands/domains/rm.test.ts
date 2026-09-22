@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import domains from '../../../../src/commands/domains';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
-import { useDomain } from '../../../mocks/domains';
+import { useDomain, useProjectDomains } from '../../../mocks/domains';
 import { defaultProject, useProject } from '../../../mocks/project';
 
 describe('domains rm', () => {
@@ -41,6 +41,7 @@ describe('domains rm', () => {
     it('should track the redacted [domain] positional argument', async () => {
       useUser();
       const domain = useDomain('one');
+      useProjectDomains(domain.name, []);
       client.scenario.delete(`/v3/domains/${domain.name}`, (_req, res) => {
         res.json({});
       });
@@ -73,6 +74,7 @@ describe('domains rm', () => {
       it('should track usage of the `--yes` flag', async () => {
         useUser();
         const domain = useDomain('one');
+        useProjectDomains(domain.name, []);
         client.scenario.delete(`/v3/domains/${domain.name}`, (_req, res) => {
           res.json({});
         });

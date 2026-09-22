@@ -1,28 +1,32 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { listSubcommand } from './command';
-import { parseSubcommandArgs, ensureProjectLink } from './shared';
+import { parseSubcommandArgs, withGlobalFlags } from './shared';
 import getRedirects from '../../util/redirects/get-redirects';
 import getRedirectVersions from '../../util/redirects/get-redirect-versions';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 
 export default async function list(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, listSubcommand);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await requireProjectContext(
+    client,
+    'redirects',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
   const { flags } = parsed;
   const teamId = org.type === 'team' ? org.id : undefined;
   const search = flags['--search'];
-  const page = flags['--page'];
-  const perPage = flags['--per-page'];
+  const page = flags['--next'] ?? flags['--page'];
+  const perPage = flags['--limit'] ?? flags['--per-page'];
   const staging = flags['--staging'];
   const versionIdFlag = flags['--version'];
 
@@ -38,7 +42,7 @@ export default async function list(client: Client, argv: string[]) {
     if (!stagingVersion) {
       output.error(
         `No staging version found for ${chalk.bold(project.name)}. Run ${chalk.cyan(
-          'vercel redirects list-versions'
+          withGlobalFlags(client, 'redirects list-versions')
         )} to see available versions.`
       );
       return 1;
@@ -67,7 +71,7 @@ export default async function list(client: Client, argv: string[]) {
     if (!version) {
       output.error(
         `Version "${versionIdFlag}" not found. Run ${chalk.cyan(
-          'vercel redirects list-versions'
+          withGlobalFlags(client, 'redirects list-versions')
         )} to see available versions.`
       );
       return 1;
@@ -153,8 +157,8 @@ export default async function list(client: Client, argv: string[]) {
       !versionIdFlag
     ) {
       output.log(
-        `  ${getCommandNamePlain('redirects list')} shows production redirects only. ` +
-          `If you added redirects but do not see them here, they may still be staged only—run ${getCommandNamePlain('redirects list --staging')} to view staged changes.`
+        `  ${withGlobalFlags(client, 'redirects list')} shows production redirects only. ` +
+          `If you added redirects but do not see them here, they may still be staged only—run ${withGlobalFlags(client, 'redirects list --staging')} to view staged changes.`
       );
     }
 
@@ -166,14 +170,16 @@ export default async function list(client: Client, argv: string[]) {
 
   if (pagination && pagination.page < pagination.numPages) {
     const nextPage = pagination.page + 1;
-    let command = `redirects list --page ${nextPage}`;
+    let command = `redirects list --next ${nextPage}`;
     if (search) {
       command += ` --search "${search}"`;
     }
     if (perPage) {
-      command += ` --per-page ${perPage}`;
+      command += ` --limit ${perPage}`;
     }
-    output.log(`To display the next page, run ${getCommandName(command)}`);
+    output.log(
+      `To display the next page, run ${withGlobalFlags(client, command)}`
+    );
   }
 
   return 0;

@@ -26,9 +26,12 @@ describe('responseError()', () => {
     url = (await listen(server)).toString();
   });
 
-  afterAll(() => {
-    server.close();
-  });
+  afterAll(
+    () =>
+      new Promise<void>(resolve => {
+        server.close(() => resolve());
+      })
+  );
 
   it('should parse 4xx response error with fallback message', async () => {
     handler = (_req: IncomingMessage, res: ServerResponse) => {

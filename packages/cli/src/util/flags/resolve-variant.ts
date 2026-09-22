@@ -15,15 +15,41 @@ export function formatVariantValue(value: FlagVariant['value']): string {
 }
 
 /**
+ * Formats a variant for a CLI `--variant` argument.
+ * Prefers the scalar/JSON value so printed commands match display copy;
+ * string values stay unquoted (shell quoting is left to `quoteArg`).
+ */
+export function formatVariantForCliArg(variant: FlagVariant): string {
+  if (typeof variant.value === 'string') {
+    return variant.value;
+  }
+
+  return formatVariantValue(variant.value);
+}
+
+/**
  * Formats a variant for display in prompts and messages.
- * Shows the value first, followed by the label if available.
+ * Shows the label first when available, with the value in parentheses.
  */
 export function formatVariantForDisplay(variant: FlagVariant): string {
-  const parts = [formatVariantValue(variant.value)];
-  if (variant.label) {
-    parts.push(chalk.dim(variant.label));
+  const value = formatVariantValue(variant.value);
+  if (!variant.label) {
+    return value;
   }
-  return parts.join(' ');
+  return `${variant.label} (${chalk.dim(value)})`;
+}
+
+/**
+ * Formats a variant for list output, matching `flags inspect`.
+ * Shows the value first, followed by a muted label when available.
+ */
+export function formatVariantListSummary(variant: FlagVariant): string {
+  const value = formatVariantValue(variant.value);
+  if (!variant.label) {
+    return value;
+  }
+
+  return `${value}: ${chalk.gray(variant.label)}`;
 }
 
 /**

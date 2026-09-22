@@ -112,7 +112,7 @@ A CLI UX change is not done until:
 - resolved target and planned mutation are visible before risky work
 - inferred resource confirmations show the resolved target before asking
 - mutation results show durable remote resources and user-actionable local artifacts changed
-- aligned rows use `printAlignedLabel()` with the shared 16-character label column and correct gutter: `▲` for production rows, `✓` for the primary completed phase, `!` for warnings, blank for previews, progress, and secondary receipt rows
+- aligned rows use `printAlignedLabel()` with the shared 16-character label column and correct gutter: `▲` for production rows, `✓` for the primary completed phase, `!` for warnings, `✗` for fatal errors, blank for previews, progress, and secondary receipt rows
 - every prompt has a flag, argument, or machine-readable action path
 - old vague prompts/output are locked out by tests
 - JSON/agent output remains valid, bounded, and stdout-clean

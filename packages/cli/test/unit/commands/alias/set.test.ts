@@ -29,14 +29,6 @@ describe('alias set', () => {
     it.todo('errors');
   });
 
-  describe('invalid deployment', () => {
-    it.todo('errors');
-  });
-
-  describe('invalid domain', () => {
-    it.todo('errors');
-  });
-
   describe('[custom domain]', () => {
     it('tracks argument', async () => {
       const user = useUser();

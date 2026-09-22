@@ -41,8 +41,6 @@ describe('Client', () => {
       for (const name of PROXY_ENV_NAMES) {
         vi.stubEnv(name, undefined);
       }
-      client.agent?.destroy();
-      client.agent = undefined;
       client.reset();
     });
 

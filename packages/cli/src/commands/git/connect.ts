@@ -4,6 +4,7 @@ import { join } from 'path';
 import type { Org, Project } from '@vercel-internals/types';
 import type Client from '../../util/client';
 import { parseGitConfig, pluckRemoteUrls } from '../../util/create-git-meta';
+import { getGitConfigPath } from '../../util/git-helpers';
 import link from '../../util/output/link';
 import { getCommandName } from '../../util/pkg-name';
 import {
@@ -59,6 +60,7 @@ export default async function connect(client: Client, argv: string[]) {
   });
   telemetry.trackCliFlagConfirm(opts['--confirm']);
   telemetry.trackCliFlagYes(opts['--yes']);
+  telemetry.trackCliOptionProject(opts['--project']);
 
   if ('--confirm' in opts) {
     output.warn('`--confirm` is deprecated, please use `--yes` instead');
@@ -79,8 +81,11 @@ export default async function connect(client: Client, argv: string[]) {
   const repoArg = args[0];
   telemetry.trackCliArgumentGitUrl(repoArg);
 
+  const projectName = opts['--project'];
   const linkedProject = await ensureLink('git', client, client.cwd, {
     autoConfirm: confirm,
+    projectName,
+    failIfNotFound: Boolean(projectName),
   });
   if (typeof linkedProject === 'number') {
     return linkedProject;
@@ -91,7 +96,7 @@ export default async function connect(client: Client, argv: string[]) {
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   // get project from .git
-  const gitConfigPath = join(cwd, '.git/config');
+  const gitConfigPath = getGitConfigPath({ cwd }) ?? join(cwd, '.git/config');
   const gitConfig = await parseGitConfig(gitConfigPath);
 
   if (repoArg) {

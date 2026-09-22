@@ -118,6 +118,17 @@ describe('guidance', () => {
         `);
         expect(exitCode).toBe(0);
       });
+
+      it('should show disabled when VERCEL_GUIDANCE_DISABLED is set', async () => {
+        vi.stubEnv('VERCEL_GUIDANCE_DISABLED', '1');
+        client.config = { guidance: { enabled: true } };
+
+        client.setArgv('guidance', 'status');
+        const exitCode = await guidance(client);
+
+        expect(client.getFullOutput()).toContain('Guidance status: Disabled');
+        expect(exitCode).toBe(0);
+      });
     });
 
     describe('enable', () => {

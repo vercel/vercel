@@ -4,6 +4,7 @@
 
 ```bash
 vercel project ls                    # list projects
+vercel project ls --filter my-app    # substring search by name
 vercel project add my-project        # create project
 vercel project inspect my-app        # inspect project
 vercel project rm my-app             # remove project
@@ -20,10 +21,12 @@ vercel remove <name|id>              # remove deployments
 vercel remove my-app --safe          # skip aliased deployments
 ```
 
+`vercel list` returns one page of 20 and supports cursor pagination with `--next`; do not assume it accepts `--limit`. Use project, scope, status, environment, and metadata filters to keep deployment lists focused, or use `vercel api` when a strict page size is required.
+
 ## Teams
 
 ```bash
-vercel whoami                        # current user and team
+vercel whoami --format json          # current user and effective team
 vercel teams ls                      # list teams
 vercel teams switch                  # interactive team picker
 vercel teams switch my-team          # switch by slug
@@ -35,7 +38,7 @@ vercel teams invite user@example.com # invite member
 Use these commands when the user has not specified a team or project and the task is read-only:
 
 ```bash
-vercel whoami
+vercel whoami --format json
 vercel teams ls --format json
 vercel project ls --scope <team-slug> --format json
 vercel list <project-name> --scope <team-slug> --status READY --format json

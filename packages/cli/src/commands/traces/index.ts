@@ -12,12 +12,14 @@ import {
   getSubcommand as getSubcommandMetadata,
   tracesCommand,
 } from './command';
+import { tracesConfigCommand } from './config/command';
 import get from './get';
 import { runCurl } from '../curl';
 
 const COMMAND_CONFIG = {
   get: getCommandAliases(getSubcommandMetadata),
   create: getCommandAliases(createSubcommandMetadata),
+  config: getCommandAliases(tracesConfigCommand),
 };
 
 const SUBCOMMAND_METADATA: Record<string, Command> = {
@@ -43,12 +45,24 @@ export default async function traces(client: Client): Promise<number> {
     return 1;
   }
 
-  const { subcommand, subcommandOriginal } = getSubcommand(
+  const { subcommand, subcommandOriginal, args } = getSubcommand(
     parsedArgs.args.slice(1),
     COMMAND_CONFIG
   );
+  const needHelp = Boolean(parsedArgs.flags['--help']);
 
-  if (parsedArgs.flags['--help']) {
+  if (subcommand === tracesConfigCommand.name) {
+    // The `config` group owns its own help and subcommand routing, including
+    // the bare `traces config` case.
+    return (await import('./config')).default(client, {
+      args,
+      needHelp,
+      subcommandOriginal,
+      telemetry,
+    });
+  }
+
+  if (needHelp) {
     telemetry.trackCliFlagHelp('traces', subcommandOriginal);
     const subMetadata =
       typeof subcommand === 'string'

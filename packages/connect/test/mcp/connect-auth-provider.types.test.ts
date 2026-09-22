@@ -38,5 +38,8 @@ describe('connectAuthProvider type compatibility', () => {
     connectAuthProvider('oauth/linear', {
       subject: { type: 'jwt-bearer', sub: 'subject_id' },
     });
+    connectAuthProvider('oauth/linear', {
+      subject: { type: 'token', token: 'passport.jwt' },
+    });
   });
 });

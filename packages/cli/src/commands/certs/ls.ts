@@ -71,7 +71,7 @@ async function ls(client: Client, argv: string[]): Promise<number> {
     client.stdout.write(formatCertsTable(certs));
   }
 
-  if (pagination && pagination.count === 20) {
+  if (pagination?.next) {
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
       `To display the next page run ${getCommandName(

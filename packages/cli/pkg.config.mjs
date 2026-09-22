@@ -13,12 +13,21 @@ export default {
       'dist/**/*.cjs',
       'dist/**/*.mjs',
       'dist/**/*.json',
+      'dist/**/*.br',
       'node_modules/**/*.js',
       'node_modules/**/*.cjs',
       'node_modules/**/*.mjs',
       'node_modules/**/*.json',
       'node_modules/**/*.wasm',
       'node_modules/**/*.node',
+    ],
+    // Test files shipped inside dependencies are never loaded by the CLI.
+    // Excluding them also stops pkg from following their requires into test
+    // frameworks that happen to be resolvable from the staging directory.
+    ignore: [
+      '**/node_modules/**/*.test.{js,cjs,mjs}',
+      '**/node_modules/**/*.spec.{js,cjs,mjs}',
+      '**/node_modules/**/{test,tests,__tests__}/**',
     ],
     targets: [
       'node24.14.1-linux-x64',

@@ -1,4 +1,9 @@
 import type { BuildOptions, BuildResultV2, Span } from '@vercel/build-utils';
+import {
+  getLambdaOptionsFromFunction,
+  getReportedServiceType,
+} from '@vercel/build-utils';
+import { generateProjectManifest } from './diagnostics';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import {
@@ -30,8 +35,26 @@ import {
 
 export const version = 2;
 
+/**
+ * Output path for the container function.
+ *
+ * Deliberately not `index`: the filesystem handler resolves `/` to an `index`
+ * output, so a rewrite landing on `/` would dispatch there before the catch-all
+ * can copy the resolved destination into the runtime request path.
+ */
+export const CONTAINER_OUTPUT_PATH = 'container';
+
 export { startDevServer } from './dev';
 export { prepareCache } from './prepare-cache';
+export { diagnostics } from './diagnostics';
+
+function resolveFunctionSourceFile(options: BuildOptions): string {
+  const entrypoint = readString(options.entrypoint) ?? '';
+  if (entrypoint === '<detect>') {
+    return findDockerfile(options.workPath) ?? entrypoint;
+  }
+  return entrypoint;
+}
 
 function normalizeCommand(command: unknown): string[] | undefined {
   if (typeof command === 'string') {
@@ -392,24 +415,49 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
     span => resolveImageHandler(options, span)
   );
 
+  const lambdaOptions = await getLambdaOptionsFromFunction({
+    sourceFile: resolveFunctionSourceFile(options),
+    config: options.config,
+  });
+
   const command = normalizeCommand(options.config.command);
 
-  // Do a normal build: the function lands at the natural `index` path and a
-  // catch-all route forwards every request to it. Without it there is no `/`
-  // route, so for a service the top-level service rewrite resolves to nothing
-  // (vercel/vercel#16648), and for a root (non-service) container deploy
-  // nothing reaches the function at all. The filesystem handler resolves `/`
-  // to the `index` output. The only service-specific concern — nesting the
-  // output under `services/<name>/` — is handled by the CLI, not here.
+  await generateProjectManifest({
+    workPath: options.workPath,
+    framework: options.config.framework ?? undefined,
+    serviceType: options.service
+      ? getReportedServiceType(options.service)
+      : undefined,
+  });
+
+  // Do a normal build: a catch-all route forwards every request to the
+  // function. Without it there is no `/` route, so for a service the top-level
+  // service rewrite resolves to nothing (vercel/vercel#16648), and for a root
+  // (non-service) container deploy nothing reaches the function at all. The
+  // only service-specific concern, nesting the output under
+  // `services/<name>/`, is handled by the CLI, not here.
   const routes = [
     { handle: 'filesystem' as const },
-    { src: '/(.*)', dest: '/index' },
+    // This route matches the resolved destination after rewrites. Copy that
+    // path into the runtime request before dispatching the container so its
+    // application routing observes the rewrite.
+    {
+      src: '/(.*)',
+      dest: `/${CONTAINER_OUTPUT_PATH}`,
+      transforms: [
+        {
+          type: 'request.path' as const,
+          op: 'set' as const,
+          args: '/$1',
+        },
+      ],
+    },
   ];
 
   return {
     routes,
     output: {
-      index: {
+      [CONTAINER_OUTPUT_PATH]: {
         type: 'Lambda',
         files: {},
         // For `runtime: 'container'` the OCI image reference is carried in
@@ -419,6 +467,7 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
         runtime: 'container',
         environment: {},
         ...(command ? { command } : {}),
+        ...lambdaOptions,
       } as any,
     },
   };

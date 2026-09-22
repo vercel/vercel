@@ -8,11 +8,14 @@ import { defaultProject, useProject } from '../../../mocks/project';
 import { client } from '../../../mocks/client';
 import git from '../../../../src/commands/git';
 import type { Project } from '@vercel-internals/types';
-import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 
 describe('git connect', () => {
   const fixture = (name: string) =>
-    join(__dirname, '../../../fixtures/unit/commands/git/connect', name);
+    setupUnitFixture(join('commands', 'git', 'connect', name));
 
   describe('--non-interactive', () => {
     it('outputs action_required JSON and exits when not linked and multiple teams (no --scope)', async () => {
@@ -68,9 +71,17 @@ describe('git connect', () => {
   });
 
   describe('connecting an unlinked project', () => {
-    const cwd = fixture('unlinked');
+    // Use a temp copy, not the in-repo fixture. These tests run the real link
+    // flow, and the repo-level link is written to the enclosing git root. From
+    // a fixture inside the checkout that root is the repository itself, so the
+    // write lands in `<repo>/.vercel/repo.json` and leaks into every other
+    // test file in the run: `getScope` picks the stray link up, drops the team
+    // scope (its `orgId` is a user, not a team), and commands that should never
+    // prompt fall through to an interactive team picker that no test answers.
+    const cwd = setupUnitFixture('commands/git/connect/unlinked');
+    let user: ReturnType<typeof useUser>;
     beforeEach(async () => {
-      useUser();
+      user = useUser();
       useTeams('team_dummy');
       useProject({
         ...defaultProject,
@@ -84,6 +95,8 @@ describe('git connect', () => {
     });
 
     afterEach(async () => {
+      delete process.env.VERCEL_ORG_ID;
+      delete process.env.VERCEL_PROJECT_ID;
       await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
     });
 
@@ -98,8 +111,9 @@ describe('git connect', () => {
         await expect(client.stderr).toOutput('Which team?');
         client.stdin.write('\r');
 
-        await expect(client.stderr).toOutput('Found existing project');
-        client.stdin.write('y\n');
+        // Unified flow: pick the detected folder-name match in the picker.
+        await expect(client.stderr).toOutput('Which project?');
+        client.events.keypress('enter');
 
         await expect(client.stderr).toOutput(
           'Pull development environment variables into .env.local?'
@@ -137,6 +151,10 @@ describe('git connect', () => {
 
     describe('--yes', () => {
       it('tracks telemetry', async () => {
+        // `--yes` no longer guesses a team; the env pair is the explicit
+        // signal and resolves the link without prompting.
+        process.env.VERCEL_ORG_ID = user.id;
+        process.env.VERCEL_PROJECT_ID = 'unlinked';
         client.setArgv('git', 'connect', '--yes');
         const gitPromise = git(client);
 
@@ -156,16 +174,16 @@ describe('git connect', () => {
             key: 'flag:yes',
             value: 'TRUE',
           },
-          {
-            key: 'flag:yes',
-            value: 'TRUE',
-          },
         ]);
       });
     });
 
     describe('--confirm', () => {
       it('tracks telemetry', async () => {
+        // `--yes` no longer guesses a team; the env pair is the explicit
+        // signal and resolves the link without prompting.
+        process.env.VERCEL_ORG_ID = user.id;
+        process.env.VERCEL_PROJECT_ID = 'unlinked';
         client.setArgv('git', 'connect', '--confirm');
         const gitPromise = git(client);
 
@@ -186,16 +204,11 @@ describe('git connect', () => {
             key: 'flag:confirm',
             value: 'TRUE',
           },
-          {
-            key: 'flag:yes',
-            value: 'TRUE',
-          },
         ]);
       });
     });
 
     it('connects an unlinked project', async () => {
-      const cwd = fixture('unlinked');
       client.cwd = cwd;
       client.setArgv('git', 'connect');
       const gitPromise = git(client);
@@ -205,8 +218,9 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\r');
 
-      await expect(client.stderr).toOutput('Found existing project');
-      client.stdin.write('y\n');
+      // Unified flow: pick the detected folder-name match in the picker.
+      await expect(client.stderr).toOutput('Which project?');
+      client.events.keypress('enter');
 
       await expect(client.stderr).toOutput(
         'Pull development environment variables into .env.local?'
@@ -238,65 +252,28 @@ describe('git connect', () => {
     });
   });
 
-  it('connects an unlinked project with a remote url', async () => {
-    const cwd = fixture('unlinked');
-    client.cwd = cwd;
-    try {
-      await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
-      useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'unlinked',
-        name: 'unlinked',
-      });
-      (client as { nonInteractive: boolean }).nonInteractive = false;
-      client.setArgv('git', 'connect', 'https://github.com/user2/repo2');
-      const gitPromise = git(client);
+  it('connects the project selected by --project', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'explicit-project',
+      name: 'explicit-project',
+      accountId: 'team_dummy',
+    });
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    client.setArgv(
+      'git',
+      'connect',
+      'https://github.com/user2/repo2',
+      '--project',
+      'explicit-project',
+      '--yes'
+    );
 
-      await expect(client.stderr).toOutput('Directory');
-
-      await expect(client.stderr).toOutput('Which team?');
-      client.stdin.write('\r');
-
-      await expect(client.stderr).toOutput('Found existing project');
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
-        'Pull development environment variables into .env.local?'
-      );
-      client.stdin.write('n\n');
-
-      await expect(client.stderr).toOutput(
-        `Do you still want to connect https://github.com/user2/repo2?`
-      );
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
-        `Connecting GitHub repository: https://github.com/user2/repo2`
-      );
-
-      const exitCode = await gitPromise;
-      await expect(client.stderr).toOutput('Connected');
-
-      expect(exitCode).toEqual(0);
-      expect(client.stderr.getFullOutput()).not.toContain(
-        'Would you like to pull environment variables now?'
-      );
-
-      const project: Project = await client.fetch(`/v8/projects/unlinked`);
-      expect(project.link).toMatchObject({
-        type: 'github',
-        repo: 'user2/repo2',
-        repoId: 1010,
-        gitCredentialId: '',
-        sourceless: true,
-        createdAt: 1656109539791,
-        updatedAt: 1656109539791,
-      });
-    } finally {
-      await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-    }
+    await expect(git(client)).resolves.toEqual(0);
+    await expect(client.stderr).toOutput('Connected');
   });
 
   it('should fail when there is no git config', async () => {

@@ -135,7 +135,7 @@ export default async function main(client: Client) {
   }
 
   try {
-    return await dev(client, parsedArgs.flags, args, telemetry);
+    return await dev(client, parsedArgs.flags, args, telemetry, vercelConfig);
   } catch (err) {
     if (
       err instanceof DevCommandExitError ||

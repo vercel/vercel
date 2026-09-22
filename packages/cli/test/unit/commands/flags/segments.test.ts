@@ -1,6 +1,10 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
+import stripAnsi from 'strip-ansi';
 import flags from '../../../../src/commands/flags';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  removeProjectLink,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
@@ -8,6 +12,7 @@ import { useUser } from '../../../mocks/user';
 import { defaultSegments, useFlags } from '../../../mocks/flags';
 import type { Segment } from '../../../../src/util/flags/types';
 import { formatFlagConditionComparatorList } from '../../../../src/util/flags/comparators';
+import { TIMESTAMP_IDENTIFY_HELP } from '../../../../src/util/flags/attribute-types';
 
 function expectHelpOutputToListRuleOperators(output: string) {
   expect(output.replace(/\s+/g, ' ')).toContain(
@@ -27,6 +32,7 @@ describe('flags segments', () => {
       ...defaultProject,
       id: 'vercel-flags-test',
       name: 'vercel-flags-test',
+      accountId: 'team_dummy',
     });
     useFlags(undefined, undefined, undefined, segmentsList);
     const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
@@ -59,7 +65,11 @@ describe('flags segments', () => {
       const exitCode = await flags(client);
 
       expect(exitCode).toEqual(2);
-      expectHelpOutputToListRuleOperators(client.stderr.getFullOutput());
+      const helpOutput = client.stderr.getFullOutput();
+      expectHelpOutputToListRuleOperators(helpOutput);
+      expect(helpOutput.replace(/\s+/g, ' ')).toContain(
+        TIMESTAMP_IDENTIFY_HELP
+      );
     });
 
     it('shows rule operators in update help', async () => {
@@ -89,6 +99,33 @@ describe('flags segments', () => {
       expect(parsed.segments).toHaveLength(2);
       expect(parsed.segments[0]).toHaveProperty('slug');
       expect(parsed.segments[0]).toHaveProperty('data');
+    });
+
+    it('lists segments with --project when the cwd is not linked', async () => {
+      const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
+      removeProjectLink(cwd);
+      client.cwd = cwd;
+
+      client.setArgv(
+        'flags',
+        'segments',
+        'ls',
+        '--project',
+        'vercel-flags-test',
+        '--json'
+      );
+      const exitCode = await flags(client);
+
+      expect(exitCode).toEqual(0);
+      expect(JSON.parse(client.stdout.getFullOutput()).segments).toHaveLength(
+        2
+      );
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:segments', value: 'segments' },
+        { key: 'subcommand:ls', value: 'ls' },
+        { key: 'option:project', value: '[REDACTED]' },
+        { key: 'flag:json', value: 'TRUE' },
+      ]);
     });
 
     it('tracks `ls` subcommand', async () => {
@@ -216,6 +253,51 @@ describe('flags segments', () => {
         cmp: '!contains',
         rhs: 'gmail.com',
       });
+    });
+
+    it('writes Timestamp conditions as numeric epoch milliseconds', async () => {
+      client.setArgv(
+        'flags',
+        'segments',
+        'create',
+        'early-adopters',
+        '--add',
+        'rule:user.signupAt:before:2026-04-16T09:00:00.000Z'
+      );
+
+      const exitCode = await flags(client);
+
+      expect(exitCode).toEqual(0);
+      expect(segmentsList[2].data.rules?.[0].conditions[0]).toMatchObject({
+        lhs: { type: 'entity', kind: 'user', attribute: 'signupAt' },
+        cmp: 'lt',
+        rhs: Date.parse('2026-04-16T09:00:00.000Z'),
+      });
+    });
+
+    it.each([
+      '1776297600',
+      '2026',
+    ])('rejects Timestamp segment rule value %s', async value => {
+      client.setArgv(
+        'flags',
+        'segments',
+        'create',
+        'early-adopters',
+        '--add',
+        `rule:user.signupAt:before:${value}`
+      );
+
+      const exitCode = await flags(client);
+
+      expect(exitCode).toEqual(1);
+      expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+        'milliseconds, not seconds or years'
+      );
+      expect(segmentsList.map(segment => segment.slug)).toEqual([
+        'beta-users',
+        'staff',
+      ]);
     });
 
     it('lists valid operators when a rule operator is invalid', async () => {

@@ -10,6 +10,9 @@ import { useUser } from '../../../mocks/user';
 import { useProject } from '../../../mocks/project';
 import { useTeams, createTeam } from '../../../mocks/team';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
+import * as linkModule from '../../../../src/util/projects/link';
+import { existsSync } from 'fs';
+import { join } from 'path';
 
 const MOCK_ACCOUNT_ID = 'team_test123';
 
@@ -103,7 +106,10 @@ describe('curl', () => {
       const exitCode = await curl(client);
       expect(exitCode).toEqual(2);
       expect(client.getFullOutput()).toContain(
-        'Execute curl with automatic deployment URL and protection bypass'
+        'Make curl requests to Vercel deployments with automatic protection bypass'
+      );
+      expect(client.getFullOutput()).toContain(
+        'vercel curl https://your-project-abc123.vercel.app/api/hello'
       );
     });
   });
@@ -130,11 +136,16 @@ describe('curl', () => {
 
     it('should accept / as a valid path', async () => {
       await setupLinkedProject();
+      const getLinkedProjectSpy = vi.spyOn(linkModule, 'getLinkedProject');
 
       client.setArgv('curl', '/', '--protection-bypass', 'test-secret');
       const exitCode = await curl(client);
 
       expect(exitCode).toEqual(0);
+      expect(getLinkedProjectSpy).toHaveBeenCalledWith(client, {
+        cwd: client.cwd,
+      });
+      getLinkedProjectSpy.mockRestore();
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -287,6 +298,227 @@ describe('curl', () => {
   });
 
   describe('--deployment flag', () => {
+    it('targets the explicit deployment project without linking cwd', async () => {
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+      useUser();
+
+      client.scenario.get('/v13/deployments/dpl_EXPLICIT123', (_req, res) => {
+        res.json({
+          id: 'dpl_EXPLICIT123',
+          url: 'explicit-project-abc123.vercel.app',
+          projectId: 'explicit-project',
+          ownerId: 'team_target',
+        });
+      });
+      client.scenario.get('/v9/projects/explicit-project', (req, res) => {
+        expect(req.query.teamId).toBe('team_target');
+        res.json({
+          id: 'explicit-project',
+          name: 'explicit-project',
+          protectionBypass: {
+            'target-project-secret': { scope: 'automation-bypass' },
+          },
+        });
+      });
+
+      const getLinkedProjectSpy = vi.spyOn(linkModule, 'getLinkedProject');
+      client.setArgv('curl', '/api/hello', '--deployment', 'dpl_EXPLICIT123');
+
+      await expect(curl(client)).resolves.toBe(0);
+      expect(getLinkedProjectSpy).not.toHaveBeenCalled();
+      expect(existsSync(join(cwd, '.vercel'))).toBe(false);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        expect.arrayContaining([
+          '--url',
+          'https://explicit-project-abc123.vercel.app/api/hello',
+          '--header',
+          'x-vercel-protection-bypass: target-project-secret',
+        ]),
+        expect.any(Object)
+      );
+      getLinkedProjectSpy.mockRestore();
+    });
+
+    it('does not create a bypass token on an explicit target project', async () => {
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+      useUser();
+      let protectionBypassPatchCalled = false;
+
+      client.scenario.get('/v13/deployments/dpl_EXPLICIT123', (_req, res) => {
+        res.json({
+          id: 'dpl_EXPLICIT123',
+          url: 'explicit-project-abc123.vercel.app',
+          projectId: 'explicit-project',
+          ownerId: 'team_target',
+        });
+      });
+      client.scenario.get('/v9/projects/explicit-project', (_req, res) => {
+        res.json({
+          id: 'explicit-project',
+          name: 'explicit-project',
+          protectionBypass: {
+            'shareable-secret': { scope: 'shareable-link' },
+          },
+        });
+      });
+      client.scenario.patch(
+        '/v1/projects/explicit-project/protection-bypass',
+        (_req, res) => {
+          protectionBypassPatchCalled = true;
+          res.status(500).end();
+        }
+      );
+
+      client.setArgv('curl', '/api/hello', '--deployment', 'dpl_EXPLICIT123');
+
+      await expect(curl(client)).resolves.toBe(0);
+      expect(protectionBypassPatchCalled).toBe(false);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        ['--url', 'https://explicit-project-abc123.vercel.app/api/hello'],
+        expect.any(Object)
+      );
+      expect(existsSync(join(cwd, '.vercel'))).toBe(false);
+    });
+
+    it('can create a bypass token when the explicit target is locally linked', async () => {
+      await setupLinkedProject();
+      client.scenario.get('/v13/deployments/dpl_EXPLICIT123', (_req, res) => {
+        res.json({
+          id: 'dpl_EXPLICIT123',
+          url: 'static-project-abc123.vercel.app',
+          projectId: 'static',
+          ownerId: 'team_dummy',
+        });
+      });
+      const bypassTokenModule = await import(
+        '../../../../src/commands/curl/bypass-token'
+      );
+      const tokenSpy = vi
+        .spyOn(bypassTokenModule, 'getOrCreateDeploymentProtectionToken')
+        .mockResolvedValue('same-project-secret');
+
+      client.setArgv('curl', '/api/hello', '--deployment', 'dpl_EXPLICIT123');
+
+      await expect(curl(client)).resolves.toBe(0);
+      expect(tokenSpy).toHaveBeenCalledWith(
+        client,
+        expect.objectContaining({
+          project: expect.objectContaining({ id: 'static' }),
+        }),
+        { createIfMissing: true }
+      );
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        expect.arrayContaining([
+          '--header',
+          'x-vercel-protection-bypass: same-project-secret',
+        ]),
+        expect.any(Object)
+      );
+      tokenSpy.mockRestore();
+    });
+
+    it.each([
+      { source: 'flag', extraArgs: ['--protection-bypass', 'caller-secret'] },
+      { source: 'environment', extraArgs: [] },
+    ])('uses a bypass from $source without loading either project', async ({
+      source,
+      extraArgs,
+    }) => {
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+      useUser();
+      if (source === 'environment') {
+        vi.stubEnv('VERCEL_AUTOMATION_BYPASS_SECRET', 'caller-secret');
+      }
+
+      const getLinkedProjectSpy = vi.spyOn(linkModule, 'getLinkedProject');
+      client.setArgv(
+        'curl',
+        '/api/hello',
+        '--deployment',
+        'https://explicit-project-abc123.vercel.app',
+        ...extraArgs
+      );
+
+      await expect(curl(client)).resolves.toBe(0);
+      expect(getLinkedProjectSpy).not.toHaveBeenCalled();
+      expect(existsSync(join(cwd, '.vercel'))).toBe(false);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        expect.arrayContaining([
+          '--url',
+          'https://explicit-project-abc123.vercel.app/api/hello',
+          '--header',
+          'x-vercel-protection-bypass: caller-secret',
+        ]),
+        expect.any(Object)
+      );
+      getLinkedProjectSpy.mockRestore();
+      vi.unstubAllEnvs();
+    });
+
+    it('proceeds without a bypass when the target project cannot be loaded', async () => {
+      await setupLinkedProject();
+      client.scenario.get('/v13/deployments/dpl_EXPLICIT123', (_req, res) => {
+        res.json({
+          id: 'dpl_EXPLICIT123',
+          url: 'explicit-project-abc123.vercel.app',
+          projectId: 'explicit-project',
+          ownerId: 'team_target',
+        });
+      });
+      client.scenario.get('/v9/projects/explicit-project', (_req, res) => {
+        res.status(500).json({ error: { message: 'Internal Server Error' } });
+      });
+
+      const getLinkedProjectSpy = vi.spyOn(linkModule, 'getLinkedProject');
+      client.setArgv('curl', '/api/hello', '--deployment', 'dpl_EXPLICIT123');
+
+      await expect(curl(client)).resolves.toBe(0);
+      expect(getLinkedProjectSpy).not.toHaveBeenCalled();
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        ['--url', 'https://explicit-project-abc123.vercel.app/api/hello'],
+        expect.any(Object)
+      );
+      await expect(client.stderr).toOutput(
+        'proceeding without an automatic protection bypass token'
+      );
+      getLinkedProjectSpy.mockRestore();
+    });
+
+    it('uses an explicit deployment URL when metadata cannot be resolved', async () => {
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+      useUser();
+      client.scenario.get('/v13/deployments/:host', (_req, res) => {
+        res.status(500).json({ error: { message: 'Internal Server Error' } });
+      });
+
+      client.setArgv(
+        'curl',
+        '/api/hello',
+        '--deployment',
+        'https://explicit-project-abc123.vercel.app'
+      );
+
+      await expect(curl(client)).resolves.toBe(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        ['--url', 'https://explicit-project-abc123.vercel.app/api/hello'],
+        expect.any(Object)
+      );
+      await expect(client.stderr).toOutput(
+        'proceeding without an automatic protection bypass token'
+      );
+      expect(existsSync(join(cwd, '.vercel'))).toBe(false);
+    });
+
     it('should resolve full URL auth from aliases without querying limited teams', async () => {
       useUser();
       const [team] = useTeams('team_active') as ReturnType<typeof createTeam>[];
@@ -868,6 +1100,32 @@ describe('parseCurlLikeArgs', () => {
     expect(parsed.target).toBe('https://example.com');
     expect(parsed.protectionBypass).toBe('secret');
     expect(parsed.toolFlags).toEqual(['--compressed']);
+  });
+
+  it('consumes scope flags before and after the command token', () => {
+    const beforeCommand = parseCurlLikeArgs(
+      ['--scope', 'team-a', '--team=team-b', 'curl', '/api/hello', '--silent'],
+      'curl'
+    );
+    const afterCommand = parseCurlLikeArgs(
+      ['curl', '/api/hello', '--scope', 'team-a', '--team=team-b', '--silent'],
+      'curl'
+    );
+
+    expect(beforeCommand.target).toBe('/api/hello');
+    expect(beforeCommand.toolFlags).toEqual(['--silent']);
+    expect(afterCommand.target).toBe('/api/hello');
+    expect(afterCommand.toolFlags).toEqual(['--silent']);
+  });
+
+  it('passes scope-looking curl arguments through after --', () => {
+    const parsed = parseCurlLikeArgs(
+      ['curl', '/api/hello', '--', '--scope', 'curl-value', '--team=other'],
+      'curl'
+    );
+
+    expect(parsed.target).toBe('/api/hello');
+    expect(parsed.toolFlags).toEqual(['--scope', 'curl-value', '--team=other']);
   });
 
   it('uses curl --url as the target', () => {
