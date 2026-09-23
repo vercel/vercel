@@ -26,6 +26,29 @@ describe('Router', () => {
       });
     });
 
+    it('should rewrite to a service destination', () => {
+      const rewrite = router.rewrite('/api/(.*)', { service: 'my_backend' });
+      expect(rewrite).toEqual({
+        source: '/api/(.*)',
+        destination: { service: 'my_backend' },
+      });
+    });
+
+    it('should extract env vars from a service destination path', () => {
+      const rewrite = router.rewrite('/org/:orgSlug/api/:path*', {
+        service: 'my_backend',
+        path: '/$LOCALE/:path*?org=:orgSlug',
+      });
+      expect(rewrite).toEqual({
+        source: '/org/:orgSlug/api/:path*',
+        destination: {
+          service: 'my_backend',
+          path: '/$LOCALE/:path*?org=:orgSlug',
+        },
+        env: ['LOCALE'],
+      });
+    });
+
     it('should return rewrite without transforms', () => {
       const rewrite = router.rewrite('/api/(.*)', '/legacy-api/$1');
       expect(rewrite).toHaveProperty('source');
@@ -512,6 +535,20 @@ describe('Router', () => {
       });
     });
 
+    it('should keep a service destination as an object and compile its path', () => {
+      const route = router.rewrite(
+        '/org/:orgSlug/api/:path*',
+        { service: 'my_backend', path: '/:path*?org=:orgSlug' },
+        { requestHeaders: { 'x-region': deploymentEnv('REGION') } }
+      );
+
+      expect(route).toMatchObject({
+        src: expect.stringMatching(/^\^/),
+        destination: { service: 'my_backend', path: '/$2?org=$1' },
+      });
+      expect(route).not.toHaveProperty('dest');
+    });
+
     it('should reject low-level named captures in a high-level request path', () => {
       expect(() =>
         router.rewrite('/api/:path*', '/internal/:path*', {
@@ -633,6 +670,19 @@ describe('Router', () => {
         src: '^/api/(.*)$',
         dest: '/internal/$1',
         transforms: [{ type: 'request.path', op: 'set', args: '/$1' }],
+      });
+    });
+
+    it('should keep a service destination instead of folding it into dest', () => {
+      router.route({
+        src: '^/api/(.*)$',
+        destination: { service: 'my_backend', path: '/$1' },
+      });
+
+      const config = router.getConfig();
+      expect(config.routes).toContainEqual({
+        src: '^/api/(.*)$',
+        destination: { service: 'my_backend', path: '/$1' },
       });
     });
 

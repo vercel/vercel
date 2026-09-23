@@ -8,6 +8,10 @@
  * Schema: https://openapi.vercel.sh/vercel.json
  */
 
+import type { ServiceDestination } from '@vercel/routing-utils';
+
+export type { ServiceDestination };
+
 export type Framework =
   | 'blitzjs'
   | 'nextjs'
@@ -383,9 +387,9 @@ export interface Rewrite {
    */
   source: string;
   /**
-   * An absolute pathname to an existing resource or an external URL.
+   * An absolute pathname to an existing resource, an external URL, or a service-targeted destination object.
    */
-  destination: string;
+  destination: string | ServiceDestination;
   /**
    * An array of requirements that are needed to match
    */
@@ -428,6 +432,102 @@ export interface HeaderRule {
    * An array of requirements that are needed to match
    */
   missing?: Condition[];
+}
+
+/**
+ * Caller-side binding that grants a service internal access to another service
+ */
+export interface ServiceBinding {
+  /**
+   * Must be "service" for service bindings.
+   */
+  type: 'service';
+  /**
+   * Target service name from services.
+   */
+  service: string;
+  /**
+   * Generated value shape. Must be "url".
+   */
+  format: 'url';
+  /**
+   * Environment variable name that receives the generated URL.
+   */
+  env: string;
+}
+
+/**
+ * Configuration for a single service in `services`
+ */
+export interface ServiceConfig {
+  /**
+   * Path to the service root, relative to vercel.json.
+   */
+  root: string;
+  /**
+   * Framework to use.
+   */
+  framework?: string;
+  /**
+   * Specific lambda runtime to use, e.g. nodejs24.x, python3.14.
+   */
+  runtime?: string;
+  /**
+   * Entry file for the service, relative to the workspace directory.
+   */
+  entrypoint?: string;
+  /**
+   * Install command for the service.
+   */
+  installCommand?: string;
+  /**
+   * Build command for the service.
+   */
+  buildCommand?: string;
+  /**
+   * Service-level dev command override.
+   */
+  devCommand?: string;
+  /**
+   * Service-level ignore/build-skip command.
+   */
+  ignoreCommand?: string;
+  /**
+   * Service-level output directory when applicable.
+   */
+  outputDirectory?: string;
+  /**
+   * Caller-side bindings to other services.
+   */
+  bindings?: ServiceBinding[];
+  /**
+   * An object describing custom options for your Serverless Functions. Each key must be glob pattern that matches the paths of the Serverless Functions you would like to customize (like `api/*.js` or `api/test.js`).
+   */
+  functions?: Record<string, FunctionConfig>;
+  /**
+   * A list of header definitions.
+   */
+  headers?: HeaderRule[];
+  /**
+   * A list of redirect definitions.
+   */
+  redirects?: Redirect[];
+  /**
+   * A list of rewrite definitions.
+   */
+  rewrites?: Rewrite[];
+  /**
+   * A list of routes objects used to rewrite paths to point towards other internal or external paths
+   */
+  routes?: RouteType[];
+  /**
+   * When set to `true`, all HTML files and Serverless Functions will have their extension removed. When visiting a path that ends with the extension, a 308 response will redirect the client to the extensionless path.
+   */
+  cleanUrls?: boolean;
+  /**
+   * When `false`, visiting a path that ends with a forward slash will respond with a `308` status code and redirect to the path without the trailing slash.
+   */
+  trailingSlash?: boolean;
 }
 
 /**
@@ -682,6 +782,11 @@ export interface VercelConfig {
    * @private
    */
   experimentalServiceGroups?: Record<string, string[]>;
+  /**
+   * Map of service name to service configuration.
+   * @private
+   */
+  services?: Record<string, ServiceConfig>;
 }
 
 /**

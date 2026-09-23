@@ -12,6 +12,12 @@ import type {
 } from './types';
 
 /**
+ * A rewrite target: a pathname or URL, or a `{ service, path? }` object that
+ * routes into a service from `services`.
+ */
+type RewriteDestination = Rewrite['destination'];
+
+/**
  * Convert a destination string from path-to-regexp format to use capture group references.
  * Replaces :paramName with $index based on the segments array.
  */
@@ -28,6 +34,28 @@ function convertDestination(destination: string, segments: string[]): string {
     }
   });
   return result;
+}
+
+/**
+ * Compile a rewrite destination for the routes format. A string becomes `dest`;
+ * a service destination stays `destination`, because `dest` only accepts strings.
+ */
+function compileRouteDestination(
+  destination: RewriteDestination,
+  segments: string[]
+): Pick<Route, 'dest' | 'destination'> {
+  if (typeof destination === 'string') {
+    return { dest: convertDestination(destination, segments) };
+  }
+  if (destination.path === undefined) {
+    return { destination };
+  }
+  return {
+    destination: {
+      ...destination,
+      path: convertDestination(destination.path, segments),
+    },
+  };
 }
 
 /**
@@ -343,8 +371,11 @@ export interface Route {
   source?: string;
   /** Optional destination for rewrite/redirect */
   dest?: string;
-  /** Alias for `dest`. An absolute pathname to an existing resource or an external URL. */
-  destination?: string;
+  /**
+   * Alias for `dest`. An absolute pathname to an existing resource, an external URL,
+   * or a service-targeted destination object (which is kept as `destination`).
+   */
+  destination?: RewriteDestination;
   /** Array of HTTP methods to match. If not provided, matches all methods */
   methods?: string[];
   /** Array of transforms to apply */
@@ -683,9 +714,21 @@ export class Router {
    *    router.rewrite('/api/:path*', '/internal/:path*', {
    *      requestPath: '/:path*'
    *    })
+   *
+   *    // Route into a service from `services`
+   *    router.rewrite('/api/(.*)', { service: 'my_backend' })
+   *
+   *    // Select a route inside the service
+   *    router.rewrite('/org/:orgSlug/api/:path*', {
+   *      service: 'my_backend',
+   *      path: '/:path*?org=:orgSlug'
+   *    })
    * @internal Can return Route with transforms internally
    */
-  rewrite<T extends string>(source: T, destination: string): Rewrite;
+  rewrite<T extends string>(
+    source: T,
+    destination: RewriteDestination
+  ): Rewrite;
   /**
    * The callback form exposes `$param` references for header and query
    * transforms. Use the object options form for `requestPath`, whose source
@@ -693,7 +736,7 @@ export class Router {
    */
   rewrite<T extends string>(
     source: T,
-    destination: string,
+    destination: RewriteDestination,
     callback: (params: PathParams<T>) => {
       has?: Condition[];
       missing?: Condition[];
@@ -705,7 +748,7 @@ export class Router {
   ): Rewrite | Route;
   rewrite<T extends string>(
     source: T,
-    destination: string,
+    destination: RewriteDestination,
     options: {
       has?: Condition[];
       missing?: Condition[];
@@ -718,7 +761,7 @@ export class Router {
   ): Rewrite | Route;
   public rewrite<T extends string>(
     source: T,
-    destination: string,
+    destination: RewriteDestination,
     optionsOrCallback?:
       | {
           has?: Condition[];
@@ -772,6 +815,9 @@ export class Router {
       requestPath,
       respectOriginCacheControl,
     } = options || {};
+
+    const destinationPath =
+      typeof destination === 'string' ? destination : destination.path;
 
     // Check if any transforms were provided
     const hasTransforms =
@@ -848,11 +894,10 @@ export class Router {
 
       // Convert path-to-regexp patterns to regex for routes format
       const { src: regexSrc, segments } = sourceToRegex(source);
-      const convertedDest = convertDestination(destination, segments);
 
       const route: Route = {
         src: regexSrc,
-        dest: convertedDest,
+        ...compileRouteDestination(destination, segments),
         transforms,
       };
       if (has) route.has = has;
@@ -861,7 +906,7 @@ export class Router {
         route.respectOriginCacheControl = respectOriginCacheControl;
 
       // Extract env vars from destination
-      const destEnvVars = extractEnvVars(destination, pathParams);
+      const destEnvVars = extractEnvVars(destinationPath, pathParams);
       if (destEnvVars.length > 0) {
         route.env = destEnvVars;
       }
@@ -871,7 +916,7 @@ export class Router {
 
     // Simple rewrite without transforms
     const pathParams = this.extractPathParams(source);
-    const destEnvVars = extractEnvVars(destination, pathParams);
+    const destEnvVars = extractEnvVars(destinationPath, pathParams);
 
     const rewrite: Rewrite = {
       source,
@@ -1154,7 +1199,7 @@ export class Router {
     // Normalize aliases to canonical names (src/dest/status)
     config.src = src;
     delete config.source;
-    if (config.destination !== undefined) {
+    if (typeof config.destination === 'string') {
       config.dest = config.destination;
       delete config.destination;
     }
