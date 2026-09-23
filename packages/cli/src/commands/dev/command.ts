@@ -27,6 +27,15 @@ export const devCommand = {
       deprecated: false,
       description: 'Start the dev server without linking to a Vercel project',
     },
+    {
+      name: 'tunnel',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      // Access is enforced server-side; CommandOption has no `hidden`.
+      description:
+        'Deploy a proxy that forwards all traffic to this dev server (internal)',
+    },
     yesOption,
     { name: 'port', shorthand: 'p', type: String, deprecated: true },
     confirmOption,
