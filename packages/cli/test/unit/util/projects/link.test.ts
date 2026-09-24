@@ -327,6 +327,44 @@ describe('getLinkedProject', () => {
     );
   });
 
+  it('should point at the token scope when the link came from env vars', async () => {
+    const cwd = fixture('vercel-pull-next');
+
+    useUser();
+    useTeams('team_dummy', { failNoAccess: true });
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+
+    // With the Project resolved from the environment there is no `.vercel`
+    // directory to remove, and re-linking is interactive, so the default
+    // remediation cannot be followed where these variables are typically set.
+    process.env.VERCEL_ORG_ID = 'team_dummy';
+    process.env.VERCEL_PROJECT_ID = 'vercel-pull-next';
+
+    let link: UnPromisify<ReturnType<typeof getLinkedProject>> | undefined;
+    let error: Error | undefined;
+    try {
+      link = await getLinkedProject(client, { cwd });
+    } catch (err) {
+      error = err as Error;
+    } finally {
+      delete process.env.VERCEL_ORG_ID;
+      delete process.env.VERCEL_PROJECT_ID;
+    }
+
+    expect(link).toBeUndefined();
+
+    if (!error) {
+      throw new Error(`Expected an error to be thrown.`);
+    }
+    expect(error.message).toBe(
+      'Could not retrieve Project Settings. The Project was resolved from `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`, so check that the token in use has access to that scope.'
+    );
+  });
+
   it('should fail to return a link when team request fails with a custom 403 code', async () => {
     const cwd = fixture('vercel-pull-next');
 
