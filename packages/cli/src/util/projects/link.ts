@@ -562,9 +562,15 @@ export async function getLinkedProject(
         throw new InvalidToken(client.authConfig.tokenSource);
       } else if (err.code === 'forbidden' || err.code === 'team_unauthorized') {
         throw new NowBuildError({
-          message: `Could not retrieve Project Settings. To link your Project, remove the ${outputCode(
-            VERCEL_DIR
-          )} directory and deploy again.`,
+          message: shouldUseEnvContext
+            ? `Could not retrieve Project Settings. The Project was resolved from ${outputCode(
+                'VERCEL_ORG_ID'
+              )} and ${outputCode(
+                'VERCEL_PROJECT_ID'
+              )}, so check that the token in use has access to that scope.`
+            : `Could not retrieve Project Settings. To link your Project, remove the ${outputCode(
+                VERCEL_DIR
+              )} directory and deploy again.`,
           code: 'PROJECT_UNAUTHORIZED',
           link: 'https://vercel.link/cannot-load-project-settings',
         });
