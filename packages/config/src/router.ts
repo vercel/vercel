@@ -11,10 +11,6 @@ import type {
   Rewrite,
 } from './types';
 
-/**
- * A rewrite target: a pathname or URL, or a `{ service, path? }` object that
- * routes into a service from `services`.
- */
 type RewriteDestination = Rewrite['destination'];
 
 /**
@@ -37,8 +33,7 @@ function convertDestination(destination: string, segments: string[]): string {
 }
 
 /**
- * Compile a rewrite destination for the routes format. A string becomes `dest`;
- * a service destination stays `destination`, because `dest` only accepts strings.
+ * A service destination stays `destination` because `dest` only accepts strings.
  */
 function compileRouteDestination(
   destination: RewriteDestination,
@@ -373,7 +368,7 @@ export interface Route {
   dest?: string;
   /**
    * Alias for `dest`. An absolute pathname to an existing resource, an external URL,
-   * or a service-targeted destination object (which is kept as `destination`).
+   * or a service-targeted destination object.
    */
   destination?: RewriteDestination;
   /** Array of HTTP methods to match. If not provided, matches all methods */

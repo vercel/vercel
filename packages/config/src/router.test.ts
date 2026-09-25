@@ -549,6 +549,18 @@ describe('Router', () => {
       expect(route).not.toHaveProperty('dest');
     });
 
+    it('should keep a service destination without a path as-is', () => {
+      const route = router.rewrite(
+        '/api/:path*',
+        { service: 'my_backend' },
+        { requestHeaders: { 'x-region': deploymentEnv('REGION') } }
+      );
+
+      expect(route).toMatchObject({ destination: { service: 'my_backend' } });
+      expect(route).not.toHaveProperty('destination.path');
+      expect(route).not.toHaveProperty('dest');
+    });
+
     it('should reject low-level named captures in a high-level request path', () => {
       expect(() =>
         router.rewrite('/api/:path*', '/internal/:path*', {
