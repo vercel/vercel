@@ -8,6 +8,9 @@ export type {
   Condition,
   MatchableValue,
   RouteType,
+  ServiceBinding,
+  ServiceConfig,
+  ServiceDestination,
 } from '../types';
 export {
   validateStaticString,

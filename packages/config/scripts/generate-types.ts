@@ -33,6 +33,10 @@ const HEADER = `/**
  *
  * Schema: https://openapi.vercel.sh/vercel.json
  */
+
+import type { ServiceDestination } from '@vercel/routing-utils';
+
+export type { ServiceDestination };
 `;
 
 function generateEnumType(name: string, values: (string | null)[]): string {
@@ -242,7 +246,8 @@ function generateRoutingTypes(schema: JSONSchema): string[] {
   function generateInterface(
     name: string,
     itemSchema: JSONSchema,
-    doc: string
+    doc: string,
+    overrides: Record<string, string> = typeOverrides
   ) {
     if (!itemSchema?.properties) return;
     output.push(`/**\n * ${doc}\n */`);
@@ -253,7 +258,7 @@ function generateRoutingTypes(schema: JSONSchema): string[] {
       const jsdoc = generateJSDoc(propSchema, '  ');
       if (jsdoc) output.push(jsdoc);
       const optional = !itemSchema.required?.includes(key) ? '?' : '';
-      const propType = typeOverrides[key] || convertSchemaType(propSchema, 1);
+      const propType = overrides[key] || convertSchemaType(propSchema, 1);
       output.push(`  ${key}${optional}: ${propType};`);
     }
     output.push('}');
@@ -273,12 +278,34 @@ function generateRoutingTypes(schema: JSONSchema): string[] {
   generateInterface(
     'Rewrite',
     rewritesItemSchema,
-    'Rewrite definition matching vercel.json schema'
+    'Rewrite definition matching vercel.json schema',
+    { ...typeOverrides, destination: 'string | ServiceDestination' }
   );
   generateInterface(
     'HeaderRule',
     headersItemSchema,
     'Header rule definition matching vercel.json schema'
+  );
+
+  const serviceSchema = schema.properties?.services?.additionalProperties;
+  generateInterface(
+    'ServiceBinding',
+    serviceSchema?.properties?.bindings?.items,
+    'Caller-side binding that grants a service internal access to another service'
+  );
+  // Not `typeOverrides`: a service's `headers` are header rules, not key/value pairs.
+  generateInterface(
+    'ServiceConfig',
+    serviceSchema,
+    'Configuration for a single service in `services`',
+    {
+      bindings: 'ServiceBinding[]',
+      functions: 'Record<string, FunctionConfig>',
+      headers: 'HeaderRule[]',
+      redirects: 'Redirect[]',
+      rewrites: 'Rewrite[]',
+      routes: 'RouteType[]',
+    }
   );
 
   output.push(`/**\n * Union type for all routing helper outputs\n */`);
@@ -527,6 +554,9 @@ function generateTypes(schema: JSONSchema): string {
           break;
         case 'routes':
           propType = 'RouteType[]';
+          break;
+        case 'services':
+          propType = 'Record<string, ServiceConfig>';
           break;
         default:
           propType = convertSchemaType(propSchema, 1);

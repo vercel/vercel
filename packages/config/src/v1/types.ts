@@ -24,4 +24,7 @@ export type {
   WildcardDomain,
   BuildConfig,
   BuildItem,
+  ServiceBinding,
+  ServiceConfig,
+  ServiceDestination,
 } from '../types';
