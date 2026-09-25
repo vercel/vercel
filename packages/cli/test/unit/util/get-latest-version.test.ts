@@ -14,11 +14,21 @@ tmp.setGracefulCleanup();
 
 vi.setConfig({ testTimeout: 25000 });
 
-const cacheDir = tmp.tmpNameSync({
-  prefix: 'test-vercel-cli-get-latest-version-',
+// A fresh cache dir per test: `getLatestVersion()` spawns an unref'd worker
+// that can still be writing the cache file after the test that spawned it has
+// finished, so sharing one dir across tests lets a leftover worker rewrite (or
+// re-create) the cache file underneath a later test.
+let cacheDir: string;
+let cacheFile: string;
+
+beforeEach(() => {
+  cacheDir = tmp.tmpNameSync({
+    prefix: 'test-vercel-cli-get-latest-version-',
+  });
+  cacheFile = join(cacheDir, 'package-updates', 'vercel-latest.json');
 });
 
-const cacheFile = join(cacheDir, 'package-updates', 'vercel-latest.json');
+afterEach(() => fs.remove(cacheDir));
 
 const pkg = {
   name: 'vercel',
@@ -28,8 +38,6 @@ const pkg = {
 const versionRE = /^\d+\.\d+\.\d+$/;
 
 describe('get latest version', () => {
-  afterEach(() => fs.remove(cacheDir));
-
   it('should find newer version async', async () => {
     // 1. first call, no cache file
     let latest = getLatestVersion({
@@ -94,9 +102,7 @@ describe('get latest version', () => {
     expect(latest).toEqual(undefined);
   });
 
-  // this test is too flakey in its current form
-  // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
-  it.skip('should not check twice', async () => {
+  it('should not check twice', async () => {
     // 1. first call, no cache file
     let latest = getLatestVersion({
       cacheDir,
@@ -105,7 +111,9 @@ describe('get latest version', () => {
     });
     expect(latest).toEqual(undefined);
 
-    // 2. immediately call again, but should hopefully still be undefined
+    // 2. immediately call again; there is still no cache file to read, so this
+    //    call cannot notify either. Both calls are synchronous and run in the
+    //    same tick, so no worker can have written the cache file in between.
     latest = getLatestVersion({
       cacheDir,
       updateCheckInterval: 1,
@@ -113,6 +121,8 @@ describe('get latest version', () => {
     });
     expect(latest).toEqual(undefined);
 
+    // Both calls raced a worker of their own, so wait until the cache file has
+    // settled — not merely until it exists — before reading it below.
     await waitForCacheFile();
 
     // 3. call again and should recheck and find a new version
@@ -137,6 +147,23 @@ describe('get latest version', () => {
       TypeError
     );
     expect(() => getLatestVersion({ pkg: { name: '' } })).toThrow(TypeError);
+  });
+
+  // A worker writes the cache file non-atomically, so a caller can catch it
+  // truncated or half-written. That must degrade to "no notification" instead of
+  // throwing at the user.
+  it.each([
+    ['a truncated (mid-write) cache file', ''],
+    ['a partially written cache file', '{"expireAt":178672299'],
+    ['a malformed cache file', 'not json'],
+  ])('should treat %s as a cache miss', async (_name, contents) => {
+    await fs.outputFile(cacheFile, contents);
+
+    let latest: string | undefined;
+    expect(() => {
+      latest = getLatestVersion({ cacheDir, pkg });
+    }).not.toThrow();
+    expect(latest).toEqual(undefined);
   });
 
   it('should reset notify if newer version is available', async () => {
@@ -258,14 +285,59 @@ describe('updateLatestVersionCache', () => {
   });
 });
 
+/**
+ * Waits until the background worker has finished writing the cache file.
+ *
+ * Waiting for the file to merely _exist_ is not enough. The worker writes the
+ * cache file with a non-atomic `writeFile()` (truncate, then write), and when
+ * two `getLatestVersion()` calls race, both spawn a worker and both workers
+ * write the same file milliseconds apart. A read that lands in either write
+ * window sees an empty or partial file, and `getLatestVersion()` treats an
+ * unparsable cache file as a cache miss and returns `undefined` — which is what
+ * made these tests flaky.
+ *
+ * So instead of checking for existence, poll until the file parses, contains a
+ * version, and has stopped changing, and fail loudly if that never happens
+ * (rather than returning silently and leaving the caller to assert on a value
+ * that was never going to arrive).
+ */
 async function waitForCacheFile() {
-  const seconds = 20;
-  for (let i = 0; i < seconds * 4; i++) {
-    await sleep(250);
-    if (await fs.pathExists(cacheFile)) {
+  const interval = 250;
+  const timeout = 20000;
+  const attempts = timeout / interval;
+  let previous: string | undefined;
+
+  for (let i = 0; i < attempts; i++) {
+    await sleep(interval);
+
+    let current: string;
+    try {
+      current = await fs.readFile(cacheFile, 'utf-8');
+    } catch {
+      // the worker has not created the cache file yet
+      continue;
+    }
+
+    let version: string | undefined;
+    try {
+      version = JSON.parse(current).version;
+    } catch {
+      // the file is mid-write, so any previous read is not trustworthy either
+      previous = undefined;
+      continue;
+    }
+
+    // two identical consecutive reads mean no worker is still writing, so the
+    // file cannot be truncated out from under the assertions that follow
+    if (version && previous === current) {
       return;
     }
+    previous = current;
   }
+
+  throw new Error(
+    `Timed out after ${timeout}ms waiting for the worker to write the cache file: ${cacheFile}`
+  );
 }
 
 // Mock fetchDistTags (the dependency of fetchLatestVersion) so we can test
