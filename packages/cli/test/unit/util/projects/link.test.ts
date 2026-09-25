@@ -338,9 +338,6 @@ describe('getLinkedProject', () => {
       name: 'vercel-pull-next',
     });
 
-    // With the Project resolved from the environment there is no `.vercel`
-    // directory to remove, and re-linking is interactive, so the default
-    // remediation cannot be followed where these variables are typically set.
     process.env.VERCEL_ORG_ID = 'team_dummy';
     process.env.VERCEL_PROJECT_ID = 'vercel-pull-next';
 
