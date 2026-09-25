@@ -338,7 +338,7 @@ export const setupSubcommand = {
       argument: 'NAME',
       deprecated: false,
       description:
-        'Agent to configure, repeatable (claude-code, cline, codex, conductor, cursor, hermes, kilo, openclaw, opencode, pi). Conductor configures local Claude Code/Codex routing and Enterprise Data Privacy; other harnesses are not restricted',
+        'Agent to configure, repeatable (claude-code, cline, codex, conductor, cursor, hermes, kilo, openclaw, opencode, pi). Conductor configures local Claude Code/Codex defaults and Enterprise Data Privacy; project overrides and other harnesses are not restricted',
     },
     {
       name: 'all',

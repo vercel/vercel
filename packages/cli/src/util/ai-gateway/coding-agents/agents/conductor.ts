@@ -4,13 +4,18 @@ import type { CodingAgent } from '../types';
 import { mergeToml, pathExists } from '../config-files';
 import { GATEWAY_ANTHROPIC_BASE_URL } from '../gateway';
 
+const PROJECT_AUTH_NOTICE =
+  'Project settings can override API key authentication. For affected projects, set claude_provider and codex_provider to "custom" in <repo>/.conductor/settings.local.toml.';
+
 /**
  * Conductor's managed TOML overrides user and project settings. Its Codex
  * integration recognizes the exact /v1 URL below and supplies its own provider
  * configuration; the standalone Codex /codex/v1 endpoint does not work here.
  * Managed environment values are literal strings, not shell/Keychain lookups.
  * User settings must also select custom providers: CLI auth mode strips the
- * gateway URL and credentials before launching Codex.
+ * gateway URL and credentials before launching Codex. These are defaults;
+ * project provider settings take precedence and cannot be locked by the
+ * supported managed settings schema.
  *
  * This configures local Claude Code/Codex routing and Enterprise Data Privacy.
  * Conductor does not expose a supported global harness allowlist: in particular,
@@ -42,16 +47,17 @@ export const conductor: CodingAgent = {
       {
         code: 'conductor_gateway_only_not_enforced',
         impact:
-          'Conductor setup configures Claude Code and Codex, but cannot enforce gateway-only access for every harness.',
+          'Conductor setup configures Claude Code and Codex defaults, but cannot enforce gateway-only access for every project or harness.',
         why: [
           'Cursor can still use a saved credential, and OpenCode providers are configured separately.',
           'Managed settings apply to all local projects and enable Enterprise Data Privacy, disabling AI-generated chat titles and custom MCP servers. Cloud workspaces are not covered.',
-          'Claude Code and Codex authentication switch to API key mode in Conductor user settings.',
+          'Default Claude Code and Codex authentication switches to API key mode in Conductor user settings.',
+          PROJECT_AUTH_NOTICE,
           'Conductor needs a literal gateway key in its managed settings file, even when Keychain storage is enabled. Settings and backups written by setup use owner-only permissions.',
         ],
         undo: 'restore the managed and user settings backups, or remove the entries added by setup',
         confirm:
-          'Configure local Claude Code/Codex routing and enable Enterprise Data Privacy?',
+          'Configure local Claude Code/Codex defaults and enable Enterprise Data Privacy?',
       },
     ];
   },
@@ -121,7 +127,8 @@ export const conductor: CodingAgent = {
       ],
       envExports: [],
       notes: [
-        'Claude Code and Codex use API key authentication in Conductor Settings > Agents.',
+        'Default Claude Code and Codex authentication is API key mode in Conductor Settings > Agents.',
+        PROJECT_AUTH_NOTICE,
         'Restart Conductor and start new local Claude Code or Codex chats to use the AI Gateway.',
         'Enterprise Data Privacy is enabled through managed settings for this Mac. The gateway key belongs to the Vercel team selected for setup.',
         'Gateway-only access is not enforced for Cursor, separately configured OpenCode providers, or cloud workspaces.',

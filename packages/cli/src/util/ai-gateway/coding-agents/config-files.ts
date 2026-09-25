@@ -11,7 +11,11 @@ import {
 } from 'node:fs/promises';
 import { isDeepStrictEqual } from 'node:util';
 import { dirname } from 'node:path';
-import { parse as tomlParse, stringify as tomlStringify } from 'smol-toml';
+import {
+  parse as tomlParse,
+  stringify as tomlStringify,
+  TomlError,
+} from 'smol-toml';
 import {
   applyEdits,
   modify,
@@ -97,10 +101,9 @@ export function mergeJson(current: string | null, patch: JsonObject): string {
   let raw: unknown;
   try {
     raw = JSON.parse(current);
-  } catch (err) {
-    throw new Error(
-      `existing file is not valid JSON (${(err as Error).message})`
-    );
+  } catch {
+    // Parser messages can quote credential-bearing source text.
+    throw new Error('existing file is not valid JSON');
   }
   if (!isPlainObject(raw)) {
     throw new Error('existing file is not a JSON object');
@@ -229,9 +232,12 @@ export function mergeToml(current: string | null, patch: JsonObject): string {
     try {
       parsed = tomlParse(current) as JsonObject;
     } catch (err) {
-      throw new Error(
-        `existing file is not valid TOML (${(err as Error).message})`
-      );
+      // TomlError.message includes a source excerpt, which may contain keys.
+      const location =
+        err instanceof TomlError
+          ? ` at line ${err.line}, column ${err.column}`
+          : '';
+      throw new Error(`existing file is not valid TOML${location}`);
     }
   }
   const legacy = () => `${tomlStringify(deepMerge(parsed, patch))}\n`;

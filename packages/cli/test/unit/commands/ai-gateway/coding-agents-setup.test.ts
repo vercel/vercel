@@ -197,7 +197,13 @@ describe('ai-gateway coding-agents setup', () => {
       );
       const result = aiGateway(client);
       await expect(client.stderr).toOutput(
-        'Configure local Claude Code/Codex routing'
+        'Configure local Claude Code/Codex defaults'
+      );
+      expect(client.stderr.getFullOutput()).toContain(
+        'Project settings can override API key authentication.'
+      );
+      expect(client.stderr.getFullOutput()).toContain(
+        'set claude_provider and codex_provider to "custom" in <repo>/.conductor/settings.local.toml'
       );
       client.stdin.write('y\n');
       await expect(client.stderr).toOutput(
@@ -325,6 +331,17 @@ describe('ai-gateway coding-agents setup', () => {
       ]);
       expect(out.notes.join('\n')).toContain(
         'Gateway-only access is not enforced'
+      );
+      for (const text of [out.warnings[0].message, out.notes.join('\n')]) {
+        expect(text).toContain(
+          'Project settings can override API key authentication.'
+        );
+        expect(text).toContain(
+          'set claude_provider and codex_provider to "custom" in <repo>/.conductor/settings.local.toml'
+        );
+      }
+      expect(out.notes).toContain(
+        'Conductor: Default Claude Code and Codex authentication is API key mode in Conductor Settings > Agents.'
       );
       expect(client.stderr.getFullOutput()).not.toContain(
         'sk-existing-credential'
@@ -519,13 +536,18 @@ describe('ai-gateway coding-agents setup', () => {
       client.config.currentTeam = team.id;
       client.nonInteractive = nonInteractive;
       mkdirSync(join(home, '.conductor'), { recursive: true });
+      const malformed = [
+        '[environmentVariables.local]',
+        'AI_GATEWAY_API_KEY = "vck_ParseErrorSecret001"',
+        'broken = = true',
+      ].join('\n');
       const managed =
         filename === 'settings.managed.toml'
-          ? 'not = = toml'
+          ? malformed
           : 'enterprise_data_privacy = false\n';
       const user =
         filename === 'settings.toml'
-          ? 'not = = toml'
+          ? malformed
           : 'codex_provider = "default"\n';
       writeFileSync(conductorSettingsPath(), managed);
       writeFileSync(conductorUserSettingsPath(), user);
@@ -537,6 +559,13 @@ describe('ai-gateway coding-agents setup', () => {
       expect(readFileSync(conductorUserSettingsPath(), 'utf8')).toBe(user);
       expect(existsSync(`${conductorSettingsPath()}.bak`)).toBe(false);
       expect(existsSync(`${conductorUserSettingsPath()}.bak`)).toBe(false);
+      const output =
+        client.stdout.getFullOutput() + client.stderr.getFullOutput();
+      expect(output).toContain(
+        'existing file is not valid TOML at line 3, column 10'
+      );
+      expect(output).not.toContain('vck_ParseErrorSecret001');
+      expect(output).not.toContain('broken = = true');
       if (nonInteractive) {
         const out = JSON.parse(client.stdout.getFullOutput());
         expect(out.status).toBe('error');
@@ -600,7 +629,7 @@ describe('ai-gateway coding-agents setup', () => {
       client.setArgv('ai-gateway', 'setup', '--agent', 'conductor');
       const result = aiGateway(client);
       await expect(client.stderr).toOutput(
-        'Configure local Claude Code/Codex routing'
+        'Configure local Claude Code/Codex defaults'
       );
       client.stdin.write('n\n');
       expect(await result).toBe(0);
@@ -614,6 +643,9 @@ describe('ai-gateway coding-agents setup', () => {
       client.setArgv('ai-gateway', 'setup', '--help');
       expect(await aiGateway(client)).toBe(2);
       expect(client.stderr.getFullOutput()).toContain('--agent');
+      expect(client.stderr.getFullOutput()).toMatch(
+        /project\s+overrides\s+and\s+other\s+harnesses\s+are\s+not\s+restricted/
+      );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:help', value: 'ai-gateway:setup' },
       ]);
@@ -2734,6 +2766,12 @@ describe('ai-gateway coding-agents setup', () => {
       const next = mergeJson(current, { env: { K: 'v' } });
       expect(next).toContain('\r\n');
       expect(next.replace(/\r\n/g, '')).not.toContain('\n');
+    });
+
+    it('keeps credential-bearing source text out of JSON parser errors', () => {
+      expect(() =>
+        mergeJson('{"token":"vck_JsonParseSecret001" broken}', { a: 1 })
+      ).toThrow(/^existing file is not valid JSON$/);
     });
 
     it('still rejects invalid JSON and non-object roots', () => {
