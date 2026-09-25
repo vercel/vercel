@@ -6,9 +6,7 @@ use axum::{
     Router,
 };
 use serde::Serialize;
-use tower::ServiceBuilder;
-use vercel_runtime::axum::VercelLayer;
-use vercel_runtime::Error;
+use tokio::net::TcpListener;
 
 #[derive(Serialize)]
 struct DataItem {
@@ -86,7 +84,7 @@ async fn fallback(uri: Uri) -> impl IntoResponse {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Error> {
+async fn main() -> std::io::Result<()> {
     let router = Router::new()
         .route("/", get(home))
         .route("/favicon.ico", get(favicon))
@@ -94,9 +92,7 @@ async fn main() -> Result<(), Error> {
         .route("/api/items/{item_id}", get(get_item))
         .fallback(fallback);
 
-    let app = ServiceBuilder::new()
-        .layer(VercelLayer::new())
-        .service(router);
-
-    vercel_runtime::run(app).await
+    let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+    let listener = TcpListener::bind(format!("0.0.0.0:{port}")).await?;
+    axum::serve(listener, router).await
 }

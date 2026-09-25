@@ -63,8 +63,7 @@
             <h1>Vercel + Axum</h1>
             <div class="hero-code">
                 <pre><code><span class="keyword">use</span> <span class="type">axum</span>::{<span class="type">Router</span>, routing::get, <span class="type">Json</span>};
-<span class="keyword">use</span> <span class="type">tower</span>::<span class="type">ServiceBuilder</span>;
-<span class="keyword">use</span> <span class="type">vercel_runtime</span>::axum::<span class="type">VercelLayer</span>;
+<span class="keyword">use</span> <span class="type">tokio</span>::net::<span class="type">TcpListener</span>;
 
 <span class="keyword">async fn</span> <span class="function">hello</span>() -&gt; <span class="type">Json</span>&lt;&amp;<span class="lifetime">'static</span> <span class="type">str</span>&gt; {
     <span class="type">Json</span>(<span class="string">"Rust on Vercel!"</span>)
@@ -73,10 +72,9 @@
 <span class="macro">#[tokio::main]</span>
 <span class="keyword">async fn</span> <span class="function">main</span>() {
     <span class="keyword">let</span> router = <span class="type">Router</span>::new().route(<span class="string">"/"</span>, get(hello));
-    <span class="keyword">let</span> app = <span class="type">ServiceBuilder</span>::new()
-        .layer(<span class="type">VercelLayer</span>::new())
-        .service(router);
-    <span class="type">vercel_runtime</span>::run(app).<span class="keyword">await</span>.unwrap();
+    <span class="keyword">let</span> port = std::env::var(<span class="string">"PORT"</span>).unwrap_or_else(|_| <span class="string">"3000"</span>.to_string());
+    <span class="keyword">let</span> listener = <span class="type">TcpListener</span>::bind(<span class="macro">format!</span>(<span class="string">"0.0.0.0:{port}"</span>)).<span class="keyword">await</span>.unwrap();
+    axum::serve(listener, router).<span class="keyword">await</span>.unwrap();
 }</code></pre>
             </div>
         </div>
