@@ -328,8 +328,7 @@ export const rulesSubcommand = {
 export const setupSubcommand = {
   name: 'setup',
   aliases: [],
-  description:
-    'Connect local coding agents (Claude Code, Codex, OpenCode, Pi) to the AI Gateway',
+  description: 'Connect local coding agents and Conductor to the AI Gateway',
   arguments: [],
   options: [
     {
@@ -339,7 +338,7 @@ export const setupSubcommand = {
       argument: 'NAME',
       deprecated: false,
       description:
-        'Coding agent to configure, repeatable (claude-code, codex, opencode, pi)',
+        'Agent to configure, repeatable (claude-code, cline, codex, conductor, cursor, hermes, kilo, openclaw, opencode, pi). Conductor configures local Claude Code/Codex routing and Enterprise Data Privacy; other harnesses are not restricted',
     },
     {
       name: 'all',
@@ -460,7 +459,7 @@ export const setupSubcommand = {
       argument: 'MODE',
       deprecated: false,
       description:
-        'How to apply non-interactively: edit (write files, default) or prompt (emit an agent prompt on stdout; requires the macOS Keychain)',
+        'How to apply non-interactively: edit (write files, default) or prompt (emit an agent prompt on stdout; requires the macOS Keychain; unavailable for Conductor)',
     },
     {
       name: 'base-url',
@@ -469,7 +468,7 @@ export const setupSubcommand = {
       argument: 'URL',
       deprecated: false,
       description:
-        'Override the AI Gateway base URL written into agent configs (advanced; e.g. a preview deployment). Written verbatim.',
+        'Override the AI Gateway base URL written into agent configs (advanced; e.g. a preview deployment). Written verbatim. Unavailable for Conductor',
     },
     yesOption,
   ],
@@ -477,6 +476,10 @@ export const setupSubcommand = {
     {
       name: 'Connect all detected coding agents (creates a key)',
       value: `${packageName} ai-gateway coding-agents setup`,
+    },
+    {
+      name: 'Configure Conductor local Claude Code/Codex routing and Enterprise Data Privacy',
+      value: `${packageName} ai-gateway setup --agent conductor --scope my-team`,
     },
     {
       name: 'Emit a prompt to hand to a coding agent instead of writing files',
@@ -913,6 +916,7 @@ export const aiGatewayCommand = {
     budgetsSubcommand,
     rulesSubcommand,
     codingAgentsSubcommand,
+    setupSubcommand,
     modelsSubcommand,
     leaderboardSubcommand,
   ],

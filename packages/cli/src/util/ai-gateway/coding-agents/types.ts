@@ -69,6 +69,8 @@ export interface CodingAgent {
   id: string;
   displayName: string;
   experimental?: boolean;
+  /** False when a redacted agent prompt cannot safely apply the settings. */
+  supportsPrompt?: boolean;
   detect(home: string): Promise<boolean>;
   configPath(ctx: SetupContext): string;
   buildPlan(ctx: SetupContext): AgentPlan;

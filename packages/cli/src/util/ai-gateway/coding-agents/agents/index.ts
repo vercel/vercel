@@ -2,6 +2,7 @@ import type { CodingAgent } from '../types';
 import { claudeCode } from './claude-code';
 import { cline } from './cline';
 import { codex } from './codex';
+import { conductor } from './conductor';
 import { cursor } from './cursor';
 import { hermes } from './hermes';
 import { kilo } from './kilo';
@@ -13,6 +14,7 @@ export const CODING_AGENTS: CodingAgent[] = [
   claudeCode,
   cline,
   codex,
+  conductor,
   cursor,
   hermes,
   kilo,

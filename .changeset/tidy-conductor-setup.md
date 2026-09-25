@@ -1,0 +1,5 @@
+---
+'vercel': patch
+---
+
+Add `vercel ai-gateway setup` as a shortcut for coding-agent setup, with a Conductor option that configures managed local Claude Code/Codex gateway routing and enables Enterprise Data Privacy. Setup explicitly reports that Conductor's other harnesses and cloud workspaces are not restricted to the gateway.

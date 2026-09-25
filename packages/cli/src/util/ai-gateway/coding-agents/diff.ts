@@ -1,5 +1,7 @@
 import chalk from 'chalk';
+import { parse as tomlParse, stringify as tomlStringify } from 'smol-toml';
 import { maskSecret } from './gateway';
+import type { FileFormat } from './types';
 
 interface DiffLine {
   type: ' ' | '-' | '+';
@@ -53,6 +55,28 @@ function maskKnownSecrets(text: string, secrets: string[]): string {
   return masked;
 }
 
+function redactToml(text: string): string {
+  const document = tomlParse(text);
+  const redact = (table: Record<string, unknown>) => {
+    for (const [key, value] of Object.entries(table)) {
+      if (
+        typeof value === 'string' &&
+        /(?:KEY|TOKEN|SECRET|PASSWORD)$|^(?:apiKey|api_key|key|token|secret|password)$/.test(
+          key
+        )
+      ) {
+        table[key] = maskSecret(value);
+      } else if (value !== null && typeof value === 'object') {
+        redact(value as Record<string, unknown>);
+      }
+    }
+  };
+  redact(document);
+  // Normalize only the preview so dotted keys, escaped strings and multiline
+  // values are redacted consistently. The actual file keeps its formatting.
+  return tomlStringify(document);
+}
+
 function redactSecretFields(text: string): string {
   return text
     .replace(
@@ -78,6 +102,7 @@ function mask(text: string, secrets: string[]): string {
 }
 
 export interface RenderDiffOptions {
+  format?: FileFormat;
   secrets?: string[];
   context?: number;
   indent?: string;
@@ -93,7 +118,10 @@ export function renderDiff(
   const dim = color ? chalk.dim : (s: string) => s;
   const green = color ? chalk.green : (s: string) => s;
   const red = color ? chalk.red : (s: string) => s;
-  const lines = diffLines(before, after);
+  const lines = diffLines(
+    options.format === 'toml' ? redactToml(before) : before,
+    options.format === 'toml' ? redactToml(after) : after
+  );
   if (!lines.some(l => l.type !== ' ')) {
     return '';
   }

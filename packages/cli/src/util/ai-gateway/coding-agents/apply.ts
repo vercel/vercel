@@ -345,7 +345,7 @@ export async function applyPlan(
     }
     let backupPath: string | undefined;
     if (options.backup && change.current !== null) {
-      backupPath = await backupFile(change.path);
+      backupPath = await backupFile(change.path, change.mode);
     }
     await writeConfigFile(change.path, change.next, change.mode);
     results.push({

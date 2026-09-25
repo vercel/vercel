@@ -310,6 +310,26 @@ export default async function codingAgentsSetup(
     }
   }
 
+  if (agents.some(agent => agent.id === 'conductor') && baseUrl) {
+    return failValidation(
+      client,
+      machine,
+      AGENT_REASON.INVALID_ARGUMENTS,
+      'Conductor requires its documented Vercel AI Gateway URLs. Remove --base-url to configure Conductor.'
+    );
+  }
+  const directWriteAgents = agents.filter(
+    agent => agent.supportsPrompt === false
+  );
+  if (applyMode === 'prompt' && directWriteAgents.length > 0) {
+    return failValidation(
+      client,
+      machine,
+      AGENT_REASON.INVALID_ARGUMENTS,
+      `${directWriteAgents.map(agent => agent.displayName).join(', ')} requires direct writes to its settings. Use --apply edit.`
+    );
+  }
+
   let sessionMigrations: PlannedSessionMigration[] = [];
   if (!noSessionMigration) {
     try {
@@ -599,7 +619,7 @@ export default async function codingAgentsSetup(
     canPrompt &&
     !yes
   ) {
-    if (useKeychain) {
+    if (useKeychain && agents.every(agent => agent.supportsPrompt !== false)) {
       const choice = await client.input.select<'apply' | 'copy' | 'cancel'>({
         message: 'Apply these changes?',
         choices: [

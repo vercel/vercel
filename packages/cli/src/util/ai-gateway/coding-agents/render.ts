@@ -103,6 +103,7 @@ export function printPlan(
       output.print(chalk.dim(`    ↳ backs up to ${change.path}.bak\n`));
     }
     const diff = renderDiff(change.current ?? '', change.next ?? '', {
+      format: change.format,
       secrets: [previewKey],
       indent: '    ',
     });
@@ -206,6 +207,7 @@ export function buildAgentPrompt(plan: SetupPlan, apiKey: string): string {
       continue;
     }
     const diff = renderDiff(change.current ?? '', change.next ?? '', {
+      format: change.format,
       secrets: [apiKey],
       indent: '',
       color: false,

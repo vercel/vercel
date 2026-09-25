@@ -19,6 +19,7 @@ import {
   mkdirSync,
   readdirSync,
   statSync,
+  chmodSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -40,6 +41,7 @@ import { useTeam } from '../../../mocks/team';
 import { claudeCode } from '../../../../src/util/ai-gateway/coding-agents/agents/claude-code';
 import { codex } from '../../../../src/util/ai-gateway/coding-agents/agents/codex';
 import { opencode } from '../../../../src/util/ai-gateway/coding-agents/agents/opencode';
+import { conductor } from '../../../../src/util/ai-gateway/coding-agents/agents/conductor';
 import {
   isKeychainAvailable,
   storeKeyInKeychain,
@@ -131,6 +133,9 @@ function opencodeConfigPath() {
 function piAuthPath() {
   return join(home, '.pi', 'agent', 'auth.json');
 }
+function conductorSettingsPath() {
+  return join(home, '.conductor', 'settings.managed.toml');
+}
 
 beforeEach(() => {
   keychainState.available = undefined;
@@ -174,6 +179,363 @@ afterEach(() => {
 });
 
 describe('ai-gateway coding-agents setup', () => {
+  describe('Conductor', () => {
+    it('uses direct file confirmation even when Keychain is available', async () => {
+      useUser();
+      keychainState.available = true;
+      mkdirSync(join(home, '.conductor'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'setup',
+        '--agent',
+        'conductor',
+        '--key',
+        'vck_KeychainConductor001'
+      );
+      const result = aiGateway(client);
+      await expect(client.stderr).toOutput(
+        'Configure local Claude Code/Codex routing'
+      );
+      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput(
+        'Store the API key in your macOS Keychain?'
+      );
+      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Apply these changes?');
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Copy a prompt for my agent'
+      );
+      client.stdin.write('y\n');
+
+      expect(await result).toBe(0);
+      expect(readFileSync(conductorSettingsPath(), 'utf8')).toContain(
+        'vck_KeychainConductor001'
+      );
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'vck_KeychainConductor001'
+      );
+    });
+
+    it.each([
+      ['setup'],
+      ['coding-agents', 'setup'],
+    ])('configures managed local routing and privacy through %s', async (...subcommand) => {
+      useUser();
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.conductor'), { recursive: true });
+      const previous = [
+        '# Organization policy',
+        'enterprise_data_privacy = false',
+        '[models]',
+        'default = "gpt-5.6-sol"',
+        '[environmentVariables.cloud]',
+        'OPENAI_BASE_URL = "https://cloud.example.com/v1"',
+        '[environmentVariables.local]',
+        'CORP_SETTING = "keep-me"',
+        'CLAUDE_CODE_USE_BEDROCK = "1"',
+        'ANTHROPIC_API_KEY = "sk-existing-credential"',
+        '',
+      ].join('\n');
+      writeFileSync(conductorSettingsPath(), previous);
+      chmodSync(conductorSettingsPath(), 0o644);
+      client.setArgv(
+        'ai-gateway',
+        ...subcommand,
+        '--agent',
+        'conductor',
+        '--key',
+        'vck_ConductorTest001'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      const contents = readFileSync(conductorSettingsPath(), 'utf8');
+      const settings = tomlParse(contents);
+      expect(contents).toContain('# Organization policy');
+      expect(settings).toMatchObject({
+        enterprise_data_privacy: true,
+        models: { default: 'gpt-5.6-sol' },
+        environmentVariables: {
+          cloud: { OPENAI_BASE_URL: 'https://cloud.example.com/v1' },
+          local: {
+            CORP_SETTING: 'keep-me',
+            OPENAI_BASE_URL: 'https://ai-gateway.vercel.sh/v1',
+            AI_GATEWAY_API_KEY: 'vck_ConductorTest001',
+            ANTHROPIC_BASE_URL: 'https://ai-gateway.vercel.sh',
+            ANTHROPIC_AUTH_TOKEN: 'vck_ConductorTest001',
+            ANTHROPIC_API_KEY: '',
+            CODEX_API_KEY: '',
+            OPENAI_API_KEY: '',
+            CLAUDE_CODE_OAUTH_TOKEN: '',
+            CLAUDE_CODE_USE_BEDROCK: '0',
+            CLAUDE_CODE_USE_VERTEX: '0',
+            CLAUDE_CODE_USE_FOUNDRY: '0',
+          },
+        },
+      });
+      expect(readFileSync(`${conductorSettingsPath()}.bak`, 'utf8')).toBe(
+        previous
+      );
+      if (process.platform !== 'win32') {
+        expect(statSync(conductorSettingsPath()).mode & 0o777).toBe(0o600);
+        expect(statSync(`${conductorSettingsPath()}.bak`).mode & 0o777).toBe(
+          0o600
+        );
+      }
+      expect(existsSync(claudeSettingsPath())).toBe(false);
+      expect(existsSync(codexConfigPath())).toBe(false);
+      expect(existsSync(bashrcPath())).toBe(false);
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.configured).toHaveLength(1);
+      expect(out.warnings).toEqual([
+        expect.objectContaining({
+          agent: 'conductor',
+          code: 'conductor_gateway_only_not_enforced',
+        }),
+      ]);
+      expect(out.notes.join('\n')).toContain(
+        'Gateway-only access is not enforced'
+      );
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'sk-existing-credential'
+      );
+    });
+
+    it('keeps a dry run free of file writes, key creation, and secret output', async () => {
+      useUser();
+      client.nonInteractive = true;
+      useCreateApiKey();
+      client.setArgv(
+        'ai-gateway',
+        'setup',
+        '--agent',
+        'conductor',
+        '--dry-run'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      expect(existsSync(conductorSettingsPath())).toBe(false);
+      expect(lastCreateBody).toBeUndefined();
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.reason).toBe('dry_run');
+      expect(out.changes).toEqual([
+        expect.objectContaining({
+          file: conductorSettingsPath(),
+          action: 'would_create',
+        }),
+      ]);
+      expect(out).not.toHaveProperty('apiKey');
+    });
+
+    it('detects Conductor but requires explicit consent for unattended setup', async () => {
+      useUser();
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.conductor'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'setup',
+        '--yes',
+        '--key',
+        'vck_Detected001'
+      );
+
+      expect(await aiGateway(client)).toBe(1);
+      expect(existsSync(conductorSettingsPath())).toBe(false);
+      expect(client.stdout.getFullOutput()).toContain('requires_consent');
+    });
+
+    it.each([
+      ['--base-url', 'https://gateway.example.test'],
+      ['--apply', 'prompt'],
+    ])('ignores consent-skipped Conductor when validating %s', async (flag, value) => {
+      useUser();
+      client.nonInteractive = true;
+      keychainState.available = true;
+      mkdirSync(join(home, '.conductor'), { recursive: true });
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'setup',
+        flag,
+        value,
+        '--key',
+        'vck_Skipped001'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      expect(existsSync(conductorSettingsPath())).toBe(false);
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.skipped).toContainEqual(
+        expect.objectContaining({
+          target: 'conductor',
+          reason: 'requires_consent',
+        })
+      );
+      if (flag === '--base-url') {
+        expect(
+          JSON.parse(readFileSync(claudeSettingsPath(), 'utf8')).env
+            .ANTHROPIC_BASE_URL
+        ).toBe(value);
+      } else {
+        expect(out.reason).toBe('agent_prompt');
+        expect(out.prompt).toContain('Claude Code settings');
+        expect(out.prompt).not.toContain('Conductor managed settings');
+      }
+    });
+
+    it('does not recreate a key when managed settings already match', async () => {
+      useUser();
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'setup',
+        '--agent',
+        'conductor',
+        '--key',
+        'vck_Existing001'
+      );
+      expect(await aiGateway(client)).toBe(0);
+      const original = readFileSync(conductorSettingsPath(), 'utf8');
+      // Permissions alone must not send an otherwise unchanged setup through
+      // key creation. Files get owner-only permissions when setup writes them.
+      chmodSync(conductorSettingsPath(), 0o644);
+      const offset = client.stdout.getFullOutput().length;
+      const team = useTeam();
+      client.config.currentTeam = team.id;
+      useCreateApiKey();
+      client.setArgv('ai-gateway', 'setup', '--agent', 'conductor');
+
+      expect(await aiGateway(client)).toBe(0);
+      expect(lastCreateBody).toBeUndefined();
+      expect(readFileSync(conductorSettingsPath(), 'utf8')).toBe(original);
+      expect(
+        JSON.parse(client.stdout.getFullOutput().slice(offset)).reason
+      ).toBe('already_configured');
+    });
+
+    it.each([
+      ['--apply', 'prompt'],
+      ['--base-url', 'https://other.example.com/v1'],
+    ])('rejects unsupported %s before creating a key', async (flag, value) => {
+      useUser();
+      client.nonInteractive = true;
+      useCreateApiKey();
+      client.setArgv(
+        'ai-gateway',
+        'setup',
+        '--agent',
+        'conductor',
+        flag,
+        value
+      );
+
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('exit');
+      });
+      try {
+        await expect(aiGateway(client)).rejects.toThrow('exit');
+        expect(exitSpy).toHaveBeenCalledWith(1);
+        expect(JSON.parse(client.stdout.getFullOutput()).reason).toBe(
+          'invalid_arguments'
+        );
+      } finally {
+        exitSpy.mockRestore();
+      }
+      expect(lastCreateBody).toBeUndefined();
+      expect(existsSync(conductorSettingsPath())).toBe(false);
+    });
+
+    it('refuses to shadow a legacy managed policy', async () => {
+      useUser();
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.conductor'), { recursive: true });
+      const legacy = join(home, '.conductor', 'settings.managed.json');
+      writeFileSync(legacy, '{"enterprise_data_privacy":true}');
+      client.setArgv(
+        'ai-gateway',
+        'setup',
+        '--agent',
+        'conductor',
+        '--key',
+        'vck_Legacy001'
+      );
+
+      expect(await aiGateway(client)).toBe(1);
+      expect(existsSync(conductorSettingsPath())).toBe(false);
+      expect(readFileSync(legacy, 'utf8')).toBe(
+        '{"enterprise_data_privacy":true}'
+      );
+      expect(client.stdout.getFullOutput()).toContain('Migrate it');
+    });
+
+    it('honors a custom managed settings path without changing global settings', async () => {
+      const path = join(home, 'custom', 'settings.managed.toml');
+      const plan = await buildSetupPlan([conductor], {
+        home,
+        apiKey: 'vck_Custom001',
+        overrides: { conductor: path },
+      });
+      expect(plan.changes).toHaveLength(1);
+      expect(plan.changes[0].path).toBe(path);
+      expect(plan.envExports).toEqual([]);
+    });
+
+    it('allows declining the privacy and routing changes before any mutation', async () => {
+      useUser();
+      useCreateApiKey();
+      client.setArgv('ai-gateway', 'setup', '--agent', 'conductor');
+      const result = aiGateway(client);
+      await expect(client.stderr).toOutput(
+        'Configure local Claude Code/Codex routing'
+      );
+      client.stdin.write('n\n');
+      expect(await result).toBe(0);
+      expect(lastCreateBody).toBeUndefined();
+      expect(existsSync(conductorSettingsPath())).toBe(false);
+    });
+  });
+
+  describe('ai-gateway setup shortcut', () => {
+    it('shows setup help at the top level', async () => {
+      client.setArgv('ai-gateway', 'setup', '--help');
+      expect(await aiGateway(client)).toBe(2);
+      expect(client.stderr.getFullOutput()).toContain('--agent');
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'flag:help', value: 'ai-gateway:setup' },
+      ]);
+    });
+
+    it('preserves setup flags and emits a dry-run plan without writing files', async () => {
+      useUser();
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'setup',
+        '--agent',
+        'claude-code',
+        '--dry-run',
+        '--scope',
+        'vercel-internal-playground'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      const result = JSON.parse(client.stdout.getFullOutput());
+      expect(result.reason).toBe('dry_run');
+      expect(result.changes).toEqual([
+        expect.objectContaining({
+          agent: 'Claude Code',
+          file: claudeSettingsPath(),
+          action: 'would_create',
+        }),
+      ]);
+      expect(existsSync(claudeSettingsPath())).toBe(false);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:setup', value: 'setup' },
+        { key: 'option:agent', value: 'claude-code' },
+        { key: 'flag:dry-run', value: 'TRUE' },
+      ]);
+    });
+  });
+
   describe('--help', () => {
     it('returns exit code 2', async () => {
       client.setArgv('ai-gateway', 'coding-agents', 'setup', '--help');
@@ -2446,6 +2808,54 @@ describe('ai-gateway coding-agents setup', () => {
   });
 
   describe('renderDiff secret masking', () => {
+    it('masks old TOML credentials during a Conductor key rotation', () => {
+      const diff = renderDiff(
+        'ANTHROPIC_AUTH_TOKEN = "old-anthropic-secret"\nAI_GATEWAY_API_KEY = \'old-gateway-secret\'\n',
+        'ANTHROPIC_AUTH_TOKEN = "vck_Replacement001"\nAI_GATEWAY_API_KEY = "vck_Replacement001"\n',
+        { format: 'toml' }
+      );
+      for (const secret of [
+        'old-anthropic-secret',
+        'old-gateway-secret',
+        'vck_Replacement001',
+      ]) {
+        expect(diff).not.toContain(secret);
+      }
+      expect(diff).toContain('ANTHROPIC_AUTH_TOKEN');
+      expect(diff).toContain('AI_GATEWAY_API_KEY');
+    });
+
+    it.each([
+      'environmentVariables.local.ANTHROPIC_AUTH_TOKEN = "sample-old-credential"',
+      '[environmentVariables.local]\nANTHROPIC_AUTH_TOKEN = """sample-old-credential"""',
+      "[environmentVariables.local]\nANTHROPIC_AUTH_TOKEN = '''sample-old-credential'''",
+      'environmentVariables = { local = { ANTHROPIC_AUTH_TOKEN = "sample-old-credential" } }',
+      '[environmentVariables.local]\n"ANTHROPIC_AUTH_TOKEN" = "sample-old-\\u0063redential"',
+    ])('redacts parsed TOML credentials regardless of representation (%#)', before => {
+      const after = mergeToml(before, {
+        environmentVariables: {
+          local: { ANTHROPIC_AUTH_TOKEN: 'replacement-test-key' },
+        },
+      });
+      const diff = renderDiff(before, after, {
+        format: 'toml',
+        color: false,
+      });
+      expect(diff).not.toContain('sample-old-credential');
+      expect(diff).not.toContain('replacement-test-key');
+      expect(diff).not.toContain('sample-old-\\u0063redential');
+      expect(diff).toContain('ANTHROPIC_AUTH_TOKEN');
+    });
+
+    it('keeps TOML environment variable references readable', () => {
+      const diff = renderDiff(
+        '',
+        '[model_providers.vercel]\nenv_key = "AI_GATEWAY_API_KEY"\n',
+        { format: 'toml', color: false }
+      );
+      expect(diff).toContain('env_key = "AI_GATEWAY_API_KEY"');
+    });
+
     it('masks a literal key in a POSIX export line', () => {
       const out = renderDiff('', "export AI_GATEWAY_API_KEY='vck_LeakMe12345'");
       expect(out).not.toContain('vck_LeakMe12345');

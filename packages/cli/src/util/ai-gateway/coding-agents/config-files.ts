@@ -7,6 +7,7 @@ import {
   lstat,
   link,
   unlink,
+  chmod,
 } from 'node:fs/promises';
 import { isDeepStrictEqual } from 'node:util';
 import { dirname } from 'node:path';
@@ -398,9 +399,10 @@ export async function publishNoClobber(
   }
 }
 
-export async function backupFile(path: string): Promise<string> {
+export async function backupFile(path: string, mode?: number): Promise<string> {
   const backupPath = `${path}.bak`;
   await copyFile(path, backupPath);
+  if (mode !== undefined) await chmod(backupPath, mode);
   return backupPath;
 }
 
@@ -410,5 +412,14 @@ export async function writeConfigFile(
   mode?: number
 ): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
+  // writeFile's mode applies only to newly created files. Restrict existing
+  // settings before writing a credential into a previously public file.
+  if (mode !== undefined) {
+    try {
+      await chmod(path, mode);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+  }
   await writeFile(path, content, mode === undefined ? 'utf8' : { mode });
 }

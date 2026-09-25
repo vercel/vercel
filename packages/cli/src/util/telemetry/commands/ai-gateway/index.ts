@@ -6,6 +6,13 @@ export class AiGatewayTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof aiGatewayCommand>
 {
+  trackCliSubcommandSetup(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'setup',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandApiKeys(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'api-keys',
