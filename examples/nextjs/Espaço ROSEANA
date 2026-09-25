@@ -1,0 +1,121 @@
+import React, { useState, useEffect } from "react"; import { Card, CardContent } from "@/components/ui/card"; import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"; import { Input } from "@/components/ui/input"; import { Button } from "@/components/ui/button"; import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+
+export default function Dashboard() { const [tab, setTab] = useState("produtos"); const [produtos, setProdutos] = useState(() => JSON.parse(localStorage.getItem("produtos") || "[]")); const [clientes, setClientes] = useState(() => JSON.parse(localStorage.getItem("clientes") || "[]")); const [vendas, setVendas] = useState(() => JSON.parse(localStorage.getItem("vendas") || "[]"));
+
+const [produtoInput, setProdutoInput] = useState(""); const [clienteInput, setClienteInput] = useState(""); const [vendaInput, setVendaInput] = useState({ produto: "", cliente: "", valor: "", data: "" }); const [filtroMes, setFiltroMes] = useState("");
+
+useEffect(() => { localStorage.setItem("produtos", JSON.stringify(produtos)); localStorage.setItem("clientes", JSON.stringify(clientes)); localStorage.setItem("vendas", JSON.stringify(vendas)); }, [produtos, clientes, vendas]);
+
+const vendasFiltradas = filtroMes ? vendas.filter(v => new Date(v.data).getMonth() + 1 === parseInt(filtroMes)) : vendas;
+
+const totalVendas = vendasFiltradas.reduce((acc, cur) => acc + parseFloat(cur.valor || 0), 0);
+
+const vendasPorMes = Array.from({ length: 12 }, (_, i) => { const mes = i + 1; const total = vendas.filter(v => new Date(v.data).getMonth() + 1 === mes) .reduce((acc, cur) => acc + parseFloat(cur.valor || 0), 0); return { mes: ${mes}, total }; });
+
+return ( <Tabs value={tab} onValueChange={setTab} className="w-full"> <TabsList className="grid w-full grid-cols-3"> <TabsTrigger value="produtos">Produtos</TabsTrigger> <TabsTrigger value="clientes">Clientes</TabsTrigger> <TabsTrigger value="vendas">Vendas</TabsTrigger> </TabsList>
+
+<TabsContent value="produtos">
+    <Card>
+      <CardContent className="p-4 space-y-4">
+        <div className="flex gap-2">
+          <Input
+            placeholder="Novo produto"
+            value={produtoInput}
+            onChange={(e) => setProdutoInput(e.target.value)}
+          />
+          <Button onClick={() => {
+            if (produtoInput) setProdutos([...produtos, produtoInput]);
+            setProdutoInput("");
+          }}>Adicionar</Button>
+        </div>
+        <ul className="list-disc pl-4">
+          {produtos.map((p, i) => (
+            <li key={i}>{p}</li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  </TabsContent>
+
+  <TabsContent value="clientes">
+    <Card>
+      <CardContent className="p-4 space-y-4">
+        <div className="flex gap-2">
+          <Input
+            placeholder="Novo cliente"
+            value={clienteInput}
+            onChange={(e) => setClienteInput(e.target.value)}
+          />
+          <Button onClick={() => {
+            if (clienteInput) setClientes([...clientes, clienteInput]);
+            setClienteInput("");
+          }}>Adicionar</Button>
+        </div>
+        <ul className="list-disc pl-4">
+          {clientes.map((c, i) => (
+            <li key={i}>{c}</li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  </TabsContent>
+
+  <TabsContent value="vendas">
+    <Card>
+      <CardContent className="p-4 space-y-4">
+        <div className="grid gap-2 grid-cols-2 md:grid-cols-4">
+          <select value={vendaInput.produto} onChange={e => setVendaInput({ ...vendaInput, produto: e.target.value })}>
+            <option value="">Produto</option>
+            {produtos.map((p, i) => <option key={i}>{p}</option>)}
+          </select>
+          <select value={vendaInput.cliente} onChange={e => setVendaInput({ ...vendaInput, cliente: e.target.value })}>
+            <option value="">Cliente</option>
+            {clientes.map((c, i) => <option key={i}>{c}</option>)}
+          </select>
+          <Input type="number" placeholder="Valor" value={vendaInput.valor} onChange={e => setVendaInput({ ...vendaInput, valor: e.target.value })} />
+          <Input type="date" value={vendaInput.data} onChange={e => setVendaInput({ ...vendaInput, data: e.target.value })} />
+        </div>
+        <Button onClick={() => {
+          if (vendaInput.produto && vendaInput.cliente && vendaInput.valor && vendaInput.data) {
+            setVendas([...vendas, vendaInput]);
+            setVendaInput({ produto: "", cliente: "", valor: "", data: "" });
+          }
+        }}>Registrar venda</Button>
+
+        <div className="flex items-center gap-2 mt-4">
+          <label>Filtrar por mês:</label>
+          <select value={filtroMes} onChange={(e) => setFiltroMes(e.target.value)}>
+            <option value="">Todos</option>
+            {Array.from({ length: 12 }, (_, i) => (
+              <option key={i + 1} value={i + 1}>{i + 1}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="text-xl font-bold">Total: R$ {totalVendas.toFixed(2)}</div>
+
+        <ul className="list-disc pl-4">
+          {vendasFiltradas.map((v, i) => (
+            <li key={i}>
+              {v.data} - {v.produto} para {v.cliente}: R$ {v.valor}
+            </li>
+          ))}
+        </ul>
+
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={vendasPorMes}>
+              <XAxis dataKey="mes" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="total" fill="#8884d8" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </CardContent>
+    </Card>
+  </TabsContent>
+</Tabs>
+
+); }
+
