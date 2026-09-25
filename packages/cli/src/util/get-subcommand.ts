@@ -14,7 +14,7 @@ export default function getSubcommand(
 ): SubcommandParsed {
   const [subcommand, ...rest] = cliArgs;
   for (const k of Object.keys(config)) {
-    if (k !== 'default' && config[k].indexOf(subcommand) !== -1) {
+    if (k !== 'default' && config[k].includes(subcommand)) {
       return {
         subcommand: k,
         subcommandOriginal: subcommand,
