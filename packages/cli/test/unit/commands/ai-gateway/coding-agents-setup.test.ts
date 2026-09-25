@@ -507,6 +507,79 @@ describe('ai-gateway coding-agents setup', () => {
       expect(client.stdout.getFullOutput()).toContain('Migrate it');
     });
 
+    it.each([
+      ['settings.managed.toml', true],
+      ['settings.toml', true],
+      ['settings.managed.toml', false],
+      ['settings.toml', false],
+    ])('leaves both settings untouched when %s is malformed (non-interactive: %s)', async (filename, nonInteractive) => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      client.nonInteractive = nonInteractive;
+      mkdirSync(join(home, '.conductor'), { recursive: true });
+      const managed =
+        filename === 'settings.managed.toml'
+          ? 'not = = toml'
+          : 'enterprise_data_privacy = false\n';
+      const user =
+        filename === 'settings.toml'
+          ? 'not = = toml'
+          : 'codex_provider = "default"\n';
+      writeFileSync(conductorSettingsPath(), managed);
+      writeFileSync(conductorUserSettingsPath(), user);
+      client.setArgv('ai-gateway', 'setup', '--agent', 'conductor', '--yes');
+
+      expect(await aiGateway(client)).toBe(1);
+      expect(lastCreateBody).toBeUndefined();
+      expect(readFileSync(conductorSettingsPath(), 'utf8')).toBe(managed);
+      expect(readFileSync(conductorUserSettingsPath(), 'utf8')).toBe(user);
+      expect(existsSync(`${conductorSettingsPath()}.bak`)).toBe(false);
+      expect(existsSync(`${conductorUserSettingsPath()}.bak`)).toBe(false);
+      if (nonInteractive) {
+        const out = JSON.parse(client.stdout.getFullOutput());
+        expect(out.status).toBe('error');
+        expect(out.skipped).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ target: conductorSettingsPath() }),
+            expect.objectContaining({ target: conductorUserSettingsPath() }),
+          ])
+        );
+      }
+    });
+
+    it('skips both Conductor files but configures an unrelated healthy agent', async () => {
+      useUser();
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.conductor'), { recursive: true });
+      writeFileSync(conductorUserSettingsPath(), 'not = = toml');
+      client.setArgv(
+        'ai-gateway',
+        'setup',
+        '--agent',
+        'conductor',
+        '--agent',
+        'claude-code',
+        '--key',
+        'vck_Healthy001'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      expect(existsSync(conductorSettingsPath())).toBe(false);
+      expect(readFileSync(conductorUserSettingsPath(), 'utf8')).toBe(
+        'not = = toml'
+      );
+      expect(existsSync(claudeSettingsPath())).toBe(true);
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.configured).toEqual([
+        expect.objectContaining({
+          agent: 'Claude Code',
+          file: claudeSettingsPath(),
+        }),
+      ]);
+    });
+
     it('honors a custom managed settings path without changing global settings', async () => {
       const path = join(home, 'custom', 'settings.managed.toml');
       const plan = await buildSetupPlan([conductor], {

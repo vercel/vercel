@@ -310,6 +310,9 @@ export default async function codingAgentsSetup(
     }
   }
 
+  // Conductor enables native Codex Gateway routing only for the exact
+  // https://ai-gateway.vercel.sh/v1 URL. A custom URL would bypass that
+  // provider configuration and credential handling.
   if (agents.some(agent => agent.id === 'conductor') && baseUrl) {
     return failValidation(
       client,

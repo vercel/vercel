@@ -59,20 +59,15 @@ export const conductor: CodingAgent = {
   buildPlan(ctx) {
     const path = this.configPath(ctx);
     const userPath = join(dirname(path), 'settings.toml');
-    // Both files must be safe to write before either auth or routing changes.
-    const checkLegacySettings = () => {
-      for (const [tomlPath, legacyName] of [
-        [path, 'settings.managed.json'],
-        [userPath, 'settings.json'],
-      ]) {
-        if (
-          !existsSync(tomlPath) &&
-          existsSync(join(dirname(path), legacyName))
-        ) {
-          throw new Error(
-            `Conductor has legacy ${legacyName}. Migrate it to ${legacyName.replace('.json', '.toml')} before running setup.`
-          );
-        }
+    // Creating TOML must not shadow settings still stored in legacy JSON.
+    const checkLegacySettings = (
+      current: string | null,
+      legacyName: string
+    ) => {
+      if (current === null && existsSync(join(dirname(path), legacyName))) {
+        throw new Error(
+          `Conductor has legacy ${legacyName}. Migrate it to ${legacyName.replace('.json', '.toml')} before running setup.`
+        );
       }
     };
     return {
@@ -83,7 +78,7 @@ export const conductor: CodingAgent = {
           format: 'toml',
           mode: 0o600,
           transform: current => {
-            checkLegacySettings();
+            checkLegacySettings(current, 'settings.managed.json');
             return mergeToml(current, {
               enterprise_data_privacy: true,
               environmentVariables: {
@@ -116,7 +111,7 @@ export const conductor: CodingAgent = {
           format: 'toml',
           mode: 0o600,
           transform: current => {
-            checkLegacySettings();
+            checkLegacySettings(current, 'settings.json');
             return mergeToml(current, {
               claude_provider: 'custom',
               codex_provider: 'custom',

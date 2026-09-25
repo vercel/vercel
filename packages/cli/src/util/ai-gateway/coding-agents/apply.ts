@@ -314,6 +314,24 @@ export async function buildSetupPlan(
     });
   }
 
+  // An agent's files form one configuration. If any file cannot be planned,
+  // block its siblings too, while allowing unrelated agents to proceed.
+  const failed = changes.filter(change => change.status === 'error');
+  for (const failure of failed) {
+    for (const change of changes) {
+      if (
+        change.status === 'error' ||
+        !change.owners.some(owner => failure.owners.includes(owner))
+      ) {
+        continue;
+      }
+      change.status = 'error';
+      change.next = null;
+      change.error = `Fix ${failure.path} before configuring ${change.owners.join(', ')}.`;
+      failed.push(change);
+    }
+  }
+
   return {
     changes,
     notes,
