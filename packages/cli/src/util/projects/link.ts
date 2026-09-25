@@ -561,12 +561,6 @@ export async function getLinkedProject(
       if (err.missingToken || err.invalidToken) {
         throw new InvalidToken(client.authConfig.tokenSource);
       } else if (err.code === 'forbidden' || err.code === 'team_unauthorized') {
-        // Reaching this branch means the token itself is valid -- an absent or
-        // malformed one is handled above -- so the token simply lacks access to
-        // the Project's owner. Which remediation to suggest depends on where the
-        // link came from: removing the local directory is meaningless when the
-        // Project was identified by environment variables, and re-linking is
-        // interactive, so it cannot be done wherever those are typically set.
         throw new NowBuildError({
           message: shouldUseEnvContext
             ? `Could not retrieve Project Settings. The Project was resolved from ${outputCode(
