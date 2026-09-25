@@ -9,6 +9,8 @@ import { GATEWAY_ANTHROPIC_BASE_URL } from '../gateway';
  * integration recognizes the exact /v1 URL below and supplies its own provider
  * configuration; the standalone Codex /codex/v1 endpoint does not work here.
  * Managed environment values are literal strings, not shell/Keychain lookups.
+ * User settings must also select custom providers: CLI auth mode strips the
+ * gateway URL and credentials before launching Codex.
  *
  * This configures local Claude Code/Codex routing and Enterprise Data Privacy.
  * Conductor does not expose a supported global harness allowlist: in particular,
@@ -44,9 +46,10 @@ export const conductor: CodingAgent = {
         why: [
           'Cursor can still use a saved credential, and OpenCode providers are configured separately.',
           'Managed settings apply to all local projects and enable Enterprise Data Privacy, disabling AI-generated chat titles and custom MCP servers. Cloud workspaces are not covered.',
+          'Claude Code and Codex authentication switch to API key mode in Conductor user settings.',
           'Conductor needs a literal gateway key in its managed settings file, even when Keychain storage is enabled. Settings and backups written by setup use owner-only permissions.',
         ],
-        undo: 'restore the managed settings backup, or remove the entries added by setup',
+        undo: 'restore the managed and user settings backups, or remove the entries added by setup',
         confirm:
           'Configure local Claude Code/Codex routing and enable Enterprise Data Privacy?',
       },
@@ -55,6 +58,23 @@ export const conductor: CodingAgent = {
 
   buildPlan(ctx) {
     const path = this.configPath(ctx);
+    const userPath = join(dirname(path), 'settings.toml');
+    // Both files must be safe to write before either auth or routing changes.
+    const checkLegacySettings = () => {
+      for (const [tomlPath, legacyName] of [
+        [path, 'settings.managed.json'],
+        [userPath, 'settings.json'],
+      ]) {
+        if (
+          !existsSync(tomlPath) &&
+          existsSync(join(dirname(path), legacyName))
+        ) {
+          throw new Error(
+            `Conductor has legacy ${legacyName}. Migrate it to ${legacyName.replace('.json', '.toml')} before running setup.`
+          );
+        }
+      }
+    };
     return {
       fileChanges: [
         {
@@ -63,16 +83,7 @@ export const conductor: CodingAgent = {
           format: 'toml',
           mode: 0o600,
           transform: current => {
-            // Creating TOML would shadow the entire legacy managed policy.
-            // Require migration rather than silently dropping its controls.
-            if (
-              current === null &&
-              existsSync(join(dirname(path), 'settings.managed.json'))
-            ) {
-              throw new Error(
-                'Conductor has legacy settings.managed.json. Migrate it to settings.managed.toml before running setup.'
-              );
-            }
+            checkLegacySettings();
             return mergeToml(current, {
               enterprise_data_privacy: true,
               environmentVariables: {
@@ -89,16 +100,33 @@ export const conductor: CodingAgent = {
                   CLAUDE_CODE_USE_MANTLE: '0',
                   OPENAI_BASE_URL: `${GATEWAY_ANTHROPIC_BASE_URL}/v1`,
                   AI_GATEWAY_API_KEY: ctx.apiKey,
-                  CODEX_API_KEY: '',
+                  // Conductor passes Codex credentials separately from general
+                  // environment variables, then restores the gateway env key
+                  // from that credential when launching the native harness.
+                  CODEX_API_KEY: ctx.apiKey,
                   OPENAI_API_KEY: '',
                 },
               },
             });
           },
         },
+        {
+          path: userPath,
+          label: 'Conductor authentication settings',
+          format: 'toml',
+          mode: 0o600,
+          transform: current => {
+            checkLegacySettings();
+            return mergeToml(current, {
+              claude_provider: 'custom',
+              codex_provider: 'custom',
+            });
+          },
+        },
       ],
       envExports: [],
       notes: [
+        'Claude Code and Codex use API key authentication in Conductor Settings > Agents.',
         'Restart Conductor and start new local Claude Code or Codex chats to use the AI Gateway.',
         'Enterprise Data Privacy is enabled through managed settings for this Mac. The gateway key belongs to the Vercel team selected for setup.',
         'Gateway-only access is not enforced for Cursor, separately configured OpenCode providers, or cloud workspaces.',

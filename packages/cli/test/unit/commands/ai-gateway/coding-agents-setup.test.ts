@@ -136,6 +136,9 @@ function piAuthPath() {
 function conductorSettingsPath() {
   return join(home, '.conductor', 'settings.managed.toml');
 }
+function conductorUserSettingsPath() {
+  return join(home, '.conductor', 'settings.toml');
+}
 
 beforeEach(() => {
   keychainState.available = undefined;
@@ -238,6 +241,24 @@ describe('ai-gateway coding-agents setup', () => {
       ].join('\n');
       writeFileSync(conductorSettingsPath(), previous);
       chmodSync(conductorSettingsPath(), 0o644);
+      const previousUserSettings = [
+        '# Personal settings',
+        'codex_provider = "default"',
+        'claude_provider = "anthropic"',
+        '[models]',
+        'default = "gpt-5.6-sol"',
+        '',
+      ].join('\n');
+      writeFileSync(conductorUserSettingsPath(), previousUserSettings);
+      const previousCodexConfig = [
+        'model_provider = "vercel"',
+        '[model_providers.vercel]',
+        'base_url = "https://ai-gateway.vercel.sh/codex/v1"',
+        'env_key = "AI_GATEWAY_API_KEY"',
+        '',
+      ].join('\n');
+      mkdirSync(join(home, '.codex'), { recursive: true });
+      writeFileSync(codexConfigPath(), previousCodexConfig);
       client.setArgv(
         'ai-gateway',
         ...subcommand,
@@ -263,7 +284,7 @@ describe('ai-gateway coding-agents setup', () => {
             ANTHROPIC_BASE_URL: 'https://ai-gateway.vercel.sh',
             ANTHROPIC_AUTH_TOKEN: 'vck_ConductorTest001',
             ANTHROPIC_API_KEY: '',
-            CODEX_API_KEY: '',
+            CODEX_API_KEY: 'vck_ConductorTest001',
             OPENAI_API_KEY: '',
             CLAUDE_CODE_OAUTH_TOKEN: '',
             CLAUDE_CODE_USE_BEDROCK: '0',
@@ -275,6 +296,16 @@ describe('ai-gateway coding-agents setup', () => {
       expect(readFileSync(`${conductorSettingsPath()}.bak`, 'utf8')).toBe(
         previous
       );
+      const userContents = readFileSync(conductorUserSettingsPath(), 'utf8');
+      expect(userContents).toContain('# Personal settings');
+      expect(tomlParse(userContents)).toEqual({
+        codex_provider: 'custom',
+        claude_provider: 'custom',
+        models: { default: 'gpt-5.6-sol' },
+      });
+      expect(readFileSync(`${conductorUserSettingsPath()}.bak`, 'utf8')).toBe(
+        previousUserSettings
+      );
       if (process.platform !== 'win32') {
         expect(statSync(conductorSettingsPath()).mode & 0o777).toBe(0o600);
         expect(statSync(`${conductorSettingsPath()}.bak`).mode & 0o777).toBe(
@@ -282,10 +313,10 @@ describe('ai-gateway coding-agents setup', () => {
         );
       }
       expect(existsSync(claudeSettingsPath())).toBe(false);
-      expect(existsSync(codexConfigPath())).toBe(false);
+      expect(readFileSync(codexConfigPath(), 'utf8')).toBe(previousCodexConfig);
       expect(existsSync(bashrcPath())).toBe(false);
       const out = JSON.parse(client.stdout.getFullOutput());
-      expect(out.configured).toHaveLength(1);
+      expect(out.configured).toHaveLength(2);
       expect(out.warnings).toEqual([
         expect.objectContaining({
           agent: 'conductor',
@@ -314,12 +345,17 @@ describe('ai-gateway coding-agents setup', () => {
 
       expect(await aiGateway(client)).toBe(0);
       expect(existsSync(conductorSettingsPath())).toBe(false);
+      expect(existsSync(conductorUserSettingsPath())).toBe(false);
       expect(lastCreateBody).toBeUndefined();
       const out = JSON.parse(client.stdout.getFullOutput());
       expect(out.reason).toBe('dry_run');
       expect(out.changes).toEqual([
         expect.objectContaining({
           file: conductorSettingsPath(),
+          action: 'would_create',
+        }),
+        expect.objectContaining({
+          file: conductorUserSettingsPath(),
           action: 'would_create',
         }),
       ]);
@@ -444,11 +480,14 @@ describe('ai-gateway coding-agents setup', () => {
       expect(existsSync(conductorSettingsPath())).toBe(false);
     });
 
-    it('refuses to shadow a legacy managed policy', async () => {
+    it.each([
+      'settings.managed.json',
+      'settings.json',
+    ])('refuses to shadow legacy %s', async filename => {
       useUser();
       client.nonInteractive = true;
       mkdirSync(join(home, '.conductor'), { recursive: true });
-      const legacy = join(home, '.conductor', 'settings.managed.json');
+      const legacy = join(home, '.conductor', filename);
       writeFileSync(legacy, '{"enterprise_data_privacy":true}');
       client.setArgv(
         'ai-gateway',
@@ -461,6 +500,7 @@ describe('ai-gateway coding-agents setup', () => {
 
       expect(await aiGateway(client)).toBe(1);
       expect(existsSync(conductorSettingsPath())).toBe(false);
+      expect(existsSync(conductorUserSettingsPath())).toBe(false);
       expect(readFileSync(legacy, 'utf8')).toBe(
         '{"enterprise_data_privacy":true}'
       );
@@ -474,8 +514,10 @@ describe('ai-gateway coding-agents setup', () => {
         apiKey: 'vck_Custom001',
         overrides: { conductor: path },
       });
-      expect(plan.changes).toHaveLength(1);
-      expect(plan.changes[0].path).toBe(path);
+      expect(plan.changes.map(change => change.path)).toEqual([
+        path,
+        join(home, 'custom', 'settings.toml'),
+      ]);
       expect(plan.envExports).toEqual([]);
     });
 
