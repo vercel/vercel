@@ -33,7 +33,8 @@
     "test:evals:smoke": "tsx evals/run.ts smoke --smoke",
     "test:evals:dry": "tsx evals/run.ts --dry",
     "test:evals:local-fixture": "tsx evals/run.ts --local-fixture",
-    "test-unit": "node scripts/test.mjs --run test/unit/ test/scenario/"
+    "test-unit": "node scripts/test.mjs --run test/unit/",
+    "test-scenario": "node scripts/test.mjs --run test/scenario/"
   },
   "bin": {
     "vc": "./dist/vc.js",

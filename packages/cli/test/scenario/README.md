@@ -8,11 +8,12 @@ access are required.
 ```bash
 cd packages/cli
 pnpm build
-pnpm test test/scenario/
+pnpm test-scenario
 ```
 
-Local runs fail if `dist` is missing or older than `src/`. In CI, Turbo builds
-the CLI before `test-unit` through `build:package`.
+Runs fail if `dist` is missing or older than `src/`. The scenarios run in their
+own `test-scenario` script, so `test-unit` does not require a built CLI. CI
+does not run `test-scenario`.
 
 ## Boundary
 
