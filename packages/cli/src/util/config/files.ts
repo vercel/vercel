@@ -87,6 +87,10 @@ export const persistAuthConfig = (
   }
 };
 
+export function getGlobalConfigDir() {
+  return VERCEL_DIR;
+}
+
 export function getConfigFilePath() {
   return CONFIG_FILE_PATH;
 }

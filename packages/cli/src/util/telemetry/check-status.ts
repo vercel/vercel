@@ -2,15 +2,32 @@ import type { GlobalConfig } from '@vercel-internals/types';
 import * as configFiles from '../config/files';
 
 import output from '../../output-manager';
+import {
+  type CliConfigStore,
+  writeGlobalConfigOrThrow,
+} from '../../gateways/cli-config-store';
 
-export function checkTelemetryStatus({ config }: { config: GlobalConfig }) {
+/**
+ * @param configStore Where to persist the updated config. Defaults to the
+ * import-time global config file.
+ * @param env Invocation environment. Defaults to `process.env`.
+ */
+export function checkTelemetryStatus({
+  config,
+  configStore,
+  env = process.env,
+}: {
+  config: GlobalConfig;
+  configStore?: CliConfigStore;
+  env?: Readonly<Record<string, string | undefined>>;
+}) {
   if (config.telemetry) {
     // telemetry has been set previously by this check of
     // user running vercel telemetry commands
     return;
   }
 
-  if (process.env.VERCEL_TELEMETRY_DISABLED) {
+  if (env.VERCEL_TELEMETRY_DISABLED) {
     // disabling telemetry with the environment variable
     // implies the user has already been informed
     return;
@@ -31,5 +48,9 @@ export function checkTelemetryStatus({ config }: { config: GlobalConfig }) {
     enabled: true,
   };
 
-  configFiles.writeToConfigFile(config);
+  if (configStore) {
+    writeGlobalConfigOrThrow(configStore, config);
+  } else {
+    configFiles.writeToConfigFile(config);
+  }
 }

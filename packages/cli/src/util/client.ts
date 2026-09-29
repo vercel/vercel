@@ -31,7 +31,15 @@ import responseError from './response-error';
 import printIndications from './print-indications';
 import reauthenticate from './login/reauthenticate';
 import type { SAMLError } from './login/types';
-import { persistAuthConfig, writeToConfigFile } from './config/files';
+import {
+  type CliConfigStore,
+  defaultCliConfigStore,
+  writeGlobalConfigOrThrow,
+} from '../gateways/cli-config-store';
+import {
+  liveWorkingDirectory,
+  type WorkingDirectory,
+} from '../gateways/working-directory';
 import type { TelemetryEventStore } from './telemetry';
 import type { Span } from '@vercel/build-utils';
 import type {
@@ -104,6 +112,12 @@ export interface ClientOptions extends Stdio {
   nonInteractive?: boolean;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions?: boolean;
+  /** Global config and credentials store. Defaults to the import-time global config dir. */
+  cliConfig?: CliConfigStore;
+  /** Working directory primitive. Defaults to `process.cwd()`/`process.chdir()`. */
+  workingDirectory?: WorkingDirectory;
+  /** Invocation environment. Defaults to `process.env`. */
+  env?: Readonly<Record<string, string | undefined>>;
 }
 
 export const isJSONObject = (v: any): v is JSONObject => {
@@ -162,6 +176,15 @@ export default class Client extends EventEmitter implements Stdio {
   userPromise?: Promise<User>;
   teams?: Team[];
   teamsPromise?: Promise<Team[]>;
+  /** Global config and credentials store. */
+  readonly cliConfig: CliConfigStore;
+  /** Working directory primitive backing `cwd`. */
+  readonly workingDirectory: WorkingDirectory;
+  /**
+   * Invocation environment. New code reads this instead of `process.env`;
+   * legacy code still reads `process.env` directly.
+   */
+  readonly env: Readonly<Record<string, string | undefined>>;
 
   constructor(opts: ClientOptions) {
     super();
@@ -180,6 +203,9 @@ export default class Client extends EventEmitter implements Stdio {
     this.agentName = opts.agentName;
     this.nonInteractive = opts.nonInteractive ?? this.isAgent;
     this.dangerouslySkipPermissions = opts.dangerouslySkipPermissions ?? false;
+    this.cliConfig = opts.cliConfig ?? defaultCliConfigStore();
+    this.workingDirectory = opts.workingDirectory ?? liveWorkingDirectory();
+    this.env = opts.env ?? process.env;
 
     const theme = {
       prefix: gray('?'),
@@ -474,7 +500,7 @@ export default class Client extends EventEmitter implements Stdio {
   }
 
   writeToConfigFile() {
-    writeToConfigFile(this.config);
+    writeGlobalConfigOrThrow(this.cliConfig, this.config);
   }
 
   updateAuthConfig(authConfig: Partial<AuthConfig>) {
@@ -496,7 +522,15 @@ export default class Client extends EventEmitter implements Stdio {
   }
 
   persistAuthConfig() {
-    persistAuthConfig(this.authConfig, this.config);
+    const result = this.cliConfig.persistAuthConfig({
+      authConfig: this.authConfig,
+    });
+    if (!result.ok) {
+      const error = new Error(result.error.message);
+      (error as Error & { cause?: unknown }).cause =
+        result.error.details?.cause;
+      throw error;
+    }
   }
 
   /**
@@ -761,10 +795,10 @@ export default class Client extends EventEmitter implements Stdio {
   };
 
   get cwd(): string {
-    return process.cwd();
+    return this.workingDirectory.current();
   }
 
   set cwd(v: string) {
-    process.chdir(v);
+    this.workingDirectory.change({ dir: v });
   }
 }

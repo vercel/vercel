@@ -2,20 +2,37 @@ import type { GlobalConfig } from '@vercel-internals/types';
 import * as configFiles from '../config/files';
 
 import output from '../../output-manager';
+import {
+  type CliConfigStore,
+  writeGlobalConfigOrThrow,
+} from '../../gateways/cli-config-store';
 
-export function checkGuidanceStatus({ config }: { config: GlobalConfig }) {
-  if (!process.env.FF_GUIDANCE_MODE) {
+/**
+ * @param configStore Where to persist the updated config. Defaults to the
+ * import-time global config file.
+ * @param env Invocation environment. Defaults to `process.env`.
+ */
+export function checkGuidanceStatus({
+  config,
+  configStore,
+  env = process.env,
+}: {
+  config: GlobalConfig;
+  configStore?: CliConfigStore;
+  env?: Readonly<Record<string, string | undefined>>;
+}) {
+  if (!env.FF_GUIDANCE_MODE) {
     // disabling guidance if not flagged into experimenting with it.
     return;
   }
 
-  if (process.env.CI) {
+  if (env.CI) {
     // disabling guidance initial enabling if in a CI environment
     // which includes Vercel's build container.
     return;
   }
 
-  if (process.env.VERCEL_GUIDANCE_DISABLED) {
+  if (env.VERCEL_GUIDANCE_DISABLED) {
     // disabling guidance with the environment variable
     // implies the user has already been informed
     return;
@@ -38,5 +55,9 @@ export function checkGuidanceStatus({ config }: { config: GlobalConfig }) {
     enabled: true,
   };
 
-  configFiles.writeToConfigFile(config);
+  if (configStore) {
+    writeGlobalConfigOrThrow(configStore, config);
+  } else {
+    configFiles.writeToConfigFile(config);
+  }
 }

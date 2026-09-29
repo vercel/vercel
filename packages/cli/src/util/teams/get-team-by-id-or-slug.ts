@@ -17,7 +17,7 @@ export const teamCache = new Map<string, Team>();
  * `false` when the lookup must not depend on that overwrite.
  */
 export default async function getTeamByIdOrSlug(
-  client: Client,
+  client: Pick<Client, 'fetch'>,
   teamIdOrSlug: string,
   { useCurrentTeam = true }: { useCurrentTeam?: boolean } = {}
 ): Promise<Team> {

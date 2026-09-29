@@ -12,23 +12,16 @@ import type { VercelConfig } from './dev/types';
 import { isErrnoException } from '@vercel/error-utils';
 import output from '../output-manager';
 
-let config: VercelConfig;
-
 /**
  * Best-effort early config read for CLI startup. Only reads vercel.json
  * directly — does NOT handle vercel.ts or vercel.toml (those go
- * through compileVercelConfig in the per-command path). Used in index.ts for
- * early error checking and scope resolution; commands that need full config
- * support should use readConfig() instead.
+ * through compileVercelConfig in the per-command path). Used at CLI startup
+ * for early error checking and scope resolution; commands that need full
+ * config support should use readConfig() instead.
  */
 export default async function earlyGetConfig(
   configFile?: string
 ): Promise<VercelConfig | Error> {
-  // If config was already read, just return it
-  if (config) {
-    return config;
-  }
-
   let localPath: string;
   try {
     localPath = process.cwd();
@@ -38,6 +31,22 @@ export default async function earlyGetConfig(
     }
     throw err;
   }
+
+  return readEarlyConfig({ cwd: localPath, configFile });
+}
+
+/**
+ * Cache-free early config read relative to `cwd`. Same semantics as
+ * `earlyGetConfig`, without reading `process.cwd()`.
+ */
+export async function readEarlyConfig({
+  cwd: localPath,
+  configFile,
+}: {
+  cwd: string;
+  configFile?: string;
+}): Promise<VercelConfig | Error> {
+  let config: VercelConfig;
 
   // First try with the config supplied by the user via --local-config
   if (configFile) {

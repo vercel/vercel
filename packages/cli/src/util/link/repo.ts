@@ -72,9 +72,16 @@ interface NewProject {
  * has already been linked.
  */
 export async function getRepoLink(
-  client: Client,
+  _client: Client,
   cwd: string
 ): Promise<RepoLink | undefined> {
+  return readRepoLink(cwd);
+}
+
+/**
+ * Same as `getRepoLink`, without the unused `client` parameter.
+ */
+export async function readRepoLink(cwd: string): Promise<RepoLink | undefined> {
   // Determine where the root of the repo is
   const rootPath = await findRepoRoot(cwd);
   if (!rootPath) return undefined;

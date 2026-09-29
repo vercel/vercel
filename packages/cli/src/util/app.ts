@@ -9,8 +9,10 @@ export interface App {
   name?: string;
 }
 
-export function isAppPrincipalEnabled() {
-  return !!process.env['APP_PRINCIPAL_ENABLED'];
+export function isAppPrincipalEnabled(
+  env: Readonly<Record<string, string | undefined>> = process.env
+) {
+  return !!env['APP_PRINCIPAL_ENABLED'];
 }
 
 export function resolveAppFromToken(

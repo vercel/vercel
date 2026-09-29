@@ -2,7 +2,12 @@ import chalk from 'chalk';
 import { help } from '../help';
 import { whoamiCommand } from './command';
 
-import getScope, { type ScopeContext } from '../../util/get-scope';
+import {
+  resolveScope,
+  type ScopeContext,
+} from '../../util/scope/resolve-scope';
+import type { ScopeResolutionContext } from '../../gateways/context';
+import { scopeContextFromClient } from '../../gateways/live-context';
 import { parseArguments } from '../../util/get-args';
 import type Client from '../../util/client';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -12,7 +17,10 @@ import { WhoamiTelemetryClient } from '../../util/telemetry/commands/whoami';
 import { validateJsonOutput } from '../../util/output-format';
 import { getCommandName } from '../../util/pkg-name';
 
-export default async function whoami(client: Client): Promise<number> {
+export default async function whoami(
+  client: Client,
+  ctx: ScopeResolutionContext = scopeContextFromClient(client)
+): Promise<number> {
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(whoamiCommand.options);
@@ -56,7 +64,7 @@ export default async function whoami(client: Client): Promise<number> {
     return 1;
   }
 
-  const scope = await getScope(client, { resolveLocalScope: true });
+  const scope = await resolveScope(ctx, client, { resolveLocalScope: true });
   const { user, team, app, globalTeam } = scope;
 
   // A local override exists when the effective team (from the linked project)

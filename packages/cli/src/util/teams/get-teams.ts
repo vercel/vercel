@@ -4,6 +4,12 @@ import type { Team } from '@vercel-internals/types';
 import { APIError, InvalidToken } from '../errors-ts';
 import { teamCache } from './get-team-by-id-or-slug';
 
+/** The `Client` members `getTeams` uses. */
+export type TeamsClient = Pick<
+  Client,
+  'fetch' | 'teams' | 'teamsPromise' | 'authConfig'
+>;
+
 export interface GetTeamsV1Options {
   apiVersion?: 1;
 }
@@ -24,15 +30,15 @@ export interface GetTeamsV2Response {
 }
 
 export default function getTeams(
-  client: Client,
+  client: TeamsClient,
   opts?: GetTeamsV1Options
 ): Promise<Team[]>;
 export default function getTeams(
-  client: Client,
+  client: TeamsClient,
   opts: GetTeamsV2Options
 ): Promise<GetTeamsV2Response>;
 export default async function getTeams(
-  client: Client,
+  client: TeamsClient,
   opts: GetTeamsV1Options | GetTeamsV2Options = {}
 ): Promise<Team[] | GetTeamsV2Response> {
   const { apiVersion = 1 } = opts;
@@ -63,7 +69,7 @@ export default async function getTeams(
 }
 
 async function fetchTeams(
-  client: Client,
+  client: TeamsClient,
   opts: GetTeamsV1Options | GetTeamsV2Options = {}
 ): Promise<Team[] | GetTeamsV2Response> {
   const { apiVersion = 1 } = opts;
