@@ -36,3 +36,32 @@ the CLI before `test-unit` through `build:package`.
 
 The fake API checks wire behavior against small fixtures. It does not prove live
 API conformance, so keep direct unit tests and live integration tests.
+
+## Portable world-state scenarios
+
+`portable/` holds scenarios that a second-language runner (for example the Go
+port) can consume without Node or TypeScript. Each scenario states an input
+`world` (server entities and persisted local CLI state), `conditions` (faults),
+an `invoke` (argv and token), and the expected outcome, stdout, API operations,
+and full world after. `portable/RUNNER-CONTRACT.md` is the normative contract.
+
+- Author scenarios as typed object literals in `portable/cases/`, and fake API
+  conformance vectors in `portable/vectors/`. Helpers in `portable/authoring/`
+  only compose worlds; write every expected answer literally.
+- The Zod schemas in `portable/model/` and the TS sources are the only source
+  of truth. Nothing generated is checked in. `portable/runner/load.ts` builds
+  the artifacts in memory, and the rest of the runner reads only those
+  serialized artifacts.
+- Run `pnpm scenarios:generate [outDir]` in `packages/cli` to export the
+  canonical JSON for another runner. The default `outDir` is
+  `portable/generated/`, which is gitignored.
+- `portable.test.ts` runs each generated scenario through
+  `portable/runner/`.
+  `fake-api-vectors.test.ts` checks the world-driven fake API against the
+  vectors.
+
+These tests stay TypeScript-only because they depend on the Node preload guard
+or test the harness itself:
+
+- `guard.test.ts`;
+- `whoami.test.ts`: the Git fallback without a repo link, and a missing route.

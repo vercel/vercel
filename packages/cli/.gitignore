@@ -2,3 +2,6 @@
 !test/dev/fixtures/**/.now
 !test/dev/fixtures/**/.vercel
 .env*.local
+
+# exported by `pnpm scenarios:generate`; source of truth is the Zod/TS sources
+test/scenario/portable/generated

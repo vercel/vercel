@@ -28,6 +28,7 @@
     "prepack": "node scripts/pin-builders.mjs pin",
     "postpack": "node scripts/pin-builders.mjs restore",
     "type-check": "tsc --noEmit",
+    "scenarios:generate": "tsx test/scenario/portable/generate-cli.ts",
     "test:evals": "tsx evals/run.ts",
     "test:evals:smoke": "tsx evals/run.ts smoke --smoke",
     "test:evals:dry": "tsx evals/run.ts --dry",

@@ -36,5 +36,8 @@ packages/**/test/build-fixtures
 packages/**/test/cache-fixtures
 packages/cli/src/util/dev/templates/*.ts
 
+# canonical JSON exported by `pnpm scenarios:generate` (gitignored)
+packages/cli/test/scenario/portable/generated
+
 # python
 /python
