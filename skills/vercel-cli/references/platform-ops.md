@@ -1,57 +1,13 @@
 # Platform Operations
 
-Use these commands for account, billing, alerting, and CLI-level operations. Prefer `--format json` where supported for automation.
-
 ## Alerts
 
-```bash
-vercel alerts                                      # linked-project alerts
-vercel alerts --all --format json                  # team-wide alerts
-vercel alerts --type usage_anomaly --type error_anomaly
-vercel alerts inspect <group-id> --format json
-```
+An alert is an observed event; an alert rule is a configured trigger with notification routing. Inspect the API-owned rule schema before authoring a rule, and discover metric IDs and dimensions from the metrics schema. Built-in and custom rules have different scope requirements; do not copy a body between them without checking the schema.
 
-Alert rules live under `vercel alerts rules`; inspect `vercel alerts rules --help` before creating or changing rules.
+## Usage and Account Changes
 
-## Usage, Contracts, and Purchases
+Bound usage queries to the requested window and grouping. Missing plan or permission data is not zero usage. Billing and purchase operations can change paid account state; keep them within the user's authorized purchase and target.
 
-```bash
-vercel usage --help
-vercel usage --from 2026-05-01 --to 2026-05-08 --breakdown daily
-vercel usage --group-by project --format json
-vercel contract
-vercel buy --help
-```
+Token values are credentials, not ordinary account metadata. Avoid exposing them when listing or describing account state.
 
-Billing and purchase commands can change paid account state. Get explicit user confirmation before running mutations such as `vercel buy ...`.
-
-## Tokens
-
-```bash
-vercel tokens ls --format json
-vercel tokens add "CI deploy" --format json
-vercel tokens rm <token-id>
-```
-
-Prefer `VERCEL_TOKEN` for automation. Do not print token values unless the user explicitly needs them and understands the exposure.
-
-## Telemetry and CLI Maintenance
-
-```bash
-vercel telemetry status
-vercel telemetry enable
-vercel telemetry disable
-vercel upgrade
-vercel whoami --format json
-```
-
-`vercel upgrade` changes the installed global CLI. Prefer the project-pinned CLI or package-manager invocation when one exists, unless the user asked to update a global install.
-
-## Other Account Commands
-
-```bash
-vercel activity --help
-vercel teams --help
-```
-
-If an account operation is not available through a first-class command, use `vercel api` as a fallback.
+CLI upgrades affect the installation used by subsequent commands. Preserve a project-pinned version unless the task calls for changing it; do not upgrade the global installation merely to make a remembered command work.

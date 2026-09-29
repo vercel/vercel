@@ -1,80 +1,21 @@
 # Domains & DNS
 
-## Overview
+## Ownership, Assignment, and DNS
 
-- `vercel domains` — manage domain ownership and project assignment
-- `vercel domains search` — discover available domains and registrar pricing
-- `vercel domains check` — check registrar availability (single or bulk)
-- `vercel domains price` — get registrar quotes (single or bulk)
-- `vercel domains buy` — purchase a domain
-- `vercel dns` — manage DNS records (when using Vercel nameservers)
-- `vercel alias` — map deployment URLs to custom domains
-- `vercel certs` — manage SSL certificates (usually auto-managed)
+Inspect the current owner and project assignment before changing a domain. Adding apex-domain ownership to a team does not attach it to a project, even in a linked directory. Project assignment is explicit; subdomains require it.
 
-Most users only need `vercel alias` — domains and DNS are auto-configured when using Vercel nameservers.
+Use the domain verification result or project Domains settings for required DNS records. Do not prescribe fixed apex IPs or CNAME targets. The CLI's DNS operations manage Vercel-hosted DNS; for an external DNS provider, apply the returned records there.
 
-## Typical Flow
+Registration, DNS hosting, and project assignment are independent. A registrar transfer is not required to serve a domain from Vercel.
 
-1. Add domain to your team, optionally assigning it to a project:
-   - **Team only** — `vercel domains add example.com` adds the domain to your team without assigning a project (works from any directory).
-   - **Assign to a project** — pass the project name as a second argument: `vercel domains add example.com my-project`.
-   - **Linked directory** — one argument still adds to your team only; pass a project name as a second argument to assign it to a project.
-2. Configure nameservers at registrar to point to Vercel
-3. Deploy: `vercel --prod` (domain is auto-assigned)
+## Transfers and Moves
 
-Or manually alias: `vercel alias set <deployment-url> example.com`
+For registrar transfers, follow [Transfer a domain to Vercel](https://vercel.com/docs/domains/working-with-domains/transfer-your-domain#transfer-a-domain-to-vercel). Normally the current registrar must unlock the domain and issue an auth/EPP code; Name.com uses an account-transfer flow instead.
 
-## Domain Discovery
+For project reassignment within one team, use the supported reassignment operation. It removes the previous assignment before adding the destination and is not atomic. Removing team ownership is not a substitute. Verify the resulting assignment.
 
-### Search
+For a cross-team ownership move, use the ownership-transfer workflow rather than removing and re-adding the domain. Preserve destination approval requirements. Re-inspect ownership, aliases, and project assignments after the move rather than assuming they transferred together.
 
-```bash
-vercel domains search acme
-vercel domains search acme --available --tld .com --limit 200
-```
+## Availability Results
 
-Search returns availability, purchase pricing, and renewal pricing in bulk. Use the continuation command printed by the CLI to fetch the next page.
-`--limit` controls how many candidates are checked per page. `--available` filters that window, so a page can return fewer results than the limit.
-
-### Availability
-
-```bash
-vercel domains check example.com
-vercel domains check one.com two.com three.com --format=json
-```
-
-### Pricing
-
-```bash
-vercel domains price example.com
-vercel domains price one.com two.com three.com --format=json
-```
-
-### Notes
-
-- `domains check` and `domains price` support up to 50 domains per request.
-- If `domains price` doesn't output a purchase price for a given domain, the domain is unavailable. If you only need availability data, just use `domains check`. If you need both price and availability data, use `domains price` to fetch both at once.
-
-## Purchase
-
-```bash
-vercel domains buy example.com
-```
-
-```bash
-vercel domains inspect example.com
-vercel domains add example.com              # add to team
-vercel domains add example.com my-project   # add to team and assign to a project
-```
-
-## DNS Records
-
-```bash
-vercel dns ls                                          # list records across every domain on the scope
-vercel dns ls example.com                              # list records for a single domain
-vercel dns add example.com @ A 1.2.3.4
-vercel dns add example.com sub CNAME target.example.com
-vercel dns rm rec_abc123
-```
-
-Use `vercel <command> --help` for full flag details.
+Search filters can leave fewer available domains than the requested page size. Follow pagination before treating a filtered page as the complete result. A missing purchase price can mean a domain is unavailable; distinguish purchase price from renewal price before recommending a purchase.
