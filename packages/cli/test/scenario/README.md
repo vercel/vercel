@@ -25,9 +25,12 @@ the CLI before `test-unit` through `build:package`.
   `git rev-parse`.
 - Unhandled API routes return 404 (not retried) and are recorded in
   `api.unhandled`; scenarios assert that list is empty.
-- App-principal scenarios use `VERCEL_CLI_INTERNAL_TEST_OAUTH_ISSUER` to point
-  OAuth discovery and introspection at the loopback fake API. The CLI accepts
-  only a literal `http://127.0.0.1:<port>` or `http://[::1]:<port>` origin.
+- The CLI needs no test-only configuration. Most scenarios pass
+  `--api <fake origin>`. Scenarios that need OAuth (app principals) run with
+  the production API origin instead, because the CLI refuses token
+  introspection for custom API origins. For those runs, the guard rewrites
+  `fetch` requests for `https://vercel.com` and `https://api.vercel.com` to
+  the fake API (`routeProductionOrigins`).
 - For API error scenarios, use a 4xx other than 403 or 429 unless the test
   targets that status. `Client.fetch` retries 5xx responses with backoff and
   waits for Retry-After plus up to 30s of skew on 429. Endpoints often map 403

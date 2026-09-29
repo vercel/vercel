@@ -217,10 +217,7 @@ export const vectorSchema = z
     request: vectorRequestSchema,
     expect: z.strictObject({
       status: z.number().int(),
-      json: z.json().meta({
-        description:
-          'Response body. `{{origin}}` in strings is the API origin.',
-      }),
+      json: z.json().meta({ description: 'Response body.' }),
       operation: operationLogEntrySchema.nullable().meta({
         description:
           'The operation-log entry recorded for this request, or null when unmodeled.',

@@ -117,18 +117,18 @@ export const operationsCatalog: OperationsCatalog = {
       identity: false,
       recordsTeamId: false,
       params: [],
-      requires: ['oauth-test-issuer'],
+      requires: ['production-origin-routing'],
       responses: {
         none: {
           kind: 'literal',
           status: 200,
           body: {
-            issuer: '{{origin}}/',
-            device_authorization_endpoint: '{{origin}}/oauth/device',
-            token_endpoint: '{{origin}}/oauth/token',
-            revocation_endpoint: '{{origin}}/oauth/revoke',
-            jwks_uri: '{{origin}}/oauth/jwks',
-            introspection_endpoint: '{{origin}}/oauth/introspect',
+            issuer: 'https://vercel.com/',
+            device_authorization_endpoint: 'https://vercel.com/oauth/device',
+            token_endpoint: 'https://vercel.com/oauth/token',
+            revocation_endpoint: 'https://vercel.com/oauth/revoke',
+            jwks_uri: 'https://vercel.com/oauth/jwks',
+            introspection_endpoint: 'https://vercel.com/oauth/introspect',
           },
         },
       },
@@ -140,7 +140,7 @@ export const operationsCatalog: OperationsCatalog = {
       identity: false,
       recordsTeamId: false,
       params: [],
-      requires: ['oauth-test-issuer'],
+      requires: ['production-origin-routing'],
       responses: {
         user: inactiveToken,
         app: {

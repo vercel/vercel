@@ -5,7 +5,7 @@
  * through to the harness 404 `scenario_unhandled` handler.
  */
 import { startFakeApi, type FakeApi } from '../../harness/fake-api';
-import { isJsonObject, substituteOrigin, type Json } from '../model/json';
+import { isJsonObject, type Json } from '../model/json';
 import type {
   Conditions,
   FaultsCatalog,
@@ -143,7 +143,7 @@ export function registerWorldApi(
       const record = () =>
         state.calls.push({ entry, auth: operation.auth, authorization });
       const send = (status: number, body: Json) =>
-        res.status(status).json(substituteOrigin(body, api.origin));
+        res.status(status).json(body);
 
       const faultId = conditions.faults[operationId];
       if (faultId !== undefined) {

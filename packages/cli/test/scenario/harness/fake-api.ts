@@ -19,13 +19,6 @@ export interface FakeApi {
   close(): Promise<void>;
 }
 
-export interface FakeIntrospection {
-  active: boolean;
-  client_id?: string;
-  client_name?: string;
-  team?: { id: string; slug?: string; name?: string };
-}
-
 /**
  * Starts an isolated loopback API for one scenario. It deliberately does not
  * use `test/mocks/client`, which installs Vitest hooks at import time.
@@ -105,25 +98,4 @@ export async function startFakeApi(): Promise<FakeApi> {
         server.close(error => (error ? reject(error) : resolve()));
       }),
   };
-}
-
-/** Registers real OAuth discovery and introspection endpoints on the fake API. */
-export function registerOAuthRoutes(
-  api: FakeApi,
-  { token, introspection }: { token: string; introspection: FakeIntrospection }
-) {
-  api.router.get('/.well-known/openid-configuration', (_req, res) => {
-    res.json({
-      issuer: `${api.origin}/`,
-      device_authorization_endpoint: `${api.origin}/oauth/device`,
-      token_endpoint: `${api.origin}/oauth/token`,
-      revocation_endpoint: `${api.origin}/oauth/revoke`,
-      jwks_uri: `${api.origin}/oauth/jwks`,
-      introspection_endpoint: `${api.origin}/oauth/introspect`,
-    });
-  });
-
-  api.router.post('/oauth/introspect', (req, res) => {
-    res.json(req.body?.token === token ? introspection : { active: false });
-  });
 }

@@ -40,4 +40,32 @@ describe('scenario subprocess guard', () => {
       expect(api.unhandled).toEqual([]);
     });
   });
+
+  it('routes production origins to the fake API only when asked', async () => {
+    await withScenario(async ({ api, sandbox }) => {
+      api.router.get('/ok', (req, res) => {
+        res.send(`ok${req.query.via ? ` via ${req.query.via}` : ''}`);
+      });
+
+      const result = await runNodeWithGuard(
+        probePath,
+        ['routed'],
+        sandbox,
+        api,
+        { env: { VERCEL_SCENARIO_ROUTE_PRODUCTION: '1' } }
+      );
+
+      expect(result.exitCode, result.stderr).toBe(0);
+      expect(JSON.parse(result.stdout)).toEqual({
+        api: 'ok',
+        issuer: 'ok',
+        request: 'ok via request',
+        other: 'ERR_SCENARIO_GUARD',
+      });
+      expect(result.guardViolations).toEqual([
+        { kind: 'socket', target: 'example.com:443' },
+      ]);
+      expect(api.unhandled).toEqual([]);
+    });
+  });
 });

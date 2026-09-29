@@ -95,20 +95,3 @@ function hasOwn(object: object, key: string): boolean {
 function show(value: unknown): string {
   return value === undefined ? 'undefined' : JSON.stringify(value);
 }
-
-/** Replaces the `{{origin}}` placeholder in every string value. */
-export function substituteOrigin(value: Json, origin: string): Json {
-  if (typeof value === 'string') return value.split('{{origin}}').join(origin);
-  if (Array.isArray(value)) {
-    return value.map(item => substituteOrigin(item, origin));
-  }
-  if (isJsonObject(value)) {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [
-        key,
-        substituteOrigin(item, origin),
-      ])
-    );
-  }
-  return value;
-}

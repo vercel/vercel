@@ -11,15 +11,15 @@ import { materializeLocal } from './materialize';
 import { readBackLocal } from './readback';
 import { registerWorldApi, type WorldApiCatalog } from './world-api';
 
+interface CapabilityOptions {
+  env?: Record<string, string>;
+  routeProductionOrigins?: boolean;
+}
+
 /** How this runner implements each capability (runner-specific). */
-const CAPABILITY_ENV: Record<
-  string,
-  (origin: string) => Record<string, string>
-> = {
-  'app-principal': () => ({ APP_PRINCIPAL_ENABLED: '1' }),
-  'oauth-test-issuer': origin => ({
-    VERCEL_CLI_INTERNAL_TEST_OAUTH_ISSUER: origin,
-  }),
+const CAPABILITIES: Record<string, CapabilityOptions> = {
+  'app-principal': { env: { APP_PRINCIPAL_ENABLED: '1' } },
+  'production-origin-routing': { routeProductionOrigins: true },
 };
 
 export type ScenarioRunResult =
@@ -40,7 +40,7 @@ export async function runScenario(
   scenario: Scenario
 ): Promise<ScenarioRunResult> {
   const missing = scenario.requires.filter(
-    id => !Object.prototype.hasOwnProperty.call(CAPABILITY_ENV, id)
+    id => !Object.prototype.hasOwnProperty.call(CAPABILITIES, id)
   );
   if (missing.length > 0) {
     return {
@@ -65,16 +65,17 @@ export async function runScenario(
       scenario.conditions,
       catalog()
     );
-    const env = Object.assign(
-      {},
-      ...scenario.requires.map(id => CAPABILITY_ENV[id](api.origin))
-    );
+    const capabilities = scenario.requires.map(id => CAPABILITIES[id]);
+    const env = Object.assign({}, ...capabilities.map(c => c?.env ?? {}));
 
     const result = await run({
       args: scenario.invoke.argv,
       ...(scenario.invoke.token === null
         ? {}
         : { token: scenario.invoke.token }),
+      routeProductionOrigins: capabilities.some(
+        c => c?.routeProductionOrigins === true
+      ),
       env,
     });
     const readBack = readBackLocal(sandbox);

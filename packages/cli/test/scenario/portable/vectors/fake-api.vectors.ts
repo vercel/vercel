@@ -295,18 +295,19 @@ export const fakeApiVectors: AuthoredVector[] = [
   },
   {
     id: 'fake-api/oauth-discovery',
-    summary: 'OAuth discovery points every endpoint at the fake API origin.',
+    summary:
+      'OAuth discovery serves production metadata; the runner routes those origins to the fake API.',
     world,
     request: { method: 'GET', path: '/.well-known/openid-configuration' },
     expect: {
       status: 200,
       json: {
-        issuer: '{{origin}}/',
-        device_authorization_endpoint: '{{origin}}/oauth/device',
-        token_endpoint: '{{origin}}/oauth/token',
-        revocation_endpoint: '{{origin}}/oauth/revoke',
-        jwks_uri: '{{origin}}/oauth/jwks',
-        introspection_endpoint: '{{origin}}/oauth/introspect',
+        issuer: 'https://vercel.com/',
+        device_authorization_endpoint: 'https://vercel.com/oauth/device',
+        token_endpoint: 'https://vercel.com/oauth/token',
+        revocation_endpoint: 'https://vercel.com/oauth/revoke',
+        jwks_uri: 'https://vercel.com/oauth/jwks',
+        introspection_endpoint: 'https://vercel.com/oauth/introspect',
       },
       operation: { operation: 'oauth.discovery' },
     },

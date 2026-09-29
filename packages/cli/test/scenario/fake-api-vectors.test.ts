@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { substituteOrigin, type Json } from './portable/model/json';
 import {
   loadFaultsCatalog,
   loadManifest,
@@ -47,9 +46,7 @@ describe('portable fake API conformance vectors', () => {
         });
 
         expect(response.status).toBe(vector.expect.status);
-        expect(await response.json()).toEqual(
-          substituteOrigin(vector.expect.json as Json, api.origin)
-        );
+        expect(await response.json()).toEqual(vector.expect.json);
         expect(worldApi.calls.map(call => call.entry)).toEqual(
           vector.expect.operation === null ? [] : [vector.expect.operation]
         );

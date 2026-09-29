@@ -156,7 +156,7 @@ describe('generator validation', () => {
       s => {
         s.expect.operations.log.push({ operation: 'oauth.discovery' });
       },
-      /requires capability "oauth-test-issuer"/,
+      /requires capability "production-origin-routing"/,
     ],
     [
       'team.get without teamId',

@@ -24,6 +24,20 @@ async function attemptAsync(action) {
   }
 }
 
+if (process.argv[2] === 'routed') {
+  const text = async url => (await fetch(url)).text();
+  const request = new Request('https://vercel.com/ok?via=request');
+  process.stdout.write(
+    JSON.stringify({
+      api: await text('https://api.vercel.com/ok'),
+      issuer: await text(new URL('https://vercel.com/ok')),
+      request: await text(request),
+      other: await attemptAsync(() => fetch('https://example.com/')),
+    })
+  );
+  process.exit(0);
+}
+
 const results = {
   netConnect: attempt(() => net.connect(443, '203.0.113.1')),
   tlsConnect: attempt(() => tls.connect(443, 'example.com')),

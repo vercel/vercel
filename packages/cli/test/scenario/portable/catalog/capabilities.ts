@@ -13,11 +13,11 @@ export const capabilitiesCatalog: CapabilitiesCatalog = {
       mechanism:
         'Runner-specific. The TypeScript runner sets APP_PRINCIPAL_ENABLED=1.',
     },
-    'oauth-test-issuer': {
+    'production-origin-routing': {
       summary:
-        'The runner can point OAuth discovery and introspection at the fake API origin.',
+        'The runner invokes the CLI without --api and routes its production origins (https://vercel.com, https://api.vercel.com) to the fake API.',
       mechanism:
-        'Runner-specific. The TypeScript runner sets VERCEL_CLI_INTERNAL_TEST_OAUTH_ISSUER=<fake API origin>.',
+        'Runner-specific. The TypeScript runner preloads a guard that rewrites fetch requests for those origins to the fake API.',
     },
   },
 };

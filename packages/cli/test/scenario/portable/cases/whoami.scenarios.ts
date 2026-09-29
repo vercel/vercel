@@ -52,7 +52,7 @@ const appWorld = baseAppWorld(
   globalTeam,
   scenarioToken
 );
-const appRequires = ['app-principal', 'oauth-test-issuer'];
+const appRequires = ['app-principal', 'production-origin-routing'];
 const localProjectLink = { orgId: localTeam.id, projectId: 'prj_local' };
 
 export const whoamiScenarios: AuthoredScenario[] = [

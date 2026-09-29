@@ -3,16 +3,6 @@ import ua from './ua';
 import { hostname } from 'os';
 
 const VERCEL_ISSUER = new URL('https://vercel.com');
-/**
- * Internal test-only escape hatch for hermetic CLI subprocess tests.
- *
- * When set, OAuth discovery uses this issuer instead of `https://vercel.com`.
- * The value must be a literal loopback HTTP origin such as
- * `http://127.0.0.1:1234`; all other values are rejected before network I/O.
- * This is not a supported user configuration.
- */
-export const OAUTH_TEST_ISSUER_ENV = 'VERCEL_CLI_INTERNAL_TEST_OAUTH_ISSUER';
-const LOOPBACK_HOSTNAMES = new Set(['127.0.0.1', '[::1]']);
 export const VERCEL_CLI_CLIENT_ID = 'cl_HYyOPBNtFMfHhaUn9L4QPfTZz6TP47bp';
 export const userAgent = `${hostname()} @ ${ua}`;
 
@@ -25,66 +15,21 @@ interface AuthorizationServerMetadata {
   introspection_endpoint: URL;
 }
 
-/**
- * Returns the validated test-only loopback issuer, or `null` when the
- * production issuer is active.
- */
-export function getOAuthTestIssuer(): URL | null {
-  const value = process.env[OAUTH_TEST_ISSUER_ENV];
-  if (value === undefined) {
-    return null;
-  }
-
-  let issuer: URL;
-  try {
-    issuer = new URL(value);
-  } catch {
-    throw new Error(`Invalid ${OAUTH_TEST_ISSUER_ENV}`);
-  }
-
-  if (
-    issuer.protocol !== 'http:' ||
-    !LOOPBACK_HOSTNAMES.has(issuer.hostname) ||
-    issuer.port === '' ||
-    issuer.username !== '' ||
-    issuer.password !== '' ||
-    issuer.pathname !== '/' ||
-    issuer.search !== '' ||
-    issuer.hash !== '' ||
-    value !== issuer.origin
-  ) {
-    throw new Error(
-      `${OAUTH_TEST_ISSUER_ENV} must be a literal loopback HTTP origin`
-    );
-  }
-
-  return issuer;
-}
-
-function getOAuthIssuer(): URL {
-  return getOAuthTestIssuer() ?? VERCEL_ISSUER;
-}
-
-let _as: { issuer: string; metadata: AuthorizationServerMetadata } | undefined;
+let _as: AuthorizationServerMetadata;
 export async function as(): Promise<AuthorizationServerMetadata> {
-  const issuer = getOAuthIssuer();
-
-  if (_as?.issuer !== issuer.href) {
-    const discoveryResponse = await discoveryEndpointRequest(issuer);
-    const [discoveryResponseError, as] = await processDiscoveryEndpointResponse(
-      discoveryResponse,
-      issuer,
-      issuer !== VERCEL_ISSUER
-    );
+  if (!_as) {
+    const discoveryResponse = await discoveryEndpointRequest(VERCEL_ISSUER);
+    const [discoveryResponseError, as] =
+      await processDiscoveryEndpointResponse(discoveryResponse);
 
     if (discoveryResponseError) {
       throw discoveryResponseError;
     }
 
-    _as = { issuer: issuer.href, metadata: as };
+    _as = as;
   }
 
-  return _as.metadata;
+  return _as;
 }
 
 /**
@@ -104,9 +49,7 @@ async function discoveryEndpointRequest(issuer: URL): Promise<Response> {
  * @see https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse
  */
 async function processDiscoveryEndpointResponse(
-  response: Response,
-  expectedIssuer: URL,
-  requireSameOriginEndpoints: boolean
+  response: Response
 ): Promise<[Error] | [null, AuthorizationServerMetadata]> {
   const json = await response.json();
 
@@ -129,33 +72,23 @@ async function processDiscoveryEndpointResponse(
 
   const issuer = new URL(json.issuer);
 
-  if (issuer.href !== expectedIssuer.href) {
+  if (issuer.href !== VERCEL_ISSUER.href) {
     return [new Error('Issuer mismatch')];
   }
 
-  const metadata = {
-    issuer: issuer,
-    device_authorization_endpoint: new URL(json.device_authorization_endpoint),
-    token_endpoint: new URL(json.token_endpoint),
-    revocation_endpoint: new URL(json.revocation_endpoint),
-    jwks_uri: new URL(json.jwks_uri),
-    introspection_endpoint: new URL(json.introspection_endpoint),
-  };
-
-  if (
-    requireSameOriginEndpoints &&
-    [
-      metadata.device_authorization_endpoint,
-      metadata.token_endpoint,
-      metadata.revocation_endpoint,
-      metadata.jwks_uri,
-      metadata.introspection_endpoint,
-    ].some(endpoint => endpoint.origin !== expectedIssuer.origin)
-  ) {
-    return [new Error('OAuth test endpoint must use the test issuer origin')];
-  }
-
-  return [null, metadata];
+  return [
+    null,
+    {
+      issuer: issuer,
+      device_authorization_endpoint: new URL(
+        json.device_authorization_endpoint
+      ),
+      token_endpoint: new URL(json.token_endpoint),
+      revocation_endpoint: new URL(json.revocation_endpoint),
+      jwks_uri: new URL(json.jwks_uri),
+      introspection_endpoint: new URL(json.introspection_endpoint),
+    },
+  ];
 }
 
 /**

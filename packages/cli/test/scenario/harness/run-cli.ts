@@ -53,6 +53,11 @@ export interface RunCliOptions {
   args: string[];
   /** Synthetic token passed with `--token`; omit it to use temp auth config. */
   token?: string;
+  /**
+   * Run with the CLI's production API origin (no `--api`) and let the guard
+   * route `https://vercel.com` and `https://api.vercel.com` to the fake API.
+   */
+  routeProductionOrigins?: boolean;
   env?: Record<string, string>;
   timeoutMs?: number;
 }
@@ -232,13 +237,12 @@ export async function withScenario(
     await body({
       api,
       sandbox,
-      run: ({ args, token, env, timeoutMs }) =>
+      run: ({ args, token, routeProductionOrigins, env, timeoutMs }) =>
         runNodeWithGuard(
           startScript,
           [
             ...args,
-            '--api',
-            api.origin,
+            ...(routeProductionOrigins ? [] : ['--api', api.origin]),
             '--global-config',
             sandbox.globalConfig,
             '--cwd',
@@ -248,7 +252,12 @@ export async function withScenario(
           sandbox,
           api,
           {
-            ...(env === undefined ? {} : { env }),
+            env: {
+              ...(routeProductionOrigins
+                ? { VERCEL_SCENARIO_ROUTE_PRODUCTION: '1' }
+                : {}),
+              ...env,
+            },
             ...(timeoutMs === undefined ? {} : { timeoutMs }),
           }
         ),

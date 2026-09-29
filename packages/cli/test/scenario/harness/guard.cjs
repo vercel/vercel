@@ -6,6 +6,10 @@
 // loopback address and blocks nested processes, UDP sockets, and non-loopback
 // DNS lookups. Every blocked attempt is appended to a parent-owned log so a CLI
 // catch/fallback path cannot hide it.
+//
+// With VERCEL_SCENARIO_ROUTE_PRODUCTION=1 it also rewrites `fetch` requests for
+// the CLI's production origins to the fake API, so the CLI runs with its
+// production defaults and needs no test-only configuration.
 
 const fs = require('node:fs');
 const net = require('node:net');
@@ -20,6 +24,12 @@ const allowedPort = Number(process.env.VERCEL_SCENARIO_GUARD_PORT);
 if (!logPath || !Number.isInteger(allowedPort) || allowedPort <= 0) {
   throw new Error('[scenario guard] missing guard log or allowed port');
 }
+
+const routeProduction = process.env.VERCEL_SCENARIO_ROUTE_PRODUCTION === '1';
+const productionOrigins = new Set([
+  'https://vercel.com',
+  'https://api.vercel.com',
+]);
 
 const appendFileSync = fs.appendFileSync;
 const loopbackHosts = new Set(['127.0.0.1', '::1', 'localhost']);
@@ -104,6 +114,23 @@ childProcess.ChildProcess.prototype.spawn = function scenarioGuardSpawn(
 ) {
   throw deny('child_process', `ChildProcess ${String(options?.file)}`);
 };
+
+if (routeProduction) {
+  const fakeOrigin = `http://127.0.0.1:${allowedPort}`;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = function scenarioGuardFetch(input, init) {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    if (!productionOrigins.has(url.origin)) {
+      return originalFetch.call(this, input, init);
+    }
+    const routed = `${fakeOrigin}${url.pathname}${url.search}`;
+    return originalFetch.call(
+      this,
+      input instanceof Request ? new Request(routed, input) : routed,
+      init
+    );
+  };
+}
 
 // ESM named imports of built-ins are snapshots until explicitly synchronized.
 syncBuiltinESMExports();

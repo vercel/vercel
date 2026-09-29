@@ -109,7 +109,10 @@ Every runner enforces all of these rules on every scenario.
    `world.server` and applies `conditions.faults` (see "Fake API").
 3. **Invocation.** Run
    `<cli> <argv...> --api <origin> --global-config <sandbox>/global-config --cwd <sandbox>/workspace`,
-   and append `--token <invoke.token>` when `invoke.token` is non-null. Stdin,
+   and append `--token <invoke.token>` when `invoke.token` is non-null. When
+   the scenario requires `production-origin-routing`, omit `--api <origin>`
+   and route the CLI's production origins to the fake API instead (see
+   "Catalogs"). Stdin,
    stdout and stderr are not TTYs. Build the environment from scratch:
    - `HOME` and the XDG directories point inside the sandbox;
    - `NO_COLOR=1`, `FORCE_COLOR=0`, `VERCEL_TELEMETRY_DISABLED=1`,
@@ -195,9 +198,10 @@ pattern (`:name` segments are params). Then apply these steps in order:
      `semantics` describes. If the semantics find nothing, respond with
      `otherwise`.
 
-A request that matches no operation is unmodeled in the same way. In any
-literal body, replace the placeholder string `{{origin}}` with the fake API
-origin (scheme, host and port, with no trailing slash).
+A request that matches no operation is unmodeled in the same way. Literal
+bodies are served verbatim. OAuth discovery returns production URLs
+(`https://vercel.com/...`); the runner's origin routing sends the CLI's
+follow-up requests to the fake API.
 
 `teams.list` returns the user's `"direct"` memberships, in `teamOrder` order.
 Order matters because the CLI picks the first match.
@@ -220,7 +224,7 @@ Each file in `fake-api-vectors/` holds:
 - `world` and `conditions`;
 - a `request`: `method`, `path`, `query`, `headers.authorization?`, and
   `body?` (sent as `application/x-www-form-urlencoded`);
-- the expected `status`, `json` (with `{{origin}}` placeholders), and the
+- the expected `status`, `json`, and the
   recorded `operation` entry (`null` when unmodeled).
 
 A runner must pass every vector against its own fake API before it trusts its
@@ -236,12 +240,15 @@ tests as complementary coverage.
 
   - `app-principal`: the CLI treats app tokens as principals, identified
     through introspection.
-  - `oauth-test-issuer`: the runner can point OAuth discovery at the fake API
-    origin.
+  - `production-origin-routing`: the runner invokes the CLI without `--api`
+    and routes requests for `https://vercel.com` (OAuth) and
+    `https://api.vercel.com` (API) to the fake API. The CLI refuses token
+    introspection for custom API origins, so app-principal scenarios need
+    this capability. The CLI itself needs no test-only configuration.
 
-  The mechanism is runner-specific. The TS runner sets `APP_PRINCIPAL_ENABLED=1`
-  and `VERCEL_CLI_INTERNAL_TEST_OAUTH_ISSUER=<origin>`. Those variable names
-  never appear in scenario files.
+  The mechanism is runner-specific. The TS runner sets `APP_PRINCIPAL_ENABLED=1`,
+  and its preloaded guard rewrites `fetch` requests for the production
+  origins to the fake API. These mechanisms never appear in scenario files.
 
 ## Known cross-implementation differences
 
