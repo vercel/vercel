@@ -1,3 +1,14 @@
+/**
+ * Scenario harness: runs the real CLI entry point over in-memory fakes.
+ *
+ * Keep scenarios in few files. Add new cases to an existing file (for example
+ * `whoami.test.ts` or `bootstrap.test.ts`) rather than creating a new one.
+ * Vitest isolates each file, so every scenario file pays a one-time module
+ * load of about 4-5 s on its first `runScenario`. Most of that is
+ * `src/commands-bulk.ts`, which `run-cli.ts` imports to reach many commands.
+ * Every later scenario in the same file takes about 1 ms. Create a new file
+ * only for a new command family.
+ */
 import { afterAll, beforeAll } from 'vitest';
 import {
   MockAgent,
