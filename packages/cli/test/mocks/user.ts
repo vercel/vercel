@@ -1,6 +1,7 @@
 import chance from 'chance';
 import { client } from './client';
 import type { User } from '@vercel-internals/types';
+import { registerUserRoutes } from './user-team-routes';
 
 export function useUser(additionalAttrs: Partial<User> = {}) {
   const user = {
@@ -10,25 +11,7 @@ export function useUser(additionalAttrs: Partial<User> = {}) {
     username: chance().first({ nationality: 'en' }).toLowerCase(),
     ...additionalAttrs,
   };
-  client.scenario.get('/v2/user', (_req, res) => {
-    res.json({
-      user,
-    });
-  });
-
-  client.scenario.post('/registration', (_req, res) => {
-    res.json({
-      token: 'T1dmvPu36nmyYisXAs7IRzcR',
-      securityCode: 'Practical Saola',
-    });
-  });
-
-  client.scenario.get('/registration/verify', (_req, res) => {
-    res.json({
-      token: 'hjkjn',
-      email: user.email,
-    });
-  });
+  registerUserRoutes(client.scenario, user);
 
   return user;
 }

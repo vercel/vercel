@@ -1,6 +1,7 @@
 import type Client from './client';
 import {
   type AccessToken,
+  getOAuthTestIssuer,
   inspectTokenRequest,
   processInspectTokenResponse,
 } from './oauth';
@@ -18,7 +19,12 @@ export async function introspectToken(
     throw new Error('No token to introspect');
   }
 
-  if (new URL(client.apiUrl).origin !== VERCEL_API_ORIGIN) {
+  const apiOrigin = new URL(client.apiUrl).origin;
+  // The internal OAuth test issuer permits only its own loopback API origin.
+  if (
+    apiOrigin !== VERCEL_API_ORIGIN &&
+    apiOrigin !== getOAuthTestIssuer()?.origin
+  ) {
     throw new Error(
       'Token introspection is unavailable for custom API origins'
     );

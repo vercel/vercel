@@ -3,27 +3,16 @@ import { client } from './client';
 import { beforeEach } from 'vitest';
 import { teamCache } from '../../src/util/teams/get-team-by-id-or-slug';
 import assert from 'assert';
+import { registerTeamRoutes } from './user-team-routes';
+import type { Team, TeamRouteOptions } from './user-team-routes';
 
-export type Team = {
-  id: string;
-  slug: string;
-  name: string;
-  creatorId: string;
-  created: string;
-  avatar: null;
-};
+export type { Team } from './user-team-routes';
 
 let teams: Team[] = [];
 
 export function useTeams(
   teamId?: string,
-  options: {
-    failMissingToken?: boolean;
-    failInvalidToken?: boolean;
-    failNoAccess?: boolean;
-    failWithCustom403Code?: boolean;
-    apiVersion?: number;
-  } = {
+  options: TeamRouteOptions = {
     failMissingToken: false,
     failInvalidToken: false,
     failNoAccess: false,
@@ -36,54 +25,7 @@ export function useTeams(
 
   createTeam(teamId);
 
-  for (const team of teams) {
-    client.scenario.get(`/teams/${team.id}`, (_req, res) => {
-      if (options.failMissingToken) {
-        res.statusCode = 403;
-        res.json({
-          message: 'The request is missing an authentication token',
-          code: 'forbidden',
-          missingToken: true,
-        });
-        return;
-      }
-      if (options.failInvalidToken) {
-        res.statusCode = 403;
-        res.json({
-          message: 'Not authorized',
-          code: 'forbidden',
-          invalidToken: true,
-        });
-        return;
-      }
-
-      if (options.failNoAccess) {
-        res.statusCode = 403;
-        res.send({
-          code: 'team_unauthorized',
-          message: 'You are not authorized',
-        });
-        return;
-      }
-
-      if (options.failWithCustom403Code) {
-        res.statusCode = 403;
-        res.send({
-          code: 'custom_error_code',
-          message: 'You are not authorized to read this team.',
-        });
-        return;
-      }
-
-      res.json(team);
-    });
-  }
-
-  client.scenario.get(`/v${options.apiVersion}/teams`, (_req, res) => {
-    res.json({
-      teams,
-    });
-  });
+  registerTeamRoutes(client.scenario, teams, options);
 
   return options.apiVersion === 2 ? { teams } : teams;
 }
