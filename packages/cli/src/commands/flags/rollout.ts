@@ -59,6 +59,7 @@ export default async function rollout(
   const stageInputs = ((flags['--stage'] as string[] | undefined) || []).map(
     input => input.trim()
   );
+  const finalPercentage = flags['--final-percentage'] as string | undefined;
   const start = normalizeOptionalInput(flags['--start'] as string | undefined);
   const message = normalizeOptionalInput(
     flags['--message'] as string | undefined
@@ -83,6 +84,7 @@ export default async function rollout(
   telemetryClient.trackCliOptionStage(
     stageInputs.length > 0 ? [stageInputs[0]] : undefined
   );
+  telemetryClient.trackCliOptionFinalPercentage(finalPercentage);
   telemetryClient.trackCliOptionStart(start);
   telemetryClient.trackCliOptionMessage(message);
 
@@ -129,6 +131,7 @@ export default async function rollout(
 
     const rolloutConfig = resolveFlagRollout(flag, settings, {
       stageInputs,
+      finalPercentage,
       baseSelector,
       rollFromVariantSelector,
       rollToVariantSelector,

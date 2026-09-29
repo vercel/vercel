@@ -731,6 +731,16 @@ export const splitSubcommand = {
   ],
 } as const;
 
+const rolloutFinalPercentageOption = {
+  name: 'final-percentage',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description:
+    'Percentage served indefinitely after the last stage (0–100, up to 3 decimal places). Preserves the current value when omitted; defaults to 100 for new rollouts.',
+  argument: 'PERCENTAGE',
+} as const;
+
 export const rolloutSubcommand = {
   name: 'rollout',
   aliases: [],
@@ -795,9 +805,10 @@ export const rolloutSubcommand = {
       type: [String],
       deprecated: false,
       description:
-        'Add a rollout stage as PERCENTAGE,DURATION (e.g. "5,6h"). Can be specified multiple times. 100% is implied at the end.',
+        'Add a rollout stage as PERCENTAGE,DURATION (e.g. "5,6h"). Can be specified multiple times. Ends at --final-percentage (100% by default).',
       argument: 'PERCENTAGE,DURATION',
     },
+    rolloutFinalPercentageOption,
     {
       name: 'start',
       shorthand: null,
@@ -820,6 +831,10 @@ export const rolloutSubcommand = {
     {
       name: 'Start a progressive boolean rollout in production',
       value: `${packageName} flags rollout redesigned-checkout --environment production --by user.userId --stage 5,6h --stage 10,6h --stage 25,12h --stage 50,1d`,
+    },
+    {
+      name: 'Finish a rollout at 50%',
+      value: `${packageName} flags rollout redesigned-checkout -e production --by user.userId --stage 5,6h --stage 25,12h --final-percentage 50`,
     },
     {
       name: 'Schedule a string-flag rollout for later',
@@ -895,6 +910,7 @@ const ruleOutcomeOptions = [
       'Add a rollout stage as PERCENTAGE,DURATION. Can be specified multiple times.',
     argument: 'PERCENTAGE,DURATION',
   },
+  rolloutFinalPercentageOption,
   {
     name: 'start',
     shorthand: null,

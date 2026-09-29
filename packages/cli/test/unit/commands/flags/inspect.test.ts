@@ -44,6 +44,34 @@ describe('flags inspect', () => {
     ]);
   });
 
+  it.each([
+    undefined,
+    0,
+    33_333,
+    50_000,
+    100_000,
+  ])('displays rollout finalPromille %s in default and rule outcomes', async finalPromille => {
+    const outcome = {
+      type: 'rollout' as const,
+      base: { type: 'entity' as const, kind: 'user', attribute: 'userId' },
+      startTimestamp: 1_700_000_000_000,
+      rollFromVariantId: 'off',
+      rollToVariantId: 'on',
+      defaultVariantId: 'off',
+      slots: [{ promille: 5000, durationMs: 3_600_000 }],
+      ...(finalPromille !== undefined && { finalPromille }),
+    };
+    flagsList[0].environments.production.fallthrough = outcome;
+    flagsList[0].environments.production.rules = [
+      { id: 'rollout', conditions: [], outcome },
+    ];
+    client.setArgv('flags', 'inspect', flagsList[0].slug);
+    expect(await flags(client)).toBe(0);
+    const output = client.stderr.getFullOutput();
+    const endpoint = `then ${(finalPromille ?? 100_000) / 1000}%;`;
+    expect(output.split(endpoint)).toHaveLength(3);
+  });
+
   it('shows flag details', async () => {
     client.setArgv('flags', 'inspect', defaultFlags[0].slug);
     const exitCode = await flags(client);

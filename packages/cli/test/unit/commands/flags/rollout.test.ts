@@ -68,6 +68,101 @@ describe('flags rollout', () => {
     ]);
   });
 
+  it.each([
+    '0',
+    '1.001',
+    '50',
+    '100',
+  ])('configures and displays a final percentage of %s', async percentage => {
+    client.setArgv(
+      'flags',
+      'rollout',
+      testFlags[0].slug,
+      '-e',
+      'production',
+      '--by',
+      'user.userId',
+      '--stage',
+      '5,6h',
+      '--final-percentage',
+      percentage
+    );
+    expect(await flags(client)).toBe(0);
+    expect(testFlags[0].environments.production.fallthrough).toMatchObject({
+      finalPromille: Math.round(Number(percentage) * 1000),
+    });
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      `then ${percentage}% indefinitely`
+    );
+    expect(client.telemetryEventStore.readonlyEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'option:final-percentage',
+          value: '[REDACTED]',
+        }),
+      ])
+    );
+  });
+
+  it.each([
+    '',
+    ' ',
+    '-1',
+    '100.001',
+    '50.1234',
+    'NaN',
+    'Infinity',
+  ])('rejects invalid final percentage %j without updating the flag', async percentage => {
+    const before = JSON.parse(JSON.stringify(testFlags[0]));
+    client.setArgv(
+      'flags',
+      'rollout',
+      testFlags[0].slug,
+      '-e',
+      'production',
+      '--by',
+      'user.userId',
+      '--stage',
+      '5,6h',
+      `--final-percentage=${percentage}`
+    );
+    expect(await flags(client)).toBe(1);
+    expect(testFlags[0]).toEqual(before);
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      'Invalid final percentage'
+    );
+  });
+
+  it.each([
+    0, 50_000, 100_000,
+  ])('updates only the final percentage to %s promille', async finalPromille => {
+    const current = {
+      type: 'rollout' as const,
+      base: { type: 'entity' as const, kind: 'user', attribute: 'userId' },
+      startTimestamp: 1_700_000_000_000,
+      rollFromVariantId: 'off',
+      rollToVariantId: 'on',
+      defaultVariantId: 'off',
+      slots: [{ promille: 5000, durationMs: 3_600_000 }],
+      finalPromille: 25_000,
+    };
+    testFlags[0].environments.production.fallthrough = current;
+    client.setArgv(
+      'flags',
+      'rollout',
+      testFlags[0].slug,
+      '-e',
+      'production',
+      '--final-percentage',
+      String(finalPromille / 1000)
+    );
+    expect(await flags(client)).toBe(0);
+    expect(testFlags[0].environments.production.fallthrough).toEqual({
+      ...current,
+      finalPromille,
+    });
+  });
+
   it('configures a boolean staged rollout with inferred variants', async () => {
     client.setArgv(
       'flags',
@@ -173,7 +268,11 @@ describe('flags rollout', () => {
     });
   });
 
-  it('preserves the current rollout start time when updating an existing rollout', async () => {
+  it.each([
+    undefined,
+    0,
+    50_000,
+  ])('preserves the start time and finalPromille %s when editing stages', async finalPromille => {
     testFlags[0].environments.production.fallthrough = {
       type: 'rollout',
       base: {
@@ -182,6 +281,7 @@ describe('flags rollout', () => {
         attribute: 'userId',
       },
       startTimestamp: 1_700_000_000_000,
+      ...(finalPromille !== undefined && { finalPromille }),
       rollFromVariantId: 'off',
       rollToVariantId: 'on',
       defaultVariantId: 'off',
@@ -206,6 +306,10 @@ describe('flags rollout', () => {
     expect(rollout.type).toBe('rollout');
     if (rollout.type === 'rollout') {
       expect(rollout.startTimestamp).toBe(1_700_000_000_000);
+      expect(rollout.finalPromille).toBe(finalPromille);
+      if (finalPromille === undefined) {
+        expect(rollout).not.toHaveProperty('finalPromille');
+      }
       expect(rollout.base).toEqual({
         type: 'entity',
         kind: 'user',

@@ -99,7 +99,7 @@ function formatRolloutOutcome(
     toVariant,
     outcome.rollToVariantId,
     includeVariantId
-  )}; ${stages}; then 100%; Fallback: ${formatFlagVariantSummary(
+  )}; ${stages}; then ${(outcome.finalPromille ?? 100_000) / 1000}%; Fallback: ${formatFlagVariantSummary(
     defaultVariant,
     outcome.defaultVariantId,
     includeVariantId

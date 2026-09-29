@@ -711,6 +711,98 @@ describe('flags rules', () => {
     );
   });
 
+  it.each([
+    'add',
+    'update',
+  ])('sets the final percentage with rules %s', async action => {
+    client.setArgv(
+      'flags',
+      'rules',
+      action,
+      'my-feature',
+      ...(action === 'update'
+        ? ['rule_1']
+        : ['--condition', 'user.plan:eq:pro']),
+      '-e',
+      'production',
+      '--by',
+      'user.userId',
+      '--stage',
+      '10,1h',
+      '--final-percentage',
+      '50',
+      '--message',
+      'Partial rollout'
+    );
+    expect(await flags(client)).toBe(0);
+    expect(
+      testFlags[0].environments.production.rules.some(
+        rule =>
+          rule.outcome.type === 'rollout' &&
+          rule.outcome.finalPromille === 50_000
+      )
+    ).toBe(true);
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain('then 50%');
+  });
+
+  it('updates only the final percentage on a rollout rule', async () => {
+    const rule = testFlags[0].environments.production.rules[0];
+    const current = {
+      type: 'rollout' as const,
+      base: { type: 'entity' as const, kind: 'user', attribute: 'userId' },
+      startTimestamp: 1_700_000_000_000,
+      rollFromVariantId: 'off',
+      rollToVariantId: 'on',
+      defaultVariantId: 'off',
+      slots: [{ promille: 5000, durationMs: 3_600_000 }],
+      finalPromille: 50_000,
+    };
+    rule.outcome = current;
+    client.setArgv(
+      'flags',
+      'rules',
+      'update',
+      'my-feature',
+      rule.id,
+      '-e',
+      'production',
+      '--final-percentage',
+      '0',
+      '--message',
+      'Change endpoint'
+    );
+    expect(await flags(client)).toBe(0);
+    expect(testFlags[0].environments.production.rules[0]).toEqual({
+      ...rule,
+      outcome: { ...current, finalPromille: 0 },
+    });
+    expect(settingsRequests).toBe(1);
+  });
+
+  it.each([
+    ['--variant', 'on'],
+    ['--weight', 'on=50'],
+  ])('rejects combining final percentage with %s', async (option, value) => {
+    client.setArgv(
+      'flags',
+      'rules',
+      'update',
+      'my-feature',
+      'rule_1',
+      '-e',
+      'production',
+      option,
+      value,
+      '--final-percentage',
+      '0'
+    );
+    expect(await flags(client)).toBe(1);
+    expect(patchBodies).toHaveLength(0);
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      'Cannot combine'
+    );
+  });
+
   it('updates a rule to a rollout outcome while preserving conditions', async () => {
     client.setArgv(
       'flags',

@@ -76,6 +76,15 @@ export class FlagsRolloutTelemetryClient
     }
   }
 
+  trackCliOptionFinalPercentage(percentage: string | undefined) {
+    if (percentage !== undefined) {
+      this.trackCliOption({
+        option: 'final-percentage',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionStart(start: string | undefined) {
     if (start) {
       this.trackCliOption({

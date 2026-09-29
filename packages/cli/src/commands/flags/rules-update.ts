@@ -72,6 +72,7 @@ export default async function rulesUpdate(
   const stageInputs = ((flags['--stage'] as string[] | undefined) ?? []).map(
     input => input.trim()
   );
+  const finalPercentage = flags['--final-percentage'] as string | undefined;
   const start = normalizeOptionalInput(flags['--start'] as string | undefined);
   const message = normalizeOptionalInput(
     flags['--message'] as string | undefined
@@ -88,6 +89,7 @@ export default async function rulesUpdate(
   telemetryClient.trackCliOptionFromVariant(rollFromVariantSelector);
   telemetryClient.trackCliOptionToVariant(rollToVariantSelector);
   telemetryClient.trackCliOptionStage(stageInputs);
+  telemetryClient.trackCliOptionFinalPercentage(finalPercentage);
   telemetryClient.trackCliOptionStart(start);
   telemetryClient.trackCliOptionMessage(message);
   telemetryClient.trackCliOptionProject(flags['--project']);
@@ -100,6 +102,7 @@ export default async function rulesUpdate(
     rollFromVariantSelector,
     rollToVariantSelector,
     stageInputs,
+    finalPercentage,
     start,
   };
 

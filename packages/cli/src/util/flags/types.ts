@@ -39,6 +39,8 @@ export interface FlagRolloutOutcome {
   rollFromVariantId: string;
   rollToVariantId: string;
   defaultVariantId: string;
+  /** Traffic after the schedule ends; defaults to 100_000 (100%). */
+  finalPromille?: number;
   slots: Array<{
     durationMs: number;
     promille: number;
