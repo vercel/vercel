@@ -1920,6 +1920,11 @@ createServer((_req, res) => {
         'diagnostics',
         'static',
       ]);
+
+      // The fixture depends on Next.js, but Storybook is the configured and
+      // executed framework. The output must not be identified as Next.js.
+      const config = await fs.readJSON(join(output, 'config.json'));
+      expect(config.framework?.slug).not.toBe('nextjs');
     } finally {
       delete process.env.STORYBOOK_DISABLE_TELEMETRY;
     }

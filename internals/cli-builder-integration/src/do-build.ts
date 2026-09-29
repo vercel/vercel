@@ -2259,19 +2259,24 @@ async function getFramework(
 
   // determine framework version from build result
   if (detectedFramework.useRuntime) {
+    let usedRuntimeBuilder = false;
     for (const [build, buildResult] of buildResults.entries()) {
-      if (
-        'framework' in buildResult &&
-        build.use === detectedFramework.useRuntime.use
-      ) {
-        return buildResult.framework
-          ? {
-              slug: buildResult.framework.slug,
-              version: buildResult.framework.version,
-            }
-          : undefined;
+      if (build.use === detectedFramework.useRuntime.use) {
+        usedRuntimeBuilder = true;
+        if ('framework' in buildResult) {
+          return buildResult.framework
+            ? {
+                slug: buildResult.framework.slug,
+                version: buildResult.framework.version,
+              }
+            : undefined;
+        }
       }
     }
+
+    // A dependency alone does not mean its framework was built. For example,
+    // a Storybook build can depend on Next.js without running @vercel/next.
+    if (!usedRuntimeBuilder) return;
   }
 
   // determine framework version from listed package.json version
