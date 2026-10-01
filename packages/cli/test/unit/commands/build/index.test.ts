@@ -1920,9 +1920,90 @@ createServer((_req, res) => {
         'diagnostics',
         'static',
       ]);
+
+      const config = await fs.readJSON(join(output, 'config.json'));
+      expect(config).not.toHaveProperty('framework');
     } finally {
       delete process.env.STORYBOOK_DISABLE_TELEMETRY;
     }
+  });
+
+  it('should preserve framework in directly generated Build Output', async () => {
+    const cwd = await getWriteableDirectory();
+    const output = join(cwd, '.vercel', 'output');
+    await fs.outputJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: '.',
+      projectId: '.',
+      settings: {
+        framework: null,
+        createdAt: 1700000000000,
+        installCommand: '',
+        buildCommand: 'node build.mjs',
+      },
+    });
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      private: true,
+      dependencies: { next: '13.3.0' },
+      scripts: { build: 'node build.mjs' },
+    });
+    await fs.writeFile(
+      join(cwd, 'build.mjs'),
+      `import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+const output = join(process.cwd(), '.vercel', 'output');
+mkdirSync(join(output, 'static'), { recursive: true });
+writeFileSync(join(output, 'static', 'index.html'), '<h1>Storybook</h1>');
+writeFileSync(join(output, 'config.json'), JSON.stringify({
+  version: 3,
+  framework: { slug: 'storybook', version: '7.4.5' }
+}));`
+    );
+
+    client.cwd = cwd;
+    expect(await build(client)).toBe(0);
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.framework).toEqual({ slug: 'storybook', version: '7.4.5' });
+  });
+
+  it.each([
+    ['Other preset', null, false],
+    ['vercel.json null override', 'storybook', true],
+  ] as const)('should omit unrelated framework for %s static output', async (_name, projectFramework, overrideInConfig) => {
+    const cwd = await getWriteableDirectory();
+    const output = join(cwd, '.vercel', 'output');
+    await fs.outputJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: '.',
+      projectId: '.',
+      settings: {
+        framework: projectFramework,
+        createdAt: 1700000000000,
+        installCommand: '',
+        buildCommand: 'node build.mjs',
+        outputDirectory: 'dist',
+      },
+    });
+    if (overrideInConfig) {
+      await fs.writeJSON(join(cwd, 'vercel.json'), { framework: null });
+    }
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      private: true,
+      dependencies: { next: '13.3.0' },
+      scripts: { build: 'node build.mjs' },
+    });
+    await fs.writeFile(
+      join(cwd, 'build.mjs'),
+      `import { mkdirSync, writeFileSync } from 'node:fs';
+mkdirSync('dist', { recursive: true });
+writeFileSync('dist/index.html', '<h1>Static site</h1>');`
+    );
+
+    client.cwd = cwd;
+    expect(await build(client)).toBe(0);
+    expect(
+      await fs.readFile(join(output, 'static', 'index.html'), 'utf8')
+    ).toBe('<h1>Static site</h1>');
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config).not.toHaveProperty('framework');
   });
 
   it('should error if .npmrc exists containing use-node-version', async () => {
