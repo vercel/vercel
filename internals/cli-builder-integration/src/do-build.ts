@@ -56,6 +56,7 @@ import {
   detectFrameworkRecord,
   detectFrameworkVersion,
   detectInstrumentation,
+  isOfficialRuntime,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import { generateServicesRoutes } from '@vercel-internals/service-topology';
@@ -2145,9 +2146,10 @@ export async function doBuild(
       : undefined;
 
   const framework =
-    topLevelBuildResults.size > 0
+    existingConfig?.framework ??
+    (topLevelBuildResults.size > 0
       ? await getFramework(workPath, topLevelBuildResults)
-      : undefined;
+      : undefined);
   const explicitRootRoutes = appendBuildOutputRouteTables(
     routesResult.routes,
     detectedExperimentalServicesV2RootRoutes ?? existingConfig?.routes
@@ -2244,7 +2246,7 @@ export async function doBuild(
   return { buildDuration: buildStamp() };
 }
 
-async function getFramework(
+export async function getFramework(
   cwd: string,
   buildResults: Map<Builder, BuildResult | BuildOutputConfig>
 ): Promise<{ slug: string; version: string } | undefined> {
@@ -2259,19 +2261,29 @@ async function getFramework(
 
   // determine framework version from build result
   if (detectedFramework.useRuntime) {
+    const runtimeUse = detectedFramework.useRuntime.use;
+    const officialRuntime = runtimeUse.startsWith('@vercel/')
+      ? runtimeUse.slice('@vercel/'.length)
+      : undefined;
+    let usedRuntimeBuilder = false;
     for (const [build, buildResult] of buildResults.entries()) {
       if (
-        'framework' in buildResult &&
-        build.use === detectedFramework.useRuntime.use
+        build.use === runtimeUse ||
+        (officialRuntime && isOfficialRuntime(officialRuntime, build.use))
       ) {
-        return buildResult.framework
-          ? {
-              slug: buildResult.framework.slug,
-              version: buildResult.framework.version,
-            }
-          : undefined;
+        usedRuntimeBuilder = true;
+        if ('framework' in buildResult) {
+          return buildResult.framework
+            ? {
+                slug: buildResult.framework.slug,
+                version: buildResult.framework.version,
+              }
+            : undefined;
+        }
       }
     }
+
+    if (!usedRuntimeBuilder) return;
   }
 
   // determine framework version from listed package.json version
