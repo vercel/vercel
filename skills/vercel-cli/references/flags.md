@@ -1,6 +1,6 @@
 # Feature Flags
 
-`vercel flags` manages [Vercel Flags](https://vercel.com/docs/flags/vercel-flags) for the linked project.
+`vercel flags` manages [Vercel Flags](https://vercel.com/docs/flags/vercel-flags) for a project selected by an explicit selector or a local link.
 
 `--help` is the source of truth for options and examples. Run `vercel flags --help` for the current subcommand list and `vercel flags <cmd> --help` before using a subcommand. The map below routes by task and carries no options on purpose.
 
@@ -41,7 +41,8 @@ vercel flags open [flag]          # open the dashboard
 
 ## CLI Contracts
 
-- Flags commands need a linked project. Confirm the target with `vercel project inspect --non-interactive` first (see `SKILL.md`).
+- Project-aware Flags commands support `--project <name-or-id>` with `--scope <team>` to select the target without a local link. Confirm that the explicit project and team match the intended target.
+- Without an explicit selector, commands use the linked project. Confirm the resolved owner and project with `vercel project inspect --non-interactive` first (see `SKILL.md`); stop on `link_required` or a target mismatch instead of linking automatically.
 - Use `--json` where a subcommand offers it and parse only stdout.
 - Commands that ask for confirmation (`archive`, `unarchive`, `rm`, `sdk-keys rm`, and others that list `--yes` in `--help`) need `--yes` in non-interactive runs.
 
