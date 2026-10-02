@@ -1488,6 +1488,7 @@ export async function getPrerenderManifest(
       }
     | {
         version: 4;
+        hasParamMatching?: true;
         routes: {
           [route: string]: RawPrerenderTaxonomy & {
             initialRevalidateSeconds: number | false;
@@ -1528,6 +1529,18 @@ export async function getPrerenderManifest(
         };
         notFoundRoutes?: string[];
       } = JSON.parse(await fs.readFile(pathPrerenderManifest, 'utf8'));
+
+  if (manifest.version === 4 && manifest.hasParamMatching) {
+    // Adapter builds return their Build Output API output before reaching this
+    // reader. The legacy builder cannot preserve parameter matching policies.
+    throw new NowBuildError({
+      code: 'NEXT_PARAM_MATCHING_REQUIRES_ADAPTER',
+      message:
+        'Next.js `unstable_paramMatching` and `unstable_generateParamMatching` are not yet supported when deploying with `--prebuilt` without the Vercel Next.js adapter, ' +
+        'or when disabling the adapter with `NEXT_ENABLE_ADAPTER=0`. Deploy your source to Vercel with the adapter enabled instead. ' +
+        'Support for these deployment modes is planned in a future Next.js release, before or when these APIs become stable.',
+    });
+  }
 
   switch (manifest.version) {
     case 1: {

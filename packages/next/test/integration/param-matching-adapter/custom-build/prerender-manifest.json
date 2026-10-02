@@ -1,0 +1,17 @@
+{
+  "version": 4,
+  "hasParamMatching": true,
+  "routes": {},
+  "dynamicRoutes": {
+    "/[slug]": {
+      "routeRegex": "^/([^/]+?)(?:/)?$",
+      "fallback": null,
+      "dataRoute": "/[slug].rsc",
+      "dataRouteRegex": "^/([^/]+?)\\.rsc$"
+    }
+  },
+  "notFoundRoutes": [],
+  "preview": {
+    "previewModeId": "test-build"
+  }
+}
