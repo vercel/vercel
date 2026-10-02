@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "node --version"
+  },
+  "dependencies": {
+    "next": "canary"
+  },
+  "ignoreNextjsUpdates": true
+}
