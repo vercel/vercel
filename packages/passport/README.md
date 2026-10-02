@@ -47,6 +47,27 @@ only accepts the dedicated `https://passport.vercel.com/{owner}` issuer. It also
 validates the Passport-specific token shape so regular Vercel OIDC tokens are
 not accepted as Passport identities.
 
+## Read a token for explicit forwarding
+
+For middleware that needs to forward the current visitor's credential without
+reading identity claims, use the main module:
+
+```ts
+import { getPassportToken } from '@vercel/passport';
+
+const token = getPassportToken();
+```
+
+This reads Vercel's request context in Node.js and Edge runtimes and returns
+`null` when there is no token. It does not read cookies, synthesize a development
+token, verify claims, or automatically attach credentials to fetch requests.
+Use `getIdentity()` or `verifyIdentity()` for authentication decisions.
+
+Only explicitly forward tokens over HTTPS to backends you operate. For a
+same-origin fetch to a Passport-protected deployment, attach the token as
+`x-vercel-oidc-passport-token` and use `redirect: 'manual'` to prevent forwarding
+it through cross-origin redirects. The receiving Proxy validates the token.
+
 ## Verify forwarded tokens
 
 Use `verifyIdentity` when a Passport-protected app forwards its Passport token to

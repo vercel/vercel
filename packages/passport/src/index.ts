@@ -1,6 +1,8 @@
 import { createRemoteJWKSet, jwtVerify, type JWTVerifyOptions } from 'jose';
+import { getContext } from './request-context';
+import { PASSPORT_HEADER_NAME } from './token';
 
-export const PASSPORT_HEADER_NAME = 'x-vercel-oidc-passport-token';
+export { getPassportToken, PASSPORT_HEADER_NAME } from './token';
 export const PASSPORT_COOKIE_NAME = '_vercel_passport';
 
 export type TokenSource = 'header' | 'cookie' | 'local';
@@ -134,12 +136,7 @@ const PASSPORT_JWKS = createRemoteJWKSet(
   new URL(`${VERCEL_OIDC_ISSUER}/.well-known/jwks`)
 );
 const DEFAULT_ALGORITHMS = ['RS256'];
-const SYMBOL_FOR_REQ_CONTEXT = Symbol.for('@vercel/request-context');
 let hasWarnedAboutDevelopmentIdentity = false;
-
-type RequestContext = {
-  headers?: Record<string, string>;
-};
 
 export class PassportIdentityError extends Error {
   constructor(message: string) {
@@ -321,13 +318,6 @@ function isHeadersLike(input: unknown): input is HeadersLike {
       'get' in input &&
       typeof input.get === 'function'
   );
-}
-
-function getContext(): RequestContext {
-  const fromSymbol: typeof globalThis & {
-    [SYMBOL_FOR_REQ_CONTEXT]?: { get?: () => RequestContext };
-  } = globalThis;
-  return fromSymbol[SYMBOL_FOR_REQ_CONTEXT]?.get?.() ?? {};
 }
 
 function getHeader(
