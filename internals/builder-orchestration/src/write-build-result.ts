@@ -694,6 +694,10 @@ async function writeStaticFile(
  * the filesystem at a different location, then create a symlink
  * to the previous location instead of copying the files again.
  *
+ * Returns `false` if the function was not previously written, or if the
+ * symlink could not be created on Windows due to missing privileges (`EPERM`),
+ * in which case the caller falls back to writing the function normally.
+ *
  * @param outputPath The path of the `.vercel/output` directory
  * @param dest The path of destination function's `.func` directory
  * @param fn The Lambda or EdgeFunction instance to create the symlink for
@@ -714,7 +718,20 @@ async function writeFunctionSymlink(
   const targetDest = join(outputDir, 'functions', `${existingPath}.func`);
   const target = relative(destDir, targetDest);
   await fs.mkdirp(destDir);
-  await fs.symlink(target, dest);
+  try {
+    await fs.symlink(target, dest);
+  } catch (err: unknown) {
+    // On Windows, creating a symlink requires elevated privileges (admin or
+    // Developer Mode) and fails with `EPERM` otherwise. Return `false` so the
+    // caller writes a full copy of the function instead of failing the build.
+    if (
+      process.platform === 'win32' &&
+      (err as NodeJS.ErrnoException)?.code === 'EPERM'
+    ) {
+      return false;
+    }
+    throw err;
+  }
   return true;
 }
 
