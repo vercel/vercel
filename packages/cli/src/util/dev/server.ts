@@ -238,7 +238,6 @@ export default class DevServer {
   private sidecars?: DevSidecar[];
   private serviceRoutesTable?: Map<string, Route[]>;
 
-  private vercelConfigWarning: boolean;
   private getVercelConfigPromise: Promise<VercelConfig> | null;
   private blockingBuildsPromise: Promise<void> | null;
   private startPromise: Promise<void> | null;
@@ -441,7 +440,6 @@ export default class DevServer {
     this.inProgressBuilds = new Map();
     this.devCacheDir = join(getVercelDirectory(cwd), 'cache');
 
-    this.vercelConfigWarning = false;
     this.getVercelConfigPromise = null;
     this.blockingBuildsPromise = null;
     this.startPromise = null;
@@ -975,20 +973,6 @@ export default class DevServer {
       vercelConfig.builds.sort(sortBuilders);
     }
 
-    // TODO: temporarily strip and warn since `has` is not implemented yet
-    vercelConfig.routes = (vercelConfig.routes || []).filter(route => {
-      if ('has' in route) {
-        if (!this.vercelConfigWarning) {
-          this.vercelConfigWarning = true;
-          output.warn(
-            `The "has" property in ${vercelConfig[fileNameSymbol]} will be ignored during development. Deployments will work as expected.`
-          );
-        }
-        return false;
-      }
-      return true;
-    });
-
     this.caseSensitive = hasNewRoutingProperties(vercelConfig);
     this.apiDir = detectApiDirectory(vercelConfig.builds || []);
     this.apiExtensions = detectApiExtensions(vercelConfig.builds || []);
@@ -1481,7 +1465,11 @@ export default class DevServer {
               req.method,
               vercelConfig.routes,
               this,
-              vercelConfig
+              vercelConfig,
+              undefined,
+              undefined,
+              undefined,
+              req.headers
             );
             if (isServiceDestination(routeResult.matched_route)) {
               const { service: serviceName } =
@@ -1924,7 +1912,11 @@ export default class DevServer {
         req.method,
         serviceRoutes,
         this,
-        vercelConfig
+        vercelConfig,
+        undefined,
+        undefined,
+        undefined,
+        req.headers
       );
 
       if (serviceResult.requestTransforms) {
@@ -2914,7 +2906,8 @@ export default class DevServer {
         vercelConfig,
         prevHeaders,
         missRoutes,
-        phase
+        phase,
+        req.headers
       );
 
       if (routeResult.requestTransforms) {
@@ -2998,7 +2991,8 @@ export default class DevServer {
           vercelConfig,
           routeResult.headers,
           [],
-          'miss'
+          'miss',
+          req.headers
         );
 
         if (routeResult.requestTransforms) {
@@ -3040,7 +3034,8 @@ export default class DevServer {
           vercelConfig,
           routeResult.headers,
           [],
-          'hit'
+          'hit',
+          req.headers
         );
         routeResult.status = prevStatus;
 
@@ -3075,7 +3070,8 @@ export default class DevServer {
         vercelConfig,
         routeResult.headers,
         [],
-        'error'
+        'error',
+        req.headers
       );
       const { matched_route } = routeResultForError;
 
@@ -3201,7 +3197,11 @@ export default class DevServer {
         req.method,
         buildResult.routes,
         this,
-        vercelConfig
+        vercelConfig,
+        undefined,
+        undefined,
+        undefined,
+        req.headers
       );
       if (matchedRoute.found && callLevel === 0) {
         debug(`Found matching route ${matchedRoute.dest} for ${newUrl}`);

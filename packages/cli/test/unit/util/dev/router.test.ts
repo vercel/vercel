@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { Route } from '@vercel/routing-utils';
 import { devRouter } from '../../../../src/util/dev/router';
 
 describe('devRouter', () => {
@@ -586,5 +587,207 @@ describe('devRouter', () => {
     expect(
       result.responseTransforms?.some(t => t.type === 'response.headers')
     ).toBe(true);
+  });
+
+  it('should skip a route when its `has` header condition is not met', async () => {
+    const routesConfig: Route[] = [
+      {
+        src: '/(.*)',
+        dest: '/private/$1',
+        has: [{ type: 'header', key: 'x-auth' }],
+      },
+      { src: '/(.*)', dest: '/public/$1' },
+    ];
+    const result = await devRouter(
+      '/page',
+      'GET',
+      routesConfig,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {}
+    );
+
+    expect(result).toMatchObject({
+      found: true,
+      dest: '/public/page',
+      matched_route: routesConfig[1],
+      matched_route_idx: 1,
+    });
+  });
+
+  it('should match a route when its `has` header condition is met', async () => {
+    const routesConfig: Route[] = [
+      {
+        src: '/(.*)',
+        dest: '/private/$1',
+        has: [{ type: 'header', key: 'x-auth' }],
+      },
+      { src: '/(.*)', dest: '/public/$1' },
+    ];
+    const result = await devRouter(
+      '/page',
+      'GET',
+      routesConfig,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { 'x-auth': 'token' }
+    );
+
+    expect(result).toMatchObject({
+      found: true,
+      dest: '/private/page',
+      matched_route: routesConfig[0],
+      matched_route_idx: 0,
+    });
+  });
+
+  it('should substitute named groups captured from `has` values', async () => {
+    const routesConfig: Route[] = [
+      {
+        src: '/proxy/(.*)',
+        dest: 'https://example.com/$tenant/$1',
+        has: [
+          {
+            type: 'header',
+            key: 'x-tenant',
+            value: '(?<tenant>[a-z]+)',
+          },
+        ],
+      },
+    ];
+    const result = await devRouter(
+      '/proxy/docs',
+      'GET',
+      routesConfig,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { 'x-tenant': 'acme' }
+    );
+
+    expect(result).toMatchObject({
+      found: true,
+      dest: 'https://example.com/acme/docs',
+      isDestUrl: true,
+    });
+  });
+
+  it('should substitute bare `has` keys from the query string', async () => {
+    const routesConfig: Route[] = [
+      {
+        src: '/blog',
+        dest: '/post-$id.js',
+        has: [{ type: 'query', key: 'id' }],
+      },
+    ];
+    const result = await devRouter(
+      '/blog?id=42',
+      'GET',
+      routesConfig,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {}
+    );
+
+    expect(result).toMatchObject({
+      found: true,
+      dest: '/post-42.js',
+      query: { id: ['42'] },
+    });
+  });
+
+  it('should match `has` cookie and host conditions', async () => {
+    const routesConfig: Route[] = [
+      {
+        src: '/(.*)',
+        dest: '/eu/$1',
+        has: [
+          { type: 'cookie', key: 'region', value: '^eu' },
+          { type: 'host', value: '^(?<sub>[a-z]+)\\.example\\.com$' },
+        ],
+      },
+    ];
+    const result = await devRouter(
+      '/page',
+      'GET',
+      routesConfig,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { cookie: 'region=eu-west', host: 'shop.example.com:3000' }
+    );
+
+    expect(result).toMatchObject({ found: true, dest: '/eu/page' });
+  });
+
+  it('should skip a route when its `missing` condition is present', async () => {
+    const routesConfig: Route[] = [
+      {
+        src: '/(.*)',
+        dest: '/cached/$1',
+        missing: [{ type: 'header', key: 'x-no-cache' }],
+      },
+      { src: '/(.*)', dest: '/fresh/$1' },
+    ];
+
+    let result = await devRouter(
+      '/page',
+      'GET',
+      routesConfig,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { 'x-no-cache': '1' }
+    );
+    expect(result).toMatchObject({
+      found: true,
+      dest: '/fresh/page',
+      matched_route_idx: 1,
+    });
+
+    result = await devRouter(
+      '/page',
+      'GET',
+      routesConfig,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {}
+    );
+    expect(result).toMatchObject({
+      found: true,
+      dest: '/cached/page',
+      matched_route_idx: 0,
+    });
+  });
+
+  it('should ignore `has` conditions when no request headers are given', async () => {
+    const routesConfig: Route[] = [
+      {
+        src: '/(.*)',
+        dest: '/private/$1',
+        has: [{ type: 'header', key: 'x-auth' }],
+      },
+    ];
+    const result = await devRouter('/page', 'GET', routesConfig);
+
+    expect(result).toMatchObject({ found: true, dest: '/private/page' });
   });
 });
