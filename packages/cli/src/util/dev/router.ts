@@ -1,5 +1,6 @@
 import url from 'url';
 import PCRE from 'pcre-to-regexp';
+import type { IncomingHttpHeaders } from 'http';
 
 import isURL from './is-url';
 import type DevServer from './server';
@@ -8,23 +9,31 @@ import type { VercelConfig, HttpHeadersConfig, RouteResult } from './types';
 import { isHandler, type Route, type HandleValue } from '@vercel/routing-utils';
 import { parseQueryString } from './parse-query-string';
 import { resolveTransforms, type Transform } from './transforms';
+import { matchRouteConditions } from './route-conditions';
 
 export function resolveRouteParameters(
   str: string,
   match: string[],
-  keys: string[]
+  keys: string[],
+  extraParams?: Record<string, string>
 ): string {
   return str.replace(/\$([1-9a-zA-Z]+)/g, (_, param) => {
-    let matchIndex: number = keys.indexOf(param);
-    if (matchIndex === -1) {
-      // It's a number match, not a named capture
-      matchIndex = parseInt(param, 10);
-    } else {
+    const matchIndex: number = keys.indexOf(param);
+    if (matchIndex !== -1) {
       // For named captures, add one to the `keys` index to
       // match up with the RegExp group matches
-      matchIndex++;
+      return match[matchIndex + 1] || '';
     }
-    return match[matchIndex] || '';
+    // Values captured from `has` conditions (named regex groups,
+    // bare keys, `$host`). `src` captures take precedence on collision.
+    if (
+      extraParams &&
+      Object.prototype.hasOwnProperty.call(extraParams, param)
+    ) {
+      return extraParams[param];
+    }
+    // It's a number match, not a named capture
+    return match[parseInt(param, 10)] || '';
   });
 }
 
@@ -55,7 +64,8 @@ export async function devRouter(
   vercelConfig?: VercelConfig,
   previousHeaders?: HttpHeadersConfig,
   missRoutes?: Route[],
-  phase?: HandleValue | null
+  phase?: HandleValue | null,
+  reqHeaders?: IncomingHttpHeaders
 ): Promise<RouteResult> {
   let result: RouteResult | undefined;
   let { pathname: reqPathname, search: reqSearch } = url.parse(reqUrl);
@@ -80,7 +90,7 @@ export async function devRouter(
         continue;
       }
 
-      const { src, headers, methods } = routeConfig;
+      const { src, headers, methods, has, missing } = routeConfig;
 
       if (Array.isArray(methods) && reqMethod && !methods.includes(reqMethod)) {
         continue;
@@ -92,7 +102,23 @@ export async function devRouter(
       const match =
         matcher.exec(reqPathname) || matcher.exec(reqPathname.substring(1));
 
+      // Values captured from `has` conditions, usable as `$name`
+      // substitutions in `dest` and `headers`.
+      let conditionParams: Record<string, string> | undefined;
+
       if (match) {
+        // Without request headers (e.g. internal build-output matching),
+        // conditions can't be evaluated and are ignored as before.
+        if ((has?.length || missing?.length) && reqHeaders) {
+          const conditions = matchRouteConditions(has, missing, {
+            headers: reqHeaders,
+            query: reqQuery,
+          });
+          if (!conditions.matched) {
+            continue;
+          }
+          conditionParams = conditions.params;
+        }
         const routeTransforms = routeConfig.transforms
           ? resolveTransforms(routeConfig.transforms, {
               match,
@@ -115,7 +141,12 @@ export async function devRouter(
         let destPath: string = reqPathname;
 
         if (routeConfig.dest) {
-          destPath = resolveRouteParameters(routeConfig.dest, match, keys);
+          destPath = resolveRouteParameters(
+            routeConfig.dest,
+            match,
+            keys,
+            conditionParams
+          );
         }
 
         if (headers) {
@@ -129,7 +160,12 @@ export async function devRouter(
               // don't override headers in the hit or miss phase
             } else {
               const originalValue = headers[originalKey];
-              const value = resolveRouteParameters(originalValue, match, keys);
+              const value = resolveRouteParameters(
+                originalValue,
+                match,
+                keys,
+                conditionParams
+              );
               combinedHeaders[lowerKey] = value;
             }
           }
@@ -182,7 +218,8 @@ export async function devRouter(
                 vercelConfig,
                 combinedHeaders,
                 [],
-                'miss'
+                'miss',
+                reqHeaders
               );
               if (missResult.found) {
                 // Carry transforms matched before the miss into the miss result.
