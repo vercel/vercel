@@ -7,6 +7,7 @@ import { afterAll, describe, expect, it, vi } from 'vitest';
 import { frameworkList } from '@vercel/frameworks';
 import { getVercelIgnore } from '@vercel/client';
 import DevServer from '../../../../src/util/dev/server';
+import pkg from '../../../../src/util/pkg';
 import {
   DEV_RUNTIME_CACHE_ITEM_PREFIX,
   RuntimeCacheStore,
@@ -601,6 +602,29 @@ describe('DevServer Runtime Cache environment', () => {
     expect((server as any).envConfigs.runEnv).toMatchObject(
       getDevRuntimeCacheEnv('http://localhost:3000')
     );
+  });
+});
+
+describe('DevServer queue environment', () => {
+  it('adds the queue broker settings and CLI version to the function run environment', async () => {
+    const cwd = join(__dirname, '../../../fixtures/unit/commands/build/proxy');
+    const server = new DevServer(cwd, {} as any);
+    (server as any).sidecars = [{}];
+    (server as any)._address = new URL('http://localhost:3000');
+    (server as any).exit = vi.fn(() => {
+      throw new Error('`vc dev` exited while resolving the config');
+    });
+    (server as any).readJsonFile = vi.fn(async (name: string) =>
+      name === 'package.json' ? null : { version: 2 }
+    );
+
+    await server._getVercelConfig();
+
+    expect((server as any).envConfigs.runEnv).toMatchObject({
+      VERCEL_QUEUE_BASE_URL: 'http://localhost:3000/_svc/_queues',
+      VERCEL_QUEUE_TOKEN: 'vc-dev-token',
+      VERCEL_CLI_VERSION: pkg.version,
+    });
   });
 });
 

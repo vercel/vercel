@@ -20,6 +20,7 @@ import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
 import deepEqual from 'fast-deep-equal';
 import { checkForPort } from './port-utils';
+import pkg from '../pkg';
 import npa from 'npm-package-arg';
 import type { ChildProcess } from 'child_process';
 import JSONparse from 'json-parse-better-errors';
@@ -273,6 +274,9 @@ export default class DevServer {
       VERCEL_QUEUE_BASE_URL: `${this.address.origin}/_svc/_queues`,
       VERCEL_QUEUE_TOKEN: 'vc-dev-token',
       VERCEL_REGION: 'dev1',
+      // `@vercel/queue` only uses the local broker injected above when it can
+      // tell it is running under a CLI version that supports it.
+      VERCEL_CLI_VERSION: pkg.version,
     };
   }
 
