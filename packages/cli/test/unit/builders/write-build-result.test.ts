@@ -10,7 +10,7 @@ import {
   type BuilderV2,
   type BuilderV3,
 } from '@vercel/build-utils';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import fs from 'fs-extra';
 import {
   filesWithoutFsRefs,
@@ -235,6 +235,103 @@ describe('writeBuildResult()', () => {
     } finally {
       await fs.remove(workPath);
     }
+  });
+
+  describe('deduplicated functions', () => {
+    const build = { src: 'api/index.js', use: '@vercel/node' };
+    const builder: BuilderV2 = {
+      version: 2,
+      build: async () => {
+        throw new Error('not used by writeBuildResult');
+      },
+    };
+
+    async function writeDeduplicated(workPath: string, outputDir: string) {
+      const lambda = new Lambda({
+        files: {
+          'index.js': new FileBlob({ data: 'exports.handler = () => {}' }),
+        },
+        handler: 'index.handler',
+        runtime: 'nodejs22.x',
+      });
+      await writeBuildResult({
+        repoRootPath: workPath,
+        outputDir,
+        buildResult: { output: { a: lambda, 'b/c': lambda } },
+        build,
+        builder,
+        builderPkg: { name: '@vercel/node' },
+        vercelConfig: null,
+        standalone: false,
+        workPath,
+      });
+    }
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('symlinks a function that was already written', async () => {
+      const workPath = await getWriteableDirectory();
+      const outputDir = join(workPath, '.vercel', 'output');
+      try {
+        await writeDeduplicated(workPath, outputDir);
+        const links = await Promise.all(
+          ['a', 'b/c'].map(async name =>
+            (
+              await fs.lstat(join(outputDir, 'functions', `${name}.func`))
+            ).isSymbolicLink()
+          )
+        );
+        // Exactly one of the two outputs is a symlink to the other
+        expect(links.filter(Boolean)).toHaveLength(1);
+      } finally {
+        await fs.remove(workPath);
+      }
+    });
+
+    it('falls back to copying on Windows when symlink fails with EPERM', async () => {
+      const workPath = await getWriteableDirectory();
+      const outputDir = join(workPath, '.vercel', 'output');
+      const platform = vi
+        .spyOn(process, 'platform', 'get')
+        .mockReturnValue('win32');
+      const symlink = vi.spyOn(fs, 'symlink').mockImplementation(async () => {
+        throw Object.assign(new Error('EPERM: operation not permitted'), {
+          code: 'EPERM',
+          syscall: 'symlink',
+        });
+      });
+      try {
+        await writeDeduplicated(workPath, outputDir);
+        expect(symlink).toHaveBeenCalled();
+        for (const name of ['a', 'b/c']) {
+          const dir = join(outputDir, 'functions', `${name}.func`);
+          expect((await fs.lstat(dir)).isSymbolicLink()).toBe(false);
+          expect(await fs.pathExists(join(dir, '.vc-config.json'))).toBe(true);
+          expect(await fs.pathExists(join(dir, 'index.js'))).toBe(true);
+        }
+      } finally {
+        platform.mockRestore();
+        await fs.remove(workPath);
+      }
+    });
+
+    it('rethrows symlink errors that are not EPERM on Windows', async () => {
+      const workPath = await getWriteableDirectory();
+      const outputDir = join(workPath, '.vercel', 'output');
+      vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+      vi.spyOn(fs, 'symlink').mockImplementation(async () => {
+        throw Object.assign(new Error('ENOSPC'), { code: 'ENOSPC' });
+      });
+      try {
+        await expect(writeDeduplicated(workPath, outputDir)).rejects.toThrow(
+          'ENOSPC'
+        );
+      } finally {
+        await fs.remove(workPath);
+      }
+    });
   });
 });
 
