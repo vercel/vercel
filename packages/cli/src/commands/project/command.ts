@@ -597,6 +597,10 @@ export const protectionSubcommand = {
     { name: 'name', required: false },
   ],
   options: [
+    {
+      ...yesOption,
+      description: 'Accept add-on pricing and skip the confirmation prompt.',
+    },
     formatOption,
     jsonOption,
     {
@@ -852,7 +856,7 @@ export const observabilitySubcommand = {
       required: false,
     },
   ],
-  options: [formatOption, jsonOption],
+  options: [yesOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Enable Observability Plus for the linked project',

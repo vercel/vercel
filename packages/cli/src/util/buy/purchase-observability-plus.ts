@@ -6,6 +6,8 @@ import { isAPIError } from '../errors-ts';
 import getScope from '../get-scope';
 import { printAlignedLabel } from '../output/print-aligned-label';
 import { getCommandName } from '../pkg-name';
+import { OBSERVABILITY_PLUS_PRICING } from './observability-plus-addon';
+import { confirmAddon } from './confirm-addon';
 
 const OBSERVABILITY_PLUS_PRODUCT_ALIAS = 'observabilityPlus';
 
@@ -83,21 +85,17 @@ export async function purchaseObservabilityPlus(
     return 0;
   }
 
-  if (!yes && (!client.stdin.isTTY || client.nonInteractive)) {
-    output.error(
-      'Confirmation required. Use --yes to skip the confirmation prompt in non-interactive mode.'
-    );
-    return 1;
-  }
-
-  if (!asJson || !yes) {
-    printAlignedLabel('Add-on', 'Observability Plus');
-    printAlignedLabel('Team', contextName);
-    printAlignedLabel('Usage', 'Billed as accrued');
-  }
-
-  if (!yes && !(await client.input.confirm('Enable this add-on?', false))) {
-    return 0;
+  const confirmation = await confirmAddon(client, {
+    yes,
+    asJson,
+    summary: [
+      ['Add-on', 'Observability Plus'],
+      ['Team', contextName],
+      ...OBSERVABILITY_PLUS_PRICING,
+    ],
+  });
+  if (confirmation !== 'confirmed') {
+    return confirmation === 'required' ? 1 : 0;
   }
 
   if (!asJson) {

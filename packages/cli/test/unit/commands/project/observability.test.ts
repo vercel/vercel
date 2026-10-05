@@ -75,7 +75,7 @@ describe('project observability', () => {
     ]);
   });
 
-  it('outputs JSON with --format json after confirmation', async () => {
+  it('outputs JSON with --format json and --yes', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
@@ -97,6 +97,7 @@ describe('project observability', () => {
       'observability',
       'enable',
       'my-project',
+      '--yes',
       '--format',
       'json'
     );
@@ -108,6 +109,40 @@ describe('project observability', () => {
       enabled: true,
       projectId: 'prj_123',
       projectName: 'my-project',
+    });
+  });
+
+  it('accepts pricing with --yes in non-interactive mode', async () => {
+    useUser();
+    const team = useTeam();
+    client.config.currentTeam = team.id;
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    const confirm = vi.spyOn(client.input, 'confirm');
+    let updated = false;
+    client.scenario.put(
+      '/v1/observability/manage/configuration/projects/prj_123',
+      (_req, res) => {
+        updated = true;
+        res.json({});
+      }
+    );
+    client.nonInteractive = true;
+    client.setArgv(
+      'project',
+      'observability',
+      'enable',
+      'my-project',
+      '--yes',
+      '--json'
+    );
+    expect(await project(client)).toBe(0);
+    expect(updated).toBe(true);
+    expect(confirm).not.toHaveBeenCalled();
+    expect(client.stderr.getFullOutput()).toContain(
+      '$1.20 per 1 million events'
+    );
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      enabled: true,
     });
   });
 

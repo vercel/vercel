@@ -1,6 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import project from '../../../../src/commands/project';
 import { client } from '../../../mocks/client';
+import { teamCache } from '../../../../src/util/teams/get-team-by-id-or-slug';
 import { defaultProject, useProject } from '../../../mocks/project';
 
 describe('project protection (SSO)', () => {
@@ -175,6 +176,130 @@ describe('project protection (SSO)', () => {
 });
 
 describe('project protection (password)', () => {
+  let teamBilling: Record<string, unknown>;
+  afterEach(() => vi.restoreAllMocks());
+  beforeEach(() => {
+    teamCache.clear();
+    teamBilling = { plan: 'pro' };
+    client.scenario.get(`/teams/${defaultProject.accountId}`, (_req, res) => {
+      res.json({
+        id: defaultProject.accountId,
+        slug: 'my-team',
+        billing: teamBilling,
+      });
+    });
+  });
+
+  it('shows pricing before confirmation and does not mutate when declined', async () => {
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    const fetch = vi.spyOn(client, 'fetch');
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--password'
+    );
+    const result = project(client);
+    await expect(client.stderr).toOutput('$20 per project per month');
+    expect(client.stderr.getFullOutput()).toContain('my-team');
+    await expect(client.stderr).toOutput('Enable this add-on?');
+    client.stdin.write('n\n');
+    expect(await result).toBe(0);
+    expect(
+      fetch.mock.calls.some(([, options]) => options?.method === 'PATCH')
+    ).toBe(false);
+  });
+
+  it('requires --yes in JSON mode before any selected protection is changed', async () => {
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    const fetch = vi.spyOn(client, 'fetch');
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--password',
+      '--protection-bypass',
+      '--json'
+    );
+    expect(await project(client)).toBe(1);
+    expect(
+      fetch.mock.calls.some(([, options]) => options?.method === 'PATCH')
+    ).toBe(false);
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      status: 'action_required',
+      reason: 'confirmation_required',
+    });
+  });
+
+  it('enables after accepting the displayed price', async () => {
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    const fetch = vi.spyOn(client, 'fetch');
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--password'
+    );
+    const result = project(client);
+    await expect(client.stderr).toOutput('Enable this add-on?');
+    client.stdin.write('y\n');
+    expect(await result).toBe(0);
+    expect(
+      fetch.mock.calls.filter(([, options]) => options?.method === 'PATCH')
+    ).toHaveLength(1);
+  });
+
+  it('does not request purchase confirmation when updating an existing password', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+      passwordProtection: { deploymentType: 'all' },
+    });
+    client.scenario.patch('/v9/projects/prj_123', (_req, res) =>
+      res.json({ id: 'prj_123' })
+    );
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--password',
+      '--protection-password',
+      'changed'
+    );
+    expect(await project(client)).toBe(0);
+    expect(client.stderr.getFullOutput()).not.toContain('Enable this add-on?');
+  });
+
+  it.each([
+    { plan: 'enterprise' },
+    { plan: 'pro', invoiceItems: { passwordProtection: { quantity: 1 } } },
+    {
+      plan: 'pro',
+      invoiceItems: { passwordProtection: { quantity: 0, highestQuantity: 1 } },
+    },
+  ])('does not prompt for existing team-level coverage: %j', async billing => {
+    teamBilling = billing;
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    client.scenario.patch('/v9/projects/prj_123', (_req, res) =>
+      res.json({ id: 'prj_123' })
+    );
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--password',
+      '--json'
+    );
+    expect(await project(client)).toBe(0);
+    expect(client.stderr.getFullOutput()).not.toContain('Enable this add-on?');
+  });
+
   it('disables password protection when --password is set', async () => {
     useProject({
       ...defaultProject,
@@ -217,6 +342,7 @@ describe('project protection (password)', () => {
       'enable',
       'my-project',
       '--password',
+      '--yes',
       '--format',
       'json'
     );
@@ -255,6 +381,7 @@ describe('project protection (password)', () => {
       'enable',
       'my-project',
       '--password',
+      '--yes',
       '--protection-password',
       's3cret'
     );

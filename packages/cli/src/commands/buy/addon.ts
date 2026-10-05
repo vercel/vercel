@@ -27,6 +27,12 @@ export default async function addon(client: Client, argv: string[]) {
   const { args, flags } = parsedArgs;
   const [addonName, quantityStr] = args;
 
+  const formatResult = validateJsonOutput(parsedArgs.flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+
   if (addonName && isCustomEnvironmentAddonAlias(addonName)) {
     const packsResult = validateCustomEnvironmentPacks(quantityStr);
     if ('error' in packsResult) {
@@ -41,6 +47,7 @@ export default async function addon(client: Client, argv: string[]) {
     return purchaseCustomEnvironmentCapacity(client, {
       packs: packsResult.packs,
       yes: Boolean(flags['--yes']),
+      asJson: formatResult.jsonOutput,
       projectName: typeof project === 'string' ? project : undefined,
       commandName: 'buy',
     });
@@ -58,12 +65,6 @@ export default async function addon(client: Client, argv: string[]) {
       output.error(
         `Observability Plus does not accept a quantity. Run ${getCommandName('buy addon observability-plus')} without one.`
       );
-      return 1;
-    }
-
-    const formatResult = validateJsonOutput(parsedArgs.flags);
-    if (!formatResult.valid) {
-      output.error(formatResult.error);
       return 1;
     }
 

@@ -432,6 +432,13 @@ export interface Project extends ProjectSettings {
   };
   customEnvironments?: CustomEnvironment[];
   rollingRelease?: ProjectRollingRelease;
+  passwordProtection?: {
+    deploymentType:
+      | 'all'
+      | 'preview'
+      | 'prod_deployment_urls_and_all_previews'
+      | 'all_except_custom_domains';
+  } | null;
   protectionBypass?: ProjectProtectionBypass;
   sandbox?: ProjectSandboxConfig;
   tracing?: ProjectTracing | null;

@@ -1,4 +1,5 @@
 export const CUSTOM_ENVIRONMENTS_PER_PACK = 5;
+export const CUSTOM_ENVIRONMENT_PACK_MONTHLY_PRICE = 50;
 
 /** Example pack count used in help text and error messages. */
 export const CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT = 2;

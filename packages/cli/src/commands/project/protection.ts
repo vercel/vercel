@@ -13,6 +13,8 @@ import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
 import chalk from 'chalk';
+import { confirmAddon } from '../../util/buy/confirm-addon';
+import getTeamByIdOrSlug from '../../util/teams/get-team-by-id-or-slug';
 import type { JSONObject, Project } from '@vercel-internals/types';
 
 const PROTECTION_ACTIONS = ['enable', 'disable'] as const;
@@ -384,6 +386,7 @@ export default async function protection(
       commandName: 'project protection',
       projectNameOrId: action ? parsedArgs.args[1] : parsedArgs.args[0],
       forReadOnlyCommand: !action,
+      autoConfirm: Boolean(parsedArgs.flags['--yes']),
     });
   } catch (err: unknown) {
     exitWithNonInteractiveError(client, err, 1, {
@@ -391,6 +394,54 @@ export default async function protection(
     });
     printError(err);
     return 1;
+  }
+
+  if (action === 'enable' && passwordSelected && !project.passwordProtection) {
+    try {
+      const team = await getTeamByIdOrSlug(client, project.accountId);
+      const billing = team.billing as typeof team.billing & {
+        invoiceItems?: {
+          passwordProtection?: { quantity?: number; highestQuantity?: number };
+        };
+      };
+      if (billing?.plan === 'hobby') {
+        output.error('Password Protection requires a Pro plan.');
+        return 1;
+      }
+      const teamPasswordProtection = billing?.invoiceItems?.passwordProtection;
+      const covered =
+        billing?.plan === 'enterprise' ||
+        Boolean(
+          teamPasswordProtection?.quantity ||
+            teamPasswordProtection?.highestQuantity
+        );
+      if (!covered) {
+        const confirmation = await confirmAddon(client, {
+          yes: Boolean(parsedArgs.flags['--yes']),
+          asJson: preferJson,
+          summary: [
+            ['Add-on', 'Password Protection'],
+            ['Team', team.slug],
+            ['Project', project.name],
+            [
+              'Standard price',
+              '$20 per project per month on Pro (USD); existing team-level coverage applies',
+            ],
+            [
+              'Pricing',
+              'https://vercel.com/docs/deployment-protection/methods-to-protect-deployments/password-protection#password-protection-pricing',
+            ],
+          ],
+        });
+        if (confirmation !== 'confirmed') {
+          return confirmation === 'required' ? 1 : 0;
+        }
+      }
+    } catch (err: unknown) {
+      exitWithNonInteractiveError(client, err, 1, { variant: 'protection' });
+      printError(err);
+      return 1;
+    }
   }
 
   if (action) {

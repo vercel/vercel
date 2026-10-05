@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import buy from '../../../../src/commands/buy';
 import { useUser } from '../../../mocks/user';
@@ -191,6 +191,100 @@ describe('buy addon', () => {
     });
   });
 
+  describe('custom environment pricing and confirmation', () => {
+    let update: (req: any, res: any) => void;
+    beforeEach(() => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+        accountId: 'team_dummy',
+      });
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.scenario.get(
+        '/v1/projects/custom-environments/settings',
+        (_req, res) => {
+          res.json({
+            packSize: 5,
+            baseline: 1,
+            purchasedAmount: 5,
+            minPurchasedAmount: 0,
+            maxPurchasedAmount: 15,
+            effectiveLimit: 6,
+            environmentsUsed: 1,
+          });
+        }
+      );
+      update = vi.fn((req, res) =>
+        res.json({ purchasedAmount: req.body.purchasedAmount })
+      );
+      client.scenario.post('/v1/projects/custom-environments/settings', update);
+    });
+
+    it('shows the proposed monthly cost before accepting a purchase', async () => {
+      client.setArgv('buy', 'addon', 'custom-environment', '2');
+      const result = buy(client);
+      await expect(client.stderr).toOutput('$50 per pack per month');
+      await expect(client.stderr).toOutput('$50 → $100');
+      await expect(client.stderr).toOutput('Purchase');
+      client.stdin.write('y\n');
+      expect(await result).toBe(0);
+      expect(update).toHaveBeenCalledOnce();
+    });
+
+    it('does not purchase when declined', async () => {
+      client.setArgv('buy', 'addon', 'custom-environment', '2');
+      const result = buy(client);
+      await expect(client.stderr).toOutput('Purchase');
+      client.stdin.write('n\n');
+      expect(await result).toBe(0);
+      expect(update).not.toHaveBeenCalled();
+    });
+
+    it('requires --yes in non-interactive mode', async () => {
+      client.config.currentTeam = 'team_dummy';
+      client.nonInteractive = true;
+      client.setArgv(
+        'buy',
+        'addon',
+        'custom-environment',
+        '2',
+        '--project',
+        'static'
+      );
+      expect(await buy(client)).toBe(1);
+      expect(update).not.toHaveBeenCalled();
+      expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+        reason: 'confirmation_required',
+      });
+    });
+
+    it('keeps JSON output parseable with --yes', async () => {
+      client.setArgv(
+        'buy',
+        'addon',
+        'custom-environment',
+        '2',
+        '--yes',
+        '--json'
+      );
+      expect(await buy(client)).toBe(0);
+      expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+        projectId: 'static',
+        purchasedAmount: 10,
+      });
+      expect(client.stderr.getFullOutput()).toContain('$50 → $100');
+    });
+
+    it('shows the reduced monthly cost', async () => {
+      client.setArgv('buy', 'addon', 'custom-environment', '0', '-y');
+      expect(await buy(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).toContain('$50 → $0');
+    });
+  });
+
   describe('Observability Plus', () => {
     it('rejects --project because Observability Plus is team-scoped', async () => {
       setupTeam();
@@ -229,6 +323,7 @@ describe('buy addon', () => {
       expect(stderr).toContain('Observability Plus');
       expect(stderr).toContain(team.slug);
       expect(stderr).toContain('Billed as accrued');
+      expect(stderr).toContain('$1.20 per 1 million events');
       expect(stderr).not.toContain('Base fee');
     });
 
@@ -252,6 +347,7 @@ describe('buy addon', () => {
       const exitCodePromise = buy(client);
       await expect(client.stderr).toOutput('Add-on');
       await expect(client.stderr).toOutput(team.slug);
+      await expect(client.stderr).toOutput('$1.20 per 1 million events');
       await expect(client.stderr).toOutput('Enable this add-on?');
       client.stdin.write('y\n');
 

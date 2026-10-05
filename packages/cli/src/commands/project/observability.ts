@@ -23,6 +23,8 @@ import output from '../../output-manager';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
 import getScope from '../../util/get-scope';
 import { canPrompt } from '../../util/can-prompt';
+import { OBSERVABILITY_PLUS_PRICING } from '../../util/buy/observability-plus-addon';
+import { confirmAddon } from '../../util/buy/confirm-addon';
 
 async function setObservability(
   client: Client,
@@ -141,7 +143,8 @@ export default async function observability(
   const asJson = formatResult.jsonOutput;
 
   const nameArg = parsedArgs.args[1];
-  if (!canPrompt(client)) {
+  const yes = Boolean(parsedArgs.flags['--yes']);
+  if (!canPrompt(client) && (action === 'disable' || !yes)) {
     const globalFlags = getGlobalFlagsFromArgs(client.argv.slice(2)).filter(
       flag => flag !== '--non-interactive'
     );
@@ -159,13 +162,13 @@ export default async function observability(
         message:
           action === 'enable'
             ? 'Enabling Observability Plus adds a paid feature to this project and will incur charges on your account. ' +
-              'This cannot be confirmed non-interactively: the user must run this command in a terminal and confirm.'
+              'Use --yes to accept the pricing and enable non-interactively.'
             : 'Disabling Observability Plus turns off enhanced observability for this project. ' +
               'This cannot be confirmed non-interactively: the user must run this command in a terminal and confirm.',
         userActionRequired: true,
         hint:
           action === 'enable'
-            ? 'Surface this to the user; enabling a paid feature cannot be automated.'
+            ? 'Use --yes to accept the pricing and skip confirmation.'
             : 'Surface this to the user; disabling Observability Plus requires interactive confirmation.',
         next: [
           {
@@ -191,6 +194,7 @@ export default async function observability(
       commandName: 'project observability',
       projectNameOrId: nameArg,
       forReadOnlyCommand: true,
+      autoConfirm: yes,
     });
   } catch (error) {
     printError(error);
@@ -240,13 +244,22 @@ export default async function observability(
       emoji('warning')
     )
   );
-  const confirmed = await client.input.confirm(
-    `Enable Observability Plus for ${project.name}?`,
-    false
-  );
-  if (!confirmed) {
-    output.log('Canceled');
-    return 0;
+  const confirmation = await confirmAddon(client, {
+    yes,
+    asJson,
+    summary: [
+      ['Add-on', 'Observability Plus'],
+      ['Team', team.slug],
+      ['Project', project.name],
+      ...OBSERVABILITY_PLUS_PRICING,
+    ],
+    prompt: `Enable Observability Plus for ${project.name}?`,
+  });
+  if (confirmation !== 'confirmed') {
+    if (confirmation === 'declined') {
+      output.log('Canceled');
+    }
+    return confirmation === 'required' ? 1 : 0;
   }
 
   return setObservability(client, project, true, asJson);

@@ -4,10 +4,12 @@ import { ensureLink } from '../link/ensure-link';
 import { getCommandName } from '../pkg-name';
 import output from '../../output-manager';
 import stamp from '../output/stamp';
+import { confirmAddon } from './confirm-addon';
 import { handleCustomEnvironmentPurchaseError } from './handle-custom-environment-purchase-error';
 import {
   CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT,
   CUSTOM_ENVIRONMENTS_PER_PACK,
+  CUSTOM_ENVIRONMENT_PACK_MONTHLY_PRICE,
 } from './custom-environment-addon';
 
 type ProjectCustomEnvironmentsSettings = {
@@ -23,6 +25,7 @@ type ProjectCustomEnvironmentsSettings = {
 export type PurchaseCustomEnvironmentCapacityOptions = {
   packs: number;
   yes: boolean;
+  asJson?: boolean;
   projectName?: string;
   commandName: string;
 };
@@ -32,6 +35,7 @@ export async function purchaseCustomEnvironmentCapacity(
   {
     packs,
     yes,
+    asJson = false,
     projectName,
     commandName,
   }: PurchaseCustomEnvironmentCapacityOptions
@@ -78,6 +82,12 @@ export async function purchaseCustomEnvironmentCapacity(
   }
 
   if (packs === purchasedPacks) {
+    if (asJson) {
+      client.stdout.write(
+        `${JSON.stringify({ projectId, purchasedAmount: settings.purchasedAmount })}\n`
+      );
+      return 0;
+    }
     output.log(
       `Project ${chalk.bold(projectNameResolved)} already has ${chalk.bold(packs)} custom environment pack${packs === 1 ? '' : 's'} purchased.`
     );
@@ -87,21 +97,30 @@ export async function purchaseCustomEnvironmentCapacity(
   const purchasedAmount = packs * packSize;
   const isIncreasing = packs > purchasedPacks;
 
-  if (!yes) {
-    if (!client.stdin.isTTY) {
-      output.error(
-        'Confirmation required. Use --yes to skip the confirmation prompt in non-interactive mode.'
-      );
-      return 1;
-    }
-    if (
-      !(await client.input.confirm(
-        `${isIncreasing ? 'Purchase' : 'Reduce to'} ${chalk.bold(packs)} custom environment pack${packs === 1 ? '' : 's'} (${purchasedAmount} environments) for project ${chalk.bold(projectNameResolved)}?`,
-        false
-      ))
-    ) {
-      return 0;
-    }
+  const confirmation = await confirmAddon(client, {
+    yes,
+    asJson,
+    summary: [
+      ['Add-on', 'Custom environments'],
+      ['Team', link.org.slug],
+      ['Project', projectNameResolved],
+      [
+        'Standard price',
+        `$${CUSTOM_ENVIRONMENT_PACK_MONTHLY_PRICE} per pack per month (USD)`,
+      ],
+      [
+        'Monthly cost',
+        `$${purchasedPacks * CUSTOM_ENVIRONMENT_PACK_MONTHLY_PRICE} → $${packs * CUSTOM_ENVIRONMENT_PACK_MONTHLY_PRICE}`,
+      ],
+      [
+        'Pricing',
+        'https://vercel.com/docs/deployments/environments#pricing-and-limits',
+      ],
+    ],
+    prompt: `${isIncreasing ? 'Purchase' : 'Reduce to'} ${chalk.bold(packs)} custom environment pack${packs === 1 ? '' : 's'} (${purchasedAmount} environments) for project ${chalk.bold(projectNameResolved)}?`,
+  });
+  if (confirmation !== 'confirmed') {
+    return confirmation === 'required' ? 1 : 0;
   }
 
   const purchaseStamp = stamp();
@@ -119,6 +138,12 @@ export async function purchaseCustomEnvironmentCapacity(
 
     output.stopSpinner();
 
+    if (asJson) {
+      client.stdout.write(
+        `${JSON.stringify({ projectId, purchasedAmount: result.purchasedAmount })}\n`
+      );
+      return 0;
+    }
     output.success(
       `Updated custom environment capacity for ${chalk.bold(projectNameResolved)} to ${chalk.bold(packs)} pack${packs === 1 ? '' : 's'} (${result.purchasedAmount} environments) ${purchaseStamp()}`
     );
