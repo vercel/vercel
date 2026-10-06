@@ -504,6 +504,9 @@ export async function linkFolderToProject(
       client.cwd = path;
 
       const args = autoConfirm ? ['--yes'] : [];
+      if (noGitignore) {
+        args.push('--no-gitignore');
+      }
       const exitCode = await pull(client, args, 'vercel-cli:link');
 
       if (exitCode !== 0) {

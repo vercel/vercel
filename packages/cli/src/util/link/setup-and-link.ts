@@ -186,7 +186,8 @@ async function maybePullEnvAfterLink(
   client: Client,
   path: string,
   autoConfirm: boolean,
-  pullEnv: boolean
+  pullEnv: boolean,
+  noGitignore: boolean = false
 ): Promise<void> {
   if (!pullEnv || !client.stdin.isTTY || client.nonInteractive) {
     return;
@@ -207,6 +208,9 @@ async function maybePullEnvAfterLink(
   try {
     client.cwd = path;
     const args = autoConfirm ? ['--yes'] : [];
+    if (noGitignore) {
+      args.push('--no-gitignore');
+    }
     const exitCode = await pull(client, args, 'vercel-cli:link');
 
     if (exitCode !== 0) {
@@ -251,7 +255,13 @@ async function linkCrossTeamMatch({
       remoteName: match.repo.remoteName,
       successEmoji,
     });
-    await maybePullEnvAfterLink(client, path, autoConfirm, pullEnv);
+    await maybePullEnvAfterLink(
+      client,
+      path,
+      autoConfirm,
+      pullEnv,
+      noGitignore
+    );
     return {
       status: 'linked',
       org: match.org,

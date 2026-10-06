@@ -805,6 +805,13 @@ describe('link', () => {
 
       // .gitignore should NOT have been created
       expect(await pathExists(join(cwd, '.gitignore'))).toBe(false);
+
+      // --no-gitignore should be forwarded to the env pull it triggers
+      expect(mockPull).toHaveBeenCalledWith(
+        expect.objectContaining({ cwd }),
+        ['--yes', '--no-gitignore'],
+        'vercel-cli:link'
+      );
     });
 
     it('should track --no-gitignore telemetry flag', async () => {
