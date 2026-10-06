@@ -25,6 +25,7 @@ import {
   getReactRouterCatchAllDest,
   getReactRouterDataPaths,
   getRegExpFromPath,
+  getRouteSpecificityScore,
   getPackageVersion,
   getSkewProtectionRoute,
   hasScript,
@@ -552,12 +553,28 @@ export const build: BuildV2 = async ({
   const routes: any[] = [];
   let hasReactRouterIndexFunction = false;
 
-  for (const [id, functionId] of Object.entries(
+  // Vercel routes are matched in order and the first match wins, so the
+  // routes must be sorted by specificity (like React Router does) rather than
+  // by definition order. Otherwise an earlier, less specific dynamic route
+  // (e.g. `/:slug/*`) would shadow a more specific route that lives in its
+  // own server bundle. `Array.prototype.sort()` is stable, so routes with
+  // equal specificity keep their definition order.
+  const routeEntries = Object.entries(
     buildManifest.routeIdToServerBundleId ?? {}
-  )) {
-    const route = buildManifest.routes[id];
-    const { path, rePath } = getPathFromRoute(route, buildManifest.routes);
+  )
+    .map(([id, functionId]) => {
+      const { path, rePath } = getPathFromRoute(
+        buildManifest.routes[id],
+        buildManifest.routes
+      );
+      return { id, functionId, path, rePath };
+    })
+    .sort(
+      (a, b) =>
+        getRouteSpecificityScore(b.path) - getRouteSpecificityScore(a.path)
+    );
 
+  for (const { id, functionId, path, rePath } of routeEntries) {
     // If the route is a pathless layout route (at the root level)
     // and doesn't have any sub-routes, then a function should not be created.
     if (!path) {
