@@ -1,6 +1,7 @@
 import type { Project, ProjectEnvVariable } from '@vercel-internals/types';
 import pluralize from 'pluralize';
 import type Client from '../../util/client';
+import { outputActionRequired } from '../../util/agent-output';
 import { isAPIError } from '../../util/errors-ts';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -178,6 +179,12 @@ export default async function importCi(client: Client, argv: string[]) {
   }
 
   const { args, flags } = parsedArgs;
+  if (flags['--force'] && flags['--yes']) {
+    output.fatal(
+      '`--force` and `--yes` choose different conflict strategies. Pick one.'
+    );
+    return 1;
+  }
   if (args.length > 1) {
     output.fatal('Specify at most one environment.');
     return 1;
@@ -254,10 +261,20 @@ export default async function importCi(client: Client, argv: string[]) {
   let environment = requestedEnvironment as Environment | undefined;
   if (!environment) {
     if (client.nonInteractive) {
-      output.fatal(
-        'Specify an environment in non-interactive mode: `production`, `preview`, or `development`.'
+      outputActionRequired(
+        client,
+        {
+          status: 'action_required',
+          reason: 'missing_environment',
+          message:
+            'Specify an environment: `production`, `preview`, or `development`.',
+          choices: environments.map(choice => ({
+            id: choice.value,
+            name: choice.name,
+          })),
+        },
+        1
       );
-      return 1;
     }
     environment = await client.input.select({
       message: 'Environment?',
@@ -319,10 +336,17 @@ export default async function importCi(client: Client, argv: string[]) {
   );
   if (keys.length === 0) {
     if (client.nonInteractive) {
-      output.fatal(
-        'Specify at least one Environment Variable with `--key <name>` in non-interactive mode.'
+      outputActionRequired(
+        client,
+        {
+          status: 'action_required',
+          reason: 'missing_keys',
+          message:
+            'Specify at least one Environment Variable with `--key <name>`.',
+          choices: availableKeys.map(key => ({ id: key, name: key })),
+        },
+        1
       );
-      return 1;
     }
     keys = await client.input.checkbox({
       message: 'Environment Variables?',
@@ -340,6 +364,25 @@ export default async function importCi(client: Client, argv: string[]) {
   let conflictStrategy: ConflictStrategy = 'skip';
   if (conflictingKeys.length > 0 && flags['--force']) {
     conflictStrategy = 'overwrite';
+  } else if (
+    conflictingKeys.length > 0 &&
+    !flags['--yes'] &&
+    client.nonInteractive
+  ) {
+    outputActionRequired(
+      client,
+      {
+        status: 'action_required',
+        reason: 'conflict_strategy_required',
+        message:
+          'Choose how to handle existing repository CI variables: pass `--yes` to skip them or `--force` to overwrite them.',
+        choices: [
+          { id: 'skip', name: 'Skip existing variables' },
+          { id: 'overwrite', name: 'Overwrite existing variables' },
+        ],
+      },
+      1
+    );
   } else if (
     conflictingKeys.length > 0 &&
     !flags['--yes'] &&

@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'node:path';
 import stripAnsi from 'strip-ansi';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import env from '../../../../src/commands/env';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
@@ -55,6 +55,7 @@ describe('env import-ci', () => {
   let requestBody: Record<string, unknown> | undefined;
 
   beforeEach(async () => {
+    requestBody = undefined;
     useUser();
     useTeams('team_dummy');
     useProject(project, sourceVariables);
@@ -185,14 +186,46 @@ describe('env import-ci', () => {
   });
 
   it('requires explicit environment and keys in non-interactive mode', async () => {
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('exit');
+    });
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     client.nonInteractive = true;
     client.setArgv('env', 'import-ci', '--non-interactive');
 
-    await expect(env(client)).resolves.toBe(1);
-    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
-      'Specify an environment in non-interactive mode'
-    );
+    await expect(env(client)).rejects.toThrow('exit');
+    expect(JSON.parse(logSpy.mock.calls.at(-1)?.[0])).toMatchObject({
+      status: 'action_required',
+      reason: 'missing_environment',
+      message: expect.stringContaining('Specify an environment'),
+    });
     expect(requestBody).toBeUndefined();
+
+    exitSpy.mockRestore();
+    logSpy.mockRestore();
+  });
+
+  it('returns selectable keys when non-interactive input omits --key', async () => {
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('exit');
+    });
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    client.nonInteractive = true;
+    client.setArgv('env', 'import-ci', 'production', '--non-interactive');
+
+    await expect(env(client)).rejects.toThrow('exit');
+    expect(JSON.parse(logSpy.mock.calls.at(-1)?.[0])).toMatchObject({
+      status: 'action_required',
+      reason: 'missing_keys',
+      choices: [
+        { id: 'API_TOKEN', name: 'API_TOKEN' },
+        { id: 'API_URL', name: 'API_URL' },
+      ],
+    });
+    expect(requestBody).toBeUndefined();
+
+    exitSpy.mockRestore();
+    logSpy.mockRestore();
   });
 
   it('overwrites conflicts with --force', async () => {
@@ -210,5 +243,50 @@ describe('env import-ci', () => {
     expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
       'Existing variables?'
     );
+  });
+
+  it('requires an explicit conflict strategy in non-interactive mode', async () => {
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('exit');
+    });
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    client.nonInteractive = true;
+    client.setArgv(
+      'env',
+      'import-ci',
+      'production',
+      '--key',
+      'API_TOKEN',
+      '--non-interactive'
+    );
+
+    await expect(env(client)).rejects.toThrow('exit');
+    expect(JSON.parse(logSpy.mock.calls.at(-1)?.[0])).toMatchObject({
+      status: 'action_required',
+      reason: 'conflict_strategy_required',
+      message: expect.stringContaining('--yes'),
+    });
+    expect(requestBody).toBeUndefined();
+
+    exitSpy.mockRestore();
+    logSpy.mockRestore();
+  });
+
+  it('rejects conflicting strategy flags before API calls', async () => {
+    client.setArgv(
+      'env',
+      'import-ci',
+      'production',
+      '--key',
+      'API_TOKEN',
+      '--yes',
+      '--force'
+    );
+
+    await expect(env(client)).resolves.toBe(1);
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      '`--force` and `--yes` choose different conflict strategies'
+    );
+    expect(requestBody).toBeUndefined();
   });
 });
