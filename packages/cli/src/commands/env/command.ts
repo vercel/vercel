@@ -411,6 +411,60 @@ export const updateSubcommand = {
   ],
 } as const;
 
+export const importCiSubcommand = {
+  name: 'import-ci',
+  aliases: [],
+  description: 'Import Project Environment Variables into Vercel CI',
+  arguments: [
+    {
+      name: 'environment',
+      required: false,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'key',
+      description: 'Environment Variable name to import (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'NAME',
+      deprecated: false,
+    },
+    {
+      name: 'git-branch',
+      description: 'Use Environment Variables for a specific Preview branch',
+      shorthand: null,
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+    },
+    {
+      ...forceOption,
+      description: 'Overwrite existing repository CI variables',
+      shorthand: null,
+    },
+    {
+      ...yesOption,
+      description: 'Skip existing repository CI variables without prompting',
+    },
+  ],
+  examples: [
+    {
+      name: 'Select Environment Variables to import into Vercel CI',
+      value: `${packageName} env import-ci`,
+    },
+    {
+      name: 'Import selected Production Environment Variables',
+      value: `${packageName} env import-ci production --key API_URL --key API_TOKEN --yes`,
+    },
+    {
+      name: 'Overwrite conflicting Preview variables',
+      value: `${packageName} env import-ci preview --key API_URL --force`,
+    },
+  ],
+} as const;
+
 export const envCommand = {
   name: 'env',
   aliases: [],
@@ -418,6 +472,7 @@ export const envCommand = {
   arguments: [],
   subcommands: [
     addSubcommand,
+    importCiSubcommand,
     listSubcommand,
     pullSubcommand,
     removeSubcommand,

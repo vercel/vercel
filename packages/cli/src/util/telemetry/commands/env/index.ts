@@ -20,6 +20,13 @@ export class EnvTelemetryClient
     });
   }
 
+  trackCliSubcommandImportCi(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'import-ci',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'rm',

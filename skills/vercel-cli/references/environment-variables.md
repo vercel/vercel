@@ -35,6 +35,18 @@ Note: `environment` is a **positional argument**, not a flag.
 
 In non-interactive / agent mode, `env add` and `env update` require the value via `--value` or stdin. Without one of these, the command exits with an `action_required` payload asking you to re-run with `--value <value> --yes`.
 
+## Importing Project variables into Vercel CI
+
+From a repository linked with `vercel link --repo`, copy selected Project Environment Variables into repository-scoped Vercel CI storage:
+
+```bash
+vercel env import-ci
+vercel env import-ci production --key API_URL --key API_TOKEN --yes
+vercel env import-ci preview --git-branch feature-x --key API_URL --force
+```
+
+The interactive flow selects a linked source Project, environment, variable names, and whether conflicts are skipped or overwritten. For non-interactive use, pass the environment and at least one `--key`; `--yes` skips conflicts and `--force` overwrites them. The command reports keys and metadata but never prints variable values.
+
 ## Pulling Locally
 
 ```bash
