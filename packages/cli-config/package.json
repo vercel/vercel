@@ -27,7 +27,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "zod": "4.1.11",
+    "zod": "^4.1.11",
     "xdg-app-paths": "5"
   },
   "devDependencies": {
