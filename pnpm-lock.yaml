@@ -1245,7 +1245,7 @@ importers:
         specifier: '5'
         version: 5.1.0
       zod:
-        specifier: 4.1.11
+        specifier: ^4.1.11
         version: 4.1.11
     devDependencies:
       '@types/node':
