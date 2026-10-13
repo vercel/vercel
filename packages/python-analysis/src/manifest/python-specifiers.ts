@@ -7,7 +7,7 @@
  * @module python-specifiers
  */
 
-import type { Pep440Constraint } from '@renovatebot/pep440';
+import type { Pep440Constraint } from './pep440';
 
 export type UnknownPythonImplementation = {
   implementation: string;
