@@ -25,86 +25,93 @@ import { AwsSigv4Signer } from '@opensearch-project/opensearch/aws';
 import { awsCredentialsProvider } from '@vercel/oidc-aws-credentials-provider';
 import { createOpenSearch } from './opensearch';
 
-const ENV_KEYS = ['OPENSEARCH_ENDPOINT', 'AWS_REGION', 'AWS_ROLE_ARN'] as const;
+type SignerArgs = {
+  region: string;
+  service: string;
+  getCredentials: () => Promise<unknown>;
+};
+
+const signerArgs = (call = 0) =>
+  (AwsSigv4Signer as unknown as ReturnType<typeof vi.fn>).mock.calls[
+    call
+  ][0] as SignerArgs;
+const nodeOf = (client: unknown) =>
+  (client as { options: { node: string } }).options.node;
 
 describe('createOpenSearch', () => {
-  const originalEnv: Record<string, string | undefined> = {};
+  const originalEnv = process.env;
 
   beforeEach(() => {
-    for (const key of ENV_KEYS) {
-      originalEnv[key] = process.env[key];
-      delete process.env[key];
-    }
+    process.env = {};
     vi.clearAllMocks();
   });
 
   afterEach(() => {
-    for (const key of ENV_KEYS) {
-      if (originalEnv[key] === undefined) {
-        delete process.env[key];
-      } else {
-        process.env[key] = originalEnv[key];
-      }
-    }
+    process.env = originalEnv;
   });
 
-  test('uses Vercel-injected env vars when no options are provided', async () => {
+  test('uses the unprefixed default connection', async () => {
     process.env.OPENSEARCH_ENDPOINT = 'https://example.aoss.amazonaws.com';
     process.env.AWS_REGION = 'us-east-2';
-    process.env.AWS_ROLE_ARN = 'arn:aws:iam::1234567890:role/vercel-opensearch';
+    process.env.AWS_ROLE_ARN = 'arn:aws:iam::1:role/vercel-opensearch';
 
     const client = createOpenSearch();
 
-    expect(AwsSigv4Signer).toHaveBeenCalledTimes(1);
-    const signerArgs = (AwsSigv4Signer as unknown as ReturnType<typeof vi.fn>)
-      .mock.calls[0][0] as {
-      region: string;
-      service: string;
-      getCredentials: () => Promise<unknown>;
-    };
-    expect(signerArgs.region).toBe('us-east-2');
-    expect(signerArgs.service).toBe('aoss');
+    expect(signerArgs().region).toBe('us-east-2');
+    expect(signerArgs().service).toBe('aoss');
+    expect(nodeOf(client)).toBe('https://example.aoss.amazonaws.com');
 
-    // Calling getCredentials should defer to awsCredentialsProvider with the role.
-    await signerArgs.getCredentials();
+    await signerArgs().getCredentials();
     expect(awsCredentialsProvider).toHaveBeenCalledWith({
-      roleArn: 'arn:aws:iam::1234567890:role/vercel-opensearch',
+      roleArn: 'arn:aws:iam::1:role/vercel-opensearch',
     });
-
-    expect(
-      (client as unknown as { options: { node: string } }).options.node
-    ).toBe('https://example.aoss.amazonaws.com');
   });
 
-  test('explicit options override env', () => {
-    process.env.OPENSEARCH_ENDPOINT = 'https://env-endpoint.example';
-    process.env.AWS_REGION = 'us-east-2';
-    process.env.AWS_ROLE_ARN = 'arn:aws:iam::1:role/env';
+  test('autodetects a prefixed connection', () => {
+    process.env.STORAGE_OPENSEARCH_ENDPOINT = 'https://prefixed.example';
+    process.env.STORAGE_AWS_REGION = 'eu-west-1';
+    process.env.STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::1:role/prefixed';
 
+    const client = createOpenSearch();
+    expect(signerArgs().region).toBe('eu-west-1');
+    expect(nodeOf(client)).toBe('https://prefixed.example');
+  });
+
+  test('passes prefix to pick between connections', () => {
+    process.env.STORAGE_OPENSEARCH_ENDPOINT = 'https://one.example';
+    process.env.STORAGE_AWS_REGION = 'us-east-2';
+    process.env.STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::1:role/one';
+    process.env.STORAGE2_OPENSEARCH_ENDPOINT = 'https://two.example';
+    process.env.STORAGE2_AWS_REGION = 'eu-west-1';
+    process.env.STORAGE2_AWS_ROLE_ARN = 'arn:aws:iam::2:role/two';
+
+    expect(() => createOpenSearch()).toThrow(/multiple OpenSearch resources/);
+    const client = createOpenSearch({ prefix: 'STORAGE2' });
+    expect(nodeOf(client)).toBe('https://two.example');
+  });
+
+  test('explicit options bypass env entirely', () => {
     createOpenSearch({
-      endpoint: 'https://override-endpoint.example',
+      endpoint: 'https://override.example',
       region: 'eu-west-1',
       roleArn: 'arn:aws:iam::2:role/override',
     });
 
-    const signerArgs = (AwsSigv4Signer as unknown as ReturnType<typeof vi.fn>)
-      .mock.calls[0][0] as { region: string };
-    expect(signerArgs.region).toBe('eu-west-1');
+    expect(signerArgs().region).toBe('eu-west-1');
     expect(awsCredentialsProvider).not.toHaveBeenCalled();
   });
 
-  test('throws a helpful error when env vars are missing', () => {
-    expect(() => createOpenSearch()).toThrow(
-      /OPENSEARCH_ENDPOINT.*AWS_REGION.*AWS_ROLE_ARN/
-    );
+  test('throws when no resource is connected', () => {
+    expect(() => createOpenSearch()).toThrow(/no OpenSearch resource/);
   });
 
-  test('lists only the missing env vars in the error', () => {
-    process.env.OPENSEARCH_ENDPOINT = 'https://example';
+  test('throws while the collection is provisioning', () => {
+    process.env.OPENSEARCH_ENDPOINT = 'provisioning';
     process.env.AWS_REGION = 'us-east-2';
-    // AWS_ROLE_ARN intentionally missing.
+    process.env.AWS_ROLE_ARN = 'arn:aws:iam::1:role/os';
 
-    expect(() => createOpenSearch()).toThrow(/AWS_ROLE_ARN/);
-    expect(() => createOpenSearch()).not.toThrow(/OPENSEARCH_ENDPOINT/);
+    expect(() => createOpenSearch()).toThrow(
+      /OPENSEARCH_ENDPOINT is "provisioning"/
+    );
   });
 });
