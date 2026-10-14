@@ -1,14 +1,14 @@
-import type Client from '../../../util/client';
-import output from '../../../output-manager';
-import { parseArguments } from '../../../util/get-args';
-import { getFlagsSpecification } from '../../../util/get-flags-specification';
-import { printError } from '../../../util/error';
-import { isAPIError } from '../../../util/errors-ts';
-import { validateJsonOutput } from '../../../util/output-format';
-import formatTable from '../../../util/format-table';
-import indent from '../../../util/output/indent';
-import { packageName } from '../../../util/pkg-name';
-import { rulesSchemaSubcommand } from './command';
+import type Client from '../../util/client';
+import output from '../../output-manager';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import { isAPIError } from '../../util/errors-ts';
+import { validateJsonOutput } from '../../util/output-format';
+import formatTable from '../../util/format-table';
+import indent from '../../util/output/indent';
+import { packageName } from '../../util/pkg-name';
+import { monitorsSchemaSubcommand } from './command';
 import { resolveRulesTeam } from './parse-scope';
 import { handleRulesApiError, outputRulesError, rulesSchemaPath } from './util';
 import type {
@@ -35,7 +35,7 @@ export default async function schema(
   try {
     parsedArgs = parseArguments(
       argv,
-      getFlagsSpecification(rulesSchemaSubcommand.options)
+      getFlagsSpecification(monitorsSchemaSubcommand.options)
     );
   } catch (error) {
     printError(error);
@@ -51,13 +51,13 @@ export default async function schema(
   if (value !== undefined && value !== 'built-in' && value !== 'custom') {
     const suggestion =
       value === 'custom_alert'
-        ? ' Use custom; alert rule types are built-in and custom.'
+        ? ' Use custom; monitor types are built-in and custom.'
         : '';
     return outputRulesError(
       client,
       format.jsonOutput,
       'INVALID_RULE_TYPE',
-      `Invalid rule type "${String(value)}".${suggestion} Expected built-in or custom.`
+      `Invalid monitor type "${String(value)}".${suggestion} Expected built-in or custom.`
     );
   }
 
@@ -65,7 +65,7 @@ export default async function schema(
   const scope = await resolveRulesTeam(client, format.jsonOutput);
   if (typeof scope === 'number') return scope;
 
-  output.spinner('Fetching alert rule schema…');
+  output.spinner('Fetching monitor schema…');
   try {
     const document = await client.fetch<AlertRuleAuthoringSchemaResponse>(
       rulesSchemaPath(scope.teamId, type)
@@ -87,7 +87,7 @@ export default async function schema(
         client,
         false,
         'INVALID_SCHEMA_RESPONSE',
-        `The API did not return the ${type} alert rule schema.`
+        `The API did not return the ${type} monitor schema.`
       );
     }
 
@@ -104,17 +104,17 @@ export default async function schema(
 }
 
 function printSchemaIndex(ruleTypes: AlertRuleAuthoringRuleType[]): void {
-  output.log('Alert rule schemas');
+  output.log('Monitor schemas');
   output.print(
     `${formatRows(
       ['Type', 'Description'],
       ruleTypes.map(item => [item.type, item.description])
-    )}\nRun \`${packageName} alerts rules schema --type <type>\` for fields and examples.\n`
+    )}\nRun \`${packageName} monitors schema --type <type>\` for fields and examples.\n`
   );
 }
 
 function printSchema(schema: AlertRuleAuthoringRuleType): void {
-  output.log(`Alert rule schema: ${schema.type}`);
+  output.log(`Monitor schema: ${schema.type}`);
   output.print(`${schema.description}\n\n`);
   printCliScope(schema.type);
   printFields(schema);
@@ -136,14 +136,14 @@ function printCliScope(type: PublicAlertRuleType): void {
   output.print(
     `${indent(
       type === 'built-in'
-        ? 'Apply the rule only to the resolved project'
-        : 'Set the project evaluated by the rule',
+        ? 'Apply the monitor only to the resolved project'
+        : 'Set the project evaluated by the monitor',
       4
     )}\n`
   );
   if (type === 'built-in') {
     output.print(`${indent('--all', 2)}\n`);
-    output.print(`${indent('Apply the rule to every team project', 4)}\n`);
+    output.print(`${indent('Apply the monitor to every team project', 4)}\n`);
   }
   output.print(
     `${indent('Use a scope flag or ruleScope in the body, not both.', 2)}\n\n`
@@ -378,8 +378,8 @@ function printExamples(
     const fileName = operation === 'create' ? 'rule.json' : 'patch.json';
     const command =
       operation === 'create'
-        ? `${packageName} alerts rules add --body ./${fileName}`
-        : `${packageName} alerts rules update <rule-id> --body ./${fileName}`;
+        ? `${packageName} monitors add --body ./${fileName}`
+        : `${packageName} monitors update <monitor-id> --body ./${fileName}`;
     output.print(`${indent(example.name, 2)}\n`);
     output.print(`${indent(`Body (${fileName}):`, 4)}\n`);
     output.print(`${indent(JSON.stringify(example.body, null, 2), 6)}\n`);

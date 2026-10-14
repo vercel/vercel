@@ -1,13 +1,13 @@
 import type { JSONObject } from '@vercel-internals/types';
-import type Client from '../../../util/client';
-import { parseArguments } from '../../../util/get-args';
-import { getFlagsSpecification } from '../../../util/get-flags-specification';
-import { printError } from '../../../util/error';
-import output from '../../../output-manager';
-import { validateJsonOutput } from '../../../util/output-format';
-import { isAPIError } from '../../../util/errors-ts';
-import { packageName } from '../../../util/pkg-name';
-import { rulesUpdateSubcommand } from './command';
+import type Client from '../../util/client';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import output from '../../output-manager';
+import { validateJsonOutput } from '../../util/output-format';
+import { isAPIError } from '../../util/errors-ts';
+import { packageName } from '../../util/pkg-name';
+import { monitorsUpdateSubcommand } from './command';
 import { printRuleMutationReceipt } from './format';
 import {
   resolveRulesProject,
@@ -57,7 +57,7 @@ function scopeForRule(
       client,
       jsonOutput,
       'INVALID_SCOPE',
-      'Custom alert rules must target one project. Use --project <name-or-id>.'
+      'Custom monitors must target one project. Use --project <name-or-id>.'
     );
   }
   return { type: 'all' };
@@ -82,7 +82,7 @@ async function resolveUpdateScope(
         client,
         flags['--project'],
         jsonOutput,
-        `alerts rules update ${ruleId}`
+        `monitors update ${ruleId}`
       )
     : resolveRulesTeam(client, jsonOutput);
 }
@@ -108,13 +108,13 @@ export default async function update(
   try {
     parsedArgs = parseArguments(
       argv,
-      getFlagsSpecification(rulesUpdateSubcommand.options)
+      getFlagsSpecification(monitorsUpdateSubcommand.options)
     );
   } catch (error) {
     emitRulesArgParseError(
       client,
       error,
-      'alerts rules update <rule-id> --project <name-or-id>'
+      'monitors update <monitor-id> --project <name-or-id>'
     );
     printError(error);
     return 1;
@@ -132,7 +132,7 @@ export default async function update(
       client,
       format.jsonOutput,
       'MISSING_ARGUMENTS',
-      `Missing rule ID. Example: ${packageName} alerts rules update <rule-id> --body <file>`
+      `Missing monitor ID. Example: ${packageName} monitors update <monitor-id> --body <file>`
     );
   }
 
@@ -183,7 +183,7 @@ export default async function update(
   try {
     let existing: PublicAlertRule | undefined;
     if (hasScopeFlag) {
-      output.spinner('Fetching alert rule…');
+      output.spinner('Fetching monitor…');
       existing = await fetchRule(client, scope, ruleId);
       const desiredScope = scopeForRule(
         client,
@@ -203,7 +203,7 @@ export default async function update(
       }
     }
 
-    output.spinner('Updating alert rule…');
+    output.spinner('Updating monitor…');
     const response = await client.fetch<AlertRuleEnvelope>(
       rulesItemPath(scope.teamId, ruleId),
       { method: 'PATCH', body }

@@ -45,6 +45,7 @@ import { logoutCommand } from '../../../src/commands/logout/command';
 import { logsCommand } from '../../../src/commands/logs/command';
 import { mcpCommand } from '../../../src/commands/mcp/command';
 import { metricsCommand } from '../../../src/commands/metrics/command';
+import { monitorsCommand } from '../../../src/commands/monitors/command';
 import { microfrontendsCommand } from '../../../src/commands/microfrontends/command';
 import { openCommand } from '../../../src/commands/open/command';
 import { projectCommand } from '../../../src/commands/project/command';
@@ -116,6 +117,7 @@ const ROOT_COMMANDS = [
   logsCommand,
   mcpCommand,
   metricsCommand,
+  monitorsCommand,
   microfrontendsCommand,
   openCommand,
   projectCommand,
@@ -201,7 +203,7 @@ const OUTPUT_FLAG_EXCEPTIONS = {
     'Supports table, JSON, and CSV through --format',
   'ai-gateway leaderboard providers':
     'Supports table, JSON, and CSV through --format',
-  'alerts rules schema': 'Schema output uses the newer --format contract',
+  'monitors schema': 'Schema output uses the newer --format contract',
   'blob list-stores': 'Blob preserves its established --json contract',
   'blob presign': 'Blob preserves its established --json contract',
   'blob signed-token': 'Blob preserves its established --json contract',

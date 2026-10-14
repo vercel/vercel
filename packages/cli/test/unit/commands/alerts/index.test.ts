@@ -56,9 +56,26 @@ describe('alerts', () => {
 
     expect(exitCode).toBe(0);
     const helpOut = client.stderr.getFullOutput();
-    expect(helpOut).toContain('rules');
+    expect(helpOut).toContain('monitors');
     expect(helpOut).toContain('List alert groups');
     expect(client.stderr.getFullOutput()).toContain('--project');
+  });
+
+  it('keeps `alerts rules` as a hidden alias for monitors', async () => {
+    client.scenario.get('/alerts/v3/alert-rules', (_req, res) => {
+      res.json({ rules: [], pagination: { count: 0, next: null } });
+    });
+    client.setArgv('alerts', 'rules', 'ls', '--json');
+
+    expect(await alerts(client)).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput()).rules).toEqual([]);
+  });
+
+  it('prints monitors help for `alerts rules --help`', async () => {
+    client.setArgv('alerts', 'rules', 'add', '--help');
+
+    expect(await alerts(client)).toBe(0);
+    expect(client.stderr.getFullOutput()).toContain('vercel monitors add');
   });
 
   it('lists alerts for linked project by default', async () => {

@@ -1,11 +1,11 @@
 import chalk from 'chalk';
-import output from '../../../output-manager';
-import { buildCommandWithGlobalFlags } from '../../../util/agent-output';
-import { quoteArg } from '../../../util/flags/quote-arg';
-import formatDate from '../../../util/format-date';
-import { printAlignedLabel } from '../../../util/output/print-aligned-label';
-import { truncateEnd, truncateMiddle } from '../../../util/output/truncate';
-import { humanizeReference, renderAlertTable } from '../format';
+import output from '../../output-manager';
+import { buildCommandWithGlobalFlags } from '../../util/agent-output';
+import { quoteArg } from '../../util/flags/quote-arg';
+import formatDate from '../../util/format-date';
+import { printAlignedLabel } from '../../util/output/print-aligned-label';
+import { truncateEnd, truncateMiddle } from '../../util/output/truncate';
+import { humanizeReference, renderAlertTable } from '../alerts/format';
 import type {
   BuiltInAlertRule,
   CustomAlertMetric,
@@ -90,7 +90,7 @@ function formatRuleCondition(rule: PublicAlertRule): string {
 
 export function printRules(rules: PublicAlertRule[]): void {
   const rows = [
-    ['Name', 'Rule ID', 'Type', 'Scope', 'Condition'].map(header =>
+    ['Name', 'Monitor ID', 'Type', 'Scope', 'Condition'].map(header =>
       chalk.cyan(header)
     ),
     ...rules.map(rule => [
@@ -107,7 +107,7 @@ export function printRules(rules: PublicAlertRule[]): void {
 function commonRows(rule: PublicAlertRule): string[][] {
   return [
     ['Name', rule.name],
-    ['Rule ID', rule.id],
+    ['Monitor ID', rule.id],
     ['Type', rule.type],
     ['Scope', formatPublicRuleScope(rule)],
     ['Default', formatBoolean(rule.isDefault)],
@@ -186,7 +186,7 @@ function printCustomRule(rule: CustomAlertRule): void {
   output.print(`${chalk.cyan('Custom alert')}\n\n`);
   if (!rule.querySupported) {
     output.print(
-      '  Query unavailable via API. You can update metadata, delete the rule, or recreate it with a supported query.\n'
+      '  Query unavailable via API. You can update metadata, delete the monitor, or recreate it with a supported query.\n'
     );
     output.print(`\n${renderAlertTable([['Severity', rule.severity]], 3)}\n`);
     return;
@@ -251,7 +251,7 @@ function printCustomRule(rule: CustomAlertRule): void {
 
 export function printRule(rule: PublicAlertRule): void {
   output.print(
-    `\n${chalk.bold('Alert rule')} ${chalk.cyan(rule.id)}\n${renderAlertTable(
+    `\n${chalk.bold('Monitor')} ${chalk.cyan(rule.id)}\n${renderAlertTable(
       commonRows(rule),
       3
     )}\n\n${chalk.cyan('Notifications')}\n\n${renderAlertTable(
@@ -265,7 +265,7 @@ export function printRule(rule: PublicAlertRule): void {
 
 export function printRulePreview(rule: PublicAlertRule): void {
   printAlignedLabel('Name', rule.name);
-  printAlignedLabel('Rule ID', rule.id);
+  printAlignedLabel('Monitor ID', rule.id);
   printAlignedLabel('Type', rule.type);
   printAlignedLabel('Scope', formatPublicRuleScope(rule));
 }
@@ -282,16 +282,13 @@ export function printRuleMutationReceipt(
 ): void {
   output.print('\n');
   printAlignedLabel(action, rule.name, { gutter: '✓' });
-  printAlignedLabel('Rule ID', rule.id);
+  printAlignedLabel('Monitor ID', rule.id);
   printAlignedLabel('Type', rule.type);
   printAlignedLabel('Scope', formatPublicRuleScope(rule));
   if (action !== 'Deleted') {
     printAlignedLabel(
       'Inspect',
-      buildCommandWithGlobalFlags(
-        argv,
-        `alerts rules inspect ${quoteArg(rule.id)}`
-      )
+      buildCommandWithGlobalFlags(argv, `monitors inspect ${quoteArg(rule.id)}`)
     );
   }
 }

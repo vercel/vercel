@@ -1,21 +1,21 @@
-import type Client from '../../../util/client';
+import type Client from '../../util/client';
 import {
   handleValidationError,
   validateAllProjectMutualExclusivity,
-} from '../../../util/command-validation';
+} from '../../util/command-validation';
 import {
   buildCommandWithGlobalFlags,
   outputAgentError,
-} from '../../../util/agent-output';
-import { AGENT_REASON } from '../../../util/agent-output-constants';
-import getScope from '../../../util/get-scope';
-import getProjectByNameOrId from '../../../util/projects/get-project-by-id-or-name';
-import { ProjectNotFound, isAPIError } from '../../../util/errors-ts';
+} from '../../util/agent-output';
+import { AGENT_REASON } from '../../util/agent-output-constants';
+import getScope from '../../util/get-scope';
+import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
+import { ProjectNotFound, isAPIError } from '../../util/errors-ts';
 import {
   type AlertsScope,
   emitAlertsScopeError,
   resolveAlertsScope,
-} from '../resolve-alerts-scope';
+} from '../alerts/resolve-alerts-scope';
 
 export async function resolveRulesTeam(
   client: Client,
@@ -30,7 +30,7 @@ export async function resolveRulesTeam(
     'No team context found. Run `vercel switch` to select a team, use `--scope <team>`, or link a team project.';
   return emitAlertsScopeError(client, jsonOutput, 'NO_TEAM', message, {
     reason: AGENT_REASON.MISSING_SCOPE,
-    hint: 'Alert rules belong to a team. Select the team before retrying.',
+    hint: 'Monitors belong to a team. Select the team before retrying.',
     next: [
       {
         command: buildCommandWithGlobalFlags(client.argv, 'teams switch'),
@@ -113,7 +113,7 @@ export async function parseRulesFlagsAndScope(
   client: Client,
   flags: { '--project'?: string; '--all'?: boolean },
   jsonOutput: boolean,
-  command = 'alerts rules ls'
+  command = 'monitors ls'
 ): Promise<AlertsScope | number> {
   const mutual = validateAllProjectMutualExclusivity(
     flags['--all'],
@@ -130,7 +130,7 @@ export async function parseRulesFlagsAndScope(
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
-              'alerts rules --help'
+              'monitors --help'
             ),
             when: 'Use either `--project` or `--all`, not both',
           },

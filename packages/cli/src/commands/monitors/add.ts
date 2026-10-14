@@ -1,12 +1,12 @@
 import type { JSONObject } from '@vercel-internals/types';
-import type Client from '../../../util/client';
-import { parseArguments } from '../../../util/get-args';
-import { getFlagsSpecification } from '../../../util/get-flags-specification';
-import { printError } from '../../../util/error';
-import output from '../../../output-manager';
-import { validateJsonOutput } from '../../../util/output-format';
-import { isAPIError } from '../../../util/errors-ts';
-import { rulesAddSubcommand } from './command';
+import type Client from '../../util/client';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import output from '../../output-manager';
+import { validateJsonOutput } from '../../util/output-format';
+import { isAPIError } from '../../util/errors-ts';
+import { monitorsAddSubcommand } from './command';
 import { printRuleMutationReceipt } from './format';
 import {
   resolveRulesProject,
@@ -65,7 +65,7 @@ function applyScopeFlag(
         client,
         jsonOutput,
         'INVALID_SCOPE',
-        'Custom alert rules must target one project. Use --project <name-or-id>.'
+        'Custom monitors must target one project. Use --project <name-or-id>.'
       );
     }
     body.ruleScope = { type: 'all' };
@@ -98,7 +98,7 @@ async function resolveCreateScope(
         client,
         flags['--project'],
         jsonOutput,
-        'alerts rules add'
+        'monitors add'
       )
     : resolveRulesTeam(client, jsonOutput);
 }
@@ -111,13 +111,13 @@ export default async function add(
   try {
     parsedArgs = parseArguments(
       argv,
-      getFlagsSpecification(rulesAddSubcommand.options)
+      getFlagsSpecification(monitorsAddSubcommand.options)
     );
   } catch (error) {
     emitRulesArgParseError(
       client,
       error,
-      'alerts rules add --project <name-or-id> --body <path>'
+      'monitors add --project <name-or-id> --body <path>'
     );
     printError(error);
     return 1;
@@ -168,7 +168,7 @@ export default async function add(
       client,
       format.jsonOutput,
       'INVALID_SCOPE',
-      'Custom alert rules must target one project. Use --project <name-or-id>.'
+      'Custom monitors must target one project. Use --project <name-or-id>.'
     );
   }
 
@@ -185,7 +185,7 @@ export default async function add(
   );
   if (scopeError !== undefined) return scopeError;
 
-  output.spinner('Creating alert rule…');
+  output.spinner('Creating monitor…');
   try {
     const response = await client.fetch<AlertRuleEnvelope>(
       rulesCollectionPath(scope.teamId),

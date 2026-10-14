@@ -1,12 +1,12 @@
-import type Client from '../../../util/client';
-import { parseArguments } from '../../../util/get-args';
-import { getFlagsSpecification } from '../../../util/get-flags-specification';
-import { printError } from '../../../util/error';
-import output from '../../../output-manager';
-import { validateJsonOutput } from '../../../util/output-format';
-import { isAPIError } from '../../../util/errors-ts';
-import { normalizeRepeatableStringFilters } from '../../../util/command-validation';
-import { rulesLsSubcommand } from './command';
+import type Client from '../../util/client';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import output from '../../output-manager';
+import { validateJsonOutput } from '../../util/output-format';
+import { isAPIError } from '../../util/errors-ts';
+import { normalizeRepeatableStringFilters } from '../../util/command-validation';
+import { monitorsLsSubcommand } from './command';
 import { parseRulesFlagsAndScope } from './parse-scope';
 import { printRules } from './format';
 import { BUILT_IN_ALERT_TYPES } from './types';
@@ -57,7 +57,7 @@ function parseRuleTypeFilter(
       client,
       jsonOutput,
       'INVALID_RULE_TYPE',
-      `Invalid rule type "${invalidType}". Expected built-in, custom, or a supported built-in trigger type.`
+      `Invalid monitor type "${invalidType}". Expected built-in, custom, or a supported built-in trigger type.`
     );
   }
 
@@ -97,14 +97,10 @@ export default async function ls(
   try {
     parsedArgs = parseArguments(
       argv,
-      getFlagsSpecification(rulesLsSubcommand.options)
+      getFlagsSpecification(monitorsLsSubcommand.options)
     );
   } catch (error) {
-    emitRulesArgParseError(
-      client,
-      error,
-      'alerts rules ls --project <name-or-id>'
-    );
+    emitRulesArgParseError(client, error, 'monitors ls --project <name-or-id>');
     printError(error);
     return 1;
   }
@@ -129,11 +125,11 @@ export default async function ls(
       '--all': flags['--all'],
     },
     format.jsonOutput,
-    'alerts rules ls'
+    'monitors ls'
   );
   if (typeof scope === 'number') return scope;
 
-  output.spinner('Fetching alert rules…');
+  output.spinner('Fetching monitors…');
   try {
     const rules: PublicAlertRule[] = [];
     let cursor: string | undefined;
@@ -157,7 +153,7 @@ export default async function ls(
         `${JSON.stringify({ rules: filteredRules }, null, 2)}\n`
       );
     } else if (filteredRules.length === 0) {
-      output.log('No alert rules found for this scope');
+      output.log('No monitors found for this scope');
     } else {
       printRules(filteredRules);
     }

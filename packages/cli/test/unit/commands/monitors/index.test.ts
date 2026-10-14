@@ -4,7 +4,7 @@ import { join } from 'path';
 import stripAnsi from 'strip-ansi';
 import { client } from '../../../mocks/client';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
-import alerts from '../../../../src/commands/alerts';
+import monitors from '../../../../src/commands/monitors';
 import * as linkModule from '../../../../src/util/projects/link';
 import * as getScopeModule from '../../../../src/util/get-scope';
 import * as getProjectModule from '../../../../src/util/projects/get-project-by-id-or-name';
@@ -349,7 +349,7 @@ function mockAuthoringSchema(
   });
 }
 
-describe('alerts rules', () => {
+describe('monitors', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
@@ -385,17 +385,9 @@ describe('alerts rules', () => {
       }
     });
 
-    client.setArgv(
-      'alerts',
-      'rules',
-      'ls',
-      '--type',
-      'custom',
-      '--format',
-      'json'
-    );
+    client.setArgv('monitors', 'ls', '--type', 'custom', '--format', 'json');
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     expect(cursors).toEqual([undefined, 'next']);
     const payload = JSON.parse(client.stdout.getFullOutput());
     expect(payload.rules.map((rule: { id: string }) => rule.id)).toEqual([
@@ -411,11 +403,11 @@ describe('alerts rules', () => {
       res.json({ rules: [builtInRule], pagination: { count: 1, next: null } });
     });
 
-    client.setArgv('alerts', 'rules', '--all');
+    client.setArgv('monitors', '--all');
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     const rendered = stripAnsi(client.stderr.getFullOutput());
-    expect(rendered).toContain('Rule ID');
+    expect(rendered).toContain('Monitor ID');
     expect(rendered).toContain('Type');
     expect(rendered).toContain('Condition');
     expect(rendered).toContain('ar_builtin');
@@ -446,9 +438,9 @@ describe('alerts rules', () => {
       expect(req.query.projectId).toBeUndefined();
       res.json({ rules: [], pagination: { count: 0, next: null } });
     });
-    client.setArgv('--scope', 'explicit-team', 'alerts', 'rules', 'ls');
+    client.setArgv('--scope', 'explicit-team', 'monitors', 'ls');
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
   });
 
   it('accepts custom_alert as a compatibility alias for custom rules', async () => {
@@ -457,8 +449,7 @@ describe('alerts rules', () => {
       res.json({ rules: [customRule], pagination: { count: 1, next: null } });
     });
     client.setArgv(
-      'alerts',
-      'rules',
+      'monitors',
       'ls',
       '--all',
       '--type',
@@ -467,7 +458,7 @@ describe('alerts rules', () => {
       'json'
     );
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     const payload = JSON.parse(client.stdout.getFullOutput());
     expect(payload.rules.map((rule: { id: string }) => rule.id)).toEqual([
       'ar_custom',
@@ -504,8 +495,7 @@ describe('alerts rules', () => {
       });
     });
     client.setArgv(
-      'alerts',
-      'rules',
+      'monitors',
       'ls',
       '--all',
       '--type',
@@ -516,7 +506,7 @@ describe('alerts rules', () => {
       'json'
     );
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     const payload = JSON.parse(client.stdout.getFullOutput());
     expect(payload.rules.map((rule: { id: string }) => rule.id)).toEqual([
       'ar_builtin',
@@ -529,8 +519,7 @@ describe('alerts rules', () => {
   it('returns the API-owned custom authoring schema unchanged for agents', async () => {
     mockAuthoringSchema(customAuthoringDocument, 'custom');
     client.setArgv(
-      'alerts',
-      'rules',
+      'monitors',
       'schema',
       '--type',
       'custom',
@@ -538,7 +527,7 @@ describe('alerts rules', () => {
       'json'
     );
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     const document = JSON.parse(client.stdout.getFullOutput());
     expect(document).toEqual(customAuthoringDocument);
     expect(JSON.stringify(document)).not.toMatch(/\bv3\b/i);
@@ -546,9 +535,9 @@ describe('alerts rules', () => {
 
   it('renders API-owned fields, constraints, and metric discovery', async () => {
     mockAuthoringSchema(customAuthoringDocument, 'custom');
-    client.setArgv('alerts', 'rules', 'schema', '--type', 'custom');
+    client.setArgv('monitors', 'schema', '--type', 'custom');
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     const rendered = stripAnsi(client.stderr.getFullOutput());
     expect(rendered).toContain('evaluation.query.metrics.<key>.aggregation');
     expect(rendered).toContain('count | sum | p95 | unique');
@@ -561,15 +550,15 @@ describe('alerts rules', () => {
 
   it('shows built-in trigger, scope, and filter guidance', async () => {
     mockAuthoringSchema(builtInAuthoringDocument, 'built-in');
-    client.setArgv('alerts', 'rules', 'schema', '--type', 'built-in');
+    client.setArgv('monitors', 'schema', '--type', 'built-in');
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     const rendered = stripAnsi(client.stderr.getFullOutput());
     expect(rendered).toContain('triggers.items[].filter');
     expect(rendered).toContain('statusGroup:4xx or statusGroup:5xx');
     expect(rendered).toContain('--project <name-or-id>');
     expect(rendered).toContain('--all');
-    expect(rendered).toContain('vercel alerts rules add --body ./rule.json');
+    expect(rendered).toContain('vercel monitors add --body ./rule.json');
     expect(rendered).not.toMatch(/\bv3\b/i);
   });
 
@@ -581,19 +570,19 @@ describe('alerts rules', () => {
         ...customAuthoringDocument.ruleTypes,
       ],
     });
-    client.setArgv('alerts', 'rules', 'schema');
+    client.setArgv('monitors', 'schema');
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     const rendered = stripAnsi(client.stderr.getFullOutput());
     expect(rendered).toContain('built-in');
     expect(rendered).toContain('custom');
-    expect(rendered).toContain('vercel alerts rules schema --type <type>');
+    expect(rendered).toContain('vercel monitors schema --type <type>');
   });
 
   it('shows complete create guidance in help', async () => {
-    client.setArgv('alerts', 'rules', 'add', '--help');
+    client.setArgv('monitors', 'add', '--help');
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     const rendered = stripAnsi(client.stderr.getFullOutput());
     expect(rendered).toContain(
       'Provide ruleScope in the body or use a scope flag, not both.'
@@ -609,21 +598,21 @@ describe('alerts rules', () => {
   });
 
   it('shows partial-body and scope guidance in update help', async () => {
-    client.setArgv('alerts', 'rules', 'update', '--help');
+    client.setArgv('monitors', 'update', '--help');
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     const rendered = stripAnsi(client.stderr.getFullOutput());
     expect(rendered).toContain(
-      'type is optional and inferred from the stored rule.'
+      'type is optional and inferred from the stored monitor.'
     );
     expect(rendered).toContain(
       'Use --project or --all to change scope with or without --body.'
     );
     expect(rendered).toContain(
-      'vercel alerts rules update ar_abc123 --project my-app'
+      'vercel monitors update ar_abc123 --project my-app'
     );
     expect(rendered).toContain(
-      'vercel alerts rules schema --type <built-in|custom>'
+      'vercel monitors schema --type <built-in|custom>'
     );
     expect(rendered).toContain('"matchMinimumSeverityLevel": "critical"');
     expect(rendered).not.toMatch(/\bv3\b/i);
@@ -658,8 +647,7 @@ describe('alerts rules', () => {
     client.setArgv(
       '--scope',
       'my-team',
-      'alerts',
-      'rules',
+      'monitors',
       'add',
       '--project',
       'explicit-project',
@@ -667,13 +655,13 @@ describe('alerts rules', () => {
       bodyPath
     );
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     const rendered = stripAnsi(client.stderr.getFullOutput());
     expect(rendered).toContain('Created');
     expect(rendered).toContain('ar_custom');
     expect(rendered).toContain('project: prj_explicit');
     expect(rendered).toContain(
-      'vercel alerts rules inspect ar_custom --scope my-team'
+      'vercel monitors inspect ar_custom --scope my-team'
     );
   });
 
@@ -689,8 +677,7 @@ describe('alerts rules', () => {
       matchMinimumSeverityLevel: builtInRule.matchMinimumSeverityLevel,
     });
     client.setArgv(
-      'alerts',
-      'rules',
+      'monitors',
       'add',
       '--all',
       '--body',
@@ -699,7 +686,7 @@ describe('alerts rules', () => {
       'json'
     );
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
       rule: builtInRule,
     });
@@ -712,9 +699,9 @@ describe('alerts rules', () => {
       triggers: builtInRule.triggers,
       matchMinimumSeverityLevel: builtInRule.matchMinimumSeverityLevel,
     });
-    client.setArgv('alerts', 'rules', 'add', '--body', bodyPath);
+    client.setArgv('monitors', 'add', '--body', bodyPath);
 
-    expect(await alerts(client)).toBe(1);
+    expect(await monitors(client)).toBe(1);
     expect(client.stderr.getFullOutput()).toContain('Missing rule scope');
   });
 
@@ -727,8 +714,7 @@ describe('alerts rules', () => {
       matchMinimumSeverityLevel: builtInRule.matchMinimumSeverityLevel,
     });
     client.setArgv(
-      'alerts',
-      'rules',
+      'monitors',
       'add',
       '--project',
       'my-app',
@@ -736,7 +722,7 @@ describe('alerts rules', () => {
       bodyPath
     );
 
-    expect(await alerts(client)).toBe(1);
+    expect(await monitors(client)).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
       'either in the body or with --project/--all'
     );
@@ -748,9 +734,9 @@ describe('alerts rules', () => {
       alertTypes: [{ type: 'custom_alert' }],
       customAlert: { queryJsonString: '{}' },
     });
-    client.setArgv('alerts', 'rules', 'add', '--all', '--body', bodyPath);
+    client.setArgv('monitors', 'add', '--all', '--body', bodyPath);
 
-    expect(await alerts(client)).toBe(1);
+    expect(await monitors(client)).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
       'previous alert-rules shape'
     );
@@ -765,8 +751,7 @@ describe('alerts rules', () => {
     });
     const bodyPath = writeBody('patch.json', { severity: 'medium' });
     client.setArgv(
-      'alerts',
-      'rules',
+      'monitors',
       'update',
       'ar_custom',
       '--body',
@@ -775,7 +760,7 @@ describe('alerts rules', () => {
       'json'
     );
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     expect(JSON.parse(client.stdout.getFullOutput()).rule.severity).toBe(
       'medium'
     );
@@ -803,19 +788,18 @@ describe('alerts rules', () => {
     client.setArgv(
       '--scope',
       'my-team',
-      'alerts',
-      'rules',
+      'monitors',
       'update',
       'ar_builtin',
       '--project',
       'explicit-project'
     );
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     const rendered = stripAnsi(client.stderr.getFullOutput());
     expect(rendered).toContain('Updated');
     expect(rendered).toContain(
-      'vercel alerts rules inspect ar_builtin --scope my-team'
+      'vercel monitors inspect ar_builtin --scope my-team'
     );
   });
 
@@ -824,8 +808,7 @@ describe('alerts rules', () => {
       res.json({ rule: builtInRule });
     });
     client.setArgv(
-      'alerts',
-      'rules',
+      'monitors',
       'update',
       'ar_builtin',
       '--all',
@@ -833,7 +816,7 @@ describe('alerts rules', () => {
       'json'
     );
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
       rule: builtInRule,
     });
@@ -849,9 +832,9 @@ describe('alerts rules', () => {
         },
       });
     });
-    client.setArgv('alerts', 'rules', 'inspect', 'ar_custom');
+    client.setArgv('monitors', 'inspect', 'ar_custom');
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     const rendered = stripAnsi(client.stderr.getFullOutput());
     expect(rendered).toContain('Query unavailable via API');
     expect(rendered).toContain('update metadata');
@@ -861,9 +844,9 @@ describe('alerts rules', () => {
     client.scenario.get('/alerts/v3/alert-rules/:ruleId', (_req, res) => {
       res.json({ rule: builtInRule });
     });
-    client.setArgv('alerts', 'rules', 'inspect', 'ar_builtin');
+    client.setArgv('monitors', 'inspect', 'ar_builtin');
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     const rendered = stripAnsi(client.stderr.getFullOutput());
     expect(rendered).toContain('Built-in conditions');
     expect(rendered).toContain('Minimum severity');
@@ -879,8 +862,7 @@ describe('alerts rules', () => {
       res.json({ rule: builtInRule });
     });
     client.setArgv(
-      'alerts',
-      'rules',
+      'monitors',
       'inspect',
       'ar_builtin',
       '--project',
@@ -889,7 +871,7 @@ describe('alerts rules', () => {
       'json'
     );
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
       rule: builtInRule,
     });
@@ -902,8 +884,7 @@ describe('alerts rules', () => {
       res.json({ success: true });
     });
     client.setArgv(
-      'alerts',
-      'rules',
+      'monitors',
       'rm',
       'ar_builtin',
       '--all',
@@ -912,7 +893,7 @@ describe('alerts rules', () => {
       'json'
     );
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
       ok: true,
       ruleId: 'ar_builtin',
@@ -924,9 +905,9 @@ describe('alerts rules', () => {
     client.scenario.delete('/alerts/v3/alert-rules/:ruleId', (_req, res) => {
       res.json({ success: true });
     });
-    client.setArgv('alerts', 'rules', 'rm', 'ar_builtin', '--yes');
+    client.setArgv('monitors', 'rm', 'ar_builtin', '--yes');
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     const rendered = stripAnsi(client.stderr.getFullOutput());
     expect(rendered).toContain('✓ Deleted');
     expect(rendered).toContain('ar_builtin');
@@ -940,17 +921,17 @@ describe('alerts rules', () => {
     client.scenario.delete('/alerts/v3/alert-rules/:ruleId', (_req, res) => {
       res.json({ success: true });
     });
-    client.setArgv('alerts', 'rules', 'rm', 'ar_builtin');
+    client.setArgv('monitors', 'rm', 'ar_builtin');
 
-    expect(await alerts(client)).toBe(0);
+    expect(await monitors(client)).toBe(0);
     expect(client.input.confirm).toHaveBeenCalledWith(
-      'Delete alert rule Production anomalies (ar_builtin)? This cannot be undone.',
+      'Delete monitor Production anomalies (ar_builtin)? This cannot be undone.',
       false
     );
     const rendered = stripAnsi(client.stderr.getFullOutput());
     expect(rendered).toContain('Production anomalies');
     expect(rendered).toContain('Deleted');
-    expect(rendered).not.toContain('alerts rules inspect');
+    expect(rendered).not.toContain('monitors inspect');
   });
 
   it('preserves structured API validation issues in JSON errors', async () => {
@@ -976,17 +957,9 @@ describe('alerts rules', () => {
       evaluation: customRule.evaluation,
       trigger: customRule.trigger,
     });
-    client.setArgv(
-      'alerts',
-      'rules',
-      'add',
-      '--body',
-      bodyPath,
-      '--format',
-      'json'
-    );
+    client.setArgv('monitors', 'add', '--body', bodyPath, '--format', 'json');
 
-    expect(await alerts(client)).toBe(1);
+    expect(await monitors(client)).toBe(1);
     expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
       error: {
         code: 'bad_request',
@@ -999,5 +972,15 @@ describe('alerts rules', () => {
         ],
       },
     });
+  });
+
+  it('prints help for the monitors command', async () => {
+    client.setArgv('monitors', '--help');
+
+    expect(await monitors(client)).toBe(0);
+    const rendered = stripAnsi(client.stderr.getFullOutput());
+    expect(rendered).toContain('vercel monitors');
+    expect(rendered).toContain('schema');
+    expect(rendered).not.toContain('alerts rules');
   });
 });

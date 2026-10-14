@@ -1,12 +1,12 @@
-import type Client from '../../../util/client';
-import { parseArguments } from '../../../util/get-args';
-import { getFlagsSpecification } from '../../../util/get-flags-specification';
-import { printError } from '../../../util/error';
-import output from '../../../output-manager';
-import { validateJsonOutput } from '../../../util/output-format';
-import { isAPIError } from '../../../util/errors-ts';
-import { packageName } from '../../../util/pkg-name';
-import { rulesInspectSubcommand } from './command';
+import type Client from '../../util/client';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import output from '../../output-manager';
+import { validateJsonOutput } from '../../util/output-format';
+import { isAPIError } from '../../util/errors-ts';
+import { packageName } from '../../util/pkg-name';
+import { monitorsInspectSubcommand } from './command';
 import { printRule } from './format';
 import { resolveRulesTeam } from './parse-scope';
 import {
@@ -24,10 +24,10 @@ export default async function inspectRule(
   try {
     parsedArgs = parseArguments(
       argv,
-      getFlagsSpecification(rulesInspectSubcommand.options)
+      getFlagsSpecification(monitorsInspectSubcommand.options)
     );
   } catch (error) {
-    emitRulesArgParseError(client, error, 'alerts rules inspect <rule-id>');
+    emitRulesArgParseError(client, error, 'monitors inspect <monitor-id>');
     printError(error);
     return 1;
   }
@@ -43,14 +43,14 @@ export default async function inspectRule(
       client,
       format.jsonOutput,
       'MISSING_ARGUMENTS',
-      `Missing rule ID. Example: ${packageName} alerts rules inspect <rule-id>`
+      `Missing monitor ID. Example: ${packageName} monitors inspect <monitor-id>`
     );
   }
 
   const scope = await resolveRulesTeam(client, format.jsonOutput);
   if (typeof scope === 'number') return scope;
 
-  output.spinner('Fetching alert rule…');
+  output.spinner('Fetching monitor…');
   try {
     const rule = await fetchRule(client, scope, ruleId);
     if (format.jsonOutput) {

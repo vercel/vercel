@@ -42,6 +42,7 @@ import { logsCommand } from './logs/command';
 import { mcpCommand } from './mcp/command';
 import { metricsCommand } from './metrics/command';
 import { microfrontendsCommand } from './microfrontends/command';
+import { monitorsCommand } from './monitors/command';
 import { openCommand } from './open/command';
 import { projectCommand } from './project/command';
 import { promoteCommand } from './promote/command';
@@ -113,6 +114,7 @@ const commandsStructs = [
   logsCommand,
   mcpCommand,
   microfrontendsCommand,
+  monitorsCommand,
   openCommand,
   projectCommand,
   promoteCommand,

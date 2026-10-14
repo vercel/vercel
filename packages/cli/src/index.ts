@@ -1146,6 +1146,10 @@ const main = async () => {
           telemetry.trackCliCommandMetrics(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).metrics;
           break;
+        case 'monitors':
+          telemetry.trackCliCommandMonitors(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).monitors;
+          break;
         case 'microfrontends':
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).microfrontends;

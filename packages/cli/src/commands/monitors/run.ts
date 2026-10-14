@@ -1,13 +1,13 @@
-import getSubcommand from '../../../util/get-subcommand';
-import output from '../../../output-manager';
-import type Client from '../../../util/client';
+import getSubcommand from '../../util/get-subcommand';
+import output from '../../output-manager';
+import type Client from '../../util/client';
 import {
   buildCommandWithGlobalFlags,
   outputAgentError,
-} from '../../../util/agent-output';
-import { AGENT_REASON } from '../../../util/agent-output-constants';
+} from '../../util/agent-output';
+import { AGENT_REASON } from '../../util/agent-output-constants';
 
-const RULES_CONFIG = {
+export const MONITORS_CONFIG = {
   ls: ['ls', 'list'],
   schema: ['schema'],
   add: ['add', 'create'],
@@ -16,7 +16,7 @@ const RULES_CONFIG = {
   update: ['update', 'patch'],
 };
 
-export default async function rules(
+export async function runMonitors(
   client: Client,
   argv: string[]
 ): Promise<number> {
@@ -27,7 +27,7 @@ export default async function rules(
 
   const { subcommand, args, subcommandOriginal } = getSubcommand(
     argv,
-    RULES_CONFIG
+    MONITORS_CONFIG
   );
   if (subcommand == null) {
     outputAgentError(
@@ -35,21 +35,21 @@ export default async function rules(
       {
         status: 'error',
         reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: `Unknown "alerts rules" subcommand "${argv[0]}".`,
+        message: `Unknown "monitors" subcommand "${argv[0]}".`,
         next: [
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
-              'alerts rules --help'
+              'monitors --help'
             ),
-            when: 'Show valid rules subcommands',
+            when: 'Show valid monitors subcommands',
           },
         ],
       },
       1
     );
     output.error(
-      `Unknown "alerts rules" subcommand "${argv[0]}". Run \`vercel alerts rules --help\`.`
+      `Unknown "monitors" subcommand "${argv[0]}". Run \`vercel monitors --help\`.`
     );
     return 1;
   }
@@ -68,7 +68,9 @@ export default async function rules(
     case 'update':
       return (await import('./update')).default(client, args);
     default:
-      output.error(`Unhandled rules subcommand: ${String(subcommandOriginal)}`);
+      output.error(
+        `Unhandled monitors subcommand: ${String(subcommandOriginal)}`
+      );
       return 1;
   }
 }

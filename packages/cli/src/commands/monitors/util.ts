@@ -1,15 +1,15 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import type { JSONObject } from '@vercel-internals/types';
-import type Client from '../../../util/client';
-import { isJSONObject } from '../../../util/client';
+import type Client from '../../util/client';
+import { isJSONObject } from '../../util/client';
 import {
   buildCommandWithGlobalFlags,
   outputAgentError,
-} from '../../../util/agent-output';
-import { AGENT_REASON } from '../../../util/agent-output-constants';
-import output from '../../../output-manager';
-import type { AlertsScope } from '../resolve-alerts-scope';
+} from '../../util/agent-output';
+import { AGENT_REASON } from '../../util/agent-output-constants';
+import output from '../../output-manager';
+import type { AlertsScope } from '../alerts/resolve-alerts-scope';
 import type {
   AlertRuleIssue,
   AlertRuleEnvelope,
@@ -130,12 +130,12 @@ export function handleRulesApiError(
 ): number {
   const message =
     err.status === 401
-      ? 'You do not have access to alert rules in this team. Ensure your role can manage Alert Rules, or pass --token and --scope.'
+      ? 'You do not have access to monitors in this team. Ensure your role can manage Alert Rules, or pass --token and --scope.'
       : err.status === 403
         ? err.serverMessage ||
-          'You do not have permission to manage alert rules in this team.'
+          'You do not have permission to manage monitors in this team.'
         : err.status >= 500
-          ? `The alert rules endpoint failed (${err.status}). Re-run with --debug and share the x-vercel-id from the failed request.`
+          ? `The monitors endpoint failed (${err.status}). Re-run with --debug and share the x-vercel-id from the failed request.`
           : err.serverMessage || `API error (${err.status}).`;
 
   return outputRulesError(
@@ -157,7 +157,7 @@ export function handleRulesApiError(
       issues: getIssues(err),
       hint:
         err.status === 401 || err.status === 403
-          ? 'Confirm the team with `vercel whoami`; use --scope <team-slug> if the rule belongs to another team.'
+          ? 'Confirm the team with `vercel whoami`; use --scope <team-slug> if the monitor belongs to another team.'
           : undefined,
     }
   );
@@ -210,7 +210,7 @@ export function readRuleBody(
       'LEGACY_ALERT_RULE_BODY',
       'This body uses the previous alert-rules shape. Rewrite it using the built-in or custom schema.',
       {
-        hint: 'Run `vercel alerts rules schema --type built-in` or `vercel alerts rules schema --type custom` for examples.',
+        hint: 'Run `vercel monitors schema --type built-in` or `vercel monitors schema --type custom` for examples.',
       }
     );
   }
@@ -244,13 +244,11 @@ export function emitRulesArgParseError(
         {
           command: buildCommandWithGlobalFlags(
             client.argv,
-            projectFlagMissingArg
-              ? recoverWithProjectFlag
-              : 'alerts rules --help'
+            projectFlagMissingArg ? recoverWithProjectFlag : 'monitors --help'
           ),
           when: projectFlagMissingArg
             ? 'Retry with a project name or id'
-            : 'See valid `alerts rules` subcommands',
+            : 'See valid `monitors` subcommands',
         },
       ],
     },

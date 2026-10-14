@@ -11,7 +11,7 @@ vercel alerts --type usage_anomaly --type error_anomaly
 vercel alerts inspect <group-id> --format json
 ```
 
-Alert rules live under `vercel alerts rules`; inspect `vercel alerts rules --help` before creating or changing rules.
+Alert rules (monitors) live under `vercel monitors`; inspect `vercel monitors --help` before creating or changing monitors.
 
 ## Usage, Contracts, and Purchases
 
