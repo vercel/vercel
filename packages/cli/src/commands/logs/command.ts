@@ -147,6 +147,21 @@ export const logsCommand = {
       deprecated: true,
       description: 'Deprecated no-op; use --branch to filter by branch',
     },
+    {
+      name: 'format',
+      shorthand: 'F',
+      type: String,
+      argument: 'FORMAT',
+      deprecated: true,
+      description: 'Deprecated; use --json for JSON output',
+    },
+    {
+      name: 'output',
+      shorthand: 'o',
+      type: String,
+      deprecated: true,
+      description: 'Deprecated no-op',
+    },
   ],
   examples: [
     {

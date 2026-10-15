@@ -235,7 +235,6 @@ const OUTPUT_FLAG_EXCEPTIONS = {
   'flags stale': 'Flags preserves its established --json contract',
   'flags versions diff': 'Flags preserves its established --json contract',
   'flags versions list': 'Flags preserves its established --json contract',
-  logs: '--json emits the established JSONL stream',
   'traces create': '--json emits a trace response envelope',
   'traces get': 'Traces preserves its established --json contract',
   'vcr permissions add': 'New VCR permissions family uses --format',
@@ -251,6 +250,7 @@ const JSON_SHAPE_EXCEPTIONS = {
 } as const satisfies Readonly<Record<string, string>>;
 
 const FORMAT_SHAPE_EXCEPTIONS = {
+  logs: '--format is a hidden deprecated alias for --json',
   skills:
     '--format is a supported but currently undocumented compatibility path',
 } as const satisfies Readonly<Record<string, string>>;

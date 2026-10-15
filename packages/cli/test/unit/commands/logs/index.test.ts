@@ -250,12 +250,12 @@ describe('logs', () => {
 
     it('should display help when an invalid flag is provided', async () => {
       client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--output', 'json');
+      client.setArgv('logs', '--unknown-flag', 'json');
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(1);
       const output = client.getFullOutput();
-      expect(output).toContain('--output');
+      expect(output).toContain('--unknown-flag');
       expect(output).toContain('unknown or unexpected option');
       expect(output).toContain('Display request logs');
       expect(output).toContain('--json');
@@ -1027,6 +1027,9 @@ describe('logs', () => {
 
       expect(exitCode).toEqual(0);
       expect(receivedSearch).toEqual('status:500 error');
+      expect(client.getFullOutput()).toContain(
+        '--search is deprecated. Use --query instead.'
+      );
     });
 
     it('should track telemetry for --search option', async () => {
@@ -1042,6 +1045,106 @@ describe('logs', () => {
           value: '[REDACTED]',
         },
       ]);
+    });
+  });
+
+  describe('deprecated flags', () => {
+    beforeEach(() => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_logstest',
+        name: 'logs-test-project',
+      });
+    });
+
+    it.each([['--format', 'json'], ['--format=json'], ['-F', 'json']])(
+      'should treat %s as --json and show a deprecation notice',
+      async (...args: string[]) => {
+        useRequestLogs([createMockLog({ message: 'JSON log test' })]);
+
+        client.cwd = fixture('linked-project');
+        client.setArgv('logs', ...args);
+        const exitCode = await logs(client);
+
+        expect(exitCode).toEqual(0);
+        const stdout = client.stdout.getFullOutput();
+        expect(JSON.parse(stdout.trim()).message).toEqual('JSON log test');
+        expect(stdout).not.toContain('deprecated');
+        expect(client.stderr.getFullOutput()).toContain(
+          '--format json is deprecated. Use --json instead.'
+        );
+      }
+    );
+
+    it('should ignore an unsupported --format value with a notice', async () => {
+      useRequestLogs([createMockLog({ message: 'Human log test' })]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--format', 'yaml');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(client.stdout.getFullOutput()).toEqual('');
+      expect(client.getFullOutput()).toContain(
+        '--format is deprecated and was ignored. Use --json for JSON output.'
+      );
+    });
+
+    it.each([
+      ['--output', 'raw'],
+      ['-o', 'short'],
+    ])(
+      'should accept %s as a no-op with a notice',
+      async (...args: string[]) => {
+        useRequestLogs([createMockLog()]);
+
+        client.cwd = fixture('linked-project');
+        client.setArgv('logs', ...args);
+        const exitCode = await logs(client);
+
+        expect(exitCode).toEqual(0);
+        const output = client.getFullOutput();
+        expect(output).not.toContain('unknown or unexpected option');
+        expect(output).toContain('--output is deprecated and was ignored.');
+      }
+    );
+
+    it('should show a notice for --no-branch', async () => {
+      useRequestLogs([createMockLog()]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--no-branch');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(client.getFullOutput()).toContain(
+        '--no-branch is deprecated and has no effect.'
+      );
+    });
+
+    it('should track telemetry for deprecated --format and --output', async () => {
+      useRequestLogs([]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--format', 'json', '--output', 'raw');
+      await logs(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'option:format', value: 'json' },
+        { key: 'option:output', value: 'raw' },
+      ]);
+    });
+
+    it('should hide deprecated flags from help', async () => {
+      client.setArgv('logs', '--help');
+      await logs(client);
+
+      const output = client.getFullOutput();
+      expect(output).not.toContain('--format');
+      expect(output).not.toContain('--output');
+      expect(output).not.toContain('--search');
     });
   });
 

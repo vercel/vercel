@@ -550,6 +550,42 @@ async function resolveLogsTarget(
   };
 }
 
+function printDeprecationNotice(message: string) {
+  output.print(`${chalk.yellow('!')} ${message}\n`);
+}
+
+// Deprecated flags stay accepted so older scripts keep working. Flags that
+// still map to current behavior are honored; the rest are ignored.
+function printDeprecationNotices(flags: {
+  format?: string;
+  output?: string;
+  search?: string;
+  noBranch?: boolean;
+}) {
+  if (flags.format !== undefined) {
+    printDeprecationNotice(
+      flags.format === 'json'
+        ? `${chalk.bold('--format json')} is deprecated. Use ${chalk.bold('--json')} instead.`
+        : `${chalk.bold('--format')} is deprecated and was ignored. Use ${chalk.bold('--json')} for JSON output.`
+    );
+  }
+  if (flags.output !== undefined) {
+    printDeprecationNotice(
+      `${chalk.bold('--output')} is deprecated and was ignored. Use ${chalk.bold('--expand')} to show full log messages.`
+    );
+  }
+  if (flags.search !== undefined) {
+    printDeprecationNotice(
+      `${chalk.bold('--search')} is deprecated. Use ${chalk.bold('--query')} instead.`
+    );
+  }
+  if (flags.noBranch) {
+    printDeprecationNotice(
+      `${chalk.bold('--no-branch')} is deprecated and has no effect. Logs include all branches unless you pass ${chalk.bold('--branch')}.`
+    );
+  }
+}
+
 export default async function logs(client: Client) {
   let parsedArguments;
   const flagsSpecification = getFlagsSpecification(logsCommand.options);
@@ -595,7 +631,10 @@ export default async function logs(client: Client) {
   const sinceOption = parsedArguments.flags['--since'];
   const untilOption = parsedArguments.flags['--until'];
   const limitOption = parsedArguments.flags['--limit'];
-  const jsonOption = parsedArguments.flags['--json'];
+  const jsonFlagValue = parsedArguments.flags['--json'];
+  const formatOption = parsedArguments.flags['--format'];
+  const outputOption = parsedArguments.flags['--output'];
+  const jsonOption = jsonFlagValue || formatOption === 'json';
   const queryOption = parsedArguments.flags['--query'];
   const searchOption = parsedArguments.flags['--search'];
   const requestIdOption = parsedArguments.flags['--request-id'];
@@ -616,7 +655,7 @@ export default async function logs(client: Client) {
   telemetry.trackCliOptionSince(sinceOption);
   telemetry.trackCliOptionUntil(untilOption);
   telemetry.trackCliOptionLimit(limitOption);
-  telemetry.trackCliFlagJson(jsonOption);
+  telemetry.trackCliFlagJson(jsonFlagValue);
   telemetry.trackCliFlagFollow(followOption);
   telemetry.trackCliFlagNoFollow(noFollowFlagValue);
   telemetry.trackCliOptionQuery(queryOption);
@@ -625,6 +664,15 @@ export default async function logs(client: Client) {
   telemetry.trackCliFlagExpand(expandOption);
   telemetry.trackCliOptionBranch(branchFlagValue);
   telemetry.trackCliFlagNoBranch(noBranchFlagValue);
+  telemetry.trackCliOptionFormat(formatOption);
+  telemetry.trackCliOptionOutput(outputOption);
+
+  printDeprecationNotices({
+    format: formatOption,
+    output: outputOption,
+    search: searchOption,
+    noBranch: noBranchFlagValue,
+  });
 
   if (followOption) {
     const incompatibleFlags = [

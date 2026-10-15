@@ -139,6 +139,24 @@ export class LogsTelemetryClient
     }
   }
 
+  trackCliOptionFormat(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'format',
+        value: v === 'json' ? v : this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionOutput(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'output',
+        value: ['raw', 'short'].includes(v) ? v : this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionRequestId(v: string | undefined) {
     if (v) {
       this.trackCliOption({
