@@ -125,6 +125,7 @@ export async function inspect(client: Client, argv: string[]) {
             id: project.projectId,
             name: project.name,
             environments: project.environments,
+            secretsOutdated: project.secretsOutdated === true,
           })) ?? [],
         billingPlan: resource.billingPlan
           ? {
@@ -185,7 +186,16 @@ export async function inspect(client: Client, argv: string[]) {
       const envs = project.environments?.length
         ? chalk.gray(` (${project.environments.join(', ')})`)
         : '';
-      output.print(`  ${project.name}${envs}\n`);
+      const outdated = project.secretsOutdated
+        ? chalk.yellow('  not using the latest secrets')
+        : '';
+      output.print(`  ${project.name}${envs}${outdated}\n`);
+    }
+    if (projects.some(project => project.secretsOutdated)) {
+      output.print('\n');
+      output.warn(
+        `Some connected projects are not using the latest secrets. Run \`${packageName} integration-resource sync-secrets ${resource.name}\` to apply them.`
+      );
     }
   }
 

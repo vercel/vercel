@@ -88,6 +88,26 @@ describe('integration-resource inspect', () => {
     );
   });
 
+  it('warns when connected projects are not using the latest secrets', async () => {
+    const outdated: Resource = {
+      ...LIVE_RESOURCE,
+      projectsMetadata: [
+        { ...LIVE_RESOURCE.projectsMetadata![0], secretsOutdated: true },
+      ],
+    };
+    mockStores([outdated]);
+    mockResource(outdated);
+
+    client.setArgv('integration-resource', 'inspect', 'my-acme');
+    const exitCode = await integrationResourceCommand(client);
+    expect(exitCode).toEqual(0);
+
+    const out = client.stderr.getFullOutput();
+    expect(out).toContain('web-app');
+    expect(out).toContain('not using the latest secrets');
+    expect(out).toContain('integration-resource sync-secrets my-acme');
+  });
+
   it('works via the `status` alias', async () => {
     mockStores([LISTED_RESOURCE]);
     mockResource(LIVE_RESOURCE);
@@ -146,6 +166,7 @@ describe('integration-resource inspect', () => {
             id: 'prj_1',
             name: 'web-app',
             environments: ['production', 'preview'],
+            secretsOutdated: false,
           },
         ],
         billingPlan: null,
