@@ -7,6 +7,7 @@ import {
   disconnectSubcommand,
   inspectSubcommand,
   removeSubcommand as resourceRemoveSubcommand,
+  syncSecretsSubcommand,
 } from '../integration-resource/command';
 
 export const addSubcommand = {
@@ -647,7 +648,7 @@ export const resourceSubcommand = {
   name: 'resource',
   aliases: [],
   description:
-    'Manage marketplace integration resources (connect, disconnect, remove, create-threshold, claim)',
+    'Manage marketplace integration resources (connect, disconnect, remove, create-threshold, claim, sync-secrets)',
   options: [],
   arguments: [],
   subcommands: [
@@ -657,6 +658,7 @@ export const resourceSubcommand = {
     resourceRemoveSubcommand,
     claimSubcommand,
     inspectSubcommand,
+    syncSecretsSubcommand,
   ],
   examples: [
     {
