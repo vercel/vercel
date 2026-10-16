@@ -9,6 +9,7 @@
  */
 
 export type Framework =
+  | 'container'
   | 'blitzjs'
   | 'nextjs'
   | 'gatsby'
@@ -49,6 +50,7 @@ export type Framework =
   | 'hydrogen'
   | 'vite'
   | 'tanstack-start'
+  | 'tanstack-start-lovable'
   | 'vitepress'
   | 'vuepress'
   | 'parcel'
@@ -56,8 +58,11 @@ export type Framework =
   | 'flask'
   | 'fasthtml'
   | 'django'
-  | 'sanity-v2'
+  | 'ash'
+  | 'factory-eve'
+  | 'eve'
   | 'sanity'
+  | 'sanity-v2'
   | 'storybook'
   | 'nitro'
   | 'hono'
@@ -71,9 +76,13 @@ export type Framework =
   | 'python'
   | 'ruby'
   | 'rust'
+  | 'axum'
+  | 'actix-web'
+  | 'bun'
   | 'node'
   | 'go'
   | 'services'
+  | 'mastra'
   | null;
 
 export interface FunctionConfig {
