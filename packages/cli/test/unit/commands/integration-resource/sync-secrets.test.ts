@@ -38,10 +38,20 @@ describe('integration-resource', () => {
           syncRequests.push(req.body);
           const conflicts = options.conflicts ?? [];
           if (req.body.dryRun) {
-            res.json({ dryRun: true, connectionIds: ['spc_1'], conflicts });
+            res.json({
+              dryRun: true,
+              connectionCount: 1,
+              conflicts,
+              hiddenConflictCount: 0,
+            });
             return;
           }
-          res.json({ dryRun: false, connectionIds: ['spc_1'], conflicts });
+          res.json({
+            dryRun: false,
+            connectionCount: 1,
+            conflicts,
+            hiddenConflictCount: 0,
+          });
         }
       );
     }
@@ -127,8 +137,9 @@ describe('integration-resource', () => {
       await expect(exitCodePromise).resolves.toEqual(0);
       expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
         dryRun: true,
-        connectionIds: ['spc_1'],
+        connectionCount: 1,
         conflicts: [conflict],
+        hiddenConflictCount: 0,
       });
       expect(syncRequests).toEqual([{ dryRun: true }]);
     });

@@ -96,7 +96,8 @@ export async function syncSecrets(client: Client, argv: string[]) {
     output.stopSpinner();
   }
 
-  const { conflicts } = preview;
+  const { conflicts, hiddenConflictCount } = preview;
+  const hasConflicts = conflicts.length > 0 || hiddenConflictCount > 0;
   const managedConflicts = conflicts.filter(c => c.managedBy);
 
   if (dryRun) {
@@ -105,19 +106,19 @@ export async function syncSecrets(client: Client, argv: string[]) {
       return 0;
     }
     output.log(
-      `${chalk.bold(resource.name)} is connected to ${preview.connectionIds.length} project connection${preview.connectionIds.length === 1 ? '' : 's'}.`
+      `${chalk.bold(resource.name)} is connected to ${preview.connectionCount} project connection${preview.connectionCount === 1 ? '' : 's'}.`
     );
-    if (conflicts.length === 0) {
+    if (conflicts.length === 0 && !preview.hiddenConflictCount) {
       output.log('No conflicting environment variables found.');
     } else {
-      printConflicts(conflicts);
+      printConflicts(conflicts, preview.hiddenConflictCount);
     }
     return 0;
   }
 
-  if (conflicts.length > 0) {
+  if (hasConflicts) {
     if (!asJson) {
-      printConflicts(conflicts);
+      printConflicts(conflicts, hiddenConflictCount);
     }
 
     if (managedConflicts.length > 0) {
@@ -172,7 +173,7 @@ export async function syncSecrets(client: Client, argv: string[]) {
   try {
     output.spinner('Applying secrets to connected projects…', 500);
     result = await syncResourceSecrets(client, resource, {
-      overwriteConflicts: conflicts.length > 0 && overwriteConflicts,
+      overwriteConflicts: hasConflicts && overwriteConflicts,
     });
   } catch (error) {
     output.error(
@@ -191,16 +192,26 @@ export async function syncSecrets(client: Client, argv: string[]) {
   }
 
   output.success(
-    `Applied the current secrets for ${chalk.bold(resource.name)} to ${result.connectionIds.length} project connection${result.connectionIds.length === 1 ? '' : 's'}. Redeploy the affected projects to use them.`
+    `Applied the current secrets for ${chalk.bold(resource.name)} to ${result.connectionCount} project connection${result.connectionCount === 1 ? '' : 's'}. Redeploy the affected projects to use them.`
   );
   return 0;
 }
 
-function printConflicts(conflicts: SecretsEnvVarConflict[]) {
+function printConflicts(
+  conflicts: SecretsEnvVarConflict[],
+  hiddenConflictCount = 0
+) {
   output.log('Conflicting environment variables:');
   for (const conflict of conflicts) {
     output.print(
       `  ${chalk.bold(conflict.projectName)}  ${conflict.key}  (${conflict.environments.join(', ')})${conflict.managedBy ? chalk.gray('  managed by another resource or integration') : ''}\n`
+    );
+  }
+  if (hiddenConflictCount > 0) {
+    output.print(
+      chalk.gray(
+        `  ${hiddenConflictCount} more in projects you don't have access to\n`
+      )
     );
   }
 }

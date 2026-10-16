@@ -13,8 +13,9 @@ export interface SecretsEnvVarConflict {
 
 export interface SyncResourceSecretsResult {
   dryRun: boolean;
-  connectionIds: string[];
+  connectionCount: number;
   conflicts: SecretsEnvVarConflict[];
+  hiddenConflictCount: number;
 }
 
 export async function syncResourceSecrets(
