@@ -21,6 +21,7 @@ export interface ResourceConnection {
   projectId: string;
   name: string;
   environments: string[];
+  secretsOutdated?: boolean;
 }
 
 export class CancelledError extends Error {}

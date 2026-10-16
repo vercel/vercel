@@ -27,6 +27,13 @@ export class IntegrationResourceTelemetryClient
     });
   }
 
+  trackCliSubcommandSyncSecrets(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'sync-secrets',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandClaim(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'claim',

@@ -301,6 +301,60 @@ export const inspectSubcommand = {
   ],
 } as const;
 
+export const syncSecretsSubcommand = {
+  name: 'sync-secrets',
+  aliases: [],
+  description:
+    "Apply a resource's current secrets to the projects it is connected to",
+  arguments: [
+    {
+      name: 'resource',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'overwrite-conflicts',
+      description:
+        'Replace project environment variables that conflict with the resource. Variables managed by another resource or integration are never replaced',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'dry-run',
+      description: 'Show the connections and conflicts without making changes',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      ...yesOption,
+      description:
+        'Skip the confirmation prompt when overwriting conflicting environment variables',
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Apply rotated secrets to connected projects',
+      value: [
+        `${packageName} integration-resource sync-secrets <resource>`,
+        `${packageName} integration-resource sync-secrets my-acme-resource`,
+      ],
+    },
+    {
+      name: 'Check for conflicting environment variables',
+      value: `${packageName} integration-resource sync-secrets my-acme-resource --dry-run`,
+    },
+    {
+      name: 'Replace conflicting environment variables',
+      value: `${packageName} integration-resource sync-secrets my-acme-resource --overwrite-conflicts`,
+    },
+  ],
+} as const;
+
 export const integrationResourceCommand = {
   name: 'integration-resource',
   aliases: ['ir'],
@@ -315,6 +369,7 @@ export const integrationResourceCommand = {
     removeSubcommand,
     claimSubcommand,
     inspectSubcommand,
+    syncSecretsSubcommand,
   ],
   examples: [],
 } as const;
