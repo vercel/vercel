@@ -75,8 +75,9 @@ describe('vercel traces get', () => {
     mockedFetchTrace.mockResolvedValue({ trace: sampleTrace, partial: false });
   });
 
-  it('prints the markdown summary to stdout for a 200 response', async () => {
+  it('prints the markdown summary to stdout when stdout is not a TTY', async () => {
     mockLinkedProject();
+    client.stdout.isTTY = false;
     client.setArgv('traces', 'get', 'req_abc');
     const exitCode = await traces(client);
 
@@ -95,13 +96,44 @@ describe('vercel traces get', () => {
     expect(stdout).toContain('**Endpoint:** `GET /api/hello` → 200');
     expect(stdout).toContain('**Spans:** 2');
     expect(stdout).toContain('## Span tree');
+    expect(stdout).not.toContain('Duration  ');
 
     const stderr = client.stderr.getFullOutput();
     expect(stderr).toContain('Run with --json for full trace data.');
   });
 
+  it('prints the markdown summary in non-interactive mode even on a TTY', async () => {
+    mockLinkedProject();
+    client.nonInteractive = true;
+    client.setArgv('traces', 'get', 'req_abc');
+    const exitCode = await traces(client);
+
+    expect(exitCode).toBe(0);
+    expect(client.stdout.getFullOutput()).toContain('## Span tree');
+  });
+
+  it('prints the waterfall chart to stdout on a TTY', async () => {
+    mockLinkedProject();
+    client.setArgv('traces', 'get', 'req_abc');
+    const exitCode = await traces(client);
+
+    expect(exitCode).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain('  Trace           trace_001');
+    expect(stdout).toContain('  Request         req_abc');
+    expect(stdout).toContain('  Endpoint        GET /api/hello → 200');
+    expect(stdout).toMatch(/Span\s+Duration\s+0ms/);
+    expect(stdout).toContain('█');
+    expect(stdout).not.toContain('## Span tree');
+    expect(stdout).not.toContain('**Trace id:**');
+    expect(client.stderr.getFullOutput()).toContain(
+      'Run with --json for full trace data.'
+    );
+  });
+
   it('works when `get` is omitted (shortcut form)', async () => {
     mockLinkedProject();
+    client.stdout.isTTY = false;
     client.scenario.get('/v1/projects/traces', (_req, res) => {
       res.json({ trace: sampleTrace });
     });
