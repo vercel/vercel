@@ -15,6 +15,7 @@ import { help } from '../help';
 import { getSubcommand, tracesCommand } from './command';
 import { fetchTrace } from './fetch-trace';
 import { renderMarkdown } from './render-markdown';
+import { renderWaterfall } from './render-waterfall';
 import { resolveScope } from './scope-resolver';
 import type { TracesTelemetryClient } from '../../util/telemetry/commands/traces';
 
@@ -285,7 +286,14 @@ export default async function get(
     return 0;
   }
 
-  client.stdout.write(renderMarkdown(trace, { requestId }));
+  // Humans at a terminal get the waterfall chart. Piped and agent output keeps
+  // the markdown summary, which is easier to parse and quote.
+  const interactive = Boolean(client.stdout.isTTY) && !client.nonInteractive;
+  client.stdout.write(
+    interactive
+      ? renderWaterfall(trace, { requestId, columns: client.stdout.columns })
+      : renderMarkdown(trace, { requestId })
+  );
   output.log('Run with --json for full trace data.');
   return 0;
 }

@@ -196,7 +196,7 @@ function formatOffset(us: number | null): string {
   return `+${formatDurationUs(us)}`;
 }
 
-function formatPct(us: number | null, rootUs: number): string {
+export function formatPct(us: number | null, rootUs: number): string {
   if (us === null) {
     return UNKNOWN;
   }
@@ -210,7 +210,7 @@ function formatPct(us: number | null, rootUs: number): string {
   return `${Math.round(pct)}%`;
 }
 
-function collectAttrHints(
+export function collectAttrHints(
   attributes: Span['attributes']
 ): Array<{ key: string; value: string }> {
   if (!attributes) {
