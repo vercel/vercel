@@ -99,6 +99,14 @@ interface StartAuthorizationOptions {
 interface CompleteAuthorizationOptions {
   readonly principal: ConnectionPrincipal;
   readonly connection: EveConnectionAuthorizationContext;
+  /**
+   * The IdP's returned query/body params, as parsed by Eve. Only the
+   * OAuth error fields are read; everything else is ignored because
+   * Vercel Connect remains authoritative for the grant itself.
+   */
+  readonly callback?: {
+    readonly params?: Readonly<Record<string, string | undefined>>;
+  };
 }
 
 /**
@@ -528,8 +536,22 @@ function buildInteractiveDefinition(
     async completeAuthorization({
       principal,
       connection,
+      callback,
     }: CompleteAuthorizationOptions): Promise<TokenResult> {
       try {
+        // When the callback reports an OAuth error (for example
+        // `?error=access_denied&error_description=...`), surface it
+        // instead of asking Connect for a token that cannot exist. The
+        // failure is terminal: starting the same sign-in again would not
+        // change the outcome.
+        const callbackError = callback?.params?.error;
+        if (callbackError) {
+          throw new ConnectionAuthorizationFailedError('connect', {
+            message: callback?.params?.error_description || callbackError,
+            reason: callbackError,
+            retryable: false,
+          });
+        }
         const params = await buildTokenParams(options, principal, connection);
         const response = await withConnectorProvisioningFallback(
           options,
@@ -727,11 +749,22 @@ function translate(
       // otherwise) but Vercel Connect still says the user is
       // unauthorized. Default to retryable so the model can
       // re-prompt; most cases (network blip, replay) resolve on
-      // retry.
-      return new ConnectionAuthorizationFailedError('connect', {
-        message:
-          'Authorization did not complete. Vercel Connect still reports the user as unauthorized.',
+      // retry. Keep Connect's `code` (`user_authorization_required`
+      // vs `no_token`) as the `reason` and the original error as the
+      // `cause` so the failure stays diagnosable.
+      const failed = new ConnectionAuthorizationFailedError('connect', {
+        message: `Authorization did not complete. Vercel Connect still reports the user as unauthorized${
+          error.code ? ` (${error.code})` : ''
+        }.`,
+        ...(error.code ? { reason: error.code } : null),
       });
+      // `cause` is not part of Eve's error options, so attach it directly.
+      Object.defineProperty(failed, 'cause', {
+        value: error,
+        configurable: true,
+        writable: true,
+      });
+      return failed;
     }
     return new ConnectionAuthorizationRequiredError('connect', {
       message: error.message,
