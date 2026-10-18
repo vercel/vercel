@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { tmpdir } from 'node:os';
 import { join, normalize, sep } from 'node:path';
+import { mkdirp, writeJSON } from 'fs-extra';
 import type { RepoProjectConfig } from '../../../../src/util/link/repo';
 import {
   findProjectsFromPath,
   findRepoRoot,
+  getRepoLink,
 } from '../../../../src/util/link/repo';
+import { client } from '../../../mocks/client';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 
 // Root of `vercel/vercel` repo
 const vercelRepoRoot = join(__dirname, '../../../../../..');
@@ -33,6 +37,47 @@ describe('findRepoRoot()', () => {
   it('should return `undefined` when no Git root found', async () => {
     const repoRoot = await findRepoRoot(tmpdir());
     expect(repoRoot).toEqual(undefined);
+  });
+});
+
+describe('getRepoLink()', () => {
+  it('accepts `teamId` as an alias for `orgId`', async () => {
+    const cwd = setupTmpDir('repo-json-team-id');
+    await mkdirp(join(cwd, '.vercel'));
+    await writeJSON(join(cwd, '.vercel/repo.json'), {
+      teamId: 'team_top',
+      remoteName: 'origin',
+      projects: [
+        { id: 'prj_a', name: 'a', directory: 'a', teamId: 'team_a' },
+        { id: 'prj_b', name: 'b', directory: 'b' },
+      ],
+    });
+
+    const repoLink = await getRepoLink(client, cwd);
+    expect(repoLink?.repoConfig?.orgId).toEqual('team_top');
+    expect(repoLink?.repoConfig?.projects[0].orgId).toEqual('team_a');
+    expect(repoLink?.repoConfig?.projects[1].orgId).toBeUndefined();
+  });
+
+  it('throws when `orgId` and `teamId` conflict on a project', async () => {
+    const cwd = setupTmpDir('repo-json-team-id-conflict');
+    await mkdirp(join(cwd, '.vercel'));
+    await writeJSON(join(cwd, '.vercel/repo.json'), {
+      remoteName: 'origin',
+      projects: [
+        {
+          id: 'prj_a',
+          name: 'a',
+          directory: 'a',
+          orgId: 'team_a',
+          teamId: 'team_b',
+        },
+      ],
+    });
+
+    await expect(getRepoLink(client, cwd)).rejects.toThrow(
+      /conflicting "orgId" and "teamId"/
+    );
   });
 });
 

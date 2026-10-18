@@ -225,6 +225,20 @@ describe('selectOrg', () => {
       }
     });
 
+    it('returns org when VERCEL_TEAM_ID matches a team', async () => {
+      process.env.VERCEL_TEAM_ID = firstTeam.id;
+      try {
+        const result = await selectOrg(client, 'Which scope?', false);
+        expect(result).toEqual({
+          type: 'team',
+          id: firstTeam.id,
+          slug: firstTeam.slug,
+        });
+      } finally {
+        delete process.env.VERCEL_TEAM_ID;
+      }
+    });
+
     it('returns org when vercel.json scope matches a team', async () => {
       client.localConfig = { ...client.localConfig, scope: firstTeam.slug };
       const result = await selectOrg(client, 'Which scope?', false);

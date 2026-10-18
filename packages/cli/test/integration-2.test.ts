@@ -407,12 +407,13 @@ test('deploy with `VERCEL_PROJECT_ID` but without `VERCEL_ORG_ID` should fail', 
   const directory = await setupE2EFixture('static-deployment');
 
   const output = await execCli(binaryPath, [directory], {
-    env: { VERCEL_PROJECT_ID: 'asdf' },
+    // CI sets `VERCEL_TEAM_ID`, which also counts as the owner ID.
+    env: { VERCEL_PROJECT_ID: 'asdf', VERCEL_TEAM_ID: undefined },
   });
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toContain(
-    'You specified `VERCEL_PROJECT_ID` but you forgot to specify `VERCEL_ORG_ID`. You need to specify both to deploy to a custom project.'
+    'You specified `VERCEL_PROJECT_ID` but you forgot to specify `VERCEL_TEAM_ID`. You need to specify both to deploy to a custom project.'
   );
 });
 

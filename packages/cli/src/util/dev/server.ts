@@ -1024,20 +1024,23 @@ export default class DevServer {
     // Expose the linked project's IDs the same way the platform does in
     // prod/preview. Don't override a value the user explicitly set in their
     // shell or `.env` files.
-    if (this.projectId && !process.env.VERCEL_PROJECT_ID) {
-      if (!('VERCEL_PROJECT_ID' in allEnv)) {
-        allEnv['VERCEL_PROJECT_ID'] = this.projectId;
+    // `VERCEL_TEAM_ID` mirrors `VERCEL_ORG_ID`, but only when the owner is a
+    // team (a personal account ID is not a team ID).
+    const linkedIds: [string, string | undefined][] = [
+      ['VERCEL_PROJECT_ID', this.projectId],
+      ['VERCEL_ORG_ID', this.orgId],
+      [
+        'VERCEL_TEAM_ID',
+        this.orgId?.startsWith('team_') ? this.orgId : undefined,
+      ],
+    ];
+    for (const [name, value] of linkedIds) {
+      if (!value || process.env[name]) continue;
+      if (!(name in allEnv)) {
+        allEnv[name] = value;
       }
-      if (!('VERCEL_PROJECT_ID' in runEnv)) {
-        runEnv['VERCEL_PROJECT_ID'] = this.projectId;
-      }
-    }
-    if (this.orgId && !process.env.VERCEL_ORG_ID) {
-      if (!('VERCEL_ORG_ID' in allEnv)) {
-        allEnv['VERCEL_ORG_ID'] = this.orgId;
-      }
-      if (!('VERCEL_ORG_ID' in runEnv)) {
-        runEnv['VERCEL_ORG_ID'] = this.orgId;
+      if (!(name in runEnv)) {
+        runEnv[name] = value;
       }
     }
 

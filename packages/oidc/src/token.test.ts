@@ -232,6 +232,26 @@ describe('refreshToken', () => {
     );
   });
 
+  test('should read team from `teamId` in project.json', async () => {
+    const customProjectId = 'prj_custom345';
+    const projectTeamId = 'team_fromteamid678';
+
+    fs.writeFileSync(
+      path.join(rootDir, '.vercel', 'project.json'),
+      JSON.stringify({ projectId, teamId: projectTeamId })
+    );
+
+    const getVercelOidcTokenSpy = vi.spyOn(tokenUtil, 'getVercelOidcToken');
+
+    await refreshToken({ project: customProjectId });
+
+    expect(getVercelOidcTokenSpy).toHaveBeenCalledWith(
+      'test',
+      customProjectId,
+      projectTeamId
+    );
+  });
+
   test('should merge provided team with project from project.json', async () => {
     const customTeamId = 'team_custom789';
     const projectProjectId = 'prj_fromjson123';

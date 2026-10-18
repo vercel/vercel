@@ -26,6 +26,11 @@ import type { RepoProjectConfig } from '../link/repo';
 import output from '../../output-manager';
 import { printAlignedLabel } from '../output/print-aligned-label';
 import { resolveProjectCwd } from './find-project-root';
+import {
+  getOrgIdEnvName,
+  getOrgIdFromEnv,
+  normalizeTeamIdAlias,
+} from './team-id';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -226,7 +231,8 @@ export async function getLinkFromDir<T = ProjectLink>(
     const json = await readFile(join(dir, VERCEL_DIR_PROJECT), 'utf8');
 
     const ajv = new AJV();
-    const link: T = JSON.parse(json);
+    // `teamId` is accepted as an alias for `orgId`.
+    const link: T = normalizeTeamIdAlias(JSON.parse(json), '"project.json"');
 
     if (!ajv.validate(linkSchema, link)) {
       const raw = link as Record<string, unknown>;
@@ -310,7 +316,7 @@ async function hasProjectLink(
   path: string
 ): Promise<boolean> {
   // "linked" via env vars?
-  const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
+  const VERCEL_ORG_ID = getOrgIdFromEnv();
   const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
   if (
     VERCEL_ORG_ID === projectLink.orgId &&
@@ -330,7 +336,7 @@ async function hasProjectLink(
       const orgId = matchingProject.orgId ?? repoLink.repoConfig.orgId;
       if (!orgId) {
         throw new Error(
-          `Invalid "repo.json": missing "orgId" for project "${matchingProject.id}" and no top-level "orgId" is defined.`
+          `Invalid "repo.json": missing "teamId" for project "${matchingProject.id}" and no top-level "teamId" is defined.`
         );
       }
       if (orgId === projectLink.orgId) {
@@ -378,7 +384,9 @@ export async function getLinkedProject(
   let path = options.cwd ?? client.cwd;
   path = await resolveProjectCwd(path);
 
-  const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
+  // `VERCEL_TEAM_ID` is an alias for `VERCEL_ORG_ID`.
+  const VERCEL_ORG_ID = getOrgIdFromEnv();
+  const orgIdEnvName = getOrgIdEnvName();
   const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
   const shouldUseEnv = Boolean(VERCEL_ORG_ID && VERCEL_PROJECT_ID);
   const projectName = options.projectName;
@@ -387,16 +395,18 @@ export async function getLinkedProject(
   const hasExplicitProject = Boolean(explicitProjectName);
   const shouldUseEnvContext = shouldUseEnv && !hasExplicitProject;
 
+  // `VERCEL_TEAM_ID` on its own already scopes API requests, so only a lone
+  // `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` counts as an incomplete pair.
   if (
     !hasExplicitProject &&
-    (VERCEL_ORG_ID || VERCEL_PROJECT_ID) &&
+    (getPlatformEnv('ORG_ID') || VERCEL_PROJECT_ID) &&
     !shouldUseEnv
   ) {
     output.error(
       `You specified ${
         VERCEL_ORG_ID ? '`VERCEL_ORG_ID`' : '`VERCEL_PROJECT_ID`'
       } but you forgot to specify ${
-        VERCEL_ORG_ID ? '`VERCEL_PROJECT_ID`' : '`VERCEL_ORG_ID`'
+        VERCEL_ORG_ID ? '`VERCEL_PROJECT_ID`' : '`VERCEL_TEAM_ID`'
       }. You need to specify both to deploy to a custom project.\n`
     );
     return { status: 'error', exitCode: 1 };
@@ -602,7 +612,7 @@ export async function getLinkedProject(
       output.error(
         `Project not found (${JSON.stringify({
           VERCEL_PROJECT_ID,
-          VERCEL_ORG_ID,
+          [orgIdEnvName]: VERCEL_ORG_ID,
         })})\n`
       );
       return { status: 'error', exitCode: 1, orgId };

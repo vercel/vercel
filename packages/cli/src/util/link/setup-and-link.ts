@@ -65,6 +65,7 @@ import { searchProjectsByRepoRoot } from '../projects/search-project-across-team
 import type { CrossTeamMatch } from '../projects/search-project-across-teams';
 import { isPromptCanceledError } from '../input/prompt-cancellation';
 import { findRepoRoot, resolveGitRemote } from './repo';
+import { getOrgIdEnvName, getOrgIdFromEnv } from '../projects/team-id';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
@@ -324,11 +325,11 @@ export default async function setupAndLink(
     return link;
   }
 
-  // `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` form an explicit project-owner
-  // pair, so resolve and confirm exactly that pair without prompting (and
-  // without requiring `--yes`). The env link itself is what makes commands
-  // work here, so leave local link files untouched.
-  if (getPlatformEnv('ORG_ID') && getPlatformEnv('PROJECT_ID')) {
+  // `VERCEL_TEAM_ID` (or `VERCEL_ORG_ID`) and `VERCEL_PROJECT_ID` form an
+  // explicit project-owner pair, so resolve and confirm exactly that pair
+  // without prompting (and without requiring `--yes`). The env link itself is
+  // what makes commands work here, so leave local link files untouched.
+  if (getOrgIdFromEnv() && getPlatformEnv('PROJECT_ID')) {
     const envLink = await getLinkedProject(client, { cwd: path });
     if (envLink.status === 'error') {
       return envLink;
@@ -338,7 +339,7 @@ export default async function setupAndLink(
         envLink.org.type === 'team' ? envLink.org.id : undefined;
       output.print('\n');
       printAlignedLabel('Directory', toHumanPath(path));
-      printAlignedLabel('Source', 'VERCEL_ORG_ID and VERCEL_PROJECT_ID');
+      printAlignedLabel('Source', `${getOrgIdEnvName()} and VERCEL_PROJECT_ID`);
       output.print('\n');
       printAlignedLabel(
         'Linked',
@@ -354,7 +355,8 @@ export default async function setupAndLink(
   }
 
   // Without a TTY the team must come from an explicit signal (`--scope`,
-  // `--team`, `vercel.json` `scope`, `VERCEL_ORG_ID`) or be the only choice.
+  // `--team`, `vercel.json` `scope`, `VERCEL_TEAM_ID`/`VERCEL_ORG_ID`) or be
+  // the only choice.
   // Resolve it before deleting the existing link and before any project
   // discovery, so a missing scope fails fast without breaking local state.
   if (!org && (nonInteractive || !isTTY)) {

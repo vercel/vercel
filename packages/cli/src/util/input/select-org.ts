@@ -3,7 +3,7 @@ import type Client from '../client';
 import getUser from '../get-user';
 import getTeams from '../teams/get-teams';
 import type { User, Team, Org } from '@vercel-internals/types';
-import { getPlatformEnv } from '@vercel/build-utils';
+import { getOrgIdFromEnv } from '../projects/team-id';
 import { emoji } from '../emoji';
 import output from '../../output-manager';
 import param from '../output/param';
@@ -117,14 +117,14 @@ export default async function selectOrg(
   }
 
   // An explicit signal — `--scope`/`--team`, `vercel.json` `scope`,
-  // `VERCEL_ORG_ID` — selects the team directly. The globally selected team
-  // (`vc switch`, login default) is a guess, not a signal, and must not
-  // silently decide where a project gets linked.
+  // `VERCEL_TEAM_ID`/`VERCEL_ORG_ID` — selects the team directly. The
+  // globally selected team (`vc switch`, login default) is a guess, not a
+  // signal, and must not silently decide where a project gets linked.
   const localConfigScope = client.localConfig?.scope;
   const explicitScope =
     getScopeOrTeamFromArgv(client.argv) ??
     (typeof localConfigScope === 'string' ? localConfigScope : null) ??
-    getPlatformEnv('ORG_ID') ??
+    getOrgIdFromEnv() ??
     null;
   const matchExplicitScope = (): Org | undefined => {
     if (!explicitScope) return undefined;

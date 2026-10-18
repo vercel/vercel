@@ -200,12 +200,14 @@ export function findProjectInfo(): { projectId: string; teamId: string } {
     );
   }
   const prj = JSON.parse(fs.readFileSync(prjPath, 'utf8'));
-  if (typeof prj.projectId !== 'string' && typeof prj.orgId !== 'string') {
+  // `teamId` is accepted as an alias for `orgId`.
+  const teamId = prj.teamId ?? prj.orgId;
+  if (typeof prj.projectId !== 'string' && typeof teamId !== 'string') {
     throw new TypeError(
       'Expected a string-valued projectId property. Try running `vc link` to re-link your project.'
     );
   }
-  return { projectId: prj.projectId, teamId: prj.orgId };
+  return { projectId: prj.projectId, teamId };
 }
 
 export function saveToken(token: VercelTokenResponse, projectId: string): void {

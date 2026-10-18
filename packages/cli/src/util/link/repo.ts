@@ -22,6 +22,7 @@ import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
 import { getGitConfigPath, getGitRootDirectory } from '../git-helpers';
 import output from '../../output-manager';
 import { printAlignedLabel } from '../output/print-aligned-label';
+import { normalizeTeamIdAlias } from '../projects/team-id';
 
 const home = homedir();
 
@@ -29,7 +30,9 @@ export interface RepoProjectConfig {
   id: string;
   name: string;
   directory: string;
+  /** User or Team ID of the project owner. `teamId` is accepted as an alias. */
   orgId?: string;
+  teamId?: string;
 }
 
 export interface RepoProjectsConfig {
@@ -38,6 +41,8 @@ export interface RepoProjectsConfig {
    * Kept for backwards compatibility with older `repo.json` files.
    */
   orgId?: string;
+  /** @deprecated Alias for the top-level `orgId`. */
+  teamId?: string;
   remoteName: string;
   projects: RepoProjectConfig[];
 }
@@ -86,6 +91,20 @@ export async function getRepoLink(
       if (err.code !== 'ENOENT') throw err;
     }
   );
+
+  // `teamId` is accepted as an alias for `orgId`, at the top level and on
+  // each project entry.
+  if (repoConfig) {
+    normalizeTeamIdAlias(repoConfig, '"repo.json"');
+    if (Array.isArray(repoConfig.projects)) {
+      for (const project of repoConfig.projects) {
+        normalizeTeamIdAlias(
+          project,
+          `Project "${project?.id}" in "repo.json"`
+        );
+      }
+    }
+  }
 
   return { rootPath, repoConfig, repoConfigPath };
 }

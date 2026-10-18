@@ -56,6 +56,36 @@ describe('getLinkFromDir', () => {
       /Project Settings are invalid/
     );
   });
+
+  it('accepts `teamId` as an alias for `orgId`', async () => {
+    const repoRoot = setupTmpDir('team-id-project-json');
+    const vercelDir = join(repoRoot, '.vercel');
+    await mkdirp(vercelDir);
+    await writeJSON(join(vercelDir, 'project.json'), {
+      teamId: 'team_x',
+      projectId: 'proj_x',
+    });
+
+    await expect(getLinkFromDir(vercelDir)).resolves.toMatchObject({
+      orgId: 'team_x',
+      projectId: 'proj_x',
+    });
+  });
+
+  it('throws when `orgId` and `teamId` conflict', async () => {
+    const repoRoot = setupTmpDir('conflicting-team-id-project-json');
+    const vercelDir = join(repoRoot, '.vercel');
+    await mkdirp(vercelDir);
+    await writeJSON(join(vercelDir, 'project.json'), {
+      orgId: 'team_x',
+      teamId: 'team_y',
+      projectId: 'proj_x',
+    });
+
+    await expect(getLinkFromDir(vercelDir)).rejects.toThrow(
+      /conflicting "orgId" and "teamId"/
+    );
+  });
 });
 
 describe('hasLocalProjectLink', () => {
@@ -910,6 +940,65 @@ describe('getLinkedProject', () => {
       expect(link.status).toEqual('not_linked');
       expect(link.orgId).toEqual('team_dummy');
     } finally {
+      delete process.env.VERCEL_ORG_ID;
+      delete process.env.VERCEL_PROJECT_ID;
+    }
+  });
+
+  it('should link from `VERCEL_TEAM_ID` and `VERCEL_PROJECT_ID`', async () => {
+    const cwd = setupTmpDir('team-id-env-link');
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'env-project',
+      name: 'env-project',
+      accountId: 'team_dummy',
+    });
+
+    process.env.VERCEL_TEAM_ID = 'team_dummy';
+    process.env.VERCEL_PROJECT_ID = 'env-project';
+    try {
+      const link = await getLinkedProject(client, { cwd });
+      if (link.status !== 'linked') {
+        throw new Error('Expected to be linked');
+      }
+      expect(link.org.id).toEqual('team_dummy');
+      expect(link.project.id).toEqual('env-project');
+    } finally {
+      delete process.env.VERCEL_TEAM_ID;
+      delete process.env.VERCEL_PROJECT_ID;
+    }
+  });
+
+  it('should not require `VERCEL_PROJECT_ID` when only `VERCEL_TEAM_ID` is set', async () => {
+    const cwd = setupTmpDir('team-id-env-only');
+
+    useUser();
+    useTeams('team_dummy');
+
+    process.env.VERCEL_TEAM_ID = 'team_dummy';
+    try {
+      const link = await getLinkedProject(client, { cwd });
+      expect(link.status).toEqual('not_linked');
+    } finally {
+      delete process.env.VERCEL_TEAM_ID;
+    }
+  });
+
+  it('should throw when `VERCEL_TEAM_ID` and `VERCEL_ORG_ID` conflict', async () => {
+    const cwd = setupTmpDir('team-id-env-conflict');
+
+    process.env.VERCEL_TEAM_ID = 'team_a';
+    process.env.VERCEL_ORG_ID = 'team_b';
+    process.env.VERCEL_PROJECT_ID = 'env-project';
+    try {
+      await expect(getLinkedProject(client, { cwd })).rejects.toThrow(
+        /"VERCEL_TEAM_ID" and "VERCEL_ORG_ID"/
+      );
+    } finally {
+      delete process.env.VERCEL_TEAM_ID;
       delete process.env.VERCEL_ORG_ID;
       delete process.env.VERCEL_PROJECT_ID;
     }
