@@ -36,6 +36,24 @@ vercel deploy --prebuilt --prod
 URL=$(vercel deploy --prod)
 ```
 
+## Temporary Deployments (No Login)
+
+Without credentials, `vercel deploy` fails and suggests `vercel deploy --temporary` or `vercel login`. Use `--temporary` to deploy without an account:
+
+```bash
+vercel deploy --temporary
+vercel deploy --temporary --format json   # includes claimUrl and expiresAt
+```
+
+- Only applies when no credentials are present; when logged in, a normal deployment is created.
+- Builds locally (`vercel build --prod`) and deploys the prebuilt output. No `vercel link` is needed.
+- Always targets production; `--target` with any other value is rejected.
+- Refused in CI and in directories already linked to a project (`.vercel/project.json`, `.vercel/repo.json`, or `VERCEL_ORG_ID` + `VERCEL_PROJECT_ID`). Use `vercel login` or `VERCEL_TOKEN` there instead.
+- Stores a temporary credential in `.vercel/anonymous.json` (gitignored). Re-running `vercel deploy --temporary` in the same directory redeploys the same temporary project until it expires.
+- Prints when the deployment expires and a claim URL to keep it. Give the claim URL only to the user: it transfers ownership, so do not post it publicly.
+- After claiming, or once expired, run `vercel login` to keep deploying.
+- Single-file temporary deployments require an `.html` file: `vercel index.html --temporary`.
+
 ## Forced Deploys And Build Cache
 
 `vercel deploy --force` creates a new deployment even when Vercel would otherwise

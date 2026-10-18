@@ -27,6 +27,8 @@ Being inside an app directory is not proof that the intended project was selecte
 
 `vercel whoami --format json` identifies the authenticated user and effective team; plain non-TTY `vercel whoami` prints only the username. Neither verifies the linked project. Read-only project commands can still require login or team SAML re-authentication and open a browser/device flow. Ask the user to complete that flow deliberately before continuing.
 
+No account or not logged in? `vercel deploy --temporary` creates a temporary production deployment without logging in and prints a claim URL the user can open to keep it. It is refused in CI and in directories already linked to a project. See `references/deployment.md`.
+
 ## Quick Start
 
 ```bash
@@ -45,7 +47,7 @@ vercel --prod     # production deployment
 
 Use this to route to the correct reference file:
 
-- **Deploy, redeploy, forced builds, no-cache builds, or deployment source/provenance** → `references/deployment.md`
+- **Deploy, temporary deployments without login (`--temporary`), redeploy, forced builds, no-cache builds, or deployment source/provenance** → `references/deployment.md`
 - **Rolling releases, deploy hooks, cron jobs, cache, git connection, Edge Config, redirects, custom environments** → `references/project-infra.md`
 - **Local development** → `references/local-development.md`
 - **Environment variables** → `references/environment-variables.md`
