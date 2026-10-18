@@ -289,6 +289,107 @@ describe('logs', () => {
       expect(output).toContain('workflow call started');
     });
 
+    it('should show middleware and function details in expanded output', async () => {
+      client.scenario.get('/api/logs/request-logs', (_req, res) => {
+        res.json({
+          rows: [
+            {
+              ...createMockLog(),
+              clientRegion: 'iad1',
+              requestDurationMs: 412,
+              events: [
+                {
+                  source: 'serverless',
+                  pathType: 'func',
+                  region: 'iad1',
+                  durationMs: 1342,
+                  functionMaxDuration: 300,
+                  functionMemorySize: 2048,
+                  functionMaxMemoryUsed: 181,
+                  functionRuntime: 'nodejs22.x',
+                  functionStartType: 'cold',
+                  functionColdStartDurationMs: 210,
+                },
+                {
+                  source: 'edge-middleware',
+                  pathType: 'middleware',
+                  region: 'iad1',
+                  durationMs: 18,
+                  functionStartType: 'hot',
+                },
+                { source: 'static', pathType: 'static', durationMs: -1 },
+              ],
+            },
+          ],
+          hasMoreRows: false,
+        });
+      });
+
+      client.stderr.isTTY = false;
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.getFullOutput();
+      const middlewareLine = 'ε Middleware  iad1 · 18ms · hot start';
+      const functionLine =
+        'λ Function  iad1 · 1.34s / 300s · cold start 210ms · 181 / 2048 MB · nodejs22.x';
+      expect(output).toContain(middlewareLine);
+      expect(output).toContain(functionLine);
+      expect(output.indexOf(middlewareLine)).toBeLessThan(
+        output.indexOf(functionLine)
+      );
+      expect(output.indexOf(functionLine)).toBeLessThan(
+        output.indexOf('Test log message')
+      );
+      expect(output).not.toContain('◇');
+    });
+
+    it('should include function details in JSON output', async () => {
+      client.scenario.get('/api/logs/request-logs', (_req, res) => {
+        res.json({
+          rows: [
+            {
+              ...createMockLog(),
+              clientRegion: 'iad1',
+              requestDurationMs: 412,
+              events: [
+                {
+                  source: 'serverless',
+                  pathType: 'func',
+                  region: 'iad1',
+                  durationMs: 342,
+                  functionStartType: 'cold',
+                  functionColdStartDurationMs: 210,
+                },
+              ],
+            },
+          ],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--json');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      const parsed = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(parsed.clientRegion).toEqual('iad1');
+      expect(parsed.requestDurationMs).toEqual(412);
+      expect(parsed.events).toEqual([
+        {
+          source: 'serverless',
+          pathType: 'func',
+          region: 'iad1',
+          durationMs: 342,
+          functionStartType: 'cold',
+          functionColdStartDurationMs: 210,
+        },
+      ]);
+    });
+
     it('should display "no logs found" when empty', async () => {
       useRequestLogs([]);
 

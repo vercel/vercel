@@ -7,6 +7,33 @@ export interface RequestLogMessage {
   messageTruncated?: boolean;
 }
 
+/**
+ * One hop of a request (middleware, function invocation, cache, rewrite, ...),
+ * matching the "events" shown in the dashboard log details panel.
+ */
+export interface RequestLogEvent {
+  source: string;
+  pathType?: string;
+  route?: string;
+  region?: string;
+  httpStatus?: number;
+  cache?: string;
+  /** Execution duration in milliseconds */
+  durationMs?: number;
+  /** Configured maximum execution duration in milliseconds */
+  functionMaxDurationMs?: number;
+  functionRuntime?: string;
+  /** `cold`, `hot`, or `prewarmed` */
+  functionStartType?: string;
+  functionColdStartDurationMs?: number;
+  /** Peak memory used in MB */
+  functionMaxMemoryUsed?: number;
+  /** Configured memory size in MB */
+  functionMemorySize?: number;
+  invocationId?: string;
+  concurrency?: number;
+}
+
 export interface RequestLogEntry {
   id: string;
   timestamp: number;
@@ -26,6 +53,11 @@ export interface RequestLogEntry {
   pprState?: string;
   traceId?: string;
   messageTruncated?: boolean;
+  /** Edge region that received the request */
+  clientRegion?: string;
+  /** Total request duration in milliseconds, as measured by the proxy */
+  requestDurationMs?: number;
+  events: RequestLogEvent[];
   logs: RequestLogMessage[];
 }
 
@@ -103,6 +135,67 @@ function parseRelativeTime(input: string): number {
     return date.getTime();
   }
   throw new Error(`Invalid time format: ${input}`);
+}
+
+// The API uses -1 and empty strings as "not available" sentinels, and may send
+// Int64 values as strings.
+function toOptionalNumber(value: unknown): number | undefined {
+  const num = typeof value === 'string' ? Number(value) : value;
+  if (typeof num !== 'number' || !Number.isFinite(num) || num < 0) {
+    return undefined;
+  }
+  return num;
+}
+
+function toOptionalString(value: unknown): string | undefined {
+  if (typeof value !== 'string' || value === '' || value === '-') {
+    return undefined;
+  }
+  return value;
+}
+
+interface ApiLogEvent {
+  source?: string;
+  pathType?: string;
+  route?: string;
+  region?: string;
+  httpStatus?: number;
+  cache?: string;
+  durationMs?: number | string;
+  functionMaxDuration?: number | string;
+  functionRuntime?: string;
+  functionStartType?: string;
+  functionColdStartDurationMs?: number | string;
+  functionMaxMemoryUsed?: number | string;
+  functionMemorySize?: number | string;
+  invocationId?: string;
+  concurrency?: number | string;
+}
+
+function normalizeEvent(event: ApiLogEvent): RequestLogEvent {
+  const maxDurationSeconds = toOptionalNumber(event.functionMaxDuration);
+  const startType = toOptionalString(event.functionStartType);
+  const concurrency = toOptionalNumber(event.concurrency);
+  return {
+    source: event.source === 'lambda' ? 'serverless' : event.source || '',
+    pathType: toOptionalString(event.pathType),
+    route: toOptionalString(event.route),
+    region: toOptionalString(event.region),
+    httpStatus: toOptionalNumber(event.httpStatus),
+    cache: toOptionalString(event.cache),
+    durationMs: toOptionalNumber(event.durationMs),
+    functionMaxDurationMs:
+      maxDurationSeconds === undefined ? undefined : maxDurationSeconds * 1000,
+    functionRuntime: toOptionalString(event.functionRuntime),
+    functionStartType: startType === 'unknown' ? undefined : startType,
+    functionColdStartDurationMs: toOptionalNumber(
+      event.functionColdStartDurationMs
+    ),
+    functionMaxMemoryUsed: toOptionalNumber(event.functionMaxMemoryUsed),
+    functionMemorySize: toOptionalNumber(event.functionMemorySize),
+    invocationId: toOptionalString(event.invocationId),
+    concurrency: concurrency && concurrency >= 1 ? concurrency : undefined,
+  };
 }
 
 export async function fetchRequestLogs(
@@ -192,12 +285,14 @@ export async function fetchRequestLogs(
     cacheReason?: string;
     pprState?: string;
     traceId?: string;
+    clientRegion?: string;
+    requestDurationMs?: number | string;
     logs?: Array<{
       level?: string;
       message?: string;
       messageTruncated?: boolean;
     }>;
-    events?: Array<{ source?: string }>;
+    events?: ApiLogEvent[];
     domain?: string;
   }
 
@@ -234,6 +329,9 @@ export async function fetchRequestLogs(
       cacheReason: row.cacheReason,
       pprState: row.pprState,
       traceId: row.traceId,
+      clientRegion: toOptionalString(row.clientRegion),
+      requestDurationMs: toOptionalNumber(row.requestDurationMs),
+      events: (row.events || []).map(normalizeEvent),
       logs: requestLogs,
     };
   });

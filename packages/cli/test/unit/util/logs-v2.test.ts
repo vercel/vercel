@@ -25,7 +25,9 @@ interface ApiLogEntry {
     message?: string;
     messageTruncated?: boolean;
   }>;
-  events?: Array<{ source?: string }>;
+  clientRegion?: string;
+  requestDurationMs?: number;
+  events?: Array<Record<string, unknown>>;
 }
 
 function createMockApiLog(overrides: Partial<ApiLogEntry> = {}): ApiLogEntry {
@@ -88,6 +90,80 @@ describe('logs-v2 utility', () => {
       expect(result.logs[0].cache).toEqual('BYPASS');
       expect(result.logs[0].cacheReason).toEqual('draft_mode');
       expect(result.logs[0].pprState).toEqual('partially_dynamic');
+    });
+
+    it('should normalize function details from request events', async () => {
+      const mockLogs = [
+        createMockApiLog({
+          clientRegion: 'iad1',
+          requestDurationMs: 412,
+          events: [
+            {
+              source: 'serverless',
+              pathType: 'middleware',
+              route: '/middleware',
+              region: 'iad1',
+              durationMs: 18,
+              functionMaxDuration: -1,
+              functionMemorySize: -1,
+              functionMaxMemoryUsed: -1,
+              functionStartType: 'unknown',
+              invocationId: '',
+            },
+            {
+              source: 'lambda',
+              pathType: 'func',
+              route: '/api/test',
+              region: 'sfo1',
+              durationMs: '342',
+              functionMaxDuration: 300,
+              functionMemorySize: 2048,
+              functionMaxMemoryUsed: 181,
+              functionRuntime: 'nodejs22.x',
+              functionStartType: 'cold',
+              functionColdStartDurationMs: 210,
+              invocationId: 'inv_123',
+              concurrency: 3,
+            },
+          ],
+        }),
+      ];
+      client.scenario.get('/api/logs/request-logs', (_req, res) => {
+        res.json({ rows: mockLogs, hasMoreRows: false });
+      });
+
+      const result = await fetchRequestLogs(client, {
+        projectId: 'prj_test',
+        ownerId: 'team_test',
+      });
+
+      const [log] = result.logs;
+      expect(log.clientRegion).toEqual('iad1');
+      expect(log.requestDurationMs).toEqual(412);
+      expect(log.events).toEqual([
+        {
+          source: 'serverless',
+          pathType: 'middleware',
+          route: '/middleware',
+          region: 'iad1',
+          durationMs: 18,
+        },
+        {
+          source: 'serverless',
+          pathType: 'func',
+          route: '/api/test',
+          region: 'sfo1',
+          durationMs: 342,
+          functionMaxDurationMs: 300_000,
+          functionRuntime: 'nodejs22.x',
+          functionStartType: 'cold',
+          functionColdStartDurationMs: 210,
+          functionMaxMemoryUsed: 181,
+          functionMemorySize: 2048,
+          invocationId: 'inv_123',
+          concurrency: 3,
+        },
+      ]);
     });
 
     it('should include deploymentId in query when provided', async () => {

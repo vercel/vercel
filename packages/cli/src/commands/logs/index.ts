@@ -20,6 +20,7 @@ import { displayRuntimeLogs } from '../../util/logs';
 import {
   fetchAllRequestLogs,
   type RequestLogEntry,
+  type RequestLogEvent,
   type RequestLogMessage,
 } from '../../util/logs-v2';
 import getDeployment from '../../util/get-deployment';
@@ -835,6 +836,7 @@ export default async function logs(client: Client) {
         statusCode: number;
         message: string;
         messageTruncated?: boolean;
+        events: RequestLogEvent[];
         logs: RequestLogMessage[];
       };
 
@@ -849,6 +851,7 @@ export default async function logs(client: Client) {
           statusCode,
           message: log.message?.replace(/\n/g, ' ').trim() || '',
           messageTruncated: log.messageTruncated,
+          events: log.events,
           logs: log.logs,
         };
       });
@@ -907,18 +910,17 @@ export default async function logs(client: Client) {
         formatHeader: header => chalk.dim(header),
         formatRow: expand
           ? (rowStr, row) => {
-              if (row.logs.length > 0) {
-                const renderedLogs = row.logs
-                  .map(log => {
-                    const message = log.message.replace(/\n/g, ' ').trim();
-                    const safeMessage = message || '(no message)';
-                    const truncatedIndicator = log.messageTruncated
-                      ? chalk.gray('…')
-                      : '';
-                    return `${colorizeMessage(safeMessage, log.level)}${truncatedIndicator}`;
-                  })
-                  .join('\n');
-                return `${rowStr}\n${renderedLogs}\n`;
+              const renderedEvents = formatFunctionEvents(row.events);
+              if (row.logs.length > 0 || renderedEvents.length > 0) {
+                const renderedLogs = row.logs.map(log => {
+                  const message = log.message.replace(/\n/g, ' ').trim();
+                  const safeMessage = message || '(no message)';
+                  const truncatedIndicator = log.messageTruncated
+                    ? chalk.gray('…')
+                    : '';
+                  return `${colorizeMessage(safeMessage, log.level)}${truncatedIndicator}`;
+                });
+                return `${rowStr}\n${[...renderedEvents, ...renderedLogs].join('\n')}\n`;
               }
               return rowStr + '\n';
             }
@@ -986,6 +988,99 @@ function getSourceIcon(source: string): string {
     default:
       return ' ';
   }
+}
+
+function isMiddlewareEvent(event: RequestLogEvent): boolean {
+  return (
+    event.pathType === 'middleware' ||
+    event.source === 'edge-middleware' ||
+    event.source === 'serverless-middleware' ||
+    event.source === 'middleware'
+  );
+}
+
+function isFunctionEvent(event: RequestLogEvent): boolean {
+  return (
+    isMiddlewareEvent(event) ||
+    event.source === 'serverless' ||
+    event.source === 'edge-function'
+  );
+}
+
+function formatDurationMs(value: number): string {
+  if (value < 1000) {
+    return `${Math.round(value)}ms`;
+  }
+  return `${Number((value / 1000).toFixed(2))}s`;
+}
+
+function getFunctionEventLabel(event: RequestLogEvent): string {
+  if (isMiddlewareEvent(event)) return 'Middleware';
+  if (event.pathType === 'background_func') return 'ISR Function';
+  if (event.source === 'edge-function') return 'Edge Function';
+  return 'Function';
+}
+
+function formatStartType(event: RequestLogEvent): string | undefined {
+  switch (event.functionStartType) {
+    case 'cold':
+      return event.functionColdStartDurationMs !== undefined
+        ? `cold start ${formatDurationMs(event.functionColdStartDurationMs)}`
+        : 'cold start';
+    case 'hot':
+      return 'hot start';
+    case 'prewarmed':
+      return 'hot start (prewarmed)';
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * One summary line per middleware or function invocation, with the details
+ * shown in the dashboard log details panel: region, execution duration,
+ * start type, memory, and runtime.
+ */
+function formatFunctionEvents(events: RequestLogEvent[]): string[] {
+  const functionEvents = events
+    .filter(isFunctionEvent)
+    .filter(event => event.durationMs !== undefined || event.functionStartType)
+    // Middleware always runs before the function it routes to
+    .sort(
+      (a, b) => Number(isMiddlewareEvent(b)) - Number(isMiddlewareEvent(a))
+    );
+
+  return functionEvents.map(event => {
+    const icon = isMiddlewareEvent(event) ? 'ε' : getSourceIcon(event.source);
+    const parts: string[] = [];
+    if (event.region) {
+      parts.push(event.region);
+    }
+    if (event.durationMs !== undefined) {
+      parts.push(
+        event.functionMaxDurationMs !== undefined
+          ? `${formatDurationMs(event.durationMs)} / ${formatDurationMs(event.functionMaxDurationMs)}`
+          : formatDurationMs(event.durationMs)
+      );
+    }
+    const startType = formatStartType(event);
+    if (startType) {
+      parts.push(startType);
+    }
+    if (event.functionMaxMemoryUsed !== undefined) {
+      parts.push(
+        event.functionMemorySize !== undefined
+          ? `${event.functionMaxMemoryUsed} / ${event.functionMemorySize} MB`
+          : `${event.functionMaxMemoryUsed} MB`
+      );
+    }
+    if (event.functionRuntime) {
+      parts.push(event.functionRuntime);
+    }
+    return chalk.dim(
+      `${icon} ${getFunctionEventLabel(event)}${parts.length > 0 ? `  ${parts.join(' · ')}` : ''}`
+    );
+  });
 }
 
 function colorizeMessage(message: string, level: string): string {
