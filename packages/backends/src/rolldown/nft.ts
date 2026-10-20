@@ -13,7 +13,14 @@ import {
 } from 'node:path';
 import { isNativeError } from 'node:util/types';
 import { FileFsRef, FileBlob, type Span } from '@vercel/build-utils';
-import { transform } from 'oxc-transform';
+import { transform, type TransformOptions } from 'oxc-transform';
+
+// NFT can't parse decorators, so lower them while transforming TypeScript.
+// Without this, files using decorators (e.g. NestJS) fail to parse and their
+// imports are never traced.
+const NFT_TRANSFORM_OPTIONS: TransformOptions = {
+  decorator: { legacy: true, emitDecoratorMetadata: true },
+};
 
 export const nft = async (
   args: Pick<BuildOptions, 'workPath' | 'repoRootPath'> & {
@@ -108,7 +115,11 @@ export const nft = async (
 
         // NFT doesn't support TypeScript, so we need to transform the source code.
         if (isTypeScriptFile(fsPath)) {
-          const transformResult = await transform(fsPath, source.toString());
+          const transformResult = await transform(
+            fsPath,
+            source.toString(),
+            NFT_TRANSFORM_OPTIONS
+          );
           source = transformResult.code;
         }
 
