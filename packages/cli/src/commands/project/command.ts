@@ -420,6 +420,15 @@ export const updateSubcommand = {
       deprecated: false,
     },
     {
+      name: 'skip-unaffected-deployments',
+      shorthand: null,
+      type: String,
+      argument: 'on|off',
+      description:
+        'Skip deployments when there are no changes to the root directory or its dependencies',
+      deprecated: false,
+    },
+    {
       ...yesOption,
       description:
         'Apply settings that do not affect charges without prompting',
@@ -459,6 +468,10 @@ export const updateSubcommand = {
     {
       name: 'Set the sandbox default and failover regions',
       value: `${packageName} project update my-project --sandbox-region sfo1 --sandbox-failover-regions cle1,iad1`,
+    },
+    {
+      name: 'Set the root directory and skip deployments when it has no changes',
+      value: `${packageName} project update my-project --root-directory apps/web --skip-unaffected-deployments on`,
     },
   ],
 } as const;

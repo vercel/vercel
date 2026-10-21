@@ -214,6 +214,7 @@ export interface AdvancedProjectFields {
     buildMachineSelection?: string;
   } | null;
   sandbox?: { region?: string; failoverRegions?: string[] } | null;
+  enableAffectedProjectsDeployments?: boolean;
 }
 
 export function getAdvancedFields(project: Project): AdvancedProjectFields {
@@ -235,7 +236,10 @@ export type AdvancedSettingDefinition = {
 } & ({ kind: 'toggle' } | { kind: 'enum'; values: readonly string[] }) &
   (
     | { target: 'resourceConfig'; field: AdvancedResourceConfigKey }
-    | { target: 'project'; field: 'nodeVersion' }
+    | {
+        target: 'project';
+        field: 'nodeVersion' | 'enableAffectedProjectsDeployments';
+      }
   );
 
 export interface ProvidedAdvancedSetting {
@@ -304,7 +308,9 @@ export function readAdvanced(
       }
       return fields.resourceConfig?.[definition.field];
     case 'project':
-      return project[definition.field];
+      return definition.field === 'nodeVersion'
+        ? project.nodeVersion
+        : fields[definition.field];
   }
 }
 
@@ -367,5 +373,13 @@ export const advancedSettingDefinitions: readonly AdvancedSettingDefinition[] =
       values: NODE_VERSIONS,
       target: 'project',
       field: 'nodeVersion',
+    },
+    {
+      key: 'enableAffectedProjectsDeployments',
+      flag: '--skip-unaffected-deployments',
+      label: 'Skip Unaffected Deployments',
+      kind: 'toggle',
+      target: 'project',
+      field: 'enableAffectedProjectsDeployments',
     },
   ];

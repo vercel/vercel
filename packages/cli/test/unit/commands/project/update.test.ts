@@ -91,6 +91,7 @@ describe('project update', () => {
       expect(helpOutput).toContain('--build-machine');
       expect(helpOutput).toContain('--elastic-concurrency');
       expect(helpOutput).toContain('--node-version');
+      expect(helpOutput).toContain('--skip-unaffected-deployments');
       expect(helpOutput).toContain('--json');
       expect(helpOutput).toContain('--yes');
       expect(helpOutput).toContain('Apply settings that do not affect');
@@ -834,6 +835,11 @@ describe('project update', () => {
       ],
       ['--sandbox-region', 'cle1', { sandbox: { region: 'cle1' } }],
       ['--node-version', '20.x', { nodeVersion: '20.x' }],
+      [
+        '--skip-unaffected-deployments',
+        'on',
+        { enableAffectedProjectsDeployments: true },
+      ],
     ])('sends a sparse PATCH for %s %s', async (flag, value, expectedBody) => {
       let patched = false;
       useScope('pro');
@@ -1059,6 +1065,11 @@ describe('project update', () => {
       ['--function-cpu', 'mega', 'Function CPU must be one of'],
       ['--build-machine', 'huge', 'Build Machine must be one of'],
       ['--node-version', '19.x', 'Node.js Version must be one of'],
+      [
+        '--skip-unaffected-deployments',
+        'true',
+        '--skip-unaffected-deployments must be "on" or "off".',
+      ],
     ])('rejects an invalid %s value before resolving a project', async (flag, value, message) => {
       client.setArgv('project', 'update', 'my-project', flag, value);
 
@@ -1354,6 +1365,11 @@ describe('project update', () => {
       ],
       ['--fluid-compute', 'on', { resourceConfig: { fluid: true } }],
       ['--node-version', '20.x', { nodeVersion: '20.x' }],
+      [
+        '--skip-unaffected-deployments',
+        'off',
+        { enableAffectedProjectsDeployments: false },
+      ],
     ])('allows ungated %s %s on a Hobby team', async (flag, value, expectedBody) => {
       let patched = false;
       useScope('hobby');

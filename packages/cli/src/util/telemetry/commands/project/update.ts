@@ -107,6 +107,10 @@ export class ProjectUpdateTelemetryClient
     this.trackChoiceOption('elastic-concurrency', value, ['on', 'off']);
   }
 
+  trackCliOptionSkipUnaffectedDeployments(value: string | undefined) {
+    this.trackChoiceOption('skip-unaffected-deployments', value, ['on', 'off']);
+  }
+
   trackCliOptionNodeVersion(value: string | undefined) {
     this.trackChoiceOption('node-version', value, [
       '24.x',

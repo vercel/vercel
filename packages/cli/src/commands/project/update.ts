@@ -287,6 +287,9 @@ export default async function update(
   telemetry.trackCliOptionBuildMachine(flags['--build-machine']);
   telemetry.trackCliOptionElasticConcurrency(flags['--elastic-concurrency']);
   telemetry.trackCliOptionNodeVersion(flags['--node-version']);
+  telemetry.trackCliOptionSkipUnaffectedDeployments(
+    flags['--skip-unaffected-deployments']
+  );
 
   if (args.length > 1) {
     return printUsageError(
