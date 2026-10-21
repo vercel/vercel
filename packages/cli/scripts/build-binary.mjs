@@ -83,7 +83,7 @@ export function getBinaryOnlyDependencies(packageJson) {
 }
 
 /**
- * Map a pkg target such as `node24.14.1-linux-x64` to Node's
+ * Map a pkg target such as `node24.22.1-linux-x64` to Node's
  * `process.platform` / `process.arch` values. Returns `null` for `host` or
  * unrecognised targets.
  */

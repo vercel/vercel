@@ -70,19 +70,19 @@ describe('getBinaryOnlyDependencies()', () => {
 
 describe('platformForTarget()', () => {
   it('maps pkg targets to process.platform / process.arch values', () => {
-    expect(platformForTarget('node24.14.1-linux-x64')).toEqual({
+    expect(platformForTarget('node24.22.1-linux-x64')).toEqual({
       os: 'linux',
       cpu: 'x64',
     });
-    expect(platformForTarget('node24.14.1-linux-arm64')).toEqual({
+    expect(platformForTarget('node24.22.1-linux-arm64')).toEqual({
       os: 'linux',
       cpu: 'arm64',
     });
-    expect(platformForTarget('node24.14.1-macos-arm64')).toEqual({
+    expect(platformForTarget('node24.22.1-macos-arm64')).toEqual({
       os: 'darwin',
       cpu: 'arm64',
     });
-    expect(platformForTarget('node24.14.1-win-x64')).toEqual({
+    expect(platformForTarget('node24.22.1-win-x64')).toEqual({
       os: 'win32',
       cpu: 'x64',
     });
@@ -100,30 +100,30 @@ describe('assertTargetsMatchHost()', () => {
 
   it('accepts matching, host, and empty targets', () => {
     expect(() =>
-      assertTargetsMatchHost(['node24.14.1-linux-x64'], host)
+      assertTargetsMatchHost(['node24.22.1-linux-x64'], host)
     ).not.toThrow();
     expect(() => assertTargetsMatchHost(['host'], host)).not.toThrow();
     expect(() => assertTargetsMatchHost([], host)).not.toThrow();
   });
 
   it('rejects cross-platform and cross-arch targets', () => {
-    expect(() => assertTargetsMatchHost(['node24.14.1-win-x64'], host)).toThrow(
+    expect(() => assertTargetsMatchHost(['node24.22.1-win-x64'], host)).toThrow(
       /does not match the build host \(linux-x64\)/
     );
     expect(() =>
-      assertTargetsMatchHost(['node24.14.1-linux-arm64'], host)
+      assertTargetsMatchHost(['node24.22.1-linux-arm64'], host)
     ).toThrow(/linux-arm64/);
   });
 });
 
 describe('getTargets()', () => {
   it('reads --target in both flag forms and splits comma lists', () => {
-    expect(getTargets(['--target', 'node24.14.1-linux-x64'])).toEqual([
-      'node24.14.1-linux-x64',
+    expect(getTargets(['--target', 'node24.22.1-linux-x64'])).toEqual([
+      'node24.22.1-linux-x64',
     ]);
     expect(
-      getTargets(['--target=node24.14.1-linux-x64,node24.14.1-macos-arm64'])
-    ).toEqual(['node24.14.1-linux-x64', 'node24.14.1-macos-arm64']);
+      getTargets(['--target=node24.22.1-linux-x64,node24.22.1-macos-arm64'])
+    ).toEqual(['node24.22.1-linux-x64', 'node24.22.1-macos-arm64']);
     expect(getTargets(['--output', 'x'])).toEqual([]);
   });
 });
