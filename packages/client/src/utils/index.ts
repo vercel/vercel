@@ -106,6 +106,64 @@ async function getUserIgnore(cwd: string): Promise<Ignore | null> {
   return ignore().add(clearRelative(ignoreFile));
 }
 
+const VCS_DEFAULTS = ['.hg', '.git', '.gitmodules', '.svn', 'CVS'];
+const CASE_SENSITIVE_VCS_DEFAULTS = new Set(['CVS']);
+const filePathMapVcsDefaults = ignore().add(
+  VCS_DEFAULTS.filter(rule => !CASE_SENSITIVE_VCS_DEFAULTS.has(rule))
+);
+const CVS_METADATA_FILES = new Set([
+  'Baserev',
+  'Baserev.tmp',
+  'Entries',
+  'Entries.Backup',
+  'Entries.Log',
+  'Entries.Static',
+  'Notify',
+  'Notify.tmp',
+  'Repository',
+  'Root',
+  'Tag',
+  'Template',
+  'fileattr',
+]);
+
+async function isFilePathMapVcsDefault(
+  posixRel: string,
+  cwd: string
+): Promise<boolean> {
+  if (filePathMapVcsDefaults.ignores(posixRel)) {
+    return true;
+  }
+
+  const segments = posixRel.split('/');
+  for (const [index, segment] of segments.entries()) {
+    if (!CASE_SENSITIVE_VCS_DEFAULTS.has(segment)) {
+      continue;
+    }
+
+    const remainingSegments = segments.slice(index + 1);
+    if (
+      remainingSegments.length > 0 &&
+      (CVS_METADATA_FILES.has(remainingSegments[0]) ||
+        remainingSegments[0] === 'Base')
+    ) {
+      return true;
+    }
+
+    const cvsDirectory = join(cwd, ...segments.slice(0, index + 1));
+    const [hasEntries, hasRoot, hasRepository] = await Promise.all([
+      pathExists(join(cvsDirectory, 'Entries')),
+      pathExists(join(cvsDirectory, 'Root')),
+      pathExists(join(cvsDirectory, 'Repository')),
+    ]);
+    if (hasEntries && hasRoot && hasRepository) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 /**
  * Source-upload defaults that `--prebuilt` `filePathMap` may re-add even when
  * the user also listed them in `.vercelignore`. These are dependency / framework
@@ -207,6 +265,13 @@ export async function buildFileTree(
                 `Ignoring "filePathMap" entry "${v}": resolves outside the deployment root`
               );
               continue;
+            }
+            if (await isFilePathMapVcsDefault(posixRel, path)) {
+              throw new NowBuildError({
+                code: 'PREBUILT_FILEPATHMAP_VCS',
+                message:
+                  'Prebuilt functions reference version-control files that cannot be uploaded. Exclude version-control files from tracing and rebuild the prebuilt output.',
+              });
             }
             if (userIg && userIg.ignores(posixRel)) {
               if (isFilePathMapIgnoreException(posixRel)) {
@@ -350,10 +415,7 @@ export async function getVercelIgnore(
     ig.add(ignores.join('\n'));
   } else {
     ignores = [
-      '.hg',
-      '.git',
-      '.gitmodules',
-      '.svn',
+      ...VCS_DEFAULTS,
       '.cache',
       '.next',
       '.now',
@@ -375,7 +437,6 @@ export async function getVercelIgnore(
       'node_modules',
       '__pycache__',
       'venv',
-      'CVS',
     ];
 
     const cwds = Array.isArray(cwd) ? cwd : [cwd];

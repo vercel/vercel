@@ -344,6 +344,81 @@ describe('buildFileTree()', () => {
     ).toBe(false);
   });
 
+  it('should allow lowercase `cvs` directories in `filePathMap` when prebuilt=true', async () => {
+    const cwd = fixture('prebuilt-filepathmap-ignore');
+    const sourcePath = join(cwd, 'src/app/api/cvs/route.ts');
+    const extraFuncDir = join(
+      cwd,
+      '.vercel/output/functions/api/lowercase-cvs.func'
+    );
+
+    await fs.outputFile(sourcePath, 'export default function handler() {}\n');
+    await fs.outputJson(join(extraFuncDir, '.vc-config.json'), {
+      runtime: 'nodejs20.x',
+      handler: 'index.js',
+      filePathMap: {
+        'route.js': 'src/app/api/cvs/route.ts',
+      },
+    });
+
+    try {
+      const { fileList } = await buildFileTree(
+        cwd,
+        {
+          isDirectory: true,
+          prebuilt: true,
+          vercelOutputDir: join(cwd, '.vercel/output'),
+        },
+        noop
+      );
+
+      expect(normalizeWindowsPaths(fileList)).toContain(
+        normalizeWindowsPaths([sourcePath])[0]
+      );
+    } finally {
+      await fs.remove(extraFuncDir);
+      await fs.remove(join(cwd, 'src/app/api/cvs'));
+    }
+  });
+
+  it.each([
+    ['uppercase CVS metadata', 'CVS/Entries'],
+    ['mixed-case Git metadata', '.GIT/config'],
+  ])('should reject %s in `filePathMap` when prebuilt=true', async (_description, vcsPath) => {
+    const cwd = fixture('prebuilt-filepathmap-ignore');
+    const sourcePath = join(cwd, vcsPath);
+    const extraFuncDir = join(
+      cwd,
+      '.vercel/output/functions/api/vcs-metadata.func'
+    );
+
+    await fs.outputFile(sourcePath, 'metadata\n');
+    await fs.outputJson(join(extraFuncDir, '.vc-config.json'), {
+      runtime: 'nodejs20.x',
+      handler: 'index.js',
+      filePathMap: {
+        metadata: vcsPath,
+      },
+    });
+
+    try {
+      await expect(
+        buildFileTree(
+          cwd,
+          {
+            isDirectory: true,
+            prebuilt: true,
+            vercelOutputDir: join(cwd, '.vercel/output'),
+          },
+          noop
+        )
+      ).rejects.toMatchObject({ code: 'PREBUILT_FILEPATHMAP_VCS' });
+    } finally {
+      await fs.remove(extraFuncDir);
+      await fs.remove(join(cwd, vcsPath.split('/')[0]));
+    }
+  });
+
   it('monorepo - should find root files but ignore `.vercel/output` files when prebuilt=false', async () => {
     const cwd = fixture('monorepo-boa');
     const { fileList, ignoreList } = await buildFileTree(
