@@ -1266,6 +1266,71 @@ describe('deploy', () => {
     );
   });
 
+  it('should resolve prebuilt `filePathMap` against the workspace root for a per-directory link', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'web',
+      id: 'QmbKpqpiUqbcke',
+    });
+
+    const repoRoot = setupTmpDir();
+    const appDir = join(repoRoot, 'apps/web');
+    await fs.outputFile(
+      join(repoRoot, 'pnpm-workspace.yaml'),
+      'packages:\n  - apps/*\n'
+    );
+    await fs.outputFile(
+      join(appDir, 'package.json'),
+      JSON.stringify({ name: 'web' })
+    );
+    await fs.outputJSON(join(appDir, '.vercel/project.json'), {
+      projectId: 'QmbKpqpiUqbcke',
+      orgId: 'team_dummy',
+    });
+    await fs.outputFile(join(appDir, 'dist/_app.html'), '<h1>App</h1>');
+
+    // `vercel build` writes `filePathMap` relative to the workspace root.
+    const outputDirectory = join(appDir, '.vercel/output');
+    await fs.outputFile(
+      join(outputDirectory, 'builds.json'),
+      JSON.stringify({ target: 'preview', builds: [] })
+    );
+    await fs.outputFile(
+      join(outputDirectory, 'config.json'),
+      JSON.stringify({ version: 3 })
+    );
+    await fs.outputFile(
+      join(outputDirectory, 'functions/api/og.func/index.js'),
+      'module.exports = () => {};'
+    );
+    await fs.outputJSON(
+      join(outputDirectory, 'functions/api/og.func/.vc-config.json'),
+      {
+        handler: 'apps/web/api/og.js',
+        runtime: 'nodejs22.x',
+        filePathMap: { 'apps/web/dist/_app.html': 'apps/web/dist/_app.html' },
+      }
+    );
+
+    client.cwd = appDir;
+    client.setArgv('deploy', '--prebuilt', '--dry', '--format=json');
+    const exitCode = await deploy(client);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+
+    expect(exitCode).toEqual(0);
+    expect(payload.basePath).toEqual(repoRoot);
+    expect(payload.files).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'apps/web/.vercel/output/functions/api/og.func/.vc-config.json',
+        }),
+        expect.objectContaining({ path: 'apps/web/dist/_app.html' }),
+      ])
+    );
+  });
+
   it('should send `projectSettings.nodeVersion` based on `engines.node` package.json field', async () => {
     const user = useUser();
     useTeams('team_dummy');
