@@ -1,4 +1,5 @@
 ---
+'vercel': patch
 ---
 
-Bump the pinned Node.js 24 used by CLI binary and release workflows to 24.22.1 for the October 21, 2026 Node.js security release.
+Build the CLI native binaries with Node.js 24.22.1, the patched release from the October 21, 2026 Node.js security release.
