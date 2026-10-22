@@ -54,6 +54,15 @@ function applyOutputOverrides(
       if (override.mode) {
         entry.mode = override.mode;
       }
+      if (override.trailingSlash !== undefined) {
+        if (typeof override.trailingSlash !== 'boolean') {
+          throw new NowBuildError({
+            message: `The \`trailingSlash\` override for "${name}" must be a boolean.`,
+            code: 'VC_BUILD_INVALID_OVERRIDE_TRAILING_SLASH',
+          });
+        }
+        entry.trailingSlash = override.trailingSlash;
+      }
       if (override.path) {
         output[override.path] = entry;
         delete output[name];

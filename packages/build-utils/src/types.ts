@@ -23,6 +23,10 @@ export interface FileBase {
   type: string;
   mode: number;
   contentType?: string;
+  /**
+   * whether the canonical url of a static output ends with a slash
+   */
+  trailingSlash?: boolean;
   toStream: () => NodeJS.ReadableStream;
   toStreamAsync?: () => Promise<NodeJS.ReadableStream>;
 }

@@ -173,6 +173,79 @@ describe('deserializeBuildOutput()', () => {
     }
   });
 
+  it('applies trailingSlash overrides to the output at its final path', async () => {
+    const fixture = await createOutputFixture({
+      overrides: {
+        'blog/hello.html': { path: 'blog/hello', trailingSlash: false },
+        'docs/intro/index.html': { path: 'docs/intro', trailingSlash: true },
+      },
+    });
+
+    try {
+      await fs.outputFile(
+        join(fixture.outputDir, 'static', 'blog', 'hello.html'),
+        'hello'
+      );
+      await fs.outputFile(
+        join(fixture.outputDir, 'static', 'docs', 'intro', 'index.html'),
+        'intro'
+      );
+      await fs.outputFile(
+        join(fixture.outputDir, 'static', 'robots.txt'),
+        'robots'
+      );
+
+      const result = await deserializeBuildOutput<TestConfig, TestResult>({
+        outputDir: fixture.outputDir,
+        repoRootPath: fixture.repoRootPath,
+        deserializeLambda: async () => createLambda('noop.handler'),
+        groupLambdas: async () => ({}),
+      });
+
+      expect(result.output['blog/hello']).toMatchObject({
+        trailingSlash: false,
+      });
+      expect(result.output['docs/intro']).toMatchObject({
+        trailingSlash: true,
+      });
+      expect(result.output['robots.txt']).toBeDefined();
+      expect(result.output['robots.txt']).not.toHaveProperty('trailingSlash');
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it('rejects trailingSlash overrides that are not booleans', async () => {
+    const fixture = await createOutputFixture({
+      overrides: {
+        'hello.html': {
+          path: 'hello',
+          trailingSlash: 'yes' as unknown as boolean,
+        },
+      },
+    });
+
+    try {
+      await fs.outputFile(
+        join(fixture.outputDir, 'static', 'hello.html'),
+        'hello'
+      );
+
+      await expect(
+        deserializeBuildOutput<TestConfig, TestResult>({
+          outputDir: fixture.outputDir,
+          repoRootPath: fixture.repoRootPath,
+          deserializeLambda: async () => createLambda('noop.handler'),
+          groupLambdas: async () => ({}),
+        })
+      ).rejects.toMatchObject({
+        code: 'VC_BUILD_INVALID_OVERRIDE_TRAILING_SLASH',
+      });
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
   it('replaces grouped lambdas for plain lambdas and prerenders without adding meta or deploymentId by default', async () => {
     const fixture = await createOutputFixture({
       deploymentId: 'dpl_custom',

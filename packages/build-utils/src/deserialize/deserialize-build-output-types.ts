@@ -13,6 +13,10 @@ export interface DeserializeBuildOutputPathOverride {
   contentType?: string;
   mode?: number;
   path?: string;
+  /**
+   * whether the canonical url of the output ends with a slash, requests for the other form redirect to it
+   */
+  trailingSlash?: boolean;
 }
 
 export interface DeserializeBuildOutputConfig<TFlags = unknown> {

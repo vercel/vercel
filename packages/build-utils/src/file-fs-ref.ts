@@ -27,6 +27,7 @@ class FileFsRef implements FileBase {
   public fsPath: string;
   public size?: number;
   public contentType: string | undefined;
+  public trailingSlash?: boolean;
 
   constructor({
     mode = 0o100644,
