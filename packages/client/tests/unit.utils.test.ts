@@ -1,3 +1,4 @@
+import os from 'os';
 import { join, resolve } from 'path';
 import fs from 'fs-extra';
 import {
@@ -324,6 +325,49 @@ describe('buildFileTree()', () => {
     } finally {
       await fs.remove(extraFuncDir);
       await fs.remove(join(cwd, 'node_modules/.pnpm'));
+    }
+  });
+
+  it("should apply the linked app's `.vercelignore` to `filePathMap` entries when re-anchored at a workspace root", async () => {
+    const root = await fs.mkdtemp(join(os.tmpdir(), 'vc-filepathmap-app-'));
+    try {
+      const appDir = join(root, 'apps/web');
+      const outputDir = join(appDir, '.vercel/output');
+      const funcDir = join(outputDir, 'functions/api/example.func');
+      await fs.outputFile(join(appDir, '.vercelignore'), '.env\nsecrets/\n');
+      await fs.outputFile(join(appDir, '.env'), 'SECRET=1\n');
+      await fs.outputFile(join(appDir, 'secrets/key.txt'), 'key\n');
+      await fs.outputFile(join(appDir, 'handler.js'), 'module.exports = {};\n');
+      await fs.outputFile(join(funcDir, 'index.js'), '');
+      await fs.writeJson(join(funcDir, '.vc-config.json'), {
+        runtime: 'nodejs20.x',
+        handler: 'index.js',
+        filePathMap: {
+          '.env': 'apps/web/.env',
+          'secrets/key.txt': 'apps/web/secrets/key.txt',
+          'handler.js': 'apps/web/handler.js',
+        },
+      });
+
+      const { fileList } = await buildFileTree(
+        root,
+        {
+          isDirectory: true,
+          prebuilt: true,
+          vercelOutputDir: outputDir,
+          rootDirectory: 'apps/web',
+        },
+        noop
+      );
+
+      const normalized = normalizeWindowsPaths(fileList);
+      const included = (rel: string) =>
+        normalizeWindowsPaths([join(root, rel)])[0];
+      expect(normalized).toContain(included('apps/web/handler.js'));
+      expect(normalized).not.toContain(included('apps/web/.env'));
+      expect(normalized).not.toContain(included('apps/web/secrets/key.txt'));
+    } finally {
+      await fs.remove(root);
     }
   });
 
