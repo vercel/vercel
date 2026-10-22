@@ -46,6 +46,13 @@ func TestMain(m *testing.M) {
 }
 
 func runProxyTestRelay() {
+	if value := os.Getenv("IPC_PROXY_TEST_EXIT"); value != "" {
+		code, err := strconv.Atoi(value)
+		if err != nil {
+			panic(err)
+		}
+		os.Exit(code)
+	}
 	listener, err := net.Listen("tcp", "127.0.0.1:"+os.Getenv("PORT"))
 	if err != nil {
 		panic(err)
@@ -56,8 +63,9 @@ func runProxyTestRelay() {
 	}
 	fmt.Fprintln(control, os.Getpid())
 	go func() {
-		io.Copy(io.Discard, control)
-		os.Exit(0)
+		code := 0
+		fmt.Fscan(control, &code)
+		os.Exit(code)
 	}()
 	for {
 		client, err := listener.Accept()
@@ -111,6 +119,8 @@ type proxyTestProcess struct {
 	errors     []string
 	started    chan struct{}
 	startCount int
+	wantStarts int
+	fatals     []UnrecoverableErrorPayload
 	collected  chan struct{}
 	logs       lockedTestBuffer
 }
@@ -150,6 +160,8 @@ func (p *proxyTestProcess) collect(listener net.Listener) {
 			Payload struct {
 				Context  RequestContext `json:"context"`
 				HTTPPort int            `json:"httpPort"`
+				ExitCode int            `json:"exitCode"`
+				Message  string         `json:"message"`
 			} `json:"payload"`
 		}
 		p.mu.Lock()
@@ -184,6 +196,7 @@ func (p *proxyTestProcess) collect(listener net.Listener) {
 				}
 			case "unrecoverable-error":
 				// Closing the relay at teardown makes the supervisor exit.
+				p.fatals = append(p.fatals, UnrecoverableErrorPayload{ExitCode: message.Payload.ExitCode, Message: message.Payload.Message})
 			default:
 				p.errors = append(p.errors, "unexpected IPC type: "+message.Type)
 			}
@@ -193,6 +206,16 @@ func (p *proxyTestProcess) collect(listener net.Listener) {
 }
 
 func startOriginalProxy(t testing.TB, h http.Handler) (string, func()) {
+	return startOriginalProxyWithOptions(t, h, proxyTestOptions{})
+}
+
+type proxyTestOptions struct {
+	prefix string
+	strip  bool
+	noIPC  bool
+}
+
+func startOriginalProxyWithOptions(t testing.TB, h http.Handler, options proxyTestOptions) (string, func()) {
 	t.Helper()
 	if activeProxyTest != nil {
 		t.Fatal("proxy process fixtures cannot run concurrently")
@@ -202,20 +225,7 @@ func startOriginalProxy(t testing.TB, h http.Handler) (string, func()) {
 		t.Fatalf("original proxy requires unused port 3000: %v", err)
 	}
 	reservation.Close()
-	// Keep Unix socket names below the macOS sockaddr_un path limit.
-	dir, err := os.MkdirTemp("", "ipc-proxy-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { os.RemoveAll(dir) })
-	executable, err := os.Executable()
-	if err != nil {
-		t.Fatal(err)
-	}
-	installTestExecutable(t, executable, filepath.Join(dir, "user-server"))
-	if runtime.GOOS == "windows" {
-		installTestExecutable(t, executable, filepath.Join(dir, "user-server.exe"))
-	}
+	dir, executable := proxyTestDirectory(t)
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == proxyTestBarrier {
 			w.WriteHeader(http.StatusNoContent)
@@ -235,24 +245,20 @@ func startOriginalProxy(t testing.TB, h http.Handler) (string, func()) {
 	}
 	t.Cleanup(func() { control.Close() })
 	control.(*net.TCPListener).SetDeadline(time.Now().Add(8 * time.Second))
-	p := &proxyTestProcess{
-		ends: make(map[string][]uint64), expected: make(map[string][]uint64),
-		barriers: make(map[uint64]chan struct{}), started: make(chan struct{}), collected: make(chan struct{}),
+	p := newProxyTestProcess()
+	if options.noIPC {
+		p.wantStarts = 0
 	}
 	go p.collect(ipc)
 	cmd := exec.Command(executable, "proxy")
 	cmd.Dir = dir
-	for _, value := range os.Environ() {
-		key, _, _ := strings.Cut(value, "=")
-		switch strings.ToUpper(key) {
-		case "PORT", "VERCEL_IPC_PATH", "VERCEL_SERVICE_ROUTE_PREFIX", "VERCEL_SERVICE_ROUTE_PREFIX_STRIP", proxyTestHelper, "IPC_PROXY_TEST_TARGET", "IPC_PROXY_TEST_CONTROL", "GORACE":
-		default:
-			cmd.Env = append(cmd.Env, value)
-		}
+	path := ipc.Addr().String()
+	if options.noIPC {
+		path = ""
 	}
-	cmd.Env = append(cmd.Env, proxyTestHelper+"=1", "VERCEL_IPC_PATH="+ipc.Addr().String(),
+	cmd.Env = append(proxyTestEnvironment(), "VERCEL_IPC_PATH="+path,
 		"IPC_PROXY_TEST_TARGET="+backend.Listener.Addr().String(), "IPC_PROXY_TEST_CONTROL="+control.Addr().String(),
-		"GORACE=atexit_sleep_ms=0")
+		"VERCEL_SERVICE_ROUTE_PREFIX="+options.prefix, "VERCEL_SERVICE_ROUTE_PREFIX_STRIP="+strconv.FormatBool(options.strip))
 	cmd.Stdout, cmd.Stderr = &p.logs, &p.logs
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
@@ -320,12 +326,14 @@ func startOriginalProxy(t testing.TB, h http.Handler) (string, func()) {
 		t.Fatalf("invalid relay PID: %q", pid)
 	}
 	control.Close()
-	select {
-	case <-p.started:
-	case <-exited:
-		t.Fatalf("proxy failed to start: %s", p.logs.String())
-	case <-time.After(8 * time.Second):
-		t.Fatalf("missing server-started IPC: %s", p.logs.String())
+	if !options.noIPC {
+		select {
+		case <-p.started:
+		case <-exited:
+			t.Fatalf("proxy failed to start: %s", p.logs.String())
+		case <-time.After(8 * time.Second):
+			t.Fatalf("missing server-started IPC: %s", p.logs.String())
+		}
 	}
 	activeProxyTest = p
 	deadline := time.Now().Add(5 * time.Second)
@@ -340,8 +348,49 @@ func startOriginalProxy(t testing.TB, h http.Handler) (string, func()) {
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
-	ipcBarrier(t)
+	if !options.noIPC {
+		ipcBarrier(t)
+	}
 	return "http://127.0.0.1:3000", stop
+}
+
+func newProxyTestProcess() *proxyTestProcess {
+	return &proxyTestProcess{
+		ends: make(map[string][]uint64), expected: make(map[string][]uint64),
+		barriers: make(map[uint64]chan struct{}), started: make(chan struct{}), collected: make(chan struct{}), wantStarts: 1,
+	}
+}
+
+func proxyTestEnvironment() []string {
+	var env []string
+	for _, value := range os.Environ() {
+		key, _, _ := strings.Cut(value, "=")
+		switch strings.ToUpper(key) {
+		case "PORT", "VERCEL_IPC_PATH", "VERCEL_SERVICE_ROUTE_PREFIX", "VERCEL_SERVICE_ROUTE_PREFIX_STRIP", proxyTestHelper, "IPC_PROXY_TEST_TARGET", "IPC_PROXY_TEST_CONTROL", "IPC_PROXY_TEST_EXIT", "GORACE":
+		default:
+			env = append(env, value)
+		}
+	}
+	return append(env, proxyTestHelper+"=1", "GORACE=atexit_sleep_ms=0")
+}
+
+func proxyTestDirectory(t testing.TB) (string, string) {
+	t.Helper()
+	// Keep Unix socket names below the macOS sockaddr_un path limit.
+	dir, err := os.MkdirTemp("", "ipc-proxy-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(dir) })
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	installTestExecutable(t, executable, filepath.Join(dir, "user-server"))
+	if runtime.GOOS == "windows" {
+		installTestExecutable(t, executable, filepath.Join(dir, "user-server.exe"))
+	}
+	return dir, executable
 }
 
 func installTestExecutable(t testing.TB, source, target string) {
@@ -362,8 +411,8 @@ func (p *proxyTestProcess) audit(t testing.TB) {
 	t.Helper()
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if p.startCount != 1 {
-		t.Errorf("server-started IPC count=%d, want 1", p.startCount)
+	if p.startCount != p.wantStarts {
+		t.Errorf("server-started IPC count=%d, want %d", p.startCount, p.wantStarts)
 	}
 	for _, err := range p.errors {
 		t.Error(err)
