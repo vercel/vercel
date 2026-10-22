@@ -193,6 +193,12 @@ export async function buildFileTree(
       // must still upload the NFT-traced subset. See
       // https://github.com/vercel/vercel/issues/17386.
       const userIg = await getUserIgnore(path);
+      // When the deployment root is a workspace root that re-anchors a linked
+      // app (`rootDirectory`), the app's own `.vercelignore` / `.nowignore`
+      // lives in the app directory and its rules are relative to that
+      // directory. Apply them too so re-anchoring does not bypass them.
+      const appDir = rootDirectory ? join(path, rootDirectory) : undefined;
+      const appIg = appDir ? await getUserIgnore(appDir) : null;
       await Promise.all(
         vcConfigFilePaths.map(async p => {
           const configJson = await readFile(p, 'utf8');
@@ -218,6 +224,26 @@ export async function buildFileTree(
                   `Ignoring "filePathMap" entry "${v}": matched by a rule in .vercelignore/.nowignore`
                 );
                 continue;
+              }
+            }
+            if (appDir && appIg) {
+              const appRel = relative(appDir, absPath);
+              if (
+                !appRel.startsWith('..') &&
+                !isAbsolute(appRel) &&
+                appIg.ignores(appRel.split(sep).join('/'))
+              ) {
+                const appPosixRel = appRel.split(sep).join('/');
+                if (isFilePathMapIgnoreException(appPosixRel)) {
+                  debug(
+                    `Keeping "filePathMap" entry "${v}": matches a default-ignored dependency/output path`
+                  );
+                } else {
+                  debug(
+                    `Ignoring "filePathMap" entry "${v}": matched by a rule in the app's .vercelignore/.nowignore`
+                  );
+                  continue;
+                }
               }
             }
             refs.add(absPath);

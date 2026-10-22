@@ -96,7 +96,7 @@ export async function collectDeploymentFiles(
       err.path
     ) {
       const errPath = relative(workPath, err.path);
-      err.message = `File does not exist: "${relative(workPath, errPath)}"`;
+      err.message = `File does not exist: "${errPath}"`;
       if (errPath.split(sep).includes('node_modules')) {
         err.message = `Please ensure project dependencies have been installed:\n${err.message}`;
       }
