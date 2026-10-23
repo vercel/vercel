@@ -20,6 +20,7 @@ export { default as changelog } from './commands/changelog';
 export { default as comments } from './commands/comments';
 export { default as connex } from './commands/connex';
 export { default as contract } from './commands/contract';
+export { default as invoices } from './commands/invoices';
 export { default as certs } from './commands/certs';
 export { default as crons } from './commands/crons';
 export { default as curl } from './commands/curl';

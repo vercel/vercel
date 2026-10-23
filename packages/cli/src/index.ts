@@ -1041,6 +1041,10 @@ const main = async () => {
           telemetry.trackCliCommandContract(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).contract;
           break;
+        case 'invoices':
+          telemetry.trackCliCommandInvoices(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).invoices;
+          break;
         case 'certs':
           telemetry.trackCliCommandCerts(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).certs;
