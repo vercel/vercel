@@ -131,13 +131,6 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
-  trackCliCommandInvoices(actual: string) {
-    this.trackCliCommand({
-      command: 'invoices',
-      value: actual,
-    });
-  }
-
   trackCliCommandCrons(actual: string) {
     this.trackCliCommand({
       command: 'crons',
@@ -274,6 +267,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandIntegrationResource(actual: string) {
     this.trackCliCommand({
       command: 'integration-resource',
+      value: actual,
+    });
+  }
+
+  trackCliCommandInvoices(actual: string) {
+    this.trackCliCommand({
+      command: 'invoices',
       value: actual,
     });
   }

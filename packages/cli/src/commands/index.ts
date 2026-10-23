@@ -14,7 +14,6 @@ import { changelogCommand } from './changelog/command';
 import { commentsCommand } from './comments/command';
 import { connexCommand } from './connex/command';
 import { contractCommand } from './contract/command';
-import { invoicesCommand } from './invoices/command';
 import { cronsCommand } from './crons/command';
 import { curlCommand } from './curl/command';
 import { deployCommand } from './deploy/command';
@@ -34,6 +33,7 @@ import { inspectCommand } from './inspect/command';
 import { installCommand } from './install/command';
 import { integrationResourceCommand } from './integration-resource/command';
 import { integrationCommand } from './integration/command';
+import { invoicesCommand } from './invoices/command';
 import { kmsCommand } from './kms/command';
 import { linkCommand } from './link/command';
 import { listCommand } from './list/command';
@@ -88,7 +88,6 @@ const commandsStructs = [
   changelogCommand,
   commentsCommand,
   contractCommand,
-  invoicesCommand,
   cronsCommand,
   curlCommand,
   deployCommand,
@@ -107,6 +106,7 @@ const commandsStructs = [
   installCommand,
   integrationCommand,
   integrationResourceCommand,
+  invoicesCommand,
   kmsCommand,
   linkCommand,
   listCommand,

@@ -6,6 +6,7 @@ import { printError } from '../../util/error';
 import getScope from '../../util/get-scope';
 import table from '../../util/output/table';
 import elapsed from '../../util/output/elapsed';
+import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import { validateJsonOutput } from '../../util/output-format';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { getGlobalFlagsFromArgs } from '../../util/arg-common';
@@ -17,7 +18,12 @@ import output from '../../output-manager';
 import { isErrnoException } from '@vercel/error-utils';
 import { type Command, help } from '../help';
 import { getCommandAliases } from '..';
-import { invoicesCommand, listSubcommand, upcomingSubcommand } from './command';
+import {
+  invoicesCommand,
+  invoiceStatuses,
+  listSubcommand,
+  upcomingSubcommand,
+} from './command';
 
 interface Invoice {
   id?: string;
@@ -60,7 +66,7 @@ export default async function invoices(client: Client): Promise<number> {
   });
 
   const { subcommand, args, subcommandOriginal } = getSubcommand(
-    parsedArgs.args.slice(1),
+    parsedArgs.args.slice(parsedArgs.args[0] === 'help' ? 2 : 1),
     COMMAND_CONFIG
   );
   const needHelp = parsedArgs.flags['--help'];
@@ -86,14 +92,19 @@ export default async function invoices(client: Client): Promise<number> {
     return 2;
   }
 
-  if (subcommand === 'upcoming') {
-    if (needHelp) return printHelp(upcomingSubcommand);
-    telemetry.trackCliSubcommandUpcoming(subcommandOriginal);
-    return upcoming(client, telemetry);
+  try {
+    if (subcommand === 'upcoming') {
+      if (needHelp) return printHelp(upcomingSubcommand);
+      telemetry.trackCliSubcommandUpcoming(subcommandOriginal);
+      return await upcoming(client, telemetry);
+    }
+    if (needHelp) return printHelp(listSubcommand);
+    telemetry.trackCliSubcommandList(subcommandOriginal);
+    return await ls(client, telemetry);
+  } catch (err) {
+    output.prettyError(err);
+    return 1;
   }
-  if (needHelp) return printHelp(listSubcommand);
-  telemetry.trackCliSubcommandList(subcommandOriginal);
-  return ls(client, telemetry);
 }
 
 async function ls(
@@ -114,12 +125,32 @@ async function ls(
 
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
-    output.error(formatResult.error);
+    output.fatal(formatResult.error);
     return 1;
   }
   const asJson = formatResult.jsonOutput;
 
-  telemetry.trackCliOptionStatus(flags['--status'] as [string] | undefined);
+  const limit = flags['--limit'];
+  if (
+    limit !== undefined &&
+    (!Number.isInteger(limit) || limit < 1 || limit > 50)
+  ) {
+    output.fatal('Use an integer from 1 to 50 for --limit.');
+    return 1;
+  }
+
+  if (
+    flags['--status']?.some(
+      status => !invoiceStatuses.some(validStatus => validStatus === status)
+    )
+  ) {
+    output.fatal(
+      `Use one of these values for --status: ${invoiceStatuses.join(', ')}.`
+    );
+    return 1;
+  }
+
+  telemetry.trackCliOptionStatus(flags['--status']);
   telemetry.trackCliOptionLimit(flags['--limit']);
   telemetry.trackCliOptionNext(flags['--next']);
   telemetry.trackCliFlagDetails(flags['--details']);
@@ -139,7 +170,7 @@ async function ls(
 
   const start = Date.now();
   if (!asJson) {
-    output.spinner(`Fetching invoices for ${chalk.bold(scope.contextName)}`);
+    output.spinner(`Fetching invoices for ${chalk.bold(scope.contextName)}…`);
   }
 
   try {
@@ -173,7 +204,7 @@ async function ls(
       extractDatePortion(inv.issuedAt ?? inv.createdAt),
       formatAmount(inv.amountDue, inv.currency),
       formatAmount(inv.total, inv.currency),
-      inv.hostedUrl ?? '-',
+      inv.hostedUrl ? chalk.cyan(inv.hostedUrl) : '-',
     ]);
     output.print(
       `\n${table([headers.map(h => chalk.bold(chalk.cyan(h))), ...rows], {
@@ -250,7 +281,7 @@ async function upcoming(
 
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
-    output.error(formatResult.error);
+    output.fatal(formatResult.error);
     return 1;
   }
   const asJson = formatResult.jsonOutput;
@@ -261,7 +292,7 @@ async function upcoming(
   const scope = await resolveScope(client);
   if (!scope) return 1;
   if (!scope.teamId) {
-    output.error(
+    output.fatal(
       'Upcoming invoices are only available for teams. Use --scope to select a team.'
     );
     return 1;
@@ -270,7 +301,7 @@ async function upcoming(
   const start = Date.now();
   if (!asJson) {
     output.spinner(
-      `Fetching upcoming invoice for ${chalk.bold(scope.contextName)}`
+      `Fetching upcoming invoice for ${chalk.bold(scope.contextName)}…`
     );
   }
 
@@ -294,9 +325,7 @@ async function upcoming(
       return 0;
     }
     if (invoice.issuedAt) {
-      output.log(
-        `${chalk.gray('Billing period ends:')} ${extractDatePortion(invoice.issuedAt)}`
-      );
+      printAlignedLabel('Invoice Date', extractDatePortion(invoice.issuedAt));
     }
 
     const rows = invoice.lineItems
@@ -316,9 +345,13 @@ async function upcoming(
         ).replace(/^/gm, '  ')}\n`
       );
     }
-    output.print(
-      `\n  ${chalk.gray('Subtotal:')} ${formatAmount(invoice.subtotal, invoice.currency)}\n  ${chalk.bold('Total:')}    ${formatAmount(invoice.total, invoice.currency)}\n\n`
+    output.print('\n');
+    printAlignedLabel(
+      'Subtotal',
+      formatAmount(invoice.subtotal, invoice.currency)
     );
+    printAlignedLabel('Total', formatAmount(invoice.total, invoice.currency));
+    output.print('\n');
     return 0;
   } catch (err) {
     output.prettyError(err);
@@ -337,7 +370,7 @@ async function resolveScope(
       isErrnoException(err) &&
       (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED')
     ) {
-      output.error(err.message);
+      output.fatal(err.message);
       return null;
     }
     throw err;

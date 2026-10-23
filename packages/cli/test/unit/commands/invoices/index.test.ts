@@ -36,6 +36,80 @@ describe('invoices', () => {
     ]);
   });
 
+  it.each([
+    { args: ['help', 'invoices', '-h'], telemetryValue: 'invoices' },
+    { args: ['help', 'invoice', 'ls', '-h'], telemetryValue: 'invoices:ls' },
+    {
+      args: ['help', 'invoices', 'upcoming', '-h'],
+      telemetryValue: 'invoices:upcoming',
+    },
+  ])('supports root help: $args', async ({ args, telemetryValue }) => {
+    const fetch = vi.spyOn(client, 'fetch');
+    client.setArgv(...args);
+
+    expect(await invoices(client)).toEqual(2);
+    expect(client.getFullOutput()).toContain('vercel invoices');
+    expect(client.getFullOutput()).not.toContain('Unexpected arguments');
+    expect(fetch).not.toHaveBeenCalled();
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'flag:help', value: telemetryValue },
+    ]);
+  });
+
+  it.each([
+    '0',
+    '-1',
+    '51',
+    '1.5',
+    'NaN',
+    'Infinity',
+  ])('rejects invalid --limit %s before requesting invoices', async limit => {
+    const fetch = vi.spyOn(client, 'fetch');
+    client.setArgv('invoices', 'ls', '--limit', limit, '--json');
+
+    expect(await invoices(client)).toEqual(1);
+    expect(client.getFullOutput()).toContain(
+      'Use an integer from 1 to 50 for --limit.'
+    );
+    expect(client.stdout.getFullOutput()).toBe('');
+    expect(fetch).not.toHaveBeenCalled();
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:list', value: 'ls' },
+    ]);
+  });
+
+  it('rejects invalid statuses without logging them or sending them to telemetry', async () => {
+    const fetch = vi.spyOn(client, 'fetch');
+    client.setArgv('invoices', 'ls', '--status', 'private-value', '--json');
+
+    expect(await invoices(client)).toEqual(1);
+    expect(client.getFullOutput()).toContain(
+      'Use one of these values for --status:'
+    );
+    expect(client.getFullOutput()).not.toContain('private-value');
+    expect(client.stdout.getFullOutput()).toBe('');
+    expect(fetch).not.toHaveBeenCalled();
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:list', value: 'ls' },
+    ]);
+  });
+
+  it.each([
+    'ls',
+    'upcoming',
+  ])('handles account lookup failures for %s', async subcommand => {
+    vi.spyOn(client, 'fetch').mockRejectedValueOnce(
+      new Error('Failed to resolve account')
+    );
+    client.setArgv('invoices', subcommand, '--json');
+
+    expect(await invoices(client)).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Failed to resolve account'
+    );
+    expect(client.stdout.getFullOutput()).toBe('');
+  });
+
   it('documents --details in list help', async () => {
     client.setArgv('invoices', 'ls', '--help');
     expect(await invoices(client)).toEqual(2);
@@ -115,6 +189,71 @@ describe('invoices', () => {
       useUser();
       useTeams('team_dummy');
       client.config.currentTeam = 'team_dummy';
+    });
+
+    it.each([
+      'ls',
+      'upcoming',
+    ])('reports permission errors for %s without writing to JSON stdout', async subcommand => {
+      const endpoint =
+        subcommand === 'ls' ? '/v2/invoices' : '/v1/invoices/upcoming';
+      client.scenario.get(endpoint, (_req, res) => {
+        res.status(403).json({
+          error: {
+            code: 'forbidden',
+            message: 'Not authorized to read invoices.',
+          },
+        });
+      });
+
+      client.setArgv('invoices', subcommand, '--json');
+      expect(await invoices(client)).toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Not authorized to read invoices.'
+      );
+      expect(client.stdout.getFullOutput()).toBe('');
+    });
+
+    it.each([1, 50])('accepts the page-size boundary %s', async limit => {
+      let query: Record<string, unknown> = {};
+      client.scenario.get('/v2/invoices', (req, res) => {
+        query = req.query;
+        res.json({ data: [], hasMore: false, nextCursor: null });
+      });
+
+      client.setArgv('invoices', '--limit', String(limit), '--json');
+      expect(await invoices(client)).toEqual(0);
+      expect(query).toMatchObject({
+        limit: String(limit),
+        teamId: 'team_dummy',
+      });
+    });
+
+    it.each([
+      ['--token', 'test-secret'],
+      ['--token=test-secret'],
+      ['-t', 'test-secret'],
+    ])('preserves encoded cursors and omits authentication flags: %j', async (...authFlags) => {
+      let query: Record<string, unknown> = {};
+      client.scenario.get('/v2/invoices', (req, res) => {
+        query = req.query;
+        res.json({ data: [invoice], hasMore: true, nextCursor: 'next+/==' });
+      });
+
+      client.setArgv('invoices', 'ls', '--next', 'cursor+/==', ...authFlags);
+      expect(await invoices(client)).toEqual(0);
+      expect(query).toMatchObject({
+        cursor: 'cursor+/==',
+        teamId: 'team_dummy',
+      });
+      expect(client.getFullOutput()).toContain("invoices ls --next 'next+/=='");
+      expect(client.getFullOutput()).not.toContain('test-secret');
+      expect(client.getFullOutput()).not.toContain('--token');
+      expect(client.getFullOutput()).not.toContain('-t');
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:list', value: 'ls' },
+        { key: 'option:next', value: '[REDACTED]' },
+      ]);
     });
 
     it('lists invoices with filters and a next-page hint', async () => {
@@ -308,7 +447,10 @@ describe('invoices', () => {
       expect(out).toContain('Pro plan');
       expect(out).not.toContain('Free item');
       expect(out).toContain('$20.00');
-      expect(out).toContain('Billing period ends: 2026-09-01');
+      expect(out).toMatch(/Invoice Date\s+2026-09-01/);
+      expect(out).not.toContain('Billing period ends:');
+      expect(out).toMatch(/\n {2}Subtotal\s+\$20\.00\n {2}Total\s+\$20\.00/);
+      expect(out).not.toContain('Subtotal:');
     });
 
     it.each([
@@ -389,5 +531,19 @@ describe('invoices', () => {
     client.setArgv('invoices', 'upcoming');
     expect(await invoices(client)).toEqual(1);
     expect(client.getFullOutput()).toContain('only available for teams');
+  });
+
+  it('lists personal invoices without adding a team ID', async () => {
+    useUser();
+    let query: Record<string, unknown> = {};
+    client.scenario.get('/v2/invoices', (req, res) => {
+      query = req.query;
+      res.json({ data: [invoice], hasMore: false, nextCursor: null });
+    });
+
+    client.setArgv('invoices', '--json');
+    expect(await invoices(client)).toEqual(0);
+    expect(query).not.toHaveProperty('teamId');
+    expect(JSON.parse(client.stdout.getFullOutput()).data).toEqual([invoice]);
   });
 });

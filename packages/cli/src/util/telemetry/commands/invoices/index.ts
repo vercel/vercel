@@ -3,13 +3,15 @@ import type { TelemetryMethods } from '../../types';
 import type {
   invoicesCommand,
   listSubcommand,
+  upcomingSubcommand,
 } from '../../../../commands/invoices/command';
 
 export class InvoicesTelemetryClient
   extends TelemetryClient
   implements
     TelemetryMethods<typeof invoicesCommand>,
-    TelemetryMethods<typeof listSubcommand>
+    TelemetryMethods<typeof listSubcommand>,
+    TelemetryMethods<typeof upcomingSubcommand>
 {
   trackCliSubcommandList(actual: string) {
     this.trackCliSubcommand({
@@ -25,7 +27,7 @@ export class InvoicesTelemetryClient
     });
   }
 
-  trackCliOptionStatus(status: [string] | undefined) {
+  trackCliOptionStatus(status: string[] | undefined) {
     if (status) {
       this.trackCliOption({
         option: 'status',

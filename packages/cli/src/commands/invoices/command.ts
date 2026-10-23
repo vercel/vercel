@@ -1,6 +1,14 @@
 import { formatOption, jsonOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
+export const invoiceStatuses = [
+  'draft',
+  'open',
+  'paid',
+  'uncollectible',
+  'void',
+] as const;
+
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
@@ -21,8 +29,7 @@ export const listSubcommand = {
       type: [String],
       argument: 'STATUS',
       deprecated: false,
-      description:
-        'Filter by status: draft, open, paid, uncollectible, void (can be used multiple times)',
+      description: `Filter by status: ${invoiceStatuses.join(', ')} (can be used multiple times)`,
     },
     {
       name: 'limit',
