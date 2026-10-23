@@ -129,7 +129,7 @@ function getFlag(countryCode: string | undefined): string | undefined {
  *
  */
 export function ipAddress(input: Request | Headers): string | undefined {
-  const headers = 'headers' in input ? input.headers : input;
+  const headers = 'get' in input ? input : input.headers;
   return getHeader(headers, IP_HEADER_NAME);
 }
 

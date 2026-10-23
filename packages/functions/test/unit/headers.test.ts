@@ -14,13 +14,38 @@ import {
   REQUEST_ID_HEADER_NAME,
 } from '../../src/headers';
 
-test('`ipAddress` returns the value from the header', () => {
-  const req = new Request('https://example.vercel.sh', {
-    headers: {
-      [IP_HEADER_NAME]: '127.0.0.1',
-    },
+describe('`ipAddress`', () => {
+  test('returns the value from a Request', () => {
+    const req = new Request('https://example.vercel.sh', {
+      headers: {
+        [IP_HEADER_NAME]: '127.0.0.1',
+      },
+    });
+    expect(ipAddress(req)).toBe('127.0.0.1');
   });
-  expect(ipAddress(req)).toBe('127.0.0.1');
+
+  test('returns the value from Headers', () => {
+    const headers = new Headers({
+      [IP_HEADER_NAME]: '127.0.0.1',
+    });
+    expect(ipAddress(headers)).toBe('127.0.0.1');
+  });
+
+  test('returns the value from Next.js ReadonlyHeaders-like objects with an internal headers property', () => {
+    class HeadersAdapter extends Headers {
+      readonly headers: Record<string, string>;
+
+      constructor(init: Record<string, string>) {
+        super(init);
+        this.headers = init;
+      }
+    }
+
+    const headers = new HeadersAdapter({
+      [IP_HEADER_NAME]: '127.0.0.1',
+    });
+    expect(ipAddress(headers)).toBe('127.0.0.1');
+  });
 });
 
 describe('`geolocation`', () => {
