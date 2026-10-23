@@ -271,6 +271,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandInvoices(actual: string) {
+    this.trackCliCommand({
+      command: 'invoices',
+      value: actual,
+    });
+  }
+
   trackCliCommandKms(actual: string) {
     this.trackCliCommand({
       command: 'kms',

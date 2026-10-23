@@ -1116,6 +1116,10 @@ const main = async () => {
           telemetry.trackCliCommandIntegrationResource(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).integrationResource;
           break;
+        case 'invoices':
+          telemetry.trackCliCommandInvoices(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).invoices;
+          break;
         case 'kms':
           telemetry.trackCliCommandKms(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).kms;

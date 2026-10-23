@@ -37,6 +37,7 @@ export { default as inspect } from './commands/inspect';
 export { default as install } from './commands/install';
 export { default as integration } from './commands/integration';
 export { default as integrationResource } from './commands/integration-resource';
+export { default as invoices } from './commands/invoices';
 export { default as kms } from './commands/kms';
 export { default as login } from './commands/login';
 export { default as logout } from './commands/logout';
