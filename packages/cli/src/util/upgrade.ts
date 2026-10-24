@@ -94,6 +94,76 @@ function isVersionCurrent(current: string, latest: string): boolean {
     : current === latest;
 }
 
+interface InstallerResult {
+  code: number | null;
+  stdout: string;
+  stderr: string;
+  error?: Error;
+}
+
+function runInstaller(
+  command: string,
+  args: string[],
+  cwd: string
+): Promise<InstallerResult> {
+  return new Promise<InstallerResult>(resolve => {
+    const stdout: Uint8Array[] = [];
+    const stderr: Uint8Array[] = [];
+
+    const upgradeProcess = spawn(command, args, {
+      cwd,
+      stdio: ['inherit', 'pipe', 'pipe'],
+      shell: false,
+    });
+
+    // Stream to debug so --debug reveals an otherwise-invisible installer
+    // prompt (the cause of apparent hangs).
+    upgradeProcess.stdout?.on('data', (data: Buffer) => {
+      stdout.push(Uint8Array.from(data));
+      output.debug(`[upgrade stdout] ${data.toString().trimEnd()}`);
+    });
+
+    upgradeProcess.stderr?.on('data', (data: Buffer) => {
+      stderr.push(Uint8Array.from(data));
+      output.debug(`[upgrade stderr] ${data.toString().trimEnd()}`);
+    });
+
+    const collect = () => ({
+      stdout: Buffer.concat(stdout).toString(),
+      stderr: Buffer.concat(stderr).toString(),
+    });
+
+    upgradeProcess.on('error', (error: Error) => {
+      resolve({ code: null, error, ...collect() });
+    });
+
+    upgradeProcess.on('close', (code: number | null) => {
+      resolve({ code, ...collect() });
+    });
+  });
+}
+
+const ALLOW_BUILD_FLAG = '--allow-build=';
+
+/**
+ * pnpm 12+ refuses `--allow-build=<pkg>` when the global config already sets
+ * `allowBuilds: { <pkg>: false }` (often left behind by an earlier
+ * approve-builds prompt). The user's explicit choice wins: drop the flag.
+ */
+function isPnpmAllowBuildConflict(
+  command: string,
+  args: string[],
+  result: InstallerResult
+): boolean {
+  return (
+    command === 'pnpm' &&
+    args.some(arg => arg.startsWith(ALLOW_BUILD_FLAG)) &&
+    `${result.stdout}\n${result.stderr}`.includes(
+      'ERR_PNPM_OVERRIDING_IGNORED_BUILT_DEPENDENCIES'
+    )
+  );
+}
+
 /**
  * Executes the upgrade command to update the Vercel CLI.
  * Returns the exit code from the upgrade process.
@@ -142,68 +212,53 @@ export async function executeUpgrade(targetVersion?: string): Promise<number> {
   output.debug(`Executing: ${updateCommand} (cwd: ${cwd})`);
   renderUpgradeProgress(targetVersion ? 1 : 2, totalSteps, 'Installing…');
 
-  return new Promise<number>(resolve => {
-    const stdout: Uint8Array[] = [];
-    const stderr: Uint8Array[] = [];
+  let result = await runInstaller(command, args, cwd);
+  let manualCommand = updateCommand;
 
-    const upgradeProcess = spawn(command, args, {
-      cwd,
-      stdio: ['inherit', 'pipe', 'pipe'],
-      shell: false,
-    });
+  if (
+    result.code !== 0 &&
+    !result.error &&
+    isPnpmAllowBuildConflict(command, args, result)
+  ) {
+    const retryArgs = args.filter(arg => !arg.startsWith(ALLOW_BUILD_FLAG));
+    manualCommand = [command, ...retryArgs].join(' ');
+    output.debug(
+      `pnpm config denies a build that --allow-build pre-approves; retrying: ${manualCommand}`
+    );
+    result = await runInstaller(command, retryArgs, cwd);
+  }
 
-    // Stream to debug so --debug reveals an otherwise-invisible installer
-    // prompt (the cause of apparent hangs).
-    upgradeProcess.stdout?.on('data', (data: Buffer) => {
-      stdout.push(Uint8Array.from(data));
-      output.debug(`[upgrade stdout] ${data.toString().trimEnd()}`);
-    });
+  if (result.error) {
+    output.stopSpinner();
+    output.error(`Failed to execute upgrade command: ${result.error.message}`);
+    output.log(`You can try running the command manually: ${manualCommand}`);
+    return 1;
+  }
 
-    upgradeProcess.stderr?.on('data', (data: Buffer) => {
-      stderr.push(Uint8Array.from(data));
-      output.debug(`[upgrade stderr] ${data.toString().trimEnd()}`);
-    });
+  if (result.code !== 0) {
+    output.stopSpinner();
+    // Show output only on error
+    if (result.stdout) {
+      output.print(result.stdout);
+    }
+    if (result.stderr) {
+      output.print(result.stderr);
+    }
+    output.error(`Upgrade failed with exit code ${result.code ?? 'unknown'}`);
+    output.log(`You can try running the command manually: ${manualCommand}`);
+    return result.code ?? 1;
+  }
 
-    upgradeProcess.on('error', (err: Error) => {
-      output.stopSpinner();
-      output.error(`Failed to execute upgrade command: ${err.message}`);
-      output.log(`You can try running the command manually: ${updateCommand}`);
-      resolve(1);
-    });
+  renderUpgradeProgress(totalSteps, totalSteps);
+  output.stopSpinner();
 
-    upgradeProcess.on('close', (code: number | null) => {
-      if (code !== 0) {
-        output.stopSpinner();
-        // Show output only on error
-        const stdoutStr = Buffer.concat(stdout).toString();
-        const stderrStr = Buffer.concat(stderr).toString();
-        if (stdoutStr) {
-          output.print(stdoutStr);
-        }
-        if (stderrStr) {
-          output.print(stderrStr);
-        }
-        output.error(`Upgrade failed with exit code ${code ?? 'unknown'}`);
-        output.log(
-          `You can try running the command manually: ${updateCommand}`
-        );
-        resolve(code ?? 1);
-        return;
-      }
+  if (resolvedTargetVersion) {
+    output.success(
+      `Vercel CLI has been upgraded to v${resolvedTargetVersion} successfully!`
+    );
+    return 0;
+  }
 
-      renderUpgradeProgress(totalSteps, totalSteps);
-      output.stopSpinner();
-
-      if (resolvedTargetVersion) {
-        output.success(
-          `Vercel CLI has been upgraded to v${resolvedTargetVersion} successfully!`
-        );
-        resolve(0);
-        return;
-      }
-
-      output.success('Vercel CLI has been upgraded successfully!');
-      resolve(0);
-    });
-  });
+  output.success('Vercel CLI has been upgraded successfully!');
+  return 0;
 }
