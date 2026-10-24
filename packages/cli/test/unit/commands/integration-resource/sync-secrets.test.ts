@@ -7,7 +7,18 @@ import { useUser } from '../../../mocks/user';
 
 const resource = 'store-acme-connected-project';
 
-const conflict = {
+type Conflict = {
+  projectId: string;
+  projectName: string;
+  connectionId: string;
+  key: string;
+  envVarId?: string;
+  environments: string[];
+  managedBy?: { storeId?: string };
+  orphaned?: true;
+};
+
+const conflict: Conflict = {
   projectId: 'prj_connected',
   projectName: 'connected-project',
   connectionId: 'spc_1',
@@ -15,6 +26,29 @@ const conflict = {
   envVarId: 'env_1',
   environments: ['production'],
 };
+
+const orphaned: Conflict = {
+  projectId: 'prj_other',
+  projectName: 'other-project',
+  connectionId: 'spc_2',
+  key: 'ACME_TOKEN',
+  envVarId: 'env_2',
+  environments: ['preview'],
+  orphaned: true,
+};
+
+function outcome(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    connectionCount: 2,
+    appliedConnectionCount: 2,
+    conflicts: [],
+    hiddenConflictCount: 0,
+    overwritten: [],
+    reclaimed: [],
+    hiddenReclaimedCount: 0,
+    ...overrides,
+  };
+}
 
 describe('integration-resource', () => {
   describe('sync-secrets', () => {
@@ -29,29 +63,49 @@ describe('integration-resource', () => {
       syncRequests = [];
     });
 
-    function mockSync(options: {
-      conflicts?: (typeof conflict & { managedBy?: { storeId: string } })[];
+    // Mirrors the API: unmanaged conflicts are overwritten with
+    // overwriteConflicts, orphaned ones are always reclaimed, and a real run
+    // with remaining conflicts applies what it can and responds with a 409.
+    function mockSync({
+      conflicts = [],
+      canOverwrite = true,
+    }: {
+      conflicts?: Conflict[];
+      canOverwrite?: boolean;
     }) {
       client.scenario.post(
         '/v1/integrations/installations/:installationId/resources/:resourceId/secrets/sync',
         (req, res) => {
           syncRequests.push(req.body);
-          const conflicts = options.conflicts ?? [];
+          const overwrite = req.body.overwriteConflicts === true;
+          const reclaimable = (c: Conflict) =>
+            c.orphaned || (overwrite && !c.managedBy);
+          const blocking = conflicts.filter(c => !reclaimable(c));
+          const reclaimed = conflicts.filter(reclaimable);
+          const result = outcome({
+            appliedConnectionCount:
+              2 - new Set(blocking.map(c => c.connectionId)).size,
+            conflicts: blocking,
+            overwritten: reclaimed.filter(c => !c.orphaned),
+            reclaimed: reclaimed.filter(c => c.orphaned),
+          });
           if (req.body.dryRun) {
-            res.json({
-              dryRun: true,
-              connectionCount: 1,
-              conflicts,
-              hiddenConflictCount: 0,
+            res.json({ dryRun: true, ...result });
+            return;
+          }
+          if (blocking.length > 0) {
+            res.status(409).json({
+              error: {
+                code: 'secrets_env_var_conflicts',
+                message: 'New secrets were applied to 1 of 2 connections.',
+                secretsUpdated: true,
+                canOverwrite: canOverwrite && !overwrite,
+                ...result,
+              },
             });
             return;
           }
-          res.json({
-            dryRun: false,
-            connectionCount: 1,
-            conflicts,
-            hiddenConflictCount: 0,
-          });
+          res.json({ dryRun: false, ...result });
         }
       );
     }
@@ -62,27 +116,56 @@ describe('integration-resource', () => {
       const exitCodePromise = integrationResourceCommand(client);
 
       await expect(client.stderr).toOutput(
-        `> Success! Applied the current secrets for ${resource} to 1 project connection.`
+        `> Success! Applied the current secrets for ${resource} to 2 project connections.`
       );
       await expect(exitCodePromise).resolves.toEqual(0);
-      expect(syncRequests).toEqual([
-        { dryRun: true },
-        { overwriteConflicts: false },
-      ]);
+      expect(syncRequests).toEqual([{ overwriteConflicts: false }]);
     });
 
-    it('fails on conflicts without --overwrite-conflicts', async () => {
+    it('reports reclaimed env vars left over from a removed integration', async () => {
+      mockSync({ conflicts: [orphaned] });
+      client.setArgv('integration-resource', 'sync-secrets', resource);
+      const exitCodePromise = integrationResourceCommand(client);
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('Replaced environment variables:');
+      expect(stderr).toContain(
+        'other-project  ACME_TOKEN  (preview)  left over from a removed integration'
+      );
+    });
+
+    it('applies secrets where it can and reports conflicts without --overwrite-conflicts', async () => {
       mockSync({ conflicts: [conflict] });
       client.setArgv('integration-resource', 'sync-secrets', resource);
       const exitCodePromise = integrationResourceCommand(client);
 
-      await expect(client.stderr).toOutput('connected-project  ACME_URL');
-      await expect(client.stderr).toOutput('--overwrite-conflicts');
       await expect(exitCodePromise).resolves.toEqual(1);
-      expect(syncRequests).toEqual([{ dryRun: true }]);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('connected-project  ACME_URL  (production)');
+      expect(stderr).toContain(
+        `Applied the current secrets for ${resource} to 1 of 2 project connections.`
+      );
+      expect(stderr).toContain(
+        'Re-run with `--overwrite-conflicts` to replace them.'
+      );
+      expect(syncRequests).toEqual([{ overwriteConflicts: false }]);
     });
 
-    it('overwrites conflicts after confirmation', async () => {
+    it('explains when conflicts cannot be overwritten due to permissions', async () => {
+      mockSync({ conflicts: [conflict], canOverwrite: false });
+      client.setArgv('integration-resource', 'sync-secrets', resource);
+      const exitCodePromise = integrationResourceCommand(client);
+
+      await expect(exitCodePromise).resolves.toEqual(1);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain(
+        "You don't have permission to remove these environment variables."
+      );
+      expect(stderr).not.toContain('--overwrite-conflicts');
+    });
+
+    it('previews and overwrites conflicts after confirmation', async () => {
       mockSync({ conflicts: [conflict] });
       client.setArgv(
         'integration-resource',
@@ -92,14 +175,37 @@ describe('integration-resource', () => {
       );
       const exitCodePromise = integrationResourceCommand(client);
 
+      await expect(client.stderr).toOutput(
+        'These environment variables will be replaced:'
+      );
       await expect(client.stderr).toOutput('? Are you sure? (y/N)');
       client.stdin.write('y\n');
       await expect(client.stderr).toOutput('> Success!');
       await expect(exitCodePromise).resolves.toEqual(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        'connected-project  ACME_URL  (production)'
+      );
       expect(syncRequests).toEqual([
-        { dryRun: true },
+        { dryRun: true, overwriteConflicts: true },
         { overwriteConflicts: true },
       ]);
+    });
+
+    it('skips the preview with --yes', async () => {
+      mockSync({ conflicts: [conflict] });
+      client.setArgv(
+        'integration-resource',
+        'sync-secrets',
+        resource,
+        '--overwrite-conflicts',
+        '--yes'
+      );
+      const exitCodePromise = integrationResourceCommand(client);
+
+      await expect(client.stderr).toOutput('> Success!');
+      await expect(exitCodePromise).resolves.toEqual(0);
+      expect(client.stderr.getFullOutput()).not.toContain('Are you sure?');
+      expect(syncRequests).toEqual([{ overwriteConflicts: true }]);
     });
 
     it('never overwrites env vars managed by another resource', async () => {
@@ -115,11 +221,35 @@ describe('integration-resource', () => {
       );
       const exitCodePromise = integrationResourceCommand(client);
 
-      await expect(client.stderr).toOutput(
-        'managed by another resource or integration and cannot be overwritten'
-      );
       await expect(exitCodePromise).resolves.toEqual(1);
-      expect(syncRequests).toEqual([{ dryRun: true }]);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain(
+        'connected-project  ACME_URL  (production)  managed by another resource or integration'
+      );
+      expect(stderr).toContain(
+        'Disconnect it from the project, then try again.'
+      );
+      expect(syncRequests).toEqual([{ overwriteConflicts: true }]);
+    });
+
+    it('writes the partial result as JSON when conflicts remain', async () => {
+      mockSync({ conflicts: [conflict] });
+      client.setArgv(
+        'integration-resource',
+        'sync-secrets',
+        resource,
+        '--format',
+        'json'
+      );
+      const exitCodePromise = integrationResourceCommand(client);
+
+      await expect(exitCodePromise).resolves.toEqual(1);
+      expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+        resource,
+        synced: false,
+        canOverwrite: true,
+        ...outcome({ appliedConnectionCount: 1, conflicts: [conflict] }),
+      });
     });
 
     it('only reports conflicts with --dry-run', async () => {
@@ -137,11 +267,55 @@ describe('integration-resource', () => {
       await expect(exitCodePromise).resolves.toEqual(0);
       expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
         dryRun: true,
-        connectionCount: 1,
-        conflicts: [conflict],
-        hiddenConflictCount: 0,
+        ...outcome({ appliedConnectionCount: 1, conflicts: [conflict] }),
       });
-      expect(syncRequests).toEqual([{ dryRun: true }]);
+      expect(syncRequests).toEqual([
+        { dryRun: true, overwriteConflicts: false },
+      ]);
+    });
+
+    it('previews the overwrite with --dry-run --overwrite-conflicts', async () => {
+      mockSync({ conflicts: [conflict] });
+      client.setArgv(
+        'integration-resource',
+        'sync-secrets',
+        resource,
+        '--dry-run',
+        '--overwrite-conflicts'
+      );
+      const exitCodePromise = integrationResourceCommand(client);
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain(
+        'would apply its current secrets to 2 of 2 project connections'
+      );
+      expect(stderr).toContain('Environment variables that would be replaced:');
+      expect(stderr).toContain('No conflicting environment variables found.');
+      expect(syncRequests).toEqual([
+        { dryRun: true, overwriteConflicts: true },
+      ]);
+    });
+
+    it('reports a rotation in progress', async () => {
+      client.scenario.post(
+        '/v1/integrations/installations/:installationId/resources/:resourceId/secrets/sync',
+        (_req, res) => {
+          res.status(409).json({
+            error: {
+              code: 'store_rotation_in_progress',
+              message: 'A secrets rotation is already in progress.',
+            },
+          });
+        }
+      );
+      client.setArgv('integration-resource', 'sync-secrets', resource);
+      const exitCodePromise = integrationResourceCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'A secrets rotation is already in progress.'
+      );
+      await expect(exitCodePromise).resolves.toEqual(1);
     });
 
     it('errors when the resource does not exist', async () => {

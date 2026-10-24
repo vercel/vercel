@@ -5,12 +5,17 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
 import { printError } from '../../util/error';
+import { isAPIError } from '../../util/errors-ts';
 import { validateJsonOutput } from '../../util/output-format';
 import { getResources } from '../../util/integration-resource/get-resources';
 import {
+  getSecretsEnvVarConflicts,
   type SecretsEnvVarConflict,
+  type SecretsEnvVarConflictsDetails,
+  type SyncResourceSecretsResult,
   syncResourceSecrets,
 } from '../../util/integration-resource/sync-resource-secrets';
+import type { Resource } from '../../util/integration-resource/types';
 import { IntegrationResourceSyncSecretsTelemetryClient } from '../../util/telemetry/commands/integration-resource/sync-secrets';
 import { buildCommandWithYes, outputAgentError } from '../../util/agent-output';
 import { syncSecretsSubcommand } from './command';
@@ -48,11 +53,6 @@ export async function syncSecrets(client: Client, argv: string[]) {
   telemetry.trackCliFlagOverwriteConflicts(overwriteConflicts);
   telemetry.trackCliFlagDryRun(dryRun);
 
-  if (dryRun && overwriteConflicts) {
-    output.error('Cannot use `--dry-run` with `--overwrite-conflicts`.');
-    return 1;
-  }
-
   if (parsedArguments.args.length !== 1) {
     output.error('You must specify one resource. See `--help` for details.');
     return 1;
@@ -83,59 +83,35 @@ export async function syncSecrets(client: Client, argv: string[]) {
     return 1;
   }
 
-  let preview;
-  try {
-    output.spinner('Checking connected projects…', 500);
-    preview = await syncResourceSecrets(client, resource, { dryRun: true });
-  } catch (error) {
-    output.error(
-      `A problem occurred while checking ${chalk.bold(resource.name)}: ${(error as Error).message}`
-    );
-    return 1;
-  } finally {
+  // The dry run honors --overwrite-conflicts and the caller's permissions, so
+  // it previews exactly what the real run would change.
+  if (dryRun || (overwriteConflicts && !skipConfirmation)) {
+    let preview;
+    try {
+      output.spinner('Checking connected projects…', 500);
+      preview = await syncResourceSecrets(client, resource, {
+        dryRun: true,
+        overwriteConflicts,
+      });
+    } catch (error) {
+      output.stopSpinner();
+      output.error(
+        `A problem occurred while checking ${chalk.bold(resource.name)}: ${getErrorMessage(error)}`
+      );
+      return 1;
+    }
     output.stopSpinner();
-  }
 
-  const { conflicts, hiddenConflictCount } = preview;
-  const hasConflicts = conflicts.length > 0 || hiddenConflictCount > 0;
-  const managedConflicts = conflicts.filter(c => c.managedBy);
-
-  if (dryRun) {
-    if (asJson) {
-      client.stdout.write(`${JSON.stringify(preview, null, 2)}\n`);
+    if (dryRun) {
+      if (asJson) {
+        client.stdout.write(`${JSON.stringify(preview, null, 2)}\n`);
+        return 0;
+      }
+      printDryRun(resource, preview, overwriteConflicts);
       return 0;
     }
-    output.log(
-      `${chalk.bold(resource.name)} is connected to ${preview.connectionCount} project connection${preview.connectionCount === 1 ? '' : 's'}.`
-    );
-    if (conflicts.length === 0 && !preview.hiddenConflictCount) {
-      output.log('No conflicting environment variables found.');
-    } else {
-      printConflicts(conflicts, preview.hiddenConflictCount);
-    }
-    return 0;
-  }
 
-  if (hasConflicts) {
-    if (!asJson) {
-      printConflicts(conflicts, hiddenConflictCount);
-    }
-
-    if (managedConflicts.length > 0) {
-      output.error(
-        'Some conflicting environment variables are managed by another resource or integration and cannot be overwritten. Disconnect it from the project, then try again.'
-      );
-      return 1;
-    }
-
-    if (!overwriteConflicts) {
-      output.error(
-        `Environment variables on connected projects conflict with ${chalk.bold(resource.name)}. Re-run with \`--overwrite-conflicts\` to replace them.`
-      );
-      return 1;
-    }
-
-    if (!skipConfirmation) {
+    if (preview.overwritten.length > 0) {
       if (client.nonInteractive) {
         outputAgentError(
           client,
@@ -159,8 +135,10 @@ export async function syncSecrets(client: Client, argv: string[]) {
         );
         return 1;
       }
+      output.log('These environment variables will be replaced:');
+      printEnvVars(preview.overwritten);
       output.log(
-        'These environment variables will be removed from the listed environments and replaced with the values managed by this resource.'
+        'They will be removed from the listed environments and replaced with the values managed by this resource.'
       );
       if (!(await client.input.confirm(chalk.red('Are you sure?'), false))) {
         output.log('Canceled');
@@ -173,16 +151,31 @@ export async function syncSecrets(client: Client, argv: string[]) {
   try {
     output.spinner('Applying secrets to connected projects…', 500);
     result = await syncResourceSecrets(client, resource, {
-      overwriteConflicts: hasConflicts && overwriteConflicts,
+      overwriteConflicts,
     });
   } catch (error) {
+    output.stopSpinner();
+    const details = getSecretsEnvVarConflicts(error);
+    if (details) {
+      if (asJson) {
+        client.stdout.write(
+          `${JSON.stringify({ resource: resource.name, synced: false, ...details }, null, 2)}\n`
+        );
+      } else {
+        printConflictsError(resource, details, overwriteConflicts);
+      }
+      return 1;
+    }
+    if (isAPIError(error) && error.code === 'store_rotation_in_progress') {
+      output.error(error.serverMessage);
+      return 1;
+    }
     output.error(
-      `A problem occurred while syncing secrets: ${(error as Error).message}`
+      `A problem occurred while syncing secrets: ${getErrorMessage(error)}`
     );
     return 1;
-  } finally {
-    output.stopSpinner();
   }
+  output.stopSpinner();
 
   if (asJson) {
     client.stdout.write(
@@ -192,9 +185,109 @@ export async function syncSecrets(client: Client, argv: string[]) {
   }
 
   output.success(
-    `Applied the current secrets for ${chalk.bold(resource.name)} to ${result.connectionCount} project connection${result.connectionCount === 1 ? '' : 's'}. Redeploy the affected projects to use them.`
+    `Applied the current secrets for ${chalk.bold(resource.name)} to ${pluralize(result.appliedConnectionCount, 'project connection')}. Redeploy the affected projects to use them.`
   );
+  printReplaced(result);
   return 0;
+}
+
+function printDryRun(
+  resource: Resource,
+  preview: SyncResourceSecretsResult,
+  overwriteConflicts: boolean
+) {
+  output.log(
+    `${chalk.bold(resource.name)} would apply its current secrets to ${preview.appliedConnectionCount} of ${pluralize(preview.connectionCount, 'project connection')}.`
+  );
+  printReplaced(preview, { dryRun: true });
+
+  if (preview.conflicts.length === 0 && preview.hiddenConflictCount === 0) {
+    output.log('No conflicting environment variables found.');
+    return;
+  }
+  printConflicts(preview.conflicts, preview.hiddenConflictCount);
+
+  if (overwriteConflicts) {
+    output.log(
+      getResolutionText({
+        canOverwrite: false,
+        conflicts: preview.conflicts,
+        hiddenConflictCount: preview.hiddenConflictCount,
+      })
+    );
+  } else if (preview.conflicts.some(conflict => !conflict.managedBy)) {
+    output.log(
+      'Add `--overwrite-conflicts` to see which of them can be replaced.'
+    );
+  }
+}
+
+function printConflictsError(
+  resource: Resource,
+  details: SecretsEnvVarConflictsDetails,
+  overwriteConflicts: boolean
+) {
+  printReplaced(details);
+  printConflicts(details.conflicts, details.hiddenConflictCount);
+  output.error(
+    `Applied the current secrets for ${chalk.bold(resource.name)} to ${details.appliedConnectionCount} of ${pluralize(details.connectionCount, 'project connection')}. Conflicting environment variables blocked the rest.`
+  );
+  output.log(
+    getResolutionText({
+      canOverwrite: details.canOverwrite && !overwriteConflicts,
+      conflicts: details.conflicts,
+      hiddenConflictCount: details.hiddenConflictCount,
+    })
+  );
+}
+
+// Mirrors the API's canOverwrite: managed conflicts, hidden conflicts, or
+// missing env var delete permissions block an overwrite.
+function getResolutionText({
+  canOverwrite,
+  conflicts,
+  hiddenConflictCount,
+}: {
+  canOverwrite: boolean;
+  conflicts: SecretsEnvVarConflict[];
+  hiddenConflictCount: number;
+}): string {
+  if (canOverwrite) {
+    return 'Re-run with `--overwrite-conflicts` to replace them.';
+  }
+  if (conflicts.some(conflict => conflict.managedBy)) {
+    return 'Some of them are managed by another resource or integration. Disconnect it from the project, then try again.';
+  }
+  if (hiddenConflictCount > 0) {
+    return 'Someone with access to these projects and environments needs to resolve the conflicts.';
+  }
+  return "You don't have permission to remove these environment variables. Someone with access to these projects needs to resolve the conflicts.";
+}
+
+function printReplaced(
+  result: Pick<
+    SyncResourceSecretsResult,
+    'overwritten' | 'reclaimed' | 'hiddenReclaimedCount'
+  >,
+  { dryRun = false } = {}
+) {
+  const replaced = [...result.overwritten, ...result.reclaimed];
+  if (replaced.length === 0 && result.hiddenReclaimedCount === 0) {
+    return;
+  }
+  output.log(
+    dryRun
+      ? 'Environment variables that would be replaced:'
+      : 'Replaced environment variables:'
+  );
+  printEnvVars(replaced);
+  if (result.hiddenReclaimedCount > 0) {
+    output.print(
+      chalk.gray(
+        `  ${result.hiddenReclaimedCount} more in projects or environments you don't have access to\n`
+      )
+    );
+  }
 }
 
 function printConflicts(
@@ -202,16 +295,34 @@ function printConflicts(
   hiddenConflictCount = 0
 ) {
   output.log('Conflicting environment variables:');
-  for (const conflict of conflicts) {
-    output.print(
-      `  ${chalk.bold(conflict.projectName)}  ${conflict.key}  (${conflict.environments.join(', ')})${conflict.managedBy ? chalk.gray('  managed by another resource or integration') : ''}\n`
-    );
-  }
+  printEnvVars(conflicts);
   if (hiddenConflictCount > 0) {
     output.print(
       chalk.gray(
-        `  ${hiddenConflictCount} more in projects you don't have access to\n`
+        `  ${hiddenConflictCount} more in projects or environments you don't have access to\n`
       )
     );
   }
+}
+
+function printEnvVars(envVars: SecretsEnvVarConflict[]) {
+  for (const envVar of envVars) {
+    let note = '';
+    if (envVar.managedBy) {
+      note = '  managed by another resource or integration';
+    } else if (envVar.orphaned) {
+      note = '  left over from a removed integration';
+    }
+    output.print(
+      `  ${chalk.bold(envVar.projectName)}  ${envVar.key}  (${envVar.environments.join(', ')})${chalk.gray(note)}\n`
+    );
+  }
+}
+
+function pluralize(count: number, noun: string) {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
+
+function getErrorMessage(error: unknown) {
+  return isAPIError(error) ? error.serverMessage : (error as Error).message;
 }

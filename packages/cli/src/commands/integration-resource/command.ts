@@ -323,7 +323,8 @@ export const syncSecretsSubcommand = {
     },
     {
       name: 'dry-run',
-      description: 'Show the connections and conflicts without making changes',
+      description:
+        'Show which connections and environment variables would change without making changes. Combine with `--overwrite-conflicts` to preview the overwrite',
       shorthand: null,
       type: Boolean,
       deprecated: false,
@@ -351,6 +352,10 @@ export const syncSecretsSubcommand = {
     {
       name: 'Replace conflicting environment variables',
       value: `${packageName} integration-resource sync-secrets my-acme-resource --overwrite-conflicts`,
+    },
+    {
+      name: 'Preview which conflicting environment variables would be replaced',
+      value: `${packageName} integration-resource sync-secrets my-acme-resource --overwrite-conflicts --dry-run`,
     },
   ],
 } as const;
