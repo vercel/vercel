@@ -471,4 +471,97 @@ describe('executeUpgrade', () => {
       `Executing: npm i -g vercel@latest (cwd: ${tmpdir()})`
     );
   });
+
+  describe('pnpm allowBuilds conflict', () => {
+    const pnpmCommand = 'pnpm i -g vercel@latest --allow-build=esbuild';
+    const conflictOutput = [
+      'Error: ERR_PNPM_OVERRIDING_IGNORED_BUILT_DEPENDENCIES',
+      '  × The following dependencies are ignored by the root project, but are',
+      '  │ allowed to be built by the current command: esbuild',
+    ].join('\n');
+
+    beforeEach(() => {
+      getUpdateCommandInfoMock.mockResolvedValueOnce({
+        command: pnpmCommand,
+        global: true,
+        packageManager: 'pnpm',
+        assumed: false,
+      });
+    });
+
+    afterEach(() => {
+      // Drop unconsumed one-off processes so a regression fails fast
+      // instead of handing a never-closing process to the next test.
+      spawnMock.mockReset();
+    });
+
+    async function failWithConflict() {
+      const first = createMockProcess();
+      const second = createMockProcess();
+      spawnMock
+        .mockReturnValueOnce(first as any)
+        .mockReturnValueOnce(second as any);
+
+      const exitCodePromise = executeUpgrade();
+      await tick();
+      first.stdout.emit('data', Buffer.from(conflictOutput));
+      first.emit('close', 1);
+      await tick();
+      return { second, exitCodePromise };
+    }
+
+    it('retries without --allow-build when the global config denies the build', async () => {
+      const { second, exitCodePromise } = await failWithConflict();
+      second.emit('close', 0);
+
+      expect(await exitCodePromise).toBe(0);
+      expect(spawnMock).toHaveBeenCalledTimes(2);
+      expect(spawnMock).toHaveBeenNthCalledWith(
+        1,
+        'pnpm',
+        ['i', '-g', 'vercel@latest', '--allow-build=esbuild'],
+        expect.objectContaining({ cwd: tmpdir() })
+      );
+      expect(spawnMock).toHaveBeenNthCalledWith(
+        2,
+        'pnpm',
+        ['i', '-g', 'vercel@latest'],
+        expect.objectContaining({ cwd: tmpdir() })
+      );
+      expect(outputMock.print).not.toHaveBeenCalled();
+      expect(outputMock.error).not.toHaveBeenCalled();
+      expect(outputMock.success).toHaveBeenCalledWith(
+        'Vercel CLI has been upgraded successfully!'
+      );
+    });
+
+    it('suggests the command without --allow-build when the retry also fails', async () => {
+      const { second, exitCodePromise } = await failWithConflict();
+      second.stderr.emit('data', Buffer.from('ERR_PNPM_EACCES'));
+      second.emit('close', 1);
+
+      expect(await exitCodePromise).toBe(1);
+      expect(outputMock.print).toHaveBeenCalledWith('ERR_PNPM_EACCES');
+      expect(outputMock.print).not.toHaveBeenCalledWith(conflictOutput);
+      expect(outputMock.log).toHaveBeenCalledWith(
+        'You can try running the command manually: pnpm i -g vercel@latest'
+      );
+    });
+
+    it('does not retry other pnpm failures', async () => {
+      const mockProcess = createMockProcess();
+      spawnMock.mockReturnValue(mockProcess as any);
+
+      const exitCodePromise = executeUpgrade();
+      await tick();
+      mockProcess.stderr.emit('data', Buffer.from('ERR_PNPM_FETCH_404'));
+      mockProcess.emit('close', 1);
+
+      expect(await exitCodePromise).toBe(1);
+      expect(spawnMock).toHaveBeenCalledTimes(1);
+      expect(outputMock.log).toHaveBeenCalledWith(
+        `You can try running the command manually: ${pnpmCommand}`
+      );
+    });
+  });
 });
