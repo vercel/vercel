@@ -222,6 +222,35 @@ describe('outputAgentError', () => {
     expect(parsed.message).toBe('Something went wrong');
     expect(exitSpy).toHaveBeenCalledWith(3);
   });
+
+  it('switches stdout to blocking mode before writing so piped output is not truncated on exit', () => {
+    const calls: string[] = [];
+    const client = {
+      nonInteractive: true,
+      stdout: {
+        _handle: {
+          setBlocking: vi.fn((blocking: boolean) => {
+            calls.push(`setBlocking:${blocking}`);
+          }),
+        },
+        write: vi.fn(() => {
+          calls.push('write');
+        }),
+      },
+    } as unknown as Client;
+    exitSpy.mockRestore();
+    const exit = vi.spyOn(process, 'exit').mockImplementation((() => {
+      calls.push('exit');
+    }) as () => never);
+
+    try {
+      outputAgentError(client, errorPayload);
+    } finally {
+      exit.mockRestore();
+    }
+
+    expect(calls).toEqual(['setBlocking:true', 'write', 'exit']);
+  });
 });
 
 describe('buildCommandWithYes', () => {
