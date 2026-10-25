@@ -546,6 +546,35 @@ export function enrichActionRequiredWithInvokingCommand(
 }
 
 /**
+ * Writes `payload` as pretty-printed JSON to `client.stdout` and exits.
+ *
+ * When stdout is a pipe, Node writes asynchronously on some platforms (e.g.
+ * macOS, where the pipe buffer is small), so calling `process.exit()` right
+ * after `write()` can drop everything past the first buffer-full of data and
+ * leave consumers with truncated JSON. Switching the underlying handle to
+ * blocking mode first makes the write synchronous, so the full payload is
+ * flushed before the process exits.
+ */
+function writeJsonToStdoutAndExit(
+  client: Client,
+  payload: unknown,
+  exitCode: number
+): never {
+  const handle = (
+    client.stdout as unknown as {
+      _handle?: { setBlocking?: (blocking: boolean) => void };
+    }
+  )._handle;
+  try {
+    handle?.setBlocking?.(true);
+  } catch {
+    // Best effort: fall back to the default (possibly async) write.
+  }
+  client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+  process.exit(exitCode);
+}
+
+/**
  * When non-interactive (`client.nonInteractive` or `--non-interactive` on argv),
  * writes the action_required payload as JSON to stdout and exits with exitCode (default 1).
  * The payload's next[] is enriched with both link commands and the invoking command with --scope
@@ -568,8 +597,7 @@ export function outputActionRequired(
     enriched.hint =
       'Run one of the commands in next[] to complete without prompting.';
   }
-  client.stdout.write(`${JSON.stringify(enriched, null, 2)}\n`);
-  process.exit(exitCode);
+  writeJsonToStdoutAndExit(client, enriched, exitCode);
 }
 
 /** True when argv explicitly requests non-interactive mode (matches main `index.ts`). */
@@ -606,8 +634,7 @@ export function outputAgentError(
   if (!shouldEmitNonInteractiveCommandError(client)) {
     return;
   }
-  client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
-  process.exit(exitCode);
+  writeJsonToStdoutAndExit(client, payload, exitCode);
 }
 
 /**
@@ -626,8 +653,7 @@ export function outputAgentSuccess(
   if (!payload.hint && payload.next?.length) {
     payload.hint = 'Follow up with one of the commands in next[].';
   }
-  client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
-  process.exit(exitCode);
+  writeJsonToStdoutAndExit(client, payload, exitCode);
 }
 
 /** Suggested follow-ups for `global-config` failures (only callers of exitWithNonInteractiveError). */
@@ -827,8 +853,7 @@ function writeAgentErrorPayloadAndExit(
     next: payload.next ?? defaults.next,
     hint: payload.hint ?? defaults.hint,
   };
-  client.stdout.write(`${JSON.stringify(out, null, 2)}\n`);
-  process.exit(exitCode);
+  writeJsonToStdoutAndExit(client, out, exitCode);
 }
 
 function isProjectNotFoundLike(err: unknown): boolean {
