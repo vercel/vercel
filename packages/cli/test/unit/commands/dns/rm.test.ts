@@ -1,6 +1,7 @@
 import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import dns from '../../../../src/commands/dns';
+import chars from '../../../../src/util/output/chars';
 import { useUser } from '../../../mocks/user';
 import { useDns } from '../../../mocks/dns';
 
@@ -17,7 +18,7 @@ describe('dns rm', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = dns(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -183,10 +184,14 @@ describe('dns rm', () => {
     it('rejects unknown flags', async () => {
       client.setArgv('dns', 'rm', 'rec_123', '--unknown');
       const exitCode = await dns(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput(
-        'Error: unknown or unexpected option: --unknown'
+        `${chars.fatal} unknown or unexpected option: --unknown`
       );
+      expect(client.stderr.getFullOutput()).toContain('accepts:');
+      expect(client.stderr.getFullOutput()).toContain('--yes');
+      expect(client.stderr.getFullOutput()).not.toContain('Error:');
+      expect(client.stdout.getFullOutput()).toBe('');
     });
   });
 });

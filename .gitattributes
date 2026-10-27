@@ -13,4 +13,10 @@ go.mod text eol=lf
 **/test/fixtures/**/git/**/* binary
 **/test/fixtures/**/git/**/* linguist-generated
 
+# Help snapshots preserve terminal-table padding.
+packages/cli/test/unit/commands/__snapshots__/help.test.ts.snap whitespace=-trailing-space
+
 .github/workflows/*.lock.yml linguist-generated=true merge=ours
+
+# Objective docs: collapsed in PR diffs by default.
+users/*/objectives/** linguist-generated=true

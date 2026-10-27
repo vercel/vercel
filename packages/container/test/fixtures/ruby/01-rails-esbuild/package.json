@@ -1,0 +1,16 @@
+{
+  "name": "app",
+  "private": true,
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "build": "esbuild app/javascript/application.js --bundle --sourcemap --format=esm --outdir=app/assets/builds --public-path=/assets"
+  },
+  "dependencies": {
+    "@hotwired/stimulus": "3.2.2"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

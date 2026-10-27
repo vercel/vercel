@@ -7,7 +7,7 @@ import createCertFromFile from '../../util/certs/create-cert-from-file';
 import dnsTable from '../../util/format-dns-table';
 import finishCertOrder from '../../util/certs/finish-cert-order';
 import getCnsFromArgs from '../../util/certs/get-cns-from-args';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import startCertOrder from '../../util/certs/start-cert-order';
 import handleCertError from '../../util/certs/handle-cert-error';
@@ -33,7 +33,7 @@ export default async function issue(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
   const {
@@ -99,13 +99,13 @@ export default async function issue(
     output.print(
       `  ${chalk.cyan(getCommandName('certs issue <cn>[, <cn>]'))}\n`
     );
-    return 1;
+    return 2;
   }
   telemetry.trackCliArgumentCn(args[0]);
 
   const cns = getCnsFromArgs(args);
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
 
   // If the user specifies that he wants the challenge to be solved manually, we request the
   // order, show the result challenges and finish immediately.

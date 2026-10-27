@@ -46,6 +46,10 @@ async function printEvents(
 
   await retry(
     async (bail, attemptNumber) => {
+      if (abortController?.signal.aborted) {
+        return;
+      }
+
       if (attemptNumber > 1) {
         debug('Retrying events');
       }
@@ -175,6 +179,11 @@ async function printEvents(
                   abortController
                 ).then(resolve, reject);
               }, 2000);
+              // Deploy waits on alias assignment, not this stream. Unref so a
+              // dropped connection cannot keep the CLI (or a test worker) alive.
+              if (onAliasAssigned) {
+                retryTimeout.unref?.();
+              }
 
               const onAbort = () => {
                 clearTimeout(retryTimeout);
@@ -209,7 +218,7 @@ async function printEvents(
       retries: 4,
       // Don't let deploy stream retry timers keep the CLI alive after polling
       // wins. Standalone log consumers await these retries, so their timers
-      // must remain referenced.
+      // must remain referenced. `async-retry` forwards this to node-retry.
       unref: Boolean(onAliasAssigned),
       onRetry: err => {
         // if we are retrying, we clear past logs

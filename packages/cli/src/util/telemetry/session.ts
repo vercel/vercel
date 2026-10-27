@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import loadJSON from 'load-json-file';
 import writeJSON from 'write-json-file';
+import { detectLibc, isLibc, type Libc } from './libc';
 
 export const DEFAULT_CLI_SESSION_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 export const DEFAULT_CLI_SESSION_MAX_LIFETIME_MS = 24 * 60 * 60 * 1000;
@@ -15,6 +16,7 @@ export interface PersistedCliSession {
 
 export interface PersistedCliDevice {
   id: string;
+  libc?: Libc;
 }
 
 export interface PersistedCliSessionOptions {
@@ -26,6 +28,7 @@ export interface PersistedCliSessionOptions {
 
 export interface PersistedCliDeviceOptions {
   filePath: string;
+  detectLibc?: () => Libc | undefined;
 }
 
 function isPersistedCliSession(value: unknown): value is PersistedCliSession {
@@ -49,7 +52,10 @@ function isPersistedCliDevice(value: unknown): value is PersistedCliDevice {
   }
 
   const device = value as Partial<PersistedCliDevice>;
-  return typeof device.id === 'string';
+  return (
+    typeof device.id === 'string' &&
+    (device.libc === undefined || isLibc(device.libc))
+  );
 }
 
 function readPersistedCliSession(filePath: string): PersistedCliSession | null {
@@ -65,11 +71,24 @@ function writePersistedCliSession(
   filePath: string,
   session: PersistedCliSession
 ): void {
+  const temporaryPath = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
   try {
     mkdirSync(dirname(filePath), { recursive: true });
-    writeJSON.sync(filePath, session, { indent: 2 });
+    // Session timestamps are best-effort telemetry. Keep replacement atomic,
+    // but avoid forcing a disk flush twice per CLI invocation.
+    writeFileSync(temporaryPath, `${JSON.stringify(session, null, 2)}\n`, {
+      flag: 'wx',
+      mode: 0o600,
+    });
+    renameSync(temporaryPath, filePath);
   } catch {
     // best-effort for telemetry
+  } finally {
+    try {
+      rmSync(temporaryPath, { force: true });
+    } catch {
+      // best-effort cleanup
+    }
   }
 }
 
@@ -141,14 +160,18 @@ export function getOrCreatePersistedCliDevice(
 ): PersistedCliDevice {
   const existing = readPersistedCliDevice(opts.filePath);
 
-  if (existing) {
+  if (existing?.libc) {
     return existing;
   }
 
-  const device = {
-    id: randomUUID(),
+  const libc = (opts.detectLibc ?? detectLibc)();
+  const device: PersistedCliDevice = {
+    id: existing?.id ?? randomUUID(),
+    ...(libc ? { libc } : {}),
   };
 
-  writePersistedCliDevice(opts.filePath, device);
+  if (!existing || libc) {
+    writePersistedCliDevice(opts.filePath, device);
+  }
   return device;
 }

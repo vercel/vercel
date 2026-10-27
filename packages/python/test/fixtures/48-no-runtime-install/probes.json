@@ -1,0 +1,12 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "\"ok\":true"
+    },
+    {
+      "path": "/",
+      "mustContain": "\"runtime_install\":false"
+    }
+  ]
+}

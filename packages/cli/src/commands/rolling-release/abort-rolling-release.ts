@@ -33,7 +33,9 @@ export default async function abortRollingRelease({
     }
   );
 
-  output.log('Successfully aborted the active rolling release.');
+  output.log(
+    `Requested rolling release abort and rollback to ${deployment.id}`
+  );
 
   return 0;
 }

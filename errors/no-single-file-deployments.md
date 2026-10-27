@@ -1,9 +1,19 @@
-# No Single File Deployments
+# Single File Deployments
 
-#### Why This Error Occurred
+Current versions of Vercel CLI support deploying a single regular file with
+`vercel <file>` or `vercel deploy <file>`. Only the selected file is uploaded,
+under its original filename. Project linking uses the file's parent directory.
+Single-file deployments use static settings and do not apply local build configuration.
 
-You attempted to create a Vercel deployment where the input is a file, rather than a directory. Previously this was allowed, however this behavior has been removed as of Vercel CLI v24.0.0 because it exposed a potential security risk if the user accidentally created a deployment from a sensitive file.
+If your CLI reports that single-file deployments have been removed, upgrade to a
+version that includes restored support, or place the file in its own directory
+and deploy that directory.
 
-#### Possible Ways to Fix It
+The `--prebuilt`, `--archive`, and `--local-config` options require a directory.
+Temporary deployments (`--temporary` without logging in) support a single file
+only when it is an `.html` file.
+Symbolic links and special files cannot be used as deployment paths.
 
-- Run the `vercel deploy` command against a directory, instead of a file.
+The deployed file is publicly accessible. Files excluded by `.vercelignore` or
+the default ignore list (such as `.env.local`) cannot be deployed, and hidden
+files (such as `.env`) require confirmation or `--yes`.

@@ -1,18 +1,18 @@
 import chalk from 'chalk';
 import table from '../../util/output/table';
 import type Client from '../../util/client';
-import { listRules, type Rule } from '../../util/ai-gateway/rules';
+import { listRulesPage, type Rule } from '../../util/ai-gateway/rules';
+import { parseListLimit, type Page } from '../../util/pagination';
 import { ensureTeam } from '../../util/ai-gateway/ensure-team';
-import stamp from '../../util/output/stamp';
 import output from '../../output-manager';
 import { AiGatewayRulesListTelemetryClient } from '../../util/telemetry/commands/ai-gateway/rules-list';
 import { rulesListSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { isAPIError } from '../../util/errors-ts';
 import { getCommandName } from '../../util/pkg-name';
 import { validateJsonOutput } from '../../util/output-format';
+import { renderResource } from '../../util/ai-gateway/output';
 
 export default async function list(client: Client, argv: string[]) {
   const telemetry = new AiGatewayRulesListTelemetryClient({
@@ -27,57 +27,57 @@ export default async function list(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { flags: opts } = parsedArgs;
 
   const includeDisabled = opts['--include-disabled'] as boolean | undefined;
+  const limitFlag = opts['--limit'] as number | undefined;
+  const next = opts['--next'] as string | undefined;
   telemetry.trackCliFlagIncludeDisabled(includeDisabled);
+  telemetry.trackCliOptionLimit(limitFlag);
+  telemetry.trackCliOptionNext(next);
   telemetry.trackCliOptionFormat(opts['--format']);
 
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
+    return 2;
+  }
+
+  let limit: number;
+  try {
+    limit = parseListLimit(limitFlag);
+  } catch (err) {
+    output.error((err as Error).message);
     return 1;
   }
-  const asJson = formatResult.jsonOutput;
 
   if (!(await ensureTeam(client))) {
     return 1;
   }
 
-  const lsStamp = stamp();
-  output.spinner('Fetching routing rules');
-
-  let rules: Rule[];
-  try {
-    rules = await listRules(client, Boolean(includeDisabled));
-  } catch (err: unknown) {
-    output.stopSpinner();
-    if (isAPIError(err)) {
-      output.error(err.message);
-      return 1;
-    }
-    throw err;
-  }
-
-  output.stopSpinner();
-
-  if (asJson) {
-    client.stdout.write(`${JSON.stringify({ rules }, null, 2)}\n`);
-    return 0;
-  }
-
-  if (rules.length === 0) {
-    output.log(
-      `No routing rules found. Add one with ${getCommandName('ai-gateway rules add')}.`
-    );
-    return 0;
-  }
-
-  output.log(`Routing rules ${lsStamp()}`);
-  client.stdout.write(printRulesTable(rules));
-  return 0;
+  return renderResource<Page<Rule>>(client, {
+    asJson: formatResult.jsonOutput,
+    spinnerText: 'Fetching routing rules',
+    fetch: () =>
+      listRulesPage(client, {
+        limit,
+        next,
+        includeDisabled: Boolean(includeDisabled),
+      }),
+    toJSON: page => ({
+      rules: page.items,
+      pagination: { next: page.next },
+    }),
+    isEmpty: page => page.items.length === 0,
+    emptyMessage: next
+      ? 'No more rules.'
+      : `No routing rules found. Add one with ${getCommandName('ai-gateway rules add')}.`,
+    header: () => 'Routing rules',
+    renderTable: page => printRulesTable(page.items),
+    next: page => page.next,
+  });
 }
 
 function printRulesTable(rules: Rule[]) {

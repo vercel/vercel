@@ -1,5 +1,6 @@
+import type { BuildahClient } from '../clients/buildah';
 import { isBuildContainer, readString } from '../util';
-import { buildahEngine } from './buildah';
+import { createBuildahEngine } from './buildah';
 import { dockerEngine } from './docker';
 import type { ContainerEngine } from './types';
 
@@ -9,13 +10,13 @@ import type { ContainerEngine } from './types';
  *
  * Override with `VERCEL_CONTAINER_ENGINE=docker|buildah` for testing.
  */
-export function selectContainerEngine(): ContainerEngine {
+export function selectContainerEngine(client: BuildahClient): ContainerEngine {
   const override = readString(
     process.env.VERCEL_CONTAINER_ENGINE
   )?.toLowerCase();
-  if (override === 'buildah') return buildahEngine;
+  if (override === 'buildah') return createBuildahEngine(client);
   if (override === 'docker') return dockerEngine;
-  return isBuildContainer() ? buildahEngine : dockerEngine;
+  return isBuildContainer() ? createBuildahEngine(client) : dockerEngine;
 }
 
 export type { BuildPushParams, ContainerEngine } from './types';

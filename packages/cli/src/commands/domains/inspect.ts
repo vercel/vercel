@@ -5,13 +5,12 @@ import stamp from '../../util/output/stamp';
 import formatDate from '../../util/format-date';
 import formatNSTable from '../../util/format-ns-table';
 import getDomainByName from '../../util/domains/get-domain-by-name';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import formatTable from '../../util/format-table';
 import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import { getCommandName } from '../../util/pkg-name';
 import { getDomainConfig } from '../../util/domains/get-domain-config';
-import code from '../../util/output/code';
 import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
 import { DomainsInspectTelemetryClient } from '../../util/telemetry/commands/domains/inspect';
 import output from '../../output-manager';
@@ -19,6 +18,7 @@ import { inspectSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import { validateJsonOutput } from '../../util/output-format';
 
 export default async function inspect(client: Client, argv: string[]) {
   const telemetry = new DomainsInspectTelemetryClient({
@@ -32,11 +32,20 @@ export default async function inspect(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
-    printError(error);
-    return 1;
+    printError(error, client);
+    return 2;
   }
-  const { args } = parsedArgs;
+  const { args, flags } = parsedArgs;
   const [domainName] = args;
+
+  telemetry.trackCliOptionFormat(flags['--format']);
+  telemetry.trackCliFlagJson(flags['--json']);
+  const formatResult = validateJsonOutput(flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 2;
+  }
+  const asJson = formatResult.jsonOutput;
 
   const inspectStamp = stamp();
 
@@ -44,7 +53,7 @@ export default async function inspect(client: Client, argv: string[]) {
     output.error(
       `${getCommandName(`domains inspect <domain>`)} expects one argument`
     );
-    return 1;
+    return 2;
   }
 
   telemetry.trackCliArgumentDomain(domainName);
@@ -55,12 +64,12 @@ export default async function inspect(client: Client, argv: string[]) {
         `${getCommandName('domains inspect <domain>')}`
       )}`
     );
-    return 1;
+    return 2;
   }
 
   output.debug(`Fetching domain info`);
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
   output.spinner(
     `Fetching Domain ${domainName} under ${chalk.bold(contextName)}`
   );
@@ -76,6 +85,37 @@ export default async function inspect(client: Client, argv: string[]) {
   }
 
   const { domain, projects, renewalPrice, domainConfig } = information;
+
+  if (asJson) {
+    output.stopSpinner();
+    client.stdout.write(
+      `${JSON.stringify(
+        {
+          domain: {
+            name: domain.name,
+            registrar: getDomainRegistrar(domain),
+            expiresAt: domain.expiresAt,
+            creator: domain.creator.username,
+            createdAt: domain.createdAt,
+            edgeNetwork: true,
+            renewalPrice: domain.boughtAt && renewalPrice ? renewalPrice : null,
+          },
+          nameservers: {
+            intended: domain.intendedNameservers,
+            current: domain.nameservers,
+          },
+          projects: projects.map(({ project, domains }) => ({
+            name: project.name,
+            domains,
+          })),
+          configuration: { misconfigured: domainConfig.misconfigured ?? null },
+        },
+        null,
+        2
+      )}\n`
+    );
+    return 0;
+  }
 
   output.log(
     `Domain ${domainName} found under ${chalk.bold(contextName)} ${chalk.gray(
@@ -142,29 +182,21 @@ export default async function inspect(client: Client, argv: string[]) {
   }
 
   if (domainConfig.misconfigured) {
-    output.warn(
-      `This Domain is not configured properly. To configure it you should either:`,
-      null,
-      null,
-      null
-    );
-    output.print(
-      `  ${chalk.grey('a)')} ` +
-        `Set the following record on your DNS provider to continue: ` +
-        `${code(`A ${domainName} 76.76.21.21`)} ` +
-        `${chalk.grey('[recommended]')}\n`
-    );
-    output.print(
-      `  ${chalk.grey('b)')} ` +
-        `Change your Domains's nameservers to the intended set detailed above.\n\n`
-    );
-    output.print(
-      `  We will run a verification for you and you will receive an email upon completion.\n`
-    );
-
     const contextNameConst = contextName;
     const projectNames = Array.from(
       new Set(projects.map(({ project }) => project.name))
+    );
+    const recordsSource = projectNames.length
+      ? "Check the project's Domains settings for the required DNS records"
+      : 'Assign it to a project to see the required DNS records';
+
+    output.warn(
+      `This domain is not configured properly. ${recordsSource}, or run ${getCommandName(
+        'domains verify --help'
+      )} for CLI verification options.`,
+      null,
+      null,
+      null
     );
 
     if (projectNames.length) {

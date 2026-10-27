@@ -1,5 +1,214 @@
 # @vercel-internals/types
 
+## 3.0.32
+
+### Patch Changes
+
+- Updated dependencies [5f55ccc]
+- Updated dependencies [bcdc735]
+- Updated dependencies [d0629bd]
+  - @vercel/build-utils@15.1.0
+  - @vercel/cli-config@0.3.4
+
+## 3.0.31
+
+### Patch Changes
+
+- Updated dependencies [2f0edaf]
+  - @vercel/build-utils@15.0.2
+
+## 3.0.30
+
+### Patch Changes
+
+- Updated dependencies [1a379a3]
+  - @vercel/build-utils@15.0.1
+
+## 3.0.29
+
+### Patch Changes
+
+- Updated dependencies [b0e01f5]
+- Updated dependencies [9b1b587]
+- Updated dependencies [fec2df1]
+- Updated dependencies [d123652]
+  - @vercel/cli-config@0.3.3
+  - @vercel/build-utils@15.0.0
+
+## 3.0.28
+
+### Patch Changes
+
+- Updated dependencies [9abaa6d]
+- Updated dependencies [179d4ab]
+- Updated dependencies [d39dd61]
+- Updated dependencies [5aa1b58]
+- Updated dependencies [637c7b9]
+  - @vercel/build-utils@14.23.0
+  - @vercel/cli-config@0.3.2
+
+## 3.0.27
+
+### Patch Changes
+
+- e8d5551: Resume many paused projects at once, and find them with `vercel project list --paused`.
+
+  - `vercel project resume --all` resumes every paused project in the team, and `vercel project resume <project> <project> ...` resumes the projects you name. Before resuming more than one project (or anything with `--all`), they show what they'll resume and ask once. Without a terminal they need `--yes`, and `--all --yes` also needs the team named with `--scope` or `VERCEL_ORG_ID`. Otherwise they return `confirmation_required` or `missing_scope` (exit 2) with the command to run.
+  - Projects that aren't paused are skipped. A failure doesn't stop the rest: the command reports each failed project, prints a retry command, and exits 1. `--json` prints `{ "results", "summary" }`.
+  - `vercel project list --paused` shows only paused projects, and the table has a new `Status` column. `--json` output now includes `paused` for every project.
+
+- Updated dependencies [a19979c]
+- Updated dependencies [a2e9f5d]
+  - @vercel/build-utils@14.22.0
+
+## 3.0.26
+
+### Patch Changes
+
+- Updated dependencies [bb42e81]
+  - @vercel/build-utils@14.21.3
+
+## 3.0.25
+
+### Patch Changes
+
+- Updated dependencies [cd68435]
+  - @vercel/build-utils@14.21.2
+
+## 3.0.24
+
+### Patch Changes
+
+- dad675d: Warn when `vercel redeploy` targets a prebuilt deployment, since the redeploy reuses the prebuilt output and does not pick up the latest environment variables or project settings.
+- Updated dependencies [1336097]
+  - @vercel/build-utils@14.21.1
+
+## 3.0.23
+
+### Patch Changes
+
+- Updated dependencies [24a7e04]
+- Updated dependencies [7e396f7]
+  - @vercel/build-utils@14.21.0
+
+## 3.0.22
+
+### Patch Changes
+
+- Updated dependencies [42cc083]
+  - @vercel/build-utils@14.20.1
+
+## 3.0.21
+
+### Patch Changes
+
+- Updated dependencies [e041037]
+  - @vercel/build-utils@14.20.0
+
+## 3.0.20
+
+### Patch Changes
+
+- Updated dependencies [e58b37a]
+  - @vercel/build-utils@14.19.0
+
+## 3.0.19
+
+### Patch Changes
+
+- Updated dependencies [94f6cea]
+- Updated dependencies [3eeaad5]
+- Updated dependencies [8ac5320]
+  - @vercel/build-utils@14.18.0
+
+## 3.0.18
+
+### Patch Changes
+
+- Updated dependencies [28a7ab7]
+- Updated dependencies [28a7ab7]
+  - @vercel/build-utils@14.17.0
+
+## 3.0.17
+
+### Patch Changes
+
+- Updated dependencies [20c5940]
+  - @vercel/build-utils@14.16.0
+
+## 3.0.16
+
+### Patch Changes
+
+- Updated dependencies [a7ef28c]
+- Updated dependencies [85cfdc3]
+  - @vercel/build-utils@14.15.0
+  - @vercel/cli-config@0.3.1
+
+## 3.0.15
+
+### Patch Changes
+
+- Updated dependencies [deb48cd]
+  - @vercel/build-utils@14.14.0
+
+## 3.0.14
+
+### Patch Changes
+
+- Updated dependencies [ff3d2f7]
+  - @vercel/build-utils@14.13.2
+
+## 3.0.13
+
+### Patch Changes
+
+- Updated dependencies [5082546]
+  - @vercel/build-utils@14.13.1
+
+## 3.0.12
+
+### Patch Changes
+
+- Updated dependencies [34b2c8e]
+  - @vercel/build-utils@14.13.0
+
+## 3.0.11
+
+### Patch Changes
+
+- 693a289: Accept `BLOCKED` in `vercel list --status`, show blocked deployments as `Blocked` instead of `UNKNOWN` in `vercel list` and `vercel inspect`, and include `readyStateReason` in `vercel inspect` output when the API provides it.
+
+## 3.0.10
+
+### Patch Changes
+
+- 1cfef7b: Add the existing optional `planIteration` and subscription-period fields to the billing type.
+- Updated dependencies [6e68e60]
+  - @vercel/build-utils@14.12.0
+
+## 3.0.9
+
+### Patch Changes
+
+- Updated dependencies [888f59e]
+- Updated dependencies [7eb63c0]
+  - @vercel/build-utils@14.11.0
+
+## 3.0.8
+
+### Patch Changes
+
+- Updated dependencies [53a6086]
+  - @vercel/build-utils@14.10.2
+
+## 3.0.7
+
+### Patch Changes
+
+- Updated dependencies [c610f14]
+  - @vercel/cli-config@0.3.0
+
 ## 3.0.6
 
 ### Patch Changes

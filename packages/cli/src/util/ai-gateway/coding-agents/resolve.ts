@@ -2,8 +2,21 @@ import chalk from 'chalk';
 import type Client from '../../client';
 import { AGENT_REASON } from '../../agent-output-constants';
 import { CHECKBOX_INSTRUCTIONS } from '../../input/checkbox-instructions';
-import { DEFAULT_AGENTS, getAgentById, UNSUPPORTED_AGENTS } from './agents';
+import {
+  DEFAULT_AGENTS,
+  getAgentById,
+  TOKEN_PASS_AGENTS,
+  UNSUPPORTED_AGENTS,
+} from './agents';
 import type { CodingAgent } from './types';
+import { defaultKeyName, type KeyOptions } from './key-source';
+
+export function resolveKeyOptions(opts: KeyOptions): KeyOptions {
+  return {
+    ...opts,
+    name: opts.name ?? (opts.tokenPass ? defaultKeyName(true) : undefined),
+  };
+}
 
 export type ResolveResult =
   | { selected: CodingAgent[]; guidance: string[]; unsupported: string[] }
@@ -13,11 +26,13 @@ export async function resolveAgents(args: {
   client: Client;
   agentFlags?: string[];
   all?: boolean;
+  tokenPass?: boolean;
   canPrompt: boolean;
   yes?: boolean;
   home: string;
 }): Promise<ResolveResult> {
-  const { client, agentFlags, all, canPrompt, yes, home } = args;
+  const { client, agentFlags, all, tokenPass, canPrompt, yes, home } = args;
+  const availableAgents = tokenPass ? TOKEN_PASS_AGENTS : DEFAULT_AGENTS;
   const guidance: string[] = [];
   const unsupported: string[] = [];
 
@@ -26,10 +41,12 @@ export async function resolveAgents(args: {
     const unknown: string[] = [];
     for (const raw of agentFlags) {
       const id = raw.toLowerCase();
-      const agent = getAgentById(id);
+      const agent = tokenPass
+        ? availableAgents.find(a => a.id === id)
+        : getAgentById(id);
       if (agent) {
         if (!selected.includes(agent)) selected.push(agent);
-      } else if (UNSUPPORTED_AGENTS[id]) {
+      } else if (!tokenPass && UNSUPPORTED_AGENTS[id]) {
         unsupported.push(id);
         guidance.push(`${id}: ${UNSUPPORTED_AGENTS[id]}`);
       } else {
@@ -37,9 +54,9 @@ export async function resolveAgents(args: {
       }
     }
     if (unknown.length > 0) {
-      const known = DEFAULT_AGENTS.map(a => a.id).join(', ');
+      const known = availableAgents.map(a => a.id).join(', ');
       return {
-        error: `Unknown agent(s): ${unknown.join(', ')}. Supported: ${known}.`,
+        error: `${tokenPass ? 'Unsupported Token Pass' : 'Unknown'} agent(s): ${unknown.join(', ')}. Supported: ${known}.`,
         reason: AGENT_REASON.INVALID_ARGUMENTS,
       };
     }
@@ -53,13 +70,13 @@ export async function resolveAgents(args: {
   }
 
   if (all) {
-    return { selected: DEFAULT_AGENTS, guidance, unsupported };
+    return { selected: availableAgents, guidance, unsupported };
   }
 
-  const detected = await Promise.all(DEFAULT_AGENTS.map(a => a.detect(home)));
+  const detected = await Promise.all(availableAgents.map(a => a.detect(home)));
 
   if (!canPrompt || yes) {
-    const selected = DEFAULT_AGENTS.filter((_, i) => detected[i]);
+    const selected = availableAgents.filter((_, i) => detected[i]);
     if (selected.length === 0) {
       return {
         error:
@@ -70,7 +87,7 @@ export async function resolveAgents(args: {
     return { selected, guidance, unsupported };
   }
 
-  const choices = DEFAULT_AGENTS.map((agent, i) => ({
+  const choices = availableAgents.map((agent, i) => ({
     name: agent.displayName,
     value: agent.id,
     checked: detected[i],

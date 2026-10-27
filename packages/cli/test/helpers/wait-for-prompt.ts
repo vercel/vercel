@@ -62,6 +62,20 @@ export async function answerTeamPromptThenCreateProject(cp: CLIProcess) {
   cp.stdin?.write('\n');
 }
 
+/** Wait for the complete readiness URL, including an OS-assigned port. */
+export async function waitForDevServerUrl(cp: CLIProcess): Promise<URL> {
+  let output = '';
+  let url: URL | undefined;
+  await waitForPrompt(cp, chunk => {
+    output += chunk;
+    const match = output.match(/Ready! Available at (http:\/\/[^\s]+)[\r\n]/);
+    if (!match) return false;
+    url = new URL(match[1]);
+    return true;
+  });
+  return url!;
+}
+
 export default async function waitForPrompt(
   cp: CLIProcess,
   rawAssertion: string | RegExp | ((chunk: string) => boolean),

@@ -6,6 +6,9 @@ import { MetricsTelemetryClient } from '../../../../src/util/telemetry/commands/
 import * as linkModule from '../../../../src/util/projects/link';
 import getScope from '../../../../src/util/get-scope';
 import getProjectByNameOrId from '../../../../src/util/projects/get-project-by-id-or-name';
+import { teamCache } from '../../../../src/util/teams/get-team-by-id-or-slug';
+import type { Team } from '@vercel-internals/types';
+import { expectDeprecationInJson } from '../../../helpers/deprecation-warning';
 
 vi.mock('../../../../src/util/projects/link');
 vi.mock('../../../../src/util/get-scope');
@@ -332,6 +335,9 @@ describe('metrics query v2', () => {
         error: {
           code: 'rate_limited',
           message: 'Too many requests - try again in 60s',
+          hint: 'Wait at least 60 seconds before trying again.',
+          retryable: true,
+          retryAfterMs: 60000,
         },
       });
     });
@@ -366,9 +372,10 @@ describe('metrics query v2', () => {
       });
     });
 
-    it('rejects an explicit aggregation missing from the metric catalog', async () => {
+    it('sends an explicit aggregation missing from the metric catalog to the API', async () => {
       vi.stubEnv('FF_LEGACY_METRICS', '');
       mockSystemMetricCatalog();
+      mockCanonicalApiSuccess();
       client.setArgv(
         'metrics',
         'vercel.request.count',
@@ -382,22 +389,18 @@ describe('metrics query v2', () => {
 
       const exitCode = await query(client, new MockTelemetry());
 
-      expect(exitCode).toBe(1);
-      expect(client.stderr.getFullOutput()).toContain(
-        'Aggregation "sum" is not valid for metric "vercel.request.count".'
-      );
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'argument:metric-id', value: 'vercel.request.count' },
-        { key: 'option:aggregation', value: 'sum' },
-        { key: 'option:since', value: '[REDACTED]' },
-        { key: 'option:until', value: '[REDACTED]' },
-        { key: 'error_code', value: 'INVALID_AGGREGATION' },
-      ]);
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        metrics: {
+          value: { metric: 'vercel.request.count', aggregation: 'sum' },
+        },
+      });
     });
 
-    it('rejects metrics without a default aggregation', async () => {
+    it('falls back to the name-based default when the catalog lists no aggregations', async () => {
       vi.stubEnv('FF_LEGACY_METRICS', '');
       mockSystemMetricCatalog('vercel.request.count', []);
+      mockCanonicalApiSuccess();
       client.setArgv(
         'metrics',
         'vercel.request.count',
@@ -409,10 +412,12 @@ describe('metrics query v2', () => {
 
       const exitCode = await query(client, new MockTelemetry());
 
-      expect(exitCode).toBe(1);
-      expect(client.stderr.getFullOutput()).toContain(
-        'Metric "vercel.request.count" does not support any query aggregations.'
-      );
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        metrics: {
+          value: { metric: 'vercel.request.count', aggregation: 'count' },
+        },
+      });
     });
 
     it('combines --prod with KQL containing OData function names', async () => {
@@ -439,13 +444,14 @@ describe('metrics query v2', () => {
       );
     });
 
-    it('rejects explicit count ordering when v1 does not support count', async () => {
+    it('sends explicit count ordering to the API when the catalog lacks count', async () => {
       vi.stubEnv('FF_LEGACY_METRICS', '');
       mockSystemMetricCatalog(
         'vercel.speed_insights.lcp_ms',
         ['p75'],
         'milliseconds'
       );
+      mockCanonicalApiSuccess();
       client.setArgv(
         'metrics',
         'vercel.speed_insights.lcp_ms',
@@ -461,10 +467,18 @@ describe('metrics query v2', () => {
 
       const exitCode = await query(client, new MockTelemetry());
 
-      expect(exitCode).toBe(1);
-      expect(client.stderr.getFullOutput()).toContain(
-        '--order-by count is not available because this metric does not support the count aggregation.'
-      );
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        metrics: {
+          __seriesCount: {
+            metric: 'vercel.speed_insights.lcp_ms',
+            aggregation: 'count',
+          },
+        },
+        seriesSelection: {
+          rankBy: [{ metric: '__seriesCount', direction: 'desc' }],
+        },
+      });
     });
 
     it('uses value ordering by default when v1 does not support count', async () => {
@@ -550,8 +564,56 @@ describe('metrics query v2', () => {
 
       expect(exitCode).toBe(0);
       expect(stripAnsi(client.stderr.getFullOutput())).toContain(
-        '! OData support in --filter is deprecated and will be removed soon. KQL will be the only supported filter syntax.'
+        '! OData support in --query is deprecated and will be removed soon. KQL will be the only supported filter syntax.'
       );
+    });
+
+    it('warns that FID is deprecated', async () => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      mockSystemMetricCatalog(
+        'vercel.speed_insights.fid_ms',
+        ['p75'],
+        'milliseconds'
+      );
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.speed_insights.fid_ms',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+        '! First Input Delay will be sunset on November 1st. Use Interaction to Next Paint instead (vercel.speed_insights.inp_ms). Learn more: https://web.dev/articles/fid'
+      );
+    });
+
+    it('does not warn about FID for other Speed Insights metrics', async () => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      mockSystemMetricCatalog(
+        'vercel.speed_insights.inp_ms',
+        ['p75'],
+        'milliseconds'
+      );
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.speed_insights.inp_ms',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain('First Input Delay');
     });
 
     it('translates qualified unique aggregations for v1', async () => {
@@ -801,6 +863,187 @@ describe('metrics query v2', () => {
           code: 'invalid_query',
           message: 'search cannot exceed 100 characters',
         },
+      });
+    });
+  });
+
+  describe('metrics omitted from discovery', () => {
+    beforeEach(() => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      client.scenario.get('/metrics/v1', (_req, res) => {
+        res.json({
+          metrics: [],
+          pagination: { hasMore: false, nextCursor: null },
+        });
+      });
+    });
+
+    it.each([
+      ['vercel.daemon.count', 'count'],
+      ['vercel.daemon.cpu_time_ms', 'sum'],
+      ['vercel.drive_read.bytes', 'sum'],
+      ['checkout.latency', 'sum'],
+      ['checkout.count', 'sum'],
+    ])('queries %s with the %s default', async (metric, aggregation) => {
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        metric,
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        scope: {
+          ownerId: 'team_dummy',
+          projectIds: ['prj_metricstest'],
+        },
+        metrics: { value: { metric, aggregation } },
+      });
+      expect(client.stdout.getFullOutput()).toContain(metric);
+      expect(client.stdout.getFullOutput()).not.toContain('125ms');
+      expect(client.stderr.getFullOutput()).not.toContain('Unknown metric');
+    });
+
+    it('preserves explicit aggregations and dimensions in JSON queries', async () => {
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.daemon.count',
+        '--aggregation',
+        'unique/instanceId',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        metrics: {
+          value: {
+            metric: 'vercel.daemon.count',
+            aggregation: 'unique',
+            dimensions: ['instanceId'],
+          },
+        },
+      });
+      expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+        query: {
+          metric: 'vercel.daemon.count',
+          aggregation: 'unique/instanceId',
+        },
+      });
+    });
+
+    it.each([
+      ['checkout.count', 'persecond', { aggregation: 'sum', per: 'second' }],
+      [
+        'checkout.count',
+        'percent',
+        { aggregation: 'sum', normalize: 'percent' },
+      ],
+      [
+        'vercel.daemon.count',
+        'persecond',
+        { aggregation: 'count', per: 'second' },
+      ],
+      [
+        'vercel.daemon.count',
+        'percent',
+        { aggregation: 'count', normalize: 'percent' },
+      ],
+    ])('queries %s with %s using the correct additive aggregation', async (metric, aggregation, selection) => {
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        metric,
+        '--aggregation',
+        aggregation,
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        metrics: { value: { metric, ...selection } },
+      });
+      expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+        query: { metric, aggregation },
+      });
+    });
+
+    describe('unknown metrics rejected by the query API', () => {
+      beforeEach(() => {
+        client.scenario.post('/metrics/v1', (req, res) => {
+          postedBody = req.body as Record<string, unknown>;
+          res.status(400).json({
+            error: {
+              code: 'unknown_metric',
+              message: 'Unknown metric "vercel.bogus".',
+            },
+          });
+        });
+      });
+
+      it('surfaces the API error in text output', async () => {
+        client.setArgv(
+          'metrics',
+          'vercel.bogus',
+          '--since',
+          '2026-07-29T09:00:42.123Z',
+          '--until',
+          '2026-07-29T10:00:42.123Z'
+        );
+
+        const exitCode = await query(client, new MockTelemetry());
+
+        expect(exitCode).toBe(1);
+        expect(postedBody).toMatchObject({
+          metrics: { value: { metric: 'vercel.bogus', aggregation: 'sum' } },
+        });
+        expect(client.stderr.getFullOutput()).toContain(
+          'Unknown metric "vercel.bogus"'
+        );
+        expect(client.stdout.getFullOutput()).toBe('');
+      });
+
+      it('surfaces the API error in JSON output', async () => {
+        client.setArgv(
+          'metrics',
+          'vercel.bogus',
+          '--since',
+          '2026-07-29T09:00:42.123Z',
+          '--until',
+          '2026-07-29T10:00:42.123Z',
+          '--format=json'
+        );
+
+        const exitCode = await query(client, new MockTelemetry());
+
+        expect(exitCode).toBe(1);
+        expect(postedBody).toMatchObject({
+          metrics: { value: { metric: 'vercel.bogus', aggregation: 'sum' } },
+        });
+        expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+          error: {
+            code: 'unknown_metric',
+            message: 'Unknown metric "vercel.bogus".',
+          },
+        });
       });
     });
   });
@@ -1694,6 +1937,114 @@ describe('metrics query v2', () => {
       expect(postedBody?.filter).toBe("environment eq 'production'");
     });
 
+    it('keeps --prod working with a deprecation warning', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv('metrics', 'vercel.request.count', '--prod');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        '--prod is deprecated. Use --environment production.'
+      );
+    });
+
+    it.each([
+      ['--environment', 'preview', "environment eq 'preview'"],
+      ['-e', 'production', "environment eq 'production'"],
+      ['--environment', 'staging-2', "environment eq 'staging-2'"],
+    ])('should pass %s %s to the API as a filter', async (flag, value, filter) => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv('metrics', 'vercel.request.count', flag, value);
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.filter).toBe(filter);
+      expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+    });
+
+    it('should pass --environment as a KQL filter on the canonical endpoint', async () => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      mockSystemMetricCatalog();
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--filter',
+        'httpStatus >= 500',
+        '--environment',
+        'preview',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z',
+        '--json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.filter).toBe(
+        '(httpStatus >= 500) AND (environment:preview)'
+      );
+    });
+
+    it('should reject --prod together with --environment', async () => {
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--prod',
+        '--environment',
+        'preview'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(2);
+      expect(postedBody).toBeUndefined();
+      expect(client.stderr.getFullOutput()).toContain(
+        "Can't use --prod with --environment. Use --environment."
+      );
+    });
+
+    it.each([
+      [['--prod', '--environment', 'preview'], 'CONFLICTING_OPTIONS'],
+      [['--environment', 'pre view'], 'INVALID_ENVIRONMENT'],
+    ])('should report %j as a JSON error with --json', async (args, code) => {
+      client.setArgv('metrics', 'vercel.request.count', ...args, '--json');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(2);
+      expect(postedBody).toBeUndefined();
+      expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+        error: { code },
+      });
+    });
+
+    it.each([
+      "prod'uction",
+      'pre view',
+      '',
+    ])('should reject the environment %j before querying', async environment => {
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        `--environment=${environment}`
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(2);
+      expect(postedBody).toBeUndefined();
+      expect(client.stderr.getFullOutput()).toContain(
+        'Environments use letters, numbers, and hyphens'
+      );
+    });
+
     it('should AND production filter with explicit filters', async () => {
       mockMetricDetail();
       mockApiSuccess();
@@ -1736,6 +2087,109 @@ describe('metrics query v2', () => {
       );
     });
 
+    it('should point a 402 at the command that buys the add-on', async () => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.status(402).json({
+          error: {
+            code: 'PAYMENT_REQUIRED',
+            message: 'Observability Plus is required to run this query',
+          },
+        });
+      });
+      client.setArgv('metrics', 'vercel.request.count');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(1);
+      // The CLI can complete the purchase itself, so the billing dashboard is
+      // a detour.
+      expect(client.stderr.getFullOutput()).toContain(
+        'buy addon observability-plus'
+      );
+    });
+
+    it('pins a linked-team 402 to that team plan, not the selected team', async () => {
+      const hobby = {
+        id: 'team_hobby',
+        slug: 'hobby-team',
+        billing: { plan: 'hobby' },
+      } as Team;
+      const pro = {
+        id: 'team_pro',
+        slug: 'pro-team',
+        billing: { plan: 'pro' },
+      } as Team;
+      for (const team of [hobby, pro]) {
+        teamCache.set(team.id, team);
+        teamCache.set(team.slug, team);
+      }
+      const previousTeam = client.config.currentTeam;
+      client.config.currentTeam = pro.id;
+      mockedGetLinkedProject.mockResolvedValue({
+        status: 'linked',
+        project: {
+          id: 'prj_linked',
+          name: 'linked-app',
+          accountId: hobby.id,
+          updatedAt: Date.now(),
+          createdAt: Date.now(),
+        },
+        org: { id: hobby.id, slug: hobby.slug, type: 'team' },
+      });
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.status(402).json({
+          error: {
+            code: 'PAYMENT_REQUIRED',
+            message: 'Observability Plus is required to run this query',
+          },
+        });
+      });
+      client.setArgv('metrics', 'vercel.request.count');
+
+      try {
+        const exitCode = await query(client, new MockTelemetry());
+
+        expect(exitCode).toBe(1);
+        const printed = client.stderr.getFullOutput();
+        expect(printed).toContain('buy pro --scope hobby-team');
+        expect(printed).not.toContain('pro-team');
+      } finally {
+        client.config.currentTeam = previousTeam;
+        for (const key of [hobby.id, hobby.slug, pro.id, pro.slug]) {
+          teamCache.delete(key);
+        }
+      }
+    });
+
+    it('should include conditional subscription guidance in JSON output', async () => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.status(402).json({
+          error: {
+            code: 'PAYMENT_REQUIRED',
+            message: 'Observability Plus is required to run this query',
+          },
+        });
+      });
+      client.setArgv('metrics', 'vercel.request.count', '--format=json');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(1);
+      const parsed = JSON.parse(client.stdout.getFullOutput());
+      expect(parsed.error.code).toBe('PAYMENT_REQUIRED');
+      expect(parsed.error.hint).toContain(
+        'Check whether Observability Plus is disabled'
+      );
+      expect(parsed.error.retryable).toBe(false);
+      expect(parsed.error.next[0].command).toContain(
+        'buy addon observability-plus'
+      );
+      expect(parsed.error.next[0].when).toContain('approved');
+    });
+
     it('should surface the API quota message for 402 responses', async () => {
       mockMetricDetail();
       client.scenario.post('/v2/observability/query', (_req, res) => {
@@ -1755,6 +2209,31 @@ describe('metrics query v2', () => {
       expect(client.stderr.getFullOutput()).toContain(
         'You have reached the daily observability metrics query limit'
       );
+      // A spent quota is not a missing subscription, and the team may well
+      // already hold one. Buying a second does not raise the limit.
+      expect(client.stderr.getFullOutput()).not.toContain('buy addon');
+    });
+
+    it("should keep the purchase hint off another product's 402", async () => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.status(402).json({
+          error: {
+            code: 'payment_required',
+            message:
+              'Accessing Analytics custom events requires an Enterprise or Pro plan.',
+          },
+        });
+      });
+      client.setArgv('metrics', 'vercel.request.count');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(1);
+      // Every paid product on this endpoint refuses with 402, so the status
+      // alone would sell Observability Plus to answer a Web Analytics gate.
+      expect(client.stderr.getFullOutput()).toContain('Enterprise or Pro plan');
+      expect(client.stderr.getFullOutput()).not.toContain('buy addon');
     });
 
     it('should handle 403 forbidden', async () => {
@@ -1972,6 +2451,24 @@ describe('metrics query v2', () => {
       ]);
     });
 
+    it('should track --environment', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--environment',
+        'preview'
+      );
+
+      await query(client, new MockTelemetry());
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
+        { key: 'option:environment', value: 'preview' },
+      ]);
+    });
+
     it('should track --all flag', async () => {
       mockMetricDetail();
       mockApiSuccess();
@@ -2122,5 +2619,92 @@ describe('metrics query v2', () => {
       expect(exitCode).toBe(0);
       expect(postedBody?.bucketTimezone).toBe('Europe/Paris');
     });
+  });
+});
+
+describe('metrics --query', () => {
+  // Runs a metrics query with a fresh client, recording the query body.
+  async function run(...args: string[]) {
+    client.reset();
+    vi.clearAllMocks();
+    postedBody = undefined;
+    mockedGetProjectByNameOrId.mockReset();
+    mockLinkedProject();
+    mockTeamScope();
+    vi.stubEnv('FF_LEGACY_METRICS', '');
+    mockSystemMetricCatalog();
+    mockCanonicalApiSuccess();
+    client.setArgv(
+      'metrics',
+      'vercel.request.count',
+      '--since',
+      '2026-07-29T09:00:42.123Z',
+      '--until',
+      '2026-07-29T10:00:42.123Z',
+      ...args
+    );
+    const exitCode = await query(client, new MockTelemetry());
+    return {
+      exitCode,
+      body: postedBody,
+      stdout: client.stdout.getFullOutput(),
+      stderr: client.stderr.getFullOutput(),
+    };
+  }
+
+  const twoFilters = ['httpStatus >= 500', 'route:"/api"'];
+
+  it('ANDs repeated --query expressions together', async () => {
+    const result = await run(
+      '--query',
+      twoFilters[0],
+      '--query',
+      twoFilters[1]
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.body).toMatchObject({
+      filter: '(httpStatus >= 500) AND (route:"/api")',
+    });
+    expect(result.stderr).not.toContain('deprecated');
+  });
+
+  it.each([
+    ['--filter', ['--filter', twoFilters[0], '--filter', twoFilters[1]]],
+    ['-f', ['-f', twoFilters[0], '-f', twoFilters[1]]],
+    ['-f', ['-f', twoFilters[0], '--filter', twoFilters[1]]],
+  ])('still accepts %s, with one warning that names --query', async (typed, oldArgs) => {
+    const now = await run('--query', twoFilters[0], '--query', twoFilters[1]);
+    const before = await run(...oldArgs);
+
+    expect(before.exitCode).toBe(now.exitCode);
+    expect(before.body).toEqual(now.body);
+    expect(before.stdout).toBe(now.stdout);
+    expect(before.stderr.match(/deprecated/g)).toHaveLength(1);
+    expect(before.stderr).toContain(`! ${typed} is deprecated. Use --query.\n`);
+  });
+
+  it('puts the warning in the JSON result with --json', async () => {
+    const now = await run('--query', twoFilters[0], '--json');
+    const before = await run('--filter', twoFilters[0], '--json');
+
+    expect(before.exitCode).toBe(0);
+    expectDeprecationInJson(
+      before.stdout,
+      now.stdout,
+      '--filter is deprecated. Use --query.'
+    );
+    expect(before.stderr).not.toContain('deprecated');
+  });
+
+  it.each([
+    [['--query', 'a:1', '--filter', 'b:2'], "Can't use --query with --filter."],
+    [['--query', 'a:1', '-f', 'b:2'], "Can't use --query with -f."],
+  ])('rejects %j before any query', async (args, message) => {
+    const result = await run(...args);
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain(message);
+    expect(result.body).toBeUndefined();
   });
 });

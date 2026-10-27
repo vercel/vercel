@@ -4,13 +4,13 @@ import { join } from 'path';
 import { mkdtemp, readFile, rm } from 'fs/promises';
 import { errorToString } from '@vercel/error-utils';
 import type Client from '../../util/client';
+import { resolveDeployment } from './resolve-deployment';
 import output from '../../output-manager';
 import { requoteArgs } from './utils';
 import { confirmProduction, type DeploymentTarget } from './confirm-production';
 import { getTraceSessionToken } from './trace-session-token-provider';
 import type { CurlTelemetryClient } from '../../util/telemetry/commands/curl';
 import type { Deployment, ProjectLinked } from '@vercel-internals/types';
-import toHost from '../../util/to-host';
 import getUser from '../../util/get-user';
 
 const TRACE_COOKIE_NAME = '_vercel_tracing';
@@ -47,11 +47,9 @@ async function lookupDeployment(
   fullUrl: string,
   accountId: string | undefined
 ): Promise<Deployment> {
-  const host = toHost(fullUrl);
-  return client.fetch<Deployment>(
-    `/v13/deployments/${encodeURIComponent(host)}`,
-    accountId ? { accountId } : {}
-  );
+  const deployment = await resolveDeployment(client, fullUrl, accountId);
+  if (!deployment) throw new Error('Deployment not found');
+  return deployment;
 }
 
 /**
@@ -344,7 +342,7 @@ export async function trace(
   }
 
   client.stderr.write(
-    `\nRun \`vercel traces get ${requestId}\` to fetch the trace.\n`
+    `\nRun \`vercel traces inspect ${requestId}\` to fetch the trace.\n`
   );
 
   return exitCode;

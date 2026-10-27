@@ -1,5 +1,6 @@
 import type {
   Deployment,
+  GitMetadata,
   Org,
   Project,
   ProjectRollingRelease,
@@ -16,7 +17,7 @@ import bytes from 'bytes';
 import chalk from 'chalk';
 import { getFetchDispatcher } from '../fetch';
 import type Now from '../../util';
-import { displayBuildLogs, type BuildLog, parseLogLines } from '../logs';
+import type { BuildLog } from '../logs';
 import { progress } from '../output/progress';
 import ua from '../ua';
 import output from '../../output-manager';
@@ -25,6 +26,8 @@ import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
 import type { ProjectNotFound } from '../errors-ts';
 import printEvents from '../events';
 import { printAlignedLabel } from '../output/print-aligned-label';
+import { printPrebuiltFilePathMapIgnoreWarning } from './print-prebuilt-filepathmap-warning';
+import { DeployTelemetryClient } from '../telemetry/commands/deploy';
 
 function printInspectUrl(inspectorUrl: string | null | undefined) {
   if (!inspectorUrl) {
@@ -48,11 +51,13 @@ export default async function processDeployment({
   jsonOutput,
   linkedProject,
   linkedProjectIsPartial,
+  gitMetadata,
   ...args
 }: {
   now: Now;
   path: string;
   requestBody: DeploymentOptions;
+  gitMetadata?: GitMetadata | Promise<GitMetadata | undefined>;
   quiet: boolean;
   force?: boolean;
   withCache?: boolean;
@@ -87,6 +92,9 @@ export default async function processDeployment({
   } = args;
 
   const client = now._client;
+  const telemetry = new DeployTelemetryClient({
+    opts: { store: client.telemetryEventStore },
+  });
 
   // The ▲ gutter belongs on the Aliased row, which only prints when we wait
   // for alias assignment and domains are auto-assigned. When that row won't
@@ -95,6 +103,9 @@ export default async function processDeployment({
     !noWait && requestBody.autoAssignCustomDomains !== false;
 
   const { env = {} } = requestBody;
+  // @vercel/client keeps its own token snapshot. Refresh before taking it,
+  // rather than relying on the parallel project lookup to refresh later.
+  await client.ensureAuthorized();
   const token = now._token;
   if (!token) {
     throw new Error('Missing authentication token');
@@ -136,6 +147,16 @@ export default async function processDeployment({
   // collect indications to show the user once
   // the deployment is done
   const indications = [];
+  let prebuiltFilePathMapWarning:
+    | { code: 'PREBUILT_FILEPATHMAP_IGNORED'; message: string }
+    | undefined;
+
+  const attachPrebuiltFilePathMapWarning = <T extends object>(payload: T) => {
+    if (prebuiltFilePathMapWarning) {
+      Object.assign(payload, { warning: prebuiltFilePathMapWarning });
+    }
+    return payload;
+  };
 
   let abortController: AbortController | undefined;
 
@@ -175,7 +196,33 @@ export default async function processDeployment({
   }
 
   try {
-    for await (const event of createDeployment(clientOptions, requestBody)) {
+    const deploymentOptions = Promise.resolve(gitMetadata).then(
+      gitMetadata => ({
+        ...requestBody,
+        ...(gitMetadata === undefined ? {} : { gitMetadata }),
+      })
+    );
+    for await (const event of createDeployment(
+      clientOptions,
+      deploymentOptions
+    )) {
+      if (
+        event.type === 'warning' &&
+        'code' in event &&
+        event.code === 'PREBUILT_FILEPATHMAP_IGNORED'
+      ) {
+        const message = String(event.payload);
+        prebuiltFilePathMapWarning = {
+          code: 'PREBUILT_FILEPATHMAP_IGNORED',
+          message,
+        };
+        printPrebuiltFilePathMapIgnoreWarning(message, telemetry);
+        if (client.stderr.isTTY) {
+          output.spinner(deployingSpinnerVal, 0);
+        }
+        continue;
+      }
+
       if (['tip', 'notice', 'warning'].includes(event.type)) {
         indications.push(event);
       }
@@ -283,13 +330,14 @@ export default async function processDeployment({
           (
             deployment as Deployment & { indications: typeof indications }
           ).indications = indications;
-          return deployment;
+          return attachPrebuiltFilePathMapWarning(deployment);
         }
 
         latestLogMessage =
           deployment.readyState === 'QUEUED' ? 'Queued…' : 'Building…';
 
         if (withFullLogs && !anonymous) {
+          const { displayBuildLogs } = await import('../logs');
           let promise: Promise<void>;
           ({ abortController, promise } = displayBuildLogs(
             client,
@@ -301,6 +349,7 @@ export default async function processDeployment({
             output.warn(`Failed to read build logs: ${error}`)
           );
         } else if (!anonymous) {
+          const { parseLogLines } = await import('../logs');
           abortController = new AbortController();
           const promise = printEvents(
             client,
@@ -335,7 +384,7 @@ export default async function processDeployment({
 
       if (event.type === 'canceled') {
         stopSpinner();
-        return event.payload;
+        return attachPrebuiltFilePathMapWarning(event.payload);
       }
 
       if (
@@ -350,7 +399,7 @@ export default async function processDeployment({
         output.spinner('Releasing…', 0);
         stopSpinner();
         event.payload.indications = indications;
-        return event.payload;
+        return attachPrebuiltFilePathMapWarning(event.payload);
       }
 
       if (event.type === 'ready' && !withFullLogs) {
@@ -362,7 +411,9 @@ export default async function processDeployment({
 
         // Keep the event stream open while polling waits for alias assignment.
         output.stopSpinner();
-        if (!anonymous) {
+        // Reprints the URL row below the cleared spinner. Without a spinner
+        // the row is already last, and erasing would remove real output.
+        if (!anonymous && !output.spinnersHidden) {
           process.stderr.write(eraseLines(2));
           const isProdDeployment = event.payload.target === 'production';
           const previewUrl = `https://${event.payload.url}`;
@@ -388,12 +439,12 @@ export default async function processDeployment({
       // v1 checks failed
       if (event.type === 'checks-conclusion-failed') {
         stopSpinner();
-        return event.payload;
+        return attachPrebuiltFilePathMapWarning(event.payload);
       }
 
       if (event.type === 'checks-v2-failed') {
         stopSpinner();
-        return event.payload;
+        return attachPrebuiltFilePathMapWarning(event.payload);
       }
 
       // Handle error events
@@ -454,7 +505,7 @@ export default async function processDeployment({
         }
 
         event.payload.indications = indications;
-        return event.payload;
+        return attachPrebuiltFilePathMapWarning(event.payload);
       }
     }
   } catch (err) {

@@ -34,7 +34,7 @@ export async function createThreshold(client: Client, argv: string[]) {
     parsedArguments = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   // parse arguments
@@ -44,7 +44,7 @@ export async function createThreshold(client: Client, argv: string[]) {
     args = parseCreateThresholdArguments(parsedArguments.args, telemetry);
   } catch (error: unknown) {
     output.error((error as Error).message);
-    return 1;
+    return 2;
   }
 
   const skipConfirmWithYes = parsedArguments.flags['--yes'];

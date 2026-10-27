@@ -37,7 +37,7 @@ describe('ai-gateway rules edit', () => {
     it('returns exit code 2', async () => {
       client.setArgv('ai-gateway', 'rules', 'edit', '--help');
       const exitCode = await aiGateway(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:rules', value: 'rules' },
@@ -46,41 +46,81 @@ describe('ai-gateway rules edit', () => {
     });
   });
 
-  it('disables a rule', async () => {
+  it('turns a rule off with --no-enable', async () => {
     const team = useTeam();
     useUser();
     const getBody = useUpdateRule();
     client.config.currentTeam = team.id;
-    client.setArgv('ai-gateway', 'rules', 'edit', 'rule_1', '--disable');
+    client.setArgv('ai-gateway', 'rules', 'update', 'rule_1', '--no-enable');
 
     const exitCodePromise = aiGateway(client);
 
-    await expect(client.stderr).toOutput('edited');
+    await expect(client.stderr).toOutput('updated');
+    expect(await exitCodePromise).toBe(0);
+    expect(getBody()).toMatchObject({ ruleId: 'rule_1', enabled: false });
+    expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:rules', value: 'rules' },
+      { key: 'subcommand:update', value: 'update' },
+      { key: 'argument:ruleId', value: '[REDACTED]' },
+      { key: 'flag:no-enable', value: 'TRUE' },
+    ]);
+  });
+
+  it('turns a rule on with --enable', async () => {
+    const team = useTeam();
+    useUser();
+    const getBody = useUpdateRule({ ...sampleRule, enabled: true });
+    client.config.currentTeam = team.id;
+    client.setArgv('ai-gateway', 'rules', 'update', 'rule_1', '--enable');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput('updated');
+    expect(await exitCodePromise).toBe(0);
+    expect(getBody()).toMatchObject({ ruleId: 'rule_1', enabled: true });
+  });
+
+  it('still turns a rule off with the old --disable, with a warning', async () => {
+    const team = useTeam();
+    useUser();
+    const getBody = useUpdateRule();
+    client.config.currentTeam = team.id;
+    client.setArgv('ai-gateway', 'rules', 'update', 'rule_1', '--disable');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput(
+      '--disable is deprecated. Use --no-enable.'
+    );
     expect(await exitCodePromise).toBe(0);
     expect(getBody()).toMatchObject({ ruleId: 'rule_1', enabled: false });
   });
 
   it('requires a rule id', async () => {
     useUser();
-    client.setArgv('ai-gateway', 'rules', 'edit', '--disable');
+    client.setArgv('ai-gateway', 'rules', 'edit', '--no-enable');
     const exitCodePromise = aiGateway(client);
     await expect(client.stderr).toOutput('expects a rule id');
-    expect(await exitCodePromise).toBe(1);
+    expect(await exitCodePromise).toBe(2);
   });
 
-  it('rejects both --enable and --disable', async () => {
+  it.each([
+    ['--no-enable'],
+    ['--disable'],
+  ])('rejects both --enable and %s', async offFlag => {
     useUser();
     client.setArgv(
       'ai-gateway',
       'rules',
-      'edit',
+      'update',
       'rule_1',
       '--enable',
-      '--disable'
+      offFlag
     );
     const exitCodePromise = aiGateway(client);
-    await expect(client.stderr).toOutput('only one of --enable or --disable');
-    expect(await exitCodePromise).toBe(1);
+    await expect(client.stderr).toOutput(`Can't use --enable with ${offFlag}.`);
+    expect(await exitCodePromise).toBe(2);
   });
 
   it('requires at least one field to edit', async () => {
@@ -96,7 +136,7 @@ describe('ai-gateway rules edit', () => {
     useUser();
     useUpdateNotFound();
     client.config.currentTeam = team.id;
-    client.setArgv('ai-gateway', 'rules', 'edit', 'missing', '--disable');
+    client.setArgv('ai-gateway', 'rules', 'edit', 'missing', '--no-enable');
 
     const exitCodePromise = aiGateway(client);
 
@@ -114,7 +154,7 @@ describe('ai-gateway rules edit', () => {
       'rules',
       'edit',
       'rule_1',
-      '--disable',
+      '--no-enable',
       '--format',
       'json'
     );
@@ -143,12 +183,42 @@ describe('ai-gateway rules edit', () => {
 
     const exitCodePromise = aiGateway(client);
 
-    await expect(client.stderr).toOutput('edited');
+    await expect(client.stderr).toOutput('updated');
     expect(await exitCodePromise).toBe(0);
     expect(getBody()).toMatchObject({
       ruleId: 'rule_1',
       description: 'route legacy model',
       action: { rewriteModel: 'anthropic/claude-opus-4.8' },
+    });
+  });
+
+  describe('subcommand name', () => {
+    function useRuleUpdate() {
+      const team = useTeam();
+      useUser();
+      useUpdateRule();
+      client.config.currentTeam = team.id;
+    }
+
+    it('warns when invoked as the deprecated edit name', async () => {
+      useRuleUpdate();
+      client.setArgv('ai-gateway', 'rules', 'edit', 'rule_1', '--no-enable');
+
+      expect(await aiGateway(client)).toBe(0);
+      await expect(client.stderr).toOutput(
+        '`vercel ai-gateway rules edit` is deprecated. Use `vercel ai-gateway rules update`.'
+      );
+    });
+
+    it('does not warn when invoked as update', async () => {
+      useRuleUpdate();
+      client.setArgv('ai-gateway', 'rules', 'update', 'rule_1', '--no-enable');
+
+      expect(await aiGateway(client)).toBe(0);
+      const output = client.stderr.getFullOutput();
+      expect(output).toContain('Routing rule rule_1 updated');
+      expect(output).not.toContain('edited');
+      expect(output).not.toContain('is deprecated');
     });
   });
 });

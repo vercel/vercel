@@ -18,6 +18,7 @@ import type {
 
 interface ResolveRolloutOptions {
   stageInputs: string[];
+  finalPercentage?: string;
   baseSelector: string | undefined;
   rollFromVariantSelector: string | undefined;
   rollToVariantSelector: string | undefined;
@@ -56,7 +57,7 @@ export function resolveFlagRollout(
     formatFlagBucketingBaseSelector(currentRollout?.base);
   if (!baseSelector) {
     throw new Error(
-      'Missing required flag --by. Use --by <entity.attribute> to choose how users are bucketed.'
+      'Missing required option --by. Use --by <entity.attribute> to choose how users are bucketed.'
     );
   }
   const base = resolveFlagBucketingBase(settings, baseSelector);
@@ -96,6 +97,11 @@ export function resolveFlagRollout(
     );
   }
 
+  const finalPromille =
+    options.finalPercentage === undefined
+      ? currentRollout?.finalPromille
+      : parseFinalPercentage(options.finalPercentage);
+
   const startTimestamp = resolveRolloutStartTimestamp(
     options.start,
     currentRollout?.startTimestamp
@@ -110,12 +116,13 @@ export function resolveFlagRollout(
       rollToVariantId: rollToVariant.id,
       defaultVariantId: defaultVariant.id,
       slots,
+      ...(finalPromille !== undefined && { finalPromille }),
     },
     defaultVariant,
     rollFromVariant,
     rollToVariant,
     baseLabel: `${base.kind}.${base.attribute}`,
-    summary: formatRolloutStages(slots),
+    summary: formatRolloutStages(slots, finalPromille),
     startLabel: formatStartLabel(options.start, currentRollout?.startTimestamp),
   };
 }
@@ -188,7 +195,7 @@ function inferBooleanVariant(
 ): FlagVariant {
   if (flag.kind !== 'boolean') {
     throw new Error(
-      `Missing required flag ${optionName}. Use ${optionName} <VARIANT> for non-boolean rollouts.`
+      `Missing required option ${optionName}. Use ${optionName} <VARIANT> for non-boolean rollouts.`
     );
   }
 
@@ -301,13 +308,32 @@ function resolveRolloutStartTimestamp(
   return absoluteTime;
 }
 
-function formatRolloutStages(slots: FlagRolloutOutcome['slots']): string {
+function parseFinalPercentage(input: string): number {
+  const percentage = Number(input);
+  if (
+    input.trim() === '' ||
+    !Number.isFinite(percentage) ||
+    percentage < 0 ||
+    percentage > 100 ||
+    Math.round(percentage * 1000) / 1000 !== percentage
+  ) {
+    throw new Error(
+      `Invalid final percentage "${input}". Use --final-percentage with a number between 0 and 100 with up to 3 decimal places.`
+    );
+  }
+  return Math.round(percentage * 1000);
+}
+
+function formatRolloutStages(
+  slots: FlagRolloutOutcome['slots'],
+  finalPromille = 100_000
+): string {
   return `${slots
     .map(
       slot =>
         `${formatPromille(slot.promille)} for ${ms(slot.durationMs, { long: true })}`
     )
-    .join(', ')}, then 100% indefinitely`;
+    .join(', ')}, then ${formatPromille(finalPromille)} indefinitely`;
 }
 
 function formatPromille(promille: number): string {

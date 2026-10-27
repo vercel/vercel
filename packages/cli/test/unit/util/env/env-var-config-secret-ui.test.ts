@@ -52,13 +52,13 @@ describe('resolveEnvVarTypeOption', () => {
 
   it('rejects invalid canonical and deprecated values before command prompts', () => {
     expect(resolveEnvVarTypeOption({ type: 'bogus' }).error).toBe(
-      'The `--type` flag must be either `config` or `secret`.'
+      'The `--type` option must be either `config` or `secret`.'
     );
     expect(resolveEnvVarTypeOption({ type: 'bogus' }).errorReason).toBe(
       'invalid_type'
     );
     expect(resolveEnvVarTypeOption({ visibility: 'sensitive' }).error).toBe(
-      'The `--visibility` flag accepts `config` or `secret`. Use `--type secret` or the legacy `--sensitive` flag.'
+      'The `--visibility` option accepts `config` or `secret`. Use `--type secret` or the legacy `--sensitive` option.'
     );
     expect(
       resolveEnvVarTypeOption({ visibility: 'sensitive' }).errorReason
@@ -162,7 +162,7 @@ describe('resolveEnvVarVisibility', () => {
         envTargets: ['production'],
         teamSensitivePolicyOn: false,
       }).error
-    ).toBe('The `--type` flag must be either `config` or `secret`.');
+    ).toBe('The `--type` option must be either `config` or `secret`.');
   });
 
   it('names the deprecated alias in invalid --visibility errors', () => {
@@ -175,7 +175,7 @@ describe('resolveEnvVarVisibility', () => {
         envTargets: ['production'],
         teamSensitivePolicyOn: false,
       }).error
-    ).toBe('The `--visibility` flag must be either `config` or `secret`.');
+    ).toBe('The `--visibility` option must be either `config` or `secret`.');
   });
 
   it('errors when explicit secret visibility is used on public-prefixed keys', () => {

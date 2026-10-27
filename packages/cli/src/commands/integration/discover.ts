@@ -62,7 +62,7 @@ export async function discover(client: Client, args: string[]) {
     parsedArguments = parseArguments(args, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new IntegrationDiscoverTelemetryClient({
@@ -75,7 +75,7 @@ export async function discover(client: Client, args: string[]) {
     output.error(
       'Invalid number of arguments. Usage: `vercel integration discover [query]`'
     );
-    return 1;
+    return 2;
   }
 
   const query = parsedArguments.args[0] ?? '';
@@ -87,7 +87,7 @@ export async function discover(client: Client, args: string[]) {
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 

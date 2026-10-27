@@ -53,7 +53,7 @@ export default async function login(
       'vcr login <engine> --project <name-or-id>'
     );
     printError(err);
-    return 1;
+    return 2;
   }
 
   const fr = validateVcrJsonOutput(client, parsedArgs.flags);
@@ -87,7 +87,7 @@ export default async function login(
           },
         ],
       },
-      1
+      2
     );
     return outputError(client, fr.jsonOutput, 'MISSING_ARGUMENTS', message);
   }

@@ -45,7 +45,7 @@ export default async function push(
   } catch (err) {
     emitVcrArgParseError(client, err, 'vcr push <engine> [name[:tag]]');
     printError(err);
-    return 1;
+    return 2;
   }
 
   // Positionals are `vcr push <engine> [name]`; drop the first two.
@@ -76,7 +76,7 @@ export default async function push(
           },
         ],
       },
-      1
+      2
     );
     return outputError(client, false, 'MISSING_ARGUMENTS', message);
   }
@@ -121,7 +121,7 @@ export default async function push(
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message: parsed.error,
       },
-      1
+      2
     );
     return outputError(client, false, 'INVALID_ARGUMENTS', parsed.error);
   }
@@ -135,7 +135,7 @@ export default async function push(
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message: validationError,
       },
-      1
+      2
     );
     return outputError(client, false, 'INVALID_ARGUMENTS', validationError);
   }

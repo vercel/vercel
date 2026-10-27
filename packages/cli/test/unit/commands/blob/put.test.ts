@@ -246,7 +246,7 @@ describe('blob put', () => {
       }));
 
       const exitCode = await put(client, ['--invalid-flag'], testAuth);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
     });
 
     it('should return 1 when --access flag is missing', async () => {
@@ -255,7 +255,7 @@ describe('blob put', () => {
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
-        "Missing required --access flag. Must be 'public' or 'private'."
+        "Missing required --access option. Must be 'public' or 'private'."
       );
       expect(mockedBlob.put).not.toHaveBeenCalled();
     });
@@ -263,7 +263,7 @@ describe('blob put', () => {
     it('should return 1 when no arguments are provided', async () => {
       const exitCode = await put(client, ['--access', 'public'], testAuth);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       expect(mockedBlob.put).not.toHaveBeenCalled();
       expect(mockedOutput.success).not.toHaveBeenCalled();
     });
@@ -454,6 +454,42 @@ describe('blob put', () => {
         expect.objectContaining({ multipart: true })
       );
     });
+
+    it('should turn multipart off with --no-multipart', async () => {
+      const testFile = getFixturePath('test-file.txt');
+      const exitCode = await put(
+        client,
+        ['--access', 'public', '--no-multipart', testFile],
+        testAuth
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedBlob.put).toHaveBeenCalledWith(
+        'test-file.txt',
+        expect.any(ReadStream),
+        expect.objectContaining({ multipart: false })
+      );
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:pathToFile', value: '[REDACTED]' },
+        { key: 'option:access', value: 'public' },
+        { key: 'flag:no-multipart', value: 'TRUE' },
+      ]);
+    });
+
+    it('should reject --multipart with --no-multipart', async () => {
+      const testFile = getFixturePath('test-file.txt');
+      const exitCode = await put(
+        client,
+        ['--access', 'public', '--multipart', '--no-multipart', testFile],
+        testAuth
+      );
+
+      expect(exitCode).toBe(2);
+      expect(mockedBlob.put).not.toHaveBeenCalled();
+      expect(mockedOutput.error).toHaveBeenCalledWith(
+        "Can't use --multipart with --no-multipart."
+      );
+    });
   });
 
   describe('telemetry tracking', () => {
@@ -623,7 +659,7 @@ describe('blob put', () => {
     it('should fail when reading from stdin without pathname', async () => {
       const exitCode = await put(client, ['--access', 'public'], testAuth);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       expect(mockedOutput.error).toHaveBeenCalledWith(
         'Missing pathname. When reading from stdin, you must specify --pathname. Usage: cat file.txt | vercel blob put --pathname <pathname>'
       );
@@ -664,6 +700,52 @@ describe('blob put', () => {
           ifMatch: undefined,
         }
       );
+    });
+  });
+
+  describe('--force', () => {
+    async function run(...args: string[]) {
+      vi.clearAllMocks();
+      const testFile = getFixturePath('test-file.txt');
+      const exitCode = await put(
+        client,
+        ['--access', 'public', ...args, testFile],
+        testAuth
+      );
+      return {
+        exitCode,
+        options: mockedBlob.put.mock.calls[0]?.[2],
+        warnings: mockedOutput.warning.mock.calls.map(([message]) => message),
+      };
+    }
+
+    it('overwrites an existing blob with --force', async () => {
+      const result = await run('--force');
+
+      expect(result.exitCode).toBe(0);
+      expect(result.options).toMatchObject({ allowOverwrite: true });
+      expect(result.warnings).toEqual([]);
+    });
+
+    it('still accepts --allow-overwrite, with one warning that names --force', async () => {
+      const now = await run('--force');
+      const before = await run('--allow-overwrite');
+
+      expect(before.exitCode).toBe(now.exitCode);
+      expect(before.options).toEqual(now.options);
+      expect(before.warnings).toEqual([
+        '--allow-overwrite is deprecated. Use --force.',
+      ]);
+    });
+
+    it('rejects --force with --allow-overwrite before uploading', async () => {
+      const result = await run('--force', '--allow-overwrite');
+
+      expect(result.exitCode).toBe(2);
+      expect(mockedOutput.error).toHaveBeenCalledWith(
+        "Can't use --force with --allow-overwrite."
+      );
+      expect(result.options).toBeUndefined();
     });
   });
 });

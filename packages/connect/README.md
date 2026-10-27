@@ -2,12 +2,13 @@
 
 SDK for obtaining scoped tokens for third-party services on behalf of apps or users. Authenticates the calling Vercel project via [`@vercel/oidc`](https://www.npmjs.com/package/@vercel/oidc) and exchanges the OIDC token for a Vercel Connect-issued credential.
 
-Seven entrypoints, all ESM:
+Eight entrypoints, all ESM:
 
 - `@vercel/connect` — core token / authorization SDK
-- `@vercel/connect/chat` — adapter helpers for the [Chat SDK](https://chat-sdk.dev) (`chat`): `connectSlackAdapter`, `connectDiscordAdapter`, `connectGitHubAdapter`, `connectLinearAdapter`, `connectNotionAdapter`, `connectTelegramAdapter`, `connectSendblueAdapter` (no Chat SDK dependency — returns structural config)
+- `@vercel/connect/chat` — adapter helpers for the [Chat SDK](https://chat-sdk.dev) (`chat`): `connectSlackAdapter`, `connectDiscordAdapter`, `connectGitHubAdapter`, `connectLinearAdapter`, `connectNotionAdapter`, `connectTelegramAdapter`, `connectSendblueAdapter`, `connectTeamsAdapter` (no Chat SDK dependency — returns structural config)
 - `@vercel/connect/ai-sdk` — [Vercel AI SDK](https://ai-sdk.dev) glue: re-exports `connectAuthProvider` for MCP transports (optional peers: `ai`, `@ai-sdk/mcp`)
-- `@vercel/connect/mcp` — canonical MCP-spec `OAuthClientProvider` for any MCP client (optional peer: `@ai-sdk/mcp`)
+- `@vercel/connect/mcp` — canonical MCP-spec `OAuthClientProvider` for any MCP client (no SDK dependency; returns a self-contained `ConnectOAuthClientProvider` assignable to `@ai-sdk/mcp` and `@modelcontextprotocol/sdk`)
+- `@vercel/connect/tanstack-ai` — [TanStack AI](https://tanstack.com/ai) glue: `connectMCPTransport` builds a `@tanstack/ai-mcp` transport config with a Connect `authProvider` (eager consent on Streamable HTTP, spec 401 flow on SSE), plus `getConsentChallenge` (no TanStack, AI SDK, or MCP SDK dependency)
 - `@vercel/connect/eve` — adapter helpers for [Eve](https://github.com/vercel/eve) connections (optional peer: `eve`)
 - `@vercel/connect/betterauth` — [Better Auth](https://www.better-auth.com/) `genericOAuth` provider (optional peer: `better-auth`)
 - `@vercel/connect/authjs` — [Auth.js](https://authjs.dev/) `OAuth2Config` provider (optional peer: `@auth/core`)
@@ -27,6 +28,21 @@ import { getToken } from '@vercel/connect';
 
 const token = await getToken(process.env.CONNECTOR_LINEAR!, {
   subject: { type: 'user', id: 'user_123' },
+});
+```
+
+For a Passport-authenticated user, you can pass the identity returned by
+`requireIdentity` from `@vercel/passport` as the subject:
+
+```ts
+import { getToken } from '@vercel/connect';
+import { requireIdentity } from '@vercel/passport';
+
+const identity = await requireIdentity();
+
+const token = await getToken('slack/xaa-slack', {
+  subject: identity,
+  scopes: ['users:read'],
 });
 ```
 
@@ -62,6 +78,20 @@ createSlackAdapter({
 `connectGitHubAdapter` (`installationToken`), and `connectLinearAdapter`
 (`accessToken`) follow the same shape. `connectSendblueAdapter` supplies a
 lazy Sendblue `accessToken` and Connect OIDC webhook verifier.
+`connectTeamsAdapter` supplies a lazy Microsoft Teams `appId`, a scope-aware
+`token` callback for Bot Framework and Microsoft Graph, and Connect OIDC webhook
+verification. Use it with a Teams adapter release that supports lazy `appId`
+and `webhookVerifier`:
+
+```ts
+import { createTeamsAdapter } from '@chat-adapter/teams';
+import { connectTeamsAdapter } from '@vercel/connect/chat';
+
+createTeamsAdapter({
+  ...connectTeamsAdapter('microsoft-teams/my-bot'),
+});
+```
+
 `connectNotionAdapter` supplies only the outbound `token`; native Notion
 webhooks still require `NOTION_VERIFICATION_TOKEN`. `connectTelegramAdapter`
 supplies only `botToken`; Telegram retains native webhook verification or
@@ -107,13 +137,69 @@ SDK's `toolApproval` option or `wrapMcpTools` from `@ai-sdk/policy-opa`.
 
 Non-AI-SDK MCP clients (the official MCP TypeScript SDK, Mastra, etc.)
 can import the same `connectAuthProvider` from `@vercel/connect/mcp`.
+TanStack AI has its own subpath, `@vercel/connect/tanstack-ai`, described
+below.
+
+### TanStack AI + MCP
+
+`@tanstack/ai-mcp`'s `createMCPClient` passes `transport.authProvider`
+straight to the official `@modelcontextprotocol/sdk` transports.
+`connectMCPTransport` builds that transport config with a Connect-backed
+`authProvider` and picks the consent mode per transport: on Streamable HTTP
+(`type: 'http'`) a missing grant fails eagerly inside `createMCPClient`, at
+the route boundary, instead of mid-run inside a tool call where TanStack
+would feed the error back to the model as text; on SSE it keeps the MCP-spec
+401 flow, because the SSE EventSource would turn an eager throw into a
+reconnect loop. TanStack wraps connect failures in `MCPConnectionError`;
+`getConsentChallenge` looks through the `cause` chain for you. The adapter
+also supplies a fixed discovery state so the official SDK never fetches OAuth
+metadata from URLs the MCP server names in `WWW-Authenticate`, and the
+transport refuses HTTP redirects by default (`redirect: 'error'`, as in
+`@ai-sdk/mcp`).
+
+```ts
+import { chat, toServerSentEventsResponse } from '@tanstack/ai';
+import { createMCPClient } from '@tanstack/ai-mcp';
+import {
+  connectMCPTransport,
+  getConsentChallenge,
+} from '@vercel/connect/tanstack-ai';
+
+export async function POST(request: Request) {
+  try {
+    const linear = await createMCPClient({
+      transport: connectMCPTransport(
+        { type: 'http', url: 'https://mcp.linear.app/mcp' },
+        'oauth/linear',
+        { subject: { type: 'user', id: userId } },
+        { redirectUrl: 'https://app.example.com/integrations' }
+      ),
+    });
+    const stream = chat({ adapter, messages, mcp: { clients: [linear] } });
+    return toServerSentEventsResponse(stream);
+  } catch (err) {
+    const challenge = getConsentChallenge(err);
+    if (challenge) return Response.redirect(challenge.url);
+    throw err;
+  }
+}
+```
+
+`createMCPClients` pools take the same per-entry transport config, so one
+`connectMCPTransport` per connector drops in. `connectAuthProvider` is also
+re-exported for hand-built transports; only pass `consent: 'eager'` with
+`type: 'http'`. Tool-call approval remains independent of Connect: use
+TanStack's `needsApproval` on tool definitions. See the
+[TanStack AI integration guide](https://github.com/vercel/vercel/blob/main/packages/connect/docs/tanstack-ai-mcp-integration.md)
+for the eager-consent rationale, the SSE caveat, pool caveats, and the
+`redirectUrl` fix for official-SDK transports.
 
 ### Eve
 
-Use `connectSendblueCredentials` with Eve's native Sendblue channel. It
-resolves the app-scoped bearer token and managed sending line together, and
-includes Vercel OIDC webhook verification. When the connector has multiple
-lines, pass `fromNumber` to choose one.
+Use channel-specific credential helpers with Eve's native channels.
+`connectSendblueCredentials` resolves the app-scoped bearer token and managed
+sending line together, and includes Vercel OIDC webhook verification. When the
+connector has multiple lines, pass `fromNumber` to choose one.
 
 ```ts
 import { connectSendblueCredentials } from '@vercel/connect/eve';
@@ -121,6 +207,20 @@ import { sendblueChannel } from 'eve/channels/sendblue';
 
 export default sendblueChannel({
   credentials: connectSendblueCredentials('sendblue/my-agent'),
+});
+```
+
+For managed Microsoft Teams bots, `connectTeamsCredentials` resolves the
+public bot application id and short-lived Bot Framework token without exposing
+the managed app's federated credential. It also verifies Connect-forwarded
+activities with Vercel OIDC.
+
+```ts
+import { connectTeamsCredentials } from '@vercel/connect/eve';
+import { teamsChannel } from 'eve/channels/teams';
+
+export default teamsChannel({
+  credentials: connectTeamsCredentials('microsoft-teams/my-agent'),
 });
 ```
 
@@ -158,3 +258,26 @@ const providers = [connect({ connector: 'linear' })];
 ```
 
 See the source under `src/` for the full API (additional helpers like `revokeToken`, `getTokenResponse`, `startAuthorization`, `experimental_startInstallation`, typed error classes, and per-adapter options).
+
+Experimental [MCP event subscription management](./docs/mcp-events.md) is available through `@vercel/connect/mcp`.
+
+### Experimental eve event integration
+
+`connect()` also exposes a runtime-only `vercelConnect.experimental_events`
+bridge for eve's event-enabled connections. eve can create a managed AI SDK
+adapter using the current authenticated principal and its framework-owned
+receiver path. It reuses the provider's `createSubject` mapping and
+`tokenParams`, including scopes, installation, audience, and resources. Creating
+the provider or adapter performs no network requests or subscriptions.
+
+The bridge also verifies Connect deliveries with the existing MCP event verifier.
+eve must then authorize each delivery against its saved session/subscription
+binding before invoking an authored callback. The bridge does not implement
+eve's inbox, session dispatch, or persistence. Those require the matching eve
+integration release.
+
+Event management uses deployment OIDC and the default Connect region, independently
+of the provider's `connectOptions.vercelToken` and `connectOptions.region`
+credential options. Event request failures use the provider's usual error
+translation. Compiler metadata must omit the live bridge and continue serializing
+only `connector` and `requirement`.

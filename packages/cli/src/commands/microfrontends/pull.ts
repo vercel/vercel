@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { join } from 'node:path';
 import output from '../../output-manager';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import type Client from '../../util/client';
 import { ensureLink } from '../../util/link/ensure-link';
 import { emoji, prependEmoji } from '../../util/emoji';
@@ -12,6 +12,11 @@ import { pullSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
+import {
+  getRenamedOption,
+  reportRenamedOptionError,
+} from '../../util/renamed-option';
+import { MicrofrontendsPullTelemetryClient } from '../../util/telemetry/commands/microfrontends/pull';
 
 interface MicrofrontendsConfig {
   $schema: string;
@@ -33,7 +38,21 @@ export default async function pull(client: Client): Promise<number> {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
+  }
+
+  const telemetry = new MicrofrontendsPullTelemetryClient({
+    opts: { store: client.telemetryEventStore },
+  });
+  telemetry.trackCliOptionDeployment(parsedArgs.flags['--deployment']);
+  telemetry.trackCliOptionDpl(parsedArgs.flags['--dpl']);
+  const deployment = getRenamedOption(
+    parsedArgs.flags,
+    '--deployment',
+    '--dpl'
+  );
+  if ('error' in deployment) {
+    return reportRenamedOptionError(client, deployment.error);
   }
 
   const autoConfirm = !!parsedArgs.flags['--yes'];
@@ -55,19 +74,19 @@ export default async function pull(client: Client): Promise<number> {
 
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
   output.spinner(
     `Fetching microfrontends configuration in ${chalk.bold(contextName)}`
   );
 
   let rawConfig: MicrofrontendsConfig;
-  const dpl = parsedArgs.flags['--dpl'];
+  const deploymentId = deployment.value;
 
   try {
-    if (dpl) {
+    if (deploymentId) {
       const { config } = await client.fetch<{
         config: MicrofrontendsConfig;
-      }>(`/v1/microfrontends/${dpl}/config`, {
+      }>(`/v1/microfrontends/${deploymentId}/config`, {
         method: 'GET',
       });
       rawConfig = config;

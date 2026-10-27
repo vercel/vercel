@@ -13,13 +13,13 @@ async function loadWebSocketServer() {
     return ws.WebSocketServer;
   } catch {
     throw new Error(
-      'The "ws" package is required for experimental_upgradeWebSocket(). ' +
+      'The "ws" package is required for upgradeWebSocket(). ' +
         'Install it with: npm install ws'
     );
   }
 }
 
-export async function experimental_upgradeWebSocket(
+export async function upgradeWebSocket(
   handler: (ws: WebSocket) => void | Promise<void>,
   options: UpgradeWebSocketOptions = {}
 ): Promise<Response> {
@@ -27,7 +27,7 @@ export async function experimental_upgradeWebSocket(
 
   if (typeof ctx.upgradeWebSocket !== 'function') {
     throw new Error(
-      'experimental_upgradeWebSocket is not available in the current runtime environment. ' +
+      'upgradeWebSocket is not available in the current runtime environment. ' +
         'This feature requires a Vercel runtime that supports WebSocket upgrades.'
     );
   }
@@ -93,3 +93,8 @@ export async function experimental_upgradeWebSocket(
   // this lies to these frameworks in order to suppress errors.
   return new Response(null, { status: 204 });
 }
+
+/**
+ * @deprecated Use upgradeWebSocket instead.
+ */
+export const experimental_upgradeWebSocket = upgradeWebSocket;

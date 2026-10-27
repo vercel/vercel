@@ -14,8 +14,11 @@ import {
 } from '@vercel/build-utils';
 
 import output from '../../output-manager';
-import { getGlobalFlagsFromArgs } from '../../util/arg-common';
-import { outputAgentError } from '../../util/agent-output';
+import {
+  writeAgentError,
+  buildCommandWithGlobalFlags as buildSuggestedCommand,
+} from '../../util/agent-output';
+import { quoteArg } from '../../util/flags/quote-arg';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import {
   formatResolvedBuilders,
@@ -32,18 +35,28 @@ import {
 } from '../../util/build/builder-process';
 import { scrubArgv } from '../../util/build/scrub-argv';
 import {
+  build as buildDiagnostics,
+  toDiagnostic,
+} from '../../util/build/diagnostics';
+import { createErrorReporter } from '../../util/diagnostics/report-error';
+import {
+  cliErrorFromUnknown,
+  recordCliError,
+} from '../../util/telemetry/cli-error';
+import {
   OUTPUT_DIR,
   writeBuildResult,
 } from '../../builders/write-build-result';
 import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
-import { printError, toEnumerableError } from '../../util/error';
+import { toEnumerableError } from '../../util/error';
 import { CantParseJSONFile } from '../../util/errors-ts';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import cmd from '../../util/output/cmd';
 import stamp from '../../util/output/stamp';
-import parseTarget from '../../util/parse-target';
+import parseTarget, {
+  applyDeprecatedTargetFlag,
+} from '../../util/parse-target';
 import cliPkg from '../../util/pkg';
 import * as cli from '../../util/pkg-name';
 import {
@@ -67,10 +80,12 @@ import {
 import { help } from '../help';
 import { ensureLink } from '../../util/link/ensure-link';
 import { pullCommandLogic } from '../pull';
-import { pullEnvRecords } from '../../util/env/get-env-records';
+import { fetchDeploymentBuildEnv } from '../../util/env/fetch-deployment-build-env';
 import { buildCommand } from './command';
+import { getRenamedOption } from '../../util/renamed-option';
 import { resolvePerDirectoryLinkRoot } from '../../util/build/repo-root';
 export type { BuildsManifest } from '@vercel-internals/cli-builder-integration';
+export { preloadVltBuilderImports } from '../../builders/import-builders';
 
 /**
  * Pick how a single builder is invoked. Eligible builds run in a forked worker so their output
@@ -91,16 +106,15 @@ function createBuildRunner({
     : undefined;
 }
 
-/** Build a plain suggested command with global flags (e.g. --cwd, --non-interactive) appended. */
+/** Keep the selected project and global context in build's suggested commands. */
 function buildCommandWithGlobalFlags(
   baseSubcommand: string,
   argv: string[]
 ): string {
-  const globalFlags = getGlobalFlagsFromArgs(argv.slice(2));
-  const full = globalFlags.length
-    ? `${baseSubcommand} ${globalFlags.join(' ')}`
-    : baseSubcommand;
-  return cli.getCommandNamePlain(full);
+  return buildSuggestedCommand(argv, baseSubcommand, undefined, {
+    globalFlags: 'all',
+    preserveProject: true,
+  });
 }
 
 export default async function main(client: Client): Promise<number> {
@@ -110,6 +124,19 @@ export default async function main(client: Client): Promise<number> {
     },
   });
 
+  // Agent runs send their error code once at exit through the run telemetry,
+  // so only human runs record it here
+  const trackErrorCode = (code: string | undefined) => {
+    if (!client.isAgent) telemetryClient.trackError(code);
+  };
+  const report = createErrorReporter(trackErrorCode, toDiagnostic);
+  const reportError = (err: unknown) => {
+    const diagnostic = report(err);
+    // The diagnostic is the command's final classification, so it replaces a
+    // generic reason recorded earlier (e.g. `build_failed` in the JSON payload)
+    recordCliError(cliErrorFromUnknown(diagnostic), { override: true });
+    return diagnostic;
+  };
   // Create build trace span as a child of the CLI-wide root span
   const rootSpan = client.rootSpan?.child('vc') ?? new Span({ name: 'vc' });
 
@@ -118,16 +145,7 @@ export default async function main(client: Client): Promise<number> {
 
   // Ensure that `vc build` is not being invoked recursively
   if (process.env.__VERCEL_BUILD_RUNNING) {
-    output.error(
-      `${cmd(
-        `${cli.packageName} build`
-      )} must not recursively invoke itself. Check the Build Command in the Project Settings or the ${cmd(
-        'build'
-      )} script in ${cmd('package.json')}`
-    );
-    output.error(
-      `Learn More: https://vercel.link/recursive-invocation-of-commands`
-    );
+    reportError(buildDiagnostics.BUILD_RECURSIVE_INVOCATION());
     return 1;
   } else {
     process.env.__VERCEL_BUILD_RUNNING = '1';
@@ -142,26 +160,55 @@ export default async function main(client: Client): Promise<number> {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
     telemetryClient.trackCliOptionOutput(parsedArgs.flags['--output']);
     telemetryClient.trackCliOptionTarget(parsedArgs.flags['--target']);
+    telemetryClient.trackCliOptionEnvironment(
+      parsedArgs.flags['--environment']
+    );
     telemetryClient.trackCliFlagProd(parsedArgs.flags['--prod']);
     telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
     telemetryClient.trackCliFlagStandalone(parsedArgs.flags['--standalone']);
+    telemetryClient.trackCliOptionDeployment(parsedArgs.flags['--deployment']);
     telemetryClient.trackCliOptionId(parsedArgs.flags['--id']);
     telemetryClient.trackCliOptionProject(parsedArgs.flags['--project']);
   } catch (error) {
-    printError(error);
-    return 1;
+    reportError(error);
+    return 2;
   }
 
   if (parsedArgs.flags['--help']) {
     telemetryClient.trackCliFlagHelp('build');
-    output.print(help(buildCommand, { columns: client.stderr.columns }));
+    output.print(
+      help(buildCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
+  }
+
+  if (!applyDeprecatedTargetFlag(client, parsedArgs.flags)) {
+    return 2;
+  }
+
+  const deployment = getRenamedOption(parsedArgs.flags, '--deployment', '--id');
+  if ('error' in deployment) {
+    const reason = AGENT_REASON.INVALID_ARGUMENTS;
+    if (client.nonInteractive) {
+      trackErrorCode(reason);
+      writeAgentError(client, {
+        status: AGENT_STATUS.ERROR,
+        reason,
+        message: deployment.error,
+      });
+    } else {
+      reportError(Object.assign(new Error(deployment.error), { code: reason }));
+    }
     return 2;
   }
 
   // Build `target` influences which environment variables will be used
   const target =
     parseTarget({
-      flagName: 'target',
+      flagName: 'environment',
       flags: parsedArgs.flags,
     }) || 'preview';
 
@@ -172,7 +219,7 @@ export default async function main(client: Client): Promise<number> {
     process.env.VERCEL_EXPERIMENTAL_STANDALONE_BUILD === '1';
   if (hasDeprecatedEnvVar) {
     output.warn(
-      'The VERCEL_EXPERIMENTAL_STANDALONE_BUILD environment variable is deprecated. Please use the --standalone flag instead.'
+      'The VERCEL_EXPERIMENTAL_STANDALONE_BUILD environment variable is deprecated. Please use the --standalone option instead.'
     );
   }
 
@@ -184,7 +231,7 @@ export default async function main(client: Client): Promise<number> {
   try {
     await validateNpmrc(cwd);
   } catch (err) {
-    output.prettyError(err);
+    reportError(err);
     return 1;
   }
 
@@ -248,39 +295,36 @@ export default async function main(client: Client): Promise<number> {
     let confirmed = yes;
     if (!confirmed) {
       if (client.nonInteractive) {
-        outputAgentError(
-          client,
-          {
-            status: AGENT_STATUS.ERROR,
-            reason: AGENT_REASON.PROJECT_SETTINGS_REQUIRED,
-            message:
-              'No project settings found locally. Run pull to retrieve them, or re-run with --yes to pull automatically.',
-            next: [
-              {
-                command: buildCommandWithGlobalFlags(
-                  `pull --yes --environment ${target}`,
-                  client.argv
-                ),
-                when: 'retrieve project settings',
-              },
-              {
-                command: buildCommandWithGlobalFlags(
-                  'build --yes',
-                  client.argv
-                ),
-                when: 're-run build after pull',
-              },
-            ],
-          },
-          1
-        );
+        trackErrorCode('BUILD_PROJECT_SETTINGS_REQUIRED');
+        writeAgentError(client, {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.PROJECT_SETTINGS_REQUIRED,
+          message:
+            'No project settings found locally. Run pull to retrieve them, or re-run with --yes to pull automatically.',
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                `pull --yes --environment ${quoteArg(target)}`,
+                client.argv
+              ),
+              when: 'retrieve project settings',
+            },
+            {
+              command: buildCommandWithGlobalFlags(
+                `build --yes --environment ${quoteArg(target)}`,
+                client.argv
+              ),
+              when: 're-run build after pull',
+            },
+          ],
+        });
         return 1;
       }
       if (!isTTY) {
-        output.print(
-          `No Project Settings found locally. Run ${cli.getCommandName(
-            'pull --yes'
-          )} to retrieve them. In non-interactive mode, set VERCEL_TOKEN for authentication.`
+        reportError(
+          buildDiagnostics.BUILD_PROJECT_SETTINGS_REQUIRED({
+            command: cli.getCommandName('pull --yes'),
+          })
         );
         return 1;
       }
@@ -389,9 +433,9 @@ export default async function main(client: Client): Promise<number> {
     cliVersion: cliPkg.version,
   };
 
-  const deploymentId = parsedArgs.flags['--id'];
+  const deploymentId = deployment.value;
 
-  // When --id is provided, system env vars are fetched from the deployment,
+  // When --deployment is provided, system env vars are fetched from the deployment,
   // so the warning about missing system env vars does not apply.
   if (
     !process.env.VERCEL_BUILD_IMAGE &&
@@ -414,7 +458,7 @@ export default async function main(client: Client): Promise<number> {
           client.config.currentTeam = link.orgId;
         }
 
-        // When --id is provided, fetch env vars from the deployment
+        // When --deployment is provided, fetch env vars from the deployment
         // instead of loading from local .env files.
         output.debug(
           `Fetching environment variables for deployment ${deploymentId}`
@@ -559,12 +603,15 @@ export default async function main(client: Client): Promise<number> {
             message: err?.message ?? String(err),
             next: [
               {
-                command: buildCommandWithGlobalFlags('pull --yes', client.argv),
+                command: buildCommandWithGlobalFlags(
+                  `pull --yes --environment ${quoteArg(target)}`,
+                  client.argv
+                ),
                 when: 'Ensure project settings are present',
               },
               {
                 command: buildCommandWithGlobalFlags(
-                  'build --yes',
+                  `build --yes --environment ${quoteArg(target)}`,
                   client.argv
                 ),
                 when: 're-run build',
@@ -576,7 +623,7 @@ export default async function main(client: Client): Promise<number> {
         )}\n`
       );
     }
-    output.prettyError(err);
+    reportError(err);
 
     // Write error to `builds.json` file
     buildsJson.error = toEnumerableError(err);
@@ -835,50 +882,4 @@ function getDirectorySizeInMB(dir: string): {
     // Directory doesn't exist or can't be read
   }
   return { size, files: filesSizeMap };
-}
-
-const INTEGRATIONS_POLL_INTERVAL_MS = 5000;
-const INTEGRATIONS_POLL_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes, matches API timeout
-
-/**
- * Fetches build environment variables for a deployment from the API.
- * If integrations are still provisioning, polls until they complete.
- */
-async function fetchDeploymentBuildEnv(
-  client: Client,
-  deploymentId: string
-): Promise<{ env: Record<string, string>; buildEnv: Record<string, string> }> {
-  const deadline = Date.now() + INTEGRATIONS_POLL_TIMEOUT_MS;
-  let isPolling = false;
-
-  while (Date.now() < deadline) {
-    try {
-      return await pullEnvRecords(client, deploymentId, 'vercel-cli:pull');
-    } catch (err: unknown) {
-      // If the API returns integrationsStatus: 'pending', poll until ready
-      if (
-        err &&
-        typeof err === 'object' &&
-        'integrationsStatus' in err &&
-        (err as { integrationsStatus?: string }).integrationsStatus ===
-          'pending'
-      ) {
-        if (!isPolling) {
-          output.spinner(
-            'Waiting for deployment integrations to finish provisioning...'
-          );
-          isPolling = true;
-        }
-        await new Promise(resolve =>
-          setTimeout(resolve, INTEGRATIONS_POLL_INTERVAL_MS)
-        );
-        continue;
-      }
-      throw err;
-    }
-  }
-
-  throw new Error(
-    'Timed out waiting for deployment integrations to complete provisioning.'
-  );
 }

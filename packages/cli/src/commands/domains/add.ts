@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import * as ERRORS from '../../util/errors-ts';
 import { isAPIError } from '../../util/errors-ts';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import addDomainToTeam from '../../util/domains/add-domain';
@@ -23,6 +23,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { errorToString } from '@vercel/error-utils';
+import { quoteArg } from '../../util/flags/quote-arg';
 import {
   openUrlInBrowserCommand,
   outputActionRequired,
@@ -74,7 +75,7 @@ function nextCommandsForDomainsAddFailure(
   if (looksLikeOwnershipOrPurchaseIssue || aliasConflict) {
     next.push({
       command: withGlobalFlags(client, `domains buy ${domainName}`),
-      when: 'user must run interactively in a terminal—agents must not purchase; purchase also available in dashboard',
+      when: 'to buy the domain; it returns the price and needed details, and charges nothing until a person approves the price',
     });
     next.push({
       command: withGlobalFlags(client, 'domains transfer-in'),
@@ -184,11 +185,11 @@ export default async function add(client: Client, argv: string[]) {
           reason: 'invalid_arguments',
           message: error instanceof Error ? error.message : String(error),
         },
-        1
+        2
       );
     }
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
 
@@ -196,7 +197,9 @@ export default async function add(client: Client, argv: string[]) {
   telemetry.trackCliFlagForce(force);
   // Scope the mutation to the linked project's team (like `domains ls`) so a
   // stale ambient team can't be targeted.
-  const { contextName } = await getScope(client, { resolveLocalScope: true });
+  const contextName = await getContextName(client, {
+    resolveLocalScope: true,
+  });
 
   if (args.length < 1 || args.length > 2) {
     if (client.nonInteractive) {
@@ -215,7 +218,7 @@ export default async function add(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
     }
     output.error(
@@ -223,7 +226,7 @@ export default async function add(client: Client, argv: string[]) {
         'domains add <domain> [project]'
       )} expects one or two arguments.`
     );
-    return 1;
+    return 2;
   }
 
   const domainName = String(args[0]);
@@ -292,7 +295,7 @@ export default async function add(client: Client, argv: string[]) {
           msg.includes('not authorized to use')
         ) {
           message +=
-            " domains add is for domains you already own or control via DNS. If you have not purchased the domain yet, the user must run 'domains buy' interactively (agents must not purchase) or buy in the dashboard; use 'domains transfer-in' to move an existing registration to Vercel.";
+            " domains add is for domains you already own or control via DNS. If you have not purchased the domain yet, run 'domains buy' to get its price, and buy it only after the user approves that price; use 'domains transfer-in' to move an existing registration to Vercel.";
         }
         outputAgentError(
           client,
@@ -370,6 +373,7 @@ export default async function add(client: Client, argv: string[]) {
 
   const addStamp = stamp();
 
+  let removedPreviousAssignment = false;
   let aliasTarget = await addDomainToProject(client, projectName, domainName);
 
   if (aliasTarget instanceof Error) {
@@ -464,16 +468,27 @@ export default async function add(client: Client, argv: string[]) {
             return 1;
           }
 
-          aliasTarget = await addDomainToProject(
-            client,
-            projectName,
-            domainName
-          );
+          removedPreviousAssignment = true;
+          try {
+            aliasTarget = await addDomainToProject(
+              client,
+              projectName,
+              domainName
+            );
+          } catch (error) {
+            // The removal completed even if the destination request has an
+            // uncertain outcome, so keep that context in the command's error.
+            aliasTarget =
+              error instanceof Error ? error : new Error(errorToString(error));
+          }
         }
       }
     }
 
     if (aliasTarget instanceof Error) {
+      const partialReassignmentHint = removedPreviousAssignment
+        ? 'Removed the previous project assignment, but could not confirm the destination assignment. Inspect the current assignment before retrying.'
+        : undefined;
       if (client.nonInteractive) {
         const status = isAPIError(aliasTarget) ? aliasTarget.status : undefined;
         const apiErr = aliasTarget as Error & { code?: string };
@@ -500,7 +515,7 @@ export default async function add(client: Client, argv: string[]) {
           msg.includes('not authorized to use')
         ) {
           message +=
-            " domains add is for domains you already own or control via DNS. If you have not purchased the domain yet, the user must run 'domains buy' interactively (agents must not purchase) or buy in the dashboard; use 'domains transfer-in' to move an existing registration to Vercel.";
+            " domains add is for domains you already own or control via DNS. If you have not purchased the domain yet, run 'domains buy' to get its price, and buy it only after the user approves that price; use 'domains transfer-in' to move an existing registration to Vercel.";
         }
         outputAgentError(
           client,
@@ -508,17 +523,31 @@ export default async function add(client: Client, argv: string[]) {
             status: 'error',
             reason,
             message,
-            next: nextCommandsForDomainsAddFailure(
-              client,
-              domainName,
-              projectName,
-              aliasTarget
-            ),
+            ...(partialReassignmentHint
+              ? { hint: partialReassignmentHint }
+              : {}),
+            next: removedPreviousAssignment
+              ? [
+                  {
+                    command: withGlobalFlags(
+                      client,
+                      `domains inspect ${quoteArg(domainName)}`
+                    ),
+                    when: 'inspect the current assignment before retrying',
+                  },
+                ]
+              : nextCommandsForDomainsAddFailure(
+                  client,
+                  domainName,
+                  projectName,
+                  aliasTarget
+                ),
           },
           1
         );
       }
       output.prettyError(aliasTarget);
+      if (partialReassignmentHint) output.log(partialReassignmentHint);
       return 1;
     }
   }

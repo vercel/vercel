@@ -21,7 +21,7 @@ export default async function addon(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -64,7 +64,7 @@ export default async function addon(client: Client, argv: string[]) {
     const formatResult = validateJsonOutput(parsedArgs.flags);
     if (!formatResult.valid) {
       output.error(formatResult.error);
-      return 1;
+      return 2;
     }
 
     return purchaseObservabilityPlus(client, {
@@ -78,7 +78,7 @@ export default async function addon(client: Client, argv: string[]) {
       `Missing addon name. Supported addons: ${SUPPORTED_ADDON_NAMES.join(', ')}`
     );
     output.log(`Run ${getCommandName('buy addon --help')} for usage.`);
-    return 1;
+    return 2;
   }
 
   output.error(

@@ -17,7 +17,7 @@ export default async function override(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -42,7 +42,7 @@ async function handleEncrypt(
       'Please provide at least one flag override as flag=value.\n' +
         'Example: vercel flags override my-flag=true'
     );
-    return 1;
+    return 2;
   }
 
   const overrides: Record<string, unknown> = {};
@@ -88,7 +88,7 @@ async function handleDecrypt(client: Client, token: string): Promise<number> {
     const overrides = await decryptOverrides(token, secret);
     if (overrides === undefined) {
       output.error('Invalid token: not a valid flag overrides token.');
-      return 1;
+      return 2;
     }
     client.stdout.write(JSON.stringify(overrides, null, 2) + '\n');
     return 0;

@@ -37,7 +37,7 @@ export default async function main(
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const {
@@ -52,16 +52,18 @@ export default async function main(
     telemetry.trackCliFlagHelp('firewall', 'persistent-actions');
     output.print(
       help(persistentActionsSubcommand, {
+        stream: client.stderr,
         parent: firewallCommand,
         columns: client.stderr.columns,
       })
     );
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: firewallCommand,
         columns: client.stderr.columns,
       })
@@ -76,7 +78,7 @@ export default async function main(
           `persistent-actions:${subcommandOriginal}`
         );
         printHelp(persistentActionsListSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandPersistentActionsList(subcommandOriginal);
       return list(client, subArgs);
@@ -87,7 +89,7 @@ export default async function main(
           `persistent-actions:${subcommandOriginal}`
         );
         printHelp(persistentActionsInspectSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandPersistentActionsInspect(subcommandOriginal);
       return inspect(client, subArgs);
@@ -95,6 +97,7 @@ export default async function main(
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(
         help(persistentActionsSubcommand, {
+          stream: client.stderr,
           parent: firewallCommand,
           columns: client.stderr.columns,
         })

@@ -15,6 +15,7 @@ import {
   type PersistedCliSessionOptions,
 } from './session';
 import { isNativeBinaryInstall } from '../native-install';
+import type { TraceEvent } from '@vercel/build-utils';
 
 const LogLabel = `['telemetry']:`;
 const MAX_ERROR_SERVER_MESSAGE_LENGTH = 500;
@@ -28,11 +29,26 @@ interface Options {
   isDebug?: boolean;
 }
 
+/** Which package `dist/vc.js` ran, and why it fell back to its own JS CLI. */
+export type Launch =
+  | {
+      runtime: 'native';
+      /** Set when the binary came from the launcher's download cache. */
+      source?: string;
+    }
+  | { runtime: 'cli-support' }
+  | {
+      runtime: 'dist';
+      target: string;
+      reason: string;
+    };
+
 interface Event {
   teamId?: string;
   userId?: string;
   projectId?: string;
   sessionId?: string;
+  invocationId?: string;
   eventTime: number;
   id: string;
   key: string;
@@ -116,6 +132,13 @@ export class TelemetryClient {
     });
   }
 
+  /** Records that an option was passed, never its value. */
+  protected trackRedactedCliOption(option: string, value: string | undefined) {
+    if (value) {
+      this.trackCliOption({ option, value: this.redactedValue });
+    }
+  }
+
   protected trackTargetEnvironment(
     targetEnvironment: 'production' | 'preview'
   ) {
@@ -136,6 +159,14 @@ export class TelemetryClient {
     this.track({
       key: `flag:${flag}`,
       value: 'TRUE',
+    });
+  }
+
+  /** Records a hidden short flag that was used, like `-d`, never its value. */
+  protected trackDeprecatedShorthand(shorthand: string) {
+    this.track({
+      key: 'deprecated_shorthand',
+      value: shorthand,
     });
   }
 
@@ -174,6 +205,25 @@ export class TelemetryClient {
       key: 'arch',
       value: os.arch(),
     });
+  }
+
+  protected trackLibc(libc: string | undefined) {
+    if (libc) {
+      this.track({
+        key: 'libc',
+        value: libc,
+      });
+    }
+  }
+
+  protected trackLaunch(launch: Launch) {
+    this.track({ key: 'launcher', value: launch.runtime });
+    if (launch.runtime === 'native' && launch.source) {
+      this.track({ key: 'launcher_source', value: launch.source });
+    }
+    if (launch.runtime !== 'dist') return;
+    this.track({ key: 'launcher_target', value: launch.target });
+    this.track({ key: 'launcher_fallback', value: launch.reason });
   }
 
   protected trackCI(ciVendorName: string | null) {
@@ -363,6 +413,7 @@ export class TelemetryClient {
 }
 
 export class TelemetryEventStore {
+  private commandTrace?: { event: TraceEvent; buildLabel?: string };
   private events: Event[];
   private isDebug: boolean;
   private sessionId: string;
@@ -372,6 +423,7 @@ export class TelemetryEventStore {
   private userId = 'NO_USER_ID';
   private projectId = 'NO_PROJECT_ID';
   private config: GlobalConfig['telemetry'];
+  private globalConfigDir?: string;
   private cliDevice?: PersistedCliDevice;
   private cliSession?: PersistedCliSession;
   private cliDeviceOptions?: PersistedCliDeviceOptions;
@@ -380,12 +432,14 @@ export class TelemetryEventStore {
   constructor(opts?: {
     isDebug?: boolean;
     config: GlobalConfig['telemetry'];
+    globalConfigDir?: string;
     cliDevice?: PersistedCliDeviceOptions;
     cliSession?: PersistedCliSessionOptions;
   }) {
     this.isDebug = opts?.isDebug || false;
     this.events = [];
     this.config = opts?.config;
+    this.globalConfigDir = opts?.globalConfigDir;
     this.cliDeviceOptions = opts?.cliDevice;
     this.cliSessionOptions = opts?.cliSession;
     this.invocationId = randomUUID();
@@ -406,10 +460,15 @@ export class TelemetryEventStore {
 
   add(event: Event) {
     event.sessionId = this.sessionId;
+    event.invocationId = this.invocationId;
     event.teamId = this.teamId;
     event.userId = this.userId;
     event.projectId = this.projectId;
     this.events.push(event);
+  }
+
+  updateConfig(config: GlobalConfig['telemetry']) {
+    this.config = config;
   }
 
   updateTeamId(teamId?: string) {
@@ -446,6 +505,10 @@ export class TelemetryEventStore {
     return this.deviceId;
   }
 
+  get currentLibc() {
+    return this.cliDevice?.libc;
+  }
+
   get currentSessionId() {
     return this.sessionId;
   }
@@ -466,7 +529,16 @@ export class TelemetryEventStore {
     return this.config?.enabled ?? true;
   }
 
-  async save() {
+  setCommandTrace(event: TraceEvent, buildLabel?: string) {
+    this.commandTrace = { event, buildLabel };
+  }
+
+  /**
+   * Sends the events through a `telemetry flush` subprocess. `detach` starts it
+   * detached even with `--debug`, for callers that exit right after, since the
+   * debug subprocess is attached and would die with this process.
+   */
+  async save({ detach = false }: { detach?: boolean } = {}) {
     if (this.cliSession && this.cliSessionOptions) {
       this.cliSession = touchPersistedCliSession(
         this.cliSessionOptions,
@@ -484,24 +556,31 @@ export class TelemetryEventStore {
         event.projectId = this.projectId;
         output.log(JSON.stringify(event));
       }
+      if (this.commandTrace) {
+        // Labeled so tools that parse the `> {` event lines skip it.
+        output.log(
+          `${LogLabel} Command trace ${JSON.stringify(this.commandTrace)}`
+        );
+      }
 
       return;
     }
 
     if (this.enabled) {
-      const sessionId = this.events[0].sessionId;
+      const sessionId = this.events[0]?.sessionId;
       if (!sessionId) {
         output.debug('Unable to send metrics: no session ID');
         return;
       }
       const events = this.events.map(event => {
-        delete event.sessionId;
-        delete event.teamId;
-        delete event.userId;
-        delete event.projectId;
-        const { eventTime, ...rest } = event;
+        const { eventTime, invocationId, ...rest } = event;
+        delete rest.sessionId;
+        delete rest.teamId;
+        delete rest.userId;
+        delete rest.projectId;
         return {
           event_time: eventTime,
+          invocation_id: invocationId,
           team_id: this.teamId,
           user_id: this.userId,
           project_id: this.projectId,
@@ -509,26 +588,27 @@ export class TelemetryEventStore {
         };
       });
       const payload = {
+        // The flush subprocess has its own store; retain this command's identity.
+        invocationId: this.invocationId,
         headers: {
           'Client-id': 'vercel-cli',
           'x-vercel-cli-topic-id': 'generic',
           'x-vercel-cli-session-id': sessionId,
         },
         body: events,
+        ...(this.commandTrace ? { commandTrace: this.commandTrace } : {}),
       };
-      await this.sendToSubprocess(payload, output.debugEnabled);
+      await this.sendToSubprocess(payload, output.debugEnabled && !detach);
     }
   }
 
-  /**
-   * Send the telemetry events to a subprocess, this invokes the `telemetry flush` command
-   * and passes a stringified payload to the subprocess, there's a risk that if the event payload
-   * increases in size, it may exceed the maximum buffer size for the subprocess, in which case the
-   * child process will error and not send anything.
-   * FIXME: handle max buffer size
-   */
+  /** Hand telemetry to the existing worker without exposing its payload in argv. */
   async sendToSubprocess(payload: object, outputDebugEnabled: boolean) {
-    const flushArgs = ['telemetry', 'flush', JSON.stringify(payload)];
+    const serialized = JSON.stringify(payload);
+    const flushArgs = ['telemetry', 'flush'];
+    if (this.globalConfigDir) {
+      flushArgs.push('--global-config', this.globalConfigDir);
+    }
     let nodeBinaryPath: string;
     let script: string[];
     if (isNativeBinaryInstall()) {
@@ -554,13 +634,18 @@ export class TelemetryEventStore {
       return new Promise<void>(resolve => {
         const childProcess = spawn(nodeBinaryPath, script, {
           env,
-          stdio: ['ignore', 'pipe', 'pipe'],
+          stdio: ['pipe', 'pipe', 'pipe'],
         });
+
+        childProcess.stdin.on('error', () => {});
+        childProcess.stdin.end(serialized);
 
         childProcess.stderr.on('data', data => output.debug(data.toString()));
         childProcess.stdout.on('data', data => output.debug(data.toString()));
         childProcess.on('error', d => {
           output.debug(d);
+          clearTimeout(timeout);
+          resolve();
         });
 
         const timeout = setTimeout(() => {
@@ -572,19 +657,22 @@ export class TelemetryEventStore {
         childProcess.on('exit', code => {
           output.debug(`Telemetry subprocess exited with code ${code}`);
           childProcess.unref();
-          timeout.unref();
+          clearTimeout(timeout);
           // An error in the subprocess should not trigger a bad exit code, so don't reject under any circumstances
           resolve();
         });
       });
     } else {
       const childProcess = spawn(nodeBinaryPath, script, {
-        stdio: 'ignore',
+        stdio: ['pipe', 'ignore', 'ignore'],
         env,
         windowsHide: true,
         detached: true,
       });
 
+      childProcess.on('error', () => {});
+      childProcess.stdin.on('error', () => {});
+      childProcess.stdin.end(serialized);
       childProcess.unref();
     }
   }

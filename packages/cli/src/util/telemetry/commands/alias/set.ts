@@ -21,7 +21,7 @@ export class AliasSetTelemetryClient
     }
   }
 
-  trackCliArgumentIdOrUrl(idOrUrl: string | undefined) {
+  trackCliArgumentDeployment(idOrUrl: string | undefined) {
     if (idOrUrl) {
       this.trackCliArgument({
         arg: 'id-or-url',

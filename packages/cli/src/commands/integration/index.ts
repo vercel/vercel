@@ -6,7 +6,8 @@ import { printError } from '../../util/error';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getSubcommand from '../../util/get-subcommand';
 import { IntegrationTelemetryClient } from '../../util/telemetry/commands/integration';
-import { type Command, help } from '../help';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
+import { type Command, type HelpOptions, help } from '../help';
 import { add } from './add';
 import { balance } from './balance';
 import {
@@ -80,6 +81,20 @@ export default async function main(client: Client) {
     output.print(
       help(command, {
         columns: client.stderr.columns,
+        stream: client.stderr,
+        parent: integrationCommand,
+      })
+    );
+  }
+
+  // `integration add` renders dynamic help itself, so it follows the same
+  // `--help` contract as the rest of the CLI: stdout and exit code 0.
+  function printHelpToStdout(command: Command, options?: HelpOptions) {
+    client.stdout.write(
+      help(command, {
+        ...options,
+        columns: client.stdout.columns ?? client.stderr.columns,
+        stream: client.stdout,
         parent: integrationCommand,
       })
     );
@@ -90,6 +105,7 @@ export default async function main(client: Client) {
     output.print(
       help(integrationCommand, {
         columns: client.stderr.columns,
+        stream: client.stderr,
       })
     );
     return 0;
@@ -104,17 +120,24 @@ export default async function main(client: Client) {
           client,
           subArgs[0],
           addSubcommand,
-          cmd => printHelp(cmd),
+          printHelpToStdout,
           'integration add'
         );
 
         if (!printed) {
-          printHelp(addSubcommand);
+          printHelpToStdout(addSubcommand);
         }
 
         return 0;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
+      if (subcommandOriginal === 'install') {
+        warnDeprecatedSubcommand(
+          client,
+          'integration install',
+          'integration add'
+        );
+      }
 
       // Parse add-specific flags from subArgs (which contains everything after 'add')
       const addFlagsSpec = getFlagsSpecification(addSubcommand.options);
@@ -123,7 +146,7 @@ export default async function main(client: Client) {
         addParsedArgs = parseArguments(subArgs, addFlagsSpec);
       } catch (error) {
         printError(error);
-        return 1;
+        return 2;
       }
 
       return add(
@@ -221,15 +244,9 @@ export default async function main(client: Client) {
         return 0;
       }
       telemetry.trackCliSubcommandResource(subcommandOriginal);
-      // Synthetic parent so child help renders `vercel integration resource <sub>`
-      // instead of `vercel resource <sub>`.
-      const nestedParent = {
-        ...resourceSubcommand,
-        name: 'integration resource',
-      };
       return dispatchResourceSubcommand(client, subArgs, !!needHelp, {
         helpBreadcrumb: 'integration resource',
-        parentForChildHelp: nestedParent,
+        parentForChildHelp: resourceSubcommand,
       });
     }
     case 'update': {
@@ -257,7 +274,7 @@ export default async function main(client: Client) {
             : AGENT_REASON.INVALID_ARGUMENTS,
           message,
           hint: missingSubcommand
-            ? `Pass a subcommand after \`integration\`, for example \`${packageName} integration installations\` or \`${packageName} integration list\`. Global flags such as \`--cwd\` may appear anywhere.`
+            ? `Pass a subcommand after \`integration\`, for example \`${packageName} integration installations\` or \`${packageName} integration list\`. Global options such as \`--cwd\` may appear anywhere.`
             : `Check the spelling or run \`${packageName} integration --help\` for the list of subcommands.`,
           next: [
             {

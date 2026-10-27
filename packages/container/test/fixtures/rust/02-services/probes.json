@@ -1,0 +1,27 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "SERVICES_FRONTEND_INDEX"
+    },
+    {
+      "path": "/api",
+      "status": 200,
+      "mustContain": "\"path\":\"/\""
+    },
+    {
+      "path": "/api/",
+      "status": 200,
+      "mustContain": "\"path\":\"/\""
+    },
+    {
+      "path": "/api/users/123",
+      "status": 200,
+      "mustContain": "\"bin\":\"server\",\"path\":\"/users/123\""
+    },
+    {
+      "logMustContain": "Default web process: server"
+    }
+  ]
+}

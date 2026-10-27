@@ -23,7 +23,7 @@ describe('routes export', () => {
   it('should show help with --help flag', async () => {
     client.setArgv('routes', 'export', '--help');
     const exitCode = await routes(client);
-    expect(exitCode).toEqual(2);
+    expect(exitCode).toEqual(0);
   });
 
   it('should export routes as vercel.json format by default', async () => {
@@ -101,7 +101,7 @@ describe('routes export', () => {
     useRoutes(3);
     client.setArgv('routes', 'export', '--output', 'xml');
     const exitCode = await routes(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('Invalid output format');
   });
 
@@ -109,7 +109,7 @@ describe('routes export', () => {
     useRoutes(3);
     client.setArgv('routes', 'export', '--output', 'XML');
     const exitCode = await routes(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     // The message reports what was typed ("XML"), not the normalized value.
     await expect(client.stderr).toOutput('Invalid output format: "XML"');
   });
@@ -118,7 +118,7 @@ describe('routes export', () => {
     useRoutes(3);
     client.setArgv('routes', 'export', '--format', 'ts');
     const exitCode = await routes(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
   });
 
   it('should export a specific route by name', async () => {

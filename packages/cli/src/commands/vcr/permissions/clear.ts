@@ -33,7 +33,7 @@ export default async function clear(
   } catch (err) {
     emitVcrArgParseError(client, err, 'vcr permissions <repository> clear');
     printError(err);
-    return 1;
+    return 2;
   }
 
   const fr = validateVcrJsonOutput(client, parsedArgs.flags);

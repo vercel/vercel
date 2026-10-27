@@ -36,6 +36,7 @@ from tests._n1_mock import (
 _VC_INIT = PROJECT_ROOT / "src" / "vercel_runtime" / "vc_init.py"
 _TEST_ROOT = pathlib.Path(__file__).parent
 _COV_WRAPPER = _TEST_ROOT / "_cov_wrapper.py"
+_HIVE_IPC_WRAPPER = _TEST_ROOT / "_hive_ipc_wrapper.py"
 _LAMBDA_INVOKER = _TEST_ROOT / "fixtures" / "lambda_invoke.py"
 _FIXTURES = _TEST_ROOT / "fixtures"
 _DEADLINE_HEADER = "x-vercel-internal-deadline"
@@ -91,6 +92,7 @@ async def _run_runtime(
     ipc_socket_path: str,
     variable_name: str = "app",
     extra_env: dict[str, str] | None = None,
+    on_hive: bool = False,
 ) -> AsyncIterator[asyncio.subprocess.Process]:
     env = {
         **_base_env(),
@@ -103,6 +105,8 @@ async def _run_runtime(
     if extra_env:
         env.update(extra_env)
     cmd = [sys.executable]
+    if on_hive:
+        cmd.append(str(_HIVE_IPC_WRAPPER))
     if _coverage_active():
         cmd.append(str(_COV_WRAPPER))
     cmd.append(str(_VC_INIT))
@@ -143,6 +147,14 @@ def _lambda_event(
     if encoding is not None:
         payload["encoding"] = encoding
     return {"body": json.dumps(payload)}
+
+
+def get_body(result: dict[str, Any]) -> str | bytes:
+    body = result.get("body", "")
+    assert isinstance(body, str)
+    if result.get("encoding") == "base64":
+        return base64.b64decode(body)
+    return body
 
 
 async def _invoke_lambda(
@@ -725,6 +737,33 @@ class TestWSGIApp(_RuntimeTestCase):
                 "GET /search?q=test",
             )
 
+    async def test_tcp_nodelay_on_reused_connections(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wsgi_socket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            started = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            connection = http.client.HTTPConnection(
+                "127.0.0.1", started.payload.http_port, timeout=5
+            )
+            try:
+                for _ in range(3):
+                    connection.request("GET", "/")
+                    response = connection.getresponse()
+                    self.assertEqual(response.status, 200)
+                    self.assertEqual(
+                        json.loads(response.read()), {"nodelay": True}
+                    )
+            finally:
+                connection.close()
+
     async def test_deadline_is_available_and_header_is_stripped(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)
         async with _run_runtime(
@@ -1056,6 +1095,37 @@ class TestWSGIApp(_RuntimeTestCase):
 
 class TestASGIApp(_RuntimeTestCase):
     """Tests for ASGI app entrypoints."""
+
+    @unittest.skipUnless(sys.platform == "linux", "Linux socket metadata")
+    async def test_tcp_nodelay_on_reused_connections(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_socket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            started = await self.n1.wait_for_message(ServerStartedMessage)
+            connection = http.client.HTTPConnection(
+                "127.0.0.1", started.payload.http_port, timeout=5
+            )
+            try:
+                for _ in range(3):
+                    connection.request("GET", "/")
+                    response = connection.getresponse()
+                    self.assertEqual(response.status, 200)
+                    self.assertEqual(
+                        json.loads(response.read()),
+                        {
+                            "family": socket.AF_INET,
+                            "protocol": socket.IPPROTO_TCP,
+                            "nodelay": 1,
+                        },
+                    )
+            finally:
+                connection.close()
 
     async def test_asgi_requests_ping_and_lifecycle(
         self,
@@ -1913,7 +1983,7 @@ class TestColdStartPhases(_RuntimeTestCase):
         variable_name: str = "app",
         warmup_path: str | None = None,
     ) -> tuple[ServerStartedMessage, str, str | None]:
-        """Boot and return the handshake plus the first two timing headers.
+        """Boot and return ``server-started`` plus the first two timing headers.
 
         ``warmup_path`` is requested before the measured request, to prove a
         request does not consume the timings.
@@ -2034,6 +2104,88 @@ class TestColdStartPhases(_RuntimeTestCase):
 
         self.assertEqual(_parse_server_timing(header)["bootstrap"], 0)
         self.assertEqual(ss.payload.init_duration, 0)
+
+
+class TestServerStartedAfterLifespan(_RuntimeTestCase):
+    """Tests for announcing after ASGI lifespan startup on Hive."""
+
+    async def _boot_slow_lifespan(
+        self,
+        *,
+        startup_seconds: float,
+        on_hive: bool,
+    ) -> tuple[ServerStartedMessage, bool, int]:
+        """Boot the slow-lifespan app.
+
+        Returns the ``server-started`` message, whether lifespan startup had
+        finished when it arrived, and the status of a request sent right after
+        it.
+        """
+        marker = self.tmp_path / "lifespan-started"
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_slow_lifespan_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "LIFESPAN_MARKER_PATH": str(marker),
+                "LIFESPAN_STARTUP_SECONDS": str(startup_seconds),
+            },
+            on_hive=on_hive,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=15.0
+            )
+            lifespan_done = marker.exists()
+            resp = await _http_get(ss.payload.http_port, "/")
+            resp.read()
+            return ss, lifespan_done, resp.status
+
+    async def test_hive_waits_for_lifespan_startup(self) -> None:
+        ss, lifespan_done, status = await self._boot_slow_lifespan(
+            startup_seconds=0.5, on_hive=True
+        )
+
+        self.assertTrue(lifespan_done)
+        self.assertGreaterEqual(ss.payload.init_duration, 500)
+        self.assertEqual(status, 200)
+
+    async def test_announces_before_lifespan_startup_off_hive(self) -> None:
+        ss, lifespan_done, status = await self._boot_slow_lifespan(
+            startup_seconds=1.5, on_hive=False
+        )
+
+        self.assertFalse(lifespan_done)
+        self.assertLess(ss.payload.init_duration, 1500)
+        self.assertEqual(status, 200)
+
+    async def test_failed_lifespan_startup_is_unrecoverable(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_lifespan_startup_failed.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            on_hive=True,
+        ) as proc:
+            msg = await self.n1.wait_for_message(
+                UnrecoverableErrorMessage, timeout=10.0
+            )
+            self.assertEqual(msg.payload.exit_code, 1)
+            self.assertIn("lifespan startup failed", msg.payload.message)
+            async with asyncio.timeout(10.0):
+                returncode = await proc.wait()
+            self.assertEqual(returncode, 1)
+
+            messages = await self.n1.collect_messages(timeout=1.0)
+            self.assertFalse(
+                any(isinstance(m, ServerStartedMessage) for m in messages)
+            )
 
 
 class TestErrorPaths(_RuntimeTestCase):
@@ -2168,7 +2320,7 @@ class TestLambdaHTTPHandler(_LambdaTestCase):
             variable_name="handler",
         )
         self.assertEqual(result["statusCode"], 200)
-        self.assertIn("GET /hello", result["body"])
+        self.assertIn("GET /hello", get_body(result))
 
     async def test_deadline_is_available_and_header_is_stripped(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
@@ -2187,7 +2339,7 @@ class TestLambdaHTTPHandler(_LambdaTestCase):
             variable_name="handler",
         )
         self.assertEqual(
-            json.loads(result["body"]),
+            json.loads(get_body(result)),
             {
                 "deadline": "2026-08-18T12:30:45+00:00",
                 "header": False,
@@ -2210,7 +2362,7 @@ class TestLambdaHTTPHandler(_LambdaTestCase):
             variable_name="handler",
         )
         self.assertEqual(result["statusCode"], 200)
-        self.assertIn("encoded", result["body"])
+        self.assertIn("encoded", get_body(result))
 
     async def test_binary_response_base64_encoded(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint(
@@ -2225,7 +2377,7 @@ class TestLambdaHTTPHandler(_LambdaTestCase):
         )
         self.assertEqual(result["statusCode"], 200)
         self.assertEqual(result["encoding"], "base64")
-        data = base64.b64decode(result["body"])
+        data = get_body(result)
         self.assertEqual(data, bytes(range(128, 256)))
 
 
@@ -2241,7 +2393,7 @@ class TestLambdaWSGI(_LambdaTestCase):
             event=_lambda_event("GET", "/hello"),
         )
         self.assertEqual(result["statusCode"], 200)
-        body = base64.b64decode(result["body"]).decode()
+        body = get_body(result)
         self.assertEqual(body, "GET /hello")
 
     async def test_deadline_is_available_and_header_is_stripped(self) -> None:
@@ -2259,7 +2411,7 @@ class TestLambdaWSGI(_LambdaTestCase):
                 },
             ),
         )
-        body = base64.b64decode(result["body"])
+        body = get_body(result)
         self.assertEqual(
             json.loads(body),
             {
@@ -2281,7 +2433,7 @@ class TestLambdaWSGI(_LambdaTestCase):
                 headers={_DEADLINE_HEADER: "2026-08-18T12:30:45Z"},
             ),
         )
-        body = base64.b64decode(result["body"]).decode()
+        body = get_body(result)
         self.assertEqual(
             body.splitlines(),
             [
@@ -2317,7 +2469,7 @@ class TestLambdaWSGI(_LambdaTestCase):
             },
         )
         self.assertEqual(result["statusCode"], 200)
-        body = base64.b64decode(result["body"]).decode()
+        body = get_body(result)
         self.assertEqual(json.loads(body), [])
         self.assertEqual(output_path.read_text(), "request-token\n")
         self.assertEqual(
@@ -2334,7 +2486,7 @@ class TestLambdaWSGI(_LambdaTestCase):
             event=_lambda_event("GET", "/search?q=test"),
         )
         self.assertEqual(result["statusCode"], 200)
-        body = base64.b64decode(result["body"]).decode()
+        body = get_body(result)
         self.assertEqual(body, "GET /search?q=test")
 
     async def test_post_with_base64_body(self) -> None:
@@ -2365,7 +2517,7 @@ class TestLambdaASGI(_LambdaTestCase):
             event=_lambda_event("GET", "/hello"),
         )
         self.assertEqual(result["statusCode"], 200)
-        body = base64.b64decode(result["body"]).decode()
+        body = get_body(result)
         self.assertEqual(body, "GET /hello")
 
     async def test_deadline_is_available_and_header_is_stripped(self) -> None:
@@ -2383,7 +2535,7 @@ class TestLambdaASGI(_LambdaTestCase):
                 },
             ),
         )
-        body = base64.b64decode(result["body"])
+        body = get_body(result)
         self.assertEqual(
             json.loads(body),
             {
@@ -2418,7 +2570,7 @@ class TestLambdaASGI(_LambdaTestCase):
             },
         )
         self.assertEqual(result["statusCode"], 200)
-        body = base64.b64decode(result["body"]).decode()
+        body = get_body(result)
         self.assertEqual(json.loads(body), [])
         self.assertEqual(output_path.read_text(), "request-token\n")
         self.assertEqual(
@@ -2459,7 +2611,7 @@ class TestLambdaASGI(_LambdaTestCase):
             ),
         )
         self.assertEqual(result["statusCode"], 200)
-        body = base64.b64decode(result["body"]).decode()
+        body = get_body(result)
         self.assertEqual(body, "text/html,application/json")
 
 
@@ -2478,7 +2630,7 @@ class TestLambdaASGILifespan(_LambdaTestCase):
         )
         # The app returns 200 only if lifespan startup ran.
         self.assertEqual(result["statusCode"], 200)
-        body = base64.b64decode(result["body"]).decode()
+        body = get_body(result)
         self.assertEqual(body, "started")
 
 
@@ -2512,13 +2664,13 @@ class TestLambdaErrorPaths(_LambdaTestCase):
         ep_abs, ep_rel, mod = _make_entrypoint(
             "asgi_bad_start.py", self.tmp_path
         )
-        with self.assertRaises(RuntimeError):
-            await _invoke_lambda(
-                entrypoint_abs=ep_abs,
-                entrypoint_rel=ep_rel,
-                module_name=mod,
-                event=_lambda_event("GET", "/"),
-            )
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event("GET", "/"),
+        )
+        self.assertEqual(result["statusCode"], 500)
 
     async def test_asgi_bad_body_message(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint(

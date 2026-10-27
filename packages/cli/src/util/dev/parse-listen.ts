@@ -1,5 +1,6 @@
 import { parse } from 'url';
 import type { ListenSpec } from './types';
+import { dev } from './diagnostics';
 
 export function parseListen(str: string, defaultPort = 3000): ListenSpec {
   let port = Number(str);
@@ -18,14 +19,14 @@ export function parseListen(str: string, defaultPort = 3000): ListenSpec {
       const cutStr = str.replace(/^pipe:/, '');
 
       if (cutStr.slice(0, 4) !== '\\\\.\\') {
-        throw new Error(`Invalid Windows named pipe endpoint: ${str}`);
+        throw dev.DEV_INVALID_WINDOWS_PIPE({ endpoint: str });
       }
 
       return [cutStr];
     }
     case 'unix:':
       if (!url.pathname) {
-        throw new Error(`Invalid UNIX domain socket endpoint: ${str}`);
+        throw dev.DEV_INVALID_UNIX_SOCKET({ endpoint: str });
       }
 
       return [url.pathname];
@@ -42,9 +43,7 @@ export function parseListen(str: string, defaultPort = 3000): ListenSpec {
           return [port, url.protocol.substring(0, url.protocol.length - 1)];
         }
       }
-      throw new Error(
-        `Unknown \`--listen\` scheme (protocol): ${url.protocol}`
-      );
+      throw dev.DEV_INVALID_LISTEN_SCHEME({ protocol: url.protocol });
   }
 }
 

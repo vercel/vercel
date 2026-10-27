@@ -1,5 +1,5 @@
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import param from '../../util/output/param';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { parseArguments } from '../../util/get-args';
@@ -25,7 +25,7 @@ import {
 import { KmsRmGrantTelemetryClient } from '../../util/telemetry/commands/kms/rm-grant';
 import { removeGrantSubcommand } from './command';
 
-const USAGE = 'kms rm-grant <issuerId> <projectId>';
+const USAGE = 'kms remove-grant <issuerId> <projectId>';
 
 export default async function rmGrant(client: Client, argv: string[]) {
   const telemetry = new KmsRmGrantTelemetryClient({
@@ -42,7 +42,7 @@ export default async function rmGrant(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
   const [issuerId, projectId] = args;
@@ -86,7 +86,7 @@ export default async function rmGrant(client: Client, argv: string[]) {
     );
   }
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
 
   // Resolve the grant first so the confirmation names the environments that
   // lose access. Anyone allowed to delete a grant can also read it.

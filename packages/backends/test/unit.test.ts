@@ -207,7 +207,9 @@ describe('successful builds', async () => {
           ).resolves.toBeUndefined();
         }
       },
-      50000
+      // This fixture installs the Nest CLI and runs a full TypeScript build.
+      // Cold dependency installation can consume the default CI budget alone.
+      fixtureName === '09-nestjs-with-build-command' ? 120_000 : 50_000
     ); // copying fixture and running npm install so it takes a while
   }
 });

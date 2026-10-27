@@ -6,8 +6,9 @@ import getScope from '../../util/get-scope';
 import isRootDomain from '../../util/is-root-domain';
 import param from '../../util/output/param';
 import renewDomain from '../../util/domains/renew-domain';
+import { getOrderOutcome } from '../../util/domains/get-order';
 import stamp from '../../util/output/stamp';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { DomainsRenewTelemetryClient } from '../../util/telemetry/commands/domains/renew';
 import type Client from '../../util/client';
@@ -15,28 +16,30 @@ import { renewSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import {
-  buildCommandWithGlobalFlags,
-  outputActionRequired,
-  outputAgentError,
-} from '../../util/agent-output';
+import { buildCommandWithGlobalFlags } from '../../util/agent-output';
 import {
   AGENT_ACTION,
   AGENT_REASON,
   AGENT_STATUS,
 } from '../../util/agent-output-constants';
-import { canPrompt } from '../../util/can-prompt';
-import { validateJsonOutput } from '../../util/output-format';
 
-function handleAgentError(
-  client: Client,
-  reason: string,
-  message: string
-): number {
-  outputAgentError(client, { status: 'error', reason, message }, 1);
-  output.error(message);
-  return 1;
-}
+import {
+  amountMatchesPrice,
+  canPromptForCharge,
+  chargeFailureReason,
+  formatAmountArg,
+  formatTerm,
+  parseAmount,
+  printChargeRecovery,
+  reportChargeFailure,
+  reportPriceChanged,
+  reportUnknownOutcome,
+  reportUsageError,
+  refuseUnnamedTeam,
+  writeChargeAction,
+} from '../../util/domains/domain-charge';
+import { validateJsonOutput } from '../../util/output-format';
+import { formatUsd } from '../../util/budget/api';
 
 export default async function renew(client: Client, argv: string[]) {
   const telemetry = new DomainsRenewTelemetryClient({
@@ -51,17 +54,18 @@ export default async function renew(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
   const [domainName] = args;
 
   telemetry.trackCliArgumentDomain(domainName);
+  telemetry.trackCliOptionAmount(opts['--amount']);
   telemetry.trackCliFlagJson(opts['--json']);
   telemetry.trackCliOptionFormat(opts['--format']);
 
   if (args.length !== 1 || !domainName) {
-    return handleAgentError(
+    return reportUsageError(
       client,
       AGENT_REASON.MISSING_ARGUMENTS,
       `Invalid number of arguments. Usage: ${getCommandNamePlain(
@@ -71,7 +75,7 @@ export default async function renew(client: Client, argv: string[]) {
   }
 
   if (!isRootDomain(domainName)) {
-    return handleAgentError(
+    return reportUsageError(
       client,
       AGENT_REASON.INVALID_DOMAIN,
       `Invalid domain name "${domainName}". Use a registrable root domain (no subdomain).`
@@ -80,7 +84,7 @@ export default async function renew(client: Client, argv: string[]) {
 
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
-    return handleAgentError(
+    return reportUsageError(
       client,
       AGENT_REASON.INVALID_ARGUMENTS,
       formatResult.error
@@ -88,63 +92,118 @@ export default async function renew(client: Client, argv: string[]) {
   }
   const asJson = formatResult.jsonOutput;
 
-  const { contextName } = await getScope(client);
+  const amount = parseAmount(opts['--amount']);
+  if (amount instanceof Error) {
+    return reportUsageError(
+      client,
+      AGENT_REASON.INVALID_ARGUMENTS,
+      amount.message
+    );
+  }
+
+  const { contextName, team } = await getScope(client);
+  const teamSlug = team?.slug;
 
   const domainPrice = await getDomainPrice(client, domainName);
   if (domainPrice instanceof Error) {
-    output.prettyError(domainPrice);
-    return 1;
+    return reportChargeFailure(client, asJson, {
+      reason: chargeFailureReason(domainPrice),
+      message: domainPrice.message,
+    });
   }
 
   const { years, renewalPrice } = domainPrice;
   if (renewalPrice === null) {
-    output.error(
-      `Renewal price for ${param(domainName)} is not available. This domain may not be renewable.`
-    );
-    return 1;
+    return reportChargeFailure(client, asJson, {
+      reason: AGENT_REASON.API_ERROR,
+      message: `The renewal price for ${domainName} is not available. This domain may not be renewable.`,
+    });
   }
 
   const term = `${years}yr${years > 1 ? 's' : ''}`;
 
-  if (!canPrompt(client)) {
-    outputActionRequired(
-      client,
-      {
+  const renewCommand = (price?: number) =>
+    buildCommandWithGlobalFlags(
+      client.argv,
+      `domains renew ${domainName}${teamSlug ? ` --scope ${teamSlug}` : ''}${
+        price === undefined ? '' : ` --amount ${formatAmountArg(price)}`
+      }${asJson ? ' --json' : ''}`
+    );
+  const inspectCommand = buildCommandWithGlobalFlags(
+    client.argv,
+    `domains inspect ${domainName}`
+  );
+
+  if (amount !== undefined && !amountMatchesPrice(amount, renewalPrice)) {
+    return reportPriceChanged(client, {
+      verb: 'renew',
+      domain: domainName,
+      amount,
+      price: renewalPrice,
+      nextCommand: renewCommand(renewalPrice),
+      json: asJson,
+    });
+  }
+
+  if (amount === undefined) {
+    if (!canPromptForCharge(client, asJson)) {
+      // Without a terminal, the approved price is the consent: nothing is
+      // charged until the command runs again with --amount.
+      const headline = `Can't renew ${domainName} without an approved price (--amount) in non-interactive mode.`;
+      const priceLine = `Price: ${formatUsd(renewalPrice)} for ${formatTerm(years)}, charged to ${contextName}.`;
+      const command = renewCommand(renewalPrice);
+      writeChargeAction(client, asJson, {
         status: AGENT_STATUS.ACTION_REQUIRED,
         reason: AGENT_REASON.CONFIRMATION_REQUIRED,
         action: AGENT_ACTION.CONFIRMATION_REQUIRED,
-        message: `Renewing ${domainName} charges your account $${renewalPrice} for ${term} and requires confirmation, so it cannot be done non-interactively. Run this command in an interactive terminal to confirm the charge.`,
+        message: `${headline} ${priceLine}`,
         userActionRequired: true,
+        hint: 'Show the user the renewal price and get their approval before running next[].',
+        data: {
+          domain: domainName,
+          ...(teamSlug && { team: teamSlug }),
+          amount: renewalPrice,
+          currency: 'USD',
+          years,
+        },
+        missing: ['--amount'],
         next: [
           {
-            command: buildCommandWithGlobalFlags(
-              client.argv,
-              'domains renew <domain>'
-            ),
-            when: 'user runs this command in an interactive terminal',
+            command,
+            when: `Only after a human approves: charges ${formatUsd(renewalPrice)} now`,
           },
         ],
-      },
-      1
+      });
+      printChargeRecovery(
+        `${headline}\n${priceLine}`,
+        'Once a person approves the price, run',
+        command
+      );
+      return 1;
+    }
+
+    output.log(
+      `An email with the invoice and transaction details will be sent to you after renewal.`
     );
-    output.error(
-      'This command must be run interactively to confirm renewing (charging for) this domain.'
+    const confirmed = await client.input.confirm(
+      `Renew ${param(domainName)} now for ${chalk.bold(formatUsd(renewalPrice))} (${formatTerm(years)})?`,
+      false
     );
-    return 1;
+    if (!confirmed) {
+      output.log('Canceled');
+      return 0;
+    }
   }
 
-  output.log(
-    `An email with the invoice and transaction details will be sent to you after renewal.`
-  );
-  const confirmed = await client.input.confirm(
-    `Renew ${param(domainName)} now for ${chalk.bold(
-      `$${renewalPrice}`
-    )} (${term})?`,
-    false
-  );
-  if (!confirmed) {
-    output.log('Canceled');
-    return 0;
+  // The person running the command has to name the team that pays.
+  if (!canPromptForCharge(client, asJson) && team) {
+    const refused = refuseUnnamedTeam(client, asJson, {
+      verb: 'renew',
+      domain: domainName,
+      team,
+      nextCommand: renewCommand(renewalPrice),
+    });
+    if (refused !== undefined) return refused;
   }
 
   const renewStamp = stamp();
@@ -155,58 +214,90 @@ export default async function renew(client: Client, argv: string[]) {
     order = await renewDomain(client, domainName, renewalPrice, years);
   } catch (err: unknown) {
     output.stopSpinner();
-    if (ERRORS.isAPIError(err)) {
-      const codeMessages: Record<string, string> = {
-        expected_price_mismatch: `The renewal price for ${param(domainName)} changed. Run ${getCommandName(`domains renew ${domainName}`)} again to see the new price.`,
-        domain_not_registered: `The domain ${param(domainName)} is not registered with Vercel.`,
-        domain_not_found: `Domain ${param(domainName)} not found under ${chalk.bold(contextName)}.`,
-        tld_not_supported: `The TLD for domain name ${param(domainName)} is not supported.`,
-        forbidden: `You don't have permission to renew ${param(domainName)} under ${chalk.bold(contextName)}.`,
-      };
-      const known = codeMessages[err.code];
-      if (known || err.status < 500) {
-        output.error(known ?? (err.serverMessage || err.message));
-        return 1;
-      }
-    }
-    output.error(
-      'An unexpected error occurred while renewing your domain. Please try again later.'
-    );
     output.debug(`Server response: ${errorToString(err)}`);
-    return 1;
+    if (ERRORS.isAPIError(err)) {
+      if (err.code === 'expected_price_mismatch') {
+        return reportPriceChanged(client, {
+          verb: 'renew',
+          domain: domainName,
+          amount: renewalPrice,
+          nextCommand: renewCommand(),
+          json: asJson,
+        });
+      }
+      const known: Record<string, [string, string]> = {
+        domain_not_registered: [
+          AGENT_REASON.DOMAIN_NOT_FOUND,
+          `The domain ${domainName} is not registered with Vercel.`,
+        ],
+        domain_not_found: [
+          AGENT_REASON.DOMAIN_NOT_FOUND,
+          `Domain ${domainName} not found under ${contextName}.`,
+        ],
+        tld_not_supported: [
+          AGENT_REASON.TLD_NOT_SUPPORTED,
+          `The TLD for domain name ${domainName} is not supported.`,
+        ],
+        forbidden: [
+          AGENT_REASON.PERMISSION_DENIED,
+          `You don't have permission to renew ${domainName} under ${contextName}.`,
+        ],
+      };
+      const [reason, message] = known[err.code] ?? [];
+      if (reason && message) {
+        return reportChargeFailure(client, asJson, { reason, message });
+      }
+      return reportChargeFailure(
+        client,
+        asJson,
+        {
+          reason: AGENT_REASON.API_ERROR,
+          message: `Couldn't renew ${domainName}. The API returned an error (${err.code}). Nothing was charged.`,
+        },
+        { apiMessage: err.serverMessage }
+      );
+    }
+    // `renewDomain` only throws when nothing was charged; a possible charge
+    // comes back as `null`. So this failed before the request was sent.
+    return reportChargeFailure(client, asJson, {
+      reason: AGENT_REASON.API_ERROR,
+      message: `Couldn't renew ${domainName}. The request wasn't sent, so nothing was charged.`,
+    });
   }
 
   output.stopSpinner();
 
-  if (order === null) {
-    output.warn(
-      `Renewal for ${param(domainName)} was submitted but is still processing. ` +
-        'Check https://vercel.com/dashboard/domains for the final status.'
-    );
-    return 0;
+  // A 5xx, a lost connection, or an order that didn't finish in time: the
+  // renewal may still have gone through.
+  if (order instanceof ERRORS.DomainChargeOutcomeUnknown) {
+    return reportUnknownOutcome(client, asJson, {
+      verb: 'renew',
+      domain: domainName,
+      inspectCommand,
+    });
   }
 
-  if (order.error?.code === 'payment-failed') {
-    output.error('Your card was declined.');
-    return 1;
+  const outcome = getOrderOutcome(order, domainName);
+  if (outcome === 'unknown') {
+    return reportUnknownOutcome(client, asJson, {
+      verb: 'renew',
+      domain: domainName,
+      inspectCommand,
+    });
   }
-
-  if (order.status !== 'completed') {
-    output.error(
-      `An unexpected error happened while renewing ${param(domainName)}.`
-    );
-    return 1;
-  }
-
-  const renewedItem = order.domains.find(d => d.domainName === domainName);
-  if (renewedItem?.status !== 'completed') {
-    output.error(
-      renewedItem?.status === 'refunded' ||
-        renewedItem?.status === 'refund-failed'
-        ? `Renewal for ${param(domainName)} failed and the charge was refunded.`
-        : `Renewal for ${param(domainName)} did not complete.`
-    );
-    return 1;
+  if (outcome !== 'completed') {
+    return reportChargeFailure(client, asJson, {
+      reason:
+        outcome === 'payment_failed'
+          ? AGENT_REASON.PAYMENT_FAILED
+          : AGENT_REASON.API_ERROR,
+      message: {
+        payment_failed: 'Your card was declined. Nothing was charged.',
+        refunded: `Renewal for ${domainName} failed, and the charge was refunded.`,
+        refund_failed: `Renewal for ${domainName} failed, and refunding the charge also failed. Contact Vercel support about the charge.`,
+        failed: `Renewal for ${domainName} failed.`,
+      }[outcome],
+    });
   }
 
   if (asJson) {
@@ -218,6 +309,7 @@ export default async function renew(client: Client, argv: string[]) {
           term,
           years,
           price: renewalPrice,
+          charge: { amount: renewalPrice, currency: 'USD' },
           orderId: order.orderId,
           message: `Domain ${domainName} renewed.`,
         },
@@ -228,6 +320,9 @@ export default async function renew(client: Client, argv: string[]) {
     return 0;
   }
 
+  // stdout carries the renewed domain; everything else is on stderr.
+  client.stdout.write(`${domainName}\n`);
   output.success(`Domain ${param(domainName)} renewed ${renewStamp()}`);
+  output.log(`Charged ${formatUsd(renewalPrice)} for ${formatTerm(years)}.`);
   return 0;
 }

@@ -6,16 +6,19 @@ vi.mock('@vercel/oidc', () => ({
 
 import { getVercelOidcToken } from '@vercel/oidc';
 import { signMessage } from './sign-message';
-import type { FlattenedJWS } from './request';
 
 const getVercelOidcTokenMock = vi.mocked(getVercelOidcToken);
 
 const OIDC_TOKEN = 'oidc-token';
-
-const SIGNATURE: FlattenedJWS = {
-  payload: 'cGF5bG9hZA',
-  signature: 'c2ln',
-  protected: 'cHJvdGVjdGVk',
+const SIGNATURE_B64 = 'c2lnbmF0dXJl';
+const SIGNATURE_BYTES = new Uint8Array([
+  115, 105, 103, 110, 97, 116, 117, 114, 101,
+]);
+const SIGNED_MESSAGE = {
+  signature: SIGNATURE_B64,
+  keyId: 'key_a',
+  algorithm: 'EdDSA',
+  fingerprint: 'SHA256:test',
 };
 
 /**
@@ -35,18 +38,23 @@ describe('signMessage', () => {
     delete process.env.VERCEL_REGION;
   });
 
-  test('signs a string message (UTF-8) and returns the flattened JWS', async () => {
+  test('signs a string message (UTF-8) and returns the raw signature', async () => {
     getVercelOidcTokenMock.mockResolvedValue(OIDC_TOKEN);
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
-      .mockImplementation(fetchReturning({ signature: SIGNATURE }));
+      .mockImplementation(fetchReturning(SIGNED_MESSAGE));
 
     const result = await signMessage({
       issuerId: 'issuer_a',
       message: 'hello',
     });
 
-    expect(result).toEqual(SIGNATURE);
+    expect(result).toEqual({
+      signature: SIGNATURE_BYTES,
+      keyId: 'key_a',
+      algorithm: 'EdDSA',
+      fingerprint: 'SHA256:test',
+    });
     expect(getVercelOidcTokenMock).toHaveBeenCalledWith();
     const [url, init] = fetchMock.mock.calls[0];
     expect((url as URL).toString()).toBe(
@@ -60,7 +68,7 @@ describe('signMessage', () => {
     getVercelOidcTokenMock.mockResolvedValue(OIDC_TOKEN);
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
-      .mockImplementation(fetchReturning({ signature: SIGNATURE }));
+      .mockImplementation(fetchReturning(SIGNED_MESSAGE));
 
     await signMessage({
       issuerId: 'issuer_bytes',
@@ -76,7 +84,7 @@ describe('signMessage', () => {
     getVercelOidcTokenMock.mockResolvedValue(OIDC_TOKEN);
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
-      .mockImplementation(fetchReturning({ signature: SIGNATURE }));
+      .mockImplementation(fetchReturning(SIGNED_MESSAGE));
 
     await signMessage({
       issuerId: 'issuer_region',
@@ -93,7 +101,7 @@ describe('signMessage', () => {
   test('uses an explicit token without fetching an OIDC token', async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
-      .mockImplementation(fetchReturning({ signature: SIGNATURE }));
+      .mockImplementation(fetchReturning(SIGNED_MESSAGE));
 
     await signMessage({
       issuerId: 'issuer_explicit',

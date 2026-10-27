@@ -2,8 +2,8 @@ import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const removeSubcommand = {
-  name: 'remove',
-  aliases: ['rm'],
+  name: 'delete',
+  aliases: ['rm', 'del', 'remove'],
   description: 'Delete an integration resource',
   arguments: [
     {
@@ -16,7 +16,8 @@ export const removeSubcommand = {
       name: 'disconnect-all',
       description:
         'Disconnects all projects from the specified resource before deletion',
-      shorthand: 'a',
+      shorthand: null,
+      deprecatedShorthand: 'a',
       type: Boolean,
       deprecated: false,
     },
@@ -30,22 +31,17 @@ export const removeSubcommand = {
   examples: [
     {
       name: 'Delete a resource',
-      value: [
-        `${packageName} integration-resource remove <resource>`,
-        `${packageName} integration-resource remove my-acme-resource`,
-      ],
+      placeholders: ['<resource>'],
+      value: `${packageName} integration resource delete <resource>`,
     },
     {
       name: 'Disconnect all projects from a resource, then delete it',
-      value: [
-        `${packageName} integration-resource remove <resource> --disconnect-all`,
-        `${packageName} integration-resource remove my-acme-resource --disconnect-all`,
-        `${packageName} integration-resource remove my-acme-resource -a`,
-      ],
+      placeholders: ['<resource>'],
+      value: `${packageName} integration resource delete <resource> --disconnect-all`,
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} integration-resource remove my-acme-resource --json --yes`,
+      value: `${packageName} integration resource delete my-acme-resource --json --yes`,
     },
   ],
 } as const;
@@ -53,7 +49,8 @@ export const removeSubcommand = {
 export const disconnectSubcommand = {
   name: 'disconnect',
   aliases: [],
-  description: 'Disconnect a marketplace resource from a project',
+  description:
+    'Disconnect a marketplace resource from a project without deleting the resource',
   arguments: [
     {
       name: 'resource',
@@ -68,7 +65,10 @@ export const disconnectSubcommand = {
     {
       name: 'all',
       description: 'Disconnects all projects from the specified resource',
-      shorthand: 'a',
+      // Disconnecting every project takes `--all` spelled out. The old `-a`
+      // still works, hidden, until the next major.
+      shorthand: null,
+      deprecatedShorthand: 'a',
       type: Boolean,
       deprecated: false,
     },
@@ -82,29 +82,22 @@ export const disconnectSubcommand = {
   examples: [
     {
       name: 'Disconnect a resource from the current project',
-      value: [
-        `${packageName} integration-resource disconnect <resource>`,
-        `${packageName} integration-resource disconnect my-acme-resource`,
-      ],
+      placeholders: ['<resource>'],
+      value: `${packageName} integration resource disconnect <resource>`,
     },
     {
       name: 'Disconnect all projects from a resource',
-      value: [
-        `${packageName} integration-resource disconnect <resource> --all`,
-        `${packageName} integration-resource disconnect my-acme-resource --all`,
-        `${packageName} integration-resource disconnect my-acme-resource -a`,
-      ],
+      placeholders: ['<resource>'],
+      value: `${packageName} integration resource disconnect <resource> --all`,
     },
     {
       name: 'Disconnect a resource from a specified project',
-      value: [
-        `${packageName} integration-resource disconnect <resource> <project>`,
-        `${packageName} integration-resource disconnect my-acme-resource my-project`,
-      ],
+      placeholders: ['<resource>', '<project>'],
+      value: `${packageName} integration resource disconnect <resource> <project>`,
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} integration-resource disconnect my-acme-resource --json --yes`,
+      value: `${packageName} integration resource disconnect my-acme-resource --json --yes`,
     },
   ],
 } as const;
@@ -128,10 +121,10 @@ export const connectSubcommand = {
       name: 'environment',
       shorthand: 'e',
       type: [String],
-      argument: 'ENV',
+      argument: 'ENVIRONMENT',
       deprecated: false,
       description:
-        'Environment to connect (can be repeated: production, preview, development). Defaults to all.',
+        'Environment to connect (can be repeated; accepts production, preview, development, or a Custom Environment slug or ID) (default: all system Environments).',
     },
     {
       name: 'prefix',
@@ -144,7 +137,8 @@ export const connectSubcommand = {
     },
     {
       ...yesOption,
-      description: 'Skip the confirmation prompt when connecting a resource',
+      description:
+        'Skip the confirmation prompt when connecting a resource (required without a terminal)',
     },
     formatOption,
     jsonOption,
@@ -152,23 +146,21 @@ export const connectSubcommand = {
   examples: [
     {
       name: 'Connect a resource to the current project',
-      value: [
-        `${packageName} integration resource connect <resource>`,
-        `${packageName} integration resource connect my-acme-resource`,
-      ],
+      placeholders: ['<resource>'],
+      value: `${packageName} integration resource connect <resource>`,
     },
     {
       name: 'Connect a resource to a specified project',
-      value: [
-        `${packageName} integration resource connect <resource> <project>`,
-        `${packageName} integration resource connect my-acme-resource my-project`,
-      ],
+      placeholders: ['<resource>', '<project>'],
+      value: `${packageName} integration resource connect <resource> <project>`,
     },
     {
       name: 'Connect only to specific environments',
       value: [
         `${packageName} integration resource connect my-acme-resource -e production`,
         `${packageName} integration resource connect my-acme-resource -e production -e preview`,
+        `${packageName} integration resource connect my-acme-resource -e qa`,
+        `${packageName} integration resource connect my-acme-resource -e env_qa123`,
       ],
     },
     {
@@ -213,12 +205,14 @@ export const createThresholdSubcommand = {
   ],
   examples: [
     {
-      name: 'create threshold',
-      value: [
-        `${packageName} integration-resource create-threshold <resource> <minimum> <spend> <limit> [options]`,
-        `${packageName} integration-resource create-threshold my-acme-resource 50 100 2000`,
-        `${packageName} integration-resource create-threshold my-acme-resource 50 100 2000 --yes`,
-      ],
+      name: 'Create a resource threshold',
+      placeholders: ['<resource>', '<minimum>', '<spend>', '<limit>'],
+      value: `${packageName} integration resource create-threshold <resource> <minimum> <spend> <limit>`,
+    },
+    {
+      name: 'Create a resource threshold without confirmation',
+      placeholders: ['<resource>', '<minimum>', '<spend>', '<limit>'],
+      value: `${packageName} integration resource create-threshold <resource> <minimum> <spend> <limit> --yes`,
     },
   ],
 } as const;
@@ -254,18 +248,16 @@ export const claimSubcommand = {
   examples: [
     {
       name: 'Claim a sandbox resource by name',
-      value: [
-        `${packageName} integration-resource claim <resource>`,
-        `${packageName} integration-resource claim my-stripe`,
-      ],
+      placeholders: ['<resource>'],
+      value: `${packageName} integration resource claim <resource>`,
     },
     {
       name: 'Pick a sandbox resource interactively (current team)',
-      value: `${packageName} integration-resource claim`,
+      value: `${packageName} integration resource claim`,
     },
     {
       name: 'Print the claim URL as JSON without waiting',
-      value: `${packageName} integration-resource claim my-stripe --json --no-wait`,
+      value: `${packageName} integration resource claim my-stripe --json --no-wait`,
     },
   ],
 } as const;
@@ -285,14 +277,8 @@ export const inspectSubcommand = {
   examples: [
     {
       name: 'Show live details and status for a resource',
-      value: [
-        `${packageName} integration resource inspect <resource>`,
-        `${packageName} integration resource inspect my-acme-resource`,
-      ],
-    },
-    {
-      name: 'Show live status for a resource (alias)',
-      value: `${packageName} integration resource status my-acme-resource`,
+      placeholders: ['<resource>'],
+      value: `${packageName} integration resource inspect <resource>`,
     },
     {
       name: 'Output as JSON',
@@ -304,6 +290,7 @@ export const inspectSubcommand = {
 export const integrationResourceCommand = {
   name: 'integration-resource',
   aliases: ['ir'],
+  summary: 'Manage integration resources',
   description:
     'Manage marketplace integration resources (alias for `vercel integration resource`)',
   options: [],

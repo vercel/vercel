@@ -118,10 +118,72 @@ describe('integration', () => {
     expect(client.stderr.getFullOutput()).toContain('neon');
   });
 
+  it('omits payment intent client secrets from installations JSON output', async () => {
+    const syntheticSecret = 'pi_test_dummy_secret_dummy';
+    client.scenario.get('/v2/integrations/configurations', (_req, res) => {
+      res.json([
+        {
+          id: 'icfg_1',
+          integration: { slug: 'neon' },
+          ownerId: 'team_dummy',
+          lastAuthorization: {
+            id: 'auth_1',
+            status: 'succeeded',
+            amountCent: 500,
+            metadata: JSON.parse('{"__proto__":{"note":"dummy"}}'),
+            paymentIntent: {
+              id: 'pi_test_dummy',
+              status: 'succeeded',
+              clientSecret: syntheticSecret,
+              paymentMethodId: 'pm_test_dummy',
+            },
+          },
+        },
+      ]);
+    });
+
+    client.setArgv('integration', 'installations', '--json');
+
+    const exitCode = await integration(client);
+
+    expect(exitCode).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).not.toContain(syntheticSecret);
+    expect(stdout).not.toContain('clientSecret');
+    const payload = JSON.parse(stdout);
+    expect(payload.installations).toHaveLength(1);
+    expect(payload.installations[0]).toMatchObject({
+      id: 'icfg_1',
+      integration: { slug: 'neon' },
+      ownerId: 'team_dummy',
+      lastAuthorization: {
+        id: 'auth_1',
+        status: 'succeeded',
+        amountCent: 500,
+        paymentIntent: {
+          id: 'pi_test_dummy',
+          status: 'succeeded',
+          paymentMethodId: 'pm_test_dummy',
+        },
+      },
+    });
+    expect(
+      payload.installations[0].lastAuthorization.paymentIntent
+    ).not.toHaveProperty('clientSecret');
+    const metadata = payload.installations[0].lastAuthorization.metadata;
+    expect(Object.prototype.hasOwnProperty.call(metadata, '__proto__')).toBe(
+      true
+    );
+    expect(
+      Object.getOwnPropertyDescriptor(metadata, '__proto__')?.value
+    ).toEqual({ note: 'dummy' });
+    expect(client.stderr.getFullOutput()).not.toContain(syntheticSecret);
+  });
+
   it('errors when integration installations is given extra positional arguments', async () => {
     client.setArgv('integration', 'installations', 'typo');
     const exitCode = await integration(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     await expect(client.stderr).toOutput('Invalid number of arguments');
   });
 });

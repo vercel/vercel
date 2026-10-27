@@ -1,0 +1,37 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "index",
+      "responseHeaders": {
+        "x-proxy-ran": "1"
+      }
+    },
+    {
+      "path": "/block",
+      "status": 403,
+      "mustContain": "blocked"
+    },
+    {
+      "path": "/response",
+      "status": 200,
+      "mustContain": "responded"
+    },
+    {
+      "path": "/redirect",
+      "status": 307,
+      "responseHeaders": {
+        "location": "/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    {
+      "path": "/rewrite",
+      "status": 200,
+      "mustContain": "rewritten"
+    }
+  ]
+}

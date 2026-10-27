@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "bootstrapping": {
+    "installCommand": "bash utils/vercel-ci-install.sh",
+    "installEnv": {},
+    "resources": { "vcpus": 8 }
+  },
+  "jobs": []
+}

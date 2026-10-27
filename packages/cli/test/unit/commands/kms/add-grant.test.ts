@@ -37,7 +37,7 @@ describe('kms add-grant', () => {
     it('tracks telemetry', async () => {
       client.setArgv('kms', 'add-grant', '--help');
       const exitCodePromise = kms(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:help', value: 'kms:add-grant' },
@@ -128,7 +128,7 @@ describe('kms add-grant', () => {
       'staging'
     );
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('Invalid environment: staging');
   });
 
@@ -208,7 +208,7 @@ describe('kms add-grant', () => {
       'production'
     );
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('was not found');
   });
 
@@ -217,7 +217,7 @@ describe('kms add-grant', () => {
     useGrantProject({ id: 'prj_1', name: 'prj_1' });
     client.setArgv('kms', 'add-grant', 'iss_test', '--project', 'prj_1');
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput(
       'At least one environment is required'
     );
@@ -238,7 +238,7 @@ describe('kms add-grant', () => {
       '[]'
     );
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput(
       '--token-claims must be a JSON object'
     );

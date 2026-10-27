@@ -154,6 +154,143 @@ describe('env update', () => {
     expect(exitCode, 'exit code for "env update"').toEqual(1);
   });
 
+  describe('--environment and --git-branch', () => {
+    beforeEach(() => {
+      client.cwd = setupUnitFixture('vercel-env-pull');
+    });
+
+    it.each([
+      ['--environment', 'production'],
+      ['-e', 'production'],
+    ])('updates the variable in the environment given with %s', async (...args) => {
+      client.setArgv(
+        'env',
+        'update',
+        'TEST_VAR',
+        ...args,
+        '--value',
+        'updated',
+        '--yes'
+      );
+      await expect(env(client)).resolves.toEqual(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('Updated');
+      expect(stderr).not.toContain('deprecated');
+    });
+
+    it('keeps the environment argument working with a deprecation warning', async () => {
+      client.setArgv(
+        'env',
+        'update',
+        'TEST_VAR',
+        'production',
+        '--value',
+        'updated',
+        '--yes'
+      );
+      await expect(env(client)).resolves.toEqual(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        'The environment argument is deprecated. Use --environment.'
+      );
+    });
+
+    it('rejects an environment given both ways', async () => {
+      client.setArgv(
+        'env',
+        'update',
+        'TEST_VAR',
+        'preview',
+        '--environment',
+        'production',
+        '--value',
+        'updated',
+        '--yes'
+      );
+      await expect(env(client)).resolves.toEqual(2);
+      expect(client.stderr.getFullOutput()).toContain(
+        "Can't use an environment argument with --environment."
+      );
+    });
+
+    it('names --environment when stdin has no environment', async () => {
+      client.stdin.isTTY = false;
+      client.setArgv('env', 'update', 'TEST_VAR');
+      const exitCodePromise = env(client);
+      setImmediate(() => client.stdin.emit('data', 'value-via-stdin'));
+
+      await expect(exitCodePromise).resolves.toEqual(2);
+      expect(client.stderr.getFullOutput()).toContain(
+        "Can't read the value from stdin without a name and --environment."
+      );
+    });
+
+    it('keeps env-only options out of the link suggestion when not linked', async () => {
+      const linkModule = await import('../../../../src/util/projects/link');
+      vi.spyOn(linkModule, 'getLinkedProject').mockResolvedValue({
+        status: 'not_linked',
+        org: null,
+        project: null,
+      });
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('exit');
+      });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      client.nonInteractive = true;
+      client.setArgv(
+        'env',
+        'update',
+        'VAR',
+        '-e',
+        'preview',
+        '--git-branch',
+        'feat-1',
+        '--value',
+        'secret',
+        '--yes',
+        '--cwd=/tmp',
+        '--non-interactive'
+      );
+
+      await expect(env(client)).rejects.toThrow('exit');
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      const [linkCommand, retryCommand] = payload.next.map(
+        (next: { command: string }) => next.command
+      );
+      expect(linkCommand).toMatch(/vercel link --scope <scope>/);
+      expect(linkCommand).toContain('--cwd=/tmp');
+      expect(linkCommand).not.toMatch(/--environment|-e |--git-branch|feat-1/);
+      expect(retryCommand).toMatch(
+        /env update VAR -e preview --git-branch feat-1/
+      );
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+      vi.restoreAllMocks();
+    });
+
+    it('rejects a Git branch given both ways', async () => {
+      client.setArgv(
+        'env',
+        'update',
+        'TEST_VAR',
+        'preview',
+        'main',
+        '--git-branch',
+        'main',
+        '--value',
+        'updated',
+        '--yes'
+      );
+      await expect(env(client)).resolves.toEqual(2);
+      expect(client.stderr.getFullOutput()).toContain(
+        "Can't use a Git branch argument with --git-branch."
+      );
+    });
+  });
+
   it('should show error with invalid number of arguments', async () => {
     const cwd = setupUnitFixture('vercel-env-pull');
     client.cwd = cwd;
@@ -163,7 +300,7 @@ describe('env update', () => {
     await expect(client.stderr).toOutput('Invalid number of arguments');
 
     const exitCode = await exitCodePromise;
-    expect(exitCode, 'exit code for "env update"').toEqual(1);
+    expect(exitCode, 'exit code for "env update"').toEqual(2);
   });
 
   describe('non-interactive', () => {
@@ -238,9 +375,9 @@ describe('env update', () => {
       });
       // Production does not need branch in suggested command
       expect(payload.next[0].command).toMatch(
-        /env update name production --value/
+        /env update name --environment production --value/
       );
-      expect(payload.next[0].command).not.toMatch(/<gitbranch>/);
+      expect(payload.next[0].command).not.toMatch(/<BRANCH>/);
 
       exitSpy.mockRestore();
       logSpy.mockRestore();
@@ -925,7 +1062,7 @@ describe('env update', () => {
       await expect(env(client)).resolves.toBe(1);
       const fullOutput = stripAnsi(client.stderr.getFullOutput());
       expect(fullOutput).toContain(
-        'The `--type` flag must be either `config` or `secret`'
+        'The `--type` option must be either `config` or `secret`'
       );
       expect(fullOutput).not.toContain("What's the new value");
     });
@@ -943,7 +1080,7 @@ describe('env update', () => {
         'secret'
       );
 
-      await expect(env(client)).resolves.toBe(1);
+      await expect(env(client)).resolves.toBe(2);
       const fullOutput = stripAnsi(client.stderr.getFullOutput());
       expect(fullOutput).toContain(
         '`--type config` cannot be used with `--sensitive`'

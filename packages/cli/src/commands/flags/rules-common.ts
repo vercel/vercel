@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { logArchivedFlagNotice } from '../../util/flags/archived-flag-notice';
 import type Client from '../../util/client';
 import { getCommandName } from '../../util/pkg-name';
 import { getFlag, getFlagSettings } from '../../util/flags/get-flags';
@@ -18,7 +19,6 @@ interface ResolveRulesContextOptions {
   flagArg: string;
   environment?: string;
   promptMessage: string;
-  requireActiveFlag?: boolean;
   fetchSettings?: boolean;
 }
 
@@ -61,13 +61,6 @@ export async function resolveRulesCommandContext(
   ]);
   output.stopSpinner();
 
-  if (options.requireActiveFlag && flag.state === 'archived') {
-    output.error(
-      `Flag ${chalk.bold(flag.slug)} is archived and cannot be updated`
-    );
-    return { exitCode: 1 };
-  }
-
   const environment = await resolveFlagEnvironment(
     client,
     flag,
@@ -96,15 +89,47 @@ export function isExitCodeResult(
 
 export function warnIfRuleChangesAreBypassed(
   flag: Flag,
-  environment: string
+  environment: string,
+  changeLabel = 'rule'
 ): void {
+  if (flag.state === 'archived') {
+    logArchivedFlagNotice(flag);
+    return;
+  }
+
   const envConfig = flag.environments[environment];
   if (!envConfig) {
     return;
   }
 
-  if (envConfig.active) {
+  const mode = describeInactiveTargetingMode(flag, envConfig);
+  if (!mode) {
     return;
+  }
+
+  output.print(
+    `${chalk.yellow('!')} This ${changeLabel} update was saved, but ${chalk.bold(environment)} ${mode}. ${capitalize(changeLabel)} changes will not affect flag evaluation until targeting is active again.\n`
+  );
+  output.print(`  Enable targeting (keeps the current fallthrough):\n`);
+  output.print(
+    `  ${getCommandName(`flags targeting enable ${quoteArg(flag.slug)} --environment ${environment}`)}\n`
+  );
+}
+
+/**
+ * Describes why targeting config is not evaluated right now, or undefined when
+ * it is. Reuse wins over paused, matching SDK evaluation order.
+ */
+export function describeInactiveTargetingMode(
+  flag: Flag,
+  envConfig: FlagEnvironmentConfig
+): string | undefined {
+  if (envConfig.reuse?.active) {
+    return `reuses ${chalk.bold(envConfig.reuse.environment)}`;
+  }
+
+  if (envConfig.active) {
+    return undefined;
   }
 
   const variantId = envConfig.pausedOutcome?.variantId;
@@ -114,11 +139,9 @@ export function warnIfRuleChangesAreBypassed(
     : variantId
       ? chalk.bold(variantId)
       : 'a fixed variant';
-  output.print(
-    `${chalk.yellow('!')} This rule update was saved, but ${chalk.bold(environment)} is serving ${serving}. Rule changes will not affect flag evaluation until targeting is active again.\n`
-  );
-  output.print(`  Enable targeting (keeps the current fallthrough):\n`);
-  output.print(
-    `  ${getCommandName(`flags use-targeting ${quoteArg(flag.slug)} --environment ${environment}`)}\n`
-  );
+  return `is serving ${serving}`;
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }

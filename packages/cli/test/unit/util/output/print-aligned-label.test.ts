@@ -83,6 +83,27 @@ describe('printAlignedLabel()', () => {
     expect(cols[0]).toBe(VALUE_COL);
   });
 
+  it('supports a wider label column for blocks with long labels', () => {
+    printAlignedLabel('Open experiments', 'VALUE', { labelWidth: 19 });
+    const plain = stripAnsi(lastPrinted());
+    expect(plain).toBe('  Open experiments   VALUE\n');
+    expect(plain.indexOf('VALUE')).toBe(21);
+  });
+
+  it('supports subtle secondary rows without changing their layout', () => {
+    printAlignedLabel('Open experiments', '`vercel experiments open`', {
+      labelWidth: 19,
+      emphasis: 'subtle',
+    });
+    const raw = lastPrinted();
+
+    expect(stripAnsi(raw)).toBe(
+      '  Open experiments   `vercel experiments open`\n'
+    );
+    expect(raw).toContain(chalk.dim('Open experiments  '));
+    expect(raw).toContain(chalk.dim('`vercel experiments open`'));
+  });
+
   describe('labels at or beyond the column width', () => {
     it('keeps one space after a label exactly ALIGNED_LABEL_WIDTH long', () => {
       const label = 'Sixteen Char Lbl';

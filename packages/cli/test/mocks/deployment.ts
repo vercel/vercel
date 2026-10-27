@@ -1,4 +1,4 @@
-import { type Mock, beforeEach } from 'vitest';
+import { beforeEach } from 'vitest';
 import { URL } from 'url';
 import chance from 'chance';
 import { client } from './client';
@@ -28,7 +28,8 @@ export function useDeployment({
     | 'INITIALIZING'
     | 'QUEUED'
     | 'READY'
-    | 'CANCELED';
+    | 'CANCELED'
+    | 'BLOCKED';
   createdAt?: number;
   project?: any; // FIX ME: Use `Project` once PR #9956 is merged
   target?: Deployment['target'];
@@ -88,27 +89,6 @@ export function useBuildLogs({
   client.scenario.get(
     `/v3/now/deployments/${deployment.id}/events`,
     async (req, res) => {
-      for await (const log of logProducer()) {
-        res.write(JSON.stringify(log) + '\n');
-      }
-      res.end();
-    }
-  );
-}
-
-export function useRuntimeLogs({
-  deployment,
-  logProducer,
-  spy,
-}: {
-  deployment: Deployment;
-  logProducer: () => AsyncGenerator<object, void, unknown>;
-  spy?: Mock;
-}) {
-  client.scenario.get(
-    `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
-    async (req, res) => {
-      spy?.(req.path, req.query);
       for await (const log of logProducer()) {
         res.write(JSON.stringify(log) + '\n');
       }

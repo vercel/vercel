@@ -1,5 +1,6 @@
 import { join } from 'path';
 import fs from 'fs-extra';
+import { isRetryableNetworkError } from './utils/network-error';
 
 import type {
   ArchiveFormat,
@@ -31,7 +32,11 @@ export async function* continueDeployment(options: {
   userAgent?: string;
   vercelOutputDir?: string;
   archive?: ArchiveFormat;
-}): AsyncIterableIterator<{ type: DeploymentEventType; payload: any }> {
+}): AsyncIterableIterator<{
+  type: DeploymentEventType;
+  payload: any;
+  code?: string;
+}> {
   const debug = createDebug(options.debug);
   debug(`Continuing deployment: ${options.deploymentId}`);
   const outputDir =
@@ -52,11 +57,20 @@ export async function* continueDeployment(options: {
     };
   }
 
-  const { fileList } = await buildFileTree(
+  const { fileList, warning } = await buildFileTree(
     options.path,
     { isDirectory: true, prebuilt: true, vercelOutputDir: outputDir },
     debug
   );
+
+  if (warning) {
+    debug('Yielding a prebuilt filePathMap ignore warning');
+    yield {
+      type: 'warning',
+      payload: warning,
+      code: 'PREBUILT_FILEPATHMAP_IGNORED',
+    };
+  }
 
   /**
    * Files that must be sent individually (outside the tar archive) so the
@@ -186,7 +200,23 @@ export async function* continueDeployment(options: {
   });
 }
 
-async function postContinue(options: {
+async function postContinue(options: Parameters<typeof postContinueOnce>[0]) {
+  try {
+    return await postContinueOnce(options);
+  } catch (error) {
+    if (!isRetryableNetworkError(error)) throw error;
+    // A lost response does not mean the server stopped processing the request.
+    throw Object.assign(
+      new DeploymentError({
+        code: 'deployment_continue_unavailable',
+        message: `Could not confirm whether deployment ${options.deploymentId} was resumed. Run 'vercel inspect ${options.deploymentId}' to check its status before retrying.`,
+      }),
+      { cause: error }
+    );
+  }
+}
+
+async function postContinueOnce(options: {
   dispatcher?: FetchDispatcher;
   apiUrl?: string;
   debug?: boolean;
@@ -226,13 +256,15 @@ async function postContinue(options: {
       apiUrl: options.apiUrl,
       userAgent: options.userAgent,
       dispatcher: options.dispatcher,
-    }
+    },
+    options.debug
   );
 
   let result;
   try {
     result = await response.json();
-  } catch {
+  } catch (error) {
+    if (isRetryableNetworkError(error)) throw error;
     return {
       type: 'error',
       error: new Error('Invalid JSON response from continue endpoint'),

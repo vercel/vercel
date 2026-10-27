@@ -1,5 +1,5 @@
 import path from 'path';
-import { fileNameSymbol } from '@vercel/client';
+import { fileNameSymbol } from '@vercel/client/dist/types';
 import {
   CantParseJSONFile,
   CantFindConfig,

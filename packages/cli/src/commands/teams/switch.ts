@@ -19,6 +19,7 @@ import {
   withGlobalFlags,
 } from '../../util/agent-output';
 import { getSameSubcommandSuggestionFlags } from '../../util/arg-common';
+import { AGENT_REASON } from '../../util/agent-output-constants';
 import { getLinkFromDir, getVercelDirectory } from '../../util/projects/link';
 
 const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
@@ -69,15 +70,39 @@ export default async function change(client: Client, argv: string[]) {
           reason: 'invalid_arguments',
           message: error instanceof Error ? error.message : String(error),
         },
-        1
+        2
       );
     }
     printError(error);
-    return 1;
+    return 2;
   }
   let {
     args: [desiredSlug],
   } = parsedArgs;
+
+  // These runs never use the saved team, so switching from one would only
+  // change the human's team behind their back.
+  if (client.ignoresSavedTeam) {
+    const message =
+      "Agents can't change the saved team. Pass --scope <team> to each command, or link the directory with --scope.";
+    outputAgentError(client, {
+      status: 'error',
+      reason: AGENT_REASON.AGENT_CANNOT_SWITCH,
+      message,
+      next: [
+        {
+          command: withGlobalFlags(client, 'teams ls'),
+          when: 'to list teams, then ask the user which one to use',
+        },
+        {
+          command: getCommandNamePlain('link --scope <team>'),
+          when: 'to set the team for this directory (replace <team> with the team the user chose)',
+        },
+      ],
+    });
+    output.error(message);
+    return 1;
+  }
 
   // Non-interactive requires a slug (or username) as first positional. Handle
   // this before fetching teams so a stale currentTeam does not surface as
@@ -113,9 +138,9 @@ export default async function change(client: Client, argv: string[]) {
           },
         ],
       },
-      1
+      2
     );
-    return 1;
+    return 2;
   }
 
   const { config, telemetryEventStore } = client;
@@ -236,9 +261,9 @@ export default async function change(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
 
     desiredSlug = await listInput(client, {

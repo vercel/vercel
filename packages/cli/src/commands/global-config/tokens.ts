@@ -40,12 +40,12 @@ export default async function tokensCmd(
     );
   } catch (error) {
     if (client.nonInteractive) {
-      exitWithNonInteractiveError(client, error, 1, {
+      exitWithNonInteractiveError(client, error, 2, {
         variant: 'global-config',
       });
     }
     printError(error);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -79,18 +79,18 @@ export default async function tokensCmd(
             },
           ],
         },
-        1
+        2
       );
     }
     output.error(
       `Missing id or slug. Usage: ${chalk.cyan(getCommandName('global-config tokens <id-or-slug>'))}`
     );
-    return 1;
+    return 2;
   }
 
   if (addLabel && removeCount > 0) {
     output.error('Use either `--add` or `--remove`, not both.');
-    return 1;
+    return 2;
   }
 
   if (removeCount > 0 && client.nonInteractive && !skipConfirmation) {
@@ -110,7 +110,7 @@ export default async function tokensCmd(
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 

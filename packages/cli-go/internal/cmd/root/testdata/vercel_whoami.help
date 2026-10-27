@@ -1,0 +1,50 @@
+
+  ▲ vercel whoami [options]
+
+  Shows the username of the currently logged in user.                           
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                      
+       --json             Output as JSON                                        
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global `.vercel` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local `vercel.json` file              
+       --no-color             No color mode (default off)                       
+       --non-interactive      Run without interactive prompts; when an agent is 
+                              detected this is the default                      
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  Examples:
+
+  - Shows the username of the currently logged in user
+
+    $ vercel whoami
+
+  Notes:
+
+  On a terminal it also shows the active team and its plan. When piped, it      
+  prints only the username.                                                     
+
+  The active team comes from --scope, then the project linked in this directory,
+  then the team saved by `vercel teams switch`, then your default team. It is   
+  always a team: there is no personal account.                                  
+
+  Exits with 1 when logged out.                                                 
+
+  Related:
+
+  vercel login         Sign in to your Vercel account.                        
+  vercel teams switch  Switch to a different team                             
+
+

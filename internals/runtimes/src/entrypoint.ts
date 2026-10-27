@@ -3,6 +3,21 @@ import { CONTAINER_ENTRYPOINT_CANDIDATES } from './constants';
 
 const PYTHON_MODULE_ATTR_RE =
   /^([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*):([A-Za-z_][\w]*)$/;
+const NODE_FILE_ENTRYPOINT_RE =
+  /^(?!\/)(?!.*(?:^|\/)\.\.?(?:\/|$))(?:[\w@+.-]+\/)*[\w@+.-]+\.[cm]?[jt]s$/;
+const PYTHON_FILE_ENTRYPOINT_RE =
+  /^(?!\/)(?!.*(?:^|\/)\.\.?(?:\/|$))(?:[\w@+.-]+\/)*[\w@+.-]+\.py$/;
+const NODE_DECLARATION_ENTRYPOINT_RE = /\.d\.[cm]?ts$/;
+
+export type ParsedScheduleEntrypoint =
+  | {
+      runtime: 'python';
+      filePath: string;
+    }
+  | {
+      runtime: 'node';
+      filePath: string;
+    };
 
 /**
  * Parse a Python `module:attr` entrypoint (e.g. `backend.jobs.scheduled:cleanup`)
@@ -13,6 +28,7 @@ const PYTHON_MODULE_ATTR_RE =
 export function parsePyModuleAttrEntrypoint(entrypoint: string): {
   attrName: string;
   filePath: string;
+  moduleName: string;
 } | null {
   const match = PYTHON_MODULE_ATTR_RE.exec(entrypoint);
   if (!match) return null;
@@ -21,7 +37,31 @@ export function parsePyModuleAttrEntrypoint(entrypoint: string): {
   return {
     attrName,
     filePath: modulePart.replace(/\./g, '/') + '.py',
+    moduleName: modulePart,
   };
+}
+
+/**
+ * User-facing summary of the entrypoint forms `parseScheduleEntrypoint`
+ * accepts. Keep in sync when adding a runtime.
+ */
+export const SCHEDULE_ENTRYPOINT_FORMS_HINT =
+  'Use a source file path like "jobs/nightly.py" or "jobs/nightly.ts".';
+
+/** Parse a supported schedule entrypoint without resolving it on disk. */
+export function parseScheduleEntrypoint(
+  entrypoint: string
+): ParsedScheduleEntrypoint | null {
+  if (PYTHON_FILE_ENTRYPOINT_RE.test(entrypoint)) {
+    return { runtime: 'python', filePath: entrypoint };
+  }
+  if (
+    NODE_FILE_ENTRYPOINT_RE.test(entrypoint) &&
+    !NODE_DECLARATION_ENTRYPOINT_RE.test(entrypoint)
+  ) {
+    return { runtime: 'node', filePath: entrypoint };
+  }
+  return null;
 }
 
 const CONTAINER_ENTRYPOINT_BASENAMES = new Set(

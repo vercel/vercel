@@ -1,0 +1,9 @@
+{
+  "name": "scoped-install-root",
+  "private": true,
+  "packageManager": "yarn@4.9.2",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

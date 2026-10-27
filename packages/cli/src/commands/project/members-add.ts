@@ -15,6 +15,7 @@ import {
   AGENT_ACTION,
   AGENT_REASON,
   AGENT_STATUS,
+  getExitCodeForReason,
 } from '../../util/agent-output-constants';
 import { isAPIError } from '../../util/errors-ts';
 import { membersAddFlags, PROJECT_MEMBER_ROLES } from './command';
@@ -67,7 +68,7 @@ export async function membersAdd(
       message: error instanceof Error ? error.message : String(error),
     });
     printError(error);
-    return 1;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(parsedArgs.flags);
@@ -78,7 +79,7 @@ export async function membersAdd(
       message: formatResult.error,
     });
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const { jsonOutput } = formatResult;
   const asJson = jsonOutput;
@@ -96,7 +97,7 @@ export async function membersAdd(
         message,
         ...extra,
       });
-      return 1;
+      return getExitCodeForReason(reason);
     }
     if (jsonOutput || !canPrompt(client)) {
       client.stdout.write(
@@ -106,10 +107,10 @@ export async function membersAdd(
           2
         )}\n`
       );
-      return 1;
+      return getExitCodeForReason(reason);
     }
     output.error(humanMessage);
-    return 1;
+    return getExitCodeForReason(reason);
   }
 
   if (parsedArgs.args.length !== 2) {
@@ -314,7 +315,7 @@ export async function membersAdd(
           reason: AGENT_REASON.INVALID_ROLE_COMBINATION,
           message,
         });
-        return 1;
+        return 2;
       }
       if (jsonOutput || !canPrompt(client)) {
         client.stdout.write(
@@ -328,7 +329,7 @@ export async function membersAdd(
             2
           )}\n`
         );
-        return 1;
+        return 2;
       }
       output.error(humanIntro);
       output.log('Project roles can only be assigned to these team roles:');

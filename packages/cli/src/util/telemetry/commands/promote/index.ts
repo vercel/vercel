@@ -6,7 +6,7 @@ export class PromoteTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof promoteCommand>
 {
-  trackCliArgumentUrlOrDeploymentId(value: string | undefined) {
+  trackCliArgumentDeployment(value: string | undefined) {
     if (value) {
       this.trackCliArgument({
         arg: 'urlOrDeploymentId',

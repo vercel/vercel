@@ -9,19 +9,27 @@ import {
   withGlobalFlags,
   failFirewall,
   failFirewallApi,
+  failFirewallObservabilityPlan,
 } from '../shared';
 import { requireProjectContext } from '../../../util/projects/require-project-context';
 import { FIREWALL_ACTIVITY_PLAN_MESSAGE } from '../../../util/firewall/get-firewall-alerts';
 import {
+  clampPersistentActionWindow,
   fetchFirewallPersistentActions,
+  isRedacted,
   PATH_DIMENSION,
+  retentionLabel,
   toPersistentAction,
   persistentActionFilter,
   type FirewallEventAction,
   apiTimestampMs,
 } from '../../../util/firewall/get-firewall-events';
 import getFirewallMetrics from '../../../util/firewall/get-firewall-metrics';
-import { getTopList } from '../../../util/firewall/get-firewall-traffic';
+import { fetchPlanInfo } from '../../../util/firewall/interactive-helpers';
+import {
+  alignQueryWindow,
+  getTopList,
+} from '../../../util/firewall/get-firewall-traffic';
 import {
   formatPersistentActionInspect,
   persistentActionWindow,
@@ -68,6 +76,10 @@ function matchesInspectFilters(
 }
 
 export default async function inspect(client: Client, argv: string[]) {
+  // Read before the flags are: a relative `--since` resolves against the
+  // clock, and so does the plan's retention boundary further down. Both are
+  // measured from here so the two agree.
+  const startedAt = Date.now();
   const parsed = await parseSubcommandArgs(
     argv,
     persistentActionsInspectSubcommand,
@@ -113,7 +125,7 @@ export default async function inspect(client: Client, argv: string[]) {
     });
   }
 
-  const { from, to } = persistentActionWindow(
+  const requested = persistentActionWindow(
     sinceResult.value,
     untilResult.value
   );
@@ -139,6 +151,23 @@ export default async function inspect(client: Client, argv: string[]) {
 
   const asJson = Boolean(parsed.flags['--json']);
   const suggestedCommand = `firewall persistent-actions inspect ${ip}${asJson ? ' --json' : ''}`;
+
+  // The API trims the search window to the plan's retention silently; an
+  // action older than that cannot be found however wide `--since` is.
+  const { isEnterprise, known } = await fetchPlanInfo(client);
+  const window = clampPersistentActionWindow({
+    ...requested,
+    isEnterprise,
+    planKnown: known,
+    now: startedAt,
+  });
+  const { from, to } = window;
+  if (window.empty) {
+    return failFirewall(client, {
+      message: `This plan keeps ${retentionLabel(isEnterprise)} of persistent-action history, and the requested window is entirely older than that. Narrow it with --since and --until.`,
+      reason: AGENT_REASON.INVALID_ARGUMENTS,
+    });
+  }
 
   output.spinner(`Fetching persistent action ${chalk.bold(ip)}`);
 
@@ -171,16 +200,16 @@ export default async function inspect(client: Client, argv: string[]) {
     // plus any traffic from this IP outside either. It is also far less to
     // scan: an action lasts minutes where the search window defaults to an
     // hour.
-    const actionStart = new Date(apiTimestampMs(selected.startTime));
-    const actionEnd = new Date(
+    const requestedStart = new Date(apiTimestampMs(selected.startTime));
+    const requestedEnd = new Date(
       Math.max(
-        // An active action's `endTime` is a projected expiry, so it would add
-        // empty future buckets to the chart.
+        // An active action's `endTime` is a projected expiry, so charting to
+        // it would spend the window on future the action has not reached.
         Math.min(apiTimestampMs(selected.endTime), Date.now()),
         // An action that started a moment ago clamps to a window of nothing,
         // and a clock behind the server's to one that runs backwards. Both
         // are rejected, so keep a bucket of it either way.
-        actionStart.getTime() + MIN_TRAFFIC_WINDOW_MS
+        requestedStart.getTime() + MIN_TRAFFIC_WINDOW_MS
       )
     );
 
@@ -195,23 +224,46 @@ export default async function inspect(client: Client, argv: string[]) {
       host: selected.host,
       withPath: true,
     });
+    // A row whose address the plan withheld cannot be scoped to, and a query
+    // with the scope dropped would report the whole project's traffic as this
+    // client's. Report it the way any other withheld activity is reported.
+    //
+    // Keyed off the address rather than off `filter`: a withheld IP on a named
+    // host still builds a filter, but one that selects every client of that
+    // host — which is the reading this guard exists to prevent.
+    const scopable = !isRedacted(selected.public_ip);
+    const granularity = inspectGranularity(requestedStart, requestedEnd);
+    // Both queries run over one window, aligned to the buckets the chart is
+    // drawn on: the API rounds the bucketed one out to whole buckets itself,
+    // and the unbucketed path list has none to be rounded by, so an unaligned
+    // window had the two cover different ranges. See `alignQueryWindow`.
+    const { startTime: actionStart, endTime: actionEnd } = alignQueryWindow(
+      requestedStart,
+      requestedEnd,
+      granularity
+    );
     const [metrics, paths] = await Promise.all([
-      getFirewallMetrics(client, {
-        projectId: project.id,
-        ownerId: teamId,
-        startTime: actionStart,
-        endTime: actionEnd,
-        granularity: inspectGranularity(actionStart, actionEnd),
-        filter,
-      }).catch(err => {
-        if (isActivityUnavailable(err)) return null;
-        throw err;
-      }),
-      // Grouping by path is the slowest query the firewall commands make —
-      // several times the cost of everything else here put together, and the
-      // window barely moves it, because the price is the dimension's
-      // cardinality. Opt in rather than pay it on every inspect.
-      wantPaths
+      !scopable
+        ? Promise.resolve(null)
+        : getFirewallMetrics(client, {
+            projectId: project.id,
+            ownerId: teamId,
+            startTime: actionStart,
+            endTime: actionEnd,
+            granularity,
+            filter,
+          }).catch(err => {
+            if (isActivityUnavailable(err)) return null;
+            throw err;
+          }),
+      // Grouping by path costs roughly double grouping by action over the
+      // same window and filter, and it runs beside that query, so the flag
+      // adds about a fifth to the command rather than the several times over
+      // it was once described as. The window barely moves it — six times the
+      // period added a few percent — so the price is the dimension's
+      // cardinality. Still worth opting into rather than paying on every
+      // inspect, but it is one query, not a cliff.
+      wantPaths && scopable
         ? getTopList(client, {
             projectId: project.id,
             ownerId: teamId,
@@ -271,10 +323,7 @@ export default async function inspect(client: Client, argv: string[]) {
     return 0;
   } catch (e: unknown) {
     if (isActivityUnavailable(e)) {
-      return failFirewall(client, {
-        message: FIREWALL_ACTIVITY_PLAN_MESSAGE,
-        reason: AGENT_REASON.API_ERROR,
-      });
+      return failFirewallObservabilityPlan(client, e, project.name);
     }
     return failFirewallApi(client, e, {
       fallback: 'Failed to fetch persistent firewall action',

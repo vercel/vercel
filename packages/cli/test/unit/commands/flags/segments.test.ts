@@ -46,7 +46,7 @@ describe('flags segments', () => {
     it('tracks telemetry', async () => {
       client.setArgv('flags', 'segments', '--help');
 
-      await expect(flags(client)).resolves.toEqual(2);
+      await expect(flags(client)).resolves.toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'subcommand:segments',
@@ -64,7 +64,7 @@ describe('flags segments', () => {
 
       const exitCode = await flags(client);
 
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       const helpOutput = client.stderr.getFullOutput();
       expectHelpOutputToListRuleOperators(helpOutput);
       expect(helpOutput.replace(/\s+/g, ' ')).toContain(
@@ -77,7 +77,7 @@ describe('flags segments', () => {
 
       const exitCode = await flags(client);
 
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expectHelpOutputToListRuleOperators(client.stderr.getFullOutput());
     });
   });
@@ -173,6 +173,28 @@ describe('flags segments', () => {
   });
 
   describe('create', () => {
+    it('sets the description with -d after the slug', async () => {
+      client.setArgv(
+        'flags',
+        'segments',
+        'create',
+        'enterprise-users',
+        '--label',
+        'Enterprise users',
+        '-d',
+        'Paying teams'
+      );
+
+      expect(await flags(client)).toEqual(0);
+      expect(segmentsList[2]).toMatchObject({
+        slug: 'enterprise-users',
+        description: 'Paying teams',
+      });
+      expect(client.stderr.getFullOutput()).toContain(
+        '! -d is deprecated. Use --description.'
+      );
+    });
+
     it('creates a segment with include values and rules', async () => {
       client.setArgv(
         'flags',
@@ -329,6 +351,20 @@ describe('flags segments', () => {
   });
 
   describe('update', () => {
+    it('sets the description with -d after the segment', async () => {
+      client.setArgv(
+        'flags',
+        'segments',
+        'update',
+        'beta-users',
+        '-d',
+        'Early access'
+      );
+
+      expect(await flags(client)).toEqual(0);
+      expect(segmentsList[0].description).toBe('Early access');
+    });
+
     it('adds and removes values with operations', async () => {
       client.setArgv(
         'flags',
@@ -476,9 +512,9 @@ describe('flags segments', () => {
 
       const exitCode = await flags(client);
 
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       expect(client.stderr.getFullOutput()).toContain(
-        'Missing required flag --yes'
+        'Missing required option --yes'
       );
       expect(confirmMock).not.toHaveBeenCalled();
       expect(segmentsList.map(segment => segment.slug)).toEqual([
@@ -494,6 +530,23 @@ describe('flags segments', () => {
 
       expect(exitCode).toEqual(0);
       expect(segmentsList.map(segment => segment.slug)).toEqual(['beta-users']);
+    });
+
+    it.each([
+      ['delete', false],
+      ['del', false],
+      ['remove', true],
+    ])('runs as %s (deprecated: %s)', async (name, deprecated) => {
+      client.setArgv('flags', 'segments', name, 'staff', '--yes');
+
+      expect(await flags(client)).toEqual(0);
+      const warning =
+        '`vercel flags segments remove` is deprecated. Use `vercel flags segments delete`.';
+      if (deprecated) {
+        expect(client.stderr.getFullOutput()).toContain(warning);
+      } else {
+        expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+      }
     });
 
     it('shows API reference details when deleting an in-use segment', async () => {

@@ -1,4 +1,5 @@
 import type { LambdaOptionsBase } from './lambda';
+import { validateMaxConcurrency } from './max-concurrency';
 import type { Env, Files } from './types';
 
 export interface ContainerImageConfig
@@ -44,6 +45,7 @@ export class ContainerImage implements ContainerImageConfig {
   supportsCancellation?: ContainerImageConfig['supportsCancellation'];
 
   constructor(params: ContainerImageConfig & { files: Files }) {
+    validateMaxConcurrency(params.maxConcurrency);
     this.type = 'ContainerImage';
     this.files = params.files;
     this.handler = params.handler;

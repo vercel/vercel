@@ -1,13 +1,9 @@
-import type {
-  JSONObject,
-  Project,
-  ProjectTracing,
-  ProjectTracingSamplingRule,
-} from '@vercel-internals/types';
+import type { JSONObject } from '@vercel-internals/types';
 import type Client from '../../../util/client';
+import { warnDeprecatedInput } from '../../../util/warn-deprecated-subcommand';
 import { RULE_ENVIRONMENTS } from './command';
 
-/** The API caps `tracing.samplingRules` at ten items. */
+/** The API caps drain sampling at ten items. */
 export const RULE_LIMIT = 10;
 
 /** The command line reads a rate as a whole percentage. */
@@ -15,6 +11,18 @@ export const MIN_SAMPLE_RATE = 1;
 export const MAX_SAMPLE_RATE = 100;
 
 export type RuleEnvironment = (typeof RULE_ENVIRONMENTS)[number];
+
+export type DrainSamplingRule = {
+  type: 'head_sampling';
+  rate: number;
+  env?: 'production' | 'preview';
+  requestPath?: string;
+};
+
+export type TracingConfig = {
+  enabled: boolean;
+  sampling: DrainSamplingRule[];
+};
 
 /**
  * One sampling rule in CLI vocabulary. A row read from `ls --json` can be fed
@@ -54,7 +62,7 @@ export function parseSampleRate(value: string): number | undefined {
  * 1; the command line speaks whole percentages, so 0.25 reads as 25. Rounding
  * absorbs float noise (0.07 * 100 is 7.000000000000001).
  */
-export function toRow(rule: ProjectTracingSamplingRule): SamplingRuleRow {
+export function toRow(rule: DrainSamplingRule): SamplingRuleRow {
   return {
     environment: rule.env ?? 'any',
     requestPath: rule.requestPath ?? null,
@@ -72,8 +80,9 @@ export function toApiRate(sampleRate: number): number {
  * by leaving the key off entirely, which is how the API spells "every
  * environment" and "every path".
  */
-export function toRule(row: SamplingRuleRow): ProjectTracingSamplingRule {
+export function toRule(row: SamplingRuleRow): DrainSamplingRule {
   return {
+    type: 'head_sampling',
     rate: toApiRate(row.sampleRate),
     ...(row.environment === 'any' ? {} : { env: row.environment }),
     ...(row.requestPath === null ? {} : { requestPath: row.requestPath }),
@@ -116,6 +125,36 @@ export function subcommandArguments(positional: string[]): string[] {
   return positional.slice(COMMAND_WORD_COUNT);
 }
 
+/**
+ * `set` and `rm` used to take the environment as their first argument
+ * (`traces config set production 25`). It is `--environment` now. Without the
+ * option, a first argument that is an environment is still read as one, with a
+ * deprecation warning; any other first argument starts the new form, so the
+ * environment comes back `undefined` and the caller reports it missing. With
+ * the option, an environment argument is a usage error.
+ */
+export function resolveRuleEnvironment(
+  client: Client,
+  environmentFlag: string | undefined,
+  args: string[]
+): { environment: string | undefined; args: string[] } | { error: string } {
+  if (environmentFlag === undefined) {
+    const [environment, ...rest] = args;
+    if (environment !== undefined && isRuleEnvironment(environment)) {
+      warnDeprecatedInput(client, 'The environment argument', '--environment');
+      return { environment, args: rest };
+    }
+    return { environment: undefined, args };
+  }
+  if (args[0] !== undefined && isRuleEnvironment(args[0])) {
+    return {
+      error:
+        "Can't use an environment argument with --environment. Use --environment.",
+    };
+  }
+  return { environment: environmentFlag, args };
+}
+
 /** A rule's identity is the pair (environment, path). */
 export function hasSameKey(a: SamplingRuleRow, b: SamplingRuleRow): boolean {
   return a.environment === b.environment && a.requestPath === b.requestPath;
@@ -131,81 +170,56 @@ export function hasSameKey(a: SamplingRuleRow, b: SamplingRuleRow): boolean {
  * neighbour from 0.075 to 0.08.
  */
 export type SamplingRuleEntry = {
-  rule: ProjectTracingSamplingRule;
+  rule: DrainSamplingRule;
   row: SamplingRuleRow;
 };
 
-export type ProjectTracingConfig = {
-  project: Project;
-  /** `null` when the project has never used tracing. */
-  tracing: ProjectTracing | null;
-  /** Every rule the project has, in the order the API returned them. */
-  entries: SamplingRuleEntry[];
-};
-
-/**
- * Reads the whole `tracing` object off the project.
- *
- * The team goes through `accountId` rather than onto the query string so
- * `client.fetch` applies its own rule for this endpoint: it forwards a
- * `team_`-prefixed id as `teamId` and drops anything else, which is how every
- * other `/v9/projects` caller behaves. `traces get` forwards its scope verbatim
- * instead, but that is a property of `/v1/projects/traces`, which documents
- * accepting a slug or an id, and it does not transfer here.
- */
-export async function readProjectTracing({
+export async function readTracingConfig({
   client,
   teamId,
   projectId,
+  projectName,
 }: {
   client: Client;
   teamId: string;
   projectId: string;
-}): Promise<ProjectTracingConfig> {
-  const project = await client.fetch<Project>(
-    `/v9/projects/${encodeURIComponent(projectId)}`,
+  projectName: string;
+}) {
+  const config = await client.fetch<TracingConfig>(
+    `/v1/drains/tracing/config?${new URLSearchParams({ projectId })}`,
     { accountId: teamId }
   );
-  const tracing = project.tracing ?? null;
+  const sampling: DrainSamplingRule[] =
+    config.enabled && config.sampling.length === 0
+      ? [{ type: 'head_sampling', rate: 1 }]
+      : config.sampling;
   return {
-    project,
-    tracing,
-    entries: (tracing?.samplingRules ?? []).map(rule => ({
-      rule,
-      row: toRow(rule),
-    })),
+    project: { id: projectId, name: projectName },
+    enabled: config.enabled,
+    entries: sampling.map(rule => ({ rule, row: toRow(rule) })),
   };
 }
 
-/**
- * Writes the whole `tracing` object back with only `samplingRules` changed, so
- * `domains` and `ignorePaths` survive whether the API merges or replaces the
- * nested object. A project that has never used tracing sends `samplingRules`
- * alone rather than inventing the other two fields.
- *
- * `rules` are API rules, not CLI rows: the caller passes through the objects it
- * read for every rule it did not edit.
- */
 export async function writeSamplingRules({
   client,
   teamId,
   projectId,
-  tracing,
   rules,
 }: {
   client: Client;
   teamId: string;
   projectId: string;
-  tracing: ProjectTracing | null;
-  rules: ProjectTracingSamplingRule[];
+  rules: DrainSamplingRule[];
 }): Promise<void> {
-  const body = {
-    tracing: { ...(tracing ?? {}), samplingRules: rules },
-  };
-  // The team goes through `accountId` for the same reason as the read.
-  await client.fetch(`/v9/projects/${encodeURIComponent(projectId)}`, {
-    accountId: teamId,
-    method: 'PATCH',
-    body: body as unknown as JSONObject,
-  });
+  await client.fetch(
+    `/v1/drains/tracing/config?${new URLSearchParams({ projectId })}`,
+    {
+      accountId: teamId,
+      method: 'PUT',
+      body: {
+        enabled: rules.length > 0,
+        ...(rules.length > 0 ? { sampling: rules } : {}),
+      } as unknown as JSONObject,
+    }
+  );
 }
