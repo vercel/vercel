@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "types": [
+      "vite/client"
+    ]
+  },
+  "include": [
+    ".modulato/content.d.ts",
+    "app.tsx",
+    "intro.ts",
+    "motion.ts",
+    "shell",
+    "pages",
+    "content",
+    "behaviors",
+    "transitions",
+    "vite.config.ts",
+    "modulato.config.ts"
+  ]
+}
