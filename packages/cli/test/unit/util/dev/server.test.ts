@@ -1,4 +1,5 @@
 import { Readable } from 'stream';
+import { EventEmitter } from 'events';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { join } from 'path';
 import { mkdtemp, rm, writeFile } from 'fs/promises';
@@ -24,6 +25,110 @@ vi.mock('../../../../src/output-manager', () => ({
     time: vi.fn((_label: string, promise: Promise<unknown>) => promise),
   },
 }));
+
+describe('DevServer worker lifecycle', () => {
+  it.each([
+    { persistent: false, duringStartup: true },
+    { persistent: true, duringStartup: true },
+    { persistent: false, duringStartup: false },
+    { persistent: true, duringStartup: false },
+  ])('handles disconnect with persistent=$persistent, duringStartup=$duringStartup', async ({
+    persistent,
+    duringStartup,
+  }) => {
+    const server = new DevServer(process.cwd(), {});
+    const shutdown = vi.fn().mockResolvedValue(undefined);
+    let finishStartup!: (result: {
+      port: number;
+      pid: number;
+      shutdown: typeof shutdown;
+      persistent: boolean;
+    }) => void;
+    let markStarted!: () => void;
+    const started = new Promise<void>(resolve => {
+      markStarted = resolve;
+    });
+    const startDevServer = vi.fn(() => {
+      markStarted();
+      return new Promise<Parameters<typeof finishStartup>[0]>(resolve => {
+        finishStartup = resolve;
+      });
+    });
+
+    Object.assign(server as any, {
+      envConfigs: { runEnv: {}, buildEnv: {} },
+      buildMatches: new Map([
+        [
+          'api/test.js',
+          {
+            src: 'api/test.js',
+            entrypoint: 'api/test.js',
+            config: {},
+            buildResults: new Map(),
+            builderWithPkg: {
+              pkg: { name: 'test-builder' },
+              builder: {
+                shouldServe: async () => true,
+                startDevServer,
+              },
+            },
+          },
+        ],
+      ]),
+    });
+    (server as any).updateBuildMatches = vi.fn();
+    (server as any).exitWithStatus = vi.fn().mockResolvedValue(false);
+    (server as any).getSidecarDevMeta = vi.fn().mockReturnValue({});
+    (server as any).getProxyHeaders = vi.fn().mockReturnValue({});
+    (server as any).prepareTransforms = vi.fn();
+    (server as any).setResponseHeaders = vi.fn();
+    const proxyWeb = vi.spyOn(server.proxy, 'web').mockImplementation(() => {});
+
+    const req = Readable.from([]) as IncomingMessage;
+    req.method = 'GET';
+    req.url = '/api/test';
+    req.headers = {};
+    const res = Object.assign(new EventEmitter(), {
+      destroyed: false,
+      setHeader: vi.fn(),
+    });
+
+    const serving = server.serveProjectAsNowV2(
+      req,
+      res as unknown as ServerResponse,
+      'test-request',
+      {}
+    );
+
+    await started;
+    if (duringStartup) {
+      res.destroyed = true;
+      res.emit('close');
+    }
+
+    finishStartup({ port: 12345, pid: 123456, shutdown, persistent });
+    await serving;
+
+    if (!duringStartup) {
+      expect(shutdown).not.toHaveBeenCalled();
+      expect((server as any).shutdownCallbacks.has(123456)).toBe(true);
+      res.destroyed = true;
+      res.emit('close');
+    }
+
+    expect(shutdown).toHaveBeenCalledTimes(persistent ? 0 : 1);
+    expect((server as any).shutdownCallbacks.has(123456)).toBe(persistent);
+    expect(proxyWeb).toHaveBeenCalledTimes(duringStartup ? 0 : 1);
+
+    // Persistent workers remain registered for server-level cleanup.
+    if (persistent) {
+      await server.killBuilderDevServer(123456);
+      expect(shutdown).toHaveBeenCalledTimes(1);
+      expect((server as any).shutdownCallbacks.has(123456)).toBe(false);
+    }
+    proxyWeb.mockRestore();
+  });
+});
 
 describe('DevServer build filtering', () => {
   it('keeps `api/` builds for every framework runtime when services are not configured', () => {
