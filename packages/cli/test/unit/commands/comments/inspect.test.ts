@@ -108,7 +108,7 @@ describe('comments inspect', () => {
     client.setArgv('comments', 'inspect', '--format', 'json');
     const exitCode = await comments(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     const parsed = JSON.parse(client.stdout.getFullOutput());
     expect(parsed.error.code).toBe('MISSING_THREAD');
   });
@@ -170,7 +170,7 @@ describe('comments inspect', () => {
     client.setArgv('comments', 'inspect');
     const exitCode = await comments(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.input.select).not.toHaveBeenCalled();
     expect(client.stderr.getFullOutput()).toContain('thread');
   });

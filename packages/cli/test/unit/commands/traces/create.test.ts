@@ -138,7 +138,7 @@ describe('traces create', () => {
     it('prints the create subcommand help', async () => {
       client.setArgv('traces', 'create', '--help');
       const exitCode = await traces(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.getFullOutput()).toContain(
         'alias for `vercel curl --trace`'
       );
@@ -149,7 +149,7 @@ describe('traces create', () => {
     it('rejects when no path is provided', async () => {
       client.setArgv('traces', 'create');
       const exitCode = await traces(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('requires a URL or API path');
     });
   });
@@ -184,7 +184,7 @@ describe('traces create', () => {
     );
 
     expect(client.stderr.getFullOutput()).toContain(
-      `Run \`vercel traces get ${REQUEST_ID}\` to fetch the trace.`
+      `Run \`vercel traces inspect ${REQUEST_ID}\` to fetch the trace.`
     );
 
     // The shared curl runner emits the path argument, the passed-through

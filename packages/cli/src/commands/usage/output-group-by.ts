@@ -2,18 +2,18 @@ import chalk from 'chalk';
 import table from '../../util/output/table';
 import output from '../../output-manager';
 import elapsed from '../../util/output/elapsed';
-import { formatCurrency, formatQuantity } from '../../util/billing/format';
+import { formatUsageAmount, formatUsageQuantity } from './format';
 import type { OutputOptions, GroupByDimension } from './types';
+import {
+  formatServiceCost,
+  formatServiceName,
+  outputHiddenServicesHint,
+  outputUsageHeader,
+  visibleServices,
+} from './output-utils';
 
 function getDimensionLabel(dimension: GroupByDimension): string {
-  switch (dimension) {
-    case 'project':
-      return 'Project';
-    case 'region':
-      return 'Region';
-    default:
-      return 'Group';
-  }
+  return dimension === 'project' ? 'Project' : 'Region';
 }
 
 export function outputGroupBy({
@@ -24,56 +24,62 @@ export function outputGroupBy({
   const { print, log } = output;
   const dimensionLabel = getDimensionLabel(groupByDimension!);
 
-  log(
-    `Usage by ${dimensionLabel} for ${chalk.bold(data.contextName)} ${elapsed(Date.now() - startTime)}`
+  outputUsageHeader(
+    data,
+    `Usage by ${dimensionLabel}`,
+    elapsed(Date.now() - startTime)
   );
-  log('');
-  const periodSuffix = data.usingDefaults ? ' (current month)' : '';
-  log(
-    `${chalk.gray('Period:')} ${data.fromDisplay} to ${data.toDisplay}${periodSuffix}`
-  );
-  log(`${chalk.gray('Charges processed:')} ${data.chargeCount}`);
-  log(`${chalk.gray('Pricing unit:')} ${data.pricingUnit}`);
-  log('');
 
   const sortedGroups = [...data.groupByUsage.entries()].sort(
-    (a, b) => b[1].totalBilledCost - a[1].totalBilledCost
+    (a, b) => b[1].totalCost - a[1].totalCost
   );
-
   if (sortedGroups.length === 0) {
     log('No usage data found for this period.');
     return;
   }
 
-  const quantityHeader =
-    data.pricingUnit === 'USD' ? 'Usage (USD)' : data.pricingUnit;
-
+  let hiddenCount = 0;
   for (const [groupName, groupData] of sortedGroups) {
+    const allServices = [...groupData.services.entries()];
+    const services = visibleServices(groupData.services).sort(
+      (a, b) => b[1].cost - a[1].cost
+    );
+    hiddenCount += allServices.length - services.length;
+    if (services.length === 0) continue;
+
     log(
-      `${chalk.bold(chalk.cyan(groupName))} (Total: ${formatQuantity(groupData.totalPricingQuantity, data.pricingUnit)}, ${formatCurrency(groupData.totalBilledCost)})`
+      `${chalk.bold(chalk.cyan(groupName))} (${formatUsageAmount(
+        groupData.totalCost,
+        data.costUnit
+      )})`
     );
-
-    const sortedServices = [...groupData.services.entries()].sort(
-      (a, b) => b[1].billedCost - a[1].billedCost
-    );
-
-    const headers = ['Service', quantityHeader, 'Billed Cost'];
-    const rows = sortedServices.map(([name, svc]) => [
-      name,
-      formatQuantity(svc.pricingQuantity, svc.pricingUnit),
-      formatCurrency(svc.billedCost),
+    const rows = services.map(([name, service]) => [
+      formatServiceName(name, service),
+      formatUsageQuantity(service.quantity, service.unit, {
+        compact: true,
+        showSmallValues: true,
+        singularUnit: service.singularUnit,
+        unitKind: service.unitKind,
+      }),
+      formatServiceCost(service, data.costUnit),
     ]);
-
     const tablePrint = table(
-      [headers.map(h => chalk.bold(chalk.gray(h))), ...rows],
-      { hsep: 4, align: ['l', 'r', 'r'] }
+      [
+        ['Service', 'Usage', 'Cost'].map(header =>
+          chalk.bold(chalk.gray(header))
+        ),
+        ...rows,
+      ],
+      { hsep: 4, align: ['l', 'l', 'r'] }
     ).replace(/^/gm, '  ');
-
     print(`${tablePrint}\n`);
   }
 
   log('');
   log(
-    `${chalk.gray('Amount due:')} ${chalk.bold(formatCurrency(data.grandTotals.billedCost))}`
+    `${chalk.gray('Estimated total:')} ${chalk.bold(
+      formatUsageAmount(data.totalCost, data.costUnit)
+    )}`
   );
+  outputHiddenServicesHint(hiddenCount);
 }

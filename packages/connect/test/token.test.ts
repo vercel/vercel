@@ -1,11 +1,21 @@
 import { getVercelOidcToken } from '@vercel/oidc';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  expectTypeOf,
+  it,
+  vi,
+} from 'vitest';
 import {
   ConnectError,
   deleteTokenCacheEntry,
+  getToken,
   getTokenResponse,
   revokeToken,
   UserAuthorizationRequiredError,
+  type ConnectTokenSubject,
 } from '../src/token.js';
 
 vi.mock('@vercel/oidc', () => ({
@@ -25,13 +35,21 @@ const RESULT = {
   providerFailed: 0,
 };
 
+it('allows an omitted subject type only with a string token', () => {
+  expectTypeOf<{ token: string }>().toMatchTypeOf<ConnectTokenSubject>();
+  expectTypeOf<{ token: null }>().not.toMatchTypeOf<ConnectTokenSubject>();
+  expectTypeOf<{ token: number }>().not.toMatchTypeOf<ConnectTokenSubject>();
+  expectTypeOf<{ id: string }>().not.toMatchTypeOf<ConnectTokenSubject>();
+  expectTypeOf<{}>().not.toMatchTypeOf<ConnectTokenSubject>();
+});
+
 describe('revokeToken', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    vi.mocked(getVercelOidcToken).mockResolvedValue('oidc_token');
+    vi.mocked(getVercelOidcToken).mockReset().mockResolvedValue('oidc_token');
   });
 
   afterEach(() => {
@@ -60,6 +78,26 @@ describe('revokeToken', () => {
       Authorization: 'Bearer vercel_token',
     });
     expect(JSON.parse(init.body as string)).toEqual(PARAMS);
+  });
+
+  it('normalizes an implicit token subject when revoking tokens', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(RESULT));
+    const identity = Object.freeze({
+      token: 'revoke_passport.jwt',
+      email: 'user@example.com',
+    });
+
+    await revokeToken(CONNECTOR, {
+      subject: identity,
+      installationId: 'icfg_123',
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toEqual({
+      subject: { type: 'token', token: identity.token },
+      installationId: 'icfg_123',
+    });
+    expect(identity).not.toHaveProperty('type');
   });
 
   it('uses the Vercel OIDC token when no explicit token is provided', async () => {
@@ -112,7 +150,7 @@ describe('getTokenResponse cache', () => {
   beforeEach(() => {
     fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    vi.mocked(getVercelOidcToken).mockResolvedValue('oidc_token');
+    vi.mocked(getVercelOidcToken).mockReset().mockResolvedValue('oidc_token');
   });
 
   afterEach(() => {
@@ -222,6 +260,96 @@ describe('getTokenResponse cache', () => {
         type: 'token',
         token: 'passport.jwt',
       },
+    });
+  });
+
+  it('accepts an identity directly and sends only the canonical token subject', async () => {
+    fetchMock.mockResolvedValue(tokenResponse('tok_implicit_passport'));
+    const identity = Object.freeze({
+      token: 'implicit_passport.jwt',
+      tokenSource: 'header',
+      verified: true,
+      subject: 'user_123',
+      email: 'user@example.com',
+      payload: { sub: 'user_123' },
+    });
+
+    await expect(
+      getToken('slack/xaa-slack', { subject: identity, scopes: ['users:read'] })
+    ).resolves.toBe('tok_implicit_passport');
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(
+      'https://api.vercel.com/v1/connect/token/slack%2Fxaa-slack'
+    );
+    expect(JSON.parse(init.body as string)).toEqual({
+      subject: { type: 'token', token: identity.token },
+      scopes: ['users:read'],
+    });
+    expect(identity).not.toHaveProperty('type');
+  });
+
+  it('shares cache entries and eviction between implicit and explicit token subjects', async () => {
+    fetchMock
+      .mockResolvedValueOnce(tokenResponse('tok_implicit_cached'))
+      .mockResolvedValueOnce(tokenResponse('tok_refetched_explicit'))
+      .mockResolvedValueOnce(tokenResponse('tok_refetched_implicit'));
+    const implicit = {
+      subject: { token: 'cache_alias.jwt', email: 'user@example.com' },
+    };
+    const explicit = {
+      subject: { token: 'cache_alias.jwt', type: 'token' as const },
+    };
+
+    await getTokenResponse(CONNECTOR, implicit);
+    await expect(getTokenResponse(CONNECTOR, explicit)).resolves.toMatchObject({
+      token: 'tok_implicit_cached',
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    deleteTokenCacheEntry(CONNECTOR, explicit);
+    await expect(getTokenResponse(CONNECTOR, implicit)).resolves.toMatchObject({
+      token: 'tok_refetched_explicit',
+    });
+
+    deleteTokenCacheEntry(CONNECTOR, implicit);
+    await expect(getTokenResponse(CONNECTOR, explicit)).resolves.toMatchObject({
+      token: 'tok_refetched_implicit',
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('keeps different implicit subject tokens in separate cache entries', async () => {
+    fetchMock
+      .mockResolvedValueOnce(tokenResponse('first_access_token'))
+      .mockResolvedValueOnce(tokenResponse('second_access_token'));
+
+    await expect(
+      getToken(CONNECTOR, { subject: { token: 'first_identity.jwt' } })
+    ).resolves.toBe('first_access_token');
+    await expect(
+      getToken(CONNECTOR, { subject: { token: 'second_identity.jwt' } })
+    ).resolves.toBe('second_access_token');
+    await expect(
+      getToken(CONNECTOR, { subject: { token: 'first_identity.jwt' } })
+    ).resolves.toBe('first_access_token');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    { type: 'app' },
+    { type: 'user', id: 'explicit_user' },
+    { type: 'jwt-bearer', sub: 'explicit_jwt_user' },
+  ] as const)('preserves an explicit non-token subject type: %j', async value => {
+    fetchMock.mockResolvedValue(tokenResponse(`tok_${value.type}`));
+    const subject = { ...value, token: 'unused.jwt' };
+
+    await getTokenResponse(CONNECTOR, { subject });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toEqual({
+      subject,
+      scopes: ['*'],
     });
   });
 

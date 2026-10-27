@@ -188,6 +188,6 @@ export function emitVcrArgParseError(
         },
       ],
     },
-    1
+    2
   );
 }

@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "59.11.7",
+  "version": "65.4.0",
   "type": "module",
   "preferGlobal": true,
   "license": "Apache-2.0",
@@ -16,6 +16,7 @@
     "test-e2e": "node scripts/test.mjs --run test/e2e-",
     "test-e2e-node-all-versions": "rimraf test/fixtures/integration && vitest run --config ./vitest.config.mts test/integration-1.test.ts test/integration-2.test.ts test/integration-3.test.ts test/integration-link-env-pull.test.ts",
     "test-dev": "vitest run --config ./vitest.config.mts test/dev/",
+    "test-testserver": "node scripts/testserver/main.mjs -- vitest run --config ./vitest.testserver.config.mts",
     "coverage": "codecov",
     "build": "node scripts/build.mjs",
     "build-binary": "node scripts/build-binary.mjs",
@@ -32,7 +33,8 @@
     "test:evals:smoke": "tsx evals/run.ts smoke --smoke",
     "test:evals:dry": "tsx evals/run.ts --dry",
     "test:evals:local-fixture": "tsx evals/run.ts --local-fixture",
-    "test-unit": "node scripts/test.mjs --run test/unit/"
+    "test-unit": "node scripts/test.mjs --run test/unit/",
+    "test-build-integration": "node scripts/test.mjs --run test/build-integration/"
   },
   "bin": {
     "vc": "./dist/vc.js",
@@ -42,7 +44,7 @@
     "dist"
   ],
   "engines": {
-    "node": ">= 18"
+    "node": ">= 20"
   },
   "dependencies": {
     "@vercel/backends": "workspace:*",
@@ -55,7 +57,7 @@
     "@vercel/elysia": "workspace:*",
     "@vercel/express": "workspace:*",
     "@vercel/fastify": "workspace:*",
-    "@vercel/fun": "1.3.0",
+    "@vercel/fun": "1.3.6",
     "@vercel/go": "workspace:*",
     "@vercel/h3": "workspace:*",
     "@vercel/hono": "workspace:*",
@@ -64,7 +66,7 @@
     "@vercel/nestjs": "workspace:*",
     "@vercel/next": "workspace:*",
     "@vercel/node": "workspace:*",
-    "@vercel/prepare-flags-definitions": "0.3.0",
+    "@vercel/prepare-flags-definitions": "0.6.1",
     "@vercel/python": "workspace:*",
     "@vercel/python-analysis": "workspace:*",
     "@vercel/redwood": "workspace:*",
@@ -77,7 +79,7 @@
     "jose": "5.9.6",
     "jsonc-parser": "3.3.1",
     "luxon": "^3.4.0",
-    "sandbox": "4.1.0",
+    "sandbox": "4.4.0",
     "smol-toml": "1.5.2",
     "undici": "5.29.0",
     "uuid": "14.0.1",
@@ -105,6 +107,9 @@
     "@vercel/static-build": "workspace:*"
   },
   "devDependencies": {
+    "@bufbuild/protobuf": "2.12.0",
+    "@connectrpc/connect": "2.0.2",
+    "@connectrpc/connect-node": "2.0.2",
     "@edge-runtime/node-utils": "2.3.0",
     "@inquirer/checkbox": "2.2.2",
     "@inquirer/confirm": "3.1.2",
@@ -145,11 +150,14 @@
     "@types/update-notifier": "5.1.0",
     "@types/which": "3.0.0",
     "@types/write-json-file": "2.2.1",
+    "@types/ws": "8.18.1",
     "@types/yauzl-promise": "2.1.0",
     "@vercel-internals/builder-orchestration": "workspace:*",
     "@vercel-internals/cli-builder-integration": "workspace:*",
     "@vercel-internals/constants": "workspace:*",
     "@vercel-internals/get-package-json": "workspace:*",
+    "@vercel-internals/local-schedules": "workspace:*",
+    "@vercel-internals/runtimes": "workspace:*",
     "@vercel-internals/service-topology": "workspace:*",
     "@vercel-internals/types": "workspace:*",
     "@vercel/agent-eval": "^0.7.1",
@@ -157,7 +165,9 @@
     "@vercel/error-utils": "workspace:*",
     "@vercel/frameworks": "workspace:*",
     "@vercel/fs-detectors": "workspace:*",
+    "@vercel/functions": "workspace:*",
     "@vercel/routing-utils": "workspace:*",
+    "@vercel/sandbox": "3.3.0",
     "@vercel/sdk": "^1.19.6",
     "@vltpkg/graph": "1.0.6",
     "@vltpkg/package-info": "1.0.6",
@@ -194,8 +204,8 @@
     "find-up": "4.1.0",
     "fs-extra": "10.0.0",
     "get-port": "5.1.1",
-    "git-last-commit": "1.0.1",
     "http-proxy-node16": "1.0.6",
+    "ignore": "4.0.6",
     "ini": "3.0.0",
     "is-docker": "2.2.1",
     "is-port-reachable": "3.1.0",
@@ -211,6 +221,7 @@
     "minimatch": "3.1.2",
     "mock-fs": "5.5.0",
     "ms": "2.1.2",
+    "nostics": "1.1.4",
     "npm-package-arg": "6.1.0",
     "open": "8.4.0",
     "ora": "3.4.0",
@@ -223,7 +234,9 @@
     "rimraf": "3.0.2",
     "semver": "5.7.2",
     "serve-handler": "6.1.1",
+    "signal-exit": "3.0.7",
     "split2": "4.2.0",
+    "string-width": "4.2.3",
     "strip-ansi": "6.0.1",
     "supports-hyperlinks": "3.0.0",
     "tar-fs": "1.16.5",
@@ -238,6 +251,7 @@
     "vitest": "^4.1.10",
     "which": "3.0.0",
     "write-json-file": "2.2.0",
+    "ws": "8.18.0",
     "xdg-app-paths": "5.1.0",
     "yauzl-promise": "2.1.3"
   }

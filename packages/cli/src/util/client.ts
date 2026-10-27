@@ -1,11 +1,10 @@
 import { bold, gray, red, yellow, bgRed, white } from 'chalk';
-import checkbox from '@inquirer/checkbox';
-import confirm from '@inquirer/confirm';
-import expand from '@inquirer/expand';
-import input from '@inquirer/input';
-import password from '@inquirer/password';
-import search from '@inquirer/search';
-import select from '@inquirer/select';
+import type checkbox from '@inquirer/checkbox';
+import type expand from '@inquirer/expand';
+import type input from '@inquirer/input';
+import type password from '@inquirer/password';
+import type search from '@inquirer/search';
+import type select from '@inquirer/select';
 import { join, resolve } from 'node:path';
 import { EventEmitter } from 'events';
 import { URL } from 'url';
@@ -19,17 +18,11 @@ import retry, {
   type RetryFunction,
   type Options as RetryOptions,
 } from 'async-retry';
-import fetch, {
-  type BodyInit,
-  Headers,
-  type RequestInit,
-  type Response,
-} from './fetch';
+import fetch, { type BodyInit, type RequestInit, type Response } from './fetch';
 import pkg from './pkg';
 import ua from './ua';
 import responseError from './response-error';
 import printIndications from './print-indications';
-import reauthenticate from './login/reauthenticate';
 import type { SAMLError } from './login/types';
 import { persistAuthConfig, writeToConfigFile } from './config/files';
 import type { TelemetryEventStore } from './telemetry';
@@ -61,7 +54,13 @@ import {
   PromptBackError,
   PromptCanceledError,
 } from './input/prompt-cancellation';
-import { performDeviceCodeFlow } from '../commands/login/future';
+
+/**
+ * `config.currentTeam` while an agent run has no team yet. It's empty, so code
+ * that checks for a team treats it as none, and `fetch` and `getScope` call
+ * `chooseTeam` before sending a request.
+ */
+export const TEAM_NOT_CHOSEN = '';
 
 const DOMAINS_API_PATH = /^\/v\d+\/(?:domains|registrar)(?:\/|$)/;
 
@@ -83,6 +82,12 @@ export interface FetchOptions extends Omit<RequestInit, 'body'> {
   json?: boolean;
   retry?: RetryOptions;
   useCurrentTeam?: boolean;
+  /**
+   * The endpoint works without a team (public data). A run that ignores the
+   * saved team and hasn't chosen one sends it without a team instead of
+   * stopping to choose; otherwise the current team is sent as usual.
+   */
+  teamOptional?: boolean;
   accountId?: string;
   /** When true, 429 responses are returned immediately instead of waiting for Retry-After and retrying */
   bailOn429?: boolean;
@@ -146,6 +151,22 @@ export default class Client extends EventEmitter implements Stdio {
   agentName?: string;
   /** Run without interactive prompts; true when --non-interactive or when agent is detected */
   nonInteractive: boolean;
+  /**
+   * The team saved in the global config for the human (`vc switch`, login).
+   * Runs that ignore it (see `ignoresSavedTeam`) write it back unchanged when
+   * they save the config, so their own team never replaces it.
+   */
+  savedTeam: string | undefined;
+  /**
+   * Whether this run ignores the team saved for the human: an agent that
+   * can't prompt. An agent attached to a terminal may have a human answering,
+   * so it keeps the saved team like any interactive run. Decided once at
+   * startup, so a command that turns off prompts mid-run (`project token`)
+   * can't change which team the run uses.
+   */
+  ignoresSavedTeam: boolean;
+  /** A team choice in flight, shared by requests that start meanwhile. */
+  private teamChoice?: Promise<void>;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions: boolean;
   /** Root trace span for CLI diagnostics */
@@ -172,6 +193,7 @@ export default class Client extends EventEmitter implements Stdio {
     this.stdout = opts.stdout;
     this.stderr = opts.stderr;
     this.config = opts.config;
+    this.savedTeam = opts.config.currentTeam;
     this.localConfig = opts.localConfig;
     this.localConfigPath = opts.localConfigPath;
     this.requestIdCounter = 1;
@@ -179,6 +201,7 @@ export default class Client extends EventEmitter implements Stdio {
     this.isAgent = opts.isAgent ?? false;
     this.agentName = opts.agentName;
     this.nonInteractive = opts.nonInteractive ?? this.isAgent;
+    this.ignoresSavedTeam = this.isAgent && this.nonInteractive;
     this.dangerouslySkipPermissions = opts.dangerouslySkipPermissions ?? false;
 
     const theme = {
@@ -186,49 +209,73 @@ export default class Client extends EventEmitter implements Stdio {
       style: { answer: gray },
     };
     this.input = {
-      text: (opts: Parameters<typeof input>[0]) =>
-        this.runPrompt(
+      text: async (opts: Parameters<typeof input>[0]) => {
+        const { default: input } = await import('@inquirer/input');
+        return this.runPrompt(
           input({ theme, ...opts }, { input: this.stdin, output: this.stderr })
-        ),
-      password: (opts: Parameters<typeof password>[0]) =>
-        this.runPrompt(
+        );
+      },
+      password: async (opts: Parameters<typeof password>[0]) => {
+        const { default: password } = await import('@inquirer/password');
+        return this.runPrompt(
           password(
             { theme, ...opts },
             { input: this.stdin, output: this.stderr }
           )
-        ),
-      checkbox: <T>(opts: Parameters<typeof checkbox<T>>[0]) =>
-        this.runPrompt(
+        );
+      },
+      checkbox: async <T>(opts: Parameters<typeof checkbox<T>>[0]) => {
+        const { default: checkbox } = await import('@inquirer/checkbox');
+        return this.runPrompt(
           checkbox<T>(
             { theme, ...opts },
             { input: this.stdin, output: this.stderr }
           )
-        ),
-      expand: (opts: Parameters<typeof expand>[0]) =>
-        this.runPrompt(
+        );
+      },
+      expand: async (opts: Parameters<typeof expand>[0]) => {
+        const { default: expand } = await import('@inquirer/expand');
+        return this.runPrompt(
           expand({ theme, ...opts }, { input: this.stdin, output: this.stderr })
-        ),
-      confirm: (message: string, default_value: boolean) =>
-        this.runPrompt(
-          confirm(
-            { theme, message, default: default_value },
-            { input: this.stdin, output: this.stderr }
-          )
-        ),
-      select: <T>(opts: Parameters<typeof select<T>>[0]) =>
-        this.runPrompt(
+        );
+      },
+      confirm: async (
+        message: string,
+        default_value: boolean,
+        opts?: { signal?: AbortSignal }
+      ) => {
+        const { default: confirm } = await import('@inquirer/confirm');
+        const prompt = confirm(
+          { theme, message, default: default_value },
+          { input: this.stdin, output: this.stderr }
+        );
+        // This `@inquirer/core` version takes no `signal`, so cancel instead.
+        const signal = opts?.signal;
+        const cancel = () => prompt.cancel();
+        if (signal?.aborted) cancel();
+        signal?.addEventListener('abort', cancel, { once: true });
+        return this.runPrompt(prompt).finally(() =>
+          signal?.removeEventListener('abort', cancel)
+        );
+      },
+      select: async <T>(opts: Parameters<typeof select<T>>[0]) => {
+        const { default: select } = await import('@inquirer/select');
+        return this.runPrompt(
           select<T>(
             { theme, ...opts },
             { input: this.stdin, output: this.stderr }
           )
-        ),
-      search: <T>(opts: Parameters<typeof search<T>>[0]) =>
-        this.runPrompt(
+        );
+      },
+      search: async <T>(opts: Parameters<typeof search<T>>[0]) => {
+        const { default: search } = await import('@inquirer/search');
+        return this.runPrompt(
           search<T>(
             { theme, ...opts },
             { input: this.stdin, output: this.stderr }
           )
-        ),
+        );
+      },
     };
   }
 
@@ -335,12 +382,13 @@ export default class Client extends EventEmitter implements Stdio {
   }
 
   /**
-   * This method silently tries to refresh the access_token if it is expired.
+   * Refresh an expired access token, recovering the saved login interactively
+   * when possible. Unrecoverable token responses clear the saved credentials;
+   * transport and persistence errors propagate to the caller.
    *
-   * If the refresh_token is also expired, it will not attempt to refresh it.
-   * If there is any error during the refresh process, it will not throw an error.
+   * Call before copying the token into clients that do not use `fetch()`.
    */
-  private async ensureAuthorized(): Promise<void> {
+  async ensureAuthorized(): Promise<void> {
     const { authConfig } = this;
 
     // If we have a valid access token, do nothing
@@ -348,7 +396,7 @@ export default class Client extends EventEmitter implements Stdio {
       if (!this._loggedTokenSource) {
         if (authConfig.tokenSource === 'flag') {
           output.debug(
-            'Using token from `--token` argument, skipping token refresh.'
+            'Using token from the `--token` option, skipping token refresh.'
           );
         } else if (authConfig.tokenSource === 'env') {
           output.debug(
@@ -392,6 +440,9 @@ export default class Client extends EventEmitter implements Stdio {
         `Stored session refresh failed: ${tokensError.cause.message}`
       );
       output.log("Couldn't refresh the saved login. Starting a new login.");
+      const { performDeviceCodeFlow } = await import(
+        '../commands/login/future'
+      );
       const recoveredTokens = await performDeviceCodeFlow(this);
       if (recoveredTokens) {
         this.updateAuthConfig({
@@ -471,10 +522,78 @@ export default class Client extends EventEmitter implements Stdio {
 
   updateConfig(config: Partial<GlobalConfig>) {
     this.config = { ...this.config, ...config };
+    if ('currentTeam' in config) {
+      this.savedTeam = config.currentTeam;
+    }
   }
 
-  writeToConfigFile() {
-    writeToConfigFile(this.config);
+  writeToConfigFile(config: GlobalConfig = this.config) {
+    writeToConfigFile(
+      this.ignoresSavedTeam
+        ? { ...config, currentTeam: this.savedTeam }
+        : config
+    );
+  }
+
+  /** Whether this run ignores the saved team and hasn't chosen one yet. */
+  isTeamUnchosen(): boolean {
+    return this.ignoresSavedTeam && this.config.currentTeam === TEAM_NOT_CHOSEN;
+  }
+
+  /**
+   * Whether a request would send this run's team before one is chosen: it
+   * names no account or `teamId` of its own and doesn't opt out (see the
+   * matching branch in `_fetch`).
+   */
+  private needsTeamChoice(url: string, opts: FetchOptions): boolean {
+    return (
+      this.isTeamUnchosen() &&
+      !opts.teamOptional &&
+      !opts.accountId &&
+      opts.useCurrentTeam !== false &&
+      !new URL(url, this.apiUrl).searchParams.has('teamId')
+    );
+  }
+
+  /**
+   * Chooses the team for a run that ignores the saved team (see
+   * `resolveAgentTeam`). Callers that start while a choice is in flight share
+   * it. With `ask: false`, several teams leave it unchosen instead of
+   * stopping with `missing_scope`.
+   */
+  chooseTeam({ ask = true }: { ask?: boolean } = {}): Promise<void> {
+    if (!ask) {
+      return this.applyTeamChoice(false);
+    }
+    this.teamChoice ??= this.applyTeamChoice(true).finally(() => {
+      this.teamChoice = undefined;
+    });
+    return this.teamChoice;
+  }
+
+  private async applyTeamChoice(ask: boolean): Promise<void> {
+    const { resolveAgentTeam } = await import('./resolve-agent-team');
+    const team = await resolveAgentTeam(this, { ask });
+    if (team !== null && this.isTeamUnchosen()) {
+      this.config.currentTeam = team;
+    }
+  }
+
+  /**
+   * This run's team, choosing it first if the run ignores the saved team and
+   * hasn't picked one yet. For code that needs the team before any request.
+   * With `ask: false`, returns `undefined` instead of stopping to ask when
+   * the team can't be told.
+   */
+  async resolveCurrentTeam({
+    ask = true,
+  }: {
+    ask?: boolean;
+  } = {}): Promise<string | undefined> {
+    if (this.isTeamUnchosen()) {
+      await this.chooseTeam({ ask });
+    }
+    return this.isTeamUnchosen() ? undefined : this.config.currentTeam;
   }
 
   updateAuthConfig(authConfig: Partial<AuthConfig>) {
@@ -530,13 +649,13 @@ export default class Client extends EventEmitter implements Stdio {
       );
       output.print(
         yellow(
-          `  An AI agent${agentInfo} is executing a ${bold('DELETE')} request with --dangerously-skip-permissions flag.\n`
+          `  An AI agent${agentInfo} is executing a ${bold('DELETE')} request with --dangerously-skip-permissions option.\n`
         )
       );
       output.print(yellow(`  This operation will delete data: ${bold(url)}\n`));
       output.print(
         yellow(
-          `  The --dangerously-skip-permissions flag has bypassed the confirmation prompt.\n\n`
+          `  The --dangerously-skip-permissions option has bypassed the confirmation prompt.\n\n`
         )
       );
     }
@@ -587,7 +706,7 @@ export default class Client extends EventEmitter implements Stdio {
       }
     }
 
-    const headers = new Headers(opts.headers);
+    const headers = new globalThis.Headers(opts.headers);
     headers.set('user-agent', ua);
     if (DOMAINS_API_PATH.test(url.pathname)) {
       headers.set('x-vercel-cli-version', pkg.version);
@@ -635,13 +754,28 @@ export default class Client extends EventEmitter implements Stdio {
 
   fetch(url: string, opts: FetchOptions & { json: false }): Promise<Response>;
   fetch<T>(url: string, opts?: FetchOptions): Promise<T>;
-  fetch(url: string, opts: FetchOptions = {}) {
+  async fetch(url: string, opts: FetchOptions = {}) {
+    // Never send a request without a team the run chose: an empty `teamId`
+    // silently targets the personal account. Choose before the retry loop so
+    // a failure here (a revoked token) isn't retried.
+    if (this.needsTeamChoice(url, opts)) {
+      await this.chooseTeam();
+    }
+
     return this.retry(async bail => {
       let res: Awaited<ReturnType<Client['_fetch']>>;
       try {
         res = await this._fetch(url, opts);
       } catch (err: unknown) {
-        if (err instanceof Error && err.name === 'AbortError') {
+        // `TimeoutError` as well as `AbortError`: a deadline set with
+        // `AbortSignal.timeout()` rejects under the former name, and the
+        // signal stays aborted afterwards. Retrying one is three more round
+        // trips that cannot do anything but reject again on a dead signal —
+        // and against a metered API, three more against the caller's quota.
+        if (
+          err instanceof Error &&
+          (err.name === 'AbortError' || err.name === 'TimeoutError')
+        ) {
           return bail(err);
         }
         throw err;
@@ -675,6 +809,9 @@ export default class Client extends EventEmitter implements Stdio {
         } else if (res.status === 429 && opts.bailOn429) {
           return bail(error);
         } else if (typeof error.retryAfterMs === 'number') {
+          if (opts.retry?.retries === 0) {
+            return bail(error);
+          }
           // Respect the Retry-After header and then try again below.
           // This covers 429 responses which would otherwise bail out
           //
@@ -742,6 +879,7 @@ export default class Client extends EventEmitter implements Stdio {
     this: Client,
     error: SAMLError
   ) {
+    const { default: reauthenticate } = await import('./login/reauthenticate');
     const result = await reauthenticate(this, error);
 
     if (typeof result === 'number') {

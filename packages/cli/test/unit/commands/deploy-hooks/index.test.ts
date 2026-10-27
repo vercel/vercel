@@ -22,7 +22,7 @@ describe('deploy-hooks', () => {
     it('tracks telemetry for top-level help', async () => {
       client.setArgv('deploy-hooks', '--help');
       const exitCode = await deployHooks(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:help', value: 'deploy-hooks' },
       ]);
@@ -31,7 +31,7 @@ describe('deploy-hooks', () => {
     it('tracks telemetry for create --help', async () => {
       client.setArgv('deploy-hooks', 'create', '--help');
       const exitCode = await deployHooks(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:help', value: 'deploy-hooks:create' },
       ]);
@@ -72,7 +72,12 @@ describe('deploy-hooks', () => {
       vi.restoreAllMocks();
     });
 
-    it('POSTs deploy hook and prints JSON in non-interactive mode', async () => {
+    it.each([
+      ['--git-branch', undefined],
+      ['--git-branch=', undefined],
+      ['--ref', '--ref'],
+      ['-r', '-r'],
+    ])('POSTs deploy hook with %s and prints JSON in non-interactive mode', async (flag, deprecated) => {
       useUser();
       useTeams('team_dummy');
       const { project } = useProject({
@@ -111,8 +116,7 @@ describe('deploy-hooks', () => {
         'deploy-hooks',
         'create',
         'from-ci',
-        '--ref',
-        'staging',
+        ...(flag.endsWith('=') ? [`${flag}staging`] : [flag, 'staging']),
         '--project',
         project.name!,
         '--non-interactive'
@@ -125,9 +129,98 @@ describe('deploy-hooks', () => {
       expect(payload.status).toBe('ok');
       expect(payload.hook.id).toBe('hk_new');
       expect(payload.hook.url).toContain('hk_new');
+      if (deprecated) {
+        expect(client.stderr.getFullOutput()).toContain(
+          `! ${deprecated} is deprecated. Use --git-branch.`
+        );
+      } else {
+        expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+      }
     });
 
-    it('errors in non-interactive mode when --ref is missing', async () => {
+    it('rejects --ref with --git-branch before creating a hook', async () => {
+      useUser();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        name: 'p',
+        link: { ...gitLink, deployHooks: [] },
+      });
+      let created = false;
+      client.scenario.post(
+        `/v2/projects/${project.id}/deploy-hooks`,
+        (_req, res) => {
+          created = true;
+          res.json(project);
+        }
+      );
+
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code}`);
+      }) as () => never);
+
+      client.setArgv(
+        'deploy-hooks',
+        'create',
+        'both',
+        '--ref',
+        'main',
+        '--git-branch',
+        'main',
+        '--project',
+        'p',
+        '--non-interactive'
+      );
+      client.nonInteractive = true;
+
+      await expect(deployHooks(client)).rejects.toThrow('exit:2');
+      expect(created).toBe(false);
+      expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+        status: 'error',
+        reason: 'invalid_arguments',
+        message: "Can't use --ref with --git-branch. Use --git-branch.",
+      });
+    });
+
+    it('rejects -r with --git-branch in human mode', async () => {
+      client.setArgv(
+        'deploy-hooks',
+        'create',
+        'both',
+        '-r',
+        'main',
+        '--git-branch',
+        'main'
+      );
+
+      const exitCode = await deployHooks(client);
+      expect(exitCode).toEqual(2);
+      expect(client.stderr.getFullOutput()).toContain(
+        "Can't use -r with --git-branch. Use --git-branch."
+      );
+    });
+
+    it('tracks telemetry without the hook name or branch', async () => {
+      client.setArgv(
+        'deploy-hooks',
+        'create',
+        'secret-hook',
+        '--ref',
+        'secret-ref',
+        '--git-branch',
+        'secret-branch'
+      );
+
+      await deployHooks(client);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:create', value: 'create' },
+        { key: 'argument:name', value: '[REDACTED]' },
+        { key: 'option:git-branch', value: '[REDACTED]' },
+        { key: 'option:ref', value: '[REDACTED]' },
+      ]);
+    });
+
+    it('errors in non-interactive mode when --git-branch is missing', async () => {
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -151,12 +244,16 @@ describe('deploy-hooks', () => {
       );
       client.nonInteractive = true;
 
-      await expect(deployHooks(client)).rejects.toThrow('exit:1');
+      await expect(deployHooks(client)).rejects.toThrow('exit:2');
       const payload = JSON.parse(
         logSpy.mock.calls[logSpy.mock.calls.length - 1][0] as string
       );
       expect(payload.status).toBe('error');
-      expect(payload.message).toMatch(/--ref/i);
+      expect(payload.message).toContain('Pass `--git-branch <BRANCH>`.');
+      expect(payload.next[0].command).toContain(
+        'deploy-hooks create noref --git-branch <BRANCH>'
+      );
+      expect(JSON.stringify(payload)).not.toContain('--ref');
     });
   });
 
@@ -208,6 +305,58 @@ describe('deploy-hooks', () => {
       const exitCode = await deployHooks(client);
       expect(exitCode).toEqual(0);
       expect(deleted).toBe(true);
+    });
+
+    it.each([
+      ['delete', false],
+      ['del', false],
+      ['remove', true],
+    ])('runs as %s (deprecated: %s)', async (name, deprecated) => {
+      useUser();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        name: 'p',
+        link: {
+          ...gitLink,
+          deployHooks: [
+            {
+              id: 'hk_del',
+              name: 'x',
+              ref: 'main',
+              url: 'https://example.com',
+              createdAt: 1,
+            },
+          ],
+        },
+      });
+      client.scenario.delete(
+        `/v2/projects/${project.id}/deploy-hooks/hk_del`,
+        (_req, res) => {
+          res.status(204).end();
+        }
+      );
+
+      client.setArgv(
+        'deploy-hooks',
+        name,
+        'hk_del',
+        '--project',
+        project.name!,
+        '--yes',
+        '--non-interactive'
+      );
+      client.nonInteractive = true;
+
+      const exitCode = await deployHooks(client);
+      expect(exitCode).toEqual(0);
+      const warning =
+        '`vercel deploy-hooks remove` is deprecated. Use `vercel deploy-hooks delete`.';
+      if (deprecated) {
+        expect(client.stderr.getFullOutput()).toContain(warning);
+      } else {
+        expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+      }
     });
   });
 });

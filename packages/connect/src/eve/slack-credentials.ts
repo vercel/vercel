@@ -5,7 +5,9 @@ import {
   type ConnectOptions,
   type ConnectTokenParams,
 } from '../index.js';
-import { vercelOidc } from 'eve/channels/auth';
+import { createConnectWebhookVerifier } from '../chat/webhook-verifier.js';
+
+import type { VercelConnectMetadata } from './connection-authorization.js';
 
 /**
  * Token parameters accepted by {@link connectSlackCredentials}.
@@ -55,10 +57,19 @@ export function connectSlackCredentials(
   connector: string,
   params: ConnectSlackCredentialsParams = {},
   options?: ConnectOptions
-): SlackChannelCredentials {
+): SlackChannelCredentials & { readonly vercelConnect: VercelConnectMetadata } {
   return {
     botToken: () =>
       getToken(connector, { ...params, subject: { type: 'app' } }, options),
-    webhookVerifier: vercelOidc(),
+    webhookVerifier: createConnectWebhookVerifier(),
+    vercelConnect: {
+      connector,
+      requirement: {
+        method: 'slack',
+        reference: `connector:${connector}`,
+        service: 'slack',
+        subjectTypes: ['app'],
+      },
+    },
   };
 }

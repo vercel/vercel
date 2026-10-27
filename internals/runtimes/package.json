@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@vercel-internals/runtimes",
-  "version": "1.0.0",
+  "version": "1.2.4",
   "description": "Runtime, framework, and entrypoint classification utilities",
   "files": [
     "dist"
@@ -22,6 +22,10 @@
     "./entrypoint": {
       "types": "./dist/entrypoint.d.ts",
       "default": "./dist/entrypoint.js"
+    },
+    "./schedule-entrypoint": {
+      "types": "./dist/schedule-entrypoint.d.ts",
+      "default": "./dist/schedule-entrypoint.js"
     }
   },
   "typesVersions": {
@@ -33,6 +37,7 @@
   },
   "scripts": {
     "build": "node ../../utils/build.mjs",
+    "test-unit": "vitest run --config ../../vitest.config.mts test/",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

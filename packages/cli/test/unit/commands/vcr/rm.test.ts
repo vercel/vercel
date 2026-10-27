@@ -58,7 +58,7 @@ describe('vcr rm', () => {
     it('tracks telemetry', async () => {
       client.setArgv('vcr', 'rm', '--help');
       const exitCode = await vcr(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -81,6 +81,26 @@ describe('vcr rm', () => {
     expect(client.stderr.getFullOutput()).toContain('deleted');
   });
 
+  it.each([
+    ['delete', false],
+    ['del', false],
+    ['remove', true],
+  ])('runs as %s (deprecated: %s)', async (name, deprecated) => {
+    client.scenario.delete('/v1/vcr/repository/my-app', (_req, res) => {
+      res.status(202).end();
+    });
+
+    client.setArgv('vcr', name, 'my-app', '--yes');
+    expect(await vcr(client)).toBe(0);
+    const warning =
+      '`vercel vcr remove` is deprecated. Use `vercel vcr delete`.';
+    if (deprecated) {
+      expect(client.stderr.getFullOutput()).toContain(warning);
+    } else {
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+    }
+  });
+
   it('tracks subcommand invocation', async () => {
     client.scenario.delete('/v1/vcr/repository/my-app', (_req, res) => {
       res.status(202).end();
@@ -92,7 +112,7 @@ describe('vcr rm', () => {
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
-        key: 'subcommand:rm',
+        key: 'subcommand:delete',
         value: 'rm',
       },
       {
@@ -116,7 +136,7 @@ describe('vcr rm', () => {
   it('errors when the repository argument is missing', async () => {
     client.setArgv('vcr', 'rm');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain('vcr rm');
+    expect(exitCode).toBe(2);
+    expect(client.stderr.getFullOutput()).toContain('vcr delete');
   });
 });

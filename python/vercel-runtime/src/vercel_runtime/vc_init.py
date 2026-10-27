@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import atexit
 import base64
 import builtins
@@ -8,6 +7,7 @@ import contextlib
 import contextvars
 import functools
 import http
+import http.client
 import json
 import logging
 import os
@@ -16,10 +16,11 @@ import sys
 import threading
 import time
 import traceback
+from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING, Any, Literal, Never, TextIO
 
-from vercel_runtime import deadline
+from vercel_runtime import deadline, init_log_buffer
 from vercel_runtime.cache import (
     SC_HEADERS_ALWAYS_STRIP,
     SC_HEADERS_STRIP_ON_NO_LEAK,
@@ -41,7 +42,6 @@ from vercel_runtime.headers import (
     get_oidc_token_for_request,
     is_internal_header,
     normalize_event_header_pairs,
-    normalize_event_headers,
     set_vercel_headers_from_asgi_pairs,
     set_vercel_headers_from_http_headers,
     strip_internal_headers,
@@ -60,7 +60,6 @@ from vercel_runtime.utils import read_wsgi_request_body
 from vercel_runtime.wait_until import (
     WaitUntilCollector,
     begin_wait_until,
-    clear_wait_until_context,
     finish_wait_until,
     finish_wait_until_async,
 )
@@ -87,6 +86,8 @@ _original_stderr = sys.stderr
 _MODULE_IMPORTED_AT = time.monotonic()
 
 # --- IPC socket & send_message (must be available before _fatal) ----------
+# Hive serves the IPC socket here, which tells it apart from Lambda.
+_HIVE_IPC_PATH = "/opt/vercel/ipc.sock"
 _ipc_sock: socket.socket | None = None
 if "VERCEL_IPC_PATH" in os.environ:
     _ipc_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -123,8 +124,8 @@ def _fatal_exc(label: str) -> Never:
 def _send_unrecoverable_error(message: str) -> None:
     """Send an ``unrecoverable-error`` IPC message to the functions runtime.
 
-    This is the only message type (besides ``server-started``) that the
-    functions runtime accepts before the handshake completes, so it is the
+    Besides ``server-started`` itself, this is the only message type the
+    functions runtime accepts before ``server-started`` is sent, so it is the
     correct way to report fatal errors during module import.
     """
     send_message(
@@ -206,7 +207,7 @@ def setup_logging(
                 )
             else:
                 # If IPC is not ready, enqueue the message to be sent later.
-                enqueue_or_send_message(
+                _init_logs.enqueue_or_send(
                     {
                         "type": "log",
                         "payload": {
@@ -248,7 +249,7 @@ def setup_logging(
                     }
                 )
             else:
-                enqueue_or_send_message(
+                _init_logs.enqueue_or_send(
                     {
                         "type": "log",
                         "payload": {
@@ -312,70 +313,10 @@ storage: contextvars.ContextVar[dict[str, str | int] | None] = (
 )
 
 
-# Buffer for pre-handshake logs (to avoid blocking IPC on startup)
-_ipc_ready = False
-_init_log_buf: list[_IpcMessage] = []
-_INIT_LOG_BUF_MAX_BYTES = 1_000_000
-_init_log_buf_bytes = 0
-
-
-def enqueue_or_send_message(msg: _IpcMessage) -> None:
-    global _init_log_buf_bytes  # noqa: PLW0603
-    if _ipc_ready:
-        send_message(msg)
-        return
-
-    enc_len = len(json.dumps(msg))
-
-    if _init_log_buf_bytes + enc_len <= _INIT_LOG_BUF_MAX_BYTES:
-        _init_log_buf.append(msg)
-        _init_log_buf_bytes += enc_len
-    else:
-        # Fallback so message is not lost if buffer is full
-        with contextlib.suppress(Exception):
-            payload = msg.get("payload", {})
-            decoded = base64.b64decode(
-                payload.get("message", ""),
-            ).decode(errors="ignore")
-            _original_stderr.write(decoded + "\n")
-
-
-def _flush_init_log_buf() -> None:
-    """Flush buffered init logs through IPC and mark the channel as ready.
-
-    Called once the ``server-started`` handshake is complete so the functions
-    runtime will accept ``log`` messages.
-    """
-    global _ipc_ready, _init_log_buf_bytes  # noqa: PLW0603
-    _ipc_ready = True
-    for m in _init_log_buf:
-        send_message(m)
-    _init_log_buf.clear()
-    _init_log_buf_bytes = 0
-
-
-def flush_init_log_buf_to_stderr() -> None:
-    global _init_log_buf_bytes  # noqa: PLW0603
-    try:
-        combined: list[str] = []
-        for m in _init_log_buf:
-            payload = m.get("payload", {})
-            msg = payload.get("message")
-            if not msg:
-                continue
-            with contextlib.suppress(Exception):
-                decoded = base64.b64decode(msg).decode(errors="ignore")
-                combined.append(decoded)
-        if combined:
-            _stderr("".join(combined))
-    except Exception:
-        pass
-    finally:
-        _init_log_buf.clear()
-        _init_log_buf_bytes = 0
-
-
-atexit.register(flush_init_log_buf_to_stderr)
+# Logs written before `server-started` (to avoid blocking IPC)
+_init_logs = init_log_buffer.InitLogBuffer(send_message, _stderr)
+os.register_at_fork(after_in_child=_init_logs.reinit_lock_after_fork)
+atexit.register(_init_logs.flush_to_stderr)
 
 
 # --- Cold start phase timings ---------------------------------------------
@@ -474,12 +415,12 @@ def _add_cold_start_timing_asgi(message: dict[str, Any]) -> None:
 
 
 def _send_server_started(http_port: int) -> None:
-    """Complete the runtime handshake and release buffered init logs."""
+    """Send ``server-started`` and release buffered init logs."""
     global _pending_server_timing  # noqa: PLW0603
     ready_at = time.monotonic()
     phases = _cold_start_phases(ready_at)
     # The platform reads the breakdown off the first response, so it is only
-    # the user-attributable share that the handshake has to carry.
+    # the user-attributable share that `server-started` has to carry.
     _pending_server_timing = _format_server_timing(phases)
     send_message(
         {
@@ -491,7 +432,7 @@ def _send_server_started(http_port: int) -> None:
             },
         }
     )
-    _flush_init_log_buf()
+    _init_logs.flush_to_ipc()
 
 
 if _ipc_sock is not None:
@@ -868,7 +809,10 @@ class ASGIMiddleware:
                 deadline.reset_deadline(deadline_token)
 
 
-if "VERCEL_IPC_PATH" in os.environ:
+# TODO: This was previously the `if "VERCEL_IPC_PATH" in os.environ`
+# branch, which has now been removed. To allow more readable PRs, I'm
+# going to leave dedenting this to a follow-up (-sully).
+with contextlib.nullcontext():
     # Override urlopen from urllib3 (& requests) to send Request Metrics
     try:
         from urllib.parse import urlparse
@@ -926,6 +870,10 @@ if "VERCEL_IPC_PATH" in os.environ:
         pass
 
     class BaseHandler(BaseHTTPRequestHandler):
+        # Headers and body are separate small writes; without TCP_NODELAY,
+        # Nagle holds the body until the client ACKs the headers.
+        disable_nagle_algorithm = True
+
         def end_headers(self) -> None:
             # Only the first response reports timings, so every response after
             # it pays one `is not None` and nothing more.
@@ -1096,6 +1044,13 @@ if "VERCEL_IPC_PATH" in os.environ:
     except RuntimeError as exc:
         _fatal(str(exc))
 
+    handler_class: type[BaseHTTPRequestHandler] | None = None
+    http_port: int | None = None
+    run_server: Callable[[], None] | None = None
+    shutdown_server: Callable[[], None] | None = None
+    # True when the function is running on hive (foh).
+    is_foh = False
+
     if (
         app_name.lower() == "handler"
         and isinstance(app_obj, type)
@@ -1114,6 +1069,8 @@ if "VERCEL_IPC_PATH" in os.environ:
                 method = getattr(self, mname)
                 method()
                 self.wfile.flush()
+
+        handler_class = Handler
 
     else:
         try:
@@ -1221,6 +1178,8 @@ if "VERCEL_IPC_PATH" in os.environ:
                         if hasattr(response, "close"):
                             response.close()  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
 
+            handler_class = Handler
+
         else:
             # ASGI: Run with Uvicorn for proper lifespan
             # and protocol handling
@@ -1230,548 +1189,120 @@ if "VERCEL_IPC_PATH" in os.environ:
             asgi_app = ASGIMiddleware(asgi_user_app)
 
             # Pre-bind a socket to obtain an ephemeral port for IPC announcement
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock = socket.socket(
+                socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP
+            )
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.bind(("127.0.0.1", 0))
             sock.listen(2048)
-            http_port = sock.getsockname()[1]
+            # `server-started` needs an `int`, and `http_port` is `int | None`.
+            listen_port: int = sock.getsockname()[1]
+            http_port = listen_port
 
             config = uvicorn.Config(
                 app=asgi_app,
-                fd=sock.fileno(),
                 lifespan="auto",
                 access_log=False,
                 log_config=None,
                 log_level="warning",
             )
-            server = uvicorn.Server(config)
 
-            _send_server_started(http_port)
+            # Only Hive waits for lifespan startup. Lambda counts the time
+            # until `server-started` against its Init phase budget, so
+            # elsewhere send it before lifespan startup as before.
+            is_foh = os.environ.get("VERCEL_IPC_PATH") == _HIVE_IPC_PATH
+            uvicorn_server: uvicorn.Server
+            if is_foh:
+                from vercel_runtime import asgi_server
 
-            # Run the server (blocking)
-            server.run()
-            # If the server ever returns, exit
-            sys.exit(0)
+                uvicorn_server = asgi_server.ReadyAnnouncingServer(
+                    config,
+                    on_ready=functools.partial(
+                        _send_server_started, listen_port
+                    ),
+                    on_startup_failed=functools.partial(
+                        _fatal,
+                        "could not start ASGI application: "
+                        "lifespan startup failed",
+                    ),
+                )
+            else:
+                uvicorn_server = uvicorn.Server(config)
+            run_server = functools.partial(uvicorn_server.run, sockets=[sock])
 
-    if "Handler" in locals():
-        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)  # type: ignore[assignment]
-        _send_server_started(server.server_address[1])  # type: ignore[attr-defined]
-        server.serve_forever()  # type: ignore[attr-defined]
+            def shutdown_uvicorn_server() -> None:
+                uvicorn_server.should_exit = True
 
-try:
-    app_name, app_obj = resolve_app(
-        __vc_module, _entrypoint_modname, _entrypoint_varname
-    )
-except RuntimeError as exc:
-    _fatal(str(exc))
+            shutdown_server = shutdown_uvicorn_server
 
-if (
-    app_name.lower() == "handler"
-    and isinstance(app_obj, type)
-    and issubclass(app_obj, BaseHTTPRequestHandler)
-):
-    _stderr("using HTTP Handler")
-    import _thread  # noqa: PLC2701
-    import http.client
-    from http.server import HTTPServer
+    if handler_class is not None:
+        # Explicit handler and WSGI cases - run a server from the handler
+        http_server = ThreadingHTTPServer(("127.0.0.1", 0), handler_class)
+        http_port = http_server.server_address[1]
+        run_server = http_server.serve_forever
+        shutdown_server = http_server.shutdown
+    else:
+        # ASGI: server already set up
+        assert http_port and run_server
 
-    server = HTTPServer(("127.0.0.1", 0), app_obj)  # type: ignore[assignment]
-    port = server.server_address[1]  # type: ignore[attr-defined]
+
+if "VERCEL_IPC_PATH" in os.environ:
+    if not is_foh:
+        _send_server_started(http_port)
+    run_server()
+else:
+    # For the vc_handler version, run the server in a thread and have
+    # vc_handler proxy to it.
+
+    server_thread = threading.Thread(target=run_server, daemon=True)
+    server_thread.start()
+
+    def _finalize() -> None:
+        assert shutdown_server
+        shutdown_server()
+        server_thread.join(timeout=15.0)
+
+    atexit.register(_finalize)
 
     def vc_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         payload = json.loads(event["body"])
-        path, _ = apply_service_route_prefix_to_target(payload["path"])
-        headers = normalize_event_headers(payload.get("headers", {}))
-        deadline_value = deadline.pop_deadline_header(headers)
-        strip_internal_headers(headers)
-        method = payload["method"]
-        encoding = payload.get("encoding")
+        header_pairs = normalize_event_header_pairs(payload.get("headers", {}))
+        header_names = {key.lower() for key, _ in header_pairs}
+
         body = payload.get("body")
+        if payload.get("encoding") == "base64":
+            body = base64.b64decode(body)
+        elif isinstance(body, str):
+            body = body.encode()
 
-        sc_no_header_leak = bool(headers.get(SC_NO_HEADER_LEAK_HEADER))
-        set_runtime_cache_from_http_headers(headers)
-        for sc_header in SC_HEADERS_ALWAYS_STRIP:
-            headers.pop(sc_header, None)
-        if sc_no_header_leak:
-            for sc_header in SC_HEADERS_STRIP_ON_NO_LEAK:
-                headers.pop(sc_header, None)
-        deadline_token = deadline.set_deadline(deadline_value)
-        set_vercel_headers_from_http_headers(headers)
-        wait_until = begin_wait_until()
+        connection = http.client.HTTPConnection("127.0.0.1", http_port)
         try:
-            # `_thread.start_new_thread` does not propagate contextvars
-            captured_ctx = contextvars.copy_context()
-            _thread.start_new_thread(
-                captured_ctx.run,
-                (server.handle_request,),  # type: ignore[attr-defined]
+            connection.putrequest(
+                payload["method"],
+                payload["path"],
+                skip_host="host" in header_names,
+                skip_accept_encoding="accept-encoding" in header_names,
             )
-
-            if (body is not None and len(body) > 0) and (
-                encoding is not None and encoding == "base64"
-            ):
-                body = base64.b64decode(body)
-
-            request_body = (
-                body.encode("utf-8") if isinstance(body, str) else body
-            )
-            conn = http.client.HTTPConnection("127.0.0.1", port)
-            try:
-                conn.request(method, path, headers=headers, body=request_body)
-            except (OSError, http.client.HTTPException) as ex:
-                _stderr(f"Request Error: {ex}")
-            res = conn.getresponse()
-
-            return_dict: dict[str, Any] = {
-                "statusCode": res.status,
-                "headers": format_headers(res.headers),
-            }
-
-            data = res.read()
-
-            try:
-                return_dict["body"] = data.decode("utf-8")
-            except UnicodeDecodeError:
-                return_dict["body"] = base64.b64encode(data).decode("utf-8")
-                return_dict["encoding"] = "base64"
-
-            return return_dict
-        finally:
-            try:
-                finish_wait_until(wait_until)
-            finally:
-                clear_runtime_cache_context()
-                clear_vercel_headers_context()
-                deadline.reset_deadline(deadline_token)
-
-else:
-    try:
-        detection_result = detect_app_type(
-            app_obj,  # pyright: ignore[reportUnknownArgumentType]
-            _entrypoint_modname,
-            app_name,
-        )
-    except RuntimeError as exc:
-        _fatal(str(exc))
-    if detection_result[0] == "wsgi":
-        _stderr("using Web Server Gateway Interface (WSGI)")
-        from io import BytesIO
-
-        from vercel_runtime._vendor.werkzeug.datastructures import Headers
-        from vercel_runtime._vendor.werkzeug.wrappers import Response
-
-        wsgi_user_app = detection_result[1]
-        string_types = (str,)
-
-        _default_charset = sys.getdefaultencoding()
-
-        def to_bytes(
-            x: str | bytes | bytearray | memoryview | None,
-            charset: str = _default_charset,
-            errors: str = "strict",
-        ) -> bytes | None:
-            if x is None:
-                return None
-            if isinstance(x, (bytes, bytearray, memoryview)):
-                return bytes(x)
-            if isinstance(x, str):  # pyright: ignore[reportUnnecessaryIsInstance]
-                return x.encode(charset, errors)
-            raise TypeError("Expected bytes")
-
-        def wsgi_encoding_dance(
-            s: str | bytes,
-            charset: str = "utf-8",
-            errors: str = "replace",
-        ) -> str:
-            if isinstance(s, str):
-                s = s.encode(charset)
-            return s.decode("latin1", errors)
-
-        def vc_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-            payload = json.loads(event["body"])
-
-            raw_headers = normalize_event_headers(payload.get("headers", {}))
-            deadline_value = deadline.pop_deadline_header(raw_headers)
-            strip_internal_headers(raw_headers)
-
-            sc_no_header_leak = bool(raw_headers.get(SC_NO_HEADER_LEAK_HEADER))
-            set_runtime_cache_from_http_headers(raw_headers)
-            for sc_header in SC_HEADERS_ALWAYS_STRIP:
-                raw_headers.pop(sc_header, None)
-            if sc_no_header_leak:
-                for sc_header in SC_HEADERS_STRIP_ON_NO_LEAK:
-                    raw_headers.pop(sc_header, None)
-
-            headers = Headers(raw_headers)
-
-            body: Any = payload.get("body", "")
-            if body and payload.get("encoding") == "base64":
-                body = base64.b64decode(body)
-            if isinstance(body, string_types):
-                body = to_bytes(body, charset="utf-8")
-
-            (
-                request_target,
-                service_root_path,
-            ) = apply_service_route_prefix_to_target(payload["path"])
-            path, query = split_request_target(request_target)
-
-            environ: dict[str, Any] = {
-                "CONTENT_LENGTH": str(len(body)),
-                "CONTENT_TYPE": headers.get("content-type", ""),
-                "SCRIPT_NAME": service_root_path,
-                "PATH_INFO": path,
-                "QUERY_STRING": query,
-                "REMOTE_ADDR": headers.get(
-                    "x-forwarded-for",
-                    headers.get("x-real-ip", payload.get("true-client-ip", "")),
-                ),
-                "REQUEST_METHOD": payload["method"],
-                "SERVER_NAME": headers.get("host", "lambda"),
-                "SERVER_PORT": headers.get("x-forwarded-port", "80"),
-                "SERVER_PROTOCOL": "HTTP/1.1",
-                "event": event,
-                "context": context,
-                "wsgi.errors": sys.stderr,
-                "wsgi.input": BytesIO(body),
-                "wsgi.multiprocess": False,
-                "wsgi.multithread": False,
-                "wsgi.run_once": False,
-                "wsgi.url_scheme": headers.get("x-forwarded-proto", "http"),
-                "wsgi.version": (1, 0),
-            }
-
-            for key, value in environ.items():
-                if isinstance(value, string_types):
-                    environ[key] = wsgi_encoding_dance(value)
-
-            for hdr_key, value in headers.items():
-                env_key = "HTTP_" + hdr_key.upper().replace("-", "_")
-                if env_key not in ("HTTP_CONTENT_TYPE", "HTTP_CONTENT_LENGTH"):
-                    environ[env_key] = value
-
-            deadline_token = deadline.set_deadline(deadline_value)
-            set_vercel_headers_from_http_headers(raw_headers)
-            wait_until = begin_wait_until()
-            try:
-                response = Response.from_app(wsgi_user_app, environ)
-                return_dict: dict[str, Any] = {
-                    "statusCode": response.status_code,
-                    "headers": format_headers(response.headers),
-                }
-
-                if response.data:
-                    return_dict["body"] = base64.b64encode(
-                        response.data,
-                    ).decode("utf-8")
-                    return_dict["encoding"] = "base64"
-
-                return return_dict
-            finally:
-                try:
-                    finish_wait_until(wait_until)
-                finally:
-                    clear_runtime_cache_context()
-                    clear_vercel_headers_context()
-                    deadline.reset_deadline(deadline_token)
-
-    else:
-        _stderr("using Asynchronous Server Gateway Interface (ASGI)")
-        # Originally authored by Jordan Eremieff and included under MIT license:
-        # https://github.com/erm/mangum/blob/b4d21c8f5e304a3e17b88bc9fa345106acc50ad7/mangum/__init__.py
-        # https://github.com/erm/mangum/blob/b4d21c8f5e304a3e17b88bc9fa345106acc50ad7/LICENSE
-        import asyncio
-        import enum
-
-        from vercel_runtime._vendor.werkzeug.datastructures import Headers
-
-        asgi_user_app = detection_result[1]
-
-        # asyncio.Runner keeps a persistent event loop across run() calls.
-        # The lifespan task stays suspended (awaiting the shutdown signal)
-        # while successive HTTP requests are dispatched on the same loop.
-        _asgi_runner = asyncio.Runner()
-
-        # --- ASGI Lifespan Protocol ---
-        _lifespan_receive_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
-        _lifespan_send_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
-        _lifespan_task: asyncio.Task[None] | None = None
-        _lifespan_active = False
-
-        async def _lifespan_startup(asgi_app: Any) -> bool:
-            """Run the ASGI lifespan startup sequence.
-
-            Returns True when the app acknowledges startup, False otherwise.
-            The lifespan task remains suspended (awaiting the shutdown
-            signal) so it stays alive for the duration of the process.
-            """
-            scope: _ASGIScope = {
-                "type": "lifespan",
-                "asgi": {"version": "3.0", "spec_version": "2.0"},
-            }
-
-            async def receive() -> dict[str, Any]:
-                return await _lifespan_receive_queue.get()
-
-            async def send(message: dict[str, Any]) -> None:
-                await _lifespan_send_queue.put(message)
-
-            # Start the lifespan coroutine as a background task.
-            # Store in outer scope to prevent GC (event loop holds weak refs).
-            global _lifespan_task  # noqa: PLW0603
-            _lifespan_task = asyncio.create_task(asgi_app(scope, receive, send))
-
-            # Ask the app to start up.
-            await _lifespan_receive_queue.put({"type": "lifespan.startup"})
-
-            # Race: wait for the app to respond OR the task to finish
-            # (apps that don't support lifespan return immediately).
-            send_future = asyncio.create_task(_lifespan_send_queue.get())
-            done, pending = await asyncio.wait(
-                {send_future, _lifespan_task},
-                timeout=30,
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-
-            if send_future not in done:
-                # App completed or timed out without responding.
-                for p in pending:
-                    p.cancel()
-                _lifespan_task = None
-                return False
-
-            msg = send_future.result()
-            if msg.get("type") == "lifespan.startup.complete":
-                return True
-            if msg.get("type") == "lifespan.startup.failed":
-                _stderr(
-                    "ASGI lifespan startup failed: " + msg.get("message", "")
-                )
-            _lifespan_task.cancel()
-            _lifespan_task = None
-            return False
-
-        try:
-            _lifespan_active = _asgi_runner.run(
-                _lifespan_startup(asgi_user_app)
-            )
-        except BaseException:
-            # App doesn't support lifespan — proceed without it.
-            _lifespan_active = False
-
-        def _lifespan_shutdown() -> None:
-            if not _lifespan_active:
-                return
-
-            async def _do_shutdown() -> None:
-                await _lifespan_receive_queue.put({"type": "lifespan.shutdown"})
-                with contextlib.suppress(TimeoutError, asyncio.CancelledError):
-                    async with asyncio.timeout(10):
-                        await _lifespan_send_queue.get()
-
-            with contextlib.suppress(BaseException):
-                _asgi_runner.run(_do_shutdown())
-
-        atexit.register(_lifespan_shutdown)
-
-        # --- HTTP Request Handling ---
-
-        class ASGICycleState(enum.Enum):
-            REQUEST = enum.auto()
-            RESPONSE = enum.auto()
-
-        class ASGICycle:
-            def __init__(self, scope: _ASGIScope) -> None:
-                self.scope = scope
-                self.body = b""
-                self.state = ASGICycleState.REQUEST
-                self.app_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
-                self.response: dict[str, Any] = {}
-
-            def __call__(self, app: Any, body: bytes) -> dict[str, Any]:
-                """Build and run the ASGI instance.
-
-                Receives the application and any body
-                included in the request, then builds the
-                ASGI instance using the connection scope.
-                Runs until the response is completely read
-                from the application.
-                """
-                self.app_queue = asyncio.Queue()
-                self.put_message(
-                    {
-                        "type": "http.request",
-                        "body": body,
-                        "more_body": False,
-                    }
-                )
-
-                asgi_instance = app(self.scope, self.receive, self.send)
-                _asgi_runner.run(
-                    asgi_instance,
-                    context=contextvars.copy_context(),
-                )
-                return self.response
-
-            def put_message(self, message: dict[str, Any]) -> None:
-                self.app_queue.put_nowait(message)
-
-            async def receive(self) -> dict[str, Any]:
-                """Receive messages in the queue."""
-                message = await self.app_queue.get()
-                return message
-
-            async def send(self, message: dict[str, Any]) -> None:
-                """Send messages to the current cycle."""
-                message_type = message["type"]
-
-                if self.state is ASGICycleState.REQUEST:
-                    if message_type != "http.response.start":
-                        raise RuntimeError(
-                            f"Expected 'http.response.start',"
-                            f" received: {message_type}"
-                        )
-
-                    status_code = message["status"]
-                    raw_headers: list[tuple[bytes | str, bytes | str]] = (
-                        message.get("headers", [])
-                    )
-
-                    # Headers from werkzeug transform bytes header value
-                    # from b'value' to "b'value'" so we need to process
-                    # ASGI headers manually
-                    decoded_headers: list[tuple[str, str]] = []
-                    for key, value in raw_headers:
-                        decoded_key = (
-                            key.decode() if isinstance(key, bytes) else key
-                        )
-                        decoded_value = (
-                            value.decode()
-                            if isinstance(value, bytes)
-                            else value
-                        )
-                        decoded_headers.append((decoded_key, decoded_value))
-
-                    headers = Headers(decoded_headers)
-
-                    self.on_request(headers, status_code)
-                    self.state = ASGICycleState.RESPONSE
-
-                elif self.state is ASGICycleState.RESPONSE:
-                    if message_type != "http.response.body":
-                        raise RuntimeError(
-                            f"Expected 'http.response.body',"
-                            f" received: {message_type}"
-                        )
-
-                    body = message.get("body", b"")
-                    more_body = message.get("more_body", False)
-
-                    # The body must be completely read before
-                    # returning the response.
-                    self.body += body
-
-                    if not more_body:
-                        self.on_response()
-                        self.put_message({"type": "http.disconnect"})
-
-            def on_request(self, headers: Any, status_code: int) -> None:
-                self.response["statusCode"] = status_code
-                self.response["headers"] = format_headers(headers, decode=True)
-
-            def on_response(self) -> None:
-                if self.body:
-                    self.response["body"] = base64.b64encode(
-                        self.body,
-                    ).decode("utf-8")
-                    self.response["encoding"] = "base64"
-
-        def vc_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-            payload = json.loads(event["body"])
-
-            header_pairs = normalize_event_header_pairs(
-                payload.get("headers", {})
-            )
-
-            sc_pairs: list[tuple[str, str]] = []
-            sc_no_header_leak = False
-            deadline_value: str | None = None
-            headers: dict[str, str] = {}
-            headers_encoded: list[tuple[bytes, bytes]] = []
             for key, value in header_pairs:
-                key_lower = key.lower()
-                if key_lower == deadline.INTERNAL_DEADLINE_HEADER:
-                    deadline_value = value
-                    continue
-                if key_lower in SC_HEADERS_ALWAYS_STRIP:
-                    continue
-                if key_lower in SC_HEADERS_STRIP_ON_NO_LEAK:
-                    sc_pairs.append((key_lower, value))
-                    if key_lower == SC_NO_HEADER_LEAK_HEADER:
-                        sc_no_header_leak = bool(value)
-                    continue
-                if is_internal_header(key_lower):
-                    continue
-                headers[key] = value
-                headers_encoded.append((key_lower.encode(), value.encode()))
+                connection.putheader(key, value)
+            if (
+                "content-length" not in header_names
+                and "transfer-encoding" not in header_names
+            ):
+                connection.putheader("content-length", str(len(body or b"")))
+            connection.endheaders(body)
 
-            set_runtime_cache_from_http_headers(dict(sc_pairs))
-            if not sc_no_header_leak:
-                for sc_key, sc_value in sc_pairs:
-                    headers[sc_key] = sc_value
-                    headers_encoded.append(
-                        (sc_key.encode(), sc_value.encode()),
-                    )
-
-            body = payload.get("body", b"")
-            if payload.get("encoding") == "base64":
-                body = base64.b64decode(body)
-            elif not isinstance(body, bytes):
-                body = body.encode()
-
-            (
-                request_target,
-                service_root_path,
-            ) = apply_service_route_prefix_to_target(payload["path"])
-            path, query_str = split_request_target(request_target)
-            query = query_str.encode()
-
-            scope: _ASGIScope = {
-                "server": (
-                    headers.get("host", "lambda"),
-                    headers.get("x-forwarded-port", 80),
-                ),
-                "client": (
-                    headers.get(
-                        "x-forwarded-for",
-                        headers.get(
-                            "x-real-ip", payload.get("true-client-ip", "")
-                        ),
-                    ),
-                    0,
-                ),
-                "scheme": headers.get("x-forwarded-proto", "http"),
-                "root_path": service_root_path,
-                "query_string": query,
-                "headers": headers_encoded,
-                "type": "http",
-                "http_version": "1.1",
-                "method": payload["method"],
-                "path": path,
-                "raw_path": path.encode(),
+            response = connection.getresponse()
+            response_body = response.read()
+            result: dict[str, Any] = {
+                "statusCode": response.status,
+                "headers": format_headers(response.headers),
             }
-
-            deadline_token = deadline.set_deadline(deadline_value)
-            set_vercel_headers_from_http_headers(headers)
-            wait_until = begin_wait_until()
             try:
-                asgi_cycle = ASGICycle(scope)
-                response = asgi_cycle(asgi_user_app, body)
-                return response
-            finally:
-                try:
-                    _asgi_runner.run(finish_wait_until_async(wait_until))
-                finally:
-                    clear_wait_until_context()
-                    clear_runtime_cache_context()
-                    clear_vercel_headers_context()
-                    deadline.reset_deadline(deadline_token)
+                result["body"] = response_body.decode()
+            except UnicodeDecodeError:
+                result["body"] = base64.b64encode(response_body).decode()
+                result["encoding"] = "base64"
+            return result
+        finally:
+            connection.close()

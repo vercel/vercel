@@ -5,18 +5,16 @@ const {
   mockIsNative,
   mockIsCurlInstall,
   mockGetInstallRoot,
-  mockGetLinkedVersion,
-  mockGetPinnedVersion,
-  mockGetPrBuildSha,
+  mockReadNativeInstallState,
   mockGetUpdateCommandInfo,
+  mockIsHomebrewInstall,
 } = vi.hoisted(() => ({
   mockIsNative: vi.fn(),
   mockIsCurlInstall: vi.fn(),
   mockGetInstallRoot: vi.fn(),
-  mockGetLinkedVersion: vi.fn(),
-  mockGetPinnedVersion: vi.fn(),
-  mockGetPrBuildSha: vi.fn(),
+  mockReadNativeInstallState: vi.fn(),
   mockGetUpdateCommandInfo: vi.fn(),
+  mockIsHomebrewInstall: vi.fn(async () => false),
 }));
 
 vi.mock('../../../src/util/native-install', () => ({
@@ -26,15 +24,15 @@ vi.mock('../../../src/util/native-install', () => ({
 
 vi.mock('../../../src/util/native-self-update', () => ({
   CURL_INSTALL_COMMAND:
-    'curl -fsSL https://api-frameworks.vercel.sh/install | sh',
+    'curl -fsSL https://api-frameworks.vercel.sh/install | bash',
   isCurlInstall: () => mockIsCurlInstall(),
-  getLinkedVersion: () => mockGetLinkedVersion(),
-  getPinnedVersion: () => mockGetPinnedVersion(),
-  getPrBuildSha: (name: string) => mockGetPrBuildSha(name),
+  readNativeInstallState: (root: string) => mockReadNativeInstallState(root),
 }));
 
 vi.mock('../../../src/util/get-update-command', () => ({
   getUpdateCommandInfo: () => mockGetUpdateCommandInfo(),
+  isHomebrewInstall: () => mockIsHomebrewInstall(),
+  HOMEBREW_UPGRADE_COMMAND: 'brew upgrade vercel',
 }));
 
 vi.mock('../../../src/util/pkg', () => ({
@@ -58,12 +56,53 @@ describe('getVersionContext', () => {
     vi.clearAllMocks();
   });
 
+  it.each([
+    false,
+    true,
+  ])('preserves a recognized unsupported manager for inspection (native: %s)', async native => {
+    mockIsNative.mockReturnValue(native);
+    mockIsCurlInstall.mockResolvedValue(false);
+    const error = new Error(
+      'Update Vercel CLI with the package manager that installed it.'
+    );
+    mockGetUpdateCommandInfo.mockRejectedValueOnce(error);
+
+    const context = await getVersionContext();
+
+    expect(context).toEqual({
+      version: '59.6.3',
+      runtime: native ? 'native' : 'node',
+      manager: 'package-manager',
+      canSwitchVersions: false,
+      packageManager: undefined,
+      packageManagerAssumed: false,
+      global: undefined,
+      upgradeCommand: undefined,
+      upgradeError: error,
+    });
+    expect(describeManager(context)).toBe(
+      'package manager (unsupported installation)'
+    );
+    expect(isInstallerManaged(context)).toBe(false);
+    expect(isPackageManagerManaged(context)).toBe(true);
+    if (!isPackageManagerManaged(context)) {
+      throw new Error('expected package-manager context');
+    }
+    expect(() => getPackageManagerInstallCommand(context)).toThrow(error);
+    expect(() => getPackageManagerInstallCommand(context, '58.0.0')).toThrow(
+      error
+    );
+  });
+
   it('describes an installer-managed native binary', async () => {
     mockIsNative.mockReturnValue(true);
     mockIsCurlInstall.mockResolvedValue(true);
     mockGetInstallRoot.mockReturnValue(installRoot);
-    mockGetLinkedVersion.mockResolvedValue('59.6.3');
-    mockGetPinnedVersion.mockResolvedValue(undefined);
+    mockReadNativeInstallState.mockResolvedValue({
+      track: 'production',
+      slot: 'a',
+      version: '59.6.3',
+    });
 
     const context = await getVersionContext();
 
@@ -73,8 +112,10 @@ describe('getVersionContext', () => {
       manager: 'installer',
       canSwitchVersions: true,
       installRoot,
-      linkedVersion: '59.6.3',
-      pinnedVersion: undefined,
+      track: 'production',
+      slot: 'a',
+      activeVersion: '59.6.3',
+      pendingProduction: undefined,
       prBuild: undefined,
     });
     expect(isInstallerManaged(context)).toBe(true);
@@ -83,13 +124,18 @@ describe('getVersionContext', () => {
     expect(mockGetUpdateCommandInfo).not.toHaveBeenCalled();
   });
 
-  it('includes pin and PR build details for installer-managed installs', async () => {
+  it('includes track, slot, pending release, and PR build details', async () => {
     mockIsNative.mockReturnValue(true);
     mockIsCurlInstall.mockResolvedValue(true);
     mockGetInstallRoot.mockReturnValue(installRoot);
-    mockGetLinkedVersion.mockResolvedValue('pr-115');
-    mockGetPinnedVersion.mockResolvedValue('pr-115');
-    mockGetPrBuildSha.mockResolvedValue('a'.repeat(40));
+    mockReadNativeInstallState.mockResolvedValue({
+      track: 'pr',
+      slot: 'b',
+      version: 'pr/115',
+      pr: 115,
+      buildSha: 'a'.repeat(40),
+      pendingProduction: { slot: 'b', version: '60.0.0' },
+    });
 
     const context = await getVersionContext();
 
@@ -97,11 +143,12 @@ describe('getVersionContext', () => {
     if (context.manager !== 'installer') {
       throw new Error('expected installer context');
     }
-    expect(context.pinnedVersion).toBe('pr-115');
-    expect(context.prBuild).toEqual({
-      name: 'pr-115',
-      number: 115,
-      sha: 'a'.repeat(40),
+    expect(context).toMatchObject({
+      track: 'pr',
+      slot: 'b',
+      activeVersion: 'pr/115',
+      pendingProduction: { slot: 'b', version: '60.0.0' },
+      prBuild: { number: 115, sha: 'a'.repeat(40) },
     });
   });
 
@@ -109,7 +156,7 @@ describe('getVersionContext', () => {
     mockIsNative.mockReturnValue(true);
     mockIsCurlInstall.mockResolvedValue(false);
     mockGetUpdateCommandInfo.mockResolvedValue({
-      command: 'npm i -g @vercel/vc-native@latest --force',
+      command: 'npm i -g vercel@latest',
       global: true,
       packageManager: 'npm',
       assumed: false,
@@ -125,11 +172,32 @@ describe('getVersionContext', () => {
       packageManager: 'npm',
       packageManagerAssumed: false,
       global: true,
-      upgradeCommand: 'npm i -g @vercel/vc-native@latest --force',
+      upgradeCommand: 'npm i -g vercel@latest',
     });
     expect(isPackageManagerManaged(context)).toBe(true);
     expect(describeRuntime(context)).toBe('native binary');
     expect(describeManager(context)).toBe('package manager (npm, global)');
+  });
+
+  it('describes a Homebrew cask install without npm-style detection', async () => {
+    mockIsNative.mockReturnValue(true);
+    mockIsCurlInstall.mockResolvedValue(false);
+    mockIsHomebrewInstall.mockResolvedValueOnce(true);
+
+    const context = await getVersionContext();
+
+    expect(context).toEqual({
+      version: '59.6.3',
+      runtime: 'native',
+      manager: 'package-manager',
+      canSwitchVersions: false,
+      packageManager: 'homebrew',
+      packageManagerAssumed: false,
+      global: true,
+      upgradeCommand: 'brew upgrade vercel',
+    });
+    expect(describeManager(context)).toBe('Homebrew');
+    expect(mockGetUpdateCommandInfo).not.toHaveBeenCalled();
   });
 
   it('describes a Node.js package-manager install', async () => {
@@ -158,7 +226,7 @@ describe('getVersionContext', () => {
     expect(describeManager(context)).toBe('package manager (pnpm, local)');
   });
 
-  it('assumes npm when package-manager detection fails', async () => {
+  it('does not assume npm when package-manager detection fails', async () => {
     mockIsNative.mockReturnValue(false);
     mockIsCurlInstall.mockResolvedValue(false);
     mockGetUpdateCommandInfo.mockRejectedValue(new Error('no package manager'));
@@ -170,19 +238,20 @@ describe('getVersionContext', () => {
       runtime: 'node',
       manager: 'package-manager',
       canSwitchVersions: false,
-      packageManager: 'npm',
-      packageManagerAssumed: true,
-      global: true,
-      upgradeCommand: 'npm i -g vercel@latest',
+      packageManager: undefined,
+      packageManagerAssumed: false,
+      global: undefined,
+      upgradeCommand: undefined,
+      upgradeError: expect.any(Error),
     });
     expect(describeManager(context)).toBe(
-      'package manager (assumed npm, global)'
+      'package manager (unsupported installation)'
     );
   });
 });
 
 describe('package manager install commands', () => {
-  it('rewrites the detected upgrade command to a specific version', () => {
+  it('rewrites the vercel upgrade command to a specific version for a native runtime', () => {
     expect(
       getPackageManagerInstallCommand(
         {
@@ -193,11 +262,11 @@ describe('package manager install commands', () => {
           packageManager: 'npm',
           packageManagerAssumed: false,
           global: true,
-          upgradeCommand: 'npm i -g @vercel/vc-native@latest --force',
+          upgradeCommand: 'npm i -g vercel@latest',
         },
         '58.0.0'
       )
-    ).toBe('npm i -g @vercel/vc-native@58.0.0 --force');
+    ).toBe('npm i -g vercel@58.0.0');
   });
 
   it('exports the installer command', () => {

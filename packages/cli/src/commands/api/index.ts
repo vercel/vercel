@@ -60,7 +60,7 @@ export default async function api(client: Client): Promise<number> {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -76,7 +76,7 @@ export default async function api(client: Client): Promise<number> {
       lsParsedArgs = parseArguments(client.argv.slice(2), lsFlagsSpec);
     } catch (err) {
       printError(err);
-      return 1;
+      return 2;
     }
     const lsFlags = lsParsedArgs.flags;
 
@@ -85,17 +85,18 @@ export default async function api(client: Client): Promise<number> {
       telemetryClient.trackCliFlagHelp('api', firstArg);
       output.print(
         help(listSubcommand, {
+          stream: client.stderr,
           parent: apiCommand,
           columns: client.stderr.columns,
         })
       );
-      return 2;
+      return 0;
     }
 
     const formatResult = validateJsonOutput(lsFlags);
     if (!formatResult.valid) {
       output.error(formatResult.error);
-      return 1;
+      return 2;
     }
 
     telemetryClient.trackCliSubcommandList();
@@ -116,8 +117,13 @@ export default async function api(client: Client): Promise<number> {
   // Handle 'api --help' (no subcommand)
   if (needHelp) {
     telemetryClient.trackCliFlagHelp('api');
-    output.print(help(apiCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(apiCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   // Set dangerously-skip-permissions flag for DELETE confirmation handling
@@ -144,7 +150,7 @@ export default async function api(client: Client): Promise<number> {
       selectedBodyFields = selected.bodyFields;
     } else {
       output.error('Endpoint is required. Usage: vercel api <endpoint>');
-      return 1;
+      return 2;
     }
   } else {
     endpoint = firstArg;
@@ -154,7 +160,7 @@ export default async function api(client: Client): Promise<number> {
     output.error(
       `Invalid arguments. Use an API path starting with /, or run \`${packageName} api\` interactively.`
     );
-    return 1;
+    return 2;
   }
 
   try {
@@ -163,7 +169,7 @@ export default async function api(client: Client): Promise<number> {
       output.error(
         'Invalid endpoint: must be a Vercel API path, not an external URL'
       );
-      return 1;
+      return 2;
     }
   } catch {
     output.error('Invalid endpoint URL format');
@@ -721,6 +727,27 @@ function extractPaginatedData(page: Record<string, unknown>): unknown[] {
   return [rest];
 }
 
+/**
+ * `--raw`, or stdout is not a terminal (piped or captured by an agent): print
+ * the response as single-line JSON instead of tables or summary text.
+ */
+function wantsRawOutput(client: Client, flags: ParsedFlags): boolean {
+  return Boolean(flags['--raw']) || !client.stdout.isTTY;
+}
+
+/**
+ * Match a single JSON document: `application/json` or a structured
+ * `application/json-*+json` type such as `application/json-patch+json`.
+ * Streaming formats such as `application/jsonl` are printed as text.
+ */
+function isJsonContentType(contentType: string): boolean {
+  const mediaType = contentType.split(';')[0].trim().toLowerCase();
+  return (
+    mediaType === 'application/json' ||
+    (mediaType.startsWith('application/json-') && mediaType.endsWith('+json'))
+  );
+}
+
 async function handleResponse(
   client: Client,
   response: Response,
@@ -739,8 +766,9 @@ async function handleResponse(
 
   const contentType = response.headers.get('content-type') || '';
   const isMutation = options?.tagOperation && method !== 'GET';
+  const raw = wantsRawOutput(client, flags);
 
-  if (contentType.includes('application/json')) {
+  if (isJsonContentType(contentType)) {
     const json = await response.json();
 
     if (flags['--verbose']) {
@@ -749,11 +777,11 @@ async function handleResponse(
       );
     }
 
-    if (displayColumns && response.ok && !flags['--raw']) {
+    if (displayColumns && response.ok && !raw) {
       return outputWithDisplayColumns(client, json, displayColumns);
     }
 
-    if (isMutation && !flags['--raw']) {
+    if (isMutation && !raw) {
       if (!response.ok) {
         return outputMutationResult(client, response, method, json);
       }
@@ -765,7 +793,7 @@ async function handleResponse(
 
   const text = await response.text();
 
-  if (isMutation && !flags['--raw']) {
+  if (isMutation && !raw) {
     return outputMutationResult(
       client,
       response,
@@ -858,7 +886,7 @@ function outputResults(
   flags: ParsedFlags
 ): number {
   const formatted = formatOutput(data, {
-    raw: flags['--raw'],
+    raw: wantsRawOutput(client, flags),
   });
 
   client.stdout.write(formatted + '\n');
@@ -971,7 +999,7 @@ async function listEndpoints(
     return outputEndpointsAsJson(client, endpoints);
   }
 
-  return outputEndpointsAsTable(endpoints);
+  return outputEndpointsAsTable(client, endpoints);
 }
 
 function outputEndpointsAsJson(
@@ -1024,25 +1052,28 @@ function groupEndpointsByPath(
   return grouped;
 }
 
-function outputEndpointsAsTable(endpoints: EndpointInfo[]): number {
+function outputEndpointsAsTable(
+  client: Client,
+  endpoints: EndpointInfo[]
+): number {
   const grouped = groupEndpointsByPath(endpoints);
   const methodWidth = 7;
 
-  output.log('');
+  client.stdout.write('\n');
 
   for (const [path, methods] of grouped) {
     // Print path as header
-    output.log(chalk.bold(path));
+    client.stdout.write(chalk.bold(path) + '\n');
 
     // Print each method underneath with indentation
     for (const { method, summary } of methods) {
       const coloredMethod = colorizeMethod(method);
       const paddedMethod = method.padEnd(methodWidth);
       const methodDisplay = coloredMethod + paddedMethod.slice(method.length);
-      output.log(`  ${methodDisplay}  ${chalk.gray(summary || '')}`);
+      client.stdout.write(`  ${methodDisplay}  ${chalk.gray(summary || '')}\n`);
     }
 
-    output.log(''); // Blank line between paths
+    client.stdout.write('\n'); // Blank line between paths
   }
 
   output.log(

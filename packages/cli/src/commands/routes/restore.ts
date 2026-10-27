@@ -39,10 +39,10 @@ export default async function restore(client: Client, argv: string[]) {
         ],
       });
       process.exit(1);
-      return 1;
+      return 2;
     }
     output.error(error);
-    return 1;
+    return 2;
   }
 
   const link = await requireProjectContext(
@@ -71,10 +71,10 @@ export default async function restore(client: Client, argv: string[]) {
         next: [{ command: withGlobalFlags(client, 'routes list-versions') }],
       });
       process.exit(1);
-      return 1;
+      return 2;
     }
     output.error(result.error);
-    return 1;
+    return 2;
   }
   const version = result.version;
   if (!version) {
@@ -102,7 +102,7 @@ export default async function restore(client: Client, argv: string[]) {
         next: [{ command: withGlobalFlags(client, 'routes list-versions') }],
       });
       process.exit(1);
-      return 1;
+      return 2;
     }
     output.error(
       `Version ${chalk.bold(
@@ -111,7 +111,7 @@ export default async function restore(client: Client, argv: string[]) {
         withGlobalFlags(client, 'routes list-versions')
       )} to see previous versions you can restore.`
     );
-    return 1;
+    return 2;
   }
 
   if (version.isStaging) {
@@ -124,7 +124,7 @@ export default async function restore(client: Client, argv: string[]) {
         next: [{ command: withGlobalFlags(client, 'routes publish --yes') }],
       });
       process.exit(1);
-      return 1;
+      return 2;
     }
     output.error(
       `Version ${chalk.bold(
@@ -133,7 +133,7 @@ export default async function restore(client: Client, argv: string[]) {
         withGlobalFlags(client, 'routes publish')
       )} to publish it instead.`
     );
-    return 1;
+    return 2;
   }
 
   // Fetch diff to show what will change

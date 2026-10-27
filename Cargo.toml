@@ -4,6 +4,9 @@ members = ["crates/vercel_runtime"]
 exclude = [
   "examples/axum",
   "examples/actix-web",
+  "packages/container/test/fixtures/rust/00-http",
+  "packages/container/test/fixtures/rust/01-axum",
+  "packages/container/test/fixtures/rust/02-services/backend",
   "packages/rust/test/fixtures/01-standalone-std",
   "packages/rust/test/fixtures/02-standalone-axum",
   "packages/rust/test/fixtures/03-standalone-actix",

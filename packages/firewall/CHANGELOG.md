@@ -1,5 +1,11 @@
 # @vercel/firewall
 
+## 1.2.6
+
+### Patch Changes
+
+- 85bbc70: Add an optional `timeout` in milliseconds to `checkRateLimit` and `unstable_checkRateLimit` to abort the rate limit fetch. The default remains no timeout.
+
 ## 1.2.5
 
 ### Patch Changes

@@ -1,0 +1,41 @@
+
+  ▲ vercel teams switch [name]
+
+  Switch to a different team                                                    
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global `.vercel` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local `vercel.json` file              
+       --no-color             No color mode (default off)                       
+       --non-interactive      Run without interactive prompts; when an agent is 
+                              detected this is the default                      
+  -S,  --scope                Set a custom scope                                
+  -v,  --version              Output the version number                         
+
+
+  Examples:
+
+  - Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively
+
+    $ vercel teams switch <slug>
+
+  Notes:
+
+  Saves the team in the global config, so later commands use it until you switch
+  again. --scope overrides it for one command.                                  
+
+  In a directory linked to a project, commands keep using the project's team.   
+
+  A scope is always a team: there is no personal account to switch to.          
+
+  Related:
+
+  vercel teams list  Show all teams that you're a member of                   
+  vercel whoami      Shows the username of the currently logged in user.      
+
+

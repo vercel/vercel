@@ -1,6 +1,6 @@
 /**
  * Interactive edit loop and helpers for route editing.
- * Extracted from edit.ts so that both `routes edit` and `routes add`
+ * Extracted from edit.ts so that both `routes update` and `routes add`
  * (for the "Edit manually" after AI generation flow) can use it
  * without cross-command imports.
  */

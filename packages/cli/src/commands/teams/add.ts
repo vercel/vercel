@@ -3,7 +3,6 @@ import stamp from '../../util/output/stamp';
 import eraseLines from '../../util/output/erase-lines';
 import chars from '../../util/output/chars';
 import invite from './invite';
-import { writeToConfigFile } from '../../util/config/files';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import type Client from '../../util/client';
 import createTeam from '../../util/teams/create-team';
@@ -184,11 +183,11 @@ export default async function add(
           reason: 'invalid_arguments',
           message: error instanceof Error ? error.message : String(error),
         },
-        1
+        2
       );
     }
     printError(error);
-    return 1;
+    return 2;
   }
 
   const slugFlag = parsedArgs.flags['--slug'] as string | undefined;
@@ -200,13 +199,17 @@ export default async function add(
     if (!nameFlag || !nameFlag.trim()) missing.push('--name');
     if (missing.length > 0) {
       const fullArgs = client.argv.slice(2);
-      const addIdx = fullArgs.indexOf('add');
+      const subcommandNames: string[] = [
+        addSubcommand.name,
+        ...addSubcommand.aliases,
+      ];
+      const addIdx = fullArgs.findIndex(arg => subcommandNames.includes(arg));
       const afterAdd = addIdx >= 0 ? fullArgs.slice(addIdx + 1) : [];
-      // Same subcommand (teams add): preserve --slug/--name and globals so
+      // Same subcommand (teams create): preserve --slug/--name and globals so
       // the user can re-run with placeholders filled without retyping flags.
       const flagParts = getSameSubcommandSuggestionFlags(afterAdd);
       const cmd = getCommandNamePlain(
-        `teams add --slug <slug> --name <name> ${flagParts.join(' ')}`.trim()
+        `teams create --slug <slug> --name <name> ${flagParts.join(' ')}`.trim()
       );
       // Plain text only—no param()/chalk in JSON message
       const requiredPlain = missing.join(' and ');
@@ -225,7 +228,7 @@ export default async function add(
             },
           ],
         },
-        1
+        2
       );
     }
     const slug = (slugFlag as string).trim().toLowerCase();
@@ -244,16 +247,16 @@ export default async function add(
             next: [
               {
                 command: getCommandNamePlain(
-                  'teams add --slug <slug> --name <name>'
+                  'teams create --slug <slug> --name <name>'
                 ),
               },
             ],
           },
-          1
+          2
         );
       }
       output.error(msg);
-      return 1;
+      return 2;
     }
     if (!validateName(name)) {
       const msg = `Invalid ${param('--name')}: only letters, numbers, spaces, hyphens, and underscores allowed`;
@@ -267,11 +270,11 @@ export default async function add(
             reason: 'invalid_name',
             message: msgPlain,
           },
-          1
+          2
         );
       }
       output.error(msg);
-      return 1;
+      return 2;
     }
 
     output.spinner(teamUrlPrefix + slug);
@@ -330,7 +333,7 @@ export default async function add(
     output.stopSpinner();
 
     client.config.currentTeam = team.id;
-    writeToConfigFile(client.config);
+    client.writeToConfigFile();
     output.success(
       `Team ${chalk.bold(team.name)} (${chalk.cyan(`vercel.com/${slug}`)}) created.`
     );
@@ -416,7 +419,7 @@ export default async function add(
   // Update config file
   output.spinner('Saving');
   client.config.currentTeam = team.id;
-  writeToConfigFile(client.config);
+  client.writeToConfigFile();
   output.stopSpinner();
 
   await invite(client, [], {

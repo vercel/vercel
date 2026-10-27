@@ -1,6 +1,6 @@
 import type { GitHubChannelCredentials } from 'eve/channels/github';
 
-import { vercelOidc } from 'eve/channels/auth';
+import { createConnectWebhookVerifier } from '../chat/webhook-verifier.js';
 
 import {
   getConnectorMetadata,
@@ -47,7 +47,7 @@ export function connectGitHubCredentials(
     appSlug: () => getGitHubAppSlug(connector, options),
     installationToken: () =>
       getToken(connector, { ...params, subject: { type: 'app' } }, options),
-    webhookVerifier: vercelOidc(),
+    webhookVerifier: createConnectWebhookVerifier(),
   };
 }
 

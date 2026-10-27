@@ -1,5 +1,6 @@
 import path from 'path';
 import { execCli } from './helpers/exec';
+import { getCliPath } from './helpers/get-cli-path';
 import nodeFetch from '../src/util/fetch';
 import { apiFetch } from './helpers/api-fetch';
 import fs from 'fs-extra';
@@ -7,6 +8,10 @@ import sleep from '../src/util/sleep';
 import waitForPrompt, {
   answerTeamPromptThenWait,
 } from './helpers/wait-for-prompt';
+import {
+  pickDeploymentUrl,
+  waitForDeployment,
+} from './helpers/wait-for-deployment';
 import { listTmpDirs } from './helpers/get-tmp-dir';
 import { teamPromise } from './helpers/get-account';
 import {
@@ -20,7 +25,7 @@ import { randomBytes } from 'crypto';
 const TEST_TIMEOUT = 3 * 60 * 1000;
 vi.setConfig({ testTimeout: TEST_TIMEOUT, hookTimeout: TEST_TIMEOUT });
 
-const binaryPath = path.resolve(__dirname, '../scripts/start.js');
+const binaryPath = getCliPath();
 
 async function vcLink(projectPath: string) {
   const { exitCode, stdout, stderr } = await execCli(
@@ -199,11 +204,10 @@ test('default command should work with --cwd option', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  const url = stdout;
+  const url = pickDeploymentUrl(stdout);
 
   // Root README.md is intentionally excluded from zero-config static deployments.
-  const deploymentResult = await nodeFetch(`${url}/content.txt`);
-  const body = await deploymentResult.text();
+  const { text: body } = await waitForDeployment(`${url}/content.txt`);
   expect(body).toEqual(
     'root contents for deploy-default-with-conflicting-sub-directory'
   );
@@ -230,10 +234,9 @@ test('should allow deploying a directory that was built with a target environmen
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  const url = stdout;
+  const url = pickDeploymentUrl(stdout);
 
-  const deploymentResult = await nodeFetch(`${url}/README.md`);
-  const body = await deploymentResult.text();
+  const { text: body } = await waitForDeployment(`${url}/README.md`);
   expect(body).toEqual(
     'readme contents for deploy-default-with-prebuilt-preview'
   );
@@ -259,10 +262,9 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  const url = stdout;
+  const url = pickDeploymentUrl(stdout);
 
-  const deploymentResult = await nodeFetch(`${url}/README.md`);
-  const body = await deploymentResult.text();
+  const { text: body } = await waitForDeployment(`${url}/README.md`);
   expect(body).toEqual('readme contents for build-output-api-raw');
 });
 
@@ -322,8 +324,10 @@ test('deploy using only vercel.json with `redirects` defined', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  const url = stdout;
-  const res = await nodeFetch(`${url}/foo/bar`, { redirect: 'manual' });
+  const url = pickDeploymentUrl(stdout);
+  const { response: res } = await waitForDeployment(`${url}/foo/bar`, {
+    redirect: 'manual',
+  });
   const location = res.headers.get('location');
   expect(location).toBe('https://example.com/foo/bar');
 });
@@ -343,11 +347,12 @@ test('deploy using --local-config flag v2', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  const { host } = new URL(stdout);
+  const { host } = new URL(pickDeploymentUrl(stdout));
   expect(host).toMatch(/secondary/gm);
 
-  const testRes = await nodeFetch(`https://${host}/test-${team.slug}.html`);
-  const testText = await testRes.text();
+  const { text: testText } = await waitForDeployment(
+    `https://${host}/test-${team.slug}.html`
+  );
   expect(testText).toBe('<h1>hello test</h1>');
 
   const anotherTestRes = await nodeFetch(`https://${host}/another-test`);
@@ -458,10 +463,11 @@ test('deploy using --local-config flag above target', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  const { host } = new URL(stdout);
+  const { host } = new URL(pickDeploymentUrl(stdout));
 
-  const testRes = await nodeFetch(`https://${host}/index.html`);
-  const testText = await testRes.text();
+  const { text: testText } = await waitForDeployment(
+    `https://${host}/index.html`
+  );
   expect(testText).toBe('<h1>hello index</h1>');
 
   const anotherTestRes = await nodeFetch(`https://${host}/another.html`);

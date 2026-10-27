@@ -37,7 +37,7 @@ export default async function sdkKeysAdd(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { flags } = parsedArgs;
@@ -101,15 +101,15 @@ export default async function sdkKeysAdd(
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                `flags sdk-keys add --type <server|client|mobile> ${envPart}`
+                `flags sdk-keys create --type <server|client|mobile> ${envPart}`
               ),
               when: 'create an SDK key with a specific type',
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
     sdkKeyType = await client.input.select({
       message: 'Select the SDK key type:',
@@ -142,20 +142,20 @@ export default async function sdkKeysAdd(
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                `flags sdk-keys add --type <server|client|mobile> ${envPart}`
+                `flags sdk-keys create --type <server|client|mobile> ${envPart}`
               ),
               when: 'use a valid type (server, client, or mobile)',
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
     output.error(
       `Invalid type: ${sdkKeyType}. Must be one of: ${VALID_TYPES.join(', ')}`
     );
-    return 1;
+    return 2;
   }
 
   // Prompt for environment if not provided
@@ -172,15 +172,15 @@ export default async function sdkKeysAdd(
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                `flags sdk-keys add --type ${sdkKeyType} --environment <production|preview|development>`
+                `flags sdk-keys create --type ${sdkKeyType} --environment <production|preview|development>`
               ),
               when: 'create an SDK key for a specific environment',
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
     environment = await client.input.select({
       message: 'Select the environment:',
@@ -203,20 +203,20 @@ export default async function sdkKeysAdd(
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                `flags sdk-keys add --type ${sdkKeyType} --environment <production|preview|development>`
+                `flags sdk-keys create --type ${sdkKeyType} --environment <production|preview|development>`
               ),
               when: 'use a valid environment (production, preview, or development)',
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
     output.error(
       `Invalid environment: ${environment}. Must be one of: ${VALID_ENVIRONMENTS.join(', ')}`
     );
-    return 1;
+    return 2;
   }
 
   // Optionally prompt for label (skip in non-interactive)

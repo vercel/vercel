@@ -37,7 +37,7 @@ export default async function main(
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const {
@@ -52,16 +52,18 @@ export default async function main(
     telemetry.trackCliFlagHelp('firewall', 'system-mitigations');
     output.print(
       help(systemMitigationsSubcommand, {
+        stream: client.stderr,
         parent: firewallCommand,
         columns: client.stderr.columns,
       })
     );
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: firewallCommand,
         columns: client.stderr.columns,
       })
@@ -76,7 +78,7 @@ export default async function main(
           `system-mitigations:${subcommandOriginal}`
         );
         printHelp(systemMitigationsPauseSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandSystemMitigationsPause(subcommandOriginal);
       return pause(client, subArgs);
@@ -87,7 +89,7 @@ export default async function main(
           `system-mitigations:${subcommandOriginal}`
         );
         printHelp(systemMitigationsResumeSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandSystemMitigationsResume(subcommandOriginal);
       return resume(client, subArgs);
@@ -95,6 +97,7 @@ export default async function main(
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(
         help(systemMitigationsSubcommand, {
+          stream: client.stderr,
           parent: firewallCommand,
           columns: client.stderr.columns,
         })

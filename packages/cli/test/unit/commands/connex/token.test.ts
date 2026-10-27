@@ -4,6 +4,7 @@ import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import connect from '../../../../src/commands/connex';
+import { expectDeprecationInJson } from '../../../helpers/deprecation-warning';
 
 vi.mock('open', () => ({ default: vi.fn(() => Promise.resolve()) }));
 
@@ -25,7 +26,7 @@ describe('connex token', () => {
     const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput('Missing connector ID or UID');
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
   });
 
   it('should error with invalid --subject value', async () => {
@@ -34,7 +35,7 @@ describe('connex token', () => {
     const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput('Invalid --subject value');
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
   });
 
   it('should print the raw token value in plain mode', async () => {
@@ -127,6 +128,41 @@ describe('connex token', () => {
 
     expect(exitCode).toBe(0);
     expect(requestBody.subject).toBeUndefined();
+  });
+
+  it('should request the connector default scopes when --scopes is omitted', async () => {
+    let requestBody: Record<string, unknown> = {};
+    client.scenario.post('/v1/connect/token/:clientId', (req, res) => {
+      requestBody = req.body;
+      res.json({ token: 'xoxp-default', expiresAt: 1712345678 });
+    });
+
+    client.setArgv('connect', 'token', 'scl_abc123');
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(requestBody.scopes).toEqual(['*']);
+  });
+
+  it('should omit scopes when --no-default-scopes is provided', async () => {
+    let requestBody: Record<string, unknown> = {};
+    client.scenario.post('/v1/connect/token/:clientId', (req, res) => {
+      requestBody = req.body;
+      res.json({ token: 'xoxp-unscoped', expiresAt: 1712345678 });
+    });
+
+    client.setArgv('connect', 'token', 'scl_abc123', '--no-default-scopes');
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(requestBody.scopes).toBeUndefined();
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:token', value: 'token' },
+      { key: 'argument:id', value: '[REDACTED]' },
+      { key: 'flag:no-default-scopes', value: 'TRUE' },
+    ]);
   });
 
   it('should accept comma-separated scopes', async () => {
@@ -472,5 +508,70 @@ describe('connex token', () => {
       { key: 'argument:id', value: '[REDACTED]' },
       { key: 'option:subject', value: '[REDACTED]' },
     ]);
+  });
+});
+
+describe('connex token --installation', () => {
+  // Runs `connect token` with a fresh client, recording the token request.
+  async function run(...args: string[]) {
+    client.reset();
+    client.cwd = setupTmpDir();
+    const user = useUser();
+    const team = useTeam();
+    client.config.currentTeam = team.id;
+    client.authConfig.userId = user.id;
+    let body: Record<string, unknown> | undefined;
+    client.scenario.post('/v1/connect/token/:clientId', (req, res) => {
+      body = req.body;
+      res.json({ token: 'xoxb-1', expiresAt: 1712345678 });
+    });
+    client.setArgv('connect', 'token', 'scl_abc123', ...args);
+    const exitCode = await connect(client);
+    return {
+      exitCode,
+      body,
+      stdout: client.stdout.getFullOutput(),
+      stderr: client.stderr.getFullOutput(),
+    };
+  }
+
+  it('still accepts --installation-id, with one warning that names --installation', async () => {
+    const now = await run('--subject', 'app', '--installation', 'inst_1');
+    const before = await run('--subject', 'app', '--installation-id', 'inst_1');
+
+    expect(now.exitCode).toBe(0);
+    expect(now.body).toMatchObject({ installationId: 'inst_1' });
+    expect(now.stderr).not.toContain('deprecated');
+    expect(before.exitCode).toBe(now.exitCode);
+    expect(before.body).toEqual(now.body);
+    expect(before.stdout).toBe(now.stdout);
+    expect(before.stderr.match(/deprecated/g)).toHaveLength(1);
+    expect(before.stderr).toContain(
+      '! --installation-id is deprecated. Use --installation.\n'
+    );
+
+    const nowJson = await run('--installation', 'inst_1', '--json');
+    const beforeJson = await run('--installation-id', 'inst_1', '--json');
+    expectDeprecationInJson(
+      beforeJson.stdout,
+      nowJson.stdout,
+      '--installation-id is deprecated. Use --installation.'
+    );
+    expect(beforeJson.stderr).not.toContain('deprecated');
+  });
+
+  it('rejects --installation with --installation-id before any request', async () => {
+    const result = await run(
+      '--installation',
+      'inst_1',
+      '--installation-id',
+      'inst_1'
+    );
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain(
+      "Can't use --installation with --installation-id."
+    );
+    expect(result.body).toBeUndefined();
   });
 });

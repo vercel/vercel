@@ -12,8 +12,13 @@ import { getCommandName } from '../../util/pkg-name';
 import chalk from 'chalk';
 import { BlobPutTelemetryClient } from '../../util/telemetry/commands/blob/put';
 import { printError } from '../../util/error';
+import {
+  getRenamedOption,
+  reportRenamedOptionError,
+} from '../../util/renamed-option';
 import { parseAccessFlag } from '../../util/blob/access';
 import { blobOpts, type BlobRWToken } from '../../util/blob/token';
+import { readOnOffOption } from '../../util/on-off-option';
 
 export default async function put(
   client: Client,
@@ -32,7 +37,7 @@ export default async function put(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const {
@@ -43,15 +48,32 @@ export default async function put(
     '--access': accessFlag,
     '--add-random-suffix': addRandomSuffix,
     '--pathname': pathnameFlag,
-    '--multipart': multipart,
     '--content-type': contentType,
     '--cache-control-max-age': cacheControlMaxAge,
-    '--allow-overwrite': allowOverwrite,
     '--if-match': ifMatch,
   } = flags;
 
+  const force = getRenamedOption<boolean>(
+    flags,
+    '--force',
+    '--allow-overwrite'
+  );
+  if ('error' in force) {
+    return reportRenamedOptionError(client, force.error);
+  }
+  const allowOverwrite = force.value;
+
   const access = parseAccessFlag(accessFlag);
   if (!access) return 1;
+
+  const multipart = readOnOffOption(client, flags, {
+    on: '--multipart',
+    off: '--no-multipart',
+  });
+  if ('error' in multipart) {
+    output.error(multipart.error);
+    return 2;
+  }
 
   // Only track file path if one was provided
   if (filePath) {
@@ -60,10 +82,12 @@ export default async function put(
   telemetryClient.trackCliOptionAccess(accessFlag);
   telemetryClient.trackCliFlagAddRandomSuffix(addRandomSuffix);
   telemetryClient.trackCliOptionPathname(pathnameFlag);
-  telemetryClient.trackCliFlagMultipart(multipart);
+  telemetryClient.trackCliFlagMultipart(flags['--multipart']);
+  telemetryClient.trackCliFlagNoMultipart(flags['--no-multipart']);
   telemetryClient.trackCliOptionContentType(contentType);
   telemetryClient.trackCliOptionCacheControlMaxAge(cacheControlMaxAge);
-  telemetryClient.trackCliFlagAllowOverwrite(allowOverwrite);
+  telemetryClient.trackCliFlagForce(flags['--force']);
+  telemetryClient.trackCliFlagAllowOverwrite(flags['--allow-overwrite']);
   telemetryClient.trackCliOptionIfMatch(ifMatch);
 
   // ReadableStream works for both stdin and ReadStream
@@ -78,7 +102,7 @@ export default async function put(
           `${getCommandName('blob put <file>')}`
         )} or pipe data: ${chalk.cyan('cat file.txt | vercel blob put --pathname <pathname>')}`
       );
-      return 1;
+      return 2;
     }
 
     // Reading from stdin - pathname is required
@@ -88,7 +112,7 @@ export default async function put(
           'cat file.txt | vercel blob put --pathname <pathname>'
         )}`
       );
-      return 1;
+      return 2;
     }
 
     putBody = process.stdin;
@@ -143,7 +167,7 @@ export default async function put(
       ...blobOpts(auth),
       access,
       addRandomSuffix: addRandomSuffix ?? false,
-      multipart: multipart ?? true,
+      multipart: multipart.value ?? true,
       contentType,
       cacheControlMaxAge,
       allowOverwrite: allowOverwrite ?? false,

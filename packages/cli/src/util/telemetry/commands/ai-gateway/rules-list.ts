@@ -6,6 +6,18 @@ export class AiGatewayRulesListTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof rulesListSubcommand>
 {
+  trackCliOptionLimit(limit: number | undefined) {
+    if (limit !== undefined) {
+      this.trackCliOption({ option: 'limit', value: String(limit) });
+    }
+  }
+
+  trackCliOptionNext(next: string | undefined) {
+    if (next) {
+      this.trackCliOption({ option: 'next', value: this.redactedValue });
+    }
+  }
+
   trackCliFlagIncludeDisabled(includeDisabled: boolean | undefined) {
     if (includeDisabled) {
       this.trackCliFlag('include-disabled');

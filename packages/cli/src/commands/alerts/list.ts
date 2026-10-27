@@ -178,11 +178,11 @@ function validationFailureForAgents(
         next: [
           {
             command: buildCommandWithGlobalFlags(client.argv, 'alerts --help'),
-            when: 'See valid `alerts` list flags and examples',
+            when: 'See valid `alerts` list options and examples',
           },
         ],
       },
-      1
+      2
     );
   }
   return handleValidationError(result, jsonOutput, client);
@@ -299,7 +299,7 @@ function parseFlags(client: Client): ListFlags | number {
                     client.argv,
                     'alerts --help'
                   ),
-                  when: 'See all `alerts` flags and examples',
+                  when: 'See all `alerts` options and examples',
                 },
               ]
             : [
@@ -308,15 +308,15 @@ function parseFlags(client: Client): ListFlags | number {
                     client.argv,
                     'alerts --help'
                   ),
-                  when: 'See valid flags and examples',
+                  when: 'See valid options and examples',
                 },
               ],
         },
-        1
+        2
       );
     }
     printError(err);
-    return 1;
+    return 2;
   }
 }
 
@@ -413,7 +413,7 @@ export default async function list(
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const jsonOutput = formatResult.jsonOutput;
 

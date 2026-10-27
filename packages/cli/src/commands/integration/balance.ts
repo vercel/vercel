@@ -32,13 +32,13 @@ export async function balance(client: Client) {
     parsedArguments = parseArguments(client.argv.slice(3), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
@@ -46,14 +46,14 @@ export async function balance(client: Client) {
 
   if (parsedArguments.args.length > 2) {
     output.error('Cannot specify more than one integration at a time');
-    return 1;
+    return 2;
   }
 
   const integrationSlug = parsedArguments.args[1];
 
   if (!integrationSlug) {
     output.error('You must pass an integration slug');
-    return 1;
+    return 2;
   }
 
   const { team } = await getScope(client);

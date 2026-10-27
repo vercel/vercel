@@ -439,7 +439,7 @@ describe('blob store add', () => {
         'staging',
       ]);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       expect(mockedOutput.error).toHaveBeenCalledWith(
         expect.stringContaining('Invalid environment value')
       );
@@ -485,7 +485,7 @@ describe('blob store add', () => {
       }));
 
       const exitCode = await addStore(client, ['--invalid-flag']);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
     });
 
     it('should return 1 when --access flag is missing in non-TTY', async () => {
@@ -494,7 +494,7 @@ describe('blob store add', () => {
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
-        "Missing required --access flag. Must be 'public' or 'private'."
+        "Missing required --access option. Must be 'public' or 'private'."
       );
     });
 

@@ -14,7 +14,6 @@ export function parseSubcommandArguments(
 ): ParsedSubcommandArguments {
   const flagsSpecification = getFlagsSpecification(command.options);
 
-  // @ts-expect-error - TypeScript complains about the flags specification type
   return parseArguments(argv, flagsSpecification);
 }
 

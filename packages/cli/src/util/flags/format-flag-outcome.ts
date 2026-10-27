@@ -3,13 +3,18 @@ import ms from 'ms';
 import { formatVariantValue } from './resolve-variant';
 import type {
   FlagOutcome,
+  FlagExperimentOutcome,
   FlagRolloutOutcome,
   FlagSplitOutcome,
   FlagVariant,
 } from './types';
 
 export function formatFlagOutcome(
-  outcome: FlagOutcome | FlagSplitOutcome | FlagRolloutOutcome,
+  outcome:
+    | FlagOutcome
+    | FlagSplitOutcome
+    | FlagRolloutOutcome
+    | FlagExperimentOutcome,
   variants: FlagVariant[],
   includeVariantId = false
 ): string {
@@ -29,6 +34,10 @@ export function formatFlagOutcome(
       includeVariantId
     );
     return `split (${weights})`;
+  }
+
+  if (outcome.type === 'experiment') {
+    return 'experiment assignment';
   }
 
   return formatRolloutOutcome(outcome, variants, includeVariantId);
@@ -99,7 +108,7 @@ function formatRolloutOutcome(
     toVariant,
     outcome.rollToVariantId,
     includeVariantId
-  )}; ${stages}; then 100%; Fallback: ${formatFlagVariantSummary(
+  )}; ${stages}; then ${(outcome.finalPromille ?? 100_000) / 1000}%; Fallback: ${formatFlagVariantSummary(
     defaultVariant,
     outcome.defaultVariantId,
     includeVariantId

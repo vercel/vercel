@@ -29,7 +29,7 @@ describe('connex revoke-tokens', () => {
 
     const exitCode = await connect(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'Missing connector ID or UID'
     );
@@ -47,7 +47,7 @@ describe('connex revoke-tokens', () => {
 
     const exitCode = await connect(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       '--my-tokens and --all-tokens are mutually exclusive'
     );
@@ -60,7 +60,7 @@ describe('connex revoke-tokens', () => {
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
-      '--yes requires a scope flag'
+      '--yes requires a scope option'
     );
     expect(client.stderr.getFullOutput()).toContain('--my-tokens');
     expect(client.stderr.getFullOutput()).toContain('--all-tokens');
@@ -77,7 +77,7 @@ describe('connex revoke-tokens', () => {
 
     const exitCode = await connect(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('--json requires --yes');
   });
 

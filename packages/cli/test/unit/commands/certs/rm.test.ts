@@ -12,7 +12,7 @@ describe('certs rm', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = certs(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -27,18 +27,18 @@ describe('certs rm', () => {
     client.setArgv('certs', 'rm');
     const exitCodePromise = certs(client);
     await expect(client.stderr).toOutput(
-      'Invalid number of arguments. Usage: `vercel certs rm <id or cn>`'
+      'Invalid number of arguments. Usage: `vercel certs delete <id or cn>`'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    await expect(exitCodePromise).resolves.toEqual(2);
   });
 
   it('should track subcommand invocation', async () => {
     client.setArgv('certs', 'rm');
     const exitCode = await certs(client);
-    expect(exitCode, 'exit code for "certs"').toEqual(1);
+    expect(exitCode, 'exit code for "certs"').toEqual(2);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
-        key: 'subcommand:remove',
+        key: 'subcommand:delete',
         value: 'rm',
       },
     ]);
@@ -55,7 +55,34 @@ describe('certs rm', () => {
       await expect(client.stderr).toOutput('Are you sure?');
       client.stdin.write('y');
 
-      await expect(client.stderr).toOutput('Success! 1 Certificate removed');
+      await expect(client.stderr).toOutput('Success! 1 Certificate deleted');
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
+
+    it.each(['delete', 'del'])('runs as %s without a warning', async name => {
+      useUser();
+      useCert();
+
+      client.setArgv('certs', name, 'cert-id');
+      const exitCodePromise = certs(client);
+
+      await expect(client.stderr).toOutput('Are you sure?');
+      client.stdin.write('y');
+      await expect(exitCodePromise).resolves.toEqual(0);
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+    });
+
+    it('warns that remove is deprecated', async () => {
+      useUser();
+      useCert();
+
+      client.setArgv('certs', 'remove', 'cert-id');
+      const exitCodePromise = certs(client);
+
+      await expect(client.stderr).toOutput(
+        '`vercel certs remove` is deprecated. Use `vercel certs delete`.'
+      );
+      client.stdin.write('y');
       await expect(exitCodePromise).resolves.toEqual(0);
     });
 
@@ -72,7 +99,7 @@ describe('certs rm', () => {
       await expect(exitCodePromise).resolves.toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'subcommand:remove',
+          key: 'subcommand:delete',
           value: 'rm',
         },
         {

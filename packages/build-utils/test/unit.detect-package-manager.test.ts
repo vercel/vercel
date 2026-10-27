@@ -258,6 +258,24 @@ describe('Test `detectPackageManager()`', () => {
           detectedPackageManager: 'yarn@4.x',
         },
       },
+      {
+        name: 'yarn@4.x with lockfile version 9 (yarn 4.14)',
+        args: ['yarn', 9],
+        want: {
+          path: undefined,
+          detectedLockfile: 'yarn.lock',
+          detectedPackageManager: 'yarn@4.x',
+        },
+      },
+      {
+        name: 'yarn@4.x with lockfile version 10 (yarn 4.16+)',
+        args: ['yarn', 10],
+        want: {
+          path: undefined,
+          detectedLockfile: 'yarn.lock',
+          detectedPackageManager: 'yarn@4.x',
+        },
+      },
     ])('$name', ({ args, want }) => {
       const [cliType, lockfileVersion] = args;
       expect(detectPackageManager(cliType, lockfileVersion)).toStrictEqual(
@@ -288,6 +306,24 @@ describe('Test `detectPackageManager()`', () => {
           path: '/bun1',
           detectedLockfile: 'bun.lock',
           detectedPackageManager: 'bun@1.x',
+        },
+      },
+      {
+        name: 'returns bun@1.4 path for `bun.lock` lockfileVersion 2 (Bun >= 1.4), even without an explicit bunVersion',
+        args: ['bun', 2],
+        want: {
+          path: '/bun1.4',
+          detectedLockfile: 'bun.lock',
+          detectedPackageManager: 'bun@1.4.x',
+        },
+      },
+      {
+        name: 'returns bun@1.4 path for future bun.lock lockfileVersion values',
+        args: ['bun', 3],
+        want: {
+          path: '/bun1.4',
+          detectedLockfile: 'bun.lock',
+          detectedPackageManager: 'bun@1.4.x',
         },
       },
     ])('$name', ({ args, want }) => {

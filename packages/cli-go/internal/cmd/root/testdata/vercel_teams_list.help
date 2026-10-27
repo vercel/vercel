@@ -1,0 +1,52 @@
+
+  ▲ vercel teams list [options]
+
+  Show all teams that you're a member of                                        
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                      
+       --json             Output as JSON                                        
+       --limit <NUMBER>   Number of results to return per page (default: 20,    
+                          max: 100)                                             
+  -N,  --next <MS>        Show next page of results                             
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global `.vercel` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local `vercel.json` file              
+       --no-color             No color mode (default off)                       
+       --non-interactive      Run without interactive prompts; when an agent is 
+                              detected this is the default                      
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  Examples:
+
+  - Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch
+
+    $ vercel teams list --next 1584722256178
+
+  Notes:
+
+  The current team is marked with ✔ and listed first.                           
+
+  The table is printed on stderr. Use --json for output a script can read on    
+  stdout.                                                                       
+
+  Shows 20 teams by default. When there are more, it prints the command for the 
+  next page.                                                                    
+
+  Related:
+
+  vercel teams switch  Switch to a different team                             
+  vercel whoami        Shows the username of the currently logged in user.    
+
+

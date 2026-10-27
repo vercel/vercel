@@ -29,11 +29,22 @@ export class RollingReleaseTelemetryClient
     });
   }
 
+  trackCliOptionDeployment(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'deployment',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionDpl(value: string | undefined) {
-    this.trackCliOption({
-      option: 'dpl',
-      value: value ?? '',
-    });
+    if (value) {
+      this.trackCliOption({
+        option: 'dpl',
+        value: this.redactedValue,
+      });
+    }
   }
 
   trackCliOptionCurrentStageIndex(value: string | undefined) {
@@ -43,9 +54,9 @@ export class RollingReleaseTelemetryClient
     });
   }
 
-  trackCliSubcommandConfigure(actual: string) {
+  trackCliSubcommandUpdate(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'configure',
+      subcommand: 'update',
       value: actual,
     });
   }
@@ -78,9 +89,9 @@ export class RollingReleaseTelemetryClient
     });
   }
 
-  trackCliSubcommandFetch(actual: string) {
+  trackCliSubcommandInspect(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'fetch',
+      subcommand: 'inspect',
       value: actual,
     });
   }
@@ -91,6 +102,19 @@ export class RollingReleaseTelemetryClient
     }
   }
 
+  trackCliFlagJson(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('json');
+    }
+  }
+
+  trackCliFlagNoEnable(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('no-enable');
+    }
+  }
+
+  /** The old name of `--no-enable`. */
   trackCliFlagDisable(value: boolean | undefined) {
     if (value) {
       this.trackCliFlag('disable');

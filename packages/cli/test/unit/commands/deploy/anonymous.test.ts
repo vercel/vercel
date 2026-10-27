@@ -3,7 +3,10 @@ import fs from 'fs-extra';
 import { join } from 'path';
 import { client } from '../../../mocks/client';
 import deploy from '../../../../src/commands/deploy';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
@@ -39,6 +42,7 @@ function mockDeploymentEndpoints({ checksFailed = false } = {}) {
     teamId?: string;
     skipAutoDetectionConfirmation?: string;
     projectSettings?: Record<string, unknown>;
+    files?: string[];
   }[] = [];
   client.scenario.post('/v13/deployments', (req, res) => {
     requests.push({
@@ -47,6 +51,7 @@ function mockDeploymentEndpoints({ checksFailed = false } = {}) {
       skipAutoDetectionConfirmation: req.query
         .skipAutoDetectionConfirmation as string,
       projectSettings: req.body.projectSettings,
+      files: req.body.files?.map((file: { file: string }) => file.file),
     });
     res.json({
       id: 'dpl_anon',
@@ -291,6 +296,9 @@ describe('deploy [anonymous]', () => {
       expect(exitCode).toEqual(1);
       expect(loginMock).toHaveBeenCalledTimes(1);
       expect(client.stderr.getFullOutput()).toContain(
+        "Temporary deployments aren't available for this attempt. Log in to continue."
+      );
+      expect(client.stderr.getFullOutput()).toContain(
         'No existing credentials found. Please log in:'
       );
     } finally {
@@ -313,6 +321,9 @@ describe('deploy [anonymous]', () => {
 
     expect(exitCode).toEqual(1);
     expect(bootstrapCalls).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      "Temporary deployments aren't available for this attempt. Log in to continue."
+    );
     expect(client.stderr.getFullOutput()).toContain(
       'No existing credentials found. Please run `vercel login` or pass "--token"'
     );
@@ -599,6 +610,81 @@ describe('deploy [anonymous]', () => {
     expect(payload.next[0].command).toContain('deploy --temporary');
 
     (client as { nonInteractive: boolean }).nonInteractive = false;
+  });
+
+  it('deploys a single HTML file temporarily as static output', async () => {
+    const cwd = setupTmpDir();
+    const path = join(cwd, 'page.html');
+    await fs.writeFile(path, '<h1>hello</h1>\n');
+    await fs.writeFile(join(cwd, 'unrelated.txt'), 'must not be uploaded');
+    client.cwd = cwd;
+    // Keep skipWrite so the logged-out client cannot clear real credentials.
+    client.authConfig = { skipWrite: true };
+    const getBootstrapCalls = mockBootstrap({
+      token: 'vcn_test',
+      expiresAt: Date.now() + 3600_000,
+    });
+    const requests = mockDeploymentEndpoints();
+
+    client.setArgv('deploy', path, '--temporary');
+    const exitCode = await deploy(client);
+
+    expect(exitCode).toEqual(0);
+    expect(getBootstrapCalls()).toEqual(1);
+    expect(buildMock).not.toHaveBeenCalled();
+    expect(requests[0].authorization).toEqual('Bearer vcn_test');
+    expect(requests[0].files?.sort()).toEqual([
+      '.vercel/output/config.json',
+      '.vercel/output/static/page.html',
+    ]);
+    expect(await fs.pathExists(join(cwd, ANONYMOUS_FILE))).toEqual(true);
+    expect(client.stderr.getFullOutput()).toContain(
+      'https://vercel.com/claim-deployment?code=claim_dummy'
+    );
+  });
+
+  it('removes the single-file output directory when the deployment fails', async () => {
+    const cwd = setupTmpDir();
+    const path = join(cwd, 'page.html');
+    await fs.writeFile(path, '<h1>hello</h1>\n');
+    client.cwd = cwd;
+    client.authConfig = { skipWrite: true };
+    mockBootstrap({ token: 'vcn_test', expiresAt: Date.now() + 3600_000 });
+    client.scenario.post('/v13/deployments', (_req, res) => {
+      res.status(400).json({
+        error: { code: 'bad_request', message: 'Test deployment failure' },
+      });
+    });
+    const mkdtemp = vi.spyOn(fs, 'mkdtemp');
+
+    client.setArgv('deploy', path, '--temporary');
+    expect(await deploy(client)).toEqual(1);
+
+    expect(mkdtemp).toHaveBeenCalledOnce();
+    const outputRoot = await mkdtemp.mock.results[0].value;
+    mkdtemp.mockRestore();
+    expect(await fs.pathExists(outputRoot)).toEqual(false);
+  });
+
+  it('rejects temporary single-file deployments of non-HTML files', async () => {
+    const cwd = setupTmpDir();
+    const path = join(cwd, 'notes.md');
+    await fs.writeFile(path, '# notes\n');
+    client.cwd = cwd;
+    client.authConfig = { skipWrite: true };
+    const getBootstrapCalls = mockBootstrap({
+      token: 'vcn_test',
+      expiresAt: Date.now() + 3600_000,
+    });
+
+    client.setArgv('deploy', path, '--temporary');
+    const exitCode = await deploy(client);
+
+    expect(exitCode).toEqual(1);
+    expect(getBootstrapCalls()).toEqual(0);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Temporary single-file deployments support only `.html` files'
+    );
   });
 
   it('rebuilds stale output and persists the detected framework', async () => {

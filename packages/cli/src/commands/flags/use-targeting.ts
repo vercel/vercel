@@ -1,3 +1,4 @@
+import { logArchivedFlagNotice } from '../../util/flags/archived-flag-notice';
 import chalk from 'chalk';
 import deepEqual from 'fast-deep-equal';
 import type Client from '../../util/client';
@@ -50,7 +51,7 @@ export default async function useTargeting(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -67,9 +68,9 @@ export default async function useTargeting(
   if (!flagArg) {
     output.error('Please provide a flag slug or ID to use targeting for');
     output.log(
-      `Example: ${getCommandName('flags use-targeting my-feature --environment production')}`
+      `Example: ${getCommandName('flags targeting enable my-feature --environment production')}`
     );
-    return 1;
+    return 2;
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
@@ -98,12 +99,7 @@ export default async function useTargeting(
     const flag = await getFlag(client, project.id, flagArg);
     output.stopSpinner();
 
-    if (flag.state === 'archived') {
-      output.error(
-        `Flag ${chalk.bold(flag.slug)} is archived and cannot use targeting`
-      );
-      return 1;
-    }
+    logArchivedFlagNotice(flag);
 
     const selectedEnvironment = await resolveFlagEnvironment(
       client,
@@ -125,11 +121,13 @@ export default async function useTargeting(
 
     if (deepEqual(envConfig, nextEnvConfig)) {
       output.warn(
-        formatAlreadyUsingTargetingWarning(
-          flag,
-          selectedEnvironment,
-          nextEnvConfig
-        )
+        flag.state === 'archived'
+          ? `Archived flag ${chalk.bold(flag.slug)} is already configured to use targeting in ${chalk.bold(selectedEnvironment)}`
+          : formatAlreadyUsingTargetingWarning(
+              flag,
+              selectedEnvironment,
+              nextEnvConfig
+            )
       );
       return 0;
     }
@@ -150,7 +148,7 @@ export default async function useTargeting(
     output.stopSpinner();
 
     output.success(
-      `Feature flag ${chalk.bold(flag.slug)} now uses targeting in ${chalk.bold(selectedEnvironment)}`
+      `Feature flag ${chalk.bold(flag.slug)} ${flag.state === 'archived' ? 'is configured to use targeting' : 'now uses targeting'} in ${chalk.bold(selectedEnvironment)}`
     );
     output.log(
       `  ${chalk.dim('Fallthrough:')} ${formatFlagOutcome(nextEnvConfig.fallthrough, flag.variants)}`
@@ -244,6 +242,10 @@ function describeUnusableFallthrough(
 ): string {
   if (fallthrough.type === 'variant') {
     return ` (${fallthrough.variantId})`;
+  }
+
+  if (fallthrough.type === 'experiment') {
+    return ' (experiment assignment)';
   }
 
   return ` (${fallthrough.type} default ${fallthrough.defaultVariantId})`;

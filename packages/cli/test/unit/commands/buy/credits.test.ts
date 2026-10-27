@@ -44,7 +44,7 @@ describe('buy credits', () => {
     it('errors when credit type is missing', async () => {
       client.setArgv('buy', 'credits');
       const exitCode = await buy(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       await expect(client.stderr).toOutput('Missing credit type');
     });
 
@@ -58,28 +58,28 @@ describe('buy credits', () => {
     it('errors when amount is missing', async () => {
       client.setArgv('buy', 'credits', 'v0');
       const exitCode = await buy(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       await expect(client.stderr).toOutput('Missing amount');
     });
 
     it('errors when amount is not a number', async () => {
       client.setArgv('buy', 'credits', 'v0', 'abc');
       const exitCode = await buy(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       await expect(client.stderr).toOutput('Invalid amount "abc"');
     });
 
     it('errors when amount has trailing garbage', async () => {
       client.setArgv('buy', 'credits', 'v0', '50abc');
       const exitCode = await buy(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       await expect(client.stderr).toOutput('Invalid amount "50abc"');
     });
 
     it('errors when amount is zero', async () => {
       client.setArgv('buy', 'credits', 'v0', '0');
       const exitCode = await buy(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       await expect(client.stderr).toOutput('positive amount');
     });
 
@@ -88,7 +88,7 @@ describe('buy credits', () => {
       // so this results in an "unknown option" error
       client.setArgv('buy', 'credits', 'v0', '-10');
       const exitCode = await buy(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       await expect(client.stderr).toOutput('unknown or unexpected option');
     });
 
@@ -103,7 +103,7 @@ describe('buy credits', () => {
     it('errors when amount is a decimal', async () => {
       client.setArgv('buy', 'credits', 'v0', '50.5');
       const exitCode = await buy(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       await expect(client.stderr).toOutput('Invalid amount "50.5"');
     });
   });
@@ -235,7 +235,7 @@ describe('buy credits', () => {
     it('shows help and returns 2', async () => {
       client.setArgv('buy', 'credits', '--help');
       const exitCode = await buy(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
     });
 
     it('tracks telemetry', async () => {

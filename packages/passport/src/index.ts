@@ -50,6 +50,10 @@ export interface PassportIdentity {
   environment?: string;
 }
 
+export interface PassportIdentityWithRequiredToken extends PassportIdentity {
+  token: string;
+}
+
 export interface HeadersLike {
   get(name: string): string | null | undefined;
 }
@@ -134,6 +138,11 @@ const PASSPORT_JWKS = createRemoteJWKSet(
   new URL(`${VERCEL_OIDC_ISSUER}/.well-known/jwks`)
 );
 const DEFAULT_ALGORITHMS = ['RS256'];
+const PASSPORT_CHUNKED_COOKIE_V1_PREFIX = '__vc_chunked_v1:';
+const PASSPORT_COOKIE_V1_GENERATION_LENGTH = 32;
+// This is a defensive reader bound, intentionally independent of and higher
+// than Proxy's current writer limit so that limit can evolve independently.
+const PASSPORT_COOKIE_READ_MAX_CHUNKS = 100;
 const SYMBOL_FOR_REQ_CONTEXT = Symbol.for('@vercel/request-context');
 let hasWarnedAboutDevelopmentIdentity = false;
 
@@ -167,11 +176,10 @@ export async function getIdentity(
   const tokenFromInput = normalized.token;
   const headerToken = getHeader(headers, PASSPORT_HEADER_NAME);
   const cookieHeader = normalized.cookieHeader ?? getHeader(headers, 'cookie');
-  const cookieToken = getCookie(
-    normalized.cookies,
-    cookieHeader,
-    PASSPORT_COOKIE_NAME
-  );
+  const cookieToken =
+    tokenFromInput || headerToken
+      ? undefined
+      : await getCookie(normalized.cookies, cookieHeader, PASSPORT_COOKIE_NAME);
   const token =
     tokenFromInput ?? headerToken ?? cookieToken ?? getEnvToken(options);
   const tokenSource: TokenSource = tokenFromInput
@@ -208,6 +216,22 @@ export async function getIdentity(
 }
 
 /**
+ * Read the Passport identity using `getIdentity` and require a non-empty token.
+ *
+ * @throws {PassportIdentityError} If no Passport identity token is available.
+ */
+export async function requireIdentity(
+  input?: RequestLike | HeadersLike | HeaderRecord | PassportIdentityInput,
+  options: PassportIdentityOptions = {}
+): Promise<PassportIdentityWithRequiredToken> {
+  const identity = await getIdentity(input, options);
+  if (!identity?.token) {
+    throw new PassportIdentityError('Passport identity token was not found.');
+  }
+  return identity as PassportIdentityWithRequiredToken;
+}
+
+/**
  * Verify a Passport identity token and return its identity claims.
  *
  * Use this helper when a Passport token is forwarded to another backend, such
@@ -218,7 +242,7 @@ export async function getIdentity(
 export async function verifyIdentity(
   input: VerifyIdentityInput,
   options: PassportVerifyOptions = {}
-): Promise<PassportIdentity> {
+): Promise<PassportIdentityWithRequiredToken> {
   const normalized =
     typeof input === 'string' ? { token: input } : normalizeInput(input);
   const headers = normalized.headers;
@@ -226,11 +250,10 @@ export async function verifyIdentity(
   const authorizationToken = getAuthorizationBearer(headers);
   const headerToken = getHeader(headers, PASSPORT_HEADER_NAME);
   const cookieHeader = normalized.cookieHeader ?? getHeader(headers, 'cookie');
-  const cookieToken = getCookie(
-    normalized.cookies,
-    cookieHeader,
-    PASSPORT_COOKIE_NAME
-  );
+  const cookieToken =
+    tokenFromInput || authorizationToken || headerToken
+      ? undefined
+      : await getCookie(normalized.cookies, cookieHeader, PASSPORT_COOKIE_NAME);
   const token =
     tokenFromInput ?? authorizationToken ?? headerToken ?? cookieToken;
 
@@ -250,12 +273,12 @@ export async function verifyIdentity(
   return createIdentity(token, tokenSource, true, payload);
 }
 
-function createIdentity(
-  token: string | null,
+function createIdentity<Token extends string | null>(
+  token: Token,
   tokenSource: TokenSource,
   verified: boolean,
   payload: PassportIdentityPayload
-): PassportIdentity {
+): PassportIdentity & { token: Token } {
   validatePassportPayload(payload);
 
   return {
@@ -359,7 +382,83 @@ function getAuthorizationBearer(
   return match?.[1];
 }
 
-function getCookie(
+async function getCookie(
+  cookies: CookieLike | undefined,
+  cookieHeader: string | undefined,
+  name: string
+): Promise<string | undefined> {
+  const storedValue = getCookieValue(cookies, cookieHeader, name);
+  if (!storedValue?.startsWith(PASSPORT_CHUNKED_COOKIE_V1_PREFIX)) {
+    return storedValue;
+  }
+
+  const match = storedValue.match(/^__vc_chunked_v1:([0-9]+):([0-9a-f]{64})$/);
+  const count = Number(match?.[1]);
+  const checksum = match?.[2];
+  if (
+    !Number.isInteger(count) ||
+    count < 1 ||
+    count > PASSPORT_COOKIE_READ_MAX_CHUNKS ||
+    !checksum
+  ) {
+    throw new PassportIdentityError(
+      'Passport session cookie manifest is invalid.'
+    );
+  }
+
+  const generation = checksum.slice(0, PASSPORT_COOKIE_V1_GENERATION_LENGTH);
+  const chunks: string[] = [];
+  for (let index = 1; index <= count; index++) {
+    const chunk = getCookieValue(
+      cookies,
+      cookieHeader,
+      `${name}.${index}.${generation}`
+    );
+    if (chunk === undefined) {
+      throw new PassportIdentityError(
+        `Passport session cookie is missing chunk ${index} of ${count}.`
+      );
+    }
+    chunks.push(chunk);
+  }
+
+  const value = chunks.join('');
+  const actualChecksum = await sha256(value);
+  if (actualChecksum !== checksum) {
+    throw new PassportIdentityError(
+      'Passport session cookie checksum does not match its chunks.'
+    );
+  }
+
+  return value;
+}
+
+async function sha256(value: string): Promise<string> {
+  const runtimeCrypto = (
+    globalThis as typeof globalThis & {
+      crypto?: {
+        subtle: {
+          digest(algorithm: string, data: Uint8Array): Promise<ArrayBuffer>;
+        };
+      };
+    }
+  ).crypto;
+  if (!runtimeCrypto) {
+    throw new PassportIdentityError(
+      'Passport session cookie verification is unavailable in this runtime.'
+    );
+  }
+
+  const digest = await runtimeCrypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(value)
+  );
+  return [...new Uint8Array(digest)]
+    .map(byte => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function getCookieValue(
   cookies: CookieLike | undefined,
   cookieHeader: string | undefined,
   name: string

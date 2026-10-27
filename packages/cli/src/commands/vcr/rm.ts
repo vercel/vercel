@@ -31,10 +31,10 @@ export default async function rm(
     emitVcrArgParseError(
       client,
       err,
-      'vcr rm <repository> --project <name-or-id>'
+      'vcr delete <repository> --project <name-or-id>'
     );
     printError(err);
-    return 1;
+    return 2;
   }
 
   const fr = validateVcrJsonOutput(client, parsedArgs.flags);
@@ -53,7 +53,7 @@ export default async function rm(
     client,
     repository,
     fr.jsonOutput,
-    'vcr rm <repository>'
+    'vcr delete <repository>'
   );
   if (typeof missingRepository === 'number') {
     return missingRepository;

@@ -31,15 +31,15 @@ export const listSubcommand = {
   examples: [
     {
       name: 'List all endpoints in table format',
-      value: `${packageName} api ls`,
+      value: `${packageName} api list`,
     },
     {
       name: 'List all endpoints as JSON',
-      value: `${packageName} api ls --json`,
+      value: `${packageName} api list --json`,
     },
     {
       name: 'List endpoints from a custom OpenAPI spec',
-      value: `${packageName} api ls --spec-url https://openapi-internal.vercel.sh --refresh`,
+      value: `${packageName} api list --spec-url https://openapi-internal.vercel.sh --refresh`,
     },
   ],
 } as const;
@@ -63,7 +63,7 @@ export const apiCommand = {
       argument: 'METHOD',
       deprecated: false,
       description:
-        'HTTP method (GET, POST, PUT, PATCH, DELETE). Defaults to GET, or POST if body is provided',
+        'HTTP method (GET, POST, PUT, PATCH, DELETE) (default: GET, or POST if body is provided)',
     },
     {
       name: 'field',
@@ -131,7 +131,8 @@ export const apiCommand = {
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Output raw JSON without pretty-printing',
+      description:
+        'Output raw JSON without pretty-printing (default: on when output is piped)',
     },
     {
       name: 'refresh',

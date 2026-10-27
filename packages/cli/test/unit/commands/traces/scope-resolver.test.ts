@@ -45,7 +45,10 @@ describe('resolveScope', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.config.currentTeam = 'team_canonical';
-    mockedGetProject.mockResolvedValue({ id: 'prj_canonical' } as never);
+    mockedGetProject.mockResolvedValue({
+      id: 'prj_canonical',
+      name: 'canonical-project',
+    } as never);
   });
 
   it('returns linked project ids without flags', async () => {
@@ -54,7 +57,11 @@ describe('resolveScope', () => {
         client,
         linkedProject: linked({ orgId: 'team_xyz', projectId: 'prj_xyz' }),
       })
-    ).resolves.toEqual({ teamId: 'team_xyz', projectId: 'prj_xyz' });
+    ).resolves.toEqual({
+      teamId: 'team_xyz',
+      projectId: 'prj_xyz',
+      projectName: 'my-project',
+    });
     expect(mockedGetProject).not.toHaveBeenCalled();
   });
 
@@ -68,6 +75,7 @@ describe('resolveScope', () => {
     ).resolves.toEqual({
       teamId: 'team_canonical',
       projectId: 'prj_canonical',
+      projectName: 'canonical-project',
     });
     expect(mockedGetProject).toHaveBeenCalledWith(
       client,
@@ -86,6 +94,7 @@ describe('resolveScope', () => {
     ).resolves.toEqual({
       teamId: 'team_canonical',
       projectId: 'prj_canonical',
+      projectName: 'canonical-project',
     });
   });
 
@@ -96,7 +105,11 @@ describe('resolveScope', () => {
         flags: { project: 'other-project' },
         linkedProject: linked({ orgId: 'team_xyz', projectId: 'prj_xyz' }),
       })
-    ).resolves.toEqual({ teamId: 'team_xyz', projectId: 'prj_canonical' });
+    ).resolves.toEqual({
+      teamId: 'team_xyz',
+      projectId: 'prj_canonical',
+      projectName: 'canonical-project',
+    });
     expect(mockedGetProject).toHaveBeenCalledWith(
       client,
       'other-project',
@@ -114,6 +127,7 @@ describe('resolveScope', () => {
     ).resolves.toEqual({
       teamId: 'team_canonical',
       projectId: 'prj_canonical',
+      projectName: 'canonical-project',
     });
     expect(mockedGetProject).toHaveBeenCalledWith(
       client,
@@ -155,6 +169,10 @@ describe('resolveScope', () => {
         flags: { scope: '   ', project: '   ' },
         linkedProject: linked({ orgId: 'team_xyz', projectId: 'prj_xyz' }),
       })
-    ).resolves.toEqual({ teamId: 'team_xyz', projectId: 'prj_xyz' });
+    ).resolves.toEqual({
+      teamId: 'team_xyz',
+      projectId: 'prj_xyz',
+      projectName: 'my-project',
+    });
   });
 });

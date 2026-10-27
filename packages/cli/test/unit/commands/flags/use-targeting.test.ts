@@ -84,7 +84,7 @@ describe('flags use-targeting', () => {
 
       const exitCodePromise = flags(client);
 
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
@@ -92,6 +92,84 @@ describe('flags use-targeting', () => {
         },
       ]);
     });
+  });
+
+  it('enables targeting with flags targeting enable', async () => {
+    testFlags[0].environments.production.active = false;
+
+    client.setArgv(
+      'flags',
+      'targeting',
+      'enable',
+      testFlags[0].slug,
+      '--environment',
+      'production'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    const output = stripAnsi(client.stderr.getFullOutput());
+    expect(output).toContain('now uses targeting');
+    expect(output).not.toContain('deprecated');
+    expect(testFlags[0].environments.production.active).toBe(true);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:targeting',
+        value: 'targeting',
+      },
+      {
+        key: 'subcommand:enable',
+        value: 'enable',
+      },
+      {
+        key: 'argument:flag',
+        value: '[REDACTED]',
+      },
+      {
+        key: 'option:environment',
+        value: 'production',
+      },
+    ]);
+  });
+
+  it('configures targeting without unarchiving the flag', async () => {
+    testFlags[0].state = 'archived';
+    client.setArgv(
+      'flags',
+      'targeting',
+      'enable',
+      testFlags[0].slug,
+      '--environment',
+      'production'
+    );
+    expect(await flags(client)).toBe(0);
+    expect(testFlags[0].state).toBe('archived');
+    expect(testFlags[0].environments.production.active).toBe(true);
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      'This flag remains archived'
+    );
+    expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
+      'now uses targeting'
+    );
+  });
+
+  it('warns that flags use-targeting is deprecated', async () => {
+    testFlags[0].environments.production.active = false;
+
+    client.setArgv(
+      'flags',
+      'use-targeting',
+      testFlags[0].slug,
+      '--environment',
+      'production'
+    );
+
+    expect(await flags(client)).toEqual(0);
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      '`vercel flags use-targeting` is deprecated. Use `vercel flags targeting enable`.'
+    );
+    expect(testFlags[0].environments.production.active).toBe(true);
   });
 
   it('resumes targeting and keeps the current fallthrough', async () => {

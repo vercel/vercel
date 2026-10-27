@@ -11,7 +11,7 @@ describe('certs issue', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCode = await certs(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -29,7 +29,7 @@ describe('certs issue', () => {
       'Invalid number of arguments to create a custom certificate entry. Usage:'
     );
     const exitCode = await exitCodePromise;
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
   });
 
   it('should issue cert', async () => {
@@ -54,7 +54,7 @@ describe('certs issue', () => {
   it('should track subcommand usage', async () => {
     client.setArgv('certs', 'issue');
     const exitCode = await certs(client);
-    expect(exitCode, 'exit code for "certs"').toEqual(1);
+    expect(exitCode, 'exit code for "certs"').toEqual(2);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
         key: 'subcommand:issue',
@@ -67,7 +67,7 @@ describe('certs issue', () => {
     it('should track usage of `--challenge-only` flag', async () => {
       client.setArgv('certs', 'issue', '--challenge-only');
       const exitCode = await certs(client);
-      expect(exitCode, 'exit code for "certs"').toEqual(1);
+      expect(exitCode, 'exit code for "certs"').toEqual(2);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'subcommand:issue',

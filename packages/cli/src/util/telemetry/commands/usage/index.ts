@@ -6,6 +6,24 @@ export class UsageTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof usageCommand>
 {
+  trackCliOptionSince(since: string | undefined) {
+    if (since) {
+      this.trackCliOption({
+        option: 'since',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionUntil(until: string | undefined) {
+    if (until) {
+      this.trackCliOption({
+        option: 'until',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionFrom(from: string | undefined) {
     if (from) {
       this.trackCliOption({

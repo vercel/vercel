@@ -10,6 +10,7 @@ import { fetchIntegration } from '../../util/integration/fetch-integration';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { installMarketplaceIntegration } from '../../util/integration/marketplace-install-integration';
 import {
+  buildAcceptedPolicies,
   getMarketplacePolicyLinks,
   promptForTermAcceptance,
 } from '../../util/integration/prompt-for-terms';
@@ -26,6 +27,9 @@ import {
 } from '../../util/agent-output';
 import { AGENT_REASON } from '../../util/agent-output-constants';
 import { packageName } from '../../util/pkg-name';
+
+/** Integrations whose terms may be accepted up front with `--yes`. */
+const INTEGRATIONS_SUPPORTING_YES = new Set(['neon']);
 
 function logPolicyLinksSummary(
   links: ReturnType<typeof getMarketplacePolicyLinks>
@@ -49,13 +53,13 @@ export default async function acceptTerms(
     parsed = parseArguments(argv, spec);
   } catch (e) {
     printError(e);
-    return 1;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(parsed.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const preferJson =
     formatResult.jsonOutput || shouldEmitNonInteractiveCommandError(client);
@@ -80,10 +84,10 @@ export default async function acceptTerms(
           },
         ],
       },
-      1
+      2
     );
     output.error(msg);
-    return 1;
+    return 2;
   }
   if (parsed.args.length > 1) {
     const msg = 'Specify only one integration at a time.';
@@ -94,13 +98,14 @@ export default async function acceptTerms(
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message: msg,
       },
-      1
+      2
     );
     output.error(msg);
-    return 1;
+    return 2;
   }
 
   const integrationSlug = parsed.args[0];
+  const yes = Boolean(parsed.flags['--yes']);
   const { team } = await getScope(client);
   if (!team) {
     output.error('Team not found. Run `vercel switch` or use --scope.');
@@ -117,6 +122,22 @@ export default async function acceptTerms(
       : (error as Error).message;
     output.error(`Failed to load integration "${integrationSlug}": ${msg}`);
     return 1;
+  }
+
+  if (yes && !INTEGRATIONS_SUPPORTING_YES.has(integration.slug)) {
+    const msg = `The --yes option is not supported for integration "${integration.slug}". Run \`${packageName} integration accept-terms ${integration.slug}\` without --yes in an interactive terminal to accept the terms.`;
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: msg,
+        policy_links: getMarketplacePolicyLinks(integration),
+      },
+      2
+    );
+    output.error(msg);
+    return 2;
   }
 
   if (integration.capabilities?.requiresBrowserInstall) {
@@ -141,10 +162,10 @@ export default async function acceptTerms(
           },
         ],
       },
-      1
+      2
     );
     output.error(msg);
-    return 1;
+    return 2;
   }
 
   const installations = await fetchInstallations(client, integration);
@@ -177,7 +198,9 @@ export default async function acceptTerms(
 
   let acceptedPolicies: AcceptedPolicies | null;
 
-  if (shouldEmitNonInteractiveCommandError(client)) {
+  if (yes) {
+    acceptedPolicies = buildAcceptedPolicies(integration);
+  } else if (shouldEmitNonInteractiveCommandError(client)) {
     const msg =
       'Marketplace terms cannot be accepted in non-interactive mode. Run this command in an interactive terminal as a human.';
     outputAgentError(
@@ -193,11 +216,11 @@ export default async function acceptTerms(
     );
     output.error(msg);
     return 1;
-  }
-
-  acceptedPolicies = await promptForTermAcceptance(client, integration);
-  if (!acceptedPolicies) {
-    return 1;
+  } else {
+    acceptedPolicies = await promptForTermAcceptance(client, integration);
+    if (!acceptedPolicies) {
+      return 1;
+    }
   }
 
   try {

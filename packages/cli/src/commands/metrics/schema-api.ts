@@ -158,24 +158,31 @@ export async function fetchMetricDetail(
 async function fetchSchemaOrExit<T>(
   client: Client,
   jsonOutput: boolean,
-  operation: () => Promise<T>
+  operation: () => Promise<T>,
+  accountId?: string
 ): Promise<T | number> {
   try {
     return await operation();
   } catch (err: unknown) {
     if (isAPIError(err)) {
-      return handleApiError(err, jsonOutput, client, {
-        401: {
-          code: 'SCHEMA_UNAUTHORIZED',
-          message:
-            'The metrics schema API request was not authorized. Run `vercel login` to authenticate and `vercel switch` to select a team, then try again.',
+      return handleApiError(
+        err,
+        jsonOutput,
+        client,
+        {
+          401: {
+            code: 'SCHEMA_UNAUTHORIZED',
+            message:
+              'The metrics schema API request was not authorized. Run `vercel login` to authenticate and `vercel switch` to select a team, then try again.',
+          },
+          403: {
+            code: 'SCHEMA_UNAUTHORIZED',
+            message:
+              'The metrics schema API request was not authorized. Run `vercel login` to authenticate and `vercel switch` to select a team, then try again.',
+          },
         },
-        403: {
-          code: 'SCHEMA_UNAUTHORIZED',
-          message:
-            'The metrics schema API request was not authorized. Run `vercel login` to authenticate and `vercel switch` to select a team, then try again.',
-        },
-      });
+        accountId?.startsWith('team_') ? { scope: accountId } : {}
+      );
     }
 
     const message =
@@ -197,8 +204,11 @@ export function fetchCustomMetricDetailOrExit(
   jsonOutput: boolean,
   metricId: string
 ): Promise<MetricCatalogMetric[] | number> {
-  return fetchSchemaOrExit(client, jsonOutput, () =>
-    fetchCatalogMetricDetail(client, accountId, metricId, 'custom')
+  return fetchSchemaOrExit(
+    client,
+    jsonOutput,
+    () => fetchCatalogMetricDetail(client, accountId, metricId, 'custom'),
+    accountId
   );
 }
 
@@ -210,8 +220,12 @@ export function fetchCatalogMetricDetailOrExit(
   kind: MetricCatalogKind,
   activeSince?: string
 ): Promise<MetricCatalogMetric[] | number> {
-  return fetchSchemaOrExit(client, jsonOutput, () =>
-    fetchCatalogMetricDetail(client, accountId, metricId, kind, activeSince)
+  return fetchSchemaOrExit(
+    client,
+    jsonOutput,
+    () =>
+      fetchCatalogMetricDetail(client, accountId, metricId, kind, activeSince),
+    accountId
   );
 }
 
@@ -220,10 +234,14 @@ export function fetchMetricCatalogListOrExit(
   accountId: string,
   jsonOutput: boolean
 ): Promise<MetricListItem[] | number> {
-  return fetchSchemaOrExit(client, jsonOutput, () =>
-    fetchMetricCatalog(client, accountId, 'all').then(metrics =>
-      metrics.map(({ id, description }) => ({ id, description }))
-    )
+  return fetchSchemaOrExit(
+    client,
+    jsonOutput,
+    () =>
+      fetchMetricCatalog(client, accountId, 'all').then(metrics =>
+        metrics.map(({ id, description }) => ({ id, description }))
+      ),
+    accountId
   );
 }
 
@@ -232,16 +250,21 @@ export function fetchCombinedMetricListOrExit(
   accountId: string,
   jsonOutput: boolean
 ): Promise<MetricListItem[] | number> {
-  return fetchSchemaOrExit(client, jsonOutput, async () => {
-    const [platformMetrics, customMetrics] = await Promise.all([
-      fetchMetricList(client, accountId),
-      fetchCustomMetricCatalog(client, accountId).catch(() => []),
-    ]);
-    return [
-      ...platformMetrics.filter(metric => metric.id.startsWith('vercel.')),
-      ...customMetrics.map(({ id, description }) => ({ id, description })),
-    ].sort((left, right) => left.id.localeCompare(right.id));
-  });
+  return fetchSchemaOrExit(
+    client,
+    jsonOutput,
+    async () => {
+      const [platformMetrics, customMetrics] = await Promise.all([
+        fetchMetricList(client, accountId),
+        fetchCustomMetricCatalog(client, accountId).catch(() => []),
+      ]);
+      return [
+        ...platformMetrics.filter(metric => metric.id.startsWith('vercel.')),
+        ...customMetrics.map(({ id, description }) => ({ id, description })),
+      ].sort((left, right) => left.id.localeCompare(right.id));
+    },
+    accountId
+  );
 }
 
 export async function fetchMetricDetailOrExit(
@@ -250,7 +273,10 @@ export async function fetchMetricDetailOrExit(
   metricId: string,
   jsonOutput: boolean
 ): Promise<MetricDetail[] | number> {
-  return fetchSchemaOrExit(client, jsonOutput, () =>
-    fetchMetricDetail(client, accountId, metricId)
+  return fetchSchemaOrExit(
+    client,
+    jsonOutput,
+    () => fetchMetricDetail(client, accountId, metricId),
+    accountId
   );
 }

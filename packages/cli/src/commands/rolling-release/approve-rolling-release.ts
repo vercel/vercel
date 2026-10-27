@@ -39,7 +39,7 @@ export default async function approveRollingRelease({
     }
   );
   output.log(
-    'Successfully requested approval of rolling release to next stage.'
+    `Requested rolling release approval from stage ${activeStageIndex} to ${activeStageIndex + 1} for ${deployment.id}`
   );
   return 0;
 }

@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   connect,
   type EveConnectionAuthorizationContext,
+  type VercelConnectMetadata,
 } from '../../src/eve/index.js';
 
 vi.mock('@vercel/oidc', () => ({
@@ -25,6 +26,13 @@ const CONNECTION: EveConnectionAuthorizationContext = {
 
 describe('connect() adapter provisioning', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
+
+  it('keeps connector-only metadata type-compatible', () => {
+    const metadata: VercelConnectMetadata = { connector: 'oauth/linear' };
+
+    expect(metadata).toEqual({ connector: 'oauth/linear' });
+    expect(connect('oauth/linear').vercelConnect).toMatchObject(metadata);
+  });
 
   beforeEach(() => {
     fetchMock = vi.fn();
@@ -46,7 +54,17 @@ describe('connect() adapter provisioning', () => {
     const definition = connect({
       connector,
       autoProvision: true,
-    }) as InteractiveAuthorizationDefinition;
+      service: 'example',
+    });
+
+    expect(definition.vercelConnect).toMatchObject({
+      connector,
+      requirement: {
+        reference: `connector:${connector}`,
+        service: 'example',
+        subjectTypes: ['user'],
+      },
+    });
 
     const result = await definition.getToken({
       principal: PRINCIPAL,
@@ -794,7 +812,7 @@ function jsonTokenResponse(
       connector: {
         id: 'scl_evict',
         uid,
-        type: 'oauth',
+        method: 'oauth',
       },
     }),
     { status: 200, headers: { 'Content-Type': 'application/json' } }

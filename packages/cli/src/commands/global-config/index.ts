@@ -25,14 +25,15 @@ import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { GlobalConfigTelemetryClient } from '../../util/telemetry/commands/global-config';
 import output from '../../output-manager';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 import { applyLinkedProjectTeam } from './apply-linked-project-team';
 
 const COMMAND_CONFIG = {
   list: ['list', 'ls'],
   add: ['add', 'create'],
-  get: ['get', 'inspect'],
+  inspect: ['inspect', 'get'],
   update: ['update'],
-  remove: ['remove', 'rm', 'delete'],
+  delete: ['delete', 'rm', 'del', 'remove'],
   items: ['items'],
   tokens: ['tokens'],
   backups: ['backups'],
@@ -47,7 +48,11 @@ export default async function main(client: Client): Promise<number> {
     });
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
+  }
+
+  if (parsedArgs.args[0] === 'edge-config') {
+    warnDeprecatedSubcommand(client, 'edge-config', 'global-config');
   }
 
   const telemetry = new GlobalConfigTelemetryClient({
@@ -65,18 +70,24 @@ export default async function main(client: Client): Promise<number> {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('global-config');
-    output.print(help(globalConfigCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(globalConfigCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   function printHelp(command: Command): number {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: globalConfigCommand,
         columns: client.stderr.columns,
       })
     );
-    return 2;
+    return 0;
   }
 
   // Global Configs live at the team level. When the current directory is
@@ -96,14 +107,28 @@ export default async function main(client: Client): Promise<number> {
         telemetry.trackCliFlagHelp('global-config', subcommandOriginal);
         return printHelp(addSubcommand);
       }
-      telemetry.trackCliSubcommandAdd(subcommandOriginal);
+      telemetry.trackCliSubcommandCreate(subcommandOriginal);
+      if (subcommandOriginal === 'add') {
+        warnDeprecatedSubcommand(
+          client,
+          'global-config add',
+          'global-config create'
+        );
+      }
       return addCmd(client, args);
-    case 'get':
+    case 'inspect':
       if (needHelp) {
         telemetry.trackCliFlagHelp('global-config', subcommandOriginal);
         return printHelp(getSubcommandDef);
       }
-      telemetry.trackCliSubcommandGet(subcommandOriginal);
+      telemetry.trackCliSubcommandInspect(subcommandOriginal);
+      if (subcommandOriginal === 'get') {
+        warnDeprecatedSubcommand(
+          client,
+          'global-config get',
+          'global-config inspect'
+        );
+      }
       return getCmd(client, args);
     case 'update':
       if (needHelp) {
@@ -112,12 +137,19 @@ export default async function main(client: Client): Promise<number> {
       }
       telemetry.trackCliSubcommandUpdate(subcommandOriginal);
       return updateCmd(client, args);
-    case 'remove':
+    case 'delete':
       if (needHelp) {
         telemetry.trackCliFlagHelp('global-config', subcommandOriginal);
         return printHelp(removeSubcommand);
       }
-      telemetry.trackCliSubcommandRemove(subcommandOriginal);
+      telemetry.trackCliSubcommandDelete(subcommandOriginal);
+      if (subcommandOriginal === 'remove') {
+        warnDeprecatedSubcommand(
+          client,
+          'global-config remove',
+          'global-config delete'
+        );
+      }
       return removeCmd(client, args);
     case 'items':
       if (needHelp) {

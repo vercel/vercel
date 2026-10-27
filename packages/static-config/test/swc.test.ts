@@ -94,6 +94,7 @@ describe('getConfig for swc', () => {
     } catch (_err) {
       err = _err;
     }
-    expect(err.message).toEqual('Invalid data');
+    expect(err.message).toMatch(/^Invalid data:/);
+    expect(err.message).toContain('runtime');
   });
 });

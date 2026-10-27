@@ -9,10 +9,47 @@ import getRedirects from '../../util/redirects/get-redirects';
 import getRedirectVersions from '../../util/redirects/get-redirect-versions';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
+import {
+  INVALID_NEXT_MESSAGE,
+  parseNumericCursor,
+} from '../../util/get-pagination-opts';
+import {
+  getNextPageCommand,
+  printNextPageCommand,
+} from '../../util/pagination';
+import { warnDeprecatedOption } from '../../util/warn-deprecated-subcommand';
+import { getTypedOptionName } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import {
+  getRenamedOption,
+  renameOptionInArgs,
+  reportRenamedOptionError,
+  withWarnings,
+} from '../../util/renamed-option';
 
 export default async function list(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, listSubcommand);
   if (typeof parsed === 'number') return parsed;
+
+  const asJson = Boolean(parsed.flags['--json']);
+  const query = getRenamedOption(parsed.flags, '--query', '--search', {
+    json: asJson,
+    typedName: getTypedOptionName(
+      argv,
+      getFlagsSpecification(listSubcommand.options),
+      '--search'
+    ),
+  });
+  if ('error' in query) {
+    return reportRenamedOptionError(client, query.error, { json: asJson });
+  }
+
+  // The cursor is a page number.
+  const nextPage = parseNumericCursor(parsed.flags['--next']);
+  if (Number.isNaN(nextPage)) {
+    output.error(INVALID_NEXT_MESSAGE);
+    return 2;
+  }
 
   const link = await requireProjectContext(
     client,
@@ -24,18 +61,21 @@ export default async function list(client: Client, argv: string[]) {
   const { project, org } = link;
   const { flags } = parsed;
   const teamId = org.type === 'team' ? org.id : undefined;
-  const search = flags['--search'];
-  const page = flags['--next'] ?? flags['--page'];
+  const search = query.value;
+  const page = nextPage ?? flags['--page'];
+  if (flags['--page'] !== undefined) {
+    warnDeprecatedOption(client.argv, '--page', '--next');
+  }
   const perPage = flags['--limit'] ?? flags['--per-page'];
   const staging = flags['--staging'];
-  const versionIdFlag = flags['--version'];
+  const versionIdFlag = flags['--redirects-version'];
 
   let versionId: string | undefined;
   let versionName: string | undefined;
 
   let useDiff = false;
   if (staging) {
-    output.spinner('Fetching staging version');
+    if (!asJson) output.spinner('Fetching staging version');
     const { versions } = await getRedirectVersions(client, project.id, teamId);
     const stagingVersion = versions.find(v => v.isStaging);
 
@@ -58,11 +98,13 @@ export default async function list(client: Client, argv: string[]) {
 
   if (versionIdFlag) {
     if (staging) {
-      output.error('Cannot use both --staging and --version flags together');
-      return 1;
+      output.error(
+        'Cannot use both --staging and --redirects-version options together'
+      );
+      return 2;
     }
 
-    output.spinner('Fetching version');
+    if (!asJson) output.spinner('Fetching version');
     const { versions } = await getRedirectVersions(client, project.id, teamId);
     const version = versions.find(
       v => v.id === versionIdFlag || v.name === versionIdFlag
@@ -90,7 +132,7 @@ export default async function list(client: Client, argv: string[]) {
   if (search) {
     spinnerMessage += ` matching "${search}"`;
   }
-  output.spinner(spinnerMessage);
+  if (!asJson) output.spinner(spinnerMessage);
 
   const { redirects, pagination } = await getRedirects(client, project.id, {
     teamId,
@@ -100,6 +142,21 @@ export default async function list(client: Client, argv: string[]) {
     versionId,
     diff: useDiff,
   });
+
+  if (asJson) {
+    const next =
+      pagination && pagination.page < pagination.numPages
+        ? pagination.page + 1
+        : null;
+    client.stdout.write(
+      `${JSON.stringify(
+        withWarnings({ redirects, pagination: { next } }, [query.warning]),
+        null,
+        2
+      )}\n`
+    );
+    return 0;
+  }
 
   if (useDiff) {
     const added = redirects.filter(r => r.action === '+');
@@ -169,16 +226,14 @@ export default async function list(client: Client, argv: string[]) {
   }
 
   if (pagination && pagination.page < pagination.numPages) {
-    const nextPage = pagination.page + 1;
-    let command = `redirects list --next ${nextPage}`;
-    if (search) {
-      command += ` --search "${search}"`;
-    }
-    if (perPage) {
-      command += ` --limit ${perPage}`;
-    }
-    output.log(
-      `To display the next page, run ${withGlobalFlags(client, command)}`
+    // Built from argv so --staging, --redirects-version, --query, and --limit
+    // carry over to the next page.
+    printNextPageCommand(
+      getNextPageCommand(
+        renameOptionInArgs(client.argv, '--search', '--query'),
+        String(pagination.page + 1),
+        ['--page']
+      )
     );
   }
 

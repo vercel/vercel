@@ -57,6 +57,7 @@ export const build: BuildV2 = async ({
   meta = {},
   config = {},
   service,
+  diagnosticsValues,
   span,
 }) => {
   await download(files, workPath, meta);
@@ -128,7 +129,7 @@ export const build: BuildV2 = async ({
       cliType,
       lockfilePath,
       lockfileVersion,
-      framework: config.framework ?? undefined,
+      framework: diagnosticsValues?.framework,
       serviceType: service ? getReportedServiceType(service) : undefined,
     });
   } catch (err) {

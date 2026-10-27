@@ -62,9 +62,9 @@ const TIMESTAMP_FLAG_CONDITION_COMPARATOR_LABELS: Partial<
   Record<FlagConditionComparator, string>
 > = {
   gt: 'is after',
-  gte: 'is on or after',
+  gte: 'is at or after',
   lt: 'is before',
-  lte: 'is on or before',
+  lte: 'is at or before',
 };
 
 const LEGACY_FLAG_CONDITION_COMPARATOR_LABELS: Record<string, string> = {

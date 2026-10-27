@@ -10,15 +10,19 @@ import parseMeta from '../../util/parse-meta';
 import parsePolicy from '../../util/parse-policy';
 import { isValidName } from '../../util/is-valid-name';
 import getCommandFlags from '../../util/get-command-flags';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import type Client from '../../util/client';
-import { getLinkedProject } from '../../util/projects/link';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import { ProjectNotFound } from '../../util/errors-ts';
 import { isErrnoException } from '@vercel/error-utils';
 import { help } from '../help';
 import { listCommand } from './command';
-import parseTarget from '../../util/parse-target';
+import {
+  type DeploymentsPage,
+  getLinkedProjectWithDeployments,
+  type LinkedDeployments,
+} from './linked-deployments';
+import parseTarget, { warnDeprecatedProdFlag } from '../../util/parse-target';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getDeployment from '../../util/get-deployment';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
@@ -28,7 +32,11 @@ import { ListTelemetryClient } from '../../util/telemetry/commands/list';
 import { exitWithNonInteractiveError } from '../../util/agent-output';
 import { validateLsArgs } from '../../util/validate-ls-args';
 import { validateJsonOutput } from '../../util/output-format';
-import { getPaginationOpts } from '../../util/get-pagination-opts';
+import {
+  getPaginationOpts,
+  InvalidNextError,
+} from '../../util/get-pagination-opts';
+import { printNextPageCommand } from '../../util/pagination';
 import type {
   Deployment,
   PaginationOptions,
@@ -59,7 +67,7 @@ export default async function list(client: Client) {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new ListTelemetryClient({
@@ -70,7 +78,12 @@ export default async function list(client: Client) {
 
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('list');
-    print(help(listCommand, { columns: client.stderr.columns }));
+    print(
+      help(listCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
     return 0;
   }
 
@@ -87,7 +100,7 @@ export default async function list(client: Client) {
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
@@ -111,6 +124,7 @@ export default async function list(client: Client) {
   const meta = parseMeta(parsedArgs.flags['--meta']);
   const policy = parsePolicy(parsedArgs.flags['--policy']);
 
+  warnDeprecatedProdFlag(client, parsedArgs.flags);
   const target = parseTarget({
     flagName: 'environment',
     flags: parsedArgs.flags,
@@ -127,6 +141,7 @@ export default async function list(client: Client) {
       'QUEUED',
       'READY',
       'CANCELED',
+      'BLOCKED',
     ];
     const statusValues = statusFlag.split(',').map(s => s.trim().toUpperCase());
     const invalidStatuses = statusValues.filter(
@@ -143,25 +158,64 @@ export default async function list(client: Client) {
     status = statusValues.join(',');
   }
 
+  // Read now so a linked project's deployments request can go out early, but
+  // a bad value is still reported after the project lookup, as before.
+  let paginationError: unknown;
+  let nextTimestamp: number | undefined;
+  let limitFlag: number | undefined;
+  try {
+    [nextTimestamp, limitFlag] = getPaginationOpts(parsedArgs.flags);
+  } catch (err: unknown) {
+    paginationError = err;
+  }
+  const limit = limitFlag ?? 20;
+
+  const getDeploymentsQuery = (projectId?: string) => {
+    const query = new URLSearchParams({ limit: String(limit) });
+    if (projectId) {
+      query.set('projectId', projectId);
+    }
+    for (const [k, v] of Object.entries(meta)) {
+      query.set(`meta-${k}`, v);
+    }
+    for (const [k, v] of Object.entries(policy)) {
+      query.set(`policy-${k}`, v);
+    }
+
+    if (nextTimestamp) {
+      query.set('until', String(nextTimestamp));
+    }
+
+    if (target) {
+      query.set('target', target);
+    }
+
+    if (status) {
+      query.set('state', status);
+    }
+    return query;
+  };
+
   let project: Project | undefined;
   let pagination: PaginationOptions | undefined;
   let contextName = '';
   let app: string | undefined = parsedArgs.args[1];
   const deployments: Deployment[] = [];
   let singleDeployment = false;
+  let linkedDeployments: LinkedDeployments | undefined;
   const allFlag = parsedArgs.flags['--all'];
   let showAllProjects = false;
 
   // Validate that --all and app argument are not used together
   if (allFlag && app) {
-    error('Cannot use --all flag with a project argument');
-    return 1;
+    error('Cannot use --all option with a project argument');
+    return 2;
   }
 
   if (app) {
     if (!isValidName(app)) {
       error(`The provided argument "${app}" is not a valid project name`);
-      return 1;
+      return 2;
     }
     telemetry.trackCliArgumentApp(app);
 
@@ -169,7 +223,7 @@ export default async function list(client: Client) {
       // `app` looks like a hostname / URL, so fetch the deployment
       // from the API and retrieve the project ID from the deployment
       try {
-        ({ contextName } = await getScope(client));
+        contextName = await getContextName(client);
       } catch (err: unknown) {
         if (
           isErrnoException(err) &&
@@ -214,7 +268,12 @@ export default async function list(client: Client) {
     showAllProjects = true;
   } else {
     // No app argument and no --all flag: try to get linked project
-    const link = await getLinkedProject(client, { cwd: client.cwd });
+    const linked = await getLinkedProjectWithDeployments(
+      client,
+      paginationError === undefined ? getDeploymentsQuery : undefined
+    );
+    const { link } = linked;
+    linkedDeployments = linked.deployments;
     if (link.status === 'error') {
       return link.exitCode;
     }
@@ -229,7 +288,7 @@ export default async function list(client: Client) {
 
   if (!contextName) {
     try {
-      ({ contextName } = await getScope(client));
+      contextName = await getContextName(client);
     } catch (err: unknown) {
       if (
         isErrnoException(err) &&
@@ -241,15 +300,10 @@ export default async function list(client: Client) {
     }
   }
 
-  let nextTimestamp;
-  let limitFlag;
-  try {
-    [nextTimestamp, limitFlag] = getPaginationOpts(parsedArgs.flags);
-  } catch (err: unknown) {
-    printError(err);
-    return 1;
+  if (paginationError !== undefined) {
+    printError(paginationError);
+    return paginationError instanceof InvalidNextError ? 2 : 1;
   }
-  const limit = limitFlag ?? 20;
 
   const projectSlugLink = project
     ? formatProject(contextName, project.name)
@@ -259,35 +313,16 @@ export default async function list(client: Client) {
     if (!asJson) {
       spinner(`Fetching deployments in ${chalk.bold(contextName)}`);
     }
-    const start = Date.now();
+    const start = linkedDeployments?.sentAt ?? Date.now();
 
     debug('Fetching deployments');
 
-    const query = new URLSearchParams({ limit: String(limit) });
-    if (project) {
-      query.set('projectId', project.id);
-    }
-    for (const [k, v] of Object.entries(meta)) {
-      query.set(`meta-${k}`, v);
-    }
-    for (const [k, v] of Object.entries(policy)) {
-      query.set(`policy-${k}`, v);
-    }
-
-    if (nextTimestamp) {
-      query.set('until', String(nextTimestamp));
-    }
-
-    if (target) {
-      query.set('target', target);
-    }
-
-    if (status) {
-      query.set('state', status);
-    }
-    for await (const chunk of client.fetchPaginated<{
-      deployments: Deployment[];
-    }>(`/v6/deployments?${query}`)) {
+    const pages =
+      linkedDeployments?.pages ??
+      client.fetchPaginated<DeploymentsPage>(
+        `/v6/deployments?${getDeploymentsQuery(project?.id)}`
+      );
+    for await (const chunk of pages) {
       deployments.push(...chunk.deployments);
       pagination = chunk.pagination;
       if (deployments.length >= limit) {
@@ -410,10 +445,10 @@ export default async function list(client: Client) {
 
   if (pagination?.next) {
     const flags = getCommandFlags(parsedArgs.flags, ['--next']);
-    log(
-      `To display the next page, run ${getCommandName(
+    printNextPageCommand(
+      getCommandNamePlain(
         `ls${app ? ` ${app}` : ''}${flags} --next ${pagination.next}`
-      )}`
+      )
     );
   }
 
@@ -443,6 +478,7 @@ export function stateString(s: string) {
     case 'ANALYZING':
       return chalk.yellow(CIRCLE) + sTitle;
     case 'ERROR':
+    case 'BLOCKED':
       return chalk.red(CIRCLE) + sTitle;
     case 'READY':
       return chalk.green(CIRCLE) + sTitle;

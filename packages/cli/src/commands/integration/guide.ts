@@ -22,7 +22,7 @@ export async function guide(client: Client, subArgs: string[]) {
     parsedArguments = parseArguments(subArgs, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new IntegrationGuideTelemetryClient({
@@ -40,7 +40,7 @@ export async function guide(client: Client, subArgs: string[]) {
     output.error(
       'You must specify an integration. Usage: vercel integration guide <integration>[/<product>]'
     );
-    return 1;
+    return 2;
   }
 
   const integrationSlug = rawArg.split('/')[0];

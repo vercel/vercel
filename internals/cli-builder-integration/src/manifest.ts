@@ -4,19 +4,20 @@ import {
   downloadFile,
   isExperimentalService,
   isExperimentalServiceV2,
-  type Config,
   type DeployManifestBuild,
   type DeployManifestService,
+  type DiagnosticsValues,
   type Files,
   type PackageManifest,
   type Service,
 } from '@vercel/build-utils';
+import { getRuntimeFramework } from '@vercel-internals/runtimes/framework';
 
 export async function writeManifests(
   packageManifests: Array<{
     workspace: string;
     key: string;
-    buildConfig: Config;
+    diagnosticsValues?: DiagnosticsValues;
     manifest: PackageManifest;
     service?: Service;
     builderUse: string;
@@ -33,20 +34,13 @@ export async function writeManifests(
 
   for (const {
     workspace,
-    buildConfig,
+    diagnosticsValues,
     manifest,
     service,
     builderUse,
   } of packageManifests) {
     const key = `${builderUse}:${workspace}`;
-    // api/ dir builds don't receive a framework in their build config (it
-    // would change builder behavior), so fall back to whatever the caller
-    // resolved into the manifest (builder-reported, or CLI-detected for
-    // api/ dir builds — see `apiDirFramework` in the CLI integration). Applied to both
-    // manifests: the explicit key below would otherwise clobber the correct
-    // value coming through the `...manifest` spread.
-    const framework =
-      service?.framework ?? buildConfig.framework ?? manifest.framework;
+    const framework = diagnosticsValues?.framework ?? manifest.framework;
     projectManifest[key] = {
       ...manifest,
       workspace,
@@ -115,5 +109,28 @@ export async function writeManifests(
       () => undefined,
       err => err
     )
+  );
+}
+
+/**
+ * Framework the CLI asks a builder to report.
+ */
+export function getBuildDiagnosticsFramework({
+  service,
+  configFramework,
+  apiDirFramework,
+}: {
+  service: Service | undefined;
+  configFramework: string | null | undefined;
+  apiDirFramework: string | undefined;
+}): string | undefined {
+  return (
+    service?.framework ??
+    // Filter out the services preset. Services projects receive it as `config.framework`,
+    // but it is not the build's framework.
+    (configFramework === 'services' ? undefined : configFramework) ??
+    // Services without a framework report their runtime's preset (e.g. "python").
+    getRuntimeFramework(service?.runtime) ??
+    apiDirFramework
   );
 }

@@ -2,13 +2,14 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import redirects from '../../../../src/commands/redirects';
 import { useUser } from '../../../mocks/user';
-import { useRedirects } from '../../../mocks/redirects';
+import { useRedirects, useRedirectVersions } from '../../../mocks/redirects';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import {
   setupTmpDir,
   setupUnitFixture,
 } from '../../../helpers/setup-unit-fixture';
+import { expectDeprecationInJson } from '../../../helpers/deprecation-warning';
 
 describe('redirects list', () => {
   beforeEach(() => {
@@ -30,7 +31,7 @@ describe('redirects list', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = redirects(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -180,7 +181,9 @@ describe('redirects list', () => {
       client.setArgv('redirects', 'list');
       const exitCode = await redirects(client);
       expect(exitCode, 'exit code for "redirects list"').toEqual(0);
-      await expect(client.stderr).toOutput('redirects list --next 2');
+      await expect(client.stderr).toOutput(
+        'Next page:\n    vercel redirects list --next=2\n'
+      );
     });
 
     it('should not show next page command on last page', async () => {
@@ -188,7 +191,7 @@ describe('redirects list', () => {
       client.setArgv('redirects', 'list', '--next', '2');
       const exitCode = await redirects(client);
       expect(exitCode, 'exit code for "redirects list --next 2"').toEqual(0);
-      expect(client.stderr).not.toOutput('To display the next page');
+      expect(client.stderr).not.toOutput('Next page:');
     });
 
     it('should not show pagination info when not provided by server', async () => {
@@ -229,7 +232,7 @@ describe('redirects list', () => {
       const exitCode = await redirects(client);
       expect(exitCode, 'exit code for "redirects list"').toEqual(0);
       await expect(client.stderr).toOutput('(page 1 of 1)');
-      expect(client.stderr).not.toOutput('To display the next page');
+      expect(client.stderr).not.toOutput('Next page:');
     });
 
     it('should preserve search and limit in next page command', async () => {
@@ -238,7 +241,7 @@ describe('redirects list', () => {
       const exitCode = await redirects(client);
       expect(exitCode, 'exit code').toEqual(0);
       await expect(client.stderr).toOutput(
-        'redirects list --next 2 --search "test" --limit 25'
+        'vercel redirects list --query test --limit 25 --next=2'
       );
     });
 
@@ -248,7 +251,7 @@ describe('redirects list', () => {
       const exitCode = await redirects(client);
       expect(exitCode, 'exit code').toEqual(0);
       await expect(client.stderr).toOutput(
-        'redirects list --next 2 --search "test"'
+        'vercel redirects list --query test --next=2'
       );
       expect(client.stderr).not.toOutput('--limit');
     });
@@ -259,7 +262,7 @@ describe('redirects list', () => {
       const exitCode = await redirects(client);
       expect(exitCode, 'exit code for "redirects list --next 3"').toEqual(0);
       await expect(client.stderr).toOutput('(page 3 of 3)');
-      expect(client.stderr).not.toOutput('To display the next page');
+      expect(client.stderr).not.toOutput('Next page:');
     });
   });
 
@@ -315,8 +318,197 @@ describe('redirects list', () => {
       const exitCode = await redirects(client);
       expect(exitCode, 'exit code').toEqual(0);
       await expect(client.stderr).toOutput(
-        'redirects list --next 2 --search "/api" --limit 20'
+        'vercel redirects list --query /api --limit 20 --next=2'
       );
+    });
+
+    it('keeps the --version filter in the next page command', async () => {
+      useRedirects(100, true);
+      useRedirectVersions();
+      client.setArgv(
+        'redirects',
+        'list',
+        '--version',
+        'version-1',
+        '--search',
+        'old'
+      );
+      const exitCode = await redirects(client);
+      expect(exitCode, 'exit code').toEqual(0);
+      await expect(client.stderr).toOutput(
+        'vercel redirects list --version version-1 --query old --next=2'
+      );
+    });
+
+    it('keeps the --staging filter in the next page command', async () => {
+      useRedirects(100, true);
+      useRedirectVersions();
+      client.setArgv('redirects', 'list', '--staging', '--search', 'old');
+      const exitCode = await redirects(client);
+      expect(exitCode, 'exit code').toEqual(0);
+      await expect(client.stderr).toOutput(
+        'vercel redirects list --staging --query old --next=2'
+      );
+    });
+
+    it('rejects a --next that is not a cursor before any request', async () => {
+      let requested = false;
+      client.scenario.get('/v1/bulk-redirects', (_req, res) => {
+        requested = true;
+        res.json({ redirects: [] });
+      });
+      client.setArgv('redirects', 'list', '--next', 'oops');
+      const exitCode = await redirects(client);
+      expect(exitCode, 'exit code').toEqual(2);
+      expect(requested).toBe(false);
+      expect(client.stderr.getFullOutput()).toContain(
+        '--next must be the cursor printed with the previous page.'
+      );
+    });
+
+    it('warns on the hidden --page and drops it from the next page command', async () => {
+      useRedirects(100, true);
+      client.setArgv('redirects', 'list', '--page', '1', '--limit', '25');
+      const exitCode = await redirects(client);
+      expect(exitCode, 'exit code').toEqual(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('! --page is deprecated. Use --next.');
+      expect(stderr).toContain(
+        'Next page:\n    vercel redirects list --limit 25 --next=2\n'
+      );
+    });
+
+    it('does not warn on --page with --json', async () => {
+      useRedirects(100, true);
+      client.setArgv('redirects', 'list', '--page', '1', '--json');
+      const exitCode = await redirects(client);
+      expect(exitCode, 'exit code').toEqual(0);
+      expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+      expect(JSON.parse(client.stdout.getFullOutput()).pagination).toEqual({
+        next: 2,
+      });
+    });
+  });
+
+  it('writes redirects and the next page to stdout with --json', async () => {
+    useRedirects(3, true);
+    client.setArgv('redirects', 'list', '--limit', '1', '--json');
+
+    expect(await redirects(client)).toBe(0);
+    const result = JSON.parse(client.stdout.getFullOutput());
+    expect(result.redirects).toHaveLength(3);
+    expect(result.pagination).toEqual({ next: 2 });
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).not.toContain('Fetching redirects');
+    expect(stderr).not.toContain('Redirects found');
+  });
+
+  describe('renamed options', () => {
+    // Runs `redirects list` with a fresh client, recording its requests.
+    async function run(...args: string[]) {
+      client.reset();
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'redirects-test',
+        name: 'redirects-test',
+      });
+      client.cwd = setupUnitFixture('commands/redirects');
+      let versionsRequested = false;
+      client.scenario.get('/v1/bulk-redirects/versions', (_req, res) => {
+        versionsRequested = true;
+        res.json({
+          versions: [{ id: 'version-1', name: 'v1', lastModified: 1 }],
+        });
+      });
+      let query: Record<string, unknown> | undefined;
+      client.scenario.get('/v1/bulk-redirects', (req, res) => {
+        query = req.query;
+        res.json({ redirects: [] });
+      });
+      client.setArgv('redirects', 'list', ...args);
+      const exitCode = await redirects(client);
+      return {
+        exitCode,
+        query,
+        versionsRequested,
+        stdout: client.stdout.getFullOutput(),
+        stderr: client.stderr.getFullOutput(),
+      };
+    }
+
+    it.each([
+      ['--search', ['--search', 'old']],
+      ['-s', ['-s', 'old']],
+    ])('still accepts %s, with one warning that names --query', async (typed, oldArgs) => {
+      const now = await run('--query', 'old');
+      const before = await run(...oldArgs);
+
+      expect(now.exitCode).toBe(0);
+      expect(now.query).toMatchObject({ q: 'old' });
+      expect(now.stderr).not.toContain('deprecated');
+      expect(before.exitCode).toBe(0);
+      expect(before.query).toEqual(now.query);
+      expect(before.stdout).toBe(now.stdout);
+      expect(before.stderr.match(/deprecated/g)).toHaveLength(1);
+      expect(before.stderr).toContain(
+        `! ${typed} is deprecated. Use --query.\n`
+      );
+
+      const nowJson = await run('--query', 'old', '--json');
+      const beforeJson = await run(...oldArgs, '--json');
+      expectDeprecationInJson(
+        beforeJson.stdout,
+        nowJson.stdout,
+        `${typed} is deprecated. Use --query.`
+      );
+      expect(beforeJson.stderr).not.toContain('deprecated');
+    });
+
+    it('keeps -s mixed with --search working, with the last value', async () => {
+      const result = await run('-s', 'one', '--search', 'two');
+
+      expect(result.exitCode).toBe(0);
+      expect(result.query).toMatchObject({ q: 'two' });
+      expect(result.stderr.match(/deprecated/g)).toHaveLength(1);
+    });
+
+    it.each([
+      [['--query', 'a', '--search', 'b'], "Can't use --query with --search."],
+      [['--query', 'a', '-s', 'b'], "Can't use --query with -s."],
+    ])('rejects %j before any request', async (args, message) => {
+      const result = await run(...args);
+
+      expect(result.exitCode).toBe(2);
+      expect(result.stderr).toContain(message);
+      expect(result.query).toBeUndefined();
+    });
+
+    it('lists the version given with --redirects-version', async () => {
+      const result = await run('--redirects-version', 'version-1');
+
+      expect(result.exitCode).toBe(0);
+      expect(result.versionsRequested).toBe(true);
+      expect(result.query).toMatchObject({ versionId: 'version-1' });
+      expect(result.stderr).not.toContain('deprecated');
+    });
+
+    // `vercel` reads `--version` as its own flag before this command runs, so
+    // it never picked a version. It keeps doing nothing, without a warning.
+    it.each([
+      [['--version', 'version-1']],
+      [['--redirects-version', 'version-1', '--version', 'version-2']],
+    ])('leaves --version as it was in %j', async args => {
+      const without = await run(
+        ...args.filter((_, i) => i < args.indexOf('--version'))
+      );
+      const result = await run(...args);
+
+      expect(result.exitCode).toBe(without.exitCode);
+      expect(result.query).toEqual(without.query);
+      expect(result.versionsRequested).toBe(without.versionsRequested);
+      expect(result.stderr).not.toContain('deprecated');
     });
   });
 });
