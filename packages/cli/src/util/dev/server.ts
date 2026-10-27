@@ -3278,6 +3278,15 @@ export default class DevServer {
 
         const { port, pid, shutdown, persistent } = devServerResult;
         this.shutdownCallbacks.set(pid, shutdown);
+
+        // The client may have disconnected while the builder was starting.
+        if (res.destroyed) {
+          if (!persistent) {
+            await this.killBuilderDevServer(pid);
+          }
+          return;
+        }
+
         if (!persistent) {
           res.once('close', () => {
             this.killBuilderDevServer(pid);
