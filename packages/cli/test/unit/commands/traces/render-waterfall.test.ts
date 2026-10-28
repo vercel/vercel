@@ -29,7 +29,7 @@ function span(
     name,
     startTime: ms(start),
     duration: ms(duration),
-    status: { code: 0 },
+    status: { code: 'Unset' },
     ...extra,
   };
 }
@@ -53,7 +53,7 @@ describe('renderWaterfall', () => {
         span('q2', 'root', 'db.query', 100, 50),
         span('fetch', 'root', 'fetch upstream', 200, 200, {
           attributes: { 'http.url': 'https://api.example.com/users' },
-          status: { code: 1, message: '503 Service Unavailable' },
+          status: { code: 'Error', message: '503 Service Unavailable' },
         }),
       ],
     };

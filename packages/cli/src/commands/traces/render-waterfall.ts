@@ -53,7 +53,7 @@ export type ChartRow = {
  */
 export function renderWaterfall(
   trace: Parameters<typeof analyze>[0],
-  options: { requestId: string; columns?: number }
+  options: { requestId?: string; columns?: number }
 ): string {
   const analysis = analyze(trace);
   const columns = clamp(
@@ -72,17 +72,21 @@ export function renderWaterfall(
   return `${sections.join('\n\n')}\n`;
 }
 
-function renderSummary(analysis: AnalyzedTrace, requestId: string): string {
+function renderSummary(
+  analysis: AnalyzedTrace,
+  requestId: string | undefined
+): string {
   const { trace, root, rootDurationUs, errorSpans } = analysis;
   const method = readAttrString(root?.attributes, 'http.method');
   const target = readAttrString(root?.attributes, 'http.target');
   const status = readAttrString(root?.attributes, 'http.status_code');
   const path = method && target ? `${method} ${target}` : (method ?? target);
 
-  const rows = [
-    formatAlignedLabel('Trace', trace.traceId),
-    formatAlignedLabel('Request', requestId),
-  ];
+  const rows = [formatAlignedLabel('Trace', trace.traceId)];
+  // Trace-ID lookups have no request ID, like the markdown header.
+  if (requestId !== undefined) {
+    rows.push(formatAlignedLabel('Request', requestId));
+  }
   if (path) {
     rows.push(
       formatAlignedLabel('Endpoint', status ? `${path} → ${status}` : path)

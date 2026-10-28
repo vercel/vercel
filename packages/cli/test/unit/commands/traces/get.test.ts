@@ -967,7 +967,13 @@ describe('vercel traces get', () => {
     expect(await traces(client)).toBe(0);
     const stdout = client.stdout.getFullOutput();
     expect(stdout).toContain(TRACE_ID);
-    expect(stdout).toContain('Request id');
+    // A terminal gets the waterfall summary; every other mode gets Markdown.
+    const isTerminal = mode === 'terminal';
+    if (isTerminal) {
+      expect(stdout).toMatch(/Request\s+req_resolved/);
+    } else {
+      expect(stdout).toContain('Request id');
+    }
     expect(stdout).toContain('req_resolved');
     expect(stdout).not.toContain('undefined');
   });
