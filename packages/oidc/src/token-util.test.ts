@@ -113,7 +113,7 @@ describe('getVercelToken', () => {
     });
   });
 
-  it('should clear auth and throw RefreshAccessTokenFailedError if token expired and no refresh token', async () => {
+  it('should keep auth and throw RefreshAccessTokenFailedError if token expired and no refresh token', async () => {
     const expiredTokenNoRefresh = {
       token: 'expired-access-token',
       expiresAt: Math.floor(Date.now() / 1000) - 3600,
@@ -126,13 +126,10 @@ describe('getVercelToken', () => {
     await expect(getVercelToken()).rejects.toThrow(
       RefreshAccessTokenFailedError
     );
-    expect(cliConfig.writeAuthConfig).toHaveBeenCalledWith(
-      expect.any(String),
-      {}
-    );
+    expect(cliConfig.writeAuthConfig).not.toHaveBeenCalled();
   });
 
-  it('should clear auth and throw RefreshAccessTokenFailedError if refresh fails with OAuth error', async () => {
+  it('should keep auth and throw RefreshAccessTokenFailedError if refresh fails with OAuth error', async () => {
     const expiredToken = {
       token: 'expired-access-token',
       refreshToken: 'invalid-refresh-token',
@@ -153,13 +150,10 @@ describe('getVercelToken', () => {
     await expect(getVercelToken()).rejects.toThrow(
       RefreshAccessTokenFailedError
     );
-    expect(cliConfig.writeAuthConfig).toHaveBeenCalledWith(
-      expect.any(String),
-      {}
-    );
+    expect(cliConfig.writeAuthConfig).not.toHaveBeenCalled();
   });
 
-  it('should clear auth and throw RefreshAccessTokenFailedError if refresh fails with network error', async () => {
+  it('should keep auth and throw RefreshAccessTokenFailedError if refresh fails with network error', async () => {
     const expiredToken = {
       token: 'expired-access-token',
       refreshToken: 'valid-refresh-token',
@@ -174,10 +168,7 @@ describe('getVercelToken', () => {
     await expect(getVercelToken()).rejects.toThrow(
       RefreshAccessTokenFailedError
     );
-    expect(cliConfig.writeAuthConfig).toHaveBeenCalledWith(
-      expect.any(String),
-      {}
-    );
+    expect(cliConfig.writeAuthConfig).not.toHaveBeenCalled();
   });
 
   it('should treat token as valid if expiresAt is missing (--token case)', async () => {
@@ -275,5 +266,55 @@ describe('getVercelToken', () => {
     const writeCall = vi.mocked(cliConfig.writeAuthConfig).mock.calls[0][1];
     expect(writeCall.expiresAt).toBeGreaterThanOrEqual(beforeCall + 7200);
     expect(writeCall.expiresAt).toBeLessThanOrEqual(afterCall + 7200);
+  });
+
+  it('should use the login saved by another process when the refresh fails', async () => {
+    const expiredToken = {
+      token: 'expired-access-token',
+      refreshToken: 'old-refresh-token',
+      expiresAt: Math.floor(Date.now() / 1000) - 3600,
+    };
+    const rotatedConfig = {
+      token: 'rotated-access-token',
+      refreshToken: 'rotated-refresh-token',
+      expiresAt: Math.floor(Date.now() / 1000) + 3600,
+    };
+
+    vi.mocked(cliConfig.tryReadAuthConfig)
+      .mockReturnValueOnce(expiredToken)
+      .mockReturnValue(rotatedConfig);
+    vi.spyOn(oauth, 'refreshTokenRequest').mockResolvedValue({
+      ok: false,
+      json: async () => ({
+        error: 'invalid_grant',
+        error_description: 'Refresh token already used',
+      }),
+    } as Response);
+
+    await expect(getVercelToken()).resolves.toBe('rotated-access-token');
+    expect(cliConfig.writeAuthConfig).not.toHaveBeenCalled();
+  });
+
+  it('should use the login saved by another process when the refresh throws', async () => {
+    const expiredToken = {
+      token: 'expired-access-token',
+      refreshToken: 'old-refresh-token',
+      expiresAt: Math.floor(Date.now() / 1000) - 3600,
+    };
+    const rotatedConfig = {
+      token: 'rotated-access-token',
+      refreshToken: 'rotated-refresh-token',
+      expiresAt: Math.floor(Date.now() / 1000) + 3600,
+    };
+
+    vi.mocked(cliConfig.tryReadAuthConfig)
+      .mockReturnValueOnce(expiredToken)
+      .mockReturnValue(rotatedConfig);
+    vi.spyOn(oauth, 'refreshTokenRequest').mockRejectedValue(
+      new Error('Network error')
+    );
+
+    await expect(getVercelToken()).resolves.toBe('rotated-access-token');
+    expect(cliConfig.writeAuthConfig).not.toHaveBeenCalled();
   });
 });
