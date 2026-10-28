@@ -1,0 +1,196 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`organization help and parsing > documents all enabled commands and nested usage > create 1`] = `
+"▲ vercel organizations create [options]
+Create an organization using an existing team
+
+Options:
+  --json         Output as JSON
+  --name <NAME>  Set the display name
+  --slug <SLUG>  Set the slug (required)
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  Create an organization from the active team
+    vercel organizations create --slug acme
+
+  Create an organization from another team
+    vercel --scope acme organizations create --slug acme
+
+  Create an organization with a display name
+    vercel --scope acme organizations create --slug acme --name "Acme Inc"
+"
+`;
+
+exports[`organization help and parsing > documents all enabled commands and nested usage > inspect 1`] = `
+"▲ vercel organizations inspect [organization] [options]
+Show an organization by ID or slug
+
+Options:
+  --json  Output as JSON
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  Inspect an organization by ID
+    vercel organizations inspect org_abc123
+
+  Inspect by slug
+    vercel organizations inspect acme
+
+  Inspect the active team's organization
+    vercel --scope acme organizations inspect
+"
+`;
+
+exports[`organization help and parsing > documents all enabled commands and nested usage > list 1`] = `
+"▲ vercel organizations list [options]
+List organizations you can view
+
+Options:
+  --json                Output as JSON
+  -n, --limit <NUMBER>  Number of results to return (default: 20, max: 100)
+  --next <CURSOR>       Show the next page using the cursor from the previous
+                        output
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  List organizations
+    vercel organizations list
+
+  List organizations as JSON
+    vercel organizations list --json
+
+  Show the next page
+    vercel organizations list --limit 20 --next <CURSOR>
+"
+`;
+
+exports[`organization help and parsing > documents all enabled commands and nested usage > teams 1`] = `
+"▲ vercel organizations teams <command>
+Manage organization child teams
+
+Commands:
+  list [organization]    List teams in an organization
+  create [organization]  Create a child team billed through the organization
+  add [organization]     Add an existing team and move its billing under the
+                         organization
+
+Global Options: See \`vercel --help\`
+"
+`;
+
+exports[`organization help and parsing > documents all enabled commands and nested usage > teams add 1`] = `
+"▲ vercel organizations teams add [organization] [options]
+Add an existing team and move its billing under the organization
+
+Options:
+  --billing-plan <BILLING_PLAN>  Set the child billing plan: platform or
+                                 enterprise (default: derived from the existing
+                                 team)
+  --child-team <TEAM>            Select the existing team to add, by ID or slug
+                                 (required)
+  --json                         Output as JSON
+  -y, --yes                      Confirm the billing change without a prompt
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  Add an existing team by ID
+    vercel organizations teams add org_abc123 --child-team team_abc123
+
+  Add an existing team by slug
+    vercel organizations teams add org_abc123 --child-team acme-web
+
+  Add an existing team in CI, after a person approves the billing change
+    vercel organizations teams add org_abc123 --child-team acme-web --yes
+"
+`;
+
+exports[`organization help and parsing > documents all enabled commands and nested usage > teams create 1`] = `
+"▲ vercel organizations teams create [organization] [options]
+Create a child team billed through the organization
+
+Options:
+  --billing-plan <BILLING_PLAN>  Set the child billing plan: platform or
+                                 enterprise (default: platform)
+  --json                         Output as JSON
+  --name <NAME>                  Set the display name (required)
+  --slug <SLUG>                  Set the slug (required)
+  -y, --yes                      Confirm the billing change without a prompt
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  Create a child team
+    vercel organizations teams create org_abc123 --slug acme-web --name "Acme Web"
+
+  Create a child team in the active team's organization
+    vercel --scope acme organizations teams create --slug acme-web --name "Acme Web"
+
+  Create an enterprise child team in CI, after a person approves the billing
+  change
+    vercel organizations teams create org_abc123 --slug acme-web --name "Acme Web" --billing-plan enterprise --yes
+"
+`;
+
+exports[`organization help and parsing > documents all enabled commands and nested usage > teams list 1`] = `
+"▲ vercel organizations teams list [organization] [options]
+List teams in an organization
+
+Options:
+  --json                Output as JSON
+  -n, --limit <NUMBER>  Number of results to return (default: 20, max: 100)
+  --next <CURSOR>       Show the next page using the cursor from the previous
+                        output
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  List organization teams as JSON
+    vercel organizations teams list org_abc123 --json
+
+  List the active team's organization teams
+    vercel --scope acme organizations teams list
+"
+`;
+
+exports[`organization help and parsing > documents all enabled commands and nested usage > update 1`] = `
+"▲ vercel organizations update [organization] [options]
+Update an organization slug
+
+Options:
+  --json         Output as JSON
+  --slug <SLUG>  Set the slug (required)
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  Change the slug
+    vercel organizations update org_abc123 --slug acme
+
+  Change the active team's organization slug
+    vercel --scope acme organizations update --slug acme
+"
+`;
+
+exports[`organization help and parsing > documents all enabled commands and nested usage 1`] = `
+"▲ vercel organizations <command>
+Manage Vercel organizations
+
+Commands:
+  list                    List organizations you can view
+  inspect [organization]  Show an organization by ID or slug
+  create                  Create an organization using an existing team
+  update [organization]   Update an organization slug
+  teams                   Manage organization child teams
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  List organizations
+    vercel organizations list
+"
+`;

@@ -81,7 +81,7 @@ describe('ai-gateway leaderboard models', () => {
     it('returns exit code 2', async () => {
       client.setArgv('ai-gateway', 'leaderboard', 'models', '--help');
       const exitCode = await aiGateway(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:leaderboard', value: 'leaderboard' },
@@ -238,5 +238,80 @@ describe('ai-gateway leaderboard models', () => {
     expect(await exitCodePromise).toBe(0);
     expect(selectMock).toHaveBeenCalledTimes(2);
     expect(getQuery()?.modality).toBe('image');
+  });
+});
+
+describe('ai-gateway leaderboard models --output', () => {
+  const first = join(tmpdir(), 'vercel-leaderboard-output-1.json');
+  const second = join(tmpdir(), 'vercel-leaderboard-output-2.json');
+
+  function clean() {
+    for (const path of [first, second]) {
+      if (existsSync(path)) unlinkSync(path);
+    }
+  }
+
+  beforeEach(clean);
+  afterEach(clean);
+
+  // Runs the command with a fresh client; returns which files it wrote.
+  async function run(...args: string[]) {
+    client.reset();
+    clean();
+    useUser();
+    useLeaderboard();
+    client.setArgv('ai-gateway', 'leaderboard', 'models', ...args);
+    const exitCode = await aiGateway(client);
+    return {
+      exitCode,
+      wrote: [first, second].filter(path => existsSync(path)),
+      stdout: client.stdout.getFullOutput(),
+      stderr: client.stderr.getFullOutput(),
+    };
+  }
+
+  it.each([
+    [['--output', first]],
+    [['-o', first]],
+    [[`--output=${first}`]],
+  ])('writes the file with %j and no warning', async args => {
+    const result = await run(...args);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.wrote).toEqual([first]);
+    expect(result.stderr).not.toContain('deprecated');
+  });
+
+  it('still accepts --out, with one warning that names --output', async () => {
+    const now = await run('--output', first);
+    const before = await run('--out', first);
+
+    expect(before.exitCode).toBe(now.exitCode);
+    expect(before.wrote).toEqual(now.wrote);
+    expect(before.stdout).toBe(now.stdout);
+    expect(before.stderr.match(/deprecated/g)).toHaveLength(1);
+    expect(before.stderr).toContain('! --out is deprecated. Use --output.\n');
+  });
+
+  // `-o` set `--out` before it set `--output`, so the last of them wins, as
+  // it did then.
+  it.each([
+    [['-o', first, '--out', second], second],
+    [['--out', first, '-o', second], second],
+  ])('keeps %j working, with the last value', async (args, written) => {
+    const result = await run(...args);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.wrote).toEqual([written]);
+    expect(result.stderr.match(/deprecated/g)).toHaveLength(1);
+    expect(result.stderr).toContain('! --out is deprecated. Use --output.\n');
+  });
+
+  it('rejects --output with --out before any request', async () => {
+    const result = await run('--output', first, '--out', second);
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain("Can't use --output with --out.");
+    expect(result.wrote).toEqual([]);
   });
 });

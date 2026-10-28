@@ -82,6 +82,110 @@ describe('detectServices', () => {
     });
   });
 
+  describe('Go buildpack compatibility', () => {
+    afterEach(() => vi.unstubAllEnvs());
+
+    it.each([
+      undefined,
+      '0',
+      '1',
+    ])('preserves services V1 Go file builds and requires an entrypoint with flag %s', async flag => {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_GO', flag);
+      const files = {
+        'go.mod': 'module example.com/server\n\ngo 1.24\n',
+        'main.go': 'package main\nfunc main() {}\n',
+      };
+      const result = await detectServices({
+        fs: new VirtualFilesystem({
+          ...files,
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              api: { runtime: 'go', entrypoint: 'main.go', mount: '/api' },
+            },
+          }),
+        }),
+      });
+
+      expect(result.errors).toEqual([]);
+      expect(result.warnings).toEqual([]);
+      expect(result.services[0]).toMatchObject({
+        schema: 'experimentalServices',
+        runtime: 'go',
+        entrypoint: 'main.go',
+        builder: { src: 'main.go', use: '@vercel/go' },
+      });
+      expect(result.services[0].builder.config).not.toHaveProperty('buildpack');
+
+      const missingEntrypoint = await detectServices({
+        fs: new VirtualFilesystem({
+          ...files,
+          'vercel.json': JSON.stringify({
+            experimentalServices: { api: { runtime: 'go', mount: '/api' } },
+          }),
+        }),
+      });
+      expect(missingEntrypoint.services).toEqual([]);
+      expect(missingEntrypoint.errors).toMatchObject([
+        {
+          code:
+            flag === '1' ? 'BUILDPACK_REQUIRES_SERVICES' : 'MISSING_ENTRYPOINT',
+          serviceName: 'api',
+        },
+      ]);
+      if (flag === '1') {
+        expect(missingEntrypoint.errors[0].message).toContain(
+          'Move it to "services" to build without an "entrypoint" from a go.mod at the service root.'
+        );
+      }
+    });
+
+    it('drops only synthesized Go entrypoints when inferring a buildpack backend', async () => {
+      const fs = new VirtualFilesystem({
+        'frontend/package.json': JSON.stringify({
+          dependencies: { next: '15.0.0' },
+        }),
+        'backend/go.mod': 'module example.com/server\n\ngo 1.24\n',
+        'backend/main.go': 'package main\nfunc main() {}\n',
+      });
+      for (const flag of [undefined, '1']) {
+        vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_GO', flag);
+        const result = await detectServices({
+          fs,
+          detectEntrypoint: async () => ({
+            kind: 'file',
+            entrypoint: 'main.go',
+          }),
+        });
+
+        expect(result.errors).toEqual([]);
+        expect(result.warnings).toEqual([]);
+        expect(result.services).toHaveLength(2);
+        const entrypoint = flag === '1' ? {} : { entrypoint: 'main.go' };
+        expect(result.inferred?.config.backend).toEqual({
+          root: 'backend',
+          mountPath: '/api/backend',
+          ...entrypoint,
+        });
+        expect(result.resolved?.experimentalServicesV2?.backend).toEqual({
+          root: 'backend',
+          framework: 'go',
+          ...entrypoint,
+        });
+        expect(
+          result.services.find(service => service.name === 'backend')
+        ).toMatchObject({
+          schema: 'experimentalServicesV2',
+          runtime: 'go',
+          entrypoint: flag === '1' ? undefined : 'main.go',
+          builder: {
+            src: `backend/${flag === '1' ? '<detect>' : 'main.go'}`,
+            use: flag === '1' ? '@vercel/container' : '@vercel/go',
+          },
+        });
+      }
+    });
+  });
+
   describe('with vercel.json without experimentalServices', () => {
     it('should return auto-detection error when no service found', async () => {
       const fs = new VirtualFilesystem({
@@ -172,6 +276,618 @@ describe('detectServices', () => {
       expect(result.errors[0]).toMatchObject({
         code: 'MISSING_ENTRYPOINT',
         serviceName: 'api',
+      });
+    });
+
+    describe('buildpack runtimes (VERCEL_EXPERIMENTAL_BUILDPACK_RUBY=1)', () => {
+      beforeEach(() => {
+        vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', '1');
+      });
+
+      afterEach(() => {
+        vi.unstubAllEnvs();
+      });
+
+      // Buildpack builds are a `services` feature. The deprecated
+      // `experimentalServices` schema never routes to them: a Ruby service
+      // with an entrypoint keeps the legacy `@vercel/ruby` runtime exactly as
+      // before, and one without an entrypoint gets an error that points at
+      // `services` instead of an unhelpful "missing entrypoint".
+      it.each([
+        '.',
+        'services/api',
+      ])('should reject a Ruby runtime service at %s without an entrypoint and point at services', async root => {
+        const prefix = root === '.' ? '' : `${root}/`;
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              api: {
+                root: root === '.' ? undefined : root,
+                runtime: 'ruby',
+                mount: '/api',
+              },
+            },
+          }),
+          [`${prefix}Gemfile`]: 'source "https://rubygems.org"\ngem "puma"\n',
+          [`${prefix}config.ru`]: 'run ->(_env) { [200, {}, ["ok"]] }\n',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.services).toEqual([]);
+        expect(result.warnings).toEqual([]);
+        expect(result.errors).toEqual([
+          {
+            code: 'BUILDPACK_REQUIRES_SERVICES',
+            message:
+              'Service "api" must specify "entrypoint" when using "runtime" with "experimentalServices". ' +
+              'Move it to "services" to build without an "entrypoint" from a Gemfile at the service root.',
+            serviceName: 'api',
+          },
+        ]);
+      });
+
+      it('should keep a Ruby runtime service with an entrypoint on the legacy builder', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              api: {
+                runtime: 'ruby',
+                entrypoint: 'app.rb',
+                mount: '/api',
+              },
+            },
+          }),
+          Gemfile: 'source "https://rubygems.org"\n',
+          'app.rb': 'puts "hello"\n',
+          'config.ru': 'run ->(_env) { [200, {}, ["ok"]] }\n',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toEqual([]);
+        expect(result.warnings).toEqual([]);
+        expect(result.services[0]).toMatchObject({
+          name: 'api',
+          runtime: 'ruby',
+          entrypoint: 'app.rb',
+          builder: { src: 'app.rb', use: '@vercel/ruby' },
+        });
+        expect(result.services[0].builder.config).not.toHaveProperty(
+          'buildpack'
+        );
+      });
+
+      it('should keep a Ruby framework service on the legacy builder at the preset entrypoint', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              api: { framework: 'ruby', mount: '/api' },
+            },
+          }),
+          Gemfile: 'source "https://rubygems.org"\n',
+          'config.ru': 'run ->(_env) { [200, {}, ["ok"]] }\n',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toEqual([]);
+        expect(result.warnings).toEqual([]);
+        expect(result.services[0]).toMatchObject({
+          name: 'api',
+          framework: 'ruby',
+          runtime: 'ruby',
+          builder: {
+            src: 'config.ru',
+            use: '@vercel/ruby',
+            config: { framework: 'ruby' },
+          },
+        });
+        expect(result.services[0].builder.config).not.toHaveProperty(
+          'buildpack'
+        );
+      });
+
+      it('should reject a Ruby runtime service with a command before the command itself', async () => {
+        // Validation order: the missing entrypoint is reported first, and the
+        // buildpack-aware message is what the user sees.
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              api: {
+                runtime: 'ruby',
+                command: 'bundle exec puma',
+                mount: '/api',
+              },
+            },
+          }),
+          Gemfile: 'source "https://rubygems.org"\n',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.services).toEqual([]);
+        expect(result.errors).toMatchObject([
+          { code: 'BUILDPACK_REQUIRES_SERVICES', serviceName: 'api' },
+        ]);
+      });
+
+      it('should reject a command for a Ruby framework service', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              api: {
+                framework: 'ruby',
+                command: ['bundle', 'exec', 'puma'],
+                mount: '/api',
+              },
+            },
+          }),
+          Gemfile: 'source "https://rubygems.org"\n',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.services).toEqual([]);
+        expect(result.errors).toEqual([
+          {
+            code: 'INVALID_COMMAND',
+            message:
+              'Service "api" can only specify "command" when using runtime "container".',
+            serviceName: 'api',
+          },
+        ]);
+      });
+
+      it('should preserve an explicit builder for a Ruby runtime service', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              api: {
+                builder: '@acme/ruby-builder',
+                runtime: 'ruby',
+                entrypoint: 'app.rb',
+                mount: '/api',
+              },
+            },
+          }),
+          'app.rb': 'puts "hello"\n',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toEqual([]);
+        expect(result.warnings).toEqual([]);
+        expect(result.services[0]).toMatchObject({
+          name: 'api',
+          runtime: 'ruby',
+          entrypoint: 'app.rb',
+          builder: {
+            src: 'app.rb',
+            use: '@acme/ruby-builder',
+          },
+        });
+        expect(result.services[0].builder.config).not.toHaveProperty(
+          'buildpack'
+        );
+      });
+
+      it('should require an entrypoint for an explicit Ruby builder', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              api: {
+                builder: '@acme/ruby-builder',
+                runtime: 'ruby',
+                mount: '/api',
+              },
+            },
+          }),
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.services).toEqual([]);
+        expect(result.errors).toMatchObject([
+          { code: 'MISSING_ENTRYPOINT', serviceName: 'api' },
+        ]);
+      });
+
+      it('should reject a command for an explicit Ruby builder', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              api: {
+                builder: '@acme/ruby-builder',
+                runtime: 'ruby',
+                entrypoint: 'app.rb',
+                command: 'bundle exec puma',
+                mount: '/api',
+              },
+            },
+          }),
+          'app.rb': 'puts "hello"\n',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.services).toEqual([]);
+        expect(result.errors).toMatchObject([
+          { code: 'INVALID_COMMAND', serviceName: 'api' },
+        ]);
+      });
+
+      it.each([
+        'Dockerfile',
+        'docker.io/library/ruby:3.4',
+      ])('should preserve a container command for %s with Ruby buildpacks enabled', async entrypoint => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              api: {
+                runtime: 'container',
+                entrypoint,
+                command: 'bundle exec puma',
+                mount: '/api',
+              },
+            },
+          }),
+          Gemfile: 'source "https://rubygems.org"\n',
+          Dockerfile: 'FROM ruby:3.4\n',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toEqual([]);
+        expect(result.warnings).toEqual([]);
+        expect(result.services[0]).toMatchObject({
+          runtime: 'container',
+          entrypoint,
+          builder: {
+            src: entrypoint,
+            use: '@vercel/container',
+            config: { command: ['bundle exec puma'] },
+          },
+        });
+        expect(result.services[0].builder.config).not.toHaveProperty(
+          'buildpack'
+        );
+      });
+
+      it('should build a Ruby entrypoint service the same way with and without the flag', async () => {
+        // `experimentalServices` is frozen: the buildpack flag never changes
+        // how a legacy Ruby service builds. Its only effect is that the
+        // `ruby` preset becomes visible to detection, so the service gains a
+        // `framework` label (reporting metadata the runtime does not act on).
+        const files = {
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              'ruby-api': {
+                entrypoint: 'services/ruby-api/config.ru',
+                routePrefix: '/ruby-api',
+              },
+            },
+          }),
+          'services/ruby-api/Gemfile': 'source "https://rubygems.org"',
+          'services/ruby-api/config.ru': 'run Sinatra::Application',
+        };
+        const flagged = await detectServices({
+          fs: new VirtualFilesystem(files),
+        });
+
+        vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', undefined);
+        const unflagged = await detectServices({
+          fs: new VirtualFilesystem(files),
+        });
+        vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', '1');
+
+        expect(flagged.errors).toEqual([]);
+        expect(flagged.warnings).toEqual([]);
+        expect(flagged.services[0]).toMatchObject({
+          name: 'ruby-api',
+          workspace: 'services/ruby-api',
+          entrypoint: 'config.ru',
+          framework: 'ruby',
+          builder: {
+            src: 'services/ruby-api/config.ru',
+            use: '@vercel/ruby',
+            config: { framework: 'ruby', workspace: 'services/ruby-api' },
+          },
+        });
+        expect(flagged.services[0].builder.config).not.toHaveProperty(
+          'buildpack'
+        );
+
+        const { framework: _f, ...unflaggedConfig } =
+          unflagged.services[0].builder.config!;
+        const { framework: _g, ...flaggedConfig } =
+          flagged.services[0].builder.config!;
+        expect(unflagged.services[0].framework).toBeUndefined();
+        expect(flaggedConfig).toEqual(unflaggedConfig);
+        expect(flagged.services[0].builder.use).toBe(
+          unflagged.services[0].builder.use
+        );
+        expect(flagged.services[0].builder.src).toBe(
+          unflagged.services[0].builder.src
+        );
+        expect(flagged.routes).toEqual(unflagged.routes);
+      });
+
+      it.each([
+        'backend',
+        'services/api',
+      ])('should infer a Rack Ruby service in %s without forwarding synthesized entrypoints', async root => {
+        const fs = new VirtualFilesystem({
+          'frontend/package.json': JSON.stringify({
+            dependencies: { next: '15.0.0' },
+          }),
+          [`${root}/Gemfile`]: 'source "https://rubygems.org"\n',
+          [`${root}/config.ru`]: 'run ->(_env) { [200, {}, ["ok"]] }\n',
+        });
+        const result = await detectServices({
+          fs,
+          detectEntrypoint: async () => ({
+            kind: 'file',
+            entrypoint: 'config.ru',
+          }),
+        });
+        const name = root === 'backend' ? 'backend' : 'api';
+
+        expect(result.errors).toEqual([]);
+        expect(result.warnings).toEqual([]);
+        expect(result.services).toHaveLength(2);
+        expect(result.inferred?.config[name]).toEqual({
+          root,
+          mountPath: `/api/${name}`,
+        });
+        expect(result.resolved?.experimentalServicesV2?.[name]).toEqual({
+          root,
+          framework: 'ruby',
+        });
+        expect(
+          result.services.find(service => service.name === name)
+        ).toMatchObject({
+          root,
+          framework: 'ruby',
+          runtime: 'ruby',
+          entrypoint: undefined,
+          builder: {
+            src: `${root}/<detect>`,
+            use: '@vercel/container',
+            config: { buildpack: 'ruby', framework: 'ruby', workspace: root },
+          },
+        });
+      });
+    });
+
+    describe('buildpack runtimes (VERCEL_EXPERIMENTAL_BUILDPACK_RUST=1)', () => {
+      const CARGO_TOML =
+        '[package]\nname = "backend"\nversion = "0.1.0"\nedition = "2021"\n';
+
+      beforeEach(() => {
+        vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUST', '1');
+      });
+
+      afterEach(() => {
+        vi.unstubAllEnvs();
+      });
+
+      it('should reject a Rust runtime service without an entrypoint and point at services', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              api: { runtime: 'rust', mount: '/api' },
+            },
+          }),
+          'Cargo.toml': CARGO_TOML,
+          'src/main.rs': 'fn main() {}\n',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.services).toEqual([]);
+        expect(result.errors).toEqual([
+          {
+            code: 'BUILDPACK_REQUIRES_SERVICES',
+            message:
+              'Service "api" must specify "entrypoint" when using "runtime" with "experimentalServices". ' +
+              'Move it to "services" to build without an "entrypoint" from a Cargo.toml at the service root.',
+            serviceName: 'api',
+          },
+        ]);
+      });
+
+      it('should keep a Rust runtime service with an entrypoint on the legacy builder', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              api: {
+                runtime: 'rust',
+                entrypoint: 'src/main.rs',
+                mount: '/api',
+              },
+            },
+          }),
+          'Cargo.toml': CARGO_TOML,
+          'src/main.rs': 'fn main() {}\n',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toEqual([]);
+        expect(result.warnings).toEqual([]);
+        expect(result.services[0]).toMatchObject({
+          name: 'api',
+          runtime: 'rust',
+          entrypoint: 'src/main.rs',
+          builder: { src: 'src/main.rs', use: '@vercel/rust' },
+        });
+        expect(result.services[0].builder.config).not.toHaveProperty(
+          'buildpack'
+        );
+      });
+
+      it('should infer a Rust service in backend/ without forwarding the synthesized entrypoint', async () => {
+        // `@vercel/rust`'s `detectEntrypoint` resolves the binary's source
+        // file for the legacy runtime; forwarding it would select that
+        // runtime over the buildpack, so layout detection drops it.
+        const fs = new VirtualFilesystem({
+          'frontend/package.json': JSON.stringify({
+            dependencies: { next: '15.0.0' },
+          }),
+          'backend/Cargo.toml': CARGO_TOML,
+          'backend/Cargo.lock': '',
+          'backend/src/main.rs': 'fn main() {}\n',
+        });
+        const result = await detectServices({
+          fs,
+          detectEntrypoint: async () => ({
+            kind: 'file',
+            entrypoint: 'src/main.rs',
+          }),
+        });
+
+        expect(result.errors).toEqual([]);
+        expect(result.warnings).toEqual([]);
+        expect(result.services).toHaveLength(2);
+        expect(result.inferred?.config.backend).toEqual({
+          root: 'backend',
+          mountPath: '/api/backend',
+        });
+        expect(result.resolved?.experimentalServicesV2?.backend).toEqual({
+          root: 'backend',
+          framework: 'rust',
+        });
+        expect(
+          result.services.find(service => service.name === 'backend')
+        ).toMatchObject({
+          root: 'backend',
+          framework: 'rust',
+          runtime: 'rust',
+          entrypoint: undefined,
+          builder: {
+            src: 'backend/<detect>',
+            use: '@vercel/container',
+            config: {
+              buildpack: 'rust',
+              framework: 'rust',
+              workspace: 'backend',
+            },
+          },
+        });
+      });
+    });
+
+    it('should keep Ruby runtime services on @vercel/ruby when buildpacks are disabled', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              runtime: 'ruby',
+              entrypoint: 'config.ru',
+              mount: '/api',
+            },
+          },
+        }),
+        Gemfile: 'source "https://rubygems.org"\n',
+        'config.ru': 'run Sinatra::Application',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services[0].builder).toMatchObject({
+        src: 'config.ru',
+        use: '@vercel/ruby',
+      });
+    });
+
+    describe('buildpack runtimes (VERCEL_EXPERIMENTAL_BUILDPACK_GO=1)', () => {
+      beforeEach(() => {
+        vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_GO', '1');
+      });
+
+      afterEach(() => {
+        vi.unstubAllEnvs();
+      });
+
+      it('should reject a Go runtime service without an entrypoint and point at services', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              api: { root: 'services/api', runtime: 'go', mount: '/api' },
+            },
+          }),
+          'services/api/go.mod': 'module example.com/api\n\ngo 1.26\n',
+          'services/api/main.go': 'package main\n\nfunc main() {}\n',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.services).toEqual([]);
+        expect(result.errors).toEqual([
+          {
+            code: 'BUILDPACK_REQUIRES_SERVICES',
+            message:
+              'Service "api" must specify "entrypoint" when using "runtime" with "experimentalServices". ' +
+              'Move it to "services" to build without an "entrypoint" from a go.mod at the service root.',
+            serviceName: 'api',
+          },
+        ]);
+      });
+
+      it('should keep a Go service with an entrypoint on @vercel/go', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              api: { entrypoint: 'services/go-api/main.go', mount: '/api' },
+            },
+          }),
+          'services/go-api/go.mod': 'module example.com/api\n\ngo 1.26\n',
+          'services/go-api/main.go': 'package main\n\nfunc main() {}\n',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toEqual([]);
+        expect(result.services[0]).toMatchObject({
+          runtime: 'go',
+          builder: { src: 'services/go-api/main.go', use: '@vercel/go' },
+        });
+        expect(result.services[0].builder.config).not.toHaveProperty(
+          'buildpack'
+        );
+      });
+
+      it.each([
+        ['backend', 'main.go'],
+        ['services/api', 'cmd/api/main.go'],
+      ])('should infer a Go service in %s without forwarding the synthesized %s', async (root, entrypoint) => {
+        // The container build finds the same entrypoint from the candidates
+        // `@vercel/go` detection synthesizes it from.
+        const fs = new VirtualFilesystem({
+          'frontend/package.json': JSON.stringify({
+            dependencies: { next: '15.0.0' },
+          }),
+          [`${root}/go.mod`]: 'module example.com/api\n\ngo 1.26\n',
+          [`${root}/${entrypoint}`]: 'package main\n\nfunc main() {}\n',
+        });
+        const result = await detectServices({
+          fs,
+          detectEntrypoint: async () => ({ kind: 'file', entrypoint }),
+        });
+        const name = root === 'backend' ? 'backend' : 'api';
+
+        expect(result.errors).toEqual([]);
+        expect(result.warnings).toEqual([]);
+        expect(result.services).toHaveLength(2);
+        expect(result.inferred?.config[name]).toEqual({
+          root,
+          mountPath: `/api/${name}`,
+        });
+        expect(result.resolved?.experimentalServicesV2?.[name]).toEqual({
+          root,
+          framework: 'go',
+        });
+        expect(
+          result.services.find(service => service.name === name)
+        ).toMatchObject({
+          root,
+          framework: 'go',
+          runtime: 'go',
+          entrypoint: undefined,
+          builder: {
+            src: `${root}/<detect>`,
+            use: '@vercel/container',
+            config: { buildpack: 'go', framework: 'go', workspace: root },
+          },
+        });
       });
     });
 
@@ -620,7 +1336,7 @@ describe('detectServices', () => {
       });
       const result = await detectServices({ fs });
 
-      expect(result.services[0].type).toBe('web');
+      expect(result.services[0]).toHaveProperty('type', 'web');
     });
 
     it('should default workspace to "."', async () => {
@@ -637,7 +1353,7 @@ describe('detectServices', () => {
       });
       const result = await detectServices({ fs });
 
-      expect(result.services[0].workspace).toBe('.');
+      expect(result.services[0]).toHaveProperty('workspace', '.');
     });
 
     it('should infer Go workspace from nearest go.mod when workspace is omitted', async () => {
@@ -1218,7 +1934,8 @@ describe('detectServices', () => {
       });
       const result = await detectServices({ fs });
 
-      expect(result.services[0].topics).toBeUndefined();
+      const service = result.services[0];
+      expect('topics' in service ? service.topics : undefined).toBeUndefined();
     });
 
     it.each([
@@ -1455,7 +2172,7 @@ describe('detectServices', () => {
         expect(result.errors).toEqual([]);
         expect(result.services).toHaveLength(2);
         const frontend = result.services.find(s => s.name === 'frontend');
-        expect(frontend?.env).toEqual({
+        expect(frontend).toHaveProperty('env', {
           NEXT_PUBLIC_API_BASE_URL: { type: 'service-ref', service: 'api' },
         });
       });
@@ -1767,7 +2484,7 @@ describe('detectServices', () => {
         expect(result.services).toHaveLength(1);
         // Workspace should be the root itself (no manifest found within),
         // not '.' (project root manifest should not be found)
-        expect(result.services[0].workspace).toBe('packages/api');
+        expect(result.services[0]).toHaveProperty('workspace', 'packages/api');
       });
 
       it('should behave identically without root (no regression)', async () => {

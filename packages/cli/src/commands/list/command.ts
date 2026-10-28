@@ -5,7 +5,7 @@ import {
   formatOption,
   jsonOption,
   limitOption,
-  nextOption,
+  nextCursorOption,
   yesOption,
 } from '../../util/arg-common';
 
@@ -24,26 +24,28 @@ export const listCommand = {
     {
       name: 'meta',
       description:
-        'Filter deployments by metadata (e.g.: `-m KEY=value`). Can appear many times.',
+        'Filter deployments by metadata (e.g. `--meta KEY=value`). Can appear many times.',
       argument: 'KEY=VALUE',
-      shorthand: 'm',
+      shorthand: null,
+      deprecatedShorthand: 'm',
       type: [String],
       deprecated: false,
     },
     {
       name: 'policy',
       description:
-        'See deployments with provided Deployment Retention policies (e.g.: `-p KEY=value`). Can appear many times.',
+        'See deployments with provided Deployment Retention policies (e.g. `--policy KEY=value`). Can appear many times.',
       argument: 'KEY=VALUE',
-      shorthand: 'p',
+      shorthand: null,
+      deprecatedShorthand: 'p',
       type: [String],
       deprecated: false,
     },
     {
       name: 'environment',
-      description: '',
-      argument: 'TARGET',
-      shorthand: null,
+      description: 'Filter deployments by environment',
+      argument: 'ENVIRONMENT',
+      shorthand: 'e',
       type: String,
       deprecated: false,
     },
@@ -52,14 +54,15 @@ export const listCommand = {
       description:
         'Filter deployments by their status. Can be comma-separated for multiple statuses (e.g.: `--status BUILDING,READY`)',
       argument: 'STATUS',
-      shorthand: 's',
+      shorthand: null,
+      deprecatedShorthand: 's',
       type: String,
       deprecated: false,
     },
-    nextOption,
+    nextCursorOption,
     limitOption,
-    // this can be deprecated someday
-    { name: 'prod', shorthand: null, type: Boolean, deprecated: false },
+    // Hidden: deprecated alias of `--environment production`.
+    { name: 'prod', shorthand: null, type: Boolean, deprecated: true },
     yesOption,
     confirmOption,
     formatOption,
@@ -80,11 +83,12 @@ export const listCommand = {
     },
     {
       name: 'Filter deployments by metadata',
-      value: `${packageName} list -m key1=value1 -m key2=value2`,
+      value: `${packageName} list --meta key1=value1 --meta key2=value2`,
     },
     {
-      name: 'Paginate deployments for a project, where `1584722256178` is the time in milliseconds since the UNIX epoch',
-      value: `${packageName} list my-app --next 1584722256178`,
+      name: 'Show the next page, using the cursor from the previous output',
+      placeholders: ['<CURSOR>'],
+      value: `${packageName} list my-app --next <CURSOR>`,
     },
     {
       name: 'Filter deployments by status',

@@ -1,0 +1,13 @@
+{
+  "version": 3,
+  "schedules": {
+    "db.cleanup": {
+      "schedule": "0 3 * * *",
+      "function": "_vercel/tasks"
+    },
+    "report": {
+      "schedule": "0 0 * * *",
+      "path": "/api/report"
+    }
+  }
+}

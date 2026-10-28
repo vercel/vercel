@@ -38,7 +38,7 @@ export default async function emptyStore(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const {
@@ -103,7 +103,7 @@ export default async function emptyStore(
           ],
         });
         output.error(
-          'Missing --yes flag. This is a destructive operation, use --yes to confirm.'
+          'Missing --yes option. This is a destructive operation, use --yes to confirm.'
         );
         return 1;
       }

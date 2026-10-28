@@ -44,7 +44,7 @@ describe('ai-gateway budgets inspect', () => {
     it('returns exit code 2', async () => {
       client.setArgv('ai-gateway', 'budgets', 'inspect', '--help');
       const exitCode = await aiGateway(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:budgets', value: 'budgets' },
@@ -159,6 +159,72 @@ describe('ai-gateway budgets inspect', () => {
     const exitCodePromise = aiGateway(client);
 
     await expect(client.stderr).toOutput('Unknown scope');
-    expect(await exitCodePromise).toBe(1);
+    expect(await exitCodePromise).toBe(2);
+  });
+
+  describe('--default', () => {
+    function useListDefaults(defaults: unknown[]) {
+      client.scenario.get('/ai-gateway/budgets/defaults/list', (_req, res) => {
+        res.json({ defaults });
+      });
+    }
+
+    const userDefaultRow = {
+      scopeType: 'user',
+      limitAmount: 50,
+      refreshPeriod: 'monthly',
+      active: true,
+      createdAt: 1,
+      updatedAt: 2,
+    };
+
+    it('shows the per-user default budget', async () => {
+      const team = useTeam();
+      useUser();
+      useListDefaults([userDefaultRow]);
+      client.config.currentTeam = team.id;
+      client.setArgv('ai-gateway', 'budgets', 'inspect', 'user', '--default');
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput('$50');
+      await expect(client.stderr).toOutput('monthly');
+      await expect(client.stderr).toOutput('every team member');
+      expect(await exitCodePromise).toBe(0);
+    });
+
+    it('outputs the default row with --format json', async () => {
+      const team = useTeam();
+      useUser();
+      useListDefaults([userDefaultRow]);
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'budgets',
+        'inspect',
+        'user',
+        '--default',
+        '--format',
+        'json'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stdout).toOutput('"scopeType": "user"');
+      expect(await exitCodePromise).toBe(0);
+    });
+
+    it('errors when no default is set for the scope', async () => {
+      const team = useTeam();
+      useUser();
+      useListDefaults([]);
+      client.config.currentTeam = team.id;
+      client.setArgv('ai-gateway', 'budgets', 'inspect', 'user', '--default');
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput('No user budget default set');
+      expect(await exitCodePromise).toBe(1);
+    });
   });
 });

@@ -25,7 +25,7 @@ import {
 } from './team-refs';
 import type { TeamOperationFailure } from './team-refs';
 
-const USAGE = 'vcr permissions <repository> rm <team>[,<team>...]';
+const USAGE = 'vcr permissions <repository> remove <team>[,<team>...]';
 
 type RmResult =
   | { ok: true; team: string }
@@ -45,7 +45,7 @@ export default async function rm(
   } catch (err) {
     emitVcrArgParseError(client, err, USAGE);
     printError(err);
-    return 1;
+    return 2;
   }
 
   const fr = validateVcrJsonOutput(client, parsedArgs.flags);
@@ -66,7 +66,7 @@ export default async function rm(
       {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
-        message: `Missing team. Example: ${packageName} vcr permissions ${repository} rm team_1a2b3c4d`,
+        message: `Missing team. Example: ${packageName} vcr permissions ${repository} remove team_1a2b3c4d`,
         next: [
           {
             command: buildCommandWithGlobalFlags(
@@ -77,7 +77,7 @@ export default async function rm(
           },
         ],
       },
-      1
+      2
     );
     return outputError(
       client,

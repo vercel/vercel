@@ -1,6 +1,7 @@
 import fs from 'fs';
 import { delimiter as pathDelimiter, join } from 'path';
 import { readConfigFile, execCommand, debug } from '@vercel/build-utils';
+import { normalizePackageName, parseUvLock } from '@vercel/python-analysis';
 import execa from 'execa';
 import { getProtectedUvEnv } from './uv';
 
@@ -140,6 +141,37 @@ export async function ensureVenv({
   } else {
     await execa(pythonVersion.pythonPath, ['-m', 'venv', venvPath]);
   }
+}
+
+// Packages `uv venv --seed` adds to the build venv that the function never
+// needs. setuptools (also seeded below Python 3.12) stays bundled for now
+// because older libraries such as Jinja2 2.11 import its `pkg_resources`
+// without declaring setuptools.
+// TODO: Add setuptools once dropping `pkg_resources` support is acceptable.
+// setuptools deprecated it in v67.5.0 and removed it in v82.0.0.
+const BUILD_ONLY_SEED_PACKAGES = ['pip'];
+
+/**
+ * Return the build-only seed packages that the project's uv.lock does not
+ * require, so they can be left out of the function bundle. Returns an empty
+ * list when the lock cannot be read, which keeps them bundled.
+ */
+export async function getSeedPackagesMissingFromLock(
+  uvLockPath: string
+): Promise<string[]> {
+  let lockedPackages: Set<string>;
+  try {
+    const content = await fs.promises.readFile(uvLockPath, 'utf8');
+    lockedPackages = new Set(
+      parseUvLock(content, uvLockPath).packages.map(pkg =>
+        normalizePackageName(pkg.name)
+      )
+    );
+  } catch (err) {
+    debug(`could not read lock file "${uvLockPath}" for seed packages: ${err}`);
+    return [];
+  }
+  return BUILD_ONLY_SEED_PACKAGES.filter(name => !lockedPackages.has(name));
 }
 
 export function getVenvPythonBin(venvPath: string) {

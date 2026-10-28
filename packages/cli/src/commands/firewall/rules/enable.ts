@@ -10,6 +10,8 @@ import {
   offerAutoPublish,
   printActionImpactWarning,
   resolveFirewallScope,
+  refuseManagedBotMutation,
+  failPriorityProjectGate,
   mapFirewallApiError,
 } from '../shared';
 import { formatActionDisplay } from '../../../util/firewall/format';
@@ -31,6 +33,14 @@ export default async function enable(client: Client, argv: string[]) {
   if (typeof scope === 'number') return scope;
 
   let identifier = parsed.args[0] as string | undefined;
+
+  const reserved = refuseManagedBotMutation(
+    client,
+    scope,
+    identifier,
+    'enable'
+  );
+  if (reserved !== null) return reserved;
 
   output.spinner(`Fetching rules for ${chalk.bold(scope.displayName)}`);
 
@@ -70,13 +80,13 @@ export default async function enable(client: Client, argv: string[]) {
               },
             ],
           },
-          1
+          2
         );
       }
       output.error(
         `Rule name or ID is required. Usage: ${withGlobalFlags(client, 'firewall rules enable <name-or-id>', scope)}`
       );
-      return 1;
+      return 2;
     }
 
     const disabledRules = currentRules.filter(r => r.active === false);
@@ -197,6 +207,9 @@ export default async function enable(client: Client, argv: string[]) {
 
     return 0;
   } catch (e: unknown) {
+    output.stopSpinner();
+    const priority = failPriorityProjectGate(client, e, scope);
+    if (priority !== null) return priority;
     output.error(mapFirewallApiError(e, scope, 'Failed to enable rule'));
     return 1;
   }

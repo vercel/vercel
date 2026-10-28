@@ -1,5 +1,5 @@
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import param from '../../util/output/param';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { parseArguments } from '../../util/get-args';
@@ -37,7 +37,7 @@ export default async function revokeKey(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
   const [issuerId, keyId] = args;
@@ -81,7 +81,7 @@ export default async function revokeKey(client: Client, argv: string[]) {
     );
   }
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
 
   // Only a key already scheduled for revocation can be revoked, so resolve it
   // first and reject the other states without calling the mutation.

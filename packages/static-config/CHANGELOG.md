@@ -1,5 +1,11 @@
 # @vercel/static-config
 
+## 3.4.4
+
+### Patch Changes
+
+- 5d88f1f: Include ajv's validation error details in the error thrown when the exported `config` object fails schema validation, so users can see which property is invalid and why instead of a generic "Invalid data" message.
+
 ## 3.4.3
 
 ### Patch Changes

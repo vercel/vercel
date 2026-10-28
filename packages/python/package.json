@@ -1,6 +1,6 @@
 {
   "name": "@vercel/python",
-  "version": "13.0.1",
+  "version": "29.0.0",
   "main": "./dist/index.js",
   "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/python",
@@ -43,7 +43,6 @@
     "fs-extra": "11.1.1",
     "get-port": "5.1.1",
     "is-port-reachable": "3.1.0",
-    "minimatch": "10.1.1",
     "pip-requirements-js": "1.0.2",
     "semver": "6.3.1",
     "smol-toml": "1.5.2",

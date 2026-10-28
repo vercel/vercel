@@ -2,8 +2,15 @@ import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 
-export default async function status(client: Client) {
+export default async function status(client: Client, asJson = false) {
   const enabled = client.config.telemetry?.enabled !== false;
+
+  if (asJson) {
+    client.stdout.write(
+      `${JSON.stringify({ telemetry: { enabled } }, null, 2)}\n`
+    );
+    return 0;
+  }
 
   const status = enabled ? chalk.green('Enabled') : chalk.red('Disabled');
   output.print('\n');

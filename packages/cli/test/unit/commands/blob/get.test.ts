@@ -343,7 +343,7 @@ describe('blob get', () => {
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
-        "Missing required --access flag. Must be 'public' or 'private'."
+        "Missing required --access option. Must be 'public' or 'private'."
       );
       expect(mockedBlob.get).not.toHaveBeenCalled();
     });
@@ -351,7 +351,7 @@ describe('blob get', () => {
     it('should return 1 when no arguments are provided', async () => {
       const exitCode = await get(client, ['--access', 'public'], testAuth);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       expect(mockedOutput.error).toHaveBeenCalledWith(
         expect.stringContaining('Missing required argument')
       );
@@ -401,7 +401,7 @@ describe('blob get', () => {
 
     it('should return 1 when argument parsing fails', async () => {
       const exitCode = await get(client, ['--invalid-flag'], testAuth);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
     });
   });
 

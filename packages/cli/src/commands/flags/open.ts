@@ -30,7 +30,7 @@ export default async function openFlag(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -41,7 +41,7 @@ export default async function openFlag(
     output.error(
       `Too many arguments. Usage: ${getCommandName('flags open [flag]')}`
     );
-    return 1;
+    return 2;
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);

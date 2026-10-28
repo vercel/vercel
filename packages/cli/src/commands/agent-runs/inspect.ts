@@ -137,7 +137,7 @@ export default async function inspect(client: Client): Promise<number> {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const positional = parsedArgs.args.slice(1);
@@ -162,6 +162,7 @@ export default async function inspect(client: Client): Promise<number> {
   if (!runIdArg) {
     output.print(
       help(inspectSubcommand, {
+        stream: client.stderr,
         parent: agentRunsCommand,
         columns: client.stderr.columns,
       })

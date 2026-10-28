@@ -7,6 +7,8 @@ import type {
 } from '@vercel/build-utils';
 import {
   QueueBroker,
+  type FunctionQueueSubscription,
+  type FunctionDispatch,
   topicPatternToRegex,
 } from '../../../../src/util/dev/queue-broker';
 
@@ -127,6 +129,411 @@ describe('QueueBroker', () => {
   afterEach(() => {
     broker?.stop();
     vi.useRealTimers();
+  });
+
+  describe('configured function subscriptions', () => {
+    function resolveFunction(outputPath: string) {
+      const origin = getServiceOrigin(outputPath);
+      return origin
+        ? (request: Parameters<typeof directFetch>[1]) =>
+            directFetch(`${origin}/${outputPath}`, request)
+        : null;
+    }
+    const subscription: FunctionQueueSubscription = {
+      consumer: 'api_Sjobs_Dts',
+      topic: 'orders',
+      outputPath: 'api/jobs',
+    };
+
+    it('dispatches to each configured path with its own consumer headers', async () => {
+      broker = new QueueBroker([], getServiceOrigin);
+      broker.setFunctionSubscriptions(
+        [
+          subscription,
+          { ...subscription, consumer: 'audit', outputPath: 'api/audit' },
+        ],
+        resolveFunction
+      );
+      const payload = Buffer.from('{"value":42}');
+      const { messageId } = broker.enqueue(
+        'orders',
+        payload,
+        'application/json'
+      );
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(mockFetch.mock.calls.map(call => call[0])).toEqual([
+        'http://localhost:3001/api/jobs',
+        'http://localhost:3001/api/audit',
+      ]);
+      expect(getServiceOrigin).toHaveBeenCalledWith('api/jobs');
+      expect(callHeaders(0)).toMatchObject({
+        'ce-type': 'com.vercel.queue.v2beta',
+        'ce-source': `/topic/orders/consumer/${subscription.consumer}`,
+        'ce-vqsconsumergroup': subscription.consumer,
+        'ce-vqsmessageid': messageId,
+        'ce-vqsdeliverycount': '1',
+        'ce-vqsregion': 'dev1',
+        'content-type': 'application/json',
+      });
+      expect(callHeaders(0)['ce-vqsreceipthandle']).toBeTruthy();
+      expect(mockFetch.mock.calls[0][1]?.body).toBe(payload);
+      expect(callHeaders(1)['ce-vqsconsumergroup']).toBe('audit');
+    });
+
+    it('delivers retained early messages once the framework is ready', async () => {
+      getServiceOrigin.mockReturnValue(null);
+      broker = new QueueBroker([], getServiceOrigin);
+      const { messageId } = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json'
+      );
+      broker.setFunctionSubscriptions([subscription], resolveFunction);
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(mockFetch).not.toHaveBeenCalled();
+
+      getServiceOrigin.mockReturnValue('http://localhost:4001');
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(mockFetch).toHaveBeenCalledOnce();
+      expect(mockFetch.mock.calls[0][0]).toBe('http://localhost:4001/api/jobs');
+      expect(callHeaders()).toMatchObject({
+        'ce-vqsmessageid': messageId,
+        'ce-vqsdeliverycount': '1',
+      });
+    });
+
+    it('keeps ACKs and active leases across identical and tuning reloads', async () => {
+      broker = new QueueBroker([], getServiceOrigin);
+      broker.setFunctionSubscriptions([subscription], resolveFunction);
+      const acked = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json'
+      );
+      const active = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json'
+      );
+      await vi.advanceTimersByTimeAsync(0);
+      const receipt = callHeaders(1)['ce-vqsreceipthandle'];
+      expect(
+        broker.acknowledge(
+          acked.messageId,
+          subscription.consumer,
+          callHeaders(0)['ce-vqsreceipthandle']
+        )
+      ).toBe(true);
+      expect(
+        broker.changeVisibility(
+          active.messageId,
+          subscription.consumer,
+          receipt,
+          120
+        )
+      ).toBe(true);
+
+      broker.setFunctionSubscriptions([subscription], resolveFunction);
+      broker.setFunctionSubscriptions(
+        [{ ...subscription, retryAfterSeconds: 2 }],
+        resolveFunction
+      );
+      await vi.advanceTimersByTimeAsync(65_000);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(
+        broker.receiveById('orders', acked.messageId, subscription.consumer)
+      ).toBeNull();
+      expect(
+        broker.receiveById('orders', active.messageId, subscription.consumer)
+          ?.receiptHandle
+      ).toBe(receipt);
+    });
+
+    it('restores an attempt deferred while a target was starting and retries without spending a delivery', async () => {
+      broker = new QueueBroker([], getServiceOrigin);
+      const dispatch = vi
+        .fn<FunctionDispatch>()
+        .mockResolvedValueOnce(null)
+        .mockResolvedValue({ ok: true, status: 200 });
+      broker.setFunctionSubscriptions([subscription], () => dispatch);
+      broker.enqueue('orders', Buffer.from('{}'), 'application/json');
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(dispatch).toHaveBeenCalledTimes(2);
+      expect(
+        dispatch.mock.calls.map(([req]) => req.headers['ce-vqsdeliverycount'])
+      ).toEqual(['1', '1']);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(dispatch).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not overwrite a newer polling lease when a removed target finishes deferring', async () => {
+      broker = new QueueBroker([], getServiceOrigin);
+      let finish!: (result: null) => void;
+      const dispatch: FunctionDispatch = () =>
+        new Promise(resolve => {
+          finish = resolve;
+        });
+      broker.setFunctionSubscriptions([subscription], () => dispatch);
+      const { messageId } = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json'
+      );
+      broker.setFunctionSubscriptions([], resolveFunction);
+      await vi.advanceTimersByTimeAsync(60_000);
+      const [polled] = broker.receiveMessages('orders', subscription.consumer);
+      finish(null);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(
+        broker.changeVisibility(
+          messageId,
+          subscription.consumer,
+          polled.receiptHandle,
+          120
+        )
+      ).toBe(true);
+      expect(
+        broker.receiveById('orders', messageId, subscription.consumer)
+          ?.deliveryCount
+      ).toBe(2);
+    });
+
+    it('updates the callback path without replaying an acknowledged message', async () => {
+      broker = new QueueBroker([], getServiceOrigin);
+      broker.setFunctionSubscriptions([subscription], resolveFunction);
+      const { messageId } = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json'
+      );
+      await vi.advanceTimersByTimeAsync(0);
+      broker.acknowledge(
+        messageId,
+        subscription.consumer,
+        callHeaders()['ce-vqsreceipthandle']
+      );
+      broker.setFunctionSubscriptions(
+        [{ ...subscription, outputPath: 'api/new' }],
+        resolveFunction
+      );
+      broker.enqueue('orders', Buffer.from('{}'), 'application/json');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch.mock.calls[1][0]).toBe('http://localhost:3001/api/new');
+    });
+
+    it('removes push registrations while preserving polling state and unrelated services', async () => {
+      broker = new QueueBroker(
+        [makeWorkerService('worker', ['other'])],
+        getServiceOrigin
+      );
+      const acked = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json'
+      );
+      const [polled] = broker.receiveMessages('orders', subscription.consumer);
+      broker.acknowledge(
+        acked.messageId,
+        subscription.consumer,
+        polled.receiptHandle
+      );
+      const active = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json'
+      );
+      const [leased] = broker.receiveMessages('orders', subscription.consumer, {
+        visibilityTimeoutSeconds: 120,
+      });
+
+      broker.setFunctionSubscriptions([subscription], resolveFunction);
+      broker.setFunctionSubscriptions([], resolveFunction);
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(
+        broker.receiveById('orders', active.messageId, subscription.consumer)
+          ?.receiptHandle
+      ).toBe(leased.receiptHandle);
+
+      const pending = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json'
+      );
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mockFetch).not.toHaveBeenCalled();
+      broker.setFunctionSubscriptions([subscription], resolveFunction);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mockFetch).toHaveBeenCalledOnce();
+      expect(callHeaders()['ce-vqsmessageid']).toBe(pending.messageId);
+      broker.enqueue('other', Buffer.from('{}'), 'application/json');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mockFetch.mock.calls[1][0]).toBe('http://localhost:3001/');
+      expect(callHeaders()['ce-vqsconsumergroup']).toBe('worker');
+    });
+
+    it('validates ownership collisions before applying any configuration changes', async () => {
+      broker = new QueueBroker(
+        [makeWorkerService('worker', ['orders'])],
+        getServiceOrigin
+      );
+      broker.setFunctionSubscriptions([subscription], resolveFunction);
+      expect(() =>
+        broker.setFunctionSubscriptions(
+          [
+            { ...subscription, consumer: 'new' },
+            { ...subscription, consumer: 'worker' },
+          ],
+          resolveFunction
+        )
+      ).toThrow('configured more than once');
+      broker.enqueue('orders', Buffer.from('{}'), 'application/json');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(
+        mockFetch.mock.calls.map(
+          (_, i) => callHeaders(i)['ce-vqsconsumergroup']
+        )
+      ).toEqual(['worker', subscription.consumer]);
+    });
+
+    it('rejects duplicate input before adding any registrations', async () => {
+      broker = new QueueBroker([], getServiceOrigin);
+      expect(() =>
+        broker.setFunctionSubscriptions(
+          [subscription, subscription],
+          resolveFunction
+        )
+      ).toThrow('configured more than once');
+      broker.enqueue('orders', Buffer.from('{}'), 'application/json');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('does not let service registration or introspection steal configured consumers', async () => {
+      broker = new QueueBroker(
+        [makeWorkerService('worker', ['other'])],
+        getServiceOrigin
+      );
+      broker.setFunctionSubscriptions([subscription], resolveFunction);
+      expect(() =>
+        broker.registerServices([
+          makeWorkerService('new', ['orders']),
+          {
+            ...makeWorkerService('collision', ['orders']),
+            consumer: subscription.consumer,
+          },
+        ])
+      ).toThrow('configured more than once');
+      expect(() =>
+        broker.updateServiceSubscriptions('worker', [
+          subscription,
+          { consumer: 'worker', topic: 'other' },
+        ])
+      ).not.toThrow();
+      broker.enqueue('orders', Buffer.from('{}'), 'application/json');
+      broker.enqueue('other', Buffer.from('{}'), 'application/json');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(
+        mockFetch.mock.calls.map(
+          (_, i) => callHeaders(i)['ce-vqsconsumergroup']
+        )
+      ).toEqual([subscription.consumer, 'worker']);
+    });
+
+    it('keeps first runtime registrations without throwing after a worker starts', async () => {
+      broker = new QueueBroker([], getServiceOrigin);
+      broker.updateServiceSubscriptions('first-worker', [
+        { consumer: 'shared', topic: 'orders' },
+      ]);
+      expect(() =>
+        broker.updateServiceSubscriptions('second-worker', [
+          { consumer: 'shared', topic: 'orders' },
+          { consumer: 'second', topic: 'orders' },
+          { consumer: 'second', topic: 'orders' },
+        ])
+      ).not.toThrow();
+      broker.enqueue('orders', Buffer.from('{}'), 'application/json');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(callHeaders(0)['ce-vqsconsumergroup']).toBe('shared');
+      expect(callHeaders(1)['ce-vqsconsumergroup']).toBe('second');
+      expect(getServiceOrigin.mock.calls).toEqual([
+        ['first-worker'],
+        ['second-worker'],
+      ]);
+    });
+
+    it('retains runtime-introspected consumers on config removal', async () => {
+      broker = new QueueBroker([], getServiceOrigin);
+      broker.updateServiceSubscriptions('worker', [
+        { consumer: 'sdk', topic: 'orders' },
+      ]);
+      broker.setFunctionSubscriptions([subscription], resolveFunction);
+      broker.setFunctionSubscriptions([], resolveFunction);
+      broker.enqueue('orders', Buffer.from('{}'), 'application/json');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mockFetch).toHaveBeenCalledOnce();
+      expect(callHeaders()['ce-vqsconsumergroup']).toBe('sdk');
+    });
+
+    it('honors configured initial delay, retry timing and delivery limit', async () => {
+      broker = new QueueBroker([], getServiceOrigin);
+      broker.enqueue('orders', Buffer.from('{}'), 'application/json');
+      mockFetch.mockResolvedValue({ ok: false, status: 500 } as any);
+      broker.setFunctionSubscriptions(
+        [
+          {
+            ...subscription,
+            initialDelaySeconds: 2,
+            retryAfterSeconds: 3,
+            maxDeliveries: 2,
+          },
+        ],
+        resolveFunction
+      );
+      await vi.advanceTimersByTimeAsync(1999);
+      expect(mockFetch).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(mockFetch).toHaveBeenCalledOnce();
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(callHeaders()['ce-vqsdeliverycount']).toBe('2');
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('ignores a stale callback failure after the polling lease has changed', async () => {
+      broker = new QueueBroker([], getServiceOrigin);
+      let finish!: (response: any) => void;
+      mockFetch.mockImplementationOnce(
+        () =>
+          new Promise(resolve => {
+            finish = resolve;
+          })
+      );
+      broker.setFunctionSubscriptions([subscription], resolveFunction);
+      const { messageId } = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json'
+      );
+      broker.setFunctionSubscriptions([], resolveFunction);
+      await vi.advanceTimersByTimeAsync(60_000);
+      const [polled] = broker.receiveMessages('orders', subscription.consumer);
+      finish({ ok: false, status: 500 });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(
+        broker.changeVisibility(
+          messageId,
+          subscription.consumer,
+          polled.receiptHandle,
+          120
+        )
+      ).toBe(true);
+    });
   });
 
   it('rejects duplicate consumer and topic pairs', () => {
@@ -330,6 +737,31 @@ describe('QueueBroker', () => {
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
+    it('delivers retained messages after subscription introspection', async () => {
+      getServiceOrigin.mockReturnValue(null);
+      broker = new QueueBroker(
+        [makeWorkerService('worker-a', ['*'])],
+        getServiceOrigin
+      );
+      const { messageId } = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json'
+      );
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mockFetch).not.toHaveBeenCalled();
+
+      getServiceOrigin.mockReturnValue('http://localhost:3001');
+      broker.updateServiceSubscriptions('worker-a', [
+        { topic: 'orders', consumer: 'orders-consumer' },
+      ]);
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(mockFetch).toHaveBeenCalledOnce();
+      expect(callHeaders()['ce-vqsmessageid']).toBe(messageId);
+      expect(callHeaders()['ce-vqsconsumergroup']).toBe('orders-consumer');
+    });
+
     it('keeps other services intact when updating one service', async () => {
       broker = new QueueBroker(
         [
@@ -531,7 +963,7 @@ describe('QueueBroker', () => {
       const { messageId } = broker.enqueue('orders', payload, 'text/plain');
       await vi.advanceTimersByTimeAsync(0);
 
-      const result = broker.receiveById(messageId, 'worker-a');
+      const result = broker.receiveById('orders', messageId, 'worker-a');
       expect(result).not.toBeNull();
       expect(result!.payload).toEqual(payload);
       expect(result!.contentType).toBe('text/plain');
@@ -546,10 +978,12 @@ describe('QueueBroker', () => {
         getServiceOrigin
       );
 
-      expect(broker.receiveById('nonexistent', 'worker-a')).toBeNull();
+      expect(
+        broker.receiveById('orders', 'nonexistent', 'worker-a')
+      ).toBeNull();
     });
 
-    it('returns null for unknown consumer group', () => {
+    it('lazily creates an unknown consumer group', () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
@@ -561,11 +995,101 @@ describe('QueueBroker', () => {
         'text/plain'
       );
 
-      expect(broker.receiveById(messageId, 'unknown-group')).toBeNull();
+      const result = broker.receiveById('orders', messageId, 'unknown-group');
+      expect(result?.messageId).toBe(messageId);
+      expect(result?.receiptHandle).toBeTruthy();
+    });
+
+    it('does not receive a message from another topic', () => {
+      broker = new QueueBroker([], getServiceOrigin);
+      const { messageId } = broker.enqueue(
+        'orders',
+        Buffer.from('test'),
+        'text/plain'
+      );
+
+      expect(
+        broker.receiveById('events', messageId, 'external-worker')
+      ).toBeNull();
     });
   });
 
   describe('receiveMessages', () => {
+    it('creates pull consumer groups at the beginning of a topic', () => {
+      broker = new QueueBroker([], getServiceOrigin);
+      const { messageId } = broker.enqueue(
+        'orders',
+        Buffer.from('{"item":"book"}'),
+        'application/json'
+      );
+
+      const firstGroup = broker.receiveMessages('orders', 'fulfillment');
+      expect(firstGroup).toHaveLength(1);
+      expect(firstGroup[0].messageId).toBe(messageId);
+      expect(mockFetch).not.toHaveBeenCalled();
+
+      expect(
+        broker.acknowledge(
+          messageId,
+          'fulfillment',
+          firstGroup[0].receiptHandle
+        )
+      ).toBe(true);
+      expect(broker.receiveMessages('orders', 'fulfillment')).toEqual([]);
+
+      const secondGroup = broker.receiveMessages('orders', 'analytics');
+      expect(secondGroup).toHaveLength(1);
+      expect(secondGroup[0].messageId).toBe(messageId);
+    });
+
+    it('delivers messages sent after a pull consumer group is created', () => {
+      broker = new QueueBroker([], getServiceOrigin);
+
+      expect(broker.receiveMessages('orders', 'fulfillment')).toEqual([]);
+      const { messageId } = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json'
+      );
+
+      expect(broker.receiveMessages('orders', 'fulfillment')[0].messageId).toBe(
+        messageId
+      );
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('upgrades a pull consumer group when its push service registers', async () => {
+      broker = new QueueBroker([], getServiceOrigin);
+      broker.receiveMessages('orders', 'fulfillment');
+
+      broker.registerServices([
+        {
+          ...makeWorkerService('worker-a', ['orders']),
+          consumer: 'fulfillment',
+        },
+      ]);
+      broker.enqueue('orders', Buffer.from('{}'), 'application/json');
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(mockFetch).toHaveBeenCalledOnce();
+      expect(callHeaders()['ce-vqsconsumergroup']).toBe('fulfillment');
+    });
+
+    it('pushes retained messages when a service registers', async () => {
+      broker = new QueueBroker([], getServiceOrigin);
+      const { messageId } = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json'
+      );
+
+      broker.registerServices([makeWorkerService('worker-a', ['orders'])]);
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(mockFetch).toHaveBeenCalledOnce();
+      expect(callHeaders()['ce-vqsmessageid']).toBe(messageId);
+    });
+
     it('selects the matching topic for a multi-topic consumer', () => {
       broker = new QueueBroker(
         [makeWorkerService('multi-worker', ['orders', 'events'])],
@@ -581,6 +1105,17 @@ describe('QueueBroker', () => {
       expect(messages).toHaveLength(1);
       expect(messages[0].payload.toString()).toBe('{"kind":"event"}');
       expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('does not receive expired retained messages between cleanup ticks', () => {
+      broker = new QueueBroker([], getServiceOrigin);
+      broker.enqueue('orders', Buffer.from('{}'), 'application/json', {
+        retentionSeconds: 1,
+      });
+      broker.receiveMessages('orders', 'fulfillment');
+      vi.setSystemTime(Date.now() + 1_001);
+
+      expect(broker.receiveMessages('orders', 'analytics')).toEqual([]);
     });
   });
 
@@ -598,7 +1133,7 @@ describe('QueueBroker', () => {
       );
       await vi.advanceTimersByTimeAsync(0);
 
-      const received = broker.receiveById(messageId, 'worker-a')!;
+      const received = broker.receiveById('orders', messageId, 'worker-a')!;
       const acked = broker.acknowledge(
         messageId,
         'worker-a',
@@ -637,7 +1172,7 @@ describe('QueueBroker', () => {
       expect(result).toBe(false);
 
       // Message should still be receivable
-      const received = broker.receiveById(messageId, 'worker-a');
+      const received = broker.receiveById('orders', messageId, 'worker-a');
       expect(received).not.toBeNull();
     });
 
@@ -652,7 +1187,7 @@ describe('QueueBroker', () => {
       );
     });
 
-    it('cleans up message when acked in all groups', async () => {
+    it('keeps an acknowledged message available to new consumer groups', async () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
@@ -665,11 +1200,17 @@ describe('QueueBroker', () => {
       );
       await vi.advanceTimersByTimeAsync(0);
 
-      const handle = broker.receiveById(messageId, 'worker-a')!.receiptHandle;
+      const handle = broker.receiveById(
+        'orders',
+        messageId,
+        'worker-a'
+      )!.receiptHandle;
       broker.acknowledge(messageId, 'worker-a', handle);
 
-      // Message no longer exists at all
-      expect(broker.receiveById(messageId, 'worker-a')).toBeNull();
+      expect(broker.receiveById('orders', messageId, 'worker-a')).toBeNull();
+      expect(
+        broker.receiveById('orders', messageId, 'new-pull-group')
+      ).not.toBeNull();
     });
 
     it('keeps message receivable in other groups after partial ACK', async () => {
@@ -689,11 +1230,19 @@ describe('QueueBroker', () => {
       await vi.advanceTimersByTimeAsync(0);
 
       // ACK in group A
-      const handleA = broker.receiveById(messageId, 'worker-a')!.receiptHandle;
+      const handleA = broker.receiveById(
+        'order-created',
+        messageId,
+        'worker-a'
+      )!.receiptHandle;
       broker.acknowledge(messageId, 'worker-a', handleA);
 
       // Still available in group B
-      const resultB = broker.receiveById(messageId, 'worker-b');
+      const resultB = broker.receiveById(
+        'order-created',
+        messageId,
+        'worker-b'
+      );
       expect(resultB).not.toBeNull();
     });
   });
@@ -712,7 +1261,11 @@ describe('QueueBroker', () => {
       );
       await vi.advanceTimersByTimeAsync(0);
 
-      const handle = broker.receiveById(messageId, 'worker-a')!.receiptHandle;
+      const handle = broker.receiveById(
+        'orders',
+        messageId,
+        'worker-a'
+      )!.receiptHandle;
       const result = broker.changeVisibility(
         messageId,
         'worker-a',
@@ -777,7 +1330,11 @@ describe('QueueBroker', () => {
       await vi.advanceTimersByTimeAsync(0);
       mockFetch.mockClear();
 
-      const handle = broker.receiveById(messageId, 'worker-a')!.receiptHandle;
+      const handle = broker.receiveById(
+        'orders',
+        messageId,
+        'worker-a'
+      )!.receiptHandle;
 
       // Extend visibility to 5 minutes
       broker.changeVisibility(messageId, 'worker-a', handle, 300);
@@ -812,9 +1369,8 @@ describe('QueueBroker', () => {
       // First attempt failed
       expect(mockFetch).toHaveBeenCalledOnce();
 
-      // Message should still be receivable (went back to pending)
-      const received = broker.receiveById(messageId, 'worker-a');
-      expect(received).not.toBeNull();
+      // The failed delivery remains hidden until its retry delay passes.
+      expect(broker.receiveById('orders', messageId, 'worker-a')).toBeNull();
 
       // Advance past retry delay (60s) + tick
       mockFetch.mockResolvedValue({ ok: true, status: 200 } as any);
@@ -857,15 +1413,35 @@ describe('QueueBroker', () => {
       // No fetch — service wasn't available
       expect(mockFetch).not.toHaveBeenCalled();
 
-      // Service becomes available
+      // Service becomes available and is retried on the next broker tick.
       getServiceOrigin.mockReturnValue('http://localhost:3001');
-      await vi.advanceTimersByTimeAsync(61_000);
+      await vi.advanceTimersByTimeAsync(1_001);
 
       expect(mockFetch).toHaveBeenCalled();
     });
   });
 
   describe('lease expiry', () => {
+    it('makes expired pull leases immediately available', async () => {
+      broker = new QueueBroker([], getServiceOrigin);
+      const { messageId } = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json'
+      );
+
+      const [first] = broker.receiveMessages('orders', 'fulfillment', {
+        visibilityTimeoutSeconds: 1,
+      });
+      expect(first.messageId).toBe(messageId);
+
+      await vi.advanceTimersByTimeAsync(1_001);
+
+      const [second] = broker.receiveMessages('orders', 'fulfillment');
+      expect(second.messageId).toBe(messageId);
+      expect(second.deliveryCount).toBe(2);
+    });
+
     it('re-dispatches message when visibility timeout expires', async () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
@@ -899,14 +1475,14 @@ describe('QueueBroker', () => {
       await vi.advanceTimersByTimeAsync(0);
 
       // First delivery
-      const first = broker.receiveById(messageId, 'worker-a');
+      const first = broker.receiveById('orders', messageId, 'worker-a');
       expect(first!.deliveryCount).toBe(1);
 
       // Expire lease + retry delay + tick → re-dispatch
       await vi.advanceTimersByTimeAsync(121_000);
 
       // Second delivery
-      const second = broker.receiveById(messageId, 'worker-a');
+      const second = broker.receiveById('orders', messageId, 'worker-a');
       expect(second!.deliveryCount).toBe(2);
     });
   });
@@ -927,13 +1503,15 @@ describe('QueueBroker', () => {
       await vi.advanceTimersByTimeAsync(0);
 
       // Message receivable before expiry
-      expect(broker.receiveById(messageId, 'worker-a')).not.toBeNull();
+      expect(
+        broker.receiveById('orders', messageId, 'worker-a')
+      ).not.toBeNull();
 
       // Advance past retention
       await vi.advanceTimersByTimeAsync(11_000);
 
       // Message gone
-      expect(broker.receiveById(messageId, 'worker-a')).toBeNull();
+      expect(broker.receiveById('orders', messageId, 'worker-a')).toBeNull();
     });
   });
 

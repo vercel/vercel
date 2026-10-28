@@ -4,6 +4,7 @@ import { yesOption } from '../../util/arg-common';
 export const agentCommand = {
   name: 'agent',
   aliases: [],
+  summary: 'Generate Vercel deployment guidance in AGENTS.md',
   description:
     'Generate an AGENTS.md file with Vercel deployment best practices',
   arguments: [

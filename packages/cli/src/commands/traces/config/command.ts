@@ -1,5 +1,6 @@
 import { packageName } from '../../../util/pkg-name';
 import {
+  environmentOption,
   formatOption,
   jsonOption,
   projectOption,
@@ -12,10 +13,16 @@ import {
  */
 export const RULE_ENVIRONMENTS = ['any', 'preview', 'production'] as const;
 
+const ruleEnvironmentOption = {
+  ...environmentOption,
+  description:
+    'Environment the rule applies to (required): production, preview, or any',
+} as const;
+
 export const lsSubcommand = {
   name: 'ls',
   aliases: ['list'],
-  description: 'List the trace sampling rules for a project',
+  description: 'List the Vercel tracing sampling rules for a project',
   arguments: [],
   options: [formatOption, jsonOption, projectOption],
   examples: [
@@ -34,39 +41,37 @@ export const setSubcommand = {
   name: 'set',
   aliases: [],
   description:
-    'Add or replace one trace sampling rule. The rate is a whole percentage from 1 to 100.',
+    'Enable Vercel tracing and add or replace one sampling rule. The rate is a whole percentage from 1 to 100.',
   arguments: [
-    { name: 'environment', required: true },
     { name: 'rate', required: true },
     { name: 'requestPath', required: false },
   ],
-  options: [formatOption, jsonOption, projectOption],
+  options: [ruleEnvironmentOption, formatOption, jsonOption, projectOption],
   examples: [
     {
       name: 'Trace a quarter of production traffic',
-      value: `${packageName} traces config set production 25`,
+      value: `${packageName} traces config set 25 --environment production`,
     },
     {
       name: 'Trace every preview request to one path prefix',
-      value: `${packageName} traces config set preview 100 /api`,
+      value: `${packageName} traces config set 100 /api --environment preview`,
     },
     {
       name: 'Trace one percent of traffic in every environment',
-      value: `${packageName} traces config set any 1`,
+      value: `${packageName} traces config set 1 --environment any`,
     },
   ],
 } as const;
 
 export const rmSubcommand = {
-  name: 'rm',
-  aliases: ['remove', 'delete'],
+  descriptionTone: 'normal',
+  name: 'remove',
+  aliases: ['rm', 'delete'],
   description:
-    'Remove trace sampling rules. Without a path prefix, every rule for the environment is removed.',
-  arguments: [
-    { name: 'environment', required: true },
-    { name: 'requestPath', required: false },
-  ],
+    'Remove Vercel tracing sampling rules. Without a path prefix, every rule for the environment is removed. Removing the final rule disables tracing.',
+  arguments: [{ name: 'requestPath', required: false }],
   options: [
+    ruleEnvironmentOption,
     {
       name: 'default',
       shorthand: null,
@@ -82,15 +87,15 @@ export const rmSubcommand = {
   examples: [
     {
       name: 'Remove one rule by environment and path prefix',
-      value: `${packageName} traces config rm production /api`,
+      value: `${packageName} traces config remove /api --environment production`,
     },
     {
       name: 'Remove every rule for production',
-      value: `${packageName} traces config rm production`,
+      value: `${packageName} traces config remove --environment production`,
     },
     {
       name: 'Remove only the production rule that covers all paths',
-      value: `${packageName} traces config rm production --default`,
+      value: `${packageName} traces config remove --environment production --default`,
     },
   ],
 } as const;
@@ -98,7 +103,7 @@ export const rmSubcommand = {
 export const tracesConfigCommand = {
   name: 'config',
   aliases: [],
-  description: 'Manage trace sampling rules for a Vercel project.',
+  description: 'Manage Vercel tracing sampling rules for a project.',
   arguments: [],
   subcommands: [lsSubcommand, setSubcommand, rmSubcommand],
   options: [],
@@ -109,11 +114,11 @@ export const tracesConfigCommand = {
     },
     {
       name: 'Trace a quarter of production traffic',
-      value: `${packageName} traces config set production 25`,
+      value: `${packageName} traces config set 25 --environment production`,
     },
     {
       name: 'Remove every rule for production',
-      value: `${packageName} traces config rm production`,
+      value: `${packageName} traces config remove --environment production`,
     },
   ],
 } as const;

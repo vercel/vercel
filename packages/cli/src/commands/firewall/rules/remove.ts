@@ -10,6 +10,7 @@ import {
   detectExistingDraft,
   offerAutoPublish,
   resolveFirewallScope,
+  refuseManagedBotMutation,
   mapFirewallApiError,
 } from '../shared';
 import { formatActionDisplay } from '../../../util/firewall/format';
@@ -31,6 +32,14 @@ export default async function remove(client: Client, argv: string[]) {
   if (typeof scope === 'number') return scope;
 
   let identifier = parsed.args[0] as string | undefined;
+
+  const reserved = refuseManagedBotMutation(
+    client,
+    scope,
+    identifier,
+    'remove'
+  );
+  if (reserved !== null) return reserved;
 
   output.spinner(`Fetching rules for ${chalk.bold(scope.displayName)}`);
 
@@ -70,13 +79,13 @@ export default async function remove(client: Client, argv: string[]) {
               },
             ],
           },
-          1
+          2
         );
       }
       output.error(
         `Rule name or ID is required. Usage: ${withGlobalFlags(client, 'firewall rules remove <name-or-id> --yes', scope)}`
       );
-      return 1;
+      return 2;
     }
 
     const selectedId = await client.input.select({

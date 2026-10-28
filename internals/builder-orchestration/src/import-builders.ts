@@ -39,8 +39,11 @@ function isRemoteBuilderPin(pin: string): boolean {
   return /^https?:\/\//i.test(pin);
 }
 
-function isBareSpec(parsed: ReturnType<typeof npa>): boolean {
-  return parsed.type === 'tag' && parsed.rawSpec === '';
+function isDefaultSpec(parsed: ReturnType<typeof npa>): boolean {
+  return (
+    parsed.type === 'tag' &&
+    (parsed.rawSpec === '' || parsed.rawSpec === 'latest')
+  );
 }
 
 /**
@@ -57,14 +60,14 @@ export function formatResolvedBuilders(
   ).join(',');
 }
 
-function pinBuilderSpecs(
+export function pinBuilderSpecs(
   specs: Set<string>,
   pins: ReadonlyMap<string, string>
 ): Map<string, string> {
   const pinnedSpecs = new Map<string, string>();
   for (const spec of specs) {
     const parsed = npa(spec);
-    if (parsed.name && isBareSpec(parsed)) {
+    if (parsed.name && isDefaultSpec(parsed)) {
       const version = pins.get(parsed.name);
       if (version) {
         // Remote pins install as the URL; version pins as name@version.
@@ -99,6 +102,7 @@ interface StaticBuilder extends BuilderV2 {
 
 export interface ImportBuildersDependencies {
   builderPins: Readonly<Record<string, string>>;
+  buildersDir?: (cwd: string, vercelDir?: string) => string;
   debug(message: string): void;
   installBuilders: InstallBuilders;
   isNativeBinaryInstall(): boolean;
@@ -113,6 +117,7 @@ export interface ImportBuildersDependencies {
  */
 export function createImportBuilders(dependencies: ImportBuildersDependencies) {
   const {
+    buildersDir: resolveBuildersDir = getBuildersDir,
     debug,
     installBuilders,
     isNativeBinaryInstall,
@@ -139,7 +144,7 @@ export function createImportBuilders(dependencies: ImportBuildersDependencies) {
     cwd: string,
     span?: Span
   ): Promise<Map<string, BuilderWithPkg>> {
-    const buildersDir = getBuildersDir(cwd, vercelDir);
+    const buildersDir = resolveBuildersDir(cwd, vercelDir);
 
     let importResult = await resolveBuilders(
       buildersDir,
@@ -306,7 +311,7 @@ async function resolveBuilders(
       // a URL. Range-shaped pins (never produced by pin-builders, which
       // requires exact versions) must not force a reinstall on every run.
       if (
-        isBareSpec(parsed) &&
+        isDefaultSpec(parsed) &&
         peerVersion &&
         valid(peerVersion) &&
         builderPkg.version !== peerVersion &&
@@ -325,7 +330,7 @@ async function resolveBuilders(
       // source instead. This catches npm installs and different preview packs,
       // including native PR binaries whose CLI version has no preview suffix.
       if (
-        isBareSpec(parsed) &&
+        isDefaultSpec(parsed) &&
         peerVersion &&
         isRemoteBuilderPin(peerVersion) &&
         pkgPath.startsWith(buildersDir) &&

@@ -34,6 +34,13 @@ export class RedirectsTelemetryClient
     });
   }
 
+  trackCliSubcommandImport(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'import',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'remove',

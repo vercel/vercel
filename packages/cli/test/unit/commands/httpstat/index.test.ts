@@ -89,7 +89,7 @@ describe('httpstat', () => {
     it('prints help message', async () => {
       client.setArgv('httpstat', '--help');
       const exitCode = await httpstat(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.getFullOutput()).toContain(
         'Execute httpstat with automatic deployment URL and protection bypass'
       );
@@ -148,12 +148,50 @@ describe('httpstat', () => {
     it('should reject unrecognized flags before --', async () => {
       client.setArgv('httpstat', '/api/hello', '--invalid-flag');
       const exitCode = await httpstat(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('unknown or unexpected option');
     });
   });
 
   describe('--deployment flag', () => {
+    it('discovers the owning team for a protected deployment ID', async () => {
+      client.cwd = setupTmpDir();
+      client.config.currentTeam = 'team_deleted';
+      useTeams('team_wrong');
+      createTeam('team_target');
+      client.scenario.get('/v13/deployments/dpl_target', (req, res) => {
+        if (req.query.teamId !== 'team_target') {
+          return res.status(404).json({ error: { code: 'not_found' } });
+        }
+        res.json({
+          id: 'dpl_target',
+          url: 'target.vercel.app',
+          projectId: 'prj_target',
+          ownerId: 'team_target',
+        });
+      });
+      client.scenario.get('/v9/projects/prj_target', (req, res) => {
+        expect(req.query.teamId).toBe('team_target');
+        res.json({
+          id: 'prj_target',
+          name: 'target',
+          protectionBypass: { secret: { scope: 'automation-bypass' } },
+        });
+      });
+      client.setArgv('httpstat', '/api/hello', '--deployment', 'dpl_target');
+
+      expect(await httpstat(client)).toBe(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'httpstat',
+        expect.arrayContaining([
+          'https://target.vercel.app/api/hello',
+          'x-vercel-protection-bypass: secret',
+        ]),
+        expect.any(Object)
+      );
+      expect(client.config.currentTeam).toBe('team_deleted');
+    });
+
     it('should accept a full deployment URL', async () => {
       await setupLinkedProject();
 

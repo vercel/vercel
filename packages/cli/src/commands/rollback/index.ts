@@ -24,7 +24,7 @@ export default async (client: Client): Promise<number> => {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new RollbackTelemetryClient({
@@ -40,8 +40,13 @@ export default async (client: Client): Promise<number> => {
 
   if (!parsedArgs.args[1] && needHelp) {
     telemetry.trackCliFlagHelp('rollback');
-    output.print(help(rollbackCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(rollbackCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   // validate the timeout
@@ -59,11 +64,12 @@ export default async (client: Client): Promise<number> => {
         telemetry.trackCliFlagHelp('rollback', 'status');
         output.print(
           help(statusSubcommand, {
+            stream: client.stderr,
             columns: client.stderr.columns,
             parent: rollbackCommand,
           })
         );
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandStatus();
       const project = await getProjectByCwdOrLink({

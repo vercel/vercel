@@ -24,6 +24,12 @@ export class AiGatewayBudgetsRemoveTelemetryClient
     }
   }
 
+  trackCliFlagDefault(defaultValue: boolean | undefined) {
+    if (defaultValue) {
+      this.trackCliFlag('default');
+    }
+  }
+
   trackCliOptionFormat(format: string | undefined) {
     if (format) {
       this.trackCliOption({ option: 'format', value: format });

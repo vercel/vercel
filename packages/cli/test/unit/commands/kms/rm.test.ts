@@ -17,7 +17,7 @@ describe('kms rm', () => {
     it('tracks telemetry', async () => {
       client.setArgv('kms', 'rm', '--help');
       const exitCodePromise = kms(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:help', value: 'kms:rm' },
@@ -34,7 +34,7 @@ describe('kms rm', () => {
     await expect(client.stderr).toOutput('Delete');
     client.stdin.write('y\n');
     await expect(exitCodePromise).resolves.toEqual(0);
-    await expect(client.stderr).toOutput('Removed');
+    await expect(client.stderr).toOutput('✓ Deleted');
   });
 
   it('cancels when the prompt is declined', async () => {
@@ -57,10 +57,31 @@ describe('kms rm', () => {
     expect(exitCode).toEqual(0);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
-      { key: 'subcommand:remove', value: 'rm' },
+      { key: 'subcommand:delete', value: 'rm' },
       { key: 'argument:issuerId', value: '[REDACTED]' },
       { key: 'flag:yes', value: 'TRUE' },
     ]);
+  });
+
+  it.each([
+    ['delete', false],
+    ['del', false],
+    ['remove', true],
+  ])('runs as %s (deprecated: %s)', async (name, deprecated) => {
+    useUser();
+    useIssuer('iss_test');
+    useDeleteIssuer('iss_test');
+    client.setArgv('kms', name, 'iss_test', '--yes');
+    expect(await kms(client)).toEqual(0);
+    expect(client.stderr.getFullOutput()).toContain('Deleted');
+    expect(client.stderr.getFullOutput()).not.toContain('Removed');
+    const warning =
+      '`vercel kms remove` is deprecated. Use `vercel kms delete`.';
+    if (deprecated) {
+      expect(client.stderr.getFullOutput()).toContain(warning);
+    } else {
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+    }
   });
 
   it('explains a 403 as a permissions problem', async () => {

@@ -110,7 +110,7 @@ describe('firewall rules inspect', () => {
     client.setArgv('firewall', 'rules', 'inspect');
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('Rule name or ID is required');
-    expect(await exitCodePromise).toEqual(1);
+    expect(await exitCodePromise).toEqual(2);
   });
 
   it('should error on multiple matches in non-TTY mode', async () => {
@@ -148,6 +148,27 @@ describe('firewall rules inspect', () => {
   it('tracks help telemetry', async () => {
     client.setArgv('firewall', 'rules', 'inspect', '--help');
     const exitCode = await firewall(client);
-    expect(exitCode).toEqual(2);
+    expect(exitCode).toEqual(0);
+  });
+
+  it('inspects a managed bot rule by slug or waf id', async () => {
+    useListFirewallConfigs(
+      createConfig({
+        managedRules: {
+          bot_filter: { active: true, action: 'challenge' },
+        },
+      }),
+      null
+    );
+    client.setArgv('firewall', 'rules', 'inspect', 'managed_bot_protection');
+    const exitCode = await firewall(client);
+    expect(exitCode).toEqual(0);
+    const fullOutput = client.stderr.getFullOutput();
+    expect(fullOutput).toContain('Bot Protection');
+    expect(fullOutput).toContain('bot-protection');
+    expect(fullOutput).toContain('managed_bot_protection');
+    expect(fullOutput).toContain(
+      'firewall rules update bot-protection --action log'
+    );
   });
 });

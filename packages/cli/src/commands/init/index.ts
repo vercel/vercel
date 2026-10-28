@@ -24,7 +24,7 @@ export default async function main(client: Client) {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new InitTelemetryClient({
@@ -35,15 +35,20 @@ export default async function main(client: Client) {
 
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('init');
-    output.print(help(initCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(initCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   const args = getSubcommand(parsedArgs.args.slice(1), COMMAND_CONFIG).args;
 
   if (parsedArgs.args.length > 3) {
     output.error('Too many arguments.');
-    return 1;
+    return 2;
   }
 
   // Note: the "example" argument is tracked in the `init` function, so that we only

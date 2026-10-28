@@ -1,3 +1,4 @@
+import { logArchivedFlagNotice } from '../../util/flags/archived-flag-notice';
 import chalk from 'chalk';
 import deepEqual from 'fast-deep-equal';
 import type Client from '../../util/client';
@@ -38,7 +39,7 @@ export default async function rollout(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -59,6 +60,7 @@ export default async function rollout(
   const stageInputs = ((flags['--stage'] as string[] | undefined) || []).map(
     input => input.trim()
   );
+  const finalPercentage = flags['--final-percentage'] as string | undefined;
   const start = normalizeOptionalInput(flags['--start'] as string | undefined);
   const message = normalizeOptionalInput(
     flags['--message'] as string | undefined
@@ -70,7 +72,7 @@ export default async function rollout(
     output.log(
       `Example: ${getCommandName('flags rollout my-feature --environment production --by user.userId --stage 5,6h --stage 25,1d')}`
     );
-    return 1;
+    return 2;
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
@@ -83,6 +85,7 @@ export default async function rollout(
   telemetryClient.trackCliOptionStage(
     stageInputs.length > 0 ? [stageInputs[0]] : undefined
   );
+  telemetryClient.trackCliOptionFinalPercentage(finalPercentage);
   telemetryClient.trackCliOptionStart(start);
   telemetryClient.trackCliOptionMessage(message);
 
@@ -109,12 +112,7 @@ export default async function rollout(
     ]);
     output.stopSpinner();
 
-    if (flag.state === 'archived') {
-      output.error(
-        `Flag ${chalk.bold(flag.slug)} is archived and cannot be rolled out`
-      );
-      return 1;
-    }
+    logArchivedFlagNotice(flag);
 
     const selectedEnvironment = await resolveFlagEnvironment(
       client,
@@ -127,14 +125,17 @@ export default async function rollout(
       }
     );
 
+    const currentOutcome = flag.environments[selectedEnvironment].fallthrough;
     const rolloutConfig = resolveFlagRollout(flag, settings, {
       stageInputs,
+      finalPercentage,
       baseSelector,
       rollFromVariantSelector,
       rollToVariantSelector,
       defaultVariantSelector,
       start,
-      currentOutcome: flag.environments[selectedEnvironment].fallthrough,
+      currentOutcome:
+        currentOutcome.type === 'experiment' ? undefined : currentOutcome,
     });
     const nextEnvironmentConfig = buildOutcomeEnvConfig(
       flag.environments[selectedEnvironment],

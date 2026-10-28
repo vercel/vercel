@@ -18,11 +18,12 @@ import {
   sdkKeysAddSubcommand,
   sdkKeysRemoveSubcommand,
 } from './command';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 
 const COMMAND_CONFIG = {
   ls: getCommandAliases(sdkKeysListSubcommand),
   add: getCommandAliases(sdkKeysAddSubcommand),
-  rm: getCommandAliases(sdkKeysRemoveSubcommand),
+  revoke: getCommandAliases(sdkKeysRemoveSubcommand),
 };
 
 export async function sdkKeys(client: Client): Promise<number> {
@@ -41,7 +42,7 @@ export async function sdkKeys(client: Client): Promise<number> {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const subArgs = parsedArgs.args.slice(0);
@@ -56,16 +57,18 @@ export async function sdkKeys(client: Client): Promise<number> {
     telemetry.trackCliFlagHelp('flags sdk-keys', subcommand);
     output.print(
       help(sdkKeysSubcommand, {
+        stream: client.stderr,
         parent: flagsCommand,
         columns: client.stderr.columns,
       })
     );
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: sdkKeysSubcommand,
         columns: client.stderr.columns,
       })
@@ -77,7 +80,7 @@ export async function sdkKeys(client: Client): Promise<number> {
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags sdk-keys', subcommandOriginal);
         printHelp(sdkKeysListSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return sdkKeysLs(client, args);
@@ -85,22 +88,37 @@ export async function sdkKeys(client: Client): Promise<number> {
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags sdk-keys', subcommandOriginal);
         printHelp(sdkKeysAddSubcommand);
-        return 2;
+        return 0;
       }
-      telemetry.trackCliSubcommandAdd(subcommandOriginal);
+      telemetry.trackCliSubcommandCreate(subcommandOriginal);
+      if (subcommandOriginal === 'add') {
+        warnDeprecatedSubcommand(
+          client,
+          'flags sdk-keys add',
+          'flags sdk-keys create'
+        );
+      }
       return sdkKeysAdd(client, args);
-    case 'rm':
+    case 'revoke':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags sdk-keys', subcommandOriginal);
         printHelp(sdkKeysRemoveSubcommand);
-        return 2;
+        return 0;
       }
-      telemetry.trackCliSubcommandRemove(subcommandOriginal);
+      telemetry.trackCliSubcommandRevoke(subcommandOriginal);
+      if (subcommandOriginal !== 'revoke') {
+        warnDeprecatedSubcommand(
+          client,
+          `flags sdk-keys ${subcommandOriginal}`,
+          'flags sdk-keys revoke'
+        );
+      }
       return sdkKeysRm(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(
         help(sdkKeysSubcommand, {
+          stream: client.stderr,
           parent: flagsCommand,
           columns: client.stderr.columns,
         })

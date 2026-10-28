@@ -1,6 +1,7 @@
 import { describe, beforeEach, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import dns from '../../../../src/commands/dns';
+import chars from '../../../../src/util/output/chars';
 import { useUser } from '../../../mocks/user';
 
 const RECORD = {
@@ -30,7 +31,7 @@ describe('dns inspect', () => {
     it('tracks telemetry', async () => {
       client.setArgv('dns', 'inspect', '--help');
       const exitCodePromise = dns(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -45,7 +46,7 @@ describe('dns inspect', () => {
     it('errors when no arguments are passed', async () => {
       client.setArgv('dns', 'inspect');
       const exitCode = await dns(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('Invalid number of arguments');
     });
   });
@@ -187,10 +188,14 @@ describe('dns inspect', () => {
     it('rejects unknown flags', async () => {
       client.setArgv('dns', 'inspect', 'rec_123', '--unknown');
       const exitCode = await dns(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput(
-        'Error: unknown or unexpected option: --unknown'
+        `${chars.fatal} unknown or unexpected option: --unknown`
       );
+      expect(client.stderr.getFullOutput()).toContain('accepts:');
+      expect(client.stderr.getFullOutput()).toContain('--format');
+      expect(client.stderr.getFullOutput()).not.toContain('Error:');
+      expect(client.stdout.getFullOutput()).toBe('');
     });
   });
 });

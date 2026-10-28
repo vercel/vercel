@@ -6,6 +6,12 @@ export class BuildTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof buildCommand>
 {
+  trackError(code: string | undefined) {
+    if (code && code !== 'Diagnostic') {
+      this.trackErrorCode(code);
+    }
+  }
+
   trackCliOptionOutput(path: string | undefined) {
     if (path) {
       this.trackCliOption({
@@ -20,6 +26,14 @@ export class BuildTelemetryClient
       this.trackCliOption({
         option: 'target',
         value: this.redactedTargetName(option),
+      });
+    }
+  }
+  trackCliOptionEnvironment(environment: string | undefined) {
+    if (environment) {
+      this.trackCliOption({
+        option: 'environment',
+        value: this.redactedTargetName(environment),
       });
     }
   }
@@ -39,6 +53,15 @@ export class BuildTelemetryClient
   trackCliFlagStandalone(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('standalone');
+    }
+  }
+
+  trackCliOptionDeployment(deployment: string | undefined) {
+    if (deployment) {
+      this.trackCliOption({
+        option: 'deployment',
+        value: this.redactedValue,
+      });
     }
   }
 

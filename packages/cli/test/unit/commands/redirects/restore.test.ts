@@ -29,7 +29,7 @@ describe('redirects restore', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = redirects(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -215,7 +215,7 @@ describe('redirects restore', () => {
         'Missing required argument: version-id'
       );
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should include list-versions in next when version-id missing in non-interactive mode', async () => {

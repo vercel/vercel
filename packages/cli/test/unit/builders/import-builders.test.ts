@@ -1,7 +1,15 @@
-import { afterEach, beforeEach, describe, it, expect } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  it,
+  expect,
+} from 'vitest';
 import { join } from 'path';
 import { ensureDir, remove, outputJSON, writeFile } from 'fs-extra';
-import { getWriteableDirectory } from '@vercel/build-utils';
+import { getWriteableDirectory, Span } from '@vercel/build-utils';
 import { client } from '../../mocks/client';
 import {
   formatResolvedBuilders,
@@ -48,22 +56,33 @@ vi.mock('../../../src/util/pkg', async importOriginal => {
 import vercelNodePkg from '@vercel/node/package.json';
 import { vi } from 'vitest';
 import { isWindows } from '../../helpers/is-windows';
+import {
+  startFakeNpmRegistry,
+  type FakeNpmRegistry,
+} from '../../helpers/fake-npm-registry';
 
-const vltMocks = vi.hoisted(() => ({
-  importBuilders: vi.fn(),
-  loadEmbeddedBuilderGraphs: vi.fn(),
-}));
+const vltMocks = vi.hoisted(() => {
+  const importBuilders = vi.fn();
+  return {
+    createVltBuilderImporter: vi.fn(() => importBuilders),
+    importBuilders,
+    loadEmbeddedBuilderGraphs: vi.fn(),
+    loadEmbeddedBuilderIndex: vi.fn(),
+  };
+});
 
 vi.mock('../../../src/builders/vlt-builder-graph', () => ({
   loadEmbeddedBuilderGraphs: vltMocks.loadEmbeddedBuilderGraphs,
+  loadEmbeddedBuilderIndex: vltMocks.loadEmbeddedBuilderIndex,
 }));
 
 vi.mock('../../../src/builders/vlt-builder-importer', () => ({
-  createVltBuilderImporter: vi.fn(() => vltMocks.importBuilders),
+  createVltBuilderImporter: vltMocks.createVltBuilderImporter,
 }));
 
-// these tests can take upwards of 190s on macos-latest
-vi.setConfig({ testTimeout: 4 * 60 * 1000 });
+// The real `npm install` tests only talk to the loopback registry below, so a
+// stall should fail the test well before the CI shard watchdog fires.
+vi.setConfig({ testTimeout: 60 * 1000 });
 
 const repoRoot = join(__dirname, '../../../../..');
 
@@ -136,111 +155,176 @@ describe('importBuilders()', () => {
     );
   });
 
-  // this test creates symlinks which require admin by default on Windows
-  it.skipIf(isWindows)(
-    'should install and import 1st party Builders with explicit version',
-    async () => {
-      const cwd = await getWriteableDirectory();
-      try {
-        const spec = '@vercel/node@2.0.0';
-        const specs = new Set([spec]);
-        const builders = await importBuilders(specs, cwd);
-        expect(builders.size).toEqual(1);
-        expect(builders.get(spec)?.pkg.name).toEqual('@vercel/node');
-        expect(builders.get(spec)?.pkg.version).toEqual('2.0.0');
-        expect(builders.get(spec)?.pkgPath).toEqual(
-          join(cwd, '.vercel/builders/node_modules/@vercel/node/package.json')
-        );
-        expect(typeof builders.get(spec)?.builder.build).toEqual('function');
-        await expect(client.stderr).toOutput(
-          '> Installing Builder: @vercel/node'
-        );
-        await expect(client.stderr).not.toOutput('npm WARN deprecated');
-      } finally {
-        await remove(cwd);
+  describe('with a real npm install', () => {
+    // Tests that run a real `npm install` resolve these synthetic packages from
+    // a loopback registry instead of registry.npmjs.org.
+    let registry: FakeNpmRegistry;
+    let registryDir: string;
+
+    beforeAll(async () => {
+      registryDir = await getWriteableDirectory();
+      // Keep npm's cache and config out of the developer's home directory.
+      vi.stubEnv('npm_config_cache', join(registryDir, 'cache'));
+      vi.stubEnv('npm_config_userconfig', join(registryDir, 'npmrc'));
+      vi.stubEnv('npm_config_audit', 'false');
+      vi.stubEnv('npm_config_fund', 'false');
+      vi.stubEnv('npm_config_update_notifier', 'false');
+      vi.stubEnv('npm_config_noproxy', '127.0.0.1,localhost');
+      registry = await startFakeNpmRegistry(
+        [
+          // `installBuilders()` always installs `@vercel/build-utils` alongside
+          // the requested Builders.
+          { name: '@vercel/build-utils', version: '1.0.0' },
+          { name: '@vercel/node', version: '2.0.0' },
+          { name: 'vercel-deno', version: '2.0.1' },
+          { name: 'vercel-bash', version: '4.1.0' },
+          {
+            name: '@frontity/now',
+            version: '1.2.0',
+            // Legacy Builders load the `@now/build-utils` symlink.
+            index: `require('@now/build-utils');\nmodule.exports = { version: 3, build() {} };\n`,
+          },
+        ],
+        registryDir
+      );
+      vi.stubEnv('npm_config_registry', `${registry.url}/`);
+    });
+
+    afterAll(async () => {
+      vi.unstubAllEnvs();
+      await registry?.close();
+      if (registryDir) await remove(registryDir);
+    });
+
+    // this test creates symlinks which require admin by default on Windows
+    it.skipIf(isWindows)(
+      'should install and import 1st party Builders with explicit version',
+      async () => {
+        const cwd = await getWriteableDirectory();
+        try {
+          const spec = '@vercel/node@2.0.0';
+          const specs = new Set([spec]);
+          const builders = await importBuilders(specs, cwd);
+          expect(builders.size).toEqual(1);
+          expect(builders.get(spec)?.pkg.name).toEqual('@vercel/node');
+          expect(builders.get(spec)?.pkg.version).toEqual('2.0.0');
+          expect(builders.get(spec)?.pkgPath).toEqual(
+            join(cwd, '.vercel/builders/node_modules/@vercel/node/package.json')
+          );
+          expect(typeof builders.get(spec)?.builder.build).toEqual('function');
+          expect(registry.requests).toEqual(
+            expect.arrayContaining([
+              '/@vercel/node',
+              '/tarballs/vercel-node-2.0.0.tgz',
+            ])
+          );
+          await expect(client.stderr).toOutput(
+            '> Installing Builder: @vercel/node'
+          );
+          await expect(client.stderr).not.toOutput('npm WARN deprecated');
+        } finally {
+          await remove(cwd);
+        }
       }
-    }
-  );
-
-  // this test creates symlinks which require admin by default on Windows
-  it.skipIf(isWindows)(
-    'should install and import 3rd party Builders',
-    async () => {
-      const cwd = await getWriteableDirectory();
-      try {
-        const spec = 'vercel-deno@2.0.1';
-        const tarballSpec = 'https://files-roan-zeta.vercel.app';
-        const specs = new Set([spec, tarballSpec]);
-        const builders = await importBuilders(specs, cwd);
-        expect(builders.size).toEqual(2);
-        expect(builders.get(spec)?.pkg.name).toEqual('vercel-deno');
-        expect(builders.get(spec)?.pkg.version).toEqual('2.0.1');
-        expect(builders.get(spec)?.pkgPath).toEqual(
-          join(cwd, '.vercel/builders/node_modules/vercel-deno/package.json')
-        );
-        expect(typeof builders.get(spec)?.builder.build).toEqual('function');
-        expect(builders.get(tarballSpec)?.pkg.name).toEqual('vercel-bash');
-        expect(builders.get(tarballSpec)?.pkg.version).toEqual('4.1.0');
-        expect(builders.get(tarballSpec)?.pkgPath).toEqual(
-          join(cwd, '.vercel/builders/node_modules/vercel-bash/package.json')
-        );
-        expect(typeof builders.get(tarballSpec)?.builder.build).toEqual(
-          'function'
-        );
-        await expect(client.stderr).toOutput(
-          `> Installing Builders: vercel-deno@2.0.1, ${tarballSpec}`
-        );
-      } finally {
-        await remove(cwd);
-      }
-    }
-  );
-
-  // this test creates symlinks which require admin by default on Windows
-  it.skipIf(isWindows)(
-    'should install and import legacy `@now/build-utils` Builders',
-    async () => {
-      const cwd = await getWriteableDirectory();
-      try {
-        const spec = '@frontity/now@1.2.0';
-        const specs = new Set([spec]);
-        const builders = await importBuilders(specs, cwd);
-        expect(builders.size).toEqual(1);
-        expect(builders.get(spec)?.pkg.name).toEqual('@frontity/now');
-        expect(builders.get(spec)?.pkg.version).toEqual('1.2.0');
-        expect(builders.get(spec)?.pkgPath).toEqual(
-          join(cwd, '.vercel/builders/node_modules/@frontity/now/package.json')
-        );
-        expect(typeof builders.get(spec)?.builder.build).toEqual('function');
-      } finally {
-        await remove(cwd);
-      }
-    }
-  );
-
-  it('should throw when importing a Builder that is not on npm registry', async () => {
-    let err: Error | undefined;
-    const cwd = await getWriteableDirectory();
-    try {
-      const spec = '@vercel/does-not-exist@0.0.1';
-      const specs = new Set([spec]);
-      await importBuilders(specs, cwd);
-    } catch (_err: unknown) {
-      err = _err as Error;
-    } finally {
-      await remove(cwd);
-    }
-
-    if (!err) {
-      throw new Error('Expected `err` to be defined');
-    }
-
-    expect(err.message).toEqual(
-      'The package `@vercel/does-not-exist` is not published on the npm registry'
     );
-    expect((err as any).link).toEqual(
-      'https://vercel.link/builder-dependencies-install-failed'
+
+    // this test creates symlinks which require admin by default on Windows
+    it.skipIf(isWindows)(
+      'should install and import 3rd party Builders',
+      async () => {
+        const cwd = await getWriteableDirectory();
+        try {
+          const spec = 'vercel-deno@2.0.1';
+          const tarballSpec = registry.tarballUrl('vercel-bash', '4.1.0');
+          const specs = new Set([spec, tarballSpec]);
+          const builders = await importBuilders(specs, cwd);
+          expect(builders.size).toEqual(2);
+          expect(builders.get(spec)?.pkg.name).toEqual('vercel-deno');
+          expect(builders.get(spec)?.pkg.version).toEqual('2.0.1');
+          expect(builders.get(spec)?.pkgPath).toEqual(
+            join(cwd, '.vercel/builders/node_modules/vercel-deno/package.json')
+          );
+          expect(typeof builders.get(spec)?.builder.build).toEqual('function');
+          expect(builders.get(tarballSpec)?.pkg.name).toEqual('vercel-bash');
+          expect(builders.get(tarballSpec)?.pkg.version).toEqual('4.1.0');
+          expect(builders.get(tarballSpec)?.pkgPath).toEqual(
+            join(cwd, '.vercel/builders/node_modules/vercel-bash/package.json')
+          );
+          expect(typeof builders.get(tarballSpec)?.builder.build).toEqual(
+            'function'
+          );
+          expect(registry.requests).toEqual(
+            expect.arrayContaining([
+              '/vercel-deno',
+              '/tarballs/vercel-deno-2.0.1.tgz',
+              '/tarballs/vercel-bash-4.1.0.tgz',
+            ])
+          );
+          await expect(client.stderr).toOutput(
+            `> Installing Builders: vercel-deno@2.0.1, ${tarballSpec}`
+          );
+        } finally {
+          await remove(cwd);
+        }
+      }
     );
+
+    // this test creates symlinks which require admin by default on Windows
+    it.skipIf(isWindows)(
+      'should install and import legacy `@now/build-utils` Builders',
+      async () => {
+        const cwd = await getWriteableDirectory();
+        try {
+          const spec = '@frontity/now@1.2.0';
+          const specs = new Set([spec]);
+          const builders = await importBuilders(specs, cwd);
+          expect(builders.size).toEqual(1);
+          expect(builders.get(spec)?.pkg.name).toEqual('@frontity/now');
+          expect(builders.get(spec)?.pkg.version).toEqual('1.2.0');
+          expect(builders.get(spec)?.pkgPath).toEqual(
+            join(
+              cwd,
+              '.vercel/builders/node_modules/@frontity/now/package.json'
+            )
+          );
+          expect(typeof builders.get(spec)?.builder.build).toEqual('function');
+          expect(registry.requests).toEqual(
+            expect.arrayContaining([
+              '/@frontity/now',
+              '/tarballs/frontity-now-1.2.0.tgz',
+            ])
+          );
+        } finally {
+          await remove(cwd);
+        }
+      }
+    );
+
+    it('should throw when importing a Builder that is not on npm registry', async () => {
+      let err: Error | undefined;
+      const cwd = await getWriteableDirectory();
+      try {
+        const spec = '@vercel/does-not-exist@0.0.1';
+        const specs = new Set([spec]);
+        await importBuilders(specs, cwd);
+      } catch (_err: unknown) {
+        err = _err as Error;
+      } finally {
+        await remove(cwd);
+      }
+
+      if (!err) {
+        throw new Error('Expected `err` to be defined');
+      }
+
+      expect(err.message).toEqual(
+        'The package `@vercel/does-not-exist` is not published on the npm registry'
+      );
+      expect(registry.requests).toContain('/@vercel/does-not-exist');
+      expect((err as any).link).toEqual(
+        'https://vercel.link/builder-dependencies-install-failed'
+      );
+    });
   });
 
   it('should attempt install when builder is missing locally and throw MODULE_NOT_FOUND on 2nd pass when install returns empty', async () => {
@@ -843,67 +927,57 @@ describe('importBuilders()', () => {
   describe('native binary resolution', () => {
     beforeEach(() => {
       vi.mocked(installBuildersModule.installBuilders).mockClear();
+      vltMocks.createVltBuilderImporter.mockClear();
       vltMocks.importBuilders.mockReset().mockResolvedValue(new Map());
+      vltMocks.loadEmbeddedBuilderIndex.mockReset();
       vltMocks.loadEmbeddedBuilderGraphs.mockReset();
     });
 
     afterEach(() => {
       delete process.env.VERCEL_VC_NATIVE;
-      delete process.env.VERCEL_EXPERIMENTAL_VLT_BUILDERS;
+      delete process.env.VERCEL_CLI_MANAGED_BUILDERS;
       delete process.env.VERCEL_BUILDERS_DIR;
     });
 
-    it('should keep native Builder imports on the legacy path without the vlt opt-in', async () => {
+    it('should keep native explicit versions on the project-local legacy path', async () => {
       process.env.VERCEL_VC_NATIVE = '1';
-      const cwd = await getWriteableDirectory();
-
-      try {
-        const builders = await importBuilders(new Set(['@vercel/node']), cwd);
-
-        expect(vltMocks.loadEmbeddedBuilderGraphs).not.toHaveBeenCalled();
-        expect(vltMocks.importBuilders).not.toHaveBeenCalled();
-        expect(builders.get('@vercel/node')?.pkg.name).toBe('@vercel/node');
-      } finally {
-        await remove(cwd);
-      }
-    });
-
-    it('should ignore the vlt opt-in outside the native binary', async () => {
-      process.env.VERCEL_EXPERIMENTAL_VLT_BUILDERS = '1';
-      const builders = await importBuilders(
-        new Set(['@vercel/node']),
-        process.cwd()
-      );
-
-      expect(vltMocks.loadEmbeddedBuilderGraphs).not.toHaveBeenCalled();
-      expect(vltMocks.importBuilders).not.toHaveBeenCalled();
-      expect(builders.get('@vercel/node')?.pkg.name).toBe('@vercel/node');
-    });
-
-    it('should keep native opted-in explicit versions on the legacy path', async () => {
-      process.env.VERCEL_VC_NATIVE = '1';
-      process.env.VERCEL_EXPERIMENTAL_VLT_BUILDERS = '1';
       mockInstallWritingVersion('9.9.9', '@vercel/node');
       const versionedSpec = '@vercel/node@9.9.9';
       const cwd = await getWriteableDirectory();
+      process.env.VERCEL_BUILDERS_DIR = join(cwd, 'configured-builders-cache');
+      const span = new Span({ name: 'test' });
+      const setAttributes = vi.spyOn(span, 'setAttributes');
 
       try {
-        const builders = await importBuilders(new Set([versionedSpec]), cwd);
+        const builders = await importBuilders(
+          new Set([versionedSpec]),
+          cwd,
+          span
+        );
 
-        expect(vltMocks.loadEmbeddedBuilderGraphs).not.toHaveBeenCalled();
+        expect(vltMocks.loadEmbeddedBuilderIndex).not.toHaveBeenCalled();
         expect(vltMocks.importBuilders).not.toHaveBeenCalled();
         expect(installBuildersModule.installBuilders).toHaveBeenCalledTimes(1);
-        expect(builders.get(versionedSpec)?.pkg.version).toBe('9.9.9');
+        expect(builders.get(versionedSpec)?.pkgPath).toBe(
+          join(
+            cwd,
+            '.vercel',
+            'builders',
+            'node_modules',
+            '@vercel/node',
+            'package.json'
+          )
+        );
+        expect(setAttributes).not.toHaveBeenCalled();
       } finally {
         await remove(cwd);
       }
     });
 
-    it('should use vlt for a bare pinned Builder and legacy for an explicit version when opted in', async () => {
+    it('should use vlt for a bare pinned Builder and legacy for an explicit version by default', async () => {
       process.env.VERCEL_VC_NATIVE = '1';
-      process.env.VERCEL_EXPERIMENTAL_VLT_BUILDERS = '1';
       const vltBuilder = { pkg: { name: '@vercel/node' } };
-      vltMocks.loadEmbeddedBuilderGraphs.mockResolvedValue({ builders: {} });
+      vltMocks.loadEmbeddedBuilderIndex.mockResolvedValue({ builders: {} });
       vltMocks.importBuilders.mockResolvedValue(
         new Map([['@vercel/node', vltBuilder]])
       );
@@ -917,9 +991,13 @@ describe('importBuilders()', () => {
           cwd
         );
 
-        expect(vltMocks.loadEmbeddedBuilderGraphs).toHaveBeenCalledTimes(1);
+        expect(vltMocks.loadEmbeddedBuilderIndex).toHaveBeenCalledTimes(1);
+        expect(vltMocks.createVltBuilderImporter).toHaveBeenCalledWith(
+          expect.objectContaining({ cacheRoot: undefined })
+        );
         expect(vltMocks.importBuilders).toHaveBeenCalledWith(
-          new Map([['@vercel/node', '@vercel/node']])
+          new Map([['@vercel/node', '@vercel/node']]),
+          undefined
         );
         expect(installBuildersModule.installBuilders).toHaveBeenCalledTimes(1);
         expect(builders.get('@vercel/node')).toBe(vltBuilder);
@@ -964,50 +1042,6 @@ describe('importBuilders()', () => {
       }
     });
 
-    it('should reinstall a stale URL-pinned CLI builder in the native binary', async () => {
-      process.env.VERCEL_VC_NATIVE = '1';
-      const cwd = await getWriteableDirectory();
-      const buildersDir = join(cwd, '.vercel', 'builders');
-      const builderModuleDir = join(
-        buildersDir,
-        'node_modules',
-        '@vercel/node'
-      );
-
-      await outputJSON(join(builderModuleDir, 'package.json'), {
-        name: '@vercel/node',
-        version: '0.0.0-stale',
-        main: 'index.js',
-      });
-      await writeFile(
-        join(builderModuleDir, 'index.js'),
-        `exports.version = 3; exports.build = async function() { return { output: {} }; };`
-      );
-      await outputJSON(join(buildersDir, 'package.json'), {
-        dependencies: { '@vercel/node': '^0.0.0' },
-      });
-
-      mockInstallWritingVersion('9.9.9', '@vercel/node');
-      try {
-        const builders = await importBuilders(new Set(['@vercel/node']), cwd);
-        expect(installBuildersModule.installBuilders).toHaveBeenCalledWith(
-          buildersDir,
-          new Set(['https://example.com/tarballs/vercel-node.tgz']),
-          undefined,
-          new Map([['@vercel/node', 'preview-pack-mismatch']]),
-          new Map([
-            ['@vercel/node', 'https://example.com/tarballs/vercel-node.tgz'],
-          ])
-        );
-        expect(builders.get('@vercel/node')?.pkgPath).toEqual(
-          join(buildersDir, 'node_modules', '@vercel/node', 'package.json')
-        );
-        expect(builders.get('@vercel/node')?.dynamicallyInstalled).toBe(true);
-      } finally {
-        await remove(cwd);
-      }
-    });
-
     it('should not fall back to CLI dependencies in the native binary', async () => {
       process.env.VERCEL_VC_NATIVE = '1';
       const cwd = await getWriteableDirectory();
@@ -1030,36 +1064,108 @@ describe('importBuilders()', () => {
       }
     });
 
-    it('should resolve from `VERCEL_BUILDERS_DIR` when set', async () => {
+    it('should use vlt and the Builders directory with `VERCEL_CLI_MANAGED_BUILDERS` outside the native binary', async () => {
+      process.env.VERCEL_CLI_MANAGED_BUILDERS = '1';
+      const cwd = await getWriteableDirectory();
+      const buildersDir = join(cwd, 'managed-builders-cache');
+      process.env.VERCEL_BUILDERS_DIR = buildersDir;
+      const vltBuilder = { pkg: { name: '@vercel/node' } };
+      vltMocks.loadEmbeddedBuilderIndex.mockResolvedValue({ builders: {} });
+      vltMocks.importBuilders.mockResolvedValue(
+        new Map([['@vercel/node', vltBuilder]])
+      );
+
+      try {
+        const builders = await importBuilders(new Set(['@vercel/node']), cwd);
+        expect(installBuildersModule.installBuilders).not.toHaveBeenCalled();
+        expect(vltMocks.createVltBuilderImporter).toHaveBeenCalledWith(
+          expect.objectContaining({ cacheRoot: buildersDir })
+        );
+        expect(builders.get('@vercel/node')).toBe(vltBuilder);
+      } finally {
+        await remove(cwd);
+      }
+    });
+
+    it('should not fall back to CLI dependencies with `VERCEL_CLI_MANAGED_BUILDERS`', async () => {
+      process.env.VERCEL_CLI_MANAGED_BUILDERS = '1';
+      const cwd = await getWriteableDirectory();
+      const buildersDir = join(cwd, '.vercel', 'builders');
+
+      mockInstallWritingVersion('9.9.9', '@vercel/node');
+      const spec = '@vercel/node@9.9.9';
+      try {
+        const builders = await importBuilders(new Set([spec]), cwd);
+        expect(installBuildersModule.installBuilders).toHaveBeenCalledTimes(1);
+        expect(builders.get(spec)?.pkgPath).toEqual(
+          join(buildersDir, 'node_modules', '@vercel/node', 'package.json')
+        );
+      } finally {
+        await remove(cwd);
+      }
+    });
+
+    it('should require an absolute `VERCEL_BUILDERS_DIR` in the native binary', async () => {
+      process.env.VERCEL_VC_NATIVE = '1';
+      process.env.VERCEL_BUILDERS_DIR = 'relative-builders-cache';
+
+      await expect(
+        importBuilders(new Set(['@vercel/node']), process.cwd())
+      ).rejects.toThrow('VERCEL_BUILDERS_DIR must be an absolute path.');
+      expect(vltMocks.loadEmbeddedBuilderIndex).not.toHaveBeenCalled();
+    });
+
+    it('should ignore `VERCEL_BUILDERS_DIR` outside the native binary', async () => {
+      const cwd = await getWriteableDirectory();
+      process.env.VERCEL_BUILDERS_DIR = join(cwd, 'empty-builders-cache');
+
+      try {
+        const builders = await importBuilders(new Set(['@vercel/node']), cwd);
+        expect(installBuildersModule.installBuilders).not.toHaveBeenCalled();
+        expect(builders.get('@vercel/node')?.pkgPath).toEqual(
+          join(repoRoot, 'packages/node/package.json')
+        );
+      } finally {
+        await remove(cwd);
+      }
+    });
+
+    it('should use and trace `VERCEL_BUILDERS_DIR` as the native vlt cache root', async () => {
       process.env.VERCEL_VC_NATIVE = '1';
       const cwd = await getWriteableDirectory();
       const buildersDir = join(cwd, 'custom-builders-cache');
       process.env.VERCEL_BUILDERS_DIR = buildersDir;
-
-      const builderModuleDir = join(
-        buildersDir,
-        'node_modules',
-        'fake-cached-builder'
-      );
-      await outputJSON(join(builderModuleDir, 'package.json'), {
-        name: 'fake-cached-builder',
-        version: '1.0.0',
-        main: 'index.js',
-      });
-      await writeFile(
-        join(builderModuleDir, 'index.js'),
-        `exports.version = 3; exports.build = async function() { return { output: {} }; };`
+      const vltBuilder = { pkg: { name: '@vercel/node' } };
+      vltMocks.loadEmbeddedBuilderIndex.mockResolvedValue({ builders: {} });
+      vltMocks.importBuilders.mockResolvedValue(
+        new Map([['@vercel/node', vltBuilder]])
       );
 
+      const span = new Span({ name: 'test' });
+      const setAttributes = vi.spyOn(span, 'setAttributes');
       try {
         const builders = await importBuilders(
-          new Set(['fake-cached-builder']),
-          cwd
+          new Set(['@vercel/node']),
+          cwd,
+          span
         );
         expect(installBuildersModule.installBuilders).not.toHaveBeenCalled();
-        expect(builders.get('fake-cached-builder')?.pkgPath).toEqual(
-          join(builderModuleDir, 'package.json')
+        // The vlt imports stay cached once an earlier test loaded them.
+        expect(
+          vltMocks.loadEmbeddedBuilderIndex.mock.calls.length
+        ).toBeLessThanOrEqual(1);
+        expect(vltMocks.createVltBuilderImporter).toHaveBeenCalledWith(
+          expect.objectContaining({ cacheRoot: buildersDir })
         );
+        expect(vltMocks.importBuilders).toHaveBeenCalledWith(
+          new Map([['@vercel/node', '@vercel/node']]),
+          span
+        );
+        expect(builders.get('@vercel/node')).toBe(vltBuilder);
+        expect(setAttributes).toHaveBeenCalledWith({
+          'builders.directory.enabled': 'true',
+          'builders.directory.path': buildersDir,
+        });
       } finally {
         await remove(cwd);
       }

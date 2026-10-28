@@ -12,6 +12,7 @@ import { printError } from '../../util/error';
 import { isAPIError } from '../../util/errors-ts';
 import { getCommandName } from '../../util/pkg-name';
 import { validateJsonOutput } from '../../util/output-format';
+import { readOnOffOption } from '../../util/on-off-option';
 
 export default async function edit(client: Client, argv: string[]) {
   const telemetry = new AiGatewayRulesEditTelemetryClient({
@@ -26,20 +27,19 @@ export default async function edit(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
 
   const [ruleId] = args;
-  const enable = opts['--enable'] as boolean | undefined;
-  const disable = opts['--disable'] as boolean | undefined;
   const destination = opts['--destination'] as string | undefined;
   const reason = opts['--reason'] as string | undefined;
   const description = opts['--description'] as string | undefined;
 
   telemetry.trackCliArgumentRuleId(ruleId);
-  telemetry.trackCliFlagEnable(enable);
-  telemetry.trackCliFlagDisable(disable);
+  telemetry.trackCliFlagEnable(opts['--enable']);
+  telemetry.trackCliFlagNoEnable(opts['--no-enable']);
+  telemetry.trackCliFlagDisable(opts['--disable']);
   telemetry.trackCliOptionDestination(destination);
   telemetry.trackCliOptionReason(reason);
   telemetry.trackCliOptionDescription(description);
@@ -48,19 +48,24 @@ export default async function edit(client: Client, argv: string[]) {
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
   if (!ruleId) {
     output.error(
-      `${getCommandName('ai-gateway rules edit <ruleId>')} expects a rule id.`
+      `${getCommandName('ai-gateway rules update <ruleId>')} expects a rule id.`
     );
-    return 1;
+    return 2;
   }
-  if (enable && disable) {
-    output.error('Pass only one of --enable or --disable.');
-    return 1;
+  const enable = readOnOffOption(client, opts, {
+    on: '--enable',
+    off: '--no-enable',
+    oldOff: '--disable',
+  });
+  if ('error' in enable) {
+    output.error(enable.error);
+    return 2;
   }
 
   const action: RuleAction | undefined =
@@ -70,11 +75,11 @@ export default async function edit(client: Client, argv: string[]) {
           ...(reason ? { reason } : {}),
         }
       : undefined;
-  const enabled = enable ? true : disable ? false : undefined;
+  const enabled = enable.value;
 
   if (enabled === undefined && description === undefined && !action) {
     output.error(
-      'Nothing to edit. Pass --enable/--disable, --destination, --reason, or --description.'
+      'Nothing to edit. Pass --enable, --no-enable, --destination, --reason, or --description.'
     );
     return 1;
   }
@@ -84,7 +89,7 @@ export default async function edit(client: Client, argv: string[]) {
   }
 
   const editStamp = stamp();
-  output.spinner('Editing routing rule');
+  output.spinner('Updating routing rule');
 
   try {
     const rule = await updateRule(client, {
@@ -100,7 +105,7 @@ export default async function edit(client: Client, argv: string[]) {
       client.stdout.write(`${JSON.stringify(rule, null, 2)}\n`);
     } else {
       output.success(
-        `Routing rule ${chalk.bold(rule.ruleId)} edited ${editStamp()}`
+        `Routing rule ${chalk.bold(rule.ruleId)} updated ${editStamp()}`
       );
     }
 

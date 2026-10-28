@@ -1,18 +1,18 @@
 import chalk from 'chalk';
 import table from '../output/table';
-import { generateSparkline } from '../../commands/metrics/text-output';
 import { formatAlignedLabel } from '../output/print-aligned-label';
 import {
   ACTION_COLORS,
+  formatActionTrendTable,
   formatCount,
   formatUtcTime,
   labelForAction,
-  windowNeedsDate,
 } from './format-utils';
 import type { FirewallActionSeries } from './get-firewall-metrics';
 import type { NamedCount } from './get-firewall-events';
 import {
   apiTimestampMs,
+  isRedacted,
   ruleTypeLabel,
   type PersistentActionsSummary,
   type FirewallEventAction,
@@ -110,6 +110,12 @@ export function formatPersistentActionsList(opts: {
       summary.otherActions > 0
         ? `${summary.otherActions} other ${pluralize(summary.otherActions, 'action')}`
         : null,
+      // Counted apart from the IP counts above, which cannot include them —
+      // without this the parts silently fall short of the total beside them,
+      // and on a plan that hides every address they are the whole of it.
+      summary.withheldActions > 0
+        ? `${summary.withheldActions} on hidden ${pluralize(summary.withheldActions, 'IP')}`
+        : null,
     ].filter((part): part is string => Boolean(part));
     lines.push(
       `  ${parts.join(' · ')} ${chalk.dim(`· ${summary.activeTotal} currently applied`)}`
@@ -155,6 +161,24 @@ export function formatPersistentActionsList(opts: {
     lines.push(`  ${line}`.trimEnd());
   }
 
+  // `***` in a cell is the plan withholding the value, not a firewall rule
+  // matching on asterisks. Unexplained it reads as data.
+  if (
+    opts.actions.some(
+      action =>
+        isRedacted(action.public_ip) ||
+        isRedacted(action.host) ||
+        isRedacted(action.action_type)
+    )
+  ) {
+    lines.push('');
+    lines.push(
+      chalk.dim(
+        '  *** marks detail this plan withholds for actions older than an hour.'
+      )
+    );
+  }
+
   if (opts.actions.length < opts.total) {
     lines.push('');
     lines.push(
@@ -164,64 +188,6 @@ export function formatPersistentActionsList(opts: {
 
   lines.push('');
   return lines.join('\n');
-}
-
-export function formatActionTrendTable(series: FirewallActionSeries[]): string {
-  const allTs = new Set<string>();
-  for (const s of series) {
-    for (const p of s.timeseries) allTs.add(p.timestamp);
-  }
-  const axis = [...allTs].sort();
-  const hasAnyTraffic = series.some(
-    s => s.total > 0 || s.timeseries.some(p => p.value > 0)
-  );
-
-  if (series.length === 0 || axis.length === 0 || !hasAnyTraffic) {
-    return chalk.dim('  No request data for this period.');
-  }
-
-  const startMs = new Date(axis[0]).getTime();
-  const endMs = new Date(axis[axis.length - 1]).getTime();
-  const needsDate = windowNeedsDate(startMs, endMs);
-
-  const header = ['Action', 'Trend', 'Total', 'Peak', 'Peak at'].map(h =>
-    chalk.bold(chalk.cyan(h))
-  );
-  const rows: string[][] = [header];
-
-  for (const s of series) {
-    const byTs = new Map(s.timeseries.map(p => [p.timestamp, p.value]));
-    const values = axis.map(t => byTs.get(t) ?? 0);
-
-    let peak = 0;
-    let peakTs = '';
-    for (let i = 0; i < axis.length; i++) {
-      if (values[i] > peak) {
-        peak = values[i];
-        peakTs = axis[i];
-      }
-    }
-
-    const plain = (x: string) => x;
-    const color = s.total > 0 ? (ACTION_COLORS[s.action] ?? plain) : chalk.dim;
-    const trend = s.total > 0 ? plain : chalk.dim;
-    rows.push([
-      color(labelForAction(s.action)),
-      trend(generateSparkline(values)),
-      formatCount(s.total),
-      peak > 0 ? formatCount(peak) : '--',
-      peak > 0 ? formatUtcTime(new Date(peakTs).getTime(), needsDate) : '--',
-    ]);
-  }
-
-  const rendered = table(rows, {
-    align: ['l', 'l', 'r', 'r', 'r'],
-    hsep: 3,
-  });
-  return rendered
-    .split('\n')
-    .map(line => `  ${line}`)
-    .join('\n');
 }
 
 export function formatPersistentActionInspect(opts: {

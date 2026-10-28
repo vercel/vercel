@@ -2,10 +2,12 @@ import { getNodeExecPath } from '@vercel/build-utils';
 import type { Framework, FrameworkDetectionItem } from '@vercel/frameworks';
 import { spawnSync } from 'child_process';
 import { DetectorFilesystem } from './detectors/filesystem';
+import { toBuildpackRuntime } from './buildpack-runtimes';
 
 interface BaseFramework {
   slug: Framework['slug'];
   detectors?: Framework['detectors'];
+  supersedes?: Framework['supersedes'];
 }
 
 export interface DetectFrameworkOptions {
@@ -33,6 +35,7 @@ export interface DetectFrameworkRecordOptions {
 type MatchResult = {
   framework: BaseFramework;
   detectedVersion?: string;
+  fallback: boolean;
 };
 
 /**
@@ -63,9 +66,13 @@ function filterFrameworkList<T extends BaseFramework>(
     return frameworkList;
   }
   return frameworkList.filter(f => {
-    // Check if framework has experimental property and filter it out if true
     const experimental = (f as { experimental?: boolean }).experimental;
-    return !experimental;
+    if (!experimental) {
+      return true;
+    }
+    // Buildpack-backed runtime frameworks are enabled by their own
+    // flag and do not require experimental frameworks to be enabled.
+    return toBuildpackRuntime(f.slug) !== undefined;
   });
 }
 
@@ -93,6 +100,7 @@ async function matches(
     path,
     matchContent,
     matchPackage,
+    fallback = false,
   }: FrameworkDetectionItem): Promise<MatchResult | undefined> => {
     if (matchPackage && matchContent) {
       throw new Error(
@@ -139,12 +147,14 @@ async function matches(
         return {
           framework,
           detectedVersion: match[3],
+          fallback,
         };
       }
     }
 
     return {
       framework,
+      fallback,
     };
   };
 
@@ -179,6 +189,7 @@ async function matches(
   return {
     framework,
     detectedVersion,
+    fallback: result.some(match => match?.fallback),
   };
 }
 
@@ -210,6 +221,38 @@ export function removeSupersededFrameworks(
   }
 }
 
+function orderFrameworkMatches<T extends BaseFramework>(
+  matches: Array<(MatchResult & { framework: T }) | null>
+): Array<MatchResult & { framework: T }> {
+  const normalMatches = matches.filter(
+    (match): match is MatchResult & { framework: T } =>
+      Boolean(match && !match.fallback)
+  );
+  const fallbackMatches = matches.filter(
+    (match): match is MatchResult & { framework: T } => Boolean(match?.fallback)
+  );
+
+  const normalFrameworks = normalMatches.map(match => match.framework);
+  removeSupersededFrameworks(normalFrameworks);
+
+  const fallbackFrameworks = fallbackMatches.map(match => match.framework);
+  for (const framework of normalFrameworks) {
+    for (const slug of framework.supersedes ?? []) {
+      removeSupersededFramework(fallbackFrameworks, slug);
+    }
+  }
+  removeSupersededFrameworks(fallbackFrameworks);
+
+  return [
+    ...normalMatches.filter(match =>
+      normalFrameworks.includes(match.framework)
+    ),
+    ...fallbackMatches.filter(match =>
+      fallbackFrameworks.includes(match.framework)
+    ),
+  ];
+}
+
 // TODO: Deprecate and replace with `detectFrameworkRecord`
 export async function detectFramework({
   fs,
@@ -221,15 +264,12 @@ export async function detectFramework({
     useExperimentalFrameworks
   );
   const result = await Promise.all(
-    filteredList.map(async frameworkMatch => {
-      if (await matches(fs, frameworkMatch)) {
-        return frameworkMatch;
-      }
-      return null;
+    filteredList.map(async framework => {
+      const match = await matches(fs, framework);
+      return match ? { ...match, framework } : null;
     })
   );
-  removeSupersededFrameworks(result);
-  return result.find(res => res !== null)?.slug ?? null;
+  return orderFrameworkMatches(result)[0]?.framework.slug ?? null;
 }
 
 /**
@@ -245,15 +285,12 @@ export async function detectFrameworks({
     useExperimentalFrameworks
   );
   const result = await Promise.all(
-    filteredList.map(async frameworkMatch => {
-      if (await matches(fs, frameworkMatch)) {
-        return frameworkMatch;
-      }
-      return null;
+    filteredList.map(async framework => {
+      const match = await matches(fs, framework);
+      return match ? { ...match, framework } : null;
     })
   );
-  removeSupersededFrameworks(result);
-  return result.filter(res => res !== null) as Framework[];
+  return orderFrameworkMatches(result).map(match => match.framework);
 }
 
 /**
@@ -275,19 +312,15 @@ export async function detectFrameworkRecord({
     useExperimentalFrameworks
   );
   const result = await Promise.all(
-    filteredList.map(async frameworkMatch => {
-      const matchResult = await matches(fs, frameworkMatch);
-      if (matchResult) {
-        return {
-          ...frameworkMatch,
-          detectedVersion: matchResult?.detectedVersion,
-        };
-      }
-      return null;
+    filteredList.map(async framework => {
+      const match = await matches(fs, framework);
+      return match ? { ...match, framework } : null;
     })
   );
-  removeSupersededFrameworks(result);
-  return result.find(res => res !== null) ?? null;
+  const match = orderFrameworkMatches(result)[0];
+  return match
+    ? { ...match.framework, detectedVersion: match.detectedVersion }
+    : null;
 }
 
 export function detectFrameworkVersion(

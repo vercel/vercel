@@ -35,38 +35,51 @@ describe('project observability', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    client.nonInteractive = false;
   });
 
-  it('enables Observability Plus for a named project after confirmation', async () => {
+  function trackPut() {
+    const bodies: unknown[] = [];
+    const teamIds: unknown[] = [];
+    client.scenario.put(
+      '/v1/observability/manage/configuration/projects/:projectIdOrName',
+      (req, res) => {
+        bodies.push(req.body);
+        teamIds.push(req.query.teamId);
+        res.json({ id: req.params.projectIdOrName });
+      }
+    );
+    return { bodies, teamIds };
+  }
+
+  function mockExit() {
+    return vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code ?? 0}`);
+    }) as () => never);
+  }
+
+  it('enables Observability Plus for a named project without a prompt', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
       name: 'my-project',
+      accountId: 'team_123',
     });
     useTeamScope();
 
-    const confirmSpy = vi
-      .spyOn(client.input, 'confirm')
-      .mockResolvedValue(true);
-
-    let requestBody: unknown;
-    client.scenario.put(
-      '/v1/observability/manage/configuration/projects/:projectIdOrName',
-      (req, res) => {
-        expect(req.params.projectIdOrName).toBe('prj_123');
-        requestBody = req.body;
-        res.json({ id: 'prj_123', disabledAt: undefined });
-      }
-    );
+    const confirmSpy = vi.spyOn(client.input, 'confirm');
+    const { bodies, teamIds } = trackPut();
 
     client.setArgv('project', 'observability', 'enable', 'my-project');
     const exitCode = await project(client);
     expect(exitCode).toBe(0);
-    expect(confirmSpy).toHaveBeenCalled();
-    expect(requestBody).toEqual({ disabled: false });
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(bodies).toEqual([{ disabled: false }]);
+    expect(teamIds).toEqual(['team_123']);
     await expect(client.stderr).toOutput(
-      'Observability Plus is enabled for my-project.'
+      'Observability Plus is enabled for my-project on team my-team.'
     );
+    expect(client.stderr.getFullOutput()).not.toContain('incur charges');
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
         key: 'subcommand:observability',
@@ -75,22 +88,14 @@ describe('project observability', () => {
     ]);
   });
 
-  it('outputs JSON with --format json after confirmation', async () => {
+  it('outputs JSON when enabling with --format json', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
       name: 'my-project',
     });
     useTeamScope();
-
-    vi.spyOn(client.input, 'confirm').mockResolvedValue(true);
-
-    client.scenario.put(
-      '/v1/observability/manage/configuration/projects/:projectIdOrName',
-      (_req, res) => {
-        res.json({ id: 'prj_123' });
-      }
-    );
+    trackPut();
 
     client.setArgv(
       'project',
@@ -111,53 +116,17 @@ describe('project observability', () => {
     });
   });
 
-  it('cancels without charging when the user declines confirmation', async () => {
+  it('enables non-interactively without --yes or --scope', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
       name: 'my-project',
+      accountId: 'team_123',
     });
     useTeamScope();
-
-    vi.spyOn(client.input, 'confirm').mockResolvedValue(false);
-
-    let putCalled = false;
-    client.scenario.put(
-      '/v1/observability/manage/configuration/projects/:projectIdOrName',
-      (_req, res) => {
-        putCalled = true;
-        res.json({ id: 'prj_123' });
-      }
-    );
-
-    client.setArgv('project', 'observability', 'enable', 'my-project');
-    const exitCode = await project(client);
-    expect(exitCode).toBe(0);
-    expect(putCalled).toBe(false);
-    await expect(client.stderr).toOutput('Canceled');
-  });
-
-  it('refuses to charge non-interactively and emits an action_required payload', async () => {
-    useProject({
-      ...defaultProject,
-      id: 'prj_123',
-      name: 'my-project',
-    });
+    const { bodies } = trackPut();
 
     client.nonInteractive = true;
-    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
-      throw new Error('__exit__');
-    }) as never);
-
-    let putCalled = false;
-    client.scenario.put(
-      '/v1/observability/manage/configuration/projects/:projectIdOrName',
-      (_req, res) => {
-        putCalled = true;
-        res.json({ id: 'prj_123' });
-      }
-    );
-
     client.setArgv(
       'project',
       'observability',
@@ -166,48 +135,142 @@ describe('project observability', () => {
       '--non-interactive'
     );
 
-    await expect(project(client)).rejects.toThrow('__exit__');
-
-    const payload = JSON.parse(client.stdout.getFullOutput());
-    expect(payload).toMatchObject({
-      status: 'action_required',
-      reason: 'confirmation_required',
-      action: 'confirmation_required',
-      userActionRequired: true,
-    });
-    expect(payload.next?.[0]?.command).toContain(
-      'project observability enable'
+    const exitCode = await project(client);
+    expect(exitCode).toBe(0);
+    expect(bodies).toEqual([{ disabled: false }]);
+    await expect(client.stderr).toOutput(
+      'Observability Plus is enabled for my-project on team my-team.'
     );
-    expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(putCalled).toBe(false);
   });
 
-  it('refuses to charge when stdin is not a TTY (no payload, human error)', async () => {
+  it('enables when stdin is not a TTY', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
       name: 'my-project',
     });
-
+    useTeamScope();
     client.stdin.isTTY = false;
+    const { bodies } = trackPut();
 
-    let putCalled = false;
+    client.setArgv('project', 'observability', 'enable', 'my-project');
+    const exitCode = await project(client);
+    expect(exitCode).toBe(0);
+    expect(bodies).toEqual([{ disabled: false }]);
+    expect(client.stderr.getFullOutput()).not.toContain(
+      'must be run interactively'
+    );
+  });
+
+  it('refuses to enable when VERCEL_ORG_ID names a different team', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+      accountId: 'team_123',
+    });
+    useTeamScope();
+    vi.stubEnv('VERCEL_ORG_ID', 'team_someone_else');
+    mockExit();
+    const { bodies } = trackPut();
+
+    client.nonInteractive = true;
+    client.setArgv(
+      'project',
+      'observability',
+      'enable',
+      'my-project',
+      '--non-interactive'
+    );
+
+    try {
+      await expect(project(client)).rejects.toThrow('exit:1');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    expect(payload).toMatchObject({ status: 'error', reason: 'conflict' });
+    expect(payload.message).toContain(
+      "Can't enable Observability Plus for my-project."
+    );
+    expect(bodies).toEqual([]);
+  });
+
+  it('leaves plan availability to the API', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+    useTeamScope('hobby');
+
+    const confirmSpy = vi.spyOn(client.input, 'confirm');
     client.scenario.put(
       '/v1/observability/manage/configuration/projects/:projectIdOrName',
       (_req, res) => {
-        putCalled = true;
-        res.json({ id: 'prj_123' });
+        res.status(402).json({
+          error: {
+            code: 'payment_required',
+            message: 'Observability Plus requires a Pro or Enterprise plan.',
+          },
+        });
       }
     );
 
     client.setArgv('project', 'observability', 'enable', 'my-project');
     const exitCode = await project(client);
     expect(exitCode).toBe(1);
-    expect(putCalled).toBe(false);
-    expect(client.stdout.getFullOutput().trim()).toBe('');
+    expect(confirmSpy).not.toHaveBeenCalled();
     await expect(client.stderr).toOutput(
-      'This command must be run interactively'
+      'Observability Plus requires a Pro or Enterprise plan.'
     );
+  });
+
+  it('reports a plan refusal to agents as plan_limit', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+      accountId: 'team_123',
+    });
+    useTeamScope('hobby');
+    mockExit();
+    client.scenario.put(
+      '/v1/observability/manage/configuration/projects/:projectIdOrName',
+      (_req, res) => {
+        res.status(402).json({
+          error: {
+            code: 'payment_required',
+            message: 'Observability Plus requires a Pro or Enterprise plan.',
+          },
+        });
+      }
+    );
+
+    client.nonInteractive = true;
+    client.setArgv(
+      'project',
+      'observability',
+      'enable',
+      'my-project',
+      '--non-interactive'
+    );
+
+    await expect(project(client)).rejects.toThrow('exit:1');
+
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    expect(payload).toMatchObject({
+      status: 'error',
+      reason: 'plan_limit',
+      message:
+        "Couldn't enable Observability Plus for my-project on team my-team. It may not be available on the current plan.",
+      userActionRequired: true,
+      data: {
+        apiMessage: 'Observability Plus requires a Pro or Enterprise plan.',
+      },
+    });
+    expect(payload.hint).toContain('Pro or Enterprise team');
   });
 
   it('returns 2 when the action is missing or invalid', async () => {
@@ -228,37 +291,6 @@ describe('project observability', () => {
     const exitCode = await project(client);
     expect(exitCode).toBe(1);
     await expect(client.stderr).toOutput('does-not-exist');
-  });
-
-  it('refuses on the Hobby plan without prompting or charging', async () => {
-    useProject({
-      ...defaultProject,
-      id: 'prj_123',
-      name: 'my-project',
-    });
-    useTeamScope('hobby');
-
-    const confirmSpy = vi
-      .spyOn(client.input, 'confirm')
-      .mockResolvedValue(true);
-
-    let putCalled = false;
-    client.scenario.put(
-      '/v1/observability/manage/configuration/projects/:projectIdOrName',
-      (_req, res) => {
-        putCalled = true;
-        res.json({ id: 'prj_123' });
-      }
-    );
-
-    client.setArgv('project', 'observability', 'enable', 'my-project');
-    const exitCode = await project(client);
-    expect(exitCode).toBe(1);
-    expect(confirmSpy).not.toHaveBeenCalled();
-    expect(putCalled).toBe(false);
-    await expect(client.stderr).toOutput(
-      'Observability Plus requires an active Pro or Enterprise plan.'
-    );
   });
 
   it('disables Observability Plus for a named project after confirmation', async () => {
@@ -360,27 +392,17 @@ describe('project observability', () => {
     await expect(client.stderr).toOutput('Canceled');
   });
 
-  it('refuses to disable non-interactively and emits an action_required payload', async () => {
+  it('requires --yes to disable non-interactively and suggests the exact command', async () => {
+    useUser();
     useProject({
       ...defaultProject,
       id: 'prj_123',
       name: 'my-project',
     });
+    mockExit();
+    const { bodies } = trackPut();
 
     client.nonInteractive = true;
-    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
-      throw new Error('__exit__');
-    }) as never);
-
-    let putCalled = false;
-    client.scenario.put(
-      '/v1/observability/manage/configuration/projects/:projectIdOrName',
-      (_req, res) => {
-        putCalled = true;
-        res.json({ id: 'prj_123' });
-      }
-    );
-
     client.setArgv(
       'project',
       'observability',
@@ -389,20 +411,85 @@ describe('project observability', () => {
       '--non-interactive'
     );
 
-    await expect(project(client)).rejects.toThrow('__exit__');
+    await expect(project(client)).rejects.toThrow('exit:1');
 
     const payload = JSON.parse(client.stdout.getFullOutput());
     expect(payload).toMatchObject({
       status: 'action_required',
       reason: 'confirmation_required',
-      action: 'confirmation_required',
       userActionRequired: true,
+      missing: ['--yes'],
     });
-    expect(payload.next?.[0]?.command).toContain(
-      'project observability disable'
+    expect(payload.message).toContain('turn off enhanced observability');
+    expect(payload.next[0].command).toMatch(
+      /^vercel project observability disable my-project --yes\b/
     );
-    expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(putCalled).toBe(false);
+    expect(bodies).toEqual([]);
+  });
+
+  it('disables with --yes non-interactively and prints JSON', async () => {
+    useUser();
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+    const confirmSpy = vi.spyOn(client.input, 'confirm');
+    const { bodies } = trackPut();
+
+    client.nonInteractive = true;
+    client.setArgv(
+      'project',
+      'observability',
+      'disable',
+      'my-project',
+      '--yes',
+      '--json'
+    );
+
+    const exitCode = await project(client);
+    expect(exitCode).toBe(0);
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(bodies).toEqual([{ disabled: true }]);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      enabled: false,
+      projectId: 'prj_123',
+      projectName: 'my-project',
+    });
+  });
+
+  it('requires --scope with --yes to disable on a team project', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+      accountId: 'team_123',
+    });
+    useTeamScope();
+    mockExit();
+    const { bodies } = trackPut();
+
+    client.nonInteractive = true;
+    client.setArgv(
+      'project',
+      'observability',
+      'disable',
+      'my-project',
+      '--yes',
+      '--non-interactive'
+    );
+
+    await expect(project(client)).rejects.toThrow('exit:1');
+
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    expect(payload).toMatchObject({
+      reason: 'missing_scope',
+      missing: ['--scope'],
+    });
+    expect(payload.next[0].command).toMatch(
+      /^vercel project observability disable my-project --yes --scope my-team\b/
+    );
+    expect(bodies).toEqual([]);
   });
 
   it('resolves the project from the linked directory when no name is given', async () => {
@@ -439,7 +526,7 @@ describe('project observability', () => {
     expect(exitCode).toBe(0);
     expect(requestBody).toEqual({ disabled: true });
     await expect(client.stderr).toOutput(
-      'Observability Plus is disabled for linked-project.'
+      'Observability Plus is disabled for linked-project on team '
     );
   });
 });

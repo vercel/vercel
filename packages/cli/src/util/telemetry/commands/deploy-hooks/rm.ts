@@ -10,7 +10,7 @@ export class DeployHooksRmTelemetryClient
     if (id) {
       this.trackCliArgument({
         arg: 'id',
-        value: id,
+        value: this.redactedValue,
       });
     }
   }

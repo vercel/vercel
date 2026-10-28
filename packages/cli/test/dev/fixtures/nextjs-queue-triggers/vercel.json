@@ -1,0 +1,23 @@
+{
+  "framework": "nextjs",
+  "redirects": [
+    { "source": "/api/node-jobs", "destination": "/test-app/api/status", "statusCode": 307 }
+  ],
+  "functions": {
+    "api/node-jobs.js": {
+      "experimentalTriggers": [
+        { "type": "queue/v2beta", "topic": "node-jobs", "retryAfterSeconds": 1 }
+      ]
+    },
+    "app/api/app-jobs/route.js": {
+      "experimentalTriggers": [
+        { "type": "queue/v2beta", "topic": "app-jobs", "retryAfterSeconds": 1 }
+      ]
+    },
+    "pages/api/page-jobs.js": {
+      "experimentalTriggers": [
+        { "type": "queue/v2beta", "topic": "page-jobs", "retryAfterSeconds": 1 }
+      ]
+    }
+  }
+}

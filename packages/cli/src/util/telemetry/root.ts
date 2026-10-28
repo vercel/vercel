@@ -1,6 +1,30 @@
 import CiInfo from 'ci-info';
 import { TelemetryClient } from '.';
 
+const launchTargets = [
+  'cli-support',
+  'darwin-arm64',
+  'darwin-x64',
+  'linux-arm64',
+  'linux-arm64-musl',
+  'linux-x64',
+  'linux-x64-musl',
+];
+const launchFallbackReasons = [
+  'target_missing',
+  'ENOENT',
+  'EACCES',
+  'ENOEXEC',
+  'opt_out',
+  'inherited_native_env',
+  'download_failed',
+];
+const launchSources = ['download', 'cache'];
+
+function oneOf(value: unknown, allowed: string[]): string {
+  return typeof value === 'string' && allowed.includes(value) ? value : 'other';
+}
+
 export class RootTelemetryClient extends TelemetryClient {
   trackCliExtension() {
     this.trackExtension();
@@ -31,6 +55,10 @@ export class RootTelemetryClient extends TelemetryClient {
       command: 'ai-gateway',
       value: actual,
     });
+  }
+
+  trackCliCommandTokenPass(actual: string) {
+    this.trackCliCommand({ command: 'token-pass', value: actual });
   }
 
   trackCliCommandAlias(actual: string) {
@@ -75,6 +103,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandBudgets(actual: string) {
+    this.trackCliCommand({
+      command: 'budgets',
+      value: actual,
+    });
+  }
+
   trackCliCommandBuild(actual: string) {
     this.trackCliCommand({
       command: 'build',
@@ -99,6 +134,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandCerts(actual: string) {
     this.trackCliCommand({
       command: 'certs',
+      value: actual,
+    });
+  }
+
+  trackCliCommandCi(actual: string) {
+    this.trackCliCommand({
+      command: 'ci',
       value: actual,
     });
   }
@@ -145,6 +187,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandDaemons(actual: string) {
+    this.trackCliCommand({
+      command: 'daemons',
+      value: actual,
+    });
+  }
+
   trackCliCommandDeploy(actual: string) {
     this.trackCliCommand({
       command: 'deploy',
@@ -173,6 +222,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandDrains(actual: string) {
+    this.trackCliCommand({
+      command: 'drains',
+      value: actual,
+    });
+  }
+
   trackCliCommandDns(actual: string) {
     this.trackCliCommand({
       command: 'dns',
@@ -183,6 +239,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandEnv(actual: string) {
     this.trackCliCommand({
       command: 'env',
+      value: actual,
+    });
+  }
+
+  trackCliCommandExperiments(actual: string) {
+    this.trackCliCommand({
+      command: 'experiments',
       value: actual,
     });
   }
@@ -218,6 +281,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandGuidance(actual: string) {
     this.trackCliCommand({
       command: 'guidance',
+      value: actual,
+    });
+  }
+
+  trackCliCommandHealth(actual: string) {
+    this.trackCliCommand({
+      command: 'health',
       value: actual,
     });
   }
@@ -327,9 +397,27 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandMonitors(actual: string) {
+    this.trackCliCommand({
+      command: 'monitors',
+      value: actual,
+    });
+  }
+
   trackCliCommandOpen(actual: string) {
     this.trackCliCommand({
       command: 'open',
+      value: actual,
+    });
+  }
+
+  trackCliCommandFeedback(actual: string) {
+    this.trackCliCommand({ command: 'feedback', value: actual });
+  }
+
+  trackCliCommandPricing(actual: string) {
+    this.trackCliCommand({
+      command: 'pricing',
       value: actual,
     });
   }
@@ -397,9 +485,23 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandSignup(actual: string) {
+    this.trackCliCommand({
+      command: 'signup',
+      value: actual,
+    });
+  }
+
   trackCliCommandSkills(actual: string) {
     this.trackCliCommand({
       command: 'skills',
+      value: actual,
+    });
+  }
+
+  trackCliCommandSetup(actual: string) {
+    this.trackCliCommand({
+      command: 'setup',
       value: actual,
     });
   }
@@ -411,6 +513,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandSchedules(actual: string) {
+    this.trackCliCommand({
+      command: 'schedules',
+      value: actual,
+    });
+  }
+
   trackCliCommandSecurity(actual: string) {
     this.trackCliCommand({
       command: 'security',
@@ -418,9 +527,16 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
-  trackCliCommandTarget(actual: string) {
+  trackCliCommandStorage(actual: string) {
     this.trackCliCommand({
-      command: 'target',
+      command: 'storage',
+      value: actual,
+    });
+  }
+
+  trackCliCommandEnvironments(actual: string) {
+    this.trackCliCommand({
+      command: 'environments',
       value: actual,
     });
   }
@@ -430,6 +546,10 @@ export class RootTelemetryClient extends TelemetryClient {
       command: 'teams',
       value: actual,
     });
+  }
+
+  trackCliCommandOrganizations(actual: string) {
+    this.trackCliCommand({ command: 'organizations', value: actual });
   }
 
   trackCliCommandTokens(actual: string) {
@@ -509,6 +629,35 @@ export class RootTelemetryClient extends TelemetryClient {
 
   trackPlatform(): void {
     super.trackPlatform();
+  }
+
+  trackLibc(libc: string | undefined) {
+    super.trackLibc(libc);
+  }
+
+  /**
+   * Reads what `pkg.js` (native binary) or `dist/vc.js` recorded before
+   * loading the CLI. Not `VERCEL_VC_NATIVE`: child processes inherit it.
+   */
+  trackCliLaunch() {
+    const launch = (globalThis as Record<symbol, unknown>)[
+      Symbol.for('vercel.cli.launch')
+    ] as Partial<Record<string, unknown>> | undefined;
+    if (launch?.runtime === 'native') {
+      this.trackLaunch(
+        launch.source === undefined
+          ? { runtime: 'native' }
+          : { runtime: 'native', source: oneOf(launch.source, launchSources) }
+      );
+    } else if (launch?.runtime === 'cli-support') {
+      this.trackLaunch({ runtime: launch.runtime });
+    } else if (launch?.runtime === 'dist') {
+      this.trackLaunch({
+        runtime: 'dist',
+        target: oneOf(launch.target, launchTargets),
+        reason: oneOf(launch.reason, launchFallbackReasons),
+      });
+    }
   }
 
   trackCIVendorName() {
@@ -632,6 +781,14 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliFlagNoColor(noColor: boolean | undefined) {
     if (noColor) {
       this.trackCliFlag('no-color');
+    }
+  }
+
+  // Measures how often each old short flag is still used before a major
+  // version removes it.
+  trackCliDeprecatedShorthands(shorthands: readonly string[]) {
+    for (const shorthand of shorthands) {
+      this.trackDeprecatedShorthand(shorthand);
     }
   }
 }

@@ -132,6 +132,7 @@ async function fetchEntries(
 function printCommandHelp(client: Client, command: Command): void {
   output.print(
     help(command, {
+      stream: client.stderr,
       columns: client.stderr.columns,
       parent: command === changelogCommand ? undefined : changelogCommand,
     })
@@ -150,7 +151,7 @@ export default async function changelog(client: Client): Promise<number> {
     parsedArgs = parseArguments(rawArgs, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const commandOffset = parsedArgs.args[0] === changelogCommand.name ? 1 : 0;
@@ -181,7 +182,7 @@ export default async function changelog(client: Client): Promise<number> {
   const limit = parsedArgs.flags['--limit'] ?? DEFAULT_LIMIT;
   if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) {
     output.error(`--limit must be between 1 and ${MAX_LIMIT}.`);
-    return 1;
+    return 2;
   }
   telemetry.trackCliOptionLimit(parsedArgs.flags['--limit']);
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
@@ -190,7 +191,7 @@ export default async function changelog(client: Client): Promise<number> {
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const jsonOutput = formatResult.jsonOutput;
 
@@ -201,7 +202,7 @@ export default async function changelog(client: Client): Promise<number> {
     if (!query) {
       output.error('Search query is required.');
       printCommandHelp(client, searchSubcommand);
-      return 1;
+      return 2;
     }
   }
 

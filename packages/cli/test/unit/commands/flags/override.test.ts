@@ -39,7 +39,7 @@ describe('flags override', () => {
     it('prints help and returns exit code 2', async () => {
       client.setArgv('flags', 'override', '--help');
       const exitCode = await flags(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
     });
 
     it('tracks telemetry', async () => {
@@ -111,7 +111,7 @@ describe('flags override', () => {
     it('errors when no overrides are provided', async () => {
       client.setArgv('flags', 'override');
       const exitCode = await flags(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
 
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain('Please provide at least one flag override');
@@ -252,7 +252,7 @@ describe('flags override', () => {
 
       client.setArgv('flags', 'override', '--decrypt', token);
       const exitCode = await flags(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
 
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain('not a valid flag overrides token');

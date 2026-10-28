@@ -1,4 +1,9 @@
 import sleep from 'sleep-promise';
+import { DeploymentError } from './errors';
+import {
+  formatNetworkError,
+  isRetryableNetworkError,
+} from './utils/network-error';
 import { fetchApi, getApiDeploymentsUrl } from './utils';
 import { getPollingDelay } from './utils/get-polling-delay';
 import {
@@ -166,6 +171,7 @@ export async function* checkDeploymentStatus(
     }
 
     let deploymentResponse: any;
+    let deploymentUpdate: any;
     let retriesLeft = RETRY_COUNT;
     while (true) {
       try {
@@ -179,8 +185,15 @@ export async function* checkDeploymentStatus(
             userAgent,
             dispatcher: clientOptions.dispatcher,
             signal: aliasAssignedSignal,
-          }
+          },
+          clientOptions.debug
         );
+        if (
+          parseRetryAfterMs(deploymentResponse) == null ||
+          retriesLeft === 1
+        ) {
+          deploymentUpdate = await deploymentResponse.json();
+        }
       } catch (error) {
         if (getAliasAssignedEvent(aliasAssignedSignal, deploymentId)) {
           continue polling;
@@ -191,7 +204,28 @@ export async function* checkDeploymentStatus(
           aliasAssignedSignal = undefined;
           continue polling;
         }
-        throw error;
+        if (!isRetryableNetworkError(error)) throw error;
+        retriesLeft--;
+        debug(
+          `Deployment status request failed (${retriesLeft} attempts remaining): ${formatNetworkError(error)}`
+        );
+        if (retriesLeft === 0) {
+          throw Object.assign(
+            new DeploymentError({
+              code: 'deployment_status_unavailable',
+              message: `Could not confirm the status of deployment ${deploymentId}. The deployment may still complete. Run 'vercel inspect ${deploymentId}' to check its status.`,
+            }),
+            { cause: error }
+          );
+        }
+        await sleepUntilAliasAssigned(
+          RETRY_DELAY_DEFAULT_MS,
+          aliasAssignedSignal,
+          deploymentId
+        );
+        if (getAliasAssignedEvent(aliasAssignedSignal, deploymentId))
+          continue polling;
+        continue;
       }
       if (getAliasAssignedEvent(aliasAssignedSignal, deploymentId)) {
         continue polling;
@@ -227,17 +261,6 @@ export async function* checkDeploymentStatus(
       }
 
       break;
-    }
-    let deploymentUpdate: any;
-    try {
-      deploymentUpdate = await deploymentResponse.json();
-    } catch (error) {
-      if (getAliasAssignedEvent(aliasAssignedSignal, deploymentId)) continue;
-      if (aliasAssignedSignal?.aborted) {
-        aliasAssignedSignal = undefined;
-        continue;
-      }
-      throw error;
     }
     if (getAliasAssignedEvent(aliasAssignedSignal, deploymentId)) continue;
 

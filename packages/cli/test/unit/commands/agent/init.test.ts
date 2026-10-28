@@ -17,13 +17,13 @@ describe('agent init', () => {
     it('should display help and return 2', async () => {
       client.setArgv('agent', '--help');
       const exitCode = await agent(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
     });
 
     it('tracks telemetry', async () => {
       client.setArgv('agent', '--help');
       const exitCode = await agent(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -77,10 +77,10 @@ describe('agent init', () => {
 
       const exitCodePromise = agent(client);
 
-      await expect(client.stderr).toOutput('Missing required flag --yes');
+      await expect(client.stderr).toOutput('Missing required option --yes');
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
     });
   });
 
@@ -180,7 +180,7 @@ describe('agent init', () => {
     it('should return 1 for unknown subcommand', async () => {
       client.setArgv('agent', 'unknown');
       const exitCode = await agent(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
     });
   });
 

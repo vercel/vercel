@@ -20,7 +20,7 @@ describe('renderMarkdown', () => {
             'http.target': '/api/hello',
             'http.status_code': 200,
           },
-          status: { code: 0 },
+          status: { code: 'Unset' },
         },
         {
           spanId: 'span_mw',
@@ -28,7 +28,7 @@ describe('renderMarkdown', () => {
           name: 'middleware',
           startTime: [0, 10_000_000],
           duration: [0, 50_000_000],
-          status: { code: 0 },
+          status: { code: 'Ok' },
         },
         {
           spanId: 'span_fetch',
@@ -37,7 +37,7 @@ describe('renderMarkdown', () => {
           startTime: [0, 80_000_000],
           duration: [0, 120_000_000],
           attributes: { 'http.url': 'https://api.example.com/users' },
-          status: { code: 0 },
+          status: { code: 'Unset' },
         },
       ],
     };
@@ -76,7 +76,7 @@ describe('renderMarkdown', () => {
             'http.target': '/api/checkout',
             'http.status_code': 500,
           },
-          status: { code: 0 },
+          status: { code: 'Unset' },
         },
         {
           spanId: 'fetch',
@@ -88,7 +88,7 @@ describe('renderMarkdown', () => {
             'http.url': 'https://api.example.com/charge',
             'http.status_code': 503,
           },
-          status: { code: 1, message: '503 Service Unavailable' },
+          status: { code: 'Error', message: '503 Service Unavailable' },
         },
       ],
     };

@@ -22,7 +22,7 @@ export function writeConfigJson(
     message,
     next,
   }: {
-    project: Project;
+    project: Pick<Project, 'id' | 'name'>;
     /** What plain `--json` prints. */
     bare: unknown;
     /** The same data keyed for the envelope, plus any extra context. */

@@ -1,6 +1,6 @@
 {
   "name": "@vercel/container",
-  "version": "7.0.1",
+  "version": "23.0.0",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -10,19 +10,24 @@
     "directory": "packages/container"
   },
   "scripts": {
-    "build": "node ../../utils/build-builder.mjs",
+    "build": "node build.mjs",
     "type-check": "tsc --noEmit",
     "test": "vitest run --config ../../vitest.config.mts",
-    "test-unit": "vitest run --config ../../vitest.config.mts test/unit.test.ts test/diagnostics.test.ts"
+    "test-unit": "node test-go.mjs && vitest run --config ../../vitest.config.mts test/unit.test.ts test/diagnostics.test.ts test/workspace.test.ts test/lifecycle-docker.test.ts test/ruby-version.test.ts test/go-version.test.ts test/rust-version.test.ts test/docker-push.test.ts test/cache.test.ts test/buildah-store-cache.test.ts test/buildah-store-command.test.ts test/buildah-debug.test.ts test/schedules-command.test.ts",
+    "test-e2e": "vitest run --config ../../vitest.config.mts test/e2e.test.ts"
   },
   "files": [
     "dist"
   ],
-  "dependencies": {},
+  "dependencies": {
+    "smol-toml": "1.5.2",
+    "tar": "7.5.11"
+  },
   "peerDependencies": {
     "@vercel/build-utils": "workspace:*"
   },
   "devDependencies": {
+    "@vercel-internals/ipc-proxy": "workspace:*",
     "@vercel/build-utils": "workspace:*",
     "@types/node": "20.11.0",
     "vitest": "4.1.10"

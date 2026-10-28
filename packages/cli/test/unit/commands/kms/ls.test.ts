@@ -9,7 +9,7 @@ describe('kms ls', () => {
     it('tracks telemetry', async () => {
       client.setArgv('kms', 'ls', '--help');
       const exitCodePromise = kms(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

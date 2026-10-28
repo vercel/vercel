@@ -1,10 +1,14 @@
 import open from 'open';
+import stripAnsi from 'strip-ansi';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import traces from '../../../../src/commands/traces';
 import * as fetchTraceModule from '../../../../src/commands/traces/fetch-trace';
+import { renderMarkdown } from '../../../../src/commands/traces/render-markdown';
 import * as linkModule from '../../../../src/util/projects/link';
 import type { Trace } from '../../../../src/commands/traces/types';
+import { teamCache } from '../../../../src/util/teams/get-team-by-id-or-slug';
+import chars from '../../../../src/util/output/chars';
 
 vi.mock('../../../../src/util/projects/link');
 vi.mock('../../../../src/commands/traces/fetch-trace');
@@ -17,19 +21,22 @@ const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
 const mockedFetchTrace = vi.mocked(fetchTraceModule.fetchTrace);
 const mockedOpen = vi.mocked(open);
 
-function mockLinkedProject() {
+function mockLinkedProject(
+  teamSlug = 'my-team',
+  projectName = 'traces-project'
+) {
   mockedGetLinkedProject.mockResolvedValue({
     status: 'linked',
     project: {
       id: 'prj_test',
-      name: 'traces-project',
+      name: projectName,
       accountId: 'team_dummy',
       updatedAt: Date.now(),
       createdAt: Date.now(),
     },
     org: {
       id: 'team_dummy',
-      slug: 'my-team',
+      slug: teamSlug,
       type: 'team',
     },
   });
@@ -56,13 +63,13 @@ const sampleTrace: Trace = {
         'http.target': '/api/hello',
         'http.status_code': 200,
       },
-      status: { code: 0 },
+      status: { code: 'Unset' },
     },
     {
       spanId: 'span_invoke',
       name: 'invoke',
       duration: [0, 18_000_000],
-      status: { code: 0 },
+      status: { code: 'Unset' },
     },
   ],
 };
@@ -70,6 +77,7 @@ const sampleTrace: Trace = {
 describe('vercel traces get', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    teamCache.clear();
     client.reset();
     mockedOpen.mockResolvedValue(undefined as never);
     mockedFetchTrace.mockResolvedValue({ trace: sampleTrace, partial: false });
@@ -99,6 +107,9 @@ describe('vercel traces get', () => {
     expect(stdout).not.toContain('Duration  ');
 
     const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain(
+      'View trace: https://vercel.com/my-team/traces-project/logs/traces/trace_001'
+    );
     expect(stderr).toContain('Run with --json for full trace data.');
   });
 
@@ -147,6 +158,47 @@ describe('vercel traces get', () => {
     );
   });
 
+  it('fetches the trace as inspect without a deprecation warning', async () => {
+    mockLinkedProject();
+    client.setArgv('traces', 'inspect', 'req_abc');
+    const exitCode = await traces(client);
+
+    expect(exitCode).toBe(0);
+    expect(mockedFetchTrace).toHaveBeenCalledWith({
+      client,
+      teamId: 'team_dummy',
+      projectId: 'prj_test',
+      requestId: 'req_abc',
+    });
+    expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+  });
+
+  it('warns for the deprecated get name and still reads the id after it', async () => {
+    mockLinkedProject();
+    client.setArgv('traces', 'get', 'req_abc');
+    const exitCode = await traces(client);
+
+    expect(exitCode).toBe(0);
+    expect(mockedFetchTrace).toHaveBeenCalledWith({
+      client,
+      teamId: 'team_dummy',
+      projectId: 'prj_test',
+      requestId: 'req_abc',
+    });
+    expect(client.stderr.getFullOutput()).toContain(
+      '`vercel traces get` is deprecated. Use `vercel traces inspect`.'
+    );
+  });
+
+  it('does not warn for the deprecated get name with --json', async () => {
+    mockLinkedProject();
+    client.setArgv('traces', 'get', 'req_abc', '--json');
+    const exitCode = await traces(client);
+
+    expect(exitCode).toBe(0);
+    expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+  });
+
   it('prints the raw trace JSON to stdout with --json', async () => {
     mockLinkedProject();
     client.scenario.get('/v1/projects/traces', (_req, res) => {
@@ -162,12 +214,58 @@ describe('vercel traces get', () => {
     expect(stdout).not.toContain('Run with --json');
   });
 
-  it('shows help and exits 2 when no requestId is provided', async () => {
+  it('prints top-level help to stderr and exits 0', async () => {
+    client.setArgv('traces', '--help');
+    expect(await traces(client)).toBe(0);
+    expect(client.stderr.getFullOutput()).toContain('traces');
+    expect(client.stdout.getFullOutput()).toBe('');
+    expect(mockedGetLinkedProject).not.toHaveBeenCalled();
+    expect(mockedFetchTrace).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { flags: [], expectedExitCode: 2 },
+    { flags: ['--help'], expectedExitCode: 0 },
+  ])('shows lookup guidance in help: $flags', async ({
+    flags,
+    expectedExitCode,
+  }) => {
     mockLinkedProject();
-    client.setArgv('traces', 'get');
+    client.setArgv('traces', 'get', ...flags);
     const exitCode = await traces(client);
 
-    expect(exitCode).toBe(2);
+    expect(exitCode).toBe(expectedExitCode);
+    const helpOutput = stripAnsi(client.stderr.getFullOutput()).replace(
+      /\s+/g,
+      ' '
+    );
+    expect(helpOutput).toContain('Trace-ID lookup');
+    expect(helpOutput).toContain(
+      'A 32-character hexadecimal ID selects trace-ID lookup. Other IDs select request-ID lookup.'
+    );
+    expect(helpOutput).toContain('traces inspect <id> [options]');
+    expect(helpOutput).not.toContain('--trace-id');
+    expect(helpOutput).not.toContain('--request-id');
+    expect(helpOutput).toContain('Request-ID lookup');
+    expect(stripAnsi(client.stderr.getFullOutput())).toMatch(
+      /timestamp\.[ ]*\n[ ]*\n {2}If no matching root/
+    );
+    expect(helpOutput).toContain(
+      'does not guarantee traces inspect can retrieve the trace'
+    );
+    expect(helpOutput).toContain(
+      'matching root span in the same project within 30 minutes after the request-ID timestamp'
+    );
+    expect(helpOutput).toContain(
+      'If no matching root is found, lookup returns 404.'
+    );
+    expect(helpOutput).toContain(
+      'Use the same --scope and --project for search and inspect.'
+    );
+    expect(helpOutput).not.toContain('search and get');
+    expect(helpOutput).not.toContain('KQL fields');
+    expect(client.stdout.getFullOutput()).toBe('');
+    expect(mockedFetchTrace).not.toHaveBeenCalled();
     expect(mockedGetLinkedProject).not.toHaveBeenCalled();
   });
 
@@ -389,7 +487,7 @@ describe('vercel traces get', () => {
       client.setArgv('traces', 'get', 'req_x', '--open', '--json');
       const exitCode = await traces(client);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       expect(client.stderr.getFullOutput()).toContain(
         '`--json` and `--open` cannot be used together.'
       );
@@ -400,7 +498,7 @@ describe('vercel traces get', () => {
       client.setArgv('traces', 'get', 'req_x', '--view', 'tree');
       const exitCode = await traces(client);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       expect(client.stderr.getFullOutput()).toContain(
         '`--view` can only be used with `--open`.'
       );
@@ -418,7 +516,7 @@ describe('vercel traces get', () => {
       );
       const exitCode = await traces(client);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       expect(client.stderr.getFullOutput()).toContain(
         '`--view` must be one of: timeline, tree, waterfall. Received: flamegraph'
       );
@@ -605,5 +703,324 @@ describe('vercel traces get', () => {
 
       exitSpy.mockRestore();
     });
+  });
+
+  const TRACE_ID = 'e5c0d1efb3904155472b01692c7f2d00';
+
+  it.each([
+    ['get', TRACE_ID],
+    ['get', TRACE_ID.toUpperCase()],
+    [TRACE_ID],
+  ])('detects a trace ID and normalizes hex case: %j', async (...args) => {
+    mockLinkedProject();
+    mockedFetchTrace.mockResolvedValue({
+      trace: { ...sampleTrace, traceId: TRACE_ID },
+      partial: false,
+    });
+    client.stdout.isTTY = false;
+    client.setArgv('traces', ...args);
+
+    expect(await traces(client)).toBe(0);
+    expect(mockedFetchTrace).toHaveBeenCalledExactlyOnceWith({
+      client,
+      teamId: 'team_dummy',
+      projectId: 'prj_test',
+      traceId: TRACE_ID,
+    });
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain(`**Trace id:** ${TRACE_ID}`);
+    expect(stdout).toContain('## Span tree');
+    expect(stdout).not.toContain('Request id');
+    expect(stdout).not.toContain('undefined');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'argument:traceId', value: '[REDACTED]' },
+    ]);
+  });
+
+  it.each([
+    'qb46r-1790847620933-1145d2891a3e',
+    'fra1::iad1::req-1738800000000-abc',
+    'a'.repeat(31),
+    'a'.repeat(33),
+    'g'.repeat(32),
+  ])('preserves request-ID lookup without matching trace-ID format: %s', async id => {
+    mockLinkedProject();
+    client.setArgv('traces', 'get', id);
+
+    expect(await traces(client)).toBe(0);
+    expect(mockedFetchTrace).toHaveBeenCalledExactlyOnceWith({
+      client,
+      teamId: 'team_dummy',
+      projectId: 'prj_test',
+      requestId: id,
+    });
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'argument:requestId', value: '[REDACTED]' },
+    ]);
+  });
+
+  it.each([
+    'pipe',
+    'agent',
+    'non-interactive',
+  ])('renders trace-ID Markdown without a request-ID header for %s output', async mode => {
+    mockLinkedProject();
+    if (mode === 'pipe') client.stdout.isTTY = false;
+    if (mode === 'agent') client.isAgent = true;
+    if (mode === 'non-interactive') client.nonInteractive = true;
+    client.setArgv('traces', 'get', TRACE_ID);
+
+    expect(await traces(client)).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toBe(renderMarkdown(sampleTrace, {}));
+    expect(stdout).not.toContain('Request id');
+    expect(stdout).not.toContain('undefined');
+  });
+
+  it('preserves raw JSON and partial warnings for trace-ID lookup', async () => {
+    mockLinkedProject();
+    mockedFetchTrace.mockResolvedValue({ trace: sampleTrace, partial: true });
+    client.setArgv('traces', 'get', TRACE_ID, '--json');
+
+    expect(await traces(client)).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual(sampleTrace);
+    expect(client.stderr.getFullOutput()).toContain('Trace is incomplete');
+    expect(mockedFetchTrace).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the resolved trace for trace-ID input', async () => {
+    mockLinkedProject();
+    client.setArgv('traces', 'get', TRACE_ID, '--open', '--view', 'waterfall');
+
+    expect(await traces(client)).toBe(0);
+    expect(mockedOpen).toHaveBeenCalledExactlyOnceWith(
+      'https://vercel.com/my-team/traces-project/logs/traces/trace_001?view=waterfall'
+    );
+    expect(client.stdout.getFullOutput()).toBe('');
+  });
+
+  it.each([
+    false,
+    true,
+  ])('rejects extra identifiers before scope resolution: non-interactive=%s', async nonInteractive => {
+    client.nonInteractive = nonInteractive;
+    client.setArgv('traces', 'get', TRACE_ID, 'req_abc');
+
+    expect(await traces(client)).toBe(2);
+    const stderr = stripAnsi(client.stderr.getFullOutput());
+    expect(stderr).toContain(
+      `${chars.fatal} Provide one trace ID or request ID.`
+    );
+    expect(stderr).not.toContain('Error:');
+    expect(mockedGetLinkedProject).not.toHaveBeenCalled();
+    expect(mockedFetchTrace).not.toHaveBeenCalled();
+    if (nonInteractive) {
+      expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+        reason: 'invalid_arguments',
+      });
+    } else {
+      expect(client.stdout.getFullOutput()).toBe('');
+    }
+  });
+
+  describe('dashboard link', () => {
+    it.each([
+      'req_dashboard',
+      'a'.repeat(32),
+    ])('links the resolved trace for input %s without opening a browser', async id => {
+      mockLinkedProject('team name', 'project/name');
+      mockedFetchTrace.mockResolvedValue({
+        trace: { ...sampleTrace, traceId: 'resolved/id' },
+        partial: false,
+      });
+      client.setArgv('traces', 'get', id);
+
+      expect(await traces(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        'View trace: https://vercel.com/team%20name/project%2Fname/logs/traces/resolved%2Fid'
+      );
+      expect(mockedOpen).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['--scope', ' other-team ', '--project', 'prj_override'],
+      ['--scope', 'other-team'],
+      ['--project', 'prj_override'],
+    ])('uses canonical project names with flags %j', async (...flags) => {
+      mockLinkedProject();
+      client.config.currentTeam = 'team_override';
+      const projectLookup = vi.fn((_req, res) => {
+        res.json({ id: 'prj_override', name: 'canonical-project' });
+      });
+      client.scenario.get(
+        flags.includes('--project')
+          ? '/v9/projects/prj_override'
+          : '/v9/projects/prj_test',
+        projectLookup
+      );
+      client.setArgv('traces', 'get', 'req_dashboard', ...flags);
+
+      expect(await traces(client)).toBe(0);
+      const teamSlug = flags.includes('--scope') ? 'other-team' : 'my-team';
+      expect(client.stderr.getFullOutput()).toContain(
+        `View trace: https://vercel.com/${teamSlug}/canonical-project/logs/traces/trace_001`
+      );
+      expect(projectLookup).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      false,
+      true,
+    ])('resolves team IDs only for human output (json=%s)', async json => {
+      mockNotLinked();
+      client.config.currentTeam = 'team_dashboard';
+      const teamLookup = vi.fn((_req, res) => {
+        res.json({ id: 'team_dashboard', slug: 'dashboard-team' });
+      });
+      client.scenario.get('/teams/team_dashboard', teamLookup);
+      client.scenario.get('/v9/projects/prj_dashboard', (_req, res) => {
+        res.json({ id: 'prj_dashboard', name: 'dashboard-project' });
+      });
+      client.setArgv(
+        'traces',
+        'get',
+        'req_dashboard',
+        '--scope',
+        'team_dashboard',
+        '--project',
+        'prj_dashboard',
+        ...(json ? ['--json'] : [])
+      );
+
+      expect(await traces(client)).toBe(0);
+      if (json) {
+        expect(JSON.parse(client.stdout.getFullOutput())).toEqual(sampleTrace);
+        expect(teamLookup).not.toHaveBeenCalled();
+        expect(client.stderr.getFullOutput()).not.toContain('View trace:');
+      } else {
+        expect(teamLookup).toHaveBeenCalledTimes(1);
+        expect(client.stderr.getFullOutput()).toContain(
+          'View trace: https://vercel.com/dashboard-team/dashboard-project/logs/traces/trace_001'
+        );
+      }
+    });
+
+    it('preserves the summary when dashboard team resolution fails', async () => {
+      mockNotLinked();
+      client.config.currentTeam = 'team_dashboard_missing';
+      client.scenario.get('/teams/team_dashboard_missing', (_req, res) => {
+        res.status(404).json({ error: { code: 'not_found' } });
+      });
+      client.scenario.get('/v9/projects/prj_dashboard', (_req, res) => {
+        res.json({ id: 'prj_dashboard', name: 'dashboard-project' });
+      });
+      client.setArgv(
+        'traces',
+        'inspect',
+        'req_dashboard',
+        '--scope',
+        'team_dashboard_missing',
+        '--project',
+        'prj_dashboard'
+      );
+
+      expect(await traces(client)).toBe(0);
+      expect(client.stdout.getFullOutput()).toContain('trace_001');
+      const stderr = stripAnsi(client.stderr.getFullOutput());
+      expect(stderr).toMatch(
+        /^! Failed to resolve the dashboard URL\. Use --open to retry\.$/m
+      );
+      expect(stderr).not.toContain('WARNING!');
+      expect(stderr).not.toContain('Unable to');
+      expect(client.stderr.getFullOutput()).toContain('Run with --json');
+    });
+  });
+
+  const traceWithRequestId: Trace = {
+    ...sampleTrace,
+    spans: [...sampleTrace.spans].reverse().map(span => ({
+      ...span,
+      attributes: {
+        ...span.attributes,
+        'vercel.request_id':
+          span.spanId === sampleTrace.rootSpanId ? 'req_resolved' : 'req_child',
+      },
+    })),
+  };
+
+  it.each([
+    'terminal',
+    'pipe',
+    'agent',
+    'non-interactive',
+  ])('prints the resolved request ID for trace-ID lookup in %s output', async mode => {
+    mockLinkedProject();
+    if (mode === 'pipe') client.stdout.isTTY = false;
+    if (mode === 'agent') client.isAgent = true;
+    if (mode === 'non-interactive') client.nonInteractive = true;
+    mockedFetchTrace.mockResolvedValue({
+      trace: { ...traceWithRequestId, traceId: TRACE_ID },
+      partial: false,
+    });
+    client.setArgv('traces', 'get', TRACE_ID);
+
+    expect(await traces(client)).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain(TRACE_ID);
+    expect(stdout).toContain('Request id');
+    expect(stdout).toContain('req_resolved');
+    expect(stdout).not.toContain('undefined');
+  });
+
+  it('preserves the supplied request ID including region prefixes', async () => {
+    mockLinkedProject();
+    mockedFetchTrace.mockResolvedValue({
+      trace: traceWithRequestId,
+      partial: false,
+    });
+    const requestId = 'fra1::iad1::req_resolved';
+    client.setArgv('traces', 'get', requestId);
+
+    expect(await traces(client)).toBe(0);
+    expect(client.stdout.getFullOutput()).toContain(requestId);
+  });
+
+  it('preserves raw JSON including the request-ID attribute', async () => {
+    mockLinkedProject();
+    mockedFetchTrace.mockResolvedValue({
+      trace: traceWithRequestId,
+      partial: false,
+    });
+    client.setArgv('traces', 'get', TRACE_ID, '--json');
+
+    expect(await traces(client)).toBe(0);
+    const json = JSON.parse(client.stdout.getFullOutput());
+    expect(json).toEqual(traceWithRequestId);
+    expect(json).not.toHaveProperty('requestId');
+  });
+
+  it.each([
+    undefined,
+    null,
+    '',
+    '   ',
+    123,
+    false,
+  ])('omits invalid root request-ID attributes without using child IDs: %j', async requestId => {
+    mockLinkedProject();
+    const trace = {
+      ...traceWithRequestId,
+      spans: traceWithRequestId.spans.map(span =>
+        span.spanId === traceWithRequestId.rootSpanId
+          ? { ...span, attributes: { 'vercel.request_id': requestId } }
+          : span
+      ),
+    };
+    mockedFetchTrace.mockResolvedValue({ trace, partial: false });
+    client.setArgv('traces', 'get', TRACE_ID);
+
+    expect(await traces(client)).toBe(0);
+    expect(client.stdout.getFullOutput()).not.toContain('Request id');
+    expect(client.stdout.getFullOutput()).not.toContain('req_child');
   });
 });

@@ -1,8 +1,13 @@
+import {
+  nextCursorOption,
+  sinceOption,
+  untilOption,
+} from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 const projectOption = {
   name: 'project',
-  shorthand: null,
+  shorthand: 'p',
   type: String,
   argument: 'NAME|ID',
   deprecated: false,
@@ -11,31 +16,18 @@ const projectOption = {
 
 const environmentOption = {
   name: 'environment',
-  shorthand: null,
+  shorthand: 'e',
   type: String,
-  argument: 'production|preview',
-  deprecated: false,
-  description: 'Environment to query Agent Runs from (default: production)',
-} as const;
-
-const sinceOption = {
-  name: 'since',
-  shorthand: null,
-  type: String,
-  argument: 'TIME',
+  argument: 'ENVIRONMENT',
   deprecated: false,
   description:
-    'Only include Agent Runs after this time (ISO 8601 or relative: 1h, 30m, 7d)',
+    'Environment to query Agent Runs from: production or preview (default: production)',
 } as const;
 
-const untilOption = {
-  name: 'until',
-  shorthand: null,
-  type: String,
-  argument: 'TIME',
-  deprecated: false,
+const agentRunsUntilOption = {
+  ...untilOption,
   description:
-    'Only include Agent Runs before this time (requires --since; default: now)',
+    'End time: ISO 8601 or relative; requires --since (default: now)',
 } as const;
 
 const jsonOption = {
@@ -55,23 +47,25 @@ export const listSubcommand = {
     projectOption,
     environmentOption,
     sinceOption,
-    untilOption,
+    agentRunsUntilOption,
     {
-      name: 'search',
-      shorthand: null,
+      name: 'query',
+      shorthand: 'q',
       type: String,
       argument: 'TEXT',
       deprecated: false,
       description: 'Search Agent Runs by title',
     },
+    // Hidden: `--search` is the old name of `--query`.
     {
-      name: 'next',
+      name: 'search',
       shorthand: null,
-      type: Number,
-      argument: 'NUMBER',
-      deprecated: false,
-      description: 'Continue from a previous response',
+      type: String,
+      argument: 'TEXT',
+      deprecated: true,
+      description: 'Deprecated alias for `--query`',
     },
+    nextCursorOption,
     {
       name: 'page',
       shorthand: null,
@@ -101,7 +95,7 @@ export const listSubcommand = {
     },
     {
       name: 'Search Agent Runs by title',
-      value: `${packageName} agent-runs list --search "checkout"`,
+      value: `${packageName} agent-runs list --query "checkout"`,
     },
     {
       name: 'List Agent Runs for a specific team and project',
@@ -129,7 +123,7 @@ export const inspectSubcommand = {
     projectOption,
     environmentOption,
     sinceOption,
-    untilOption,
+    agentRunsUntilOption,
     jsonOption,
   ],
   examples: [
@@ -159,7 +153,25 @@ export const traceSubcommand = {
     projectOption,
     environmentOption,
     sinceOption,
-    untilOption,
+    agentRunsUntilOption,
+    {
+      name: 'next',
+      shorthand: null,
+      type: String,
+      argument: 'CURSOR',
+      deprecated: false,
+      description:
+        'Fetch newer trace activity using a cursor from a previous response',
+    },
+    {
+      name: 'previous',
+      shorthand: null,
+      type: String,
+      argument: 'CURSOR',
+      deprecated: false,
+      description:
+        'Fetch older trace activity using a cursor from a previous response',
+    },
     {
       name: 'max-field-length',
       shorthand: null,
@@ -180,6 +192,11 @@ export const traceSubcommand = {
       name: 'Print the raw trace as JSON without truncation',
       value: `${packageName} agent-runs trace run_1234567890 --json --max-field-length 0`,
     },
+    {
+      name: 'Fetch newer activity from a paginated trace response',
+      placeholders: ['<CURSOR>'],
+      value: `${packageName} agent-runs trace run_1234567890 --next <CURSOR>`,
+    },
   ],
 } as const;
 
@@ -188,7 +205,7 @@ export const projectsSubcommand = {
   aliases: [],
   description: 'List projects in the current team with Agent Runs activity',
   arguments: [],
-  options: [environmentOption, sinceOption, untilOption, jsonOption],
+  options: [environmentOption, sinceOption, agentRunsUntilOption, jsonOption],
   examples: [
     {
       name: 'List projects with Agent Runs activity',

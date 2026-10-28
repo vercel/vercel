@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import output from '../../output-manager';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
@@ -23,7 +23,7 @@ async function add(client: Client, argv: string[]): Promise<number> {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
 
@@ -84,7 +84,7 @@ async function add(client: Client, argv: string[]): Promise<number> {
       output.print(
         `  ${chalk.cyan(getCommandName('certs add <cn>[, <cn>]'))}\n`
       );
-      return 1;
+      return 2;
     }
 
     // Create the certificate from the given array of CNs
@@ -96,7 +96,7 @@ async function add(client: Client, argv: string[]): Promise<number> {
       `Generating a certificate for ${chalk.bold(cns.join(', '))}`
     );
 
-    const { contextName } = await getScope(client);
+    const contextName = await getContextName(client);
     cert = await createCertForCns(client, cns, contextName);
     output.stopSpinner();
   }

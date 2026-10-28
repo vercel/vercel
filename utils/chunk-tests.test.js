@@ -209,6 +209,55 @@ describe('getChunkedTests', () => {
       delete process.env.TURBO_TASKS;
     }
   });
+
+  it('schedules the CLI build integration lane on the CLI unit matrix', async () => {
+    process.env.TURBO_TASKS = JSON.stringify([
+      {
+        package: 'vercel',
+        directory: 'packages/cli',
+        task: 'test-build-integration',
+        command: 'node scripts/test.mjs --run test/build-integration/',
+      },
+    ]);
+
+    try {
+      const chunks = await getChunkedTests();
+
+      expect(chunks).toHaveLength(18);
+      expect(
+        chunks.every(
+          chunk =>
+            chunk.packageName === 'vercel' &&
+            chunk.scriptName === 'test-build-integration' &&
+            chunk.testScript === 'test' &&
+            chunk.testPaths.length === 1
+        )
+      ).toBe(true);
+      expect(
+        [...new Set(chunks.map(chunk => chunk.testPaths[0]))].sort()
+      ).toEqual([
+        'test/build-integration/index.test.ts',
+        'test/build-integration/monorepo.test.ts',
+        'test/build-integration/parallel.test.ts',
+      ]);
+      expect(
+        [
+          ...new Set(
+            chunks.map(chunk => `${chunk.runner}/${chunk.nodeVersion}`)
+          ),
+        ].sort()
+      ).toEqual([
+        'macos-15/24',
+        'ubuntu-latest/20',
+        'ubuntu-latest/22',
+        'ubuntu-latest/24',
+        'windows-latest/22',
+        'windows-latest/24',
+      ]);
+    } finally {
+      delete process.env.TURBO_TASKS;
+    }
+  });
 });
 
 describe('sortBySchedulePriority', () => {

@@ -28,7 +28,7 @@ Instead, each subclass is expected to implement specific tracking methods that c
 
 Each layer of the CLI invocation may have its own telemetry client subclass.
 
-- `root` has a instance of `RootTelementryClient` from `src/util/telemetry/root.ts`
+- `root` has a instance of `RootTelemetryClient` from `src/util/telemetry/root.ts`
 - a `command` would have an instance of `{CommandName}TelemetryClient` at `src/util/telemetry/commands/{command-name}/index.ts`
 - a `subcommand` would have an instance of `{CommandName}{SubcommandName}TelemetryClient` at `src/util/telemetry/commands/{command-name}/{subcommand-name}.ts`
 
@@ -42,11 +42,11 @@ Methods within these classes are intended to be called directly during the CLI's
 
 A command like `vercel joke list [humor-level] --random [randomness seed] --kid-safe` would result in methods and client subclasses like:
 
-- `RootTelementryClient.trackCliCommandJoke()` called in `src/index.ts`
-- `JokeTelemtryClient.trackCliSubcommandList()` called in `src/commands/joke/index.ts`
-- `JokeListTelemtryClient.trackCliArgumentHumorLevel()` called in `src/commands/joke/list.ts`
-- `JokeListTelemtryClient.trackCliOptionRandom()` called in `src/commands/joke/list.ts`
-- `JokeListTelemtryClient.trackCliFlagKidSafe()` called in `src/commands/joke/list.ts`
+- `RootTelemetryClient.trackCliCommandJoke()` called in `src/index.ts`
+- `JokeTelemetryClient.trackCliSubcommandList()` called in `src/commands/joke/index.ts`
+- `JokeListTelemetryClient.trackCliArgumentHumorLevel()` called in `src/commands/joke/list.ts`
+- `JokeListTelemetryClient.trackCliOptionRandom()` called in `src/commands/joke/list.ts`
+- `JokeListTelemetryClient.trackCliFlagKidSafe()` called in `src/commands/joke/list.ts`
 
 Although the structure is quite verbose, it is the pattern established earlier by other teams and the methodology approved by the Security team.
 
@@ -94,6 +94,29 @@ const myTelemetryClient = new TelemetryClientSubClass({
 ```
 
 This instance is the central object containing all events tracked during a CLI invocation. At the end of the invocation `client.telemetryEventStore.save()` is called to persist the metrics data.
+
+The store creates one invocation UUID and adds it to every event, including events
+added directly to the store. The wire field `invocation_id` identifies the originating
+command; `id` identifies an individual event, and `session_id` can span commands.
+The existing `invocation_id` key/value event remains for older consumers.
+
+The detached flush payload also carries the originating `invocationId`. At send
+time, flush applies it to any appended context event that lacks `invocation_id`,
+while preserving explicit invocation IDs. Never use the flush process's own telemetry
+store to identify the original command. Legacy payloads without invocation identity
+remain unannotated.
+
+The CLI also queues a telemetry copy of the local `vc.cli.command` span: its ID and
+timing plus a fixed set of tags (command, invocation UUID, version, platform, agent,
+CI, exit code, outcome). The local span keeps only `command`, since `vc build` uploads
+local spans in `.vercel/output/diagnostics`.
+The worker makes one request to the existing CLI bridge route: a legacy event array
+when no command trace is queued, or `{ version: 1, events, commandTrace }` otherwise.
+`commandTrace` contains `{ event, buildLabel? }`; usage identity stays in `events`.
+The bridge controls trace delivery. The CLI has no direct Datadog exporter or
+Datadog credential requirement. Telemetry opt-outs and telemetry debug mode do not
+send requests; the worker's disabled collection prevents recursive telemetry while
+allowing it to send the parent-authorized payload.
 
 ## Testing
 

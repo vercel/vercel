@@ -1,5 +1,10 @@
 import type Client from '../../util/client';
-import type { Trace } from './types';
+import {
+  SPAN_STATUS_ERROR,
+  SPAN_STATUS_OK,
+  SPAN_STATUS_UNSET,
+} from './analyze';
+import type { SpanStatusCode, Trace } from './types';
 
 const OBSERVABILITY_API_URL = 'https://vercel.com/api/observability-api/';
 const QUERY_REASON_HEADER = 'x-vercel-observability-query-reason';
@@ -9,8 +14,10 @@ export type FetchTraceParams = {
   client: Client;
   teamId: string;
   projectId: string;
-  requestId: string;
-};
+} & (
+  | { requestId: string; traceId?: never }
+  | { traceId: string; requestId?: never }
+);
 
 export type FetchTraceSuccess = {
   trace: Trace;
@@ -38,18 +45,12 @@ export async function fetchTrace({
   teamId,
   projectId,
   requestId,
-}: FetchTraceParams): Promise<FetchTraceSuccess> {
-  return fetchQueryEngineTrace({ client, teamId, projectId, requestId });
-}
-
-async function fetchQueryEngineTrace({
-  client,
-  teamId,
-  projectId,
-  requestId,
+  traceId,
 }: FetchTraceParams): Promise<FetchTraceSuccess> {
   const traceUrl = new URL(
-    `v1/traces/requests/${encodeURIComponent(requestId)}`,
+    traceId !== undefined
+      ? `v1/traces/${encodeURIComponent(traceId)}`
+      : `v1/traces/requests/${encodeURIComponent(requestId)}`,
     OBSERVABILITY_API_URL
   );
   traceUrl.searchParams.set('teamId', teamId);
@@ -99,7 +100,7 @@ function mapSpan(value: unknown): Trace['spans'][number] {
   const timestamp = parseTimestamp(value.timestamp);
   const attributes = isRecord(value.attributes) ? value.attributes : undefined;
   const status = isRecord(value.status) ? value.status : undefined;
-  const statusCode = status?.code === 'ERROR' ? 1 : 0;
+  const statusCode = mapStatusCode(status?.code);
   const statusMessage =
     typeof status?.message === 'string' ? status.message : undefined;
 
@@ -117,6 +118,17 @@ function mapSpan(value: unknown): Trace['spans'][number] {
       ...(statusMessage ? { message: statusMessage } : {}),
     },
   };
+}
+
+function mapStatusCode(code: unknown): SpanStatusCode {
+  switch (code) {
+    case 'ERROR':
+      return SPAN_STATUS_ERROR;
+    case 'OK':
+      return SPAN_STATUS_OK;
+    default:
+      return SPAN_STATUS_UNSET;
+  }
 }
 
 function parseTimestamp(value: unknown): number {

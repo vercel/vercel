@@ -60,8 +60,8 @@ export default async function main(client: Client) {
       permissive: true,
     });
   } catch (error) {
-    printError(error);
-    return 1;
+    printError(error, client);
+    return 2;
   }
 
   const telemetry = new DomainsTelemetryClient({
@@ -79,15 +79,24 @@ export default async function main(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('domains');
-    output.print(help(domainsCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(domainsCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
-      help(command, { parent: domainsCommand, columns: client.stderr.columns })
+      help(command, {
+        stream: client.stderr,
+        parent: domainsCommand,
+        columns: client.stderr.columns,
+      })
     );
-    return 2;
+    return 0;
   }
 
   switch (subcommand) {

@@ -70,7 +70,7 @@ export default async function startRollingRelease({
     )) as DeploymentCreateResponsePartial;
 
     output.log(
-      `Successfully created new deployment at ${newDeployment.inspectorUrl}`
+      `Created production deployment ${newDeployment.id}: ${newDeployment.inspectorUrl}`
     );
     return 0;
   }
@@ -83,6 +83,6 @@ export default async function startRollingRelease({
       method: 'POST',
     }
   );
-  output.log('Successfully started rolling release');
+  output.log(`Requested rolling release start for ${deployment.id}`);
   return 0;
 }

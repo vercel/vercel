@@ -175,6 +175,251 @@ describe('project protection (SSO)', () => {
 });
 
 describe('project protection (password)', () => {
+  afterEach(() => vi.restoreAllMocks());
+  it.each([
+    { tty: false, nonInteractive: false, json: false },
+    { tty: false, nonInteractive: false, json: true },
+    { tty: true, nonInteractive: true, json: false },
+    { tty: false, nonInteractive: true, json: true },
+  ])('blocks first-time activation with $tty TTY, $nonInteractive non-interactive, $json JSON', async ({
+    tty,
+    nonInteractive,
+    json,
+  }) => {
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    client.stdin.isTTY = tty;
+    client.nonInteractive = nonInteractive;
+    const fetch = vi.spyOn(client, 'fetch');
+    const confirm = vi.spyOn(client.input, 'text');
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--password',
+      '--protection-password',
+      's3cret',
+      ...(json ? ['--json'] : []),
+      ...(nonInteractive ? ['--non-interactive'] : [])
+    );
+
+    expect(await project(client)).toBe(1);
+    expect(
+      fetch.mock.calls.filter(
+        ([, opts]) => opts?.method && opts.method !== 'GET'
+      )
+    ).toEqual([]);
+    expect(confirm).not.toHaveBeenCalled();
+    if (json || nonInteractive) {
+      expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+        status: 'action_required',
+        reason: 'interactive_confirmation_required',
+        action: 'confirmation_required',
+        userActionRequired: true,
+        hint: expect.stringContaining('interactive confirmation'),
+        next: [
+          {
+            command: expect.stringContaining(
+              'vercel project protection enable prj_123 --password --protection-password <password>'
+            ),
+            when: expect.stringContaining('interactive terminal'),
+          },
+        ],
+      });
+      expect(client.stderr.getFullOutput()).toBe('');
+    } else {
+      expect(client.stdout.getFullOutput()).toBe('');
+      expect(client.stderr.getFullOutput()).toContain(
+        'Enabling Password Protection can incur charges.'
+      );
+    }
+    expect(client.stdout.getFullOutput()).not.toContain('s3cret');
+    expect(client.stderr.getFullOutput()).not.toContain('s3cret');
+  });
+
+  it('does not partially enable SSO when Password Protection is blocked', async () => {
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    client.stdin.isTTY = false;
+    const fetch = vi.spyOn(client, 'fetch');
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--password',
+      '--sso'
+    );
+    expect(await project(client)).toBe(1);
+    expect(
+      fetch.mock.calls.filter(
+        ([, opts]) => opts?.method && opts.method !== 'GET'
+      )
+    ).toEqual([]);
+  });
+
+  it.each([
+    '',
+    'wrong-project',
+  ])('cancels activation when confirmation is %j', async entered => {
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    const fetch = vi.spyOn(client, 'fetch');
+    const confirm = vi.spyOn(client.input, 'text').mockResolvedValue(entered);
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--password',
+      '--sso'
+    );
+    expect(await project(client)).toBe(0);
+    expect(confirm).toHaveBeenCalledWith({
+      message: 'Type my-project to confirm enabling Password Protection:',
+    });
+    expect(client.stderr.getFullOutput()).toContain('can incur charges');
+    expect(client.stderr.getFullOutput()).toContain('Canceled');
+    expect(
+      fetch.mock.calls.filter(
+        ([, opts]) => opts?.method && opts.method !== 'GET'
+      )
+    ).toEqual([]);
+  });
+
+  it('warns and confirms before activating Password Protection', async () => {
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    const fetch = vi.spyOn(client, 'fetch');
+    const confirm = vi
+      .spyOn(client.input, 'text')
+      .mockImplementation(async () => {
+        expect(client.stderr.getFullOutput()).toContain('can incur charges');
+        expect(
+          fetch.mock.calls.filter(
+            ([, opts]) => opts?.method && opts.method !== 'GET'
+          )
+        ).toEqual([]);
+        return 'my-project';
+      });
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--password'
+    );
+    expect(await project(client)).toBe(0);
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(fetch).toHaveBeenCalledWith(
+      '/v9/projects/prj_123',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: {
+          passwordProtection: {
+            deploymentType: 'prod_deployment_urls_and_all_previews',
+          },
+        },
+      })
+    );
+  });
+
+  it.each([
+    true,
+    false,
+  ])('updates an existing password without confirmation (TTY: %s)', async tty => {
+    const existingProject = {
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+      passwordProtection: { deploymentType: 'all' },
+    };
+    useProject(existingProject);
+    client.stdin.isTTY = tty;
+    client.nonInteractive = !tty;
+    const fetch = vi.spyOn(client, 'fetch');
+    const confirm = vi.spyOn(client.input, 'text');
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--password',
+      '--protection-password',
+      's3cret',
+      '--json'
+    );
+    expect(await project(client)).toBe(0);
+    expect(confirm).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledWith(
+      '/v9/projects/prj_123',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: {
+          passwordProtection: {
+            deploymentType: 'prod_deployment_urls_and_all_previews',
+            password: 's3cret',
+          },
+        },
+      })
+    );
+    expect(client.stderr.getFullOutput()).not.toContain('can incur charges');
+    expect(client.stdout.getFullOutput()).not.toContain('s3cret');
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      passwordProtection: true,
+    });
+  });
+
+  it('provides a safe interactive next step preserving scope', async () => {
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    client.nonInteractive = true;
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--password',
+      '--protection-password',
+      's3cret',
+      '--scope',
+      'my-team',
+      '--token',
+      'secret-token',
+      '--non-interactive=true'
+    );
+    expect(await project(client)).toBe(1);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    expect(payload.next[0].command).toContain('--scope my-team');
+    expect(payload.next[0].command).toContain('--non-interactive=false');
+    expect(payload.next[0].command).not.toContain('--non-interactive=true');
+    expect(JSON.stringify(payload)).not.toContain('secret-token');
+    expect(JSON.stringify(payload)).not.toContain('s3cret');
+  });
+
+  it('can disable Password Protection in non-interactive mode', async () => {
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    const fetch = vi.spyOn(client, 'fetch');
+    client.nonInteractive = true;
+    client.stdin.isTTY = false;
+    client.setArgv(
+      'project',
+      'protection',
+      'disable',
+      'my-project',
+      '--password',
+      '--non-interactive'
+    );
+    expect(await project(client)).toBe(0);
+    expect(fetch).toHaveBeenCalledWith(
+      '/v9/projects/prj_123',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: { passwordProtection: null },
+      })
+    );
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      action: 'disable',
+      passwordProtection: false,
+    });
+  });
+
   it('disables password protection when --password is set', async () => {
     useProject({
       ...defaultProject,
@@ -201,6 +446,7 @@ describe('project protection (password)', () => {
   });
 
   it('returns JSON for enable with --password', async () => {
+    vi.spyOn(client.input, 'text').mockResolvedValue('my-project');
     useProject({
       ...defaultProject,
       id: 'prj_123',
@@ -233,6 +479,7 @@ describe('project protection (password)', () => {
   });
 
   it('enables password protection with --protection-password', async () => {
+    vi.spyOn(client.input, 'text').mockResolvedValue('my-project');
     useProject({
       ...defaultProject,
       id: 'prj_123',
@@ -325,7 +572,7 @@ describe('project protection (password)', () => {
     );
     const exitCode = await project(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     await expect(client.stderr).toOutput('Invalid --protection-password');
   });
 
@@ -347,7 +594,7 @@ describe('project protection (password)', () => {
     );
     const exitCode = await project(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     await expect(client.stderr).toOutput('Invalid --protection-password');
   });
 });
@@ -488,7 +735,7 @@ describe('project protection (skew)', () => {
     );
     const exitCode = await project(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     await expect(client.stderr).toOutput('Invalid --skew-max-age');
   });
 

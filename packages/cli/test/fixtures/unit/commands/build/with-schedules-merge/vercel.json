@@ -1,0 +1,8 @@
+{
+  "schedules": {
+    "hourly-jobs": {
+      "schedule": "0 * * * *",
+      "topic": "hourly-jobs"
+    }
+  }
+}

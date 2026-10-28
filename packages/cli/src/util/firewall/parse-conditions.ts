@@ -44,7 +44,7 @@ export function parseConditionFlags(
 
   // Check the last group isn't empty (trailing --or)
   if (groups[groups.length - 1].conditions.length === 0) {
-    return '--or cannot be the last flag — add conditions after it.';
+    return '--or cannot be the last option — add conditions after it.';
   }
 
   return { groups };

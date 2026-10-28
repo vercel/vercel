@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import type { Project } from '@vercel-internals/types';
 import type Client from '../../util/client';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { getGlobalFlagsFromArgs } from '../../util/arg-common';
@@ -40,7 +40,7 @@ export default async function rm(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
   const [hookId] = args;
@@ -66,19 +66,19 @@ export default async function rm(client: Client, argv: string[]) {
             },
             {
               command: deployHooksCommandWithGlobalFlags(
-                'deploy-hooks rm <id> --yes',
+                'deploy-hooks delete <id> --yes',
                 client.argv
               ),
             },
           ],
         },
-        1
+        2
       );
     }
     output.error(
-      `${getCommandName('deploy-hooks rm <id>')} expects one argument`
+      `${getCommandName('deploy-hooks delete <id>')} expects one argument`
     );
-    return 1;
+    return 2;
   }
 
   const skipConfirmation = opts['--yes'] || false;
@@ -89,7 +89,7 @@ export default async function rm(client: Client, argv: string[]) {
         status: 'error',
         reason: 'confirmation_required',
         message:
-          'Removing a deploy hook requires confirmation. Re-run with --yes.',
+          'Deleting a deploy hook requires confirmation. Re-run with --yes.',
         next: [{ command: buildCommandWithYes(client.argv) }],
       },
       1
@@ -99,19 +99,19 @@ export default async function rm(client: Client, argv: string[]) {
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        getCommandName('deploy-hooks rm <id>')
+        getCommandName('deploy-hooks delete <id>')
       )}`
     );
-    return 1;
+    return 2;
   }
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
 
   let project: Project;
   try {
     project = await getProjectByCwdOrLink({
       client,
-      commandName: 'deploy-hooks rm',
+      commandName: 'deploy-hooks delete',
       projectNameOrId: opts['--project'] as string | undefined,
       forReadOnlyCommand: true,
     });
@@ -149,7 +149,7 @@ export default async function rm(client: Client, argv: string[]) {
 
   if (!client.nonInteractive) {
     const confirmed = await client.input.confirm(
-      `Remove deploy hook ${chalk.bold(existing.name)} (${hookId}) from ${chalk.bold(project.name)}?`,
+      `Delete deploy hook ${chalk.bold(existing.name)} (${hookId}) from ${chalk.bold(project.name)}?`,
       false
     );
     if (!confirmed) {
@@ -162,7 +162,7 @@ export default async function rm(client: Client, argv: string[]) {
 
   if (!client.nonInteractive) {
     output.spinner(
-      `Removing deploy hook under ${chalk.bold(contextName)} ${chalk.gray(rmStamp)}`
+      `Deleting deploy hook under ${chalk.bold(contextName)} ${chalk.gray(rmStamp)}`
     );
   }
 
@@ -173,7 +173,7 @@ export default async function rm(client: Client, argv: string[]) {
     );
     output.stopSpinner();
     output.success(
-      `Removed deploy hook ${chalk.bold(hookId)} from ${chalk.bold(project.name)} ${rmStamp()}`
+      `Deleted deploy hook ${chalk.bold(hookId)} from ${chalk.bold(project.name)} ${rmStamp()}`
     );
     return 0;
   } catch (err: unknown) {

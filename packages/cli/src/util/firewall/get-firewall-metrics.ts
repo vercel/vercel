@@ -1,42 +1,20 @@
 import type Client from '../client';
-import { isAPIError } from '../errors-ts';
-import { getRollupColumnName } from '../../commands/metrics/output';
-import type {
-  Granularity,
-  MetricsQueryRequest,
-  MetricsQueryResponse,
-} from '../../commands/metrics/types';
+import type { Granularity } from '../../commands/metrics/types';
+import {
+  queryFirewallObservability,
+  rowDimension,
+  rowValue,
+  type CanonicalRow,
+} from './observability-query';
 
-export const FIREWALL_ACTION_METRIC = 'vercel.firewall_action.count';
-const FIREWALL_ACTION_AGGREGATION = 'sum';
-// The API flattens `metric_aggregation` into a single column name, e.g.
-// `vercel_firewall_action_count_sum`. That column holds each row's value.
-const ROLLUP_COLUMN = getRollupColumnName(
+export {
+  ActivityTimeoutError,
   FIREWALL_ACTION_METRIC,
-  FIREWALL_ACTION_AGGREGATION
-);
+  isActivityTimeout,
+} from './observability-query';
 
-/**
- * A query that ran out of time, from either side: the observability API
- * answers 408, and the client gives up first on a slow enough one. Named so a
- * caller can tell it apart from a genuine failure without matching messages.
- */
-export class ActivityTimeoutError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ActivityTimeoutError';
-  }
-}
-
-export function isActivityTimeout(error: unknown): boolean {
-  return (
-    (isAPIError(error) && error.status === 408) ||
-    (error instanceof Error && error.name === 'ActivityTimeoutError')
-  );
-}
-
-/** Cold ClickHouse queries can be slow; fail instead of hanging forever. */
-const METRICS_TIMEOUT_MS = 45_000;
+/** The action dimension on `vercel.firewall_action.count`. */
+const ACTION_DIMENSION = 'wafAction';
 
 export type FirewallActionName =
   | 'allow'
@@ -66,24 +44,23 @@ export interface FirewallMetricsResult {
   totals: Record<string, number>;
 }
 
-function actionFromRow(row: Record<string, unknown>): string {
-  const raw = row.waf_action ?? row.wafAction ?? 'unknown';
-  return String(raw);
-}
-
-function valueFromRow(row: Record<string, unknown>): number {
-  const raw = row[ROLLUP_COLUMN] ?? row.value ?? row.count ?? 0;
-  const n = typeof raw === 'number' ? raw : Number(raw);
-  return Number.isFinite(n) ? n : 0;
+/**
+ * Not every row of the metric names an action: requests the firewall let
+ * through without a rule matching carry an empty `wafAction`. Left as `''`
+ * they render as a blank-labelled row, so name them instead.
+ */
+function actionFromRow(row: CanonicalRow): string {
+  return rowDimension(row, ACTION_DIMENSION) || 'unknown';
 }
 
 /**
- * Fetch Requests-by-Action totals + hourly timeseries over the given window,
- * via the observability metrics API used by `vercel metrics`.
+ * Fetch Requests-by-Action totals + timeseries over the given window, via the
+ * Observability API used by `vercel metrics`.
  *
  * The window is the caller's, not ours: every panel of the activity block has
  * to cover the same period, and a window derived here would be one the other
- * queries could only learn by waiting for this one to answer.
+ * queries could only learn by waiting for this one to answer. It comes back
+ * rounded out to whole buckets, which is the span the numbers describe.
  */
 export default async function getFirewallMetrics(
   client: Client,
@@ -93,85 +70,51 @@ export default async function getFirewallMetrics(
     startTime: Date;
     endTime: Date;
     granularity?: Granularity;
+    /** KQL. */
     filter?: string;
     timeoutMs?: number;
   }
 ): Promise<FirewallMetricsResult> {
-  const { startTime: start, endTime: end } = opts;
   const granularity = opts.granularity ?? ({ hours: 1 } as const);
-  const timeoutMs = opts.timeoutMs ?? METRICS_TIMEOUT_MS;
 
-  const body: MetricsQueryRequest = {
-    scope: {
-      type: 'project',
-      ownerId: opts.ownerId,
-      projectIds: [opts.projectId],
-    },
-    metric: FIREWALL_ACTION_METRIC,
-    aggregation: FIREWALL_ACTION_AGGREGATION,
-    startTime: start.toISOString(),
-    endTime: end.toISOString(),
+  const result = await queryFirewallObservability(client, {
+    ownerId: opts.ownerId,
+    projectId: opts.projectId,
+    startTime: opts.startTime,
+    endTime: opts.endTime,
     granularity,
-    groupBy: ['waf_action'],
+    groupBy: [ACTION_DIMENSION],
     filter: opts.filter,
     // Caps series, not points, so this is well clear of the handful of
     // actions a firewall can report.
     limit: 100,
-  };
-
-  let response: MetricsQueryResponse;
-  try {
-    response = await client.fetch<MetricsQueryResponse>(
-      '/v2/observability/query',
-      {
-        method: 'POST',
-        body: JSON.stringify(body),
-        headers: { 'Content-Type': 'application/json' },
-        accountId: opts.ownerId,
-        signal: AbortSignal.timeout(timeoutMs),
-      }
-    );
-  } catch (err: unknown) {
-    if (
-      err instanceof Error &&
-      (err.name === 'TimeoutError' || err.name === 'AbortError')
-    ) {
-      throw new ActivityTimeoutError(
-        `Timed out after ${Math.round(timeoutMs / 1000)}s waiting for firewall metrics.`
-      );
-    }
-    throw err;
-  }
+    timeoutMs: opts.timeoutMs,
+    timeoutSubject: 'firewall metrics',
+  });
 
   const byAction = new Map<string, FirewallActionSeries>();
   // Which actions `summary` gave a total for, tracked per action rather than
-  // for the response as a whole. An action can appear in `data` alone, and
+  // for the response as a whole. An action can appear in the series alone, and
   // its total then has to come from accumulating those rows; deciding that
   // once for every action reports 0 for such a series alongside a non-empty
   // timeseries.
   const totalFromSummary = new Set<string>();
 
-  for (const row of response.summary ?? []) {
-    const action = actionFromRow(row as Record<string, unknown>);
-    const total = valueFromRow(row as Record<string, unknown>);
+  for (const row of result.summary) {
+    const action = actionFromRow(row);
     totalFromSummary.add(action);
-    byAction.set(action, {
-      action,
-      total,
-      timeseries: [],
-    });
+    byAction.set(action, { action, total: rowValue(row), timeseries: [] });
   }
 
-  for (const row of response.data ?? []) {
-    const action = actionFromRow(row as Record<string, unknown>);
-    const value = valueFromRow(row as Record<string, unknown>);
-    const timestamp = String(row.timestamp);
+  for (const row of result.series) {
+    const action = actionFromRow(row);
+    const value = rowValue(row);
     let series = byAction.get(action);
     if (!series) {
       series = { action, total: 0, timeseries: [] };
       byAction.set(action, series);
     }
-    series.timeseries.push({ timestamp, value });
+    series.timeseries.push({ timestamp: row.timestamp, value });
     if (!totalFromSummary.has(action)) {
       series.total += value;
     }
@@ -197,8 +140,8 @@ export default async function getFirewallMetrics(
   }
 
   return {
-    startTime: start.toISOString(),
-    endTime: end.toISOString(),
+    startTime: result.startTime.toISOString(),
+    endTime: result.endTime.toISOString(),
     granularity,
     series,
     totals,

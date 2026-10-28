@@ -58,7 +58,7 @@ describe('microfrontends pull', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = microfrontends(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -119,7 +119,125 @@ describe('microfrontends pull', () => {
     );
   });
 
-  describe('--dpl', () => {
+  describe('--deployment', () => {
+    function useRequestedDeployment() {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-microfrontends-pull',
+        name: 'vercel-microfrontends-pull',
+      });
+      const requested: string[] = [];
+      client.scenario.get('/v1/microfrontends/:dpl/config', (req, res) => {
+        requested.push(req.params.dpl);
+        res.json({
+          config: {
+            $schema: 'https://openapi.vercel.sh/microfrontends.json',
+            applications: { 'app-1': {} },
+          },
+        });
+      });
+      client.cwd = setupUnitFixture('vercel-microfrontends-pull');
+      return requested;
+    }
+
+    function optionEvents() {
+      return client.telemetryEventStore.readonlyEvents
+        .map(event => event.key)
+        .filter(key => key === 'option:deployment' || key === 'option:dpl');
+    }
+
+    it('pulls the configuration of the given deployment', async () => {
+      const requested = useRequestedDeployment();
+      client.setArgv('microfrontends', 'pull', '--deployment', 'dpl_12345');
+
+      await expect(microfrontends(client)).resolves.toEqual(0);
+      expect(requested).toEqual(['dpl_12345']);
+      expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+      expect(optionEvents()).toEqual(['option:deployment']);
+    });
+
+    it('still accepts the deprecated --dpl with a warning', async () => {
+      const requested = useRequestedDeployment();
+      client.setArgv('microfrontends', 'pull', '--dpl=dpl_12345');
+
+      await expect(microfrontends(client)).resolves.toEqual(0);
+      expect(requested).toEqual(['dpl_12345']);
+      expect(client.stderr.getFullOutput()).toContain(
+        '! --dpl is deprecated. Use --deployment.'
+      );
+      expect(optionEvents()).toEqual(['option:dpl']);
+    });
+
+    it('rejects --deployment with --dpl before any request', async () => {
+      const requested = useRequestedDeployment();
+      client.setArgv(
+        'microfrontends',
+        'pull',
+        '--deployment',
+        'dpl_12345',
+        '--dpl',
+        'dpl_12345'
+      );
+
+      await expect(microfrontends(client)).resolves.toEqual(2);
+      expect(requested).toEqual([]);
+      expect(client.stderr.getFullOutput()).toContain(
+        "Can't use --deployment with --dpl."
+      );
+    });
+
+    it('rejects an empty --deployment before any request', async () => {
+      const requested = useRequestedDeployment();
+      client.setArgv('microfrontends', 'pull', '--deployment=');
+
+      await expect(microfrontends(client)).resolves.toEqual(2);
+      expect(requested).toEqual([]);
+      expect(client.stderr.getFullOutput()).toContain(
+        "--deployment can't be empty."
+      );
+    });
+
+    it('keeps pulling the production configuration for an empty deprecated --dpl', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-microfrontends-pull',
+        name: 'vercel-microfrontends-pull',
+      });
+      useMicrofrontendsForProject();
+      client.cwd = setupUnitFixture('vercel-microfrontends-pull');
+      client.setArgv('microfrontends', 'pull', '--dpl=');
+
+      await expect(microfrontends(client)).resolves.toEqual(0);
+      await expect(client.stderr).toOutput(
+        'Downloaded microfrontends configuration to'
+      );
+    });
+
+    it('writes a JSON error for --deployment with --dpl in non-interactive mode', async () => {
+      const requested = useRequestedDeployment();
+      client.nonInteractive = true;
+      client.setArgv(
+        'microfrontends',
+        'pull',
+        '--deployment',
+        'dpl_12345',
+        '--dpl',
+        'dpl_12345'
+      );
+
+      await expect(microfrontends(client)).resolves.toEqual(2);
+      expect(requested).toEqual([]);
+      expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+        status: 'error',
+        reason: 'invalid_arguments',
+        message: "Can't use --deployment with --dpl.",
+      });
+    });
+
     it('should use the provided deployment ID', async () => {
       useUser();
       useTeams('team_dummy');
@@ -132,7 +250,7 @@ describe('microfrontends pull', () => {
       const cwd = setupUnitFixture('vercel-microfrontends-pull');
 
       client.cwd = cwd;
-      client.setArgv('microfrontends', 'pull', '--dpl=dpl_12345');
+      client.setArgv('microfrontends', 'pull', '--deployment=dpl_12345');
       const microfrontendsPromise = microfrontends(client);
 
       await expect(client.stderr).toOutput(
@@ -159,7 +277,7 @@ describe('microfrontends pull', () => {
       const cwd = setupUnitFixture('vercel-microfrontends-pull');
 
       client.cwd = cwd;
-      client.setArgv('microfrontends', 'pull', '--dpl=dpl_non_existent');
+      client.setArgv('microfrontends', 'pull', '--deployment=dpl_non_existent');
       const microfrontendsPromise = microfrontends(client);
 
       const exitCode = await microfrontendsPromise;

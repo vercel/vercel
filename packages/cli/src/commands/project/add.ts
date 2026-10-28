@@ -10,7 +10,7 @@ import { addSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 
 export default async function add(
   client: Client,
@@ -28,27 +28,27 @@ export default async function add(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args } = parsedArgs;
 
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('project add <name>')}`
+        `${getCommandName('project create <name>')}`
       )}`
     );
 
     if (args.length > 1) {
       const example = chalk.cyan(
-        `${getCommandName(`project add "${args.join(' ')}"`)}`
+        `${getCommandName(`project create "${args.join(' ')}"`)}`
       );
       output.log(
         `If your project name  has spaces, make sure to wrap it in quotes. Example: \n  ${example} `
       );
     }
 
-    return 1;
+    return 2;
   }
 
   const start = Date.now();
@@ -72,7 +72,7 @@ export default async function add(
   }
   const elapsed = ms(Date.now() - start);
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
   output.log(
     `${chalk.cyan('Success!')} Project ${chalk.bold(
       name.toLowerCase()

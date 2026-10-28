@@ -1,4 +1,5 @@
 import { DateTime } from 'luxon';
+import ms from 'ms';
 import type { BreakdownPeriod } from '../../commands/usage/types';
 
 // Vercel billing periods are aligned to LA (Pacific) time
@@ -43,15 +44,24 @@ export function getDefaultToDateDisplay(): string {
   return dt.toFormat('yyyy-MM-dd');
 }
 
+export function isRelativeTime(input: string): boolean {
+  return ms(input) !== undefined;
+}
+
 export function parseBillingDate(
   dateStr: string,
   isEndDate: boolean = false
 ): string {
+  const relativeMs = ms(dateStr);
+  if (relativeMs !== undefined) {
+    return new Date(Date.now() - relativeMs).toISOString();
+  }
+
   if (dateStr.includes('T')) {
     const dt = DateTime.fromISO(dateStr);
     if (!dt.isValid) {
       throw new Error(
-        `Invalid date: "${dateStr}". Expected ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss)`
+        `Invalid date: "${dateStr}". Expected YYYY-MM-DD, ISO 8601 (YYYY-MM-DDTHH:mm:ss), or relative (7d)`
       );
     }
     return dateStr;
@@ -64,7 +74,7 @@ export function parseBillingDate(
 
   if (!laDateTime.isValid) {
     throw new Error(
-      `Invalid date: "${dateStr}". Expected ISO 8601 format (YYYY-MM-DD)`
+      `Invalid date: "${dateStr}". Expected YYYY-MM-DD, ISO 8601, or relative (7d)`
     );
   }
 

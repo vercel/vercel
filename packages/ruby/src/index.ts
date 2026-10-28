@@ -172,6 +172,7 @@ export const build: BuildV3 = async ({
   config,
   meta = {},
   service,
+  diagnosticsValues,
 }) => {
   await download(files, workPath, meta);
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
@@ -335,7 +336,7 @@ export const build: BuildV3 = async ({
     await generateProjectManifest({
       workPath,
       gemfileLockPath: join(dirname(gemfilePath), 'Gemfile.lock'),
-      framework: config?.framework ?? undefined,
+      framework: diagnosticsValues?.framework,
       serviceType: service ? getReportedServiceType(service) : undefined,
     });
   } catch (err) {
