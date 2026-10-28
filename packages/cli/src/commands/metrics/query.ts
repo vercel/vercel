@@ -58,7 +58,7 @@ import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name'
 import getScope from '../../util/get-scope';
 import { isAPIError, ProjectNotFound } from '../../util/errors-ts';
 
-function handleValidationError(
+export function handleValidationError(
   result: ValidationError,
   jsonOutput: boolean,
   client: Client,
@@ -185,7 +185,7 @@ function getCanonicalOrderBy(
   return selection.aggregation === 'count' || supportsCount ? 'count' : 'value';
 }
 
-async function resolveQueryScope(
+export async function resolveQueryScope(
   client: Client,
   telemetry: MetricsTelemetryClient,
   opts: {

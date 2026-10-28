@@ -84,6 +84,10 @@ export default async function metrics(client: Client): Promise<number> {
         );
         return 0;
       }
+      if (parsedArgs.flags['--body'] !== undefined) {
+        const rawQueryFn = (await import('./raw-query')).default;
+        return rawQueryFn(client, telemetry);
+      }
       // Show help if no metric was provided for the default query form.
       if (!positionalMetric) {
         output.print(

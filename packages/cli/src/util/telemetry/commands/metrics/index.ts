@@ -97,6 +97,15 @@ export class MetricsTelemetryClient
     }
   }
 
+  trackCliOptionBody(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'body',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliFlagProd(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('prod');

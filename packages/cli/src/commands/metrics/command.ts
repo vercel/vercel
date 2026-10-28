@@ -118,6 +118,15 @@ export const metricsCommand = {
       argument: 'EXPR',
     },
     {
+      name: 'body',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Raw /metrics/v1 query body for multiple metrics and formulas: inline JSON, @file, or @- for stdin. Fills "scope" and "timeRange" from the linked project and --since/--until when omitted',
+      argument: 'JSON',
+    },
+    {
       ...environmentOption,
       description:
         'Limit the query to one environment, such as production or preview',
@@ -241,6 +250,14 @@ export const metricsCommand = {
       {
         name: 'Team-wide function executions by project',
         value: `${packageName} metrics --all vercel.function_invocation.count --group-by ${projectId} --since 24h`,
+      },
+      {
+        name: 'Hourly 5xx error rate with a formula (raw /metrics/v1 body)',
+        value: `${packageName} metrics --since 24h --body '{"metrics":{"errors":{"metric":"vercel.function_invocation.count","aggregation":"count","filter":"httpStatus >= 500"},"total":{"metric":"vercel.function_invocation.count","aggregation":"count"}},"formulas":{"errorRate":"errors / total * 100"},"outputs":["errorRate"],"bucketSeconds":3600}'`,
+      },
+      {
+        name: 'Raw /metrics/v1 body from a file',
+        value: `${packageName} metrics --body @query.json --format json`,
       },
     ];
   },
