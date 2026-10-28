@@ -91,6 +91,32 @@ export function getProtectionForDeployment(
   const publicScopes = getProductionUrl(deployment)
     ? PRODUCTION_DOMAINS_PUBLIC
     : PRODUCTION_DEPLOYMENTS_PUBLIC;
+  return withoutPublicScopes(methods, publicScopes);
+}
+
+/**
+ * The methods that protect a hostname assigned with `vercel alias set`. Only
+ * a domain added to the project counts as a production domain: Standard
+ * Protection still protects any other alias, even one that points to a
+ * production deployment, the same way it protects the deployment URL.
+ */
+export function getProtectionForAlias(
+  methods: EnabledProtection[] | null | undefined,
+  deployment: { target?: string | null },
+  isProjectDomain: boolean
+): EnabledProtection[] {
+  if (!methods) return [];
+  if (deployment.target !== 'production') return methods;
+  const publicScopes = isProjectDomain
+    ? PRODUCTION_DOMAINS_PUBLIC
+    : PRODUCTION_DEPLOYMENTS_PUBLIC;
+  return withoutPublicScopes(methods, publicScopes);
+}
+
+function withoutPublicScopes(
+  methods: EnabledProtection[],
+  publicScopes: Set<string>
+): EnabledProtection[] {
   return methods.filter(
     method => !method.deploymentType || !publicScopes.has(method.deploymentType)
   );

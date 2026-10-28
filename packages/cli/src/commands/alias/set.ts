@@ -5,6 +5,7 @@ import * as ERRORS from '../../util/errors-ts';
 import assignAlias from '../../util/alias/assign-alias';
 import type Client from '../../util/client';
 import { getDeploymentForAlias } from '../../util/alias/get-deployment-by-alias';
+import { printAliasProtection } from '../../util/alias/print-alias-protection';
 import getScope from '../../util/get-scope';
 import type setupDomain from '../../util/domains/setup-domain';
 import stamp from '../../util/output/stamp';
@@ -136,6 +137,12 @@ export default async function set(client: Client, argv: string[]) {
           `${isWildcardAlias(target) ? '' : 'https://'}${handleResult.alias}`
         )} now points to https://${deployment.url} ${setStamp()}`
       );
+      await printAliasProtection(
+        client,
+        deployment,
+        contextName,
+        handleResult.alias
+      );
     }
 
     return 0;
@@ -166,6 +173,12 @@ export default async function set(client: Client, argv: string[]) {
     `${chalk.bold(
       `${prefix}${handleResult.alias}`
     )} now points to ${idOrUrl} ${setStamp()}`
+  );
+  await printAliasProtection(
+    client,
+    idOrUrlForRequest,
+    contextName,
+    handleResult.alias
   );
 
   return 0;

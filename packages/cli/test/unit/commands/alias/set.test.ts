@@ -177,4 +177,94 @@ describe('alias set', () => {
       await expect(client.stderr).toOutput(`Failed to find ID or URL ${host}`);
     });
   });
+
+  describe('Deployment Protection notice', () => {
+    function useAliasScenario({
+      ssoProtection,
+      projectDomain,
+    }: {
+      ssoProtection: { deploymentType: string } | null;
+      projectDomain?: string;
+    }) {
+      const user = useUser();
+      const deployment = useDeployment({ creator: user });
+      client.scenario.post(
+        '/:version/deployments/:id/aliases',
+        (request, response) => {
+          response.json({ alias: request.body.alias });
+        }
+      );
+      client.scenario.get('/v9/projects/:id', (request, response) => {
+        response.json({ id: request.params.id, ssoProtection });
+      });
+      client.scenario.get(
+        '/v9/projects/:id/domains/:domain',
+        (request, response) => {
+          if (request.params.domain === projectDomain) {
+            response.json({
+              name: projectDomain,
+              projectId: request.params.id,
+              verified: true,
+            });
+            return;
+          }
+          response
+            .status(404)
+            .json({ error: { code: 'not_found', message: 'Not found' } });
+        }
+      );
+      return deployment;
+    }
+
+    it('warns when a production alias is not a project domain under Standard Protection', async () => {
+      const { url } = useAliasScenario({
+        ssoProtection: { deploymentType: 'all_except_custom_domains' },
+      });
+      client.setArgv('alias', 'set', url, 'my-alias.vercel.app');
+
+      await expect(alias(client)).resolves.toEqual(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('now points to');
+      expect(stderr).toContain(
+        'Deployment Protection is on for this project (Vercel Authentication), so https://my-alias.vercel.app requires access.'
+      );
+      expect(stderr).toContain('vercel curl');
+    });
+
+    it('stays quiet when the alias is a project domain under Standard Protection', async () => {
+      const { url } = useAliasScenario({
+        ssoProtection: { deploymentType: 'all_except_custom_domains' },
+        projectDomain: 'my-alias.vercel.app',
+      });
+      client.setArgv('alias', 'set', url, 'my-alias.vercel.app');
+
+      await expect(alias(client)).resolves.toEqual(0);
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Deployment Protection'
+      );
+    });
+
+    it('warns for a project domain when All Deployments are protected', async () => {
+      const { url } = useAliasScenario({
+        ssoProtection: { deploymentType: 'all' },
+        projectDomain: 'my-alias.vercel.app',
+      });
+      client.setArgv('alias', 'set', url, 'my-alias.vercel.app');
+
+      await expect(alias(client)).resolves.toEqual(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Deployment Protection is on for this project'
+      );
+    });
+
+    it('stays quiet when protection is off', async () => {
+      const { url } = useAliasScenario({ ssoProtection: null });
+      client.setArgv('alias', 'set', url, 'my-alias.vercel.app');
+
+      await expect(alias(client)).resolves.toEqual(0);
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Deployment Protection'
+      );
+    });
+  });
 });

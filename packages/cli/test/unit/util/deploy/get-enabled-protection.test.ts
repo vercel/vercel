@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   getEnabledProtection,
+  getProtectionForAlias,
   getProtectionForDeployment,
 } from '../../../../src/util/deploy/get-enabled-protection';
 
@@ -113,5 +114,51 @@ describe('getProtectionForDeployment', () => {
 
   it('returns an empty list when the settings could not be read', () => {
     expect(getProtectionForDeployment(null, production)).toEqual([]);
+  });
+});
+
+describe('getProtectionForAlias', () => {
+  const sso = (deploymentType?: string) => ({
+    setting: 'ssoProtection' as const,
+    id: 'vercel_authentication' as const,
+    name: 'Vercel Authentication' as const,
+    deploymentType,
+  });
+  const production = { target: 'production' };
+
+  it('keeps Standard Protection for a production alias that is not a project domain', () => {
+    const methods = [
+      sso('all_except_custom_domains'),
+      sso('prod_deployment_urls_and_all_previews'),
+      sso('all'),
+    ];
+    expect(getProtectionForAlias(methods, production, false)).toEqual(methods);
+  });
+
+  it('drops Standard Protection for a production alias that is a project domain', () => {
+    expect(
+      getProtectionForAlias(
+        [sso('all_except_custom_domains'), sso('all')],
+        production,
+        true
+      )
+    ).toEqual([sso('all')]);
+  });
+
+  it('drops Only Preview Deployments for any production alias', () => {
+    expect(getProtectionForAlias([sso('preview')], production, false)).toEqual(
+      []
+    );
+  });
+
+  it('keeps every method for a preview alias, even a project domain', () => {
+    const methods = [sso('all_except_custom_domains'), sso('preview')];
+    expect(getProtectionForAlias(methods, { target: null }, true)).toEqual(
+      methods
+    );
+  });
+
+  it('returns an empty list when the settings could not be read', () => {
+    expect(getProtectionForAlias(null, production, false)).toEqual([]);
   });
 });
