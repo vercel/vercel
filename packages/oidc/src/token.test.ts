@@ -342,4 +342,45 @@ describe('refreshToken', () => {
     expect(getVercelOidcTokenSpy).not.toHaveBeenCalled();
     expect(process.env.VERCEL_OIDC_TOKEN).toBe('valid-cached-token');
   });
+
+  test('should share one in-flight refresh between concurrent callers', async () => {
+    let resolveAuthToken!: (value: string) => void;
+    const getVercelTokenSpy = vi
+      .spyOn(tokenUtil, 'getVercelToken')
+      .mockReturnValue(
+        new Promise<string>(resolve => {
+          resolveAuthToken = resolve;
+        })
+      );
+    const getVercelOidcTokenSpy = vi.spyOn(tokenUtil, 'getVercelOidcToken');
+
+    const results = Promise.all([
+      refreshToken(),
+      refreshToken(),
+      refreshToken(),
+    ]);
+    resolveAuthToken('test');
+    await results;
+
+    expect(getVercelTokenSpy).toHaveBeenCalledTimes(1);
+    expect(getVercelOidcTokenSpy).toHaveBeenCalledTimes(1);
+    expect(process.env.VERCEL_OIDC_TOKEN).toBe('test-token');
+  });
+
+  test('should share a failed in-flight refresh and allow a retry afterwards', async () => {
+    const getVercelTokenSpy = vi
+      .spyOn(tokenUtil, 'getVercelToken')
+      .mockRejectedValueOnce(new Error('refresh failed'));
+
+    const results = await Promise.allSettled([refreshToken(), refreshToken()]);
+
+    expect(results.map(r => r.status)).toEqual(['rejected', 'rejected']);
+    expect(getVercelTokenSpy).toHaveBeenCalledTimes(1);
+
+    getVercelTokenSpy.mockResolvedValue('test');
+    await refreshToken();
+
+    expect(getVercelTokenSpy).toHaveBeenCalledTimes(2);
+    expect(process.env.VERCEL_OIDC_TOKEN).toBe('test-token');
+  });
 });
