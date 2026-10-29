@@ -73,7 +73,3 @@ if (
   module.exports.getRequestHandlerWithMetadata = (metadata: any) =>
     serve(nextServer.getRequestHandlerWithMetadata(metadata));
 }
-
-if (process.env.NEXT_PRIVATE_PRELOAD_ENTRIES) {
-  module.exports.preload = nextServer.unstable_preloadEntries.bind(nextServer);
-}
