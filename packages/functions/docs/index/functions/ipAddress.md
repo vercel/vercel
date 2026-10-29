@@ -6,7 +6,7 @@
 
 > **ipAddress**(`input`): `string` \| `undefined`
 
-Defined in: [packages/functions/src/headers.ts:131](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L131)
+Defined in: [packages/functions/src/headers.ts:135](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L135)
 
 Returns the IP address of the request from the headers.
 

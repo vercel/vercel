@@ -4,27 +4,57 @@
 
 # Type Alias: VercelOidcExchangeInit
 
-> **VercelOidcExchangeInit** = \{ `audience`: `string`; `jti?`: `string`; `skipTokenCache?`: `boolean`; \} \| \{ `audience?`: `undefined`; `jti?`: `never`; `skipTokenCache?`: `never`; \}
+> **VercelOidcExchangeInit** = \{ `audience?`: `never`; `enableProjectIdentity`: `true`; `jti?`: `never`; `skipTokenCache?`: `boolean`; \} \| \{ `audience`: `string`; `enableProjectIdentity?`: `false`; `jti?`: `string`; `skipTokenCache?`: `boolean`; \} \| \{ `audience?`: `undefined`; `enableProjectIdentity?`: `false`; `jti?`: `never`; `skipTokenCache?`: `never`; \}
 
 Defined in: [aws-credentials-provider.ts:30](https://github.com/vercel/vercel/blob/main/packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts#L30)
 
 The Vercel OIDC token options layered on top of the STS init.
 
-`jti` and `skipTokenCache` are only accepted when `audience` is provided,
-because they only take effect while exchanging the token for a custom
-audience — without an `audience` there is no exchange.
+Custom-audience exchanges accept `jti` and `skipTokenCache`. Immutable
+project identity is a separate exchange mode that accepts `skipTokenCache`
+without a custom audience.
 
 ## Union Members
 
 ### Type Literal
 
-\{ `audience`: `string`; `jti?`: `string`; `skipTokenCache?`: `boolean`; \}
+\{ `audience?`: `never`; `enableProjectIdentity`: `true`; `jti?`: `never`; `skipTokenCache?`: `boolean`; \}
+
+#### audience?
+
+> `optional` **audience?**: `never`
+
+#### enableProjectIdentity
+
+> **enableProjectIdentity**: `true`
+
+Use an immutable project identity for AWS roles prepared for this token
+format. Standard tokens remain unchanged. Cannot be combined with a
+custom audience or JTI.
+
+#### jti?
+
+> `optional` **jti?**: `never`
+
+#### skipTokenCache?
+
+> `optional` **skipTokenCache?**: `boolean`
+
+---
+
+### Type Literal
+
+\{ `audience`: `string`; `enableProjectIdentity?`: `false`; `jti?`: `string`; `skipTokenCache?`: `boolean`; \}
 
 #### audience
 
 > **audience**: `string`
 
 Audience to set on the exchanged token.
+
+#### enableProjectIdentity?
+
+> `optional` **enableProjectIdentity?**: `false`
 
 #### jti?
 
@@ -57,7 +87,7 @@ false;
 
 ### Type Literal
 
-\{ `audience?`: `undefined`; `jti?`: `never`; `skipTokenCache?`: `never`; \}
+\{ `audience?`: `undefined`; `enableProjectIdentity?`: `false`; `jti?`: `never`; `skipTokenCache?`: `never`; \}
 
 #### audience?
 
@@ -68,6 +98,10 @@ false;
 ```ts
 undefined;
 ```
+
+#### enableProjectIdentity?
+
+> `optional` **enableProjectIdentity?**: `false`
 
 #### jti?
 

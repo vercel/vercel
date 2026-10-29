@@ -19,3 +19,15 @@ export function getVercelOidcTokenSync(): string {
 export async function getVercelToken(): Promise<string> {
   throw new Error('getVercelToken is not supported in browser environments');
 }
+
+export async function exchangeVercelOidcToken(): Promise<string> {
+  throw new Error(
+    'OIDC token exchange is not supported in browser environments'
+  );
+}
+
+export async function exchangeVercelAwsOidcToken(): Promise<string> {
+  throw new Error(
+    'AWS identity exchange is not supported in browser environments'
+  );
+}

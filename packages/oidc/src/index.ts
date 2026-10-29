@@ -11,7 +11,9 @@ export {
 } from './auth-errors';
 export {
   exchangeVercelOidcToken,
+  exchangeVercelAwsOidcToken,
   type ExchangeVercelOidcTokenOptions,
+  type ExchangeVercelAwsOidcTokenOptions,
 } from './exchange-vercel-oidc-token';
 export {
   getVercelToken,

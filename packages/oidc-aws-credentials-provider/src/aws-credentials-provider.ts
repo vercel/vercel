@@ -1,7 +1,7 @@
 import type { AwsCredentialIdentityProvider } from '@smithy/types';
 import type { FromWebTokenInit } from '@aws-sdk/credential-provider-web-identity';
 import { fromWebToken } from '@aws-sdk/credential-provider-web-identity';
-import { getVercelOidcToken } from '@vercel/oidc';
+import { getVercelOidcToken, exchangeVercelAwsOidcToken } from '@vercel/oidc';
 
 /**
  * The init object for the `awsCredentialsProvider` function.
@@ -23,12 +23,24 @@ import { getVercelOidcToken } from '@vercel/oidc';
 /**
  * The Vercel OIDC token options layered on top of the STS init.
  *
- * `jti` and `skipTokenCache` are only accepted when `audience` is provided,
- * because they only take effect while exchanging the token for a custom
- * audience — without an `audience` there is no exchange.
+ * Custom-audience exchanges accept `jti` and `skipTokenCache`. Immutable
+ * project identity is a separate exchange mode that accepts `skipTokenCache`
+ * without a custom audience.
  */
 export type VercelOidcExchangeInit =
   | {
+      /**
+       * Use an immutable project identity for AWS roles prepared for this token
+       * format. Standard tokens remain unchanged. Cannot be combined with a
+       * custom audience or JTI.
+       */
+      enableProjectIdentity: true;
+      audience?: never;
+      jti?: never;
+      skipTokenCache?: boolean;
+    }
+  | {
+      enableProjectIdentity?: false;
       /**
        * Audience to set on the exchanged token.
        */
@@ -48,6 +60,7 @@ export type VercelOidcExchangeInit =
       skipTokenCache?: boolean;
     }
   | {
+      enableProjectIdentity?: false;
       /**
        * @default undefined
        */
@@ -107,13 +120,30 @@ export type AwsCredentialsProviderInit = Omit<
 export function awsCredentialsProvider(
   init: AwsCredentialsProviderInit
 ): AwsCredentialIdentityProvider {
-  const { audience, jti, skipTokenCache, ...initOptions } = init;
+  const {
+    enableProjectIdentity,
+    audience,
+    jti,
+    skipTokenCache,
+    ...initOptions
+  } = init;
+  if (enableProjectIdentity && (audience !== undefined || jti !== undefined)) {
+    throw new Error(
+      'Immutable AWS project identity cannot be combined with audience or jti'
+    );
+  }
   return async () => {
-    const webIdentityToken = await getVercelOidcToken(
+    let webIdentityToken = await getVercelOidcToken(
       audience === undefined
         ? undefined
         : { audience, jti, skipCache: skipTokenCache }
     );
+    if (enableProjectIdentity) {
+      webIdentityToken = await exchangeVercelAwsOidcToken({
+        token: webIdentityToken,
+        skipCache: skipTokenCache,
+      });
+    }
     return fromWebToken({
       ...initOptions,
       webIdentityToken,

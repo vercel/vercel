@@ -16,10 +16,12 @@
 
 ## Type Aliases
 
+- [ExchangeVercelAwsOidcTokenOptions](type-aliases/ExchangeVercelAwsOidcTokenOptions.md)
 - [VercelOidcPayload](type-aliases/VercelOidcPayload.md)
 
 ## Functions
 
+- [exchangeVercelAwsOidcToken](functions/exchangeVercelAwsOidcToken.md)
 - [exchangeVercelOidcToken](functions/exchangeVercelOidcToken.md)
 - [getContext](functions/getContext.md)
 - [getVercelOidcToken](functions/getVercelOidcToken.md)

@@ -32,6 +32,14 @@ export interface ExchangeVercelOidcTokenOptions {
   skipCache?: boolean;
 }
 
+/** Options for exchanging a standard project token for AWS immutable identity. */
+export type ExchangeVercelAwsOidcTokenOptions = Pick<
+  ExchangeVercelOidcTokenOptions,
+  'token' | 'skipCache'
+>;
+
+type ExchangeEndpoint = '~token' | '~aws-token';
+
 interface CacheEntry {
   token: string;
   /** Epoch milliseconds after which the cached token must not be reused. */
@@ -40,7 +48,7 @@ interface CacheEntry {
 
 /**
  * Bounded, expiry-aware, in-memory cache of exchanged tokens keyed by a hash of
- * token + audience + jti. Entries are evicted once their API-provided expiry
+ * endpoint + token + audience + jti. Entries are evicted once their API expiry
  * passes, and the cache is bounded via least-recently-used eviction so callers
  * that rotate tokens frequently — or pass a unique `jti` each time — can't grow
  * it without bound. Because the source token is part of the key, a rotated
@@ -107,14 +115,20 @@ const MAX_CACHE_ENTRIES = 1000;
 const tokenCache = new TokenCache(MAX_CACHE_ENTRIES);
 
 /**
- * Derives a stable cache key from the source token, audience, and jti. The
- * inputs are SHA-256 hashed so the raw token is never retained as a map key and
+ * Derives a cache key from the endpoint, source token, audience, and jti.
+ * Inputs are SHA-256 hashed so the raw token is never retained as a map key and
  * the key length stays bounded regardless of input size.
  */
 async function getCacheKey(
+  endpoint: ExchangeEndpoint,
   options: ExchangeVercelOidcTokenOptions
 ): Promise<string> {
-  const input = JSON.stringify([options.token, options.audience, options.jti]);
+  const input = JSON.stringify([
+    endpoint,
+    options.token,
+    options.audience,
+    options.jti,
+  ]);
   const digest = await crypto.subtle.digest(
     'SHA-256',
     new TextEncoder().encode(input)
@@ -138,7 +152,26 @@ async function getCacheKey(
 export async function exchangeVercelOidcToken(
   options: ExchangeVercelOidcTokenOptions
 ): Promise<string> {
-  const cacheKey = await getCacheKey(options);
+  return exchangeToken('~token', options);
+}
+
+/**
+ * Exchanges a standard Vercel project token for an AWS web identity token whose
+ * subject uses immutable team, project, and environment IDs. The AWS role must
+ * trust this subject format before callers opt in. Errors never fall back to
+ * the source token.
+ */
+export async function exchangeVercelAwsOidcToken(
+  options: ExchangeVercelAwsOidcTokenOptions
+): Promise<string> {
+  return exchangeToken('~aws-token', options);
+}
+
+async function exchangeToken(
+  endpoint: ExchangeEndpoint,
+  options: ExchangeVercelOidcTokenOptions
+): Promise<string> {
+  const cacheKey = await getCacheKey(endpoint, options);
   if (!options.skipCache) {
     const cached = tokenCache.get(cacheKey);
     if (cached !== undefined) {
@@ -146,18 +179,26 @@ export async function exchangeVercelOidcToken(
     }
   }
 
-  const response = await fetch('https://oidc.vercel.com/~token', {
+  const response = await fetch(`https://oidc.vercel.com/${endpoint}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
       'User-Agent': `@vercel/oidc@${version}`,
     },
-    body: JSON.stringify({
-      token: options.token,
-      aud: options.audience,
-      ...(options.jti ? { jti: options.jti } : undefined),
+    ...(endpoint === '~aws-token' && {
+      redirect: 'error',
+      signal: AbortSignal.timeout(10_000),
     }),
+    body: JSON.stringify(
+      endpoint === '~aws-token'
+        ? { token: options.token }
+        : {
+            token: options.token,
+            aud: options.audience,
+            ...(options.jti ? { jti: options.jti } : undefined),
+          }
+    ),
   });
   if (!response.ok) {
     throw new Error(
@@ -174,7 +215,8 @@ export async function exchangeVercelOidcToken(
     !data ||
     typeof data !== 'object' ||
     !('token' in data) ||
-    typeof data.token !== 'string'
+    typeof data.token !== 'string' ||
+    (endpoint === '~aws-token' && !data.token)
   ) {
     throw new Error(
       'Failed to exchange token: response did not contain a token'
@@ -187,6 +229,16 @@ export async function exchangeVercelOidcToken(
     'expiry' in data && typeof data.expiry === 'number'
       ? data.expiry
       : undefined;
+  if (
+    endpoint === '~aws-token' &&
+    (expiry === undefined ||
+      !Number.isFinite(expiry) ||
+      expiry * 1000 <= Date.now())
+  ) {
+    throw new Error(
+      'Failed to exchange token: response did not contain a valid expiry'
+    );
+  }
   if (expiry !== undefined) {
     const expiresAt = expiry * 1000;
     if (expiresAt > Date.now()) {

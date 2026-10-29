@@ -1,6 +1,9 @@
 import type { AwsCredentialIdentityProvider } from '@smithy/types';
 import type { FromWebTokenInit } from '@aws-sdk/credential-provider-web-identity';
-import { getVercelOidcTokenSync } from '@vercel/oidc';
+import {
+  getVercelOidcTokenSync,
+  exchangeVercelAwsOidcToken,
+} from '@vercel/oidc';
 
 /**
  * The init object for the `awsCredentialsProvider` function.
@@ -17,8 +20,15 @@ import { getVercelOidcTokenSync } from '@vercel/oidc';
  * @property {number} [durationSeconds=3600] - The duration, in seconds, of the role session. Defaults to 3600 seconds.
  */
 
-export interface AwsCredentialsProviderInit // eslint-disable-line @typescript-eslint/no-empty-interface
-  extends Omit<FromWebTokenInit, 'webIdentityToken'> {}
+export interface AwsCredentialsProviderInit
+  extends Omit<FromWebTokenInit, 'webIdentityToken'> {
+  /**
+   * Use immutable project identity for an AWS role prepared for that token
+   * format. Exchange errors never fall back to the standard project token.
+   * @default false
+   */
+  enableProjectIdentity?: boolean;
+}
 
 /**
  * Obtains the Vercel OIDC token and creates an AWS credential provider function
@@ -70,11 +80,18 @@ async function loadAwsCredentialProviderWebIdentity() {
 export function awsCredentialsProvider(
   init: AwsCredentialsProviderInit
 ): AwsCredentialIdentityProvider {
+  const { enableProjectIdentity, ...initOptions } = init;
   return async () => {
     const { fromWebToken } = await loadAwsCredentialProviderWebIdentity();
+    let webIdentityToken = getVercelOidcTokenSync();
+    if (enableProjectIdentity) {
+      webIdentityToken = await exchangeVercelAwsOidcToken({
+        token: webIdentityToken,
+      });
+    }
     return fromWebToken({
-      ...init,
-      webIdentityToken: getVercelOidcTokenSync(),
+      ...initOptions,
+      webIdentityToken,
     })();
   };
 }

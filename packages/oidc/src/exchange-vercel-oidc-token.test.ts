@@ -133,4 +133,74 @@ describe('exchangeVercelOidcToken', () => {
     await exchange({ token: 'token-1000', audience: 'https://a.example.com' });
     expect(fetchMock).toHaveBeenCalledTimes(1002);
   });
+  it('exchanges AWS identity through the dedicated endpoint with bounded requests', async () => {
+    const { exchangeVercelAwsOidcToken } = await import(
+      './exchange-vercel-oidc-token'
+    );
+    fetchMock.mockResolvedValue(
+      jsonResponse({ token: 'aws-token', expiry: futureExpiry(300) })
+    );
+    expect(await exchangeVercelAwsOidcToken({ token: 'source' })).toBe(
+      'aws-token'
+    );
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://oidc.vercel.com/~aws-token');
+    expect(JSON.parse(init.body)).toEqual({ token: 'source' });
+    expect(init.redirect).toBe('error');
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('separates AWS tokens from standard exchanges and supports cache bypass', async () => {
+    const { exchangeVercelAwsOidcToken, exchangeVercelOidcToken } =
+      await import('./exchange-vercel-oidc-token');
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({ token: 'standard', expiry: futureExpiry(300) })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ token: 'aws', expiry: futureExpiry(300) })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ token: 'fresh-aws', expiry: futureExpiry(300) })
+      );
+    expect(await exchangeVercelOidcToken({ token: 'source' })).toBe('standard');
+    expect(await exchangeVercelAwsOidcToken({ token: 'source' })).toBe('aws');
+    expect(await exchangeVercelAwsOidcToken({ token: 'source' })).toBe('aws');
+    expect(
+      await exchangeVercelAwsOidcToken({ token: 'source', skipCache: true })
+    ).toBe('fresh-aws');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it.each([
+    { token: '', expiry: 9999999999 },
+    { token: 'aws' },
+    { token: 'aws', expiry: 0 },
+    { token: 'aws', expiry: Number.NaN },
+    { token: 'aws', expiry: Number.POSITIVE_INFINITY },
+  ])('rejects invalid AWS exchange responses %j', async body => {
+    const { exchangeVercelAwsOidcToken } = await import(
+      './exchange-vercel-oidc-token'
+    );
+    fetchMock.mockResolvedValue(jsonResponse(body));
+    await expect(
+      exchangeVercelAwsOidcToken({ token: 'source' })
+    ).rejects.toThrow('Failed to exchange token');
+  });
+
+  it('propagates AWS exchange denial and does not cache it', async () => {
+    const { exchangeVercelAwsOidcToken } = await import(
+      './exchange-vercel-oidc-token'
+    );
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ error: 'Not authorized' }, false))
+      .mockResolvedValueOnce(
+        jsonResponse({ token: 'aws', expiry: futureExpiry(300) })
+      );
+    await expect(
+      exchangeVercelAwsOidcToken({ token: 'source' })
+    ).rejects.toThrow('Not authorized');
+    expect(await exchangeVercelAwsOidcToken({ token: 'source' })).toBe('aws');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

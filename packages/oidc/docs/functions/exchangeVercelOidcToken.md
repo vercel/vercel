@@ -6,7 +6,7 @@
 
 > **exchangeVercelOidcToken**(`options`): [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<`string`\>
 
-Defined in: [packages/oidc/src/exchange-vercel-oidc-token.ts:138](https://github.com/vercel/vercel/blob/main/packages/oidc/src/exchange-vercel-oidc-token.ts#L138)
+Defined in: [packages/oidc/src/exchange-vercel-oidc-token.ts:152](https://github.com/vercel/vercel/blob/main/packages/oidc/src/exchange-vercel-oidc-token.ts#L152)
 
 Exchanges a Vercel OIDC token for a Vercel token with a custom audience.
 

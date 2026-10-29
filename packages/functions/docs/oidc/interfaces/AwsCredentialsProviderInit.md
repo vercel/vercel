@@ -4,7 +4,7 @@
 
 # Interface: AwsCredentialsProviderInit
 
-Defined in: [packages/functions/src/oidc/aws-credentials-provider.ts:20](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/aws-credentials-provider.ts#L20)
+Defined in: [packages/functions/src/oidc/aws-credentials-provider.ts:23](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/aws-credentials-provider.ts#L23)
 
 The init object for the `awsCredentialsProvider` function.
 
@@ -51,6 +51,23 @@ The duration, in seconds, of the role session. Defaults to 3600 seconds.
 #### Inherited from
 
 `Omit.durationSeconds`
+
+***
+
+### enableProjectIdentity?
+
+> `optional` **enableProjectIdentity?**: `boolean`
+
+Defined in: [packages/functions/src/oidc/aws-credentials-provider.ts:30](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/aws-credentials-provider.ts#L30)
+
+Use immutable project identity for an AWS role prepared for that token
+format. Exchange errors never fall back to the standard project token.
+
+#### Default
+
+```ts
+false
+```
 
 ***
 
