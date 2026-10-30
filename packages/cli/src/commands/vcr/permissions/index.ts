@@ -15,7 +15,7 @@ import {
   permissionsClearSubcommand,
 } from './command';
 
-const USAGE = 'vcr permissions <repository> <ls|add|rm|clear>';
+const USAGE = 'vcr permissions <repository> <ls|add|remove|clear>';
 
 /**
  * Flags accepted by any `vcr permissions` action. The router parses
@@ -76,10 +76,10 @@ export default async function permissions(
           },
         ],
       },
-      1
+      2
     );
     output.error(`${message} Run \`vercel vcr permissions --help\`.`);
-    return 1;
+    return 2;
   }
 
   switch (subcommand) {

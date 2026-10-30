@@ -1,15 +1,21 @@
 import { CantParseJSONFile } from '../errors-ts';
 import readJSONFile from '../read-json-file';
 import type { VercelConfig } from '../dev/types';
-import getLocalConfigPath from './local-path';
+import getLocalConfigPath, { localConfigFlagPath } from './local-path';
 import { compileVercelConfig } from '../compile-vercel-config';
 
 export default async function readConfig(dir: string) {
   let pkgFilePath: string;
 
   try {
-    const compileResult = await compileVercelConfig(dir);
-    pkgFilePath = compileResult.configPath || getLocalConfigPath(dir);
+    // --local-config names the file outright, over a compiled vercel.ts.
+    const localConfigPath = localConfigFlagPath();
+    if (localConfigPath) {
+      pkgFilePath = localConfigPath;
+    } else {
+      const compileResult = await compileVercelConfig(dir);
+      pkgFilePath = compileResult.configPath || getLocalConfigPath(dir);
+    }
   } catch (err) {
     if (err instanceof Error) {
       return err as any;

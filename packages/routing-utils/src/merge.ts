@@ -22,6 +22,31 @@ function getBuilderRoutesMapping(builds: Build[]) {
   return builderRoutes;
 }
 
+function addToHandleMap(
+  path: string,
+  routesMapping: BuilderRoutes,
+  handleMap: Map<HandleValue | null, Route[]>
+): void {
+  const br = routesMapping[path];
+  Object.keys(br)
+    .sort()
+    .forEach(use => {
+      let prevHandle: HandleValue | null = null;
+      br[use].forEach(route => {
+        if (isHandler(route)) {
+          prevHandle = route.handle;
+        } else {
+          const routes = handleMap.get(prevHandle);
+          if (!routes) {
+            handleMap.set(prevHandle, [route]);
+          } else {
+            routes.push(route);
+          }
+        }
+      });
+    });
+}
+
 function getCheckAndContinue(routes: Route[]): {
   checks: Route[];
   continues: Route[];
@@ -66,47 +91,48 @@ export function mergeRoutes({ userRoutes, builds }: MergeRoutesProps): Route[] {
     }
   });
 
+  // Project level middleware builds must run before routes from other builders.
+  const projectHandleMap = new Map<HandleValue | null, Route[]>();
+  const projectMiddlewareRoutes = getBuilderRoutesMapping(
+    builds.filter(b => b.projectMiddleware)
+  );
+  Object.keys(projectMiddlewareRoutes)
+    .sort()
+    .forEach(path =>
+      addToHandleMap(path, projectMiddlewareRoutes, projectHandleMap)
+    );
+
   const builderHandleMap = new Map<HandleValue | null, Route[]>();
-  const builderRoutes = getBuilderRoutesMapping(builds);
-  const sortedPaths = Object.keys(builderRoutes).sort();
-  sortedPaths.forEach(path => {
-    const br = builderRoutes[path];
-    const sortedBuilders = Object.keys(br).sort();
-    sortedBuilders.forEach(use => {
-      let builderPrevHandle: HandleValue | null = null;
-      br[use].forEach(route => {
-        if (isHandler(route)) {
-          builderPrevHandle = route.handle;
-        } else {
-          const routes = builderHandleMap.get(builderPrevHandle);
-          if (!routes) {
-            builderHandleMap.set(builderPrevHandle, [route]);
-          } else {
-            routes.push(route);
-          }
-        }
-      });
-    });
-  });
+  const builderRoutes = getBuilderRoutesMapping(
+    builds.filter(b => !b.projectMiddleware)
+  );
+  Object.keys(builderRoutes)
+    .sort()
+    .forEach(path => addToHandleMap(path, builderRoutes, builderHandleMap));
 
   const outputRoutes: Route[] = [];
   const uniqueHandleValues = new Set([
     null,
     ...userHandleMap.keys(),
+    ...projectHandleMap.keys(),
     ...builderHandleMap.keys(),
   ]);
   for (const handle of uniqueHandleValues) {
     const userRoutes = userHandleMap.get(handle) || [];
+    const projectRoutes = projectHandleMap.get(handle) || [];
     const builderRoutes = builderHandleMap.get(handle) || [];
     const builderSorted = getCheckAndContinue(builderRoutes);
     if (
       handle !== null &&
-      (userRoutes.length > 0 || builderRoutes.length > 0)
+      (userRoutes.length > 0 ||
+        projectRoutes.length > 0 ||
+        builderRoutes.length > 0)
     ) {
       outputRoutes.push({ handle });
     }
     outputRoutes.push(...builderSorted.continues);
     outputRoutes.push(...userRoutes);
+    outputRoutes.push(...projectRoutes);
     outputRoutes.push(...builderSorted.checks);
     outputRoutes.push(...builderSorted.others);
   }

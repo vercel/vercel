@@ -21,7 +21,7 @@ describe('domains search', () => {
   it('prints subcommand help', async () => {
     client.setArgv('domains', 'search', '--help');
 
-    expect(await domains(client)).toEqual(2);
+    expect(await domains(client)).toEqual(0);
     expect(client.stderr.getFullOutput()).toContain(
       'Discover domain-name candidates from a keyword or fragment'
     );
@@ -572,7 +572,7 @@ describe('domains search', () => {
     expect(await domains(client)).toEqual(0);
 
     expect(client.stderr.getFullOutput()).toContain(
-      'To continue, run `vercel domains search acme --next '
+      '  Next page:\n    vercel domains search acme --next '
     );
     expect(client.stderr.getFullOutput()).not.toContain('--order=');
   });
@@ -605,7 +605,7 @@ describe('domains search', () => {
     expect(await domains(client)).toEqual(0);
 
     expect(client.stderr.getFullOutput()).toContain(
-      'To continue, run `vercel domains search acme --order=alphabetical --next '
+      '  Next page:\n    vercel domains search acme --order=alphabetical --next '
     );
   });
 
@@ -676,7 +676,7 @@ describe('domains search', () => {
     expect(output).not.toContain('acme.io');
     expect(output).not.toContain('Unavailable');
     expect(output).toContain(
-      'To continue, run `vercel domains search acme --available --next '
+      '  Next page:\n    vercel domains search acme --available --next '
     );
   });
 
@@ -1025,7 +1025,7 @@ describe('domains search', () => {
   it('rejects an invalid order', async () => {
     client.setArgv('domains', 'search', 'acme', '--order=recent');
 
-    expect(await domains(client)).toEqual(1);
+    expect(await domains(client)).toEqual(2);
     expect(client.stderr.getFullOutput()).toContain('Invalid order: "recent"');
   });
 
@@ -1061,7 +1061,7 @@ describe('domains search', () => {
   it.each([0, 201])('rejects invalid limit boundary %i', async limit => {
     client.setArgv('domains', 'search', 'acme', `--limit=${limit}`);
 
-    expect(await domains(client)).toEqual(1);
+    expect(await domains(client)).toEqual(2);
     expect(client.stderr.getFullOutput()).toContain(
       'Provide a number from 1 to 200'
     );
@@ -1292,7 +1292,7 @@ describe('domains search', () => {
   ])('rejects invalid exact TLD filter %j', async tld => {
     client.setArgv('domains', 'search', 'acme', `--tld=${tld}`);
 
-    expect(await domains(client)).toEqual(1);
+    expect(await domains(client)).toEqual(2);
     expect(client.stderr.getFullOutput()).toContain('Invalid TLD filter');
   });
 
@@ -1343,7 +1343,7 @@ describe('domains search', () => {
   ])('rejects unsupported query %j', async (query, expectedError) => {
     client.setArgv('domains', 'search', query);
 
-    expect(await domains(client)).toEqual(1);
+    expect(await domains(client)).toEqual(2);
     expect(client.stderr.getFullOutput()).toContain(expectedError);
   });
 });

@@ -5,6 +5,7 @@ import {
   connectLinearCredentials,
   connectLinqCredentials,
   connectPhotonCredentials,
+  connectTeamsCredentials,
   connectSlackCredentials,
 } from '../../src/eve/index.js';
 
@@ -175,6 +176,70 @@ describe('Eve channel credential helpers', () => {
     expectTokenRequest('linq/my-agent', { subject: { type: 'app' } });
   });
 
+  it('builds Teams credentials from connector metadata and a Bot Framework token', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonConnectorResponse('microsoft-teams/my-bot', {
+          appId: 'teams-app-id',
+        })
+      )
+      .mockResolvedValueOnce(jsonTokenResponse('bot-framework-token'));
+
+    const credentials = connectTeamsCredentials(
+      'microsoft-teams/my-bot',
+      { installationId: 'teams-installation' },
+      { vercelToken: 'vercel_token' }
+    );
+
+    expect(credentials.webhookVerifier).toEqual(expect.any(Function));
+    expect(credentials.tokenProvider).toEqual(expect.any(Function));
+    await expect(resolveToken(credentials.appId)).resolves.toBe('teams-app-id');
+    await expect(credentials.tokenProvider!()).resolves.toEqual({
+      accessToken: 'bot-framework-token',
+      expiresAt: expect.any(Number),
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [metadataUrl, metadataInit] = fetchMock.mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(metadataUrl).toBe(
+      `https://api.vercel.com/v1/connect/connectors/${encodeURIComponent('microsoft-teams/my-bot')}`
+    );
+    expect(metadataInit.headers).toMatchObject({
+      Authorization: 'Bearer vercel_token',
+    });
+    const [tokenUrl, tokenInit] = fetchMock.mock.calls[1] as [
+      string,
+      RequestInit,
+    ];
+    expect(tokenUrl).toBe(
+      `https://api.vercel.com/v1/connect/token/${encodeURIComponent('microsoft-teams/my-bot')}`
+    );
+    expect(JSON.parse(tokenInit.body as string)).toEqual({
+      installationId: 'teams-installation',
+      scopes: ['https://api.botframework.com/.default'],
+      subject: { type: 'app' },
+    });
+  });
+
+  it('fails clearly when connector metadata has no Microsoft Teams app id', async () => {
+    fetchMock.mockResolvedValue(
+      jsonConnectorResponse('microsoft-teams/missing-app-id', {})
+    );
+
+    const credentials = connectTeamsCredentials(
+      'microsoft-teams/missing-app-id',
+      {},
+      { vercelToken: 'vercel_token' }
+    );
+
+    await expect(resolveToken(credentials.appId)).rejects.toThrow(
+      'did not return a Microsoft Teams app id'
+    );
+  });
+
   it('resolves Photon credentials from an app-scoped Connect token', async () => {
     fetchMock.mockResolvedValue(
       jsonTokenResponse('photon-secret', {
@@ -232,6 +297,15 @@ describe('Eve channel credential helpers', () => {
     );
 
     expect(credentials.webhookVerifier).toEqual(expect.any(Function));
+    expect(credentials.vercelConnect).toEqual({
+      connector: 'oauth/slack',
+      requirement: {
+        reference: 'connector:oauth/slack',
+        service: 'slack',
+        subjectTypes: ['app'],
+        method: 'slack',
+      },
+    });
     expect(credentials.botToken).toEqual(expect.any(Function));
     await expect(resolveToken(credentials.botToken)).resolves.toBe(
       'slack_token'

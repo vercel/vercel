@@ -1,3 +1,4 @@
+import type { JSONObject } from '@vercel-internals/types';
 import type Client from '../client';
 import type {
   Flag,
@@ -5,6 +6,7 @@ import type {
   FlagSettings,
   FlagVersion,
   FlagVersionsResponse,
+  UpdateFlagSettingsRequest,
 } from './types';
 import { flagUrl } from './update-flag';
 import output from '../../output-manager';
@@ -132,10 +134,26 @@ export async function getFlagSettings(
 ): Promise<FlagSettings> {
   output.debug(`Fetching feature flag settings for project ${projectId}`);
 
-  const url = `/v1/projects/${encodeURIComponent(projectId)}/feature-flags/settings`;
-  const response = await client.fetch<FlagSettings>(url);
+  const response = await client.fetch<FlagSettings>(flagSettingsUrl(projectId));
 
   return response;
+}
+
+export async function updateFlagSettings(
+  client: Client,
+  projectId: string,
+  request: UpdateFlagSettingsRequest
+): Promise<FlagSettings> {
+  output.debug(`Updating feature flag settings for project ${projectId}`);
+
+  return client.fetch<FlagSettings>(flagSettingsUrl(projectId), {
+    method: 'PATCH',
+    body: request as unknown as JSONObject,
+  });
+}
+
+function flagSettingsUrl(projectId: string): string {
+  return `/v1/projects/${encodeURIComponent(projectId)}/feature-flags/settings`;
 }
 
 export async function getFlagVersions(

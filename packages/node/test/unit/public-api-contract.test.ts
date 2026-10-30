@@ -14,6 +14,7 @@ describe('published package contract', () => {
     expect(published.build).toBeTypeOf('function');
     expect(published.prepareCache).toBeTypeOf('function');
     expect(published.startDevServer).toBeTypeOf('function');
+    expect(published.getDevWarnings).toBeTypeOf('function');
     expect(published.shouldServe).toBeTypeOf('function');
     expect(published.diagnostics).toBeTypeOf('function');
   });

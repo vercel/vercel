@@ -1,0 +1,8 @@
+[project]
+name = "asgi-proxy-static"
+version = "0.0.1"
+requires-python = ">=3.12"
+dependencies = ["fastapi==0.139.0"]
+
+[dependency-groups]
+"vercel.proxy" = ["vercel-proxy"]

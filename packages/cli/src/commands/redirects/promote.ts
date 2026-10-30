@@ -60,12 +60,12 @@ export default async function promote(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
     output.error(error);
-    return 1;
+    return 2;
   }
 
   const link = await requireProjectContext(
@@ -131,14 +131,14 @@ export default async function promote(client: Client, argv: string[]) {
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: `Version ${version.name || version.id} is already live. Nothing to promote.`,
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
     output.error(
       `Version ${chalk.bold(version.name || version.id)} is already live.`
     );
-    return 1;
+    return 2;
   }
 
   if (!version.isStaging) {
@@ -163,9 +163,9 @@ export default async function promote(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
     output.error(
       `Version ${chalk.bold(
@@ -174,7 +174,7 @@ export default async function promote(client: Client, argv: string[]) {
         'vercel redirects list-versions'
       )} to see which version is currently staged.`
     );
-    return 1;
+    return 2;
   }
 
   const versionName = version.name || version.id;

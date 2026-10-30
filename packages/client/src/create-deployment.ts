@@ -16,8 +16,16 @@ import {
 export default function buildCreateDeployment() {
   return async function* createDeployment(
     clientOptions: VercelClientOptions,
-    deploymentOptions: DeploymentOptions = {}
-  ): AsyncIterableIterator<{ type: DeploymentEventType; payload: any }> {
+    deploymentOptions: DeploymentOptions | Promise<DeploymentOptions> = {}
+  ): AsyncIterableIterator<{
+    type: DeploymentEventType;
+    payload: any;
+    code?: string;
+  }> {
+    // Start resolving metadata while collecting files. Attach a rejection
+    // handler immediately, even if file collection fails before we await it.
+    const options = Promise.resolve(deploymentOptions);
+    void options.catch(() => {});
     const { path } = clientOptions;
 
     const debug = createDebug(clientOptions.debug);
@@ -51,6 +59,7 @@ export default function buildCreateDeployment() {
         });
       }
 
+      const deploymentOptions = await options;
       // Once the feature becomes stable we will use a new body parameter
       deploymentOptions.build = deploymentOptions.build || {};
       deploymentOptions.build.env = deploymentOptions.build.env || {};
@@ -62,11 +71,20 @@ export default function buildCreateDeployment() {
       return;
     }
 
-    const { fileList, filesMap: files } = await collectDeploymentFiles(
-      path,
-      clientOptions,
-      debug
-    );
+    const {
+      fileList,
+      filesMap: files,
+      warning,
+    } = await collectDeploymentFiles(path, clientOptions, debug);
+
+    if (warning) {
+      debug('Yielding a prebuilt filePathMap ignore warning');
+      yield {
+        type: 'warning',
+        payload: warning,
+        code: 'PREBUILT_FILEPATHMAP_IGNORED',
+      };
+    }
 
     // This is a useful warning because it prevents people
     // from getting confused about a deployment that renders 404.
@@ -89,11 +107,12 @@ export default function buildCreateDeployment() {
       debug(`Using provided user agent: ${clientOptions.userAgent}`);
     }
 
+    const resolvedOptions = await options;
     debug(`Setting platform version to harcoded value 2`);
-    deploymentOptions.version = 2;
+    resolvedOptions.version = 2;
 
     debug(`Creating the deployment and starting upload...`);
-    for await (const event of upload(files, clientOptions, deploymentOptions)) {
+    for await (const event of upload(files, clientOptions, resolvedOptions)) {
       debug(`Yielding a '${event.type}' event`);
       yield event;
     }

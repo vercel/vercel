@@ -1,0 +1,11 @@
+{
+  "framework": null,
+  "build": {
+    "env": {
+      "VERCEL_PYTHON_PROXY": "1"
+    }
+  },
+  "proxy": {
+    "entrypoint": "proxy:proxy"
+  }
+}

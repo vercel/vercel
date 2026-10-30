@@ -27,6 +27,7 @@ import {
   type BuilderV3,
   type BuilderVX,
   type Config,
+  type Meta,
   type StartDevServerOptions,
   type Cron,
   type DevQueueSubscription,
@@ -35,36 +36,23 @@ import {
   type Service,
 } from '@vercel/build-utils';
 import { checkForPort } from './port-utils';
+import {
+  buildpackServicesDevUnsupportedError,
+  getBuildpackRuntime,
+} from './buildpack-dev';
 import { importBuilders } from '../../builders/import-builders';
 import { getStaticServiceSchedules } from '@vercel-internals/cli-builder-integration/service-schedules';
 import output from '../../output-manager';
+import pkg from '../pkg';
 import { treeKill } from '../tree-kill';
 import { injectNextDevWebSocketShimIfNeeded } from './next-dev-websocket-shim-injection';
+import replaceDevCommandPort from './replace-dev-command-port';
+import type { DevResourceEndpoints } from './resource-servers';
+import { getDevQueueEnv, getDevSchedulesEnv } from './resource-servers';
 import { getDevRuntimeCacheEnv } from './runtime-cache';
+import { dev, ServiceStartError } from './diagnostics';
 
 const STARTUP_TIMEOUT = ms('5m');
-
-export class ServiceStartError extends Error {
-  constructor(failures: Error[]) {
-    // Deduplicate errors that are the same for all services
-    const dedupeErrorCodes = new Set(['PYTHON_EXTERNAL_VENV_DETECTED']);
-    const seenCodes = new Set<string>();
-    const uniqueMessages: string[] = [];
-
-    for (const err of failures) {
-      if (err instanceof NowBuildError && dedupeErrorCodes.has(err.code)) {
-        if (!seenCodes.has(err.code)) {
-          uniqueMessages.push(err.message);
-          seenCodes.add(err.code);
-        }
-      } else {
-        uniqueMessages.push(err.message);
-      }
-    }
-
-    super(uniqueMessages.join('\n'));
-  }
-}
 
 const SERVICE_COLORS = [
   chalk.cyan,
@@ -208,6 +196,7 @@ interface ServicesOrchestratorOptions {
   repoRoot: string;
   env: NodeJS.ProcessEnv;
   proxyOrigin: string;
+  resourceEndpoints: DevResourceEndpoints;
   useImplicitEnvInjection: boolean;
   preferServiceBuilder?: boolean;
   /**
@@ -301,6 +290,7 @@ export class ServicesOrchestrator {
   private managedServices = new Map<string, ServiceDevProcess>();
   private managedProcesses = new Map<string, ChildProcess>();
   private servicePorts = new Map<string, number>();
+  private installMeta: Meta = {};
   private cronTimers: ReturnType<typeof setTimeout>[] = [];
   private stopping = false;
   private exitBackstop: (() => void) | undefined;
@@ -311,6 +301,7 @@ export class ServicesOrchestrator {
   private envFilesValues: NodeJS.ProcessEnv;
   private maxNameLength: number;
   private proxyOrigin: string;
+  private resourceEndpoints: DevResourceEndpoints;
   private pythonServiceCount: number;
   private hasQueueServices: boolean;
   private useImplicitEnvInjection: boolean;
@@ -326,6 +317,7 @@ export class ServicesOrchestrator {
     this.repoRoot = options.repoRoot;
     this.maxNameLength = Math.max(...options.services.map(s => s.name.length));
     this.proxyOrigin = options.proxyOrigin;
+    this.resourceEndpoints = options.resourceEndpoints;
     this.envFilesValues = options.env;
     this.useImplicitEnvInjection = options.useImplicitEnvInjection;
     this.preferServiceBuilder = options.preferServiceBuilder ?? false;
@@ -611,6 +603,16 @@ export class ServicesOrchestrator {
       spec.env.VERCEL_DEV_PORT = String(port);
     }
 
+    // A buildpack-backed service builds a container image, which nothing
+    // here can run yet; `vercel dev` rejects these before starting any
+    // service, so this only guards other entry paths.
+    const buildpackRuntime = getBuildpackRuntime(service.builder);
+    if (buildpackRuntime) {
+      throw buildpackServicesDevUnsupportedError([
+        { name: service.name, runtime: buildpackRuntime },
+      ]);
+    }
+
     if (spec.builderSpec) {
       const result = await this.tryStartWithBuilder(
         service.name,
@@ -626,9 +628,10 @@ export class ServicesOrchestrator {
     const devCommand =
       spec.explicitDevCommand || spec.framework?.settings?.devCommand?.value;
     if (!devCommand) {
-      throw new Error(
-        `No dev server available for service "${service.name}" (framework: ${service.framework ?? 'none'}).`
-      );
+      throw dev.DEV_SERVICE_NO_DEV_SERVER({
+        name: service.name,
+        framework: service.framework ?? 'none',
+      });
     }
 
     return this.spawnDevCommandProcess({
@@ -654,7 +657,30 @@ export class ServicesOrchestrator {
     if (env.RUNTIME_CACHE_ENDPOINT) {
       return;
     }
-    Object.assign(env, getDevRuntimeCacheEnv(this.proxyOrigin));
+    Object.assign(
+      env,
+      getDevRuntimeCacheEnv(this.resourceEndpoints.runtimeCache.direct, '')
+    );
+  }
+
+  private applyContainerResourceProxyEnv(env: NodeJS.ProcessEnv): void {
+    const endpoints = this.resourceEndpoints;
+    Object.assign(env, getDevSchedulesEnv(endpoints.schedules?.proxy, true));
+    if (env.VERCEL_QUEUE_BASE_URL === endpoints.queues.direct) {
+      Object.assign(
+        env,
+        getDevQueueEnv(
+          endpoints.queues.proxy,
+          env.VERCEL_HAS_WORKER_SERVICES !== undefined
+        )
+      );
+    }
+    if (env.RUNTIME_CACHE_ENDPOINT === endpoints.runtimeCache.direct) {
+      Object.assign(
+        env,
+        getDevRuntimeCacheEnv(endpoints.runtimeCache.proxy, '')
+      );
+    }
   }
 
   private getV1StartSpec(service: ExperimentalService): ServiceStartSpec {
@@ -705,16 +731,19 @@ export class ServicesOrchestrator {
       env.VERCEL_HAS_WORKER_SERVICES = '1';
     }
 
-    // When any worker service exists, point all services at the dev server's
-    // queue proxy so that send() calls from web services are routed through
-    // the proxy and dispatched to the matching worker process.
-    if (this.hasQueueServices) {
-      env.VERCEL_QUEUE_BASE_URL = `${this.proxyOrigin}/_svc/_queues`;
-      env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
-      env.VERCEL_REGION = 'dev1';
-    }
+    Object.assign(
+      env,
+      getDevQueueEnv(
+        this.resourceEndpoints.queues.direct,
+        this.hasQueueServices
+      )
+    );
 
     this.applyRuntimeCacheEnv(env);
+    Object.assign(
+      env,
+      getDevSchedulesEnv(this.resourceEndpoints.schedules?.direct)
+    );
 
     if (service.routePrefix && service.routePrefix !== '/') {
       env.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
@@ -788,13 +817,19 @@ export class ServicesOrchestrator {
     ) {
       env.VERCEL_HAS_WORKER_SERVICES = '1';
     }
-    if (this.hasQueueServices) {
-      env.VERCEL_QUEUE_BASE_URL = `${this.proxyOrigin}/_svc/_queues`;
-      env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
-      env.VERCEL_REGION = 'dev1';
-    }
+    Object.assign(
+      env,
+      getDevQueueEnv(
+        this.resourceEndpoints.queues.direct,
+        this.hasQueueServices
+      )
+    );
 
     this.applyRuntimeCacheEnv(env);
+    Object.assign(
+      env,
+      getDevSchedulesEnv(this.resourceEndpoints.schedules?.direct)
+    );
 
     const root = service.root || '.';
     return {
@@ -832,7 +867,8 @@ export class ServicesOrchestrator {
         new Set([spec.builderSpec]),
         this.cwd
       );
-      const builder = builders.get(spec.builderSpec)?.builder as
+      const builderWithPkg = builders.get(spec.builderSpec);
+      const builder = builderWithPkg?.builder as
         | BuilderV2
         | BuilderV3
         | BuilderVX
@@ -840,6 +876,10 @@ export class ServicesOrchestrator {
 
       if (!builder?.startDevServer) {
         return null;
+      }
+
+      if (builderWithPkg?.pkg.name === '@vercel/container') {
+        this.applyContainerResourceProxyEnv(spec.env);
       }
 
       output.debug(
@@ -868,6 +908,7 @@ export class ServicesOrchestrator {
           pythonServiceCount: this.pythonServiceCount,
           syncDependencies: true,
           serviceName: name,
+          devResourceEndpoints: this.resourceEndpoints,
         },
         service: spec.servicePayload,
         files: {},
@@ -936,6 +977,8 @@ export class ServicesOrchestrator {
 
     const port = params.port ?? (await getPort());
     env.PORT = `${port}`;
+    env.VERCEL_CLI_VERSION = pkg.version;
+    const command = replaceDevCommandPort(devCommand, port);
 
     // Add node_modules/.bin to PATH
     const nodeBinPaths = getNodeBinPaths({
@@ -946,7 +989,7 @@ export class ServicesOrchestrator {
     env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
 
     output.debug(
-      `Starting ${chalk.bold(name)} with ${chalk.cyan.bold(`"${devCommand}"`)}`
+      `Starting ${chalk.bold(name)} with ${chalk.cyan.bold(`"${command}"`)}`
     );
 
     // Pass terminal width so child frameworks can format output correctly.
@@ -954,11 +997,11 @@ export class ServicesOrchestrator {
       env.COLUMNS = `${process.stdout.columns}`;
     }
 
-    injectNextDevWebSocketShimIfNeeded(env, devCommand, {
+    injectNextDevWebSocketShimIfNeeded(env, command, {
       framework: framework?.slug,
     });
 
-    const child = spawnCommand(devCommand, {
+    const child = spawnCommand(command, {
       cwd: workspacePath,
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -966,11 +1009,9 @@ export class ServicesOrchestrator {
     });
 
     if (!child.pid) {
-      throw new Error(`Failed to start service "${name}": no PID returned`);
+      throw dev.DEV_SERVICE_NO_PID({ name });
     } else if (!child.stdout || !child.stderr) {
-      throw new Error(
-        `Failed to start service "${name}": expected child process to have stdout and stderr`
-      );
+      throw dev.DEV_SERVICE_NO_STDIO({ name });
     }
 
     // Track process immediately so we can kill it if startup fails
@@ -1123,7 +1164,7 @@ export class ServicesOrchestrator {
           workspacePath,
           [],
           undefined,
-          undefined,
+          this.installMeta,
           undefined,
           { stdout, stderr }
         );

@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import { ACTION_COLORS } from './format-utils';
+import { truncateEnd } from '../output/truncate';
 import type {
   FirewallConfigResponse,
   FirewallConfigChange,
@@ -13,6 +14,8 @@ import type {
   ManagedRuleConfig,
   ManagedRulesResponse,
 } from './types';
+import type { ManagedBotAction, ManagedBotRule } from './managed-bot-rules';
+import { formatManagedBotAction } from './managed-bot-rules';
 import { formatAlignedLabel } from '../output/print-aligned-label';
 
 export interface AttackModeStatus {
@@ -173,7 +176,6 @@ export function formatStatusOutput(opts: {
   /** Bypass rules, or `null` when the bypass API is gated on the plan. */
   bypass: BypassRule[] | null;
   attackMode?: AttackModeStatus;
-  /** Decides whether OWASP reports the upgrade it needs. */
   planInfo?: FirewallPlanInfo;
   /**
    * The project's `security.firewallBypassIps`. Not plan-gated, so it carries
@@ -181,8 +183,7 @@ export function formatStatusOutput(opts: {
    */
   firewallBypassIps?: string[];
 }): string {
-  const { active, draft, bypass, attackMode, planInfo, firewallBypassIps } =
-    opts;
+  const { active, draft, bypass, attackMode, firewallBypassIps } = opts;
   const lines: string[] = [];
 
   lines.push(
@@ -247,10 +248,7 @@ export function formatStatusOutput(opts: {
     )
   );
   lines.push(
-    formatAlignedLabel(
-      'OWASP',
-      formatOwaspStatus(active?.managedRules?.owasp, planInfo)
-    )
+    formatAlignedLabel('OWASP', formatOwaspStatus(active?.managedRules?.owasp))
   );
 
   if (draft && draft.changes.length > 0) {
@@ -741,8 +739,11 @@ export function formatConditionCompact(condition: FirewallCondition): string {
 }
 
 /**
- * Format the action for display.
+ * Format the action for a one-line summary (pickers, diffs).
  * e.g., "Deny (1h)", "Rate Limit (100/60s)", "Redirect → /new (301)"
+ *
+ * Expand and inspect print the type via `formatActionType` and put
+ * destination, duration, and rate-limit numbers on their own rows.
  */
 export function formatActionDisplay(action: FirewallRuleAction): string {
   const mitigate = action.mitigate;
@@ -778,6 +779,14 @@ export function formatActionDisplay(action: FirewallRuleAction): string {
     default:
       return actionType;
   }
+}
+
+/** The action verb alone, for expand/inspect where details follow on later rows. */
+function formatActionType(action: FirewallRuleAction): string {
+  const type = action.mitigate?.action;
+  if (!type) return 'None';
+  if (type === 'rate_limit') return 'Rate Limit';
+  return type.charAt(0).toUpperCase() + type.slice(1);
 }
 
 // --- Rules list (annotated) ---
@@ -841,22 +850,96 @@ export function annotateRules(
   return result;
 }
 
-export function formatRulesTable(annotated: AnnotatedRule[]): string {
+/**
+ * Compact table cell for a rule action. Redirect destinations stay out of
+ * this column: a live URL sized every row to the longest one and wrapped
+ * Status off the name line. Inspect and `--expand` still show the target.
+ */
+function formatActionCompact(action: FirewallRuleAction): string {
+  const mitigate = action.mitigate;
+  if (!mitigate) return 'None';
+
+  const actionType = mitigate.action;
+  const duration = mitigate.actionDuration;
+
+  switch (actionType) {
+    case 'deny':
+      return duration ? `Deny (${duration})` : 'Deny';
+    case 'challenge':
+      return duration ? `Challenge (${duration})` : 'Challenge';
+    case 'log':
+      return 'Log';
+    case 'bypass':
+      return 'Bypass';
+    case 'rate_limit': {
+      const rl = mitigate.rateLimit;
+      if (rl) {
+        return `Rate Limit (${rl.limit}/${rl.window}s)`;
+      }
+      return 'Rate Limit';
+    }
+    case 'redirect': {
+      const rd = mitigate.redirect;
+      const code = rd?.permanent ? '301' : '307';
+      return `Redirect (${code})`;
+    }
+    default:
+      return actionType;
+  }
+}
+
+export function formatRulesTable(
+  annotated: AnnotatedRule[],
+  columns = 80
+): string {
   const lines: string[] = [];
 
   const gap = 3;
+  const gutter = 2;
   const prefixWidth = 2;
+  const statusWidth = 'Disabled'.length;
   const numWidth = Math.max('#'.length, String(annotated.length).length);
-  const nameWidth = Math.max(
+  const actionTexts = annotated.map(a => formatActionCompact(a.rule.action));
+
+  let nameWidth = Math.max(
     'Name'.length,
     ...annotated.map(a => a.rule.name.length)
   );
-  const actionTexts = annotated.map(a => formatActionDisplay(a.rule.action));
-  const actionWidth = Math.max(
+  let actionWidth = Math.max(
     'Action'.length,
     ...actionTexts.map(t => t.length)
   );
-  // Header — Action before Status
+
+  // `#`, Name, Action, Status must share one terminal row. Shrink Name,
+  // then Action, so a wide redirect or long title cannot wrap Status.
+  const width = columns > 0 ? columns : 80;
+  let overflow =
+    gutter +
+    prefixWidth +
+    numWidth +
+    gap +
+    nameWidth +
+    gap +
+    actionWidth +
+    gap +
+    statusWidth -
+    width;
+  if (overflow > 0) {
+    const nameShrink = Math.min(
+      overflow,
+      Math.max(0, nameWidth - 'Name'.length)
+    );
+    nameWidth -= nameShrink;
+    overflow -= nameShrink;
+  }
+  if (overflow > 0) {
+    const actionShrink = Math.min(
+      overflow,
+      Math.max(0, actionWidth - 'Action'.length)
+    );
+    actionWidth -= actionShrink;
+  }
+
   lines.push(
     `  ${' '.repeat(prefixWidth)}${chalk.dim('#'.padEnd(numWidth + gap))}${chalk.dim('Name'.padEnd(nameWidth + gap))}${chalk.dim('Action'.padEnd(actionWidth + gap))}${chalk.dim('Status')}`
   );
@@ -864,8 +947,12 @@ export function formatRulesTable(annotated: AnnotatedRule[]): string {
   for (let i = 0; i < annotated.length; i++) {
     const { rule, status } = annotated[i];
     const num = String(i + 1).padEnd(numWidth + gap);
-    const name = rule.name.padEnd(nameWidth + gap);
-    const actionText = actionTexts[i].padEnd(actionWidth + gap);
+    const name = truncateEnd(rule.name, nameWidth, { omission: '…' }).padEnd(
+      nameWidth + gap
+    );
+    const actionText = truncateEnd(actionTexts[i], actionWidth, {
+      omission: '…',
+    }).padEnd(actionWidth + gap);
     let prefix = '  ';
     let colorFn: (s: string) => string = (s: string) => s;
 
@@ -880,7 +967,6 @@ export function formatRulesTable(annotated: AnnotatedRule[]): string {
       colorFn = chalk.yellow;
     }
 
-    // For removed rules, dim the status; otherwise color it normally
     const activeStatusText = rule.active ? 'Enabled' : 'Disabled';
     const activeStatus =
       status === 'removed'
@@ -889,13 +975,76 @@ export function formatRulesTable(annotated: AnnotatedRule[]): string {
           ? chalk.green(activeStatusText)
           : chalk.red(activeStatusText);
 
-    // Line 1: #, Name, Action, Status
     lines.push(colorFn(`  ${prefix}${num}${name}${actionText}${activeStatus}`));
-    // Line 2: ID (dimmed, indented under Name column, inherits status color)
     const idIndent = ' '.repeat(prefixWidth + numWidth + gap);
     lines.push(colorFn(`  ${idIndent}${chalk.dim(rule.id)}`));
   }
 
+  return lines.join('\n');
+}
+
+// --- Managed bot rules ---
+
+/**
+ * Impact rather than on/off: the settings that let traffic through are dim.
+ * Challenge/deny/log share `ACTION_COLORS` with the rest of the firewall
+ * tables; Deep Analysis is BotID-only and stays green.
+ */
+function colorManagedBotAction(action: ManagedBotAction): string {
+  const label = formatManagedBotAction(action);
+  if (action === 'off' || action === 'allow' || action === 'basic') {
+    return chalk.dim(label);
+  }
+  if (action === 'deep-analysis') return chalk.green(label);
+  const color = ACTION_COLORS[action];
+  return color ? color(label) : label;
+}
+
+/**
+ * The Managed group that heads `rules list` and stands alone in
+ * `bot-management`. It has no Status column: a managed rule is never disabled,
+ * only set to the action that lets traffic through.
+ */
+export function formatManagedBotRulesTable(rules: ManagedBotRule[]): string {
+  const lines: string[] = [];
+  const gap = 3;
+  const nameWidth = Math.max('Name'.length, ...rules.map(r => r.name.length));
+  const actionWidth = Math.max(
+    'Action'.length,
+    ...rules.map(r => formatManagedBotAction(r.action).length)
+  );
+
+  lines.push(`  ${chalk.bold('Managed')}`);
+  lines.push('');
+  lines.push(
+    `  ${chalk.dim('Name'.padEnd(nameWidth + gap))}${chalk.dim('Action'.padEnd(actionWidth + gap))}${chalk.dim('ID')}`
+  );
+
+  for (const rule of rules) {
+    const name = rule.name.padEnd(nameWidth + gap);
+    // Padded off the uncolored label, since the color codes carry no width.
+    const actionLabel = formatManagedBotAction(rule.action);
+    const actionPad = ' '.repeat(
+      Math.max(0, actionWidth + gap - actionLabel.length)
+    );
+    lines.push(
+      `  ${name}${colorManagedBotAction(rule.action)}${actionPad}${chalk.dim(rule.id)}`
+    );
+  }
+
+  return lines.join('\n');
+}
+
+export function formatManagedBotRuleDetail(rule: ManagedBotRule): string {
+  const lines: string[] = [];
+  lines.push(formatAlignedLabel('Rule', rule.name));
+  lines.push(formatAlignedLabel('ID', chalk.dim(rule.id)));
+  // The id traffic and events attribute the rule by, which is the one a
+  // `traffic inspect rule <id>` takes.
+  if (rule.wafRuleId) {
+    lines.push(formatAlignedLabel('WAF ID', chalk.dim(rule.wafRuleId)));
+  }
+  lines.push(formatAlignedLabel('Action', colorManagedBotAction(rule.action)));
   return lines.join('\n');
 }
 
@@ -923,7 +1072,6 @@ export function formatRuleExpanded(rule: FirewallRule, index?: number): string {
 
   const prefix = index !== undefined ? `${index + 1}. ` : '';
   const status = rule.active ? chalk.green('Enabled') : chalk.red('Disabled');
-  const action = formatActionDisplay(rule.action);
 
   lines.push(`  ${prefix}${chalk.bold(rule.name)} [${status}]`);
 
@@ -952,7 +1100,7 @@ export function formatRuleExpanded(rule: FirewallRule, index?: number): string {
 
   // Action
   lines.push('');
-  lines.push(`     ${chalk.dim('Action:')} ${action}`);
+  lines.push(`     ${chalk.dim('Action:')} ${formatActionType(rule.action)}`);
 
   // Duration (not shown for rate_limit — shown as part of "If exceeded" instead)
   const duration = rule.action.mitigate?.actionDuration;
@@ -1024,7 +1172,7 @@ export function formatRuleDetail(rule: FirewallRule): string {
 
   // Action (the "THEN")
   lines.push(
-    `  ${chalk.bold('Action:')}      ${formatActionDisplay(rule.action)}`
+    `  ${chalk.bold('Action:')}      ${formatActionType(rule.action)}`
   );
 
   // Duration (not shown for rate_limit — shown as part of "If exceeded" instead)
@@ -1110,13 +1258,9 @@ export function formatAiBotsStatus(
 }
 
 export function formatOwaspStatus(
-  ruleset: ManagedRuleConfig | undefined,
-  planInfo?: FirewallPlanInfo
+  ruleset: ManagedRuleConfig | undefined
 ): string {
   if (!ruleset?.active) {
-    if (!hasOwaspEntitlement(planInfo)) {
-      return `${chalk.dim('Off')}  ${chalk.dim('\u00b7 requires Security+')}`;
-    }
     return chalk.dim('Off');
   }
   const groups = ruleset.ruleGroups

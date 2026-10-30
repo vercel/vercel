@@ -16,6 +16,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { AliasTelemetryClient } from '../../util/telemetry/commands/alias';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
@@ -40,7 +41,11 @@ export default async function alias(client: Client) {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
+  }
+
+  if (parsedArguments.args[0] === 'ln') {
+    warnDeprecatedSubcommand(client, 'ln', 'alias');
   }
 
   const { subcommand, args, subcommandOriginal } = getSubcommand(
@@ -52,13 +57,22 @@ export default async function alias(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('alias');
-    output.print(help(aliasCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(aliasCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
-      help(command, { parent: aliasCommand, columns: client.stderr.columns })
+      help(command, {
+        stream: client.stderr,
+        parent: aliasCommand,
+        columns: client.stderr.columns,
+      })
     );
   }
 
@@ -67,7 +81,7 @@ export default async function alias(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('alias', subcommandOriginal);
         printHelp(listSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return ls(client, args);
@@ -75,7 +89,7 @@ export default async function alias(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('alias', subcommandOriginal);
         printHelp(removeSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, args);
@@ -83,7 +97,7 @@ export default async function alias(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('alias', subcommandOriginal);
         printHelp(setSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandSet(subcommandOriginal);
       return set(client, args);
@@ -91,7 +105,7 @@ export default async function alias(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('alias', subcommandOriginal);
         printHelp(setSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandSet(subcommandOriginal);
       return set(client, args);

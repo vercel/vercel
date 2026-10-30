@@ -158,12 +158,48 @@ export function printNotes(plan: SetupPlan): void {
   if (plan.notes.length === 0) {
     return;
   }
-  output.print('\n');
-  for (const note of plan.notes) {
-    for (const line of note.notes) {
-      output.log(`${note.displayName}: ${line}`);
+  const sections = plan.notes.map(note => {
+    const heading = note.actionRequired
+      ? `${chalk.red('!')} ${chalk.bold(note.displayName)} ${chalk.red(
+          '[Action Required]'
+        )}`
+      : `  ${chalk.bold(note.displayName)}`;
+    return [heading, ...formatInstructions(note.notes)].join('\n');
+  });
+  output.print(
+    `\n${chalk.bold('  Next steps:')}\n\n${sections.join('\n\n')}\n`
+  );
+}
+
+function formatInstructions(lines: string[]): string[] {
+  let inOrderedList = false;
+
+  return lines.flatMap((line, index) => {
+    const trimmed = line.trimStart();
+    const numbered = /^\d+\.\s/.test(trimmed);
+    const indented = trimmed !== line;
+    const next = lines[index + 1]?.trimStart() ?? '';
+    const introducesOrderedList =
+      trimmed.endsWith(':') && /^\d+\.\s/.test(next);
+
+    if (introducesOrderedList) {
+      return `    ${line}`;
     }
-  }
+    if (numbered) {
+      inOrderedList = true;
+      return `    ${line}`;
+    }
+    if (indented) {
+      return `    ${line}`;
+    }
+
+    const bullet = `    - ${line}`;
+    if (inOrderedList) {
+      inOrderedList = false;
+      return ['', bullet];
+    }
+    return bullet;
+  });
 }
 
 export function printKey(

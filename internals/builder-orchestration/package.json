@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@vercel-internals/builder-orchestration",
-  "version": "1.0.0",
+  "version": "1.0.30",
   "files": [
     "dist"
   ],

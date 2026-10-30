@@ -4,7 +4,7 @@ import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useCreateIssuer, useKmsError } from '../../../mocks/kms';
 
-describe('kms add', () => {
+describe('kms create', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -13,7 +13,7 @@ describe('kms add', () => {
     it('tracks telemetry', async () => {
       client.setArgv('kms', 'add', '--help');
       const exitCodePromise = kms(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:help', value: 'kms:add' },
@@ -41,7 +41,7 @@ describe('kms add', () => {
     expect(exitCode).toEqual(0);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
-      { key: 'subcommand:add', value: 'add' },
+      { key: 'subcommand:create', value: 'add' },
       { key: 'argument:name', value: '[REDACTED]' },
       { key: 'option:algorithm', value: 'ES256' },
     ]);
@@ -51,7 +51,7 @@ describe('kms add', () => {
     useUser();
     client.setArgv('kms', 'add', 'my-issuer', '--algorithm', 'HS256');
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('Invalid algorithm "HS256"');
   });
 
@@ -59,7 +59,7 @@ describe('kms add', () => {
     useUser();
     client.setArgv('kms', 'add', 'my-issuer', '--key', './private-key.pem');
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('unknown or unexpected option: --key');
   });
 
@@ -67,7 +67,7 @@ describe('kms add', () => {
     useUser();
     client.setArgv('kms', 'add', 'my-issuer', '--claims-schema', '{nope');
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('Invalid JSON for --claims-schema');
   });
 
@@ -127,5 +127,30 @@ describe('kms add', () => {
     const exitCode = await kms(client);
     expect(exitCode).toEqual(1);
     await expect(client.stderr).toOutput('requires the Owner role');
+  });
+
+  describe('subcommand name', () => {
+    function useCreation() {
+      useUser();
+      useCreateIssuer();
+    }
+
+    it('warns when invoked as the deprecated add name', async () => {
+      useCreation();
+      client.setArgv('kms', 'add', 'my-issuer');
+
+      expect(await kms(client)).toBe(0);
+      await expect(client.stderr).toOutput(
+        '`vercel kms add` is deprecated. Use `vercel kms create`.'
+      );
+    });
+
+    it('does not warn when invoked as create', async () => {
+      useCreation();
+      client.setArgv('kms', 'create', 'my-issuer');
+
+      expect(await kms(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+    });
   });
 });

@@ -26,7 +26,7 @@ export default async function remove(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
 
@@ -36,19 +36,20 @@ export default async function remove(client: Client, argv: string[]) {
   telemetry.trackCliArgumentId(id);
   telemetry.trackCliFlagYes(yes);
   telemetry.trackCliOptionFormat(opts['--format']);
+  telemetry.trackCliFlagJson(opts['--json']);
 
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
   if (!id) {
     output.error(
-      `${getCommandName('ai-gateway api-keys rm <id>')} expects an API key id.`
+      `${getCommandName('ai-gateway api-keys revoke <id>')} expects an API key id.`
     );
-    return 1;
+    return 2;
   }
 
   if (!(await ensureTeam(client))) {
@@ -57,11 +58,11 @@ export default async function remove(client: Client, argv: string[]) {
 
   if (!yes) {
     if (!client.stdin.isTTY) {
-      output.error('To remove in non-interactive mode, re-run with --yes.');
+      output.error('To revoke in non-interactive mode, re-run with --yes.');
       return 1;
     }
     const confirmed = await client.input.confirm(
-      `Remove API key ${chalk.bold(id)}?`,
+      `Revoke API key ${chalk.bold(id)}?`,
       false
     );
     if (!confirmed) {
@@ -71,7 +72,7 @@ export default async function remove(client: Client, argv: string[]) {
   }
 
   const removeStamp = stamp();
-  output.spinner('Removing API key');
+  output.spinner('Revoking API key');
 
   try {
     await deleteApiKey(client, id);
@@ -81,7 +82,7 @@ export default async function remove(client: Client, argv: string[]) {
         `${JSON.stringify({ id, removed: true }, null, 2)}\n`
       );
     } else {
-      output.success(`API key ${chalk.bold(id)} removed ${removeStamp()}`);
+      output.success(`API key ${chalk.bold(id)} revoked ${removeStamp()}`);
     }
     return 0;
   } catch (err: unknown) {

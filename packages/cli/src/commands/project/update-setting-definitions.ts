@@ -251,13 +251,6 @@ export interface AdvancedPreviewRow {
   changed: boolean;
 }
 
-function parseOnOff(flag: string, raw: string): AdvancedParseResult {
-  if (raw === 'on' || raw === 'off') {
-    return { ok: true, value: raw === 'on' };
-  }
-  return { ok: false, message: `${flag} must be "on" or "off".` };
-}
-
 function parseEnumValue(
   label: string,
   raw: string,
@@ -280,13 +273,12 @@ function displayValue(value: AdvancedValue | null | undefined): string {
   return value === null || value === undefined ? 'Auto' : String(value);
 }
 
+/** Toggles are `--x` / `--no-x` presence flags, so only choices parse here. */
 export function parseAdvanced(
-  definition: AdvancedSettingDefinition,
+  definition: Extract<AdvancedSettingDefinition, { kind: 'enum' }>,
   raw: string
 ): AdvancedParseResult {
-  return definition.kind === 'toggle'
-    ? parseOnOff(definition.flag, raw)
-    : parseEnumValue(definition.label, raw, definition.values);
+  return parseEnumValue(definition.label, raw, definition.values);
 }
 
 export function readAdvanced(

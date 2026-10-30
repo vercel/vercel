@@ -7,8 +7,8 @@ import { add } from '../integration/add';
 import { printAddDynamicHelp } from '../integration/add-help';
 import { addSubcommand } from '../integration/command';
 import { installCommand } from './command';
-import output from '../../output-manager';
 import { InstallTelemetryClient } from '../../util/telemetry/commands/install';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 
 export default async function install(client: Client) {
   const flagsSpecification = getFlagsSpecification(addSubcommand.options);
@@ -17,9 +17,12 @@ export default async function install(client: Client) {
     parsed = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags } = parsed;
+  if (args[0] === 'i') {
+    warnDeprecatedSubcommand(client, 'i', 'install');
+  }
   const telemetry = new InstallTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -33,12 +36,24 @@ export default async function install(client: Client) {
       client,
       args[1],
       installCommand,
-      c => output.print(help(c, { columns: client.stderr.columns })),
+      (c, options) =>
+        client.stdout.write(
+          help(c, {
+            ...options,
+            stream: client.stdout,
+            columns: client.stdout.columns ?? client.stderr.columns,
+          })
+        ),
       'install'
     );
 
     if (!printed) {
-      output.print(help(installCommand, { columns: client.stderr.columns }));
+      client.stdout.write(
+        help(installCommand, {
+          stream: client.stdout,
+          columns: client.stdout.columns ?? client.stderr.columns,
+        })
+      );
     }
 
     return 0;

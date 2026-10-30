@@ -4,10 +4,10 @@ export const BLOB_OPERATIONS = ['get', 'head', 'put', 'delete'] as const;
 export type BlobOperation = (typeof BLOB_OPERATIONS)[number];
 
 export const UPLOAD_CONSTRAINT_FLAGS_ERROR =
-  'The flags --allowed-content-type and --maximum-size-in-bytes can only be used with --operation put.';
+  'The options --allowed-content-type and --maximum-size-in-bytes can only be used with --operation put.';
 
 export const PRESIGN_UPLOAD_ONLY_FLAGS_ERROR =
-  'The flags --allowed-content-type, --maximum-size-in-bytes, --allow-overwrite, --add-random-suffix, and --cache-control-max-age can only be used with --operation put.';
+  'The options --allowed-content-type, --maximum-size-in-bytes, --allow-overwrite, --add-random-suffix, and --cache-control-max-age can only be used with --operation put.';
 
 export function isBlobOperation(value: string): value is BlobOperation {
   return (BLOB_OPERATIONS as readonly string[]).includes(value);

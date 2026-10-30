@@ -44,7 +44,7 @@ export default async function leaderboard(client: Client) {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const subArgs = parsedArgs.args.slice(2);
@@ -58,14 +58,18 @@ export default async function leaderboard(client: Client) {
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('ai-gateway leaderboard', subcommandOriginal);
     output.print(
-      help(leaderboardSubcommand, { columns: client.stderr.columns })
+      help(leaderboardSubcommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
     );
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: leaderboardSubcommand,
         columns: client.stderr.columns,
       })
@@ -80,7 +84,7 @@ export default async function leaderboard(client: Client) {
           subcommandOriginal
         );
         printHelp(leaderboardModelsSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandModels(subcommandOriginal);
       return models(client, args);
@@ -91,7 +95,7 @@ export default async function leaderboard(client: Client) {
           subcommandOriginal
         );
         printHelp(leaderboardLabsSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandLabs(subcommandOriginal);
       return labs(client, args);
@@ -102,7 +106,7 @@ export default async function leaderboard(client: Client) {
           subcommandOriginal
         );
         printHelp(leaderboardAppsSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandApps(subcommandOriginal);
       return apps(client, args);
@@ -113,14 +117,17 @@ export default async function leaderboard(client: Client) {
           subcommandOriginal
         );
         printHelp(leaderboardProvidersSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandProviders(subcommandOriginal);
       return providers(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(
-        help(leaderboardSubcommand, { columns: client.stderr.columns })
+        help(leaderboardSubcommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
       );
       return 2;
   }

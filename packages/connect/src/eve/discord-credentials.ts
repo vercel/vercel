@@ -1,6 +1,6 @@
 import type { DiscordChannelCredentials } from 'eve/channels/discord';
 
-import { vercelOidc } from 'eve/channels/auth';
+import { createConnectWebhookVerifier } from '../chat/webhook-verifier.js';
 
 import {
   getTokenResponse,
@@ -74,6 +74,6 @@ export function connectDiscordCredentials(
   return {
     applicationId: async () => (await resolveCredentials()).applicationId,
     botToken: async () => (await resolveCredentials()).botToken,
-    webhookVerifier: vercelOidc(),
+    webhookVerifier: createConnectWebhookVerifier(),
   };
 }

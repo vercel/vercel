@@ -3,6 +3,7 @@ import { frameworkList } from '@vercel/frameworks';
 import workspaceManagers from '../src/workspaces/workspace-managers';
 import {
   detectFramework,
+  detectFrameworkRecord,
   detectFrameworks,
   LocalFileSystemDetector,
 } from '../src';
@@ -777,6 +778,285 @@ describe('detectFramework()', () => {
   });
 });
 
+describe.each([
+  ['detectFramework', detectFramework, 'ruby', null],
+  [
+    'detectFrameworks',
+    detectFrameworks,
+    [expect.objectContaining({ slug: 'ruby' })],
+    [],
+  ],
+  [
+    'detectFrameworkRecord',
+    detectFrameworkRecord,
+    expect.objectContaining({ slug: 'ruby' }),
+    null,
+  ],
+] as const)('%s Ruby detection', (_, detect, matched, unmatched) => {
+  beforeEach(() => {
+    vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', undefined);
+    vi.stubEnv('VERCEL_USE_EXPERIMENTAL_FRAMEWORKS', undefined);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('detects a Gemfile with config.ru with only the Ruby buildpack flag enabled', async () => {
+    vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', '1');
+    const fs = new VirtualFilesystem({ Gemfile: '', 'config.ru': '' });
+
+    expect(await detect({ fs, frameworkList })).toEqual(matched);
+  });
+
+  it.each([
+    ['a Gemfile alone', { Gemfile: '' }],
+    [
+      'a Gemfile with api/ functions',
+      { Gemfile: '', 'api/hello.rb': 'Handler = Proc.new { |req, res| }\n' },
+    ],
+    // Rails and Rack both boot from `config.ru` (`rails server` aborts
+    // without it), so Rails markers alone must not detect the preset.
+    [
+      'a Gemfile with Rails markers but no config.ru',
+      {
+        Gemfile: 'source "https://rubygems.org"\ngem "rails"\n',
+        'Gemfile.lock': 'GEM\n  specs:\n    railties (8.1.3.1)\n',
+        'bin/rails': '',
+        'config/application.rb': '',
+      },
+    ],
+    [
+      'a Gemfile with a server gem resolved in Gemfile.lock',
+      {
+        Gemfile: 'source "https://rubygems.org"\ngem "puma"\n',
+        'Gemfile.lock': 'GEM\n  specs:\n    puma (6.4.2)\n    rack (3.0.0)\n',
+      },
+    ],
+  ])('does not detect Ruby from %s, even with buildpacks enabled', async (_, files) => {
+    vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', '1');
+    const fs = new VirtualFilesystem(files);
+
+    expect(await detect({ fs, frameworkList })).toEqual(unmatched);
+  });
+
+  it.each([
+    ['no Ruby files', {}],
+    ['config.ru', { 'config.ru': 'run ->(_env) { [200, {}, ["ok"]] }\n' }],
+    ['bin/rails', { 'bin/rails': '' }],
+    ['config/application.rb', { 'config/application.rb': '' }],
+    ['Gemfile.lock', { 'Gemfile.lock': 'GEM\n  specs:\n    puma (6.4.2)\n' }],
+    [
+      'config.ru and Gemfile.lock',
+      {
+        'config.ru': 'run ->(_env) { [200, {}, ["ok"]] }\n',
+        'Gemfile.lock': 'GEM\n  specs:\n    puma (6.4.2)\n',
+      },
+    ],
+  ])('does not detect Ruby without a Gemfile (%s), even with buildpacks enabled', async (_, files) => {
+    vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', '1');
+    const fs = new VirtualFilesystem(files);
+
+    expect(await detect({ fs, frameworkList })).toEqual(unmatched);
+  });
+
+  it.each([
+    [
+      'rails',
+      {
+        'config.ru':
+          'require_relative "config/environment"\nrun Rails.application\n',
+        'config/application.rb': '',
+        'bin/rails': '',
+      },
+    ],
+    ['sinatra', { 'config.ru': 'require "./app"\nrun Sinatra::Application\n' }],
+  ])('detects %s as the same Ruby preset', async (gem, files) => {
+    vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', '1');
+    const fs = new VirtualFilesystem({
+      Gemfile: `source "https://rubygems.org"\ngem "${gem}"\n`,
+      'Gemfile.lock': `GEM\n  specs:\n    ${gem} (1.0.0)\n`,
+      ...files,
+    });
+
+    expect(await detect({ fs, frameworkList })).toEqual(matched);
+  });
+
+  it('keeps legacy Ruby detection behind global experimental visibility', async () => {
+    const fs = new VirtualFilesystem({ Gemfile: '', 'config.ru': '' });
+
+    expect(await detect({ fs, frameworkList })).toEqual(unmatched);
+    vi.stubEnv('VERCEL_USE_EXPERIMENTAL_FRAMEWORKS', '1');
+    expect(await detect({ fs, frameworkList })).toEqual(matched);
+    expect(
+      await detect({ fs, frameworkList, useExperimentalFrameworks: false })
+    ).toEqual(unmatched);
+    vi.stubEnv('VERCEL_USE_EXPERIMENTAL_FRAMEWORKS', undefined);
+    expect(
+      await detect({ fs, frameworkList, useExperimentalFrameworks: true })
+    ).toEqual(matched);
+  });
+
+  it.each([
+    undefined,
+    '',
+    '0',
+    'true',
+    'TRUE',
+    '01',
+  ])('requires Gemfile and config.ru when the Ruby flag is %s', async flag => {
+    vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', flag);
+    vi.stubEnv('VERCEL_USE_EXPERIMENTAL_FRAMEWORKS', '1');
+
+    const incompleteProjects: Record<string, string>[] = [
+      { Gemfile: '' },
+      { 'config.ru': '' },
+      {
+        Gemfile: '',
+        'Gemfile.lock':
+          'GEM\n  specs:\n    puma (6.4.2)\n    thin (1.8.2)\n    unicorn (6.1.0)\n    passenger (6.0.20)\n    rack (3.0.0)\n',
+      },
+    ];
+    for (const files of incompleteProjects) {
+      const fs = new VirtualFilesystem(files);
+      expect(await detect({ fs, frameworkList })).toEqual(unmatched);
+    }
+
+    const fs = new VirtualFilesystem({ Gemfile: '', 'config.ru': '' });
+    expect(await detect({ fs, frameworkList })).toEqual(matched);
+    vi.stubEnv('VERCEL_USE_EXPERIMENTAL_FRAMEWORKS', undefined);
+    expect(await detect({ fs, frameworkList })).toEqual(unmatched);
+  });
+
+  it('reevaluates the Ruby flag after import and between detection calls', async () => {
+    // Without global experimental visibility, only the Ruby flag makes the
+    // experimental preset detectable; the detector itself is static.
+    vi.stubEnv('VERCEL_USE_EXPERIMENTAL_FRAMEWORKS', undefined);
+    const fs = new VirtualFilesystem({ Gemfile: '', 'config.ru': '' });
+
+    for (const flag of [undefined, '1', '0', '1', undefined]) {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', flag);
+      expect(await detect({ fs, frameworkList })).toEqual(
+        flag === '1' ? matched : unmatched
+      );
+    }
+  });
+});
+
+describe('Ruby static-site generators with the Ruby buildpack flag enabled', () => {
+  beforeEach(() => {
+    vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', '1');
+    vi.stubEnv('VERCEL_USE_EXPERIMENTAL_FRAMEWORKS', undefined);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  // Jekyll and Middleman sites carry a Gemfile too. They must keep detecting
+  // as themselves, and as the *only* match: service detection errors when a
+  // workspace matches more than one framework.
+  it.each([
+    [
+      'jekyll',
+      {
+        Gemfile: 'source "https://rubygems.org"\ngem "jekyll"\n',
+        '_config.yml': 'title: Blog\n',
+      },
+    ],
+    [
+      'middleman',
+      {
+        Gemfile: 'source "https://rubygems.org"\ngem "middleman"\n',
+        'config.rb': 'activate :directory_indexes\n',
+      },
+    ],
+  ])('detects a %s site as only that framework', async (slug, files) => {
+    const fs = new VirtualFilesystem(files);
+
+    expect(await detectFramework({ fs, frameworkList })).toBe(slug);
+    expect(await detectFrameworks({ fs, frameworkList })).toEqual([
+      expect.objectContaining({ slug }),
+    ]);
+    expect(await detectFrameworkRecord({ fs, frameworkList })).toEqual(
+      expect.objectContaining({ slug })
+    );
+  });
+});
+
+describe('container framework detection priority', () => {
+  const nextPackageJson = JSON.stringify({
+    dependencies: { next: 'latest' },
+  });
+
+  it.each([
+    'Dockerfile',
+    'Containerfile',
+  ])('treats plain %s detection as a fallback', async containerFile => {
+    const fs = new VirtualFilesystem({
+      'package.json': nextPackageJson,
+      [containerFile]: 'FROM node:22',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('nextjs');
+    expect(
+      (await detectFrameworks({ fs, frameworkList })).map(f => f.slug)
+    ).toEqual(['nextjs', 'container']);
+    expect(await detectFrameworkRecord({ fs, frameworkList })).toEqual(
+      expect.objectContaining({ slug: 'nextjs' })
+    );
+  });
+
+  it.each([
+    'Dockerfile.vercel',
+    'Containerfile.vercel',
+  ])('keeps %s detection eager', async containerFile => {
+    const fs = new VirtualFilesystem({
+      'package.json': nextPackageJson,
+      [containerFile]: 'FROM node:22',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('container');
+    expect(
+      (await detectFrameworks({ fs, frameworkList })).map(f => f.slug)
+    ).toEqual(['container', 'nextjs']);
+    expect(await detectFrameworkRecord({ fs, frameworkList })).toEqual(
+      expect.objectContaining({ slug: 'container' })
+    );
+  });
+
+  it('detects a plain Dockerfile when no other framework matches', async () => {
+    const fs = new VirtualFilesystem({ Dockerfile: 'FROM node:22' });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('container');
+    expect(await detectFrameworks({ fs, frameworkList })).toEqual([
+      expect.objectContaining({ slug: 'container' }),
+    ]);
+    expect(await detectFrameworkRecord({ fs, frameworkList })).toEqual(
+      expect.objectContaining({ slug: 'container' })
+    );
+  });
+
+  it('does not let a fallback match supersede an eager match', async () => {
+    const fs = new VirtualFilesystem({ eager: '', fallback: '' });
+    const frameworks = [
+      {
+        slug: 'fallback',
+        supersedes: ['eager'],
+        detectors: { some: [{ path: 'fallback', fallback: true }] },
+      },
+      {
+        slug: 'eager',
+        detectors: { some: [{ path: 'eager' }] },
+      },
+    ];
+
+    expect(await detectFramework({ fs, frameworkList: frameworks })).toBe(
+      'eager'
+    );
+  });
+});
+
 describe('detectFrameworks()', () => {
   it('Return empty array when there are no matches', async () => {
     const fs = new VirtualFilesystem({
@@ -951,5 +1231,36 @@ describe('detectFrameworks()', () => {
       f => f.slug
     );
     expect(slugs).toEqual(['remix']);
+  });
+});
+
+describe('Go buildpack framework detection', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it.each([
+    undefined,
+    '0',
+    '1',
+  ])('does not detect a Go module or API-only project as a framework with flag %s', async flag => {
+    vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_GO', flag);
+    for (const files of [{}, { 'api/hello.go': 'package handler\n' }]) {
+      const fs = new VirtualFilesystem({
+        'go.mod': 'module example.com/app\n\ngo 1.24\n',
+        ...files,
+      });
+      expect(await detectFramework({ fs, frameworkList })).toBeNull();
+      expect(await detectFrameworks({ fs, frameworkList })).toEqual([]);
+    }
+  });
+
+  it('preserves an explicit Dockerfile.vercel override for a Go application', async () => {
+    vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_GO', '1');
+    const fs = new VirtualFilesystem({
+      'go.mod': 'module example.com/app\n\ngo 1.24\n',
+      'main.go': 'package main\nfunc main() {}\n',
+      'Dockerfile.vercel': 'FROM golang:1.24\n',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('container');
   });
 });

@@ -30,8 +30,8 @@ export class CommentsTelemetryClient
     this.trackCliSubcommand({ subcommand: 'reopen', value: actual });
   }
 
-  trackCliSubcommandEdit(actual: string) {
-    this.trackCliSubcommand({ subcommand: 'edit', value: actual });
+  trackCliSubcommandUpdate(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'update', value: actual });
   }
 
   trackCliSubcommandDelete(actual: string) {
@@ -74,6 +74,13 @@ export class CommentsTelemetryClient
     }
   }
 
+  trackCliOptionGitBranch(v: string[] | undefined) {
+    if (v && v.length > 0) {
+      this.trackCliOption({ option: 'git-branch', value: this.redactedValue });
+    }
+  }
+
+  // The deprecated name keeps its own key, to measure who still uses it.
   trackCliOptionBranch(v: string[] | undefined) {
     if (v && v.length > 0) {
       this.trackCliOption({ option: 'branch', value: this.redactedValue });
@@ -98,12 +105,26 @@ export class CommentsTelemetryClient
     }
   }
 
+  trackCliOptionContent(v: string[] | undefined) {
+    if (v && v.length > 0) {
+      this.trackCliOption({ option: 'content', value: this.redactedValue });
+    }
+  }
+
+  // The deprecated name keeps its own key, to measure who still uses it.
   trackCliOptionContentId(v: string[] | undefined) {
     if (v && v.length > 0) {
       this.trackCliOption({ option: 'content-id', value: this.redactedValue });
     }
   }
 
+  trackCliOptionQuery(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({ option: 'query', value: this.redactedValue });
+    }
+  }
+
+  // The deprecated name keeps its own key, to measure who still uses it.
   trackCliOptionSearch(v: string | undefined) {
     if (v) {
       this.trackCliOption({ option: 'search', value: this.redactedValue });

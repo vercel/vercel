@@ -81,7 +81,7 @@ describe('changelog', () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch');
     client.setArgv('changelog', 'search');
 
-    expect(await changelog(client)).toBe(1);
+    expect(await changelog(client)).toBe(2);
     expect(client.getFullOutput()).toContain('Search query is required.');
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -90,7 +90,7 @@ describe('changelog', () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch');
     client.setArgv('changelog', '--limit', '21');
 
-    expect(await changelog(client)).toBe(1);
+    expect(await changelog(client)).toBe(2);
     expect(client.getFullOutput()).toContain(
       '--limit must be between 1 and 20.'
     );
@@ -121,7 +121,7 @@ describe('changelog', () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch');
     client.setArgv('changelog', '--format', 'yaml');
 
-    expect(await changelog(client)).toBe(1);
+    expect(await changelog(client)).toBe(2);
     expect(client.getFullOutput()).toContain('Invalid output format: "yaml"');
     expect(fetchMock).not.toHaveBeenCalled();
   });

@@ -1,5 +1,4 @@
 import { posix as posixPath } from 'path';
-import { CONTAINER_ENTRYPOINT_CANDIDATES } from './constants';
 
 const PYTHON_MODULE_ATTR_RE =
   /^([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*):([A-Za-z_][\w]*)$/;
@@ -24,18 +23,9 @@ export function parsePyModuleAttrEntrypoint(entrypoint: string): {
   };
 }
 
-const CONTAINER_ENTRYPOINT_BASENAMES = new Set(
-  CONTAINER_ENTRYPOINT_CANDIDATES.map(name => name.toLowerCase())
-);
-
-/**
- * Returns true if the path names a blessed Dockerfile or Containerfile.
- * Suffixed names like `Dockerfile.prod` are intentionally not matched.
- */
+/** Recognize explicit Dockerfile/Containerfile paths, with the name anywhere in the basename. */
 export function isDockerfileEntrypoint(entrypoint: string): boolean {
-  return CONTAINER_ENTRYPOINT_BASENAMES.has(
-    posixPath.basename(entrypoint).toLowerCase()
-  );
+  return /(docker|container)file/i.test(posixPath.basename(entrypoint));
 }
 
 /**

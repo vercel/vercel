@@ -27,17 +27,18 @@ import {
 import { getFlagsSpecification } from '../../../util/get-flags-specification';
 import output from '../../../output-manager';
 import { getCommandAliases } from '../..';
+import { warnDeprecatedSubcommand } from '../../../util/warn-deprecated-subcommand';
 import type { FirewallTelemetryClient } from '../../../util/telemetry/commands/firewall';
 
 const COMMAND_CONFIG = {
   list: getCommandAliases(rulesListSubcommand),
   inspect: getCommandAliases(rulesInspectSubcommand),
   add: getCommandAliases(rulesAddSubcommand),
-  edit: getCommandAliases(rulesEditSubcommand),
+  update: getCommandAliases(rulesEditSubcommand),
   enable: getCommandAliases(rulesEnableSubcommand),
   disable: getCommandAliases(rulesDisableSubcommand),
   remove: getCommandAliases(rulesRemoveSubcommand),
-  reorder: getCommandAliases(rulesReorderSubcommand),
+  move: getCommandAliases(rulesReorderSubcommand),
 };
 
 export default async function main(
@@ -53,7 +54,7 @@ export default async function main(
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const {
@@ -68,16 +69,18 @@ export default async function main(
     telemetry.trackCliFlagHelp('firewall', 'rules');
     output.print(
       help(rulesSubcommand, {
+        stream: client.stderr,
         parent: firewallCommand,
         columns: client.stderr.columns,
       })
     );
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: firewallCommand,
         columns: client.stderr.columns,
       })
@@ -89,7 +92,7 @@ export default async function main(
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', `rules:${subcommandOriginal}`);
         printHelp(rulesListSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRulesList(subcommandOriginal);
       return list(client, subArgs);
@@ -97,7 +100,7 @@ export default async function main(
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', `rules:${subcommandOriginal}`);
         printHelp(rulesInspectSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRulesInspect(subcommandOriginal);
       return inspect(client, subArgs);
@@ -105,23 +108,30 @@ export default async function main(
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', `rules:${subcommandOriginal}`);
         printHelp(rulesAddSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRulesAdd(subcommandOriginal);
       return add(client, subArgs);
-    case 'edit':
+    case 'update':
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', `rules:${subcommandOriginal}`);
         printHelp(rulesEditSubcommand);
-        return 2;
+        return 0;
       }
-      telemetry.trackCliSubcommandRulesEdit(subcommandOriginal);
+      telemetry.trackCliSubcommandRulesUpdate(subcommandOriginal);
+      if (subcommandOriginal === 'edit') {
+        warnDeprecatedSubcommand(
+          client,
+          'firewall rules edit',
+          'firewall rules update'
+        );
+      }
       return edit(client, subArgs);
     case 'enable':
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', `rules:${subcommandOriginal}`);
         printHelp(rulesEnableSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRulesEnable(subcommandOriginal);
       return enable(client, subArgs);
@@ -129,7 +139,7 @@ export default async function main(
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', `rules:${subcommandOriginal}`);
         printHelp(rulesDisableSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRulesDisable(subcommandOriginal);
       return disable(client, subArgs);
@@ -137,22 +147,37 @@ export default async function main(
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', `rules:${subcommandOriginal}`);
         printHelp(rulesRemoveSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRulesRemove(subcommandOriginal);
+      if (subcommandOriginal === 'delete') {
+        warnDeprecatedSubcommand(
+          client,
+          'firewall rules delete',
+          'firewall rules remove'
+        );
+      }
       return remove(client, subArgs);
-    case 'reorder':
+    case 'move':
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', `rules:${subcommandOriginal}`);
         printHelp(rulesReorderSubcommand);
-        return 2;
+        return 0;
       }
-      telemetry.trackCliSubcommandRulesReorder(subcommandOriginal);
+      telemetry.trackCliSubcommandRulesMove(subcommandOriginal);
+      if (subcommandOriginal === 'reorder') {
+        warnDeprecatedSubcommand(
+          client,
+          'firewall rules reorder',
+          'firewall rules move'
+        );
+      }
       return reorder(client, subArgs);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(
         help(rulesSubcommand, {
+          stream: client.stderr,
           parent: firewallCommand,
           columns: client.stderr.columns,
         })

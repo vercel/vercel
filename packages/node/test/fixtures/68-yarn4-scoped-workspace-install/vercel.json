@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "apps/project/api/index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "build": {
+    "env": {
+      "ENABLE_EXPERIMENTAL_COREPACK": "1",
+      "VERCEL_EXPERIMENTAL_WORKSPACE_SCOPED_INSTALLS": "1",
+      "VERCEL_FORCE_NO_BUILD_CACHE": "1"
+    }
+  },
+  "probes": [
+    {
+      "logMustContain": "Detected ENABLE_EXPERIMENTAL_COREPACK=1 and \"yarn@4.9.2\" in package.json"
+    },
+    {
+      "logMustContain": "@fixture/project@workspace:apps/project must be built"
+    },
+    {
+      "logMustNotContain": "@fixture/unrelated@workspace:packages/unrelated must be built"
+    },
+    {
+      "path": "/apps/project/api/index.js",
+      "mustContain": "scoped:60000:RANDOMNESS_PLACEHOLDER"
+    }
+  ]
+}

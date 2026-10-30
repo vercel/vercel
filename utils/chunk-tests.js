@@ -10,7 +10,7 @@ const runnersMap = new Map([
       min: 1,
       max: 1,
       testScript: 'test-unit',
-      runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
+      runners: ['ubuntu-latest', 'macos-15', 'windows-latest'],
       nodeVersions: ['20', '22', '24'],
       excludeRunnerNodeVersions: { 'windows-latest': ['20'] },
     },
@@ -21,7 +21,7 @@ const runnersMap = new Map([
       min: 1,
       max: 1,
       testScript: 'test',
-      runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
+      runners: ['ubuntu-latest', 'macos-15', 'windows-latest'],
       nodeVersions: ['20', '22', '24'],
       // Skip Node 20 on Windows: it's the slowest runner with the highest
       // per-job overhead and the oldest supported Node, so the Windows/Node 20
@@ -103,12 +103,30 @@ const runnersMap = new Map([
     },
   ],
   [
+    // CLI `vc build` fixture tests (real package installs). Kept out of
+    // `test-unit` so local unit runs stay fast, but run on the same
+    // runner/Node coverage as the CLI unit lane because the tests have
+    // platform-specific behavior. One chunk per file.
+    'test-build-integration',
+    {
+      min: 1,
+      max: 3,
+      testScript: 'test',
+      runners: ['ubuntu-latest', 'macos-15', 'windows-latest'],
+      nodeVersions: ['20', '22', '24'],
+      excludeRunnerNodeVersions: {
+        'macos-15': ['20', '22'],
+        'windows-latest': ['20'],
+      },
+    },
+  ],
+  [
     'test-dev',
     {
       min: 1,
       max: 7,
       testScript: 'test',
-      runners: ['ubuntu-latest', 'macos-14'],
+      runners: ['ubuntu-latest', 'macos-15'],
     },
   ],
   [
@@ -117,7 +135,7 @@ const runnersMap = new Map([
       min: 1,
       max: 7,
       testScript: 'test',
-      runners: ['ubuntu-latest', 'macos-14'],
+      runners: ['ubuntu-latest', 'macos-15'],
     },
   ],
 ]);
@@ -156,7 +174,11 @@ const packageOptionsOverrides = {
   vercel: {
     max: 7,
     useEnvPaths: true,
-    schedulePriority: { 'test-unit': 3, 'test-dev-artifacts': 3 },
+    schedulePriority: {
+      'test-unit': 3,
+      'test-dev-artifacts': 3,
+      'test-build-integration': 3,
+    },
   },
 
   examples: { schedulePriority: { 'test-e2e-artifacts': 2 } },
@@ -515,7 +537,7 @@ function getRunnerShort(runner) {
   switch (runner) {
     case 'ubuntu-latest':
       return 'linux';
-    case 'macos-14':
+    case 'macos-15':
       return 'mac';
     case 'windows-latest':
     case 'windows-latest-8-core':

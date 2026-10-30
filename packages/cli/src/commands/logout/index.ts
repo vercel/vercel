@@ -30,12 +30,17 @@ export default async function logout(client: Client): Promise<number> {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('logout');
-    output.print(help(logoutCommand, { columns: client.stderr.columns }));
+    output.print(
+      help(logoutCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
     return 0;
   }
 
@@ -76,6 +81,7 @@ export default async function logout(client: Client): Promise<number> {
 
   delete authConfig.token;
   delete authConfig.userId;
+  delete authConfig.cachedUser;
 
   try {
     if (!authConfig.skipWrite) {

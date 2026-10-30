@@ -1,5 +1,324 @@
 # @vercel/container
 
+## 23.0.0
+
+### Minor Changes
+
+- 5f55ccc: Add an experimental Buildah image store cache, enabled with `VERCEL_BUILDAH_STORE_CACHE=1`, so builds reuse images and layers from earlier deployments. Concurrent service builds share one `--source-date-epoch` per deployment so their layers stay reusable. `@vercel/build-utils` now exports `resolveBuildConcurrency()`.
+- 2a5ebec: Run container schedule commands through a schedules dispatcher added to the built image.
+
+### Patch Changes
+
+- 41c8d95: Build schedule command images with the schedule's `root` as the build context, and have the dispatcher read the command from `VERCEL_SCHEDULE_COMMAND` in the function's environment instead of the image's CMD.
+- 2a0a79a: Complete a schedule command invocation when a process that left the command's process group keeps its output open, dropping that output after 1s.
+- b2a9eb5: Expand HTTP regression coverage for the standalone IPC proxy.
+- Updated dependencies [5f55ccc]
+- Updated dependencies [d0629bd]
+  - @vercel/build-utils@15.1.0
+
+## 22.0.2
+
+### Patch Changes
+
+- 2f0edaf: Report the runtime preset for services without a framework.
+- Updated dependencies [2f0edaf]
+  - @vercel/build-utils@15.0.2
+
+## 22.0.1
+
+### Patch Changes
+
+- 1a379a3: Support `livenessProbe` in `vercel.json#daemons`.
+- Updated dependencies [1a379a3]
+  - @vercel/build-utils@15.0.1
+
+## 22.0.0
+
+### Patch Changes
+
+- Updated dependencies [9b1b587]
+- Updated dependencies [fec2df1]
+- Updated dependencies [d123652]
+  - @vercel/build-utils@15.0.0
+
+## 21.0.0
+
+### Patch Changes
+
+- 148453b: Emit daemon service bindings in the Build Output API daemon descriptor.
+- Updated dependencies [9abaa6d]
+- Updated dependencies [179d4ab]
+- Updated dependencies [d39dd61]
+- Updated dependencies [5aa1b58]
+  - @vercel/build-utils@14.23.0
+
+## 20.0.0
+
+### Minor Changes
+
+- b11e94a: Build daemon images with the Go and Rust buildpacks. A buildpack daemon gets its own image repository and cache, and has `command` baked into the image. When its buildpack fails, the build names the daemon and its root.
+
+  Buildpack builds pass the program to build as `VERCEL_ENTRYPOINT`, which replaces `VERCEL_GO_TARGET`: a service's entrypoint, else a zero-config project's `VERCEL_ENTRYPOINT` environment variable, then for Go the first of `@vercel/go`'s `main.go`, `cmd/api/main.go`, and `cmd/server/main.go`, and for a zero-config Rust project `src/main.rs`. A zero-config Go project with none of these fails with that list. An explicit entrypoint takes precedence over a `Dockerfile.vercel` marker. The Go and Rust buildpacks are pinned at 0.3.0, the first versions that read `VERCEL_ENTRYPOINT`, and the Ruby buildpack at 0.3.2.
+
+### Patch Changes
+
+- Updated dependencies [a19979c]
+- Updated dependencies [a2e9f5d]
+  - @vercel/build-utils@14.22.0
+
+## 19.1.3
+
+### Patch Changes
+
+- Updated dependencies [bb42e81]
+  - @vercel/build-utils@14.21.3
+
+## 19.1.2
+
+### Patch Changes
+
+- Updated dependencies [cd68435]
+  - @vercel/build-utils@14.21.2
+
+## 19.1.1
+
+### Patch Changes
+
+- Updated dependencies [1336097]
+  - @vercel/build-utils@14.21.1
+
+## 19.1.0
+
+### Minor Changes
+
+- f4f3ff7: Always enabled buildpack cache. Bump the buildpacks to the latest version with cache support.
+
+## 19.0.0
+
+### Patch Changes
+
+- 24a7e04: Accept `instances` for daemons in `vercel.json`. `replicas` is deprecated and ignored when `instances` is set. Daemon build output now writes `instances`.
+- 7e396f7: Support `terminationGracePeriodSeconds` in `vercel.json#daemons`.
+- 8845006: Accept Dockerfile and Containerfile names anywhere in the basename of explicit service and daemon entrypoints, such as `worker_Dockerfile`.
+- Updated dependencies [24a7e04]
+- Updated dependencies [7e396f7]
+  - @vercel/build-utils@14.21.0
+
+## 18.0.1
+
+### Patch Changes
+
+- 0d62534: Accept suffixed Dockerfile and Containerfile names in explicit service and daemon entrypoints.
+- Updated dependencies [42cc083]
+  - @vercel/build-utils@14.20.1
+
+## 18.0.0
+
+### Patch Changes
+
+- Updated dependencies [e041037]
+  - @vercel/build-utils@14.20.0
+
+## 17.0.0
+
+### Patch Changes
+
+- Updated dependencies [e58b37a]
+  - @vercel/build-utils@14.19.0
+
+## 16.0.0
+
+### Patch Changes
+
+- ad69711: Reduce buildpack build times on Vercel by overlapping setup and cache restoration and exporting the image and cache in parallel. Move Buildah container cleanup into the background and add debug timings to help identify slow build steps.
+- Updated dependencies [94f6cea]
+- Updated dependencies [3eeaad5]
+- Updated dependencies [8ac5320]
+  - @vercel/build-utils@14.18.0
+
+## 15.0.0
+
+### Minor Changes
+
+- 28a7ab7: Build top-level `daemons` when `VERCEL_ENABLE_DAEMONS_BOA=1`: `vercel build` builds the project as usual, pushes each daemon's Dockerfile image, and writes a Build Output API descriptor to `daemons/<name>/.vc-config.json`.
+
+### Patch Changes
+
+- Updated dependencies [28a7ab7]
+- Updated dependencies [28a7ab7]
+  - @vercel/build-utils@14.17.0
+
+## 14.0.0
+
+### Patch Changes
+
+- Updated dependencies [20c5940]
+  - @vercel/build-utils@14.16.0
+
+## 13.0.0
+
+### Minor Changes
+
+- b0c985b: Build standalone Go servers with the Vercel Go buildpack and the container
+  runtime when `VERCEL_EXPERIMENTAL_BUILDPACK_GO=1`, instead of running them
+  behind the IPC proxy on Lambda. This applies to zero-config Go projects and
+  Go services with a `go.mod` at their root, including `package main` and
+  directory service entrypoints. `api/**/*.go` functions and Go handler
+  entrypoints keep using `@vercel/go`.
+
+  The build image is `golang:<version>-bookworm`, selected from the newer of
+  the go.mod `toolchain` and `go` directives. The buildpack defaults to
+  `GOTOOLCHAIN=local`, so the image's Go builds the module. It compiles the
+  package a service entrypoint names, or else the one `@vercel/go` would
+  build, passed as `VERCEL_GO_TARGET`, and the binary runs on distroless
+  Debian 12.
+
+- 5772e9e: Build Rust HTTP servers with a root `Cargo.toml` using the container builder when `VERCEL_EXPERIMENTAL_BUILDPACK_RUST=1`, selecting the build image from `rust-toolchain` or `rust-toolchain.toml` and serving `public/` from the root path. API functions and services with explicit file entrypoints continue using `@vercel/rust`.
+
+### Patch Changes
+
+- Updated dependencies [a7ef28c]
+  - @vercel/build-utils@14.15.0
+
+## 12.0.0
+
+### Patch Changes
+
+- Updated dependencies [deb48cd]
+  - @vercel/build-utils@14.14.0
+
+## 11.0.2
+
+### Patch Changes
+
+- Updated dependencies [ff3d2f7]
+  - @vercel/build-utils@14.13.2
+
+## 11.0.1
+
+### Patch Changes
+
+- Updated dependencies [5082546]
+  - @vercel/build-utils@14.13.1
+
+## 11.0.0
+
+### Patch Changes
+
+- Updated dependencies [34b2c8e]
+  - @vercel/build-utils@14.13.0
+
+## 10.1.0
+
+### Minor Changes
+
+- 42b7d4e: Persist buildpack dependency layers between deployments through the CNB lifecycle's directory cache under the repository's `.vercel/cache`. Enable with `VERCEL_ENABLE_BUILDPACK_CACHE=1`.
+  Stop returning the Buildah layer store from `prepareCache`, which made the platform drop the entire build cache.
+
+## 10.0.0
+
+### Patch Changes
+
+- Updated dependencies [6e68e60]
+  - @vercel/build-utils@14.12.0
+
+## 9.0.0
+
+### Patch Changes
+
+- Updated dependencies [888f59e]
+- Updated dependencies [7eb63c0]
+  - @vercel/build-utils@14.11.0
+
+## 8.4.0
+
+### Minor Changes
+
+- 1cd2cfa: Bump the ruby buildpack version to 0.2.0
+
+## 8.3.1
+
+### Patch Changes
+
+- Updated dependencies [53a6086]
+  - @vercel/build-utils@14.10.2
+
+## 8.3.0
+
+### Minor Changes
+
+- 4060042: Add `VERCEL_BUILDPACK_PRERELEASE_URL` to build with an unreleased buildpack.
+  Set it to the full HTTPS URL of a `vercel-<name>-<version>.cnb` archive. The
+  builder verifies it against the adjacent `.cnb.sha256` file and uses it for
+  the matching buildpack in the runtime's group. Other buildpacks keep their
+  pinned releases; missing or invalid prerelease files fail the build.
+
+## 8.2.2
+
+### Patch Changes
+
+- 98b7677: Resolve a pushed image's digest from the registry when the push does not report it, instead of the local image store. Podman keeps locally-built layers uncompressed and gzips them on push, so the uploaded manifest hashes to a different digest than the one in `RepoDigests`; prebuilt container deployments then referenced a digest that did not exist in VCR. Both the Docker and buildah engines now fail the build if the pushed digest cannot be resolved rather than emitting a mutable tag.
+
+## 8.2.1
+
+### Patch Changes
+
+- a953d36: Serve Vercel Queues and Runtime Cache from dedicated local ports in `vercel dev`, including projects without configured queue services. Poll-mode consumers can create consumer groups on first receive and read retained messages from the beginning of a topic. Every service, sidecar, function, and framework dev command receives the direct local endpoints, while container services use authenticated `/_svc` routes as container-reachable proxy aliases. The ports can be pinned with `--queue-port` and `--runtime-cache-port`; otherwise occupied defaults are incremented automatically. A `RUNTIME_CACHE_ENDPOINT` you set yourself still takes precedence.
+
+## 8.2.0
+
+### Minor Changes
+
+- a88afa0: Route Ruby services and zero-config Ruby projects (Rails and Rack) to the
+  experimental Ruby buildpack container builder behind
+  `VERCEL_EXPERIMENTAL_BUILDPACK_RUBY=1`. The buildpack is selected only when a
+  `Gemfile` sits at the build root and no file `entrypoint` narrows the build;
+  services with an explicit `.rb`/`.ru` entrypoint keep building with
+  `@vercel/ruby`. `vercel dev` reports that Ruby projects and services are not
+  supported yet.
+
+## 8.1.0
+
+### Minor Changes
+
+- f9d0e90: Add experimental Cloud Native Buildpacks lifecycle support with isolated source
+  staging, pinned lifecycle and buildpack archives, and runtime-owned image
+  resolution. Ruby images are selected from `.ruby-version`, `.tool-versions`, or
+  the `tools.ruby` entry in `mise.toml`, then an exact Gemfile declaration,
+  defaulting to Ruby 3.4. Unsupported version declarations fail with configuration
+  guidance. Nothing selects a buildpack yet.
+
+### Patch Changes
+
+- Updated dependencies [f9d0e90]
+- Updated dependencies [8a277e4]
+- Updated dependencies [66e443e]
+- Updated dependencies [08b0be2]
+  - @vercel/build-utils@14.10.1
+
+## 8.0.0
+
+### Patch Changes
+
+- Updated dependencies [2a57243]
+- Updated dependencies [54a6d73]
+- Updated dependencies [3d16792]
+  - @vercel/build-utils@14.10.0
+
+## 7.0.3
+
+### Patch Changes
+
+- Updated dependencies [55e8d1e]
+  - @vercel/build-utils@14.9.3
+
+## 7.0.2
+
+### Patch Changes
+
+- Updated dependencies [b174f14]
+  - @vercel/build-utils@14.9.2
+
 ## 7.0.1
 
 ### Patch Changes

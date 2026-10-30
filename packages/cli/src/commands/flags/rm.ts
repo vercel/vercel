@@ -27,7 +27,7 @@ export default async function rm(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -37,8 +37,8 @@ export default async function rm(
 
   if (!flagArg) {
     output.error('Please provide a flag slug or ID to delete');
-    output.log(`Example: ${getCommandName('flags rm my-feature')}`);
-    return 1;
+    output.log(`Example: ${getCommandName('flags delete my-feature')}`);
+    return 2;
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
@@ -78,9 +78,9 @@ export default async function rm(
     if (!skipConfirmation) {
       if (!client.stdin.isTTY) {
         output.error(
-          'Missing required flag --yes. Use --yes to skip the confirmation prompt in non-interactive mode.'
+          'Missing required option --yes. Use --yes to skip the confirmation prompt in non-interactive mode.'
         );
-        return 1;
+        return 2;
       }
 
       const confirmed = await client.input.confirm(

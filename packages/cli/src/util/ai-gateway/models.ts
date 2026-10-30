@@ -1,4 +1,5 @@
 import type Client from '../client';
+import type { FetchOptions } from '../client';
 
 const DEFAULT_AI_GATEWAY_URL = 'https://ai-gateway.vercel.sh';
 
@@ -12,6 +13,7 @@ export type Model = {
   object: 'model';
   created?: number;
   released?: number;
+  deprecated_at?: number;
   owned_by: string;
   name: string;
   description?: string;
@@ -59,12 +61,15 @@ function gatewayBase(): string {
   return process.env.VERCEL_AI_GATEWAY_URL ?? DEFAULT_AI_GATEWAY_URL;
 }
 
-export async function listModels(client: Client): Promise<Model[]> {
+export async function listModels(
+  client: Client,
+  opts: Pick<FetchOptions, 'signal' | 'retry' | 'bailOn429'> = {}
+): Promise<Model[]> {
   // Public, unauthenticated, OpenAI-style endpoint. Passing an absolute URL to
   // client.fetch bypasses the default api host (new URL(url, apiUrl)).
   const { data } = await client.fetch<{ object: 'list'; data: Model[] }>(
     `${gatewayBase()}/v1/models`,
-    { method: 'GET' }
+    { method: 'GET', ...opts }
   );
   return data ?? [];
 }

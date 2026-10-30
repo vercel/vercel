@@ -52,6 +52,12 @@ export class BlobPutTelemetryClient
     }
   }
 
+  trackCliFlagNoMultipart(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('no-multipart');
+    }
+  }
+
   trackCliOptionContentType(contentType: string | undefined) {
     if (contentType) {
       this.trackCliOption({
@@ -70,6 +76,13 @@ export class BlobPutTelemetryClient
     }
   }
 
+  trackCliFlagForce(force: boolean | undefined) {
+    if (force) {
+      this.trackCliFlag('force');
+    }
+  }
+
+  // The deprecated name keeps its own key, to measure who still uses it.
   trackCliFlagAllowOverwrite(allowOverwrite: boolean | undefined) {
     if (allowOverwrite) {
       this.trackCliFlag('allow-overwrite');

@@ -1,5 +1,7 @@
-import chalk from 'chalk';
+import { helpHeading, wrapHelpText } from '../output/help-format';
 import type { MetadataSchema, MetadataSchemaProperty } from './types';
+import { createHelpTheme } from '../output/help-theme';
+import { remoteText } from '../output/remote-text';
 
 /**
  * Whether a field is hidden during resource creation.
@@ -40,47 +42,61 @@ export function getVisibleOptions(
   return options.length > 0 ? options : undefined;
 }
 
+/** Remote schema data must never introduce shell syntax into a suggestion. */
+export function formatMetadataExample(
+  key: string,
+  value: string,
+  array = false
+): string {
+  const safeKey = /^[A-Za-z_][A-Za-z0-9_.-]*$/.test(key) ? key : '<KEY>';
+  const safeValue = /^[A-Za-z0-9_][A-Za-z0-9_.,:/@+-]*$/.test(value)
+    ? value
+    : '<VALUE>';
+  const argument = `${safeKey}=${safeValue}`;
+  return `--meta ${array ? `"${argument}"` : argument}`;
+}
+
 function generateExample(
   key: string,
   prop: MetadataSchemaProperty
 ): string | undefined {
   if (prop.type === 'boolean') {
-    return `-m ${key}=true`;
+    return formatMetadataExample(key, 'true');
   }
 
   if (prop.type === 'array') {
     const options = getVisibleOptions(prop);
     if (options && options.length >= 2) {
-      return `-m "${key}=${options[0]},${options[1]}"`;
+      return formatMetadataExample(key, `${options[0]},${options[1]}`, true);
     }
     if (options && options.length === 1) {
-      return `-m "${key}=${options[0]}"`;
+      return formatMetadataExample(key, options[0], true);
     }
     if (prop.items?.type === 'number') {
       if (prop.default !== undefined) {
-        return `-m ${key}=${prop.default}`;
+        return formatMetadataExample(key, String(prop.default));
       }
-      return `-m ${key}=N,N`;
+      return formatMetadataExample(key, '<VALUE>', true);
     }
-    return `-m "${key}=value1,value2"`;
+    return formatMetadataExample(key, '<VALUE>', true);
   }
 
   if (prop.type === 'number') {
     if (prop.default !== undefined) {
-      return `-m ${key}=${prop.default}`;
+      return formatMetadataExample(key, String(prop.default));
     }
     if (prop.minimum !== undefined) {
-      return `-m ${key}=${prop.minimum}`;
+      return formatMetadataExample(key, String(prop.minimum));
     }
-    return `-m ${key}=N`;
+    return formatMetadataExample(key, '<VALUE>');
   }
 
   // string type
   const options = getVisibleOptions(prop);
   if (options && options.length > 0) {
-    return `-m ${key}=${options[0]}`;
+    return formatMetadataExample(key, options[0]);
   }
-  return `-m ${key}=<value>`;
+  return formatMetadataExample(key, '<VALUE>');
 }
 
 /**
@@ -100,22 +116,23 @@ export function isServerHandledRegion(prop: MetadataSchemaProperty): boolean {
 export function formatMetadataSchemaHelp(
   schema: MetadataSchema,
   integrationName: string,
-  productSlug?: string
+  productSlug?: string,
+  columns = 80,
+  theme = createHelpTheme()
 ): string {
   const lines: string[] = [];
   lines.push('');
   const header = productSlug
-    ? `  Metadata options for "${integrationName}/${productSlug}":`
-    : `  Metadata options for "${integrationName}":`;
-  lines.push(chalk.bold(header));
-  lines.push('');
+    ? `Metadata options for "${integrationName}/${productSlug}":`
+    : `Metadata options for "${integrationName}":`;
+  lines.push(helpHeading(header.slice(0, -1), theme));
 
   const required = new Set(schema.required ?? []);
   const entries = Object.entries(schema.properties);
 
   if (entries.length === 0) {
-    lines.push('    No metadata options available.');
-    return lines.join('\n');
+    lines.push('  No metadata options available.');
+    return lines.join('\n') + (lines.at(-1) === '' ? '' : '\n');
   }
 
   for (const [key, prop] of entries) {
@@ -126,26 +143,26 @@ export function formatMetadataSchemaHelp(
 
     const isRequired = required.has(key);
     const requiredSuffix =
-      isRequired && !isServerHandledRegion(prop)
-        ? chalk.red(' (required)')
-        : '';
+      isRequired && !isServerHandledRegion(prop) ? ' (required)' : '';
 
     const typeHint =
       prop.type === 'boolean'
-        ? chalk.dim(' (true/false)')
+        ? ' (true/false)'
         : prop.type === 'array'
-          ? chalk.dim(' (comma-separated)')
+          ? ' (comma-separated)'
           : '';
-    lines.push(`    ${chalk.cyan(key)}${requiredSuffix}${typeHint}`);
+    lines.push(`  ${remoteText(key)}${requiredSuffix}${typeHint}`);
 
     if (prop.description) {
-      lines.push(`      ${prop.description}`);
+      lines.push(wrapHelpText(prop.description, columns, '    '));
     }
 
     // Show options for select fields
     const visibleOptions = getVisibleOptions(prop);
     if (visibleOptions) {
-      lines.push(`      Options: ${visibleOptions.join(', ')}`);
+      lines.push(
+        wrapHelpText(`Options: ${visibleOptions.join(', ')}`, columns, '    ')
+      );
     }
 
     // Show range for number fields
@@ -153,24 +170,26 @@ export function formatMetadataSchemaHelp(
       const range = [];
       if (prop.minimum !== undefined) range.push(`min: ${prop.minimum}`);
       if (prop.maximum !== undefined) range.push(`max: ${prop.maximum}`);
-      lines.push(`      Range: ${range.join(', ')}`);
+      lines.push(wrapHelpText(`Range: ${range.join(', ')}`, columns, '    '));
     }
 
     // Show default value
     if (prop.default !== undefined) {
-      lines.push(`      Default: ${prop.default}`);
+      lines.push(wrapHelpText(`Default: ${prop.default}`, columns, '    '));
     }
 
     // Show usage example
     const example = generateExample(key, prop);
     if (example) {
-      lines.push(`      Example: ${chalk.dim(example)}`);
+      lines.push(
+        `    Example: ${theme.reference('--meta')}${remoteText(example.slice('--meta'.length))}`
+      );
     }
 
     lines.push('');
   }
 
-  return lines.join('\n');
+  return lines.join('\n') + (lines.at(-1) === '' ? '' : '\n');
 }
 
 /**

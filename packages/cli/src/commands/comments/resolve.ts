@@ -39,7 +39,7 @@ export default async function resolveThreads(
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const jsonOutput = formatResult.jsonOutput;
   const closingMessage: string | undefined = resolved
@@ -94,7 +94,7 @@ export default async function resolveThreads(
       client,
       jsonOutput,
       'MESSAGE_WITH_MULTIPLE_THREADS',
-      'Cannot use -m with multiple threads. Resolve one thread with a closing message, or resolve multiple threads without -m.'
+      'Cannot use --message with multiple threads. Resolve one thread with a closing message, or resolve multiple threads without --message.'
     );
   }
 

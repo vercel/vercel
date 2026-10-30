@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12"
 
 [manifest]
@@ -1219,8 +1219,9 @@ wheels = [
 
 [[package]]
 name = "vercel-runtime"
-version = "0.22.1"
+version = "0.24.1"
 source = { editable = "python/vercel-runtime" }
+default-groups = ["test"]
 
 [package.dev-dependencies]
 test = [
@@ -1250,6 +1251,7 @@ test = [
 name = "vercel-workers"
 version = "0.0.25"
 source = { editable = "python/vercel-workers" }
+default-groups = ["test"]
 dependencies = [
     { name = "anyio" },
     { name = "httpx" },

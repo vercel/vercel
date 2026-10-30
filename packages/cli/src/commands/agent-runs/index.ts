@@ -42,7 +42,7 @@ export default async function agentRuns(client: Client): Promise<number> {
     });
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const subArgs = parsedArgs.args.slice(1);
@@ -55,6 +55,7 @@ export default async function agentRuns(client: Client): Promise<number> {
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: agentRunsCommand,
         columns: client.stderr.columns,
       })
@@ -65,14 +66,24 @@ export default async function agentRuns(client: Client): Promise<number> {
     const unknown = subArgs.find(arg => !arg.startsWith('-'));
     if (unknown) {
       output.error(`Unknown subcommand: ${unknown}`);
-      output.print(help(agentRunsCommand, { columns: client.stderr.columns }));
-      return 1;
+      output.print(
+        help(agentRunsCommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
+      );
+      return 2;
     }
     if (needHelp) {
       telemetry.trackCliFlagHelp('agent-runs');
     }
-    output.print(help(agentRunsCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(agentRunsCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   switch (subcommand) {
@@ -80,7 +91,7 @@ export default async function agentRuns(client: Client): Promise<number> {
       if (needHelp) {
         telemetry.trackCliFlagHelp('agent-runs', subcommandOriginal);
         printHelp(listSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return await list(client);
@@ -89,7 +100,7 @@ export default async function agentRuns(client: Client): Promise<number> {
       if (needHelp) {
         telemetry.trackCliFlagHelp('agent-runs', subcommandOriginal);
         printHelp(inspectSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
       return await inspect(client);
@@ -98,7 +109,7 @@ export default async function agentRuns(client: Client): Promise<number> {
       if (needHelp) {
         telemetry.trackCliFlagHelp('agent-runs', subcommandOriginal);
         printHelp(traceSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandTrace(subcommandOriginal);
       return await trace(client);
@@ -107,15 +118,20 @@ export default async function agentRuns(client: Client): Promise<number> {
       if (needHelp) {
         telemetry.trackCliFlagHelp('agent-runs', subcommandOriginal);
         printHelp(projectsSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandProjects(subcommandOriginal);
       return await projects(client);
     }
     default: {
       output.error(`Unknown subcommand: ${subcommandOriginal}`);
-      output.print(help(agentRunsCommand, { columns: client.stderr.columns }));
-      return 1;
+      output.print(
+        help(agentRunsCommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
+      );
+      return 2;
     }
   }
 }

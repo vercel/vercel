@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { getExitCodeForReason } from '../../../src/util/agent-output-constants';
 import {
   isActionRequiredPayload,
   outputActionRequired,
@@ -222,6 +223,62 @@ describe('outputAgentError', () => {
     expect(parsed.message).toBe('Something went wrong');
     expect(exitSpy).toHaveBeenCalledWith(3);
   });
+
+  it.each([
+    ['invalid_arguments', 2],
+    ['missing_arguments', 2],
+    ['unknown_command', 2],
+    ['api_error', 1],
+    ['not_found', 1],
+    ['test_reason', 1],
+  ])('exits by default with the code for the %s reason', (reason, code) => {
+    const client = {
+      nonInteractive: true,
+      stdout: { write: vi.fn() },
+    } as unknown as Client;
+
+    outputAgentError(client, { ...errorPayload, reason });
+    expect(exitSpy).toHaveBeenCalledWith(code);
+  });
+
+  it.each([
+    true,
+    false,
+  ])('includes feedback only for agents (isAgent=%s)', isAgent => {
+    const stdoutWrite = vi.fn();
+    const client = {
+      isAgent,
+      nonInteractive: true,
+      stdout: { write: stdoutWrite },
+    } as unknown as Client;
+
+    outputAgentError(client, errorPayload);
+
+    expect(stdoutWrite).toHaveBeenCalledTimes(1);
+    const written = JSON.parse(stdoutWrite.mock.calls[0][0] as string);
+    expect(written).toMatchObject(errorPayload);
+    if (isAgent) {
+      expect(written.feedback).toEqual({
+        message:
+          "Please send one brief feedback report about this error while helping the user resolve it. Don't delay the user's request for feedback.",
+        command:
+          "Run the 'vercel feedback --help' command to see how to report feedback. Make sure all feedback, including text copied from errors or logs, excludes personal data, account identifiers (e.g., usernames, team IDs, project names), and secrets (e.g., API keys, tokens, env values, credentials).",
+      });
+    } else {
+      expect(written).not.toHaveProperty('feedback');
+    }
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+});
+
+describe('getExitCodeForReason', () => {
+  it('returns 2 for usage errors and 1 for every other failure', () => {
+    expect(getExitCodeForReason('invalid_arguments')).toBe(2);
+    expect(getExitCodeForReason('missing_name')).toBe(2);
+    expect(getExitCodeForReason('login_required')).toBe(1);
+    expect(getExitCodeForReason('invalid_cron_expression')).toBe(1);
+    expect(getExitCodeForReason(undefined)).toBe(1);
+  });
 });
 
 describe('buildCommandWithYes', () => {
@@ -344,6 +401,7 @@ describe('enrichActionRequiredWithInvokingCommand', () => {
     const payload: ActionRequiredPayload = {
       status: 'action_required',
       message: 'Choose scope.',
+      reason: 'missing_scope',
       choices: [
         { id: 'team_1', name: 'team-a' },
         { id: 'team_2', name: 'team-b' },
@@ -363,10 +421,39 @@ describe('enrichActionRequiredWithInvokingCommand', () => {
     expect(out.next![3].command).toBe('vercel deploy --scope team-b');
   });
 
+  it('does not treat non-scope choices as team slugs', () => {
+    const payload: ActionRequiredPayload = {
+      status: 'action_required',
+      reason: 'public_prefix_requires_type',
+      message: 'Choose how to store this variable.',
+      choices: [
+        { id: 'private', name: 'Keep private' },
+        { id: 'public', name: 'Expose publicly' },
+      ],
+      next: [
+        { command: 'vercel env add SAFE_NAME production --type secret' },
+        { command: 'vercel env add NEXT_PUBLIC_NAME production --type config' },
+      ],
+    };
+
+    const out = enrichActionRequiredWithInvokingCommand(payload, [
+      '/node',
+      '/vc.js',
+      'env',
+      'add',
+      'NEXT_PUBLIC_NAME',
+      'production',
+    ]);
+
+    expect(out).toBe(payload);
+    expect(out.next).toEqual(payload.next);
+  });
+
   it('preserves --project and other flags in link command when present in argv', () => {
     const payload: ActionRequiredPayload = {
       status: 'action_required',
       message: 'Choose scope.',
+      reason: 'missing_scope',
       choices: [{ id: 'team_1', name: 'team-a' }],
       next: [],
     };
@@ -378,6 +465,30 @@ describe('enrichActionRequiredWithInvokingCommand', () => {
     );
     expect(out.next![1].command).toBe(
       'vercel link --project my-app --scope team-a'
+    );
+  });
+
+  it("links without the invoking command's subcommand or arguments", () => {
+    const payload: ActionRequiredPayload = {
+      status: 'action_required',
+      message: 'Choose scope.',
+      reason: 'missing_scope',
+      choices: [{ id: 'team_1', name: 'team-a' }],
+      next: [],
+    };
+    const argv = [
+      '/node',
+      '/vc.js',
+      'domains',
+      'add',
+      'example.com',
+      '--cwd',
+      '/app',
+    ];
+    const out = enrichActionRequiredWithInvokingCommand(payload, argv);
+    expect(out.next![0].command).toBe('vercel link --cwd /app --scope team-a');
+    expect(out.next![1].command).toBe(
+      'vercel domains add example.com --cwd /app --scope team-a'
     );
   });
 
@@ -770,7 +881,7 @@ describe('buildCommandWithGlobalFlags', () => {
 
 describe('exitWithNonInteractiveError', () => {
   it('emits JSON when argv includes --non-interactive even if client.nonInteractive is false', async () => {
-    const { Response } = await import('../../../src/util/fetch');
+    const { Response } = await import('../../../src/util/fetch-primitives');
     const res = new Response(
       JSON.stringify({
         error: { code: 'not_found', message: 'Project not found.' },
@@ -842,7 +953,7 @@ describe('exitWithNonInteractiveError', () => {
   });
 
   it('includes action and resource from a 403 APIError', async () => {
-    const { Response } = await import('../../../src/util/fetch');
+    const { Response } = await import('../../../src/util/fetch-primitives');
     const res = new Response(
       JSON.stringify({
         error: {
@@ -892,7 +1003,7 @@ describe('exitWithNonInteractiveError', () => {
   });
 
   it('omits action and resource from a 404 APIError', async () => {
-    const { Response } = await import('../../../src/util/fetch');
+    const { Response } = await import('../../../src/util/fetch-primitives');
     const res = new Response(
       JSON.stringify({
         error: { code: 'not_found', message: 'Not found.' },

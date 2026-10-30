@@ -5,6 +5,8 @@ import { LocalFileSystemDetector } from '@vercel/fs-detectors';
 import {
   detectServices,
   generateServiceRewrites,
+  type ConfiguredServices,
+  type ConfiguredServicesType,
   type DetectServicesResult,
   type InferredServicesConfig,
 } from '@vercel-internals/service-topology';
@@ -19,6 +21,42 @@ import { createDetectEntrypoint } from './detect-entrypoint';
 
 export type ServicesConfigWriteBlocker = 'builds' | 'functions';
 
+function getServicesConfiguration(config?: VercelConfig | null) {
+  const configuredServices: ConfiguredServices | undefined =
+    config?.services ??
+    config?.experimentalServicesV2 ??
+    config?.experimentalServices;
+  const configuredServicesType: ConfiguredServicesType | undefined =
+    config?.services
+      ? 'services'
+      : config?.experimentalServicesV2
+        ? 'experimentalServicesV2'
+        : config?.experimentalServices
+          ? 'experimentalServices'
+          : undefined;
+
+  return { configuredServices, configuredServicesType };
+}
+
+export async function loadVercelConfig(
+  cwd: string
+): Promise<VercelConfig | null> {
+  try {
+    const { configPath } = await compileVercelConfig(cwd);
+    if (!configPath) return null;
+
+    const config = await readJSONFile<VercelConfig>(configPath);
+    return config instanceof Error ? null : config;
+  } catch {
+    return null;
+  }
+}
+
+function isServicesEnvEnabled(): boolean {
+  const value = process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
+  return value === '1' || value?.toLowerCase() === 'true';
+}
+
 /**
  * Check if vercel.json in the given directory has services configured
  * or VERCEL_USE_EXPERIMENTAL_SERVICES environment variable is set.
@@ -26,32 +64,10 @@ export type ServicesConfigWriteBlocker = 'builds' | 'functions';
 export async function isExperimentalServicesEnabled(
   cwd: string
 ): Promise<boolean> {
-  return (
-    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES === '1' ||
-    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES?.toLowerCase() === 'true' ||
-    (await hasExperimentalServicesConfig(cwd))
+  const { configuredServices } = getServicesConfiguration(
+    await loadVercelConfig(cwd)
   );
-}
-
-async function hasExperimentalServicesConfig(cwd: string): Promise<boolean> {
-  try {
-    const compileResult = await compileVercelConfig(cwd);
-    if (!compileResult.configPath) return false;
-
-    const config = await readJSONFile<Record<string, unknown>>(
-      compileResult.configPath
-    );
-    if (!config || config instanceof Error) return false;
-    return (
-      (config.experimentalServices != null &&
-        typeof config.experimentalServices === 'object') ||
-      (config.services != null && typeof config.services === 'object') ||
-      (config.experimentalServicesV2 != null &&
-        typeof config.experimentalServicesV2 === 'object')
-    );
-  } catch {
-    return false;
-  }
+  return isServicesEnvEnabled() || configuredServices !== undefined;
 }
 
 /**
@@ -64,16 +80,22 @@ async function hasExperimentalServicesConfig(cwd: string): Promise<boolean> {
  * Returns null otherwise.
  */
 export async function tryDetectServices(
-  cwd: string
+  cwd: string,
+  config?: VercelConfig | null
 ): Promise<DetectServicesResult | null> {
-  const isServicesEnabled = await isExperimentalServicesEnabled(cwd);
-  if (!isServicesEnabled) {
+  if (config === undefined) {
+    config = await loadVercelConfig(cwd);
+  }
+  const configuration = getServicesConfiguration(config);
+  if (!isServicesEnvEnabled() && !configuration.configuredServices) {
     return null;
   }
 
   const fs = new LocalFileSystemDetector(cwd);
   const result = await detectServices({
     fs,
+    configuredServices: configuration.configuredServices,
+    configuredServicesType: configuration.configuredServicesType,
     detectEntrypoint: createDetectEntrypoint(cwd),
   });
 

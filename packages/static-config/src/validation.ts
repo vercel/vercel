@@ -9,8 +9,8 @@ export function validate<T extends JSONSchema>(
 ): FromSchema<T> {
   const isValid = ajv.compile(schema);
   if (!isValid(data)) {
-    // TODO: better error message
-    throw new Error('Invalid data');
+    const details = ajv.errorsText(isValid.errors, { dataVar: 'config' });
+    throw new Error(`Invalid data: ${details}`);
   }
   // @ts-expect-error - this seems to work just fine, but TS complains it could be infinite nesting
   return data as FromSchema<T>;

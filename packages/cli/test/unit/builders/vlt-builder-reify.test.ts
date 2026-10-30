@@ -4,8 +4,8 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { describe, expect, it } from 'vitest';
-import { getWriteableDirectory } from '@vercel/build-utils';
+import { describe, expect, it, vi } from 'vitest';
+import { getWriteableDirectory, Span } from '@vercel/build-utils';
 import { remove } from 'fs-extra';
 import {
   generateBuilderGraphs,
@@ -15,6 +15,7 @@ import {
   createVltBuilderImporter,
   type EmbeddedBuilderGraphs,
 } from '../../../src/builders/vlt-builder-importer';
+import { createBuilderIndex } from '../../../src/builders/vlt-builder-graph';
 
 const execFileAsync = promisify(execFile);
 const require_ = createRequire(__filename);
@@ -104,10 +105,50 @@ describe('vlt Builder importer', () => {
           new LocalPreviewPackageInfoClient(options, artifacts),
         debug,
       });
-      const builders = await importBuilders(
-        new Map([['@vercel/test-builder', '@vercel/test-builder']])
-      );
+      const specs = new Map([['@vercel/test-builder', '@vercel/test-builder']]);
+      const installSpan = new Span({ name: 'install' });
+      const setInstallAttributes = vi.spyOn(installSpan, 'setAttributes');
+      const builders = await importBuilders(specs, installSpan);
       const loaded = builders.get('@vercel/test-builder');
+
+      expect(setInstallAttributes).toHaveBeenCalledWith({
+        'builders.vlt.installed': '@vercel/test-builder',
+        'builders.vlt.reused': '',
+        'builders.vlt.ensureMs': expect.stringMatching(/^\d+$/),
+        'builders.vlt.requireMs': expect.stringMatching(/^\d+$/),
+      });
+
+      const reuseSpan = new Span({ name: 'reuse' });
+      const setReuseAttributes = vi.spyOn(reuseSpan, 'setAttributes');
+      await importBuilders(specs, reuseSpan);
+      expect(setReuseAttributes).toHaveBeenCalledWith(
+        expect.objectContaining({
+          'builders.vlt.installed': '',
+          'builders.vlt.reused': '@vercel/test-builder',
+        })
+      );
+      expect(
+        (await importBuilders(specs)).get('@vercel/test-builder')?.builder
+      ).toBe(loaded?.builder);
+
+      // An installed Builder is imported from the index alone: no full
+      // graphs, and no vlt package info client.
+      const loadGraphs = vi.fn(async () => graphs as EmbeddedBuilderGraphs);
+      const packageInfoFactory = vi.fn();
+      const indexOnlyImport = createVltBuilderImporter({
+        loadIndex: async () =>
+          createBuilderIndex(graphs as EmbeddedBuilderGraphs),
+        loadGraphs,
+        require: require_,
+        cacheRoot,
+        packageInfoFactory,
+      });
+      const fromIndex = await indexOnlyImport(specs);
+      expect(fromIndex.get('@vercel/test-builder')?.pkgPath).toBe(
+        loaded?.pkgPath
+      );
+      expect(loadGraphs).not.toHaveBeenCalled();
+      expect(packageInfoFactory).not.toHaveBeenCalled();
 
       expect(loaded?.pkg.version).toBe('1.0.0');
       expect(loaded?.pkgPath).toContain(

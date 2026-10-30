@@ -15,6 +15,7 @@ import {
   AGENT_ACTION,
   AGENT_REASON,
   AGENT_STATUS,
+  getExitCodeForReason,
 } from '../../util/agent-output-constants';
 import { membersRemoveFlags } from './command';
 import { canPrompt } from '../../util/can-prompt';
@@ -83,7 +84,7 @@ export async function membersRemove(
       message: error instanceof Error ? error.message : String(error),
     });
     printError(error);
-    return 1;
+    return 2;
   }
 
   const [projectNameOrId, member] = parsedArgs.args;
@@ -98,7 +99,7 @@ export async function membersRemove(
       message: formatResult.error,
     });
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
 
   const { jsonOutput } = formatResult;
@@ -117,7 +118,7 @@ export async function membersRemove(
         message,
         ...extra,
       });
-      return 1;
+      return getExitCodeForReason(reason);
     }
     if (jsonOutput || !canPrompt(client)) {
       client.stdout.write(
@@ -127,10 +128,10 @@ export async function membersRemove(
           2
         )}\n`
       );
-      return 1;
+      return getExitCodeForReason(reason);
     }
     output.error(humanMessage);
-    return 1;
+    return getExitCodeForReason(reason);
   }
 
   if (parsedArgs.args.length !== 2) {

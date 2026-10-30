@@ -25,7 +25,7 @@ export default async function run(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
 
@@ -88,7 +88,7 @@ export default async function run(client: Client, argv: string[]) {
       output.error(
         `A cron path argument is required in non-interactive mode. Usage: ${getCommandName('crons run <path>')}`
       );
-      return 1;
+      return 2;
     }
 
     output.stopSpinner();

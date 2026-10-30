@@ -15,11 +15,11 @@ describe('connex remove', () => {
   });
 
   it('should error when no client argument is provided', async () => {
-    client.setArgv('connect', 'remove');
+    client.setArgv('connect', 'delete');
 
     const exitCode = await connect(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'Missing connector ID or UID'
     );
@@ -31,7 +31,7 @@ describe('connex remove', () => {
       res.json({ error: { code: 'not_found', message: 'Not Found' } });
     });
 
-    client.setArgv('connect', 'remove', 'scl_missing', '--yes');
+    client.setArgv('connect', 'delete', 'scl_missing', '--yes');
 
     const exitCode = await connect(client);
 
@@ -58,13 +58,13 @@ describe('connex remove', () => {
       res.end();
     });
 
-    client.setArgv('connect', 'remove', 'slack/my-bot', '--yes');
+    client.setArgv('connect', 'delete', 'slack/my-bot', '--yes');
 
     const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(deleteCalled).toBe(true);
-    expect(client.stderr.getFullOutput()).toContain('successfully removed');
+    expect(client.stderr.getFullOutput()).toContain('successfully deleted');
   });
 
   it('should refuse to delete when projects are connected and --disconnect-all is not set', async () => {
@@ -90,7 +90,7 @@ describe('connex remove', () => {
       res.end();
     });
 
-    client.setArgv('connect', 'remove', 'slack/my-bot', '--yes');
+    client.setArgv('connect', 'delete', 'slack/my-bot', '--yes');
 
     const exitCode = await connect(client);
 
@@ -123,7 +123,7 @@ describe('connex remove', () => {
 
     client.setArgv(
       'connect',
-      'remove',
+      'delete',
       'slack/my-bot',
       '--disconnect-all',
       '--yes'
@@ -133,7 +133,7 @@ describe('connex remove', () => {
 
     expect(exitCode).toBe(0);
     expect(deleteCalled).toBe(true);
-    expect(client.stderr.getFullOutput()).toContain('successfully removed');
+    expect(client.stderr.getFullOutput()).toContain('successfully deleted');
   });
 
   it('should require --yes when stdin is not a TTY', async () => {
@@ -147,7 +147,7 @@ describe('connex remove', () => {
       }
     );
 
-    client.setArgv('connect', 'remove', 'scl_abc123');
+    client.setArgv('connect', 'delete', 'scl_abc123');
     (client.stdin as unknown as { isTTY: boolean }).isTTY = false;
 
     const exitCode = await connect(client);
@@ -174,7 +174,7 @@ describe('connex remove', () => {
       res.end();
     });
 
-    client.setArgv('connect', 'remove', 'scl_abc123');
+    client.setArgv('connect', 'delete', 'scl_abc123');
 
     const exitCodePromise = connect(client);
 
@@ -189,11 +189,11 @@ describe('connex remove', () => {
   });
 
   it('should reject --format=json without --yes', async () => {
-    client.setArgv('connect', 'remove', 'scl_abc123', '--format=json');
+    client.setArgv('connect', 'delete', 'scl_abc123', '--format=json');
 
     const exitCode = await connect(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('--json requires --yes');
   });
 
@@ -214,7 +214,7 @@ describe('connex remove', () => {
 
     client.setArgv(
       'connect',
-      'remove',
+      'delete',
       'slack/my-bot',
       '--format=json',
       '--yes'
@@ -252,12 +252,43 @@ describe('connex remove', () => {
       res.end();
     });
 
-    client.setArgv('connect', 'remove', 'slack/my-bot', '--yes');
+    client.setArgv('connect', 'delete', 'slack/my-bot', '--yes');
 
     const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(getProjectsClientId).toBe('scl_abc123');
     expect(deleteClientId).toBe('scl_abc123');
+  });
+
+  it.each([
+    ['rm', false],
+    ['del', false],
+    ['remove', true],
+  ])('runs as %s (deprecated: %s)', async (name, deprecated) => {
+    client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+      res.json({ id: 'scl_abc123', uid: 'slack/my-bot', name: 'My Bot' });
+    });
+    client.scenario.get(
+      '/v1/connect/connectors/:clientId/projects',
+      (_req, res) => {
+        res.json({ projects: [] });
+      }
+    );
+    client.scenario.delete('/v1/connect/connectors/:clientId', (_req, res) => {
+      res.statusCode = 200;
+      res.end();
+    });
+
+    client.setArgv('connect', name, 'slack/my-bot', '--yes');
+
+    expect(await connect(client)).toBe(0);
+    const warning =
+      '`vercel connect remove` is deprecated. Use `vercel connect delete`.';
+    if (deprecated) {
+      expect(client.stderr.getFullOutput()).toContain(warning);
+    } else {
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+    }
   });
 });

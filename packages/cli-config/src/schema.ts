@@ -6,7 +6,7 @@
  * passthrough behavior for unrecognized config keys.
  */
 
-import { z } from 'zod';
+import * as z from 'zod';
 import {
   authConfigSchema as generatedAuthConfigSchema,
   globalConfigSchema as generatedGlobalConfigSchema,

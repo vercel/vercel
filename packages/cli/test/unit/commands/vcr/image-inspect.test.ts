@@ -78,7 +78,7 @@ describe('vcr image inspect', () => {
     it('tracks telemetry', async () => {
       client.setArgv('vcr', 'image', 'inspect', '--help');
       const exitCode = await vcr(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -143,7 +143,7 @@ describe('vcr image inspect', () => {
   it('errors when the imageId argument is missing', async () => {
     client.setArgv('vcr', 'image', 'inspect', 'my-app');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('vcr image inspect');
   });
 });

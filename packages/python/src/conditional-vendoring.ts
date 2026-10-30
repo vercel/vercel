@@ -100,9 +100,19 @@ export interface QueueIntegration {
   servingActivator?: string;
 }
 
+/**
+ * `vercel-internal-shared-vendored-deps` 0.1.2 renamed vendored `httpx` to
+ * `httpx2` without republishing the `*-bundle` adapters that still import
+ * `httpx` (vercel-py#386). Pin 0.1.1 until matching adapter wheels are on PyPI.
+ * Remove this once those bundles require a floor that includes the rename.
+ */
+export const QUEUE_ADAPTER_SHARED_VENDORED_DEPS_PIN =
+  'vercel-internal-shared-vendored-deps==0.1.1';
+
 export interface QueueAdapterInjectedPackage {
   name: InjectedPackageName;
   requirement: string;
+  extraRequirements: string[];
   envOverride: string | undefined;
   allowLocalSource: boolean;
 }
@@ -176,6 +186,9 @@ export async function getQueueAdapterBootstrap({
     injectedPackages.push({
       name,
       requirement: name,
+      extraRequirements: name.endsWith('-bundle')
+        ? [QUEUE_ADAPTER_SHARED_VENDORED_DEPS_PIN]
+        : [],
       envOverride: env[adapter.envOverride],
       allowLocalSource: false,
     });

@@ -77,7 +77,7 @@ describe('vcr config', () => {
     it('tracks telemetry', async () => {
       client.setArgv('vcr', 'config', '--help');
       const exitCode = await vcr(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -88,10 +88,10 @@ describe('vcr config', () => {
     });
   });
 
-  it('makes a repository public with --public true', async () => {
+  it('makes a repository public with --public', async () => {
     const seen = mockUpdateRepository({ expectedPublic: true });
 
-    client.setArgv('vcr', 'config', 'my-app', '--public', 'true');
+    client.setArgv('vcr', 'update', 'my-app', '--public');
     const exitCode = await vcr(client);
     expect(exitCode).toBe(0);
     expect(seen.method).toBe('PATCH');
@@ -99,33 +99,62 @@ describe('vcr config', () => {
     expect(client.stderr.getFullOutput()).toContain(
       'Repository my-app is now public'
     );
+    expect(client.stderr.getFullOutput()).not.toContain('deprecated');
   });
 
-  it('makes a repository private with --public false', async () => {
+  it('makes a repository private with --no-public', async () => {
     const seen = mockUpdateRepository({ expectedPublic: false });
 
-    client.setArgv('vcr', 'config', 'my-app', '--public', 'false');
+    client.setArgv('vcr', 'update', 'my-app', '--no-public');
     const exitCode = await vcr(client);
     expect(exitCode).toBe(0);
     expect(seen.body).toEqual({ public: false });
     expect(client.stderr.getFullOutput()).toContain(
       'Repository my-app is now private'
     );
+    expect(client.stderr.getFullOutput()).not.toContain('deprecated');
   });
 
-  it('accepts --public=false', async () => {
-    const seen = mockUpdateRepository({ expectedPublic: false });
+  it('accepts --public before the repository', async () => {
+    const seen = mockUpdateRepository({ expectedPublic: true });
 
-    client.setArgv('vcr', 'config', 'my-app', '--public=false');
+    client.setArgv('vcr', 'update', '--public', 'my-app');
+    expect(await vcr(client)).toBe(0);
+    expect(seen.body).toEqual({ public: true });
+  });
+
+  it.each([
+    ['true', true],
+    ['false', false],
+  ])('still accepts --public %s, with a warning', async (value, expected) => {
+    const seen = mockUpdateRepository({ expectedPublic: expected });
+
+    client.setArgv('vcr', 'update', 'my-app', '--public', value);
     const exitCode = await vcr(client);
     expect(exitCode).toBe(0);
-    expect(seen.body).toEqual({ public: false });
+    expect(seen.body).toEqual({ public: expected });
+    expect(client.stderr.getFullOutput()).toContain(
+      `--public ${value} is deprecated. Use ${expected ? '--public' : '--no-public'}.`
+    );
+  });
+
+  it.each([
+    ['--public=true', true],
+    ['--public=false', false],
+  ])('accepts %s without a warning', async (flag, expected) => {
+    const seen = mockUpdateRepository({ expectedPublic: expected });
+
+    client.setArgv('vcr', 'update', 'my-app', flag);
+    const exitCode = await vcr(client);
+    expect(exitCode).toBe(0);
+    expect(seen.body).toEqual({ public: expected });
+    expect(client.stderr.getFullOutput()).not.toContain('deprecated');
   });
 
   it('prints the updated repository as JSON with --json', async () => {
     mockUpdateRepository({ expectedPublic: true });
 
-    client.setArgv('vcr', 'config', 'my-app', '--public', 'true', '--json');
+    client.setArgv('vcr', 'update', 'my-app', '--public', '--json');
     const exitCode = await vcr(client);
     expect(exitCode).toBe(0);
 
@@ -136,7 +165,37 @@ describe('vcr config', () => {
     });
   });
 
-  it('tracks subcommand invocation and the public value', async () => {
+  it('keeps stderr clean for the old --public true with --json', async () => {
+    mockUpdateRepository({ expectedPublic: true });
+
+    client.setArgv('vcr', 'update', 'my-app', '--public', 'true', '--json');
+    expect(await vcr(client)).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput()).repository.public).toBe(
+      true
+    );
+    expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+  });
+
+  it('tracks --public and --no-public as flags', async () => {
+    mockUpdateRepository({ expectedPublic: false });
+
+    client.setArgv('vcr', 'update', 'my-app', '--no-public');
+    const exitCode = await vcr(client);
+    expect(exitCode).toBe(0);
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:update',
+        value: 'update',
+      },
+      {
+        key: 'flag:no-public',
+        value: 'TRUE',
+      },
+    ]);
+  });
+
+  it('tracks the old --public value', async () => {
     mockUpdateRepository({ expectedPublic: false });
 
     client.setArgv('vcr', 'config', 'my-app', '--public', 'false');
@@ -145,7 +204,7 @@ describe('vcr config', () => {
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
-        key: 'subcommand:config',
+        key: 'subcommand:update',
         value: 'config',
       },
       {
@@ -158,41 +217,62 @@ describe('vcr config', () => {
   it('errors when the repository argument is missing', async () => {
     client.setArgv('vcr', 'config', '--public', 'true');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('vcr config');
   });
 
   it('errors when no setting is passed', async () => {
     client.setArgv('vcr', 'config', 'my-app');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'Missing a setting to change'
     );
   });
 
-  it('errors when --public is passed without a value', async () => {
-    client.setArgv('vcr', 'config', 'my-app', '--public');
+  it('errors on --public with --no-public', async () => {
+    client.setArgv('vcr', 'update', 'my-app', '--public', '--no-public');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain('requires argument');
-  });
-
-  it('errors on an invalid --public value', async () => {
-    client.setArgv('vcr', 'config', 'my-app', '--public', 'banana');
-    const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
-      'Must be one of: true, false'
+      "Can't use --public with --no-public."
     );
   });
 
-  it('errors on an invalid --public value passed with =', async () => {
-    client.setArgv('vcr', 'config', 'my-app', '--public=yes');
+  it.each([
+    ['--public', 'yes'],
+    ['--public=yes'],
+  ])('errors on an invalid value: %s %s', async (...flag) => {
+    client.setArgv('vcr', 'update', 'my-app', ...flag);
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
-      'Must be one of: true, false'
+      "--public doesn't take a value. Use --public or --no-public."
+    );
+  });
+
+  it.each([
+    [['--json']],
+    [['--format', 'json']],
+  ])('reports an invalid value as a JSON error with %j', async jsonFlags => {
+    client.setArgv('vcr', 'update', 'my-app', '--public=yes', ...jsonFlags);
+    const exitCode = await vcr(client);
+    expect(exitCode).toBe(2);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      error: {
+        code: 'INVALID_ARGUMENTS',
+        message: "--public doesn't take a value. Use --public or --no-public.",
+      },
+    });
+    expect(client.stderr.getFullOutput()).toBe('');
+  });
+
+  it('errors instead of ignoring a value that looks like a second argument', async () => {
+    client.setArgv('vcr', 'update', 'my-app', '--public', 'banana');
+    const exitCode = await vcr(client);
+    expect(exitCode).toBe(2);
+    expect(client.stderr.getFullOutput()).toContain(
+      '`vcr update` takes one repository.'
     );
   });
 
@@ -207,5 +287,25 @@ describe('vcr config', () => {
     const exitCode = await vcr(client);
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain('Repository not found');
+  });
+
+  describe('subcommand name', () => {
+    it('warns when invoked as the deprecated config name', async () => {
+      mockUpdateRepository({ expectedPublic: true });
+      client.setArgv('vcr', 'config', 'my-app', '--public', 'true');
+
+      expect(await vcr(client)).toBe(0);
+      await expect(client.stderr).toOutput(
+        '`vercel vcr config` is deprecated. Use `vercel vcr update`.'
+      );
+    });
+
+    it('does not warn when invoked as update', async () => {
+      mockUpdateRepository({ expectedPublic: true });
+      client.setArgv('vcr', 'update', 'my-app', '--public');
+
+      expect(await vcr(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+    });
   });
 });

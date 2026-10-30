@@ -18,6 +18,7 @@ describe('determineAgent', () => {
     vi.stubEnv('ANTIGRAVITY_AGENT', '');
     vi.stubEnv('AUGMENT_AGENT', '');
     vi.stubEnv('OPENCODE_CLIENT', '');
+    vi.stubEnv('OPENCODE', '');
     vi.stubEnv('CLAUDECODE', '');
     vi.stubEnv('CLAUDE_CODE', '');
     vi.stubEnv('CLAUDE_CODE_IS_COWORK', '');
@@ -56,6 +57,30 @@ describe('determineAgent', () => {
       expect(result).toEqual({
         isAgent: true,
         agent: { name: KNOWN_AGENTS.V0 },
+      });
+    });
+  });
+
+  describe('fx detection', () => {
+    it('detects fx from AI_AGENT=fx', async () => {
+      vi.stubEnv('AI_AGENT', 'fx');
+
+      const result = await determineAgent();
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.FX },
+      });
+    });
+  });
+
+  describe('eve detection', () => {
+    it('detects eve from AI_AGENT=eve', async () => {
+      vi.stubEnv('AI_AGENT', 'eve');
+
+      const result = await determineAgent();
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.EVE },
       });
     });
   });
@@ -248,6 +273,22 @@ describe('determineAgent', () => {
   });
 
   describe('opencode detection', () => {
+    it('detects CLI subprocesses marked with OPENCODE=1', async () => {
+      vi.stubEnv('OPENCODE', '1');
+      expect(await determineAgent()).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.OPENCODE },
+      });
+    });
+
+    it('does not detect OPENCODE=0 as an agent', async () => {
+      vi.stubEnv('OPENCODE', '0');
+      expect(await determineAgent()).toEqual({
+        isAgent: false,
+        agent: undefined,
+      });
+    });
+
     describe('OPENCODE_CLIENT set', () => {
       beforeEach(() => {
         vi.stubEnv('OPENCODE_CLIENT', 'opencode');

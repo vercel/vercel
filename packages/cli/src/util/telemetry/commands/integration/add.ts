@@ -24,10 +24,29 @@ export class IntegrationAddTelemetryClient
     }
   }
 
+  trackCliOptionMeta(v: string[] | undefined) {
+    if (v?.length) {
+      this.trackCliOption({
+        option: 'meta',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  // The deprecated names keep their own keys, to measure who still uses them.
   trackCliOptionMetadata(v: string[] | undefined) {
     if (v?.length) {
       this.trackCliOption({
         option: 'metadata',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionBillingPlan(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'billing-plan',
         value: this.redactedValue,
       });
     }
@@ -58,6 +77,15 @@ export class IntegrationAddTelemetryClient
     if (v?.length) {
       this.trackCliOption({
         option: 'environment',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionInstallation(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'installation',
         value: this.redactedValue,
       });
     }
