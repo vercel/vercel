@@ -1034,6 +1034,77 @@ test('convertRewrites', () => {
   assertRegexMatches(actual, mustMatch, mustNotMatch);
 });
 
+test('convertRewrites with a root catch-all', () => {
+  const actual = convertRewrites([
+    // Zero-or-more segments at the root, so the bare root `/` is included.
+    { source: '/:path*', destination: '/index.html' },
+    // Zero-or-one segment at the root, so the bare root `/` is included.
+    { source: '/:path?', destination: '/index.html' },
+    // One-or-more segments at the root, so the bare root `/` is excluded.
+    { source: '/:path+', destination: '/index.html' },
+    // Equivalent regex source, which already matched the bare root `/`.
+    { source: '/(.*)', destination: '/index.html' },
+    // Catch-all behind a static prefix, which never owns the root.
+    { source: '/api/:path*', destination: '/api/index.html' },
+    // Catch-all handing off to a service, as used by the `services` config.
+    { source: '/:path*', destination: { service: 'frontend' } },
+  ]);
+
+  const expected = [
+    {
+      src: '^(?:(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?|\\/)$',
+      dest: '/index.html?path=$1',
+      check: true,
+    },
+    {
+      src: '^(?:(?:\\/([^\\/]+?))?|\\/)$',
+      dest: '/index.html?path=$1',
+      check: true,
+    },
+    {
+      src: '^(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))$',
+      dest: '/index.html?path=$1',
+      check: true,
+    },
+    {
+      src: '^(?:\\/(.*))$',
+      dest: '/index.html',
+      check: true,
+    },
+    {
+      src: '^\\/api(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
+      dest: '/api/index.html?path=$1',
+      check: true,
+    },
+    {
+      src: '^(?:(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?|\\/)$',
+      destination: { type: 'service', service: 'frontend' },
+    },
+  ];
+
+  deepEqual(actual, expected);
+
+  const mustMatch = [
+    ['/', '/foo', '/foo/bar'],
+    ['/', '/foo'],
+    ['/foo', '/foo/bar'],
+    ['/', '/foo', '/foo/bar'],
+    ['/api', '/api/foo', '/api/foo/bar'],
+    ['/', '/foo', '/foo/bar'],
+  ];
+
+  const mustNotMatch = [
+    ['/foo/', '//', '/foo//bar'],
+    ['/foo/', '/foo/bar'],
+    ['/', '/foo/'],
+    ['foo', 'foo/bar'],
+    ['/', '/api/', '/apifoo'],
+    ['/foo/', '//', '/foo//bar'],
+  ];
+
+  assertRegexMatches(actual, mustMatch, mustNotMatch);
+});
+
 test('convertHeaders', () => {
   const actual = convertHeaders([
     {
