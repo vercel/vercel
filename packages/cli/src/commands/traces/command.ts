@@ -66,7 +66,7 @@ export const getSubcommand = {
       argument: 'timeline|tree|waterfall',
       deprecated: false,
       description:
-        'Dashboard view to open (default: timeline). Only valid with --open.',
+        'With --open, the dashboard view to open (default: timeline). Without --open, only waterfall is valid: it draws the trace as a waterfall chart in the terminal instead of Markdown.',
     },
   ],
   examples: [
@@ -89,6 +89,10 @@ export const getSubcommand = {
     {
       name: 'Inspect a trace from a specific team and project',
       value: `${packageName} traces inspect e5c0d1efb3904155472b01692c7f2d00 --scope my-team --project my-app`,
+    },
+    {
+      name: 'Draw the trace as a waterfall chart in the terminal',
+      value: `${packageName} traces inspect e5c0d1efb3904155472b01692c7f2d00 --view waterfall`,
     },
     {
       name: 'Open the trace in the Vercel Dashboard',

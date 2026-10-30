@@ -52,11 +52,21 @@ describe('renderMarkdown', () => {
       - **Duration:** 250.0ms
       - **Spans:** 3
 
+      ## Slowest by self time
+
+      | Span | Self time | Duration | % of trace |
+      | --- | ---: | ---: | ---: |
+      | \`fetch upstream\` | 120.0ms | 120.0ms | 48% |
+      | \`GET /api/hello\` | 80.0ms | 250.0ms | 32% |
+      | \`middleware\` | 50.0ms | 50.0ms | 20% |
+
       ## Span tree
 
-      - \`250.0ms\` 100% +0μs \`GET /api/hello\` — \`http.target\`: /api/hello
-        - \`50.0ms\` 20% +10.0ms \`middleware\`
-        - \`120.0ms\` 48% +80.0ms \`fetch upstream\` — \`http.url\`: https://api.example.com/users
+      Each row: start offset | duration | self time | % of trace | name | status. Rows marked ×N group N sibling spans with the same name and show their totals.
+
+      - +0ms | 250.0ms | 80.0ms | 100% | \`GET /api/hello\` | unset — \`http.target\`: /api/hello
+        - +10.0ms | 50.0ms | 50.0ms | 20% | \`middleware\` | ok
+        - +80.0ms | 120.0ms | 120.0ms | 48% | \`fetch upstream\` | unset — \`http.url\`: https://api.example.com/users
       "
     `);
   });
@@ -109,10 +119,19 @@ describe('renderMarkdown', () => {
         - \`http.url\`: https://api.example.com/charge
         - \`http.status_code\`: 503
 
+      ## Slowest by self time
+
+      | Span | Self time | Duration | % of trace |
+      | --- | ---: | ---: | ---: |
+      | \`fetch upstream\` | 400.0ms | 400.0ms | 80% |
+      | \`POST /api/checkout\` | 100.0ms | 500.0ms | 20% |
+
       ## Span tree
 
-      - \`500.0ms\` 100% +0μs \`POST /api/checkout\` — \`http.target\`: /api/checkout
-        - \`400.0ms\` 80% +50.0ms \`fetch upstream\` [error: 503 Service Unavailable] — \`http.url\`: https://api.example.com/charge
+      Each row: start offset | duration | self time | % of trace | name | status. Rows marked ×N group N sibling spans with the same name and show their totals.
+
+      - +0ms | 500.0ms | 100.0ms | 100% | \`POST /api/checkout\` | unset — \`http.target\`: /api/checkout
+        - +50.0ms | 400.0ms | 400.0ms | 80% | \`fetch upstream\` | error: 503 Service Unavailable — \`http.url\`: https://api.example.com/charge
       "
     `);
   });
@@ -164,8 +183,17 @@ describe('renderMarkdown', () => {
       - **Trace id:** trace_repeat
       - **Request id:** req_abc123
       - **Endpoint:** \`GET /api/users\` → 200
-      - **Duration:** 1.0s
+      - **Duration:** 1000ms
       - **Spans:** 4
+
+      ## Slowest by self time
+
+      | Span | Self time | Duration | % of trace |
+      | --- | ---: | ---: | ---: |
+      | \`GET /api/users\` | 820.0ms | 1000ms | 82% |
+      | \`db.query users\` | 70.0ms | 70.0ms | 7% |
+      | \`db.query users\` | 60.0ms | 60.0ms | 6% |
+      | \`db.query users\` | 50.0ms | 50.0ms | 5% |
 
       ## Repeated operations
 
@@ -175,10 +203,10 @@ describe('renderMarkdown', () => {
 
       ## Span tree
 
-      - \`1.0s\` 100% +0μs \`GET /api/users\` — \`http.target\`: /api/users
-        - \`50.0ms\` 5% +100.0ms \`db.query users\`
-        - \`60.0ms\` 6% +200.0ms \`db.query users\`
-        - \`70.0ms\` 7% +300.0ms \`db.query users\`
+      Each row: start offset | duration | self time | % of trace | name | status. Rows marked ×N group N sibling spans with the same name and show their totals.
+
+      - +0ms | 1000ms | 820.0ms | 100% | \`GET /api/users\` | unset — \`http.target\`: /api/users
+        - +100.0ms | 180.0ms | 180.0ms | 18% | \`db.query users\` ×3 | unset
       "
     `);
   });
@@ -201,5 +229,55 @@ describe('renderMarkdown', () => {
       _No spans._
       "
     `);
+  });
+
+  it('caps the tree, keeping errors and slow branches, and says what was cut', () => {
+    const spans: Trace['spans'] = [
+      {
+        spanId: 'root',
+        name: 'GET /',
+        startTime: [0, 0],
+        duration: [1, 0],
+        status: { code: 'Unset' },
+      },
+    ];
+    for (let i = 0; i < 150; i++) {
+      spans.push({
+        spanId: `s${i}`,
+        parentSpanId: 'root',
+        name: `step ${i}`,
+        startTime: [0, i * 1_000_000],
+        duration: [0, (i + 1) * 1_000],
+        status: { code: 'Unset' },
+      });
+    }
+    // The shortest span, but an error, so it must survive the cap.
+    spans.push({
+      spanId: 'fail',
+      parentSpanId: 'root',
+      name: 'charge card',
+      startTime: [0, 0],
+      duration: [0, 1],
+      status: { code: 'Error', message: 'declined' },
+    });
+
+    const out = renderMarkdown({ traceId: 't', rootSpanId: 'root', spans }, {});
+    const tree = out.slice(out.indexOf('## Span tree'));
+    const rows = tree.split('\n').filter(line => /^\s*- /.test(line));
+    expect(rows).toHaveLength(96);
+    expect(tree).toContain('`charge card` | error: declined');
+    expect(tree).toContain('`step 149`');
+    expect(tree).not.toContain('`step 0`');
+    expect(tree).toContain(
+      '_56 spans omitted to keep the tree short. Errors and the slowest branches are kept. Run with --json for every span._'
+    );
+  });
+
+  it('warns in the output when the trace is incomplete', () => {
+    const trace: Trace = { traceId: 't', spans: [] };
+    expect(renderMarkdown(trace, { partial: true })).toContain(
+      '> **Warning:** This trace is incomplete. It exceeded the span limit, so some spans are missing.'
+    );
+    expect(renderMarkdown(trace, {})).not.toContain('Warning');
   });
 });

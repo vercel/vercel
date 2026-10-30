@@ -13,6 +13,8 @@ export type Span = {
   spanId: string;
   parentSpanId?: string;
   name: string;
+  // `service.name` of the process that emitted the span, e.g. `vercel.proxy`.
+  serviceName?: string;
   duration: [number, number];
   startTime?: [number, number];
   attributes?: Record<string, unknown>;
@@ -42,6 +44,16 @@ export type RepeatedOp = {
 export type TreeNode = {
   span: Span;
   depth: number;
+};
+
+/**
+ * Sibling spans that share a name, shown as one row. Children of a group are
+ * merged across all of its spans and grouped again one level down.
+ */
+export type SpanGroup = {
+  name: string;
+  depth: number;
+  spans: Span[];
 };
 
 export type AnalyzedTrace = {
