@@ -1,6 +1,6 @@
 import output from '../../output-manager';
 import type Client from '../../util/client';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { getLinkedProject } from '../../util/projects/link';
 import { packageName } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
@@ -21,19 +21,110 @@ function getAvailableClients(): string[] {
   ];
 }
 
-function safeExecSync(
+// Commands are executed without a shell so team-controlled values (project
+// names) can never be interpreted as shell syntax or extra argv entries.
+function safeExecFile(
   command: string,
+  args: string[],
   options: any = {}
 ): string | { error: string; stderr: string } {
   try {
-    return execSync(command, {
+    const result = execFileSync(command, args, {
       stdio: 'pipe',
       encoding: 'utf8',
       ...options,
     });
+    return typeof result === 'string' ? result : result.toString('utf8');
   } catch (error: any) {
     return { error: error.message, stderr: error.stderr?.toString() || '' };
   }
+}
+
+// MCP clients expect a simple server identifier and project names are
+// team-controlled, so the derived name is restricted to a safe character set.
+// The project's case is preserved so an existing server entry keeps matching.
+function getServerName(projectName?: string): string {
+  if (!projectName) {
+    return 'vercel';
+  }
+  const safe = projectName.replace(/[^A-Za-z0-9._-]+/g, '-');
+  return safe ? `vercel-${safe}` : 'vercel';
+}
+
+// The names and URLs below are the only dynamic values that reach a Windows
+// command line, so they are matched against the exact character sets produced
+// by getServerName and getProjectSpecificUrl before cmd is involved.
+const WINDOWS_SAFE_SERVER_NAME = /^[A-Za-z0-9._-]+$/;
+const WINDOWS_SAFE_URL = /^https:\/\/[A-Za-z0-9._~%/:-]+$/;
+
+// On Windows the MCP clients and CLI helpers are .cmd shims, which
+// execFileSync cannot run without a shell (EINVAL since the CVE-2024-27980
+// hardening). They are invoked through cmd with verbatim arguments, so the
+// command line is passed as a single pre-quoted element that cmd never
+// re-quotes; callers must only pass values validated above.
+function safeExecWindowsCommand(
+  commandLine: string
+): string | { error: string; stderr: string } {
+  return safeExecFile('cmd', ['/d', '/s', '/c', commandLine], {
+    windowsVerbatimArguments: true,
+  });
+}
+
+// Hands a deep link to the platform opener as a single argv element, so the
+// URL is never parsed by a shell. Returns false when the opener failed.
+function openUrl(url: string): boolean {
+  const result =
+    process.platform === 'darwin'
+      ? safeExecFile('open', [url])
+      : process.platform === 'win32'
+        ? // `start` is a cmd builtin and its first argument is the window
+          // title. Verbatim arguments pass the command line through as written,
+          // so the URL stays inside the quotes and its `&` cannot split the
+          // command; this is safe because every dynamic segment is
+          // percent-encoded or base64 (no quotes can appear in the URL).
+          safeExecWindowsCommand(`start "" "${url}"`)
+        : safeExecFile('xdg-open', [url]);
+  return typeof result === 'string';
+}
+
+// Registers the MCP server with Claude Code. On Windows `claude` is a .cmd
+// shim, so it is run through cmd after the two dynamic values have been
+// checked against the charset produced by getServerName/getProjectSpecificUrl.
+function addClaudeMcpServer(
+  mcpName: string,
+  mcpUrl: string
+): string | { error: string; stderr: string } {
+  if (process.platform !== 'win32') {
+    return safeExecFile('claude', [
+      'mcp',
+      'add',
+      '--transport',
+      'http',
+      mcpName,
+      mcpUrl,
+    ]);
+  }
+  if (
+    !WINDOWS_SAFE_SERVER_NAME.test(mcpName) ||
+    !WINDOWS_SAFE_URL.test(mcpUrl)
+  ) {
+    return {
+      error: 'refusing to run claude with unsafe arguments',
+      stderr: '',
+    };
+  }
+  return safeExecWindowsCommand(
+    `claude mcp add --transport http ${mcpName} ${mcpUrl}`
+  );
+}
+
+// Lists the installed VS Code extensions. `code` is a .cmd shim on Windows and
+// the command carries no dynamic values, so cmd is safe there.
+function listVSCodeExtensions(): string | { error: string; stderr: string } {
+  if (process.platform === 'win32') {
+    return safeExecWindowsCommand('code --list-extensions');
+  }
+  return safeExecFile('code', ['--list-extensions']);
 }
 
 async function getProjectSpecificUrl(
@@ -52,7 +143,9 @@ async function getProjectSpecificUrl(
 
     const { org, project } = linkedProject;
     return {
-      url: `${MCP_ENDPOINT}/${org.slug}/${project.name}`,
+      url: `${MCP_ENDPOINT}/${encodeURIComponent(
+        org.slug
+      )}/${encodeURIComponent(project.name)}`,
       projectName: project.name,
     };
   } catch (_error) {
@@ -179,16 +272,15 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
     }
 
     if (clientName === 'Claude Code') {
-      const mcpUrl = isProjectSpecific
-        ? (await getProjectSpecificUrl(client))?.url
-        : MCP_ENDPOINT;
-      const mcpName = isProjectSpecific
-        ? `vercel-${(await getProjectSpecificUrl(client))?.projectName}`
+      const claudeProjectInfo = isProjectSpecific
+        ? await getProjectSpecificUrl(client)
+        : null;
+      const mcpUrl = claudeProjectInfo?.url ?? MCP_ENDPOINT;
+      const mcpName = claudeProjectInfo
+        ? getServerName(claudeProjectInfo.projectName)
         : 'vercel';
 
-      const result = safeExecSync(
-        `claude mcp add --transport http ${mcpName} ${mcpUrl}`
-      );
+      const result = addClaudeMcpServer(mcpName, mcpUrl);
 
       if (typeof result === 'object' && 'error' in result) {
         if (result.stderr?.includes('already exists')) {
@@ -249,12 +341,13 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
       }
     } else if (clientName === 'Cursor') {
       // Check if Cursor is installed
-      const cursorCheck = safeExecSync(
+      const cursorCheck = safeExecFile(
         process.platform === 'darwin'
-          ? 'ls /Applications/Cursor.app'
+          ? 'ls'
           : process.platform === 'win32'
-            ? 'where cursor'
-            : 'which cursor'
+            ? 'where'
+            : 'which',
+        [process.platform === 'darwin' ? '/Applications/Cursor.app' : 'cursor']
       );
 
       if (typeof cursorCheck === 'object' && 'error' in cursorCheck) {
@@ -270,11 +363,12 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
         continue;
       }
 
-      const mcpUrl = isProjectSpecific
-        ? (await getProjectSpecificUrl(client))?.url
-        : MCP_ENDPOINT;
-      const serverName = isProjectSpecific
-        ? `vercel-${(await getProjectSpecificUrl(client))?.projectName}`
+      const cursorProjectInfo = isProjectSpecific
+        ? await getProjectSpecificUrl(client)
+        : null;
+      const mcpUrl = cursorProjectInfo?.url ?? MCP_ENDPOINT;
+      const serverName = cursorProjectInfo
+        ? getServerName(cursorProjectInfo.projectName)
         : 'vercel';
 
       // Check if Vercel MCP is already configured in Cursor
@@ -337,16 +431,13 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
       };
       const configJson = JSON.stringify(config);
       const encodedConfig = Buffer.from(configJson).toString('base64');
-      const oneClickUrl = `cursor://anysphere.cursor-deeplink/mcp/install?name=${serverName}&config=${encodedConfig}`;
+      const encodedServerName = encodeURIComponent(serverName);
+      const oneClickUrl = `cursor://anysphere.cursor-deeplink/mcp/install?name=${encodedServerName}&config=${encodedConfig}`;
 
       // Try to open the one-click installer
       try {
-        if (process.platform === 'darwin') {
-          execSync(`open '${oneClickUrl}'`);
-        } else if (process.platform === 'win32') {
-          execSync(`start ${oneClickUrl}`);
-        } else {
-          execSync(`xdg-open '${oneClickUrl}'`);
+        if (!openUrl(oneClickUrl)) {
+          throw new Error('failed to open the one-click installer');
         }
 
         summary.push('✅ Cursor: One-click installer opened');
@@ -373,11 +464,13 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
       }
     } else if (clientName === 'VS Code with Copilot') {
       // Check if GitHub Copilot is installed
-      const copilotCheck = safeExecSync(
-        'code --list-extensions | grep -i copilot'
-      );
+      // List extensions without a shell and filter in-process instead of
+      // piping through grep.
+      const copilotCheck = listVSCodeExtensions();
+      const hasCopilot =
+        typeof copilotCheck === 'string' && /copilot/i.test(copilotCheck);
 
-      if (typeof copilotCheck === 'object' && 'error' in copilotCheck) {
+      if (!hasCopilot) {
         if (!client.nonInteractive) {
           output.print(
             '⚠️ GitHub Copilot not detected. MCP functionality may be limited.\n'
@@ -393,11 +486,12 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
         }
       }
 
-      const mcpUrl = isProjectSpecific
-        ? (await getProjectSpecificUrl(client))?.url
-        : MCP_ENDPOINT;
-      const serverName = isProjectSpecific
-        ? `vercel-${(await getProjectSpecificUrl(client))?.projectName}`
+      const vscodeProjectInfo = isProjectSpecific
+        ? await getProjectSpecificUrl(client)
+        : null;
+      const mcpUrl = vscodeProjectInfo?.url ?? MCP_ENDPOINT;
+      const serverName = vscodeProjectInfo
+        ? getServerName(vscodeProjectInfo.projectName)
         : 'vercel';
 
       // Check if Vercel MCP is already configured in VS Code
@@ -463,12 +557,8 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
 
       try {
         // Try to open the one-click installer
-        if (process.platform === 'darwin') {
-          execSync(`open '${oneClickUrl}'`);
-        } else if (process.platform === 'win32') {
-          execSync(`start ${oneClickUrl}`);
-        } else {
-          execSync(`xdg-open '${oneClickUrl}'`);
+        if (!openUrl(oneClickUrl)) {
+          throw new Error('failed to open the one-click installer');
         }
 
         summary.push('✅ VS Code: One-click installer opened');
