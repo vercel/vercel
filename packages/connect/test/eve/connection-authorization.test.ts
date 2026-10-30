@@ -766,6 +766,126 @@ describe('connect() adapter authorization display name', () => {
   });
 });
 
+describe('connect() adapter completeAuthorization', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    vi.mocked(getVercelOidcToken).mockResolvedValue('oidc_token');
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  const CALLBACK_OK = { params: {}, method: 'GET' };
+
+  it('returns the token when the callback carries no error', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonTokenResponse('tok_complete', 'oauth/connection-auth-complete-ok')
+    );
+
+    const definition = connect({
+      connector: 'oauth/connection-auth-complete-ok',
+      autoProvision: false,
+    });
+    const result = await definition.completeAuthorization({
+      principal: PRINCIPAL,
+      connection: CONNECTION,
+      callbackUrl: 'https://example.com/cb',
+      callback: CALLBACK_OK,
+    });
+
+    expect(result.token).toBe('tok_complete');
+  });
+
+  it('throws a terminal failure with the callback error and skips the token endpoint', async () => {
+    const definition = connect({
+      connector: 'oauth/connection-auth-complete-denied',
+      autoProvision: false,
+    });
+
+    const error = await definition
+      .completeAuthorization({
+        principal: PRINCIPAL,
+        connection: CONNECTION,
+        callbackUrl: 'https://example.com/cb',
+        callback: {
+          params: {
+            error: 'access_denied',
+            error_description: 'The user denied the request',
+          },
+          method: 'GET',
+        },
+      })
+      .catch(e => e);
+
+    expect(error).toMatchObject({
+      name: 'ConnectionAuthorizationFailedError',
+      reason: 'access_denied',
+      retryable: false,
+      message: 'The user denied the request',
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the error code as the message when no description is sent', async () => {
+    const definition = connect({
+      connector: 'oauth/connection-auth-complete-no-description',
+      autoProvision: false,
+    });
+
+    const error = await definition
+      .completeAuthorization({
+        principal: PRINCIPAL,
+        connection: CONNECTION,
+        callbackUrl: 'https://example.com/cb',
+        callback: { params: { error: 'server_error' }, method: 'GET' },
+      })
+      .catch(e => e);
+
+    expect(error).toMatchObject({
+      reason: 'server_error',
+      retryable: false,
+      message: 'server_error',
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'user_authorization_required',
+    'no_token',
+  ])('keeps the Connect %s code as reason and the original error as cause', async code => {
+    const connector = `oauth/connection-auth-complete-${code}`;
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ error: { code, message: 'No grant for subject' } }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      )
+    );
+
+    const definition = connect({ connector, autoProvision: false });
+    const error = await definition
+      .completeAuthorization({
+        principal: PRINCIPAL,
+        connection: CONNECTION,
+        callbackUrl: 'https://example.com/cb',
+        callback: CALLBACK_OK,
+      })
+      .catch(e => e);
+
+    expect(error).toMatchObject({
+      name: 'ConnectionAuthorizationFailedError',
+      reason: code,
+      retryable: true,
+    });
+    expect(error.message).toContain(code);
+    expect(error.cause).toMatchObject({ code });
+  });
+});
+
 const SALESFORCE_CONNECTOR = {
   id: 'scl_salesforce',
   uid: 'oauth/connection-auth-salesforce',
