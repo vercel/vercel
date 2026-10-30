@@ -1,8 +1,8 @@
 /**
  * Public surface of the `@vercel/connect/eve` subpath.
  *
- * Holds Eve-specific helpers that adapt the Vercel Connect SDK to
- * Eve's connection runtime. Each helper lives in its own module;
+ * Holds eve-specific helpers that adapt the Vercel Connect SDK to
+ * eve's connection runtime. Each helper lives in its own module;
  * this barrel re-exports the public API so consumers import
  * everything from `@vercel/connect/eve`.
  */
@@ -61,3 +61,14 @@ export {
   type ConnectSendblueCredentials,
   type ConnectSendblueCredentialsParams,
 } from './sendblue-credentials.js';
+
+export {
+  connectTelegramCredentials,
+  type ConnectTelegramCredentials,
+  type ConnectTelegramCredentialsParams,
+} from './telegram-credentials.js';
+export {
+  connectTwilioCredentials,
+  type ConnectTwilioCredentials,
+  type ConnectTwilioCredentialsParams,
+} from './twilio-credentials.js';
