@@ -60,11 +60,29 @@ export async function getConnectorMetadata(
     );
   }
 
-  const { data, ...rest } = (await response.json()) as Record<
-    string,
-    unknown
-  > & {
+  const {
+    id,
+    uid,
+    name,
+    type,
+    service,
+    clientUrl,
+    createdAt,
+    updatedAt,
+    data,
+  } = (await response.json()) as Record<string, unknown> & {
     data?: Record<string, unknown>;
   };
-  return { ...rest, vendor: data ?? {} } as ConnectorMetadata;
+
+  return {
+    id,
+    uid,
+    name,
+    type,
+    service,
+    clientUrl,
+    createdAt,
+    updatedAt,
+    vendor: data ?? {},
+  } as ConnectorMetadata;
 }
