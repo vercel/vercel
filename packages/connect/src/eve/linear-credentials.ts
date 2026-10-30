@@ -1,3 +1,7 @@
+import {
+  channelCredentialsMetadata,
+  type ConnectChannelMetadata,
+} from '../internal/channel-credentials-metadata.js';
 import type { LinearChannelCredentials } from 'eve/channels/linear';
 
 import { createConnectWebhookVerifier } from '../chat/webhook-verifier.js';
@@ -35,8 +39,9 @@ export function connectLinearCredentials(
   connector: string,
   params: ConnectLinearCredentialsParams = {},
   options?: ConnectOptions
-): LinearChannelCredentials {
+): LinearChannelCredentials & ConnectChannelMetadata {
   return {
+    ...channelCredentialsMetadata(connector, 'linear'),
     accessToken: () =>
       getToken(connector, { ...params, subject: { type: 'app' } }, options),
     webhookVerifier: createConnectWebhookVerifier(),

@@ -1,4 +1,8 @@
 import {
+  channelCredentialsMetadata,
+  type ConnectChannelMetadata,
+} from '../internal/channel-credentials-metadata.js';
+import {
   createConnectWebhookVerifier,
   type ConnectWebhookVerifier,
 } from '../chat/webhook-verifier.js';
@@ -45,8 +49,9 @@ export function connectLinqCredentials(
   connector: string,
   params: ConnectLinqCredentialsParams = {},
   options?: ConnectOptions
-): ConnectLinqCredentials {
+): ConnectLinqCredentials & ConnectChannelMetadata {
   return {
+    ...channelCredentialsMetadata(connector, 'linq'),
     apiKey: () =>
       getToken(connector, { ...params, subject: { type: 'app' } }, options),
     webhookVerifier: createConnectWebhookVerifier(),
