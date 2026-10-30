@@ -2,8 +2,10 @@ import chalk from 'chalk';
 import {
   MAX_TREE_DEPTH,
   SPAN_STATUS_ERROR,
+  SPAN_STATUS_OK,
   analyze,
-  getStartTimeUs,
+  collapseRows,
+  isVercelService,
   readAttrString,
 } from './analyze';
 import {
@@ -13,22 +15,38 @@ import {
 } from './render-markdown';
 import { formatAlignedLabel } from '../../util/output/print-aligned-label';
 import ellipsis from '../../util/output/ellipsis';
-import type { AnalyzedTrace, Span, TreeNode } from './types';
+import type { AnalyzedTrace, Span, SpanGroup } from './types';
 
 const UNNAMED = '<unnamed>';
 const DEFAULT_COLUMNS = 100;
 const MIN_COLUMNS = 60;
-const MAX_COLUMNS = 160;
+// Columns left free on the right so output survives small window resizes.
+const RIGHT_MARGIN = 4;
 const MIN_NAME_WIDTH = 16;
 const DURATION_WIDTH = 8;
 const MIN_BAR_WIDTH = 16;
-const MAX_SHARE_BAR_WIDTH = 24;
 const HINT_KEY_WIDTH = 18;
 const GAP = '  ';
 const GUTTER = '  ';
 const FULL_BLOCK = '█';
 // Left-aligned partial blocks, indexed by eighths of a cell (0 = empty).
 const PARTIAL_BLOCKS = ['', '▏', '▎', '▍', '▌', '▋', '▊', '▉'] as const;
+
+// Service colors in order of first appearance, matching the dashboard's
+// blue, green, purple, pink, teal. Named terminal colors instead of Geist hex
+// keep them readable on both light and dark themes.
+const SERVICE_COLORS = [
+  'blue',
+  'green',
+  'magenta',
+  'magentaBright',
+  'cyan',
+] as const;
+
+type ServiceColor = (typeof SERVICE_COLORS)[number];
+type Paint = (text: string) => string;
+
+const VERCEL_PREFIX = '▲ ';
 
 type Layout = {
   nameWidth: number;
@@ -40,11 +58,53 @@ type Layout = {
  * so traces with hundreds of repeated calls stay readable; their children
  * merge the same way, one level down.
  */
-export type ChartRow = {
-  name: string;
-  depth: number;
-  spans: Span[];
-};
+export type ChartRow = SpanGroup;
+
+/**
+ * Assigns each non-Vercel service a color in order of first appearance, the
+ * way the dashboard does. Spans without a service share one color.
+ */
+function buildServiceColors(
+  analysis: AnalyzedTrace
+): Map<string, ServiceColor> {
+  const colors = new Map<string, ServiceColor>();
+  for (const { span } of [...analysis.treeOrder, ...analysis.orphanOrder]) {
+    const service = span.serviceName ?? '';
+    if (!isVercelService(span) && !colors.has(service)) {
+      colors.set(service, SERVICE_COLORS[colors.size % SERVICE_COLORS.length]);
+    }
+  }
+  return colors;
+}
+
+/**
+ * Bar color for a row, following the dashboard: red for errors, green for
+ * OK, gray for Vercel infrastructure, and the service color otherwise.
+ */
+function paintForSpans(
+  spans: Span[],
+  colors: Map<string, ServiceColor>
+): Paint {
+  if (spans.some(span => span.status?.code === SPAN_STATUS_ERROR)) {
+    return chalk.red;
+  }
+  if (spans.some(span => span.status?.code === SPAN_STATUS_OK)) {
+    return chalk.green;
+  }
+  const [first] = spans;
+  if (!first) {
+    return text => text;
+  }
+  if (isVercelService(first)) {
+    return chalk.gray;
+  }
+  const color = colors.get(first.serviceName ?? '');
+  return color ? chalk[color] : text => text;
+}
+
+function prefixFor(spans: Span[]): string {
+  return spans[0] && isVercelService(spans[0]) ? VERCEL_PREFIX : '';
+}
 
 /**
  * Renders a trace as a terminal waterfall chart: a summary block, errors,
@@ -53,28 +113,33 @@ export type ChartRow = {
  */
 export function renderWaterfall(
   trace: Parameters<typeof analyze>[0],
-  options: { requestId?: string; columns?: number }
+  options: { requestId?: string; columns?: number; partial?: boolean }
 ): string {
   const analysis = analyze(trace);
-  const columns = clamp(
-    options.columns || DEFAULT_COLUMNS,
+  // Fill the terminal width so wide terminals get more detail, but stop short
+  // of the edge so a slightly narrower window doesn't wrap every row.
+  const columns = Math.max(
     MIN_COLUMNS,
-    MAX_COLUMNS
+    (options.columns || DEFAULT_COLUMNS) - RIGHT_MARGIN
   );
-  const sections: string[] = [renderSummary(analysis, options.requestId)];
+  const colors = buildServiceColors(analysis);
+  const sections: string[] = [
+    renderSummary(analysis, options.requestId, options.partial),
+  ];
   if (analysis.errorSpans.length > 0) {
     sections.push(renderErrors(analysis));
   }
   if (analysis.repeatedOps.length > 0) {
-    sections.push(renderRepeatedOps(analysis, columns));
+    sections.push(renderRepeatedOps(analysis, columns, colors));
   }
-  sections.push(renderChart(analysis, columns));
+  sections.push(renderChart(analysis, columns, colors));
   return `${sections.join('\n\n')}\n`;
 }
 
 function renderSummary(
   analysis: AnalyzedTrace,
-  requestId: string | undefined
+  requestId: string | undefined,
+  partial: boolean | undefined
 ): string {
   const { trace, root, rootDurationUs, errorSpans } = analysis;
   const method = readAttrString(root?.attributes, 'http.method');
@@ -99,6 +164,14 @@ function renderSummary(
       ? String(trace.spans.length)
       : `${trace.spans.length} · ${errorCount} ${errorCount === 1 ? 'error' : 'errors'}`;
   rows.push(formatAlignedLabel('Spans', spans));
+  if (partial) {
+    rows.push(
+      formatAlignedLabel(
+        'Incomplete',
+        chalk.yellow('Exceeded the span limit, so some spans are missing.')
+      )
+    );
+  }
   return rows.join('\n');
 }
 
@@ -118,11 +191,26 @@ function renderErrors(analysis: AnalyzedTrace): string {
   return lines.join('\n');
 }
 
-function renderRepeatedOps(analysis: AnalyzedTrace, columns: number): string {
+function renderRepeatedOps(
+  analysis: AnalyzedTrace,
+  columns: number,
+  colors: Map<string, ServiceColor>
+): string {
   const { repeatedOps, rootDurationUs } = analysis;
   const hasRoot = rootDurationUs !== null && rootDurationUs > 0;
+  const spansByName = new Map<string, Span[]>();
+  for (const span of analysis.trace.spans) {
+    const name = span.name || UNNAMED;
+    const list = spansByName.get(name);
+    if (list) {
+      list.push(span);
+    } else {
+      spansByName.set(name, [span]);
+    }
+  }
   const rows = repeatedOps.map(op => ({
     name: op.name,
+    paint: paintForSpans(spansByName.get(op.name) ?? [], colors),
     count: `${op.count}×`,
     total: formatDurationUs(op.totalUs),
     perCall: `${formatDurationUs(op.perCallUs)} each`,
@@ -146,10 +234,9 @@ function renderRepeatedOps(analysis: AnalyzedTrace, columns: number): string {
     MIN_NAME_WIDTH,
     Math.max(MIN_NAME_WIDTH, columns - fixed)
   );
-  const barWidth = clamp(
-    columns - fixed + MIN_BAR_WIDTH - nameWidth,
+  const barWidth = Math.max(
     MIN_BAR_WIDTH,
-    MAX_SHARE_BAR_WIDTH
+    columns - fixed + MIN_BAR_WIDTH - nameWidth
   );
 
   const lines = [`${GUTTER}${chalk.bold('Repeated operations')}`];
@@ -162,7 +249,7 @@ function renderRepeatedOps(analysis: AnalyzedTrace, columns: number): string {
     ];
     if (row.share !== null) {
       cells.push(
-        renderShareBar(row.share, barWidth),
+        renderShareBar(row.share, barWidth, row.paint),
         row.pct.padStart(pctWidth)
       );
     }
@@ -171,15 +258,24 @@ function renderRepeatedOps(analysis: AnalyzedTrace, columns: number): string {
   return lines.join('\n');
 }
 
-function renderChart(analysis: AnalyzedTrace, columns: number): string {
+function renderChart(
+  analysis: AnalyzedTrace,
+  columns: number,
+  colors: Map<string, ServiceColor>
+): string {
   if (analysis.treeOrder.length === 0 && analysis.orphanOrder.length === 0) {
     return `${GUTTER}No spans.`;
   }
 
   const rows = collapseRows(analysis.treeOrder);
   const orphanRows = collapseRows(analysis.orphanOrder);
-  const labels = buildTreeLabels(rows);
-  const orphanLabels = buildTreeLabels(orphanRows);
+  // Vercel infrastructure spans get the dashboard's `▲` prefix.
+  const withPrefix = (row: ChartRow) => ({
+    name: `${prefixFor(row.spans)}${row.name}`,
+    depth: row.depth,
+  });
+  const labels = buildTreeLabels(rows.map(withPrefix));
+  const orphanLabels = buildTreeLabels(orphanRows.map(withPrefix));
   const layout = computeLayout(
     [...rows, ...orphanRows].map(
       (row, i) => [...labels, ...orphanLabels][i] + countSuffix(row)
@@ -189,18 +285,15 @@ function renderChart(analysis: AnalyzedTrace, columns: number): string {
   const placeBars = analysis.rootStartUs !== null;
   const timelineUs = computeTimelineUs(analysis, placeBars);
 
+  const chart = { analysis, layout, timelineUs, placeBars, colors };
   const lines = renderAxis(layout, timelineUs);
   rows.forEach((row, i) => {
-    lines.push(
-      renderRow(row, labels[i], analysis, layout, timelineUs, placeBars)
-    );
+    lines.push(renderRow(row, labels[i], chart));
   });
   if (orphanRows.length > 0) {
     lines.push('', `${GUTTER}${chalk.bold('Orphan spans')}`);
     orphanRows.forEach((row, i) => {
-      lines.push(
-        renderRow(row, orphanLabels[i], analysis, layout, timelineUs, placeBars)
-      );
+      lines.push(renderRow(row, orphanLabels[i], chart));
     });
   }
   if (analysis.truncatedAtDepth) {
@@ -289,10 +382,19 @@ function renderAxis(layout: Layout, timelineUs: number): string[] {
 function renderRow(
   row: ChartRow,
   label: string,
-  analysis: AnalyzedTrace,
-  layout: Layout,
-  timelineUs: number,
-  placeBars: boolean
+  {
+    analysis,
+    layout,
+    timelineUs,
+    placeBars,
+    colors,
+  }: {
+    analysis: AnalyzedTrace;
+    layout: Layout;
+    timelineUs: number;
+    placeBars: boolean;
+    colors: Map<string, ServiceColor>;
+  }
 ): string {
   const intervals: Array<{ offsetUs: number; durationUs: number }> = [];
   let totalUs: number | null = null;
@@ -333,75 +435,16 @@ function renderRow(
   } else if (timelineUs > 0 && intervals.length > 1) {
     bar = renderCoverageBar(intervals, timelineUs, layout.barWidth);
   }
+  // Bars follow the dashboard's colors. Errors are also marked by the `✗`
+  // gutter, so color never carries required meaning.
   if (bar) {
-    bar = isError ? chalk.red(bar) : chalk.cyan(bar);
+    bar = paintForSpans(row.spans, colors)(bar);
   }
   return `${gutter}${name}${namePad}${GAP}${duration}${GAP}${bar}`.trimEnd();
 }
 
 function countSuffix(row: ChartRow): string {
   return row.spans.length > 1 ? ` ×${row.spans.length}` : '';
-}
-
-/**
- * Groups sibling spans by name, keeping the order of each name's first
- * occurrence. Children of a collapsed group are merged across all of its
- * spans and grouped again, so repeated subtrees collapse at every level.
- */
-export function collapseRows(nodes: TreeNode[]): ChartRow[] {
-  const roots: Span[] = [];
-  const children = new Map<string, Span[]>();
-  for (const { span, depth } of nodes) {
-    if (depth === 0 || !span.parentSpanId) {
-      roots.push(span);
-      continue;
-    }
-    const list = children.get(span.parentSpanId);
-    if (list) {
-      list.push(span);
-    } else {
-      children.set(span.parentSpanId, [span]);
-    }
-  }
-
-  const out: ChartRow[] = [];
-  const expand = (group: Span[], depth: number) => {
-    out.push({ name: group[0].name || UNNAMED, depth, spans: group });
-    const kids = group.flatMap(span => children.get(span.spanId) ?? []);
-    if (group.length > 1) {
-      kids.sort(compareStart);
-    }
-    for (const kidGroup of groupByName(kids)) {
-      expand(kidGroup, depth + 1);
-    }
-  };
-  for (const group of groupByName(roots)) {
-    expand(group, 0);
-  }
-  return out;
-}
-
-function groupByName(spans: Span[]): Span[][] {
-  const groups = new Map<string, Span[]>();
-  for (const span of spans) {
-    const name = span.name || UNNAMED;
-    const group = groups.get(name);
-    if (group) {
-      group.push(span);
-    } else {
-      groups.set(name, [span]);
-    }
-  }
-  return [...groups.values()];
-}
-
-function compareStart(a: Span, b: Span): number {
-  const startA = getStartTimeUs(a);
-  const startB = getStartTimeUs(b);
-  if (startA === null || startB === null) {
-    return startA === startB ? 0 : startA === null ? 1 : -1;
-  }
-  return startA - startB;
 }
 
 export function renderSpanBar(
@@ -428,9 +471,13 @@ export function renderSpanBar(
   return `${' '.repeat(startCol)}${bar}`;
 }
 
-function renderShareBar(share: number, width: number): string {
+function renderShareBar(
+  share: number,
+  width: number,
+  color: (text: string) => string
+): string {
   const filled = clamp(Math.round(share * width), share > 0 ? 1 : 0, width);
-  return `${chalk.cyan(FULL_BLOCK.repeat(filled))}${chalk.dim('░'.repeat(width - filled))}`;
+  return `${color(FULL_BLOCK.repeat(filled))}${chalk.dim('░'.repeat(width - filled))}`;
 }
 
 /**

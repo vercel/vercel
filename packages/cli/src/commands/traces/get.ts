@@ -5,6 +5,7 @@ import output from '../../output-manager';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import { isAPIError } from '../../util/errors-ts';
 import { getLinkedProject } from '../../util/projects/link';
 import type { ProjectLinkResult } from '@vercel-internals/types';
 import getTeamByIdOrSlug from '../../util/teams/get-team-by-id-or-slug';
@@ -14,6 +15,7 @@ import { help } from '../help';
 import { getSubcommand, tracesCommand } from './command';
 import { fetchTrace } from './fetch-trace';
 import { resolveRootSpan } from './analyze';
+import { addSpanQueryIssueDetails } from './query';
 import { renderMarkdown } from './render-markdown';
 import { renderWaterfall } from './render-waterfall';
 import { resolveScope } from './scope-resolver';
@@ -79,6 +81,26 @@ async function resolveDashboardScope({
   return { teamSlug, projectName };
 }
 
+const RETENTION_HINT =
+  'Traces are kept for 1 hour on Hobby, 1 day on Pro, and 3 days on Enterprise.';
+
+/**
+ * Adds the API's validation reason to a failed lookup, so a 400 says why
+ * (for example, a request ID outside the retention window) instead of only
+ * "Invalid trace request".
+ */
+function addTraceErrorDetails(err: unknown): void {
+  addSpanQueryIssueDetails(err);
+  if (
+    isAPIError(err) &&
+    err.status === 400 &&
+    /retention window/i.test(err.serverMessage)
+  ) {
+    err.serverMessage = `${err.serverMessage}. ${RETENTION_HINT}`;
+    err.message = `${err.serverMessage} (${err.status})`;
+  }
+}
+
 export default async function get(
   client: Client,
   telemetry: TracesTelemetryClient
@@ -127,8 +149,23 @@ export default async function get(
     return 2;
   }
 
-  if (viewFlag && !openFlag) {
-    const msg = '`--view` can only be used with `--open`.';
+  // Without --open, only the waterfall has a terminal rendering.
+  if (viewFlag && !openFlag && viewFlag !== 'waterfall') {
+    const msg =
+      '`--view` can only be used with `--open`, except `--view waterfall`, which draws the chart in the terminal.';
+    if (client.nonInteractive) {
+      outputAgentError(client, {
+        status: AGENT_STATUS.ERROR,
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: msg,
+      });
+    }
+    output.error(msg);
+    return 2;
+  }
+
+  if (viewFlag && json) {
+    const msg = '`--json` and `--view` cannot be used together.';
     if (client.nonInteractive) {
       outputAgentError(client, {
         status: AGENT_STATUS.ERROR,
@@ -232,6 +269,7 @@ export default async function get(
     }));
   } catch (err) {
     output.stopSpinner();
+    addTraceErrorDetails(err);
     printError(err);
     return 1;
   }
@@ -243,7 +281,9 @@ export default async function get(
     (typeof rootRequestId === 'string' && rootRequestId.trim() !== ''
       ? rootRequestId
       : undefined);
-  if (partial) {
+  // The rendered summaries say this on stdout, where agents read it. JSON
+  // and the browser have no room for it, so they keep the stderr warning.
+  if (partial && (json || openFlag)) {
     output.warn('Trace is incomplete because it exceeded the span limit.');
   }
 
@@ -294,14 +334,16 @@ export default async function get(
     return 0;
   }
 
-  // Humans at a terminal get the waterfall chart. Piped and agent output keeps
-  // the markdown summary, which is easier to parse and quote.
-  const interactive =
-    Boolean(client.stdout.isTTY) && !client.nonInteractive && !client.isAgent;
+  // Markdown is the default for everyone: it's easy to parse and quote, and
+  // agents read structured text better than charts. The waterfall is opt-in.
   client.stdout.write(
-    interactive
-      ? renderWaterfall(trace, { requestId, columns: client.stdout.columns })
-      : renderMarkdown(trace, { requestId })
+    view === 'waterfall'
+      ? renderWaterfall(trace, {
+          requestId,
+          partial,
+          columns: client.stdout.columns,
+        })
+      : renderMarkdown(trace, { requestId, partial })
   );
   try {
     const resolved = await resolveDashboardScope({

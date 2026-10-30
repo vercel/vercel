@@ -110,6 +110,9 @@ function mapSpan(value: unknown): Trace['spans'][number] {
       ? { parentSpanId: value.parentSpanId }
       : {}),
     name: value.name,
+    ...(typeof value.serviceName === 'string' && value.serviceName
+      ? { serviceName: value.serviceName }
+      : {}),
     duration: durationTuple(value.durationMs),
     startTime: timestampTuple(timestamp),
     ...(attributes ? { attributes } : {}),

@@ -90,6 +90,7 @@ describe('fetchTrace', () => {
           spanId: 'span_root',
           parentSpanId: null,
           name: 'GET /checkout',
+          serviceName: 'vercel.proxy',
           timestamp: '2025-02-06T00:00:00.250Z',
           durationMs: 12.5,
           attributes: { 'http.method': 'GET', 'http.target': '/checkout' },
@@ -110,6 +111,7 @@ describe('fetchTrace', () => {
           {
             spanId: 'span_root',
             name: 'GET /checkout',
+            serviceName: 'vercel.proxy',
             startTime: [1_738_800_000, 250_000_000],
             duration: [0, 12_500_000],
             attributes: {

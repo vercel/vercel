@@ -3,6 +3,7 @@ import type {
   AnalyzedTrace,
   RepeatedOp,
   Span,
+  SpanGroup,
   SpanStatusCode,
   Trace,
   TreeNode,
@@ -218,6 +219,74 @@ export function analyze(trace: Trace): AnalyzedTrace {
     repeatedOps,
     truncatedAtDepth,
   };
+}
+
+/**
+ * Whether a span comes from Vercel's own infrastructure, which the dashboard
+ * draws gray with a `▲` prefix. Function invocation spans from the serverless
+ * runtime carry the request (`http.method`), so they count as the user's.
+ */
+export function isVercelService(span: Span): boolean {
+  const service = span.serviceName;
+  if (!service?.startsWith('vercel.')) {
+    return false;
+  }
+  return !(
+    service === 'vercel.serverless-runtime' &&
+    readAttrString(span.attributes, 'http.method') !== undefined
+  );
+}
+
+/**
+ * Groups sibling spans by name, keeping the order of each name's first
+ * occurrence. Children of a collapsed group are merged across all of its
+ * spans and grouped again, so repeated subtrees collapse at every level.
+ */
+export function collapseRows(nodes: TreeNode[]): SpanGroup[] {
+  const roots: Span[] = [];
+  const children = new Map<string, Span[]>();
+  for (const { span, depth } of nodes) {
+    if (depth === 0 || !span.parentSpanId) {
+      roots.push(span);
+      continue;
+    }
+    const list = children.get(span.parentSpanId);
+    if (list) {
+      list.push(span);
+    } else {
+      children.set(span.parentSpanId, [span]);
+    }
+  }
+
+  const out: SpanGroup[] = [];
+  const expand = (group: Span[], depth: number) => {
+    out.push({ name: group[0].name || '<unnamed>', depth, spans: group });
+    const kids = group.flatMap(span => children.get(span.spanId) ?? []);
+    if (group.length > 1) {
+      kids.sort(compareByStart);
+    }
+    for (const kidGroup of groupByName(kids)) {
+      expand(kidGroup, depth + 1);
+    }
+  };
+  for (const group of groupByName(roots)) {
+    expand(group, 0);
+  }
+  return out;
+}
+
+function groupByName(spans: Span[]): Span[][] {
+  const groups = new Map<string, Span[]>();
+  for (const span of spans) {
+    const name = span.name || '<unnamed>';
+    const group = groups.get(name);
+    if (group) {
+      group.push(span);
+    } else {
+      groups.set(name, [span]);
+    }
+  }
+  return [...groups.values()];
 }
 
 function walkTree(

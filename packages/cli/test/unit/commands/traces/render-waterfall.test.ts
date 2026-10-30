@@ -1,12 +1,12 @@
+import chalk from 'chalk';
 import { describe, expect, it } from 'vitest';
 import {
   buildTreeLabels,
-  collapseRows,
   renderCoverageBar,
   renderSpanBar,
   renderWaterfall,
 } from '../../../../src/commands/traces/render-waterfall';
-import { analyze } from '../../../../src/commands/traces/analyze';
+import { analyze, collapseRows } from '../../../../src/commands/traces/analyze';
 import type { Span, Trace } from '../../../../src/commands/traces/types';
 
 const REQUEST_ID = 'req_abc123';
@@ -58,7 +58,7 @@ describe('renderWaterfall', () => {
       ],
     };
     expect(
-      renderWaterfall(trace, { requestId: REQUEST_ID, columns: 80 }).split('\n')
+      renderWaterfall(trace, { requestId: REQUEST_ID, columns: 84 }).split('\n')
     ).toEqual([
       '  Trace           trace_abcdef0123456789',
       '  Request         req_abc123',
@@ -71,7 +71,7 @@ describe('renderWaterfall', () => {
       '    http.url          https://api.example.com/users',
       '',
       '  Repeated operations',
-      '  db.query          2×  100.0ms  50.0ms each  ██████░░░░░░░░░░░░░░░░░░  25%',
+      '  db.query          2×  100.0ms  50.0ms each  ███████░░░░░░░░░░░░░░░░░░░░░░  25%',
       '',
       '  Span               Duration  0ms                  200.0ms              400.0ms',
       '                               ├───────────┼───────────┼───────────┼───────────┤',
@@ -93,7 +93,7 @@ describe('renderWaterfall', () => {
         span('bg', 'root', 'waitUntil', 50, 150),
       ],
     };
-    const out = renderWaterfall(trace, { requestId: REQUEST_ID, columns: 80 });
+    const out = renderWaterfall(trace, { requestId: REQUEST_ID, columns: 84 });
     expect(out).toContain('200.0ms\n');
     // Root ends at 25 of 50 cells; the background span starts at cell 12.
     expect(out).toMatch(/\n {2}root\s+100\.0ms {2}█{25}\n/);
@@ -114,7 +114,7 @@ describe('renderWaterfall', () => {
         },
       ],
     };
-    const out = renderWaterfall(trace, { requestId: REQUEST_ID, columns: 80 });
+    const out = renderWaterfall(trace, { requestId: REQUEST_ID, columns: 84 });
     expect(out).toMatch(/└─ child\s+50\.0ms {2}█{25}\n/);
   });
 
@@ -127,7 +127,7 @@ describe('renderWaterfall', () => {
         span('orphan', 'missing', 'lost span', 10, 10),
       ],
     };
-    const out = renderWaterfall(trace, { requestId: REQUEST_ID, columns: 80 });
+    const out = renderWaterfall(trace, { requestId: REQUEST_ID, columns: 84 });
     expect(out).toContain('\n\n  Orphan spans\n  lost span');
   });
 
@@ -140,13 +140,105 @@ describe('renderWaterfall', () => {
     expect(out).not.toContain('Duration  0ms');
   });
 
+  it('stretches to fill wide terminals, leaving a right margin', () => {
+    const trace: Trace = {
+      traceId: 't',
+      rootSpanId: 'root',
+      spans: [
+        span('root', undefined, 'root', 0, 100),
+        span('q1', 'root', 'db.query', 0, 10),
+        span('q2', 'root', 'db.query', 50, 10),
+      ],
+    };
+    const lines = renderWaterfall(trace, {
+      requestId: REQUEST_ID,
+      columns: 200,
+    }).split('\n');
+    const widest = Math.max(...lines.map(line => line.length));
+    expect(widest).toBe(196);
+    expect(lines.find(line => line.startsWith('  root '))).toHaveLength(196);
+  });
+
+  it('colors bars by service and status like the dashboard', () => {
+    const trace: Trace = {
+      traceId: 't',
+      rootSpanId: 'root',
+      spans: [
+        span('root', undefined, 'GET /api', 0, 100, {
+          serviceName: 'vercel.proxy',
+        }),
+        // Invocations carry the request, so they count as the user's code.
+        span('inv', 'root', 'invoke', 0, 90, {
+          serviceName: 'vercel.serverless-runtime',
+          attributes: { 'http.method': 'GET' },
+        }),
+        span('q1', 'inv', 'db.query', 10, 10, { serviceName: 'my-app' }),
+        span('q2', 'inv', 'db.query', 30, 10, { serviceName: 'my-app' }),
+        span('c1', 'inv', 'cache.get', 45, 5, { serviceName: 'redis' }),
+        span('f1', 'inv', 'charge', 50, 10, {
+          serviceName: 'my-app',
+          status: { code: 'Error' },
+        }),
+        span('k1', 'inv', 'notify', 60, 10, {
+          serviceName: 'redis',
+          status: { code: 'Ok' },
+        }),
+      ],
+    };
+    const previousLevel = chalk.level;
+    chalk.level = 1;
+    try {
+      const lines = renderWaterfall(trace, {
+        requestId: REQUEST_ID,
+        columns: 84,
+      }).split('\n');
+      const barColor = (line: string) =>
+        /\u001b\[(\d+)m *[█-▏]/.exec(line)?.[1];
+      const plain = (line: string) => line.replace(/\u001b\[\d+m/g, '');
+      const chart = lines.slice(
+        lines.findIndex(l => plain(l).startsWith('  Span '))
+      );
+      const row = (name: string) =>
+        chart.find(l => plain(l).includes(`${name} `)) ?? '';
+
+      // Vercel infrastructure is gray with a `▲` prefix.
+      expect(plain(row('GET /api'))).toContain('▲ GET /api');
+      expect(barColor(row('GET /api'))).toBe('90');
+      expect(plain(row('invoke'))).not.toContain('▲');
+      // Other services take blue, green, purple in order of first appearance.
+      expect(barColor(row('invoke'))).toBe('34');
+      expect(barColor(row('db.query'))).toBe('32');
+      expect(barColor(row('cache.get'))).toBe('35');
+      // Status wins over the service color.
+      expect(barColor(row('charge'))).toBe('31');
+      expect(barColor(row('notify'))).toBe('32');
+
+      const repeated = lines.find(l => plain(l).startsWith('  db.query  '));
+      expect(barColor(repeated ?? '')).toBe('32');
+    } finally {
+      chalk.level = previousLevel;
+    }
+  });
+
+  it('shows the incomplete-trace warning in the summary', () => {
+    const trace: Trace = {
+      traceId: 't',
+      rootSpanId: 'root',
+      spans: [span('root', undefined, 'root', 0, 100)],
+    };
+    expect(renderWaterfall(trace, { partial: true })).toContain(
+      'Exceeded the span limit, so some spans are missing.'
+    );
+    expect(renderWaterfall(trace, {})).not.toContain('Exceeded');
+  });
+
   it('truncates long names to fit narrow terminals', () => {
     const trace: Trace = {
       traceId: 't',
       rootSpanId: 'root',
       spans: [span('root', undefined, 'x'.repeat(200), 0, 100)],
     };
-    const out = renderWaterfall(trace, { requestId: REQUEST_ID, columns: 60 });
+    const out = renderWaterfall(trace, { requestId: REQUEST_ID, columns: 64 });
     for (const line of out.split('\n')) {
       expect(line.length).toBeLessThanOrEqual(60);
     }
@@ -217,7 +309,7 @@ describe('collapseRows', () => {
     }
     const out = renderWaterfall(
       { traceId: 't', rootSpanId: 'root', spans },
-      { requestId: REQUEST_ID, columns: 80 }
+      { requestId: REQUEST_ID, columns: 84 }
     );
     expect(out).toMatch(/└─ y+… ×120 +0μs/);
     expect(out.split('\n').filter(l => l.includes('y…'))).toHaveLength(2);

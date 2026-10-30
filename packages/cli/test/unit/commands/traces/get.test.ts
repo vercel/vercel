@@ -123,9 +123,24 @@ describe('vercel traces get', () => {
     expect(client.stdout.getFullOutput()).toContain('## Span tree');
   });
 
-  it('prints the waterfall chart to stdout on a TTY', async () => {
+  it('prints the markdown summary on a TTY by default', async () => {
     mockLinkedProject();
     client.setArgv('traces', 'get', 'req_abc');
+    const exitCode = await traces(client);
+
+    expect(exitCode).toBe(0);
+    expect(client.stdout.getFullOutput()).toBe(
+      renderMarkdown(sampleTrace, { requestId: 'req_abc' })
+    );
+  });
+
+  it.each([
+    'terminal',
+    'agent',
+  ])('prints the waterfall chart with --view waterfall in %s output', async mode => {
+    mockLinkedProject();
+    if (mode === 'agent') client.isAgent = true;
+    client.setArgv('traces', 'get', 'req_abc', '--view', 'waterfall');
     const exitCode = await traces(client);
 
     expect(exitCode).toBe(0);
@@ -391,6 +406,55 @@ describe('vercel traces get', () => {
     expect(exitCode).toBe(1);
   });
 
+  it.each([
+    [[]],
+    [['--view', 'waterfall']],
+  ])('says the trace is incomplete on stdout, not stderr, with flags %j', async flags => {
+    mockLinkedProject();
+    mockedFetchTrace.mockResolvedValue({ trace: sampleTrace, partial: true });
+
+    client.setArgv('traces', 'get', 'req_partial', ...flags);
+    expect(await traces(client)).toBe(0);
+
+    expect(client.stdout.getFullOutput()).toMatch(
+      /incomplete|Exceeded the span limit/
+    );
+    expect(client.stderr.getFullOutput()).not.toContain('Trace is incomplete');
+  });
+
+  it('prints the API reason and retention for a request ID that is too old', async () => {
+    mockLinkedProject();
+    mockedFetchTrace.mockRejectedValue(
+      Object.assign(new Error('Invalid trace request (400)'), {
+        status: 400,
+        serverMessage: 'Invalid trace request',
+        issues: [
+          {
+            path: 'requestId',
+            message: 'Request ID must be within the trace retention window',
+          },
+        ],
+      })
+    );
+
+    client.setArgv('traces', 'get', 'req_old');
+    expect(await traces(client)).toBe(1);
+
+    expect(client.stderr.getFullOutput()).toContain(
+      'Invalid trace request: requestId: Request ID must be within the trace retention window. Traces are kept for 1 hour on Hobby, 1 day on Pro, and 3 days on Enterprise. (400)'
+    );
+  });
+
+  it('errors when --view and --json are combined', async () => {
+    client.setArgv('traces', 'get', 'req_x', '--view', 'waterfall', '--json');
+
+    expect(await traces(client)).toBe(2);
+    expect(client.stderr.getFullOutput()).toContain(
+      '`--json` and `--view` cannot be used together.'
+    );
+    expect(mockedFetchTrace).not.toHaveBeenCalled();
+  });
+
   it('warns when the resolved trace is partial without changing JSON stdout', async () => {
     mockLinkedProject();
     mockedFetchTrace.mockResolvedValue({ trace: sampleTrace, partial: true });
@@ -500,7 +564,7 @@ describe('vercel traces get', () => {
 
       expect(exitCode).toBe(2);
       expect(client.stderr.getFullOutput()).toContain(
-        '`--view` can only be used with `--open`.'
+        '`--view` can only be used with `--open`, except `--view waterfall`, which draws the chart in the terminal.'
       );
       expect(mockedOpen).not.toHaveBeenCalled();
     });
@@ -642,7 +706,9 @@ describe('vercel traces get', () => {
       const payload = readAgentPayload();
       expect(payload.status).toBe('error');
       expect(payload.reason).toBe('invalid_arguments');
-      expect(payload.message).toBe('`--view` can only be used with `--open`.');
+      expect(payload.message).toBe(
+        '`--view` can only be used with `--open`, except `--view waterfall`, which draws the chart in the terminal.'
+      );
 
       exitSpy.mockRestore();
     });
@@ -950,6 +1016,7 @@ describe('vercel traces get', () => {
 
   it.each([
     'terminal',
+    'waterfall',
     'pipe',
     'agent',
     'non-interactive',
@@ -962,14 +1029,18 @@ describe('vercel traces get', () => {
       trace: { ...traceWithRequestId, traceId: TRACE_ID },
       partial: false,
     });
-    client.setArgv('traces', 'get', TRACE_ID);
+    client.setArgv(
+      'traces',
+      'get',
+      TRACE_ID,
+      ...(mode === 'waterfall' ? ['--view', 'waterfall'] : [])
+    );
 
     expect(await traces(client)).toBe(0);
     const stdout = client.stdout.getFullOutput();
     expect(stdout).toContain(TRACE_ID);
-    // A terminal gets the waterfall summary; every other mode gets Markdown.
-    const isTerminal = mode === 'terminal';
-    if (isTerminal) {
+    // --view waterfall gets the chart summary; every other mode gets Markdown.
+    if (mode === 'waterfall') {
       expect(stdout).toMatch(/Request\s+req_resolved/);
     } else {
       expect(stdout).toContain('Request id');
