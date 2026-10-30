@@ -44,7 +44,7 @@ Each helper has the signature `(connector, params?, options?)`:
 ## Setup
 
 The trigger-forwarding steps below apply to Slack, Discord, GitHub, Linear, Linq,
-Sendblue, and Microsoft Teams. Notion and Telegram Connect are outbound-only:
+Sendblue, and Microsoft Teams. The Notion and Telegram helpers are outbound-only:
 create and attach the connector without triggers, then use each provider's
 native webhook verification or polling.
 
@@ -274,9 +274,14 @@ createTelegramAdapter({
 ```
 
 The helper supplies only the outbound `botToken`; it does not include a
-`webhookVerifier`. Connect does not forward Telegram triggers, so keep
+`webhookVerifier`, because the Telegram adapter has no option for one. Keep
 `TELEGRAM_WEBHOOK_SECRET_TOKEN` for native webhook verification or use polling
 mode. Omit `TELEGRAM_BOT_TOKEN` when using this helper.
+
+Don't enable triggers on this connector: Connect would register its own
+webhook, and a Telegram bot has only one. eve's Telegram channel supports
+Connect triggers through `connectTelegramCredentials` from
+`@vercel/connect/eve`.
 
 ## Custom webhook verification
 

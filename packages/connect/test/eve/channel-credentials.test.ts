@@ -7,6 +7,7 @@ import {
   connectPhotonCredentials,
   connectTeamsCredentials,
   connectSlackCredentials,
+  connectTelegramCredentials,
 } from '../../src/eve/index.js';
 
 describe('Eve channel credential helpers', () => {
@@ -174,6 +175,24 @@ describe('Eve channel credential helpers', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     await expect(credentials.apiKey()).resolves.toBe('linq-api-key');
     expectTokenRequest('linq/my-agent', { subject: { type: 'app' } });
+  });
+
+  it('resolves Telegram credentials from an app-scoped Connect token', async () => {
+    fetchMock.mockResolvedValue(jsonTokenResponse('telegram-bot-token'));
+
+    const credentials = connectTelegramCredentials(
+      'telegram/my-agent',
+      { installationId: 'telegram-installation' },
+      { vercelToken: 'vercel_token' }
+    );
+
+    expect(credentials.webhookVerifier).toEqual(expect.any(Function));
+    expect(fetchMock).not.toHaveBeenCalled();
+    await expect(credentials.botToken()).resolves.toBe('telegram-bot-token');
+    expectTokenRequest('telegram/my-agent', {
+      installationId: 'telegram-installation',
+      subject: { type: 'app' },
+    });
   });
 
   it('builds Teams credentials from connector metadata and a Bot Framework token', async () => {

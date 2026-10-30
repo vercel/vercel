@@ -224,6 +224,21 @@ export default teamsChannel({
 });
 ```
 
+For Telegram, `connectTelegramCredentials` resolves the bot token and verifies
+updates that Connect forwards with Vercel OIDC. Connect registers the bot's
+webhook and checks Telegram's secret-token header, so the deployment holds no
+bot token or webhook secret.
+
+```ts
+import { connectTelegramCredentials } from '@vercel/connect/eve';
+import { telegramChannel } from 'eve/channels/telegram';
+
+export default telegramChannel({
+  botUsername: 'my_bot',
+  credentials: connectTelegramCredentials('telegram/my-agent'),
+});
+```
+
 ```ts
 import { defineMcpClientConnection } from 'eve/connections';
 import { connect } from '@vercel/connect/eve';

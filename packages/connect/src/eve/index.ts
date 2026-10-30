@@ -61,3 +61,8 @@ export {
   type ConnectSendblueCredentials,
   type ConnectSendblueCredentialsParams,
 } from './sendblue-credentials.js';
+export {
+  connectTelegramCredentials,
+  type ConnectTelegramCredentials,
+  type ConnectTelegramCredentialsParams,
+} from './telegram-credentials.js';
