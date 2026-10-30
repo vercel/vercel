@@ -19,7 +19,7 @@
 /packages/firewall                       @vercel/ci-cd @cramforce @sueplex @quuu @ctgowrie
 /packages/mcp-adapter                    @vercel/ci-cd @cramforce @quuu
 /examples/create-react-app               @vercel/ci-cd @Timer
-/examples/nextjs                         @vercel/ci-cd @ijjk @ztanner @huozhi
+/examples/nextjs                         @vercel/ci-cd @aurorascharff @icyjoseph @timneutkens @devjiwonchoi
 /packages/node                           @vercel/ci-cd
 /packages/related-projects               @vercel/ci-cd @mknichel
 /packages/oidc                           @vercel/ci-cd @vercel/identity-and-access-management
