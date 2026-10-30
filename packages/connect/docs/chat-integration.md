@@ -44,7 +44,7 @@ Each helper has the signature `(connector, params?, options?)`:
 ## Setup
 
 The trigger-forwarding steps below apply to Slack, Discord, GitHub, Linear, Linq,
-Sendblue, and Microsoft Teams. Notion and Telegram Connect are outbound-only:
+Sendblue, and Microsoft Teams. The Notion and Telegram Chat SDK helpers provide outbound credentials only:
 create and attach the connector without triggers, then use each provider's
 native webhook verification or polling.
 
@@ -274,7 +274,7 @@ createTelegramAdapter({
 ```
 
 The helper supplies only the outbound `botToken`; it does not include a
-`webhookVerifier`. Connect does not forward Telegram triggers, so keep
+`webhookVerifier`. This helper does not enable forwarded-webhook verification. For direct Telegram delivery, keep
 `TELEGRAM_WEBHOOK_SECRET_TOKEN` for native webhook verification or use polling
 mode. Omit `TELEGRAM_BOT_TOKEN` when using this helper.
 
@@ -326,3 +326,5 @@ production — it would reject preview and development deployments.
 - [Vercel Connect overview](https://vercel.com/docs/connect)
 - [Connect triggers](https://vercel.com/docs/connect/concepts/triggers)
 - [Chat SDK](https://chat-sdk.dev) and its [guides](https://chat-sdk.dev/resources)
+
+For eve channels with Telegram webhooks registered through Connect, use `connectTelegramCredentials` from `@vercel/connect/eve`. Connect's Telegram trigger driver verifies the provider secret before forwarding; the eve helper verifies the forwarded Connect token. The Chat SDK helper above retains its direct-delivery behavior.

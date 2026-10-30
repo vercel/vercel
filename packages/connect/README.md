@@ -287,3 +287,9 @@ only `connector` and `requirement`.
 The eve channel credential helpers attach serializable connector requirements without fetching tokens during a build. This includes Slack, GitHub, Linear, Discord, Microsoft Teams, Photon, Linq, and Sendblue. The matching eve channel must preserve that metadata for it to reach the deployment manifest.
 
 The manifest compiler accepts channels without native provider configuration and retains their event destinations. It combines declarations with the same connector reference when their service, explicit method, and native configuration agree. A credential-only connection can share a channel's connector; required app/user subjects are combined. Conflicts identify the source files. This does not provision provider apps or prove that callbacks and grants are configured; those checks remain Connect's responsibility.
+
+### Telegram and Twilio channels in eve
+
+Use `connectTelegramCredentials('telegram/my-agent')` for a Telegram bot token stored in Connect. Use `connectTwilioCredentials('twilio/my-agent', accountSid)` for a Twilio Auth Token; supply the matching account SID explicitly. Twilio OAuth access tokens are not compatible with this helper.
+
+Both helpers declare API-key requirements without fetching credentials during the build. They provide Connect webhook verification for events routed through a connector with triggers configured. Register Telegram's webhook through Connect before using `connectTelegramCredentials`; direct Telegram deliveries use a native secret header and are not accepted by that helper. For direct delivery, use `connectTelegramAdapter` for the outbound token and keep eve's `webhookSecretToken` configuration.

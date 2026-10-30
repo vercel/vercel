@@ -8,6 +8,8 @@ import {
   connectTeamsCredentials,
   connectSlackCredentials,
   connectSendblueCredentials,
+  connectTelegramCredentials,
+  connectTwilioCredentials,
 } from '../../src/eve/index.js';
 
 describe('Eve channel credential helpers', () => {
@@ -44,6 +46,44 @@ describe('Eve channel credential helpers', () => {
       },
     });
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('resolves Telegram API-key credentials lazily with an app subject', async () => {
+    fetchMock.mockResolvedValue(jsonTokenResponse('telegram-token'));
+    const credentials = connectTelegramCredentials(
+      'telegram/agent',
+      {},
+      { vercelToken: 'vercel_token' }
+    );
+    expect(credentials.vercelConnect.requirement).toMatchObject({
+      reference: 'connector:telegram/agent',
+      service: 'telegram',
+      method: 'api-key',
+      subjectTypes: ['app'],
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    await expect(credentials.botToken()).resolves.toBe('telegram-token');
+    expectTokenRequest('telegram/agent', { subject: { type: 'app' } });
+  });
+
+  it('resolves a Twilio Auth Token lazily and preserves the explicit account SID', async () => {
+    fetchMock.mockResolvedValue(jsonTokenResponse('twilio-token'));
+    const credentials = connectTwilioCredentials(
+      'twilio/agent',
+      'AC123',
+      {},
+      { vercelToken: 'vercel_token' }
+    );
+    expect(credentials.vercelConnect.requirement).toMatchObject({
+      reference: 'connector:twilio/agent',
+      service: 'twilio',
+      method: 'api-key',
+      subjectTypes: ['app'],
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    await expect(credentials.authToken()).resolves.toBe('twilio-token');
+    expectTokenRequest('twilio/agent', { subject: { type: 'app' } });
+    expect(credentials.accountSid).toBe('AC123');
   });
 
   it('builds Discord credentials backed by one app-scoped Connect token response', async () => {

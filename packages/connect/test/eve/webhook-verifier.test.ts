@@ -8,6 +8,8 @@ import {
   connectSendblueCredentials,
   connectSlackCredentials,
   connectTeamsCredentials,
+  connectTelegramCredentials,
+  connectTwilioCredentials,
 } from '../../src/eve/index.js';
 
 vi.mock('@vercel/oidc', () => ({
@@ -25,6 +27,8 @@ const helpers: Array<[string, () => { webhookVerifier?: unknown }]> = [
   ['Microsoft Teams', () => connectTeamsCredentials('microsoft-teams/bot')],
   ['Sendblue', () => connectSendblueCredentials('sendblue/agent')],
   ['Slack', () => connectSlackCredentials('slack/bot')],
+  ['Telegram', () => connectTelegramCredentials('telegram/bot')],
+  ['Twilio', () => connectTwilioCredentials('twilio/agent', 'AC123')],
 ];
 
 function forwardedWebhook(): Request {
