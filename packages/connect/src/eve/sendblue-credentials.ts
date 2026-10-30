@@ -1,3 +1,7 @@
+import {
+  channelCredentialsMetadata,
+  type ConnectChannelMetadata,
+} from '../internal/channel-credentials-metadata.js';
 import type { ConnectOptions } from '../index.js';
 import {
   createConnectSendblueConfig,
@@ -33,8 +37,9 @@ export function connectSendblueCredentials(
   connector: string,
   params: ConnectSendblueCredentialsParams = {},
   options?: ConnectOptions
-): ConnectSendblueCredentials {
+): ConnectSendblueCredentials & ConnectChannelMetadata {
   return {
+    ...channelCredentialsMetadata(connector, 'sendblue'),
     ...createConnectSendblueConfig(connector, params, options),
     webhookVerifier: createConnectWebhookVerifier(),
   };

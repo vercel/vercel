@@ -1,3 +1,7 @@
+import {
+  channelCredentialsMetadata,
+  type ConnectChannelMetadata,
+} from '../internal/channel-credentials-metadata.js';
 import type { GitHubChannelCredentials } from 'eve/channels/github';
 
 import { createConnectWebhookVerifier } from '../chat/webhook-verifier.js';
@@ -42,8 +46,9 @@ export function connectGitHubCredentials(
   connector: string,
   params: ConnectGitHubCredentialsParams = {},
   options?: ConnectOptions
-): GitHubChannelCredentials {
+): GitHubChannelCredentials & ConnectChannelMetadata {
   return {
+    ...channelCredentialsMetadata(connector, 'github'),
     appSlug: () => getGitHubAppSlug(connector, options),
     installationToken: () =>
       getToken(connector, { ...params, subject: { type: 'app' } }, options),
