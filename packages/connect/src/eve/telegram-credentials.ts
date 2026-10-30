@@ -26,7 +26,8 @@ export type ConnectTelegramCredentialsParams = Omit<
 /**
  * Use an app-scoped Telegram API-key connector with eve.
  * The bot token is resolved only when eve makes a Telegram API call.
- * Forwarded webhooks are verified with Connect's delivery verifier.
+ * Register Telegram webhooks through Connect before using this helper.
+ * Direct Telegram delivery needs native secret-token verification instead.
  */
 export function connectTelegramCredentials(
   connector: string,
