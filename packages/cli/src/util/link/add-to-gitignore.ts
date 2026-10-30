@@ -13,7 +13,15 @@ export async function addToGitIgnore(path: string, ignore = VERCEL_DIR) {
     const EOL = gitIgnore.includes('\r\n') ? '\r\n' : os.EOL;
     let contentModified = false;
 
-    if (!gitIgnore.split(EOL).includes(ignore)) {
+    // Normalize line endings (strip `\r`) before comparing existing entries
+    // to the new entry. Without this, a `.gitignore` that uses `\n` line
+    // endings (e.g. on Windows with Git configured for LF) combined with a
+    // detected `EOL` of `\r\n` (from `os.EOL`) would never match an existing
+    // entry, causing the same entry to be appended repeatedly with mismatched
+    // line endings.
+    const existingEntries = gitIgnore.split(/\r\n|\r|\n/);
+
+    if (!existingEntries.includes(ignore)) {
       gitIgnore += `${
         gitIgnore.endsWith(EOL) || gitIgnore.length === 0 ? '' : EOL
       }${ignore}${EOL}`;
