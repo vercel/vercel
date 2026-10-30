@@ -486,6 +486,8 @@ export function stateString(s: string) {
       return chalk.white(CIRCLE) + sTitle;
     case 'CANCELED':
       return chalk.gray(sTitle);
+    case 'BLOCKED':
+      return chalk.gray(CIRCLE) + sTitle;
     default:
       return chalk.gray('UNKNOWN');
   }
