@@ -133,6 +133,26 @@ describe('resolveBulkRedirect', () => {
       statusCode: 301,
     });
   });
+
+  it.each([
+    ['/old?from=email', true, '/new.html?from=email#details'],
+    ['/old', true, '/new.html#details'],
+    ['/old?from=email', false, '/new.html#details'],
+  ])('handles destination fragments for %s (preserveQueryParams: %s)', (reqUrl, preserveQueryParams, location) => {
+    const table = new BulkRedirectTable();
+    table.add({
+      source: '/old',
+      destination: '/new.html#details',
+      statusCode: 307,
+      caseSensitive: false,
+      preserveQueryParams,
+    });
+
+    expect(resolveBulkRedirect(table, reqUrl)).toEqual({
+      location,
+      statusCode: 307,
+    });
+  });
 });
 
 describe('appendQueryParams', () => {
@@ -142,6 +162,40 @@ describe('appendQueryParams', () => {
 
   it('merges onto destinations that already have a query string', () => {
     expect(appendQueryParams('/new?bar=2', '?foo=1')).toBe('/new?bar=2&foo=1');
+  });
+
+  it.each([
+    ['/new#details', '/new?foo=1#details'],
+    ['/new?bar=2#details', '/new?bar=2&foo=1#details'],
+    [
+      'https://example.com/new#details',
+      'https://example.com/new?foo=1#details',
+    ],
+    [
+      'https://example.com/new?bar=2#details',
+      'https://example.com/new?bar=2&foo=1#details',
+    ],
+    ['/new#details?tab=one', '/new?foo=1#details?tab=one'],
+    ['/new#details#more', '/new?foo=1#details#more'],
+    ['/new#', '/new?foo=1#'],
+    ['/new%23details', '/new%23details?foo=1'],
+  ])('appends query params before the fragment in %s', (destination, expected) => {
+    expect(appendQueryParams(destination, '?foo=1')).toBe(expected);
+  });
+
+  it.each([
+    '',
+    '?',
+  ])('leaves the destination unchanged for search %j', search => {
+    expect(appendQueryParams('/new?bar=2#details', search)).toBe(
+      '/new?bar=2#details'
+    );
+  });
+
+  it('preserves query encoding and repeated params when a fragment is present', () => {
+    expect(
+      appendQueryParams('/new?bar=a%20b#details', '?foo=c+d&foo=%23')
+    ).toBe('/new?bar=a%20b&foo=c+d&foo=%23#details');
   });
 });
 

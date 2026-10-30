@@ -241,9 +241,15 @@ export function appendQueryParams(destination: string, search: string): string {
   if (!query) {
     return destination;
   }
-  return destination.includes('?')
-    ? `${destination}&${query}`
-    : `${destination}?${query}`;
+
+  const fragmentIndex = destination.indexOf('#');
+  const fragment = fragmentIndex === -1 ? '' : destination.slice(fragmentIndex);
+  const url =
+    fragmentIndex === -1 ? destination : destination.slice(0, fragmentIndex);
+
+  return url.includes('?')
+    ? `${url}&${query}${fragment}`
+    : `${url}?${query}${fragment}`;
 }
 
 export function resolveBulkRedirectsPath(
