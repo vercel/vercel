@@ -14,4 +14,14 @@ export class DomainsInspectTelemetryClient
       });
     }
   }
+
+  trackCliOptionFormat(format: string | undefined) {
+    if (format) {
+      this.trackCliOption({ option: 'format', value: this.redactedValue });
+    }
+  }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) this.trackCliFlag('json');
+  }
 }

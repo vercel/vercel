@@ -30,11 +30,11 @@ export async function checksRemove(
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: error instanceof Error ? error.message : String(error),
         },
-        1
+        2
       );
     }
     printError(error);
-    return 1;
+    return 2;
   }
 
   if (parsedArgs.args.length < 1 || parsedArgs.args.length > 2) {
@@ -60,12 +60,12 @@ export async function checksRemove(
           },
         ],
       },
-      1
+      2
     );
     output.error(
       'Invalid number of arguments. Usage: `vercel project checks remove <checkId> [project-name]`'
     );
-    return 1;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(parsedArgs.flags);
@@ -78,11 +78,11 @@ export async function checksRemove(
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: formatResult.error,
         },
-        1
+        2
       );
     }
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput || Boolean(client.nonInteractive);
 
@@ -109,10 +109,10 @@ export async function checksRemove(
           },
         ],
       },
-      1
+      2
     );
     output.error('A check id is required (from `vercel project checks`).');
-    return 1;
+    return 2;
   }
 
   const projectNameOrId = parsedArgs.args[1];

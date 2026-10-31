@@ -1,5 +1,6 @@
 import {
   formatOption,
+  jsonOption,
   limitOption,
   projectOption,
   yesOption,
@@ -24,7 +25,7 @@ export const PERMISSIONS_ACTIONS: Record<
 const projectScopeOption = {
   ...projectOption,
   shorthand: 'p',
-  description: 'Project name or ID (defaults to the linked project).',
+  description: 'Project name or ID (default: linked project).',
 } as const;
 
 const nextOption = {
@@ -32,7 +33,7 @@ const nextOption = {
   shorthand: null,
   type: String,
   deprecated: false,
-  description: 'Continue from a previous response',
+  description: 'Show the next page using the cursor from the previous output',
   argument: 'CURSOR',
 } as const;
 
@@ -52,10 +53,15 @@ export const permissionsLsSubcommand = {
   arguments: [],
   options: [
     projectScopeOption,
-    limitOption,
+    {
+      ...limitOption,
+      description:
+        'Number of results to return per page (default: 100, max: 100)',
+    },
     nextOption,
     cursorOption,
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -64,7 +70,7 @@ export const permissionsLsSubcommand = {
     },
     {
       name: 'List teams with access as JSON',
-      value: `${packageName} vcr permissions my-app ls --format json`,
+      value: `${packageName} vcr permissions my-app ls --json`,
     },
   ],
 } as const;
@@ -80,7 +86,7 @@ export const permissionsAddSubcommand = {
       multiple: true,
     },
   ],
-  options: [projectScopeOption, formatOption],
+  options: [projectScopeOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Share a repository with a team by id',
@@ -98,8 +104,8 @@ export const permissionsAddSubcommand = {
 } as const;
 
 export const permissionsRmSubcommand = {
-  name: 'rm',
-  aliases: ['remove'],
+  name: 'remove',
+  aliases: ['rm'],
   description: "Remove one or more teams' access to a repository",
   arguments: [
     {
@@ -108,15 +114,15 @@ export const permissionsRmSubcommand = {
       multiple: true,
     },
   ],
-  options: [projectScopeOption, formatOption],
+  options: [projectScopeOption, formatOption, jsonOption],
   examples: [
     {
       name: "Remove a team's access by id",
-      value: `${packageName} vcr permissions my-app rm team_1a2b3c4d`,
+      value: `${packageName} vcr permissions my-app remove team_1a2b3c4d`,
     },
     {
       name: "Remove multiple teams' access",
-      value: `${packageName} vcr permissions my-app rm team_1a2b3c4d,other-team`,
+      value: `${packageName} vcr permissions my-app remove team_1a2b3c4d,other-team`,
     },
   ],
 } as const;
@@ -126,7 +132,7 @@ export const permissionsClearSubcommand = {
   aliases: [],
   description: 'Remove access to a repository for every team',
   arguments: [],
-  options: [projectScopeOption, yesOption, formatOption],
+  options: [projectScopeOption, yesOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Clear all repository permissions',
@@ -149,6 +155,7 @@ export const permissionsClearSubcommand = {
 export const permissionsAggregateCommand = {
   name: 'permissions',
   aliases: ['permission'],
+  argumentsBeforeSubcommand: true,
   description:
     'Manage which teams can pull images from a container registry repository',
   arguments: [
@@ -175,7 +182,7 @@ export const permissionsAggregateCommand = {
     },
     {
       name: "Remove a team's access to a repository",
-      value: `${packageName} vcr permissions my-app rm team_1a2b3c4d`,
+      value: `${packageName} vcr permissions my-app remove team_1a2b3c4d`,
     },
     {
       name: 'Clear all repository permissions',

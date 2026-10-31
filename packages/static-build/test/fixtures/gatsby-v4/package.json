@@ -12,5 +12,8 @@
     "start": "gatsby develop",
     "serve": "gatsby serve",
     "clean": "gatsby clean"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

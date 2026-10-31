@@ -53,7 +53,7 @@ describe('add', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: `subcommand:add`,
+          key: `subcommand:create`,
           value: 'add',
         },
         {
@@ -61,6 +61,35 @@ describe('add', () => {
           value: '[REDACTED]',
         },
       ]);
+    });
+  });
+
+  describe('subcommand name', () => {
+    function useCreation() {
+      useUser();
+      useProject({
+        ...defaultProject,
+        id: 'test-project',
+        name: 'test-project',
+      });
+    }
+
+    it('warns when invoked as the deprecated add name', async () => {
+      useCreation();
+      client.setArgv('project', 'add', 'test-project');
+
+      expect(await projects(client)).toBe(0);
+      await expect(client.stderr).toOutput(
+        '`vercel project add` is deprecated. Use `vercel project create`.'
+      );
+    });
+
+    it('does not warn when invoked as create', async () => {
+      useCreation();
+      client.setArgv('project', 'create', 'test-project');
+
+      expect(await projects(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
     });
   });
 });

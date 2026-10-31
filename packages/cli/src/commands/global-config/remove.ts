@@ -32,12 +32,12 @@ export default async function removeCmd(
     );
   } catch (error) {
     if (client.nonInteractive) {
-      exitWithNonInteractiveError(client, error, 1, {
+      exitWithNonInteractiveError(client, error, 2, {
         variant: 'global-config',
       });
     }
     printError(error);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -56,7 +56,7 @@ export default async function removeCmd(
           status: 'error',
           reason: 'missing_arguments',
           message:
-            'Global Config id or slug is required. Usage: `vercel global-config remove <id-or-slug>`',
+            'Global Config id or slug is required. Usage: `vercel global-config delete <id-or-slug>`',
           next: [
             {
               command: buildCommandWithGlobalFlags(
@@ -66,13 +66,13 @@ export default async function removeCmd(
             },
           ],
         },
-        1
+        2
       );
     }
     output.error(
-      `Missing id or slug. Usage: ${chalk.cyan(getCommandName('global-config remove <id-or-slug>'))}`
+      `Missing id or slug. Usage: ${chalk.cyan(getCommandName('global-config delete <id-or-slug>'))}`
     );
-    return 1;
+    return 2;
   }
 
   if (client.nonInteractive && !skipConfirmation) {
@@ -82,7 +82,7 @@ export default async function removeCmd(
         status: 'error',
         reason: 'confirmation_required',
         message:
-          'Removing a Global Config requires confirmation. Re-run with `--yes`.',
+          'Deleting a Global Config requires confirmation. Re-run with `--yes`.',
         next: [{ command: buildCommandWithYes(client.argv) }],
       },
       1
@@ -92,7 +92,7 @@ export default async function removeCmd(
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
@@ -156,7 +156,7 @@ export default async function removeCmd(
         {
           status: 'ok',
           id,
-          message: `Global Config ${id} removed.`,
+          message: `Global Config ${id} deleted.`,
         },
         null,
         2
@@ -165,6 +165,6 @@ export default async function removeCmd(
     return 0;
   }
 
-  output.success(`Global Config ${chalk.bold(id)} removed.`);
+  output.success(`Global Config ${chalk.bold(id)} deleted.`);
   return 0;
 }

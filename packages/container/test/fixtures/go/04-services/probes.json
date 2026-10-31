@@ -1,0 +1,39 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "SERVICES_FRONTEND_INDEX"
+    },
+    {
+      "path": "/api",
+      "status": 200,
+      "mustContain": "\"path\":\"/\",\"service\":\"backend\""
+    },
+    {
+      "path": "/api/",
+      "status": 200,
+      "mustContain": "\"path\":\"/\",\"service\":\"backend\""
+    },
+    {
+      "path": "/api",
+      "status": 200,
+      "mustContain": "\"go\":\"go1.26."
+    },
+    {
+      "path": "/api/users/123",
+      "status": 200,
+      "mustContain": "\"path\":\"/users/123\",\"service\":\"backend\",\"user_id\":\"123\""
+    },
+    {
+      "path": "/admin",
+      "status": 200,
+      "mustContain": "\"go\":\"go1.25.8\",\"path\":\"/\",\"service\":\"admin\""
+    },
+    {
+      "path": "/admin/health",
+      "status": 200,
+      "mustContain": "\"path\":\"/health\",\"service\":\"admin\""
+    }
+  ]
+}

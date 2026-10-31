@@ -34,6 +34,7 @@ export type {
   ConnectLinqCredentials,
   ConnectNotionAdapterConfig,
   ConnectSendblueAdapterConfig,
+  ConnectTeamsAdapterConfig,
   ConnectTelegramAdapterConfig,
   ConnectTokenResolver,
 } from './types.js';
@@ -71,3 +72,7 @@ export {
   connectSendblueAdapter,
   type ConnectSendblueAdapterParams,
 } from './sendblue-adapter.js';
+export {
+  connectTeamsAdapter,
+  type ConnectTeamsAdapterParams,
+} from './teams-adapter.js';

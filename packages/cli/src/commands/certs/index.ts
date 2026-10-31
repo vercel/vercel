@@ -18,12 +18,13 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { CertsTelemetryClient } from '../../util/telemetry/commands/certs';
 import { getCommandAliases } from '..';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   issue: getCommandAliases(issueSubcommand),
   ls: getCommandAliases(listSubcommand),
-  rm: getCommandAliases(removeSubcommand),
+  delete: getCommandAliases(removeSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -45,7 +46,7 @@ export default async function main(client: Client) {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { subcommand, subcommandOriginal, args } = getSubcommand(
@@ -57,13 +58,22 @@ export default async function main(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('certs', subcommand);
-    output.print(help(certsCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(certsCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
-      help(command, { parent: certsCommand, columns: client.stderr.columns })
+      help(command, {
+        stream: client.stderr,
+        parent: certsCommand,
+        columns: client.stderr.columns,
+      })
     );
   }
 
@@ -72,7 +82,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('certs', subcommandOriginal);
         printHelp(issueSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandIssue(subcommandOriginal);
       return issue(client, args);
@@ -80,29 +90,37 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('certs', subcommandOriginal);
         printHelp(listSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return ls(client, args);
-    case 'rm':
+    case 'delete':
       if (needHelp) {
         telemetry.trackCliFlagHelp('certs', subcommandOriginal);
         printHelp(removeSubcommand);
-        return 2;
+        return 0;
       }
-      telemetry.trackCliSubcommandRemove(subcommandOriginal);
+      telemetry.trackCliSubcommandDelete(subcommandOriginal);
+      if (subcommandOriginal === 'remove') {
+        warnDeprecatedSubcommand(client, 'certs remove', 'certs delete');
+      }
       return rm(client, args);
     case 'add':
       if (needHelp) {
         telemetry.trackCliFlagHelp('certs', subcommandOriginal);
         printHelp(addSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
     default:
-      output.error('Please specify a valid subcommand: ls | issue | rm');
-      output.print(help(certsCommand, { columns: client.stderr.columns }));
+      output.error('Please specify a valid subcommand: ls | issue | delete');
+      output.print(
+        help(certsCommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
+      );
       return 2;
   }
 }

@@ -7,6 +7,7 @@ import { useTeam } from '../../../mocks/team';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import connect from '../../../../src/commands/connex';
+import { expectDeprecationInJson } from '../../../helpers/deprecation-warning';
 
 async function linkProjectInCwd(
   team: { id: string },
@@ -582,7 +583,7 @@ describe('connex list', () => {
       expect(exitCode).toBe(0);
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain('--type slack');
-      expect(stderr).toContain('--search "linear"');
+      expect(stderr).toContain('--query "linear"');
       expect(stderr).toContain('--next cursor-xyz');
     });
   });
@@ -667,5 +668,89 @@ describe('connex list', () => {
     expect(plain.icon).toBeNull();
     expect(plain.backgroundColor).toBeNull();
     expect(plain.accentColor).toBeNull();
+  });
+  describe('pagination', () => {
+    function usePagedConnectors() {
+      client.scenario.get('/v1/connect/connectors', (_req, res) => {
+        res.json({ clients: [], cursor: 'c_2' });
+      });
+    }
+
+    it('adds pagination.next to the JSON and keeps cursor', async () => {
+      usePagedConnectors();
+      client.setArgv('connect', 'list', '--json');
+
+      expect(await connect(client)).toBe(0);
+      const json = JSON.parse(client.stdout.getFullOutput());
+      expect(json.cursor).toBe('c_2');
+      expect(json.pagination).toEqual({ next: 'c_2' });
+    });
+
+    it('returns a null pagination.next on the last page', async () => {
+      client.scenario.get('/v1/connect/connectors', (_req, res) => {
+        res.json({ clients: [] });
+      });
+      client.setArgv('connect', 'list', '--json');
+
+      expect(await connect(client)).toBe(0);
+      expect(JSON.parse(client.stdout.getFullOutput()).pagination).toEqual({
+        next: null,
+      });
+    });
+  });
+});
+
+describe('connex list --query', () => {
+  // Runs `connect list` with a fresh client, recording the list request.
+  async function run(...args: string[]) {
+    client.reset();
+    useUser({ id: 'user_1', username: 'tester' });
+    const team = useTeam('team_test');
+    client.config.currentTeam = team.id;
+    client.cwd = setupTmpDir();
+    let query: Record<string, unknown> | undefined;
+    client.scenario.get('/v1/connect/connectors', (req, res) => {
+      query = req.query;
+      res.json({ clients: [] });
+    });
+    client.setArgv('connect', 'list', '--all-projects', ...args);
+    const exitCode = await connect(client);
+    return {
+      exitCode,
+      query,
+      stdout: client.stdout.getFullOutput(),
+      stderr: client.stderr.getFullOutput(),
+    };
+  }
+
+  it('still accepts --search, with one warning that names --query', async () => {
+    const now = await run('--query', 'linear');
+    const before = await run('--search', 'linear');
+
+    expect(now.exitCode).toBe(0);
+    expect(now.query).toMatchObject({ search: 'linear' });
+    expect(now.stderr).not.toContain('deprecated');
+    expect(before.exitCode).toBe(now.exitCode);
+    expect(before.query).toEqual(now.query);
+    expect(before.stdout).toBe(now.stdout);
+    expect(before.stderr.match(/deprecated/g)).toHaveLength(1);
+    expect(before.stderr).toContain('! --search is deprecated. Use --query.\n');
+
+    const nowJson = await run('--query', 'linear', '--json');
+    const beforeJson = await run('--search', 'linear', '--json');
+    expectDeprecationInJson(
+      beforeJson.stdout,
+      nowJson.stdout,
+      '--search is deprecated. Use --query.'
+    );
+    expect(beforeJson.stderr).not.toContain('deprecated');
+  });
+
+  it('rejects --query with --search before any request', async () => {
+    const result = await run('--query', 'a', '--search', 'b');
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain("Can't use --query with --search.");
+    expect(result.query).toBeUndefined();
   });
 });

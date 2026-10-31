@@ -15,6 +15,8 @@ export interface GuidanceConfig {
 
 export interface UpdatesConfig {
   auto?: boolean;
+  /** Allow CLI upgrades to override package-manager minimum release age. */
+  bypassMinReleaseAge?: boolean;
 }
 
 export type CredStorage = 'auto' | 'file' | 'keyring';
@@ -39,6 +41,8 @@ export interface AuthConfig {
   skipWrite?: boolean;
   token?: string;
   userId?: string;
+  /** The last looked-up user's name, with the id it belongs to, for `whoami --cached`. */
+  cachedUser?: { id: string; username: string };
   refreshToken?: string;
   expiresAt?: number;
   tokenSource?: 'flag' | 'env';
@@ -55,6 +59,14 @@ export interface GlobalConfig {
   telemetry?: TelemetryConfig;
   guidance?: GuidanceConfig;
   updates?: UpdatesConfig;
-  /** Opt-in to running the native Vercel CLI binary when one is installed. */
+  /** `false` opts out of the native CLI. Honored for one more release. */
   useNativeBinary?: boolean;
+  /** Ignored. Older releases chose the native CLI with it. */
+  nativeBinaryAutoOptIn?: boolean;
+  /**
+   * `false` in a config the CLI created for a first-time user, until their
+   * first successful interactive run. Configs from earlier releases don't set
+   * it and count as used.
+   */
+  usedBefore?: boolean;
 }

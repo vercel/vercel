@@ -8,23 +8,20 @@ import {
 } from '../../util/arg-common';
 import { KMS_ALGORITHMS } from '../../util/kms/types';
 
-/**
- * The list cursor is an opaque base64url token, so this cannot reuse the
- * shared `nextOption`, which is a millisecond timestamp.
- */
+/** The list cursor is an opaque base64url token. */
 const cursorOption = {
   name: 'next',
   shorthand: null,
   type: String,
   argument: 'CURSOR',
   deprecated: false,
-  description:
-    'Show the next page of results, using a cursor from a prior page',
+  description: 'Show the next page using the cursor from the previous output',
 } as const;
 
 const algorithmOption = {
   name: 'algorithm',
-  shorthand: 'a',
+  shorthand: null,
+  deprecatedShorthand: 'a',
   type: String,
   argument: 'ALGORITHM',
   deprecated: false,
@@ -38,7 +35,8 @@ const algorithmOption = {
  */
 const importAlgorithmOption = {
   name: 'algorithm',
-  shorthand: 'a',
+  shorthand: null,
+  deprecatedShorthand: 'a',
   type: String,
   argument: 'ALGORITHM',
   deprecated: false,
@@ -99,7 +97,7 @@ const environmentOption = {
   name: 'environment',
   shorthand: 'e',
   type: [String],
-  argument: 'ENV',
+  argument: 'ENVIRONMENT',
   deprecated: false,
   description:
     'Environment the grant applies to: a system environment (production, preview, development) or a custom environment ID (env_…). Repeatable',
@@ -107,7 +105,8 @@ const environmentOption = {
 
 const keyOption = {
   name: 'key',
-  shorthand: 'k',
+  shorthand: null,
+  deprecatedShorthand: 'k',
   type: String,
   argument: 'FILE',
   deprecated: false,
@@ -164,7 +163,7 @@ export const listSubcommand = {
   examples: [
     {
       name: 'List issuers as JSON',
-      value: `${packageName} kms ls --format json`,
+      value: `${packageName} kms list --json`,
     },
   ],
 } as const;
@@ -189,8 +188,8 @@ export const inspectSubcommand = {
 } as const;
 
 export const addSubcommand = {
-  name: 'add',
-  aliases: ['create'],
+  name: 'create',
+  aliases: ['add'],
   description: 'Create an issuer with a Vercel-generated signing key',
   arguments: [
     {
@@ -202,7 +201,7 @@ export const addSubcommand = {
   examples: [
     {
       name: 'Create an issuer that signs with ES256',
-      value: `${packageName} kms add my-issuer --algorithm ES256`,
+      value: `${packageName} kms create my-issuer --algorithm ES256`,
     },
   ],
 } as const;
@@ -267,8 +266,8 @@ export const updateSubcommand = {
 } as const;
 
 export const removeSubcommand = {
-  name: 'remove',
-  aliases: ['rm', 'delete'],
+  name: 'delete',
+  aliases: ['rm', 'del', 'remove'],
   description: 'Delete an issuer and all of its keys',
   arguments: [
     {
@@ -280,7 +279,7 @@ export const removeSubcommand = {
   examples: [
     {
       name: 'Delete an issuer',
-      value: `${packageName} kms rm iss_1a2b3c4d`,
+      value: `${packageName} kms delete iss_1a2b3c4d`,
     },
   ],
 } as const;
@@ -386,6 +385,7 @@ export const revokeKeySubcommand = {
 } as const;
 
 export const addGrantSubcommand = {
+  descriptionTone: 'normal',
   name: 'add-grant',
   aliases: [],
   description: 'Grant a project permission to sign with an issuer',
@@ -444,6 +444,7 @@ export const updateGrantSubcommand = {
 } as const;
 
 export const removeGrantSubcommand = {
+  descriptionTone: 'normal',
   name: 'remove-grant',
   aliases: ['rm-grant', 'delete-grant'],
   description: "Revoke a project's permission to sign with an issuer",
@@ -461,7 +462,7 @@ export const removeGrantSubcommand = {
   examples: [
     {
       name: 'Remove a project grant',
-      value: `${packageName} kms rm-grant iss_1a2b3c4d prj_9i8h7g6f`,
+      value: `${packageName} kms remove-grant iss_1a2b3c4d prj_9i8h7g6f`,
     },
   ],
 } as const;

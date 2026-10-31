@@ -10,7 +10,7 @@ describe('certs add', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = certs(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -27,13 +27,13 @@ describe('certs add', () => {
     await expect(client.stderr).toOutput(
       'Invalid number of arguments to create a custom certificate entry. Usage:'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    await expect(exitCodePromise).resolves.toEqual(2);
   });
 
   it('should track subcommand usage', async () => {
     client.setArgv('certs', 'add');
     const exitCode = await certs(client);
-    expect(exitCode, 'exit code for "certs"').toEqual(1);
+    expect(exitCode, 'exit code for "certs"').toEqual(2);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
         key: 'subcommand:add',

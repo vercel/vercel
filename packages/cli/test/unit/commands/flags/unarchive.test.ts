@@ -38,7 +38,7 @@ describe('flags unarchive', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = flags(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -114,16 +114,16 @@ describe('flags unarchive', () => {
 
     const exitCode = await flags(client);
 
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     expect(client.stderr.getFullOutput()).toContain(
-      'Missing required flag --yes'
+      'Missing required option --yes'
     );
   });
 
   it('errors without flag argument', async () => {
     client.setArgv('flags', 'unarchive');
     const exitCode = await flags(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
   });
 
   it('errors when flag is not found', async () => {

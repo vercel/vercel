@@ -11,9 +11,9 @@ vi.setConfig({ testTimeout: 4 * 60 * 1000, hookTimeout: 4 * 60 * 1000 });
 module.exports = function setupTests(groupIndex) {
   const fixturesPath = path.resolve(__dirname, 'fixtures');
   const testsThatFailToBuild = new Map([
-    ['30-fail-build-invalid-pipfile', 'Could not parse config file'],
+    ['10-fail-build-invalid-pipfile', 'Could not parse config file'],
     [
-      '31-fail-build-invalid-python36',
+      '11-fail-build-invalid-python36',
       'Python version "3.6" detected in Pipfile.lock is discontinued and must be upgraded.',
     ],
   ]);

@@ -1,14 +1,28 @@
 import { Readable } from 'stream';
+import { request } from 'http';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { join } from 'path';
 import { mkdtemp, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
-import { afterAll, describe, expect, it, vi } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { frameworkList } from '@vercel/frameworks';
 import { getVercelIgnore } from '@vercel/client';
 import DevServer from '../../../../src/util/dev/server';
+import output from '../../../../src/output-manager';
 import {
-  DEV_RUNTIME_CACHE_ITEM_PREFIX,
+  DEV_RESOURCE_TOKEN,
+  listenOnDevResourcePort,
+} from '../../../../src/util/dev/resource-servers';
+import {
+  DEV_RUNTIME_CACHE_API_PREFIX,
   RuntimeCacheStore,
   getDevRuntimeCacheEnv,
 } from '../../../../src/util/dev/runtime-cache';
@@ -167,6 +181,130 @@ describe('DevServer build filtering', () => {
   });
 });
 
+describe('DevServer buildpack builds', () => {
+  let cwd: string;
+
+  beforeAll(async () => {
+    // A Rack app the Ruby preset detects; with the buildpack flag on, project
+    // detection routes it to a `@vercel/container` buildpack build.
+    cwd = await mkdtemp(join(tmpdir(), 'vc-dev-ruby-buildpack-'));
+    await writeFile(join(cwd, 'Gemfile'), 'source "https://rubygems.org"\n');
+    await writeFile(join(cwd, 'config.ru'), 'run ->(_env) { [200, {}, []] }\n');
+  });
+
+  afterAll(async () => {
+    await rm(cwd, { recursive: true, force: true });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  function createServer(vercelConfig: Record<string, unknown>) {
+    const server = new DevServer(cwd, {} as any);
+    (server as any).sidecars = [];
+    (server as any)._address = new URL('http://localhost:3000');
+    (server as any).exit = vi.fn(() => {
+      throw new Error('`vc dev` exited while resolving the config');
+    });
+    (server as any).readJsonFile = vi.fn(async (name: string) =>
+      name === 'package.json' ? null : { version: 2, ...vercelConfig }
+    );
+    return server;
+  }
+
+  it('fails clearly when detection selects a buildpack build', async () => {
+    vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', '1');
+    const server = createServer({ framework: 'ruby' });
+
+    await expect(server._getVercelConfig()).rejects.toMatchObject({
+      code: 'BUILDPACK_DEV_UNSUPPORTED',
+      message: "`vercel dev` doesn't support Ruby projects yet.",
+    });
+    // The error propagates to the caller; config resolution never shuts the
+    // server down itself, which would deadlock a request awaiting the config.
+    expect((server as any).exit).not.toHaveBeenCalled();
+  });
+
+  it('rejects the shared config promise without leaving an unhandled rejection, then re-resolves after a fix', async () => {
+    vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', '1');
+    const server = createServer({ framework: 'ruby' });
+
+    // Two concurrent callers (a request and the watcher, say) share one
+    // in-flight promise and both observe the rejection.
+    const first = server.getVercelConfig();
+    const second = server.getVercelConfig();
+    expect(second).toBe(first);
+    await expect(first).rejects.toMatchObject({
+      code: 'BUILDPACK_DEV_UNSUPPORTED',
+    });
+    await expect(second).rejects.toMatchObject({
+      code: 'BUILDPACK_DEV_UNSUPPORTED',
+    });
+    expect((server as any).exit).not.toHaveBeenCalled();
+
+    // The next call re-resolves from scratch rather than replaying the cached
+    // rejection: with the flag off the same project resolves to its legacy
+    // Ruby build.
+    vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', undefined);
+    const config = await server.getVercelConfig();
+    expect(config.builds).toContainEqual(
+      expect.objectContaining({
+        src: 'config.ru',
+        use: expect.stringMatching(/^@vercel\/ruby/),
+      })
+    );
+  });
+
+  it('reports a filesystem-event failure instead of crashing the process', async () => {
+    const server = createServer({ framework: 'ruby' });
+    const failure = new Error('config no longer resolves');
+    (server as any).handleFilesystemEvents = vi.fn(async () => {
+      throw failure;
+    });
+    (server as any).watchAggregationTimeout = 0;
+    const prettyError = vi.mocked(output.prettyError);
+    prettyError.mockClear();
+
+    server.enqueueFsEvent('change', join(cwd, 'vercel.json'));
+    await vi.waitFor(() => {
+      expect(prettyError).toHaveBeenCalledWith(failure);
+    });
+    expect((server as any).handleFilesystemEvents).toHaveBeenCalledWith([
+      { type: 'change', path: join(cwd, 'vercel.json') },
+    ]);
+  });
+
+  it('fails even when the project has a Development Command', async () => {
+    // A Development Command does not make the build runnable yet; support
+    // for running the app through it comes later.
+    vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', '1');
+    const server = createServer({
+      framework: 'ruby',
+      devCommand: 'bundle exec rackup -p $PORT',
+    });
+
+    await expect(server._getVercelConfig()).rejects.toMatchObject({
+      code: 'BUILDPACK_DEV_UNSUPPORTED',
+      message: "`vercel dev` doesn't support Ruby projects yet.",
+    });
+  });
+
+  it('keeps the legacy Ruby runtime build when the buildpack flag is off', async () => {
+    vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', undefined);
+    const server = createServer({ framework: 'ruby' });
+
+    const config = await server._getVercelConfig();
+
+    expect(config.builds).toContainEqual(
+      expect.objectContaining({
+        src: 'config.ru',
+        use: expect.stringMatching(/^@vercel\/ruby/),
+      })
+    );
+  });
+});
+
 describe('DevServer queue routes', () => {
   it('forwards the VQS idempotency key to the queue broker', async () => {
     const server = new DevServer(process.cwd(), {});
@@ -188,11 +326,7 @@ describe('DevServer queue routes', () => {
       end: vi.fn(),
     } as unknown as ServerResponse;
 
-    await (server as any).handleQueuesRoute(
-      req,
-      res,
-      '/_svc/_queues/api/v3/topic/orders'
-    );
+    await (server as any).handleQueuesRoute(req, res, '/api/v3/topic/orders');
 
     expect(enqueue).toHaveBeenCalledWith(
       'orders',
@@ -232,7 +366,7 @@ describe('DevServer queue routes', () => {
     await (server as any).handleQueuesRoute(
       req,
       res,
-      '/_svc/_queues/api/v3/topic/orders/consumer/worker/id/duplicate-message-id'
+      '/api/v3/topic/orders/consumer/worker/id/duplicate-message-id'
     );
 
     expect(getOriginalMessageIdForDuplicate).toHaveBeenCalledWith(
@@ -252,8 +386,228 @@ describe('DevServer queue routes', () => {
   });
 });
 
+describe('DevServer dedicated resource listeners', () => {
+  it('serves Queues on its native API path', async () => {
+    const server = new DevServer(process.cwd(), {});
+    const enqueue = vi.fn().mockReturnValue({ messageId: 'message-id' });
+    (server as any).queueBroker = { enqueue, stop: vi.fn() };
+    const listener = await listenOnDevResourcePort(
+      (server as any).queueServer,
+      {
+        name: 'Vercel Queues',
+        flag: '--queue-port',
+        defaultPort: 4782,
+        port: 0,
+      }
+    );
+    (server as any).queueOrigin = listener.origin;
+
+    try {
+      const response = await fetch(`${listener.origin}/api/v3/topic/orders`, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${DEV_RESOURCE_TOKEN}`,
+          'content-type': 'application/json',
+        },
+        body: '{"attempt":1}',
+      });
+
+      expect(response.status).toBe(201);
+      expect(await response.json()).toEqual({ messageId: 'message-id' });
+      expect(enqueue).toHaveBeenCalledWith(
+        'orders',
+        Buffer.from('{"attempt":1}'),
+        'application/json',
+        {
+          retentionSeconds: undefined,
+          delaySeconds: undefined,
+          idempotencyKey: undefined,
+        }
+      );
+    } finally {
+      await server.stop();
+    }
+  });
+
+  it('rejects missing credentials and DNS rebinding hosts', async () => {
+    const server = new DevServer(process.cwd(), {});
+    const enqueue = vi.fn();
+    (server as any).queueBroker = { enqueue, stop: vi.fn() };
+    const listener = await listenOnDevResourcePort(
+      (server as any).queueServer,
+      {
+        name: 'Vercel Queues',
+        flag: '--queue-port',
+        defaultPort: 4782,
+        port: 0,
+      }
+    );
+    (server as any).queueOrigin = listener.origin;
+
+    try {
+      const unauthorized = await fetch(
+        `${listener.origin}/api/v3/topic/orders`,
+        { method: 'POST', body: '{}' }
+      );
+      expect(unauthorized.status).toBe(401);
+
+      const requestStatus = (host: string) =>
+        new Promise<number>((resolve, reject) => {
+          const req = request(
+            {
+              hostname: '127.0.0.1',
+              port: listener.port,
+              path: '/api/v3/topic/orders',
+              method: 'POST',
+              headers: {
+                authorization: `Bearer ${DEV_RESOURCE_TOKEN}`,
+                host,
+              },
+            },
+            res => {
+              res.resume();
+              resolve(res.statusCode || 0);
+            }
+          );
+          req.once('error', reject);
+          req.end('{}');
+        });
+
+      await expect(requestStatus('attacker.example')).resolves.toBe(403);
+      await expect(
+        requestStatus(`localhost:${listener.port}/path`)
+      ).resolves.toBe(403);
+      await expect(
+        requestStatus(`localhost:${listener.port + 1}`)
+      ).resolves.toBe(403);
+      expect(enqueue).not.toHaveBeenCalled();
+    } finally {
+      await server.stop();
+    }
+  });
+
+  it('shares Runtime Cache state with the authenticated container alias', async () => {
+    const server = new DevServer(process.cwd(), {});
+    (server as any).runtimeCache = new RuntimeCacheStore();
+    const listener = await listenOnDevResourcePort(
+      (server as any).runtimeCacheServer,
+      {
+        name: 'Runtime Cache',
+        flag: '--runtime-cache-port',
+        defaultPort: 4783,
+        port: 0,
+      }
+    );
+    (server as any).runtimeCacheOrigin = listener.origin;
+
+    try {
+      const setResponse = await fetch(
+        `${listener.origin}/v1/suspense-cache/products`,
+        {
+          method: 'POST',
+          headers: { authorization: `Bearer ${DEV_RESOURCE_TOKEN}` },
+          body: '{"count":1}',
+        }
+      );
+      expect(setResponse.status).toBe(200);
+
+      const req = Readable.from([]) as IncomingMessage;
+      req.method = 'GET';
+      req.url = `/_svc/_cache/${(server as any).resourceProxyToken}/v1/suspense-cache/products`;
+      req.headers = {
+        authorization: `Bearer ${DEV_RESOURCE_TOKEN}`,
+      };
+      (server as any).buildMatches.set('container', {
+        builderWithPkg: { pkg: { name: '@vercel/container' } },
+      });
+      const res = {
+        writeHead: vi.fn(),
+        end: vi.fn(),
+      } as unknown as ServerResponse;
+
+      await server.serveProjectAsNowV2(req, res, 'request-id', {
+        version: 2,
+      } as any);
+
+      expect(res.writeHead).toHaveBeenCalledWith(200, expect.anything());
+      expect((res.end as any).mock.calls[0][0].toString()).toBe('{"count":1}');
+    } finally {
+      await server.stop();
+    }
+  });
+
+  it.each([
+    '/_svc/_queues/test-proxy-token/api/v3/topic/orders',
+    '/_svc/_cache/test-proxy-token/v1/suspense-cache/products',
+  ])('requires authorization on container alias %s', async requestUrl => {
+    const server = new DevServer(process.cwd(), {});
+    (server as any).resourceProxyToken = 'test-proxy-token';
+    (server as any).queueBroker = { stop: vi.fn() };
+    (server as any).runtimeCache = new RuntimeCacheStore();
+    (server as any).buildMatches.set('container', {
+      builderWithPkg: { pkg: { name: '@vercel/container' } },
+    });
+    const req = Readable.from([]) as IncomingMessage;
+    req.method = 'GET';
+    req.url = requestUrl;
+    req.headers = {};
+    const res = {
+      writeHead: vi.fn(),
+      end: vi.fn(),
+    } as unknown as ServerResponse;
+
+    await server.serveProjectAsNowV2(req, res, 'request-id', {
+      version: 2,
+    } as any);
+
+    expect(res.writeHead).toHaveBeenCalledWith(401, {
+      'WWW-Authenticate': 'Bearer',
+    });
+    await server.stop();
+  });
+
+  it('provides authenticated proxy configuration to container builders', () => {
+    const server = new DevServer(process.cwd(), {});
+    (server as any)._address = new URL('http://localhost:3000');
+    (server as any).queueOrigin = 'http://127.0.0.1:4782';
+    (server as any).runtimeCacheOrigin = 'http://127.0.0.1:4783';
+    (server as any).resourceProxyToken = 'test-proxy-token';
+    (server as any).schedulesOrigin = 'http://127.0.0.1:4784';
+
+    const env = (server as any).getBuilderDevEnv(
+      { builderWithPkg: { pkg: { name: '@vercel/container' } } },
+      {
+        VERCEL_QUEUE_BASE_URL: 'http://127.0.0.1:4782',
+        VERCEL_SCHEDULE_BASE_URL: 'https://remote.invalid',
+        VERCEL_SCHEDULE_TOKEN: 'remote-token',
+        VERCEL_QUEUE_TOKEN: DEV_RESOURCE_TOKEN,
+        VERCEL_REGION: 'dev1',
+        RUNTIME_CACHE_ENDPOINT: 'http://127.0.0.1:4783/v1/suspense-cache/',
+        RUNTIME_CACHE_HEADERS: JSON.stringify({
+          authorization: `Bearer ${DEV_RESOURCE_TOKEN}`,
+        }),
+      }
+    );
+
+    expect(env).toMatchObject({
+      VERCEL_QUEUE_BASE_URL:
+        'http://localhost:3000/_svc/_queues/test-proxy-token',
+      VERCEL_SCHEDULE_BASE_URL:
+        'http://host.docker.internal:3000/_svc/_schedules/test-proxy-token',
+      VERCEL_SCHEDULE_TOKEN: DEV_RESOURCE_TOKEN,
+      VERCEL_SCHEDULE_DEV_API_VERSION: '1',
+      VERCEL_QUEUE_TOKEN: DEV_RESOURCE_TOKEN,
+      RUNTIME_CACHE_ENDPOINT:
+        'http://localhost:3000/_svc/_cache/test-proxy-token/v1/suspense-cache/',
+      RUNTIME_CACHE_HEADERS: JSON.stringify({
+        authorization: `Bearer ${DEV_RESOURCE_TOKEN}`,
+      }),
+    });
+  });
+});
+
 describe('DevServer Runtime Cache routes', () => {
-  const ITEM_PATH = `${DEV_RUNTIME_CACHE_ITEM_PREFIX}products$abc123`;
+  const ITEM_PATH = `${DEV_RUNTIME_CACHE_API_PREFIX}products$abc123`;
 
   function createServer() {
     const server = new DevServer(process.cwd(), {});
@@ -357,7 +711,7 @@ describe('DevServer Runtime Cache routes', () => {
     const revalidateRes = await call(
       server,
       'POST',
-      `${DEV_RUNTIME_CACHE_ITEM_PREFIX}revalidate?tags=products,home`
+      `${DEV_RUNTIME_CACHE_API_PREFIX}revalidate?tags=products,home`
     );
     expect(revalidateRes.writeHead).toHaveBeenCalledWith(200, {
       'Content-Type': 'application/json',
@@ -377,7 +731,7 @@ describe('DevServer Runtime Cache routes', () => {
     await call(
       server,
       'POST',
-      `${DEV_RUNTIME_CACHE_ITEM_PREFIX}revalidate?tags=category=products`
+      `${DEV_RUNTIME_CACHE_API_PREFIX}revalidate?tags=category=products`
     );
 
     const getRes = await call(server, 'GET', ITEM_PATH);
@@ -392,7 +746,7 @@ describe('DevServer Runtime Cache routes', () => {
     await call(
       server,
       'POST',
-      `${DEV_RUNTIME_CACHE_ITEM_PREFIX}revalidate?itemId=products%24abc123`
+      `${DEV_RUNTIME_CACHE_API_PREFIX}revalidate?itemId=products%24abc123`
     );
 
     const getRes = await call(server, 'GET', ITEM_PATH);
@@ -406,7 +760,7 @@ describe('DevServer Runtime Cache routes', () => {
     const res = await call(
       server,
       'POST',
-      `${DEV_RUNTIME_CACHE_ITEM_PREFIX}revalidate`
+      `${DEV_RUNTIME_CACHE_API_PREFIX}revalidate`
     );
 
     expect(res.writeHead).toHaveBeenCalledWith(400, {
@@ -422,7 +776,7 @@ describe('DevServer Runtime Cache routes', () => {
     const res = await call(
       server,
       'GET',
-      `${DEV_RUNTIME_CACHE_ITEM_PREFIX}products%24abc123`
+      `${DEV_RUNTIME_CACHE_API_PREFIX}products%24abc123`
     );
 
     expect(res.writeHead).toHaveBeenCalledWith(200, expect.anything());
@@ -435,7 +789,7 @@ describe('DevServer Runtime Cache routes', () => {
     const res = await call(
       server,
       'GET',
-      `${DEV_RUNTIME_CACHE_ITEM_PREFIX}bad%zz`
+      `${DEV_RUNTIME_CACHE_API_PREFIX}bad%zz`
     );
 
     expect(res.writeHead).toHaveBeenCalledWith(400, {
@@ -532,20 +886,38 @@ describe('DevServer Runtime Cache routes', () => {
 });
 
 describe('DevServer Runtime Cache environment', () => {
+  it('points Queue clients at the dedicated local listener', () => {
+    const server = new DevServer(process.cwd(), {});
+    (server as any).queueOrigin = 'http://127.0.0.1:4782';
+
+    expect((server as any).getDevQueueEnv()).toMatchObject({
+      VERCEL_QUEUE_BASE_URL: 'http://127.0.0.1:4782',
+      VERCEL_QUEUE_TOKEN: 'vc-dev-token',
+    });
+    expect(
+      (server as any).getDevQueueEnv().VERCEL_HAS_WORKER_SERVICES
+    ).toBeUndefined();
+  });
+
   it('points functions at the dev server store', () => {
     const server = new DevServer(process.cwd(), {});
     (server as any)._address = new URL('http://localhost:3000');
+    (server as any).runtimeCacheOrigin = 'http://127.0.0.1:4783';
 
     const env = (server as any).getDevRuntimeCacheEnv({});
 
     expect(env).toEqual(
-      getDevRuntimeCacheEnv('http://localhost:3000') as Record<string, string>
+      getDevRuntimeCacheEnv(
+        'http://127.0.0.1:4783',
+        DEV_RUNTIME_CACHE_API_PREFIX
+      ) as Record<string, string>
     );
   });
 
   it('leaves a developer-configured cache endpoint alone', () => {
     const server = new DevServer(process.cwd(), {});
     (server as any)._address = new URL('http://localhost:3000');
+    (server as any).runtimeCacheOrigin = 'http://127.0.0.1:4783';
 
     const env = (server as any).getDevRuntimeCacheEnv({
       RUNTIME_CACHE_ENDPOINT: 'https://cache.example.com/v1/suspense-cache/',
@@ -563,6 +935,7 @@ describe('DevServer Runtime Cache environment', () => {
   it('passes a cache endpoint exported in the shell to functions', () => {
     const server = new DevServer(process.cwd(), {});
     (server as any)._address = new URL('http://localhost:3000');
+    (server as any).runtimeCacheOrigin = 'http://127.0.0.1:4783';
     vi.stubEnv(
       'RUNTIME_CACHE_ENDPOINT',
       'https://cache.example.com/v1/suspense-cache/'
@@ -589,6 +962,7 @@ describe('DevServer Runtime Cache environment', () => {
     const server = new DevServer(cwd, {} as any);
     (server as any).sidecars = [];
     (server as any)._address = new URL('http://localhost:3000');
+    (server as any).runtimeCacheOrigin = 'http://127.0.0.1:4783';
     (server as any).exit = vi.fn(() => {
       throw new Error('`vc dev` exited while resolving the config');
     });
@@ -599,7 +973,10 @@ describe('DevServer Runtime Cache environment', () => {
     await server._getVercelConfig();
 
     expect((server as any).envConfigs.runEnv).toMatchObject(
-      getDevRuntimeCacheEnv('http://localhost:3000')
+      getDevRuntimeCacheEnv(
+        'http://127.0.0.1:4783',
+        DEV_RUNTIME_CACHE_API_PREFIX
+      )
     );
   });
 });

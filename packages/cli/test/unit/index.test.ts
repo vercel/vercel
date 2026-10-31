@@ -1,5 +1,7 @@
 import os from 'node:os';
 import { spawn } from 'node:child_process';
+import { EventEmitter } from 'node:events';
+import { PassThrough } from 'node:stream';
 import {
   describe,
   expect,
@@ -18,7 +20,11 @@ vi.mock('node:child_process', async importOriginal => {
   const actual = await importOriginal<typeof import('node:child_process')>();
   return {
     ...actual,
-    spawn: vi.fn(() => ({ unref: vi.fn() })),
+    spawn: vi.fn(() => ({
+      on: vi.fn(),
+      stdin: { on: vi.fn(), end: vi.fn() },
+      unref: vi.fn(),
+    })),
   };
 });
 
@@ -218,12 +224,42 @@ describe('main', () => {
               expect.any(Boolean)
             );
           });
+
+          it('does not send when the config is disabled during the run', async () => {
+            const telemetryEventStore = new TelemetryEventStore({
+              isDebug: false,
+              config: { enabled: true },
+            });
+            const spy = vi
+              .spyOn(telemetryEventStore, 'sendToSubprocess')
+              .mockResolvedValue();
+            new RootTelemetryClient({
+              opts: { store: telemetryEventStore },
+            }).trackPlatform();
+
+            telemetryEventStore.updateConfig({ enabled: false });
+            await telemetryEventStore.save();
+
+            expect(spy).not.toHaveBeenCalled();
+          });
         });
       });
     });
 
     describe('sendToSubprocess', () => {
-      const payload = { headers: {}, body: [] };
+      const payload = {
+        invocationId: 'original-command',
+        headers: { 'x-vercel-cli-session-id': 'session' },
+        body: [
+          {
+            id: 'event-id',
+            event_time: 1_000,
+            invocation_id: 'original-command',
+            key: 'arch',
+            value: 'arm64',
+          },
+        ],
+      };
 
       beforeEach(() => {
         vi.mocked(spawn).mockClear();
@@ -233,19 +269,30 @@ describe('main', () => {
         const telemetryEventStore = new TelemetryEventStore({
           isDebug: false,
           config: {},
+          globalConfigDir: '/isolated/config',
         });
 
         await telemetryEventStore.sendToSubprocess(payload, false);
 
         expect(spawn).toHaveBeenCalledTimes(1);
-        const [binary, args] = vi.mocked(spawn).mock.calls[0];
+        const [binary, args, options] = vi.mocked(spawn).mock.calls[0];
+        const child = vi.mocked(spawn).mock.results[0].value;
+        expect(child.stdin?.end).toHaveBeenCalledExactlyOnceWith(
+          JSON.stringify(payload)
+        );
         expect(binary).toBe(process.argv[0]);
         expect(args).toEqual([
           process.argv[1],
           'telemetry',
           'flush',
-          JSON.stringify(payload),
+          '--global-config',
+          '/isolated/config',
         ]);
+        expect(options).toMatchObject({
+          detached: true,
+          env: { VERCEL_TELEMETRY_DISABLED: '1' },
+        });
+        expect(child.unref).toHaveBeenCalledOnce();
       });
 
       it('omits the script path when running as the native binary', async () => {
@@ -261,8 +308,43 @@ describe('main', () => {
 
         expect(spawn).toHaveBeenCalledTimes(1);
         const [binary, args] = vi.mocked(spawn).mock.calls[0];
+        const child = vi.mocked(spawn).mock.results[0].value;
+        expect(child.stdin?.end).toHaveBeenCalledExactlyOnceWith(
+          JSON.stringify(payload)
+        );
         expect(binary).toBe(process.execPath);
-        expect(args).toEqual(['telemetry', 'flush', JSON.stringify(payload)]);
+        expect(args).toEqual(['telemetry', 'flush']);
+      });
+
+      it('preserves the existing debug wait until the worker exits', async () => {
+        const child = Object.assign(new EventEmitter(), {
+          stdin: new PassThrough(),
+          stdout: new PassThrough(),
+          stderr: new PassThrough(),
+          unref: vi.fn(),
+          kill: vi.fn(),
+        });
+        vi.mocked(spawn).mockReturnValueOnce(
+          child as unknown as ReturnType<typeof spawn>
+        );
+        const store = new TelemetryEventStore({ config: { enabled: true } });
+        let completed = false;
+        const result = store.sendToSubprocess(payload, true).then(() => {
+          completed = true;
+        });
+
+        expect(completed).toBe(false);
+        expect(vi.mocked(spawn).mock.calls[0][2]).toMatchObject({
+          stdio: ['pipe', 'pipe', 'pipe'],
+          env: { VERCEL_TELEMETRY_DISABLED: '1' },
+        });
+        expect(vi.mocked(spawn).mock.calls[0][2]).not.toHaveProperty(
+          'detached'
+        );
+        child.emit('exit', 0);
+        await result;
+        expect(completed).toBe(true);
+        expect(child.unref).toHaveBeenCalledOnce();
       });
     });
   });

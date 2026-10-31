@@ -62,7 +62,7 @@ async function createDeploymentProtectionToken(
     output.log(
       `  4. Use it with ${chalk.cyan(
         '--protection-bypass'
-      )} flag or set ${chalk.cyan('VERCEL_AUTOMATION_BYPASS_SECRET')} env var`
+      )} option or set ${chalk.cyan('VERCEL_AUTOMATION_BYPASS_SECRET')} env var`
     );
     output.log('');
 

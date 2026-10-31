@@ -1,5 +1,251 @@
 # @vercel/next
 
+## 27.0.0
+
+### Patch Changes
+
+- Updated dependencies [5f55ccc]
+- Updated dependencies [d0629bd]
+  - @vercel/build-utils@15.1.0
+
+## 26.0.2
+
+### Patch Changes
+
+- 2f0edaf: Report the runtime preset for services without a framework.
+- Updated dependencies [2f0edaf]
+  - @vercel/build-utils@15.0.2
+
+## 26.0.1
+
+### Patch Changes
+
+- Updated dependencies [1a379a3]
+  - @vercel/build-utils@15.0.1
+
+## 26.0.0
+
+### Patch Changes
+
+- Updated dependencies [9b1b587]
+- Updated dependencies [fec2df1]
+- Updated dependencies [d123652]
+  - @vercel/build-utils@15.0.0
+
+## 25.0.0
+
+### Patch Changes
+
+- Updated dependencies [9abaa6d]
+- Updated dependencies [179d4ab]
+- Updated dependencies [d39dd61]
+- Updated dependencies [5aa1b58]
+  - @vercel/build-utils@14.23.0
+
+## 24.0.0
+
+### Patch Changes
+
+- Updated dependencies [a19979c]
+- Updated dependencies [a2e9f5d]
+  - @vercel/build-utils@14.22.0
+
+## 23.0.3
+
+### Patch Changes
+
+- Updated dependencies [bb42e81]
+  - @vercel/build-utils@14.21.3
+
+## 23.0.2
+
+### Patch Changes
+
+- Updated dependencies [cd68435]
+  - @vercel/build-utils@14.21.2
+
+## 23.0.1
+
+### Patch Changes
+
+- Updated dependencies [1336097]
+  - @vercel/build-utils@14.21.1
+
+## 23.0.0
+
+### Patch Changes
+
+- Updated dependencies [24a7e04]
+- Updated dependencies [7e396f7]
+  - @vercel/build-utils@14.21.0
+
+## 22.0.1
+
+### Patch Changes
+
+- Updated dependencies [42cc083]
+  - @vercel/build-utils@14.20.1
+
+## 22.0.0
+
+### Patch Changes
+
+- Updated dependencies [e041037]
+  - @vercel/build-utils@14.20.0
+
+## 21.0.0
+
+### Patch Changes
+
+- Updated dependencies [e58b37a]
+  - @vercel/build-utils@14.19.0
+
+## 20.0.1
+
+### Patch Changes
+
+- d2ac1cc: Reject immutable static assets in Next.js static export builds when not using the adapter.
+
+## 20.0.0
+
+### Patch Changes
+
+- Updated dependencies [94f6cea]
+- Updated dependencies [3eeaad5]
+- Updated dependencies [8ac5320]
+  - @vercel/build-utils@14.18.0
+
+## 19.0.0
+
+### Patch Changes
+
+- Updated dependencies [28a7ab7]
+- Updated dependencies [28a7ab7]
+  - @vercel/build-utils@14.17.0
+
+## 18.0.0
+
+### Patch Changes
+
+- Updated dependencies [20c5940]
+  - @vercel/build-utils@14.16.0
+
+## 17.0.0
+
+### Patch Changes
+
+- Updated dependencies [a7ef28c]
+  - @vercel/build-utils@14.15.0
+
+## 16.0.0
+
+### Patch Changes
+
+- f5ba1b7: Preserve function affinity when building grouped Next.js functions.
+- Updated dependencies [deb48cd]
+  - @vercel/build-utils@14.14.0
+
+## 15.0.2
+
+### Patch Changes
+
+- Updated dependencies [ff3d2f7]
+  - @vercel/build-utils@14.13.2
+
+## 15.0.1
+
+### Patch Changes
+
+- Updated dependencies [5082546]
+  - @vercel/build-utils@14.13.1
+
+## 15.0.0
+
+### Patch Changes
+
+- Updated dependencies [34b2c8e]
+  - @vercel/build-utils@14.13.0
+
+## 14.0.0
+
+### Patch Changes
+
+- Updated dependencies [6e68e60]
+  - @vercel/build-utils@14.12.0
+
+## 13.0.0
+
+### Patch Changes
+
+- fad00b1: Disable adapters by default
+- 41d2343: Expose a development manifest for static Next.js App Router handlers and Pages API routes, including functions without triggers, deployment output identities, local HTTP invocation targets, and normalized Queue and Schedule trigger metadata. Use the project's isolated development configuration and diagnose unsupported trigger mappings and conflicting output identities.
+- Updated dependencies [888f59e]
+- Updated dependencies [7eb63c0]
+  - @vercel/build-utils@14.11.0
+
+## 12.0.5
+
+### Patch Changes
+
+- aaf949a: Enable adapters by default
+
+## 12.0.4
+
+### Patch Changes
+
+- ab7bc75: Update Next.js adapter to 0.0.1-beta.34
+- Updated dependencies [53a6086]
+  - @vercel/build-utils@14.10.2
+
+## 12.0.3
+
+### Patch Changes
+
+- 29601cf: Update `@next-community/adapter-vercel` to `0.0.1-beta.33`. Revert server-action meta routes so adapter-built deploys no longer emit those firewall/observability routes or the sanitization/CDN-cap trim from beta.32.
+
+## 12.0.2
+
+### Patch Changes
+
+- 5438961: Update `@next-community/adapter-vercel` to `0.0.1-beta.32`. Percent-encode server-action meta route transform args outside the API charset, and drop extra action meta routes so the CDN table stays under 2048.
+
+## 12.0.1
+
+### Patch Changes
+
+- 99eef31: Update to latest Next.js adapter
+- 074d76d: Update to latest Next.js adapter
+- 3647e4f: Fail adapter-disabled builds that produce `_next/static/immutable` files.
+- Updated dependencies [f9d0e90]
+- Updated dependencies [8a277e4]
+- Updated dependencies [66e443e]
+- Updated dependencies [08b0be2]
+  - @vercel/build-utils@14.10.1
+
+## 12.0.0
+
+### Patch Changes
+
+- 2a57243: More robust Next.js framework version detection
+- Updated dependencies [2a57243]
+- Updated dependencies [54a6d73]
+- Updated dependencies [3d16792]
+  - @vercel/build-utils@14.10.0
+
+## 11.0.4
+
+### Patch Changes
+
+- Updated dependencies [55e8d1e]
+  - @vercel/build-utils@14.9.3
+
+## 11.0.3
+
+### Patch Changes
+
+- Updated dependencies [b174f14]
+  - @vercel/build-utils@14.9.2
+
 ## 11.0.2
 
 ### Patch Changes

@@ -1,0 +1,16 @@
+{
+  "projectSettings": {
+    "framework": "rust"
+  },
+  "build": {
+    "env": {
+      "VERCEL_EXPERIMENTAL_BUILDPACK_RUST": "1"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/old",
+      "destination": "/new"
+    }
+  ]
+}

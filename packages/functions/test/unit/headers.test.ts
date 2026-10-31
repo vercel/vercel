@@ -14,13 +14,72 @@ import {
   REQUEST_ID_HEADER_NAME,
 } from '../../src/headers';
 
-test('`ipAddress` returns the value from the header', () => {
-  const req = new Request('https://example.vercel.sh', {
-    headers: {
-      [IP_HEADER_NAME]: '127.0.0.1',
-    },
+describe('`ipAddress`', () => {
+  // Next.js's HeadersAdapter implements get() over a Node headers record stored
+  // in `.headers`, rather than a nested Web Headers instance.
+  class RecordHeaders {
+    constructor(readonly headers: Record<string, string>) {}
+
+    get(name: string): string | null {
+      return this.headers[name] ?? null;
+    }
+  }
+
+  describe.each([
+    [
+      'Request',
+      (values: Record<string, string>) =>
+        new Request('https://example.vercel.sh', { headers: values }),
+    ],
+    ['Headers', (values: Record<string, string>) => new Headers(values)],
+    [
+      'record-backed header reader',
+      (values: Record<string, string>) => new RecordHeaders(values),
+    ],
+    [
+      'request with a record-backed header reader',
+      (values: Record<string, string>) => ({
+        headers: new RecordHeaders(values),
+      }),
+    ],
+  ] as const)('%s', (_, makeInput) => {
+    test.each([
+      '127.0.0.1',
+      '2001:db8::1',
+      '',
+      undefined,
+    ])('returns the platform IP header value %s', ip => {
+      const values = {
+        'x-forwarded-for': '198.51.100.1',
+        'x-client-ip': '198.51.100.2',
+        ...(ip === undefined ? {} : { [IP_HEADER_NAME]: ip }),
+      };
+
+      expect(ipAddress(makeInput(values))).toBe(ip);
+    });
   });
-  expect(ipAddress(req)).toBe('127.0.0.1');
+
+  test('preserves request headers when the request also has a get method', () => {
+    const request = {
+      headers: new Headers({ [IP_HEADER_NAME]: '127.0.0.1' }),
+      get: () => 'not-a-header-value',
+    };
+
+    expect(ipAddress(request)).toBe('127.0.0.1');
+  });
+
+  test.each([
+    null,
+    undefined,
+    { get: 'not-a-function' },
+  ])('accepts a header reader with an unrelated headers property: %s', headers => {
+    const reader = Object.assign(
+      new Headers({ [IP_HEADER_NAME]: '127.0.0.1' }),
+      { headers }
+    );
+
+    expect(ipAddress(reader)).toBe('127.0.0.1');
+  });
 });
 
 describe('`geolocation`', () => {

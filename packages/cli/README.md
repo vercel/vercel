@@ -32,6 +32,10 @@ Finally, [connect your Git repository to Vercel](https://vercel.com/docs/git) an
 
 For details on how to use Vercel CLI, check out our [documentation](https://vercel.com/docs/cli).
 
+To manage schedules in a running development session, see [local schedules](docs/local-schedules.md).
+
+For how `vercel` picks the runtime for each platform, see [launcher](docs/launcher.md).
+
 ## Local Development
 
 To develop Vercel CLI, first check out the source code, install dependencies, and build all packages:
@@ -48,6 +52,8 @@ At this point you can make modifications to the CLI source code and test them ou
 ```bash
 cd packages/cli
 ```
+
+Before you add or rename a command, flag, or output, read [AGENTS.md](AGENTS.md) and the CLI design system in [`.agents/skills/cli-ux`](.agents/skills/cli-ux/SKILL.md).
 
 ### `pnpm vercel <cli-commands...>`
 

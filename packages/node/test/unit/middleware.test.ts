@@ -11,6 +11,7 @@ const NEW_PROJECT = MIDDLEWARE_NODEJS_DEFAULT_SINCE.getTime();
 const EXISTING_PROJECT = NEW_PROJECT - 1;
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllEnvs();
 });
 
@@ -76,6 +77,7 @@ it.each([
   nodejsDefault,
   expectedType,
 }) => {
+  const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
   if (nodejsDefault) {
     vi.stubEnv(MIDDLEWARE_NODEJS_DEFAULT_ENV, '1');
   }
@@ -118,6 +120,17 @@ it.each([
       override: true,
     },
   ]);
+  const deprecationWarnings = consoleWarnSpy.mock.calls.filter(([message]) =>
+    String(message).includes('uses the deprecated "edge" runtime')
+  );
+  expect(deprecationWarnings).toHaveLength(
+    expectedType === 'EdgeFunction' ? 1 : 0
+  );
+  if (expectedType === 'EdgeFunction') {
+    expect(deprecationWarnings[0][0]).toMatch(
+      /^\x1b\[33m\x1b\[1mWARNING! \x1b\[22m.*\x1b\[39m$/
+    );
+  }
 });
 
 it.each([
@@ -173,37 +186,4 @@ it('should throw an error for an unsupported runtime', async () => {
   ).rejects.toThrow(
     'middleware.js: unsupported "runtime" value in `config`: "invalid" (must be one of: ["edge","experimental-edge","nodejs"])'
   );
-});
-
-it.each([
-  { runtime: undefined, warns: true },
-  { runtime: 'edge', warns: true },
-  { runtime: 'nodejs', warns: false },
-])('runtime="$runtime" warns about the edge deprecation: $warns', async ({
-  runtime,
-  warns,
-}) => {
-  const consoleWarnSpy = vi.spyOn(console, 'warn');
-  const config = runtime
-    ? `export const config = { runtime: '${runtime}' };`
-    : '';
-  const filesystem = await prepareFilesystem({
-    'middleware.js': `
-        ${config}
-        export default () => new Response('middleware');
-      `,
-  });
-
-  await build({
-    ...filesystem,
-    entrypoint: 'middleware.js',
-    config: { middleware: true },
-    meta: { skipDownload: true },
-  });
-
-  const warned = consoleWarnSpy.mock.calls.some(([message]) =>
-    String(message).includes('uses the deprecated "edge" runtime')
-  );
-  expect(warned).toBe(warns);
-  consoleWarnSpy.mockRestore();
 });

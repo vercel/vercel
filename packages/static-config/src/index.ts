@@ -139,7 +139,7 @@ function classifyOxcError(error: unknown): string {
   if (error instanceof Error && error.message.startsWith('Unhandled type:')) {
     return 'unsupported_node';
   }
-  if (error instanceof Error && error.message === 'Invalid data') {
+  if (error instanceof Error && error.message.startsWith('Invalid data')) {
     return 'validation';
   }
   return 'unknown';

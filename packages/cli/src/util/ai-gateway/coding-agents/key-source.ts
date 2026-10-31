@@ -22,6 +22,7 @@ export interface KeySource {
 const CHILD_PROMPT = chalk.dim('↳');
 
 export interface KeyOptions {
+  tokenPass?: boolean;
   name?: string;
   budget?: number;
   refreshPeriod?: string;
@@ -29,7 +30,7 @@ export interface KeyOptions {
   expiresAt?: number;
 }
 
-export function defaultKeyName(): string {
+export function defaultKeyName(tokenPass = false): string {
   let host = '';
   let user = '';
   try {
@@ -40,14 +41,42 @@ export function defaultKeyName(): string {
   } catch {}
   const device = host.split('.')[0].replace(/[-_]+/g, ' ').trim();
   const who = user.trim();
-  if (who && device) return `[${who}'s ${device}] Coding Agents`;
-  if (device) return `[${device}] Coding Agents`;
-  if (who) return `[${who}] Coding Agents`;
-  return 'Coding Agents';
+  const label = tokenPass ? 'Coding Agents token-pass' : 'Coding Agents';
+  if (who && device) return `[${who}'s ${device}] ${label}`;
+  if (device) return `[${device}] ${label}`;
+  if (who) return `[${who}] ${label}`;
+  return label;
 }
 
-export async function promptKeyName(client: Client): Promise<string> {
-  const fallback = defaultKeyName();
+export async function promptExistingKey(
+  client: Client,
+  defaultSource: 'create' | 'existing' = 'create'
+): Promise<string | undefined> {
+  const source = await client.input.select<'create' | 'existing'>({
+    message: 'AI Gateway API key?',
+    choices: [
+      { name: 'Create a new key', value: 'create' },
+      { name: 'Use an existing key', value: 'existing' },
+    ],
+    default: defaultSource,
+  });
+  if (source === 'create') {
+    return undefined;
+  }
+  const key = await client.input.password({
+    message: `${CHILD_PROMPT} Paste your AI Gateway API key `,
+    mask: true,
+    validate: value =>
+      value.trim().length > 0 ? true : 'Enter an AI Gateway API key.',
+  });
+  return key.trim();
+}
+
+export async function promptKeyName(
+  client: Client,
+  tokenPass = false
+): Promise<string> {
+  const fallback = defaultKeyName(tokenPass);
   const answer = await client.input.text({
     message: 'Key name?',
     default: fallback,
@@ -129,7 +158,12 @@ function hasExplicitScopeFlag(argv: string[]): boolean {
 
 export async function ensureTeam(
   client: Client,
-  opts: { machine: boolean; canPrompt: boolean; yes: boolean }
+  opts: {
+    machine: boolean;
+    canPrompt: boolean;
+    yes: boolean;
+    tokenPass?: boolean;
+  }
 ): Promise<number | undefined> {
   const { machine, canPrompt, yes } = opts;
 
@@ -140,14 +174,19 @@ export async function ensureTeam(
       undefined,
       true,
       undefined,
-      'The new AI Gateway API key will be created under this team:'
+      opts.tokenPass
+        ? 'The new Token Pass API Key will be created under this team:'
+        : 'The new AI Gateway API key will be created under this team:'
     );
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
     return undefined;
   }
 
   // Non-interactive, an explicit scope, or `--yes`: use the resolved scope.
-  if (hasExplicitScopeFlag(client.argv) || client.config.currentTeam) {
+  if (
+    hasExplicitScopeFlag(client.argv) ||
+    (await client.resolveCurrentTeam())
+  ) {
     return undefined;
   }
 
@@ -160,9 +199,7 @@ export async function ensureTeam(
       message,
       next: [
         {
-          command: getCommandName(
-            'ai-gateway coding-agents setup --scope <team-slug>'
-          ),
+          command: getCommandName('ai-gateway setup --scope <team-slug>'),
         },
       ],
     });
@@ -185,6 +222,7 @@ export async function createKey(
         includeByok: opts.includeByok,
       }),
       ...(opts.expiresAt !== undefined && { expiresAt: opts.expiresAt }),
+      ...(opts.tokenPass && { metadata: { tokenPass: true as const } }),
     });
     return result.apiKeyString;
   } finally {

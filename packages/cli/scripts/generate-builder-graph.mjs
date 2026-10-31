@@ -12,7 +12,7 @@ import {
 import { brotliCompress, constants } from 'node:zlib';
 import { promisify } from 'node:util';
 import { tmpdir } from 'node:os';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { install } from '@vltpkg/graph';
 import { PackageInfoClient } from '@vltpkg/package-info';
@@ -72,6 +72,24 @@ function isExactVersionSpec(spec) {
 export function registryTarballUrl(name, version) {
   const unscoped = name.startsWith('@') ? name.split('/').pop() : name;
   return `${REGISTRY}${name}/-/${unscoped}-${version}.tgz`;
+}
+
+function isRegistryTarballUrl(url) {
+  return typeof url === 'string' && url.startsWith(REGISTRY);
+}
+
+function artifactTarballUrl(artifact, url) {
+  return isRegistryTarballUrl(url) &&
+    artifact.sourceUrl &&
+    !isRegistryTarballUrl(artifact.sourceUrl)
+    ? artifact.sourceUrl
+    : url;
+}
+
+function artifactIntegrity(artifact, url) {
+  return !isRegistryTarballUrl(url) || artifact.sourceUrl === url
+    ? artifact.integrity
+    : undefined;
 }
 
 function registryManifestUrl(name, version) {
@@ -135,25 +153,111 @@ function specTarballUrl(spec) {
  * manifests refer to the future preview deployment URLs, but the bytes are
  * available locally before that deployment is live.
  */
+async function readPackageTarballManifest(expectedName, path) {
+  const packageInfo = new PackageInfoClient({
+    packageJson: new PackageJson(),
+    projectRoot: dirname(path),
+  });
+  return packageInfo.manifest(`${expectedName}@file:${basename(path)}`);
+}
+
+async function createPackageArtifact(expectedName, path, bytes, sourceUrl) {
+  const manifest = await readPackageTarballManifest(expectedName, path);
+  if (manifest.name !== expectedName) {
+    throw new Error(
+      `Packed artifact ${path} contains ${String(manifest.name)} instead of ${expectedName}`
+    );
+  }
+  if (!isExactVersionSpec(manifest.version)) {
+    throw new Error(
+      `Packed artifact ${path} has invalid version ${String(manifest.version)}`
+    );
+  }
+  return {
+    name: expectedName,
+    packageName: manifest.name,
+    version: manifest.version,
+    manifest,
+    path,
+    sourceUrl,
+    integrity: `sha512-${createHash('sha512').update(bytes).digest('base64')}`,
+  };
+}
+
+async function downloadRemoteArtifacts(specs, artifacts, downloadRoot) {
+  const pending = new Map();
+  const visited = new Set();
+  const enqueueDependencies = artifact => {
+    for (const field of RUNTIME_DEP_FIELDS) {
+      for (const [dependencyName, spec] of Object.entries(
+        artifact.manifest[field] ?? {}
+      )) {
+        if (isRemoteSpec(spec) && !artifacts.has(spec) && !visited.has(spec)) {
+          pending.set(spec, dependencyName);
+        }
+      }
+    }
+  };
+  for (const [name, spec] of Object.entries(specs)) {
+    if (!isRemoteSpec(spec)) continue;
+    const artifact = artifacts.get(spec);
+    if (artifact) enqueueDependencies(artifact);
+    else pending.set(spec, name);
+  }
+
+  while (pending.size > 0) {
+    const batch = [...pending];
+    pending.clear();
+    const results = await Promise.allSettled(
+      batch.map(async ([url, name]) => {
+        visited.add(url);
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(
+            `Could not download ${name} from ${url}: ${response.status}`
+          );
+        }
+        const bytes = Buffer.from(await response.arrayBuffer());
+        const path = join(
+          downloadRoot,
+          `${createHash('sha256').update(url).digest('hex')}.tgz`
+        );
+        await writeFile(path, bytes);
+        return {
+          url,
+          artifact: await createPackageArtifact(name, path, bytes, url),
+        };
+      })
+    );
+    const failure = results.find(result => result.status === 'rejected');
+    if (failure) throw failure.reason;
+
+    for (const { value } of results) {
+      const { url, artifact } = value;
+      artifacts.set(url, artifact);
+      artifacts.set(
+        registryTarballUrl(artifact.packageName, artifact.version),
+        artifact
+      );
+      enqueueDependencies(artifact);
+    }
+  }
+}
+
 export async function indexWorkspaceTarballs(
   specs,
   packagesDir = defaultPackagesDir
 ) {
-  const remoteEntries = Object.entries(specs).filter(([, spec]) =>
-    isRemoteSpec(spec)
+  const remoteEntries = Object.entries(specs).filter(
+    ([, spec]) => isRemoteSpec(spec) && !isRegistryTarballUrl(spec)
   );
   if (remoteEntries.length === 0) return new Map();
-  const tarballBaseUrls = new Set(
-    remoteEntries.map(([name, spec]) => {
-      const suffix = `/${previewTarballFilename(name)}`;
-      if (!spec.endsWith(suffix)) {
-        throw new Error(
-          `Unexpected workspace tarball URL for ${name}: ${spec}`
-        );
-      }
-      return spec.slice(0, -suffix.length);
-    })
-  );
+  const remoteUrls = new Map(remoteEntries);
+  for (const [name, spec] of remoteUrls) {
+    if (!spec.endsWith(`/${previewTarballFilename(name)}`)) {
+      throw new Error(`Unexpected workspace tarball URL for ${name}: ${spec}`);
+    }
+  }
 
   const artifacts = new Map();
   for (const entry of await readdir(packagesDir, { withFileTypes: true })) {
@@ -174,16 +278,20 @@ export async function indexWorkspaceTarballs(
     if (!tarball) continue;
     const path = join(packageDir, tarball);
     const bytes = await readFile(path);
-    const artifact = {
-      name: packageJson.name,
+    const remoteUrl = remoteUrls.get(packageJson.name);
+    const artifact = await createPackageArtifact(
+      packageJson.name,
       path,
-      integrity: `sha512-${createHash('sha512').update(bytes).digest('base64')}`,
-    };
-    for (const baseUrl of tarballBaseUrls) {
-      const url = `${baseUrl}/${previewTarballFilename(packageJson.name)}`;
-      artifacts.set(url, artifact);
-    }
+      bytes,
+      remoteUrl
+    );
+    artifacts.set(
+      registryTarballUrl(artifact.packageName, artifact.version),
+      artifact
+    );
+    if (remoteUrl) artifacts.set(remoteUrl, artifact);
   }
+
   return artifacts;
 }
 
@@ -268,12 +376,7 @@ async function packWorkspacePackage(pkg, destDir) {
   const packedName = parsePnpmPackFilename(stdout);
   const path = isAbsolute(packedName) ? packedName : join(destDir, packedName);
   const bytes = await readFile(path);
-  return {
-    name: pkg.packageJson.name,
-    version: pkg.packageJson.version,
-    path,
-    integrity: `sha512-${createHash('sha512').update(bytes).digest('base64')}`,
-  };
+  return createPackageArtifact(pkg.packageJson.name, path, bytes);
 }
 
 export async function packUnpublishedWorkspaceArtifacts(
@@ -296,24 +399,46 @@ export async function packUnpublishedWorkspaceArtifacts(
     const version = pkg.packageJson.version;
     if (hasVersion ? await hasVersion(name, version) : false) continue;
     const artifact = await packWorkspacePackage(pkg, destDir);
-    artifacts.set(registryTarballUrl(name, version), artifact);
+    artifacts.set(
+      registryTarballUrl(artifact.packageName, artifact.version),
+      artifact
+    );
   }
   return artifacts;
 }
 
 export class LocalPreviewPackageInfoClient extends PackageInfoClient {
-  constructor(options, artifacts, remoteSpecs = new Map(), downloadArtifact) {
+  constructor(
+    options,
+    artifacts,
+    operations = new Set(),
+    operationErrors = []
+  ) {
     super(options);
     this.artifacts = artifacts;
-    this.remoteSpecs = remoteSpecs;
-    this.downloadArtifact = downloadArtifact;
+    this.operations = operations;
+    this.operationErrors = operationErrors;
+  }
+
+  track(operation) {
+    this.operations.add(operation);
+    operation.then(
+      () => this.operations.delete(operation),
+      error => {
+        this.operations.delete(operation);
+        this.operationErrors.push(error);
+      }
+    );
+    return operation;
   }
 
   artifact(spec) {
     const finalUrl = specTarballUrl(spec);
     if (finalUrl) {
       const artifact = this.artifacts.get(finalUrl);
-      if (artifact) return { artifact, finalUrl };
+      if (artifact) {
+        return { artifact, finalUrl: artifactTarballUrl(artifact, finalUrl) };
+      }
     }
 
     const name = specName(spec);
@@ -321,69 +446,91 @@ export class LocalPreviewPackageInfoClient extends PackageInfoClient {
     if (name && version) {
       const url = registryTarballUrl(name, version);
       const artifact = this.artifacts.get(url);
-      if (artifact) return { artifact, finalUrl: url };
+      if (artifact) {
+        return { artifact, finalUrl: artifactTarballUrl(artifact, url) };
+      }
     }
 
-    if (!name) return undefined;
-    for (const [url, artifact] of this.artifacts) {
-      if (artifact.name !== name) continue;
-      if (version && artifact.version && artifact.version !== version) continue;
-      return { artifact, finalUrl: url };
-    }
     return undefined;
+  }
+
+  async validateVersion(spec, artifact) {
+    const expectedVersion = specVersion(spec);
+    if (!expectedVersion) return undefined;
+    const localUrl = pathToFileURL(await realpath(artifact.path)).href;
+    const manifest = await super.manifest(`${artifact.name}@${localUrl}`);
+    if (manifest.version !== expectedVersion) {
+      throw new Error(
+        `Resolved ${String(spec)} to ${String(manifest.name)}@${String(manifest.version)} instead of ${expectedVersion}`
+      );
+    }
+    artifact.packageName = manifest.name;
+    artifact.version = manifest.version;
+    return manifest;
   }
 
   async local(spec) {
     const existing = this.artifact(spec);
-    if (existing) return existing;
-    if (!this.downloadArtifact) return undefined;
-
-    const finalUrl = specTarballUrl(spec);
-    const name =
-      specName(spec) ?? (finalUrl ? this.remoteSpecs.get(finalUrl) : undefined);
-    if (!finalUrl || !name) return undefined;
-
-    const artifact = await this.downloadArtifact(name, finalUrl);
-    this.artifacts.set(finalUrl, artifact);
-    return { artifact, finalUrl };
+    if (!existing) return undefined;
+    const manifest = await this.validateVersion(spec, existing.artifact);
+    return { ...existing, manifest };
   }
 
-  async manifest(spec, options) {
+  manifest(spec, options) {
+    return this.track(this.manifestLocal(spec, options));
+  }
+
+  async manifestLocal(spec, options) {
     const local = await this.local(spec);
     if (!local) return super.manifest(spec, options);
     const { artifact, finalUrl } = local;
-    const localUrl = pathToFileURL(await realpath(artifact.path)).href;
-    const manifest = await super.manifest(
-      `${artifact.name}@${localUrl}`,
-      options
-    );
+    const manifest =
+      local.manifest ??
+      (await super.manifest(
+        `${artifact.name}@${pathToFileURL(await realpath(artifact.path)).href}`,
+        options
+      ));
+    const integrity = artifactIntegrity(artifact, finalUrl);
     return {
       ...manifest,
       dist: {
         ...manifest.dist,
         tarball: finalUrl,
-        integrity: artifact.integrity,
+        ...(integrity ? { integrity } : {}),
       },
     };
   }
 
-  async resolve(spec, options) {
+  resolve(spec, options) {
+    return this.track(this.resolveLocal(spec, options));
+  }
+
+  async resolveLocal(spec, options) {
     const local = await this.local(spec);
     if (!local) return super.resolve(spec, options);
     const resolution = await super.resolve(
       `${local.artifact.name}@${local.finalUrl}`,
       options
     );
-    return { ...resolution, integrity: local.artifact.integrity };
+    const integrity = artifactIntegrity(local.artifact, local.finalUrl);
+    return integrity ? { ...resolution, integrity } : resolution;
   }
 
-  async tarball(spec, options) {
+  tarball(spec, options) {
+    return this.track(this.tarballLocal(spec, options));
+  }
+
+  async tarballLocal(spec, options) {
     const local = await this.local(spec);
     if (!local) return super.tarball(spec, options);
     return readFile(local.artifact.path);
   }
 
-  async extract(spec, target, options) {
+  extract(spec, target, options) {
+    return this.track(this.extractLocal(spec, target, options));
+  }
+
+  async extractLocal(spec, target, options) {
     const local = await this.local(spec);
     if (!local) return super.extract(spec, target, options);
     const localUrl = pathToFileURL(await realpath(local.artifact.path)).href;
@@ -392,7 +539,14 @@ export class LocalPreviewPackageInfoClient extends PackageInfoClient {
       `${local.artifact.name}@${local.finalUrl}`,
       options
     );
-    return { ...resolution, integrity: local.artifact.integrity };
+    const integrity = artifactIntegrity(local.artifact, local.finalUrl);
+    return integrity ? { ...resolution, integrity } : resolution;
+  }
+}
+
+async function settleOperations(operations) {
+  while (operations.size > 0) {
+    await Promise.allSettled([...operations]);
   }
 }
 
@@ -401,8 +555,8 @@ async function generateOneBuilderGraph({
   spec,
   buildUtilsSpec,
   artifacts,
-  remoteSpecs,
-  downloadArtifact,
+  operations,
+  operationErrors,
 }) {
   const projectRoot = await mkdtemp(join(tmpdir(), 'vercel-builder-graph-'));
   const manifest = {
@@ -428,8 +582,8 @@ async function generateOneBuilderGraph({
     const packageInfo = new LocalPreviewPackageInfoClient(
       { ...options, packageJson },
       artifacts,
-      remoteSpecs,
-      downloadArtifact
+      operations,
+      operationErrors
     );
     const builderManifest = await packageInfo.manifest(`${name}@${spec}`);
     const { graph } = await install({
@@ -450,6 +604,21 @@ async function generateOneBuilderGraph({
   } finally {
     await rm(projectRoot, { recursive: true, force: true });
   }
+}
+
+/**
+ * Writes each Builder's graph hash and version. Importing an installed
+ * Builder only needs this, not the full compressed graphs.
+ */
+export async function writeBuilderIndex(path, graphs) {
+  const builders = Object.fromEntries(
+    Object.entries(graphs.builders).map(([name, { hash, version }]) => [
+      name,
+      { hash, version },
+    ])
+  );
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, `${JSON.stringify({ schemaVersion: 1, builders })}\n`);
 }
 
 export async function writeCompressedBuilderGraphs(path, graphs) {
@@ -486,85 +655,60 @@ export async function generateBuilderGraphs(
   const allSpecs = { ...builders, '@vercel/build-utils': buildUtilsSpec };
   const artifacts =
     providedArtifacts ?? (await indexWorkspaceTarballs(allSpecs, packagesDir));
-  const remoteSpecs = new Map(
-    Object.entries(allSpecs)
-      .filter(([, spec]) => isRemoteSpec(spec))
-      .map(([name, spec]) => [spec, name])
-  );
   const downloadRoot = await mkdtemp(
     join(tmpdir(), 'vercel-builder-tarballs-')
   );
-  if (!providedArtifacts) {
-    const unpublished = await packUnpublishedWorkspaceArtifacts(
-      allSpecs,
-      packagesDir,
-      downloadRoot,
-      hasVersion ?? registryHasVersion
-    );
-    for (const [url, artifact] of unpublished) {
-      artifacts.set(url, artifact);
-    }
-  }
-  const downloads = new Map();
-  const downloadArtifact = (name, url) => {
-    let download = downloads.get(url);
-    if (!download) {
-      download = (async () => {
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(
-            `Could not download ${name} from ${url}: ${response.status}`
-          );
-        }
-        const bytes = Buffer.from(await response.arrayBuffer());
-        const path = join(
-          downloadRoot,
-          `${createHash('sha256').update(url).digest('hex')}.tgz`
-        );
-        await writeFile(path, bytes);
-        return {
-          name,
-          path,
-          integrity: `sha512-${createHash('sha512')
-            .update(bytes)
-            .digest('base64')}`,
-        };
-      })();
-      downloads.set(url, download);
-    }
-    return download;
-  };
-
-  const missingLocalArtifacts = Object.values(allSpecs).filter(
-    spec => isRemoteSpec(spec) && !artifacts.has(spec)
-  );
-  // A live URL is valid for native binary builds. During preview package
-  // packing all same-deployment URLs should have local artifacts, and callers
-  // can request strict validation once the artifact index is known.
-  if (providedArtifacts && missingLocalArtifacts.length > 0) {
-    throw new Error(
-      `Missing local workspace tarballs for: ${missingLocalArtifacts.join(', ')}`
-    );
-  }
+  const operations = new Set();
+  const operationErrors = [];
 
   try {
-    const entries = await Promise.all(
+    if (providedArtifacts) {
+      const missingArtifacts = Object.values(allSpecs).filter(
+        spec => isRemoteSpec(spec) && !artifacts.has(spec)
+      );
+      if (missingArtifacts.length > 0) {
+        throw new Error(
+          `Missing local workspace tarballs for: ${missingArtifacts.join(', ')}`
+        );
+      }
+    } else {
+      const unpublished = await packUnpublishedWorkspaceArtifacts(
+        allSpecs,
+        packagesDir,
+        downloadRoot,
+        hasVersion ?? registryHasVersion
+      );
+      for (const [url, artifact] of unpublished) {
+        artifacts.set(url, artifact);
+      }
+      await downloadRemoteArtifacts(allSpecs, artifacts, downloadRoot);
+    }
+
+    const results = await Promise.allSettled(
       Object.entries(builders).map(([name, spec]) =>
         generateOneBuilderGraph({
           name,
           spec,
           buildUtilsSpec,
           artifacts,
-          remoteSpecs,
-          downloadArtifact,
+          operations,
+          operationErrors,
         })
       )
     );
+    await settleOperations(operations);
+
+    const failedGraph = results.find(result => result.status === 'rejected');
+    if (failedGraph) throw failedGraph.reason;
+    if (operationErrors.length > 0) throw operationErrors[0];
+
+    const entries = results.map(result => result.value);
     return {
       schemaVersion: 1,
       builders: Object.fromEntries(entries.map(entry => [entry.name, entry])),
     };
   } finally {
+    await settleOperations(operations);
     await rm(downloadRoot, { recursive: true, force: true });
   }
 }

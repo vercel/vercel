@@ -102,7 +102,7 @@ describe('microfrontends add-to-group', () => {
     it('prints usage', async () => {
       client.setArgv('microfrontends', 'add-to-group', '--help');
       const exitCode = await microfrontends(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
     });
   });
 

@@ -17,6 +17,16 @@ function makePlan(
 }
 
 describe('formatBillingPlansHelp', () => {
+  it('keeps unsafe plan IDs out of the option suggestion', () => {
+    const result = stripAnsi(
+      formatBillingPlansHelp('Acme', [
+        makePlan({ id: 'plan;echo SAMPLE', name: 'Sample' }),
+      ])
+    );
+    const usage = result.split('\n').find(line => line.startsWith('▲'));
+    expect(usage).toBe('▲ --billing-plan <PLAN>');
+  });
+
   it('should list enabled plans with aligned IDs', () => {
     const plans = [
       makePlan({ id: 'pro', name: 'Pro Plan', cost: '$25/m' }),
@@ -36,8 +46,8 @@ describe('formatBillingPlansHelp', () => {
     ];
     const result = stripAnsi(formatBillingPlansHelp('Acme', plans));
 
-    expect(result).toContain('Usage:');
-    expect(result).toContain('--plan starter');
+    expect(result).toContain('▲');
+    expect(result).toContain('--billing-plan starter');
   });
 
   it('should return empty string when no plans', () => {

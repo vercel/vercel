@@ -1,9 +1,33 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateCommand } from '../../../scripts/smoke-test-binary.mjs';
+import {
+  createSmokeInvocation,
+  evaluateCommand,
+} from '../../../scripts/smoke-test-binary.mjs';
 
 const helpCommand = {
   args: ['deploy', '--help'],
 };
+
+describe('createSmokeInvocation()', () => {
+  it('supports a Node entrypoint and shared CLI suffix arguments', () => {
+    expect(
+      createSmokeInvocation(['deploy', '--help'], {
+        executable: '/node',
+        prefixArgs: ['/install/vercel/dist/vc.js'],
+        suffixArgs: ['--global-config', '/tmp/config'],
+      })
+    ).toEqual({
+      executable: '/node',
+      args: [
+        '/install/vercel/dist/vc.js',
+        'deploy',
+        '--help',
+        '--global-config',
+        '/tmp/config',
+      ],
+    });
+  });
+});
 
 describe('evaluateCommand()', () => {
   it('accepts a successful command with output', () => {

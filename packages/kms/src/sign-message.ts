@@ -1,4 +1,4 @@
-import { postJson, resolveBaseUrl, type FlattenedJWS } from './request';
+import { postJson, resolveBaseUrl } from './request';
 import { resolveOidcToken } from './resolve-token';
 
 /**
@@ -33,15 +33,33 @@ export interface SignMessageOptions {
 }
 
 /**
+ * Result of {@link signMessage}.
+ */
+export interface SignMessageResult {
+  /** Raw signature over the message bytes. */
+  signature: Uint8Array;
+  /** Key id of the signing key. Matches the JWKS `kid`. */
+  keyId: string;
+  /** Algorithm of the signing key. */
+  algorithm: string;
+  /**
+   * SHA-256 fingerprint of the signing key's public key (`SHA256:<base64>`).
+   */
+  fingerprint: string;
+}
+
+/**
  * Signs a message for an issuer using its managed signing key and returns the
- * resulting JOSE Flattened JWS. The message may be provided as raw bytes
- * (`Uint8Array`) or a UTF-8 `string`; it is base64-encoded before being sent.
+ * raw signature over the message bytes, plus the `keyId`, `algorithm`, and
+ * `fingerprint` of the key that produced it. The message may be provided as
+ * raw bytes (`Uint8Array`) or a UTF-8 `string`; it is base64-encoded before
+ * being sent.
  *
  * @throws {import('./errors').VercelKmsError} If the sign request fails.
  */
 export async function signMessage(
   options: SignMessageOptions
-): Promise<FlattenedJWS> {
+): Promise<SignMessageResult> {
   const { issuerId, message, token } = options;
   const baseUrl = resolveBaseUrl({
     region: options.region,
@@ -50,14 +68,19 @@ export async function signMessage(
 
   const oidcToken = await resolveOidcToken({ token });
 
-  const { signature } = await postJson<{ signature: FlattenedJWS }>({
+  const { signature, keyId, algorithm, fingerprint } = await postJson<{
+    signature: string;
+    keyId: string;
+    algorithm: string;
+    fingerprint: string;
+  }>({
     baseUrl,
     path: `/kms/issuers/${encodeURIComponent(issuerId)}/sign/message`,
     token: oidcToken,
     body: { message: toBase64(message) },
   });
 
-  return signature;
+  return { signature: fromBase64(signature), keyId, algorithm, fingerprint };
 }
 
 /**
@@ -70,4 +93,8 @@ function toBase64(message: Uint8Array | string): string {
       ? Buffer.from(message, 'utf-8')
       : Buffer.from(message)
   ).toString('base64');
+}
+
+function fromBase64(value: string): Uint8Array {
+  return new Uint8Array(Buffer.from(value, 'base64'));
 }

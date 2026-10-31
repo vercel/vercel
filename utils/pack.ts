@@ -6,6 +6,7 @@ import {
   hoistRegistryDependenciesFromWorkspaceTarballs,
   pinWorkspacePeerDependencies,
   selectPackageTasks,
+  toSemverPreviewIdentifier,
 } from './pack-task-selection';
 const { getPythonPackages } = require('./get-python-packages.js');
 const { previewTarballFilename } = require('./preview-tarball-filename.js');
@@ -76,7 +77,7 @@ async function main() {
       continue;
     }
     const packageObj = await fs.readJson(packageJsonPath);
-    const previewSha = sha.trim();
+    const previewSha = toSemverPreviewIdentifier(sha.trim());
     packageObj.version += `-${previewSha}`;
     pinWorkspacePeerDependencies(packageObj, workspaceVersions, previewSha);
 

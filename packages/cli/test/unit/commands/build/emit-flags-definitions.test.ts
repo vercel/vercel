@@ -9,28 +9,35 @@ function sha256(input: string): string {
   return createHash('sha256').update(input).digest('hex');
 }
 
-function mockFetch(responses: Array<{ data: unknown; ok?: boolean }>) {
+function mockFetch(
+  responses: Array<{ data: unknown; ok?: boolean; status?: number }>
+) {
   let callIndex = 0;
   const fn = vi.fn(async () => {
     const response = responses[callIndex++];
     const ok = response?.ok ?? true;
+    const status = response?.status ?? (ok ? 200 : 500);
     return {
       ok,
-      status: ok ? 200 : 500,
-      statusText: ok ? 'OK' : 'Internal Server Error',
+      status,
+      statusText: ok ? 'OK' : 'Error',
       json: async () => response?.data,
     } as Response;
   });
   return fn;
 }
 
+const FETCHED_AT = 1700000000000;
+
 let cwd: string;
 
 beforeEach(async () => {
   cwd = await mkdtemp(join(tmpdir(), 'flags-test-'));
+  vi.spyOn(Date, 'now').mockReturnValue(FETCHED_AT);
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await rm(cwd, { recursive: true, force: true });
 });
 
@@ -209,9 +216,9 @@ describe('prepareFlagsDefinitions', () => {
     // Map entry uses hashed key pointing to _d0
     expect(indexJs).toContain(`"${hashedKey}": _d0`);
 
-    // _d0 contains the JSON-serialized definitions
+    // _d0 contains the JSON-serialized definitions plus the fetch time
     expect(indexJs).toContain(
-      `const _d0 = memo(() => JSON.parse(${JSON.stringify(JSON.stringify(definitions))}));`
+      `const _d0 = memo(() => JSON.parse(${JSON.stringify(JSON.stringify({ ...definitions, fetchedAt: FETCHED_AT }))}));`
     );
 
     // Lookup function uses the hashed key parameter
@@ -256,10 +263,10 @@ describe('prepareFlagsDefinitions', () => {
     );
   });
 
-  it('should throw when fetch fails', async () => {
+  it('should throw when fetch fails with a non-retryable status', async () => {
     const sdkKey = 'vf_server_fail_key_abcdef123';
 
-    const fetch = mockFetch([{ data: null, ok: false }]);
+    const fetch = mockFetch([{ data: null, ok: false, status: 401 }]);
 
     await expect(
       prepareFlagsDefinitions({
@@ -268,6 +275,23 @@ describe('prepareFlagsDefinitions', () => {
         fetch,
       })
     ).rejects.toThrow('Failed to fetch flag definitions');
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('should throw after retrying a server error', async () => {
+    const sdkKey = 'vf_server_fail_key_abcdef123';
+    const failure = { data: null, ok: false, status: 500 };
+
+    const fetch = mockFetch([failure, failure, failure, failure]);
+
+    await expect(
+      prepareFlagsDefinitions({
+        cwd,
+        env: { KEY: sdkKey },
+        fetch,
+      })
+    ).rejects.toThrow('Failed to fetch flag definitions');
+    expect(fetch).toHaveBeenCalledTimes(4);
   });
 
   it('should ignore env vars that do not contain SDK keys', async () => {

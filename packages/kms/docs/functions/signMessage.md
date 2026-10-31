@@ -4,13 +4,15 @@
 
 # Function: signMessage()
 
-> **signMessage**(`options`): [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<[`FlattenedJWS`](../interfaces/FlattenedJWS.md)\>
+> **signMessage**(`options`): [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<[`SignMessageResult`](../interfaces/SignMessageResult.md)\>
 
-Defined in: [packages/kms/src/sign-message.ts:42](https://github.com/vercel/vercel/blob/main/packages/kms/src/sign-message.ts#L42)
+Defined in: [packages/kms/src/sign-message.ts:60](https://github.com/vercel/vercel/blob/main/packages/kms/src/sign-message.ts#L60)
 
 Signs a message for an issuer using its managed signing key and returns the
-resulting JOSE Flattened JWS. The message may be provided as raw bytes
-(`Uint8Array`) or a UTF-8 `string`; it is base64-encoded before being sent.
+raw signature over the message bytes, plus the `keyId`, `algorithm`, and
+`fingerprint` of the key that produced it. The message may be provided as
+raw bytes (`Uint8Array`) or a UTF-8 `string`; it is base64-encoded before
+being sent.
 
 ## Parameters
 
@@ -20,7 +22,7 @@ resulting JOSE Flattened JWS. The message may be provided as raw bytes
 
 ## Returns
 
-[`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<[`FlattenedJWS`](../interfaces/FlattenedJWS.md)\>
+[`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<[`SignMessageResult`](../interfaces/SignMessageResult.md)\>
 
 ## Throws
 

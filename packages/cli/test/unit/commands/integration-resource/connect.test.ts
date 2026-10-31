@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import integrationResourceCommand from '../../../../src/commands/integration-resource';
 import integrationCommand from '../../../../src/commands/integration';
+import chars from '../../../../src/util/output/chars';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { useResources } from '../../../mocks/integration';
@@ -52,6 +53,37 @@ describe('integration-resource', () => {
         });
       });
 
+      it('connects a resource selected by its stable ID while retaining confirmation', async () => {
+        const resourceId = 'store_4';
+        const resourceName = 'store-acme-no-projects';
+        const projectName = 'connected-project';
+        useResources();
+        useProject({
+          ...defaultProject,
+          id: 'prj_connected',
+          name: projectName,
+        });
+        const request = mockConnectResourceToProject();
+
+        client.setArgv(
+          'integration-resource',
+          'connect',
+          resourceId,
+          projectName
+        );
+        const exitCodePromise = integrationResourceCommand(client);
+
+        await expect(client.stderr).toOutput(
+          `> The resource ${resourceName} will be connected to project ${projectName} (environments: production, preview, development).`
+        );
+        await expect(client.stderr).toOutput('? Connect? (Y/n)');
+        expect(request.value).toBeUndefined();
+        client.stdin.write('y\n');
+
+        await expect(exitCodePromise).resolves.toEqual(0);
+        expect(request.resourceId).toEqual(resourceId);
+      });
+
       it('connects with selected environments only', async () => {
         useResources();
         const projectName = 'connected-project';
@@ -78,6 +110,125 @@ describe('integration-resource', () => {
         expect(exitCode).toEqual(0);
         expect(requestBody.value).toEqual({
           envVarEnvironments: ['production', 'preview'],
+          projectId: 'prj_connected',
+          type: 'integration',
+        });
+      });
+
+      it('resolves a Custom Environment slug to its stable ID', async () => {
+        useResources();
+        const projectName = 'connected-project';
+        useProject({
+          ...defaultProject,
+          id: 'prj_connected',
+          name: projectName,
+          customEnvironments: [
+            {
+              id: 'env_qa123',
+              slug: 'qa',
+              type: 'preview',
+              createdAt: 1,
+              updatedAt: 1,
+            },
+          ],
+        });
+        const requestBody = mockConnectResourceToProject();
+
+        client.setArgv(
+          'integration-resource',
+          'connect',
+          'store-acme-no-projects',
+          projectName,
+          '--yes',
+          '-e',
+          'qa'
+        );
+        const exitCode = await integrationResourceCommand(client);
+
+        expect(exitCode).toEqual(0);
+        expect(requestBody.value).toEqual({
+          envVarEnvironments: ['env_qa123'],
+          projectId: 'prj_connected',
+          type: 'integration',
+        });
+        await expect(client.stderr).toOutput(
+          '> Success! Connected store-acme-no-projects to connected-project (qa)'
+        );
+      });
+
+      it('accepts a Custom Environment stable ID', async () => {
+        useResources();
+        const projectName = 'connected-project';
+        useProject({
+          ...defaultProject,
+          id: 'prj_connected',
+          name: projectName,
+          customEnvironments: [
+            {
+              id: 'env_qa123',
+              slug: 'qa',
+              type: 'preview',
+              createdAt: 1,
+              updatedAt: 1,
+            },
+          ],
+        });
+        const requestBody = mockConnectResourceToProject();
+
+        client.setArgv(
+          'integration-resource',
+          'connect',
+          'store-acme-no-projects',
+          projectName,
+          '--yes',
+          '-e',
+          'env_qa123'
+        );
+        const exitCode = await integrationResourceCommand(client);
+
+        expect(exitCode).toEqual(0);
+        expect(requestBody.value).toEqual({
+          envVarEnvironments: ['env_qa123'],
+          projectId: 'prj_connected',
+          type: 'integration',
+        });
+      });
+
+      it('connects to system and Custom Environments together', async () => {
+        useResources();
+        const projectName = 'connected-project';
+        useProject({
+          ...defaultProject,
+          id: 'prj_connected',
+          name: projectName,
+          customEnvironments: [
+            {
+              id: 'env_staging123',
+              slug: 'staging',
+              type: 'preview',
+              createdAt: 1,
+              updatedAt: 1,
+            },
+          ],
+        });
+        const requestBody = mockConnectResourceToProject();
+
+        client.setArgv(
+          'integration-resource',
+          'connect',
+          'store-acme-no-projects',
+          projectName,
+          '--yes',
+          '-e',
+          'production',
+          '-e',
+          'staging'
+        );
+        const exitCode = await integrationResourceCommand(client);
+
+        expect(exitCode).toEqual(0);
+        expect(requestBody.value).toEqual({
+          envVarEnvironments: ['production', 'env_staging123'],
           projectId: 'prj_connected',
           type: 'integration',
         });
@@ -237,7 +388,7 @@ describe('integration-resource', () => {
           '--format=json'
         );
         const exitCode = await integrationResourceCommand(client);
-        expect(exitCode).toEqual(1);
+        expect(exitCode).toEqual(2);
         await expect(client.stderr).toOutput(
           'Error: --json requires --yes to skip confirmation prompts'
         );
@@ -274,7 +425,7 @@ describe('integration-resource', () => {
           await expect(client.stderr).toOutput(
             'You must specify a resource. See `--help` for details.'
           );
-          await expect(exitCodePromise).resolves.toEqual(1);
+          await expect(exitCodePromise).resolves.toEqual(2);
         });
 
         it('errors when too many arguments are passed', async () => {
@@ -283,7 +434,7 @@ describe('integration-resource', () => {
           await expect(client.stderr).toOutput(
             'Too many arguments. Usage: `vercel integration resource connect <resource> [project]`.'
           );
-          await expect(exitCodePromise).resolves.toEqual(1);
+          await expect(exitCodePromise).resolves.toEqual(2);
         });
 
         it('errors on invalid --prefix value', async () => {
@@ -300,10 +451,16 @@ describe('integration-resource', () => {
           await expect(client.stderr).toOutput(
             'Error: Invalid --prefix value.'
           );
-          await expect(exitCodePromise).resolves.toEqual(1);
+          await expect(exitCodePromise).resolves.toEqual(2);
         });
 
         it('errors on invalid --environment value', async () => {
+          useResources();
+          useProject({
+            ...defaultProject,
+            id: 'prj_connected',
+            name: 'connected-project',
+          });
           client.setArgv(
             'integration-resource',
             'connect',
@@ -315,9 +472,55 @@ describe('integration-resource', () => {
           );
           const exitCodePromise = integrationResourceCommand(client);
           await expect(client.stderr).toOutput(
-            'Error: Invalid environment value: "staging".'
+            `${chars.fatal} Invalid environment value: "staging".`
           );
           await expect(exitCodePromise).resolves.toEqual(1);
+          expect(client.stderr.getFullOutput()).not.toContain('Error:');
+        });
+
+        it('preserves the server gate for Custom Environment connections', async () => {
+          useResources();
+          useProject({
+            ...defaultProject,
+            id: 'prj_connected',
+            name: 'connected-project',
+            customEnvironments: [
+              {
+                id: 'env_qa123',
+                slug: 'qa',
+                type: 'preview',
+                createdAt: 1,
+                updatedAt: 1,
+              },
+            ],
+          });
+          client.scenario.post(
+            '/:version/storage/stores/:resourceId/connections',
+            (_req, res) => {
+              res.status(403).json({
+                error: {
+                  code: 'forbidden',
+                  message: 'Custom environments are not enabled for this team.',
+                },
+              });
+            }
+          );
+
+          client.setArgv(
+            'integration-resource',
+            'connect',
+            'store-acme-no-projects',
+            'connected-project',
+            '--yes',
+            '-e',
+            'qa'
+          );
+          const exitCode = await integrationResourceCommand(client);
+
+          expect(exitCode).toEqual(1);
+          await expect(client.stderr).toOutput(
+            'A problem occurred while connecting: Custom environments are not enabled for this team.'
+          );
         });
 
         it('errors when the resource does not exist', async () => {
@@ -370,7 +573,7 @@ describe('integration-resource', () => {
             'Error: Cannot connect: env var SHOPIFY_STOREFRONT_ACCESS_TOKEN already exists on project connected-project'
           );
           await expect(client.stderr).toOutput(
-            'Re-run with `--prefix <PREFIX>_` to namespace the new variables, or remove the existing one with `vercel env rm SHOPIFY_STOREFRONT_ACCESS_TOKEN`.'
+            'Re-run with `--prefix <PREFIX>_` to namespace the new variables, or remove the existing one with `vercel env remove SHOPIFY_STOREFRONT_ACCESS_TOKEN`.'
           );
         });
 
@@ -408,16 +611,40 @@ describe('integration-resource', () => {
             ]),
           });
         });
+
+        it('asks for --yes without a terminal before looking anything up', async () => {
+          const fetchSpy = vi.spyOn(client, 'fetch');
+
+          (client.stdin as any).isTTY = false;
+          client.setArgv(
+            'integration-resource',
+            'connect',
+            'store-acme-no-projects',
+            'connected-project'
+          );
+
+          const exitCode = await integrationResourceCommand(client);
+
+          expect(exitCode).toEqual(2);
+          expect(client.stderr.getFullOutput()).toContain(
+            'Error: Connecting a resource without a terminal requires --yes. Re-run: vercel integration-resource connect store-acme-no-projects connected-project --yes'
+          );
+          expect(fetchSpy).not.toHaveBeenCalled();
+        });
       });
     });
   });
 });
 
-function mockConnectResourceToProject(): { value: unknown } {
-  const ref: { value: unknown } = { value: undefined };
+function mockConnectResourceToProject(): {
+  value: unknown;
+  resourceId?: string;
+} {
+  const ref: { value: unknown; resourceId?: string } = { value: undefined };
   client.scenario.post(
     '/:version/storage/stores/:resourceId/connections',
     (req, res) => {
+      ref.resourceId = req.params.resourceId;
       ref.value = req.body;
       res.status(200).json({});
     }

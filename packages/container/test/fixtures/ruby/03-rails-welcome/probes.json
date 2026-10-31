@@ -1,0 +1,13 @@
+{
+  "probes": [
+    {
+      "logMustContain": "Detected Rails application"
+    },
+    {
+      "logMustContain": "Default web process: bundle exec rails server"
+    },
+    {
+      "logMustContain": "Skipping asset precompilation (no assets:precompile task defined)"
+    }
+  ]
+}

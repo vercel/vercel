@@ -26,13 +26,13 @@ export default async function credits(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
@@ -45,7 +45,7 @@ export default async function credits(client: Client, argv: string[]) {
       `Missing credit type. Supported types: ${SUPPORTED_CREDIT_TYPES.join(', ')}`
     );
     output.log(`Run ${getCommandName('buy credits --help')} for usage.`);
-    return 1;
+    return 2;
   }
 
   if (!SUPPORTED_CREDIT_TYPES.includes(creditType as CreditType)) {
@@ -59,7 +59,7 @@ export default async function credits(client: Client, argv: string[]) {
   if (!amountStr) {
     output.error('Missing amount. Please specify the amount in dollars.');
     output.log(`Run ${getCommandName('buy credits --help')} for usage.`);
-    return 1;
+    return 2;
   }
 
   const amount = Number(amountStr);
@@ -67,13 +67,13 @@ export default async function credits(client: Client, argv: string[]) {
     output.error(
       `Invalid amount "${amountStr}". Please specify a whole number (in dollars).`
     );
-    return 1;
+    return 2;
   }
   if (amount <= 0) {
     output.error(
       `Invalid amount "${amountStr}". Please specify a positive amount in dollars.`
     );
-    return 1;
+    return 2;
   }
   // Safety check to prevent accidental large purchases via CLI
   if (amount > MAX_CREDIT_PURCHASE_AMOUNT) {

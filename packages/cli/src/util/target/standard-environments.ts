@@ -3,3 +3,5 @@ export const STANDARD_ENVIRONMENTS = [
   'preview',
   'development',
 ] as const;
+
+export type StandardEnvironment = (typeof STANDARD_ENVIRONMENTS)[number];

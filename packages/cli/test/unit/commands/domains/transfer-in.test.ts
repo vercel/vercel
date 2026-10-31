@@ -23,7 +23,7 @@ describe('domains transfer-in', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = domains(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -42,7 +42,7 @@ describe('domains transfer-in', () => {
         'Error: Missing domain name. Run `vercel domains --help'
       );
       const exitCode = await exitCodePromise;
-      expect(exitCode, 'exit code for "domains"').toEqual(1);
+      expect(exitCode, 'exit code for "domains"').toEqual(2);
     });
   });
 

@@ -9,10 +9,7 @@ dependencies = [
 ]
 
 [tool.setuptools]
-py-modules = ["main", "subscribers"]
+py-modules = ["main", "poll_worker"]
 
 [tool.vercel]
 entrypoint = "main:app"
-
-[[tool.vercel.subscribers]]
-entrypoint = "subscribers"

@@ -28,7 +28,7 @@ export default async function unblock(client: Client, argv: string[]) {
   const identifier = parsed.args[0];
   if (!identifier) {
     output.error('Missing required argument: <id-or-ip>');
-    return 1;
+    return 2;
   }
 
   const scope = await resolveFirewallScope(client, parsed.flags);

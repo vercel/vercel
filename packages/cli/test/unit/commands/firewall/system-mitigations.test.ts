@@ -46,7 +46,7 @@ describe('firewall system-mitigations', () => {
     it('tracks help telemetry', async () => {
       client.setArgv('firewall', 'system-mitigations', 'pause', '--help');
       const exitCode = await firewall(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
     });
   });
 

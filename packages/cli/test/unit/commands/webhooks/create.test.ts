@@ -28,7 +28,7 @@ describe('webhooks create', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = webhooks(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -184,7 +184,7 @@ describe('webhooks create', () => {
         message: expect.stringMatching(/created/),
         next: expect.any(Array),
       });
-      expect(payload.next[0].command).toMatch(/^vercel webhooks get /);
+      expect(payload.next[0].command).toMatch(/^vercel webhooks inspect /);
       expect(payload.next[0].command).not.toMatch(/`|\\u001b/);
     });
   });

@@ -3,7 +3,7 @@ import type Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import formatDate from '../../util/format-date';
 import getWebhook from '../../util/webhooks/get-webhook';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import { validateJsonOutput } from '../../util/output-format';
@@ -28,7 +28,7 @@ export default async function get(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
   const [webhookId] = args;
@@ -45,14 +45,16 @@ export default async function get(client: Client, argv: string[]) {
           message: 'Webhook ID is required. Provide ID as the first argument.',
           next: [
             { command: getCommandNamePlain('webhooks ls') },
-            { command: getCommandNamePlain('webhooks get <id>') },
+            { command: getCommandNamePlain('webhooks inspect <id>') },
           ],
         },
-        1
+        2
       );
     }
-    output.error(`${getCommandName(`webhooks get <id>`)} expects one argument`);
-    return 1;
+    output.error(
+      `${getCommandName(`webhooks inspect <id>`)} expects one argument`
+    );
+    return 2;
   }
 
   telemetry.trackCliArgumentId(webhookId);
@@ -61,22 +63,22 @@ export default async function get(client: Client, argv: string[]) {
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput || client.nonInteractive;
 
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('webhooks get <id>')}`
+        `${getCommandName('webhooks inspect <id>')}`
       )}`
     );
-    return 1;
+    return 2;
   }
 
   output.debug(`Fetching webhook info`);
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
   if (!client.nonInteractive) {
     output.spinner(
       `Fetching Webhook ${webhookId} under ${chalk.bold(contextName)}`
@@ -117,8 +119,10 @@ export default async function get(client: Client, argv: string[]) {
           message: `Webhook ${webhookId} found.`,
           next: [
             {
-              command: getCommandNamePlain(`webhooks rm ${webhookId} --yes`),
-              when: 'Remove this webhook',
+              command: getCommandNamePlain(
+                `webhooks delete ${webhookId} --yes`
+              ),
+              when: 'Delete this webhook',
             },
           ],
         }

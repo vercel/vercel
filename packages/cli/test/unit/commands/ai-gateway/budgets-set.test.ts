@@ -4,6 +4,7 @@ import aiGateway from '../../../../src/commands/ai-gateway';
 import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
 import { useProject, defaultProject } from '../../../mocks/project';
+import { expectDeprecationInJson } from '../../../helpers/deprecation-warning';
 
 const teamBudget = {
   quotaEntityId: 'team_abc',
@@ -89,12 +90,36 @@ function useTeamMembers(teamId: string, members = [teamMember]) {
   });
 }
 
+function useListDefaults(defaults: unknown[]) {
+  client.scenario.get('/ai-gateway/budgets/defaults/list', (_req, res) => {
+    res.json({ defaults });
+  });
+}
+
+function useUpsertDefault(response: unknown) {
+  let captured: unknown;
+  client.scenario.put('/ai-gateway/budgets/defaults', (req, res) => {
+    captured = req.body;
+    res.json(response);
+  });
+  return () => captured;
+}
+
+const userDefaultRow = {
+  scopeType: 'user',
+  limitAmount: 50,
+  refreshPeriod: 'monthly',
+  active: true,
+  createdAt: 1,
+  updatedAt: 2,
+};
+
 describe('ai-gateway budgets set', () => {
   describe('--help', () => {
     it('returns exit code 2', async () => {
       client.setArgv('ai-gateway', 'budgets', 'set', '--help');
       const exitCode = await aiGateway(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:budgets', value: 'budgets' },
@@ -168,7 +193,7 @@ describe('ai-gateway budgets set', () => {
     const exitCodePromise = aiGateway(client);
 
     await expect(client.stderr).toOutput('--limit');
-    expect(await exitCodePromise).toBe(1);
+    expect(await exitCodePromise).toBe(2);
   });
 
   it('rejects an invalid --refresh-period', async () => {
@@ -186,7 +211,7 @@ describe('ai-gateway budgets set', () => {
     const exitCodePromise = aiGateway(client);
 
     await expect(client.stderr).toOutput('--refresh-period');
-    expect(await exitCodePromise).toBe(1);
+    expect(await exitCodePromise).toBe(2);
   });
 
   it('outputs JSON with --format json', async () => {
@@ -217,7 +242,7 @@ describe('ai-gateway budgets set', () => {
     const exitCodePromise = aiGateway(client);
 
     await expect(client.stderr).toOutput('Expected a scope');
-    expect(await exitCodePromise).toBe(1);
+    expect(await exitCodePromise).toBe(2);
   });
 
   it('rejects an unknown scope', async () => {
@@ -226,7 +251,7 @@ describe('ai-gateway budgets set', () => {
     const exitCodePromise = aiGateway(client);
 
     await expect(client.stderr).toOutput('Unknown scope');
-    expect(await exitCodePromise).toBe(1);
+    expect(await exitCodePromise).toBe(2);
   });
 
   it('sets an api-key budget via the key id', async () => {
@@ -353,13 +378,38 @@ describe('ai-gateway budgets set', () => {
     expect(await exitCodePromise).toBe(1);
   });
 
+  it('does not set a budget for a partial email match', async () => {
+    const team = useTeam();
+    useUser();
+    useTeamMembers(team.id, [
+      { ...teamMember, email: 'joann@example.com', username: 'joann' },
+    ]);
+    const getBody = useSetBudget();
+    client.config.currentTeam = team.id;
+    client.setArgv(
+      'ai-gateway',
+      'budgets',
+      'set',
+      'user',
+      'ann@example.com',
+      '--limit',
+      '100'
+    );
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput('Team member not found');
+    expect(await exitCodePromise).toBe(1);
+    expect(getBody()).toBeUndefined();
+  });
+
   it('requires a user identifier', async () => {
     client.setArgv('ai-gateway', 'budgets', 'set', 'user', '--limit', '100');
 
     const exitCodePromise = aiGateway(client);
 
     await expect(client.stderr).toOutput('user scope requires');
-    expect(await exitCodePromise).toBe(1);
+    expect(await exitCodePromise).toBe(2);
   });
 
   it('rejects a name on the team scope', async () => {
@@ -376,7 +426,7 @@ describe('ai-gateway budgets set', () => {
     const exitCodePromise = aiGateway(client);
 
     await expect(client.stderr).toOutput('team scope does not take a name');
-    expect(await exitCodePromise).toBe(1);
+    expect(await exitCodePromise).toBe(2);
   });
 
   it('requires a project name', async () => {
@@ -385,6 +435,195 @@ describe('ai-gateway budgets set', () => {
     const exitCodePromise = aiGateway(client);
 
     await expect(client.stderr).toOutput('project scope requires');
-    expect(await exitCodePromise).toBe(1);
+    expect(await exitCodePromise).toBe(2);
+  });
+
+  describe('--default', () => {
+    it('sets the per-user default budget', async () => {
+      const team = useTeam();
+      useUser();
+      useListDefaults([]);
+      const getBody = useUpsertDefault(userDefaultRow);
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'budgets',
+        'set',
+        'user',
+        '--default',
+        '--limit',
+        '50',
+        '--refresh-period',
+        'monthly'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput('Set default');
+      await expect(client.stderr).toOutput('every team member');
+      expect(await exitCodePromise).toBe(0);
+      expect(getBody()).toMatchObject({
+        scopeType: 'user',
+        limitAmount: 50,
+        refreshPeriod: 'monthly',
+      });
+    });
+
+    it('omits refreshPeriod when not passed (the server preserves the cadence)', async () => {
+      const team = useTeam();
+      useUser();
+      const getBody = useUpsertDefault(userDefaultRow);
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'budgets',
+        'set',
+        'user',
+        '--default',
+        '--limit',
+        '75'
+      );
+
+      const exitCode = await aiGateway(client);
+
+      expect(exitCode).toBe(0);
+      expect(getBody()).toMatchObject({
+        scopeType: 'user',
+        limitAmount: 75,
+      });
+      expect(getBody()).not.toHaveProperty('refreshPeriod');
+    });
+
+    it('sets the per-api-key default budget', async () => {
+      const team = useTeam();
+      useUser();
+      useListDefaults([]);
+      const getBody = useUpsertDefault({
+        ...userDefaultRow,
+        scopeType: 'api-key',
+      });
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'budgets',
+        'set',
+        'api-key',
+        '--default',
+        '--limit',
+        '25'
+      );
+
+      const exitCode = await aiGateway(client);
+
+      expect(exitCode).toBe(0);
+      expect(getBody()).toMatchObject({
+        scopeType: 'api-key',
+        limitAmount: 25,
+      });
+    });
+
+    it('rejects --default on the team scope', async () => {
+      client.setArgv(
+        'ai-gateway',
+        'budgets',
+        'set',
+        'team',
+        '--default',
+        '--limit',
+        '100'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput(
+        'team scope does not support --default'
+      );
+      expect(await exitCodePromise).toBe(2);
+    });
+
+    it('rejects --default together with a name', async () => {
+      client.setArgv(
+        'ai-gateway',
+        'budgets',
+        'set',
+        'user',
+        teamMember.email,
+        '--default',
+        '--limit',
+        '50'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput('either a name or --default');
+      expect(await exitCodePromise).toBe(2);
+    });
+
+    it('points a bare named scope at --default', async () => {
+      client.setArgv('ai-gateway', 'budgets', 'set', 'user', '--limit', '50');
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput('Pass --default');
+      expect(await exitCodePromise).toBe(2);
+    });
+  });
+});
+
+describe('ai-gateway budgets set --amount', () => {
+  async function run(...args: string[]) {
+    client.reset();
+    const team = useTeam();
+    useUser();
+    const getBody = useSetBudget();
+    client.config.currentTeam = team.id;
+    client.setArgv('ai-gateway', 'budgets', 'set', 'team', ...args);
+    const exitCode = await aiGateway(client);
+    return {
+      exitCode,
+      body: getBody(),
+      stdout: client.stdout.getFullOutput(),
+      stderr: client.stderr.getFullOutput(),
+    };
+  }
+
+  it('still accepts --limit, with one warning that names --amount', async () => {
+    const now = await run('--amount', '500');
+    const before = await run('--limit', '500');
+
+    expect(now.exitCode).toBe(0);
+    expect(now.body).toMatchObject({ limitAmount: 500 });
+    expect(now.stderr).not.toContain('deprecated');
+    expect(before.exitCode).toBe(now.exitCode);
+    expect(before.body).toEqual(now.body);
+    expect(before.stdout).toBe(now.stdout);
+    expect(before.stderr.match(/deprecated/g)).toHaveLength(1);
+    expect(before.stderr).toContain('! --limit is deprecated. Use --amount.\n');
+
+    const nowJson = await run('--amount', '500', '--json');
+    const beforeJson = await run('--limit', '500', '--json');
+    expectDeprecationInJson(
+      beforeJson.stdout,
+      nowJson.stdout,
+      '--limit is deprecated. Use --amount.'
+    );
+    expect(beforeJson.stderr).not.toContain('deprecated');
+  });
+
+  it('requires an amount', async () => {
+    const result = await run();
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain(
+      'The --amount option is required and must be at least 1.'
+    );
+  });
+
+  it('rejects --amount with --limit before any request', async () => {
+    const result = await run('--amount', '500', '--limit', '500');
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain("Can't use --amount with --limit.");
+    expect(result.body).toBeUndefined();
   });
 });

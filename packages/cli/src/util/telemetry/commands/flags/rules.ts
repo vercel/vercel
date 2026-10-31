@@ -1,7 +1,8 @@
 import { TelemetryClient } from '../..';
-import { STANDARD_ENVIRONMENTS } from '../../../target/standard-environments';
-
-type StandardEnvironment = (typeof STANDARD_ENVIRONMENTS)[number];
+import {
+  STANDARD_ENVIRONMENTS,
+  type StandardEnvironment,
+} from '../../../target/standard-environments';
 
 export class FlagsRulesTelemetryClient extends TelemetryClient {
   trackCliSubcommandList(actual: string) {
@@ -139,6 +140,15 @@ export class FlagsRulesCommandTelemetryClient extends TelemetryClient {
     if (stages?.length) {
       this.trackCliOption({
         option: 'stage',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionFinalPercentage(percentage: string | undefined) {
+    if (percentage !== undefined) {
+      this.trackCliOption({
+        option: 'final-percentage',
         value: this.redactedValue,
       });
     }

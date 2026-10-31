@@ -6,8 +6,8 @@ export class TeamsListTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof listSubcommand>
 {
-  trackCliOptionNext(value: number | undefined) {
-    if (value && value > 0) {
+  trackCliOptionNext(value: string | undefined) {
+    if (value && Number(value) > 0) {
       this.trackCliOption({
         option: 'next',
         value: this.redactedValue,

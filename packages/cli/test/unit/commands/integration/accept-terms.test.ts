@@ -87,13 +87,13 @@ describe('integration', () => {
         '--non-interactive'
       );
 
-      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+      await expect(integrationCommand(client)).rejects.toThrow('exit:2');
       const errPayload = JSON.parse(client.stdout.getFullOutput().trim());
       expect(errPayload.message).toMatch(/browser/);
     });
 
-    it('rejects the legacy --yes flag', async () => {
-      useIntegration({
+    it('rejects --yes for integrations other than neon', async () => {
+      const { installRequestBodies } = useIntegration({
         withInstallation: false,
         ownerId: team.id,
       });
@@ -101,10 +101,37 @@ describe('integration', () => {
       client.setArgv('integration', 'accept-terms', 'acme', '--yes');
       const code = await integrationCommand(client);
 
-      expect(code).toBe(1);
+      expect(code).toBe(2);
+      expect(installRequestBodies).toHaveLength(0);
       expect(client.stderr.getFullOutput()).toContain(
-        'unknown or unexpected option: --yes'
+        'The --yes option is not supported for integration "acme"'
       );
+    });
+
+    it('accepts terms with --yes for neon in non-interactive mode', async () => {
+      const { installRequestBodies } = useIntegration({
+        withInstallation: false,
+        ownerId: team.id,
+      });
+
+      client.nonInteractive = true;
+      client.setArgv(
+        'integration',
+        'accept-terms',
+        'neon',
+        '--yes',
+        '--non-interactive'
+      );
+
+      const code = await integrationCommand(client);
+      expect(code).toBe(0);
+      expect(installRequestBodies).toHaveLength(1);
+      expect(installRequestBodies[0]).toMatchObject({
+        acceptedPolicies: { toc: expect.any(String) },
+      });
+
+      const out = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(out).toMatchObject({ integration: 'neon', installed: true });
     });
 
     describe('--help', () => {

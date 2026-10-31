@@ -5,20 +5,43 @@ import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
 import { useTeam } from '../../mocks/team';
 import { setupTmpDir } from '../../helpers/setup-unit-fixture';
-import getScope from '../../../src/util/get-scope';
+import getScope, { getContextName } from '../../../src/util/get-scope';
+import {
+  TEAM_SLUG_TTL_MS,
+  setCachedTeamSlug,
+} from '../../../src/util/teams/team-name-cache';
 import { introspectToken } from '../../../src/util/introspect-token';
+import {
+  readGlobalConfigFile,
+  writeGlobalConfigFile,
+} from '@vercel/cli-config';
+
+vi.mock('@vercel/cli-config', async importOriginal => ({
+  ...(await importOriginal<typeof import('@vercel/cli-config')>()),
+  readGlobalConfigFile: vi.fn(),
+  writeGlobalConfigFile: vi.fn(),
+}));
 
 vi.mock('../../../src/util/introspect-token', () => ({
   introspectToken: vi.fn(),
 }));
 
 const introspectTokenMock = vi.mocked(introspectToken);
+const readConfigMock = vi.mocked(readGlobalConfigFile);
+const writeConfigMock = vi.mocked(writeGlobalConfigFile);
 
 describe('getScope', () => {
   let mockTeam: ReturnType<typeof useTeam>;
   let mockUser: ReturnType<typeof useUser>;
   beforeEach(() => {
     mockTeam = useTeam();
+    readConfigMock.mockReset().mockReturnValue({});
+    writeConfigMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
 
   describe('non-northstar', () => {
@@ -280,6 +303,140 @@ describe('getScope', () => {
         team: { id: mockTeam.id, slug: mockTeam.slug },
       });
       await expect(getScope(client)).rejects.toMatchObject({ status: 401 });
+    });
+  });
+});
+
+describe('getContextName', () => {
+  const setCachedTeamSlugMock = vi.mocked(setCachedTeamSlug);
+
+  beforeEach(() => {
+    readConfigMock.mockReset().mockReturnValue({});
+    writeConfigMock.mockReset();
+    setCachedTeamSlugMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  function saveTeamName(teamId: string, slug: string, savedAt = Date.now()) {
+    client.config = {
+      ...client.config,
+      currentTeam: teamId,
+      cachedTeamSlugs: { [teamId]: { slug, savedAt } },
+    } as typeof client.config;
+  }
+
+  it('uses the saved team name without API requests', async () => {
+    saveTeamName('team_saved', 'saved-team');
+    const fetch = vi.spyOn(client, 'fetch');
+
+    await expect(getContextName(client)).resolves.toBe('saved-team');
+    expect(fetch).not.toHaveBeenCalled();
+    expect(setCachedTeamSlugMock).not.toHaveBeenCalled();
+  });
+
+  it('looks the team up and saves its name when none is saved', async () => {
+    useUser();
+    const mockTeam = useTeam();
+    client.config.currentTeam = mockTeam.id;
+
+    await expect(getContextName(client)).resolves.toBe(mockTeam.slug);
+    expect(setCachedTeamSlugMock).toHaveBeenCalledExactlyOnceWith(
+      client,
+      mockTeam.id,
+      mockTeam.slug
+    );
+  });
+
+  it('looks the team up again once the saved name has expired', async () => {
+    useUser();
+    const mockTeam = useTeam();
+    saveTeamName(mockTeam.id, 'old-name', Date.now() - TEAM_SLUG_TTL_MS);
+
+    await expect(getContextName(client)).resolves.toBe(mockTeam.slug);
+    expect(setCachedTeamSlugMock).toHaveBeenCalledExactlyOnceWith(
+      client,
+      mockTeam.id,
+      mockTeam.slug
+    );
+  });
+
+  it('does not use a name saved for a different team', async () => {
+    useUser();
+    const mockTeam = useTeam();
+    saveTeamName('team_other', 'other-team');
+    client.config.currentTeam = mockTeam.id;
+
+    await expect(getContextName(client)).resolves.toBe(mockTeam.slug);
+  });
+
+  it('does not save a name for a personal account', async () => {
+    const mockUser = useUser();
+
+    await expect(getContextName(client)).resolves.toBe(mockUser.username);
+    expect(setCachedTeamSlugMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'flag',
+    'env',
+  ] as const)('ignores saved names for a token from %s', async tokenSource => {
+    useUser();
+    const mockTeam = useTeam();
+    saveTeamName(mockTeam.id, 'saved-team');
+    client.authConfig = { ...client.authConfig, tokenSource };
+
+    await expect(getContextName(client)).resolves.toBe(mockTeam.slug);
+    expect(setCachedTeamSlugMock).not.toHaveBeenCalled();
+  });
+
+  describe('with resolveLocalScope', () => {
+    it('uses the saved team name in an unlinked directory', async () => {
+      client.cwd = setupTmpDir();
+      saveTeamName('team_saved', 'saved-team');
+      const fetch = vi.spyOn(client, 'fetch');
+
+      await expect(
+        getContextName(client, { resolveLocalScope: true })
+      ).resolves.toBe('saved-team');
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('looks the team up in a linked directory instead of using a saved name', async () => {
+      useUser();
+      const linkedTeam = useTeam('team_linked');
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+      saveTeamName(linkedTeam.id, 'stale-name');
+      await outputFile(
+        join(cwd, '.vercel', 'project.json'),
+        JSON.stringify({ orgId: linkedTeam.id, projectId: 'prj_linked' })
+      );
+
+      await expect(
+        getContextName(client, { resolveLocalScope: true })
+      ).resolves.toBe(linkedTeam.slug);
+      expect(client.config.currentTeam).toBe(linkedTeam.id);
+    });
+
+    it('uses the saved name of an explicit scope in a linked directory', async () => {
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+      saveTeamName('team_scoped', 'scoped-team');
+      client.setArgv('project', 'ls', '--scope', 'scoped-team');
+      await outputFile(
+        join(cwd, '.vercel', 'project.json'),
+        JSON.stringify({ orgId: 'team_linked', projectId: 'prj_linked' })
+      );
+      const fetch = vi.spyOn(client, 'fetch');
+
+      await expect(
+        getContextName(client, { resolveLocalScope: true })
+      ).resolves.toBe('scoped-team');
+      expect(fetch).not.toHaveBeenCalled();
     });
   });
 });

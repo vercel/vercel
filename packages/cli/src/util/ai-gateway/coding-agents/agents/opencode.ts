@@ -41,9 +41,11 @@ export const opencode: CodingAgent = {
     const envExports: EnvExport[] = ctx.useKeychain
       ? [{ name: GATEWAY_API_KEY_ENV, value: ctx.apiKey }]
       : [];
-    const notes = [
-      'OpenCode can now use the Vercel AI Gateway; pick a model like vercel/<creator>/<model>.',
-    ];
+    const notes = ctx.tokenPass
+      ? []
+      : [
+          'OpenCode can now use the Vercel AI Gateway; pick a model like vercel/<creator>/<model>.',
+        ];
     if (ctx.useKeychain) {
       notes.push(
         `Open a new terminal so ${GATEWAY_API_KEY_ENV} is loaded (Keychain-backed).`

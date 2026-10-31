@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import type { Project } from '@vercel-internals/types';
 import type Client from '../../util/client';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import {
@@ -14,10 +14,11 @@ import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import output from '../../output-manager';
 import { DeployHooksCreateTelemetryClient } from '../../util/telemetry/commands/deploy-hooks/create';
 import { createSubcommand } from './command';
-import { parseArguments } from '../../util/get-args';
+import { getTypedOptionName, parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { isAPIError } from '../../util/errors-ts';
+import { applyDeprecatedGitBranchFlag } from '../../util/git-branch-option';
 
 export default async function create(client: Client, argv: string[]) {
   const telemetry = new DeployHooksCreateTelemetryClient({
@@ -39,22 +40,45 @@ export default async function create(client: Client, argv: string[]) {
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: error instanceof Error ? error.message : String(error),
         },
-        1
+        2
       );
     }
     printError(error);
-    return 1;
+    return 2;
   }
 
   const { args, flags: opts } = parsedArgs;
   let [nameArg] = args;
-  let ref = opts['--ref'] as string | undefined;
 
   telemetry.trackCliArgumentName(nameArg);
-  telemetry.trackCliOptionRef(ref);
+  telemetry.trackCliOptionGitBranch(opts['--git-branch']);
+  telemetry.trackCliOptionRef(opts['--ref']);
   telemetry.trackCliOptionProject(opts['--project'] as string | undefined);
 
-  const { contextName } = await getScope(client);
+  const branchError = applyDeprecatedGitBranchFlag(
+    client,
+    opts,
+    '--ref',
+    getTypedOptionName(argv, flagsSpecification, '--ref')
+  );
+  if (branchError) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: branchError,
+        },
+        2
+      );
+    }
+    output.error(branchError);
+    return 2;
+  }
+  let ref = opts['--git-branch'];
+
+  const contextName = await getContextName(client);
 
   if (!client.nonInteractive) {
     output.spinner(`Loading project under ${chalk.bold(contextName)}`);
@@ -87,11 +111,11 @@ export default async function create(client: Client, argv: string[]) {
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message,
         },
-        1
+        2
       );
     }
     output.error(message);
-    return 1;
+    return 2;
   }
 
   if (!nameArg) {
@@ -106,12 +130,12 @@ export default async function create(client: Client, argv: string[]) {
           next: [
             {
               command: getCommandNamePlain(
-                'deploy-hooks create <name> --ref <branch>'
+                'deploy-hooks create <name> --git-branch <BRANCH>'
               ),
             },
           ],
         },
-        1
+        2
       );
     }
     nameArg = await client.input.text({
@@ -143,16 +167,16 @@ export default async function create(client: Client, argv: string[]) {
           status: 'error',
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message:
-            'Git branch ref is required in non-interactive mode. Pass `--ref <branch>`.',
+            'Git branch is required in non-interactive mode. Pass `--git-branch <BRANCH>`.',
           next: [
             {
               command: getCommandNamePlain(
-                `deploy-hooks create ${name} --ref <branch>`
+                `deploy-hooks create ${name} --git-branch <BRANCH>`
               ),
             },
           ],
         },
-        1
+        2
       );
     }
     ref = await client.input.text({

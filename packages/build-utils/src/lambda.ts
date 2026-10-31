@@ -1,4 +1,5 @@
 import assert from 'assert';
+import { validateMaxConcurrency } from './max-concurrency';
 import Sema from 'async-sema';
 import { ZipFile } from 'yazl';
 import minimatch from 'minimatch';
@@ -6,6 +7,7 @@ import { readlink } from 'fs-extra';
 import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
 import type {
+  BuilderFunctions,
   Config,
   Env,
   Files,
@@ -128,6 +130,7 @@ export interface LambdaOptionsWithZipBuffer extends LambdaOptionsBase {
 interface GetLambdaOptionsFromFunctionOptions {
   sourceFile: string;
   config?: Pick<Config, 'functions' | 'serviceName'>;
+  isScheduleEntrypoint?: boolean;
 }
 
 function getDefaultLambdaArchitecture(
@@ -289,12 +292,7 @@ export class Lambda {
       );
     }
 
-    if (maxConcurrency !== undefined) {
-      assert(
-        Number.isInteger(maxConcurrency) && maxConcurrency >= 1,
-        '"maxConcurrency" must be an integer greater than or equal to 1'
-      );
-    }
+    validateMaxConcurrency(maxConcurrency);
 
     if (allowQuery !== undefined) {
       assert(Array.isArray(allowQuery), '"allowQuery" is not an Array');
@@ -561,9 +559,35 @@ export async function createZip(files: Files): Promise<Buffer> {
   return zipBuffer;
 }
 
+/**
+ * Find the `functions` entry that applies to a function. Candidates are tried
+ * in order, and for each candidate the first matching pattern wins.
+ */
+export function findMatchingFunction(
+  functions: BuilderFunctions | undefined,
+  candidates: readonly string[]
+):
+  | {
+      sourceFile: string;
+      pattern: string;
+      functionConfig: BuilderFunctions[string];
+    }
+  | undefined {
+  if (!functions) return undefined;
+  for (const sourceFile of candidates) {
+    for (const [pattern, functionConfig] of Object.entries(functions)) {
+      if (sourceFile === pattern || minimatch(sourceFile, pattern)) {
+        return { sourceFile, pattern, functionConfig };
+      }
+    }
+  }
+  return undefined;
+}
+
 export async function getLambdaOptionsFromFunction({
   sourceFile,
   config,
+  isScheduleEntrypoint = false,
 }: GetLambdaOptionsFromFunctionOptions): Promise<
   Pick<
     LambdaOptions,
@@ -578,57 +602,72 @@ export async function getLambdaOptionsFromFunction({
     | 'supportsCancellation'
   >
 > {
-  if (config?.functions) {
+  const match = findMatchingFunction(config?.functions, [sourceFile]);
+  if (match) {
+    const { pattern, functionConfig: fn } = match;
     // `pattern` is service-root-relative, so two services sharing a function
     // path would derive the same consumer; scope it by service name.
     const serviceName =
-      typeof config.serviceName === 'string' && config.serviceName !== ''
+      typeof config?.serviceName === 'string' && config.serviceName !== ''
         ? config.serviceName
         : undefined;
-    for (const [pattern, fn] of Object.entries(config.functions)) {
-      if (sourceFile === pattern || minimatch(sourceFile, pattern)) {
-        const consumer = sanitizeConsumerName(
-          serviceName ? `${serviceName}~${pattern}` : pattern
-        );
-        const experimentalTriggers: TriggerEvent[] | undefined =
-          fn.experimentalTriggers?.map(
-            (trigger: TriggerEventInput): TriggerEvent => {
-              if (trigger.type === 'queue/v2beta') {
-                return {
-                  ...trigger,
-                  consumer,
-                };
-              }
-              return trigger;
-            }
-          );
-
-        // User-configured functions can only have one v2beta trigger.
-        // Services may attach multiple triggers programmatically.
-        if (
-          experimentalTriggers &&
-          experimentalTriggers.length > 1 &&
-          experimentalTriggers.some(t => t.type === 'queue/v2beta')
-        ) {
-          throw new Error(
-            `functions["${pattern}"].experimentalTriggers can only have one item for queue/v2beta`
-          );
+    const consumer = sanitizeConsumerName(
+      serviceName ? `${serviceName}~${pattern}` : pattern
+    );
+    const experimentalTriggers: TriggerEvent[] | undefined =
+      fn.experimentalTriggers?.map(
+        (trigger: TriggerEventInput): TriggerEvent => {
+          if (trigger.type === 'queue/v2beta') {
+            return {
+              ...trigger,
+              consumer,
+            };
+          }
+          return trigger;
         }
+      );
 
-        return {
-          architecture: fn.architecture,
-          memory: fn.memory,
-          maxDuration: fn.maxDuration,
-          affinity: fn.affinity,
-          maxConcurrency: fn.maxConcurrency,
-          regions: fn.regions,
-          functionFailoverRegions: fn.functionFailoverRegions,
-          experimentalTriggers,
-          supportsCancellation: fn.supportsCancellation,
-        };
-      }
+    // User-configured functions can only have one v2beta trigger.
+    // Services may attach multiple triggers programmatically.
+    if (
+      experimentalTriggers &&
+      experimentalTriggers.length > 1 &&
+      experimentalTriggers.some(t => t.type === 'queue/v2beta')
+    ) {
+      throw new Error(
+        `functions["${pattern}"].experimentalTriggers can only have one item for queue/v2beta`
+      );
     }
+
+    if (
+      isScheduleEntrypoint &&
+      experimentalTriggers !== undefined &&
+      !(
+        experimentalTriggers.length === 1 &&
+        experimentalTriggers[0]?.type === 'schedule/v1beta'
+      )
+    ) {
+      throw new Error(
+        `functions["${pattern}"].experimentalTriggers conflicts with the schedule entrypoint trigger`
+      );
+    }
+
+    return {
+      architecture: fn.architecture,
+      memory: fn.memory,
+      maxDuration: fn.maxDuration,
+      affinity: fn.affinity,
+      maxConcurrency: fn.maxConcurrency,
+      regions: fn.regions,
+      functionFailoverRegions: fn.functionFailoverRegions,
+      experimentalTriggers: isScheduleEntrypoint
+        ? [{ type: 'schedule/v1beta' }]
+        : experimentalTriggers,
+      supportsCancellation: fn.supportsCancellation,
+    };
   }
 
-  return {};
+  return isScheduleEntrypoint
+    ? { experimentalTriggers: [{ type: 'schedule/v1beta' }] }
+    : {};
 }

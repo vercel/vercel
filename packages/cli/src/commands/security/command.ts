@@ -25,12 +25,12 @@ export const checkSubcommand = {
     },
     {
       name: 'limit',
-      shorthand: null,
+      shorthand: 'n',
       type: Number,
       argument: 'N',
       deprecated: false,
       description:
-        'Max findings listed per check; by default every available finding is listed. Violation counts are always exact even when findings are capped',
+        'Max findings listed per check (default: all). Violation counts are always exact even when findings are capped',
     },
     {
       ...projectOption,

@@ -1,5 +1,11 @@
 # @vercel/routing-utils
 
+## 6.6.0
+
+### Minor Changes
+
+- f8eb285: Fix route ordering so project middleware always runs before builder-generated routes.
+
 ## 6.5.0
 
 ### Minor Changes

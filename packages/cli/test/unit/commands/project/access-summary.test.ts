@@ -157,8 +157,13 @@ describe('access-summary', () => {
         status: 'error',
         reason: 'forbidden',
         message: 'Invalid team plan.',
+        hint: expect.stringContaining('ask a team owner'),
+        retryable: false,
+        userActionRequired: true,
       });
-      expect(Array.isArray(payload.next)).toBe(true);
+      expect(payload.next).toBeUndefined();
+      expect(client.stdout.getFullOutput()).not.toContain('vercel link');
+      expect(client.stderr.getFullOutput()).toBe('');
     });
   });
 

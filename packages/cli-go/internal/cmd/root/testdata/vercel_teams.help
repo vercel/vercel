@@ -1,0 +1,34 @@
+
+  ▲ vercel teams command
+
+  Manage Teams under your Vercel account                                        
+
+  Commands:
+
+  add                Create a new team                                  
+  invite   email     Invite a new member to a team                      
+  list               Show all teams that you're a member of             
+  request  [userId]  Show join-request status for the current team      
+                     (defaults to the authenticated user)               
+  switch   [name]    Switch to a different team                         
+  sso                Show SAML / SSO configuration for the current team 
+  members            List, invite, or remove members from the current   
+                     team                                               
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global `.vercel` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local `vercel.json` file              
+       --no-color             No color mode (default off)                       
+       --non-interactive      Run without interactive prompts; when an agent is 
+                              detected this is the default                      
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+

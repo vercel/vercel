@@ -43,6 +43,7 @@ __pycache__
 .turbo
 .eslintcache
 turbo-cache-key.json
+turbo-host-cache-key.json
 turbo-native-cache-key.json
 turbo-platform-cache-key.json
 junit.xml
@@ -51,6 +52,9 @@ junit.xml
 # CLI "target" subcommand (e.g. vercel target list) is source, not build output
 !packages/cli/src/commands/target/
 !packages/cli/src/commands/target/**
+# CLI target helpers are source, not build output
+!packages/cli/src/util/target/
+!packages/cli/src/util/target/**
 !packages/cli/src/util/telemetry/commands/target/
 !packages/cli/src/util/telemetry/commands/target/**
 # CLI target command tests

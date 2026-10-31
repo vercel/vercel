@@ -1,5 +1,17 @@
 # @vercel/detect-agent
 
+## 1.2.7
+
+### Patch Changes
+
+- f7da501: Add fx and eve to detect-agent supported agents
+
+## 1.2.6
+
+### Patch Changes
+
+- e35da01: Detect OpenCode CLI subprocesses using the `OPENCODE=1` environment marker, in addition to `OPENCODE_CLIENT`.
+
 ## 1.2.5
 
 ### Patch Changes

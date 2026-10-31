@@ -8,11 +8,14 @@ import { apiFetch } from './helpers/api-fetch';
 import fs, { writeFile, readFile, remove, ensureDir } from 'fs-extra';
 import sleep from '../src/util/sleep';
 import waitForPrompt, {
+  waitForDevServerUrl,
   answerTeamPromptThenWait,
   answerTeamPromptThenCreateProject,
 } from './helpers/wait-for-prompt';
+import { waitForPortToAccept } from './helpers/wait-for-port';
 import { execCli } from './helpers/exec';
-import { listTmpDirs } from './helpers/get-tmp-dir';
+import { getCliPath } from './helpers/get-cli-path';
+import { getNewTmpDir, listTmpDirs } from './helpers/get-tmp-dir';
 import { teamPromise, userPromise } from './helpers/get-account';
 import {
   setupE2EFixture,
@@ -26,7 +29,7 @@ import stripAnsi from 'strip-ansi';
 const TEST_TIMEOUT = 3 * 60 * 1000;
 vi.setConfig({ testTimeout: TEST_TIMEOUT, hookTimeout: TEST_TIMEOUT });
 
-const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
+const binaryPath = getCliPath();
 const example = (name: string) =>
   path.join(__dirname, '..', '..', '..', 'examples', name);
 const session = Math.random().toString(36).split('.')[1];
@@ -752,7 +755,7 @@ describe('telemetry submits data', () => {
         cwd: directory,
       });
       expect(mockTelemetryBridgeWasCalled).toEqual(false);
-      expect(output.exitCode, formatOutput(output)).toBe(2);
+      expect(output.exitCode, formatOutput(output)).toBe(0);
 
       await bridgeEventPromise;
       expect(mockTelemetryBridgeWasCalled).toEqual(true);
@@ -771,7 +774,7 @@ describe('telemetry submits data', () => {
         cwd: directory,
       });
       expect(mockTelemetryBridgeWasCalled).toEqual(false);
-      expect(output.exitCode, formatOutput(output)).toBe(2);
+      expect(output.exitCode, formatOutput(output)).toBe(0);
 
       await cleanup();
     });
@@ -789,7 +792,7 @@ describe('telemetry submits data', () => {
         cwd: directory,
       });
       expect(output.stderr).toContain('Telemetry subprocess exited');
-      expect(output.exitCode, formatOutput(output)).toBe(2);
+      expect(output.exitCode, formatOutput(output)).toBe(0);
       expect(mockTelemetryBridgeWasCalled).toEqual(true);
 
       await cleanup();
@@ -806,7 +809,7 @@ describe('telemetry submits data', () => {
         cwd: directory,
       });
       expect(output.stderr).toContain('Failed to send telemetry events');
-      expect(output.exitCode, formatOutput(output)).toBe(2);
+      expect(output.exitCode, formatOutput(output)).toBe(0);
       expect(mockTelemetryBridgeWasCalled).toEqual(true);
 
       await cleanup();
@@ -825,7 +828,7 @@ describe('telemetry submits data', () => {
         cwd: directory,
       });
       expect(output.stderr).toContain('Telemetry event tracked');
-      expect(output.exitCode, formatOutput(output)).toBe(2);
+      expect(output.exitCode, formatOutput(output)).toBe(0);
       expect(mockTelemetryBridgeWasCalled).toEqual(true);
 
       await cleanup();
@@ -1065,7 +1068,8 @@ test('[vc link] should not duplicate paths in .gitignore', async () => {
 
 test('[vc dev] should show prompts to set up project', async () => {
   const dir = await setupE2EFixture('project-link-dev');
-  const port = 58352;
+  // Let the OS reserve a free port atomically rather than racing CI sockets.
+  const port = 0;
   const projectName = `project-link-dev-${
     Math.random().toString(36).split('.')[1]
   }`;
@@ -1080,30 +1084,43 @@ test('[vc dev] should show prompts to set up project', async () => {
     },
   });
 
-  await setupProject(dev, projectName, {
-    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
-    outputDirectory: 'o',
-  });
-
-  // Ensure .gitignore is created
-  const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  expect(gitignore).toBe('.vercel\n');
-
-  // Ensure .vercel/project.json and .vercel/README.txt are created
-  expect(
-    fs.existsSync(path.join(dir, '.vercel', 'project.json')),
-    'project.json'
-  ).toBe(true);
-  expect(
-    fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
-    'README.txt'
-  ).toBe(true);
-
-  await waitForPrompt(dev, 'Ready! Available at');
-
-  // Ensure that `vc dev` also works
+  // Wrap everything from here on in try/finally so that the `dev` child
+  // process is always killed, even if `waitForPortToAccept` below times
+  // out. Otherwise the leaked process keeps holding shared default ports
+  // (e.g. the Queues/Runtime-Cache ports) and contaminates later tests.
   try {
-    const response = await nodeFetch(`http://localhost:${port}/`);
+    await setupProject(dev, projectName, {
+      buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+      outputDirectory: 'o',
+    });
+
+    // Ensure .gitignore is created
+    const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
+    expect(gitignore).toBe('.vercel\n');
+
+    // Ensure .vercel/project.json and .vercel/README.txt are created
+    expect(
+      fs.existsSync(path.join(dir, '.vercel', 'project.json')),
+      'project.json'
+    ).toBe(true);
+    expect(
+      fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
+      'README.txt'
+    ).toBe(true);
+
+    const serverUrl = await waitForDevServerUrl(dev);
+
+    // The readiness message is printed as soon as the server's `listen()`
+    // call resolves, but under CI load there can be a brief window before
+    // the OS socket actually accepts new connections (observed as a
+    // transient ECONNREFUSED). Wait for the port to truly accept a TCP
+    // connection before making the real request below.
+    await waitForPortToAccept(Number(serverUrl.port), {
+      host: serverUrl.hostname,
+    });
+
+    // Ensure that `vc dev` also works
+    const response = await nodeFetch(serverUrl.href);
     const text = await response.text();
     expect(text).toContain('<h1>custom hello</h1>');
   } finally {
@@ -1174,16 +1191,24 @@ test('[vc dev] should send the platform proxy request headers to frontend dev se
     },
   });
 
-  await setupProject(dev, projectName, {
-    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
-    outputDirectory: 'o',
-    devCommand: 'node server.js',
-  });
-
-  await waitForPrompt(dev, 'Ready! Available at');
-
-  // Ensure that `vc dev` also works
+  // Wrap everything from here on in try/finally so that the `dev` child
+  // process is always killed, even if `waitForPortToAccept` below times
+  // out. Otherwise the leaked process keeps holding shared default ports
+  // (e.g. the Queues/Runtime-Cache ports) and contaminates later tests.
   try {
+    await setupProject(dev, projectName, {
+      buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+      outputDirectory: 'o',
+      devCommand: 'node server.js',
+    });
+
+    await waitForPrompt(dev, 'Ready! Available at');
+
+    // See the comment above the equivalent call in the previous test: wait
+    // for the port to actually accept a TCP connection before fetching.
+    await waitForPortToAccept(port);
+
+    // Ensure that `vc dev` also works
     const response = await nodeFetch(`http://localhost:${port}/`);
     const body = await response.json();
     expect(body.headers['x-vercel-deployment-url']).toBe(`localhost:${port}`);
@@ -1603,88 +1628,102 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   });
 });
 
-test('vercel.json configuration overrides in an existing project do not prompt user and correctly apply overrides', async () => {
-  // create project directory and get path to vercel.json
-  const directory = await setupE2EFixture(
-    'vercel-json-configuration-overrides'
-  );
-  const vercelJsonPath = path.join(directory, 'vercel.json');
-
-  async function deploy(autoConfirm = false) {
-    const deployment = await execCli(
-      binaryPath,
-      [directory].concat(autoConfirm ? ['--yes'] : [])
+// Three deploys in a row, the last a remote Next.js build, can exceed the
+// file's 3 minute timeout.
+test(
+  'vercel.json configuration overrides in an existing project do not prompt user and correctly apply overrides',
+  {
+    timeout: 5 * 60 * 1000,
+  },
+  async () => {
+    // Build the project directory in a new temp dir on every attempt, so a
+    // retry does not inherit the files or project link a failed attempt left.
+    // The directory name sets the project name.
+    const directory = path.join(
+      getNewTmpDir(),
+      'vercel-json-configuration-overrides'
     );
-    expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
-    return deployment;
+    await ensureDir(directory);
+    const vercelJsonPath = path.join(directory, 'vercel.json');
+    await writeFile(vercelJsonPath, '{}');
+    await writeFile(path.join(directory, 'package.json'), '{}');
+
+    async function deploy(autoConfirm = false) {
+      const deployment = await execCli(
+        binaryPath,
+        [directory].concat(autoConfirm ? ['--yes'] : [])
+      );
+      expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
+      return deployment;
+    }
+
+    // Step 1. Create a simple static deployment with no configuration.
+    // Deployment should succeed and page should display "0"
+
+    await ensureDir(path.join(directory, 'public'));
+    await writeFile(path.join(directory, 'public/index.txt'), '0');
+
+    // auto-confirm this deployment
+    let deployment = await deploy(true);
+
+    const { href } = new URL(deployment.stdout);
+    let page = await nodeFetch(href);
+    let text = await page.text();
+    expect(text).toBe('0');
+
+    // Step 2. Now that the project exists, override the buildCommand and outputDirectory.
+    // The CLI should not prompt the user about the overrides.
+
+    const BUILD_COMMAND = 'mkdir output && echo "1" >> output/index.txt';
+    const OUTPUT_DIRECTORY = 'output';
+
+    await writeFile(
+      vercelJsonPath,
+      JSON.stringify({
+        buildCommand: BUILD_COMMAND,
+        outputDirectory: OUTPUT_DIRECTORY,
+      })
+    );
+
+    deployment = await deploy();
+    page = await nodeFetch(deployment.stdout);
+    text = await page.text();
+    expect(text).toBe('1\n');
+
+    // // Step 3. Do a more complex deployment using a framework this time
+    await ensureDir(`${directory}/pages`);
+    await writeFile(
+      `${directory}/pages/index.js`,
+      `export default () => 'Next.js Test'`
+    );
+    await writeFile(
+      vercelJsonPath,
+      JSON.stringify({
+        framework: 'nextjs',
+      })
+    );
+    await writeFile(
+      `${directory}/package.json`,
+      JSON.stringify({
+        scripts: {
+          dev: 'next',
+          start: 'next start',
+          build: 'next build',
+        },
+        dependencies: {
+          next: 'latest',
+          react: 'latest',
+          'react-dom': 'latest',
+        },
+      })
+    );
+
+    deployment = await deploy();
+    page = await nodeFetch(deployment.stdout);
+    text = await page.text();
+    expect(text).toMatch(/Next\.js Test/);
   }
-
-  // Step 1. Create a simple static deployment with no configuration.
-  // Deployment should succeed and page should display "0"
-
-  await ensureDir(path.join(directory, 'public'));
-  await writeFile(path.join(directory, 'public/index.txt'), '0');
-
-  // auto-confirm this deployment
-  let deployment = await deploy(true);
-
-  const { href } = new URL(deployment.stdout);
-  let page = await nodeFetch(href);
-  let text = await page.text();
-  expect(text).toBe('0');
-
-  // Step 2. Now that the project exists, override the buildCommand and outputDirectory.
-  // The CLI should not prompt the user about the overrides.
-
-  const BUILD_COMMAND = 'mkdir output && echo "1" >> output/index.txt';
-  const OUTPUT_DIRECTORY = 'output';
-
-  await writeFile(
-    vercelJsonPath,
-    JSON.stringify({
-      buildCommand: BUILD_COMMAND,
-      outputDirectory: OUTPUT_DIRECTORY,
-    })
-  );
-
-  deployment = await deploy();
-  page = await nodeFetch(deployment.stdout);
-  text = await page.text();
-  expect(text).toBe('1\n');
-
-  // // Step 3. Do a more complex deployment using a framework this time
-  await ensureDir(`${directory}/pages`);
-  await writeFile(
-    `${directory}/pages/index.js`,
-    `export default () => 'Next.js Test'`
-  );
-  await writeFile(
-    vercelJsonPath,
-    JSON.stringify({
-      framework: 'nextjs',
-    })
-  );
-  await writeFile(
-    `${directory}/package.json`,
-    JSON.stringify({
-      scripts: {
-        dev: 'next',
-        start: 'next start',
-        build: 'next build',
-      },
-      dependencies: {
-        next: 'latest',
-        react: 'latest',
-        'react-dom': 'latest',
-      },
-    })
-  );
-
-  deployment = await deploy();
-  page = await nodeFetch(deployment.stdout);
-  text = await page.text();
-  expect(text).toMatch(/Next\.js Test/);
-});
+);
 
 // The prompt entry point is intentionally hidden, but keep this coverage ready
 // for when advanced project settings return to the interactive flow.

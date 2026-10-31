@@ -6,14 +6,16 @@
 
 > **getVercelOidcToken**(`options?`): [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<`string`\>
 
-Defined in: [packages/oidc/src/get-vercel-oidc-token-with-refresh.ts:96](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token-with-refresh.ts#L96)
+Defined in: [packages/oidc/src/get-vercel-oidc-token-with-refresh.ts:100](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token-with-refresh.ts#L100)
 
-Gets the current OIDC token from the request context or the environment variable.
+Gets the current OIDC token from the request context, the Vercel OIDC token
+file, or the environment variable.
 
 Do not cache this value, as it is subject to change in production!
 
-This function is used to retrieve the OIDC token from the request context or the environment variable.
-It checks for the `x-vercel-oidc-token` header in the request context and falls back to the `VERCEL_OIDC_TOKEN` environment variable if the header is not present.
+It checks for the `x-vercel-oidc-token` header in the request context, then
+reads the file named by `VERCEL_OIDC_TOKEN_FILE` when set, then falls back to
+the `VERCEL_OIDC_TOKEN` environment variable.
 
 Unlike the `getVercelOidcTokenSync` function, this function will refresh the token if it is expired in a development environment.
 
@@ -33,7 +35,7 @@ A promise that resolves to the OIDC token.
 
 ## Throws
 
-If the `x-vercel-oidc-token` header is missing from the request context and the environment variable `VERCEL_OIDC_TOKEN` is not set. If the token
+If no token source is available or the configured file cannot be read. If the token
 is expired in a development environment, will also throw an error if the token cannot be refreshed: no CLI credentials are available, CLI credentials are expired, no project configuration is available
 or the token refresh request fails.
 

@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -10,10 +10,32 @@ const packageRoot = resolve(fileURLToPath(new URL('../', import.meta.url)));
 const binArg = process.argv[2] ?? 'dist-bin/vercel';
 const binPath = isAbsolute(binArg) ? binArg : join(packageRoot, binArg);
 
-// `--help` exits 0 in some command families and 2 (usage) in others. Both are
-// established CLI behavior; the smoke test only cares that the command loaded
-// and printed help, so accept either.
-const HELP_EXIT_CODES = [0, 2];
+/**
+ * @typedef {object} SmokeOptions
+ * @property {string} [displayName]
+ * @property {string} [executable]
+ * @property {string[]} [prefixArgs]
+ * @property {string[]} [suffixArgs]
+ * @property {NodeJS.ProcessEnv} [env]
+ */
+
+/**
+ * @param {string[]} args
+ * @param {SmokeOptions} [options]
+ */
+export function createSmokeInvocation(
+  args,
+  { executable = binPath, prefixArgs = [], suffixArgs = [] } = {}
+) {
+  return {
+    executable,
+    args: [...prefixArgs, ...args, ...suffixArgs],
+  };
+}
+
+// Built-in commands answer `--help` with exit code 0. The sandbox CLI is
+// external and owns its own help exit codes.
+const SANDBOX_HELP_EXIT_CODES = [0, 2];
 
 const COMMANDS = [
   {
@@ -21,24 +43,27 @@ const COMMANDS = [
     outputPattern: /Vercel CLI \d+\.\d+\.\d+/,
   },
   { args: ['help'] },
-  { args: ['login', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
-  { args: ['logout', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
+  { args: ['login', '--help'] },
+  { args: ['logout', '--help'] },
   {
     args: ['whoami'],
     acceptedExitCodes: [1],
     outputPattern: /Logged out\./,
   },
-  { args: ['deploy', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
-  { args: ['build', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
-  { args: ['dev', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
-  { args: ['env', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
-  { args: ['pull', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
-  { args: ['link', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
-  { args: ['project', 'ls', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
-  { args: ['git', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
-  { args: ['domains', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
-  { args: ['sandbox', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
-  { args: ['sandbox', 'ls', '--help'], acceptedExitCodes: HELP_EXIT_CODES },
+  { args: ['deploy', '--help'] },
+  { args: ['build', '--help'] },
+  { args: ['dev', '--help'] },
+  { args: ['env', '--help'] },
+  { args: ['pull', '--help'] },
+  { args: ['link', '--help'] },
+  { args: ['project', 'ls', '--help'] },
+  { args: ['git', '--help'] },
+  { args: ['domains', '--help'] },
+  { args: ['sandbox', '--help'], acceptedExitCodes: SANDBOX_HELP_EXIT_CODES },
+  {
+    args: ['sandbox', 'ls', '--help'],
+    acceptedExitCodes: SANDBOX_HELP_EXIT_CODES,
+  },
 ];
 
 const FAILURE_PATTERNS = [
@@ -56,11 +81,35 @@ const FAILURE_PATTERNS = [
 
 const PER_COMMAND_TIMEOUT_MS = 30_000;
 
-function runCommand(args) {
+// The npm launcher adds a Node parent above the native process. Terminate the
+// whole test process tree so timeouts and dev teardown do not leave it running.
+export function signalProcessTree(child, signal) {
+  if (!child.pid) return;
+  if (process.platform === 'win32') {
+    spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], {
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+  } else {
+    try {
+      process.kill(-child.pid, signal);
+    } catch (error) {
+      if (error.code !== 'ESRCH') throw error;
+    }
+  }
+}
+
+/**
+ * @param {string[]} args
+ * @param {SmokeOptions} [options]
+ */
+function runCommand(args, options) {
   return new Promise(resolvePromise => {
-    const child = spawn(binPath, args, {
+    const invocation = createSmokeInvocation(args, options);
+    const child = spawn(invocation.executable, invocation.args, {
+      detached: process.platform !== 'win32',
       env: {
-        ...process.env,
+        ...(options?.env ?? process.env),
         CI: '1',
         NO_COLOR: '1',
         NO_UPDATE_NOTIFIER: '1',
@@ -80,7 +129,7 @@ function runCommand(args) {
     child.stderr.on('data', onData);
 
     const timer = setTimeout(() => {
-      child.kill('SIGKILL');
+      signalProcessTree(child, 'SIGKILL');
     }, PER_COMMAND_TIMEOUT_MS);
 
     child.on('error', error => {
@@ -129,12 +178,14 @@ export function evaluateCommand(command, result) {
   return { label, ok: reasons.length === 0, reasons };
 }
 
-async function main() {
-  console.log(`Smoke testing binary: ${binPath}\n`);
+/** @param {SmokeOptions} [options] */
+export async function smokeTestBinary(options = {}) {
+  const displayName = options.displayName ?? options.executable ?? binPath;
+  console.log(`Smoke testing binary: ${displayName}\n`);
 
   const failures = [];
   for (const command of COMMANDS) {
-    const result = await runCommand(command.args);
+    const result = await runCommand(command.args, options);
     const verdict = evaluateCommand(command, result);
 
     if (verdict.ok) {
@@ -160,17 +211,23 @@ async function main() {
     for (const failure of failures) {
       console.error(`  - ${failure.label}: ${failure.reasons.join('; ')}`);
     }
-    process.exit(1);
+    return false;
   }
 
   console.log(
     `Smoke test PASSED: all ${COMMANDS.length} commands completed successfully.`
   );
+  return true;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main().catch(error => {
-    console.error('Smoke test harness crashed:', error);
-    process.exit(1);
-  });
+  smokeTestBinary().then(
+    ok => {
+      if (!ok) process.exit(1);
+    },
+    error => {
+      console.error('Smoke test harness crashed:', error);
+      process.exit(1);
+    }
+  );
 }

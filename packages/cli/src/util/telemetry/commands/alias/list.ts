@@ -15,7 +15,7 @@ export class AliasListTelemetryClient
     }
   }
 
-  trackCliOptionNext(next: number | undefined) {
+  trackCliOptionNext(next: string | undefined) {
     if (next) {
       this.trackCliOption({
         option: 'next',

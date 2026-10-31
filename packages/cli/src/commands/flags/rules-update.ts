@@ -46,7 +46,7 @@ export default async function rulesUpdate(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -72,6 +72,7 @@ export default async function rulesUpdate(
   const stageInputs = ((flags['--stage'] as string[] | undefined) ?? []).map(
     input => input.trim()
   );
+  const finalPercentage = flags['--final-percentage'] as string | undefined;
   const start = normalizeOptionalInput(flags['--start'] as string | undefined);
   const message = normalizeOptionalInput(
     flags['--message'] as string | undefined
@@ -88,6 +89,7 @@ export default async function rulesUpdate(
   telemetryClient.trackCliOptionFromVariant(rollFromVariantSelector);
   telemetryClient.trackCliOptionToVariant(rollToVariantSelector);
   telemetryClient.trackCliOptionStage(stageInputs);
+  telemetryClient.trackCliOptionFinalPercentage(finalPercentage);
   telemetryClient.trackCliOptionStart(start);
   telemetryClient.trackCliOptionMessage(message);
   telemetryClient.trackCliOptionProject(flags['--project']);
@@ -100,6 +102,7 @@ export default async function rulesUpdate(
     rollFromVariantSelector,
     rollToVariantSelector,
     stageInputs,
+    finalPercentage,
     start,
   };
 
@@ -108,7 +111,7 @@ export default async function rulesUpdate(
     output.log(
       `Example: ${getCommandName('flags rules update my-feature rule_123 --environment production --variant on')}`
     );
-    return 1;
+    return 2;
   }
 
   try {
@@ -117,7 +120,6 @@ export default async function rulesUpdate(
       flagArg,
       environment,
       promptMessage: 'Select an environment containing the rule:',
-      requireActiveFlag: true,
       fetchSettings:
         needsFlagRuleOutcomeSettings(outcomeOptions) ||
         conditionInputs.length > 0,

@@ -338,4 +338,30 @@ describe('teams switch', () => {
       );
     });
   });
+
+  describe('agent run', () => {
+    it('refuses to change the saved team', async () => {
+      useUser({ version: 'northstar' });
+      const team = useTeam();
+      client.isAgent = true;
+      client.nonInteractive = true;
+      client.ignoresSavedTeam = true;
+      client.setArgv('teams', 'switch', team.slug);
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      await expect(teams(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.reason).toBe('agent_cannot_switch');
+      expect(payload.next[0].command).toBe('vercel teams ls');
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(client.config.currentTeam).toBeUndefined();
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+    });
+  });
 });

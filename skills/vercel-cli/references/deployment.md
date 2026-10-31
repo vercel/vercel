@@ -1,98 +1,31 @@
 # Deployment
 
-Ensure `.vercel/` exists before deploying (via `vercel link` or `vercel link --repo`).
+## Identity and Source
 
-## Basic Usage
+Inspect the exact deployment URL or alias supplied by the user. An alias need not match the project name; resolve the project from deployment metadata rather than the hostname prefix. Failure to find an inferred project name does not prove lack of access.
 
-```bash
-vercel                    # preview deployment (default)
-vercel --prod             # production deployment
-vercel --target staging   # custom environment
-```
+`vercel deploy` deploys local source; `vercel deploy --prebuilt` uploads existing build output; `vercel redeploy` rebuilds an existing deployment from its source. Choose the source that tests the user's intended change. Deploying a local checkout is not interchangeable with a Git integration deployment: commit metadata, aliases, source provenance, and dashboard grouping may differ.
 
-## Prebuilt Deploy
+## Builds and Cache
 
-Build locally, deploy the output — avoids remote builds:
+A normal deploy does not consume prior local build output. Use the prebuilt deployment path when that output is the artifact to ship.
 
-```bash
-vercel build --prod
-vercel deploy --prebuilt --prod
-```
+Forced deployment and reuse of build cache are separate choices. Check installed help for the rebuild path and cache controls rather than assuming a redeploy clears cache. Compare cache and source provenance when testing a cache hypothesis.
 
-If build and deploy run in **separate CI jobs**, use `--standalone` so artifacts are self-contained:
+## Promotion and Verification
 
-```bash
-vercel build --prod --standalone
-# (upload .vercel/output/ as artifact, then in deploy job:)
-vercel deploy --prebuilt --prod
-```
+For a staged production rollout, deploy without moving the production domain, verify that deployment, then promote it. Keep the same deployment identity through those steps. Rolling releases additionally require checking the active stage before advancing or aborting.
 
-## Deploy Output
+Use the CLI's authenticated preview access when available instead of disabling Deployment Protection. If the environment cannot reach deployment hosts, report that limit rather than weakening protection.
 
-- **stdout**: The deployment URL (pipeable)
-- **stderr**: Progress and errors
+When deployment completion is part of the task, inspect or wait for `Ready` or `Error`; starting a build is not proof of success.
 
-```bash
-URL=$(vercel deploy --prod)
-```
+## CI Builds and Artifact Transfer
 
-## Forced Deploys And Build Cache
+For a local CI build, retrieve project settings and environment data, build for that environment, then deploy the resulting output through the prebuilt path. Keep the project/team and environment consistent across those steps. Validate repository mappings rather than allowing a CI command to link the wrong monorepo project.
 
-`vercel deploy --force` creates a new deployment even when Vercel would otherwise
-reuse an existing result. For forced deploys, build cache is not retained unless
-`--with-cache` is also provided.
+When build and deployment run in separate jobs, check whether the output references files outside `.vercel/output/`. The standalone build option can inline referenced files; transfer the complete output and verify it in the destination job. This does not guarantee portability across builders, platforms, or build environments.
 
-Use this when you need a fresh preview build from the current local checkout:
+Supply credentials through the CI secret environment. Non-interactive execution and mutation confirmation are separate; plain CI does not necessarily receive agent-mode defaults. Discover each command's supported options through help rather than applying a blanket confirmation flag.
 
-```bash
-vercel deploy . --target preview --force
-```
-
-For large repositories, retry with an archive if the CLI reports too many files:
-
-```bash
-vercel deploy . --target preview --force --archive=tgz
-```
-
-`vercel redeploy <url>` rebuilds an existing deployment, but it does not support
-a no-cache flag. A manual CLI deploy is not the same as a Git integration
-redeploy: it creates a new deployment from local source, so commit metadata,
-aliases, source provenance, and dashboard grouping may differ from the original
-Git-triggered deployment.
-
-## Accessing Preview Deployments
-
-Use `vercel curl` — it handles deployment protection automatically:
-
-```bash
-vercel curl /api/health --deployment $PREVIEW_URL
-```
-
-**Do not disable deployment protection.** Use `vercel curl` instead.
-
-## Other Deploy Commands
-
-- `vercel redeploy <url>` — rebuild an existing deployment; no no-cache flag
-- `vercel promote <url>` — move a deployment to production without rebuilding
-- `vercel rollback <url>` — revert to a previous deployment
-- `vercel rolling-release` / `vercel rr` — gradual traffic shifting
-
-## Workflows
-
-### Blue/Green
-
-```bash
-URL=$(vercel --prod --skip-domain)   # deploy without domain assignment
-vercel curl / --deployment $URL      # verify (handles deployment protection)
-vercel promote $URL                  # promote to production
-```
-
-### Rolling Release
-
-```bash
-vercel rr configure --enable --advancement-type=automatic --stage=10,5m --stage=50,10m
-vercel rr start --dpl=<deployment-url> --yes
-vercel rr fetch
-```
-
-See `references/project-infra.md` for approve, abort, and complete commands.
+Capture deployment URLs from stdout without mixing in progress output. When a deployment is meant to validate the change, wait for its final state before reporting success.

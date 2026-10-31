@@ -86,7 +86,7 @@ export default async function inspect(
       'vcr tag inspect <repository> <tag> --project <name-or-id>'
     );
     printError(err);
-    return 1;
+    return 2;
   }
 
   const fr = validateVcrJsonOutput(client, parsedArgs.flags);

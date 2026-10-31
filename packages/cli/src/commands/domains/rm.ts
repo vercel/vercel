@@ -5,7 +5,7 @@ import type { Domain } from '@vercel-internals/types';
 import type Client from '../../util/client';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getDomainByName from '../../util/domains/get-domain-by-name';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import removeDomainByName from '../../util/domains/remove-domain-by-name';
 import stamp from '../../util/output/stamp';
@@ -34,7 +34,7 @@ export default async function rm(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
   const [domainName] = args;
@@ -44,20 +44,20 @@ export default async function rm(client: Client, argv: string[]) {
 
   if (!domainName) {
     output.error(
-      `${getCommandName(`domains rm <domain>`)} expects one argument`
+      `${getCommandName(`domains remove <domain>`)} expects one argument`
     );
-    return 1;
+    return 2;
   }
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
 
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('domains rm <domain>')}`
+        `${getCommandName('domains remove <domain>')}`
       )}`
     );
-    return 1;
+    return 2;
   }
 
   const domain = await getDomainByName(client, contextName, domainName);

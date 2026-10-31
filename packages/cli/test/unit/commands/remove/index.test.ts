@@ -16,7 +16,7 @@ describe('remove', () => {
 
       client.setArgv(command, '--help');
       const exitCodePromise = remove(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -36,7 +36,7 @@ describe('remove', () => {
         'Error: `vercel rm` expects at least one argument'
       );
       const exitCode = await exitCodePromise;
-      expect(exitCode, 'exit code for "remove"').toEqual(1);
+      expect(exitCode, 'exit code for "remove"').toEqual(2);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'argument:nameOrDeploymentId', value: 'NONE' },
@@ -52,7 +52,7 @@ describe('remove', () => {
         `Error: The provided argument "${badDeployName}" is not a valid deployment or project`
       );
       const exitCode = await exitCodePromise;
-      expect(exitCode, 'exit code for "remove"').toEqual(1);
+      expect(exitCode, 'exit code for "remove"').toEqual(2);
     });
   });
 

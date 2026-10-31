@@ -157,6 +157,13 @@ export interface DetectServicesResult extends ResolvedServicesResult {
   inferred: InferredServicesResult | null;
 }
 
+/** A `vercel.json#daemons` entry as written in the config, before validation. */
+export interface DetectedDaemon {
+  name: string;
+  /** The daemon's `entrypoint` (e.g. `Dockerfile`), if it's a string. */
+  entrypoint?: string;
+}
+
 export type DetectServicesSource = 'configured' | 'auto-detected';
 
 export interface ServiceDetectionWarning {

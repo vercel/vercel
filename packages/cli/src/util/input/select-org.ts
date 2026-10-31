@@ -92,19 +92,22 @@ export default async function selectOrg(
           } as const,
         ];
 
+  // Agents see no default team at the top of the list to pick by habit.
+  const orderedTeams = client.ignoresSavedTeam
+    ? teams
+    : teams.sort(a => (a.id === user.defaultTeamId ? -1 : 1));
+
   const choices: Choice[] = [
     ...personalAccountChoice,
-    ...teams
-      .sort(a => (a.id === user.defaultTeamId ? -1 : 1))
-      .map<Choice>(team => ({
-        name: formatChoiceName(
-          team.name || team.slug,
-          team.slug,
-          team.id === currentTeam,
-          team.limited
-        ),
-        value: { type: 'team', id: team.id, slug: team.slug },
-      })),
+    ...orderedTeams.map<Choice>(team => ({
+      name: formatChoiceName(
+        team.name || team.slug,
+        team.slug,
+        team.id === currentTeam,
+        team.limited
+      ),
+      value: { type: 'team', id: team.id, slug: team.slug },
+    })),
   ];
 
   const defaultChoiceIndex = Math.max(
@@ -161,14 +164,18 @@ export default async function selectOrg(
       reason: 'missing_scope',
       message:
         choices.length > 0
-          ? 'Provide --team or --scope explicitly. No default is applied in non-interactive mode.'
+          ? 'Provide --scope explicitly. No default is applied in non-interactive mode.'
           : 'No teams available.',
+      ...(choices.length > 0 && {
+        userActionRequired: true,
+        hint: 'Ask the user which team to use, then run the matching command in next[]. Do not choose a team yourself.',
+      }),
       choices: choices.map(c => ({
         id: c.value.id,
         name: c.value.slug,
       })),
       next: choices.map(c => ({
-        command: `${packageName} link --team ${c.value.slug}`,
+        command: `${packageName} link --scope ${c.value.slug}`,
       })),
     };
     // Emits JSON and exits in non-interactive mode; no-op otherwise.
@@ -176,7 +183,7 @@ export default async function selectOrg(
     output.error(
       choices.length > 0
         ? `Multiple teams found. Teams are never auto-selected when the CLI runs without an interactive terminal. Re-run this command with ${param(
-            '--team <slug>'
+            '--scope <slug>'
           )}, or run ${getCommandName('teams ls')} to list your teams.`
         : 'No teams available.'
     );

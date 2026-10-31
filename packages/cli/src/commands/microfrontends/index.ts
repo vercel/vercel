@@ -23,6 +23,7 @@ import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import getSubcommand from '../../util/get-subcommand';
 import { MicrofrontendsTelemetryClient } from '../../util/telemetry/commands/microfrontends';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 
 const COMMAND_CONFIG = {
   'create-group': getCommandAliases(createGroupSubcommand),
@@ -50,7 +51,11 @@ export default async function main(client: Client) {
     });
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
+  }
+
+  if (parsedArgs.args[0] === 'mf') {
+    warnDeprecatedSubcommand(client, 'mf', 'microfrontends');
   }
 
   const { subcommand, subcommandOriginal } = getSubcommand(
@@ -63,19 +68,23 @@ export default async function main(client: Client) {
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('microfrontends');
     output.print(
-      help(microfrontendsCommand, { columns: client.stderr.columns })
+      help(microfrontendsCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
     );
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: microfrontendsCommand,
         columns: client.stderr.columns,
       })
     );
-    return 2;
+    return 0;
   }
 
   switch (subcommand) {
@@ -124,7 +133,10 @@ export default async function main(client: Client) {
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(
-        help(microfrontendsCommand, { columns: client.stderr.columns })
+        help(microfrontendsCommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
       );
       return 2;
   }

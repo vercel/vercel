@@ -1,3 +1,4 @@
+import { jsonOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const listSubcommand = {
@@ -5,7 +6,7 @@ export const listSubcommand = {
   aliases: ['ls'],
   description: 'Lists Vercel CLI versions available to install',
   arguments: [],
-  options: [],
+  options: [jsonOption],
   examples: [],
 } as const;
 
@@ -31,14 +32,23 @@ export const useSubcommand = {
   options: [],
   examples: [
     {
-      name: 'Use a specific version (pins it)',
+      name: 'Use a specific production version',
       value: `${packageName} version use 50.1.0`,
     },
     {
-      name: 'Return to the latest version (unpins)',
+      name: 'Use the latest production version',
       value: `${packageName} version use latest`,
     },
   ],
+} as const;
+
+export const checkSubcommand = {
+  name: 'check',
+  aliases: [],
+  description: 'Check for native CLI updates in the background',
+  arguments: [],
+  options: [],
+  examples: [],
 } as const;
 
 export const updateSubcommand = {
@@ -50,15 +60,58 @@ export const updateSubcommand = {
   examples: [],
 } as const;
 
+export const autoupdateEnableSubcommand = {
+  name: 'enable',
+  aliases: [],
+  description: 'Turn on automatic CLI updates',
+  arguments: [],
+  options: [],
+  examples: [
+    {
+      name: 'Turn on automatic updates',
+      value: `${packageName} version autoupdate enable`,
+    },
+  ],
+} as const;
+
+export const autoupdateDisableSubcommand = {
+  name: 'disable',
+  aliases: [],
+  description: 'Turn off automatic CLI updates',
+  arguments: [],
+  options: [],
+  examples: [
+    {
+      name: 'Turn off automatic updates',
+      value: `${packageName} version autoupdate disable`,
+    },
+  ],
+} as const;
+
+export const autoupdateStatusSubcommand = {
+  name: 'status',
+  aliases: [],
+  default: true,
+  description: 'Show whether automatic CLI updates are on',
+  arguments: [],
+  options: [],
+  examples: [
+    {
+      name: 'Show whether automatic updates are on',
+      value: `${packageName} version autoupdate status`,
+    },
+  ],
+} as const;
+
 export const autoupdateSubcommand = {
   name: 'autoupdate',
   aliases: [],
   description: 'Enables or disables automatic CLI updates',
-  arguments: [
-    {
-      name: 'enable|disable|status',
-      required: false,
-    },
+  arguments: [],
+  subcommands: [
+    autoupdateEnableSubcommand,
+    autoupdateDisableSubcommand,
+    autoupdateStatusSubcommand,
   ],
   options: [],
   examples: [
@@ -77,12 +130,14 @@ export const versionCommand = {
   name: 'version',
   aliases: ['versions'],
   description: 'Manages the installed Vercel CLI version.',
+  runsWithoutSubcommand: true,
   arguments: [],
   subcommands: [
     listSubcommand,
     installedSubcommand,
     useSubcommand,
     updateSubcommand,
+    checkSubcommand,
     autoupdateSubcommand,
   ],
   options: [],

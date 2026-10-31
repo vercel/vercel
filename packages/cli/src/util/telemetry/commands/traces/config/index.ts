@@ -20,9 +20,9 @@ export class TracesConfigTelemetryClient
     });
   }
 
-  trackCliSubcommandRm(actual: string) {
+  trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'rm',
+      subcommand: 'remove',
       value: actual,
     });
   }

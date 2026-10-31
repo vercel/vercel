@@ -4,14 +4,15 @@
     Example: if `argv` is { '--debug': true, '--all': true, '--scope': 'zeit' },
     the output will be '--debug --all --scope zeit'.
 
-    Flags can be excluded using the `excludeFlags` param.
+    Flags can be excluded using the `excludeFlags` param. `--token` is always
+    excluded, so a suggested command never prints it.
 */
 export default function getCommandFlags(
   argv: { [key: string]: any },
   excludeFlags: string[] = []
 ) {
   const flags = Object.keys(argv)
-    .filter(key => !excludeFlags.includes(key))
+    .filter(key => key !== '--token' && !excludeFlags.includes(key))
     .map(
       key => `${key}${typeof argv[key] !== 'boolean' ? ' ' + argv[key] : ''}`
     );

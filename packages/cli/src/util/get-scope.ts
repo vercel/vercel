@@ -1,4 +1,5 @@
 import { relative } from 'path';
+import { getPlatformEnv } from '@vercel/build-utils';
 import type Client from './client';
 import type { Org, Team, User } from '@vercel-internals/types';
 import getUser from './get-user';
@@ -10,7 +11,13 @@ import type { RepoProjectsConfig } from './link/repo';
 import output from '../output-manager';
 import { introspectToken } from './introspect-token';
 import type { TokenIntrospectionResponse } from './introspect-token';
-import { type App, isAppPrincipalEnabled, resolveAppFromToken } from './app';
+import {
+  type App,
+  assertOrgIdMatchesAppTeam,
+  isAppPrincipalEnabled,
+  resolveAppFromToken,
+} from './app';
+import { getCachedTeamSlug, setCachedTeamSlug } from './teams/team-name-cache';
 
 export interface ScopeContext {
   org: Org;
@@ -29,6 +36,7 @@ export interface ScopeContext {
     rootPath: string;
   } | null;
   isCrossTeamRepo: boolean;
+  localOrgId: string | undefined;
   scopeMismatch: boolean;
   explicitScopeProvided: boolean;
 }
@@ -49,6 +57,11 @@ interface Principal {
 interface GetScopeOptions {
   getTeam?: boolean;
   resolveLocalScope?: boolean;
+  /**
+   * `false` leaves an agent run without a team instead of asking for one, for
+   * commands that only report the scope (`whoami`).
+   */
+  chooseTeam?: boolean;
 }
 
 interface GetScopeWithLocalScopeOptions extends GetScopeOptions {
@@ -73,8 +86,12 @@ export default async function getScope(
 ): Promise<BasicScopeContext | ScopeContext> {
   const { user, app, token } = await getPrincipal(client);
 
+  // Runs that ignore the saved team never fall back to the default team
+  // either; see `Client.chooseTeam`.
   const defaultTeamId =
-    user?.version === 'northstar' ? user.defaultTeamId : undefined;
+    user?.version === 'northstar' && !client.ignoresSavedTeam
+      ? user.defaultTeamId
+      : undefined;
   const appTeamId = !user && app ? token?.team?.id : undefined;
 
   if (!user && app && opts.getTeam === false) {
@@ -84,7 +101,12 @@ export default async function getScope(
   // App tokens are bound to their introspected team. Make that team the
   // effective request scope so subsequent API calls include the correct
   // `teamId`, and so a stale team from the user's global config cannot win.
+  // Runs that ignore the saved team fail on a `VERCEL_ORG_ID` naming another
+  // team, as `Client.chooseTeam` does.
   if (!user && app) {
+    if (client.ignoresSavedTeam && appTeamId) {
+      assertOrgIdMatchesAppTeam(client, appTeamId);
+    }
     client.config.currentTeam = appTeamId;
   }
 
@@ -97,6 +119,12 @@ export default async function getScope(
   // the default here so the effective request scope matches what we report.
   if (!client.config.currentTeam && defaultTeamId) {
     client.config.currentTeam = defaultTeamId;
+  }
+
+  // A run with no team chooses one now, so the scope reported matches the
+  // requests that follow.
+  if (client.isTeamUnchosen()) {
+    await client.chooseTeam({ ask: opts.chooseTeam !== false });
   }
 
   const teamId = client.config.currentTeam || defaultTeamId;
@@ -113,6 +141,55 @@ export default async function getScope(
   }
 
   return resolveLocalScopeContext(client, { user, app, team });
+}
+
+/**
+ * Resolves only the display name of the current scope. When the directory is
+ * not linked and the current team's slug was saved by an earlier run, this
+ * makes no API requests: the team id is already known, the slug is only shown
+ * to the user, and the command's own request is still authorized by the API.
+ * Every other case falls back to `getScope` and saves the slug it finds.
+ */
+export async function getContextName(
+  client: Client,
+  opts: { resolveLocalScope?: boolean } = {}
+): Promise<string> {
+  const teamId = client.config.currentTeam;
+  const cachedSlug =
+    teamId && !client.authConfig.tokenSource
+      ? getCachedTeamSlug(client.config, teamId)
+      : undefined;
+
+  if (
+    cachedSlug &&
+    !(opts.resolveLocalScope && (await hasLocalScope(client)))
+  ) {
+    output.debug(`Using saved name "${cachedSlug}" for team ${teamId}`);
+    return cachedSlug;
+  }
+
+  const { contextName, team } = opts.resolveLocalScope
+    ? await getScope(client, { resolveLocalScope: true })
+    : await getScope(client);
+
+  if (team && !client.authConfig.tokenSource) {
+    setCachedTeamSlug(client, team.id, team.slug);
+  }
+
+  return contextName;
+}
+
+/**
+ * True when a project or repository link in the current directory could
+ * change the scope, or needs `getScope` to warn about it.
+ */
+async function hasLocalScope(client: Client): Promise<boolean> {
+  if (detectExplicitScope(client)) {
+    return false;
+  }
+
+  const { localOrgId, isCrossTeamRepo } = await findLocalLink(client);
+  return Boolean(localOrgId) || isCrossTeamRepo;
 }
 
 /**
@@ -152,7 +229,11 @@ async function resolveLocalScopeContext(
   client: Client,
   { user, app, team }: { user: User | null; app: App | null; team: Team | null }
 ): Promise<ScopeContext> {
-  const explicitScopeProvided = detectExplicitScope(client);
+  // `VERCEL_ORG_ID` outranks the link for runs that ignore the saved team, as
+  // `Client.chooseTeam` resolves it.
+  const explicitScopeProvided =
+    detectExplicitScope(client) ||
+    (client.ignoresSavedTeam && Boolean(getPlatformEnv('ORG_ID')));
   const globalTeamId = client.config.currentTeam;
 
   const { localOrgId, linkedRepo, isCrossTeamRepo } =
@@ -195,6 +276,7 @@ async function resolveLocalScopeContext(
     globalTeam: team,
     linkedRepo,
     isCrossTeamRepo,
+    localOrgId: effectiveLocalOrgId,
     scopeMismatch,
     explicitScopeProvided,
   };
@@ -260,6 +342,13 @@ interface LocalLink {
 type ProjectLink = { orgId: string; projectId: string };
 type RepoLink = Awaited<ReturnType<typeof getRepoLink>>;
 
+/** The team or account the directory's project or repository link uses. */
+export async function getLocalOrgId(
+  client: Client
+): Promise<string | undefined> {
+  return (await findLocalLink(client)).localOrgId;
+}
+
 async function findLocalLink(client: Client): Promise<LocalLink> {
   const [projectLink, repoLink] = await Promise.all([
     findProjectLink(client),
@@ -311,7 +400,14 @@ function findRepoOrgId(
   repoConfig: RepoProjectsConfig,
   pathFromRepoRoot: string
 ): string | undefined {
-  const projects = findProjectsFromPath(repoConfig.projects, pathFromRepoRoot);
+  const matchedProjects = findProjectsFromPath(
+    repoConfig.projects,
+    pathFromRepoRoot
+  );
+  const projects =
+    matchedProjects.length === 0 && pathFromRepoRoot === ''
+      ? repoConfig.projects
+      : matchedProjects;
   const orgIds = new Set(projects.map(p => p.orgId ?? repoConfig.orgId ?? ''));
 
   if (orgIds.size !== 1) {
@@ -340,8 +436,8 @@ export function applyScopeFromLink(client: Client, link: { org: Org }): void {
     : undefined;
 }
 
-export function detectExplicitScope(client: Client): boolean {
-  const argv = client.argv;
+/** Whether the command line itself passes `--scope` or `--team`. */
+export function scopeFlagPassed(argv: string[]): boolean {
   for (const arg of argv) {
     if (arg === '--') {
       break;
@@ -357,12 +453,11 @@ export function detectExplicitScope(client: Client): boolean {
       return true;
     }
   }
-
-  if (client.localConfig?.scope) {
-    return true;
-  }
-
   return false;
+}
+
+export function detectExplicitScope(client: Client): boolean {
+  return scopeFlagPassed(client.argv) || Boolean(client.localConfig?.scope);
 }
 
 function detectCrossTeamRepo(

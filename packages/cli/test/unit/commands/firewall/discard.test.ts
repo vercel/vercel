@@ -30,7 +30,7 @@ describe('firewall discard', () => {
     it('tracks telemetry', async () => {
       client.setArgv('firewall', 'discard', '--help');
       const exitCode = await firewall(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
