@@ -8,7 +8,7 @@ import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
 import { FetchDispatcher, VercelClientOptions, VercelConfig } from '../types';
 import { Sema } from 'async-sema';
-import { pathExists, readFile, stat } from 'fs-extra';
+import { pathExists, readFile, readdir as readDirectory, stat } from 'fs-extra';
 import readdir from './readdir-recursive';
 
 type Ignore = ReturnType<typeof ignore>;
@@ -119,6 +119,7 @@ const filePathMapVcsDefaults = ignore().add(
   VCS_DEFAULTS.filter(rule => !CASE_SENSITIVE_VCS_DEFAULTS.has(rule))
 );
 const CVS_METADATA_FILES = new Set([
+  'Base',
   'Baserev',
   'Baserev.tmp',
   'Entries',
@@ -134,6 +135,33 @@ const CVS_METADATA_FILES = new Set([
   'fileattr',
 ]);
 
+async function matchesDirectoryEntry(
+  parent: string,
+  requested: string,
+  expected: string
+): Promise<boolean> {
+  if (requested === expected) return true;
+  if (requested.toLowerCase() !== expected.toLowerCase()) return false;
+
+  try {
+    // realpath can preserve the requested spelling on case-insensitive volumes.
+    const entries = await readDirectory(parent);
+    return (
+      entries.includes(expected) &&
+      !entries.includes(requested) &&
+      (await pathExists(join(parent, requested)))
+    );
+  } catch (error) {
+    if (
+      (error as NodeJS.ErrnoException).code === 'ENOENT' ||
+      (error as NodeJS.ErrnoException).code === 'ENOTDIR'
+    ) {
+      return false;
+    }
+    throw error;
+  }
+}
+
 async function isFilePathMapVcsDefault(
   posixRel: string,
   cwd: string
@@ -144,20 +172,31 @@ async function isFilePathMapVcsDefault(
 
   const segments = posixRel.split('/');
   for (const [index, segment] of segments.entries()) {
-    if (!CASE_SENSITIVE_VCS_DEFAULTS.has(segment)) {
+    if (segment.toLowerCase() !== 'cvs') continue;
+    const parent = join(cwd, ...segments.slice(0, index));
+    if (!(await matchesDirectoryEntry(parent, segment, 'CVS'))) {
       continue;
     }
 
     const remainingSegments = segments.slice(index + 1);
+    const cvsDirectory = join(parent, segment);
+    const metadataName = remainingSegments[0];
+    const expectedMetadataName = metadataName
+      ? [...CVS_METADATA_FILES].find(
+          name => name.toLowerCase() === metadataName.toLowerCase()
+        )
+      : undefined;
     if (
-      remainingSegments.length > 0 &&
-      (CVS_METADATA_FILES.has(remainingSegments[0]) ||
-        remainingSegments[0] === 'Base')
+      expectedMetadataName &&
+      (await matchesDirectoryEntry(
+        cvsDirectory,
+        metadataName,
+        expectedMetadataName
+      ))
     ) {
       return true;
     }
 
-    const cvsDirectory = join(cwd, ...segments.slice(0, index + 1));
     const [hasEntries, hasRoot, hasRepository] = await Promise.all([
       pathExists(join(cvsDirectory, 'Entries')),
       pathExists(join(cvsDirectory, 'Root')),

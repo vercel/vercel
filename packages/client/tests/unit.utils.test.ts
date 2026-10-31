@@ -611,17 +611,20 @@ describe('buildFileTree()', () => {
   it('should allow lowercase `cvs` directories in `filePathMap` when prebuilt=true', async () => {
     const cwd = fixture('prebuilt-filepathmap-ignore');
     const sourcePath = join(cwd, 'src/app/api/cvs/route.ts');
+    const rootPath = join(cwd, 'src/app/api/cvs/Root');
     const extraFuncDir = join(
       cwd,
       '.vercel/output/functions/api/lowercase-cvs.func'
     );
 
     await fs.outputFile(sourcePath, 'export default function handler() {}\n');
+    await fs.outputFile(rootPath, 'application data\n');
     await fs.outputJson(join(extraFuncDir, '.vc-config.json'), {
       runtime: 'nodejs20.x',
       handler: 'index.js',
       filePathMap: {
         'route.js': 'src/app/api/cvs/route.ts',
+        root: 'src/app/api/cvs/Root',
       },
     });
 
@@ -639,9 +642,80 @@ describe('buildFileTree()', () => {
       expect(normalizeWindowsPaths(fileList)).toContain(
         normalizeWindowsPaths([sourcePath])[0]
       );
+      expect(normalizeWindowsPaths(fileList)).toContain(
+        normalizeWindowsPaths([rootPath])[0]
+      );
     } finally {
       await fs.remove(extraFuncDir);
       await fs.remove(join(cwd, 'src/app/api/cvs'));
+    }
+  });
+
+  it.for([
+    ['CVS/Root', 'cvs/Root'],
+    ['CVS/Root', 'CVS/root'],
+    ['CVS/Root', 'cVs/rOoT'],
+    ['CVS/Base/revision', 'cvs/base/revision'],
+  ])('should reject a case alias of %s in `filePathMap`', async ([
+    actualPath,
+    mapPath,
+  ], context) => {
+    const cwd = fixture('prebuilt-filepathmap-ignore');
+    await fs.outputFile(join(cwd, actualPath), 'metadata\n');
+
+    try {
+      if (!(await fs.pathExists(join(cwd, mapPath)))) {
+        context.skip();
+        return;
+      }
+
+      await withDefaultFilePathMap(cwd, { metadata: mapPath }, async () => {
+        await expect(
+          buildFileTree(
+            cwd,
+            {
+              isDirectory: true,
+              prebuilt: true,
+              vercelOutputDir: join(cwd, '.vercel/output'),
+            },
+            noop
+          )
+        ).rejects.toMatchObject({ code: 'PREBUILT_FILEPATHMAP_VCS' });
+      });
+    } finally {
+      await fs.remove(join(cwd, 'CVS'));
+    }
+  });
+
+  it('should allow a separate lowercase `cvs` directory next to `CVS`', async context => {
+    const cwd = fixture('prebuilt-filepathmap-ignore');
+    const lowercaseRoot = join(cwd, 'cvs/Root');
+    await fs.outputFile(join(cwd, 'CVS/Root'), 'metadata\n');
+
+    try {
+      if (await fs.pathExists(lowercaseRoot)) {
+        context.skip();
+        return;
+      }
+
+      await fs.outputFile(lowercaseRoot, 'application data\n');
+      await withDefaultFilePathMap(cwd, { root: 'cvs/Root' }, async () => {
+        const { fileList } = await buildFileTree(
+          cwd,
+          {
+            isDirectory: true,
+            prebuilt: true,
+            vercelOutputDir: join(cwd, '.vercel/output'),
+          },
+          noop
+        );
+        expect(normalizeWindowsPaths(fileList)).toContain(
+          normalizeWindowsPaths([lowercaseRoot])[0]
+        );
+      });
+    } finally {
+      await fs.remove(join(cwd, 'CVS'));
+      await fs.remove(join(cwd, 'cvs'));
     }
   });
 
