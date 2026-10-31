@@ -8,7 +8,7 @@ import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
 import { FetchDispatcher, VercelClientOptions, VercelConfig } from '../types';
 import { Sema } from 'async-sema';
-import { pathExists, readFile, stat } from 'fs-extra';
+import { pathExists, readFile, readdir as readDirectory, stat } from 'fs-extra';
 import readdir from './readdir-recursive';
 
 type Ignore = ReturnType<typeof ignore>;
@@ -113,10 +113,102 @@ async function getUserIgnore(cwd: string): Promise<UserIgnore | null> {
   };
 }
 
-// VCS source-upload defaults cannot be overridden by user negations
-// or dependency/output exceptions when collecting prebuilt references.
 const VCS_DEFAULTS = ['.hg', '.git', '.gitmodules', '.svn', 'CVS'];
-const filePathMapVcsDefaults = ignore().add(VCS_DEFAULTS);
+const CASE_SENSITIVE_VCS_DEFAULTS = new Set(['CVS']);
+const filePathMapVcsDefaults = ignore().add(
+  VCS_DEFAULTS.filter(rule => !CASE_SENSITIVE_VCS_DEFAULTS.has(rule))
+);
+const CVS_METADATA_FILES = new Set([
+  'Base',
+  'Baserev',
+  'Baserev.tmp',
+  'Entries',
+  'Entries.Backup',
+  'Entries.Log',
+  'Entries.Static',
+  'Notify',
+  'Notify.tmp',
+  'Repository',
+  'Root',
+  'Tag',
+  'Template',
+  'fileattr',
+]);
+
+async function matchesDirectoryEntry(
+  parent: string,
+  requested: string,
+  expected: string
+): Promise<boolean> {
+  if (requested === expected) return true;
+  if (requested.toLowerCase() !== expected.toLowerCase()) return false;
+
+  try {
+    // realpath can preserve the requested spelling on case-insensitive volumes.
+    const entries = await readDirectory(parent);
+    return (
+      entries.includes(expected) &&
+      !entries.includes(requested) &&
+      (await pathExists(join(parent, requested)))
+    );
+  } catch (error) {
+    if (
+      (error as NodeJS.ErrnoException).code === 'ENOENT' ||
+      (error as NodeJS.ErrnoException).code === 'ENOTDIR'
+    ) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+async function isFilePathMapVcsDefault(
+  posixRel: string,
+  cwd: string
+): Promise<boolean> {
+  if (filePathMapVcsDefaults.ignores(posixRel)) {
+    return true;
+  }
+
+  const segments = posixRel.split('/');
+  for (const [index, segment] of segments.entries()) {
+    if (segment.toLowerCase() !== 'cvs') continue;
+    const parent = join(cwd, ...segments.slice(0, index));
+    if (!(await matchesDirectoryEntry(parent, segment, 'CVS'))) {
+      continue;
+    }
+
+    const remainingSegments = segments.slice(index + 1);
+    const cvsDirectory = join(parent, segment);
+    const metadataName = remainingSegments[0];
+    const expectedMetadataName = metadataName
+      ? [...CVS_METADATA_FILES].find(
+          name => name.toLowerCase() === metadataName.toLowerCase()
+        )
+      : undefined;
+    if (
+      expectedMetadataName &&
+      (await matchesDirectoryEntry(
+        cvsDirectory,
+        metadataName,
+        expectedMetadataName
+      ))
+    ) {
+      return true;
+    }
+
+    const [hasEntries, hasRoot, hasRepository] = await Promise.all([
+      pathExists(join(cvsDirectory, 'Entries')),
+      pathExists(join(cvsDirectory, 'Root')),
+      pathExists(join(cvsDirectory, 'Repository')),
+    ]);
+    if (hasEntries && hasRoot && hasRepository) {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 /**
  * Source-upload defaults that `--prebuilt` `filePathMap` may re-add even when
@@ -298,7 +390,7 @@ export async function buildFileTree(
             );
             continue;
           }
-          if (filePathMapVcsDefaults.ignores(posixRel)) {
+          if (await isFilePathMapVcsDefault(posixRel, path)) {
             // Reject before hashing or archiving, rather than leave dangling
             // references that fail during remote hydration. Do not echo
             // artifact-controlled paths or file contents in the error.
