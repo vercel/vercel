@@ -89,4 +89,11 @@ export class IntegrationTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandMigrateSkills(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'migrate-skills',
+      value: actual,
+    });
+  }
 }

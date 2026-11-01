@@ -643,6 +643,33 @@ export const guideSubcommand = {
   ],
 } as const;
 
+export const migrateSkillsSubcommand = {
+  name: 'migrate-skills',
+  aliases: [],
+  description:
+    "Replace Neon Marketplace agent skills installed in this project with Vercel's maintained version",
+  arguments: [],
+  options: [
+    {
+      name: 'yes',
+      shorthand: 'y',
+      type: Boolean,
+      deprecated: false,
+      description: 'Apply the change without the confirmation prompt',
+    },
+  ],
+  examples: [
+    {
+      name: 'Review and apply the skill migration for the current project',
+      value: `${packageName} integration migrate-skills`,
+    },
+    {
+      name: 'Apply without prompting (useful for CI/agents)',
+      value: `${packageName} integration migrate-skills --yes`,
+    },
+  ],
+} as const;
+
 export const resourceSubcommand = {
   name: 'resource',
   aliases: [],
@@ -690,6 +717,7 @@ export const integrationCommand = {
     guideSubcommand,
     installationsSubcommand,
     listSubcommand,
+    migrateSkillsSubcommand,
     openSubcommand,
     resourceSubcommand,
     updateSubcommand,

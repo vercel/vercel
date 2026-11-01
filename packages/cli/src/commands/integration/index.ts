@@ -19,6 +19,7 @@ import {
   installationsSubcommand,
   integrationCommand,
   listSubcommand,
+  migrateSkillsSubcommand,
   openSubcommand,
   removeSubcommand,
   resourceSubcommand,
@@ -32,6 +33,7 @@ import { update } from './update-integration';
 import { categories } from './categories';
 import { discover } from './discover';
 import { guide } from './guide';
+import { migrateSkills } from './migrate-skills';
 import { printAddDynamicHelp } from './add-help';
 import installationsList from './installations-list';
 import acceptTerms from './accept-terms';
@@ -51,6 +53,7 @@ const COMMAND_CONFIG = {
   categories: getCommandAliases(categoriesSubcommand),
   discover: getCommandAliases(discoverSubcommand),
   guide: getCommandAliases(guideSubcommand),
+  'migrate-skills': getCommandAliases(migrateSkillsSubcommand),
   balance: getCommandAliases(balanceSubcommand),
   remove: getCommandAliases(removeSubcommand),
   resource: getCommandAliases(resourceSubcommand),
@@ -186,6 +189,15 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandGuide(subcommandOriginal);
       return guide(client, subArgs);
+    }
+    case 'migrate-skills': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
+        printHelp(migrateSkillsSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandMigrateSkills(subcommandOriginal);
+      return migrateSkills(client, subArgs);
     }
     case 'balance': {
       if (needHelp) {
