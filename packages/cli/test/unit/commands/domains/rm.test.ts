@@ -103,5 +103,42 @@ describe('domains rm', () => {
         ]);
       });
     });
+
+    describe('orphaned alias', () => {
+      it('should remove the alias if domain is not found globally', async () => {
+        useUser();
+        // Domain not found globally
+        client.scenario.get(
+          '/v4/domains/example-one.com',
+          (_req, res) => {
+            res.status(404).json({
+              error: {
+                code: 'not_found',
+                message: 'Domain not found',
+              },
+            });
+          }
+        );
+        // Alias is found
+        let deleteCalled = false;
+        client.scenario.get('/now/aliases/:aliasOrId', (req, res) => {
+          expect(req.params.aliasOrId).toEqual('example-one.com');
+          res.json({
+            uid: 'alias-id-123',
+            alias: 'example-one.com',
+            createdAt: Date.now() - 10000,
+          });
+        });
+        client.scenario.delete('/now/aliases/alias-id-123', (_req, res) => {
+          deleteCalled = true;
+          res.json({});
+        });
+
+        client.setArgv('domains', 'rm', 'example-one.com', '--yes');
+        const exitCode = await domains(client);
+        expect(exitCode).toEqual(0);
+        expect(deleteCalled).toBe(true);
+      });
+    });
   });
 });
