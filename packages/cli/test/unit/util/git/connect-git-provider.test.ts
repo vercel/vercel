@@ -5,6 +5,15 @@ import {
 } from '../../../../src/util/git/connect-git-provider';
 import { client } from '../../../mocks/client';
 
+vi.mock('child_process', async () => {
+  const actual =
+    await vi.importActual<typeof import('child_process')>('child_process');
+  return {
+    ...actual,
+    execFileSync: vi.fn(),
+  };
+});
+
 describe('parseRepoUrl()', () => {
   it('should parse GitHub HTTPS URL', () => {
     const result = parseRepoUrl('https://github.com/vercel/next.js.git');
@@ -60,6 +69,60 @@ describe('parseRepoUrl()', () => {
     expect(parseRepoUrl('')).toBeNull();
     expect(parseRepoUrl('not-a-url')).toBeNull();
     expect(parseRepoUrl('https://example.com')).toBeNull();
+  });
+
+  describe('SSH config Host alias resolution', () => {
+    beforeEach(async () => {
+      const { execFileSync } = await import('child_process');
+      vi.mocked(execFileSync).mockReset();
+    });
+
+    it('should resolve SSH Host alias via `ssh -G`', async () => {
+      const { execFileSync } = await import('child_process');
+      vi.mocked(execFileSync).mockReturnValue(
+        'user git\nhostname github.com\nport 22\n'
+      );
+
+      const result = parseRepoUrl('git@github-golden:vercel/next.js.git');
+
+      expect(execFileSync).toHaveBeenCalledWith(
+        'ssh',
+        ['-G', 'github-golden'],
+        expect.objectContaining({ encoding: 'utf8' })
+      );
+      expect(result).toEqual({
+        url: 'git@github-golden:vercel/next.js.git',
+        provider: 'github',
+        org: 'vercel',
+        repo: 'next.js',
+      });
+    });
+
+    it('should not call `ssh -G` when hostname already contains a dot', async () => {
+      const { execFileSync } = await import('child_process');
+
+      parseRepoUrl('git@github.com:vercel/next.js.git');
+
+      expect(execFileSync).not.toHaveBeenCalled();
+    });
+
+    it('should return null when `ssh -G` is unavailable or throws', async () => {
+      const { execFileSync } = await import('child_process');
+      vi.mocked(execFileSync).mockImplementation(() => {
+        throw new Error('spawn ssh ENOENT');
+      });
+
+      expect(parseRepoUrl('git@github-golden:vercel/next.js.git')).toBeNull();
+    });
+
+    it('should return null when `ssh -G` resolves the alias to itself', async () => {
+      const { execFileSync } = await import('child_process');
+      vi.mocked(execFileSync).mockReturnValue(
+        'user git\nhostname github-golden\nport 22\n'
+      );
+
+      expect(parseRepoUrl('git@github-golden:vercel/next.js.git')).toBeNull();
+    });
   });
 });
 
