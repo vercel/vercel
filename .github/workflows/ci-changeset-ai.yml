@@ -1,0 +1,118 @@
+# When Lint fails because a changeset is missing, generate one via Vercel AI Gateway and push to the PR branch.
+# Requires repository secrets: AI_GATEWAY_API_KEY, VERCEL_CLI_RELEASE_BOT_TOKEN (push + checkout).
+# Does not run for fork PRs (cannot push to contributor forks).
+
+name: CI — Changeset (AI Gateway)
+
+on:
+  workflow_run:
+    workflows:
+      - Lint
+    types:
+      - completed
+
+concurrency:
+  group: changeset-ai-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  generate-changeset:
+    name: Generate changeset
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    if: |
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    steps:
+      - name: Resolve PR for workflow run
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sha = context.payload.workflow_run.head_sha;
+            const { data: pulls } =
+              await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: sha,
+              });
+            if (!pulls.length) {
+              core.setOutput('found', 'false');
+              return;
+            }
+            const pr = pulls[0];
+            core.setOutput('found', 'true');
+            core.setOutput('number', String(pr.number));
+            core.setOutput('head_ref', pr.head.ref);
+            core.setOutput('title', pr.title || '');
+            core.setOutput('body', pr.body || '');
+
+      - name: Checkout PR head
+        if: steps.pr.outputs.found == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ steps.pr.outputs.head_ref }}
+          token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
+
+      - name: Install pnpm
+        if: steps.pr.outputs.found == 'true'
+        run: npm i -g pnpm@8.3.1
+
+      - name: Install dependencies
+        if: steps.pr.outputs.found == 'true'
+        run: pnpm install
+
+      - name: Fetch main for changeset base
+        if: steps.pr.outputs.found == 'true'
+        run: git fetch origin main
+
+      - name: Check whether a changeset is still required
+        id: need
+        if: steps.pr.outputs.found == 'true'
+        run: |
+          set +e
+          pnpm exec changeset status --since=main
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo "needs_changeset=false" >> $GITHUB_OUTPUT
+          else
+            echo "needs_changeset=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate changeset with AI Gateway
+        if: steps.pr.outputs.found == 'true' && steps.need.outputs.needs_changeset == 'true'
+        env:
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+          PR_TITLE: ${{ steps.pr.outputs.title }}
+          PR_BODY: ${{ steps.pr.outputs.body }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: |
+          if [ -z "$AI_GATEWAY_API_KEY" ]; then
+            echo "::error::Add repository secret AI_GATEWAY_API_KEY (Vercel AI Gateway API key)."
+            exit 1
+          fi
+          node scripts/ci/generate-changeset-ai.mjs
+
+      - name: Validate changeset
+        if: steps.pr.outputs.found == 'true' && steps.need.outputs.needs_changeset == 'true'
+        run: pnpm exec changeset status --since=main
+
+      - name: Commit and push
+        if: steps.pr.outputs.found == 'true' && steps.need.outputs.needs_changeset == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .changeset
+          if git diff --cached --quiet; then
+            echo "No changeset file to commit"
+            exit 1
+          fi
+          git commit -m "chore: add changeset (ci ai-gateway)"
+          git push origin "HEAD:${{ steps.pr.outputs.head_ref }}"
