@@ -1,12 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { execVercelCli, VercelCliError } from '@vercel/cli-exec';
-import {
-  getGlobalPathConfig,
-  tryReadAuthConfig,
-  writeAuthConfig,
-  type AuthConfig,
-} from '@vercel/cli-config';
+import type { AuthConfig } from '@vercel/cli-config';
 import { VercelOidcTokenError } from './token-error';
 import { findRootDir, getUserDataDir } from './token-io';
 import { refreshTokenRequest, processTokenResponse } from './oauth';
@@ -27,6 +22,11 @@ export interface GetVercelTokenOptions {
 export async function getVercelToken(
   options?: GetVercelTokenOptions
 ): Promise<string> {
+  // Dynamic import to avoid loading CLI-specific dependencies (xdg-app-paths) at module
+  // initialisation time, which crashes under bundlers like webpack (Next.js dev) where
+  // require.main / process.argv[0] may be undefined.
+  const { getGlobalPathConfig, tryReadAuthConfig, writeAuthConfig } =
+    await import('@vercel/cli-config');
   const configDir = getGlobalPathConfig();
   const authConfig = tryReadAuthConfig(configDir);
 
@@ -61,7 +61,8 @@ export async function getVercelToken(
     const updatedConfig: AuthConfig = {
       token: tokens.access_token,
       expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
-      refreshToken: tokens.refresh_token,
+      // Preserve the existing refresh token if the server does not return a new one
+      refreshToken: tokens.refresh_token ?? authConfig.refreshToken,
     };
 
     writeAuthConfig(configDir, updatedConfig);
