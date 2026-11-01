@@ -7,6 +7,14 @@ import {
   fetchMarketplaceIntegrationsList,
   type IntegrationListItem,
 } from './fetch-marketplace-integrations-list';
+import didYouMean from '../did-you-mean';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+  shouldEmitNonInteractiveCommandError,
+} from '../agent-output';
+import { AGENT_REASON } from '../agent-output-constants';
+import { packageName } from '../pkg-name';
 
 export async function fetchIntegration(client: Client, slug: string) {
   return client.fetch<Integration>(`/v2/integrations/integration/${slug}`, {
@@ -88,8 +96,14 @@ export async function resolveAndFetchIntegration(
   let directError: Error | undefined;
   try {
     const integration = await fetchIntegration(client, slug);
-    telemetry.trackCliArgumentIntegration(slug, true);
-    return integration;
+    // A marketplace integration has installable products. A slug can also resolve
+    // to a legacy, non-marketplace integration with no products (e.g. `turso`,
+    // whose Marketplace slug is `tursocloud`). Treat that like "not found" and fall
+    // through to suggest the closest marketplace match instead of dead-ending.
+    if (integration.products?.length) {
+      telemetry.trackCliArgumentIntegration(slug, true);
+      return integration;
+    }
   } catch (error) {
     directError = error as Error;
   }
@@ -121,28 +135,79 @@ export async function resolveAndFetchIntegration(
     return null;
   }
 
-  if (matches.length === 1) {
-    const match = matches[0];
-    if (client.stdin.isTTY === true) {
-      const confirmed = await client.input.confirm(
-        `Install ${chalk.bold(match.name)} (${match.slug})?`,
-        true
+  // Closest match, for "did you mean" copy and the primary suggested command.
+  const suggestion =
+    didYouMean(
+      slug,
+      matches.map(m => m.slug)
+    ) ?? matches[0].slug;
+
+  // Non-interactive (agents/CI): don't silently install a fuzzy match. Surface the
+  // suggestion and the discover command so the caller can decide the next step.
+  if (
+    client.stdin.isTTY !== true ||
+    shouldEmitNonInteractiveCommandError(client)
+  ) {
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.NOT_FOUND,
+        message: `"${slug}" is not a Marketplace integration.`,
+        hint: `Did you mean "${suggestion}"?`,
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `integration add ${suggestion}`,
+              packageName,
+              { prependGlobalFlags: true }
+            ),
+            when: `Install "${suggestion}" (closest match)`,
+          },
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'integration discover',
+              packageName,
+              { prependGlobalFlags: true }
+            ),
+            when: 'List available marketplace integrations and slugs',
+          },
+        ],
+      },
+      1
+    );
+    if (matches.length === 1) {
+      output.error(
+        `"${slug}" is not a Marketplace integration. Did you mean ${chalk.bold(matches[0].name)} (${chalk.bold(matches[0].slug)})?`
       );
-      if (!confirmed) {
-        telemetry.trackCliArgumentIntegration(slug, false);
-        return null;
-      }
+    } else {
+      output.error(
+        `"${slug}" is not a Marketplace integration. Did you mean one of:\n${matches.map(m => `- ${m.slug}: ${m.description}`).join('\n')}`
+      );
     }
-    slug = match.slug;
-  } else if (client.stdin.isTTY !== true) {
-    output.error(
-      `Found ${matches.length} integrations matching "${slug}". Available integrations:\n${matches.map(m => `- ${m.slug}: ${m.description}`).join('\n')}`
+    output.log(
+      `Run ${chalk.cyan('vercel integration discover')} to list all integrations.`
     );
     telemetry.trackCliArgumentIntegration(slug, false);
     return null;
+  }
+
+  if (matches.length === 1) {
+    const match = matches[0];
+    const confirmed = await client.input.confirm(
+      `Did you mean ${chalk.bold(match.name)} (${chalk.bold(match.slug)})? Install it?`,
+      true
+    );
+    if (!confirmed) {
+      telemetry.trackCliArgumentIntegration(slug, false);
+      return null;
+    }
+    slug = match.slug;
   } else {
     slug = await client.input.select({
-      message: `Found ${matches.length} integrations matching "${slug}". Pick one to install:`,
+      message: `"${slug}" is not an exact match. Did you mean one of these? Pick one to install:`,
       choices: matches.map(m => ({
         name: `${m.name} (${m.slug})${m.description ? ` - ${m.description}` : ''}`,
         value: m.slug,
