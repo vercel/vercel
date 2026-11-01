@@ -1,0 +1,17 @@
+[project]
+name = "apscheduler-example"
+version = "0.1.0"
+description = "APScheduler example using vercel-workers + Vercel Queues"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "APScheduler>=3.10.4,<4",
+    "vercel-workers",
+]
+
+[tool.uv.sources]
+vercel-workers = { workspace = true }
+
+[tool.setuptools]
+py-modules = ["main", "tasks"]
