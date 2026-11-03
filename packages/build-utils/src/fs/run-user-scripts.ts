@@ -852,7 +852,9 @@ const installSema = new Sema(1);
  * install. Without the path (e.g. set by the build container), the marker
  * covers every default install, preserving the legacy behavior.
  */
-function installCompletedCovers(packageJsonPath: string | undefined): boolean {
+export function installCompletedCovers(
+  packageJsonPath: string | undefined
+): boolean {
   if (process.env.VERCEL_INSTALL_COMPLETED !== '1') {
     return false;
   }
