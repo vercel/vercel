@@ -15,6 +15,7 @@ import {
   getScriptName,
   glob,
   runNpmInstall,
+  installCompletedCovers,
   runPackageJsonScript,
   execCommand,
   getEnvForPackageManager,
@@ -284,6 +285,7 @@ export const build: BuildV2 = async buildOptions => {
     cliType,
     lockfilePath,
     lockfileVersion,
+    packageJsonPath,
     packageJsonPackageManager,
     packageJsonDevEngines,
     turboSupportsCorepackHome,
@@ -376,8 +378,30 @@ export const build: BuildV2 = async buildOptions => {
     // Case 1: We have a install command which is non zero length
     Boolean(trimmedInstallCommand);
 
+  // A custom install command may already have run before config compilation
+  // (see `vc build`'s pre-compilation install in do-build.ts), in which case
+  // VERCEL_INSTALL_COMPLETED covers this package.json and the command must
+  // not run a second time. This mirrors the skip in runNpmInstall and
+  // runCustomInstallCommand. Skipping here, instead of routing through
+  // runCustomInstallCommand, preserves the spawnEnv built above (including
+  // nodeVersion) for the rest of the build.
+  // A pathless marker is deliberately NOT enough to skip a custom command:
+  // without a path it cannot show that this package.json was the one
+  // installed, so it cannot prove this custom command ran. Only a marker
+  // scoped to this package.json (which `vc build` sets when its
+  // pre-compilation install finds one) suppresses the command.
+  const installMarkerPath = process.env.VERCEL_INSTALL_COMPLETED_PATH;
+  const installAlreadyCompleted =
+    typeof trimmedInstallCommand === 'string' &&
+    Boolean(installMarkerPath) &&
+    installCompletedCovers(packageJsonPath);
+
+  // `install` here means a command actually ran, not merely that the
+  // install step was entered (the child span below still traces on skips).
   builderSpan.setAttributes({
-    install: JSON.stringify(shouldRunInstallCommand),
+    install: JSON.stringify(
+      shouldRunInstallCommand && !installAlreadyCompleted
+    ),
   });
 
   if (shouldRunInstallCommand) {
@@ -391,14 +415,20 @@ export const build: BuildV2 = async buildOptions => {
       })
       .trace(async () => {
         if (typeof trimmedInstallCommand === 'string') {
-          console.log(
-            `Running "install" command: \`${trimmedInstallCommand}\`...`
-          );
+          if (installAlreadyCompleted) {
+            console.log(
+              `Skipping "install" command because VERCEL_INSTALL_COMPLETED is set for ${packageJsonPath}...`
+            );
+          } else {
+            console.log(
+              `Running "install" command: \`${trimmedInstallCommand}\`...`
+            );
 
-          await execCommand(trimmedInstallCommand, {
-            env: spawnEnv,
-            cwd: entryPath,
-          });
+            await execCommand(trimmedInstallCommand, {
+              env: spawnEnv,
+              cwd: entryPath,
+            });
+          }
         } else {
           await runNpmInstall(
             entryPath,
