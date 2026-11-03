@@ -15,7 +15,7 @@ import {
 import { isErrorLike } from '@vercel/error-utils';
 import bytes from 'bytes';
 import chalk from 'chalk';
-import { getFetchDispatcher } from '../fetch';
+import { getUploadDispatcher } from '../fetch';
 import type Now from '../../util';
 import type { BuildLog } from '../logs';
 import { progress } from '../output/progress';
@@ -130,7 +130,7 @@ export default async function processDeployment({
     rootDirectory,
     skipAutoDetectionConfirmation,
     archive,
-    dispatcher: getFetchDispatcher(),
+    dispatcher: await getUploadDispatcher(),
     projectName,
     bulkRedirectsPath,
     manual,

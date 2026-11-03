@@ -43,6 +43,34 @@ export function getFetchDispatcher(): FetchDispatcher | undefined {
   return fetchDispatcher;
 }
 
+let uploadDispatcher: FetchDispatcher | undefined;
+
+/**
+ * The dispatcher for deployment file uploads. With
+ * `VERCEL_EXPERIMENTAL_HTTP2_UPLOADS=1` and no proxy configured, uploads share
+ * a few HTTP/2 connections; otherwise this is {@link getFetchDispatcher}.
+ */
+export async function getUploadDispatcher(): Promise<
+  FetchDispatcher | undefined
+> {
+  if (fetchDispatcher || !isHttp2UploadsEnabled()) {
+    return fetchDispatcher;
+  }
+
+  if (!uploadDispatcher) {
+    const { createHttp2UploadDispatcher } = await import(
+      './http2-upload-dispatcher'
+    );
+    uploadDispatcher = createHttp2UploadDispatcher();
+  }
+  return uploadDispatcher;
+}
+
+function isHttp2UploadsEnabled(): boolean {
+  const value = process.env.VERCEL_EXPERIMENTAL_HTTP2_UPLOADS;
+  return value === '1' || value?.toLowerCase() === 'true';
+}
+
 export default function fetch(
   input: RequestInfo,
   init?: RequestInit

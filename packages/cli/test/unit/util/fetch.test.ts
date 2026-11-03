@@ -1,8 +1,9 @@
 import { Readable } from 'node:stream';
-import { MockAgent, type Dispatcher } from 'undici';
+import { Agent, MockAgent, type Dispatcher } from 'undici';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import fetch, {
   directFetch,
+  getUploadDispatcher,
   setFetchDispatcher,
   toNodeReadable,
 } from '../../../src/util/fetch';
@@ -188,6 +189,46 @@ describe('native fetch', () => {
       handlers()
     );
     expect(calls).toEqual(['direct', 'proxy']);
+  });
+});
+
+describe('getUploadDispatcher', () => {
+  const originalValue = process.env.VERCEL_EXPERIMENTAL_HTTP2_UPLOADS;
+
+  afterEach(() => {
+    setFetchDispatcher(undefined);
+    if (originalValue === undefined) {
+      delete process.env.VERCEL_EXPERIMENTAL_HTTP2_UPLOADS;
+    } else {
+      process.env.VERCEL_EXPERIMENTAL_HTTP2_UPLOADS = originalValue;
+    }
+  });
+
+  it('uses the default dispatcher when the flag is not set', async () => {
+    delete process.env.VERCEL_EXPERIMENTAL_HTTP2_UPLOADS;
+
+    await expect(getUploadDispatcher()).resolves.toBeUndefined();
+  });
+
+  it.each([
+    '1',
+    'true',
+    'TRUE',
+  ])('uses one shared HTTP/2 agent when the flag is "%s"', async value => {
+    process.env.VERCEL_EXPERIMENTAL_HTTP2_UPLOADS = value;
+
+    const dispatcher = await getUploadDispatcher();
+
+    expect(dispatcher).toBeInstanceOf(Agent);
+    await expect(getUploadDispatcher()).resolves.toBe(dispatcher);
+  });
+
+  it('keeps the proxy dispatcher when a proxy is configured', async () => {
+    process.env.VERCEL_EXPERIMENTAL_HTTP2_UPLOADS = '1';
+    const proxy = trackedDispatcher('proxy', []);
+    setFetchDispatcher(proxy);
+
+    await expect(getUploadDispatcher()).resolves.toBe(proxy);
   });
 });
 

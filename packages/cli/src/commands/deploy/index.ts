@@ -13,7 +13,7 @@ import {
   type VercelConfig,
 } from '@vercel/client';
 import { errorToString, isError } from '@vercel/error-utils';
-import { getFetchDispatcher } from '../../util/fetch';
+import { getUploadDispatcher } from '../../util/fetch';
 import type { Deployment } from '@vercel-internals/types';
 import type { DeploymentFramework } from '../../util/deploy/resolve-deployment-framework-preset';
 import bytes from 'bytes';
@@ -2811,7 +2811,7 @@ async function handleContinueDeployment({
       | undefined;
 
     for await (const event of continueDeployment({
-      dispatcher: getFetchDispatcher(),
+      dispatcher: await getUploadDispatcher(),
       apiUrl: client.apiUrl,
       debug: output.isDebugEnabled(),
       deploymentId,
