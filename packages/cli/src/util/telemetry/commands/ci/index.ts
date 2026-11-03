@@ -6,6 +6,13 @@ export class CiTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof ciCommand>
 {
+  trackCliSubcommandDisable(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'disable',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandEnable(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'enable',

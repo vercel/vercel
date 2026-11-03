@@ -15,7 +15,10 @@ const REPO = {
   repository: 'next.js',
 };
 
-function useSettings(options: { enabled?: boolean } = {}) {
+function useSettings(options: {
+  enabled: boolean;
+  patchError?: { status: number; code: string };
+}) {
   const calls = {
     getQuery: undefined as Record<string, unknown> | undefined,
     patches: [] as Array<{ query: Record<string, unknown>; body: unknown }>,
@@ -30,7 +33,19 @@ function useSettings(options: { enabled?: boolean } = {}) {
   });
   client.scenario.patch(SETTINGS_PATH, (req, res) => {
     calls.patches.push({ query: req.query, body: req.body });
-    res.json({ ...REPO, ciEnabled: true, ciEnabledAt: 2, updatedAt: 2 });
+    if (options.patchError) {
+      res.setHeader('retry-after', '0');
+      res.status(options.patchError.status).json({
+        error: { code: options.patchError.code, message: 'Remote message.' },
+      });
+      return;
+    }
+    res.json({
+      ...REPO,
+      ciEnabled: !options.enabled,
+      ciEnabledAt: 2,
+      updatedAt: 2,
+    });
   });
   return calls;
 }
@@ -42,7 +57,23 @@ function useSettingsError(status: number, code: string) {
   });
 }
 
-describe('ci enable', () => {
+describe.each(['enable', 'disable'] as const)('ci %s', action => {
+  const enabled = action === 'enable';
+  const outcome = enabled ? 'enabled' : 'disabled';
+  const receipt = enabled ? 'Enabled' : 'Disabled';
+  const next = enabled
+    ? [
+        {
+          command: 'vercel ci list',
+          when: 'List Vercel CI runs after you push a commit',
+        },
+      ]
+    : [];
+
+  function useCurrentSettings(alreadySet = false) {
+    return useSettings({ enabled: alreadySet ? enabled : !enabled });
+  }
+
   beforeEach(() => {
     vi.stubEnv('CI', '');
     useUser();
@@ -68,8 +99,8 @@ describe('ci enable', () => {
   ])('selects a remote interactively with stdout TTY=%s', async stdoutIsTTY => {
     client.stdout.isTTY = stdoutIsTTY;
     addUpstream();
-    const calls = useSettings();
-    client.setArgv('ci', 'enable');
+    const calls = useCurrentSettings();
+    client.setArgv('ci', action);
     const result = ci(client);
 
     await expect(client.stderr).toOutput('Which Git remote should be used?');
@@ -94,9 +125,9 @@ describe('ci enable', () => {
       cwd: client.cwd,
     });
     const select = vi.spyOn(client.input, 'select');
-    const calls = useSettings();
+    const calls = useCurrentSettings();
     client.nonInteractive = true;
-    client.setArgv('ci', 'enable');
+    client.setArgv('ci', action);
 
     expect(await ci(client)).toBe(0);
     expect(calls.getQuery).toMatchObject(REPO);
@@ -110,9 +141,9 @@ describe('ci enable', () => {
   ])('uses an explicit remote without prompting: %j', async (...flags) => {
     addUpstream();
     const select = vi.spyOn(client.input, 'select');
-    const calls = useSettings();
+    const calls = useCurrentSettings();
     client.nonInteractive = true;
-    client.setArgv('ci', 'enable', ...flags);
+    client.setArgv('ci', action, ...flags);
 
     expect(await ci(client)).toBe(0);
     const selectedRepo = { ...REPO, organizationId: 'acme', repository: 'app' };
@@ -130,11 +161,11 @@ describe('ci enable', () => {
   ])('requires --remote with multiple remotes in %s mode', async mode => {
     addUpstream();
     const select = vi.spyOn(client.input, 'select');
-    const calls = useSettings();
+    const calls = useCurrentSettings();
     client.nonInteractive = mode === 'non-interactive';
     client.setArgv(
       'ci',
-      'enable',
+      action,
       ...(mode === 'json'
         ? ['--json']
         : mode === 'format-json'
@@ -183,9 +214,9 @@ describe('ci enable', () => {
       });
       client.cwd = worktree;
     }
-    const calls = useSettings();
+    const calls = useCurrentSettings();
     client.nonInteractive = true;
-    client.setArgv('ci', 'enable', '--remote', remote);
+    client.setArgv('ci', action, '--remote', remote);
 
     expect(await ci(client)).toBe(0);
     expect(calls.getQuery).toMatchObject({
@@ -202,7 +233,7 @@ describe('ci enable', () => {
   ])('does not prompt in %s mode', async mode => {
     addUpstream();
     const select = vi.spyOn(client.input, 'select');
-    const calls = useSettings();
+    const calls = useCurrentSettings();
     if (mode === 'piped-stdin') client.stdin.isTTY = false;
     if (mode === 'redirected-stderr') client.stderr.isTTY = false;
     if (mode === 'ci') vi.stubEnv('CI', '1');
@@ -210,7 +241,7 @@ describe('ci enable', () => {
       client.isAgent = true;
       client.nonInteractive = true;
     }
-    client.setArgv('ci', 'enable');
+    client.setArgv('ci', action);
 
     expect(await ci(client)).toBe(2);
     expect(select).not.toHaveBeenCalled();
@@ -227,9 +258,9 @@ describe('ci enable', () => {
     'https://github.com/acme/app.git',
   ])('rejects an invalid remote %j without falling back to origin', async remote => {
     const select = vi.spyOn(client.input, 'select');
-    const calls = useSettings();
+    const calls = useCurrentSettings();
     client.nonInteractive = true;
-    client.setArgv('ci', 'enable', `--remote=${remote}`);
+    client.setArgv('ci', action, `--remote=${remote}`);
 
     expect(await ci(client)).toBe(2);
     expect(calls.getQuery).toBeUndefined();
@@ -250,9 +281,9 @@ describe('ci enable', () => {
       ['remote', 'add', 'upstream', 'https://gitlab.com/acme/app.git'],
       { cwd: client.cwd }
     );
-    const calls = useSettings();
+    const calls = useCurrentSettings();
     client.nonInteractive = true;
-    client.setArgv('ci', 'enable', '--remote', 'upstream');
+    client.setArgv('ci', action, '--remote', 'upstream');
 
     expect(await ci(client)).toBe(1);
     expect(calls.getQuery).toBeUndefined();
@@ -263,95 +294,185 @@ describe('ci enable', () => {
   });
 
   it('documents the remote selector in help without API requests', async () => {
-    const calls = useSettings();
-    client.setArgv('ci', 'enable', '--help');
+    const calls = useCurrentSettings();
+    client.setArgv('ci', action, '--help');
 
     expect(await ci(client)).toBe(0);
     expect(client.stderr.getFullOutput()).toContain('--remote');
     expect(client.stderr.getFullOutput()).toContain('--remote upstream');
     expect(calls.getQuery).toBeUndefined();
+    expect(calls.patches).toHaveLength(0);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'flag:help', value: `ci:${action}` },
+    ]);
   });
 
-  it('enables Vercel CI for the origin repository', async () => {
-    const calls = useSettings();
-    client.setArgv('ci', 'enable');
+  it('updates Vercel CI for the origin repository', async () => {
+    const calls = useCurrentSettings();
+    client.setArgv('ci', action);
 
     expect(await ci(client)).toBe(0);
     expect(calls.getQuery).toMatchObject(REPO);
     expect(calls.patches).toEqual([
-      { query: expect.objectContaining(REPO), body: { ciEnabled: true } },
+      { query: expect.objectContaining(REPO), body: { ciEnabled: enabled } },
     ]);
     const stderr = client.stderr.getFullOutput();
-    expect(stderr).toContain('Enabled');
+    expect(stderr).toContain(receipt);
+    expect(stderr).toContain('Vercel CI');
     expect(stderr).toContain('vercel/next.js');
-    expect(stderr).toContain('vercel ci list');
+    if (enabled) {
+      expect(stderr).toContain('vercel ci list');
+    } else {
+      expect(stderr).not.toContain('vercel ci list');
+    }
     expect(client.stdout.getFullOutput()).toBe('');
   });
 
-  it('reports a no-op without updating when CI is already enabled', async () => {
-    const calls = useSettings({ enabled: true });
-    client.setArgv('ci', 'enable');
+  it('uses the current team for both settings requests', async () => {
+    client.config.currentTeam = 'team_current';
+    const calls = useCurrentSettings();
+    client.nonInteractive = true;
+    client.setArgv('ci', action);
+
+    expect(await ci(client)).toBe(0);
+    expect(calls.getQuery).toMatchObject({ ...REPO, teamId: 'team_current' });
+    expect(calls.patches).toEqual([
+      {
+        query: expect.objectContaining({ ...REPO, teamId: 'team_current' }),
+        body: { ciEnabled: enabled },
+      },
+    ]);
+  });
+
+  it('reports a no-op without updating when CI is already in the requested state', async () => {
+    const calls = useCurrentSettings(true);
+    client.setArgv('ci', action);
 
     expect(await ci(client)).toBe(0);
     expect(calls.patches).toHaveLength(0);
     const stderr = client.stderr.getFullOutput();
     expect(stderr).toContain(
-      'Vercel CI is already enabled for vercel/next.js.'
+      `Vercel CI is already ${outcome} for vercel/next.js.`
     );
     expect(stderr).not.toContain('✓');
-  });
-
-  it('prints the result as JSON with --json', async () => {
-    useSettings();
-    client.setArgv('ci', 'enable', '--json');
-
-    expect(await ci(client)).toBe(0);
-    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
-      repository: { ...REPO, ciEnabled: true, ciEnabledAt: 2, updatedAt: 2 },
-      outcome: 'enabled',
-      next: [
-        {
-          command: 'vercel ci list',
-          when: 'List Vercel CI runs after you push a commit',
-        },
-      ],
-    });
-  });
-
-  it('reports unchanged in non-interactive mode', async () => {
-    useSettings({ enabled: true });
-    client.nonInteractive = true;
-    client.setArgv('ci', 'enable');
-
-    expect(await ci(client)).toBe(0);
-    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
-      status: 'ok',
-      outcome: 'unchanged',
-      repository: { ciEnabled: true },
-      message: 'Vercel CI is already enabled for vercel/next.js.',
-    });
+    if (!enabled) expect(stderr).not.toContain('vercel ci list');
   });
 
   it.each([
-    [403, 'forbidden', 'permission_denied'],
-    [404, 'not_found', 'not_found'],
-    [409, 'repository_linked_to_multiple_teams', 'conflict'],
-    [429, 'rate_limited', 'rate_limited'],
-    [500, 'internal_error', 'api_error'],
-  ])('maps a %s response to %s', async (status, code, reason) => {
-    useSettingsError(status, code);
+    ['--json'],
+    ['--format', 'json'],
+  ])('prints the result as JSON with %j', async (...flags) => {
+    const calls = useCurrentSettings();
+    client.setArgv('ci', action, ...flags);
+
+    expect(await ci(client)).toBe(0);
+    expect(calls.patches).toEqual([
+      { query: expect.objectContaining(REPO), body: { ciEnabled: enabled } },
+    ]);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      repository: {
+        ...REPO,
+        ciEnabled: enabled,
+        ciEnabledAt: 2,
+        updatedAt: 2,
+      },
+      outcome,
+      next,
+    });
+    expect(client.stderr.getFullOutput()).toBe('');
+  });
+
+  it('reports the changed result in non-interactive mode', async () => {
+    useCurrentSettings();
     client.nonInteractive = true;
-    client.setArgv('ci', 'enable');
+    client.setArgv('ci', action);
+
+    expect(await ci(client)).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      status: 'ok',
+      repository: { ...REPO, ciEnabled: enabled, ciEnabledAt: 2, updatedAt: 2 },
+      outcome,
+      next,
+      message: `${receipt} Vercel CI for vercel/next.js.`,
+    });
+    expect(client.stderr.getFullOutput()).toBe('');
+  });
+
+  it.each([
+    false,
+    true,
+  ])('reports unchanged as JSON with nonInteractive=%s', async nonInteractive => {
+    const calls = useCurrentSettings(true);
+    client.nonInteractive = nonInteractive;
+    client.setArgv('ci', action, ...(nonInteractive ? [] : ['--json']));
+
+    expect(await ci(client)).toBe(0);
+    expect(calls.getQuery).toMatchObject(REPO);
+    expect(calls.patches).toHaveLength(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      ...(nonInteractive
+        ? {
+            status: 'ok',
+            message: `Vercel CI is already ${outcome} for vercel/next.js.`,
+          }
+        : {}),
+      repository: enabled
+        ? { ...REPO, ciEnabled: true, ciEnabledAt: 1, updatedAt: 1 }
+        : { ...REPO, ciEnabled: false },
+      outcome: 'unchanged',
+      next,
+    });
+    expect(client.stderr.getFullOutput()).toBe('');
+  });
+
+  describe.each(['GET', 'PATCH'] as const)('%s failures', method => {
+    it.each([
+      [403, 'forbidden', 'permission_denied'],
+      [404, 'not_found', 'not_found'],
+      [409, 'repository_linked_to_multiple_teams', 'conflict'],
+      [429, 'rate_limited', 'rate_limited'],
+      [500, 'internal_error', 'api_error'],
+    ])('maps a %s response to %s', async (status, code, reason) => {
+      if (method === 'GET') {
+        useSettingsError(status, code);
+      } else {
+        useSettings({ enabled: !enabled, patchError: { status, code } });
+      }
+      client.nonInteractive = true;
+      client.setArgv('ci', action);
+
+      expect(await ci(client)).toBe(1);
+      const payload = JSON.parse(client.stdout.getFullOutput());
+      expect(payload).toMatchObject({ status: 'error', reason });
+      expect(payload.message).not.toContain('Remote message.');
+      expect(payload.outcome).toBeUndefined();
+      expect(client.stderr.getFullOutput()).toBe('');
+    });
+  });
+
+  it('does not print a success receipt when updating settings fails', async () => {
+    const calls = useSettings({
+      enabled: !enabled,
+      patchError: { status: 403, code: 'forbidden' },
+    });
+    client.setArgv('ci', action);
 
     expect(await ci(client)).toBe(1);
-    const payload = JSON.parse(client.stdout.getFullOutput());
-    expect(payload).toMatchObject({ status: 'error', reason });
-    expect(payload.message).not.toContain('Remote message.');
+    expect(calls.getQuery).toMatchObject(REPO);
+    expect(calls.patches).toEqual([
+      { query: expect.objectContaining(REPO), body: { ciEnabled: enabled } },
+    ]);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain(`Can't ${action} Vercel CI for vercel/next.js.`);
+    expect(stderr).not.toContain(receipt);
+    expect(stderr).not.toContain('✓');
+    expect(stderr).not.toContain('vercel ci list');
+    expect(client.stdout.getFullOutput()).toBe('');
   });
 
   it('explains that the repository must be connected on a 404', async () => {
     useSettingsError(404, 'not_found');
-    client.setArgv('ci', 'enable');
+    client.setArgv('ci', action);
 
     expect(await ci(client)).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
@@ -360,22 +481,68 @@ describe('ci enable', () => {
   });
 
   it('rejects positional arguments', async () => {
-    const calls = useSettings();
+    const calls = useCurrentSettings();
     client.nonInteractive = true;
-    client.setArgv('ci', 'enable', 'vercel/next.js');
+    client.setArgv('ci', action, 'vercel/next.js');
 
     expect(await ci(client)).toBe(2);
     expect(calls.getQuery).toBeUndefined();
+    expect(calls.patches).toHaveLength(0);
     expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
       status: 'error',
       reason: 'invalid_arguments',
     });
   });
 
+  it.each([
+    ['--format', 'yaml'],
+    ['--json', '--format', 'text'],
+  ])('rejects invalid output options before API requests: %j', async (...flags) => {
+    const calls = useCurrentSettings();
+    const select = vi.spyOn(client.input, 'select');
+    client.nonInteractive = true;
+    client.setArgv('ci', action, ...flags);
+
+    expect(await ci(client)).toBe(2);
+    expect(calls.getQuery).toBeUndefined();
+    expect(calls.patches).toHaveLength(0);
+    expect(select).not.toHaveBeenCalled();
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      status: 'error',
+      reason: 'invalid_arguments',
+    });
+  });
+
+  it.each([
+    { flags: ['--json'], event: { key: 'flag:json', value: 'TRUE' } },
+    {
+      flags: ['--format', 'json'],
+      event: { key: 'option:format', value: 'json' },
+    },
+  ])('tracks $flags telemetry without recording the remote name', async ({
+    flags,
+    event,
+  }) => {
+    execFileSync(
+      'git',
+      ['remote', 'add', 'private-remote', 'https://github.com/acme/app.git'],
+      { cwd: client.cwd }
+    );
+    useCurrentSettings();
+    client.setArgv('ci', action, '--remote', 'private-remote', ...flags);
+
+    expect(await ci(client)).toBe(0);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: `subcommand:${action}`, value: action },
+      event,
+      { key: 'option:remote', value: '[REDACTED]' },
+    ]);
+  });
+
   it('requires a supported Git repository', async () => {
     client.cwd = createCiGitRepo({ remote: '' }).cwd;
     client.nonInteractive = true;
-    client.setArgv('ci', 'enable');
+    client.setArgv('ci', action);
 
     expect(await ci(client)).toBe(1);
     expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({

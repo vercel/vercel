@@ -9,6 +9,7 @@ import { type Command, help } from '../help';
 import { getCommandAliases } from '..';
 import {
   ciCommand,
+  disableSubcommand,
   enableSubcommand,
   grepSubcommand,
   inspectSubcommand,
@@ -16,6 +17,7 @@ import {
   logsSubcommand,
   rerunSubcommand,
 } from './command';
+import disable from './disable';
 import enable from './enable';
 import grep from './grep';
 import inspect from './inspect';
@@ -24,6 +26,7 @@ import rerun from './rerun';
 import ls from './ls';
 
 const COMMAND_CONFIG = {
+  disable: getCommandAliases(disableSubcommand),
   enable: getCommandAliases(enableSubcommand),
   ls: getCommandAliases(listSubcommand),
   inspect: getCommandAliases(inspectSubcommand),
@@ -67,6 +70,13 @@ export default async function main(client: Client): Promise<number> {
   }
 
   switch (subcommand) {
+    case 'disable':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('ci', subcommandOriginal);
+        return printHelp(disableSubcommand);
+      }
+      telemetry.trackCliSubcommandDisable(subcommandOriginal);
+      return disable(client, args);
     case 'enable':
       if (needHelp) {
         telemetry.trackCliFlagHelp('ci', subcommandOriginal);

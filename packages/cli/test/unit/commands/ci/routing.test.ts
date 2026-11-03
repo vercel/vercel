@@ -11,6 +11,7 @@ describe('CI argument errors', () => {
 
   it.each([
     'enable',
+    'disable',
     'ls',
     'inspect',
     'logs',
@@ -34,6 +35,8 @@ describe('CI argument errors', () => {
     ['rerun', '--team'],
     ['enable', '--format'],
     ['enable', '--remote'],
+    ['disable', '--format'],
+    ['disable', '--remote'],
   ])('reports a missing value for %s %s as JSON', async (subcommand, flag) => {
     client.setArgv('ci', subcommand, flag);
     expect(await ci(client)).toBe(2);

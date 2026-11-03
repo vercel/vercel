@@ -1,0 +1,169 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ci help > documents disable at 40 columns 1`] = `
+"▲ vercel ci disable [options]
+Disable Vercel CI for the current
+repository. The repository must be
+connected to a project on the current
+team
+
+Options:
+  --json
+    Output as JSON
+  --remote <NAME>
+    Git remote to disable Vercel CI for
+    (default: the only remote; prompts
+    when multiple exist). Required with
+    multiple remotes in non-interactive
+    mode
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  Disable Vercel CI for the current
+  repository
+    vercel ci disable
+
+  Disable Vercel CI for a repository on
+  another team
+    vercel ci disable --scope <TEAM>
+
+  Disable Vercel CI for a specific Git
+  remote without prompts
+    vercel ci disable --remote upstream --non-interactive
+"
+`;
+
+exports[`ci help > documents disable at 80 columns 1`] = `
+"▲ vercel ci disable [options]
+Disable Vercel CI for the current repository. The repository must be connected
+to a project on the current team
+
+Options:
+  --json           Output as JSON
+  --remote <NAME>  Git remote to disable Vercel CI for (default: the only
+                   remote; prompts when multiple exist). Required with multiple
+                   remotes in non-interactive mode
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  Disable Vercel CI for the current repository
+    vercel ci disable
+
+  Disable Vercel CI for a repository on another team
+    vercel ci disable --scope <TEAM>
+
+  Disable Vercel CI for a specific Git remote without prompts
+    vercel ci disable --remote upstream --non-interactive
+"
+`;
+
+exports[`ci help > documents disable at 120 columns 1`] = `
+"▲ vercel ci disable [options]
+Disable Vercel CI for the current repository. The repository must be connected to a project on the current team
+
+Options:
+  --json           Output as JSON
+  --remote <NAME>  Git remote to disable Vercel CI for (default: the only remote; prompts when multiple exist). Required
+                   with multiple remotes in non-interactive mode
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  Disable Vercel CI for the current repository
+    vercel ci disable
+
+  Disable Vercel CI for a repository on another team
+    vercel ci disable --scope <TEAM>
+
+  Disable Vercel CI for a specific Git remote without prompts
+    vercel ci disable --remote upstream --non-interactive
+"
+`;
+
+exports[`ci help > lists disable at 40 columns 1`] = `
+"▲ vercel ci <command>
+Inspect Vercel CI and rerun runs
+
+Commands:
+  enable
+    Enable Vercel CI for the current
+    repository. The repository must be
+    connected to a project on the
+    current team
+  disable
+    Disable Vercel CI for the current
+    repository. The repository must be
+    connected to a project on the
+    current team
+  list
+    List Vercel CI runs for the current
+    repository
+  inspect [run]
+    Show the jobs and tasks of a Vercel
+    CI run (default: the run for the
+    current commit)
+  logs [run]
+    Show task logs for a Vercel CI run
+    (default: the run for the current
+    commit)
+  grep <text>
+    Search the task logs of recent
+    Vercel CI runs for the current
+    repository (default: the last 20
+    runs on the current branch)
+  rerun [run]
+    Start a new attempt of a finished
+    Vercel CI run (default: a failed run
+    for the current commit; succeeded or
+    skipped runs require a run ID)
+
+Global Options: See \`vercel --help\`
+"
+`;
+
+exports[`ci help > lists disable at 80 columns 1`] = `
+"▲ vercel ci <command>
+Inspect Vercel CI and rerun runs
+
+Commands:
+  enable         Enable Vercel CI for the current repository. The repository
+                 must be connected to a project on the current team
+  disable        Disable Vercel CI for the current repository. The repository
+                 must be connected to a project on the current team
+  list           List Vercel CI runs for the current repository
+  inspect [run]  Show the jobs and tasks of a Vercel CI run (default: the run
+                 for the current commit)
+  logs [run]     Show task logs for a Vercel CI run (default: the run for the
+                 current commit)
+  grep <text>    Search the task logs of recent Vercel CI runs for the current
+                 repository (default: the last 20 runs on the current branch)
+  rerun [run]    Start a new attempt of a finished Vercel CI run (default: a
+                 failed run for the current commit; succeeded or skipped runs
+                 require a run ID)
+
+Global Options: See \`vercel --help\`
+"
+`;
+
+exports[`ci help > lists disable at 120 columns 1`] = `
+"▲ vercel ci <command>
+Inspect Vercel CI and rerun runs
+
+Commands:
+  enable         Enable Vercel CI for the current repository. The repository must be connected to a project on the
+                 current team
+  disable        Disable Vercel CI for the current repository. The repository must be connected to a project on the
+                 current team
+  list           List Vercel CI runs for the current repository
+  inspect [run]  Show the jobs and tasks of a Vercel CI run (default: the run for the current commit)
+  logs [run]     Show task logs for a Vercel CI run (default: the run for the current commit)
+  grep <text>    Search the task logs of recent Vercel CI runs for the current repository (default: the last 20 runs on
+                 the current branch)
+  rerun [run]    Start a new attempt of a finished Vercel CI run (default: a failed run for the current commit;
+                 succeeded or skipped runs require a run ID)
+
+Global Options: See \`vercel --help\`
+"
+`;

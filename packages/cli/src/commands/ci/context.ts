@@ -22,8 +22,13 @@ export type CiContext = {
  */
 export async function resolveCiContext(
   client: Client,
-  remoteOptions?: { remote?: string; nonInteractive: boolean }
+  remoteOptions?: {
+    remote?: string;
+    nonInteractive: boolean;
+    action?: 'enable' | 'disable';
+  }
 ): Promise<CiContext | number> {
+  const action = remoteOptions?.action ?? 'enable';
   let remoteName = 'origin';
   if (remoteOptions) {
     const remoteNames = await getCiGitRemoteNames(client.cwd);
@@ -31,7 +36,7 @@ export async function resolveCiContext(
       if (!remoteNames.includes(remoteOptions.remote)) {
         return invalidCiArguments(
           client,
-          "Can't enable Vercel CI. --remote must name an existing Git remote. Run `git remote` to list remotes, then pass --remote <NAME>."
+          `Can't ${action} Vercel CI. --remote must name an existing Git remote. Run \`git remote\` to list remotes, then pass --remote <NAME>.`
         );
       }
       remoteName = remoteOptions.remote;
@@ -41,7 +46,7 @@ export async function resolveCiContext(
     ) {
       return invalidCiArguments(
         client,
-        "Can't enable Vercel CI. Found multiple Git remotes. Pass --remote <NAME> to select one; run `git remote` to list remotes."
+        `Can't ${action} Vercel CI. Found multiple Git remotes. Pass --remote <NAME> to select one; run \`git remote\` to list remotes.`
       );
     } else if (remoteNames.length > 0) {
       remoteName = await selectGitRemote(client, remoteNames);

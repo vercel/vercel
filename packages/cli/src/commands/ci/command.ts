@@ -375,6 +375,42 @@ export const enableSubcommand = {
   ],
 } as const;
 
+export const disableSubcommand = {
+  name: 'disable',
+  aliases: [],
+  description:
+    'Disable Vercel CI for the current repository. The repository must be connected to a project on the current team',
+  arguments: [],
+  options: [
+    {
+      name: 'remote',
+      shorthand: null,
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+      description:
+        'Git remote to disable Vercel CI for (default: the only remote; prompts when multiple exist). Required with multiple remotes in non-interactive mode',
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Disable Vercel CI for the current repository',
+      value: `${packageName} ci disable`,
+    },
+    {
+      name: 'Disable Vercel CI for a repository on another team',
+      placeholders: ['<TEAM>'],
+      value: `${packageName} ci disable --scope <TEAM>`,
+    },
+    {
+      name: 'Disable Vercel CI for a specific Git remote without prompts',
+      value: `${packageName} ci disable --remote upstream --non-interactive`,
+    },
+  ],
+} as const;
+
 export const ciCommand = {
   name: 'ci',
   aliases: [],
@@ -382,6 +418,7 @@ export const ciCommand = {
   arguments: [],
   subcommands: [
     enableSubcommand,
+    disableSubcommand,
     listSubcommand,
     inspectSubcommand,
     logsSubcommand,
