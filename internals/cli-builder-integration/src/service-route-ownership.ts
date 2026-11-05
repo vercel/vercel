@@ -37,7 +37,16 @@ export function scopeRoutesToServiceOwnership({
     return routes;
   }
   return routes.map(route => {
-    if ('handle' in route || typeof route.src !== 'string') {
+    // Middleware routes are indexed by their exact `src` by the deploy
+    // output validator, so wrapping them with the ownership guard (as
+    // done for normal routes) corrupts the key and breaks deploys of
+    // services-mode projects that have a middleware. Leave them alone,
+    // exactly like `handle` routes. See vercel/vercel#16296.
+    if (
+      'handle' in route ||
+      'middlewarePath' in route ||
+      typeof route.src !== 'string'
+    ) {
       return route;
     }
     return {
