@@ -58,6 +58,16 @@ function looksLikeHostname(path: string): boolean {
   return firstSegment.includes('.') && !firstSegment.startsWith('.');
 }
 
+function isWindowsDrivePath(path: string): boolean {
+  return process.platform === 'win32' && /^[a-z]:[\\/]/i.test(path);
+}
+
+function reportConvertedWindowsPath(commandName: string): void {
+  output.error(
+    `${getCommandName(`${commandName} <path>`)} received a Windows drive path. Git Bash/MSYS may have converted the leading-slash path before it reached the CLI. Run ${getCommandName(`${commandName} llms.txt`)} without the leading slash, or set MSYS_NO_PATHCONV=1.`
+  );
+}
+
 function orgFromOwner(id: string, slug = id): ProjectLinked['org'] {
   return { type: id.startsWith('team_') ? 'team' : 'user', id, slug };
 }
@@ -225,6 +235,11 @@ export function setupCurlLikeCommand(
 
     const path = parsed.target;
 
+    if (path && isWindowsDrivePath(path)) {
+      reportConvertedWindowsPath(command.name);
+      return 2;
+    }
+
     telemetryClient.trackCliArgumentPath(path);
 
     if (parsed.deployment) {
@@ -293,6 +308,11 @@ export function setupCurlLikeCommand(
 
   const separatorIndex = process.argv.indexOf('--');
   const path = parsedArgs.args[0];
+
+  if (path && isWindowsDrivePath(path)) {
+    reportConvertedWindowsPath(command.name);
+    return 2;
+  }
 
   telemetryClient.trackCliArgumentPath(path);
 
