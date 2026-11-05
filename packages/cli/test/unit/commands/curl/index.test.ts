@@ -1,11 +1,15 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import curl from '../../../../src/commands/curl';
+import httpstat from '../../../../src/commands/httpstat';
+import { curlCommand } from '../../../../src/commands/curl/command';
+import { httpstatCommand } from '../../../../src/commands/httpstat/command';
 import { getDeploymentUrlById } from '../../../../src/commands/curl/deployment-url';
 import {
   getDeploymentUrlAndToken,
   getFullUrlAndToken,
   parseCurlLikeArgs,
+  setupCurlLikeCommand,
 } from '../../../../src/commands/curl/shared';
 import { useUser } from '../../../mocks/user';
 import { useProject } from '../../../mocks/project';
@@ -65,6 +69,77 @@ describe('curl', () => {
   afterEach(() => {
     process.argv = originalProcessArgv;
     vi.clearAllMocks();
+  });
+
+  describe('Windows drive path validation', () => {
+    const telemetry = {
+      trackCliArgumentPath: vi.fn(),
+      trackCliOptionDeployment: vi.fn(),
+      trackCliOptionProtectionBypass: vi.fn(),
+    };
+
+    beforeEach(() => {
+      vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it.each([
+      'C:/Program Files/Git/llms.txt',
+      'C:\\Program Files\\Git\\llms.txt',
+    ])('rejects converted path %s as a usage error before work', async path => {
+      client.setArgv('curl', path);
+      const fetch = vi.spyOn(client, 'fetch');
+
+      expect(await curl(client)).toBe(2);
+      expect(client.getFullOutput()).toContain(
+        'Git Bash/MSYS may have converted'
+      );
+      expect(client.getFullOutput()).toContain('curl llms.txt');
+      expect(client.getFullOutput()).toContain('MSYS_NO_PATHCONV=1');
+      expect(fetch).not.toHaveBeenCalled();
+      expect(spawnMock).not.toHaveBeenCalled();
+    });
+
+    it('rejects the converted path for httpstat before network or subprocess work', async () => {
+      client.setArgv('httpstat', 'C:/Program Files/Git/llms.txt');
+      const fetch = vi.spyOn(client, 'fetch');
+
+      expect(await httpstat(client)).toBe(2);
+      expect(client.getFullOutput()).toContain('httpstat llms.txt');
+      expect(client.getFullOutput()).toContain('MSYS_NO_PATHCONV=1');
+      expect(fetch).not.toHaveBeenCalled();
+      expect(spawnMock).not.toHaveBeenCalled();
+    });
+
+    it('preserves relative paths, hostnames, and URLs on Windows', () => {
+      for (const [command, args, expectedPath, isFullUrl] of [
+        [curlCommand, ['curl', 'api/hello'], 'api/hello', false],
+        [
+          curlCommand,
+          ['curl', 'example.vercel.app'],
+          'https://example.vercel.app',
+          true,
+        ],
+        [
+          curlCommand,
+          ['curl', 'https://example.com/path'],
+          'https://example.com/path',
+          true,
+        ],
+        [httpstatCommand, ['httpstat', '/api/hello'], '/api/hello', false],
+      ] as const) {
+        client.setArgv(...args);
+        const setup = setupCurlLikeCommand(client, command, telemetry, {
+          allowFullUrl: command.name === 'curl',
+          args: [...args],
+        });
+
+        expect(setup).toMatchObject({ path: expectedPath, isFullUrl });
+      }
+    });
   });
 
   describe('--non-interactive', () => {
