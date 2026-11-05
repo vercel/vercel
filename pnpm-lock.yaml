@@ -2683,8 +2683,8 @@ importers:
         specifier: workspace:*
         version: link:../error-utils
       '@vercel/nft':
-        specifier: 1.10.0
-        version: 1.10.0(rollup@4.62.4)
+        specifier: 1.11.1
+        version: 1.11.1(rollup@4.62.4)
       '@vercel/static-config':
         specifier: workspace:*
         version: link:../static-config
@@ -7186,6 +7186,11 @@ packages:
 
   '@vercel/nft@1.10.0':
     resolution: {integrity: sha512-iLOW4fcsgkipfOh2Bw3wB38YDfxTlxr7+j4uFeui2OswkNT28jIitS/aMce7tS0mef1YPQ8zLIDYr3a0aahNrA==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  '@vercel/nft@1.11.1':
+    resolution: {integrity: sha512-RXQA08MdBy9WdKKXf1JCAM6HlZUOUDPDBjwHSz0ZaPcQDVisPR5hPJs2iLHVdfjHq36YIlS9AkzDceegukpqGA==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -17779,6 +17784,25 @@ snapshots:
       graceful-fs: 4.2.11
       node-gyp-build: 4.8.4
       picomatch: 4.0.4
+      resolve-from: 5.0.0
+    transitivePeerDependencies:
+      - encoding
+      - rollup
+      - supports-color
+
+  '@vercel/nft@1.11.1(rollup@4.62.4)':
+    dependencies:
+      '@mapbox/node-pre-gyp': 2.0.3
+      '@rollup/pluginutils': 5.4.0(rollup@4.62.4)
+      acorn: 8.16.0
+      acorn-import-attributes: 1.9.5(acorn@8.16.0)
+      async-sema: 3.1.1
+      bindings: 1.5.0
+      estree-walker: 2.0.2
+      glob: 13.0.6
+      graceful-fs: 4.2.11
+      node-gyp-build: 4.8.4
+      picomatch: 4.0.5
       resolve-from: 5.0.0
     transitivePeerDependencies:
       - encoding
