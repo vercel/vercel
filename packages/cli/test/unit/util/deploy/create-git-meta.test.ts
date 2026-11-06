@@ -6,6 +6,7 @@ import createLineIterator from 'line-async-iterator';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import {
   createGitMeta,
+  getGitMetaDirectory,
   getOriginUrl,
   getRemoteUrls,
   getRootDirectory,
@@ -260,6 +261,48 @@ describe('createGitMeta', () => {
       });
       expect(getRootDirectory(nestedDirectory)).toEqual('apps/web');
       expect(getRootDirectory(directory)).toEqual('');
+    } finally {
+      await fs.remove(join(directory, 'apps'));
+      await fs.rename(join(directory, '.git'), join(directory, 'git'));
+    }
+  });
+  it('resolves git metadata directory when deploying from inside rootDirectory', async () => {
+    const directory = fixture('test-github');
+    const nestedDirectory = join(directory, 'apps', 'web');
+    try {
+      await fs.rename(join(directory, 'git'), join(directory, '.git'));
+      await fs.mkdirp(nestedDirectory);
+
+      // Deploying from repo root: candidate path exists and is used
+      expect(getGitMetaDirectory(directory, 'apps/web')).toEqual(
+        nestedDirectory
+      );
+
+      // Deploying from inside rootDirectory: candidate does not exist, falls back to cwd
+      expect(getGitMetaDirectory(nestedDirectory, 'apps/web')).toEqual(
+        nestedDirectory
+      );
+
+      // When rootDirectory is omitted or empty: returns cwd
+      expect(getGitMetaDirectory(directory, undefined)).toEqual(directory);
+      expect(getGitMetaDirectory(directory, '')).toEqual(directory);
+
+      // Even if nested apps/web folder exists inside apps/web, cwd already ends with rootDirectory
+      const doublyNestedDirectory = join(nestedDirectory, 'apps', 'web');
+      await fs.mkdirp(doublyNestedDirectory);
+      expect(getGitMetaDirectory(nestedDirectory, 'apps/web')).toEqual(
+        nestedDirectory
+      );
+
+      // End-to-end: createGitMeta with getGitMetaDirectory succeeds from inside subdirectory
+      const data = await createGitMeta(
+        getGitMetaDirectory(nestedDirectory, 'apps/web')
+      );
+      expect(data).toMatchObject({
+        remoteUrl: 'https://github.com/user/repo.git',
+        commitSha: '0499dbfa2f58cd8b3b3ce5b2c02a24200862ac97',
+        rootDirectory: 'apps/web',
+      });
     } finally {
       await fs.remove(join(directory, 'apps'));
       await fs.rename(join(directory, '.git'), join(directory, 'git'));

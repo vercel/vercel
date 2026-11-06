@@ -26,7 +26,7 @@ import Now, { type CreateOptions } from '../../util';
 import type Client from '../../util/client';
 import { readLocalConfig } from '../../util/config/files';
 import { compileVercelConfig } from '../../util/compile-vercel-config';
-import { createGitMeta } from '../../util/create-git-meta';
+import { createGitMeta, getGitMetaDirectory } from '../../util/create-git-meta';
 import { getGitExecutable } from '../../util/git-executable';
 import createDeploy from '../../util/deploy/create-deploy';
 import {
@@ -487,7 +487,7 @@ async function handleInitDeployment(
   // Observational path of the project dir relative to the git root — not the
   // project `rootDirectory` setting (though they often resolve to the same path).
   const gitMetadata = createGitMeta(
-    join(cwd, project.rootDirectory || ''),
+    getGitMetaDirectory(cwd, project.rootDirectory),
     project
   );
   void gitMetadata.catch(() => {});
@@ -1739,7 +1739,7 @@ async function runDefaultDeploy(
   // project `rootDirectory` setting (though they often resolve to the same path).
   const gitMetadata = singleFile
     ? Promise.resolve(undefined)
-    : createGitMeta(join(cwd, project.rootDirectory || ''), project);
+    : createGitMeta(getGitMetaDirectory(cwd, project.rootDirectory), project);
   // Validation can return before metadata is consumed; retain errors for the
   // eventual await without allowing an unhandled rejection in the meantime.
   void gitMetadata.catch(() => {});
