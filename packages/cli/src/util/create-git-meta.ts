@@ -97,28 +97,20 @@ export async function createGitMeta(
 }
 
 /**
- * Resolves the directory to pass to `createGitMeta`. When deploying from the
- * repository root of a monorepo, `project.rootDirectory` is joined onto `cwd`.
- * When deploying from inside the project's rootDirectory (or when the joined
- * path does not exist on disk), falls back to `cwd`.
+ * Resolves the directory to pass to `createGitMeta`. When deploying from within
+ * a Git repository, `project.rootDirectory` is resolved relative to the Git repository root.
+ * When deploying outside a Git repository, `project.rootDirectory` is resolved relative to `cwd`.
+ * If the resolved directory does not exist on disk, falls back to `cwd`.
  */
 export function getGitMetaDirectory(
   cwd: string,
   rootDirectory?: string | null
 ): string {
   if (rootDirectory) {
-    const candidate = join(cwd, rootDirectory);
+    const gitRoot = getGitRootDirectory({ cwd });
+    const baseDir = gitRoot || cwd;
+    const candidate = join(baseDir, rootDirectory);
     if (fs.existsSync(candidate)) {
-      const normalizedCwd = resolve(cwd).replace(/\\/g, '/');
-      const normalizedRoot = rootDirectory
-        .replace(/\\/g, '/')
-        .replace(/^\/+|\/+$/g, '');
-      if (
-        normalizedCwd === normalizedRoot ||
-        normalizedCwd.endsWith(`/${normalizedRoot}`)
-      ) {
-        return cwd;
-      }
       return candidate;
     }
   }

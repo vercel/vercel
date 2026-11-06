@@ -287,12 +287,20 @@ describe('createGitMeta', () => {
       expect(getGitMetaDirectory(directory, undefined)).toEqual(directory);
       expect(getGitMetaDirectory(directory, '')).toEqual(directory);
 
-      // Even if nested apps/web folder exists inside apps/web, cwd already ends with rootDirectory
+      // Even if nested apps/web folder exists inside apps/web, gitRoot resolves apps/web
       const doublyNestedDirectory = join(nestedDirectory, 'apps', 'web');
       await fs.mkdirp(doublyNestedDirectory);
       expect(getGitMetaDirectory(nestedDirectory, 'apps/web')).toEqual(
         nestedDirectory
       );
+
+      // When repository folder name matches rootDirectory, candidate inside gitRoot is correctly selected
+      const repoNameMatchingDirectory = join(directory, 'test-github');
+      await fs.mkdirp(repoNameMatchingDirectory);
+      expect(getGitMetaDirectory(directory, 'test-github')).toEqual(
+        repoNameMatchingDirectory
+      );
+      await fs.remove(repoNameMatchingDirectory);
 
       // End-to-end: createGitMeta with getGitMetaDirectory succeeds from inside subdirectory
       const data = await createGitMeta(
