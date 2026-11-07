@@ -36,7 +36,11 @@ function mockLinkedProject() {
 
 function mockProjectWithCrons(
   definitions: { host: string; path: string; schedule: string }[],
-  opts?: { disabledAt?: number | null }
+  opts?: {
+    disabledAt?: number | null;
+    deploymentId?: string;
+    productionDeployment?: { id: string; url: string };
+  }
 ) {
   client.scenario.get(`/v9/projects/${projectId}`, (_req, res) => {
     res.json({
@@ -46,7 +50,11 @@ function mockProjectWithCrons(
         definitions,
         disabledAt: opts?.disabledAt ?? null,
         enabledAt: 1700000000000,
+        ...(opts?.deploymentId ? { deploymentId: opts.deploymentId } : {}),
       },
+      ...(opts?.productionDeployment
+        ? { targets: { production: opts.productionDeployment } }
+        : {}),
     });
   });
 }
@@ -132,6 +140,61 @@ describe('crons ls', () => {
       await expect(client.stderr).toOutput('(disabled)');
     });
 
+    it('shows the deployment the crons are registered on', async () => {
+      mockLinkedProject();
+      mockProjectWithCrons(
+        [
+          {
+            host: 'example-abc.vercel.app',
+            path: '/api/cron',
+            schedule: '0 * * * *',
+          },
+        ],
+        {
+          deploymentId: 'dpl_cron',
+          productionDeployment: {
+            id: 'dpl_cron',
+            url: 'example-abc.vercel.app',
+          },
+        }
+      );
+      client.setArgv('crons', 'ls');
+      const exitCode = await crons(client);
+      expect(exitCode).toEqual(0);
+      await expect(client.stderr).toOutput(
+        'Running on deployment example-abc.vercel.app (dpl_cron)'
+      );
+      expect(client.stderr.getFullOutput()).not.toContain('promote');
+    });
+
+    it('suggests promote when crons are not on the latest production deployment', async () => {
+      mockLinkedProject();
+      mockProjectWithCrons(
+        [
+          {
+            host: 'example-old.vercel.app',
+            path: '/api/cron',
+            schedule: '0 * * * *',
+          },
+        ],
+        {
+          deploymentId: 'dpl_old',
+          productionDeployment: {
+            id: 'dpl_new',
+            url: 'example-new.vercel.app',
+          },
+        }
+      );
+      mockedReadLocalConfig.mockReturnValue({
+        crons: [{ path: '/api/new', schedule: '0 0 * * *' }],
+      } as any);
+      client.setArgv('crons', 'ls');
+      const exitCode = await crons(client);
+      expect(exitCode).toEqual(0);
+      await expect(client.stderr).toOutput('promote example-new.vercel.app');
+      expect(client.stderr.getFullOutput()).not.toContain('deploy --prod');
+    });
+
     it('shows no crons message when empty', async () => {
       mockLinkedProject();
       mockProjectWithCrons([]);
@@ -166,6 +229,27 @@ describe('crons ls', () => {
         },
       ]);
       expect(parsed.enabled).toBe(true);
+      expect(parsed.deploymentId).toBeNull();
+    });
+
+    it('includes deploymentId in JSON', async () => {
+      mockLinkedProject();
+      mockProjectWithCrons(
+        [
+          {
+            host: 'example.vercel.app',
+            path: '/api/cron',
+            schedule: '0 * * * *',
+          },
+        ],
+        { deploymentId: 'dpl_cron' }
+      );
+      client.setArgv('crons', 'ls', '--format', 'json');
+      const exitCode = await crons(client);
+      expect(exitCode).toEqual(0);
+
+      const parsed = JSON.parse(client.stdout.getFullOutput());
+      expect(parsed.deploymentId).toBe('dpl_cron');
     });
 
     it('includes undeployed and modified in JSON', async () => {
