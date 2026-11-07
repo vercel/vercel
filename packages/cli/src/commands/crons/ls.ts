@@ -86,11 +86,25 @@ export default async function ls(client: Client, argv: string[]) {
       definitions: CronJobDefinition[];
       disabledAt: number | null;
       enabledAt: number;
+      deploymentId?: string;
+    };
+    targets?: {
+      production?: { id?: string; url?: string };
     };
   }>(`/v9/projects/${encodeURIComponent(project.id)}`);
 
   const definitions = projectData.crons?.definitions ?? [];
   const isDisabled = projectData.crons?.disabledAt != null;
+
+  // Crons run on the deployment they were registered on, which is not
+  // necessarily the newest production deployment (e.g. when it was never promoted).
+  const cronsDeploymentId = projectData.crons?.deploymentId;
+  const cronsDeploymentHost = definitions[0]?.host;
+  const productionDeployment = projectData.targets?.production;
+  const cronsOnStaleDeployment =
+    cronsDeploymentId !== undefined &&
+    productionDeployment?.id !== undefined &&
+    cronsDeploymentId !== productionDeployment.id;
 
   // Read local vercel.json to find crons configured but not yet deployed
   const localConfig = readLocalConfig(client.cwd);
@@ -127,6 +141,7 @@ export default async function ls(client: Client, argv: string[]) {
         deployedSchedule: deployed.schedule,
       })),
       enabled: !isDisabled,
+      deploymentId: cronsDeploymentId ?? null,
     };
     client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
   } else if (
@@ -143,10 +158,21 @@ export default async function ls(client: Client, argv: string[]) {
       output.log(
         `${totalDeployed} cron ${totalDeployed === 1 ? 'job' : 'jobs'} found for ${chalk.bold(`${org.slug}/${project.name}`)}${isDisabled ? chalk.yellow(' (disabled)') : ''} ${chalk.gray(lsStamp())}`
       );
+      if (cronsDeploymentId) {
+        output.log(
+          `Running on deployment ${chalk.bold(cronsDeploymentHost ?? cronsDeploymentId)}${cronsDeploymentHost ? chalk.gray(` (${cronsDeploymentId})`) : ''}`
+        );
+      }
       output.print(
         formatCronsTable(definitions).replace(/^(.*)/gm, `${' '.repeat(1)}$1`)
       );
       output.print('\n\n');
+    }
+
+    if (cronsOnStaleDeployment) {
+      output.warn(
+        `Cron jobs are not registered on the latest production deployment. Run ${getCommandName(`promote ${productionDeployment?.url ?? productionDeployment?.id}`)} to run them on it.`
+      );
     }
 
     if (undeployedCrons.length > 0 || modifiedCrons.length > 0) {
@@ -161,9 +187,11 @@ export default async function ls(client: Client, argv: string[]) {
         )
       );
       output.print('\n\n');
-      output.warn(
-        `Run ${getCommandName('deploy --prod')} to apply local changes.`
-      );
+      if (!cronsOnStaleDeployment) {
+        output.warn(
+          `Run ${getCommandName('deploy --prod')} to apply local changes.`
+        );
+      }
     }
   }
 
