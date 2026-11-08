@@ -86,7 +86,7 @@ export default async function ls(client: Client, argv: string[]) {
       definitions: CronJobDefinition[];
       disabledAt: number | null;
       enabledAt: number;
-      deploymentId?: string;
+      deploymentId?: string | null;
     };
     targets?: {
       production?: { id?: string; url?: string };
@@ -102,8 +102,8 @@ export default async function ls(client: Client, argv: string[]) {
   const cronsDeploymentHost = definitions[0]?.host;
   const productionDeployment = projectData.targets?.production;
   const cronsOnStaleDeployment =
-    cronsDeploymentId !== undefined &&
-    productionDeployment?.id !== undefined &&
+    cronsDeploymentId != null &&
+    productionDeployment?.id != null &&
     cronsDeploymentId !== productionDeployment.id;
 
   // Read local vercel.json to find crons configured but not yet deployed

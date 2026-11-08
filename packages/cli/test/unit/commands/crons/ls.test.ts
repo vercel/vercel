@@ -38,7 +38,7 @@ function mockProjectWithCrons(
   definitions: { host: string; path: string; schedule: string }[],
   opts?: {
     disabledAt?: number | null;
-    deploymentId?: string;
+    deploymentId?: string | null;
     productionDeployment?: { id: string; url: string };
   }
 ) {
@@ -50,7 +50,9 @@ function mockProjectWithCrons(
         definitions,
         disabledAt: opts?.disabledAt ?? null,
         enabledAt: 1700000000000,
-        ...(opts?.deploymentId ? { deploymentId: opts.deploymentId } : {}),
+        ...(opts && 'deploymentId' in opts
+          ? { deploymentId: opts.deploymentId }
+          : {}),
       },
       ...(opts?.productionDeployment
         ? { targets: { production: opts.productionDeployment } }
@@ -193,6 +195,34 @@ describe('crons ls', () => {
       expect(exitCode).toEqual(0);
       await expect(client.stderr).toOutput('promote example-new.vercel.app');
       expect(client.stderr.getFullOutput()).not.toContain('deploy --prod');
+    });
+
+    it('does not suggest promote when the API returns a null crons deploymentId', async () => {
+      mockLinkedProject();
+      mockProjectWithCrons(
+        [
+          {
+            host: 'example.vercel.app',
+            path: '/api/cron',
+            schedule: '0 * * * *',
+          },
+        ],
+        {
+          deploymentId: null,
+          productionDeployment: {
+            id: 'dpl_new',
+            url: 'example-new.vercel.app',
+          },
+        }
+      );
+      mockedReadLocalConfig.mockReturnValue({
+        crons: [{ path: '/api/new', schedule: '0 0 * * *' }],
+      } as any);
+      client.setArgv('crons', 'ls');
+      const exitCode = await crons(client);
+      expect(exitCode).toEqual(0);
+      expect(client.stderr.getFullOutput()).not.toContain('promote');
+      await expect(client.stderr).toOutput('deploy --prod');
     });
 
     it('shows no crons message when empty', async () => {
