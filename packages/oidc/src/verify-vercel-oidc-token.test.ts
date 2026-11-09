@@ -77,6 +77,24 @@ describe('verifyVercelOidcToken', () => {
     expect(jwtVerify).toHaveBeenCalledTimes(2);
   });
 
+  test('loads Jose lazily instead of at module load', async () => {
+    vi.resetModules();
+    mocks.createRemoteJWKSet.mockClear();
+
+    const { verifyVercelOidcToken: freshVerify } = await import(
+      './verify-vercel-oidc-token'
+    );
+    expect(mocks.createRemoteJWKSet).not.toHaveBeenCalled();
+
+    await freshVerify('token');
+    await freshVerify('token');
+
+    expect(mocks.createRemoteJWKSet).toHaveBeenCalledTimes(1);
+    expect(mocks.createRemoteJWKSet).toHaveBeenCalledWith(
+      new URL('https://oidc.vercel.com/.well-known/jwks')
+    );
+  });
+
   test('passes custom algorithms to Jose verification', async () => {
     await verifyVercelOidcToken('token', {
       algorithms: ['RS512'],
