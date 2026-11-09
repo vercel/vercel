@@ -122,6 +122,29 @@ describe('crons run', () => {
       await expect(client.stderr).toOutput('not found');
     });
 
+    it('errors when multiple cron jobs share the path', async () => {
+      mockLinkedProject();
+      mockProjectWithCrons([
+        {
+          host: 'example.vercel.app',
+          path: '/api/cron',
+          schedule: '0 12 * * *',
+        },
+        {
+          host: 'example.vercel.app',
+          path: '/api/cron',
+          schedule: '30 12 * * *',
+        },
+      ]);
+      const { getRequestBody } = mockRunEndpoint();
+
+      client.setArgv('crons', 'run', '/api/cron');
+      const exitCode = await crons(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Multiple cron jobs share the path');
+      expect(getRequestBody()).toBeUndefined();
+    });
+
     it('errors when no cron jobs exist', async () => {
       mockLinkedProject();
       mockProjectWithCrons([]);
@@ -218,6 +241,37 @@ describe('crons run', () => {
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
+    });
+
+    it('runs the selected schedule when multiple crons share a path', async () => {
+      mockLinkedProject();
+      mockProjectWithCrons([
+        {
+          host: 'example.vercel.app',
+          path: '/api/cron',
+          schedule: '0 12 * * *',
+        },
+        {
+          host: 'example.vercel.app',
+          path: '/api/cron',
+          schedule: '30 12 * * *',
+        },
+      ]);
+      const { getRequestBody } = mockRunEndpoint();
+
+      client.setArgv('crons', 'run');
+      const exitCodePromise = crons(client);
+
+      await expect(client.stderr).toOutput('Which cron job');
+      client.stdin.write('\x1B[B'); // move down to second option
+      client.stdin.write('\n');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(getRequestBody()).toEqual({
+        path: '/api/cron',
+        schedule: '30 12 * * *',
+      });
     });
 
     it('errors in non-interactive mode without path', async () => {
