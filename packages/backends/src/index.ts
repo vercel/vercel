@@ -259,7 +259,9 @@ export const build: BuildV2 = async args => {
         cliType: downloadResult.cliType,
         lockfilePath: downloadResult.lockfilePath,
         lockfileVersion: downloadResult.lockfileVersion,
-        framework: rolldownResult.framework.slug || undefined,
+        framework:
+          args.diagnosticsValues?.framework ??
+          (rolldownResult.framework.slug || undefined),
         serviceType: args.service
           ? getReportedServiceType(args.service)
           : undefined,

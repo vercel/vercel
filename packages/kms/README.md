@@ -9,13 +9,13 @@ automatically via [`@vercel/oidc`](https://www.npmjs.com/package/@vercel/oidc)).
 
 ## Usage
 
-### Signing a token
+### Signing a JWT
 
 ```typescript
-import { signToken } from '@vercel/kms';
+import { signJWT } from '@vercel/kms';
 
-// Returns a compact JWT string signed by the issuer.
-const token = await signToken({
+// Returns `{ token, keyId, algorithm, fingerprint }`.
+const { token, keyId, algorithm, fingerprint } = await signJWT({
   issuerId: 'issuer_abc123',
   claims: { sub: 'user_123', scope: 'read:data' },
   ttl: 300, // seconds; defaults to 300
@@ -28,8 +28,8 @@ const token = await signToken({
 import { signMessage } from '@vercel/kms';
 
 // `message` is a UTF-8 string or raw bytes (Uint8Array); it is base64-encoded
-// internally. Returns a JOSE Flattened JWS.
-const signature = await signMessage({
+// internally. Returns `{ signature, keyId, algorithm, fingerprint }`.
+const { signature, keyId, algorithm, fingerprint } = await signMessage({
   issuerId: 'issuer_abc123',
   message: 'hello world',
 });
@@ -41,7 +41,7 @@ By default the OIDC token is fetched via `getVercelOidcToken()`. To supply your
 own token, pass `token`:
 
 ```typescript
-const token = await signToken({
+const { token } = await signJWT({
   issuerId: 'issuer_abc123',
   token: myOidcToken,
 });
@@ -49,7 +49,7 @@ const token = await signToken({
 
 ## API
 
-### `signToken(options)`
+### `signJWT(options)`
 
 Signs a JWT for an issuer.
 
@@ -62,6 +62,16 @@ Signs a JWT for an issuer.
 - `token?: string` — Explicit OIDC token; skips automatic retrieval.
 - `region?: string` — Region for the regional KMS API host, e.g. `sfo1`, producing `https://api-<region>.vercel.com/v1`. Defaults to the `VERCEL_REGION` environment variable, falling back to `https://api.vercel.com/v1`. Ignored when `baseUrl` is set.
 - `baseUrl?: string` — Override the API base URL. Takes precedence over `region`.
+
+Returns `Promise<{ token: string, keyId: string, algorithm: string, fingerprint: string }>` — the compact JWT, plus the key id, algorithm, and public-key fingerprint of the signing key.
+
+### `signToken(options)`
+
+Deprecated: use `signJWT` instead.
+
+Signs a JWT for an issuer and returns only the compact JWT string.
+
+**Options:** same as `signJWT`.
 
 Returns `Promise<string>` — the compact JWT.
 
@@ -77,4 +87,4 @@ Signs a message for an issuer.
 - `region?: string` — Region for the regional KMS API host, e.g. `sfo1`, producing `https://api-<region>.vercel.com/v1`. Defaults to the `VERCEL_REGION` environment variable, falling back to `https://api.vercel.com/v1`. Ignored when `baseUrl` is set.
 - `baseUrl?: string` — Override the API base URL. Takes precedence over `region`.
 
-Returns `Promise<FlattenedJWS>` — the JOSE Flattened JWS.
+Returns `Promise<{ signature: Uint8Array, keyId: string, algorithm: string, fingerprint: string }>` — the raw signature bytes, plus the key id, algorithm, and public-key fingerprint of the signing key.

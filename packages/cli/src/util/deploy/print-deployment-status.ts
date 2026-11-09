@@ -8,6 +8,12 @@ import linkStyle from '../output/link';
 import { prependEmoji, emoji } from '../../util/emoji';
 import output from '../../output-manager';
 import { withGlobalFlags } from '../agent-output';
+import { getProductionUrl } from './get-production-url';
+import {
+  type DeploymentVerification,
+  formatVerificationFailure,
+  formatVerificationSummary,
+} from './verify-deployment';
 import {
   suggestNextCommands,
   type SuggestedNextCommand,
@@ -29,6 +35,8 @@ export async function printDeploymentStatus(
   client: Client,
   {
     readyState,
+    alias,
+    aliasAssigned,
     aliasError,
     indications,
     aliasWarning,
@@ -37,6 +45,7 @@ export async function printDeploymentStatus(
   }: {
     readyState: Deployment['readyState'];
     alias: string[];
+    aliasAssigned?: Deployment['aliasAssigned'];
     aliasError: Error;
     target: string;
     indications: any;
@@ -52,7 +61,11 @@ export async function printDeploymentStatus(
   noWait: boolean,
   guidanceMode: boolean,
   isInit?: boolean,
-  gitConnectCommand?: string
+  gitConnectCommand?: string,
+  /** Deployment Protection methods that protect the deployed target's URL. */
+  protectionNames?: string[],
+  /** The result of `--verify`, when it ran. */
+  verification?: DeploymentVerification
 ): Promise<number> {
   indications = indications || [];
 
@@ -81,6 +94,22 @@ export async function printDeploymentStatus(
     const duration = bareDuration(deployStamp());
     output.print(
       `\n${chalk.green('✓')} ${chalk.bold('Ready')} ${chalk.dim(`in ${duration}`)}\n`
+    );
+  }
+
+  if (verification?.ok) {
+    output.print(
+      `${chalk.green('✓')} ${chalk.bold('Verified')} ${verification.url} ${chalk.dim(`(${formatVerificationSummary(verification)})`)}\n`
+    );
+  } else if (verification) {
+    output.error(formatVerificationFailure(verification));
+  }
+
+  // Point to access, not to turning protection off: that is the likely next
+  // step, and disabling protection is a project-wide security change.
+  if (protectionNames?.length) {
+    output.print(
+      `\n${chalk.yellow('!')} Deployment Protection is on for this project (${protectionNames.join(', ')}). Use ${chalk.cyan('`vercel curl`')} to access it.\n`
     );
   }
 
@@ -126,12 +155,25 @@ export async function printDeploymentStatus(
       });
     }
     if (readyState === 'READY') {
-      nextCommands.push({
-        description: 'Check the deployment response',
-        command: withGlobalFlags(client, `curl https://${url}`, {
-          preserveProject: true,
-        }),
+      const productionUrl = getProductionUrl({
+        target,
+        alias,
+        aliasAssigned,
+        aliasError,
       });
+      // `--verify` already loaded the URL.
+      if (!verification?.ok) {
+        nextCommands.push({
+          description: productionUrl
+            ? 'Check the production response'
+            : 'Check the deployment response',
+          command: withGlobalFlags(
+            client,
+            `curl ${productionUrl ?? `https://${url}`}`,
+            { preserveProject: true }
+          ),
+        });
+      }
       nextCommands.push(
         {
           description: 'View build logs',
@@ -165,5 +207,5 @@ export async function printDeploymentStatus(
     suggestNextCommands(nextCommands);
   }
 
-  return 0;
+  return verification && !verification.ok ? 1 : 0;
 }

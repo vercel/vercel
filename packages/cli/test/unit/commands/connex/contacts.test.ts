@@ -79,7 +79,7 @@ describe('connect contacts add', () => {
 
     const exitCode = await connect(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('Missing phone number');
   });
 
@@ -95,7 +95,7 @@ describe('connect contacts add', () => {
 
     const exitCode = await connect(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('Invalid phone number');
   });
 

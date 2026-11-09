@@ -38,7 +38,7 @@ export default async function segmentsRm(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -98,9 +98,9 @@ export default async function segmentsRm(
     if (!skipConfirmation) {
       if (!client.stdin.isTTY) {
         output.error(
-          'Missing required flag --yes. Use --yes to skip the confirmation prompt in non-interactive mode.'
+          'Missing required option --yes. Use --yes to skip the confirmation prompt in non-interactive mode.'
         );
-        return 1;
+        return 2;
       }
 
       if (client.nonInteractive) {
@@ -114,7 +114,7 @@ export default async function segmentsRm(
               {
                 command: buildCommandWithGlobalFlags(
                   client.argv,
-                  `flags segments rm ${segmentArg} --yes`
+                  `flags segments delete ${segmentArg} --yes`
                 ),
                 when: 'confirm and delete the segment',
               },
@@ -231,7 +231,7 @@ function handleSegmentInUseError(
         {
           command: buildCommandWithGlobalFlags(
             client.argv,
-            `flags segments rm ${segment} --yes`
+            `flags segments delete ${segment} --yes`
           ),
           when: 'retry after removing all references',
         },
@@ -272,7 +272,7 @@ async function resolveSegmentArg(
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
-              'flags segments rm <segment> --yes'
+              'flags segments delete <segment> --yes'
             ),
             when: 'delete a segment by slug or ID',
           },
@@ -285,14 +285,16 @@ async function resolveSegmentArg(
           },
         ],
       },
-      1
+      2
     );
     return undefined;
   }
 
   if (!client.stdin.isTTY) {
     output.error('Please provide a segment slug or ID to delete');
-    output.log(`Example: ${getCommandName('flags segments rm beta-users')}`);
+    output.log(
+      `Example: ${getCommandName('flags segments delete beta-users')}`
+    );
     return undefined;
   }
 

@@ -16,6 +16,8 @@ import ipBlocks from './ip-blocks';
 import rules from './rules';
 import alerts from './alerts';
 import persistentActions from './persistent-actions';
+import traffic from './traffic';
+import botManagement from './bot-management';
 import {
   firewallCommand,
   overviewSubcommand,
@@ -24,12 +26,14 @@ import {
   publishSubcommand,
   discardSubcommand,
   rulesSubcommand,
+  botManagementSubcommand,
   ipBlocksSubcommand,
   systemBypassSubcommand,
   attackModeSubcommand,
   systemMitigationsSubcommand,
   alertsSubcommand,
   persistentActionsSubcommand,
+  trafficSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
@@ -50,6 +54,8 @@ const COMMAND_CONFIG = {
   'system-mitigations': getCommandAliases(systemMitigationsSubcommand),
   alerts: getCommandAliases(alertsSubcommand),
   'persistent-actions': getCommandAliases(persistentActionsSubcommand),
+  traffic: getCommandAliases(trafficSubcommand),
+  'bot-management': getCommandAliases(botManagementSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -67,7 +73,7 @@ export default async function main(client: Client) {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const subArgs = parsedArgs.args.slice(1);
@@ -80,13 +86,19 @@ export default async function main(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('firewall');
-    output.print(help(firewallCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(firewallCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: firewallCommand,
         columns: client.stderr.columns,
       })
@@ -103,7 +115,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
         printHelp(statusSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandStatus(subcommandOriginal);
       return status(client, args);
@@ -111,7 +123,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
         printHelp(overviewSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandOverview(subcommandOriginal);
       return overview(client, args);
@@ -119,7 +131,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
         printHelp(diffSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandDiff(subcommandOriginal);
       return diff(client, args);
@@ -127,7 +139,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
         printHelp(publishSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandPublish(subcommandOriginal);
       return publish(client, args);
@@ -135,7 +147,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
         printHelp(discardSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandDiscard(subcommandOriginal);
       return discard(client, args);
@@ -174,9 +186,27 @@ export default async function main(client: Client) {
       const nestedArgs = needHelp ? [...args, '--help'] : args;
       return persistentActions(client, nestedArgs, telemetry);
     }
+    case 'traffic': {
+      telemetry.trackCliSubcommandTraffic(subcommandOriginal);
+      const nestedArgs = needHelp ? [...args, '--help'] : args;
+      return traffic(client, nestedArgs, telemetry);
+    }
+    case 'bot-management':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
+        printHelp(botManagementSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandBotManagement(subcommandOriginal);
+      return botManagement(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      output.print(help(firewallCommand, { columns: client.stderr.columns }));
+      output.print(
+        help(firewallCommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
+      );
       return 2;
   }
 }

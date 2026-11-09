@@ -10,13 +10,20 @@ import { isErrnoException } from '@vercel/error-utils';
 import { getCommandName } from '../../util/pkg-name';
 import { BlobPutImageTelemetryClient } from '../../util/telemetry/commands/blob/put-image';
 import { printError } from '../../util/error';
+import {
+  getRenamedOption,
+  reportRenamedOptionError,
+  withWarnings,
+  type DeprecatedOptionWarning,
+} from '../../util/renamed-option';
 import { parseAccessFlag } from '../../util/blob/access';
 import { blobOpts, type BlobRWToken } from '../../util/blob/token';
 
 export default async function putImage(
   client: Client,
   argv: string[],
-  auth: BlobRWToken
+  auth: BlobRWToken,
+  warnings: ReadonlyArray<DeprecatedOptionWarning | undefined> = []
 ): Promise<number> {
   const telemetryClient = new BlobPutImageTelemetryClient({
     opts: {
@@ -30,7 +37,7 @@ export default async function putImage(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const {
@@ -44,10 +51,20 @@ export default async function putImage(
     '--format': formatFlag,
     '--pathname': pathnameFlag,
     '--add-random-suffix': addRandomSuffix,
-    '--allow-overwrite': allowOverwrite,
     '--cache-control-max-age': cacheControlMaxAge,
     '--json': asJson,
   } = flags;
+
+  const force = getRenamedOption<boolean>(
+    flags,
+    '--force',
+    '--allow-overwrite',
+    { json: asJson }
+  );
+  if ('error' in force) {
+    return reportRenamedOptionError(client, force.error, { json: asJson });
+  }
+  const allowOverwrite = force.value;
 
   if (!source) {
     output.error(
@@ -55,7 +72,7 @@ export default async function putImage(
         'blob put-image <file-or-url> --pathname <pathname> --width <pixels> --access <public|private>'
       )}`
     );
-    return 1;
+    return 2;
   }
 
   const isUrl = /^https?:\/\//i.test(source);
@@ -76,7 +93,7 @@ export default async function putImage(
 
   if (!pathnameFlag) {
     output.error(
-      'Missing required --pathname flag. Set the pathname to store the optimized image at in the Blob store.'
+      'Missing required --pathname option. Set the pathname to store the optimized image at in the Blob store.'
     );
     return 1;
   }
@@ -89,13 +106,14 @@ export default async function putImage(
   telemetryClient.trackCliOptionFormat(formatFlag);
   telemetryClient.trackCliOptionPathname(pathnameFlag);
   telemetryClient.trackCliFlagAddRandomSuffix(addRandomSuffix);
-  telemetryClient.trackCliFlagAllowOverwrite(allowOverwrite);
+  telemetryClient.trackCliFlagForce(flags['--force']);
+  telemetryClient.trackCliFlagAllowOverwrite(flags['--allow-overwrite']);
   telemetryClient.trackCliOptionCacheControlMaxAge(cacheControlMaxAge);
   telemetryClient.trackCliFlagJson(asJson);
 
   if (!auth.success || auth.kind !== 'oidc') {
     output.error(
-      `Image optimization requires OIDC credentials. Pass --oidc-token and --store-id, or set the VERCEL_OIDC_TOKEN and BLOB_STORE_ID environment variables (available in .env.local after ${getCommandName('env pull')}).`
+      `Image optimization requires OIDC credentials. Pass --oidc-token and --store, or set the VERCEL_OIDC_TOKEN and BLOB_STORE_ID environment variables (available in .env.local after ${getCommandName('env pull')}).`
     );
     return 1;
   }
@@ -161,12 +179,15 @@ export default async function putImage(
   if (asJson) {
     client.stdout.write(
       `${JSON.stringify(
-        {
-          url: result.url,
-          downloadUrl: result.downloadUrl,
-          pathname: result.pathname,
-          contentType: result.contentType,
-        },
+        withWarnings(
+          {
+            url: result.url,
+            downloadUrl: result.downloadUrl,
+            pathname: result.pathname,
+            contentType: result.contentType,
+          },
+          [...warnings, force.warning]
+        ),
         null,
         2
       )}\n`

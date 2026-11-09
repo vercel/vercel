@@ -1,8 +1,14 @@
 import type { BuildOptions, BuildResultV2, Span } from '@vercel/build-utils';
 import {
+  getDaemonImageRepository,
   getLambdaOptionsFromFunction,
   getReportedServiceType,
 } from '@vercel/build-utils';
+import {
+  buildSchedulesCommandImage,
+  SCHEDULES_COMMAND_ENV,
+  type SchedulesCommand,
+} from './schedules-command';
 import { generateProjectManifest } from './diagnostics';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -11,24 +17,29 @@ import {
   VCR_REGISTRY,
   TARGET_PLATFORM,
 } from './engines';
-import type { BuildPushParams } from './engines/types';
-import { resolveOidcTokenForBuild } from './oidc';
-import { ensureRepository } from './registry';
+import type { BuildPushParams, ContainerEngine } from './engines/types';
+import { BuildahClient } from './clients/buildah';
+import { buildAndPushBuildpack } from './buildpacks/build';
+import { BUILDPACK_FAILED_EXIT_CODE } from './buildpacks/lifecycle/lifecycle';
+import type { ImageSource } from './image-source';
+import { resolveImageSource } from './image-source';
+import { BuildahStoreCache } from './buildah-store-cache/cache';
+import { buildahStoreCacheEnabled } from './buildah-store-cache/config';
+import { sharedBuildahStoreLock } from './buildah-store-cache/lock';
+import { ensureRepository, resolveRegistryTarget } from './registry';
 import {
   debug,
-  debugTokenClaims,
-  decodeOidcClaims,
   devImageTag,
   done,
   elapsed,
   existingRegistryAuthFile,
   findDockerfile,
   info,
-  isDockerfileRef,
+  normalizeCommand,
   readString,
+  type RunError,
   shortDigest,
   step,
-  tokenFingerprint,
   toTag,
   withSpan,
 } from './util';
@@ -56,19 +67,6 @@ function resolveFunctionSourceFile(options: BuildOptions): string {
   return entrypoint;
 }
 
-function normalizeCommand(command: unknown): string[] | undefined {
-  if (typeof command === 'string') {
-    return [command];
-  }
-  if (
-    Array.isArray(command) &&
-    command.every(item => typeof item === 'string')
-  ) {
-    return command;
-  }
-  return undefined;
-}
-
 function sanitizeRepository(name: string): string {
   const sanitized = name
     .toLowerCase()
@@ -90,17 +88,59 @@ function resolveImageTag(): string {
   return `build-${Date.now().toString(36)}`;
 }
 
+async function authenticateRegistry(
+  engine: ContainerEngine,
+  buildParams: BuildPushParams,
+  span?: Span
+): Promise<void> {
+  const forceLogin = readString(process.env.VERCEL_VCR_FORCE_LOGIN) === '1';
+  const authFile = forceLogin ? undefined : existingRegistryAuthFile();
+  if (authFile) {
+    debug(`registry auth file present: ${authFile}`);
+    step(`Using registry credentials from ${authFile}`);
+    span?.setAttributes({
+      'container.registry': VCR_REGISTRY,
+      'registry.username': buildParams.username,
+      'registry.auth_file': authFile,
+      'registry.login_skipped': toTag(true),
+    });
+    done('authenticated via provisioned credentials');
+    return;
+  }
+
+  step(`Authenticating to ${VCR_REGISTRY} as ${buildParams.username}`);
+  await withSpan(
+    span,
+    'container.registry_login',
+    {
+      'container.registry': VCR_REGISTRY,
+      'registry.username': buildParams.username,
+    },
+    () => engine.login(buildParams)
+  );
+  done('authenticated');
+}
+
 async function buildAndPushImage(params: {
   contextDir: string;
   dockerfilePath: string;
   repository: string;
   tag: string;
   buildArgs?: Record<string, string>;
+  buildahClient: BuildahClient;
   parentSpan?: Span;
+  schedulesCommand?: SchedulesCommand;
 }): Promise<string> {
-  const { contextDir, dockerfilePath, repository, tag, buildArgs, parentSpan } =
-    params;
-  const engine = selectContainerEngine();
+  const {
+    contextDir,
+    dockerfilePath,
+    repository,
+    tag,
+    buildArgs,
+    buildahClient,
+    parentSpan,
+  } = params;
+  const engine = selectContainerEngine(buildahClient);
 
   return withSpan(
     parentSpan,
@@ -111,26 +151,12 @@ async function buildAndPushImage(params: {
       'container.repository': repository,
     },
     async buildSpan => {
-      const token = await withSpan(buildSpan, 'container.mint_oidc', {}, s =>
-        resolveOidcTokenForBuild(s)
-      );
-
-      const claims = decodeOidcClaims(token);
-      debug(`registry token: ${tokenFingerprint(token)}`);
-      debugTokenClaims('OIDC token claims', token);
-
-      const username = claims.owner_id;
-      if (!username) {
-        throw new Error(
-          'VERCEL_OIDC_TOKEN is missing the `owner_id` (team id) claim required to ' +
-            'authenticate to the container registry.'
-        );
-      }
-
-      const fullRepository = [claims.owner, claims.project, repository].join(
-        '/'
-      );
-      const imageRef = `${VCR_REGISTRY}/${fullRepository}:${tag}`;
+      const target = await resolveRegistryTarget({
+        repository,
+        tag,
+        span: buildSpan,
+      });
+      const { token, claims, username, fullRepository, imageRef } = target;
 
       buildSpan?.setAttributes({
         'container.repository': fullRepository,
@@ -173,40 +199,11 @@ async function buildAndPushImage(params: {
           token,
           repository,
           buildArgs,
+          useBuildahStoreCache: buildahStoreCacheEnabled(),
           span: buildSpan,
         };
 
-        // The build container provisions a registry auth file
-        // (`~/.config/containers/auth.json`, vercel/api#76560) that buildah
-        // picks up automatically, so skip the redundant explicit login when one
-        // exists. Local `vercel build` (docker engine) still logs in.
-        // `VERCEL_VCR_FORCE_LOGIN=1` forces an explicit login.
-        const forceLogin =
-          readString(process.env.VERCEL_VCR_FORCE_LOGIN) === '1';
-        const authFile = forceLogin ? undefined : existingRegistryAuthFile();
-        if (authFile) {
-          debug(`registry auth file present: ${authFile}`);
-          step(`Using registry credentials from ${authFile}`);
-          buildSpan?.setAttributes({
-            'container.registry': VCR_REGISTRY,
-            'registry.username': username,
-            'registry.auth_file': authFile,
-            'registry.login_skipped': toTag(true),
-          });
-          done('authenticated via provisioned credentials');
-        } else {
-          step(`Authenticating to ${VCR_REGISTRY} as ${username}`);
-          await withSpan(
-            buildSpan,
-            'container.registry_login',
-            {
-              'container.registry': VCR_REGISTRY,
-              'registry.username': username,
-            },
-            () => engine.login(buildParams)
-          );
-          done('authenticated');
-        }
+        await authenticateRegistry(engine, buildParams, buildSpan);
 
         await withSpan(
           buildSpan,
@@ -231,7 +228,13 @@ async function buildAndPushImage(params: {
           buildSpan,
           'container.image_build',
           { 'image.ref': imageRef, 'image.platform': TARGET_PLATFORM },
-          () => engine.build(buildParams)
+          async () => {
+            if (params.schedulesCommand) {
+              await buildSchedulesCommandImage(engine, buildParams);
+            } else {
+              await engine.build(buildParams);
+            }
+          }
         );
         done(`built in ${elapsed(buildStart)}`);
 
@@ -243,11 +246,7 @@ async function buildAndPushImage(params: {
           { 'image.ref': imageRef },
           () => engine.push(buildParams)
         );
-        done(
-          digest
-            ? `pushed ${shortDigest(digest)} in ${elapsed(pushStart)}`
-            : `pushed in ${elapsed(pushStart)}`
-        );
+        done(`pushed ${shortDigest(digest)} in ${elapsed(pushStart)}`);
 
         // Post-build confirmation of the effective image store (debug-only).
         await withSpan(
@@ -257,9 +256,7 @@ async function buildAndPushImage(params: {
           s => engine.reportStorage?.(s) ?? Promise.resolve()
         );
 
-        const resolvedRef = digest
-          ? `${VCR_REGISTRY}/${fullRepository}@${digest}`
-          : imageRef;
+        const resolvedRef = `${VCR_REGISTRY}/${fullRepository}@${digest}`;
         buildSpan?.setAttributes({
           'image.digest': digest,
           'image.resolved_ref': resolvedRef,
@@ -278,42 +275,76 @@ async function buildAndPushImage(params: {
 
 async function resolveImageHandler(
   options: BuildOptions,
-  span?: Span
+  source: ImageSource,
+  buildahClient: BuildahClient,
+  span?: Span,
+  schedulesCommand?: SchedulesCommand
 ): Promise<string> {
-  const { config, workPath, entrypoint, meta } = options;
-
-  const entrypointRef = readString(entrypoint);
-  // An entrypoint that names a Dockerfile (including the `Dockerfile.vercel` /
-  // `Containerfile.vercel` opt-in markers) is built directly. Otherwise — e.g.
-  // when the `container` framework preset resolves its entrypoint via
-  // `<detect>` — discover a Dockerfile in the work directory.
-  const dockerfileConfigured =
-    entrypointRef && isDockerfileRef(entrypointRef)
-      ? entrypointRef
-      : findDockerfile(workPath);
-  const dockerfileRel = dockerfileConfigured ?? 'Dockerfile';
-  const dockerfilePath = path.join(workPath, dockerfileRel);
-  const hasDockerfile =
-    dockerfileConfigured !== undefined || existsSync(dockerfilePath);
-
-  const prebuiltImage =
-    readString(config.handler) ?? (hasDockerfile ? undefined : entrypointRef);
+  const { config, meta } = options;
+  const { daemon } = config;
 
   span?.setAttributes({
-    'container.has_dockerfile': toTag(hasDockerfile),
+    'container.has_dockerfile': toTag(source.kind === 'dockerfile'),
     'container.is_dev': toTag(Boolean(meta?.isDev)),
   });
 
-  if (!hasDockerfile) {
-    if (!prebuiltImage) {
-      throw new Error(
-        'Container service must specify an entrypoint: a prebuilt OCI image reference, or a Dockerfile path to build.'
-      );
-    }
+  if (source.kind === 'prebuilt') {
     span?.setAttributes({ 'container.mode': 'prebuilt' });
-    info(`Using prebuilt image ${prebuiltImage}`);
-    return prebuiltImage;
+    info(`Using prebuilt image ${source.imageRef}`);
+    return source.imageRef;
   }
+
+  if (source.kind === 'buildpack') {
+    const { buildpack } = source;
+    if (meta?.isDev) {
+      const tag = devImageTag(options.service?.name ?? 'service');
+      span?.setAttributes({
+        'container.mode': 'buildpack-dev',
+        'buildpack.runtime': buildpack.runtime,
+        'image.tag': tag,
+      });
+      return tag;
+    }
+
+    const repository = daemon
+      ? getDaemonImageRepository(daemon.name)
+      : sanitizeRepository(options.service?.name ?? buildpack.runtime);
+    const tag = resolveImageTag();
+    span?.setAttributes({
+      'container.mode': 'buildpack-build-and-push',
+      'buildpack.runtime': buildpack.runtime,
+      'container.repository': repository,
+      'image.tag': tag,
+    });
+    try {
+      return await buildAndPushBuildpack({
+        buildpack,
+        files: options.files,
+        workPath: options.workPath,
+        repoRootPath: options.repoRootPath,
+        service: options.service,
+        repository,
+        tag,
+        config,
+        meta,
+        buildEnv: buildArgsFromEnv(meta?.buildEnv),
+        buildahClient,
+        parentSpan: span,
+      });
+    } catch (error) {
+      if (
+        daemon &&
+        (error as RunError).exitCode === BUILDPACK_FAILED_EXIT_CODE
+      ) {
+        throw new Error(
+          `Failed to build daemon "${daemon.name}" (root "${daemon.root}") with the ${buildpack.runtime} buildpack. Its error is above.`
+        );
+      }
+      throw error;
+    }
+  }
+
+  const { dockerfileRel, dockerfilePath } = source;
 
   if (meta?.isDev) {
     // In dev the image is built and run locally from the Dockerfile by
@@ -341,13 +372,23 @@ async function resolveImageHandler(
   // the Dockerfile's base name (e.g. `Dockerfile.vercel` -> `dockerfile`,
   // `Containerfile.vercel` -> `containerfile`). The repository is already
   // namespaced by owner/project from the OIDC claims, so this leaf only needs
-  // to be stable per project.
-  const serviceName = options.service?.name;
-  const repository = sanitizeRepository(
-    serviceName ?? path.basename(dockerfileRel).split('.')[0]
-  );
+  // to be stable per project. Daemons get their own repositories, so a daemon
+  // and a service may share a name.
+  const repository = daemon
+    ? getDaemonImageRepository(daemon.name)
+    : sanitizeRepository(
+        options.service?.name ?? path.basename(dockerfileRel).split('.')[0]
+      );
   const tag = resolveImageTag();
-  const contextDir = path.dirname(dockerfilePath);
+  const contextDir = schedulesCommand
+    ? path.join(options.workPath, schedulesCommand.root)
+    : path.dirname(dockerfilePath);
+  // Command schedules use their root as context, including nested Dockerfiles.
+  // A daemon's `dockerfileRel` includes its root; use its entrypoint.
+  const contextIsRoot =
+    Boolean(schedulesCommand) ||
+    path.dirname(path.normalize(daemon ? daemon.entrypoint : dockerfileRel)) ===
+      '.';
 
   // Forward the project's build env to the image build as `--build-arg`s, so
   // Dockerfiles can consume declared `ARG`s during build — matching how other
@@ -358,6 +399,7 @@ async function resolveImageHandler(
   span?.setAttributes({
     'container.mode': 'build_and_push',
     'container.repository': repository,
+    'container.context_is_root': toTag(contextIsRoot),
     'image.tag': tag,
   });
   return buildAndPushImage({
@@ -366,7 +408,9 @@ async function resolveImageHandler(
     repository,
     tag,
     buildArgs,
+    buildahClient,
     parentSpan: span,
+    schedulesCommand,
   });
 }
 
@@ -387,23 +431,81 @@ function buildArgsFromEnv(
 }
 
 export async function build(options: BuildOptions): Promise<BuildResultV2> {
+  const source = resolveImageSource(options, 'build');
+  const schedulesCommand = options.config.schedulesCommand as
+    | SchedulesCommand
+    | undefined;
+  const { daemon } = options.config;
+  const buildahClient = new BuildahClient(sharedBuildahStoreLock);
+  // Opening an empty store would make later services skip the restore.
+  if (
+    !options.meta?.isDev &&
+    selectContainerEngine(buildahClient).name === 'buildah'
+  ) {
+    await BuildahStoreCache.forProject(options, buildahClient).beforeBuild({
+      buildsWithBuildah: source.kind !== 'prebuilt',
+      span: options.span,
+    });
+  }
   const image = await withSpan(
     options.span,
     'container.resolve_image',
     { 'service.name': options.service?.name },
-    span => resolveImageHandler(options, span)
+    span =>
+      resolveImageHandler(
+        options,
+        source,
+        buildahClient,
+        span,
+        schedulesCommand
+      )
   );
+
+  if (daemon) {
+    return {
+      output: {},
+      daemons: {
+        [daemon.name]: {
+          runtime: 'container',
+          image,
+          // Checked by vercel.json validation: a daemon sets one of them.
+          instances: (daemon.instances ?? daemon.replicas)!,
+          // A command replaces the image's entrypoint, which for a buildpack
+          // image is the launcher; the buildpack bakes the command in instead.
+          ...(daemon.command &&
+            source.kind !== 'buildpack' && { command: daemon.command }),
+          ...(daemon.resources && { resources: daemon.resources }),
+          ...(daemon.terminationGracePeriodSeconds !== undefined && {
+            terminationGracePeriodSeconds: daemon.terminationGracePeriodSeconds,
+          }),
+          ...(daemon.livenessProbe && { livenessProbe: daemon.livenessProbe }),
+          ...(daemon.bindings?.length && {
+            bindings: daemon.bindings.map(({ type, service, format, env }) => ({
+              type,
+              service,
+              format,
+              env,
+            })),
+          }),
+        },
+      },
+    };
+  }
 
   const lambdaOptions = await getLambdaOptionsFromFunction({
     sourceFile: resolveFunctionSourceFile(options),
     config: options.config,
+    isScheduleEntrypoint: schedulesCommand !== undefined,
   });
 
-  const command = normalizeCommand(options.config.command);
+  const command =
+    source.kind === 'buildpack' || schedulesCommand
+      ? undefined
+      : normalizeCommand(options.config.command);
 
   await generateProjectManifest({
     workPath: options.workPath,
-    framework: options.config.framework ?? undefined,
+    framework: options.diagnosticsValues?.framework,
     serviceType: options.service
       ? getReportedServiceType(options.service)
       : undefined,
@@ -434,7 +536,7 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
   ];
 
   return {
-    routes,
+    routes: schedulesCommand ? [] : routes,
     output: {
       [CONTAINER_OUTPUT_PATH]: {
         type: 'Lambda',
@@ -444,7 +546,11 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
         // (vercel/api#76729).
         handler: image,
         runtime: 'container',
-        environment: {},
+        environment: schedulesCommand
+          ? {
+              [SCHEDULES_COMMAND_ENV]: JSON.stringify(schedulesCommand.command),
+            }
+          : {},
         ...(command ? { command } : {}),
         ...lambdaOptions,
       } as any,

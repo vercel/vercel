@@ -246,9 +246,11 @@ async function main() {
     getBuildUtilsSpec,
     previewTarballFilename,
   } = await import('./pin-builders.mjs');
-  const { generateBuilderGraphs, writeCompressedBuilderGraphs } = await import(
-    './generate-builder-graph.mjs'
-  );
+  const {
+    generateBuilderGraphs,
+    writeBuilderIndex,
+    writeCompressedBuilderGraphs,
+  } = await import('./generate-builder-graph.mjs');
   const { runtime, builders } = getRuntimeDependencies(packageJson);
   const binaryOnly = getBinaryOnlyDependencies(packageJson);
 
@@ -270,6 +272,14 @@ async function main() {
   });
   await fs.copyFile(join(packageRoot, 'pkg.js'), join(stagingRoot, 'pkg.js'));
   await fs.copyFile(
+    join(packageRoot, 'native-esbuild.js'),
+    join(stagingRoot, 'native-esbuild.js')
+  );
+  await fs.copyFile(
+    join(packageRoot, 'native-eject.js'),
+    join(stagingRoot, 'native-eject.js')
+  );
+  await fs.copyFile(
     join(packageRoot, 'pkg.config.mjs'),
     join(stagingRoot, 'pkg.config.mjs')
   );
@@ -287,14 +297,19 @@ async function main() {
   );
   const previewTarballBaseUrl =
     process.env.VERCEL_CLI_PREVIEW_TARBALL_BASE_URL?.replace(/\/$/, '');
-  const buildUtilsSpec = previewTarballBaseUrl
+  const buildUtilsVersion = getBuildUtilsSpec(packageJson, workspaceVersions);
+  const pinnedBuildUtilsVersion = previewTarballBaseUrl
     ? `${previewTarballBaseUrl}/${previewTarballFilename('@vercel/build-utils')}`
-    : getBuildUtilsSpec(packageJson, workspaceVersions);
+    : buildUtilsVersion;
   const builderGraphs = await generateBuilderGraphs(pinnedBuilders, {
-    buildUtilsSpec,
+    buildUtilsSpec: pinnedBuildUtilsVersion,
   });
   await writeCompressedBuilderGraphs(
     join(stagingRoot, 'dist/builders/builder-graph.json.br'),
+    builderGraphs
+  );
+  await writeBuilderIndex(
+    join(stagingRoot, 'dist/builders/builder-index.json'),
     builderGraphs
   );
   await writeJson(join(stagingRoot, 'package.json'), {
@@ -302,7 +317,13 @@ async function main() {
     version: packageJson.version,
     type: packageJson.type,
     private: true,
-    dependencies: { ...runtime, ...binaryOnly },
+    dependencies: {
+      ...runtime,
+      ...binaryOnly,
+      '@vercel/build-utils': buildUtilsVersion,
+    },
+    pinnedBuildUtilsVersion,
+    strictBuilderPins: true,
     builders: pinnedBuilders,
   });
 

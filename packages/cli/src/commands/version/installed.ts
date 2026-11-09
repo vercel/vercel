@@ -4,19 +4,21 @@ import {
   CURL_INSTALL_COMMAND,
   getVersionContext,
 } from '../../util/version-context';
-import { listInstalledVersions } from '../../util/native-self-update';
+import { listNativeTrackSlots } from '../../util/native-install-layout';
 
-/**
- * `vc version installed`: versions managed under the platform data directory for
- * installer-managed CLIs; for package manager installs just report the current one.
- */
+/** List the bounded slots managed by the native installer. */
 export default async function installed(): Promise<number> {
   const context = await getVersionContext();
 
   if (context.manager !== 'installer') {
-    const manager = context.packageManagerAssumed
-      ? `${context.packageManager} (assumed)`
-      : context.packageManager;
+    const manager =
+      context.packageManager === undefined
+        ? 'an unsupported package-manager installation'
+        : context.packageManager === 'homebrew'
+          ? 'Homebrew'
+          : context.packageManagerAssumed
+            ? `${context.packageManager} (assumed)`
+            : context.packageManager;
     output.print(`${context.version} ${chalk.dim('(current)')}\n`);
     output.log(
       `This CLI is managed by ${manager}, so only the current version is available. ` +
@@ -25,24 +27,21 @@ export default async function installed(): Promise<number> {
     return 0;
   }
 
-  const versions = await listInstalledVersions();
-
-  if (versions.length === 0) {
-    output.log('No installed versions found');
+  const slots = await listNativeTrackSlots(context.installRoot);
+  if (slots.length === 0) {
+    output.log('No slot-managed versions found');
     return 0;
   }
 
-  for (const version of versions) {
-    const active = version === (context.linkedVersion ?? context.version);
-    const labels = [];
-    if (active) labels.push('active');
-    if (version === context.pinnedVersion) labels.push('pinned');
+  for (const installed of slots) {
+    const active =
+      installed.track === context.track && installed.slot === context.slot;
+    const build = installed.pr
+      ? `PR #${installed.pr}${installed.buildSha ? ` (${installed.buildSha.slice(0, 12)})` : ''}`
+      : `v${installed.version}`;
     output.print(
-      active
-        ? `${chalk.cyan(version)} ${chalk.dim(`(${labels.join(', ')})`)}\n`
-        : `${version}\n`
+      `${installed.track}/${installed.slot} ${build}${active ? ` ${chalk.dim('(active)')}` : ''}\n`
     );
   }
-
   return 0;
 }

@@ -2,7 +2,10 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import type { FileBlob, Files } from '@vercel/build-utils';
-import { writeManifests } from '@vercel-internals/cli-builder-integration/manifest';
+import {
+  getBuildDiagnosticsFramework,
+  writeManifests,
+} from '@vercel-internals/cli-builder-integration/manifest';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -50,7 +53,7 @@ describe('writeManifests', () => {
           {
             workspace: '.',
             key: '@vercel/next:.',
-            buildConfig: { framework: 'nextjs' },
+            diagnosticsValues: { framework: 'nextjs' },
             manifest: nodeManifest({ framework: 'nextjs' }),
             builderUse: '@vercel/next',
           },
@@ -71,14 +74,14 @@ describe('writeManifests', () => {
           {
             workspace: '.',
             key: '@vercel/next:.',
-            buildConfig: { framework: 'nextjs' },
+            diagnosticsValues: { framework: 'nextjs' },
             manifest: nodeManifest({ framework: 'nextjs' }),
             builderUse: '@vercel/next',
           },
           {
             workspace: '.',
             key: '@vercel/python:.',
-            buildConfig: { framework: 'fastapi' },
+            diagnosticsValues: { framework: 'fastapi' },
             manifest: pythonManifest({ framework: 'fastapi' }),
             builderUse: '@vercel/python',
           },
@@ -101,7 +104,7 @@ describe('writeManifests', () => {
           {
             workspace: '.',
             key: '@vercel/next:.',
-            buildConfig: { framework: 'nextjs' },
+            diagnosticsValues: { framework: 'nextjs' },
             manifest: nodeManifest({ framework: 'nextjs' }),
             builderUse: '@vercel/next',
           },
@@ -118,5 +121,65 @@ describe('writeManifests', () => {
         type: 'FileBlob',
       });
     });
+  });
+});
+
+describe('getBuildDiagnosticsFramework', () => {
+  it('does not resolve the "services" project preset', () => {
+    expect(
+      getBuildDiagnosticsFramework({
+        service: {
+          schema: 'experimentalServicesV2',
+          name: 'site',
+          root: 'site',
+          builder: { use: '@vercel/static', src: 'site/**' },
+        },
+        configFramework: 'services',
+        apiDirFramework: undefined,
+      })
+    ).toBeUndefined();
+  });
+
+  it('falls back to the runtime preset for services without a framework', () => {
+    expect(
+      getBuildDiagnosticsFramework({
+        service: {
+          schema: 'experimentalServicesV2',
+          name: 'api',
+          root: 'api',
+          runtime: 'go',
+          builder: { use: '@vercel/go', src: 'api/main.go' },
+        },
+        configFramework: 'services',
+        apiDirFramework: undefined,
+      })
+    ).toBe('go');
+  });
+
+  it('prefers the service framework over the runtime preset', () => {
+    expect(
+      getBuildDiagnosticsFramework({
+        service: {
+          schema: 'experimentalServicesV2',
+          name: 'api',
+          root: 'api',
+          framework: 'fastapi',
+          runtime: 'python',
+          builder: { use: '@vercel/python', src: 'api/main.py' },
+        },
+        configFramework: 'fastapi',
+        apiDirFramework: undefined,
+      })
+    ).toBe('fastapi');
+  });
+
+  it('resolves other frameworks from config', () => {
+    expect(
+      getBuildDiagnosticsFramework({
+        service: undefined,
+        configFramework: 'nextjs',
+        apiDirFramework: undefined,
+      })
+    ).toBe('nextjs');
   });
 });

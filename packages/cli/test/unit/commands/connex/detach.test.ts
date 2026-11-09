@@ -39,7 +39,7 @@ describe('connex detach', () => {
 
     const exitCode = await connect(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'Missing connector ID or UID'
     );
@@ -51,7 +51,7 @@ describe('connex detach', () => {
 
     const exitCode = await connect(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('--json requires --yes');
   });
 

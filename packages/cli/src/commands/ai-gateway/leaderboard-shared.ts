@@ -8,9 +8,16 @@ import output from '../../output-manager';
 import stamp from '../../util/output/stamp';
 import { isAPIError } from '../../util/errors-ts';
 import { canPrompt } from '../../util/can-prompt';
-import { parseArguments } from '../../util/get-args';
+import { parseArguments, parseWithShortFlag } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import { wantsMachineReadableOutput } from '../../util/output-format';
+import {
+  getRenamedOption,
+  reportRenamedOptionError,
+  withWarnings,
+  type DeprecatedOptionWarning,
+} from '../../util/renamed-option';
 import {
   fetchLeaderboard,
   fetchLeaderboardCsv,
@@ -31,16 +38,19 @@ export interface TimeseriesTelemetry {
   trackCliOptionMetric(value?: string): void;
   trackCliOptionDate(value?: string): void;
   trackCliOptionFormat(value?: string): void;
+  trackCliOptionOutput(value?: string): void;
   trackCliOptionOut(value?: string): void;
 }
 
 export interface RankedTelemetry {
   trackCliOptionFormat(value?: string): void;
+  trackCliOptionOutput(value?: string): void;
   trackCliOptionOut(value?: string): void;
 }
 
 interface LeaderboardFlags {
   '--format'?: string;
+  '--output'?: string;
   '--out'?: string;
   '--modality'?: string;
   '--metric'?: string;
@@ -49,17 +59,36 @@ interface LeaderboardFlags {
 
 const dash = () => chalk.gray('–');
 
+/** The file to write to, from `--output` or its old name `--out`. */
+function outputPathFlag(flags: LeaderboardFlags): string | undefined {
+  return flags['--output'] ?? flags['--out'];
+}
+
+/**
+ * Prints a deprecation warning on stderr, unless it goes in the JSON result
+ * on stdout. A file written with `--output` holds only the data.
+ */
+function warnOutsideJsonResult(
+  flags: LeaderboardFlags,
+  format: LeaderboardFormat,
+  warning: DeprecatedOptionWarning | undefined
+) {
+  if (warning && (format !== 'json' || outputPathFlag(flags) !== undefined)) {
+    output.warning(warning.message);
+  }
+}
+
 /**
  * Resolve the output representation. Explicit `--format` always wins; otherwise
  * a real terminal gets the pretty table and everything else (pipes, CI,
- * `--non-interactive`, `--out`) gets machine-readable JSON. CSV is opt-in only.
+ * `--non-interactive`, `--output`) gets machine-readable JSON. CSV is opt-in only.
  */
 function resolveFormat(
   client: Client,
   flags: LeaderboardFlags
 ): { format: LeaderboardFormat } | { error: string } {
   const raw = flags['--format'];
-  const out = flags['--out'];
+  const out = outputPathFlag(flags);
 
   if (raw !== undefined) {
     const format = raw.toLowerCase();
@@ -71,7 +100,7 @@ function resolveFormat(
     if (format === 'table' && out !== undefined) {
       return {
         error:
-          'Cannot write the table view to a file. Use --format json or --format csv with --out.',
+          'Cannot write the table view to a file. Use --format json or --format csv with --output.',
       };
     }
     return { format };
@@ -159,12 +188,14 @@ export async function runTimeseriesLeaderboard(
     /** Column header for the entity, e.g. `model` or `lab`. */
     entityLabel: string;
     label: string;
+    warning?: DeprecatedOptionWarning;
   }
 ): Promise<number> {
   telemetry.trackCliOptionModality(flags['--modality']);
   telemetry.trackCliOptionMetric(flags['--metric']);
   telemetry.trackCliOptionDate(flags['--date']);
   telemetry.trackCliOptionFormat(flags['--format']);
+  telemetry.trackCliOptionOutput(flags['--output']);
   telemetry.trackCliOptionOut(flags['--out']);
 
   const formatResult = resolveFormat(client, flags);
@@ -173,6 +204,7 @@ export async function runTimeseriesLeaderboard(
     return 1;
   }
   const { format } = formatResult;
+  warnOutsideJsonResult(flags, format, config.warning);
 
   const modalityResult = parseEnum(
     flags['--modality'],
@@ -197,7 +229,7 @@ export async function runTimeseriesLeaderboard(
   let metric: LeaderboardMetric | undefined = metricResult.value;
 
   // In an interactive terminal showing the table, let the user pick the
-  // dimensions they didn't pass. Machine output (json/csv/--out) never prompts.
+  // dimensions they didn't pass. Machine output (json/csv/--output) never prompts.
   if (format === 'table' && canPrompt(client)) {
     if (modality === undefined) {
       modality = await client.input.select<LeaderboardModality>({
@@ -229,8 +261,9 @@ export async function runTimeseriesLeaderboard(
       `Fetching ${config.label}`
     );
     if ('exitCode' in result) return result.exitCode;
-    if (flags['--out'] !== undefined) {
-      return writeToFile(client, flags['--out'], result.data, config.label);
+    const outputFile = outputPathFlag(flags);
+    if (outputFile !== undefined) {
+      return writeToFile(client, outputFile, result.data, config.label);
     }
     client.stdout.write(result.data);
     return 0;
@@ -248,9 +281,14 @@ export async function runTimeseriesLeaderboard(
   const data = result.data;
 
   if (format === 'json') {
-    const content = `${JSON.stringify(data, null, 2)}\n`;
-    if (flags['--out'] !== undefined) {
-      return writeToFile(client, flags['--out'], content, config.label);
+    const outputFile = outputPathFlag(flags);
+    const content = `${JSON.stringify(
+      outputFile === undefined ? withWarnings(data, [config.warning]) : data,
+      null,
+      2
+    )}\n`;
+    if (outputFile !== undefined) {
+      return writeToFile(client, outputFile, content, config.label);
     }
     client.stdout.write(content);
     return 0;
@@ -323,9 +361,14 @@ export async function runRankedLeaderboard(
   client: Client,
   flags: LeaderboardFlags,
   telemetry: RankedTelemetry,
-  config: { dataset: 'apps' | 'providers'; label: string }
+  config: {
+    dataset: 'apps' | 'providers';
+    label: string;
+    warning?: DeprecatedOptionWarning;
+  }
 ): Promise<number> {
   telemetry.trackCliOptionFormat(flags['--format']);
+  telemetry.trackCliOptionOutput(flags['--output']);
   telemetry.trackCliOptionOut(flags['--out']);
 
   const formatResult = resolveFormat(client, flags);
@@ -334,6 +377,7 @@ export async function runRankedLeaderboard(
     return 1;
   }
   const { format } = formatResult;
+  warnOutsideJsonResult(flags, format, config.warning);
 
   if (format === 'csv') {
     const result = await fetchWithSpinner(
@@ -341,8 +385,9 @@ export async function runRankedLeaderboard(
       `Fetching ${config.label}`
     );
     if ('exitCode' in result) return result.exitCode;
-    if (flags['--out'] !== undefined) {
-      return writeToFile(client, flags['--out'], result.data, config.label);
+    const outputFile = outputPathFlag(flags);
+    if (outputFile !== undefined) {
+      return writeToFile(client, outputFile, result.data, config.label);
     }
     client.stdout.write(result.data);
     return 0;
@@ -356,9 +401,14 @@ export async function runRankedLeaderboard(
   const data = result.data;
 
   if (format === 'json') {
-    const content = `${JSON.stringify(data, null, 2)}\n`;
-    if (flags['--out'] !== undefined) {
-      return writeToFile(client, flags['--out'], content, config.label);
+    const outputFile = outputPathFlag(flags);
+    const content = `${JSON.stringify(
+      outputFile === undefined ? withWarnings(data, [config.warning]) : data,
+      null,
+      2
+    )}\n`;
+    if (outputFile !== undefined) {
+      return writeToFile(client, outputFile, content, config.label);
     }
     client.stdout.write(content);
     return 0;
@@ -439,21 +489,51 @@ export async function runLeaderboardSubcommand(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   // The generic spec widens the parsed flag types; every leaderboard
   // subcommand declares (a subset of) these flags.
   const flags = parsedArgs.flags as LeaderboardFlags;
 
+  // `--out` is the old name of `--output`. `-o` sets `--output` now and set
+  // `--out` before, so `-o` mixed with `--out` keeps its old meaning: the
+  // last one wins. Only a typed `--output` with `--out` is an error.
+  const json = wantsMachineReadableOutput(undefined, client.argv);
+  const resolvedFlags: LeaderboardFlags =
+    flags['--out'] !== undefined &&
+    flags['--output'] !== undefined &&
+    parseWithShortFlag(argv, flagsSpecification, '-o', String)['--output'] ===
+      undefined
+      ? {
+          ...flags,
+          '--output': undefined,
+          '--out': parseWithShortFlag(argv, flagsSpecification, '-o', '--out')[
+            '--out'
+          ] as string | undefined,
+        }
+      : flags;
+  // The run decides where the warning goes once it knows the format.
+  const outputPath = getRenamedOption(
+    { '--output': resolvedFlags['--output'], '--out': resolvedFlags['--out'] },
+    '--output',
+    '--out',
+    { json: true }
+  );
+  if ('error' in outputPath) {
+    return reportRenamedOptionError(client, outputPath.error, { json });
+  }
+
   if (variant.kind === 'timeseries') {
-    return runTimeseriesLeaderboard(client, flags, variant.telemetry, {
+    return runTimeseriesLeaderboard(client, resolvedFlags, variant.telemetry, {
       dataset: variant.dataset,
       entityLabel: variant.entityLabel,
       label: variant.label,
+      warning: outputPath.warning,
     });
   }
-  return runRankedLeaderboard(client, flags, variant.telemetry, {
+  return runRankedLeaderboard(client, resolvedFlags, variant.telemetry, {
     dataset: variant.dataset,
     label: variant.label,
+    warning: outputPath.warning,
   });
 }

@@ -1,4 +1,6 @@
 import path from 'path';
+import { mkdtemp, mkdir, rm, writeFile } from 'fs/promises';
+import { tmpdir } from 'os';
 import { runNpmInstall } from '../src';
 import type { Meta } from '../src/types';
 import { afterEach, expect, it, vi } from 'vitest';
@@ -26,6 +28,7 @@ afterEach(() => {
   spawnMock.mockClear();
   delete process.env.VERCEL_INSTALL_COMPLETED;
   delete process.env.VERCEL_INSTALL_COMPLETED_PATH;
+  delete process.env.VERCEL_EXPERIMENTAL_WORKSPACE_SCOPED_INSTALLS;
   delete process.env.NPM_ONLY_PRODUCTION;
 });
 
@@ -125,6 +128,99 @@ it('should only invoke `runNpmInstall()` once per `package.json` file (parallel)
     stdio: 'inherit',
     env: expect.any(Object),
   });
+});
+
+it('should install all targeted workspaces once when workspace scoped installs are enabled', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'workspace-install-'));
+  const alpha = path.join(root, 'services', 'alpha');
+  const beta = path.join(root, 'services', 'beta');
+  const alphaApi = path.join(alpha, 'api');
+  const betaApi = path.join(beta, 'api');
+  const meta: Meta = {};
+
+  try {
+    await Promise.all([
+      mkdir(alphaApi, { recursive: true }),
+      mkdir(betaApi, { recursive: true }),
+    ]);
+    await Promise.all([
+      writeFile(
+        path.join(root, 'package.json'),
+        JSON.stringify({ private: true, workspaces: ['./services/*'] })
+      ),
+      writeFile(
+        path.join(root, 'package-lock.json'),
+        JSON.stringify({ lockfileVersion: 3, packages: {} })
+      ),
+      writeFile(
+        path.join(alpha, 'package.json'),
+        JSON.stringify({ name: '@fixture/alpha' })
+      ),
+      writeFile(
+        path.join(beta, 'package.json'),
+        JSON.stringify({ name: '@fixture/beta' })
+      ),
+    ]);
+    process.env.VERCEL_EXPERIMENTAL_WORKSPACE_SCOPED_INSTALLS = '1';
+    const workspaceInstall = {
+      targets: [
+        {
+          installRoot: root,
+          isRoot: true,
+          packageJsonPath: path.join(root, 'package.json'),
+          relativePath: '.',
+        },
+        {
+          installRoot: root,
+          name: '@fixture/alpha',
+          packageJsonPath: path.join(alpha, 'package.json'),
+          relativePath: 'services/alpha',
+        },
+        {
+          installRoot: root,
+          name: '@fixture/beta',
+          packageJsonPath: path.join(beta, 'package.json'),
+          relativePath: 'services/beta',
+        },
+      ],
+    };
+
+    expect(
+      await runNpmInstall(
+        alphaApi,
+        [],
+        undefined,
+        meta,
+        undefined,
+        undefined,
+        workspaceInstall
+      )
+    ).toBe(true);
+    expect(
+      await runNpmInstall(
+        betaApi,
+        [],
+        undefined,
+        meta,
+        undefined,
+        undefined,
+        workspaceInstall
+      )
+    ).toBe(false);
+
+    expect(spawnMock).toHaveBeenCalledTimes(1);
+    expect(spawnMock.mock.calls[0][0]).toBe('npm');
+    expect(spawnMock.mock.calls[0][1]).toEqual([
+      'install',
+      '--no-audit',
+      '--workspace=services/alpha',
+      '--workspace=services/beta',
+      '--include-workspace-root',
+    ]);
+    expect(spawnMock.mock.calls[0][2]).toMatchObject({ cwd: root });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 it('should print warning for yarn dynamic require bug', async () => {

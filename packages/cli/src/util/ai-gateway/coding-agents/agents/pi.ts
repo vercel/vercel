@@ -46,9 +46,11 @@ export const pi: CodingAgent = {
         },
       ],
       envExports: [],
-      notes: [
-        'Pi will use the Vercel AI Gateway provider; pick a model with /model or --model.',
-      ],
+      notes: ctx.tokenPass
+        ? []
+        : [
+            'Pi will use the Vercel AI Gateway provider; pick a model with /model or --model.',
+          ],
     };
   },
 };

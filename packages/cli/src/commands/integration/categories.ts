@@ -22,20 +22,20 @@ export async function categories(client: Client, args: string[]) {
     parsedArguments = parseArguments(args, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   if (parsedArguments.args.length > 0) {
     output.error(
       'Invalid number of arguments. Usage: `vercel integration categories`'
     );
-    return 1;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 

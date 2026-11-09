@@ -89,7 +89,7 @@ describe('domains verify', () => {
     it('tracks telemetry', async () => {
       client.setArgv('domains', 'verify', '--help');
       const exitCodePromise = domains(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -104,7 +104,7 @@ describe('domains verify', () => {
     client.setArgv('domains', 'verify');
     const exitCodePromise = domains(client);
     await expect(client.stderr).toOutput('expects one argument');
-    expect(await exitCodePromise).toBe(1);
+    expect(await exitCodePromise).toBe(2);
   });
 
   it('succeeds when the domain is configured and verified for a project', async () => {
@@ -578,7 +578,7 @@ describe('domains verify', () => {
         '--cwd=/tmp/site'
       );
 
-      expect(await domains(client)).toBe(1);
+      expect(await domains(client)).toBe(2);
 
       const payload = JSON.parse(client.stdout.getFullOutput());
       expect(payload).toMatchObject({
@@ -643,7 +643,7 @@ describe('domains verify', () => {
       client.setArgv('domains', 'verify', DOMAIN, '--format', 'yaml');
       const exitCodePromise = domains(client);
       await expect(client.stderr).toOutput('Invalid output format');
-      expect(await exitCodePromise).toBe(1);
+      expect(await exitCodePromise).toBe(2);
     });
   });
 

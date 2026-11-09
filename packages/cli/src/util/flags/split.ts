@@ -51,7 +51,7 @@ export function resolveFlagSplit(
     options.baseSelector || formatFlagBucketingBaseSelector(currentSplit?.base);
   if (!baseSelector) {
     throw new Error(
-      'Missing required flag --by. Use --by <entity.attribute> to choose how users are bucketed.'
+      'Missing required option --by. Use --by <entity.attribute> to choose how users are bucketed.'
     );
   }
   const base = resolveFlagBucketingBase(settings, baseSelector);
@@ -204,7 +204,7 @@ function resolveDefaultVariant(
   }
 
   throw new Error(
-    'Missing required flag --default-variant. Use --default-variant <VARIANT> for non-boolean splits.'
+    'Missing required option --default-variant. Use --default-variant <VARIANT> for non-boolean splits.'
   );
 }
 

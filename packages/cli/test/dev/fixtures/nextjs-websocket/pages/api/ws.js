@@ -1,7 +1,7 @@
-const { experimental_upgradeWebSocket } = require('@vercel/functions');
+const { upgradeWebSocket } = require('@vercel/functions');
 
 module.exports = async function handler() {
-  await experimental_upgradeWebSocket(ws => {
+  await upgradeWebSocket(ws => {
     ws.on('message', data => {
       ws.send(`echo:${data.toString()}`);
     });

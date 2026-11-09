@@ -1,566 +1,440 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import traces from '../../../../src/commands/traces';
-import * as linkModule from '../../../../src/util/projects/link';
-import type {
-  ProjectTracing,
-  ProjectTracingSamplingRule,
-} from '@vercel-internals/types';
+import {
+  expectConfigTarget,
+  headRule,
+  mockConfigScope,
+  useTracingConfig,
+} from './config-fixture';
 
 vi.mock('../../../../src/util/projects/link');
 
-const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
+const sampling = [
+  headRule(0.1, { env: 'production' }),
+  headRule(0.2, { env: 'production', requestPath: '/api' }),
+  headRule(0.3, { env: 'preview' }),
+  headRule(0.4),
+  headRule(0.005, { requestPath: '/blog' }),
+];
 
-function mockLinkedProject() {
-  mockedGetLinkedProject.mockResolvedValue({
-    status: 'linked',
-    project: {
-      id: 'prj_test',
-      name: 'traces-project',
-      accountId: 'team_dummy',
-      updatedAt: Date.now(),
-      createdAt: Date.now(),
-    },
-    org: {
-      id: 'team_dummy',
-      slug: 'my-team',
-      type: 'team',
-    },
-  });
-}
-
-type PatchCalls = { bodies: Array<Record<string, unknown>> };
-
-function useTracingProject(tracing: ProjectTracing | null) {
-  const calls: PatchCalls = { bodies: [] };
-  const project = {
-    id: 'prj_test',
-    name: 'traces-project',
-    accountId: 'team_dummy',
-    updatedAt: Date.now(),
-    createdAt: Date.now(),
-    tracing,
-  };
-  client.scenario.get('/v9/projects/:idOrName', (_req, res) => {
-    res.json(project);
-  });
-  client.scenario.patch('/v9/projects/:idOrName', (req, res) => {
-    calls.bodies.push(req.body);
-    res.json({ ...project, ...req.body });
-  });
-  return calls;
-}
-
-/** The sampling rules left behind by the single PATCH the command should make. */
-function remainingRules(calls: PatchCalls): ProjectTracingSamplingRule[] {
-  expect(calls.bodies).toHaveLength(1);
-  const tracing = calls.bodies[0].tracing as ProjectTracing;
-  return tracing.samplingRules ?? [];
-}
-
-/**
- * Runs the command and answers the confirmation prompt.
- *
- * No flag stands in for that answer, so every `rm` that reaches a write goes
- * through the prompt, and answering it belongs in the fixture rather than in
- * each test. The wait keys off the list header, which is printed immediately
- * before the prompt.
- */
 async function runAnswering(answer: 'y' | 'n'): Promise<number> {
-  const exitCodePromise = traces(client);
+  const result = traces(client);
   await expect(client.stderr).toOutput('will be removed from');
   client.stdin.write(`${answer}\n`);
-  return exitCodePromise;
+  return result;
 }
-
-/** One rule of each shape the matcher has to tell apart. */
-const mixedRules: ProjectTracingSamplingRule[] = [
-  { rate: 0.1, env: 'production' },
-  { rate: 0.2, env: 'production', requestPath: '/api' },
-  { rate: 0.3, env: 'preview' },
-  { rate: 0.4 },
-  { rate: 0.5, requestPath: '/blog' },
-];
 
 describe('vercel traces config rm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
     client.nonInteractive = false;
-    mockLinkedProject();
+    mockConfigScope();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
-  it('removes a single rule by environment and path', async () => {
-    const calls = useTracingProject({ samplingRules: mixedRules });
+  it.each([
+    { args: ['production', '/api'], kept: [sampling[0], ...sampling.slice(2)] },
+    { args: ['production'], kept: sampling.slice(2) },
+    { args: ['production', '--default'], kept: sampling.slice(1) },
+    { args: ['any'], kept: sampling.slice(0, 3) },
+  ])('removes only the selected rules for $args, preserving order and fractional rates', async ({
+    args,
+    kept,
+  }) => {
+    const calls = useTracingConfig({ enabled: true, sampling });
+    client.setArgv('traces', 'config', 'rm', ...args);
+    expect(await runAnswering('y')).toBe(0);
+    expect(calls.bodies).toEqual([{ enabled: true, sampling: kept }]);
+    expectConfigTarget(calls.requests);
+  });
 
+  it.each([
+    ['--environment', 'production', '/api'],
+    ['-e', 'production', '/api'],
+    ['/api', '--environment', 'production'],
+  ])('reads the environment from the option in %s %s %s without a warning', async (...args) => {
+    const calls = useTracingConfig({ enabled: true, sampling });
+    client.setArgv('traces', 'config', 'rm', ...args);
+    expect(await runAnswering('y')).toBe(0);
+    expect(calls.bodies).toEqual([
+      { enabled: true, sampling: [sampling[0], ...sampling.slice(2)] },
+    ]);
+    expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+  });
+
+  it('keeps the environment argument working with a deprecation warning', async () => {
+    const calls = useTracingConfig({ enabled: true, sampling });
     client.setArgv('traces', 'config', 'rm', 'production', '/api');
-    const exitCode = await runAnswering('y');
-
-    expect(exitCode).toBe(0);
-    expect(remainingRules(calls)).toEqual([
-      { rate: 0.1, env: 'production' },
-      { rate: 0.3, env: 'preview' },
-      { rate: 0.4 },
-      { rate: 0.5, requestPath: '/blog' },
+    expect(await runAnswering('y')).toBe(0);
+    expect(calls.bodies).toEqual([
+      { enabled: true, sampling: [sampling[0], ...sampling.slice(2)] },
     ]);
+    expect(client.stderr.getFullOutput()).toContain(
+      'The environment argument is deprecated. Use --environment.'
+    );
   });
 
-  it('removes every rule for one environment', async () => {
-    const calls = useTracingProject({ samplingRules: mixedRules });
-
-    client.setArgv('traces', 'config', 'rm', 'production');
-    const exitCode = await runAnswering('y');
-
-    expect(exitCode).toBe(0);
-    expect(remainingRules(calls)).toEqual([
-      { rate: 0.3, env: 'preview' },
-      { rate: 0.4 },
-      { rate: 0.5, requestPath: '/blog' },
-    ]);
+  it.each([
+    ['/api'],
+    ['/api', '--default'],
+  ])('reports a missing --environment for %j', async (...args) => {
+    const calls = useTracingConfig({ enabled: true, sampling });
+    client.setArgv('traces', 'config', 'rm', ...args);
+    expect(await traces(client)).toBe(2);
+    expect(calls.requests).toEqual([]);
+    expect(client.stderr.getFullOutput()).toContain(
+      "Can't remove sampling rules without --environment."
+    );
   });
 
-  it('removes only the rule with no path prefix with --default', async () => {
-    const calls = useTracingProject({ samplingRules: mixedRules });
-
-    client.setArgv('traces', 'config', 'rm', 'production', '--default');
-    const exitCode = await runAnswering('y');
-
-    expect(exitCode).toBe(0);
-    expect(remainingRules(calls)).toEqual([
-      { rate: 0.2, env: 'production', requestPath: '/api' },
-      { rate: 0.3, env: 'preview' },
-      { rate: 0.4 },
-      { rate: 0.5, requestPath: '/blog' },
-    ]);
+  it('rejects an environment given as an argument and as --environment', async () => {
+    const calls = useTracingConfig({ enabled: true, sampling });
+    client.setArgv(
+      'traces',
+      'config',
+      'rm',
+      'production',
+      '--environment',
+      'production'
+    );
+    expect(await traces(client)).toBe(2);
+    expect(calls.requests).toEqual([]);
+    expect(client.stderr.getFullOutput()).toContain(
+      "Can't use an environment argument with --environment."
+    );
   });
 
-  it('`rm any` leaves the preview and production rules untouched', async () => {
-    const calls = useTracingProject({ samplingRules: mixedRules });
+  it.each([
+    'rm',
+    'remove',
+    'delete',
+  ])('disables tracing when %s removes the final rule', async alias => {
+    const calls = useTracingConfig({
+      enabled: true,
+      sampling: [headRule(0.1, { env: 'production' })],
+    });
+    client.setArgv('traces', 'config', alias, 'production');
+    expect(await runAnswering('y')).toBe(0);
+    expect(calls.bodies).toEqual([{ enabled: false }]);
+    expect(calls.getConfig()).toEqual({ enabled: false, sampling: [] });
+    expect(client.stderr.getFullOutput()).toContain('0 of 10 rules');
+    expect(client.stderr.getFullOutput()).toContain(
+      'Removing the final rule disables tracing'
+    );
+    expect(client.stderr.getFullOutput()).toContain('Tracing is disabled.');
+  });
 
+  it('lists no rules after the final rule is removed', async () => {
+    const calls = useTracingConfig({
+      enabled: true,
+      sampling: [headRule(0.1)],
+    });
     client.setArgv('traces', 'config', 'rm', 'any');
-    const exitCode = await runAnswering('y');
+    expect(await runAnswering('y')).toBe(0);
+    const stderrOffset = client.stderr.getFullOutput().length;
+    client.setArgv('traces', 'config', 'ls');
+    expect(await traces(client)).toBe(0);
+    const emptyOutput = client.stderr.getFullOutput().slice(stderrOffset);
+    expect(emptyOutput).toContain(
+      'No trace sampling rules for traces-project.'
+    );
+    expect(emptyOutput).not.toContain('Trace sampling rules for');
+    client.nonInteractive = true;
+    client.setArgv('traces', 'config', 'ls');
+    expect(await traces(client)).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      rules: [],
+      enabled: false,
+    });
+    expect(calls.getConfig().enabled).toBe(false);
+  });
 
-    expect(exitCode).toBe(0);
-    expect(remainingRules(calls)).toEqual([
-      { rate: 0.1, env: 'production' },
-      { rate: 0.2, env: 'production', requestPath: '/api' },
-      { rate: 0.3, env: 'preview' },
+  it('disables an enabled drain with implicit 100% sampling when removing any', async () => {
+    const calls = useTracingConfig({ enabled: true, sampling: [] });
+    client.setArgv('traces', 'config', 'rm', 'any');
+    expect(await runAnswering('y')).toBe(0);
+    expect(client.stderr.getFullOutput()).toContain('100%');
+    expect(calls.bodies).toEqual([{ enabled: false }]);
+  });
+
+  it('updates only the scoped internal drain, never the project tracing field', async () => {
+    mockConfigScope({
+      projectId: 'prj_other',
+      projectName: 'other-app',
+      teamId: 'team_flag',
+      teamSlug: 'flag-team',
+    });
+    const calls = useTracingConfig({ enabled: true, sampling });
+    client.setArgv(
+      'traces',
+      'config',
+      'rm',
+      'production',
+      '--scope',
+      'flag-team',
+      '--project',
+      'other-app'
+    );
+    expect(await runAnswering('y')).toBe(0);
+    expectConfigTarget(calls.requests, 'prj_other', 'team_flag');
+    expect(calls.requests.map(request => request.method)).toEqual([
+      'GET',
+      'PUT',
+    ]);
+    expect(calls.bodies).toEqual([
+      { enabled: true, sampling: sampling.slice(2) },
     ]);
   });
 
-  it('carries `domains` and `ignorePaths` through untouched', async () => {
-    const calls = useTracingProject({
-      domains: 'drain.example.com',
-      ignorePaths: ['/health'],
-      samplingRules: [{ rate: 0.1, env: 'production' }],
-    });
-
+  it('refuses to remove saved rules from a disabled drain rather than re-enabling it', async () => {
+    const calls = useTracingConfig({ enabled: false, sampling });
     client.setArgv('traces', 'config', 'rm', 'production');
-    const exitCode = await runAnswering('y');
-
-    expect(exitCode).toBe(0);
-    expect(calls.bodies[0].tracing).toEqual({
-      domains: 'drain.example.com',
-      ignorePaths: ['/health'],
-      samplingRules: [],
-    });
+    expect(await traces(client)).toBe(2);
+    expect(calls.bodies).toEqual([]);
+    expect(client.stderr.getFullOutput()).toContain('Tracing is disabled');
   });
 
-  it('accepts `remove` and `delete` as aliases', async () => {
-    for (const alias of ['remove', 'delete']) {
-      client.reset();
-      client.nonInteractive = false;
-      mockLinkedProject();
-      const calls = useTracingProject({
-        samplingRules: [{ rate: 0.1, env: 'production' }],
-      });
+  it.each([
+    { args: ['preview'], rules: [headRule(0.1, { env: 'production' })] },
+    {
+      args: ['production', '/other'],
+      rules: [headRule(0.1, { env: 'production', requestPath: '/api' })],
+    },
+    { args: ['production'], rules: [] },
+  ])('does not write when no rule matches $args', async ({ args, rules }) => {
+    const calls = useTracingConfig({
+      enabled: rules.length > 0,
+      sampling: rules,
+    });
+    client.setArgv('traces', 'config', 'rm', ...args);
+    expect(await traces(client)).toBe(1);
+    expect(calls.bodies).toEqual([]);
+    expect(client.stderr.getFullOutput()).toContain('No trace sampling rule');
+  });
 
-      client.setArgv('traces', 'config', alias, 'production');
-      const exitCode = await runAnswering('y');
+  it('lists every rule at risk before confirming', async () => {
+    const calls = useTracingConfig({ enabled: true, sampling });
+    client.setArgv('traces', 'config', 'rm', 'production');
+    expect(await runAnswering('y')).toBe(0);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain('(all paths)');
+    expect(stderr).toContain('/api');
+    expect(stderr).toContain('10%');
+    expect(stderr).toContain('20%');
+    expect(calls.bodies[0].sampling).toHaveLength(3);
+  });
 
-      expect(exitCode, alias).toBe(0);
-      expect(remainingRules(calls)).toEqual([]);
+  it('does not write when confirmation is declined', async () => {
+    const calls = useTracingConfig({ enabled: true, sampling });
+    client.setArgv('traces', 'config', 'rm', 'production');
+    expect(await runAnswering('n')).toBe(0);
+    expect(calls.bodies).toEqual([]);
+    expect(client.stderr.getFullOutput()).toContain('Canceled');
+  });
+
+  it.each(['--yes', '-y'])('does not accept %s as confirmation', async flag => {
+    const calls = useTracingConfig({ enabled: true, sampling });
+    client.setArgv('traces', 'config', 'rm', 'production', flag);
+    expect(await traces(client)).toBe(2);
+    expect(calls.requests).toEqual([]);
+  });
+
+  it.each([
+    'agent',
+    'non-TTY',
+  ])('refuses a %s session that cannot confirm', async mode => {
+    const calls = useTracingConfig({ enabled: true, sampling });
+    if (mode === 'agent') client.isAgent = true;
+    else client.stdin.isTTY = false;
+    client.setArgv('traces', 'config', 'rm', 'production');
+    expect(await traces(client)).toBe(1);
+    expect(calls.bodies).toEqual([]);
+    expect(client.stderr.getFullOutput()).toContain('cannot prompt');
+    expect(client.stdout.getFullOutput()).toBe('');
+  });
+
+  function spyExit() {
+    vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('exit');
+    }) as () => never);
+  }
+
+  it('reports every rule at risk and requires human confirmation in non-interactive mode', async () => {
+    spyExit();
+    const calls = useTracingConfig({ enabled: true, sampling });
+    client.nonInteractive = true;
+    client.setArgv('traces', 'config', 'rm', '--environment', 'production');
+    await expect(traces(client)).rejects.toThrow('exit');
+    expect(calls.bodies).toEqual([]);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    expect(payload).toMatchObject({
+      status: 'error',
+      reason: 'confirmation_required',
+      userActionRequired: true,
+    });
+    expect(payload.message).toContain('production (all paths) 10%');
+    expect(payload.message).toContain('production /api 20%');
+    expect(payload.next[0].command).toContain(
+      'traces config remove --environment production'
+    );
+    expect(payload.next[0].command).not.toContain('--yes');
+  });
+
+  it('preserves --default in the suggested confirmation command', async () => {
+    spyExit();
+    useTracingConfig({ enabled: true, sampling });
+    client.nonInteractive = true;
+    client.setArgv(
+      'traces',
+      'config',
+      'rm',
+      '--environment',
+      'production',
+      '--default'
+    );
+    await expect(traces(client)).rejects.toThrow('exit');
+    expect(JSON.parse(client.stdout.getFullOutput()).next[0].command).toContain(
+      'traces config remove --environment production --default'
+    );
+  });
+
+  it('quotes shell metacharacters in the suggested confirmation command', async () => {
+    spyExit();
+    useTracingConfig({
+      enabled: true,
+      sampling: [
+        headRule(0.1, {
+          env: 'production',
+          requestPath: '/api; touch /tmp/pwn',
+        }),
+      ],
+    });
+    client.nonInteractive = true;
+    client.setArgv(
+      'traces',
+      'config',
+      'rm',
+      '/api; touch /tmp/pwn',
+      '--environment',
+      'production'
+    );
+    await expect(traces(client)).rejects.toThrow('exit');
+    expect(JSON.parse(client.stdout.getFullOutput()).next[0].command).toContain(
+      "traces config remove '/api; touch /tmp/pwn' --environment production"
+    );
+  });
+
+  it('reports not_found ahead of confirmation_required when nothing matches', async () => {
+    spyExit();
+    const calls = useTracingConfig({
+      enabled: true,
+      sampling: [headRule(0.1, { env: 'production' })],
+    });
+    client.nonInteractive = true;
+    client.setArgv('traces', 'config', 'rm', 'preview');
+    await expect(traces(client)).rejects.toThrow('exit');
+    expect(JSON.parse(client.stdout.getFullOutput()).reason).toBe('not_found');
+    expect(calls.bodies).toEqual([]);
+  });
+
+  it.each([
+    ['staging'],
+    ['production', '/api', '--default'],
+    ['production', ''],
+  ])('rejects invalid input %j before calling the API', async (...args) => {
+    const calls = useTracingConfig({ enabled: true, sampling });
+    client.setArgv('traces', 'config', 'rm', ...args);
+    expect(await traces(client)).toBe(2);
+    expect(calls.requests).toEqual([]);
+  });
+  it.each([
+    [],
+    ['production', '/api', '/extra'],
+  ])('exits 2 for invalid argument count %j', async (...args) => {
+    const calls = useTracingConfig({ enabled: true, sampling });
+    client.setArgv('traces', 'config', 'rm', ...args);
+    expect(await traces(client)).toBe(2);
+    expect(calls.requests).toEqual([]);
+  });
+
+  it('keeps removed-rule JSON on stdout and the confirmation preview on stderr', async () => {
+    useTracingConfig({ enabled: true, sampling });
+    client.setArgv('traces', 'config', 'rm', 'production', '--json');
+    expect(await runAnswering('y')).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual([
+      { environment: 'production', requestPath: null, sampleRate: 10 },
+      { environment: 'production', requestPath: '/api', sampleRate: 20 },
+    ]);
+    expect(client.stderr.getFullOutput()).toContain('/api');
+    expect(client.stderr.getFullOutput()).toContain('20%');
+    expect(client.stdout.getFullOutput()).not.toContain('Removed');
+  });
+
+  it('surfaces a forbidden PUT without reporting success', async () => {
+    useTracingConfig(
+      { enabled: true, sampling },
+      {
+        status: 403,
+        code: 'forbidden',
+        message: 'You cannot change observability settings',
+      }
+    );
+    client.setArgv('traces', 'config', 'rm', 'production');
+    expect(await runAnswering('y')).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'You cannot change observability settings'
+    );
+    expect(client.stderr.getFullOutput()).not.toContain('Removed');
+  });
+
+  it('tracks the subcommand and redacts the path', async () => {
+    useTracingConfig({ enabled: true, sampling });
+    client.setArgv('traces', 'config', 'remove', 'production', '/api');
+    expect(await runAnswering('y')).toBe(0);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:config', value: 'config' },
+      { key: 'subcommand:remove', value: 'remove' },
+      { key: 'argument:environment', value: 'production' },
+      { key: 'argument:requestPath', value: '[REDACTED]' },
+    ]);
+  });
+  it('tracks --default', async () => {
+    useTracingConfig({ enabled: true, sampling });
+    client.setArgv('traces', 'config', 'rm', 'production', '--default');
+    expect(await runAnswering('y')).toBe(0);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:config', value: 'config' },
+      { key: 'subcommand:remove', value: 'rm' },
+      { key: 'argument:environment', value: 'production' },
+      { key: 'flag:default', value: 'TRUE' },
+    ]);
+  });
+
+  it.each([
+    ['remove', false],
+    ['rm', false],
+    ['delete', true],
+  ])('runs as %s (deprecated: %s)', async (name, deprecated) => {
+    useTracingConfig({ enabled: true, sampling });
+    client.setArgv(
+      'traces',
+      'config',
+      name,
+      '/api',
+      '--environment',
+      'production'
+    );
+    expect(await runAnswering('y')).toBe(0);
+    const warning =
+      '`vercel traces config delete` is deprecated. Use `vercel traces config remove`.';
+    if (deprecated) {
+      expect(client.stderr.getFullOutput()).toContain(warning);
+    } else {
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
     }
-  });
-
-  describe('nothing matches', () => {
-    it('exits 1 and makes no write when the environment has no rules', async () => {
-      const calls = useTracingProject({
-        samplingRules: [{ rate: 0.1, env: 'production' }],
-      });
-
-      client.setArgv('traces', 'config', 'rm', 'preview');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(1);
-      expect(calls.bodies).toHaveLength(0);
-      expect(client.stderr.getFullOutput()).toContain('No trace sampling rule');
-    });
-
-    it('exits 1 and makes no write when the path does not match', async () => {
-      const calls = useTracingProject({
-        samplingRules: [{ rate: 0.1, env: 'production', requestPath: '/api' }],
-      });
-
-      client.setArgv('traces', 'config', 'rm', 'production', '/other');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(1);
-      expect(calls.bodies).toHaveLength(0);
-    });
-
-    it('exits 1 and makes no write when the project has no rules at all', async () => {
-      const calls = useTracingProject(null);
-
-      client.setArgv('traces', 'config', 'rm', 'production');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(1);
-      expect(calls.bodies).toHaveLength(0);
-    });
-  });
-
-  describe('confirmation', () => {
-    it('lists every rule it will remove and removes them on `y`', async () => {
-      const calls = useTracingProject({ samplingRules: mixedRules });
-
-      client.setArgv('traces', 'config', 'rm', 'production');
-      const exitCode = await runAnswering('y');
-
-      expect(exitCode).toBe(0);
-      const stderr = client.stderr.getFullOutput();
-      // Both matched rules are shown before the prompt, with path and rate.
-      expect(stderr).toContain('(all paths)');
-      expect(stderr).toContain('/api');
-      expect(stderr).toContain('10%');
-      expect(stderr).toContain('20%');
-      expect(remainingRules(calls)).toHaveLength(3);
-    });
-
-    it('makes no write when the confirmation is declined', async () => {
-      const calls = useTracingProject({ samplingRules: mixedRules });
-
-      client.setArgv('traces', 'config', 'rm', 'production');
-      const exitCode = await runAnswering('n');
-
-      expect(exitCode).toBe(0);
-      expect(calls.bodies).toHaveLength(0);
-      expect(client.stderr.getFullOutput()).toContain('Canceled');
-    });
-
-    /**
-     * `--yes` is not accepted: an agent that passes it should fail on an unknown
-     * option rather than remove rules nobody agreed to lose. It is rejected at
-     * parse time, so the project is never even read.
-     */
-    it('does not accept --yes', async () => {
-      const calls = useTracingProject({ samplingRules: mixedRules });
-
-      client.setArgv('traces', 'config', 'rm', 'production', '--yes');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(1);
-      expect(calls.bodies).toHaveLength(0);
-      expect(client.stderr.getFullOutput()).toContain('--yes');
-    });
-
-    it('does not accept -y', async () => {
-      const calls = useTracingProject({ samplingRules: mixedRules });
-
-      client.setArgv('traces', 'config', 'rm', 'production', '-y');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(1);
-      expect(calls.bodies).toHaveLength(0);
-    });
-  });
-
-  // The prompt is the only consent the command takes, so each way of arriving
-  // without a person to answer it has to be refused rather than left to reach
-  // `input.confirm` and wait forever.
-  describe('sessions that cannot confirm', () => {
-    function spyExit() {
-      return vi.spyOn(process, 'exit').mockImplementation((() => {
-        throw new Error('exit');
-      }) as () => never);
-    }
-
-    // An agent that shells out through a pty keeps a TTY, so `nonInteractive`
-    // stays false and this is the case the old `--yes` gate let through.
-    it('refuses an agent that has a TTY', async () => {
-      const calls = useTracingProject({ samplingRules: mixedRules });
-
-      client.isAgent = true;
-      client.setArgv('traces', 'config', 'rm', 'production');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(1);
-      expect(calls.bodies).toHaveLength(0);
-      const stderr = client.stderr.getFullOutput();
-      expect(stderr).toContain('cannot prompt');
-      expect(stderr).toContain('/api');
-      // Nothing asked for JSON, so stdout stays empty.
-      expect(client.stdout.getFullOutput()).toBe('');
-    });
-
-    it('refuses a session with no TTY', async () => {
-      const calls = useTracingProject({ samplingRules: mixedRules });
-
-      client.stdin.isTTY = false;
-      client.setArgv('traces', 'config', 'rm', 'production');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(1);
-      expect(calls.bodies).toHaveLength(0);
-      expect(client.stderr.getFullOutput()).toContain('cannot prompt');
-    });
-
-    it('names every rule at risk and the command to run by hand', async () => {
-      const exitSpy = spyExit();
-      const calls = useTracingProject({ samplingRules: mixedRules });
-
-      client.nonInteractive = true;
-      client.setArgv('traces', 'config', 'rm', 'production');
-
-      await expect(traces(client)).rejects.toThrow('exit');
-
-      expect(calls.bodies).toHaveLength(0);
-      const payload = JSON.parse(client.stdout.getFullOutput());
-      expect(payload.status).toBe('error');
-      expect(payload.reason).toBe('confirmation_required');
-      expect(payload.message).toContain('production (all paths) 10%');
-      expect(payload.message).toContain('production /api 20%');
-      expect(payload.next[0].command).toContain('traces config rm production');
-      // The signal that stops an agent retrying: no flag can grant consent.
-      expect(payload.userActionRequired).toBe(true);
-      expect(payload.next[0].command).not.toContain('--yes');
-
-      exitSpy.mockRestore();
-    });
-
-    it('keeps the selector in the command it suggests', async () => {
-      const exitSpy = spyExit();
-      useTracingProject({ samplingRules: mixedRules });
-
-      client.nonInteractive = true;
-      client.setArgv('traces', 'config', 'rm', 'production', '--default');
-
-      await expect(traces(client)).rejects.toThrow('exit');
-
-      const payload = JSON.parse(client.stdout.getFullOutput());
-      expect(payload.next[0].command).toContain(
-        'traces config rm production --default'
-      );
-
-      exitSpy.mockRestore();
-    });
-
-    /**
-     * The suggestion is meant to be pasted into a shell, and the path prefix is
-     * the one token in it that carries customer data. Unquoted, `/api; touch x`
-     * would paste as two commands.
-     */
-    it('quotes a path prefix that the shell would otherwise read', async () => {
-      const exitSpy = spyExit();
-      useTracingProject({
-        samplingRules: [
-          { rate: 0.1, env: 'production', requestPath: '/api; touch /tmp/pwn' },
-        ],
-      });
-
-      client.nonInteractive = true;
-      client.setArgv(
-        'traces',
-        'config',
-        'rm',
-        'production',
-        '/api; touch /tmp/pwn'
-      );
-
-      await expect(traces(client)).rejects.toThrow('exit');
-
-      const payload = JSON.parse(client.stdout.getFullOutput());
-      expect(payload.next[0].command).toContain(
-        "traces config rm production '/api; touch /tmp/pwn'"
-      );
-
-      exitSpy.mockRestore();
-    });
-
-    it('reports `not_found` when nothing matches', async () => {
-      const exitSpy = spyExit();
-      const calls = useTracingProject({
-        samplingRules: [{ rate: 0.1, env: 'production' }],
-      });
-
-      client.nonInteractive = true;
-      client.setArgv('traces', 'config', 'rm', 'preview');
-
-      await expect(traces(client)).rejects.toThrow('exit');
-
-      expect(calls.bodies).toHaveLength(0);
-      const payload = JSON.parse(client.stdout.getFullOutput());
-      expect(payload.status).toBe('error');
-      // A selector that matches nothing is the more useful complaint of the
-      // two, so it is reported ahead of the missing confirmation.
-      expect(payload.reason).toBe('not_found');
-
-      exitSpy.mockRestore();
-    });
-  });
-
-  describe('validation', () => {
-    it('rejects an unknown environment word before calling the API', async () => {
-      const calls = useTracingProject({ samplingRules: mixedRules });
-
-      client.setArgv('traces', 'config', 'rm', 'staging');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(1);
-      expect(calls.bodies).toHaveLength(0);
-      expect(client.stderr.getFullOutput()).toContain(
-        'any, preview, production'
-      );
-    });
-
-    it('rejects --default combined with an explicit path', async () => {
-      const calls = useTracingProject({ samplingRules: mixedRules });
-
-      client.setArgv(
-        'traces',
-        'config',
-        'rm',
-        'production',
-        '/api',
-        '--default'
-      );
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(1);
-      expect(calls.bodies).toHaveLength(0);
-    });
-
-    it('prints help and exits 2 when the environment is missing', async () => {
-      const calls = useTracingProject({ samplingRules: mixedRules });
-
-      client.setArgv('traces', 'config', 'rm');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(2);
-      expect(calls.bodies).toHaveLength(0);
-      expect(client.stderr.getFullOutput()).toContain('traces config rm');
-    });
-
-    it('exits 2 on too many arguments', async () => {
-      const calls = useTracingProject({ samplingRules: mixedRules });
-
-      client.setArgv('traces', 'config', 'rm', 'production', '/api', '/extra');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(2);
-      expect(calls.bodies).toHaveLength(0);
-      expect(client.stderr.getFullOutput()).toContain('Too many arguments');
-    });
-  });
-
-  describe('--json', () => {
-    it('prints the removed rules', async () => {
-      useTracingProject({ samplingRules: mixedRules });
-
-      client.setArgv('traces', 'config', 'rm', 'production', '--json');
-      const exitCode = await runAnswering('y');
-
-      expect(exitCode).toBe(0);
-      expect(JSON.parse(client.stdout.getFullOutput())).toEqual([
-        { environment: 'production', requestPath: null, sampleRate: 10 },
-        { environment: 'production', requestPath: '/api', sampleRate: 20 },
-      ]);
-    });
-
-    it('keeps prose off stdout', async () => {
-      useTracingProject({ samplingRules: mixedRules });
-
-      client.setArgv('traces', 'config', 'rm', 'production', '--json');
-      await runAnswering('y');
-
-      expect(client.stdout.getFullOutput()).not.toContain('Removed');
-    });
-
-    // The prompt cannot be skipped, and a prompt without the list asks the
-    // person to agree to something they cannot see, so the list is printed
-    // here too — on stderr, which leaves stdout parseable.
-    it('still lists the rules on stderr before prompting', async () => {
-      useTracingProject({ samplingRules: mixedRules });
-
-      client.setArgv('traces', 'config', 'rm', 'production', '--json');
-      await runAnswering('y');
-
-      const stderr = client.stderr.getFullOutput();
-      expect(stderr).toContain('/api');
-      expect(stderr).toContain('20%');
-    });
-  });
-
-  describe('errors', () => {
-    it('surfaces the API message and exits 1 when the PATCH is forbidden', async () => {
-      client.scenario.get('/v9/projects/:idOrName', (_req, res) => {
-        res.json({
-          id: 'prj_test',
-          name: 'traces-project',
-          accountId: 'team_dummy',
-          updatedAt: Date.now(),
-          createdAt: Date.now(),
-          tracing: { samplingRules: [{ rate: 0.1, env: 'production' }] },
-        });
-      });
-      client.scenario.patch('/v9/projects/:idOrName', (_req, res) => {
-        res.status(403).json({
-          error: {
-            code: 'forbidden',
-            message: 'You cannot change observability settings',
-          },
-        });
-      });
-
-      client.setArgv('traces', 'config', 'rm', 'production');
-      const exitCode = await runAnswering('y');
-
-      expect(exitCode).toBe(1);
-      expect(client.stderr.getFullOutput()).toContain(
-        'You cannot change observability settings'
-      );
-    });
-  });
-
-  describe('telemetry', () => {
-    it('tracks the subcommand and redacts the path', async () => {
-      useTracingProject({ samplingRules: mixedRules });
-
-      client.setArgv('traces', 'config', 'remove', 'production', '/api');
-      const exitCode = await runAnswering('y');
-
-      expect(exitCode).toBe(0);
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'subcommand:config', value: 'config' },
-        { key: 'subcommand:rm', value: 'remove' },
-        { key: 'argument:environment', value: 'production' },
-        { key: 'argument:requestPath', value: '[REDACTED]' },
-      ]);
-    });
-
-    it('tracks --default', async () => {
-      useTracingProject({ samplingRules: mixedRules });
-
-      client.setArgv('traces', 'config', 'rm', 'production', '--default');
-      const exitCode = await runAnswering('y');
-
-      expect(exitCode).toBe(0);
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'subcommand:config', value: 'config' },
-        { key: 'subcommand:rm', value: 'rm' },
-        { key: 'argument:environment', value: 'production' },
-        { key: 'flag:default', value: 'TRUE' },
-      ]);
-    });
   });
 });

@@ -243,7 +243,7 @@ describe('integration', () => {
     it('errors when too many arguments are provided', async () => {
       client.setArgv('integration', 'discover', 'arg1', 'arg2');
       const exitCode = await integrationCommand(client);
-      expect(exitCode, 'exit code for "integrationCommand"').toEqual(1);
+      expect(exitCode, 'exit code for "integrationCommand"').toEqual(2);
 
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain(

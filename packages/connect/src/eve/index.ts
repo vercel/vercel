@@ -14,6 +14,7 @@ export {
   type EveConnectionAuthorizationContext,
   type ConnectAuthorizationPhase,
   type VercelConnectMetadata,
+  type Experimental_EveEventsBackend,
 } from './connection-authorization.js';
 
 export {
@@ -41,6 +42,10 @@ export {
   type ConnectLinqCredentials,
   type ConnectLinqCredentialsParams,
 } from './linq-credentials.js';
+export {
+  connectTeamsCredentials,
+  type ConnectTeamsCredentialsParams,
+} from './microsoft-teams-credentials.js';
 export {
   connectPhotonCredentials,
   type ConnectPhotonCredentialProvider,

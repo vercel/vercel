@@ -65,13 +65,24 @@ export interface ConnexConnectionMethod {
   };
 }
 
+interface ConnexServiceTypeInfo {
+  type?: string;
+  createInputSchema?: Record<string, unknown>;
+}
+
 /** The parts of `GET /v1/connect/services/:service?schemas=true` the CLI reads. */
 export interface ConnexServiceInfo {
   name?: string;
-  types?: Array<{
-    type?: string;
-    createInputSchema?: Record<string, unknown>;
-  }>;
+  types?: ConnexServiceTypeInfo[];
+  /**
+   * What OAuth discovery found at a URL no service describes. It names no
+   * connection method, so these create through the URL-based flows.
+   */
+  discovery?: {
+    serverUrl: string;
+    discoveryServerUrl: string;
+    type: ConnexServiceTypeInfo;
+  };
   targets?: ConnexServiceTarget[];
   connectionMethods?: ConnexConnectionMethod[];
   /**

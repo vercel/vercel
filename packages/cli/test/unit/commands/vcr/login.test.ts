@@ -85,7 +85,7 @@ describe('vcr login', () => {
     it('tracks telemetry and exits 2', async () => {
       client.setArgv('vcr', 'login', '--help');
       const exitCode = await vcr(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
@@ -126,7 +126,7 @@ describe('vcr login', () => {
   it('errors when the engine argument is omitted (no default)', async () => {
     client.setArgv('vcr', 'login');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('Missing engine');
     expect(client.stderr.getFullOutput()).toContain('docker, podman, buildah');
     expect(mockedExeca).not.toHaveBeenCalled();
@@ -234,7 +234,7 @@ describe('vcr login', () => {
   it('rejects an invalid engine value', async () => {
     client.setArgv('vcr', 'login', 'nope');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('docker, podman, buildah');
     expect(mockedExeca).not.toHaveBeenCalled();
   });

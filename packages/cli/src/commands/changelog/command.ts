@@ -4,7 +4,7 @@ import { formatOption, jsonOption } from '../../util/arg-common';
 const changelogOptions = [
   {
     name: 'limit',
-    shorthand: null,
+    shorthand: 'n',
     type: Number,
     argument: 'NUMBER',
     deprecated: false,
@@ -38,6 +38,7 @@ export const changelogCommand = {
   name: 'changelog',
   aliases: [],
   description: 'Show the latest Vercel product updates',
+  runsWithoutSubcommand: true,
   arguments: [],
   subcommands: [searchSubcommand],
   options: changelogOptions,

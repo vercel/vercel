@@ -1,8 +1,8 @@
 import { getCache } from '@vercel/functions';
 
-// Reads the completion the Python subscriber wrote into the Runtime Cache.
-// In `vc dev` both processes talk to the dev server's shared store, so a
-// write from the Python sidecar is visible here.
+// Reads the completion the external Python worker wrote into Runtime Cache.
+// Both processes talk to the `vc dev` shared store, so a write from the
+// separately launched worker is visible here.
 export default async function handler(req, res) {
   const taskId = String(req.query.taskId || '');
   const completion = await getCache({ namespace: 'queue-cache' }).get(

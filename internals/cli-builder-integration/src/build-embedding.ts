@@ -1,4 +1,8 @@
-import { isPackageInstalled } from '@vercel/build-utils';
+import {
+  isPackageInstalled,
+  type PackageJson,
+  type ProjectSettings,
+} from '@vercel/build-utils';
 
 function isFlagsEmbedOption(
   input: string | undefined
@@ -16,7 +20,9 @@ function envHasSdkKey() {
 }
 
 export async function shouldEmbedFlagsDefinitions(
-  cwd?: string
+  cwd?: string,
+  packageJson?: PackageJson | null,
+  vercelFlags?: ProjectSettings['vercelFlags']
 ): Promise<boolean> {
   // legacy opt out
   if (process.env.VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING === '1') {
@@ -27,7 +33,7 @@ export async function shouldEmbedFlagsDefinitions(
     return process.env.VERCEL_FLAGS_EMBED_DEFINITIONS === 'force-on';
   }
 
-  if (envHasSdkKey()) {
+  if (vercelFlags?.enabledAt !== undefined || envHasSdkKey()) {
     return true;
   }
 
@@ -38,5 +44,13 @@ export async function shouldEmbedFlagsDefinitions(
     return true;
   }
 
-  return false;
+  // Dependencies may not be installed yet on builds without a restored cache.
+  const dependencies = {
+    ...packageJson?.dependencies,
+    ...packageJson?.devDependencies,
+    ...packageJson?.optionalDependencies,
+  };
+  return Boolean(
+    dependencies['@flags-sdk/vercel'] || dependencies['@vercel/flags-core']
+  );
 }

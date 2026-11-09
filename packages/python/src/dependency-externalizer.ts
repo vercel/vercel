@@ -135,6 +135,12 @@ interface AnalyzeOptions {
   }) => void;
 }
 
+/** Whether to bundle all dependencies instead of installing them at cold start. */
+function runtimeInstallDisabledByFlag(): boolean {
+  const flag = process.env.VERCEL_PYTHON_DISABLE_RUNTIME_INSTALL?.toLowerCase();
+  return flag === '1' || flag === 'true';
+}
+
 export class PythonDependencyExternalizer {
   private installedDistributions: InstalledPythonDistributions;
   private vendorDir: string;
@@ -144,6 +150,7 @@ export class PythonDependencyExternalizer {
   private projectName: string | undefined;
   private readonly pythonVersion: PythonVersion;
   private hasCustomCommand: boolean;
+  private readonly runtimeInstallDisabled: boolean;
   private alwaysBundlePackages: string[];
 
   private allVendorFiles: Files = {};
@@ -159,11 +166,12 @@ export class PythonDependencyExternalizer {
     this.projectName = options.projectName;
     this.pythonVersion = options.pythonVersion;
     this.hasCustomCommand = options.hasCustomCommand;
+    this.runtimeInstallDisabled = runtimeInstallDisabledByFlag();
     this.alwaysBundlePackages = options.alwaysBundlePackages ?? [];
   }
 
   shouldEnableRuntimeInstall(): boolean {
-    if (this.hasCustomCommand) {
+    if (this.hasCustomCommand || this.runtimeInstallDisabled) {
       return false;
     }
     // Fits AWS Lambda directly, or there's no lock to defer from.
@@ -226,7 +234,8 @@ export class PythonDependencyExternalizer {
     if (
       this.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
       this.hasCustomCommand &&
-      !largeFunctionsEnabled
+      !largeFunctionsEnabled &&
+      !this.runtimeInstallDisabled
     ) {
       const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
       throw new NowBuildError({
@@ -246,7 +255,7 @@ export class PythonDependencyExternalizer {
     // Enforce the large-function size limit up front (faster than failing at
     // ZIP time). `>=` matches the platform's uncompressed-size check.
     if (
-      largeFunctionsEnabled &&
+      (largeFunctionsEnabled || this.runtimeInstallDisabled) &&
       this.totalBundleSize >= MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
     ) {
       const limitMB = (

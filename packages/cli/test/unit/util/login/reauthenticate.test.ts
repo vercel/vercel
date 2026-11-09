@@ -19,8 +19,11 @@ vi.mock('../../../../src/util/fetch', async () => ({
   default: vi.fn(),
 }));
 
-vi.mock('../../../../src/util/agent/auto-install-agentic', () => ({
-  autoInstallVercelPlugin: vi.fn().mockResolvedValue(undefined),
+// The device flow tests delete `CI`, so `login/future.ts` would open a real
+// browser. `open` resolves to a ChildProcess; `future.ts` calls `.on('error')`.
+// Passing the implementation to `vi.fn` keeps it through `vi.resetAllMocks()`.
+vi.mock('open', () => ({
+  default: vi.fn(() => Promise.resolve({ on: vi.fn() })),
 }));
 
 function mockResponse(data: unknown, ok = true): Response {

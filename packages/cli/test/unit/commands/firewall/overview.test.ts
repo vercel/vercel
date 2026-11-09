@@ -41,7 +41,7 @@ describe('firewall overview', () => {
     it('tracks telemetry', async () => {
       client.setArgv('firewall', 'overview', '--help');
       const exitCode = await firewall(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -194,11 +194,11 @@ describe('firewall overview', () => {
     useGetBypass([]);
     useFirewallActivity({
       series: [
-        { timestamp: '2026-09-03T10:00:00.000Z', waf_action: 'deny', value: 4 },
-        { timestamp: '2026-09-03T11:00:00.000Z', waf_action: 'deny', value: 6 },
+        { timestamp: '2026-09-03T10:00:00.000Z', wafAction: 'deny', value: 4 },
+        { timestamp: '2026-09-03T11:00:00.000Z', wafAction: 'deny', value: 6 },
         {
           timestamp: '2026-09-03T10:00:00.000Z',
-          waf_action: 'allow',
+          wafAction: 'allow',
           value: 1,
         },
       ],
@@ -239,8 +239,8 @@ describe('firewall overview', () => {
 
     // The two panels of the activity block: traffic by action, and by rule.
     const [byAction, byRule] = firewallActivity.queries;
-    expect(byAction.groupBy).toEqual(['waf_action']);
-    expect(byRule.groupBy).toEqual(['waf_rule_id']);
+    expect(byAction.groupBy).toEqual(['wafAction']);
+    expect(byRule.groupBy).toEqual(['wafRuleId']);
 
     // Both panels cover the same period, so a reader can compare them. The
     // window is now the caller's: `getFirewallMetrics` takes it rather than
@@ -389,17 +389,17 @@ describe('firewall overview', () => {
     function useActivityWithTraffic() {
       useFirewallActivity({
         series: [
-          { timestamp: bucket(2), waf_action: 'deny', value: 400 },
-          { timestamp: bucket(1), waf_action: 'deny', value: 1_100 },
-          { timestamp: bucket(2), waf_action: 'allow', value: 90_000 },
-          { timestamp: bucket(1), waf_action: 'allow', value: 120_000 },
+          { timestamp: bucket(2), wafAction: 'deny', value: 400 },
+          { timestamp: bucket(1), wafAction: 'deny', value: 1_100 },
+          { timestamp: bucket(2), wafAction: 'allow', value: 90_000 },
+          { timestamp: bucket(1), wafAction: 'allow', value: 120_000 },
         ],
         topRules: [
           {
-            waf_rule_id: 'sys_dos_mitigation',
+            wafRuleId: 'sys_dos_mitigation',
             [FIREWALL_ROLLUP_COLUMN]: 1_500_000,
           },
-          { waf_rule_id: 'rule_001', [FIREWALL_ROLLUP_COLUMN]: 2_400 },
+          { wafRuleId: 'rule_001', [FIREWALL_ROLLUP_COLUMN]: 2_400 },
         ],
         anomalies: [
           createAttackAnomaly({
@@ -410,6 +410,58 @@ describe('firewall overview', () => {
         ],
       });
     }
+
+    it('leaves the unattributed rule row out of the busiest rules', async () => {
+      useListFirewallConfigs(
+        createConfig({ firewallEnabled: true, rules: [createRule(1)] }),
+        null
+      );
+      useGetBypass([]);
+      useFirewallActivity({
+        series: [{ timestamp: bucket(1), wafAction: 'allow', value: 120_000 }],
+        topRules: [
+          // Requests no rule matched. The `wafRuleId!=""` filter is meant
+          // to exclude them and does not, and they dwarf every real rule, so
+          // left in they take the top row and leave its Rule and Id blank.
+          { wafRuleId: '', [FIREWALL_ROLLUP_COLUMN]: 4_000_000_000 },
+          { wafRuleId: 'rule_001', [FIREWALL_ROLLUP_COLUMN]: 2_400 },
+        ],
+      });
+
+      client.setArgv('firewall', 'overview');
+      expect(await firewall(client)).toEqual(0);
+
+      const out = client.stderr.getFullOutput();
+      expect(out).toContain('rule_001');
+      expect(out).not.toContain('4000.0M');
+    });
+
+    it('still shows eight rules when the unattributed row leads them', async () => {
+      useListFirewallConfigs(
+        createConfig({ firewallEnabled: true, rules: [createRule(1)] }),
+        null
+      );
+      useGetBypass([]);
+      useFirewallActivity({
+        series: [{ timestamp: bucket(1), wafAction: 'allow', value: 120_000 }],
+        topRules: [
+          // The blank row is dropped after the API has already capped the
+          // result, so asking it for exactly eight rendered seven.
+          { wafRuleId: '', [FIREWALL_ROLLUP_COLUMN]: 4_000_000_000 },
+          ...Array.from({ length: 8 }, (_, i) => ({
+            wafRuleId: `rule_${String(i).padStart(3, '0')}`,
+            [FIREWALL_ROLLUP_COLUMN]: 8_000 - i,
+          })),
+        ],
+      });
+
+      client.setArgv('firewall', 'overview', '--json');
+      expect(await firewall(client)).toEqual(0);
+
+      const json = JSON.parse(client.stdout.getFullOutput());
+      expect(json.topRules).toHaveLength(8);
+      expect(json.topRules.at(-1).id).toEqual('rule_007');
+    });
 
     it('renders traffic by action, the busiest rules, and alerts', async () => {
       useListFirewallConfigs(
@@ -465,11 +517,9 @@ describe('firewall overview', () => {
       useListFirewallConfigs(createConfig({ firewallEnabled: true }), null);
       useGetBypass([]);
       useFirewallActivity({
-        series: [{ timestamp: bucket(1), waf_action: 'deny', value: 7 }],
+        series: [{ timestamp: bucket(1), wafAction: 'deny', value: 7 }],
         // The API's own total, which must win over summing the buckets.
-        actionSummary: [
-          { waf_action: 'deny', [FIREWALL_ROLLUP_COLUMN]: 9_000 },
-        ],
+        actionSummary: [{ wafAction: 'deny', [FIREWALL_ROLLUP_COLUMN]: 9_000 }],
       });
 
       client.setArgv('firewall', 'overview', '--json');
@@ -484,16 +534,14 @@ describe('firewall overview', () => {
       useGetBypass([]);
       useFirewallActivity({
         series: [
-          { timestamp: bucket(2), waf_action: 'deny', value: 7 },
-          { timestamp: bucket(2), waf_action: 'challenge', value: 6 },
-          { timestamp: bucket(1), waf_action: 'challenge', value: 4 },
+          { timestamp: bucket(2), wafAction: 'deny', value: 7 },
+          { timestamp: bucket(2), wafAction: 'challenge', value: 6 },
+          { timestamp: bucket(1), wafAction: 'challenge', value: 4 },
         ],
         // Only `deny` has an API total. `challenge` is in the buckets alone,
         // so its total has to come from summing them — deciding that once for
         // the whole response reports 0 next to a non-empty timeseries.
-        actionSummary: [
-          { waf_action: 'deny', [FIREWALL_ROLLUP_COLUMN]: 9_000 },
-        ],
+        actionSummary: [{ wafAction: 'deny', [FIREWALL_ROLLUP_COLUMN]: 9_000 }],
       });
 
       client.setArgv('firewall', 'overview', '--json');

@@ -27,9 +27,23 @@ export class AiGatewayTelemetryClient
     });
   }
 
+  trackCliSubcommandVirtualModels(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'virtual-models',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandCodingAgents(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'coding-agents',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandSetup(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'setup',
       value: actual,
     });
   }

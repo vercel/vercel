@@ -68,7 +68,7 @@ describe('vcr ls', () => {
     it('tracks telemetry', async () => {
       client.setArgv('vcr', 'ls', '--help');
       const exitCode = await vcr(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -155,7 +155,7 @@ describe('vcr ls', () => {
   it('rejects an out-of-range --limit', async () => {
     client.setArgv('vcr', 'ls', '--limit', '9999');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('--limit');
   });
 
@@ -187,6 +187,58 @@ describe('vcr ls', () => {
       { key: 'subcommand:ls', value: 'ls' },
       { key: 'option:cursor', value: '[REDACTED]' },
     ]);
+    expect(client.stderr.getFullOutput()).toContain(
+      '! --cursor is deprecated. Use --next.'
+    );
+  });
+
+  it('does not warn for --cursor with --json', async () => {
+    client.scenario.get('/v1/vcr/repository', (_req, res) => {
+      res.json({ repositories: [] });
+    });
+
+    client.setArgv('vcr', 'ls', '--cursor', 'next_page', '--json');
+    expect(await vcr(client)).toBe(0);
+    expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+  });
+
+  it('prints the full next page command, without the old --cursor', async () => {
+    client.scenario.get('/v1/vcr/repository', (_req, res) => {
+      res.json({
+        repositories: [
+          {
+            id: 'repo_1',
+            projectId: 'prj_1',
+            name: 'my-app',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        nextCursor: 'page_3',
+      });
+    });
+
+    client.setArgv('vcr', 'ls', '--limit', '1', '--cursor', 'page_2');
+    expect(await vcr(client)).toBe(0);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain(
+      '  Next page:\n    vercel vcr ls --limit 1 --next=page_3\n'
+    );
+    expect(stderr).not.toContain('More results available');
+  });
+
+  it('adds pagination.next to the JSON and keeps nextCursor', async () => {
+    client.scenario.get('/v1/vcr/repository', (_req, res) => {
+      res.json({ repositories: [], nextCursor: 'page_2' });
+    });
+
+    client.setArgv('vcr', 'ls', '--json');
+    expect(await vcr(client)).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      repositories: [],
+      nextCursor: 'page_2',
+      pagination: { next: 'page_2' },
+    });
   });
 
   it('errors when there is no linked project', async () => {

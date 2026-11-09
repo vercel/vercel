@@ -37,7 +37,7 @@ export default async function price(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const domains = parsedArgs.args;
@@ -45,12 +45,12 @@ export default async function price(
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
 
   if (domains.length === 0) {
     output.error('Missing domain name. Usage: `vercel domains price <domain>`');
-    return 1;
+    return 2;
   }
 
   try {

@@ -52,7 +52,7 @@ describe('ai-gateway leaderboard labs', () => {
     it('returns exit code 2', async () => {
       client.setArgv('ai-gateway', 'leaderboard', 'labs', '--help');
       const exitCode = await aiGateway(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:leaderboard', value: 'leaderboard' },

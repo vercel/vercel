@@ -6,6 +6,7 @@ import { help, type Command } from '../../help';
 import type { TracesTelemetryClient } from '../../../util/telemetry/commands/traces';
 import { TracesConfigTelemetryClient } from '../../../util/telemetry/commands/traces/config';
 import { tracesCommand } from '../command';
+import { warnDeprecatedSubcommand } from '../../../util/warn-deprecated-subcommand';
 import {
   lsSubcommand,
   rmSubcommand,
@@ -16,13 +17,13 @@ import {
 const COMMAND_CONFIG = {
   ls: getCommandAliases(lsSubcommand),
   set: getCommandAliases(setSubcommand),
-  rm: getCommandAliases(rmSubcommand),
+  remove: getCommandAliases(rmSubcommand),
 };
 
 const SUBCOMMAND_METADATA: Record<string, Command> = {
   ls: lsSubcommand,
   set: setSubcommand,
-  rm: rmSubcommand,
+  remove: rmSubcommand,
 };
 
 export type TracesConfigOptions = {
@@ -43,25 +44,22 @@ export default async function config(
   const actionMetadata =
     typeof action === 'string' ? SUBCOMMAND_METADATA[action] : undefined;
 
-  function printHelp(command: Command, nested: boolean): number {
+  function printHelp(command: Command): number {
     output.print(
       help(command, {
-        // `help` takes a single parent, so a nested group borrows the parent
-        // command with its own path as the name.
-        parent: nested
-          ? { ...tracesCommand, name: 'traces config' }
-          : tracesCommand,
+        stream: client.stderr,
+        parent: tracesCommand,
         columns: client.stderr.columns,
       })
     );
-    return 2;
+    return needHelp ? 0 : 2;
   }
 
   if (needHelp) {
     telemetry.trackCliFlagHelp('traces', subcommandOriginal);
     return actionMetadata
-      ? printHelp(actionMetadata, true)
-      : printHelp(tracesConfigCommand, false);
+      ? printHelp(actionMetadata)
+      : printHelp(tracesConfigCommand);
   }
 
   telemetry.trackCliSubcommandConfig(subcommandOriginal);
@@ -77,12 +75,19 @@ export default async function config(
     case 'set':
       configTelemetry.trackCliSubcommandSet(actionOriginal);
       return (await import('./set')).default(client);
-    case 'rm':
-      configTelemetry.trackCliSubcommandRm(actionOriginal);
+    case 'remove':
+      configTelemetry.trackCliSubcommandRemove(actionOriginal);
+      if (actionOriginal === 'delete') {
+        warnDeprecatedSubcommand(
+          client,
+          'traces config delete',
+          'traces config remove'
+        );
+      }
       return (await import('./rm')).default(client);
     default:
       // A bare `traces config` prints the group help rather than falling
-      // through to `ls`, so `set` and `rm` stay discoverable.
-      return printHelp(tracesConfigCommand, false);
+      // through to `ls`, so `set` and `remove` stay discoverable.
+      return printHelp(tracesConfigCommand);
   }
 }

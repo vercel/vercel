@@ -185,39 +185,48 @@ describe('coerceTimestampCondition', () => {
     expect(condition.rhs).toEqual(epochMs);
   });
 
-  it('converts list values on timestamp attributes', () => {
+  it.each([
+    'gt',
+    'gte',
+    'lt',
+    'lte',
+  ])('accepts the %s operator on timestamp attributes', cmp => {
     const condition = coerceTimestampCondition(
       {
         lhs: { type: 'entity', kind: 'user', attribute: 'signupAt' },
-        cmp: 'oneOf',
-        rhs: {
-          type: 'list',
-          items: [{ value: '2026-04-16T09:00:00Z' }, { value: 1776297600000 }],
-        },
+        cmp,
+        rhs: '2026-04-16T09:00:00Z',
       },
       defaultFlagSettings
     );
 
-    expect(condition.rhs).toEqual({
-      type: 'list',
-      items: [
-        { value: Date.parse('2026-04-16T09:00:00Z') },
-        { value: 1776297600000 },
-      ],
+    expect(condition).toMatchObject({
+      cmp,
+      rhs: Date.parse('2026-04-16T09:00:00Z'),
     });
   });
 
-  it('rejects string operators on timestamp attributes', () => {
+  it.each([
+    ['eq', '2026-04-16T09:00:00Z'],
+    ['!eq', '2026-04-16T09:00:00Z'],
+    ['ex', undefined],
+    ['!ex', undefined],
+    ['contains', '2026'],
+    ['startsWith', '2026'],
+    ['oneOf', { type: 'list', items: [{ value: '2026-04-16T09:00:00Z' }] }],
+  ])('rejects the %s operator on timestamp attributes', (cmp, rhs) => {
     expect(() =>
       coerceTimestampCondition(
         {
           lhs: { type: 'entity', kind: 'user', attribute: 'signupAt' },
-          cmp: 'contains',
-          rhs: '2026',
+          cmp,
+          rhs,
         },
         defaultFlagSettings
       )
-    ).toThrow(/not valid for Timestamp attribute user\.signupAt/);
+    ).toThrow(
+      /not valid for Timestamp attribute user\.signupAt\. Use gt \(after\), gte \(at-or-after\), lt \(before\), or lte \(at-or-before\)\./
+    );
   });
 
   it('leaves string attributes unchanged', () => {
