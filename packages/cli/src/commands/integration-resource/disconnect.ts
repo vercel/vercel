@@ -38,13 +38,13 @@ export async function disconnect(client: Client, argv: string[]) {
     parsedArguments = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
@@ -54,7 +54,7 @@ export async function disconnect(client: Client, argv: string[]) {
 
   if (asJson && !skipConfirmation) {
     output.error('--json requires --yes to skip confirmation prompts');
-    return 1;
+    return 2;
   }
 
   const { team } = await getScope(client);
@@ -67,7 +67,7 @@ export async function disconnect(client: Client, argv: string[]) {
   const isMissingResource = parsedArguments.args.length < 1;
   if (isMissingResource) {
     output.error('You must specify a resource. See `--help` for details.');
-    return 1;
+    return 2;
   }
 
   const hasTooManyArguments = parsedArguments.args.length > 2;
@@ -82,31 +82,31 @@ export async function disconnect(client: Client, argv: string[]) {
   const isProjectSpecified = parsedArguments.args.length === 2;
 
   if (isProjectSpecified && shouldDisconnectAll) {
-    output.error('Cannot specify a project while using the `--all` flag.');
-    return 1;
+    output.error('Cannot specify a project while using the `--all` option.');
+    return 2;
   }
 
-  const resourceName = parsedArguments.args[0];
+  const resourceReference = parsedArguments.args[0];
   let specifiedProject: string | undefined;
 
   if (isProjectSpecified) {
     specifiedProject = parsedArguments.args[1];
   }
 
-  telemetry.trackCliArgumentResource(resourceName);
+  telemetry.trackCliArgumentResource(resourceReference);
   telemetry.trackCliArgumentProject(specifiedProject);
   telemetry.trackCliFlagYes(skipConfirmation);
   telemetry.trackCliFlagAll(shouldDisconnectAll);
 
   output.spinner('Retrieving resource…', 500);
   const resources = await getResources(client);
-  const targetedResource = resources.find(
-    resource => resource.name === resourceName
-  );
+  const targetedResource =
+    resources.find(resource => resource.name === resourceReference) ??
+    resources.find(resource => resource.id === resourceReference);
   output.stopSpinner();
 
   if (!targetedResource) {
-    output.error(`No resource ${chalk.bold(resourceName)} found.`);
+    output.error(`No resource ${chalk.bold(resourceReference)} found.`);
     return 1;
   }
 
@@ -183,6 +183,9 @@ async function handleDisconnectProject(
     );
     return 1;
   }
+  const projectConnections = resource.projectsMetadata!.filter(
+    connection => connection.projectId === project.projectId
+  );
 
   if (!skipConfirmation && client.nonInteractive) {
     outputAgentError(
@@ -211,7 +214,12 @@ async function handleDisconnectProject(
 
   if (
     !skipConfirmation &&
-    !(await confirmDisconnectProject(client, resource, project))
+    !(await confirmDisconnectProject(
+      client,
+      resource,
+      project,
+      projectConnections.length
+    ))
   ) {
     output.log('Canceled');
     return 0;
@@ -219,7 +227,9 @@ async function handleDisconnectProject(
 
   try {
     output.spinner('Disconnecting resource…', 500);
-    await disconnectResourceFromProject(client, resource, project);
+    for (const connection of projectConnections) {
+      await disconnectResourceFromProject(client, resource, connection);
+    }
   } catch (error) {
     output.error(
       `A problem occurred while disconnecting: ${(error as Error).message}`
@@ -235,8 +245,11 @@ async function handleDisconnectProject(
     return 0;
   }
 
+  const connectionCount = projectConnections.length;
   output.success(
-    `Disconnected ${chalk.bold(project.name)} from ${chalk.bold(resource.name)}`
+    connectionCount === 1
+      ? `Disconnected ${chalk.bold(project.name)} from ${chalk.bold(resource.name)}`
+      : `Disconnected all ${connectionCount} connections for ${chalk.bold(project.name)} from ${chalk.bold(resource.name)}`
   );
   return 0;
 }
@@ -304,10 +317,13 @@ export async function handleDisconnectAllProjects(
 async function confirmDisconnectProject(
   client: Client,
   resource: Resource,
-  project: ResourceConnection
+  project: ResourceConnection,
+  connectionCount: number
 ) {
   output.log(
-    `The resource ${chalk.bold(resource.name)} will be disconnected from project ${chalk.bold(project.name)}.`
+    connectionCount === 1
+      ? `The resource ${chalk.bold(resource.name)} will be disconnected from project ${chalk.bold(project.name)}.`
+      : `All ${connectionCount} connections between resource ${chalk.bold(resource.name)} and project ${chalk.bold(project.name)} will be disconnected.`
   );
   return client.input.confirm(`${chalk.red('Are you sure?')}`, false);
 }

@@ -128,6 +128,77 @@ describe('checkDeploymentStatus()', () => {
     });
   });
 
+  describe('transport failures', () => {
+    const failure = () =>
+      Object.assign(new TypeError('fetch failed'), {
+        cause: Object.assign(new Error('other side closed'), {
+          code: 'UND_ERR_SOCKET',
+        }),
+      });
+
+    it('retries a dropped status connection', async () => {
+      const write = vi
+        .spyOn(process.stderr, 'write')
+        .mockImplementation(() => true);
+      mockFetch
+        .mockRejectedValueOnce(failure())
+        .mockResolvedValueOnce(
+          mockResponse(200, { ...mockDeployment(), readyState: 'READY' })
+        );
+      const iterator = checkDeploymentStatus(mockDeployment(), {
+        ...mockClientOptions(),
+        debug: true,
+      });
+      expect((await iterator.next()).value.type).toBe('ready');
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch.mock.calls[1][3]).toBe(true);
+      expect(sleep).toHaveBeenCalledWith(5000);
+      write.mockRestore();
+    });
+
+    it('retries a connection lost while reading the response body', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ...mockResponse(200),
+          json: vi.fn().mockRejectedValue(failure()),
+        })
+        .mockResolvedValueOnce(
+          mockResponse(200, { ...mockDeployment(), readyState: 'READY' })
+        );
+      expect(
+        (
+          await checkDeploymentStatus(
+            mockDeployment(),
+            mockClientOptions()
+          ).next()
+        ).value.type
+      ).toBe('ready');
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('bounds retries and reports unknown status instead of a failed deployment', async () => {
+      mockFetch.mockRejectedValue(failure());
+      await expect(
+        checkDeploymentStatus(mockDeployment(), mockClientOptions()).next()
+      ).rejects.toMatchObject({
+        code: 'deployment_status_unavailable',
+        message: expect.stringContaining('may still complete'),
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(5);
+    });
+
+    it('does not retry a certificate error', async () => {
+      const error = Object.assign(new Error('certificate expired'), {
+        code: 'CERT_HAS_EXPIRED',
+      });
+      mockFetch.mockRejectedValue(error);
+      await expect(
+        checkDeploymentStatus(mockDeployment(), mockClientOptions()).next()
+      ).rejects.toBe(error);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('alias-assigned stream signal', () => {
     it('finishes from an existing signal without fetching the deployment', async () => {
       const date = 1783370781619;

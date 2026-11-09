@@ -1,9 +1,14 @@
+import { VERCEL_CONFIG_EXTENSIONS } from './config/constants';
+export {
+  VERCEL_CONFIG_EXTENSIONS,
+  DEFAULT_VERCEL_CONFIG_FILENAME,
+} from './config/constants';
 import { mkdir, readFile, writeFile, unlink, access } from 'fs/promises';
 import { join, basename } from 'path';
 import { fork } from 'child_process';
 import { config as dotenvConfig } from 'dotenv';
-import { parse as tomlParse } from 'smol-toml';
 import output from '../output-manager';
+import { loadEsbuild } from './esbuild';
 import { VERCEL_DIR } from './projects/link';
 import { ConflictingConfigFiles } from './errors-ts';
 import { DeprecatedNowJson } from './errors-ts';
@@ -121,15 +126,6 @@ export interface CompileConfigResult {
   wasCompiled: boolean;
   sourceFile?: string;
 }
-
-export const VERCEL_CONFIG_EXTENSIONS = [
-  'ts',
-  'mts',
-  'js',
-  'mjs',
-  'cjs',
-] as const;
-export const DEFAULT_VERCEL_CONFIG_FILENAME = 'Vercel config';
 
 async function fileExists(filePath: string): Promise<boolean> {
   try {
@@ -273,6 +269,7 @@ export async function compileVercelConfig(
   // Handle vercel.toml — parse and write to .vercel/vercel.json
   if (hasVercelToml) {
     try {
+      const { parse: tomlParse } = await import('smol-toml');
       const tomlContent = await readFile(vercelTomlPath, 'utf8');
       const config = tomlParse(tomlContent) as unknown as VercelConfig;
       const normalizedConfig = normalizeConfig(config);
@@ -312,7 +309,7 @@ export async function compileVercelConfig(
   const loaderPath = join(vercelDir, 'vercel-loader.mjs');
 
   try {
-    const { build } = await import('esbuild');
+    const { build } = await loadEsbuild();
 
     await mkdir(vercelDir, { recursive: true });
 

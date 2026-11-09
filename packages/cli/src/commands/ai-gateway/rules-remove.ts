@@ -28,7 +28,7 @@ export default async function remove(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
 
@@ -42,15 +42,15 @@ export default async function remove(client: Client, argv: string[]) {
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
   if (!ruleId) {
     output.error(
-      `${getCommandName('ai-gateway rules rm <ruleId>')} expects a rule id.`
+      `${getCommandName('ai-gateway rules remove <ruleId>')} expects a rule id.`
     );
-    return 1;
+    return 2;
   }
 
   if (!(await ensureTeam(client))) {

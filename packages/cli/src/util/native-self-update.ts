@@ -9,27 +9,42 @@ import {
   copyFile,
   mkdir,
   mkdtemp,
-  readdir,
-  readFile,
-  readlink,
   realpath,
   rename,
   rm,
   stat,
-  symlink,
-  unlink,
   writeFile,
 } from 'node:fs/promises';
 import tar from 'tar-fs';
 import semver from 'semver';
-import fetch, { toNodeReadable } from './fetch';
-import pkg from './pkg';
+import fetch, { toNodeReadable, type Response } from './fetch';
 import output from '../output-manager';
 import { getInstallRoot, isNativeBinaryInstall } from './native-install';
+import {
+  activateSlot,
+  markPendingProduction,
+  readActivePointer,
+  readSlotMetadata,
+  withNativeInstallLock,
+  writeTrackSlot,
+  type NativeSlot,
+} from './native-install-layout';
 
 export { getInstallRoot } from './native-install';
+export {
+  readActivePointer,
+  readNativeInstallState,
+} from './native-install-layout';
 
 const REGISTRY = 'https://registry.npmjs.org';
+
+export interface NativeUpdateOptions {
+  signal?: AbortSignal;
+}
+
+function discardResponseBody(response: Response): void {
+  void response.body?.cancel().catch(() => undefined);
+}
 
 /**
  * Move a file, falling back to copy+delete when the source and destination
@@ -49,7 +64,7 @@ async function moveFile(source: string, destination: string): Promise<void> {
 }
 
 export const CURL_INSTALL_COMMAND =
-  'curl -fsSL https://api-frameworks.vercel.sh/install | sh';
+  'curl -fsSL https://api-frameworks.vercel.sh/install | bash';
 
 /**
  * Platforms the native binary is built for. Keep in sync with
@@ -59,11 +74,30 @@ const SUPPORTED_PLATFORMS = new Set([
   'darwin-arm64',
   'darwin-x64',
   'linux-arm64',
+  'linux-arm64-musl',
   'linux-x64',
+  'linux-x64-musl',
 ]);
 
+/**
+ * The running Node's libc: a glibc-linked runtime reports its glibc version
+ * in the diagnostic report header, a musl-linked one does not.
+ */
+function isMuslRuntime(): boolean {
+  if (process.platform !== 'linux') return false;
+  try {
+    const report = process.report?.getReport() as unknown as
+      | { header?: { glibcVersionRuntime?: string } }
+      | undefined;
+    return report !== undefined && !report.header?.glibcVersionRuntime;
+  } catch {
+    return false;
+  }
+}
+
 function platformTarget(): string {
-  return `${process.platform}-${process.arch}`;
+  const target = `${process.platform}-${process.arch}`;
+  return isMuslRuntime() ? `${target}-musl` : target;
 }
 
 function isSupportedPlatform(): boolean {
@@ -83,36 +117,42 @@ function nativePackageSuffix(): string {
   return `vc-native-${platformTarget()}`;
 }
 
-function nativePackageName(): string {
+export function getNativePackageName(): string {
   return `@vercel/${nativePackageSuffix()}`;
 }
 
 /**
- * True when this process is the native binary installed by the curl
- * installer, i.e. it runs from `<install root>/versions/<version>/vercel`.
+ * True when this process is a native binary installed by the curl installer.
+ * Legacy paths are recognized for detection only.
  */
 export async function isCurlInstall(): Promise<boolean> {
   if (!isNativeBinaryInstall()) {
     return false;
   }
 
-  const versionsPrefix = join(getInstallRoot(), 'versions') + sep;
-  if (process.execPath.startsWith(versionsPrefix)) {
+  const root = getInstallRoot();
+  // Managed slots live below the legacy `versions` prefix so released native
+  // CLIs continue to recognize the installation after a track switch.
+  const managedPrefixes = [join(root, 'versions') + sep];
+  if (managedPrefixes.some(prefix => process.execPath.startsWith(prefix))) {
     return true;
   }
 
   try {
-    // The install root's `bin/vercel` symlink points into the versions dir.
     const real = await realpath(process.execPath);
-    return real.startsWith(versionsPrefix);
+    return managedPrefixes.some(prefix => real.startsWith(prefix));
   } catch {
     return false;
   }
 }
 
-async function resolveLatestVersion(pkgName: string): Promise<string> {
-  const res = await fetch(`${REGISTRY}/${pkgName}/latest`);
+async function resolveLatestVersion(
+  pkgName: string,
+  { signal }: NativeUpdateOptions = {}
+): Promise<string> {
+  const res = await fetch(`${REGISTRY}/${pkgName}/latest`, { signal });
   if (!res.ok) {
+    discardResponseBody(res);
     throw new Error(
       `Failed to fetch package metadata from the npm registry (HTTP ${res.status})`
     );
@@ -124,8 +164,10 @@ async function resolveLatestVersion(pkgName: string): Promise<string> {
   return manifest.version;
 }
 
-async function resolveLatestNativeVersion(): Promise<string> {
-  return resolveLatestVersion(nativePackageName());
+export async function resolveLatestNativeVersion(
+  options?: NativeUpdateOptions
+): Promise<string> {
+  return resolveLatestVersion(getNativePackageName(), options);
 }
 
 /**
@@ -156,7 +198,8 @@ export async function listAvailableVersions(
 
 async function downloadAndExtractBinary(
   version: string,
-  destination: string
+  destination: string,
+  { signal }: NativeUpdateOptions = {}
 ): Promise<void> {
   if (!isSupportedPlatform()) {
     throw new Error(unsupportedPlatformMessage());
@@ -165,8 +208,9 @@ async function downloadAndExtractBinary(
   const suffix = nativePackageSuffix();
   const tarballUrl = `${REGISTRY}/@vercel/${suffix}/-/${suffix}-${version}.tgz`;
 
-  const res = await fetch(tarballUrl);
+  const res = await fetch(tarballUrl, { signal });
   if (res.status === 404) {
+    discardResponseBody(res);
     // The version exists for `vercel` but no native binary was published for
     // it — e.g. versions that predate the native builds.
     throw new Error(
@@ -176,6 +220,7 @@ async function downloadAndExtractBinary(
     );
   }
   if (!res.ok) {
+    discardResponseBody(res);
     throw new Error(`Failed to download ${tarballUrl} (HTTP ${res.status})`);
   }
 
@@ -189,8 +234,10 @@ async function downloadAndExtractBinary(
         // traversal vector (CVE-2024-12905 / CVE-2025-48387).
         ignore: (_name, header) =>
           header?.type !== 'file' && header?.type !== 'directory',
-      })
+      }),
+      { signal }
     );
+    signal?.throwIfAborted();
 
     const binary = join(tmpDir, 'package', 'bin', 'vercel');
     const stats = await stat(binary).catch(() => null);
@@ -200,47 +247,13 @@ async function downloadAndExtractBinary(
       );
     }
 
+    signal?.throwIfAborted();
     await mkdir(destination, { recursive: true });
     await chmod(binary, 0o755);
     await moveFile(binary, join(destination, 'vercel'));
   } finally {
     await rm(tmpDir, { recursive: true, force: true });
   }
-}
-
-async function forceSymlink(target: string, linkPath: string): Promise<void> {
-  await unlink(linkPath).catch(() => {});
-  await symlink(target, linkPath);
-}
-
-/**
- * Point the `bin/vercel` and `bin/vc` symlinks at an installed version.
- */
-async function linkVersion(version: string): Promise<void> {
-  const installRoot = getInstallRoot();
-  const binaryPath = join(installRoot, 'versions', version, 'vercel');
-  const binDir = join(installRoot, 'bin');
-  await mkdir(binDir, { recursive: true });
-  await forceSymlink(binaryPath, join(binDir, 'vercel'));
-  await forceSymlink(binaryPath, join(binDir, 'vc'));
-}
-
-/**
- * Ensure `<install root>/versions/<version>/vercel` exists, downloading the
- * native binary when missing, then link it as the active version.
- */
-export async function installAndLinkVersion(version: string): Promise<void> {
-  const installRoot = getInstallRoot();
-  const versionDir = join(installRoot, 'versions', version);
-  const binaryPath = join(versionDir, 'vercel');
-
-  const existing = await stat(binaryPath).catch(() => null);
-  if (!existing?.isFile()) {
-    output.spinner(`Downloading Vercel CLI v${version}…`, 0);
-    await downloadAndExtractBinary(version, versionDir);
-  }
-
-  await linkVersion(version);
 }
 
 /**
@@ -264,17 +277,6 @@ export function parsePrTarget(target: string): number | undefined {
   }
   const pr = Number(match[1]);
   return Number.isSafeInteger(pr) && pr > 0 ? pr : undefined;
-}
-
-function prVersionDirName(pr: number): string {
-  return `pr-${pr}`;
-}
-
-/**
- * True for version directory names created for PR builds (e.g. `pr-115`).
- */
-function isPrVersionName(name: string): boolean {
-  return /^pr-\d+$/.test(name);
 }
 
 async function fetchPrBuildSha(pr: number): Promise<string> {
@@ -380,232 +382,155 @@ async function downloadPrBinary(
   }
 }
 
-/**
- * Install (or refresh) the binary built for a PR and link it as the active
- * CLI. PR builds are mutable — every push overwrites the published binary —
- * so this always compares the remote checksum against the installed copy and
- * re-downloads when they differ.
- *
- * Returns `updated: false` when the installed copy already matches the
- * latest build for the PR.
- */
-export async function installAndLinkPrBinary(
-  pr: number
-): Promise<{ updated: boolean; buildSha: string }> {
-  const installRoot = getInstallRoot();
-  const versionDir = join(installRoot, 'versions', prVersionDirName(pr));
-  const binaryPath = join(versionDir, 'vercel');
-  const shaPath = join(versionDir, 'vercel.sha256');
-
-  output.spinner(`Checking latest build for PR #${pr}…`, 0);
-  const buildSha = await fetchPrBuildSha(pr);
-  const remoteSha = await fetchPrChecksum(pr, buildSha);
-
-  const existing = await stat(binaryPath).catch(() => null);
-  const localSha = existing?.isFile()
-    ? (await readFile(shaPath, 'utf8').catch(() => '')).trim().split(/\s+/)[0]
-    : undefined;
-
-  if (existing?.isFile() && localSha === remoteSha) {
-    await writeFile(join(versionDir, 'build-sha'), `${buildSha}\n`);
-    await linkVersion(prVersionDirName(pr));
-    return { updated: false, buildSha };
+async function findTrackSlot(
+  track: 'production' | 'pr',
+  matches: (metadata: {
+    version: string;
+    pr?: number;
+    buildSha?: string;
+  }) => boolean
+): Promise<NativeSlot | undefined> {
+  const root = getInstallRoot();
+  for (const slot of ['a', 'b'] as const) {
+    const metadata = await readSlotMetadata(root, track, slot);
+    const binary = await stat(
+      join(root, 'versions', 'tracks', track, slot, 'vercel')
+    ).catch(() => undefined);
+    if (metadata && binary?.isFile() && matches(metadata)) return slot;
   }
-
-  output.spinner(`Downloading Vercel CLI build for PR #${pr}…`, 0);
-  await downloadPrBinary(pr, buildSha, remoteSha, versionDir);
-  await writeFile(join(versionDir, 'build-sha'), `${buildSha}\n`);
-  await linkVersion(prVersionDirName(pr));
-  return { updated: true, buildSha };
+  return undefined;
 }
 
-/**
- * Versions installed under `<install root>/versions`, newest first.
- */
-export async function listInstalledVersions(): Promise<string[]> {
-  const versionsDir = join(getInstallRoot(), 'versions');
-  const entries = await readdir(versionsDir, { withFileTypes: true }).catch(
-    () => []
-  );
-  const versions: string[] = [];
-  const prBuilds: string[] = [];
-  for (const entry of entries) {
-    const isPr = isPrVersionName(entry.name);
-    if (!entry.isDirectory() || (!semver.valid(entry.name) && !isPr)) {
-      continue;
-    }
-    const binary = join(versionsDir, entry.name, 'vercel');
-    const stats = await stat(binary).catch(() => null);
-    if (stats?.isFile()) {
-      (isPr ? prBuilds : versions).push(entry.name);
-    }
-  }
-  // Release versions newest first, then PR builds.
-  return [...versions.sort(semver.rcompare), ...prBuilds.sort()];
-}
-
-/**
- * The version the `bin/vercel` symlink currently points at, if resolvable.
- * May be a release version (`58.7.1`) or a PR build name (`pr-115`).
- */
-export async function getLinkedVersion(): Promise<string | undefined> {
-  const link = join(getInstallRoot(), 'bin', 'vercel');
-  try {
-    const target = await readlink(link);
-    const segments = target.split(sep);
-    const versionsIdx = segments.lastIndexOf('versions');
-    const version = versionsIdx >= 0 ? segments[versionsIdx + 1] : undefined;
-    return version && (semver.valid(version) || isPrVersionName(version))
-      ? version
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * True when the active `bin/vercel` symlink points at a PR build directory.
- */
-export async function isLinkedToPrBuild(): Promise<boolean> {
-  const linked = await getLinkedVersion();
-  return linked !== undefined && isPrVersionName(linked);
-}
-
-function pinFilePath(): string {
-  return join(getInstallRoot(), 'pinned');
-}
-
-/**
- * Record that the user explicitly chose the linked version
- * (`vc version use`), so automatic updates leave it alone.
- */
-export async function setPinnedVersion(version: string): Promise<void> {
-  await writeFile(pinFilePath(), `${version}\n`);
-}
-
-/** Remove the pin (explicit upgrades unpin). */
-export async function clearPinnedVersion(): Promise<void> {
-  await unlink(pinFilePath()).catch(() => {});
-}
-
-/**
- * The pinned version, but only while the pin still matches the linked
- * version. If the symlink was re-pointed some other way, the pin is stale
- * and ignored.
- */
-export async function getPinnedVersion(): Promise<string | undefined> {
-  const pinned = (await readFile(pinFilePath(), 'utf8').catch(() => ''))
-    .trim()
-    .split(/\s+/)[0];
-  if (!pinned) {
-    return undefined;
-  }
-  const linked = await getLinkedVersion();
-  return pinned === linked ? pinned : undefined;
-}
-
-/**
- * The Git commit SHA recorded for an installed PR build, if present.
- */
-export async function getPrBuildSha(name: string): Promise<string | undefined> {
-  const shaPath = join(getInstallRoot(), 'versions', name, 'build-sha');
-  const sha = (await readFile(shaPath, 'utf8').catch(() => ''))
-    .trim()
-    .toLowerCase();
-  return /^[0-9a-f]{40}$/.test(sha) ? sha : undefined;
-}
-
-/**
- * When a native binary was installed through a package manager (as the
- * `vercel` package's optional dependency), returns the command that removes
- * that install. Detected from the real binary location, since the package
- * manager's global layout appears in `process.execPath`.
- */
-function packageManagerRemovalCommand(): string | undefined {
-  const segments = process.execPath.split(sep);
-  if (segments.includes('pnpm') || segments.includes('.pnpm')) {
-    return 'pnpm rm -g vercel';
-  }
-  if (segments.includes('yarn') || segments.includes('.yarn')) {
-    return 'yarn global remove vercel';
-  }
-  return 'npm rm -g vercel';
-}
-
-/**
- * After migrating a package-manager-installed native binary into the
- * platform data layout, the old install still shadows the new one on `PATH`.
- * Tell the user how to remove it, tailored to their package manager.
- */
-async function printMigrationCleanup(): Promise<void> {
-  if (await isCurlInstall()) {
-    return;
-  }
-
-  const removalCommand = packageManagerRemovalCommand();
-  const binDir = join(getInstallRoot(), 'bin');
-  output.print('\n');
-  output.log(
-    `The Vercel CLI now updates itself in ${binDir} and no longer needs your package manager.`
-  );
-  output.log(
-    `Remove the old install so the new binary takes effect: ${removalCommand}`
-  );
-  output.log(
-    'Then open a new terminal (or run `hash -r`) so your shell picks up the new binary.'
-  );
-}
-
-/**
- * Self-update for native binary installs: downloads the latest native binary
- * into `<install root>/versions/<version>/vercel` and re-points the
- * `bin/vercel` and `bin/vc` symlinks — the same layout the curl installer
- * uses. Package-manager installs are migrated into this layout and told to
- * remove the old install.
- */
-export async function executeNativeSelfUpdate(
-  targetVersion?: string
-): Promise<number> {
-  try {
-    output.spinner('Checking for updates…', 0);
-    const version = targetVersion ?? (await resolveLatestNativeVersion());
-    const onPrBuild = await isLinkedToPrBuild();
-
+async function findNewestProductionSlotAtLeast(
+  version: string
+): Promise<{ slot: NativeSlot; version: string } | undefined> {
+  const root = getInstallRoot();
+  let newest: { slot: NativeSlot; version: string } | undefined;
+  for (const slot of ['a', 'b'] as const) {
+    const metadata = await readSlotMetadata(root, 'production', slot);
+    const binary = await stat(
+      join(root, 'versions', 'tracks', 'production', slot, 'vercel')
+    ).catch(() => undefined);
     if (
-      !targetVersion &&
-      !onPrBuild &&
-      semver.valid(version) &&
-      semver.valid(pkg.version) &&
-      semver.gte(pkg.version, version)
+      metadata &&
+      binary?.isFile() &&
+      semver.valid(metadata.version) &&
+      semver.gte(metadata.version, version) &&
+      (!newest || semver.gt(metadata.version, newest.version))
     ) {
-      output.stopSpinner();
-      output.log(
-        `No upgrade available. Vercel CLI is already up to date (v${pkg.version}).`
-      );
-      return 0;
+      newest = { slot, version: metadata.version };
     }
-
-    if (onPrBuild) {
-      output.stopSpinner();
-      output.log(
-        `Currently on a PR build (${await getLinkedVersion()}). Switching back to the latest release…`
-      );
-    }
-
-    await installAndLinkVersion(version);
-    // An explicit upgrade is a request to track releases again.
-    await clearPinnedVersion();
-
-    output.stopSpinner();
-    output.success(`Vercel CLI has been upgraded to v${version} successfully!`);
-    await printMigrationCleanup();
-    return 0;
-  } catch (error) {
-    output.stopSpinner();
-    output.error(
-      `Upgrade failed: ${error instanceof Error ? error.message : String(error)}`
-    );
-    output.log(`You can try reinstalling manually: ${CURL_INSTALL_COMMAND}`);
-    return 1;
   }
+  return newest;
+}
+
+/** Install a production release in a bounded slot and activate it. */
+export async function installAndActivateProductionVersion(
+  version: string
+): Promise<{ slot: NativeSlot; downloaded: boolean }> {
+  const root = getInstallRoot();
+  return withNativeInstallLock(root, async () => {
+    const existing = await findTrackSlot(
+      'production',
+      metadata => metadata.version === version
+    );
+    if (existing) {
+      await activateSlot(root, 'production', existing);
+      return { slot: existing, downloaded: false };
+    }
+
+    output.spinner(`Downloading Vercel CLI v${version}…`, 0);
+    const slot = await writeTrackSlot(
+      root,
+      { track: 'production', version },
+      directory => downloadAndExtractBinary(version, directory)
+    );
+    await activateSlot(root, 'production', slot);
+    return { slot, downloaded: true };
+  });
+}
+
+/** Install the current build for a PR in a bounded slot and activate it. */
+export async function installAndActivatePrBinary(
+  pr: number
+): Promise<{ updated: boolean; buildSha: string; slot: NativeSlot }> {
+  const root = getInstallRoot();
+  return withNativeInstallLock(root, async () => {
+    output.spinner(`Checking latest build for PR #${pr}…`, 0);
+    const buildSha = await fetchPrBuildSha(pr);
+    const remoteSha = await fetchPrChecksum(pr, buildSha);
+    const existing = await findTrackSlot(
+      'pr',
+      metadata => metadata.pr === pr && metadata.buildSha === buildSha
+    );
+    if (existing) {
+      await activateSlot(root, 'pr', existing);
+      return { updated: false, buildSha, slot: existing };
+    }
+
+    output.spinner(`Downloading Vercel CLI build for PR #${pr}…`, 0);
+    const slot = await writeTrackSlot(
+      root,
+      {
+        track: 'pr',
+        version: `pr/${pr}`,
+        pr,
+        buildSha,
+      },
+      async directory => {
+        await downloadPrBinary(pr, buildSha, remoteSha, directory);
+        await writeFile(join(directory, 'build-sha'), `${buildSha}\n`);
+      }
+    );
+    await activateSlot(root, 'pr', slot);
+    return { updated: true, buildSha, slot };
+  });
+}
+
+/**
+ * Stage a production release in the inactive production slot. Activation is
+ * allowed only when production is selected; a PR selection is never replaced.
+ */
+export async function stageProductionUpdate(
+  version: string,
+  selectProduction = false,
+  options: NativeUpdateOptions = {}
+): Promise<{ slot: NativeSlot; downloaded: boolean; activated: boolean }> {
+  const root = getInstallRoot();
+  return withNativeInstallLock(
+    root,
+    async () => {
+      options.signal?.throwIfAborted();
+      const active = await readActivePointer(root);
+      options.signal?.throwIfAborted();
+      // Legacy curl installs have no track pointer yet; treat them as
+      // production-selected so the first slot update migrates the live binary.
+      const activated = selectProduction || active?.track !== 'pr';
+      const installed = await findNewestProductionSlotAtLeast(version);
+      options.signal?.throwIfAborted();
+      if (installed) {
+        await markPendingProduction(root, installed.slot, installed.version);
+        if (activated) {
+          options.signal?.throwIfAborted();
+          await activateSlot(root, 'production', installed.slot);
+        }
+        return { slot: installed.slot, downloaded: false, activated };
+      }
+
+      const slot = await writeTrackSlot(
+        root,
+        { track: 'production', version },
+        directory => downloadAndExtractBinary(version, directory, options),
+        options
+      );
+      options.signal?.throwIfAborted();
+      await markPendingProduction(root, slot, version);
+      if (activated) {
+        options.signal?.throwIfAborted();
+        await activateSlot(root, 'production', slot);
+      }
+      return { slot, downloaded: true, activated };
+    },
+    { wait: false }
+  );
 }

@@ -30,14 +30,14 @@ export function findFlagValue(
 
 const ErrorMessage = `No Vercel Blob credentials found. To fix this issue, choose one of the following options:
 ${listItem(`Pass the read-write token as an option: ${getCommandName('blob list --rw-token BLOB_READ_WRITE_TOKEN')}`, 1)}
-${listItem(`Pass OIDC credentials as options: ${getCommandName('blob list --oidc-token VERCEL_OIDC_TOKEN --store-id BLOB_STORE_ID')}`, 2)}
+${listItem(`Pass OIDC credentials as options: ${getCommandName('blob list --oidc-token VERCEL_OIDC_TOKEN --store BLOB_STORE_ID')}`, 2)}
 ${listItem(`Set OIDC credentials as environment variables: ${cmd(`VERCEL_OIDC_TOKEN=... BLOB_STORE_ID=... ${packageName} blob list`)}`, 3)}
 ${listItem(`Set the read-write token as an environment variable: ${cmd(`BLOB_READ_WRITE_TOKEN=BLOB_READ_WRITE_TOKEN ${packageName} blob list`)}`, 4)}
 ${listItem('Link your current folder to a Vercel Project that has a Vercel Blob store connected', 5)}`;
 
-const PartialOidcFlagsErrorMessage = `--oidc-token and --store-id must be passed together. Pass both flags, or omit them and rely on environment variables / linked project credentials.`;
+const PartialOidcFlagsErrorMessage = `--oidc-token and --store must be passed together. Pass both options, or omit them and rely on environment variables / linked project credentials.`;
 
-const PartialOidcEnvErrorMessage = `VERCEL_OIDC_TOKEN and BLOB_STORE_ID must both be set, or both be unset. Set both to use OIDC, unset both to use the read-write token, or pass --rw-token / --oidc-token + --store-id explicitly.`;
+const PartialOidcEnvErrorMessage = `VERCEL_OIDC_TOKEN and BLOB_STORE_ID must both be set, or both be unset. Set both to use OIDC, unset both to use the read-write token, or pass --rw-token / --oidc-token + --store explicitly.`;
 
 export type BlobRWToken =
   | { success: true; kind: 'rw'; token: string }
@@ -49,7 +49,7 @@ export async function getBlobRWToken(
   argv: string[]
 ): Promise<BlobRWToken> {
   // 1. Explicit auth flags are exclusive. Try --rw-token first, then the
-  //    --oidc-token + --store-id pair. If either OIDC flag is passed alone,
+  //    --oidc-token + --store pair. If either OIDC flag is passed alone,
   //    surface a hard error rather than silently falling through.
   const rwToken = findFlagValue(argv, '--rw-token');
   if (rwToken) {
@@ -57,7 +57,10 @@ export async function getBlobRWToken(
   }
 
   const oidcTokenFlag = findFlagValue(argv, '--oidc-token');
-  const storeIdFlag = findFlagValue(argv, '--store-id');
+  // `--store-id` is the old name of `--store`. Passing both is rejected
+  // before this runs.
+  const storeIdFlag =
+    findFlagValue(argv, '--store') ?? findFlagValue(argv, '--store-id');
   if (oidcTokenFlag || storeIdFlag) {
     if (!oidcTokenFlag || !storeIdFlag) {
       return { success: false, error: PartialOidcFlagsErrorMessage };

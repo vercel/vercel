@@ -28,7 +28,7 @@ describe('kms import-key', () => {
     it('tracks telemetry', async () => {
       client.setArgv('kms', 'import-key', '--help');
       const exitCodePromise = kms(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:help', value: 'kms:import-key' },
@@ -82,7 +82,7 @@ describe('kms import-key', () => {
     useUser();
     client.setArgv('kms', 'import-key', 'iss_external');
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('A private key is required.');
   });
 
@@ -96,7 +96,7 @@ describe('kms import-key', () => {
       'missing-key.pem'
     );
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput("Couldn't read --key file");
   });
 

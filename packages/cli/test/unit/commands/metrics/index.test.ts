@@ -1,3 +1,4 @@
+import stripAnsi from 'strip-ansi';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import metrics from '../../../../src/commands/metrics';
@@ -33,25 +34,31 @@ describe('metrics', () => {
       const exitCode = await metrics(client);
 
       expect(exitCode).toBe(0);
-      const output = client.stderr.getFullOutput();
+      const output = stripAnsi(client.stderr.getFullOutput());
       // Shows schema subcommand
       expect(output).toContain('schema');
       // Shows positional metric examples
       expect(output).toContain('metrics vercel.function_invocation.count');
-      // Shows production convenience flag
-      expect(output).toContain('--prod');
+      // Shows the environment filter, and hides the deprecated --prod
+      expect(output).toContain('-e, --environment <ENVIRONMENT>');
+      expect(output).not.toContain('--prod');
       expect(output).toContain('KQL filter expression');
-      expect(output).toContain('-f "httpStatus >= 500" --group-by errorCode');
-      expect(output).toContain('Order grouped results by value or count');
-      expect(output).toContain('count, or value when count is unsupported');
       expect(output).toContain(
-        'vercel metrics vercel.ai_gateway.request.cost -a sum --group-by aiProvider --since 7d'
+        '--query "httpStatus >= 500" --group-by errorCode'
+      );
+      expect(output).toContain('Order grouped results by value or count');
+      // Wider option names can move the wrap point, so compare one line of text.
+      expect(output.replace(/\s+/g, ' ')).toContain(
+        'count, or value when count is unsupported'
+      );
+      expect(output).toContain(
+        'vercel metrics vercel.ai_gateway.request.cost --aggregation sum --group-by aiProvider --since 7d'
       );
       expect(output).toContain(
         'vercel metrics vercel.analytics.page_view.count --since 7d --granularity 1d'
       );
       expect(output).toContain(
-        'vercel metrics vercel.analytics.page_view.count -a unique/visitorId --group-by country --since 1d --granularity 1h --limit 5'
+        'vercel metrics vercel.analytics.page_view.count --aggregation unique/visitorId --group-by country --since 1d --granularity 1h --limit 5'
       );
       expect(output).not.toContain('vercel.ai_gateway_request.cost');
       expect(output).not.toContain('vercel.analytics_pageview.count');
@@ -67,9 +74,11 @@ describe('metrics', () => {
       expect(exitCode).toBe(0);
       const output = client.stderr.getFullOutput();
       expect(output).toContain('OData filter expression');
-      expect(output).toContain('-f "http_status ge 500" --group-by error_code');
       expect(output).toContain(
-        'vercel metrics vercel.ai_gateway_request.cost -a sum --group-by ai_provider --since 7d'
+        '--query "http_status ge 500" --group-by error_code'
+      );
+      expect(output).toContain(
+        'vercel metrics vercel.ai_gateway_request.cost --aggregation sum --group-by ai_provider --since 7d'
       );
       expect(output).toContain(
         'vercel metrics vercel.analytics_pageview.count --since 7d --granularity 1d --bucket-timezone Europe/Paris'

@@ -1,7 +1,12 @@
 import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { isArgumentError, parseArguments } from '../../util/get-args';
+import { wantsMachineReadableOutput } from '../../util/output-format';
+import {
+  getFlagsSpecification,
+  getShortFlagLongName,
+} from '../../util/get-flags-specification';
 import { type Command, help } from '../help';
+import { tokensAfterCommand } from '../print-command-help';
 import {
   abortSubcommand,
   approveSubcommand,
@@ -26,26 +31,36 @@ import { resolveProjectContext } from '../../util/projects/resolve-project-conte
 import getSubcommand from '../../util/get-subcommand';
 import { getCommandAliases } from '..';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
-import { outputAgentError } from '../../util/agent-output';
+import { outputAgentError, writeAgentError } from '../../util/agent-output';
+import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { packageName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
+import {
+  warnDeprecatedInput,
+  warnDeprecatedSubcommand,
+} from '../../util/warn-deprecated-subcommand';
+import {
+  getRenamedOption,
+  renameOptionInArgs,
+  reportRenamedOptionError,
+} from '../../util/renamed-option';
 
 const COMMAND_CONFIG = {
-  configure: getCommandAliases(configureSubcommand),
+  update: getCommandAliases(configureSubcommand),
   start: getCommandAliases(startSubcommand),
   approve: getCommandAliases(approveSubcommand),
   abort: getCommandAliases(abortSubcommand),
   complete: getCommandAliases(completeSubcommand),
-  fetch: getCommandAliases(fetchSubcommand),
+  inspect: getCommandAliases(fetchSubcommand),
 };
 
 const SUBCOMMANDS = {
-  configure: configureSubcommand,
+  update: configureSubcommand,
   start: startSubcommand,
   approve: approveSubcommand,
   abort: abortSubcommand,
   complete: completeSubcommand,
-  fetch: fetchSubcommand,
+  inspect: fetchSubcommand,
 } as const;
 
 type RollingReleaseSubcommand = keyof typeof SUBCOMMANDS;
@@ -62,7 +77,12 @@ function buildDeploymentSuggestionCommands(
   client: Client,
   subcmd: 'start' | 'abort' | 'approve' | 'complete'
 ): { listCommand: string; subcommandCommand: string } {
-  const args = client.argv.slice(2);
+  // Suggestions teach `--deployment`, even when `--dpl` was typed.
+  const args = renameOptionInArgs(
+    client.argv.slice(2),
+    '--dpl',
+    '--deployment'
+  );
   const preservedParts: string[] = [];
   const listParts: string[] = [];
   let hasNonInteractive = false;
@@ -97,7 +117,7 @@ function buildDeploymentSuggestionCommands(
       preservedParts.push(arg);
       continue;
     }
-    if (arg === '--project') {
+    if (arg === '--project' || getShortFlagLongName(arg) === '--project') {
       if (i + 1 < args.length) {
         listParts.push(args[i + 1]);
         preservedParts.push(arg, args[i + 1]);
@@ -118,8 +138,8 @@ function buildDeploymentSuggestionCommands(
     : `${packageName} rolling-release ${subcmd}`;
   const defaultSuffix =
     subcmd === 'approve'
-      ? '--dpl dpl_123 --currentStageIndex=0'
-      : '--dpl dpl_123';
+      ? '--deployment dpl_123 --currentStageIndex=0'
+      : '--deployment dpl_123';
   const subcommandCommand = hasNonInteractive
     ? `${base} ${defaultSuffix} --non-interactive`
     : `${base} ${defaultSuffix}`;
@@ -130,7 +150,7 @@ type RollingReleaseSubcmdWithDpl = 'start' | 'abort' | 'approve' | 'complete';
 
 /**
  * Non-interactive rolling-release errors that should suggest `ls` and a concrete
- * subcommand example with --dpl (and approve extras). Centralizes the repeated
+ * subcommand example with --deployment (and approve extras). Centralizes the repeated
  * outputAgentError + buildDeploymentSuggestionCommands pattern.
  */
 function outputRollingReleaseErrorWithDeploymentSuggestions(
@@ -155,6 +175,26 @@ function outputRollingReleaseErrorWithDeploymentSuggestions(
   );
 }
 
+/**
+ * The deployment from `--deployment`, or from `--dpl`, its deprecated old
+ * name. Returns exit code 2 when both are given or the value is empty.
+ */
+function getDeploymentFlag(
+  client: Client,
+  flags: Readonly<Record<string, unknown>>,
+  telemetry: RollingReleaseTelemetryClient
+): string | undefined | number {
+  telemetry.trackCliOptionDeployment(
+    flags['--deployment'] as string | undefined
+  );
+  telemetry.trackCliOptionDpl(flags['--dpl'] as string | undefined);
+  const deployment = getRenamedOption(flags, '--deployment', '--dpl');
+  if ('error' in deployment) {
+    return reportRenamedOptionError(client, deployment.error);
+  }
+  return deployment.value;
+}
+
 export default async function rollingRelease(client: Client): Promise<number> {
   const telemetry = new RollingReleaseTelemetryClient({
     opts: {
@@ -168,19 +208,30 @@ export default async function rollingRelease(client: Client): Promise<number> {
     subcommandOriginal,
   } = getSubcommand(client.argv.slice(3), COMMAND_CONFIG);
 
+  // The command name typed, after any global options.
+  const commandIndex =
+    client.argv.length - tokensAfterCommand(client.argv).length - 1;
+  if (client.argv[commandIndex] === 'rr') {
+    warnDeprecatedSubcommand(client, 'rr', 'rolling-release');
+  }
+
   const needHelp = client.argv.includes('--help') || client.argv.includes('-h');
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('rolling-release');
     output.print(
-      help(rollingReleaseCommand, { columns: client.stderr.columns })
+      help(rollingReleaseCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
     );
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: rollingReleaseCommand,
         columns: client.stderr.columns,
       })
@@ -196,18 +247,47 @@ export default async function rollingRelease(client: Client): Promise<number> {
     if (subcommandConfig && needHelp) {
       telemetry.trackCliFlagHelp('rolling-release', subcommandOriginal);
       printHelp(subcommandConfig);
-      return 2;
+      return 0;
     }
 
     let subcommandFlags;
     let projectName;
+    let deployment: string | undefined;
     if (subcommandConfig) {
-      subcommandFlags = parseArguments(
-        subcommandArgs,
-        getFlagsSpecification(subcommandConfig.options)
-      );
+      try {
+        subcommandFlags = parseArguments(
+          subcommandArgs,
+          getFlagsSpecification(subcommandConfig.options)
+        );
+      } catch (err: unknown) {
+        if (!isArgumentError(err)) {
+          throw err;
+        }
+        // A rejected flag is a usage error, and `--json` asked for a JSON one.
+        if (wantsMachineReadableOutput(undefined, subcommandArgs)) {
+          writeAgentError(client, {
+            status: AGENT_STATUS.ERROR,
+            reason: AGENT_REASON.INVALID_ARGUMENTS,
+            message: err.message,
+          });
+        } else {
+          printError(err);
+        }
+        return 2;
+      }
       projectName = subcommandFlags.flags['--project'];
       telemetry.trackCliOptionProject(projectName);
+      if (subcommandConfig.options.some(({ name }) => name === 'deployment')) {
+        const deploymentFlag = getDeploymentFlag(
+          client,
+          subcommandFlags.flags,
+          telemetry
+        );
+        if (typeof deploymentFlag === 'number') {
+          return deploymentFlag;
+        }
+        deployment = deploymentFlag;
+      }
     }
 
     const link = await resolveProjectContext({
@@ -225,14 +305,14 @@ export default async function rollingRelease(client: Client): Promise<number> {
             status: 'error',
             reason: 'not_linked',
             message:
-              'No project found for rolling releases. Link your project first.',
+              'No project found for rolling releases. Specify a project with --project <name-or-id>, or link your project first.',
             next: [{ command: `${packageName} link` }],
           },
           1
         );
       }
       output.error(
-        'No project found. Please run `vc link` to link your project first.'
+        `No project found. Specify a project with \`--project <name-or-id>\`, or run \`${packageName} link\` to link your project first.`
       );
       return 1;
     }
@@ -244,63 +324,98 @@ export default async function rollingRelease(client: Client): Promise<number> {
       output.debug(`Invalid subcommand: ${subcommand}`);
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(
-        help(rollingReleaseCommand, { columns: client.stderr.columns })
+        help(rollingReleaseCommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
       );
       return 2;
     }
 
     switch (subcommandName) {
-      case 'configure': {
+      case 'update': {
+        telemetry.trackCliSubcommandUpdate(subcommandOriginal);
+        if (subcommandOriginal === 'configure') {
+          warnDeprecatedSubcommand(
+            client,
+            'rolling-release configure',
+            'rolling-release update'
+          );
+        }
         const cfgString = subcommandFlags.flags['--cfg'];
         const enableFlag = subcommandFlags.flags['--enable'];
+        const noEnableFlag = subcommandFlags.flags['--no-enable'];
         const disableFlag = subcommandFlags.flags['--disable'];
         const advancementType = subcommandFlags.flags['--advancement-type'];
         const stageFlags = subcommandFlags.flags['--stage'];
+        const jsonOutput = subcommandFlags.flags['--json'] ?? false;
 
         telemetry.trackCliFlagEnable(enableFlag);
+        telemetry.trackCliFlagNoEnable(noEnableFlag);
         telemetry.trackCliFlagDisable(disableFlag);
+        if (disableFlag && !enableFlag) {
+          warnDeprecatedInput(client, '--disable', '--no-enable');
+        }
         telemetry.trackCliOptionAdvancementType(advancementType);
         telemetry.trackCliOptionStage(stageFlags);
+        telemetry.trackCliFlagJson(jsonOutput);
 
         const configResult = await buildConfigurePayload({
           client,
           cfgString,
           enableFlag,
-          disableFlag,
+          disableFlag: noEnableFlag || disableFlag,
+          disableName: noEnableFlag ? '--no-enable' : '--disable',
           advancementType,
           stageFlags,
+          jsonOutput,
         });
 
         if (configResult.exitCode !== undefined) {
           return configResult.exitCode;
         }
 
-        await configureRollingRelease({
-          client,
-          projectId: project.id,
-          teamId: org.id,
-          rollingReleaseConfig: configResult.config,
-        });
+        try {
+          await configureRollingRelease({
+            client,
+            projectId: project.id,
+            teamId: org.id,
+            rollingReleaseConfig: configResult.config,
+            jsonOutput,
+          });
+        } catch (err: unknown) {
+          if (jsonOutput && isAPIError(err)) {
+            writeAgentError(client, {
+              status: AGENT_STATUS.ERROR,
+              reason: AGENT_REASON.API_ERROR,
+              message:
+                err.message || 'Updating rolling release settings failed.',
+            });
+            return 1;
+          }
+          throw err;
+        }
         break;
       }
       case 'start': {
-        const dpl = subcommandFlags.flags['--dpl'];
-        if (dpl === undefined) {
+        if (deployment === undefined) {
           if (client.nonInteractive) {
             outputRollingReleaseErrorWithDeploymentSuggestions(
               client,
               'start',
               'missing_flags',
-              'Starting a rolling release in non-interactive mode requires the --dpl flag.'
+              'Starting a rolling release in non-interactive mode requires the --deployment option.'
             );
           }
-          output.error('starting a rolling release requires --dpl option.');
-          return 1;
+          output.error(
+            'starting a rolling release requires --deployment option.'
+          );
+          return 2;
         }
         try {
           await startRollingRelease({
             client,
-            dpl,
+            dpl: deployment,
             projectId: project.id,
             teamId: project.accountId,
             yes: subcommandFlags.flags['--yes'] ?? false,
@@ -321,20 +436,19 @@ export default async function rollingRelease(client: Client): Promise<number> {
         break;
       }
       case 'approve': {
-        const dpl = subcommandFlags.flags['--dpl'];
         const currentStageIndex = subcommandFlags.flags['--currentStageIndex'];
         const activeStageIndex = parseInt(currentStageIndex ?? '');
-        if (!dpl) {
+        if (!deployment) {
           if (client.nonInteractive) {
             outputRollingReleaseErrorWithDeploymentSuggestions(
               client,
               'approve',
               'missing_flags',
-              'Approving a rolling release in non-interactive mode requires --dpl and --currentStageIndex.'
+              'Approving a rolling release in non-interactive mode requires --deployment and --currentStageIndex.'
             );
           }
-          output.error('Missing required flag --dpl');
-          return 1;
+          output.error('Missing required option --deployment');
+          return 2;
         }
         if (currentStageIndex === undefined) {
           if (client.nonInteractive) {
@@ -345,8 +459,8 @@ export default async function rollingRelease(client: Client): Promise<number> {
               'Approving a rolling release in non-interactive mode requires --currentStageIndex.'
             );
           }
-          output.error('Missing required flag --currentStageIndex');
-          return 1;
+          output.error('Missing required option --currentStageIndex');
+          return 2;
         }
         if (isNaN(activeStageIndex)) {
           if (client.nonInteractive) {
@@ -358,37 +472,36 @@ export default async function rollingRelease(client: Client): Promise<number> {
             );
           }
           output.error('--currentStageIndex must be a valid number.');
-          return 1;
+          return 2;
         }
         await approveRollingRelease({
           client,
           projectId: project.id,
           teamId: org.id,
           activeStageIndex,
-          dpl,
+          dpl: deployment,
         });
         break;
       }
       case 'abort': {
-        const dpl = subcommandFlags.flags['--dpl'];
-        if (!dpl) {
+        if (!deployment) {
           if (client.nonInteractive) {
             outputRollingReleaseErrorWithDeploymentSuggestions(
               client,
               'abort',
               'missing_flags',
-              'Aborting a rolling release in non-interactive mode requires the --dpl flag.'
+              'Aborting a rolling release in non-interactive mode requires the --deployment option.'
             );
           }
-          output.error('Missing required flag --dpl');
-          return 1;
+          output.error('Missing required option --deployment');
+          return 2;
         }
         try {
           await abortRollingRelease({
             client,
             projectId: project.id,
             teamId: org.id,
-            dpl,
+            dpl: deployment,
           });
         } catch (err: unknown) {
           if (client.nonInteractive && isAPIError(err)) {
@@ -406,34 +519,47 @@ export default async function rollingRelease(client: Client): Promise<number> {
         break;
       }
       case 'complete': {
-        const dpl = subcommandFlags.flags['--dpl'];
-        if (!dpl) {
+        if (!deployment) {
           if (client.nonInteractive) {
             outputRollingReleaseErrorWithDeploymentSuggestions(
               client,
               'complete',
               'missing_flags',
-              'Completing a rolling release in non-interactive mode requires the --dpl flag.'
+              'Completing a rolling release in non-interactive mode requires the --deployment option.'
             );
           }
-          output.error('Missing required flag --dpl');
-          return 1;
+          output.error('Missing required option --deployment');
+          return 2;
         }
         await completeRollingRelease({
           client,
           projectId: project.id,
           teamId: org.id,
-          dpl,
+          dpl: deployment,
         });
         break;
       }
-      case 'fetch': {
+      case 'inspect': {
+        telemetry.trackCliSubcommandInspect(subcommandOriginal);
+        if (subcommandOriginal === 'fetch') {
+          warnDeprecatedSubcommand(
+            client,
+            'rolling-release fetch',
+            'rolling-release inspect'
+          );
+        }
         const result = await requestRollingRelease({
           client,
           projectId: project.id,
           teamId: org.id,
         });
-        output.log(JSON.stringify(result, null, 2));
+        if (subcommandFlags?.flags['--json']) {
+          client.stdout.write(
+            `${JSON.stringify({ rollingRelease: result }, null, 2)}\n`
+          );
+        } else {
+          output.log(JSON.stringify(result, null, 2));
+        }
         break;
       }
     }

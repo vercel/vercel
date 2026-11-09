@@ -61,7 +61,7 @@ describe('flags rules', () => {
     it('tracks telemetry for nested help', async () => {
       client.setArgv('flags', 'rules', '--help');
 
-      await expect(flags(client)).resolves.toEqual(2);
+      await expect(flags(client)).resolves.toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'subcommand:rules',
@@ -79,14 +79,14 @@ describe('flags rules', () => {
 
       const exitCode = await flags(client);
 
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       const helpOutput = stripAnsi(client.stderr.getFullOutput());
       expectHelpOutputToListRuleOperators(helpOutput);
       expect(helpOutput.replace(/\s+/g, ' ')).toContain(
         TIMESTAMP_IDENTIFY_HELP
       );
       expect(helpOutput.replace(/\s+/g, ' ')).toContain(
-        'after and before are exclusive; use on-or-after or on-or-before for inclusive boundaries'
+        'gt and lt are exclusive; use gte or lte for inclusive boundaries'
       );
     });
   });
@@ -100,6 +100,11 @@ describe('flags rules', () => {
           {
             lhs: { type: 'entity', kind: 'user', attribute: 'signupAt' },
             cmp: 'gt',
+            rhs: signupAt,
+          },
+          {
+            lhs: { type: 'entity', kind: 'user', attribute: 'signupAt' },
+            cmp: 'lte',
             rhs: signupAt,
           },
         ],
@@ -121,6 +126,9 @@ describe('flags rules', () => {
     expect(exitCode).toEqual(0);
     const output = stripAnsi(client.stderr.getFullOutput());
     expect(output).toContain('user.signupAt is after 2026-08-26T22:00:00.000Z');
+    expect(output).toContain(
+      'user.signupAt is at or before 2026-08-26T22:00:00.000Z'
+    );
     expect(output).not.toContain(String(signupAt));
     expect(output).not.toContain('is greater than');
   });
@@ -221,7 +229,11 @@ describe('flags rules', () => {
     ]);
   });
 
-  it('adds a variant rule at a specific position and PATCHes only that environment', async () => {
+  it.each([
+    'active',
+    'archived',
+  ] as const)('adds a variant rule at a specific position and PATCHes only that environment (%s)', async state => {
+    testFlags[0].state = state;
     client.setArgv(
       'flags',
       'rules',
@@ -276,6 +288,7 @@ describe('flags rules', () => {
     expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
       'This rule update was saved'
     );
+    expect(testFlags[0].state).toBe(state);
   });
 
   it('writes Timestamp conditions as numeric epoch milliseconds', async () => {
@@ -302,6 +315,32 @@ describe('flags rules', () => {
       cmp: 'gt',
       rhs: Date.parse('2026-04-16T09:00:00.000Z'),
     });
+  });
+
+  it.each([
+    ['at-or-after', 'gte'],
+    ['on-or-after', 'gte'],
+    ['at-or-before', 'lte'],
+    ['on-or-before', 'lte'],
+  ])('maps the %s alias to %s', async (alias, cmp) => {
+    client.setArgv(
+      'flags',
+      'rules',
+      'add',
+      'my-feature',
+      '--environment',
+      'production',
+      '--condition',
+      `user.signupAt:${alias}:2026-04-16T09:00:00.000Z`,
+      '--variant',
+      'on'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    const rules = testFlags[0].environments.production.rules;
+    expect(rules[rules.length - 1].conditions[0]).toMatchObject({ cmp });
   });
 
   it('rejects Timestamp conditions without a time', async () => {
@@ -464,8 +503,9 @@ describe('flags rules', () => {
       'Enable targeting (keeps the current fallthrough):'
     );
     expect(output).toContain(
-      'flags use-targeting my-feature --environment production'
+      'flags targeting enable my-feature --environment production'
     );
+    expect(output).not.toContain('use-targeting');
     expect(output).not.toContain('--default-variant');
     expect(output).not.toContain(offId);
     expect(output).not.toContain('WARNING!');
@@ -602,7 +642,11 @@ describe('flags rules', () => {
     expect(settingsRequests).toEqual(1);
   });
 
-  it('updates rule conditions', async () => {
+  it.each([
+    'active',
+    'archived',
+  ] as const)('updates rule conditions (%s)', async state => {
+    testFlags[0].state = state;
     client.setArgv(
       'flags',
       'rules',
@@ -629,6 +673,7 @@ describe('flags rules', () => {
     ]);
     expect(patchBodies[0].message).toEqual('Update enterprise rule');
     expect(settingsRequests).toEqual(1);
+    expect(testFlags[0].state).toBe(state);
   });
 
   it('updates inherited rules and disables reuse for the selected environment', async () => {
@@ -711,6 +756,98 @@ describe('flags rules', () => {
     );
   });
 
+  it.each([
+    'add',
+    'update',
+  ])('sets the final percentage with rules %s', async action => {
+    client.setArgv(
+      'flags',
+      'rules',
+      action,
+      'my-feature',
+      ...(action === 'update'
+        ? ['rule_1']
+        : ['--condition', 'user.plan:eq:pro']),
+      '-e',
+      'production',
+      '--by',
+      'user.userId',
+      '--stage',
+      '10,1h',
+      '--final-percentage',
+      '50',
+      '--message',
+      'Partial rollout'
+    );
+    expect(await flags(client)).toBe(0);
+    expect(
+      testFlags[0].environments.production.rules.some(
+        rule =>
+          rule.outcome.type === 'rollout' &&
+          rule.outcome.finalPromille === 50_000
+      )
+    ).toBe(true);
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain('then 50%');
+  });
+
+  it('updates only the final percentage on a rollout rule', async () => {
+    const rule = testFlags[0].environments.production.rules[0];
+    const current = {
+      type: 'rollout' as const,
+      base: { type: 'entity' as const, kind: 'user', attribute: 'userId' },
+      startTimestamp: 1_700_000_000_000,
+      rollFromVariantId: 'off',
+      rollToVariantId: 'on',
+      defaultVariantId: 'off',
+      slots: [{ promille: 5000, durationMs: 3_600_000 }],
+      finalPromille: 50_000,
+    };
+    rule.outcome = current;
+    client.setArgv(
+      'flags',
+      'rules',
+      'update',
+      'my-feature',
+      rule.id,
+      '-e',
+      'production',
+      '--final-percentage',
+      '0',
+      '--message',
+      'Change endpoint'
+    );
+    expect(await flags(client)).toBe(0);
+    expect(testFlags[0].environments.production.rules[0]).toEqual({
+      ...rule,
+      outcome: { ...current, finalPromille: 0 },
+    });
+    expect(settingsRequests).toBe(1);
+  });
+
+  it.each([
+    ['--variant', 'on'],
+    ['--weight', 'on=50'],
+  ])('rejects combining final percentage with %s', async (option, value) => {
+    client.setArgv(
+      'flags',
+      'rules',
+      'update',
+      'my-feature',
+      'rule_1',
+      '-e',
+      'production',
+      option,
+      value,
+      '--final-percentage',
+      '0'
+    );
+    expect(await flags(client)).toBe(1);
+    expect(patchBodies).toHaveLength(0);
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      'Cannot combine'
+    );
+  });
+
   it('updates a rule to a rollout outcome while preserving conditions', async () => {
     client.setArgv(
       'flags',
@@ -778,7 +915,11 @@ describe('flags rules', () => {
     expect(settingsRequests).toEqual(0);
   });
 
-  it('moves a rule while preserving the other rule payloads', async () => {
+  it.each([
+    'active',
+    'archived',
+  ] as const)('moves a rule while preserving the other rule payloads (%s)', async state => {
+    testFlags[0].state = state;
     client.setArgv(
       'flags',
       'rules',
@@ -803,6 +944,7 @@ describe('flags rules', () => {
       patchBodies[0].environments?.production?.rules?.map(rule => rule.id)
     ).toEqual(['rule_2', 'rule_1']);
     expect(patchBodies[0].message).toEqual('Prioritize allowlist');
+    expect(testFlags[0].state).toBe(state);
   });
 
   it('does not PATCH when moving a rule to its current position', async () => {
@@ -829,7 +971,11 @@ describe('flags rules', () => {
     );
   });
 
-  it('removes a rule by ID', async () => {
+  it.each([
+    'active',
+    'archived',
+  ] as const)('removes a rule by ID (%s)', async state => {
+    testFlags[0].state = state;
     client.setArgv(
       'flags',
       'rules',
@@ -852,5 +998,6 @@ describe('flags rules', () => {
       patchBodies[0].environments?.production?.rules?.map(rule => rule.id)
     ).toEqual(['rule_2']);
     expect(patchBodies[0].message).toEqual('Remove pro rule');
+    expect(testFlags[0].state).toBe(state);
   });
 });

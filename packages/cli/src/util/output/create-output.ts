@@ -4,10 +4,12 @@ import { supportsHyperlink as detectSupportsHyperlink } from 'supports-hyperlink
 import renderLink from './link';
 import wait, { type StopSpinner } from './wait';
 import { errorToString } from '@vercel/error-utils';
+import { Diagnostic } from 'nostics';
 import { removeEmoji } from '../emoji';
 import type * as tty from 'tty';
 import { inspect } from 'util';
 import chars from './chars';
+import { cliErrorFromUnknown, recordCliError } from '../telemetry/cli-error';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 
@@ -16,6 +18,8 @@ export interface OutputOptions {
   debug?: boolean;
   supportsHyperlink?: boolean;
   noColor?: boolean;
+  /** Print nothing for spinners, for agents that read output as text. */
+  hideSpinners?: boolean;
 }
 
 export interface LogOptions {
@@ -34,12 +38,14 @@ export class Output {
   debugEnabled!: boolean;
   supportsHyperlink!: boolean;
   colorDisabled!: boolean;
+  spinnersHidden: boolean;
   private spinnerMessage: string;
   private _spinner: StopSpinner | null;
 
   constructor(stream: tty.WriteStream, options: OutputOptions = {}) {
     this.spinnerMessage = '';
     this._spinner = null;
+    this.spinnersHidden = false;
 
     this.initialize({
       ...options,
@@ -56,9 +62,14 @@ export class Output {
     debug: debugEnabled,
     supportsHyperlink,
     noColor,
+    hideSpinners,
   }: OutputOptions = {}) {
     if (stream !== undefined) {
       this.stream = stream;
+    }
+
+    if (hideSpinners !== undefined) {
+      this.spinnersHidden = hideSpinners;
     }
 
     if (debugEnabled !== undefined) {
@@ -130,6 +141,8 @@ export class Output {
     link?: string,
     action = 'Learn More'
   ) => {
+    // The printed text can hold user content, so only the slug is recorded
+    recordCliError({ slug });
     this.print(`${chalk.red(`Error:`)} ${str}\n`);
     const details = slug ? `https://err.sh/vercel/${slug}` : link;
     if (details) {
@@ -141,10 +154,50 @@ export class Output {
    * Prints a fatal error. This does not exit; the caller owns the exit code.
    */
   fatal = (str: string) => {
+    recordCliError({});
     this.print(`${chalk.red(chars.fatal)} ${str.replace(/\n/g, '\n  ')}\n`);
   };
 
+  /**
+   * Prints a nonfatal warning with the `!` gutter. Prefer this over the
+   * legacy `warn()`, which prints a `WARNING!` banner.
+   */
+  warning = (str: string) => {
+    this.print(
+      `${chalk.yellow(chars.warning)} ${str.replace(/\n/g, '\n  ')}\n`
+    );
+  };
+
+  formatStatus = (
+    label: string,
+    tone: 'success' | 'pending' | 'error' | 'muted'
+  ): string => {
+    const colors = {
+      success: chalk.green,
+      pending: chalk.yellow,
+      error: chalk.red,
+      muted: chalk.gray,
+    };
+    const dot = this.colorDisabled ? chars.dot : colors[tone](chars.dot);
+    return `${dot} ${label}`;
+  };
+
   prettyError = (err: unknown) => {
+    recordCliError(cliErrorFromUnknown(err));
+    if (err instanceof Diagnostic) {
+      // `Diagnostic` defaults `name` to 'Diagnostic' when no code was assigned
+      const code = err.name && err.name !== 'Diagnostic' ? err.name : undefined;
+      let str = code
+        ? `${chalk.dim(`[${code}]`)} ${errorToString(err)}`
+        : errorToString(err);
+      if (err.fix) {
+        str += `\n${chalk.bold('Fix:')} ${err.fix}`;
+      }
+      // A wrapped error may carry a custom label, so
+      // fall back to the generic "Learn More" for native diagnostics.
+      const action = (err as Diagnostic & { action?: string }).action;
+      return this.error(str, undefined, err.docs, action ?? 'Learn More');
+    }
     return this.error(
       errorToString(err),
       undefined,
@@ -174,6 +227,9 @@ export class Output {
   spinner = (message: string, delay = 300): void => {
     if (this.debugEnabled) {
       this.debug(`Spinner invoked (${message}) with a ${delay}ms delay`);
+      return;
+    }
+    if (this.spinnersHidden) {
       return;
     }
     if (IS_TEST || !this.stream.isTTY) {

@@ -15,7 +15,7 @@ const TRACE_ID_MAX_LEN = 13;
 
 export function renderMarkdown(
   trace: Trace,
-  options: { requestId: string }
+  options: { requestId?: string }
 ): string {
   const analysis = analyze(trace);
   const sections: string[] = [];
@@ -32,7 +32,7 @@ export function renderMarkdown(
 
 function renderHeader(
   analysis: AnalyzedTrace,
-  options: { requestId: string }
+  options: { requestId?: string }
 ): string {
   const { trace, root, rootDurationUs, errorSpans } = analysis;
   const attributes = root?.attributes;
@@ -47,7 +47,9 @@ function renderHeader(
     `# Trace ${ellipsis(trace.traceId, TRACE_ID_MAX_LEN)}`,
     '',
     `- **Trace id:** ${trace.traceId}`,
-    `- **Request id:** ${options.requestId}`,
+    ...(options.requestId !== undefined
+      ? [`- **Request id:** ${options.requestId}`]
+      : []),
     `- **Endpoint:** ${endpoint}`,
     `- **Duration:** ${duration}`,
     `- **Spans:** ${spans}`,

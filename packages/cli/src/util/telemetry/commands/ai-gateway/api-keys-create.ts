@@ -15,10 +15,29 @@ export class AiGatewayApiKeysCreateTelemetryClient
     }
   }
 
+  trackCliOptionAmount(amount: number | undefined) {
+    if (amount !== undefined) {
+      this.trackCliOption({
+        option: 'amount',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  // The deprecated names keep their own keys, to measure who still uses them.
   trackCliOptionBudget(budget: number | undefined) {
     if (budget !== undefined) {
       this.trackCliOption({
         option: 'budget',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionLimit(limit: number | undefined) {
+    if (limit !== undefined) {
+      this.trackCliOption({
+        option: 'limit',
         value: this.redactedValue,
       });
     }
@@ -60,6 +79,12 @@ export class AiGatewayApiKeysCreateTelemetryClient
   trackCliFlagZdrExempt(zdrExempt: boolean | undefined) {
     if (zdrExempt) {
       this.trackCliFlag('zdr-exempt');
+    }
+  }
+
+  trackCliFlagTokenPass(tokenPass: boolean | undefined) {
+    if (tokenPass) {
+      this.trackCliFlag('token-pass');
     }
   }
 

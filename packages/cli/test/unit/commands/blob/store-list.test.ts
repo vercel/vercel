@@ -470,7 +470,7 @@ describe('blob list-stores', () => {
     it('should return 1 when argument parsing fails', async () => {
       const exitCode = await listStores(client, ['--invalid-flag']);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
     });
 
     it('should return 1 when API call fails', async () => {

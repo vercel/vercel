@@ -51,17 +51,20 @@ function createInstalledDistributions({
   distributions,
   pythonMajor = 3,
   pythonMinor = 12,
+  excludePackages,
 }: {
   sitePackagesDir: string;
   distributions: DistributionIndex;
   pythonMajor?: number;
   pythonMinor?: number;
+  excludePackages?: string[];
 }): InstalledPythonDistributions {
   return new InstalledPythonDistributions({
     sitePackageDirs: [sitePackagesDir],
     distributions: new Map([[sitePackagesDir, distributions]]),
     pythonMajor,
     pythonMinor,
+    excludePackages,
   });
 }
 
@@ -223,6 +226,38 @@ describe('InstalledPythonDistributions', () => {
     expect(await installed.calculatePerPackageSizes()).toEqual(
       new Map([['my-package', 36]])
     );
+  });
+
+  it('leaves excluded packages out of mirroring, sizing, and sources', async () => {
+    const sitePackagesDir = makeTempDir('installed-distributions-exclude-');
+    fs.outputFileSync(path.join(sitePackagesDir, 'pip', '__init__.py'), 'pip');
+    fs.outputFileSync(
+      path.join(sitePackagesDir, 'app_dep', '__init__.py'),
+      'dep'
+    );
+
+    const installed = createInstalledDistributions({
+      sitePackagesDir,
+      distributions: createDistributionIndex([
+        ['pip', [{ path: 'pip/__init__.py', size: 3n }]],
+        ['app-dep', [{ path: 'app_dep/__init__.py', size: 3n }]],
+      ]),
+      excludePackages: ['PIP'],
+    });
+
+    const files = await installed.mirrorPackagesIntoVendor({
+      vendorDirName: '_vendor',
+    });
+
+    expect(Object.keys(files)).toEqual(['_vendor/app_dep/__init__.py']);
+    expect(await installed.calculatePerPackageSizes()).toEqual(
+      new Map([['app-dep', 3]])
+    );
+    expect(installed.getPythonSourceFiles()).toEqual([
+      path.resolve(sitePackagesDir, 'app_dep/__init__.py'),
+    ]);
+    expect(installed.getInstalledVersion('pip')).toBeNull();
+    expect(installed.getInstalledVersion('app-dep')).toBe('1.0.0');
   });
 
   it('returns sorted, package-scoped Python sources from RECORD entries', () => {

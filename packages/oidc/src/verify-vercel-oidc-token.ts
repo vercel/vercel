@@ -13,6 +13,16 @@ const VERCEL_OIDC_JWKS_URL = new URL(
 const DEFAULT_ALGORITHMS = ['RS256'];
 const VERCEL_OIDC_JWKS = createRemoteJWKSet(VERCEL_OIDC_JWKS_URL);
 
+/** A verified token whose Vercel identity does not match the receiver. */
+class VercelOidcTokenValidationError extends TypeError {
+  readonly code = 'ERR_VERCEL_OIDC_TOKEN_VALIDATION';
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'VercelOidcTokenValidationError';
+  }
+}
+
 export type VercelOidcPayload = JWTPayload & {
   owner_id: string;
   project_id: string;
@@ -116,7 +126,7 @@ function validateIssuer(actual: unknown): void {
     actual !== VERCEL_OIDC_ISSUER &&
     (typeof actual !== 'string' || !actual.startsWith(`${VERCEL_OIDC_ISSUER}/`))
   ) {
-    throw new TypeError(
+    throw new VercelOidcTokenValidationError(
       `Expected Vercel OIDC token iss claim to be "${VERCEL_OIDC_ISSUER}" or to start with "${VERCEL_OIDC_ISSUER}/".`
     );
   }
@@ -154,7 +164,7 @@ function validateClaim({
   }
 
   if (actual !== expected) {
-    throw new TypeError(
+    throw new VercelOidcTokenValidationError(
       Array.isArray(expected)
         ? `Expected Vercel OIDC token ${claim} claim to be one of: ${expected.map(value => `"${value}"`).join(', ')}.`
         : `Expected Vercel OIDC token ${claim} claim to be "${expected}".`
@@ -176,7 +186,7 @@ function validateOptionalClaim({
   }
 
   if (actual !== expected) {
-    throw new TypeError(
+    throw new VercelOidcTokenValidationError(
       `Expected Vercel OIDC token ${claim} claim to be "${expected}".`
     );
   }

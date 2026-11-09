@@ -14,8 +14,8 @@ export class AiGatewayRulesTelemetryClient
     this.trackCliSubcommand({ subcommand: 'list', value: actual });
   }
 
-  trackCliSubcommandEdit(actual: string) {
-    this.trackCliSubcommand({ subcommand: 'edit', value: actual });
+  trackCliSubcommandUpdate(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'update', value: actual });
   }
 
   trackCliSubcommandRemove(actual: string) {

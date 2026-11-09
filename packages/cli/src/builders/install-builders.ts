@@ -7,8 +7,15 @@ import code from '../util/output/code';
 import output from '../output-manager';
 import execa from 'execa';
 
+const binaryPkg = cliPkg as typeof cliPkg & {
+  pinnedBuildUtilsVersion?: string;
+  strictBuilderPins?: boolean;
+};
+
 export const installBuilders = createInstallBuilders({
   buildUtilsVersion: cliPkg.dependencies?.['@vercel/build-utils'],
+  pinnedBuildUtilsVersion: binaryPkg.pinnedBuildUtilsVersion,
+  strictBuilderPins: binaryPkg.strictBuilderPins,
   code,
   cmd,
   isCantParseJSONFile: (value): value is CantParseJSONFile =>

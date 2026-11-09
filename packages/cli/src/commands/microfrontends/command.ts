@@ -1,5 +1,10 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
+import {
+  deploymentOption,
+  formatOption,
+  jsonOption,
+  yesOption,
+} from '../../util/arg-common';
 
 export const createGroupSubcommand = {
   name: 'create-group',
@@ -17,7 +22,7 @@ export const createGroupSubcommand = {
     },
     {
       name: 'project',
-      shorthand: null,
+      shorthand: 'p',
       type: [String],
       deprecated: false,
       description: 'Project name to include (repeatable)',
@@ -55,8 +60,8 @@ export const createGroupSubcommand = {
       value: `${packageName} microfrontends create-group`,
     },
     {
-      name: 'Create a microfrontends group with flags',
-      value: `${packageName} mf create-group --name="My Group" --project=web --project=docs --default-app=web --project-default-route=docs=/docs --yes`,
+      name: 'Create a microfrontends group with options',
+      value: `${packageName} microfrontends create-group --name="My Group" --project=web --project=docs --default-app=web --project-default-route=docs=/docs --yes`,
     },
   ],
 } as const;
@@ -89,8 +94,8 @@ export const addToGroupSubcommand = {
       value: `${packageName} microfrontends add-to-group`,
     },
     {
-      name: 'Add current project to a group with flags',
-      value: `${packageName} mf add-to-group --group="My Group" --default-route=/docs`,
+      name: 'Add current project to a group with options',
+      value: `${packageName} microfrontends add-to-group --group="My Group" --default-route=/docs`,
     },
   ],
 } as const;
@@ -104,7 +109,8 @@ export const removeFromGroupSubcommand = {
   options: [
     {
       ...yesOption,
-      description: 'Skip project linking confirmation',
+      description:
+        'Skip the removal confirmations, including the one for a project still in microfrontends.json',
     },
   ],
   examples: [
@@ -124,7 +130,8 @@ export const deleteGroupSubcommand = {
   options: [
     {
       ...yesOption,
-      description: 'Skip project linking confirmation',
+      description:
+        'Skip the deletion confirmation (without a terminal, also pass --group)',
     },
     {
       name: 'group',
@@ -140,8 +147,8 @@ export const deleteGroupSubcommand = {
       value: `${packageName} microfrontends delete-group`,
     },
     {
-      name: 'Delete a microfrontends group with flags',
-      value: `${packageName} mf delete-group --group="My Group"`,
+      name: 'Delete a microfrontends group with options',
+      value: `${packageName} microfrontends delete-group --group="My Group"`,
     },
   ],
 } as const;
@@ -158,13 +165,12 @@ export const pullSubcommand = {
         'Skip confirmation when linking is required (e.g. in non-interactive mode)',
     },
     {
-      name: 'dpl',
-      shorthand: null,
-      deprecated: false,
-      type: String,
+      ...deploymentOption,
       description:
-        'The deploymentId to use for pulling the microfrontends configuration',
+        'The deployment ID to use for pulling the microfrontends configuration',
     },
+    // `--dpl` is the deprecated name of `--deployment`.
+    { name: 'dpl', shorthand: null, type: String, deprecated: true },
   ],
   examples: [
     {
@@ -173,7 +179,8 @@ export const pullSubcommand = {
     },
     {
       name: 'Pull a microfrontends configuration for a specific deployment',
-      value: `${packageName} microfrontends pull --dpl=<deployment-id>`,
+      placeholders: ['<DEPLOYMENT>'],
+      value: `${packageName} microfrontends pull --deployment=<DEPLOYMENT>`,
     },
   ],
 } as const;
@@ -210,7 +217,7 @@ export const inspectGroupSubcommand = {
     },
     {
       name: 'Inspect a microfrontends group as JSON',
-      value: `${packageName} mf inspect-group --group="My Group" --json`,
+      value: `${packageName} microfrontends inspect-group --group="My Group" --json`,
     },
   ],
 } as const;
@@ -218,6 +225,7 @@ export const inspectGroupSubcommand = {
 export const microfrontendsCommand = {
   name: 'microfrontends',
   aliases: ['mf'],
+  summary: 'Manage microfrontends groups',
   description:
     'Manage microfrontends groups that compose multiple projects into one cohesive application',
   arguments: [],

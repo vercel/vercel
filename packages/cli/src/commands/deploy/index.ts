@@ -1,7 +1,7 @@
 import {
   getPrettyError,
   getSupportedNodeVersion,
-  scanParentDirs,
+  findPackageJson,
 } from '@vercel/build-utils';
 import {
   fileNameSymbol,
@@ -13,28 +13,61 @@ import {
   type VercelConfig,
 } from '@vercel/client';
 import { errorToString, isError } from '@vercel/error-utils';
+import { getFetchDispatcher } from '../../util/fetch';
+import type { Deployment } from '@vercel-internals/types';
 import type { DeploymentFramework } from '../../util/deploy/resolve-deployment-framework-preset';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import fs from 'fs-extra';
 import ms from 'ms';
-import { join, resolve } from 'path';
+import { tmpdir } from 'os';
+import { basename, dirname, extname, join, resolve } from 'path';
 import Now, { type CreateOptions } from '../../util';
 import type Client from '../../util/client';
 import { readLocalConfig } from '../../util/config/files';
 import { compileVercelConfig } from '../../util/compile-vercel-config';
 import { createGitMeta } from '../../util/create-git-meta';
+import { getGitExecutable } from '../../util/git-executable';
 import createDeploy from '../../util/deploy/create-deploy';
+import {
+  buildCreateIfMissingCommand,
+  ENV_VALUE_PLACEHOLDER,
+  findEnvPlaceholder,
+} from '../../util/deploy/create-if-missing-command';
+import {
+  isIgnoredFile,
+  singleFileConfig,
+  singleFileProjectSettings,
+} from '../../util/deploy/single-file';
+import { getBuildMachineResourceConfig } from '../../util/deploy/get-build-machine-resource-config';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import { getDeploymentCheckRuns } from '../../util/deploy/get-deployment-check-runs';
 import { getDeploymentCheckRunLogs } from '../../util/deploy/get-deployment-check-run-logs';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
+import {
+  getEnabledProtection,
+  getProtectionForDeployment,
+} from '../../util/deploy/get-enabled-protection';
+import { getProductionUrl } from '../../util/deploy/get-production-url';
+import {
+  type DeploymentVerification,
+  formatVerificationFailure,
+  verifyDeployment,
+} from '../../util/deploy/verify-deployment';
+import { printPrebuiltFilePathMapIgnoreWarning } from '../../util/deploy/print-prebuilt-filepathmap-warning';
 import { getGitConnectRecommendation } from '../../util/deploy/get-git-connect-recommendation';
 import { isValidArchive } from '../../util/deploy/validate-archive-format';
-import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { printError } from '../../util/error';
+import {
+  getRenamedOption,
+  reportRenamedOptionError,
+} from '../../util/renamed-option';
+import {
+  cliErrorFromUnknown,
+  recordCliError,
+} from '../../util/telemetry/cli-error';
 import { SchemaValidationFailed } from '../../util/errors-ts';
 import {
   AliasDomainConfigured,
@@ -60,6 +93,11 @@ import {
 import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import {
+  getDeployFlagsSpecification,
+  warnDeprecatedShorthands,
+} from './deprecated-shorthands';
+import { quoteArg } from '../../util/flags/quote-arg';
 import getSubcommand from '../../util/get-subcommand';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
@@ -69,11 +107,20 @@ import stamp from '../../util/output/stamp';
 import table from '../../util/output/table';
 import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
-import { outputAgentError, withGlobalFlags } from '../../util/agent-output';
-import { getCommandName, packageName } from '../../util/pkg-name';
+import {
+  buildCommandWithYes,
+  outputAgentError,
+  withGlobalFlags,
+  writeAgentError,
+} from '../../util/agent-output';
+import {
+  getCommandName,
+  getCommandNamePlain,
+  packageName,
+} from '../../util/pkg-name';
 import { getErrorCta } from '../../util/get-error-cta';
 import link from '../../util/output/link';
-import { AGENT_STATUS } from '../../util/agent-output-constants';
+import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { pickOverrides } from '../../util/projects/project-settings';
 import validatePaths, {
   validateRootDirectory,
@@ -85,17 +132,21 @@ import {
   deprecatedArchiveSplitTgz,
   initSubcommand,
   continueSubcommand,
+  describeSubcommand,
 } from './command';
-import parseTarget from '../../util/parse-target';
+import describe from './describe';
+import parseTarget, {
+  applyDeprecatedTargetFlag,
+} from '../../util/parse-target';
 import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
+import { promptExperimentalServicesMigration } from '../../util/services/migrate-experimental-services';
 import {
   isOwnerLookupUnavailableLink,
   isRemoteLookupSkippedLink,
 } from '../../util/projects/link';
 import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
-import { displayBuildLogsUntilFinalError } from '../../util/logs';
 import { isGuidanceEnabled } from '../../util/guidance/is-enabled';
 import { validateJsonOutput } from '../../util/output-format';
 import { resolvePerDirectoryLinkRoot } from '../../util/build/repo-root';
@@ -109,6 +160,7 @@ import {
 const COMMAND_CONFIG = {
   init: getCommandAliases(initSubcommand),
   continue: getCommandAliases(continueSubcommand),
+  describe: getCommandAliases(describeSubcommand),
 };
 
 export default async (client: Client): Promise<number> => {
@@ -120,7 +172,7 @@ export default async (client: Client): Promise<number> => {
 
   let parsedArguments = null;
 
-  const flagsSpecification = getFlagsSpecification(deployCommand.options);
+  const flagsSpecification = getDeployFlagsSpecification(deployCommand.options);
 
   // #region Argument Parsing
   try {
@@ -129,7 +181,7 @@ export default async (client: Client): Promise<number> => {
     });
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   // Strip the command name from the args
@@ -145,7 +197,11 @@ export default async (client: Client): Promise<number> => {
 
   function printSubcommandHelp(command: Command) {
     output.print(
-      help(command, { parent: deployCommand, columns: client.stderr.columns })
+      help(command, {
+        stream: client.stderr,
+        parent: deployCommand,
+        columns: client.stderr.columns,
+      })
     );
   }
 
@@ -154,7 +210,7 @@ export default async (client: Client): Promise<number> => {
       if (parsedArguments.flags['--help']) {
         telemetryClient.trackCliFlagHelp('deploy', subcommandOriginal);
         printSubcommandHelp(initSubcommand);
-        return 2;
+        return 0;
       }
       telemetryClient.trackCliSubcommandInit(subcommandOriginal);
       return handleInitDeployment(client, telemetryClient);
@@ -163,16 +219,30 @@ export default async (client: Client): Promise<number> => {
       if (parsedArguments.flags['--help']) {
         telemetryClient.trackCliFlagHelp('deploy', subcommandOriginal);
         printSubcommandHelp(continueSubcommand);
-        return 2;
+        return 0;
       }
       telemetryClient.trackCliSubcommandContinue(subcommandOriginal);
       return handleContinueSubcommand(client, telemetryClient);
 
+    case 'describe':
+      if (parsedArguments.flags['--help']) {
+        telemetryClient.trackCliFlagHelp('deploy', subcommandOriginal);
+        printSubcommandHelp(describeSubcommand);
+        return 0;
+      }
+      telemetryClient.trackCliSubcommandDescribe(subcommandOriginal);
+      return describe(client);
+
     default:
       if (parsedArguments.flags['--help']) {
         telemetryClient.trackCliFlagHelp('deploy');
-        output.print(help(deployCommand, { columns: client.stderr.columns }));
-        return 2;
+        output.print(
+          help(deployCommand, {
+            stream: client.stderr,
+            columns: client.stderr.columns,
+          })
+        );
+        return 0;
       }
       return handleDefaultDeploy(client, telemetryClient);
   }
@@ -183,14 +253,17 @@ async function handleInitDeployment(
   telemetryClient: DeployTelemetryClient
 ): Promise<number> {
   // Re-parse with init-specific flags
-  const flagsSpecification = getFlagsSpecification(initSubcommand.options);
+  const flagsSpecification = getDeployFlagsSpecification(
+    initSubcommand.options
+  );
   let parsedArguments;
   try {
     parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
+  warnDeprecatedShorthands(client, initSubcommand.options);
 
   telemetryClient.trackCliFlagJson(parsedArguments.flags['--json']);
   telemetryClient.trackCliOptionFormat(parsedArguments.flags['--format']);
@@ -201,9 +274,13 @@ async function handleInitDeployment(
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput || client.nonInteractive;
+
+  if (!applyDeprecatedTargetFlag(client, parsedArguments.flags)) {
+    return 2;
+  }
 
   // Strip 'deploy' and 'init' from args
   let args = parsedArguments.args;
@@ -259,7 +336,7 @@ async function handleInitDeployment(
   const autoConfirm = parsedArguments.flags['--yes'];
 
   const target = parseTarget({
-    flagName: 'target',
+    flagName: 'environment',
     flags: parsedArguments.flags,
   });
   telemetryClient.trackTargetEnvironment(target);
@@ -273,7 +350,7 @@ async function handleInitDeployment(
     )
   ) {
     output.error(`Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`);
-    return 1;
+    return 2;
   }
   if (parsedArchive === deprecatedArchiveSplitTgz) {
     output.print(
@@ -289,6 +366,8 @@ async function handleInitDeployment(
   const cliMeta = parseMeta(parsedArguments.flags['--meta']);
   const isV0 = cliMeta.v0 === 'true';
 
+  // Resolve the Git launcher while project lookup is in progress.
+  void getGitExecutable(cwd);
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
     // Only explicit names: the folder-name fallback is derived inside
@@ -323,6 +402,17 @@ async function handleInitDeployment(
     )) === false
   ) {
     return 1;
+  }
+
+  if (
+    await promptExperimentalServicesMigration({
+      client,
+      cwd: join(cwd, rootDirectory || ''),
+      autoConfirm: Boolean(parsedArguments.flags['--yes']),
+      nonInteractive: client.nonInteractive,
+    })
+  ) {
+    localConfig = readLocalConfig(join(cwd, rootDirectory || ''));
   }
 
   if (rootDirectory) {
@@ -397,10 +487,11 @@ async function handleInitDeployment(
 
   // Observational path of the project dir relative to the git root — not the
   // project `rootDirectory` setting (though they often resolve to the same path).
-  const gitMetadata = await createGitMeta(
+  const gitMetadata = createGitMeta(
     join(cwd, project.rootDirectory || ''),
     project
   );
+  void gitMetadata.catch(() => {});
 
   const deploymentEnv = Object.assign(
     {},
@@ -487,7 +578,7 @@ async function handleInitDeployment(
       };
     }
 
-    const { packageJson } = await scanParentDirs(
+    const { packageJson } = await findPackageJson(
       join(cwd, project?.rootDirectory ?? ''),
       true,
       cwd
@@ -520,6 +611,7 @@ async function handleInitDeployment(
     );
 
     if (deployment instanceof NotDomainOwner) {
+      recordCliError({ code: 'not_domain_owner' });
       if (client.nonInteractive) {
         client.stdout.write(
           `${JSON.stringify(
@@ -546,6 +638,11 @@ async function handleInitDeployment(
     }
 
     if (deployment instanceof Error) {
+      const deployError = cliErrorFromUnknown(deployment);
+      recordCliError({
+        ...deployError,
+        code: deployError.code ?? 'deploy_failed',
+      });
       const msg =
         deployment.message ||
         'An unexpected error occurred while deploying your project';
@@ -580,6 +677,7 @@ async function handleInitDeployment(
     }
 
     if (deployment.readyState === 'CANCELED') {
+      recordCliError({ code: 'deployment_canceled' });
       if (asJson) {
         output.stopSpinner();
         const deploymentJson = getDeploymentOutputJson(
@@ -618,6 +716,7 @@ async function handleInitDeployment(
 
     // v1 checks: uses checksConclusion from the deployment object
     if (deployment.checksConclusion === 'failed') {
+      recordCliError({ code: 'checks_failed' });
       const { checks } = await getDeploymentChecks(client, deployment.id);
       const counters = new Map<string, number>();
       checks.forEach(c => {
@@ -660,6 +759,7 @@ async function handleInitDeployment(
     }
 
     if (deployment === null) {
+      recordCliError({ code: 'upload_failed' });
       if (client.nonInteractive) {
         client.stdout.write(
           `${JSON.stringify(
@@ -694,7 +794,10 @@ async function handleInitDeployment(
         ? {
             status: AGENT_STATUS.OK,
             deployment: deploymentJson,
-            message: `Deployment ${deployment.url} ready.`,
+            message: formatReadyMessage(
+              deployment.url,
+              deploymentJson.productionUrl
+            ),
             ...(isImplicitProduction
               ? {
                   hint: 'This is the project\u2019s first deployment, so it was assigned to production. Future deployments will be preview deployments unless you use --prod.',
@@ -729,6 +832,7 @@ async function handleInitDeployment(
       true
     );
   } catch (err: unknown) {
+    recordCliError(cliErrorFromUnknown(err));
     if (isError(err)) {
       debug(`Error: ${err}\n${err.stack}`);
     }
@@ -739,6 +843,8 @@ async function handleInitDeployment(
     }
 
     if (err instanceof NotDomainOwner) {
+      // Replaces the class's NOT_DOMAIN_OWNER code to match the agent reason
+      recordCliError({ code: 'not_domain_owner' }, { override: true });
       output.error(err.message);
       return 1;
     }
@@ -788,23 +894,35 @@ async function handleContinueSubcommand(
     parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
-  const idFlag = parsedArguments.flags['--id'];
+  telemetryClient.trackCliOptionDeployment(
+    parsedArguments.flags['--deployment']
+  );
+  telemetryClient.trackCliOptionId(parsedArguments.flags['--id']);
+  const deployment = getRenamedOption(
+    parsedArguments.flags,
+    '--deployment',
+    '--id'
+  );
+  if ('error' in deployment) {
+    return reportRenamedOptionError(client, deployment.error);
+  }
+  const idFlag = deployment.value;
   const parsedArchive = parsedArguments.flags['--archive'];
   const errorMessage = parsedArguments.flags['--error'];
 
   if (typeof parsedArchive === 'string' && !isValidArchive(parsedArchive)) {
     output.error(`Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`);
-    return 1;
+    return 2;
   }
 
   telemetryClient.trackCliOptionArchive(parsedArchive);
 
   if (parsedArchive && errorMessage !== undefined) {
     output.error(`Cannot use ${param('--archive')} with ${param('--error')}`);
-    return 1;
+    return 2;
   }
 
   if (errorMessage !== undefined && errorMessage.trim() === '') {
@@ -820,25 +938,25 @@ async function handleContinueSubcommand(
           status: AGENT_STATUS.ERROR,
           reason: 'missing_id',
           message:
-            'Missing required --id flag. Provide the deployment ID to continue.',
+            'Missing required --deployment option. Provide the deployment ID to continue.',
           next: [
             {
               command: withGlobalFlags(
                 client,
-                'deploy continue --id <deployment-id>'
+                'deploy continue --deployment <DEPLOYMENT>'
               ),
               when: 'provide deployment ID',
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     } else {
       output.error(
-        `Missing required ${param('--id')} flag. Usage: ${getCommandName('deploy continue --id <deployment-id>')}`
+        `Missing required ${param('--deployment')} option. Usage: ${getCommandName('deploy continue --deployment <DEPLOYMENT>')}`
       );
-      return 1;
+      return 2;
     }
   }
 
@@ -922,7 +1040,7 @@ async function handleContinueSubcommand(
             {
               command: withGlobalFlags(
                 client,
-                `deploy continue --id ${idFlag}`
+                `deploy continue --deployment ${idFlag}`
               ),
               when: 'deploy prebuilt output',
             },
@@ -945,6 +1063,7 @@ async function handleContinueSubcommand(
 
   return handleContinueDeployment({
     client,
+    telemetryClient,
     deploymentId: idFlag,
     cwd,
     deployStamp,
@@ -959,17 +1078,38 @@ async function handleDefaultDeploy(
   client: Client,
   telemetryClient: DeployTelemetryClient
 ): Promise<number> {
+  // Temporary directories are removed here so that every exit path, including
+  // thrown errors and early returns, cleans up after the deployment.
+  const tempDirs: string[] = [];
+  try {
+    return await runDefaultDeploy(client, telemetryClient, tempDirs);
+  } finally {
+    await Promise.all(tempDirs.map(dir => fs.remove(dir)));
+  }
+}
+
+async function runDefaultDeploy(
+  client: Client,
+  telemetryClient: DeployTelemetryClient,
+  tempDirs: string[]
+): Promise<number> {
   // Re-parse without permissive mode for stricter validation
-  const flagsSpecification = getFlagsSpecification(deployCommand.options);
+  const flagsSpecification = getDeployFlagsSpecification(deployCommand.options);
   let parsedArguments;
   try {
     parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
+  warnDeprecatedShorthands(client, deployCommand.options);
+
+  const buildMachine = parsedArguments.flags['--turbo']
+    ? ('turbo' as const)
+    : undefined;
 
   telemetryClient.trackCliOptionArchive(parsedArguments.flags['--archive']);
+  telemetryClient.trackCliFlagTurbo(parsedArguments.flags['--turbo']);
   telemetryClient.trackCliOptionEnv(parsedArguments.flags['--env']);
   telemetryClient.trackCliOptionBuildEnv(parsedArguments.flags['--build-env']);
   telemetryClient.trackCliOptionMeta(parsedArguments.flags['--meta']);
@@ -977,8 +1117,15 @@ async function handleDefaultDeploy(
   telemetryClient.trackCliOptionRegions(parsedArguments.flags['--regions']);
   telemetryClient.trackCliFlagNoWait(parsedArguments.flags['--no-wait']);
   telemetryClient.trackCliFlagDry(parsedArguments.flags['--dry']);
+  telemetryClient.trackCliFlagCreateIfMissing(
+    parsedArguments.flags['--create-if-missing']
+  );
+  telemetryClient.trackCliFlagVerify(parsedArguments.flags['--verify']);
   telemetryClient.trackCliFlagYes(parsedArguments.flags['--yes']);
   telemetryClient.trackCliOptionTarget(parsedArguments.flags['--target']);
+  telemetryClient.trackCliOptionEnvironment(
+    parsedArguments.flags['--environment']
+  );
   telemetryClient.trackCliFlagProd(parsedArguments.flags['--prod']);
   telemetryClient.trackCliFlagTemporary(parsedArguments.flags['--temporary']);
   telemetryClient.trackCliFlagSkipDomain(
@@ -998,9 +1145,54 @@ async function handleDefaultDeploy(
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput || client.nonInteractive;
+
+  const createIfMissing = !!parsedArguments.flags['--create-if-missing'];
+  // A suggested create command run without filling in its placeholders would
+  // deploy the literal `<VALUE>`, so stop before anything is created.
+  const envPlaceholder = findEnvPlaceholder(parsedArguments.flags);
+  if (
+    envPlaceholder ||
+    (createIfMissing && (!projectNameOrId || parsedArguments.flags['--dry']))
+  ) {
+    const message = envPlaceholder
+      ? `${envPlaceholder.flag} ${envPlaceholder.key} is still the placeholder ${ENV_VALUE_PLACEHOLDER}. Replace it with the Environment Variable's value.`
+      : projectNameOrId
+        ? "Can't use --create-if-missing with --dry. --dry never creates anything."
+        : '--create-if-missing requires --project <PROJECT>.';
+    const helpCommand = getCommandNamePlain('deploy --help');
+    output.error(`${message}\n\nSee all options:\n  ${helpCommand}`);
+    outputAgentError(client, {
+      status: AGENT_STATUS.ERROR,
+      reason: AGENT_REASON.INVALID_ARGUMENTS,
+      message,
+      next: [{ command: helpCommand, when: 'see all options' }],
+    });
+    return 2;
+  }
+
+  if (!applyDeprecatedTargetFlag(client, parsedArguments.flags)) {
+    return 2;
+  }
+
+  const verify = Boolean(parsedArguments.flags['--verify']);
+  const verifyConflict = (['--no-wait', '--dry'] as const).find(
+    flag => parsedArguments.flags[flag]
+  );
+  if (verify && verifyConflict) {
+    const message = `Can't use --verify with ${verifyConflict}. --verify loads the deployment once it's ready.`;
+    if (client.nonInteractive) {
+      writeAgentError(client, {
+        status: AGENT_STATUS.ERROR,
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message,
+      });
+    }
+    output.error(message);
+    return 2;
+  }
 
   if ('--confirm' in parsedArguments.flags) {
     telemetryClient.trackCliFlagConfirm(parsedArguments.flags['--confirm']);
@@ -1025,16 +1217,86 @@ async function handleDefaultDeploy(
     paths = [client.cwd];
   }
 
-  const pathValidation = await validatePaths(client, paths);
+  const pathValidation = await validatePaths(client, paths, {
+    allowFiles: true,
+  });
 
   if (!pathValidation.valid) {
     return pathValidation.exitCode;
+  }
+  const singleFile = pathValidation.isFile ? pathValidation.path : undefined;
+  if (singleFile) {
+    const incompatibleFlag = (
+      [
+        '--prebuilt',
+        '--archive',
+        '--local-config',
+        '--create-if-missing',
+      ] as const
+    ).find(flag => parsedArguments.flags[flag]);
+    const message = incompatibleFlag
+      ? `Single-file deployments don't support ${incompatibleFlag}. Deploy a directory to use this option.`
+      : !client.authConfig.token &&
+          parsedArguments.flags['--temporary'] &&
+          extname(singleFile).toLowerCase() !== '.html'
+        ? 'Temporary single-file deployments support only `.html` files. Log in or deploy a directory to deploy other files.'
+        : (await isIgnoredFile(singleFile, client.cwd))
+          ? `${basename(singleFile)} matches \`.vercelignore\` or the default ignore list, so it can't be deployed.`
+          : undefined;
+    if (message) {
+      if (asJson) {
+        client.stdout.write(
+          `${JSON.stringify({ status: 'error', reason: 'invalid_file_deployment_option', message })}\n`
+        );
+      } else {
+        output.fatal(message);
+      }
+      return 1;
+    }
+
+    // Hidden files such as `.env` are often credentials, and the deployment
+    // serves the file publicly, so require an explicit `--yes` or a prompt.
+    if (
+      basename(singleFile).startsWith('.') &&
+      !parsedArguments.flags['--yes'] &&
+      !parsedArguments.flags['--dry']
+    ) {
+      const warning = `${basename(singleFile)} is a hidden file and will be publicly accessible once deployed.`;
+      if (client.nonInteractive || !client.stdin.isTTY) {
+        if (asJson) {
+          client.stdout.write(
+            `${JSON.stringify(
+              {
+                status: AGENT_STATUS.ACTION_REQUIRED,
+                reason: AGENT_REASON.CONFIRMATION_REQUIRED,
+                message: `${warning} Use option --yes to deploy it.`,
+                next: [
+                  {
+                    command: buildCommandWithYes(client.argv),
+                    when: 'Deploy the hidden file',
+                  },
+                ],
+              },
+              null,
+              2
+            )}\n`
+          );
+        } else {
+          output.error(`${warning} Use option ${param('--yes')} to deploy it.`);
+        }
+        return 1;
+      }
+      if (!(await client.input.confirm(`${warning} Continue?`, false))) {
+        output.print('Canceled\n');
+        return 0;
+      }
+    }
   }
   // #endregion
 
   // #region Config loading
   try {
-    await compileVercelConfig(paths[0]);
+    if (!singleFile) await compileVercelConfig(paths[0]);
   } catch (err) {
     if (
       err instanceof ConflictingConfigFiles ||
@@ -1047,9 +1309,11 @@ async function handleDefaultDeploy(
   }
 
   const shouldUseEarlyLocalConfig = paths[0] === client.cwd;
-  let localConfig = shouldUseEarlyLocalConfig
-    ? client.localConfig || readLocalConfig(paths[0])
-    : readLocalConfig(paths[0]);
+  let localConfig = singleFile
+    ? { ...singleFileConfig }
+    : shouldUseEarlyLocalConfig
+      ? client.localConfig || readLocalConfig(paths[0])
+      : readLocalConfig(paths[0]);
 
   if (localConfig) {
     client.localConfig = localConfig;
@@ -1080,7 +1344,9 @@ async function handleDefaultDeploy(
 
   const quiet = !client.stdout.isTTY;
 
-  let { path: cwd } = pathValidation;
+  // Project linking needs a directory, but file collection must retain the
+  // explicitly selected file even when linking resolves a repository root.
+  let cwd = singleFile ? dirname(singleFile) : pathValidation.path;
   const autoConfirm = parsedArguments.flags['--yes'] || client.nonInteractive;
   // #endregion
 
@@ -1122,7 +1388,7 @@ async function handleDefaultDeploy(
   }
 
   let target = parseTarget({
-    flagName: 'target',
+    flagName: 'environment',
     flags: parsedArguments.flags,
   });
   telemetryClient.trackTargetEnvironment(target);
@@ -1134,7 +1400,7 @@ async function handleDefaultDeploy(
   const skipDomain = parsedArguments.flags['--skip-domain'];
   if (skipDomain && target !== 'production') {
     output.error(
-      'The `--skip-domain` option can only be used with production deployments. Use `--prod` or `--target=production`.'
+      'The `--skip-domain` option can only be used with production deployments. Use `--prod` or `--environment production`.'
     );
     return 1;
   }
@@ -1148,7 +1414,7 @@ async function handleDefaultDeploy(
     )
   ) {
     output.error(`Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`);
-    return 1;
+    return 2;
   }
   if (parsedArchive === deprecatedArchiveSplitTgz) {
     output.print(
@@ -1164,10 +1430,19 @@ async function handleDefaultDeploy(
   const cliMeta = parseMeta(parsedArguments.flags['--meta']);
   const isV0 = cliMeta.v0 === 'true';
 
-  const anonymousSetup = await setupAnonymousDeployment(client, cwd, {
-    isAnonymous,
-    dryRun: Boolean(parsedArguments.flags['--dry']),
-  });
+  // Executable discovery is independent of the remote project settings.
+  // createGitMeta reuses it when the deployment directory is unchanged.
+  if (!singleFile && !parsedArguments.flags['--dry'])
+    void getGitExecutable(cwd);
+  // A logged-in single-file deploy must not clear the temporary state of the
+  // directory that contains the file.
+  const anonymousSetup =
+    singleFile && !isAnonymous
+      ? { isAnonymous: false, anonymousLink: undefined }
+      : await setupAnonymousDeployment(client, cwd, {
+          isAnonymous,
+          dryRun: Boolean(parsedArguments.flags['--dry']),
+        });
   if (typeof anonymousSetup === 'number') {
     return anonymousSetup;
   }
@@ -1181,11 +1456,33 @@ async function handleDefaultDeploy(
     anonymousLink ??
     (await ensureLink('deploy', client, cwd, {
       autoConfirm,
+      singleFile,
+      pullEnv: singleFile ? false : undefined,
       // Only explicit names: the folder-name fallback is derived inside
       // `setupAndLink`, and passing it would suppress Git-match suggestions.
       projectName:
         projectNameOrId ?? parsedArguments.flags['--name'] ?? localConfig?.name,
       failIfNotFound: !!projectNameOrId,
+      // A directory deploy creates a missing `--project` name in a terminal,
+      // where the setup questions come first. With `--yes` or without a
+      // terminal (agents, CI) a typo would create silently, so creating
+      // there needs `--create-if-missing`. `--dry` creates nothing, and
+      // single files resolve their project themselves.
+      createIfNotFound:
+        !!projectNameOrId &&
+        !singleFile &&
+        !parsedArguments.flags['--dry'] &&
+        (createIfMissing || !autoConfirm),
+      // The command as typed plus `--create-if-missing`, so the retry is the
+      // same deploy (path, `--yes`, `--prebuilt`, and the rest).
+      createCommand:
+        projectNameOrId && !singleFile && !parsedArguments.flags['--dry']
+          ? buildCreateIfMissingCommand(
+              parsedArguments.args,
+              parsedArguments.flags,
+              client.argv
+            )
+          : undefined,
       requireExistingLink: parsedArguments.flags['--dry'],
       allowOwnerLookupFallback: true,
       skipRemoteLookup: !parsedArguments.flags['--dry'],
@@ -1197,20 +1494,26 @@ async function handleDefaultDeploy(
 
   const redeployCommand = withGlobalFlags(
     client,
-    isAnonymous ? 'deploy --temporary' : 'deploy'
+    singleFile
+      ? `deploy ${quoteArg(singleFile)}${isAnonymous ? ' --temporary' : ''}`
+      : isAnonymous
+        ? 'deploy --temporary'
+        : 'deploy',
+    { preserveProject: Boolean(singleFile) }
   );
 
   const { org, project } = link;
-  let rootDirectory = project.rootDirectory;
+  let rootDirectory = singleFile ? null : project.rootDirectory;
   const sourceFilesOutsideRootDirectory =
     project.sourceFilesOutsideRootDirectory ?? true;
   const projectCwd = cwd;
 
-  if (link.repoRoot) {
+  if (!singleFile && link.repoRoot) {
     cwd = link.repoRoot;
   }
 
   const postDeployGuidanceEnabled =
+    !singleFile &&
     !anonymousLink &&
     (client.nonInteractive || !asJson) &&
     isGuidanceEnabled(client, parsedArguments.flags['--guidance'], true);
@@ -1218,11 +1521,16 @@ async function handleDefaultDeploy(
   const prebuilt = isAnonymous || !!parsedArguments.flags['--prebuilt'];
   let vercelOutputDir: string | undefined;
   let prebuiltBuild: Awaited<ReturnType<typeof getPrebuiltJson>> = null;
+  // Temporary deployments must upload prebuilt output. A single file needs no
+  // build, so it is copied into a Build Output directory of its own.
+  let singleFileOutputRoot: string | undefined;
   if (prebuilt) {
-    // Anonymous deployments have no real project link to re-anchor.
-    const perDirectoryRoot = anonymousLink
-      ? undefined
-      : resolvePrebuiltPerDirectoryRoot(link, cwd);
+    // Anonymous and single-file deployments have no real project link to
+    // re-anchor.
+    const perDirectoryRoot =
+      anonymousLink || singleFile
+        ? undefined
+        : resolvePrebuiltPerDirectoryRoot(link, cwd);
     if (perDirectoryRoot) {
       cwd = perDirectoryRoot.cwd;
       rootDirectory = perDirectoryRoot.rootDirectory;
@@ -1235,7 +1543,19 @@ async function handleDefaultDeploy(
     }
 
     let prebuiltExists = await fs.pathExists(vercelOutputDir);
-    if (
+    if (singleFile) {
+      singleFileOutputRoot = await fs.mkdtemp(join(tmpdir(), 'vercel-file-'));
+      tempDirs.push(singleFileOutputRoot);
+      vercelOutputDir = join(singleFileOutputRoot, '.vercel/output');
+      await fs.copy(
+        singleFile,
+        join(vercelOutputDir, 'static', basename(singleFile))
+      );
+      await fs.outputJSON(join(vercelOutputDir, 'config.json'), {
+        version: 3,
+      });
+      prebuiltExists = true;
+    } else if (
       isAnonymous &&
       !parsedArguments.flags['--prebuilt'] &&
       !parsedArguments.flags['--dry']
@@ -1313,6 +1633,20 @@ async function handleDefaultDeploy(
     return 1;
   }
 
+  if (
+    !singleFile &&
+    !parsedArguments.flags['--dry'] &&
+    !prebuilt &&
+    (await promptExperimentalServicesMigration({
+      client,
+      cwd: join(cwd, rootDirectory || ''),
+      autoConfirm: Boolean(parsedArguments.flags['--yes']),
+      nonInteractive: client.nonInteractive,
+    }))
+  ) {
+    localConfig = readLocalConfig(join(cwd, rootDirectory || ''));
+  }
+
   if (rootDirectory) {
     const rootDirectoryPath = join(cwd, rootDirectory);
     await compileVercelConfig(rootDirectoryPath);
@@ -1338,7 +1672,7 @@ async function handleDefaultDeploy(
   if (parsedArguments.flags['--dry']) {
     try {
       const summary = await inspectDeploymentFiles({
-        path: cwd,
+        path: singleFileOutputRoot ?? singleFile ?? cwd,
         archive: parsedArchive ? 'tgz' : undefined,
         debug: output.isDebugEnabled(),
         prebuilt,
@@ -1354,6 +1688,10 @@ async function handleDefaultDeploy(
         localFramework: localConfig.framework,
         projectFramework: project.framework,
       });
+
+      if (summary.warning) {
+        printPrebuiltFilePathMapIgnoreWarning(summary.warning, telemetryClient);
+      }
 
       printDeploymentDryRun(
         client,
@@ -1420,10 +1758,12 @@ async function handleDefaultDeploy(
 
   // Observational path of the project dir relative to the git root — not the
   // project `rootDirectory` setting (though they often resolve to the same path).
-  const gitMetadata = await createGitMeta(
-    join(cwd, rootDirectory || ''),
-    project
-  );
+  const gitMetadata = singleFile
+    ? Promise.resolve(undefined)
+    : createGitMeta(join(cwd, rootDirectory || ''), project);
+  // Validation can return before metadata is consumed; retain errors for the
+  // eventual await without allowing an unhandled rejection in the meantime.
+  void gitMetadata.catch(() => {});
   // #endregion
 
   // #region Env vars validation
@@ -1484,6 +1824,7 @@ async function handleDefaultDeploy(
       project: project.id,
       env: deploymentEnv as Dictionary<string>,
       build: { env: deploymentBuildEnv as Dictionary<string> },
+      buildMachine,
       forceNew: parsedArguments.flags['--force'],
       withCache: parsedArguments.flags['--with-cache'],
       prebuilt,
@@ -1515,14 +1856,13 @@ async function handleDefaultDeploy(
         sourceFilesOutsideRootDirectory,
         rootDirectory,
         ...localConfigurationOverrides,
+        ...(singleFile && singleFileProjectSettings),
       };
     }
 
-    const { packageJson } = await scanParentDirs(
-      join(cwd, rootDirectory ?? ''),
-      true,
-      cwd
-    );
+    const { packageJson } = singleFile
+      ? { packageJson: null }
+      : await findPackageJson(join(cwd, rootDirectory ?? ''), true, cwd);
     let nodeVersion: string | undefined;
     if (packageJson?.engines?.node) {
       try {
@@ -1553,7 +1893,7 @@ async function handleDefaultDeploy(
       client,
       now,
       contextName,
-      cwd,
+      singleFileOutputRoot ?? singleFile ?? cwd,
       createArgs,
       org,
       !project,
@@ -1565,6 +1905,7 @@ async function handleDefaultDeploy(
     }
 
     if (deployment instanceof NotDomainOwner) {
+      recordCliError({ code: 'not_domain_owner' });
       if (client.nonInteractive) {
         client.stdout.write(
           `${JSON.stringify(
@@ -1591,6 +1932,11 @@ async function handleDefaultDeploy(
     }
 
     if (deployment instanceof Error) {
+      const deployError = cliErrorFromUnknown(deployment);
+      recordCliError({
+        ...deployError,
+        code: deployError.code ?? 'deploy_failed',
+      });
       const msg =
         deployment.message ||
         'An unexpected error occurred while deploying your project';
@@ -1625,6 +1971,7 @@ async function handleDefaultDeploy(
     }
 
     if (deployment.readyState === 'CANCELED') {
+      recordCliError({ code: 'deployment_canceled' });
       if (asJson) {
         output.stopSpinner();
         const deploymentJson = getDeploymentOutputJson(
@@ -1663,6 +2010,7 @@ async function handleDefaultDeploy(
 
     // v1 checks: uses checksConclusion from the deployment object
     if (deployment.checksConclusion === 'failed') {
+      recordCliError({ code: 'checks_failed' });
       const { checks } = await getDeploymentChecks(client, deployment.id);
       const counters = new Map<string, number>();
       checks.forEach(c => {
@@ -1711,6 +2059,7 @@ async function handleDefaultDeploy(
     }
 
     if (deployment === null) {
+      recordCliError({ code: 'upload_failed' });
       if (client.nonInteractive) {
         client.stdout.write(
           `${JSON.stringify(
@@ -1736,6 +2085,7 @@ async function handleDefaultDeploy(
       }
     }
   } catch (err: unknown) {
+    recordCliError(cliErrorFromUnknown(err));
     if (isError(err)) {
       debug(`Error: ${err}\n${err.stack}`);
     }
@@ -1779,6 +2129,8 @@ async function handleDefaultDeploy(
     }
 
     if (err instanceof NotDomainOwner) {
+      // Replaces the class's NOT_DOMAIN_OWNER code to match the agent reason
+      recordCliError({ code: 'not_domain_owner' }, { override: true });
       if (client.nonInteractive) {
         client.stdout.write(
           `${JSON.stringify(
@@ -1809,6 +2161,9 @@ async function handleDefaultDeploy(
         `The domain ${err.meta.domain} was not found, trying to purchase it`
       );
 
+      const { default: purchaseDomainIfAvailable } = await import(
+        '../../util/domains/purchase-domain-if-available'
+      );
       const purchase = await purchaseDomainIfAvailable(
         client,
         err.meta.domain,
@@ -1825,7 +2180,11 @@ async function handleDefaultDeploy(
         return 1;
       }
 
-      handleCreateDeployError(purchase, localConfig);
+      // Purchase errors (a changed price, a declined card) aren't deploy
+      // errors, so print them here instead of exiting without a message.
+      if (handleCreateDeployError(purchase, localConfig) !== 1) {
+        output.error(purchase.message);
+      }
       return 1;
     }
 
@@ -1870,6 +2229,21 @@ async function handleDefaultDeploy(
     }
 
     if (err instanceof BuildError) {
+      const buildFailedNext = [
+        ...(now.url
+          ? [
+              {
+                command: withGlobalFlags(client, `inspect ${now.url} --logs`),
+                when: 'read build logs',
+              },
+            ]
+          : []),
+        {
+          command: redeployCommand,
+          when: 'retry deploy',
+        },
+      ];
+
       if (now.url) {
         try {
           const failedDeployment = await getDeployment(
@@ -1880,17 +2254,28 @@ async function handleDefaultDeploy(
 
           if (asJson) {
             output.stopSpinner();
-            client.stdout.write(
-              `${JSON.stringify(
-                getDeploymentOutputJson(failedDeployment, client.apiUrl, {
-                  name: 'BUILD_ERROR',
-                  message: err.message,
-                }),
-                null,
-                2
-              )}\n`
+            const deploymentJson = getDeploymentOutputJson(
+              failedDeployment,
+              client.apiUrl,
+              {
+                name: 'BUILD_ERROR',
+                message: err.message,
+              }
             );
+            const payload = client.nonInteractive
+              ? {
+                  status: AGENT_STATUS.ERROR,
+                  reason: 'build_failed',
+                  message: err.message,
+                  deployment: deploymentJson,
+                  next: buildFailedNext,
+                }
+              : deploymentJson;
+            client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
           } else if (withFullLogs === false) {
+            const { displayBuildLogsUntilFinalError } = await import(
+              '../../util/logs'
+            );
             await displayBuildLogsUntilFinalError(
               client,
               failedDeployment,
@@ -1900,19 +2285,22 @@ async function handleDefaultDeploy(
         } catch (_) {
           if (asJson) {
             output.stopSpinner();
-            client.stdout.write(
-              `${JSON.stringify(
-                {
+            const payload = client.nonInteractive
+              ? {
+                  status: AGENT_STATUS.ERROR,
+                  reason: 'build_failed',
+                  message: err.message,
+                  url: `https://${now.url}`,
+                  next: buildFailedNext,
+                }
+              : {
                   error: {
                     name: 'BUILD_ERROR',
                     message: err.message,
                   },
                   url: `https://${now.url}`,
-                },
-                null,
-                2
-              )}\n`
-            );
+                };
+            client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
           } else {
             output.log(
               `To check build logs run: ${getCommandName(
@@ -1924,6 +2312,20 @@ async function handleDefaultDeploy(
             );
           }
         }
+      } else if (client.nonInteractive) {
+        output.stopSpinner();
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              status: AGENT_STATUS.ERROR,
+              reason: 'build_failed',
+              message: err.message,
+              next: buildFailedNext,
+            },
+            null,
+            2
+          )}\n`
+        );
       }
 
       return 1;
@@ -1978,16 +2380,37 @@ async function handleDefaultDeploy(
     return 1;
   }
 
-  const gitConnectCommand = postDeployGuidanceEnabled
-    ? await getGitConnectRecommendation(client, projectCwd, project, {
-        alreadyOffered:
-          'gitConnectOffered' in link ? link.gitConnectOffered : false,
-      })
-    : undefined;
+  const [gitConnectCommand, protection] = await Promise.all([
+    postDeployGuidanceEnabled
+      ? getGitConnectRecommendation(client, projectCwd, project, {
+          alreadyOffered:
+            'gitConnectOffered' in link ? link.gitConnectOffered : false,
+        })
+      : undefined,
+    // Anonymous deployments have no project settings to read.
+    anonymousLink ? null : getEnabledProtection(client, project),
+  ]);
+
+  const anonymousUrl = anonymousLink ? deployment.alias?.[0] : undefined;
+  let verification: DeploymentVerification | undefined;
+  if (verify) {
+    const verifyUrl = anonymousUrl
+      ? `https://${anonymousUrl}`
+      : (getProductionUrl(deployment) ?? `https://${deployment.url}`);
+    output.spinner(`Loading ${verifyUrl}…`, 0);
+    verification = await verifyDeployment(client, verifyUrl, {
+      project: anonymousLink ? undefined : project,
+      org: anonymousLink ? undefined : org,
+      protectionEnabled: Boolean(protection?.length),
+    });
+    output.stopSpinner();
+    if (!verification.ok) {
+      recordCliError({ code: 'verification_failed' });
+    }
+  }
 
   if (asJson) {
     output.stopSpinner();
-    const anonymousUrl = anonymousLink ? deployment.alias?.[0] : undefined;
     const deploymentJson = {
       ...getDeploymentOutputJson(deployment, client.apiUrl),
       ...(anonymousLink
@@ -1997,9 +2420,50 @@ async function handleDefaultDeploy(
           }
         : {}),
       ...(anonymousUrl
-        ? { url: `https://${anonymousUrl}`, inspectorUrl: null }
+        ? {
+            url: `https://${anonymousUrl}`,
+            inspectorUrl: null,
+            productionUrl: null,
+          }
         : {}),
+      ...(anonymousLink
+        ? {}
+        : {
+            deploymentProtection: protection?.map(method => method.id) ?? null,
+          }),
+      ...(verification ? { verification } : {}),
     };
+
+    if (verification && !verification.ok) {
+      const message = formatVerificationFailure(verification);
+      const payload = client.nonInteractive
+        ? {
+            status: AGENT_STATUS.ERROR,
+            reason: 'verification_failed',
+            message,
+            deployment: deploymentJson,
+            next: [
+              {
+                command: `${packageName} curl ${verification.url}`,
+                when: 'See the full response',
+              },
+              {
+                command: withGlobalFlags(
+                  client,
+                  `inspect ${deployment.url} --logs`
+                ),
+                when: 'read build logs',
+              },
+            ],
+          }
+        : {
+            ...deploymentJson,
+            error: { name: 'VERIFICATION_FAILED', message },
+          };
+      client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+      return 1;
+    }
+
     const isImplicitProduction = deployment.target === 'production' && !target;
     const payload = client.nonInteractive
       ? {
@@ -2007,7 +2471,7 @@ async function handleDefaultDeploy(
           deployment: deploymentJson,
           message: anonymousLink
             ? `Anonymous deployment ${anonymousUrl ?? deployment.url} ready. It expires in ${ms(anonymousLink.expiresAt - Date.now(), { long: true })}. Claim it at ${anonymousLink.claimUrl} to keep it.`
-            : `Deployment ${deployment.url} ready.`,
+            : formatReadyMessage(deployment.url, deploymentJson.productionUrl),
           ...(isImplicitProduction
             ? {
                 hint: 'This is the project\u2019s first deployment, so it was assigned to production. Future deployments will be preview deployments unless you use --prod.',
@@ -2033,10 +2497,15 @@ async function handleDefaultDeploy(
                       },
                     ]
                   : []),
-                {
-                  command: `${packageName} curl https://${deployment.url}`,
-                  when: 'Verify deployment, including when Deployment Protection is enabled',
-                },
+                // `--verify` already loaded the URL.
+                ...(verification
+                  ? []
+                  : [
+                      {
+                        command: `${packageName} curl ${deploymentJson.productionUrl ?? `https://${deployment.url}`}`,
+                        when: 'Verify deployment, including when Deployment Protection is enabled',
+                      },
+                    ]),
                 {
                   command: withGlobalFlags(client, `inspect ${deployment.url}`),
                   when: 'Inspect deployment',
@@ -2073,7 +2542,13 @@ async function handleDefaultDeploy(
     noWait,
     postDeployGuidanceEnabled,
     undefined,
-    gitConnectCommand
+    gitConnectCommand,
+    // Standard Protection leaves production domains public, so the notice
+    // only shows when the URL people open is protected.
+    getProtectionForDeployment(protection, deployment).map(
+      method => method.name
+    ),
+    verification
   );
 }
 
@@ -2179,6 +2654,14 @@ function printDeploymentDryRun(
           totalSize: summary.totalSize,
           ignoredCount: summary.ignoredCount,
           ignored: summary.ignored,
+          ...(summary.warning
+            ? {
+                warning: {
+                  code: 'PREBUILT_FILEPATHMAP_IGNORED',
+                  message: summary.warning,
+                },
+              }
+            : {}),
           directories,
           largestFiles,
           files: summary.files,
@@ -2294,7 +2777,7 @@ const addProcessEnv = async (
       throw new Error(
         `No value specified for env variable ${chalk.bold(
           `"${chalk.bold(key)}"`
-        )} and it was not found in your env. If you meant to specify an environment to deploy to, use ${param('--target')}`
+        )} and it was not found in your env. If you meant to specify an environment to deploy to, use ${param('--environment')}`
       );
     }
   }
@@ -2333,6 +2816,7 @@ function resolvePrebuiltPerDirectoryRoot(
 
 async function handleContinueDeployment({
   client,
+  telemetryClient,
   deploymentId,
   cwd,
   deployStamp,
@@ -2342,6 +2826,7 @@ async function handleContinueDeployment({
   archive,
 }: {
   client: Client;
+  telemetryClient: DeployTelemetryClient;
   deploymentId: string;
   cwd: string;
   deployStamp: () => string;
@@ -2369,8 +2854,12 @@ async function handleContinueDeployment({
 
   try {
     let finalDeployment: any = null;
+    let prebuiltFilePathMapWarning:
+      | { code: 'PREBUILT_FILEPATHMAP_IGNORED'; message: string }
+      | undefined;
 
     for await (const event of continueDeployment({
+      dispatcher: getFetchDispatcher(),
       apiUrl: client.apiUrl,
       debug: output.isDebugEnabled(),
       deploymentId,
@@ -2381,6 +2870,23 @@ async function handleContinueDeployment({
       vercelOutputDir,
     })) {
       debug(`Event: ${event.type}`);
+
+      if (
+        event.type === 'warning' &&
+        'code' in event &&
+        event.code === 'PREBUILT_FILEPATHMAP_IGNORED'
+      ) {
+        const message = String(event.payload);
+        prebuiltFilePathMapWarning = {
+          code: 'PREBUILT_FILEPATHMAP_IGNORED',
+          message,
+        };
+        printPrebuiltFilePathMapIgnoreWarning(message, telemetryClient);
+        if (client.stderr.isTTY) {
+          output.spinner(`Continuing deployment…`, 0);
+        }
+        continue;
+      }
 
       if (event.type === 'hashes-calculated') {
         const hashCount = Object.keys(event.payload).length;
@@ -2425,6 +2931,9 @@ async function handleContinueDeployment({
         );
 
         if (noWait) {
+          if (prebuiltFilePathMapWarning) {
+            finalDeployment.warning = prebuiltFilePathMapWarning;
+          }
           return printDeploymentStatus(
             client,
             finalDeployment,
@@ -2469,6 +2978,7 @@ async function handleContinueDeployment({
       if (event.type === 'error') {
         output.stopSpinner();
         const payload = event.payload;
+        recordCliError(cliErrorFromUnknown(payload));
         error(payload.message || 'An error occurred during deployment');
         return 1;
       }
@@ -2479,6 +2989,10 @@ async function handleContinueDeployment({
       return 1;
     }
 
+    if (prebuiltFilePathMapWarning) {
+      finalDeployment.warning = prebuiltFilePathMapWarning;
+    }
+
     return printDeploymentStatus(
       client,
       finalDeployment,
@@ -2487,6 +3001,7 @@ async function handleContinueDeployment({
       false
     );
   } catch (err: unknown) {
+    recordCliError(cliErrorFromUnknown(err));
     output.stopSpinner();
     if (isError(err)) {
       debug(`Error: ${err}\n${err.stack}`);
@@ -2498,24 +3013,45 @@ async function handleContinueDeployment({
   }
 }
 
+function formatReadyMessage(url: string, productionUrl: string | null) {
+  return productionUrl
+    ? `Deployment ${url} ready. Production URL: ${productionUrl}`
+    : `Deployment ${url} ready.`;
+}
+
 function getDeploymentOutputJson(
-  deployment: {
-    id: string;
-    url: string;
-    inspectorUrl?: string | null;
-    readyState: string;
-    target?: string | null;
-  },
+  deployment: Pick<
+    Deployment,
+    | 'id'
+    | 'url'
+    | 'inspectorUrl'
+    | 'readyState'
+    | 'target'
+    | 'resourceConfig'
+    | 'aliasWarning'
+    | 'aliasError'
+  > &
+    Partial<Pick<Deployment, 'alias' | 'aliasAssigned'>> & {
+      warning?: { code: string; message: string };
+    },
   apiUrl: string,
   error?: { name: string; message: string }
 ) {
+  const buildMachine = getBuildMachineResourceConfig(deployment);
   return {
     id: deployment.id,
     url: `https://${deployment.url}`,
+    productionUrl: getProductionUrl(deployment),
     inspectorUrl: deployment.inspectorUrl ?? null,
     readyState: deployment.readyState,
     target: deployment.target ?? null,
     deploymentApiUrl: `${apiUrl}/v13/deployments/${deployment.id}`,
+    ...(buildMachine ? { buildMachine } : {}),
+    ...(deployment.warning ? { warning: deployment.warning } : {}),
+    ...(deployment.aliasWarning
+      ? { aliasWarning: deployment.aliasWarning }
+      : {}),
+    ...(deployment.aliasError ? { aliasError: deployment.aliasError } : {}),
     ...(error ? { error } : {}),
   };
 }
@@ -2563,16 +3099,14 @@ function shouldReconcileFinalDeployment(
 // v2 checks: fetch check runs and print failures
 async function handleFailedCheckRuns(
   client: Client,
-  deployment: {
-    id: string;
-    url: string;
-    inspectorUrl?: string | null;
-    readyState: string;
-    target?: string | null;
-  },
+  deployment: Pick<
+    Deployment,
+    'id' | 'url' | 'inspectorUrl' | 'readyState' | 'target' | 'resourceConfig'
+  >,
   asJson: boolean,
   retryCommand = withGlobalFlags(client, 'deploy')
 ): Promise<number> {
+  recordCliError({ code: 'checks_failed' });
   const { runs } = await getDeploymentCheckRuns(client, deployment.id);
 
   const failedRuns = (runs ?? []).filter(run => run.conclusion === 'failed');

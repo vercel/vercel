@@ -9,10 +9,8 @@ import { formatVariantValue } from './resolve-variant';
 import type {
   FlagCondition,
   FlagEnvironmentConfig,
-  FlagOutcome,
-  FlagRolloutOutcome,
+  FlagServingOutcome,
   FlagRule,
-  FlagSplitOutcome,
   FlagVariant,
   FlagVersion,
 } from './types';
@@ -464,8 +462,8 @@ function appendTargetChanges(
 function appendOutcomeChange(
   lines: string[],
   label: string,
-  before: FlagOutcome | FlagSplitOutcome | FlagRolloutOutcome | undefined,
-  after: FlagOutcome | FlagSplitOutcome | FlagRolloutOutcome | undefined,
+  before: FlagServingOutcome | undefined,
+  after: FlagServingOutcome | undefined,
   beforeVariants: FlagVariant[],
   afterVariants: FlagVariant[],
   indent = 4,
@@ -760,7 +758,7 @@ function formatReuse(reuse: FlagEnvironmentConfig['reuse']): string {
 }
 
 function formatOutcome(
-  outcome: FlagOutcome | FlagSplitOutcome | FlagRolloutOutcome,
+  outcome: FlagServingOutcome,
   variants: FlagVariant[],
   includeServe = true,
   includeVariantId = false

@@ -320,6 +320,20 @@ describe('getBlobRWToken', () => {
       expect(mockedCreateEnvObject).not.toHaveBeenCalled();
     });
 
+    it.each([
+      [['--store', 'store_abc123']],
+      [['--store=store_abc123']],
+    ])('reads the store from --store as from --store-id: %j', async store => {
+      const argv = ['blob', 'list', '--oidc-token', 'oidc', ...store];
+
+      expect(await getBlobRWToken(client, argv)).toEqual({
+        success: true,
+        kind: 'oidc',
+        oidcToken: 'oidc',
+        storeId: 'store_abc123',
+      });
+    });
+
     it('should support --flag=value equals form', async () => {
       const oidcToken = 'eyJhbGc.payload.signature';
       const storeId = 'store_abc123';
@@ -353,7 +367,7 @@ describe('getBlobRWToken', () => {
       expect(result).toEqual({
         success: false,
         error: expect.stringContaining(
-          '--oidc-token and --store-id must be passed together'
+          '--oidc-token and --store must be passed together'
         ),
       });
     });
@@ -366,7 +380,7 @@ describe('getBlobRWToken', () => {
       expect(result).toEqual({
         success: false,
         error: expect.stringContaining(
-          '--oidc-token and --store-id must be passed together'
+          '--oidc-token and --store must be passed together'
         ),
       });
     });
@@ -387,7 +401,7 @@ describe('getBlobRWToken', () => {
       expect(result).toEqual({
         success: false,
         error: expect.stringContaining(
-          '--oidc-token and --store-id must be passed together'
+          '--oidc-token and --store must be passed together'
         ),
       });
     });

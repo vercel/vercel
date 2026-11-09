@@ -3,6 +3,7 @@ import { packageName } from '../../util/pkg-name';
 export const mcpCommand = {
   name: 'mcp',
   aliases: [],
+  summary: 'Set up MCP agents for Vercel',
   description: 'Set up MCP agents and configuration for Vercel integration',
   arguments: [],
   options: [

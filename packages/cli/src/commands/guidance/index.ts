@@ -44,7 +44,7 @@ export default async function guidance(client: Client) {
     parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { subcommand, subcommandOriginal } = getSubcommand(
@@ -57,6 +57,7 @@ export default async function guidance(client: Client) {
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         columns: client.stderr.columns,
         parent: guidanceCommand,
       })
@@ -65,8 +66,13 @@ export default async function guidance(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetryClient.trackCliFlagHelp('guidance', subcommand);
-    output.print(help(guidanceCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(guidanceCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   switch (subcommand) {
@@ -74,7 +80,7 @@ export default async function guidance(client: Client) {
       if (needHelp) {
         telemetryClient.trackCliFlagHelp('guidance', subcommandOriginal);
         printHelp(statusSubcommand);
-        return 2;
+        return 0;
       }
       telemetryClient.trackCliSubcommandStatus(subcommandOriginal);
       return status(client);
@@ -82,7 +88,7 @@ export default async function guidance(client: Client) {
       if (needHelp) {
         telemetryClient.trackCliFlagHelp('guidance', subcommandOriginal);
         printHelp(enableSubcommand);
-        return 2;
+        return 0;
       }
       telemetryClient.trackCliSubcommandEnable(subcommandOriginal);
       return enable(client);
@@ -90,11 +96,16 @@ export default async function guidance(client: Client) {
       if (needHelp) {
         telemetryClient.trackCliFlagHelp('guidance', subcommandOriginal);
         printHelp(disableSubcommand);
-        return 2;
+        return 0;
       }
       return disable(client);
     default: {
-      output.print(help(guidanceCommand, { columns: client.stderr.columns }));
+      output.print(
+        help(guidanceCommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
+      );
       return 2;
     }
   }

@@ -65,6 +65,7 @@ for (const platform of platforms) {
     repository: repository('packages/vc-native'),
     os: platform.os,
     cpu: platform.cpu,
+    ...(platform.libc ? { libc: platform.libc } : {}),
     files: ['bin'],
     publishConfig: { access: 'public' },
   });

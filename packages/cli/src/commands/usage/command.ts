@@ -1,29 +1,31 @@
-import { formatOption, jsonOption } from '../../util/arg-common';
+import {
+  formatOption,
+  jsonOption,
+  sinceOption,
+  untilOption,
+} from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const usageCommand = {
   name: 'usage',
   aliases: [],
+  summary: 'Show billing usage and costs',
   description:
-    'Show billing usage (MIUs and costs) for the current billing period or a custom date range',
+    'Show billing usage and costs for the current billing cycle or a custom date range',
   arguments: [],
   options: [
     {
-      name: 'from',
-      shorthand: null,
-      type: String,
-      argument: 'DATE',
-      description: 'Start date (YYYY-MM-DD, interpreted as midnight LA time)',
-      deprecated: false,
+      ...sinceOption,
+      description:
+        'Start time: YYYY-MM-DD (midnight LA time), ISO 8601, or relative, like 7d (default: start of the current billing cycle)',
     },
     {
-      name: 'to',
-      shorthand: null,
-      type: String,
-      argument: 'DATE',
-      description: 'End date (YYYY-MM-DD, interpreted as end of day LA time)',
-      deprecated: false,
+      ...untilOption,
+      description:
+        'End time: YYYY-MM-DD (end of day LA time), ISO 8601, or relative; requires --since (default: now)',
     },
+    { name: 'from', shorthand: null, type: String, deprecated: true },
+    { name: 'to', shorthand: null, type: String, deprecated: true },
     {
       name: 'breakdown',
       shorthand: null,
@@ -52,7 +54,11 @@ export const usageCommand = {
     },
     {
       name: 'Show usage for a custom date range',
-      value: `${packageName} usage --from 2025-01-01 --to 2025-01-31`,
+      value: `${packageName} usage --since 2025-01-01 --until 2025-01-31`,
+    },
+    {
+      name: 'Show usage for the last 7 days',
+      value: `${packageName} usage --since 7d`,
     },
     {
       name: 'Show daily usage breakdown',

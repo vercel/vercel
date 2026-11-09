@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import importlib.util
 import logging
 import logging.config
 import mimetypes
 import os
+import posixpath
 import sys
 from typing import TYPE_CHECKING, Any, cast
 
@@ -20,6 +22,7 @@ from vercel_runtime.routing import (
     apply_service_route_prefix_to_asgi_scope,
     strip_service_route_prefix,
 )
+from vercel_runtime.schedules import is_schedule_scripts_app
 from vercel_runtime.wait_until import (
     WaitUntilCollector,
     begin_wait_until,
@@ -253,8 +256,7 @@ def _static_wsgi_app(
         return _not_found(start_response)
 
     req_path = environ.get("PATH_INFO", "/") or "/"
-    safe = os.path.normpath(req_path).lstrip("/")
-    full = os.path.join(PUBLIC_DIR, safe)
+    full = posixpath.join(PUBLIC_DIR, req_path.lstrip("/"))
     if not _is_safe_file(PUBLIC_DIR, full):
         return _not_found(start_response)
 
@@ -327,8 +329,7 @@ async def _asgi_app(
 
     if static_asgi is not None and effective_scope.get("type") == "http":
         req_path = effective_scope.get("path", "/") or "/"
-        safe = os.path.normpath(req_path).lstrip("/")
-        full = os.path.join(PUBLIC_DIR, safe)
+        full = posixpath.join(PUBLIC_DIR, req_path.lstrip("/"))
         try:
             base = os.path.realpath(PUBLIC_DIR)
             target = os.path.realpath(full)
@@ -480,6 +481,19 @@ def _start_wsgi(host: str, port: int) -> None:
 
 
 def _start_asgi(host: str, port: int) -> None:
+    # The schedule supervisor runs each firing as a fresh process, so code
+    # changes apply without reloading it, and `vercel dev` restarts it when
+    # its schedules change.
+    if is_schedule_scripts_app(_asgi_user_app):
+        vendored_uvicorn.run(
+            "vercel_runtime.dev:asgi_app",
+            host=host,
+            port=port,
+            use_colors=not _NO_COLOR,
+            log_config=_build_uvicorn_log_config(),
+        )
+        return
+
     # Prefer user-installed fastapi-cli for web services;
     # cron/worker go straight to uvicorn.
     if not is_cron_service() and not is_worker_service():
@@ -499,12 +513,19 @@ def _start_asgi(host: str, port: int) -> None:
         except (ImportError, AttributeError):
             pass
 
+    has_watchfiles = bool(importlib.util.find_spec("watchfiles"))
+
+    # If watchfiles isn't installed, turn up the reload_delay so we don't
+    # hammer the CPU.
+    reload_delay = 0.25 if has_watchfiles else 2.0
+
     vendored_uvicorn.run(
         "vercel_runtime.dev:asgi_app",
         host=host,
         port=port,
         use_colors=not _NO_COLOR,
         reload=True,
+        reload_delay=reload_delay,
         log_config=_build_uvicorn_log_config(),
     )
 

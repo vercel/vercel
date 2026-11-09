@@ -2,13 +2,21 @@ import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import flags from '../../../../src/commands/flags';
+import {
+  flagsCommand,
+  setSubcommand,
+} from '../../../../src/commands/flags/command';
+import { help } from '../../../../src/commands/help';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { useFlags } from '../../../mocks/flags';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
-import type { Flag } from '../../../../src/util/flags/types';
+import type {
+  Flag,
+  FlagServingOutcome,
+} from '../../../../src/util/flags/types';
 
 function createTestFlags(): Flag[] {
   return [
@@ -205,12 +213,30 @@ describe('flags set', () => {
   });
 
   describe('--help', () => {
+    it.each([40, 80, 120])('explains preservation at %i columns', columns => {
+      const text = stripAnsi(
+        help(setSubcommand, {
+          stream: { isTTY: false },
+          parent: flagsCommand,
+          columns,
+        })
+      ).replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'default variant, split or rollout, rules, and targets are preserved'
+      );
+      expect(text).toContain('resume targeting with the saved configuration');
+      expect(text).toContain('flags targeting enable <FLAG>');
+      expect(text).not.toContain('use-targeting');
+      expect(text).not.toContain('replaces');
+    });
+
     it('tracks telemetry', async () => {
       client.setArgv('flags', 'set', '--help');
 
       const exitCodePromise = flags(client);
 
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
@@ -273,7 +299,7 @@ describe('flags set', () => {
     await expect(client.stderr).toOutput(
       'flags set my-feature --environment production --variant true'
     );
-    expect(await exitCodePromise).toEqual(1);
+    expect(await exitCodePromise).toEqual(2);
   });
 
   it('sets a string variant by value', async () => {
@@ -300,7 +326,7 @@ describe('flags set', () => {
     expect(testFlags[1].environments.production).toMatchObject({
       active: false,
       pausedOutcome: { type: 'variant', variantId: 'variant-a' },
-      fallthrough: { type: 'variant', variantId: 'variant-a' },
+      fallthrough: { type: 'variant', variantId: 'default' },
     });
   });
 
@@ -325,7 +351,7 @@ describe('flags set', () => {
     expect(testFlags[2].environments.preview).toMatchObject({
       active: false,
       pausedOutcome: { type: 'variant', variantId: 'large' },
-      fallthrough: { type: 'variant', variantId: 'large' },
+      fallthrough: { type: 'variant', variantId: 'small' },
     });
   });
 
@@ -353,7 +379,7 @@ describe('flags set', () => {
     expect(testFlags[2].environments.preview).toMatchObject({
       active: false,
       pausedOutcome: { type: 'variant', variantId: 'large' },
-      fallthrough: { type: 'variant', variantId: 'large' },
+      fallthrough: { type: 'variant', variantId: 'small' },
     });
   });
 
@@ -381,7 +407,7 @@ describe('flags set', () => {
     expect(testFlags[3].environments.preview).toMatchObject({
       active: false,
       pausedOutcome: { type: 'variant', variantId: 'dark' },
-      fallthrough: { type: 'variant', variantId: 'dark' },
+      fallthrough: { type: 'variant', variantId: 'light' },
     });
   });
 
@@ -406,7 +432,7 @@ describe('flags set', () => {
     expect(testFlags[1].environments.production).toMatchObject({
       active: false,
       pausedOutcome: { type: 'variant', variantId: 'variant-a' },
-      fallthrough: { type: 'variant', variantId: 'variant-a' },
+      fallthrough: { type: 'variant', variantId: 'default' },
     });
   });
 
@@ -434,7 +460,7 @@ describe('flags set', () => {
     expect(testFlags[0].environments.production).toMatchObject({
       active: false,
       pausedOutcome: { type: 'variant', variantId: 'on' },
-      fallthrough: { type: 'variant', variantId: 'on' },
+      fallthrough: { type: 'variant', variantId: 'off' },
     });
   });
 
@@ -462,7 +488,7 @@ describe('flags set', () => {
     expect(testFlags[0].environments.development).toMatchObject({
       active: false,
       pausedOutcome: { type: 'variant', variantId: 'off' },
-      fallthrough: { type: 'variant', variantId: 'off' },
+      fallthrough: { type: 'variant', variantId: 'on' },
     });
   });
   it('prompts for environment and variant when not specified', async () => {
@@ -508,7 +534,87 @@ describe('flags set', () => {
     expect(testFlags[1].environments.preview).toMatchObject({
       active: false,
       pausedOutcome: { type: 'variant', variantId: 'variant-a' },
-      fallthrough: { type: 'variant', variantId: 'variant-a' },
+      fallthrough: { type: 'variant', variantId: 'default' },
+    });
+  });
+
+  it.each([
+    { type: 'variant', variantId: 'default' },
+    {
+      type: 'split',
+      base: { type: 'entity', kind: 'user', attribute: 'id' },
+      weights: { default: 50, 'variant-a': 50 },
+      defaultVariantId: 'default',
+    },
+    {
+      type: 'rollout',
+      base: { type: 'entity', kind: 'user', attribute: 'id' },
+      startTimestamp: 1_790_000_000_000,
+      rollFromVariantId: 'default',
+      rollToVariantId: 'variant-a',
+      defaultVariantId: 'default',
+      slots: [{ durationMs: 86_400_000, promille: 50_000 }],
+    },
+  ] satisfies FlagServingOutcome[])('preserves $type fallthrough through set and use-targeting', async fallthrough => {
+    client.stdin.isTTY = false;
+    const flag = testFlags[1];
+    flag.environments.production = {
+      active: true,
+      fallthrough,
+      pausedOutcome: { type: 'variant', variantId: 'default' },
+      rules: [
+        {
+          id: 'rule_custom',
+          conditions: [
+            {
+              lhs: { type: 'entity', kind: 'user', attribute: 'plan' },
+              cmp: 'eq',
+              rhs: 'enterprise',
+            },
+          ],
+          outcome: { type: 'variant', variantId: 'variant-a' },
+        },
+      ],
+      targets: {
+        'variant-a': { user: { id: [{ value: 'user_123' }] } },
+      },
+    };
+    const originalEnvironment = structuredClone(flag.environments.production);
+    client.setArgv(
+      'flags',
+      'set',
+      flag.slug,
+      '--environment',
+      'production',
+      '--variant',
+      'treatment'
+    );
+
+    expect(await flags(client)).toBe(0);
+    const pausedEnvironment = {
+      ...originalEnvironment,
+      active: false,
+      pausedOutcome: { type: 'variant', variantId: 'variant-a' },
+    };
+    expect(testFlags[1].environments.production).toEqual(pausedEnvironment);
+
+    const revision = testFlags[1].revision;
+    expect(await flags(client)).toBe(0);
+    expect(testFlags[1].revision).toBe(revision);
+    expect(client.stderr.getFullOutput()).toContain('already serving');
+    expect(testFlags[1].environments.production).toEqual(pausedEnvironment);
+
+    client.setArgv(
+      'flags',
+      'use-targeting',
+      flag.slug,
+      '--environment',
+      'production'
+    );
+    expect(await flags(client)).toBe(0);
+    expect(testFlags[1].environments.production).toEqual({
+      ...pausedEnvironment,
+      active: true,
     });
   });
 
@@ -520,7 +626,7 @@ describe('flags set', () => {
 
     expect(exitCode).toEqual(1);
     expect(client.stderr.getFullOutput()).toContain(
-      'Missing required flag --environment'
+      'Missing required option --environment'
     );
   });
 
@@ -538,7 +644,7 @@ describe('flags set', () => {
 
     expect(exitCode).toEqual(1);
     expect(client.stderr.getFullOutput()).toContain(
-      'Missing required flag --variant'
+      'Missing required option --variant'
     );
   });
 
@@ -609,7 +715,7 @@ describe('flags set', () => {
     );
   });
 
-  it('errors when the flag is archived', async () => {
+  it('updates an archived flag without unarchiving it', async () => {
     testFlags[1].state = 'archived';
     (client.stdin as any).isTTY = false;
     client.setArgv(
@@ -624,8 +730,18 @@ describe('flags set', () => {
 
     const exitCode = await flags(client);
 
-    expect(exitCode).toEqual(1);
-    expect(client.stderr.getFullOutput()).toContain('archived');
+    expect(exitCode).toEqual(0);
+    expect(testFlags[1].state).toBe('archived');
+    expect(testFlags[1].environments.production.pausedOutcome).toEqual({
+      type: 'variant',
+      variantId: 'default',
+    });
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      'This flag remains archived'
+    );
+    expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
+      'Serving variant:'
+    );
   });
 
   it('uses a custom revision message', async () => {

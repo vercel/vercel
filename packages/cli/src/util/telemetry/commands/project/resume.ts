@@ -6,12 +6,24 @@ export class ProjectResumeTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof resumeSubcommand>
 {
-  trackCliArgumentProject(value: string | undefined) {
-    if (value) {
+  trackCliArgumentProject(value: string[]) {
+    if (value.length > 0) {
       this.trackCliArgument({
         arg: 'project',
         value: this.redactedValue,
       });
+    }
+  }
+
+  trackCliFlagAll(all: boolean | undefined) {
+    if (all) {
+      this.trackCliFlag('all');
+    }
+  }
+
+  trackCliFlagYes(yes: boolean | undefined) {
+    if (yes) {
+      this.trackCliFlag('yes');
     }
   }
 

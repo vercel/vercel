@@ -1,544 +1,400 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import traces from '../../../../src/commands/traces';
-import * as linkModule from '../../../../src/util/projects/link';
-import type { ProjectTracing } from '@vercel-internals/types';
+import {
+  expectConfigTarget,
+  headRule,
+  mockConfigScope,
+  useTracingConfig,
+} from './config-fixture';
 
 vi.mock('../../../../src/util/projects/link');
-
-const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
-
-function mockLinkedProject() {
-  mockedGetLinkedProject.mockResolvedValue({
-    status: 'linked',
-    project: {
-      id: 'prj_test',
-      name: 'traces-project',
-      accountId: 'team_dummy',
-      updatedAt: Date.now(),
-      createdAt: Date.now(),
-    },
-    org: {
-      id: 'team_dummy',
-      slug: 'my-team',
-      type: 'team',
-    },
-  });
-}
-
-type PatchCalls = {
-  bodies: Array<Record<string, unknown>>;
-};
-
-/**
- * Registers the read-modify-write pair for a project with the given `tracing`
- * value and records every PATCH body.
- */
-function useTracingProject(tracing: ProjectTracing | null | undefined) {
-  const calls: PatchCalls = { bodies: [] };
-  const project = {
-    id: 'prj_test',
-    name: 'traces-project',
-    accountId: 'team_dummy',
-    updatedAt: Date.now(),
-    createdAt: Date.now(),
-    ...(tracing === undefined ? {} : { tracing }),
-  };
-  client.scenario.get('/v9/projects/:idOrName', (_req, res) => {
-    res.json(project);
-  });
-  client.scenario.patch('/v9/projects/:idOrName', (req, res) => {
-    calls.bodies.push(req.body);
-    res.json({ ...project, ...req.body });
-  });
-  return calls;
-}
-
-/** The `tracing` object from the single PATCH the command should have made. */
-function patchedTracing(calls: PatchCalls): ProjectTracing {
-  expect(calls.bodies).toHaveLength(1);
-  return calls.bodies[0].tracing as ProjectTracing;
-}
 
 describe('vercel traces config set', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
     client.nonInteractive = false;
-    mockLinkedProject();
+    mockConfigScope();
   });
 
-  it('creates the first rule on a project that has never used tracing', async () => {
-    const calls = useTracingProject(null);
+  it.each([
+    [
+      'production',
+      '1',
+      '/api',
+      headRule(0.01, { env: 'production', requestPath: '/api' }),
+    ],
+    ['preview', '100', undefined, headRule(1, { env: 'preview' })],
+    ['any', '30', '/blog', headRule(0.3, { requestPath: '/blog' })],
+    ['any', '5', undefined, headRule(0.05)],
+  ])('enables tracing and sends %s %s %s as a head-sampling rule', async (env, rate, path, rule) => {
+    const calls = useTracingConfig({ enabled: false, sampling: [] });
+    client.setArgv(
+      'traces',
+      'config',
+      'set',
+      env,
+      rate,
+      ...(path ? [path] : [])
+    );
+    expect(await traces(client)).toBe(0);
+    expect(calls.bodies).toEqual([{ enabled: true, sampling: [rule] }]);
+    expect(calls.requests.map(request => request.method)).toEqual([
+      'GET',
+      'PUT',
+    ]);
+    expectConfigTarget(calls.requests);
+    expect(client.stderr.getFullOutput()).not.toContain('?');
+  });
 
+  it.each([
+    ['25', '--environment', 'production'],
+    ['-e', 'production', '25'],
+    ['--environment=production', '25'],
+  ])('reads the environment from the option in %s %s %s without a warning', async (...args) => {
+    const calls = useTracingConfig({ enabled: false, sampling: [] });
+    client.setArgv('traces', 'config', 'set', ...args);
+    expect(await traces(client)).toBe(0);
+    expect(calls.bodies).toEqual([
+      { enabled: true, sampling: [headRule(0.25, { env: 'production' })] },
+    ]);
+    expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+  });
+
+  it('keeps the environment argument working with a deprecation warning', async () => {
+    const calls = useTracingConfig({ enabled: false, sampling: [] });
     client.setArgv('traces', 'config', 'set', 'production', '25');
-    const exitCode = await traces(client);
-
-    expect(exitCode).toBe(0);
-    expect(patchedTracing(calls)).toEqual({
-      samplingRules: [{ rate: 0.25, env: 'production' }],
-    });
+    expect(await traces(client)).toBe(0);
+    expect(calls.bodies).toEqual([
+      { enabled: true, sampling: [headRule(0.25, { env: 'production' })] },
+    ]);
+    expect(client.stderr.getFullOutput()).toContain(
+      'The environment argument is deprecated. Use --environment.'
+    );
   });
 
-  it('does not invent `domains` or `ignorePaths` when `tracing` is absent', async () => {
-    const calls = useTracingProject(undefined);
-
-    client.setArgv('traces', 'config', 'set', 'preview', '50');
-    const exitCode = await traces(client);
-
-    expect(exitCode).toBe(0);
-    expect(Object.keys(patchedTracing(calls))).toEqual(['samplingRules']);
+  it('rejects an environment given as an argument and as --environment', async () => {
+    const calls = useTracingConfig({ enabled: false, sampling: [] });
+    client.setArgv(
+      'traces',
+      'config',
+      'set',
+      'production',
+      '25',
+      '--environment',
+      'production'
+    );
+    expect(await traces(client)).toBe(2);
+    expect(calls.requests).toEqual([]);
+    expect(client.stderr.getFullOutput()).toContain(
+      "Can't use an environment argument with --environment."
+    );
   });
 
-  it('carries `domains` and `ignorePaths` through untouched', async () => {
-    const calls = useTracingProject({
-      domains: 'drain.example.com,other.example.com',
-      ignorePaths: ['/health', '/metrics'],
-      samplingRules: [{ rate: 0.1, env: 'production' }],
-    });
-
-    client.setArgv('traces', 'config', 'set', 'preview', '100', '/api');
-    const exitCode = await traces(client);
-
-    expect(exitCode).toBe(0);
-    expect(patchedTracing(calls)).toEqual({
-      domains: 'drain.example.com,other.example.com',
-      ignorePaths: ['/health', '/metrics'],
-      samplingRules: [
-        { rate: 0.1, env: 'production' },
-        { rate: 1, env: 'preview', requestPath: '/api' },
-      ],
-    });
-  });
-
-  /**
-   * The API accepts any rate from 0 to 1, and the command line only spells whole
-   * percentages, so a rule the CLI cannot express has to survive an edit to a
-   * different rule: the write sends back the object the API returned, rather
-   * than one rebuilt from what the table showed.
-   */
-  it('sends a neighbouring rate the CLI cannot express back unchanged', async () => {
-    const calls = useTracingProject({
-      samplingRules: [
-        { rate: 0.075, env: 'production' },
-        { rate: 0.005, requestPath: '/blog' },
-      ],
-    });
-
-    client.setArgv('traces', 'config', 'set', 'preview', '50');
-    const exitCode = await traces(client);
-
-    expect(exitCode).toBe(0);
-    expect(patchedTracing(calls).samplingRules).toEqual([
-      { rate: 0.075, env: 'production' },
-      { rate: 0.005, requestPath: '/blog' },
-      { rate: 0.5, env: 'preview' },
+  it('tracks --environment as an option', async () => {
+    useTracingConfig({ enabled: false, sampling: [] });
+    client.setArgv('traces', 'config', 'set', '25', '--environment', 'preview');
+    expect(await traces(client)).toBe(0);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:config', value: 'config' },
+      { key: 'subcommand:set', value: 'set' },
+      { key: 'option:environment', value: 'preview' },
+      { key: 'argument:rate', value: '[REDACTED]' },
     ]);
   });
 
-  it('changes only the rate of the rule it replaces', async () => {
-    const calls = useTracingProject({
-      samplingRules: [
-        { rate: 0.075, env: 'production' },
-        { rate: 0.125, env: 'production', requestPath: '/api' },
-      ],
-    });
-
-    client.setArgv('traces', 'config', 'set', 'production', '20', '/api');
-    const exitCode = await traces(client);
-
-    expect(exitCode).toBe(0);
-    expect(patchedTracing(calls).samplingRules).toEqual([
-      { rate: 0.075, env: 'production' },
-      { rate: 0.2, env: 'production', requestPath: '/api' },
-    ]);
-  });
-
-  /**
-   * A rule the API sent with fields the CLI does not model is still that rule
-   * after its rate changes.
-   */
-  it('keeps fields it does not model on a replaced rule', async () => {
-    const calls = useTracingProject({
-      samplingRules: [
-        {
-          rate: 0.1,
-          env: 'production',
-          requestPath: '/api',
-          unknownField: 'kept',
-        } as never,
-      ],
-    });
-
-    client.setArgv('traces', 'config', 'set', 'production', '30', '/api');
-    const exitCode = await traces(client);
-
-    expect(exitCode).toBe(0);
-    expect(patchedTracing(calls).samplingRules).toEqual([
+  it('updates every duplicate key and reports the previous effective rate', async () => {
+    const sampling = [
+      headRule(0.1, { env: 'preview' }),
+      headRule(0.5, { env: 'production' }),
+      headRule(0.075, { requestPath: '/blog' }),
+      headRule(1, { env: 'production' }),
+    ];
+    const calls = useTracingConfig({ enabled: true, sampling });
+    client.nonInteractive = true;
+    client.setArgv('traces', 'config', 'set', 'production', '25');
+    expect(await traces(client)).toBe(0);
+    expect(calls.bodies).toEqual([
       {
-        rate: 0.3,
-        env: 'production',
-        requestPath: '/api',
-        unknownField: 'kept',
+        enabled: true,
+        sampling: [
+          sampling[0],
+          headRule(0.25, { env: 'production' }),
+          sampling[2],
+          headRule(0.25, { env: 'production' }),
+        ],
+      },
+    ]);
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      previousSampleRate: 100,
+      ruleCount: 4,
+    });
+  });
+
+  it('keeps unmodeled fields on a replaced rule', async () => {
+    const original = {
+      ...headRule(0.1, { env: 'production' }),
+      futureField: 'kept',
+    };
+    const calls = useTracingConfig({ enabled: true, sampling: [original] });
+    client.setArgv('traces', 'config', 'set', 'production', '30');
+    expect(await traces(client)).toBe(0);
+    expect(calls.bodies).toEqual([
+      { enabled: true, sampling: [{ ...original, rate: 0.3 }] },
+    ]);
+  });
+
+  it('preserves the effective catch-all when adding a rule to an enabled drain with empty sampling', async () => {
+    const calls = useTracingConfig({ enabled: true, sampling: [] });
+    client.setArgv('traces', 'config', 'set', 'production', '25', '/api');
+    expect(await traces(client)).toBe(0);
+    expect(calls.bodies).toEqual([
+      {
+        enabled: true,
+        sampling: [
+          headRule(1),
+          headRule(0.25, { env: 'production', requestPath: '/api' }),
+        ],
       },
     ]);
   });
 
-  it('replaces the rule that shares its environment and path', async () => {
-    const calls = useTracingProject({
-      samplingRules: [
-        { rate: 0.1, env: 'production' },
-        { rate: 0.1, env: 'production', requestPath: '/api' },
+  it('preserves neighbouring fractional rates and persisted order when replacing a rule', async () => {
+    const calls = useTracingConfig({
+      enabled: true,
+      sampling: [
+        headRule(0.075, { env: 'production' }),
+        headRule(0.125, { env: 'production', requestPath: '/api' }),
+        headRule(0.005, { requestPath: '/blog' }),
       ],
     });
+    client.setArgv('traces', 'config', 'set', 'production', '20', '/api');
+    expect(await traces(client)).toBe(0);
+    expect(calls.bodies).toEqual([
+      {
+        enabled: true,
+        sampling: [
+          headRule(0.075, { env: 'production' }),
+          headRule(0.2, { env: 'production', requestPath: '/api' }),
+          headRule(0.005, { requestPath: '/blog' }),
+        ],
+      },
+    ]);
+    expect(client.stderr.getFullOutput()).toContain('was 13%');
+    expect(client.stderr.getFullOutput()).toContain('3 of 10 rules');
+  });
 
-    client.setArgv('traces', 'config', 'set', 'production', '75', '/api');
-    const exitCode = await traces(client);
+  it('appends a new rule without conflating any and production', async () => {
+    const calls = useTracingConfig({
+      enabled: true,
+      sampling: [headRule(0.1, { requestPath: '/api' })],
+    });
+    client.setArgv('traces', 'config', 'set', 'production', '90', '/api');
+    expect(await traces(client)).toBe(0);
+    expect(calls.bodies[0].sampling).toEqual([
+      headRule(0.1, { requestPath: '/api' }),
+      headRule(0.9, { env: 'production', requestPath: '/api' }),
+    ]);
+    expect(client.stderr.getFullOutput()).not.toContain('was ');
+  });
 
-    expect(exitCode).toBe(0);
-    expect(patchedTracing(calls).samplingRules).toEqual([
-      { rate: 0.1, env: 'production' },
-      { rate: 0.75, env: 'production', requestPath: '/api' },
+  it('preserves saved sampling when re-enabling a disabled drain', async () => {
+    const calls = useTracingConfig({
+      enabled: false,
+      sampling: [headRule(0.075, { env: 'production' })],
+    });
+    client.setArgv('traces', 'config', 'set', 'preview', '25');
+    expect(await traces(client)).toBe(0);
+    expect(calls.bodies).toEqual([
+      {
+        enabled: true,
+        sampling: [
+          headRule(0.075, { env: 'production' }),
+          headRule(0.25, { env: 'preview' }),
+        ],
+      },
     ]);
   });
 
-  it('reports the old rate and the new rate with the rule count', async () => {
-    useTracingProject({
-      samplingRules: [{ rate: 0.1, env: 'production' }],
+  it('replaces the effective 100% default of an enabled drain with empty sampling', async () => {
+    const calls = useTracingConfig({ enabled: true, sampling: [] });
+    client.setArgv('traces', 'config', 'set', 'any', '25');
+    expect(await traces(client)).toBe(0);
+    expect(calls.bodies).toEqual([
+      { enabled: true, sampling: [headRule(0.25)] },
+    ]);
+    expect(client.stderr.getFullOutput()).toContain('was 100%');
+  });
+
+  describe('the ten-rule limit', () => {
+    const sampling = Array.from({ length: 10 }, (_, index) =>
+      headRule(0.5, { requestPath: `/route-${index}` })
+    );
+    it('refuses an eleventh rule without writing', async () => {
+      const calls = useTracingConfig({ enabled: true, sampling });
+      client.setArgv('traces', 'config', 'set', 'any', '25', '/new-route');
+      expect(await traces(client)).toBe(2);
+      expect(calls.bodies).toEqual([]);
+      expect(client.stderr.getFullOutput()).toContain('traces config remove');
     });
-
-    client.setArgv('traces', 'config', 'set', 'production', '75');
-    const exitCode = await traces(client);
-
-    expect(exitCode).toBe(0);
-    const stderr = client.stderr.getFullOutput();
-    expect(stderr).toContain('75%');
-    expect(stderr).toContain('was 10%');
-    expect(stderr).toContain('1 of 10 rules');
-  });
-
-  it('omits the old rate when the rule is new', async () => {
-    useTracingProject({ samplingRules: [] });
-
-    client.setArgv('traces', 'config', 'set', 'production', '75');
-    const exitCode = await traces(client);
-
-    expect(exitCode).toBe(0);
-    const stderr = client.stderr.getFullOutput();
-    expect(stderr).toContain('75%');
-    expect(stderr).not.toContain('was ');
-    expect(stderr).toContain('1 of 10 rules');
-  });
-
-  it('labels a rule with no path as covering all paths', async () => {
-    useTracingProject({ samplingRules: [] });
-
-    client.setArgv('traces', 'config', 'set', 'any', '5');
-    const exitCode = await traces(client);
-
-    expect(exitCode).toBe(0);
-    expect(client.stderr.getFullOutput()).toContain('(all paths)');
-  });
-
-  it('never prompts', async () => {
-    useTracingProject({ samplingRules: [] });
-
-    client.setArgv('traces', 'config', 'set', 'production', '25');
-    const exitCode = await traces(client);
-
-    expect(exitCode).toBe(0);
-    expect(client.stderr.getFullOutput()).not.toContain('?');
-  });
-
-  describe('rate conversion', () => {
-    it('sends 1 as 0.01', async () => {
-      const calls = useTracingProject({ samplingRules: [] });
-
-      client.setArgv('traces', 'config', 'set', 'production', '1');
-      await traces(client);
-
-      expect(patchedTracing(calls).samplingRules).toEqual([
-        { rate: 0.01, env: 'production' },
-      ]);
-    });
-
-    it('sends 100 as 1', async () => {
-      const calls = useTracingProject({ samplingRules: [] });
-
-      client.setArgv('traces', 'config', 'set', 'production', '100');
-      await traces(client);
-
-      expect(patchedTracing(calls).samplingRules).toEqual([
-        { rate: 1, env: 'production' },
-      ]);
-    });
-  });
-
-  describe('the `any` environment', () => {
-    it('writes a rule with no `env` key', async () => {
-      const calls = useTracingProject({ samplingRules: [] });
-
-      client.setArgv('traces', 'config', 'set', 'any', '30', '/blog');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(0);
-      const [rule] = patchedTracing(calls).samplingRules ?? [];
-      expect(rule).toEqual({ rate: 0.3, requestPath: '/blog' });
-      expect(rule).not.toHaveProperty('env');
-    });
-
-    it('is a different rule from the same path under `production`', async () => {
-      const calls = useTracingProject({
-        samplingRules: [{ rate: 0.1, requestPath: '/api' }],
-      });
-
-      client.setArgv('traces', 'config', 'set', 'production', '90', '/api');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(0);
-      expect(patchedTracing(calls).samplingRules).toEqual([
-        { rate: 0.1, requestPath: '/api' },
-        { rate: 0.9, env: 'production', requestPath: '/api' },
-      ]);
+    it('replaces an existing rule when full', async () => {
+      const calls = useTracingConfig({ enabled: true, sampling });
+      client.setArgv('traces', 'config', 'set', 'any', '25', '/route-3');
+      expect(await traces(client)).toBe(0);
+      expect(calls.bodies[0].sampling).toHaveLength(10);
+      expect(calls.bodies[0].sampling?.[3]).toEqual(
+        headRule(0.25, { requestPath: '/route-3' })
+      );
     });
   });
 
   describe('validation', () => {
-    it('rejects an unknown environment word before calling the API', async () => {
-      const calls = useTracingProject({ samplingRules: [] });
-
-      client.setArgv('traces', 'config', 'set', 'staging', '25');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(1);
-      expect(calls.bodies).toHaveLength(0);
-      const stderr = client.stderr.getFullOutput();
-      expect(stderr).toContain('any, preview, production');
-      expect(stderr).toContain('staging');
-    });
-
     it.each([
-      ['0', 'a rate of zero'],
-      ['101', 'a rate above 100'],
-      ['2.5', 'a fractional rate'],
-      ['abc', 'a non-numeric rate'],
-    ])('rejects %s (%s) before calling the API', async rate => {
-      const calls = useTracingProject({ samplingRules: [] });
-
-      client.setArgv('traces', 'config', 'set', 'production', rate);
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(1);
-      expect(calls.bodies).toHaveLength(0);
-      expect(client.stderr.getFullOutput()).toContain(
-        'whole number from 1 to 100'
-      );
+      ['staging', '25'],
+      ['production', '0'],
+      ['production', '101'],
+      ['production', '2.5'],
+      ['production', 'abc'],
+      ['production', '-5'],
+      ['production', '25', ''],
+    ])('rejects invalid arguments %j before calling the API', async (...args) => {
+      const calls = useTracingConfig({ enabled: false, sampling: [] });
+      client.setArgv('traces', 'config', 'set', ...args);
+      expect(await traces(client)).toBe(2);
+      expect(calls.requests).toEqual([]);
     });
-
-    // A leading `-` reads as a flag to the argument parser, so a negative rate
-    // fails as an unknown option rather than reaching the range check.
-    it('rejects a negative rate before calling the API', async () => {
-      const calls = useTracingProject({ samplingRules: [] });
-
-      client.setArgv('traces', 'config', 'set', 'production', '-5');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(1);
-      expect(calls.bodies).toHaveLength(0);
-    });
-
-    it('rejects an empty path prefix', async () => {
-      const calls = useTracingProject({ samplingRules: [] });
-
-      client.setArgv('traces', 'config', 'set', 'production', '25', '');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(1);
-      expect(calls.bodies).toHaveLength(0);
-    });
-
-    it('prints help and exits 2 when arguments are missing', async () => {
-      const calls = useTracingProject({ samplingRules: [] });
-
-      client.setArgv('traces', 'config', 'set', 'production');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(2);
-      expect(calls.bodies).toHaveLength(0);
-      expect(client.stderr.getFullOutput()).toContain('traces config set');
-    });
-
-    // Arg-count problems print usage, so they exit 2 like `ls` does, while a
-    // bad argument value exits 1.
-    it('exits 2 on too many arguments', async () => {
-      const calls = useTracingProject({ samplingRules: [] });
-
-      client.setArgv(
-        'traces',
-        'config',
-        'set',
-        'production',
-        '25',
-        '/api',
-        '/extra'
-      );
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(2);
-      expect(calls.bodies).toHaveLength(0);
-      expect(client.stderr.getFullOutput()).toContain('Too many arguments');
+    it.each([
+      ['production'],
+      ['production', '25', '/api', '/extra'],
+    ])('exits 2 for invalid argument count %j', async (...args) => {
+      const calls = useTracingConfig({ enabled: false, sampling: [] });
+      client.setArgv('traces', 'config', 'set', ...args);
+      expect(await traces(client)).toBe(2);
+      expect(calls.requests).toEqual([]);
     });
   });
 
-  describe('the ten-rule limit', () => {
-    const tenRules = Array.from({ length: 10 }, (_unused, index) => ({
-      rate: 0.5,
-      requestPath: `/route-${index}`,
-    }));
-
-    it('refuses an eleventh rule and makes no write', async () => {
-      const calls = useTracingProject({ samplingRules: tenRules });
-
-      client.setArgv('traces', 'config', 'set', 'any', '25', '/new-route');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(1);
-      expect(calls.bodies).toHaveLength(0);
-      const stderr = client.stderr.getFullOutput();
-      expect(stderr).toContain('10');
-      expect(stderr).toContain('traces config rm');
+  it.each([
+    false,
+    true,
+  ])('preserves JSON output in non-interactive=%s mode', async nonInteractive => {
+    useTracingConfig({
+      enabled: true,
+      sampling: [headRule(0.1, { env: 'production' })],
     });
-
-    it('still replaces an existing rule when the project is full', async () => {
-      const calls = useTracingProject({ samplingRules: tenRules });
-
-      client.setArgv('traces', 'config', 'set', 'any', '25', '/route-3');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(0);
-      expect(patchedTracing(calls).samplingRules).toHaveLength(10);
-    });
-  });
-
-  describe('--json', () => {
-    it('prints the changed rule', async () => {
-      useTracingProject({ samplingRules: [] });
-
-      client.setArgv(
-        'traces',
-        'config',
-        'set',
-        'preview',
-        '40',
-        '/api',
-        '--json'
-      );
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(0);
-      expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
-        environment: 'preview',
-        requestPath: '/api',
-        sampleRate: 40,
+    client.nonInteractive = nonInteractive;
+    client.setArgv('traces', 'config', 'set', 'production', '60', '--json');
+    expect(await traces(client)).toBe(0);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    const rule = {
+      environment: 'production',
+      requestPath: null,
+      sampleRate: 60,
+    };
+    if (nonInteractive) {
+      expect(payload).toMatchObject({
+        status: 'ok',
+        projectId: 'prj_test',
+        projectName: 'traces-project',
+        rule,
+        previousSampleRate: 10,
+        ruleCount: 1,
+        ruleLimit: 10,
       });
-    });
-
-    it('keeps prose off stdout', async () => {
-      useTracingProject({ samplingRules: [] });
-
-      client.setArgv('traces', 'config', 'set', 'preview', '40', '--json');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(0);
-      expect(client.stdout.getFullOutput()).not.toContain('Set ');
-    });
-  });
-
-  describe('non-interactive mode', () => {
-    it('prints the agent envelope', async () => {
-      useTracingProject({ samplingRules: [{ rate: 0.1, env: 'production' }] });
-
-      client.nonInteractive = true;
-      client.setArgv('traces', 'config', 'set', 'production', '60');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(0);
-      const payload = JSON.parse(client.stdout.getFullOutput());
-      expect(payload.status).toBe('ok');
-      expect(payload.projectId).toBe('prj_test');
-      expect(payload.projectName).toBe('traces-project');
-      expect(payload.rule).toEqual({
-        environment: 'production',
-        requestPath: null,
-        sampleRate: 60,
-      });
-      expect(payload.previousSampleRate).toBe(10);
-      expect(payload.message).toContain('60%');
       expect(payload.next[0].command).toContain('traces config ls');
-    });
+    } else {
+      expect(payload).toEqual(rule);
+    }
   });
 
-  describe('errors', () => {
-    it('surfaces the API message and exits 1 when the PATCH is forbidden', async () => {
-      client.scenario.get('/v9/projects/:idOrName', (_req, res) => {
-        res.json({
-          id: 'prj_test',
-          name: 'traces-project',
-          accountId: 'team_dummy',
-          updatedAt: Date.now(),
-          createdAt: Date.now(),
-          tracing: { samplingRules: [] },
-        });
-      });
-      client.scenario.patch('/v9/projects/:idOrName', (_req, res) => {
-        res.status(403).json({
-          error: {
-            code: 'forbidden',
-            message: 'You cannot change observability settings',
-          },
-        });
-      });
-
-      client.setArgv('traces', 'config', 'set', 'production', '25');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(1);
-      expect(client.stderr.getFullOutput()).toContain(
-        'You cannot change observability settings'
-      );
-    });
+  it.each([
+    [403, 'forbidden', 'You cannot change observability settings'],
+    [409, 'tracing_config_busy', 'Tracing configuration is busy'],
+    [503, 'tracing_config_unavailable', 'Tracing configuration is unavailable'],
+  ])('surfaces a PUT failure with status %s', async (status, code, message) => {
+    useTracingConfig(
+      { enabled: false, sampling: [] },
+      { status, code, message }
+    );
+    client.setArgv('traces', 'config', 'set', 'production', '25');
+    expect(await traces(client)).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(message);
   });
 
-  describe('telemetry', () => {
-    it('tracks the subcommand and redacts the rate and the path', async () => {
-      useTracingProject({ samplingRules: [] });
+  it('tracks the subcommand and redacts the rate and path', async () => {
+    useTracingConfig({ enabled: false, sampling: [] });
+    client.setArgv('traces', 'config', 'set', 'production', '25', '/api');
+    expect(await traces(client)).toBe(0);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:config', value: 'config' },
+      { key: 'subcommand:set', value: 'set' },
+      { key: 'argument:environment', value: 'production' },
+      { key: 'argument:rate', value: '[REDACTED]' },
+      { key: 'argument:requestPath', value: '[REDACTED]' },
+    ]);
+  });
 
-      client.setArgv('traces', 'config', 'set', 'production', '25', '/api');
-      const exitCode = await traces(client);
+  it('redacts an invalid environment word', async () => {
+    client.setArgv('traces', 'config', 'set', '25', '--environment', 'staging');
+    expect(await traces(client)).toBe(2);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:config', value: 'config' },
+      { key: 'subcommand:set', value: 'set' },
+      { key: 'option:environment', value: '[REDACTED]' },
+      { key: 'argument:rate', value: '[REDACTED]' },
+    ]);
+  });
 
-      expect(exitCode).toBe(0);
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'subcommand:config', value: 'config' },
-        { key: 'subcommand:set', value: 'set' },
-        { key: 'argument:environment', value: 'production' },
-        { key: 'argument:rate', value: '[REDACTED]' },
-        { key: 'argument:requestPath', value: '[REDACTED]' },
-      ]);
+  it.each([
+    ['25'],
+    ['25', '/api'],
+    ['staging', '25'],
+  ])('reports a missing --environment for %j', async (...args) => {
+    const calls = useTracingConfig({ enabled: false, sampling: [] });
+    client.setArgv('traces', 'config', 'set', ...args);
+    expect(await traces(client)).toBe(2);
+    expect(calls.requests).toEqual([]);
+    expect(client.stderr.getFullOutput()).toContain(
+      "Can't set a sampling rule without --environment."
+    );
+  });
+
+  it('reports a missing --environment as action_required in non-interactive mode', async () => {
+    vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('exit');
+    }) as () => never);
+    useTracingConfig({ enabled: false, sampling: [] });
+    client.nonInteractive = true;
+    client.setArgv('traces', 'config', 'set', '25', '/api');
+    await expect(traces(client)).rejects.toThrow('exit');
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      status: 'action_required',
+      reason: 'missing_environment',
     });
+    vi.restoreAllMocks();
+  });
 
-    it('redacts an environment word that is not in the closed set', async () => {
-      useTracingProject({ samplingRules: [] });
-
-      client.setArgv('traces', 'config', 'set', 'staging', '25');
-      const exitCode = await traces(client);
-
-      expect(exitCode).toBe(1);
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'subcommand:config', value: 'config' },
-        { key: 'subcommand:set', value: 'set' },
-        { key: 'argument:environment', value: '[REDACTED]' },
-        { key: 'argument:rate', value: '[REDACTED]' },
-      ]);
+  it('reports an environment given both ways as JSON in non-interactive mode', async () => {
+    vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('exit');
+    }) as () => never);
+    useTracingConfig({ enabled: false, sampling: [] });
+    client.nonInteractive = true;
+    client.setArgv(
+      'traces',
+      'config',
+      'set',
+      'production',
+      '25',
+      '--environment',
+      'preview'
+    );
+    await expect(traces(client)).rejects.toThrow('exit');
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      status: 'error',
+      reason: 'invalid_arguments',
     });
+    vi.restoreAllMocks();
   });
 });

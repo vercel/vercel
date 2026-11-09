@@ -9,6 +9,9 @@ export interface ResolveProjectContextOptions {
   cwd?: string;
   projectNameOrId?: string;
   commandName?: string;
+  /** Fetches the project without fetching its owner; the org slug is empty. */
+  skipOwnerLookup?: boolean;
+  quiet?: boolean;
   /**
    * Controls who handles an unresolved explicit project. `report` emits the
    * standard project-not-found error; `return` leaves the result as
@@ -40,12 +43,16 @@ export async function resolveProjectContext({
   projectNameOrId,
   commandName = '',
   projectNotFoundHandling = 'report',
+  skipOwnerLookup,
+  quiet,
 }: ResolveProjectContextOptions): Promise<ProjectLinkResultWithOrgId> {
   const context = await getLinkedProject(client, {
     cwd,
     projectName: projectNameOrId,
     projectNameIsExplicit: Boolean(projectNameOrId),
     scopeIsExplicit: detectExplicitScope(client),
+    skipOwnerLookup,
+    quiet,
   });
 
   if (

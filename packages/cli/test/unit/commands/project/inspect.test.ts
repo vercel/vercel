@@ -11,6 +11,33 @@ import { useTeams } from '../../../mocks/team';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { client } from '../../../mocks/client';
 
+function expectedProjectInspectJson(
+  project: Partial<typeof defaultProject>,
+  team: { name: string; slug: string }
+) {
+  return {
+    id: project.id,
+    name: project.name,
+    owner: {
+      name: team.name,
+      slug: team.slug,
+    },
+    createdAt: project.createdAt,
+    rootDirectory: project.rootDirectory ?? null,
+    nodeVersion: project.nodeVersion ?? null,
+    framework: project.framework ?? null,
+    buildCommand: project.buildCommand ?? null,
+    outputDirectory: project.outputDirectory ?? null,
+    installCommand: project.installCommand ?? null,
+    sandbox: project.sandbox
+      ? {
+          region: project.sandbox.region ?? null,
+          failoverRegions: project.sandbox.failoverRegions ?? [],
+        }
+      : null,
+  };
+}
+
 describe('inspect', () => {
   describe('invalid argument', () => {
     it('errors', async () => {
@@ -139,6 +166,126 @@ describe('inspect', () => {
     expect(line.value).toEqual('');
 
     expect(client.stderr.getFullOutput()).not.toContain('Sandbox');
+    expect(client.stdout.getFullOutput()).toBe('');
+  });
+
+  it('outputs a curated JSON view with --format json', async () => {
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    const [team] = teams;
+    const { project } = useProject({
+      ...defaultProject,
+      name: 'test_project',
+      accountId: team.id,
+      framework: 'nextjs',
+      sandbox: { region: 'sfo1', failoverRegions: ['cle1'] },
+      link: {
+        type: 'github',
+        repo: 'owner/private-repo',
+        repoId: 1010,
+        org: 'owner',
+        gitCredentialId: 'credential-secret',
+        sourceless: true,
+        createdAt: 1,
+        updatedAt: 1,
+        deployHooks: [
+          {
+            id: 'hook_secret',
+            name: 'private-hook',
+            ref: 'main',
+            url: 'https://example.com/hook-secret',
+            createdAt: 1,
+          },
+        ],
+      },
+    });
+
+    client.setArgv('project', 'inspect', project.name!, '--format', 'json');
+    const exitCode = await projects(client);
+
+    expect(exitCode).toEqual(0);
+    expect(client.stderr.getFullOutput()).toBe('');
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual(
+      expectedProjectInspectJson(project, team)
+    );
+    expect(client.stdout.getFullOutput()).not.toContain('deployHooks');
+    expect(client.stdout.getFullOutput()).not.toContain('credential-secret');
+    expect(client.stdout.getFullOutput()).not.toContain('private-hook');
+    expect(client.stdout.getFullOutput()).not.toContain('hook-secret');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:inspect',
+        value: 'inspect',
+      },
+      {
+        key: 'argument:name',
+        value: '[REDACTED]',
+      },
+      {
+        key: 'option:format',
+        value: 'json',
+      },
+    ]);
+  });
+
+  it.each([
+    [
+      '--format=json',
+      {
+        key: 'option:format',
+        value: 'json',
+      },
+    ],
+    [
+      '--json',
+      {
+        key: 'flag:json',
+        value: 'TRUE',
+      },
+    ],
+  ])('outputs the same JSON view with %s', async (outputFlag, telemetry) => {
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    const [team] = teams;
+    const { project } = useProject({
+      ...defaultProject,
+      name: 'test_project',
+      accountId: team.id,
+    });
+
+    client.setArgv('project', 'inspect', project.name!, outputFlag);
+    const exitCode = await projects(client);
+
+    expect(exitCode).toEqual(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual(
+      expectedProjectInspectJson(project, team)
+    );
+    expect(client.stderr.getFullOutput()).toBe('');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:inspect',
+        value: 'inspect',
+      },
+      {
+        key: 'argument:name',
+        value: '[REDACTED]',
+      },
+      telemetry,
+    ]);
+  });
+
+  it('rejects an invalid format before resolving the project', async () => {
+    useUser();
+    const fetchSpy = vi.spyOn(client, 'fetch');
+
+    client.setArgv('project', 'inspect', 'test_project', '--format', 'yaml');
+    const exitCode = await projects(client);
+
+    expect(exitCode).toEqual(2);
+    await expect(client.stderr).toOutput('Invalid output format: "yaml"');
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('should show the configured sandbox regions', async () => {

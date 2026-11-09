@@ -26,6 +26,7 @@ function asObject(value: unknown): YamlObject {
 export const hermes: CodingAgent = {
   id: 'hermes',
   displayName: 'Hermes',
+  needsTopModels: true,
 
   async detect(home) {
     return pathExists(join(home, '.hermes'));
@@ -40,6 +41,7 @@ export const hermes: CodingAgent = {
   buildPlan(ctx) {
     const path = this.configPath(ctx);
     const api = ctx.baseUrlOverride ?? GATEWAY_CODING_AGENT_BASE_URL;
+    const defaultModel = ctx.topModels?.[0]?.id ?? GATEWAY_DEFAULT_MODEL;
     return {
       fileChanges: [
         {
@@ -60,7 +62,7 @@ export const hermes: CodingAgent = {
             config.model = {
               ...asObject(config.model),
               provider: `custom:${PROVIDER_KEY}`,
-              default: GATEWAY_DEFAULT_MODEL,
+              default: defaultModel,
             };
             return dump(config, { lineWidth: 120 });
           },
@@ -68,7 +70,7 @@ export const hermes: CodingAgent = {
       ],
       envExports: [{ name: 'AI_GATEWAY_API_KEY', value: ctx.apiKey }],
       notes: [
-        `Hermes will use the gateway with ${GATEWAY_DEFAULT_MODEL}; switch models in-session with /model custom:${PROVIDER_KEY}:<gateway-model-id>.`,
+        `Hermes will use the gateway with ${defaultModel}; switch models in-session with /model custom:${PROVIDER_KEY}:<gateway-model-id>.`,
         'Open a new terminal first so AI_GATEWAY_API_KEY is loaded.',
       ],
     };

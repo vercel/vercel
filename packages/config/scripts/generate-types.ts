@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { writeFileSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
 interface JSONSchema {
@@ -16,6 +16,7 @@ interface JSONSchema {
   maximum?: number;
   oneOf?: any[];
   anyOf?: any[];
+  dependencies?: Record<string, string[] | any>;
   allOf?: any[];
   additionalProperties?: boolean | any;
   patternProperties?: Record<string, any>;
@@ -346,6 +347,77 @@ function generateTypes(schema: JSONSchema): string {
     output.push('');
   }
 
+  // Generate ScheduleDefinition: shared fields plus exactly one target field.
+  // `schedules` keys them by name.
+  const schedulesProp = schema.properties?.schedules;
+  if (schedulesProp?.additionalProperties) {
+    const scheduleSchema = schedulesProp.additionalProperties as JSONSchema;
+    const properties = scheduleSchema.properties ?? {};
+    const targetKeys: string[] = (scheduleSchema.oneOf ?? []).flatMap(
+      (branch: JSONSchema) => branch.required ?? []
+    );
+    // Properties that depend on a target key are emitted inside its branch.
+    const targetOptions = new Map<string, string[]>();
+    for (const [key, required] of Object.entries(
+      scheduleSchema.dependencies ?? {}
+    )) {
+      if (!Array.isArray(required) || required.length !== 1) continue;
+      const [targetKey] = required;
+      if (!targetKeys.includes(targetKey)) continue;
+      targetOptions.set(targetKey, [
+        ...(targetOptions.get(targetKey) ?? []),
+        key,
+      ]);
+    }
+    const dependentKeys = [...targetOptions.values()].flat();
+
+    output.push(
+      '/**\n * A schedule without its name, which is its key in `schedules`.\n */'
+    );
+    output.push('export type ScheduleDefinition = {');
+    for (const [key, propSchema] of Object.entries(properties)) {
+      if (targetKeys.includes(key) || dependentKeys.includes(key)) continue;
+      const jsdoc = generateJSDoc(propSchema, '  ');
+      if (jsdoc) {
+        output.push(jsdoc);
+      }
+      const optional = !scheduleSchema.required?.includes(key) ? '?' : '';
+      const propType = convertSchemaType(propSchema, 1);
+      output.push(`  ${key}${optional}: ${propType};`);
+    }
+    if (targetKeys.length === 0) {
+      output.push('};');
+    } else {
+      output.push('} & (');
+      for (const key of targetKeys) {
+        const propSchema = properties[key];
+        const jsdoc = generateJSDoc(propSchema, '      ');
+        output.push('  | {');
+        if (jsdoc) {
+          output.push(jsdoc);
+        }
+        output.push(`      ${key}: ${convertSchemaType(propSchema, 3)};`);
+        for (const optionKey of targetOptions.get(key) ?? []) {
+          const optionJsdoc = generateJSDoc(properties[optionKey], '      ');
+          if (optionJsdoc) {
+            output.push(optionJsdoc);
+          }
+          output.push(
+            `      ${optionKey}?: ${convertSchemaType(properties[optionKey], 3)};`
+          );
+        }
+        for (const otherKey of targetKeys) {
+          if (otherKey !== key) {
+            output.push(`      ${otherKey}?: never;`);
+          }
+        }
+        output.push('    }');
+      }
+      output.push(');');
+    }
+    output.push('');
+  }
+
   // Generate GitConfig interface
   const gitProp = schema.properties?.git;
   if (gitProp?.properties) {
@@ -495,6 +567,9 @@ function generateTypes(schema: JSONSchema): string {
         case 'crons':
           propType = 'CronJob[]';
           break;
+        case 'schedules':
+          propType = 'Record<string, ScheduleDefinition>';
+          break;
         case 'git':
           propType = 'GitConfig';
           break;
@@ -549,14 +624,23 @@ export const VercelConfig = {};`);
 
 const SCHEMA_URL = 'https://openapi.vercel.sh/vercel.json';
 
+async function loadSchema(source: string): Promise<JSONSchema> {
+  if (!/^https?:\/\//.test(source)) {
+    console.log(`Reading schema from: ${source}`);
+    return JSON.parse(readFileSync(resolve(source), 'utf-8'));
+  }
+  console.log(`Fetching schema from: ${source}`);
+  const res = await fetch(source);
+  if (!res.ok) throw new Error(`Failed to fetch schema: ${res.status}`);
+  return res.json();
+}
+
 async function main() {
   try {
     const outputPath = resolve(__dirname, '../src/types.ts');
 
-    console.log(`Fetching schema from: ${SCHEMA_URL}`);
-    const res = await fetch(SCHEMA_URL);
-    if (!res.ok) throw new Error(`Failed to fetch schema: ${res.status}`);
-    const schema: JSONSchema = await res.json();
+    // An optional local path or URL, e.g. to generate from an unreleased schema.
+    const schema = await loadSchema(process.argv[2] ?? SCHEMA_URL);
 
     console.log('Generating TypeScript types...');
     const types = generateTypes(schema);

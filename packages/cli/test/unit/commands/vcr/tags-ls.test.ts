@@ -57,7 +57,7 @@ describe('vcr tag ls', () => {
     it('tracks telemetry', async () => {
       client.setArgv('vcr', 'tag', 'ls', '--help');
       const exitCode = await vcr(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -112,7 +112,7 @@ describe('vcr tag ls', () => {
   it('rejects an invalid --sort-by value', async () => {
     client.setArgv('vcr', 'tag', 'ls', 'my-app', '--sort-by', 'bogus');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'Invalid value for --sort-by'
     );
@@ -121,7 +121,7 @@ describe('vcr tag ls', () => {
   it('rejects an invalid --sort-order value', async () => {
     client.setArgv('vcr', 'tag', 'ls', 'my-app', '--sort-order', 'bogus');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'Invalid value for --sort-order'
     );
@@ -140,12 +140,15 @@ describe('vcr tag ls', () => {
     const exitCode = await vcr(client);
 
     expect(exitCode).toBe(0);
+    expect(client.stderr.getFullOutput().includes('deprecated')).toBe(
+      flag === '--cursor'
+    );
   });
 
   it('errors when the repository argument is missing', async () => {
     client.setArgv('vcr', 'tag', 'ls');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('vcr tag ls');
   });
 });

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import deploy from '../../../../src/commands/deploy';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
@@ -6,6 +6,7 @@ import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import output from '../../../../src/output-manager';
+import * as gitMetaModule from '../../../../src/util/create-git-meta';
 import * as createDeployModule from '../../../../src/util/deploy/create-deploy';
 import { BuildsRateLimited } from '../../../../src/util/errors-ts';
 import { getErrorCta } from '../../../../src/util/get-error-cta';
@@ -40,6 +41,10 @@ describe('getErrorCta', () => {
 });
 
 describe('deploy — builds_rate_limited upgrade hint', () => {
+  beforeEach(() => {
+    // Mocked createDeploy calls do not consume the concurrent metadata promise.
+    vi.spyOn(gitMetaModule, 'createGitMeta').mockResolvedValue(undefined);
+  });
   it('surfaces the error and the backend CTA on a builds_rate_limited 429', async () => {
     useUser();
     useTeams('team_dummy');

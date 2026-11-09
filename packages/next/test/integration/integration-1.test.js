@@ -339,11 +339,13 @@ it('should build using server build', async () => {
 
   expect(output['api/another'].type).toBe('Lambda');
   expect(output['api/another'].allowQuery).toBe(undefined);
+  expect(output['api/another'].affinity).toEqual({ mode: 'strict' });
   expect(output['api/another'].maxConcurrency).toBe(undefined);
   expect(output['api/another'].operationType).toBe('API');
 
   expect(output['api/blog/[slug]'].type).toBe('Lambda');
   expect(output['api/blog/[slug]'].allowQuery).toBe(undefined);
+  expect(output['api/blog/[slug]'].affinity).toBe(undefined);
   expect(output['api/blog/[slug]'].maxConcurrency).toBe(undefined);
   expect(output['api/blog/[slug]'].operationType).toBe('API');
 
@@ -361,7 +363,7 @@ it('should build using server build', async () => {
     true
   );
   expect(output['index'] !== output['dynamic/[slug]']).toBe(true);
-  expect(output['api/another']).toBe(output['api/blog/[slug]']);
+  expect(output['api/another']).not.toBe(output['api/blog/[slug]']);
   expect(output['api'] !== output['api/another']).toBe(true);
   expect(
     caughtLogs.some(log =>
@@ -381,7 +383,7 @@ it('should build using server build', async () => {
       totalLambdas += 1;
     }
   }
-  expect(lambdas.size).toBe(7);
+  expect(lambdas.size).toBe(8);
   expect(lambdas.size).toBeLessThan(totalLambdas);
 });
 

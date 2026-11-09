@@ -7,6 +7,7 @@ import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name'
 export type ResolvedScope = {
   teamId: string;
   projectId: string;
+  projectName: string;
 };
 
 export type ScopeResolutionError = {
@@ -39,6 +40,7 @@ export async function resolveScope({
       return {
         teamId: linkedProject.org.id,
         projectId: linkedProject.project.id,
+        projectName: linkedProject.project.name,
       };
     }
 
@@ -63,6 +65,7 @@ export async function resolveScope({
     return {
       teamId,
       projectId: project.id,
+      projectName: project.name,
     };
   }
 
@@ -81,7 +84,7 @@ export async function resolveScope({
         message: `Project not found: ${flagProject}`,
       };
     }
-    return { teamId, projectId: project.id };
+    return { teamId, projectId: project.id, projectName: project.name };
   }
 
   return { reason: AGENT_REASON.NOT_LINKED, message: MISSING_BOTH_MESSAGE };

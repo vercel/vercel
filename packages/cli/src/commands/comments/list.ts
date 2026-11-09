@@ -5,7 +5,10 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import getScope from '../../util/get-scope';
 import { stripSensitiveAuthArgs } from '../../util/redact-args';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { printNextPageCommand } from '../../util/pagination';
+import { applyDeprecatedGitBranchFlag } from '../../util/git-branch-option';
+import { getRenamedOption, withWarnings } from '../../util/renamed-option';
 import { isAPIError } from '../../util/errors-ts';
 import { validateJsonOutput } from '../../util/output-format';
 import {
@@ -28,13 +31,16 @@ import type {
 
 export interface ListFlags {
   '--project'?: string;
+  '--git-branch'?: string[];
   '--branch'?: string[];
   '--all-branches'?: boolean;
   '--status'?: string;
   '--page-path'?: string[];
   '--page'?: string[];
   '--author'?: string[];
+  '--content'?: string[];
   '--content-id'?: string[];
+  '--query'?: string;
   '--search'?: string;
   '--limit'?: number;
   '--next'?: string;
@@ -95,11 +101,11 @@ function printActiveFilters(flags: ListFlags): void {
   if (pagePaths?.length) {
     parts.push(`--page-path ${pagePaths.join(', ')}`);
   }
-  if (flags['--search']) {
-    parts.push(`--search ${flags['--search']}`);
+  if (flags['--query']) {
+    parts.push(`--query ${flags['--query']}`);
   }
-  if (flags['--content-id']?.length) {
-    parts.push(`--content-id ${flags['--content-id'].join(', ')}`);
+  if (flags['--content']?.length) {
+    parts.push(`--content ${flags['--content'].join(', ')}`);
   }
   if (parts.length > 0) {
     output.log(`Filters: ${parts.join(' · ')}`);
@@ -152,6 +158,14 @@ function scopeFlagsSuffix(client: Client): string {
   return out.length > 0 ? ` ${out.join(' ')}` : '';
 }
 
+// Hidden old names, rewritten so the next-page suggestion teaches the new ones.
+const RENAMED_LIST_FLAGS: Readonly<Record<string, string>> = {
+  '--page': '--page-path',
+  '--branch': '--git-branch',
+  '--content-id': '--content',
+  '--search': '--query',
+};
+
 /** All current flags except pagination, for the next-page suggestion. */
 function nextPageFlagsSuffix(client: Client): string {
   const tokens = argvFlagTokens(client);
@@ -168,9 +182,8 @@ function nextPageFlagsSuffix(client: Client): string {
       }
       continue;
     }
-    out.push(
-      name === '--page' ? token.replace(/^--page(?==|$)/, '--page-path') : token
-    );
+    const renamed = RENAMED_LIST_FLAGS[name];
+    out.push(renamed ? `${renamed}${token.slice(name.length)}` : token);
     if (
       !token.includes('=') &&
       i + 1 < tokens.length &&
@@ -237,7 +250,7 @@ async function printEmptyState(
   if (branches.size === 1) {
     const [branch, count] = [...branches.entries()][0];
     output.log(
-      `${count}${suffix}${statusWord(status)} on ${chalk.bold(branch)} — run ${getCommandName(`comments --branch ${shellSafe(branch)}${scopeSuffix}`)}`
+      `${count}${suffix}${statusWord(status)} on ${chalk.bold(branch)} — run ${getCommandName(`comments --git-branch ${shellSafe(branch)}${scopeSuffix}`)}`
     );
     return;
   }
@@ -276,22 +289,51 @@ export default async function list(
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const jsonOutput = formatResult.jsonOutput;
 
   telemetry.trackCliOptionProject(flags['--project']);
+  telemetry.trackCliOptionGitBranch(flags['--git-branch']);
   telemetry.trackCliOptionBranch(flags['--branch']);
   telemetry.trackCliFlagAllBranches(flags['--all-branches']);
   telemetry.trackCliOptionStatus(flags['--status']);
   telemetry.trackCliOptionPagePath(flags['--page-path']);
   telemetry.trackCliOptionPage(flags['--page']);
   telemetry.trackCliOptionAuthor(flags['--author']);
+  telemetry.trackCliOptionContent(flags['--content']);
   telemetry.trackCliOptionContentId(flags['--content-id']);
+  telemetry.trackCliOptionQuery(flags['--query']);
   telemetry.trackCliOptionSearch(flags['--search']);
   telemetry.trackCliOptionLimit(flags['--limit']);
   telemetry.trackCliOptionNext(flags['--next']);
   telemetry.trackCliOptionFormat(flags['--format']);
+
+  const branchError = applyDeprecatedGitBranchFlag(client, flags, '--branch');
+  if (branchError) {
+    return outputError(client, jsonOutput, 'MUTUAL_EXCLUSIVITY', branchError);
+  }
+  const content = getRenamedOption<string[]>(
+    parsedArgs.flags,
+    '--content',
+    '--content-id',
+    { json: jsonOutput }
+  );
+  if ('error' in content) {
+    return outputError(client, jsonOutput, 'INVALID_ARGUMENTS', content.error);
+  }
+  const query = getRenamedOption(parsedArgs.flags, '--query', '--search', {
+    json: jsonOutput,
+  });
+  if ('error' in query) {
+    return outputError(client, jsonOutput, 'INVALID_ARGUMENTS', query.error);
+  }
+  // The rest of the command, including the filter summary, only sees the new
+  // names.
+  flags['--content'] = content.value;
+  delete flags['--content-id'];
+  flags['--query'] = query.value;
+  delete flags['--search'];
 
   const status = validateStatus(flags['--status']);
   if (!status) {
@@ -313,12 +355,12 @@ export default async function list(
     return handleValidationError(limitResult, jsonOutput, client);
   }
 
-  if (flags['--branch'] && flags['--all-branches']) {
+  if (flags['--git-branch'] && flags['--all-branches']) {
     return outputError(
       client,
       jsonOutput,
       'MUTUAL_EXCLUSIVITY',
-      'Cannot specify both --branch and --all-branches.'
+      'Cannot specify both --git-branch and --all-branches.'
     );
   }
 
@@ -333,8 +375,8 @@ export default async function list(
 
   let focus: BranchFocus | undefined;
   let branchFilter: string[] | undefined;
-  if (flags['--branch'] && flags['--branch'].length > 0) {
-    branchFilter = flags['--branch'];
+  if (flags['--git-branch'] && flags['--git-branch'].length > 0) {
+    branchFilter = flags['--git-branch'];
     focus = { value: branchFilter.join(', '), source: 'flag' };
   } else if (!flags['--all-branches'] && scope.linked) {
     // Infer only when the resolved project matches this checkout's local
@@ -357,8 +399,8 @@ export default async function list(
     status: status === 'all' ? undefined : status,
     page: pagePaths,
     author: authors,
-    contentId: flags['--content-id'],
-    search: flags['--search'],
+    contentId: flags['--content'],
+    search: flags['--query'],
     limit: limitResult.value,
     cursor: flags['--next'],
   };
@@ -400,10 +442,16 @@ export default async function list(
         ...(status !== 'all' && { status }),
         ...(focus && { branch: { value: focus.value, source: focus.source } }),
       },
-      pagination: { nextCursor },
+      pagination: { nextCursor, next: nextCursor },
       threads,
     };
-    client.stdout.write(`${JSON.stringify(envelope, null, 2)}\n`);
+    client.stdout.write(
+      `${JSON.stringify(
+        withWarnings(envelope, [content.warning, query.warning]),
+        null,
+        2
+      )}\n`
+    );
     return 0;
   }
 
@@ -438,8 +486,11 @@ export default async function list(
   );
 
   if (nextCursor) {
-    output.log(
-      `To display the next page, run ${getCommandName(`comments${nextPageFlagsSuffix(client)} --next ${nextCursor}`)}`
+    output.print('\n');
+    printNextPageCommand(
+      getCommandNamePlain(
+        `comments${nextPageFlagsSuffix(client)} --next ${nextCursor}`
+      )
     );
   }
 

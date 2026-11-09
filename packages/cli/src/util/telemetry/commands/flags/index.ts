@@ -69,6 +69,13 @@ export class FlagsTelemetryClient
     });
   }
 
+  trackCliSubcommandTargeting(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'targeting',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandUseTargeting(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'use-targeting',
@@ -90,9 +97,9 @@ export class FlagsTelemetryClient
     });
   }
 
-  trackCliSubcommandRemove(actual: string) {
+  trackCliSubcommandDelete(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'rm',
+      subcommand: 'delete',
       value: actual,
     });
   }
@@ -132,11 +139,29 @@ export class FlagsTelemetryClient
     });
   }
 
+  trackCliSubcommandConnections(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'connections',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandSegments(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'segments',
       value: actual,
     });
+  }
+
+  trackCliSubcommandEntities(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'entities',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandLabels(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'labels', value: actual });
   }
 
   trackCliSubcommandRules(actual: string) {
@@ -146,9 +171,23 @@ export class FlagsTelemetryClient
     });
   }
 
+  trackCliSubcommandTargets(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'targets',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandPrepare(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'prepare',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandDatafile(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'datafile',
       value: actual,
     });
   }

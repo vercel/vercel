@@ -39,6 +39,11 @@ import {
 } from 'eve/connections';
 
 import { startAuthorization } from '../authorization.js';
+import {
+  experimental_connectEventsAdapter,
+  type Experimental_ConnectEventOperations,
+} from '../ai-sdk/connect-events-adapter.js';
+import { verifyMcpEvent, type McpEventDelivery } from '../mcp/verify-event.js';
 import type {
   ConnectOptions,
   ConnectTokenParams,
@@ -138,6 +143,13 @@ export interface EveAuthorizationOptions {
    *   Vercel Connect app.
    */
   readonly principalType?: 'app' | 'user';
+
+  /**
+   * Stable service identifier included in eve's external-resource snapshot.
+   * Set this when the connection should participate in Connect manifest
+   * generation; connector-only runtime usage may leave it unset.
+   */
+  readonly service?: string;
 
   /**
    * Extra parameters forwarded to every `getTokenResponse` /
@@ -260,6 +272,19 @@ export interface EveAuthorizationOptions {
 /** Input accepted by {@link connect}. */
 export type EveAuthorizationInput = string | EveAuthorizationOptions;
 
+/** Runtime bridge consumed only by event-enabled eve connections. */
+export interface Experimental_EveEventsBackend {
+  createAdapter(input: {
+    principal: ConnectionPrincipal;
+    connection: EveConnectionAuthorizationContext;
+    destination: { path: string };
+  }): Promise<Experimental_ConnectEventOperations>;
+  verify(
+    request: Request,
+    options: { path: string }
+  ): Promise<McpEventDelivery>;
+}
+
 /**
  * Structurally-readable marker exposed on every {@link connect} return
  * value so downstream tooling can detect Vercel Connect-backed
@@ -274,14 +299,29 @@ export type EveAuthorizationInput = string | EveAuthorizationOptions;
  * URL) can resolve UID → `scl_...` against the Vercel Connect API;
  * both forms address the same connector.
  *
- * The marker is purely metadata — it does not influence the runtime
- * token-fetching identity, which continues to be driven by the
+ * Newer helpers may include a complete external-resource requirement for
+ * Eve's build tooling. It remains optional so existing connector-only metadata
+ * assignments stay source-compatible.
+ *
+ * The connector and requirement are serializable metadata. The optional
+ * events bridge is a live runtime capability and must not be serialized.
+ * Token-fetching identity continues to be driven by the
  * `getToken` / `startAuthorization` / `completeAuthorization`
  * callbacks. When auto-provisioning is enabled, the same connector value is
  * also sent as the managed OAuth UID.
  */
 export interface VercelConnectMetadata {
+  /** Live capability; compilers must omit this from serializable metadata. */
+  readonly experimental_events?: Experimental_EveEventsBackend;
+  /** Raw connector UID or service-connector key passed to the helper. */
   readonly connector: string;
+  /** Complete credential requirement consumed by eve build tooling. */
+  readonly requirement?: {
+    readonly method?: string;
+    readonly reference: string;
+    readonly service: string;
+    readonly subjectTypes: readonly ('app' | 'user')[];
+  };
 }
 
 /**
@@ -370,12 +410,35 @@ export function connect(
   InteractiveAuthorizationDefinition | NonInteractiveAuthorizationDefinition
 > {
   const options = normalizeAuthorizationOptions(input);
-  const vercelConnect: VercelConnectMetadata = { connector: options.connector };
+  const requirement =
+    options.service === undefined
+      ? undefined
+      : {
+          reference: `connector:${options.connector}`,
+          service: options.service,
+          subjectTypes: [options.principalType ?? 'user'] as const,
+        };
+  const vercelConnect: VercelConnectMetadata =
+    requirement === undefined
+      ? { connector: options.connector }
+      : { connector: options.connector, requirement };
+  const eventMetadata = {
+    ...vercelConnect,
+    experimental_events: buildEventsBackend(options),
+  };
   const evict = makeEvict(options);
   if (options.principalType === 'app') {
-    return { ...buildNonInteractiveDefinition(options), vercelConnect, evict };
+    return {
+      ...buildNonInteractiveDefinition(options),
+      vercelConnect: eventMetadata,
+      evict,
+    };
   }
-  return { ...buildInteractiveDefinition(options), vercelConnect, evict };
+  return {
+    ...buildInteractiveDefinition(options),
+    vercelConnect: eventMetadata,
+    evict,
+  };
 }
 
 /**
@@ -418,6 +481,40 @@ function makeEvict(
       }
     }
     deleteTokenCacheEntry(options.connector, params);
+  };
+}
+
+function buildEventsBackend(
+  options: EveAuthorizationOptions
+): Experimental_EveEventsBackend {
+  return {
+    verify: verifyMcpEvent,
+    async createAdapter({ principal, connection, destination }) {
+      // Apply the same error translation to subject resolution and requests.
+      async function call<T>(operation: () => Promise<T>): Promise<T> {
+        try {
+          return await operation();
+        } catch (error) {
+          throw translate(error, 'getToken', options);
+        }
+      }
+      const adapter = await call(async () =>
+        experimental_connectEventsAdapter({
+          connector: options.connector,
+          tokenParams: await buildTokenParams(options, principal, connection),
+          destination,
+        }).createAdapter({
+          transport: { type: 'http', url: connection.url },
+        })
+      );
+      return {
+        subscribe: input => call(() => adapter.subscribe(input)),
+        getSubscription: input => call(() => adapter.getSubscription(input)),
+        listSubscriptions: input =>
+          call(() => adapter.listSubscriptions(input)),
+        unsubscribe: input => call(() => adapter.unsubscribe(input)),
+      };
+    },
   };
 }
 

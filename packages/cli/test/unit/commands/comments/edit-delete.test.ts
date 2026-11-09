@@ -47,7 +47,53 @@ describe('comments edit', () => {
     client.setArgv('comments', 'edit', 'icZ9BnPPINuK', 'msg_target');
     const exitCode = await comments(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
+  });
+
+  describe('subcommand name', () => {
+    function useMessagePatch() {
+      client.scenario.patch(
+        '/toolbar/threads/:id/messages/:mid',
+        (req, res) => {
+          res.json(makeMessage({ id: req.params.mid }));
+        }
+      );
+    }
+
+    it('warns when invoked as the deprecated edit name', async () => {
+      useMessagePatch();
+      client.setArgv(
+        'comments',
+        'edit',
+        'icZ9BnPPINuK',
+        'msg_target',
+        '-m',
+        'Updated'
+      );
+
+      expect(await comments(client)).toBe(0);
+      await expect(client.stderr).toOutput(
+        '`vercel comments edit` is deprecated. Use `vercel comments update`.'
+      );
+    });
+
+    it('does not warn when invoked as update', async () => {
+      useMessagePatch();
+      client.setArgv(
+        'comments',
+        'update',
+        'icZ9BnPPINuK',
+        'msg_target',
+        '--message',
+        'Updated'
+      );
+
+      expect(await comments(client)).toBe(0);
+      const output = client.stderr.getFullOutput();
+      expect(output).toContain('Updated message msg_target');
+      expect(output).not.toContain('Edited message');
+      expect(output).not.toContain('is deprecated');
+    });
   });
 });
 

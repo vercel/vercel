@@ -16,7 +16,7 @@ describe('kms', () => {
 
       client.setArgv(command, '--help');
       const exitCodePromise = kms(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -35,7 +35,7 @@ describe('kms', () => {
 
   it('routes create and import to separate subcommands', async () => {
     client.setArgv('kms', 'import', '--help');
-    await expect(kms(client)).resolves.toEqual(2);
+    await expect(kms(client)).resolves.toEqual(0);
     expect(lsSpy).not.toHaveBeenCalled();
     await expect(client.stderr).toOutput('kms import');
   });

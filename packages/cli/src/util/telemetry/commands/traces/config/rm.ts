@@ -25,6 +25,17 @@ export class TracesConfigRmTelemetryClient
     }
   }
 
+  trackCliOptionEnvironment(environment: string | undefined) {
+    if (environment) {
+      this.trackCliOption({
+        option: 'environment',
+        value: isRuleEnvironment(environment)
+          ? (environment satisfies RuleEnvironment)
+          : this.redactedValue,
+      });
+    }
+  }
+
   /** The path prefix is customer data. */
   trackCliArgumentRequestPath(requestPath: string | undefined) {
     if (requestPath) {

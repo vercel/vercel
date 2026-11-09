@@ -15,6 +15,10 @@ export class DomainsRenewTelemetryClient
     }
   }
 
+  trackCliOptionAmount(amount: string | undefined) {
+    this.trackRedactedCliOption('amount', amount);
+  }
+
   trackCliFlagJson(json: boolean | undefined) {
     if (json) {
       this.trackCliFlag('json');
