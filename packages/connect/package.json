@@ -1,6 +1,6 @@
 {
   "name": "@vercel/connect",
-  "version": "2.0.2",
+  "version": "2.5.6",
   "license": "Apache-2.0",
   "type": "module",
   "repository": {
@@ -21,6 +21,10 @@
       "types": "./dist/eve/index.d.ts",
       "default": "./dist/eve/index.js"
     },
+    "./manifest": {
+      "types": "./dist/manifest/index.d.ts",
+      "default": "./dist/manifest/index.js"
+    },
     "./betterauth": {
       "types": "./dist/betterauth/index.d.ts",
       "default": "./dist/betterauth/index.js"
@@ -36,6 +40,10 @@
     "./ai-sdk": {
       "types": "./dist/ai-sdk/index.d.ts",
       "default": "./dist/ai-sdk/index.js"
+    },
+    "./tanstack-ai": {
+      "types": "./dist/tanstack-ai/index.d.ts",
+      "default": "./dist/tanstack-ai/index.js"
     }
   },
   "files": [
@@ -54,11 +62,12 @@
   },
   "peerDependencies": {
     "@ai-sdk/mcp": "^1 || ^2",
-    "@auth/core": ">=0.37.0",
+    "@auth/core": ">=0.41.3",
     "@chat-adapter/slack": "^4.0.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "ai": "^6 || ^7.0.0-beta.0",
     "better-auth": ">=1.5.0",
-    "eve": ">=0.13.7"
+    "eve": ">=0.39.1"
   },
   "peerDependenciesMeta": {
     "@ai-sdk/mcp": {
@@ -68,6 +77,9 @@
       "optional": true
     },
     "@chat-adapter/slack": {
+      "optional": true
+    },
+    "@modelcontextprotocol/sdk": {
       "optional": true
     },
     "ai": {
@@ -82,11 +94,14 @@
   },
   "devDependencies": {
     "@ai-sdk/mcp": "2.0.0-beta.37",
-    "@auth/core": "0.37.4",
+    "@auth/core": "0.41.3",
     "@chat-adapter/slack": "4.31.0",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "@tanstack/ai-mcp": "0.3.10",
     "ai": "7.0.26",
     "better-auth": "1.5.5",
     "eve": "0.39.1",
+    "jose5": "npm:jose@5.9.6",
     "typescript": "^5"
   },
   "private": false,

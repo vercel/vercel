@@ -32,7 +32,7 @@ export default async function get(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const {
@@ -49,7 +49,7 @@ export default async function get(
     output.error(
       `Missing required argument. Usage: ${getCommandName('blob get <urlOrPathname>')}`
     );
-    return 1;
+    return 2;
   }
 
   const access = parseAccessFlag(accessFlag);

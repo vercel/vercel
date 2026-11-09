@@ -20,6 +20,11 @@ export interface FrameworkDetectionItem {
    * @example "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"next\":\\s*\".+?\"[^}]*}"
    */
   matchPackage?: string;
+  /**
+   * If true, this detector only wins when no non-fallback framework detector
+   * matches. Use for common files that may be incidental to the project.
+   */
+  fallback?: boolean;
 }
 
 export interface SettingPlaceholder {

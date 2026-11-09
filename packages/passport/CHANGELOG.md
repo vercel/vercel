@@ -1,5 +1,21 @@
 # @vercel/passport
 
+## 1.2.0
+
+### Minor Changes
+
+- edbf428: Add `requireIdentity`, which calls `getIdentity` and throws `PassportIdentityError` if no identity token is available. Both `requireIdentity` and `verifyIdentity` return the new `PassportIdentityWithRequiredToken` interface, which extends `PassportIdentity` with a string token.
+
+### Patch Changes
+
+- edbf428: Allow token subjects to omit `type` and infer `type: 'token'` before sending Connect requests. Refine Passport identity types so verified identities have a string token.
+
+## 1.1.0
+
+### Minor Changes
+
+- 6997eb4: Support reading Passport session tokens stored across multiple cookies while preserving support for existing single-cookie sessions.
+
 ## 1.0.1
 
 ### Patch Changes

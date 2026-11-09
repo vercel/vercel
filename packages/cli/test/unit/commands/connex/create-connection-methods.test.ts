@@ -955,7 +955,7 @@ describe('connex create connection methods', () => {
 
     expect(await connect(client)).toBe(1);
     await expect(client.stderr).toOutput(
-      'The --connector-type and --connection-method flags cannot be combined.'
+      'The --connector-type and --connection-method options cannot be combined.'
     );
   });
 
@@ -1204,9 +1204,9 @@ describe('connex create connection methods', () => {
       'domain=acme.okta.com'
     );
 
-    expect(await connect(client)).toBe(1);
+    expect(await connect(client)).toBe(2);
     await expect(client.stderr).toOutput(
-      'The --param flag requires --connection-method.'
+      'The --param option requires --connection-method.'
     );
 
     client.reset();
@@ -1225,9 +1225,9 @@ describe('connex create connection methods', () => {
       'api'
     );
 
-    expect(await connect(client)).toBe(1);
+    expect(await connect(client)).toBe(2);
     await expect(client.stderr).toOutput(
-      'The --target flag requires --connection-method.'
+      'The --target option requires --connection-method.'
     );
   });
 

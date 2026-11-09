@@ -1,0 +1,17 @@
+# Agent Factory settings for vercel/vercel-internal.
+# Read by the shared factory from this repository's default branch.
+version: 1
+owners:
+  - github:melkeydev
+  - slack:T0CAQ00TU:U0AG5TT1W9F
+slack:
+  channel: C0C6RM27MBN
+  mention: [U0AG5TT1W9F, U06NH7M769H]
+features:
+  issueTriage: true
+  issueClassifier: true
+  flakyTests: false
+  ciRepair: true
+  prSecurityReview: false
+  improvements: true
+  securityScan: off

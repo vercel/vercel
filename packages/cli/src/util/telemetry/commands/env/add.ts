@@ -48,6 +48,19 @@ export class EnvAddTelemetryClient
     }
   }
 
+  trackCliOptionEnvironment(environments: string[] | undefined) {
+    if (environments && environments.length > 0) {
+      const allStandard = environments
+        .flatMap(environment => environment.split(','))
+        .map(t => t.trim())
+        .every(t => STANDARD_ENVIRONMENTS.includes(t as CustomEnvironmentType));
+      this.trackCliOption({
+        option: 'environment',
+        value: allStandard ? environments.join(',') : this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionValue(value: string | undefined) {
     if (value) {
       this.trackCliOption({

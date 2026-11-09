@@ -1,5 +1,10 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, jsonOption, projectOption } from '../../util/arg-common';
+import {
+  formatOption,
+  jsonOption,
+  projectOption,
+  yesOption,
+} from '../../util/arg-common';
 
 export const listSubcommand = {
   name: 'list',
@@ -12,16 +17,17 @@ export const listSubcommand = {
     jsonOption,
     {
       name: 'limit',
-      shorthand: null,
+      shorthand: 'n',
       type: Number,
-      description: 'Maximum number of tokens to return (default 20)',
+      description: 'Maximum number of tokens to return (default: 20, max: 100)',
       deprecated: false,
     },
     {
       name: 'next',
       shorthand: null,
       type: String,
-      description: 'Continue from a previous response',
+      description:
+        'Show the next page using the cursor from the previous output',
       argument: 'CURSOR',
       deprecated: false,
     },
@@ -29,14 +35,14 @@ export const listSubcommand = {
   examples: [
     {
       name: 'List tokens as JSON',
-      value: `${packageName} tokens ls --json`,
+      value: `${packageName} tokens list --json`,
     },
   ],
 } as const;
 
 export const addSubcommand = {
-  name: 'add',
-  aliases: ['create'],
+  name: 'create',
+  aliases: ['add'],
   description: 'Create a new personal authentication token',
   arguments: [
     {
@@ -55,26 +61,33 @@ export const addSubcommand = {
   examples: [
     {
       name: 'Create a token',
-      value: `${packageName} tokens add "CI deploy"`,
+      value: `${packageName} tokens create "CI deploy"`,
     },
   ],
 } as const;
 
 export const removeSubcommand = {
-  name: 'remove',
-  aliases: ['rm', 'delete'],
-  description: 'Delete a personal authentication token by ID',
+  name: 'revoke',
+  aliases: ['remove', 'rm', 'delete'],
+  description: 'Revoke a personal authentication token by ID',
   arguments: [
     {
       name: 'id',
       required: true,
     },
   ],
-  options: [formatOption, jsonOption],
+  options: [
+    formatOption,
+    jsonOption,
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when revoking a token',
+    },
+  ],
   examples: [
     {
-      name: 'Remove a token',
-      value: `${packageName} tokens rm tok_abc123`,
+      name: 'Revoke a token',
+      value: `${packageName} tokens revoke tok_abc123`,
     },
   ],
 } as const;

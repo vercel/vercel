@@ -1,0 +1,16 @@
+{
+  "projectSettings": {
+    "framework": "go"
+  },
+  "build": {
+    "env": {
+      "VERCEL_EXPERIMENTAL_BUILDPACK_GO": "1"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/old",
+      "destination": "/new"
+    }
+  ]
+}

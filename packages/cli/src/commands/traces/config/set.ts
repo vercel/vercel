@@ -10,7 +10,11 @@ import { help } from '../../help';
 import { TracesConfigSetTelemetryClient } from '../../../util/telemetry/commands/traces/config/set';
 import { tracesCommand } from '../command';
 import { setSubcommand } from './command';
-import { handleTracingApiError, invalidArguments } from './errors';
+import {
+  handleTracingApiError,
+  invalidArguments,
+  missingEnvironment,
+} from './errors';
 import { writeConfigJson } from './json-output';
 import {
   EMPTY_PATH_ERROR,
@@ -21,7 +25,8 @@ import {
   isRuleEnvironment,
   parseSampleRate,
   RATE_ERROR,
-  readProjectTracing,
+  readTracingConfig,
+  resolveRuleEnvironment,
   RULE_LIMIT,
   type SamplingRuleEntry,
   type SamplingRuleRow,
@@ -32,7 +37,8 @@ import {
 } from './rules';
 import { resolveConfigScope } from './scope';
 
-const USAGE = 'traces config set <environment> <rate> [requestPath]';
+const USAGE =
+  'traces config set <rate> [requestPath] --environment <environment>';
 
 export default async function set(client: Client): Promise<number> {
   const telemetry = new TracesConfigSetTelemetryClient({
@@ -45,26 +51,44 @@ export default async function set(client: Client): Promise<number> {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
   const { flags } = parsedArgs;
 
-  const [environmentArg, rateArg, ...pathArgs] = subcommandArguments(
-    parsedArgs.args
+  const ruleEnvironment = resolveRuleEnvironment(
+    client,
+    flags['--environment'],
+    subcommandArguments(parsedArgs.args)
   );
+  if ('error' in ruleEnvironment) {
+    return invalidArguments(client, ruleEnvironment.error);
+  }
+  const environmentArg = ruleEnvironment.environment;
+  const [rateArg, ...pathArgs] = ruleEnvironment.args;
   const pathArg = pathArgs[0];
 
-  telemetry.trackCliArgumentEnvironment(environmentArg);
+  if (flags['--environment'] === undefined) {
+    telemetry.trackCliArgumentEnvironment(environmentArg);
+  }
+  telemetry.trackCliOptionEnvironment(flags['--environment']);
   telemetry.trackCliArgumentRate(rateArg);
   telemetry.trackCliArgumentRequestPath(pathArg);
   telemetry.trackCliOptionFormat(flags['--format']);
   telemetry.trackCliFlagJson(flags['--json']);
   telemetry.trackCliOptionProject(flags['--project']);
 
+  if (environmentArg === undefined && rateArg !== undefined) {
+    return missingEnvironment(
+      client,
+      `Can't set a sampling rule without --environment. Usage: ${getCommandName(USAGE)}`
+    );
+  }
+
   if (environmentArg === undefined || rateArg === undefined) {
     output.print(
       help(setSubcommand, {
-        parent: { ...tracesCommand, name: 'traces config' },
+        stream: client.stderr,
+        parent: tracesCommand,
         columns: client.stderr.columns,
       })
     );
@@ -100,7 +124,7 @@ export default async function set(client: Client): Promise<number> {
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput || client.nonInteractive;
 
@@ -122,10 +146,9 @@ export default async function set(client: Client): Promise<number> {
   }
 
   let project;
-  let tracing;
   let entries: SamplingRuleEntry[];
   try {
-    ({ project, tracing, entries } = await readProjectTracing({
+    ({ project, entries } = await readTracingConfig({
       client,
       ...scope,
     }));
@@ -134,18 +157,19 @@ export default async function set(client: Client): Promise<number> {
     return handleTracingApiError(client, err);
   }
 
-  const existingIndex = entries.findIndex(entry => hasSameKey(entry.row, rule));
-  const previous =
-    existingIndex === -1 ? undefined : entries[existingIndex].row;
+  const matchingEntries = entries.filter(entry => hasSameKey(entry.row, rule));
+  const previousSampleRate = matchingEntries.length
+    ? Math.max(...matchingEntries.map(entry => entry.row.sampleRate))
+    : null;
   // Every rule the command did not name is sent back as the API returned it. A
   // replacement keeps its own object too, with only the rate changed: the key
   // it matched on is the environment and the path, so nothing else about the
   // rule was asked to change.
   const nextRules =
-    existingIndex === -1
+    matchingEntries.length === 0
       ? [...entries.map(entry => entry.rule), toRule(rule)]
-      : entries.map((entry, index) =>
-          index === existingIndex
+      : entries.map(entry =>
+          hasSameKey(entry.row, rule)
             ? { ...entry.rule, rate: toApiRate(rule.sampleRate) }
             : entry.rule
         );
@@ -154,12 +178,12 @@ export default async function set(client: Client): Promise<number> {
     output.stopSpinner();
     return invalidArguments(
       client,
-      `A project can have at most ${RULE_LIMIT} trace sampling rules, and ${project.name} already has ${entries.length}. Remove one with ${getCommandName('traces config rm <environment> [requestPath]')} first.`
+      `A project can have at most ${RULE_LIMIT} trace sampling rules, and ${project.name} already has ${entries.length}. Remove one with ${getCommandName('traces config remove [requestPath] --environment <environment>')} first.`
     );
   }
 
   try {
-    await writeSamplingRules({ client, ...scope, tracing, rules: nextRules });
+    await writeSamplingRules({ client, ...scope, rules: nextRules });
   } catch (err: unknown) {
     output.stopSpinner();
     return handleTracingApiError(client, err);
@@ -167,7 +191,10 @@ export default async function set(client: Client): Promise<number> {
   output.stopSpinner();
 
   const target = formatRuleTarget(rule.environment, rule.requestPath);
-  const wasClause = previous ? ` (was ${formatRate(previous.sampleRate)})` : '';
+  const wasClause =
+    previousSampleRate !== null
+      ? ` (was ${formatRate(previousSampleRate)})`
+      : '';
   // The old rate is printed so the change is reversible from the message alone.
   const successLine = (subject: string) =>
     `Set ${subject} to ${formatRate(rule.sampleRate)}${wasClause}. ${nextRules.length} of ${RULE_LIMIT} rules.`;
@@ -178,7 +205,7 @@ export default async function set(client: Client): Promise<number> {
       bare: rule,
       envelope: {
         rule,
-        previousSampleRate: previous?.sampleRate ?? null,
+        previousSampleRate,
         ruleCount: nextRules.length,
         ruleLimit: RULE_LIMIT,
       },

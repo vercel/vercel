@@ -4,45 +4,26 @@ import type { Project } from '@vercel-internals/types';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { canPrompt } from '../../util/can-prompt';
 import { emoji, prependEmoji } from '../../util/emoji';
-import { getCommandNamePlain } from '../../util/pkg-name';
-import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import {
   exitWithNonInteractiveError,
-  outputActionRequired,
   outputAgentError,
 } from '../../util/agent-output';
-import {
-  AGENT_ACTION,
-  AGENT_REASON,
-  AGENT_STATUS,
-} from '../../util/agent-output-constants';
-import { webAnalyticsSubcommand } from './command';
+import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
+import { webAnalyticsDisableSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
-import getScope from '../../util/get-scope';
+import {
+  isHobbyProject,
+  projectLabel,
+  refuseExplicitAccountConflict,
+  resolveProjectFeatureConsent,
+  warnIfOutsideCurrentTeam,
+} from '../../util/projects/project-feature-consent';
 
 interface ToggleResponse {
   value: boolean;
-}
-
-const LIMITS_DOCS_URL = 'https://vercel.com/docs/analytics/limits-and-pricing';
-
-async function isHobbyPlan(client: Client): Promise<boolean> {
-  try {
-    const { team, user } = await getScope(client);
-    const plan = team?.billing?.plan ?? user?.billing?.plan;
-    return plan === 'hobby';
-  } catch (err: unknown) {
-    output.debug(
-      `Failed to resolve billing plan: ${
-        err instanceof Error ? err.message : String(err)
-      }`
-    );
-    return false;
-  }
 }
 
 async function setWebAnalytics(
@@ -60,6 +41,7 @@ async function setWebAnalytics(
         method: 'POST',
         json: true,
         body: { value: enabled },
+        accountId: project.accountId,
       }
     );
   } catch (err: unknown) {
@@ -86,9 +68,7 @@ async function setWebAnalytics(
   }
 
   output.log(
-    result.value
-      ? `Web Analytics is enabled for ${project.name}.`
-      : `Web Analytics is disabled for ${project.name}.`
+    `Web Analytics is ${result.value ? 'enabled' : 'disabled'} for ${await projectLabel(client, project)}.`
   );
   return 0;
 }
@@ -98,8 +78,9 @@ export default async function webAnalytics(
   argv: string[]
 ): Promise<number> {
   let parsedArgs;
+  // `disable` takes every option `enable` does, plus `--yes`.
   const flagsSpecification = getFlagsSpecification(
-    webAnalyticsSubcommand.options
+    webAnalyticsDisableSubcommand.options
   );
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
@@ -112,11 +93,11 @@ export default async function webAnalytics(
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: error instanceof Error ? error.message : String(error),
         },
-        1
+        2
       );
     }
     printError(error);
-    return 1;
+    return 2;
   }
 
   const firstArg = parsedArgs.args[0];
@@ -139,61 +120,9 @@ export default async function webAnalytics(
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
-
-  const isHobby = action === 'enable' ? await isHobbyPlan(client) : false;
-
-  if (!canPrompt(client)) {
-    const globalFlags = getGlobalFlagsFromArgs(client.argv.slice(2)).filter(
-      flag => flag !== '--non-interactive'
-    );
-    const interactiveCommand = getCommandNamePlain(
-      `project web-analytics ${action}${
-        projectNameOrId ? ` ${projectNameOrId}` : ''
-      }${globalFlags.length ? ` ${globalFlags.join(' ')}` : ''}`.trim()
-    );
-    outputActionRequired(
-      client,
-      {
-        status: AGENT_STATUS.ACTION_REQUIRED,
-        reason: AGENT_REASON.CONFIRMATION_REQUIRED,
-        action: AGENT_ACTION.CONFIRMATION_REQUIRED,
-        message:
-          action === 'disable'
-            ? 'Disabling Web Analytics stops data collection for this project. ' +
-              'This cannot be confirmed non-interactively: the user must run this command in a terminal and confirm.'
-            : isHobby
-              ? `Web Analytics is free with limits documented on ${LIMITS_DOCS_URL}. ` +
-                'This cannot be confirmed non-interactively: the user must run this command in a terminal and confirm.'
-              : 'Enabling Web Analytics adds a paid feature to this project and will incur charges on your account. ' +
-                'This cannot be confirmed non-interactively: the user must run this command in a terminal and confirm.',
-        userActionRequired: true,
-        hint:
-          action === 'disable'
-            ? 'Surface this to the user; disabling Web Analytics requires interactive confirmation.'
-            : isHobby
-              ? 'Surface this to the user; enabling Web Analytics requires interactive confirmation.'
-              : 'Surface this to the user; enabling a paid feature cannot be automated.',
-        next: [
-          {
-            command: interactiveCommand,
-            when: 'user runs this command in an interactive terminal',
-          },
-        ],
-      },
-      1
-    );
-    output.error(
-      action === 'disable'
-        ? 'This command must be run interactively to disable Web Analytics.'
-        : isHobby
-          ? 'This command must be run interactively to enable Web Analytics.'
-          : 'This command must be run interactively because enabling Web Analytics incurs charges.'
-    );
-    return 1;
-  }
 
   let project: Project;
   try {
@@ -211,7 +140,40 @@ export default async function webAnalytics(
     return 1;
   }
 
-  if (action === 'disable') {
+  // Enabling is usage on the account's current plan, like deploying, so it is
+  // an ordinary write: no confirmation, `--yes`, or `--scope`. Plan limits
+  // are enforced by the API.
+  if (action === 'enable') {
+    const conflict = await refuseExplicitAccountConflict(client, {
+      project,
+      consequence: `Can't enable Web Analytics for ${project.name}.`,
+    });
+    if (conflict) {
+      return conflict.exitCode;
+    }
+    if (!asJson) {
+      await warnIfOutsideCurrentTeam(client, project);
+    }
+    return setWebAnalytics(client, project, true, asJson);
+  }
+
+  const isHobby = await isHobbyProject(client, project);
+  const consequence = `Disabling Web Analytics for ${project.name} will stop data collection for this project.`;
+
+  const consent = await resolveProjectFeatureConsent(client, {
+    command: 'project web-analytics',
+    action,
+    projectArg: projectNameOrId,
+    project,
+    billable: !isHobby,
+    yes: Boolean(parsedArgs.flags['--yes']),
+    consequence,
+  });
+  if (consent.kind === 'refused') {
+    return consent.exitCode;
+  }
+
+  if (consent.kind === 'prompt' || !asJson) {
     output.print(
       prependEmoji(
         `Disabling Web Analytics for ${chalk.bold(
@@ -220,41 +182,21 @@ export default async function webAnalytics(
         emoji('warning')
       )
     );
-    const confirmedDisable = await client.input.confirm(
-      `Disable Web Analytics for ${project.name}?`,
+  }
+
+  if (consent.kind === 'prompt') {
+    const target = `${project.name}${
+      consent.team ? ` on team ${consent.team}` : ''
+    }`;
+    const confirmed = await client.input.confirm(
+      `Disable Web Analytics for ${target}?`,
       false
     );
-    if (!confirmedDisable) {
+    if (!confirmed) {
       output.log('Canceled');
       return 0;
     }
-    return setWebAnalytics(client, project, false, asJson);
   }
 
-  if (isHobby) {
-    output.print(
-      `Web Analytics is free for ${chalk.bold(
-        project.name
-      )} with limits documented on ${LIMITS_DOCS_URL}.\n`
-    );
-  } else {
-    output.print(
-      prependEmoji(
-        `Enabling Web Analytics for ${chalk.bold(
-          project.name
-        )} will incur charges on your account.\n`,
-        emoji('warning')
-      )
-    );
-  }
-  const confirmed = await client.input.confirm(
-    `Enable Web Analytics for ${project.name}?`,
-    false
-  );
-  if (!confirmed) {
-    output.log('Canceled');
-    return 0;
-  }
-
-  return setWebAnalytics(client, project, true, asJson);
+  return setWebAnalytics(client, project, false, asJson);
 }

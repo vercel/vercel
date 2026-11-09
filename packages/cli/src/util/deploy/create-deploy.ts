@@ -1,4 +1,3 @@
-import generateCertForDeploy from './generate-cert-for-deploy';
 import * as ERRORS_TS from '../errors-ts';
 import { NowError } from '../now-error';
 import mapCertError from '../certs/map-cert-error';
@@ -92,6 +91,9 @@ export default async function createDeploy(
 
       // If the cert is missing we try to generate a new one and the retry
       if (err.code === 'cert_missing') {
+        const { default: generateCertForDeploy } = await import(
+          './generate-cert-for-deploy'
+        );
         const result = await generateCertForDeploy(
           client,
           contextName,

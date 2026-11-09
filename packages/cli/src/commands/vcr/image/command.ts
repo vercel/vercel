@@ -10,7 +10,7 @@ import { packageName } from '../../../util/pkg-name';
 const projectScopeOption = {
   ...projectOption,
   shorthand: 'p',
-  description: 'Project name or ID (defaults to the linked project).',
+  description: 'Project name or ID (default: linked project).',
 } as const;
 
 const nextOption = {
@@ -18,7 +18,7 @@ const nextOption = {
   shorthand: null,
   type: String,
   deprecated: false,
-  description: 'Continue from a previous response',
+  description: 'Show the next page using the cursor from the previous output',
   argument: 'CURSOR',
 } as const;
 
@@ -92,8 +92,8 @@ export const imageInspectSubcommand = {
 } as const;
 
 export const imageRmSubcommand = {
-  name: 'rm',
-  aliases: ['remove', 'delete'],
+  name: 'delete',
+  aliases: ['rm', 'del', 'remove'],
   description: 'Delete an image from a repository',
   arguments: [
     {
@@ -109,11 +109,11 @@ export const imageRmSubcommand = {
   examples: [
     {
       name: 'Delete an image by id',
-      value: `${packageName} vcr image rm my-app img_abc123`,
+      value: `${packageName} vcr image delete my-app img_abc123`,
     },
     {
       name: 'Delete an image without the confirmation prompt',
-      value: `${packageName} vcr image rm my-app img_abc123 --yes`,
+      value: `${packageName} vcr image delete my-app img_abc123 --yes`,
     },
   ],
 } as const;

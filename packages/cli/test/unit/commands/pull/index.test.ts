@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import pull from '../../../../src/commands/pull';
@@ -14,6 +14,10 @@ import { useTeams, createTeam } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
 describe('pull', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   describe('--non-interactive', () => {
     it('outputs action_required JSON and exits when not linked and multiple teams (no --scope)', async () => {
       const cwd = setupUnitFixture('vercel-pull-unlinked');
@@ -55,7 +59,7 @@ describe('pull', () => {
 
       client.setArgv(command, '--help');
       const exitCodePromise = pull(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -79,7 +83,7 @@ describe('pull', () => {
     client.setArgv('pull', cwd);
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
-      `Downloading \`development\` environment variables for ${teams[0].slug}/vercel-pull-next`
+      'Downloading `development` environment variables for vercel-pull-next'
     );
     await expect(client.stderr).toOutput(
       `✓ Created         .vercel${path.sep}.env.development.local file`
@@ -97,10 +101,35 @@ describe('pull', () => {
     expect(devFileHasDevEnv).toBeTruthy();
   });
 
-  it('should not use owner lookup fallback for pulling', async () => {
+  it.each([
+    undefined,
+    {},
+    { enabledAt: 1700000000000 },
+  ])('saves Vercel Flags project metadata: %j', async vercelFlags => {
+    const cwd = setupUnitFixture('vercel-pull-next');
+    useTeams('team_dummy', { failNoAccess: true });
+    useProject({
+      ...defaultProject,
+      accountId: 'team_dummy',
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+      vercelFlags,
+    });
+    client.setArgv('pull', cwd, '--yes');
+
+    await expect(pull(client)).resolves.toBe(0);
+    const project = await fs.readJSON(
+      path.join(cwd, '.vercel', 'project.json')
+    );
+    expect(project.settings.vercelFlags).toEqual(vercelFlags);
+    if (vercelFlags === undefined) {
+      expect(project.settings).not.toHaveProperty('vercelFlags');
+    }
+  });
+
+  it('pulls without looking up the project owner', async () => {
     const cwd = setupUnitFixture('vercel-pull-next');
 
-    useUser();
     useTeams('team_dummy', { failNoAccess: true });
     useProject({
       ...defaultProject,
@@ -108,11 +137,16 @@ describe('pull', () => {
       id: 'vercel-pull-next',
       name: 'vercel-pull-next',
     });
+    const fetchSpy = vi.spyOn(client, 'fetch');
+    client.setArgv('pull', cwd, '--yes');
 
-    client.setArgv('pull', cwd);
-
-    await expect(pull(client)).rejects.toThrow(
-      'Could not retrieve Project Settings. To link your Project, remove the `.vercel` directory and deploy again.'
+    await expect(pull(client)).resolves.toBe(0);
+    expect(fetchSpy.mock.calls.map(([url]) => url)).toEqual([
+      '/v9/projects/vercel-pull-next',
+      '/v3/env/pull/vercel-pull-next/development?source=vercel-cli%3Apull',
+    ]);
+    expect(client.stderr.getFullOutput()).not.toContain(
+      'Could not retrieve Project Settings'
     );
   });
 
@@ -179,7 +213,7 @@ describe('pull', () => {
       client.setArgv('pull', cwd);
       const exitCodePromise = pull(client);
       await expect(client.stderr).toOutput(
-        `Downloading \`development\` environment variables for ${teams[0].slug}/vercel-pull-next`
+        'Downloading `development` environment variables for vercel-pull-next'
       );
       await expect(client.stderr).toOutput(
         `✓ Created         .vercel${path.sep}.env.development.local file`
@@ -220,7 +254,7 @@ describe('pull', () => {
     client.setArgv('pull', '--environment=preview', cwd);
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
-      `Downloading \`preview\` environment variables for ${teams[0].slug}/vercel-pull-next`
+      'Downloading `preview` environment variables for vercel-pull-next'
     );
     await expect(client.stderr).toOutput(
       `✓ Created         .vercel${path.sep}.env.preview.local file`
@@ -265,7 +299,7 @@ describe('pull', () => {
     client.setArgv('pull', '--environment=production', cwd);
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
-      `Downloading \`production\` environment variables for ${teams[0].slug}/vercel-pull-next`
+      'Downloading `production` environment variables for vercel-pull-next'
     );
     await expect(client.stderr).toOutput(
       `✓ Created         .vercel${path.sep}.env.production.local file`
@@ -316,7 +350,7 @@ describe('pull', () => {
     client.setArgv('pull');
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
-      `Downloading \`development\` environment variables for ${teams[0].slug}/dashboard`
+      'Downloading `development` environment variables for dashboard'
     );
     await expect(client.stderr).toOutput(
       `✓ Created         .vercel${path.sep}.env.development.local file`
@@ -417,6 +451,43 @@ describe('pull', () => {
     ]);
   });
 
+  it('should warn that --prod is deprecated', async () => {
+    const cwd = setupUnitFixture('vercel-pull-next');
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    client.setArgv('pull', '--yes', '--prod', cwd);
+
+    await expect(pull(client)).resolves.toEqual(0);
+    expect(client.stderr.getFullOutput()).toContain(
+      '--prod is deprecated. Use --environment production.'
+    );
+  });
+
+  it('should accept -e for --environment', async () => {
+    const cwd = setupUnitFixture('vercel-pull-next');
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    client.setArgv('pull', '--yes', '-e', 'production', cwd);
+
+    await expect(pull(client)).resolves.toEqual(0);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Downloading `production` environment variables'
+    );
+    expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+  });
+
   it('should track --git-branch', async () => {
     const cwd = setupUnitFixture('vercel-pull-next');
     useUser();
@@ -471,7 +542,7 @@ describe('pull', () => {
       const exitCodePromise = pull(client);
 
       await expect(client.stderr).toOutput(
-        `Downloading \`production\` environment variables for ${teams[0].slug}/project-via-flag`
+        'Downloading `production` environment variables for project-via-flag'
       );
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "pull"').toEqual(0);

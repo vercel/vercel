@@ -26,7 +26,7 @@ export async function update(
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
@@ -35,7 +35,7 @@ export async function update(
     output.error(
       'Missing connector ID or UID. Usage: vercel connect update <id>'
     );
-    return 1;
+    return 2;
   }
 
   const iconFlag = flags['--icon'];
@@ -66,7 +66,7 @@ export async function update(
     output.error(
       'Specify at least one of: --icon, --background-color, --accent-color.'
     );
-    return 1;
+    return 2;
   }
   let preparedIcon: PreparedIcon | undefined;
   if (iconFlag) {

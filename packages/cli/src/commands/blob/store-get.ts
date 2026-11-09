@@ -37,7 +37,7 @@ export default async function getStore(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const {
@@ -78,7 +78,7 @@ export default async function getStore(
         ],
       });
       output.error('Missing required argument: storeId');
-      return 1;
+      return 2;
     }
   }
 

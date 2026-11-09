@@ -115,7 +115,7 @@ describe('microfrontends remove-from-group', () => {
     it('prints usage', async () => {
       client.setArgv('microfrontends', 'remove-from-group', '--help');
       const exitCode = await microfrontends(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
     });
   });
 

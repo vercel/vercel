@@ -58,7 +58,7 @@ describe('vcr image rm', () => {
     it('tracks telemetry', async () => {
       client.setArgv('vcr', 'image', 'rm', '--help');
       const exitCode = await vcr(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -82,6 +82,35 @@ describe('vcr image rm', () => {
     const exitCode = await vcr(client);
     expect(exitCode).toBe(0);
     expect(client.stderr.getFullOutput()).toContain('deleted');
+  });
+
+  it.each([
+    ['delete', false],
+    ['del', false],
+    ['remove', true],
+  ])('runs as %s (deprecated: %s)', async (name, deprecated) => {
+    client.scenario.delete(
+      '/v1/vcr/repository/my-app/images/img_1',
+      (_req, res) => {
+        res.status(202).end();
+      }
+    );
+
+    client.setArgv('vcr', 'image', name, 'my-app', 'img_1', '--yes');
+    expect(await vcr(client)).toBe(0);
+    const warning =
+      '`vercel vcr image remove` is deprecated. Use `vercel vcr image delete`.';
+    if (deprecated) {
+      expect(client.stderr.getFullOutput()).toContain(warning);
+    } else {
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+    }
+  });
+
+  it('shows delete help for the del alias', async () => {
+    client.setArgv('vcr', 'image', 'del', '--help');
+    expect(await vcr(client)).toEqual(0);
+    expect(client.stderr.getFullOutput()).toContain('vcr image delete');
   });
 
   it('tracks subcommand invocation', async () => {
@@ -122,7 +151,7 @@ describe('vcr image rm', () => {
   it('errors when the imageId argument is missing', async () => {
     client.setArgv('vcr', 'image', 'rm', 'my-app');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain('vcr image rm');
+    expect(exitCode).toBe(2);
+    expect(client.stderr.getFullOutput()).toContain('vcr image delete');
   });
 });

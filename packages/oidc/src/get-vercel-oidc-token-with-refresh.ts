@@ -1,4 +1,6 @@
+import { readFile } from 'node:fs/promises';
 import { exchangeVercelOidcToken } from './exchange-vercel-oidc-token';
+import { getContext } from './get-context';
 import { getVercelOidcTokenSync } from './get-vercel-oidc-token-sync';
 import { VercelOidcTokenError } from './token-error';
 
@@ -56,18 +58,20 @@ export type GetVercelOidcTokenOptions =
     });
 
 /**
- * Gets the current OIDC token from the request context or the environment variable.
+ * Gets the current OIDC token from the request context, the Vercel OIDC token
+ * file, or the environment variable.
  *
  * Do not cache this value, as it is subject to change in production!
  *
- * This function is used to retrieve the OIDC token from the request context or the environment variable.
- * It checks for the `x-vercel-oidc-token` header in the request context and falls back to the `VERCEL_OIDC_TOKEN` environment variable if the header is not present.
+ * It checks for the `x-vercel-oidc-token` header in the request context, then
+ * reads the file named by `VERCEL_OIDC_TOKEN_FILE` when set, then falls back to
+ * the `VERCEL_OIDC_TOKEN` environment variable.
  *
  * Unlike the `getVercelOidcTokenSync` function, this function will refresh the token if it is expired in a development environment.
  *
  * @param {GetVercelOidcTokenOptions} [options] - Optional configuration for token retrieval.
  * @returns {Promise<string>} A promise that resolves to the OIDC token.
- * @throws {Error} If the `x-vercel-oidc-token` header is missing from the request context and the environment variable `VERCEL_OIDC_TOKEN` is not set. If the token
+ * @throws {Error} If no token source is available or the configured file cannot be read. If the token
  * is expired in a development environment, will also throw an error if the token cannot be refreshed: no CLI credentials are available, CLI credentials are expired, no project configuration is available
  * or the token refresh request fails.
  *
@@ -99,8 +103,12 @@ export async function getVercelOidcToken(
   let token = '';
   let err: any;
 
+  const tokenFromFile = getContext().headers?.['x-vercel-oidc-token']
+    ? null
+    : await tryOidcTokenFromFile();
+
   try {
-    token = getVercelOidcTokenSync();
+    token = tokenFromFile ?? getVercelOidcTokenSync();
   } catch (error) {
     err = error;
   }
@@ -137,6 +145,21 @@ export async function getVercelOidcToken(
       jti: options.jti,
       skipCache: options.skipCache,
     });
+  }
+  return token;
+}
+
+async function tryOidcTokenFromFile(): Promise<string | null> {
+  const tokenFile = process.env.VERCEL_OIDC_TOKEN_FILE;
+  if (!tokenFile) {
+    return null;
+  }
+
+  const token = (await readFile(tokenFile, 'utf8')).trim();
+  if (!token) {
+    throw new VercelOidcTokenError(
+      `The Vercel OIDC token file is empty: ${tokenFile}`
+    );
   }
   return token;
 }

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import telemetry from '../../../../src/commands/telemetry';
 import { client } from '../../../mocks/client';
 import * as configFilesUtil from '../../../../src/util/config/files';
+import * as flushModule from '../../../../src/commands/telemetry/flush';
 
 describe('telemetry', () => {
   const setSpy = vi.spyOn(configFilesUtil, 'writeToConfigFile');
@@ -10,13 +11,49 @@ describe('telemetry', () => {
     setSpy.mockClear();
   });
 
+  it.each([
+    false,
+    true,
+  ])('bounds the worker and clears its deadline (stalled: %s)', async stalled => {
+    vi.useFakeTimers();
+    let complete!: (code: 0 | 1) => void;
+    const flush = vi.spyOn(flushModule, 'default').mockImplementation(
+      () =>
+        new Promise<0 | 1>(resolve => {
+          complete = resolve;
+        })
+    );
+    const exit = vi
+      .spyOn(process, 'exit')
+      .mockImplementation(() => undefined as never);
+    try {
+      client.setArgv('telemetry', 'flush');
+      const result = telemetry(client);
+      if (stalled) {
+        await vi.advanceTimersByTimeAsync(
+          flushModule.TELEMETRY_FLUSH_TIMEOUT_MS + 1_000
+        );
+        expect(exit).toHaveBeenCalledWith(1);
+      } else {
+        expect(exit).not.toHaveBeenCalled();
+      }
+      complete(0);
+      await expect(result).resolves.toBe(0);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      flush.mockRestore();
+      exit.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'telemetry';
 
       client.setArgv(command, '--help');
       const exitCodePromise = telemetry(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -143,6 +180,25 @@ describe('telemetry', () => {
         telemetry: { enabled: false },
       });
       expect(exitCode).toBe(0);
+    });
+  });
+
+  describe('status --json', () => {
+    it('writes the setting to stdout', async () => {
+      client.config = { telemetry: { enabled: false } };
+      client.setArgv('telemetry', 'status', '--json');
+
+      expect(await telemetry(client)).toBe(0);
+      expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+        telemetry: { enabled: false },
+      });
+      expect(client.stderr.getFullOutput()).toBe('');
+    });
+
+    it('still rejects --json on a subcommand without it', async () => {
+      client.setArgv('telemetry', 'enable', '--json');
+
+      expect(await telemetry(client)).toBe(2);
     });
   });
 });

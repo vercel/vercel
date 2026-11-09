@@ -103,11 +103,11 @@ export default async function request(
           reason: 'invalid_arguments',
           message: error instanceof Error ? error.message : String(error),
         },
-        1
+        2
       );
     }
     printError(error);
-    return 1;
+    return 2;
   }
 
   if (parsedArgs.args.length > 1) {
@@ -127,7 +127,7 @@ export default async function request(
             },
           ],
         },
-        1
+        2
       );
     }
     output.error(
@@ -146,15 +146,15 @@ export default async function request(
           reason: 'invalid_arguments',
           message: formatResult.error,
         },
-        1
+        2
       );
     }
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
-  const { currentTeam: teamId } = client.config;
+  const teamId = await client.resolveCurrentTeam();
   if (!teamId) {
     const switchCmd = withGlobalFlags(client, 'teams switch <slug>');
     if (client.nonInteractive) {
@@ -199,7 +199,7 @@ export default async function request(
           next: [
             {
               command: teamsRequestNextCommand(client),
-              when: 'to retry after resolving the error (same flags and optional userId)',
+              when: 'to retry after resolving the error (same options and optional userId)',
             },
           ],
         },

@@ -18,6 +18,16 @@ export async function POST() {
 }
 ```
 
+To abort the rate limit fetch after a specified duration, pass `timeout` in
+milliseconds. By default, no timeout is applied. If the timeout expires,
+`checkRateLimit` rejects with a `TimeoutError`.
+
+```ts
+const { rateLimited } = await checkRateLimit('my-rate-limit-id', {
+  timeout: 1000,
+});
+```
+
 <p align="center">
   <a href="https://vercel.com">
     <img src="https://assets.vercel.com/image/upload/v1588805858/repositories/vercel/logo.png" height="96">

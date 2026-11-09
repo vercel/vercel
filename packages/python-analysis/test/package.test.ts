@@ -478,6 +478,52 @@ describe('discoverPythonPackage', () => {
     });
   });
 
+  describe('dependency group normalization', () => {
+    it('normalizes pyproject.toml group names and include-group references', async () => {
+      const root = fixtureRoot('dependency-groups-pyproject');
+      const result = await discoverPythonPackage({
+        entrypointDir: root,
+        rootDir: root,
+      });
+
+      expect(result.manifest?.data['dependency-groups']).toEqual({
+        'vercel-proxy': ['vercel-proxy'],
+        'test-group': ['pytest'],
+        dev: ['ruff', { 'include-group': 'test-group' }],
+      });
+    });
+
+    it('normalizes group names converted from Pipfile categories', async () => {
+      const root = fixtureRoot('dependency-groups-pipfile');
+      const result = await discoverPythonPackage({
+        entrypointDir: root,
+        rootDir: root,
+      });
+
+      // Pipfiles have no include-group, so `dev` (from [dev-packages]) lists
+      // ruff only.
+      expect(result.manifest?.data['dependency-groups']).toEqual({
+        'vercel-proxy': ['vercel-proxy'],
+        'test-group': ['pytest'],
+        dev: ['ruff'],
+      });
+    });
+
+    it('rejects group names that collide after normalization', async () => {
+      const root = fixtureRoot('dependency-groups-duplicate');
+
+      await expect(
+        discoverPythonPackage({
+          entrypointDir: root,
+          rootDir: root,
+        })
+      ).rejects.toMatchObject({
+        code: 'PYTHON_DUPLICATE_DEPENDENCY_GROUP',
+        path: 'pyproject.toml',
+      });
+    });
+  });
+
   describe('edge cases', () => {
     it('handles root and entrypoint being the same directory', async () => {
       const root = fixtureRoot('simple-pyproject');

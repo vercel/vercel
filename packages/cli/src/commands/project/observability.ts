@@ -6,23 +6,18 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { isAPIError } from '../../util/errors-ts';
 import { emoji, prependEmoji } from '../../util/emoji';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
-import { getGlobalFlagsFromArgs } from '../../util/arg-common';
-import {
-  outputAgentError,
-  outputActionRequired,
-} from '../../util/agent-output';
-import {
-  AGENT_ACTION,
-  AGENT_REASON,
-  AGENT_STATUS,
-} from '../../util/agent-output-constants';
-import { observabilitySubcommand } from './command';
+import { outputAgentError } from '../../util/agent-output';
+import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
+import { observabilityDisableSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
-import getScope from '../../util/get-scope';
-import { canPrompt } from '../../util/can-prompt';
+import {
+  projectLabel,
+  refuseExplicitAccountConflict,
+  resolveProjectFeatureConsent,
+  warnIfOutsideCurrentTeam,
+} from '../../util/projects/project-feature-consent';
 
 async function setObservability(
   client: Client,
@@ -39,6 +34,7 @@ async function setObservability(
         method: 'PUT',
         json: true,
         body: { disabled: !enabled },
+        accountId: project.accountId,
       }
     );
   } catch (err: unknown) {
@@ -53,6 +49,24 @@ async function setObservability(
         return 1;
       }
       if (err.status === 404 || err.status === 402) {
+        // The API decides plan availability. Agents get the refusal as
+        // `plan_limit`, with the API's own explanation kept out of `message`.
+        outputAgentError(
+          client,
+          {
+            status: AGENT_STATUS.ERROR,
+            reason: AGENT_REASON.PLAN_LIMIT,
+            message: `Couldn't ${
+              enabled ? 'enable' : 'disable'
+            } Observability Plus for ${await projectLabel(client, project)}. It may not be available on the current plan.`,
+            userActionRequired: true,
+            hint: "Observability Plus needs a Pro or Enterprise team with the Observability Plus add-on. Ask a team owner to check the team's plan, then retry.",
+            ...(err.serverMessage && {
+              data: { apiMessage: err.serverMessage },
+            }),
+          },
+          1
+        );
         output.error(
           err.serverMessage ||
             `Observability Plus could not be ${
@@ -85,9 +99,7 @@ async function setObservability(
   }
 
   output.log(
-    `Observability Plus is ${enabled ? 'enabled' : 'disabled'} for ${
-      project.name
-    }.`
+    `Observability Plus is ${enabled ? 'enabled' : 'disabled'} for ${await projectLabel(client, project)}.`
   );
   return 0;
 }
@@ -97,8 +109,9 @@ export default async function observability(
   argv: string[]
 ): Promise<number> {
   let parsedArgs;
+  // `disable` takes every option `enable` does, plus `--yes`.
   const flagsSpecification = getFlagsSpecification(
-    observabilitySubcommand.options
+    observabilityDisableSubcommand.options
   );
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
@@ -111,11 +124,11 @@ export default async function observability(
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: error instanceof Error ? error.message : String(error),
         },
-        1
+        2
       );
     }
     printError(error);
-    return 1;
+    return 2;
   }
 
   const action = parsedArgs.args[0];
@@ -136,53 +149,11 @@ export default async function observability(
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
   const nameArg = parsedArgs.args[1];
-  if (!canPrompt(client)) {
-    const globalFlags = getGlobalFlagsFromArgs(client.argv.slice(2)).filter(
-      flag => flag !== '--non-interactive'
-    );
-    const interactiveCommand = getCommandNamePlain(
-      `project observability ${action}${nameArg ? ` ${nameArg}` : ''}${
-        globalFlags.length ? ` ${globalFlags.join(' ')}` : ''
-      }`.trim()
-    );
-    outputActionRequired(
-      client,
-      {
-        status: AGENT_STATUS.ACTION_REQUIRED,
-        reason: AGENT_REASON.CONFIRMATION_REQUIRED,
-        action: AGENT_ACTION.CONFIRMATION_REQUIRED,
-        message:
-          action === 'enable'
-            ? 'Enabling Observability Plus adds a paid feature to this project and will incur charges on your account. ' +
-              'This cannot be confirmed non-interactively: the user must run this command in a terminal and confirm.'
-            : 'Disabling Observability Plus turns off enhanced observability for this project. ' +
-              'This cannot be confirmed non-interactively: the user must run this command in a terminal and confirm.',
-        userActionRequired: true,
-        hint:
-          action === 'enable'
-            ? 'Surface this to the user; enabling a paid feature cannot be automated.'
-            : 'Surface this to the user; disabling Observability Plus requires interactive confirmation.',
-        next: [
-          {
-            command: interactiveCommand,
-            when: 'user runs this command in an interactive terminal',
-          },
-        ],
-      },
-      1
-    );
-    output.error(
-      action === 'enable'
-        ? 'This command must be run interactively because enabling Observability Plus incurs charges.'
-        : 'This command must be run interactively to disable Observability Plus.'
-    );
-    return 1;
-  }
 
   let project: Project;
   try {
@@ -197,7 +168,37 @@ export default async function observability(
     return 1;
   }
 
-  if (action === 'disable') {
+  // Enabling is usage on the account's current plan, like deploying, so it is
+  // an ordinary write: no confirmation, `--yes`, or `--scope`. Plan
+  // availability (Pro or Enterprise) is enforced by the API.
+  if (action === 'enable') {
+    const conflict = await refuseExplicitAccountConflict(client, {
+      project,
+      consequence: `Can't enable Observability Plus for ${project.name}.`,
+    });
+    if (conflict) {
+      return conflict.exitCode;
+    }
+    if (!asJson) {
+      await warnIfOutsideCurrentTeam(client, project);
+    }
+    return setObservability(client, project, true, asJson);
+  }
+
+  const consent = await resolveProjectFeatureConsent(client, {
+    command: 'project observability',
+    action,
+    projectArg: nameArg,
+    project,
+    billable: true,
+    yes: Boolean(parsedArgs.flags['--yes']),
+    consequence: `Disabling Observability Plus for ${project.name} will turn off enhanced observability for this project.`,
+  });
+  if (consent.kind === 'refused') {
+    return consent.exitCode;
+  }
+
+  if (consent.kind === 'prompt' || !asJson) {
     output.print(
       prependEmoji(
         `Disabling Observability Plus for ${chalk.bold(
@@ -206,48 +207,21 @@ export default async function observability(
         emoji('warning')
       )
     );
-    const confirmedDisable = await client.input.confirm(
-      `Disable Observability Plus for ${project.name}?`,
+  }
+
+  if (consent.kind === 'prompt') {
+    const target = `${project.name}${
+      consent.team ? ` on team ${consent.team}` : ''
+    }`;
+    const confirmed = await client.input.confirm(
+      `Disable Observability Plus for ${target}?`,
       false
     );
-    if (!confirmedDisable) {
+    if (!confirmed) {
       output.log('Canceled');
       return 0;
     }
-    return setObservability(client, project, false, asJson);
   }
 
-  const { team } = await getScope(client);
-  if (!team) {
-    output.error(
-      'Observability Plus requires a team. Use --scope to specify one.'
-    );
-    return 1;
-  }
-  if (team.billing?.plan === 'hobby') {
-    output.error(
-      'Observability Plus requires an active Pro or Enterprise plan.'
-    );
-    output.log(`Upgrade with ${getCommandName('buy pro')}.`);
-    return 1;
-  }
-
-  output.print(
-    prependEmoji(
-      `Enabling Observability Plus for ${chalk.bold(
-        project.name
-      )} will incur charges on your account.\n`,
-      emoji('warning')
-    )
-  );
-  const confirmed = await client.input.confirm(
-    `Enable Observability Plus for ${project.name}?`,
-    false
-  );
-  if (!confirmed) {
-    output.log('Canceled');
-    return 0;
-  }
-
-  return setObservability(client, project, true, asJson);
+  return setObservability(client, project, false, asJson);
 }

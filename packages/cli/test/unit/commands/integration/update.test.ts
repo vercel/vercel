@@ -4,6 +4,7 @@ import { client } from '../../../mocks/client';
 import { useConfiguration } from '../../../mocks/integration';
 import { type Team, useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
+import { expectDeprecationInJson } from '../../../helpers/deprecation-warning';
 
 describe('integration', () => {
   describe('update', () => {
@@ -169,14 +170,14 @@ describe('integration', () => {
     it('errors when integration slug is missing but --projects was passed first', async () => {
       client.setArgv('integration', 'update', '--projects', 'all');
       const code = await integrationCommand(client);
-      expect(code).toBe(1);
+      expect(code).toBe(2);
       await expect(client.stderr).toOutput('immediately after `update`');
     });
 
     it('errors when integration slug is missing with no subcommand flags', async () => {
       client.setArgv('integration', 'update');
       const code = await integrationCommand(client);
-      expect(code).toBe(1);
+      expect(code).toBe(2);
       await expect(client.stderr).toOutput('integration slug after `update`');
     });
 
@@ -192,7 +193,7 @@ describe('integration', () => {
         '--cwd',
         '/tmp/example'
       );
-      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+      await expect(integrationCommand(client)).rejects.toThrow('exit:2');
       const payload = JSON.parse(client.stdout.getFullOutput().trim());
       expect(payload).toMatchObject({
         status: 'error',
@@ -221,7 +222,7 @@ describe('integration', () => {
         '/tmp/example',
         '--non-interactive'
       );
-      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+      await expect(integrationCommand(client)).rejects.toThrow('exit:2');
       const payload = JSON.parse(client.stdout.getFullOutput().trim());
       expect(payload.reason).toBe('missing_arguments');
       expect(payload.message).toMatch(/immediately after `update`/i);
@@ -242,8 +243,118 @@ describe('integration', () => {
         'all'
       );
       const code = await integrationCommand(client);
-      expect(code).toBe(1);
-      await expect(client.stderr).toOutput('either --plan or --projects');
+      expect(code).toBe(2);
+      await expect(client.stderr).toOutput(
+        'either --billing-plan or --projects'
+      );
     });
+  });
+});
+
+describe('integration update renamed options', () => {
+  // Runs `integration update` with a fresh client, recording the update.
+  async function run(...args: string[]) {
+    client.reset();
+    useUser({ id: 'user_1', username: 'tester' });
+    const teams = useTeams('team_dummy');
+    const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+    client.config.currentTeam = team.id;
+    useConfiguration();
+    let patched: { id: string; body: unknown } | undefined;
+    client.scenario.patch('/v1/integrations/configuration/:id', (req, res) => {
+      patched = { id: req.params.id, body: req.body };
+      res.status(200).json({});
+    });
+    client.setArgv('integration', 'update', 'acme-no-projects', ...args);
+    const exitCode = await integrationCommand(client);
+    return {
+      exitCode,
+      patched,
+      stdout: client.stdout.getFullOutput(),
+      stderr: client.stderr.getFullOutput(),
+    };
+  }
+
+  it.each([
+    ['--plan', '--billing-plan', ['--plan', 'pro'], ['--billing-plan', 'pro']],
+    ['-p', '--billing-plan', ['-p', 'pro'], ['--billing-plan', 'pro']],
+    [
+      '--authorization-id',
+      '--authorization',
+      ['--billing-plan', 'pro', '--authorization-id', 'auth_1'],
+      ['--billing-plan', 'pro', '--authorization', 'auth_1'],
+    ],
+    [
+      '--installation-id',
+      '--installation',
+      ['--installation-id', 'acme-first', '--projects', 'all'],
+      ['--installation', 'acme-first', '--projects', 'all'],
+    ],
+  ])('still accepts %s, with one warning that names %s', async (typed, name, oldArgs, newArgs) => {
+    const now = await run(...newArgs);
+    const before = await run(...oldArgs);
+
+    expect(now.exitCode).toBe(0);
+    expect(now.stderr).not.toContain('deprecated');
+    expect(before.exitCode).toBe(now.exitCode);
+    expect(before.patched).toEqual(now.patched);
+    expect(before.stdout).toBe(now.stdout);
+    expect(before.stderr.match(/deprecated/g)).toHaveLength(1);
+    expect(before.stderr).toContain(`! ${typed} is deprecated. Use ${name}.\n`);
+
+    const nowJson = await run(...newArgs, '--json');
+    const beforeJson = await run(...oldArgs, '--json');
+    expectDeprecationInJson(
+      beforeJson.stdout,
+      nowJson.stdout,
+      `${typed} is deprecated. Use ${name}.`
+    );
+    expect(beforeJson.stderr).not.toContain('deprecated');
+  });
+
+  it('sends the plan and authorization given with the new names', async () => {
+    const result = await run(
+      '--billing-plan',
+      'pro',
+      '--authorization',
+      'auth_1'
+    );
+
+    expect(result.patched).toEqual({
+      id: 'acme-first',
+      body: { billingPlanId: 'pro', authorizationId: 'auth_1' },
+    });
+  });
+
+  it.each([
+    [
+      ['--billing-plan', 'pro', '--plan', 'pro'],
+      "Can't use --billing-plan with --plan.",
+    ],
+    [
+      ['--billing-plan', 'pro', '-p', 'pro'],
+      "Can't use --billing-plan with -p.",
+    ],
+    [
+      [
+        '--billing-plan',
+        'pro',
+        '--authorization',
+        'a',
+        '--authorization-id',
+        'a',
+      ],
+      "Can't use --authorization with --authorization-id.",
+    ],
+    [
+      ['--projects', 'all', '--installation', 'x', '--installation-id', 'x'],
+      "Can't use --installation with --installation-id.",
+    ],
+  ])('rejects %j before any request', async (args, message) => {
+    const result = await run(...args);
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain(message);
+    expect(result.patched).toBeUndefined();
   });
 });

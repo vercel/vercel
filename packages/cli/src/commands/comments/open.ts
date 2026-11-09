@@ -27,7 +27,7 @@ export default async function openThread(
   telemetry.trackCliArgumentThread(threadInput);
   if (!threadInput) {
     output.error('Pass a thread ID or URL: `vercel comments open <thread>`.');
-    return 1;
+    return 2;
   }
 
   const threadRef = parseThreadArg(threadInput);
@@ -35,7 +35,7 @@ export default async function openThread(
     output.error(
       `Could not extract a thread ID from "${threadInput}". Pass the thread ID or its vercel.com URL.`
     );
-    return 1;
+    return 2;
   }
   const threadId = threadRef.id;
 

@@ -41,7 +41,7 @@ describe('flags split', () => {
 
       const exitCodePromise = flags(client);
 
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
@@ -122,7 +122,11 @@ describe('flags split', () => {
     );
   });
 
-  it('configures a boolean split with an inferred fallback variant', async () => {
+  it.each([
+    'active',
+    'archived',
+  ] as const)('configures a boolean split with an inferred fallback variant (%s)', async state => {
+    testFlags[0].state = state;
     client.setArgv(
       'flags',
       'split',
@@ -166,6 +170,7 @@ describe('flags split', () => {
     expect(output).toContain('Based on: user.userId');
     expect(output).toContain('Fallback: Off (false)');
     expect(output).toContain('Weights: Off (false): 95%, On (true): 5%');
+    expect(testFlags[0].state).toBe(state);
   });
 
   it('prompts for the fallback variant when configuring a boolean split interactively', async () => {
@@ -464,7 +469,7 @@ describe('flags split', () => {
 
     expect(exitCode).toEqual(1);
     expect(stripAnsi(client.stderr.getFullOutput())).toContain(
-      'Missing required flag --default-variant'
+      'Missing required option --default-variant'
     );
   });
 

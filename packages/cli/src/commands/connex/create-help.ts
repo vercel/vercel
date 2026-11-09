@@ -1,8 +1,18 @@
-import chalk from 'chalk';
+import { createHelpTheme, type HelpTheme } from '../../util/output/help-theme';
+import {
+  helpHeading,
+  helpColumns,
+  helpRows,
+  helpSyntaxWidth,
+  wrapHelpText,
+} from '../../util/output/help-format';
 import output from '../../output-manager';
+import { remoteText } from '../../util/output/remote-text';
 import type Client from '../../util/client';
 import {
   buildCommandDocumentationLines,
+  buildCommandExampleLines,
+  type CommandExample,
   type Command,
   type HelpOptions,
 } from '../help';
@@ -14,7 +24,6 @@ import {
   createPathBadge,
   describeCredentialFields,
   fetchConnexServiceInfo,
-  wrapPlain,
   type ConnexConnectionMethod,
   type ConnexServiceInfo,
   type ConnexServiceTarget,
@@ -68,7 +77,8 @@ export async function printCreateDynamicHelp(
 
   const serviceName = serviceInfo?.name ?? service;
   const targets = serviceInfo?.targets ?? [];
-  const width = Math.max(40, Math.min(client.stderr.columns || 80, 100));
+  const width = helpColumns(client.stdout.columns);
+  const theme = createHelpTheme(client.stdout);
 
   // `create --help` is the command reference; `create <service> --help`
   // answers a different question, so it keeps the synopsis and description
@@ -82,20 +92,23 @@ export async function printCreateDynamicHelp(
       disabledGlobalOptions: globalCommandOptions.map(option => option.name),
       examples: [],
     },
-    { omitDocumentation: true }
+    { omitDocumentation: true, theme, stream: client.stdout, columns: width }
   );
 
   if (targets.length > 1) {
-    output.print(formatTargets(serviceName, targets, width));
+    client.stdout.write(formatTargets(serviceName, targets, width, theme));
   }
-  output.print(formatMethods(serviceName, methods, targets, width));
-  output.print(formatExamples(service, methods));
+  client.stdout.write(
+    formatMethods(serviceName, methods, targets, width, theme)
+  );
+  client.stdout.write(formatExamples(service, methods, width, theme));
 
   const documentationLines = buildCommandDocumentationLines(connexCommand, {
     columns: width,
+    theme,
   });
   if (documentationLines) {
-    output.print(`\n${documentationLines}`);
+    client.stdout.write(`\n${documentationLines}\n`);
   }
 
   return true;
@@ -104,16 +117,20 @@ export async function printCreateDynamicHelp(
 function formatTargets(
   serviceName: string,
   targets: ConnexServiceTarget[],
-  width: number
+  width: number,
+  theme: HelpTheme
 ): string {
-  const lines: string[] = [
-    '',
-    `  ${chalk.dim(`${serviceName} products:`)}`,
-    '',
-  ];
+  const lines: string[] = ['', helpHeading(`${serviceName} products`, theme)];
 
   for (const target of targets) {
-    lines.push(`    ${chalk.bold(target.target)}  ${target.label}`);
+    lines.push(
+      helpRows(
+        [{ syntax: target.target, description: target.label }],
+        width,
+        theme,
+        helpSyntaxWidth(targets.map(target => target.target))
+      )
+    );
     for (const line of describeLines(
       target.description,
       target.docsUrl,
@@ -131,20 +148,28 @@ function formatMethods(
   serviceName: string,
   methods: ConnexConnectionMethod[],
   targets: ConnexServiceTarget[],
-  width: number
+  width: number,
+  theme: HelpTheme
 ): string {
   const lines: string[] = [
     '',
-    `  ${chalk.dim(`Connection methods for ${serviceName}:`)}`,
-    '',
+    helpHeading(`Connection methods for ${serviceName}`, theme),
   ];
 
   for (const method of methods) {
     const badge = createPathBadge(method);
     lines.push(
-      `    ${chalk.bold(method.connectionMethod)}  ${method.label}${
-        badge ? chalk.dim(` — ${badge}`) : ''
-      }`
+      helpRows(
+        [
+          {
+            syntax: method.connectionMethod,
+            description: `${method.label}${badge ? ` — ${badge}` : ''}`,
+          },
+        ],
+        width,
+        theme,
+        helpSyntaxWidth(methods.map(method => method.connectionMethod))
+      )
     );
 
     for (const line of describeLines(method.description, undefined, width)) {
@@ -155,36 +180,55 @@ function formatMethods(
       .map(slug => targets.find(t => t.target === slug)?.label ?? slug)
       .join(', ');
     if (connectsTo && targets.length > 1) {
-      lines.push(indented(`Connects to: ${connectsTo}`));
+      lines.push(wrapHelpText(`Connects to: ${connectsTo}`, width, '    '));
     }
 
     const registerUrl = method.settingsUrl ?? method.docUrl;
     if (registerUrl && method.create.manual) {
-      lines.push(indented(`Get credentials at ${chalk.cyan(registerUrl)}`));
+      lines.push(
+        wrapHelpText(`Get credentials at ${registerUrl}`, width, '    ')
+      );
     }
 
     for (const field of method.templateFields ?? []) {
       const detail = field.default
-        ? `default: ${field.default}`
+        ? `${field.label} (default: ${field.default})`
         : field.placeholder
-          ? `e.g. ${field.placeholder}`
-          : undefined;
+          ? `${field.label} · e.g. ${field.placeholder}`
+          : field.label;
       lines.push(
-        indented(
-          `--param ${field.key}=<value>  ${chalk.dim(
-            detail ? `${field.label} · ${detail}` : field.label
-          )}`
+        helpRows(
+          [
+            {
+              syntax: [
+                { text: '--param', literal: true },
+                { text: ` ${field.key}=<VALUE>` },
+              ],
+              description: detail,
+            },
+          ],
+          Math.max(1, width - 2),
+          theme,
+          helpSyntaxWidth(
+            (method.templateFields ?? []).map(
+              field => `--param ${field.key}=<VALUE>`
+            )
+          )
         )
+          .split('\n')
+          .map(line => `  ${line}`)
+          .join('\n')
       );
     }
 
     if (method.instructions) {
-      for (const line of wrapPlain(
-        connexMarkdownToPlainText(method.instructions),
-        width - 6
-      )) {
-        lines.push(indented(chalk.dim(line)));
-      }
+      lines.push(
+        wrapHelpText(
+          connexMarkdownToPlainText(method.instructions),
+          width,
+          '    '
+        )
+      );
     }
 
     const credentials = method.create.manual
@@ -195,7 +239,7 @@ function formatMethods(
       // the automatic one, so don't present --data as its requirement.
       const prefix =
         method.create.managed === true ? 'Or bring your own: --data' : '--data';
-      lines.push(indented(`${prefix} with ${chalk.dim(credentials)}`));
+      lines.push(wrapHelpText(`${prefix} with ${credentials}`, width, '    '));
     }
 
     lines.push('');
@@ -206,41 +250,55 @@ function formatMethods(
 
 function formatExamples(
   service: string,
-  methods: ConnexConnectionMethod[]
+  methods: ConnexConnectionMethod[],
+  columns: number,
+  theme: HelpTheme
 ): string {
-  const lines: string[] = ['', `  ${chalk.dim('Examples:')}`];
+  const examples: CommandExample[] = [];
 
   for (const method of methods) {
     const parts = [
       packageName,
       COMMAND,
-      service,
+      exampleIdentifier(service, 'SERVICE'),
       '--connection-method',
-      method.connectionMethod,
+      exampleIdentifier(method.connectionMethod, 'METHOD'),
     ];
     for (const field of method.templateFields ?? []) {
-      parts.push('--param', `${field.key}=${field.placeholder ?? '<value>'}`);
+      parts.push(
+        '--param',
+        `${exampleIdentifier(field.key, 'KEY')}=${exampleIdentifier(field.default, 'VALUE')}`
+      );
     }
-    parts.push('--name', `${service}-${method.connectionMethod}`);
+    parts.push(
+      '--name',
+      `${exampleIdentifier(service, 'SERVICE')}-${exampleIdentifier(method.connectionMethod, 'METHOD')}`
+    );
 
     const managedOnly = method.create.managed === true;
     if (!managedOnly && method.create.manual) {
-      parts.push('--data', '@credentials.json');
+      parts.push('--data', '"@<CREDENTIALS_FILE>"');
     }
 
-    lines.push('');
-    lines.push(`  ${chalk.dim('-')} Connect with ${method.label}`);
-    lines.push('');
-    lines.push(`    ${chalk.cyan(`$ ${parts.join(' ')}`)}`);
+    examples.push({
+      name: `Connect with ${remoteText(method.label)}`,
+      placeholders: [
+        ...new Set(
+          parts.flatMap(
+            part =>
+              part.match(/<(?:SERVICE|METHOD|KEY|VALUE|CREDENTIALS_FILE)>/g) ??
+              []
+          )
+        ),
+      ],
+      value: parts.join(' '),
+    });
   }
-
-  lines.push('');
-  lines.push(
-    `  ${chalk.dim(`Run \`${packageName} ${COMMAND} --help\` for all options.`)}`
-  );
-  lines.push('');
-
-  return lines.join('\n');
+  examples.push({
+    name: 'Show all command options',
+    value: `${packageName} ${COMMAND} --help`,
+  });
+  return `\n${buildCommandExampleLines({ examples }, columns, theme)}\n`;
 }
 
 function describeLines(
@@ -250,16 +308,19 @@ function describeLines(
 ): string[] {
   const lines: string[] = [];
   if (description) {
-    for (const line of wrapPlain(description, width - 6)) {
-      lines.push(indented(chalk.dim(line)));
-    }
+    lines.push(wrapHelpText(description, width, '    '));
   }
   if (docsUrl) {
-    lines.push(indented(chalk.dim(`Docs: ${docsUrl}`)));
+    lines.push(wrapHelpText(`Docs: ${docsUrl}`, width, '    '));
   }
   return lines;
 }
 
-function indented(text: string): string {
-  return `      ${text}`;
+function exampleIdentifier(
+  value: string | undefined,
+  placeholder: string
+): string {
+  return value && /^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$/.test(value)
+    ? value
+    : `<${placeholder}>`;
 }

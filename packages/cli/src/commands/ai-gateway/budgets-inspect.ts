@@ -1,10 +1,15 @@
 import type Client from '../../util/client';
 import {
   listBudgets,
+  listScopeBudgetDefaults,
   parseBudgetScope,
+  BUDGET_DEFAULT_APPLIES_TO,
   type Budget,
 } from '../../util/ai-gateway/budgets';
-import { findApiKeyByIdOrName } from '../../util/ai-gateway/api-keys';
+import {
+  describeApiKeyLookupError,
+  findApiKeyByIdOrName,
+} from '../../util/ai-gateway/api-keys';
 import { ensureTeam } from '../../util/ai-gateway/ensure-team';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import getTeamByIdOrSlug from '../../util/teams/get-team-by-id-or-slug';
@@ -21,6 +26,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { isAPIError } from '../../util/errors-ts';
+import { getCommandName } from '../../util/pkg-name';
 import { validateJsonOutput } from '../../util/output-format';
 
 export default async function inspect(client: Client, argv: string[]) {
@@ -38,30 +44,36 @@ export default async function inspect(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
 
   telemetry.trackCliArgumentScope(args[0]);
   telemetry.trackCliArgumentName(args[1]);
+  telemetry.trackCliFlagDefault(opts['--default']);
   telemetry.trackCliOptionFormat(opts['--format']);
 
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
-  const scopeResult = parseBudgetScope(args);
+  const isDefault = opts['--default'] as boolean | undefined;
+  const scopeResult = parseBudgetScope(args, { isDefault });
   if ('error' in scopeResult) {
     output.error(scopeResult.error);
-    return 1;
+    return 2;
   }
   const { scope } = scopeResult;
 
   if (!(await ensureTeam(client))) {
     return 1;
+  }
+
+  if (scope.isDefault) {
+    return await inspectScopeDefault(client, scope.scopeType, asJson);
   }
 
   let scopeId: string | undefined;
@@ -95,11 +107,7 @@ export default async function inspect(client: Client, argv: string[]) {
   } else if (scope.scopeType === 'api-key') {
     const resolved = await findApiKeyByIdOrName(client, scope.name);
     if ('error' in resolved) {
-      output.error(
-        resolved.error === 'ambiguous'
-          ? `Multiple API keys named "${scope.name}" (${resolved.count}). Use the key id instead.`
-          : `API key not found: ${scope.name}`
-      );
+      output.error(describeApiKeyLookupError(scope.name, resolved));
       return 1;
     }
     scopeId = resolved.apiKey.id;
@@ -150,5 +158,48 @@ export default async function inspect(client: Client, argv: string[]) {
   if (budget.source === 'default') {
     printAlignedLabel('Source', `${budget.scopeType} default`);
   }
+  return 0;
+}
+
+// The --default path: reads the scope's policy row from the defaults list.
+async function inspectScopeDefault(
+  client: Client,
+  scopeType: 'project' | 'user' | 'api-key',
+  asJson: boolean
+) {
+  output.spinner('Fetching budget default…');
+
+  let row;
+  try {
+    const defaults = await listScopeBudgetDefaults(client);
+    // `scopeType` is already narrowed to the default-capable scopes; the found
+    // row shares it (the type still admits a hidden team row).
+    row = defaults.find(d => d.scopeType === scopeType && d.active !== false);
+  } catch (err: unknown) {
+    output.stopSpinner();
+    if (isAPIError(err)) {
+      output.error(err.message);
+      return 1;
+    }
+    throw err;
+  }
+  output.stopSpinner();
+
+  if (!row) {
+    output.error(
+      `No ${scopeType} budget default set. Set one with ${getCommandName(`ai-gateway budgets set ${scopeType} --default`)}.`
+    );
+    return 1;
+  }
+
+  if (asJson) {
+    client.stdout.write(`${JSON.stringify(row, null, 2)}\n`);
+    return 0;
+  }
+
+  printAlignedLabel('Scope', row.scopeType);
+  printAlignedLabel('Limit', `$${row.limitAmount}`);
+  printAlignedLabel('Refresh', row.refreshPeriod);
+  printAlignedLabel('Applies to', BUDGET_DEFAULT_APPLIES_TO[scopeType]);
   return 0;
 }

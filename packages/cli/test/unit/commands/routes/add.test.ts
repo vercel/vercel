@@ -31,7 +31,7 @@ describe('routes add', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = routes(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -60,7 +60,7 @@ describe('routes add', () => {
       expect(nextCmd).toContain('--ai');
       expect(nextCmd).toContain('--yes');
       expect(nextCmd).toContain('<description>');
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(exitSpy).toHaveBeenCalledWith(2);
       logSpy.mockRestore();
       exitSpy.mockRestore();
       client.nonInteractive = false;
@@ -331,7 +331,19 @@ describe('routes add', () => {
       await expect(exitCodePromise).resolves.toEqual(0);
     });
 
-    it('should add route with --disabled flag', async () => {
+    it.each([
+      ['--no-enable', false],
+      ['--disabled', true],
+    ])('should add a route turned off with %s', async (flag, deprecated) => {
+      let enabled: unknown;
+      client.scenario.post(
+        '/v1/projects/:projectId/routes',
+        (req, _res, next) => {
+          enabled = (req.body as { route?: { enabled?: boolean } }).route
+            ?.enabled;
+          next?.();
+        }
+      );
       useAddRoute();
 
       client.setArgv(
@@ -346,7 +358,7 @@ describe('routes add', () => {
         'rewrite',
         '--dest',
         '/dest',
-        '--disabled',
+        flag,
         '--yes'
       );
       const exitCodePromise = routes(client);
@@ -354,6 +366,13 @@ describe('routes add', () => {
       await expect(client.stderr).toOutput('Created');
 
       await expect(exitCodePromise).resolves.toEqual(0);
+      expect(enabled).toBe(false);
+      const stderr = client.stderr.getFullOutput();
+      if (deprecated) {
+        expect(stderr).toContain('--disabled is deprecated. Use --no-enable.');
+      } else {
+        expect(stderr).not.toContain('deprecated');
+      }
     });
 
     it('should add route with --position start', async () => {
@@ -458,7 +477,7 @@ describe('routes add', () => {
 
       await expect(client.stderr).toOutput('Route name is required');
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error when --src is missing with --yes', async () => {
@@ -478,7 +497,7 @@ describe('routes add', () => {
 
       await expect(client.stderr).toOutput('Source path is required');
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error on name too long', async () => {
@@ -642,7 +661,7 @@ describe('routes add', () => {
 
       await expect(client.stderr).toOutput('--action is required');
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error when --action redirect has non-redirect status', async () => {
@@ -666,7 +685,7 @@ describe('routes add', () => {
 
       await expect(client.stderr).toOutput('Invalid redirect status');
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error when --action rewrite has --status', async () => {
@@ -690,7 +709,7 @@ describe('routes add', () => {
 
       await expect(client.stderr).toOutput('does not accept --status');
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error on invalid transform format', async () => {
@@ -725,7 +744,7 @@ describe('routes add', () => {
 
       await expect(client.stderr).toOutput('At least one action is required');
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error when --action rewrite without --dest', async () => {
@@ -742,7 +761,7 @@ describe('routes add', () => {
       );
       const exitCodePromise = routes(client);
       await expect(client.stderr).toOutput('requires --dest');
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error when --action redirect without --dest', async () => {
@@ -761,7 +780,7 @@ describe('routes add', () => {
       );
       const exitCodePromise = routes(client);
       await expect(client.stderr).toOutput('requires --dest');
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error when --action set-status without --status', async () => {
@@ -778,7 +797,7 @@ describe('routes add', () => {
       );
       const exitCodePromise = routes(client);
       await expect(client.stderr).toOutput('requires --status');
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error when --action is invalid', async () => {
@@ -795,7 +814,7 @@ describe('routes add', () => {
       );
       const exitCodePromise = routes(client);
       await expect(client.stderr).toOutput('Invalid action type');
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error on status code below 100', async () => {
@@ -819,7 +838,7 @@ describe('routes add', () => {
         'Status code must be between 100 and 599'
       );
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error on status code above 599', async () => {
@@ -843,7 +862,7 @@ describe('routes add', () => {
         'Status code must be between 100 and 599'
       );
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error when too many conditions (>16)', async () => {
@@ -1413,7 +1432,7 @@ describe('routes add', () => {
           '/new-feature/:path*',
           '--description',
           'Routing for upcoming feature - enable when ready to launch',
-          '--disabled',
+          '--no-enable',
           '--yes'
         );
         await expect(routes(client)).resolves.toEqual(0);

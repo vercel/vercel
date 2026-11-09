@@ -25,7 +25,7 @@ export default async function main(client: Client) {
     });
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const telemetry = new GitTelemetryClient({
     opts: {
@@ -40,8 +40,13 @@ export default async function main(client: Client) {
 
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('git', subcommand);
-    output.print(help(gitCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(gitCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   switch (subcommand) {
@@ -53,7 +58,12 @@ export default async function main(client: Client) {
       return disconnect(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      output.print(help(gitCommand, { columns: client.stderr.columns }));
+      output.print(
+        help(gitCommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
+      );
       return 2;
   }
 }

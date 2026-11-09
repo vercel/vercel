@@ -57,7 +57,7 @@ describe('vcr image ls', () => {
     it('tracks telemetry', async () => {
       client.setArgv('vcr', 'image', 'ls', '--help');
       const exitCode = await vcr(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -133,12 +133,15 @@ describe('vcr image ls', () => {
     const exitCode = await vcr(client);
 
     expect(exitCode).toBe(0);
+    expect(client.stderr.getFullOutput().includes('deprecated')).toBe(
+      flag === '--cursor'
+    );
   });
 
   it('errors when the repository argument is missing', async () => {
     client.setArgv('vcr', 'image', 'ls');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('vcr image ls');
   });
 });

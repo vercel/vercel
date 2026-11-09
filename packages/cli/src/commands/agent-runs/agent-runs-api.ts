@@ -23,12 +23,33 @@ export interface AgentRunsQuery {
   environment?: string;
   since?: string;
   until?: string;
+  /** Epoch seconds. Overrides `since` and `until` when both are set. */
+  window?: { from: number; to: number };
   view?: 'team';
   page?: number;
+  /** Source cursor that continues the list endpoint's merged list. */
+  cursor?: string;
   pageSize?: number;
   search?: string;
   runId?: string;
   trace?: boolean;
+  traceStreamId?: string;
+  traceAfterCursor?: string;
+  traceBeforeChunk?: number;
+}
+
+/** Resolves `--since` and `--until` to the epoch seconds sent as `from`/`to`. */
+export function resolveAgentRunsWindow(
+  since: string | undefined,
+  until: string | undefined
+): { from: number; to: number } | undefined {
+  if (!since) return undefined;
+  const from = parseTimeFlag(since);
+  const to = until ? parseTimeFlag(until) : new Date();
+  return {
+    from: Math.floor(from.getTime() / 1000),
+    to: Math.floor(to.getTime() / 1000),
+  };
 }
 
 export function buildAgentRunsUrl(query: AgentRunsQuery): string {
@@ -40,11 +61,11 @@ export function buildAgentRunsUrl(query: AgentRunsQuery): string {
     url.searchParams.set('project', query.projectId);
   }
   url.searchParams.set('environment', query.environment || 'production');
-  if (query.since) {
-    const from = parseTimeFlag(query.since);
-    const to = query.until ? parseTimeFlag(query.until) : new Date();
-    url.searchParams.set('from', String(Math.floor(from.getTime() / 1000)));
-    url.searchParams.set('to', String(Math.floor(to.getTime() / 1000)));
+  const window =
+    query.window ?? resolveAgentRunsWindow(query.since, query.until);
+  if (window) {
+    url.searchParams.set('from', String(window.from));
+    url.searchParams.set('to', String(window.to));
   }
   if (typeof query.page === 'number') {
     url.searchParams.set('page', String(Math.max(1, Math.floor(query.page))));
@@ -58,11 +79,23 @@ export function buildAgentRunsUrl(query: AgentRunsQuery): string {
   if (query.search) {
     url.searchParams.set('search', query.search);
   }
+  if (query.cursor) {
+    url.searchParams.set('cursor', query.cursor);
+  }
   if (query.runId) {
     url.searchParams.set('runId', query.runId);
   }
   if (query.trace) {
     url.searchParams.set('trace', '1');
+  }
+  if (query.traceStreamId) {
+    url.searchParams.set('traceStreamId', query.traceStreamId);
+  }
+  if (query.traceAfterCursor) {
+    url.searchParams.set('traceAfterCursor', query.traceAfterCursor);
+  }
+  if (typeof query.traceBeforeChunk === 'number') {
+    url.searchParams.set('traceBeforeChunk', String(query.traceBeforeChunk));
   }
   return url.href;
 }
@@ -190,7 +223,7 @@ export function invalidArguments(client: Client, message: string): number {
     message,
   });
   output.error(message);
-  return 1;
+  return 2;
 }
 
 export function normalizeTraceMaxFieldLength(

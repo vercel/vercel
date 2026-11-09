@@ -48,6 +48,12 @@ export function printFlagDetails({
     output.print(`  ${chalk.dim('Description:')}  ${flag.description}\n`);
   }
 
+  if (flag.experiment) {
+    output.print(
+      `  ${chalk.dim('Experiment:')}   managed by ${flag.experiment.id ?? 'an experiment'}\n`
+    );
+  }
+
   if (showTimestamps) {
     output.print(
       `  ${chalk.dim('Created:')}      ${formatDate(flag.createdAt)}\n`
@@ -165,6 +171,13 @@ export function printFlagEnvironmentDetails(
               flag.variants
             )}\n`
           );
+        } else if (fallthrough.type === 'experiment') {
+          output.print(
+            `      ${chalk.dim('Default:')} ${formatFlagOutcome(
+              fallthrough,
+              flag.variants
+            )}\n`
+          );
         }
       }
     } else {
@@ -216,6 +229,7 @@ function hasCustomConfigurationEnabled(
     Boolean(envConfig.targets && Object.keys(envConfig.targets).length > 0) ||
     envConfig.rules.length > 0 ||
     envConfig.fallthrough.type === 'split' ||
-    envConfig.fallthrough.type === 'rollout'
+    envConfig.fallthrough.type === 'rollout' ||
+    envConfig.fallthrough.type === 'experiment'
   );
 }

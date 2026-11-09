@@ -70,7 +70,7 @@ describe('env pull', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = env(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -104,7 +104,47 @@ describe('env pull', () => {
     await expect(env(client)).resolves.toEqual(0);
   });
 
-  it('rejects --project when --id belongs to another project', async () => {
+  it.each([
+    403, 404,
+  ])('uses the team ID in deployment lookup errors without an owner lookup (%s)', async status => {
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    const requests: string[] = [];
+    client.scenario.get('*', (req, _res, next) => {
+      requests.push(req.path);
+      next?.();
+    });
+    client.scenario.get('/v9/projects/prj_scoped', (_req, res) => {
+      res.json({
+        ...defaultProject,
+        id: 'prj_scoped',
+        accountId: 'team_dummy',
+      });
+    });
+    client.scenario.get('/v13/deployments/dpl_denied', (_req, res) => {
+      res.status(status).json({ error: { message: 'Deployment unavailable' } });
+    });
+    const envPath = path.join(client.cwd, '.env.local');
+    await fs.writeFile(envPath, 'EXISTING=value\n');
+    client.setArgv(
+      'env',
+      'pull',
+      '--deployment',
+      'dpl_denied',
+      '--project',
+      'prj_scoped',
+      '--yes'
+    );
+
+    await expect(env(client)).rejects.toThrow(/dpl_denied.*team_dummy/);
+    expect(requests).toEqual([
+      '/v9/projects/prj_scoped',
+      '/v13/deployments/dpl_denied',
+    ]);
+    expect(await fs.readFile(envPath, 'utf8')).toBe('EXISTING=value\n');
+  });
+
+  it('rejects --project when --deployment belongs to another project', async () => {
     useUser();
     useTeams('team_dummy');
     useProject({
@@ -121,7 +161,7 @@ describe('env pull', () => {
     client.setArgv(
       'env',
       'pull',
-      '--id',
+      '--deployment',
       'dpl_other',
       '--project',
       'vercel-env-pull',
@@ -134,7 +174,7 @@ describe('env pull', () => {
     );
   });
 
-  it('accepts --project when --id belongs to the selected project', async () => {
+  it('accepts --project when --deployment belongs to the selected project', async () => {
     useUser();
     useTeams('team_dummy');
     useProject({
@@ -155,7 +195,7 @@ describe('env pull', () => {
       'env',
       'pull',
       '.env.test',
-      '--id',
+      '--deployment',
       'dpl_same',
       '--project',
       'vercel-env-pull',
@@ -163,6 +203,159 @@ describe('env pull', () => {
     );
 
     await expect(env(client)).resolves.toEqual(0);
+  });
+
+  describe('deployment option', () => {
+    function useDeploymentEnv() {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+        accountId: 'team_dummy',
+      });
+      client.scenario.get('/v13/deployments/dpl_same', (_req, res) => {
+        res.json({ id: 'dpl_same', projectId: 'vercel-env-pull' });
+      });
+      client.scenario.get('/v3/env/pull/dpl_same', (_req, res) => {
+        res.json({ env: {}, buildEnv: { DEPLOYMENT_VAR: 'value' } });
+      });
+      client.cwd = setupTmpDir();
+      client.config.currentTeam = 'team_dummy';
+    }
+
+    function optionEvents() {
+      return client.telemetryEventStore.readonlyEvents
+        .map(event => event.key)
+        .filter(key => key === 'option:deployment' || key === 'option:id');
+    }
+
+    it('pulls the deployment variables with --deployment', async () => {
+      useDeploymentEnv();
+      client.setArgv(
+        'env',
+        'pull',
+        '.env.test',
+        '--deployment',
+        'dpl_same',
+        '--project',
+        'vercel-env-pull',
+        '--yes'
+      );
+
+      await expect(env(client)).resolves.toEqual(0);
+      const content = await fs.readFile(
+        path.join(client.cwd, '.env.test'),
+        'utf8'
+      );
+      expect(content).toContain('DEPLOYMENT_VAR="value"');
+      expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+      expect(optionEvents()).toEqual(['option:deployment']);
+    });
+
+    it('still accepts the deprecated --id with a warning', async () => {
+      useDeploymentEnv();
+      client.setArgv(
+        'env',
+        'pull',
+        '.env.test',
+        '--id',
+        'dpl_same',
+        '--project',
+        'vercel-env-pull',
+        '--yes'
+      );
+
+      await expect(env(client)).resolves.toEqual(0);
+      const content = await fs.readFile(
+        path.join(client.cwd, '.env.test'),
+        'utf8'
+      );
+      expect(content).toContain('DEPLOYMENT_VAR="value"');
+      expect(client.stderr.getFullOutput()).toContain(
+        '! --id is deprecated. Use --deployment.'
+      );
+      expect(optionEvents()).toEqual(['option:id']);
+    });
+
+    it('rejects --deployment with --id before any request', async () => {
+      useDeploymentEnv();
+      const fetch = vi.spyOn(client, 'fetch');
+      client.setArgv(
+        'env',
+        'pull',
+        '.env.test',
+        '--deployment',
+        'dpl_same',
+        '--id',
+        'dpl_same',
+        '--yes'
+      );
+
+      await expect(env(client)).resolves.toEqual(2);
+      expect(client.stderr.getFullOutput()).toContain(
+        "Can't use --deployment with --id."
+      );
+      expect(fetch).not.toHaveBeenCalled();
+      expect(fs.existsSync(path.join(client.cwd, '.env.test'))).toBe(false);
+      fetch.mockRestore();
+    });
+
+    it('rejects an empty --deployment before any request', async () => {
+      useDeploymentEnv();
+      const fetch = vi.spyOn(client, 'fetch');
+      client.setArgv('env', 'pull', '.env.test', '--deployment=', '--yes');
+
+      await expect(env(client)).resolves.toEqual(2);
+      expect(client.stderr.getFullOutput()).toContain(
+        "--deployment can't be empty."
+      );
+      expect(fetch).not.toHaveBeenCalled();
+      fetch.mockRestore();
+    });
+
+    it('writes a JSON error for --deployment with --id in non-interactive mode', async () => {
+      useDeploymentEnv();
+      client.nonInteractive = true;
+      client.setArgv(
+        'env',
+        'pull',
+        '--deployment',
+        'dpl_same',
+        '--id',
+        'dpl_same'
+      );
+
+      await expect(env(client)).resolves.toEqual(2);
+      expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+        status: 'error',
+        reason: 'invalid_arguments',
+        message: "Can't use --deployment with --id.",
+      });
+    });
+
+    it('suggests --deployment when --id was used in an unlinked directory', async () => {
+      useUser();
+      client.cwd = setupTmpDir();
+      client.nonInteractive = true;
+      vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+      client.setArgv('env', 'pull', '--id', 'dpl_same', '--yes');
+
+      await env(client);
+      const payload = JSON.parse(client.stdout.getFullOutput());
+      expect(payload.reason).toBe('not_linked');
+      const commands: string[] = payload.next.map(
+        (next: { command: string }) => next.command
+      );
+      expect(commands).toContainEqual(
+        expect.stringMatching(/^vercel env pull --deployment dpl_same /)
+      );
+      for (const command of commands) {
+        expect(command).not.toMatch(/--id\b/);
+      }
+      vi.restoreAllMocks();
+    });
   });
 
   it('accepts --project when the deployment response omits projectId', async () => {
@@ -186,7 +379,7 @@ describe('env pull', () => {
       'env',
       'pull',
       '.env.test',
-      '--id',
+      '--deployment',
       'dpl_legacy',
       '--project',
       'vercel-env-pull',

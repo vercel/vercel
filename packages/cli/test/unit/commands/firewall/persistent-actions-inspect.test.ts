@@ -9,7 +9,7 @@ import {
   FIREWALL_ROLLUP_COLUMN,
 } from '../../../mocks/firewall';
 import { useProject, defaultProject } from '../../../mocks/project';
-import { useTeams } from '../../../mocks/team';
+import { setTeamBillingPlan, useTeams } from '../../../mocks/team';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 
 const IP = '51.158.168.18';
@@ -20,6 +20,9 @@ describe('firewall persistent-actions inspect', () => {
   beforeEach(() => {
     useUser();
     useTeams('team_dummy');
+    // The retention these commands report is read off the plan, and a team
+    // the API answers without one is a lookup failure rather than a plan.
+    setTeamBillingPlan('pro');
     useProject({
       ...defaultProject,
       id: 'firewall-test-project',
@@ -38,22 +41,22 @@ describe('firewall persistent-actions inspect', () => {
       series: [
         {
           timestamp: new Date(START).toISOString(),
-          waf_action: 'challenge',
+          wafAction: 'challenge',
           value: 1,
         },
         {
           timestamp: new Date(END).toISOString(),
-          waf_action: 'log',
+          wafAction: 'log',
           value: 1,
         },
       ],
       actionSummary: [
-        { waf_action: 'challenge', [FIREWALL_ROLLUP_COLUMN]: 1 },
-        { waf_action: 'log', [FIREWALL_ROLLUP_COLUMN]: 1 },
+        { wafAction: 'challenge', [FIREWALL_ROLLUP_COLUMN]: 1 },
+        { wafAction: 'log', [FIREWALL_ROLLUP_COLUMN]: 1 },
       ],
       topPaths: [
-        { request_path: '/sso-api', [FIREWALL_ROLLUP_COLUMN]: 6 },
-        { request_path: '/login', [FIREWALL_ROLLUP_COLUMN]: 4 },
+        { requestPath: '/sso-api', [FIREWALL_ROLLUP_COLUMN]: 6 },
+        { requestPath: '/login', [FIREWALL_ROLLUP_COLUMN]: 4 },
       ],
     });
   });
@@ -61,7 +64,7 @@ describe('firewall persistent-actions inspect', () => {
   describe('--help', () => {
     it('tracks telemetry', async () => {
       client.setArgv('firewall', 'persistent-actions', 'inspect', '--help');
-      expect(await firewall(client)).toEqual(2);
+      expect(await firewall(client)).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:persistent-actions', value: 'persistent-actions' },
         { key: 'flag:help', value: 'firewall:persistent-actions:inspect' },
@@ -71,7 +74,7 @@ describe('firewall persistent-actions inspect', () => {
 
   it('requires an IP', async () => {
     client.setArgv('firewall', 'persistent-actions', 'inspect');
-    expect(await firewall(client)).toEqual(1);
+    expect(await firewall(client)).toEqual(2);
     expect(client.stderr.getFullOutput()).toContain('IP is required');
   });
 
@@ -104,7 +107,7 @@ describe('firewall persistent-actions inspect', () => {
 
   it('rejects a non-IP argument', async () => {
     client.setArgv('firewall', 'persistent-actions', 'inspect', 'not-an-ip');
-    expect(await firewall(client)).toEqual(1);
+    expect(await firewall(client)).toEqual(2);
     expect(client.stderr.getFullOutput()).toContain('valid IP address');
   });
 
@@ -136,7 +139,7 @@ describe('firewall persistent-actions inspect', () => {
     expect(firewallActivity.eventsQuery?.hosts).toBe('vercel.com');
     expect(firewallActivity.queries).toHaveLength(2);
     const groupBys = firewallActivity.queries.map(q => q.groupBy?.[0]).sort();
-    expect(groupBys).toEqual(['request_path', 'waf_action']);
+    expect(groupBys).toEqual(['requestPath', 'wafAction']);
     for (const query of firewallActivity.queries) {
       expect(query.filter).toContain(IP);
       expect(query.filter).toContain('vercel.com');
@@ -151,13 +154,13 @@ describe('firewall persistent-actions inspect', () => {
     // them server-side is work the query need not do. The by-action query has
     // no such exclusion — a mitigation with no path still counts there.
     const paths = firewallActivity.queries.find(
-      q => q.groupBy?.[0] === 'request_path'
+      q => q.groupBy?.[0] === 'requestPath'
     );
     const byAction = firewallActivity.queries.find(
-      q => q.groupBy?.[0] === 'waf_action'
+      q => q.groupBy?.[0] === 'wafAction'
     );
-    expect(paths?.filter).toContain("request_path ne ''");
-    expect(byAction?.filter).not.toContain("request_path ne ''");
+    expect(paths?.filter).toContain('requestPath!=""');
+    expect(byAction?.filter).not.toContain('requestPath!=""');
   });
 
   it('skips the top-paths query unless asked', async () => {
@@ -167,7 +170,7 @@ describe('firewall persistent-actions inspect', () => {
     // Grouping by path costs several times the rest of the command, and the
     // window barely affects it, so it is opt-in.
     expect(firewallActivity.queries).toHaveLength(1);
-    expect(firewallActivity.queries[0].groupBy).toEqual(['waf_action']);
+    expect(firewallActivity.queries[0].groupBy).toEqual(['wafAction']);
 
     const out = client.stderr.getFullOutput();
     expect(out).not.toContain('Top Request Paths');
@@ -201,12 +204,22 @@ describe('firewall persistent-actions inspect', () => {
     client.setArgv('firewall', 'persistent-actions', 'inspect', IP);
     expect(await firewall(client)).toEqual(0);
 
-    // A future end would chart empty buckets that have not happened yet.
+    // A future end would chart empty buckets that have not happened yet. The
+    // bucket the window ends in is rounded up — the API charts whole buckets
+    // and rounds the range out to them itself — so allow one bucket of the
+    // ten-minute window's 1m granularity and no more: the projected expiry
+    // this guards against is ten minutes past it.
     for (const query of firewallActivity.queries) {
       expect(new Date(query.endTime!).getTime()).toBeLessThanOrEqual(
-        Date.now()
+        Date.now() + 60_000
       );
     }
+    // And every query covers the same window, so the path list beside the
+    // chart counts the requests the chart drew.
+    const windows = new Set(
+      firewallActivity.queries.map(q => `${q.startTime}/${q.endTime}`)
+    );
+    expect(windows.size).toEqual(1);
   });
 
   it('notes when several actions match the IP', async () => {

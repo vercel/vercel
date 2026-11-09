@@ -1,5 +1,6 @@
 import { remove } from 'fs-extra';
-import { join, basename } from 'path';
+import slugify from '@sindresorhus/slugify';
+import { join, basename, extname } from 'path';
 import { getPlatformEnv } from '@vercel/build-utils';
 import { LocalFileSystemDetector, getWorkspaces } from '@vercel/fs-detectors';
 import type {
@@ -16,6 +17,8 @@ import {
 } from '../projects/link';
 import { linkRepoProject } from './repo';
 import createProject from '../projects/create-project';
+import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
+import { singleFileProjectSettings } from '../deploy/single-file';
 import type Client from '../client';
 import { printError } from '../error';
 import pull from '../../commands/env/pull';
@@ -42,7 +45,7 @@ import {
   type PartialProjectSettings,
 } from '../input/edit-project-settings';
 import type { EmojiLabel } from '../emoji';
-import { CantParseJSONFile, isAPIError } from '../errors-ts';
+import { CantParseJSONFile, isAPIError, ProjectNotFound } from '../errors-ts';
 import output from '../../output-manager';
 import { detectProjects } from '../projects/detect-projects';
 import readConfig from '../config/read-config';
@@ -74,6 +77,8 @@ export interface SetupAndLinkOptions {
   selectedOrg?: Org;
   successEmoji?: EmojiLabel;
   projectName?: string;
+  /** Deploy only this file; use static settings without inspecting its parent. */
+  singleFile?: string;
   /** When true, avoid prompts and return action_required payload when scope/project choice is needed */
   nonInteractive?: boolean;
   pullEnv?: boolean;
@@ -85,6 +90,12 @@ export interface SetupAndLinkOptions {
    * fail fast rather than creating a new project.
    */
   failIfNotFound?: boolean;
+  /**
+   * With `failIfNotFound`, create a missing `projectName` in the selected team
+   * instead of failing. The name resolves exactly, and the project (found or
+   * created) is not written to `.vercel/`, like any other explicit `--project`.
+   */
+  createIfNotFound?: boolean;
 }
 
 export type ProjectLinkResultWithGitGuidance = ProjectLinkResult & {
@@ -299,21 +310,30 @@ export default async function setupAndLink(
     selectedOrg,
     successEmoji = 'link',
     projectName,
+    singleFile,
     nonInteractive = false,
     pullEnv = true,
     v0,
+    createIfNotFound = false,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResultWithGitGuidance> {
   const { config } = client;
   const gitProjectName = projectName;
-  projectName = projectName ?? basename(path);
+  projectName =
+    projectName ??
+    (singleFile
+      ? slugify(basename(singleFile, extname(singleFile))) || 'file'
+      : basename(path));
 
   if (!isDirectory(path)) {
     output.error(`Expected directory but found file: ${path}`);
     return { status: 'error', exitCode: 1, reason: 'PATH_IS_FILE' };
   }
   if (!link) {
-    link = await getLinkedProject(client, { cwd: path });
+    link = await getLinkedProject(client, {
+      cwd: path,
+      skipProjectRootResolution: Boolean(singleFile),
+    });
   }
   const isTTY = client.stdin.isTTY;
   let rootDirectory: string | null = null;
@@ -329,7 +349,10 @@ export default async function setupAndLink(
   // without requiring `--yes`). The env link itself is what makes commands
   // work here, so leave local link files untouched.
   if (getPlatformEnv('ORG_ID') && getPlatformEnv('PROJECT_ID')) {
-    const envLink = await getLinkedProject(client, { cwd: path });
+    const envLink = await getLinkedProject(client, {
+      cwd: path,
+      skipProjectRootResolution: Boolean(singleFile),
+    });
     if (envLink.status === 'error') {
       return envLink;
     }
@@ -337,7 +360,10 @@ export default async function setupAndLink(
       config.currentTeam =
         envLink.org.type === 'team' ? envLink.org.id : undefined;
       output.print('\n');
-      printAlignedLabel('Directory', toHumanPath(path));
+      printAlignedLabel(
+        singleFile ? 'File' : 'Directory',
+        toHumanPath(singleFile ?? path)
+      );
       printAlignedLabel('Source', 'VERCEL_ORG_ID and VERCEL_PROJECT_ID');
       output.print('\n');
       printAlignedLabel(
@@ -373,7 +399,10 @@ export default async function setupAndLink(
 
   // The command invocation carries setup intent; show the local target as state.
   output.print('\n');
-  printAlignedLabel('Directory', toHumanPath(path));
+  printAlignedLabel(
+    singleFile ? 'File' : 'Directory',
+    toHumanPath(singleFile ?? path)
+  );
   output.print('\n');
 
   // Every command that establishes a link gets the same interactive flow:
@@ -382,7 +411,7 @@ export default async function setupAndLink(
   // resolved directly.
   const interactive = isTTY && !nonInteractive;
   const searchableTeamPicker = interactive;
-  const showProjectSuggestions = interactive && !gitProjectName;
+  const showProjectSuggestions = interactive && !gitProjectName && !singleFile;
 
   let projectOrNewProjectName: Awaited<ReturnType<typeof inputProject>>;
   // When the team was auto-selected as the only choice, there is no other
@@ -404,6 +433,13 @@ export default async function setupAndLink(
       }
       org = resolved;
       teamAutoSelected = orgMeta.choiceCount === 1;
+    }
+
+    if (createIfNotFound) {
+      const existing = await getProjectByIdOrName(client, projectName, org.id);
+      projectOrNewProjectName =
+        existing instanceof ProjectNotFound ? projectName : existing;
+      break;
     }
 
     let repoMatches: CrossTeamMatch[] = [];
@@ -497,42 +533,47 @@ export default async function setupAndLink(
   } else {
     const project = projectOrNewProjectName;
 
-    await linkFolderToProject(
-      client,
-      path,
-      {
-        projectId: project.id,
-        orgId: org.id,
-      },
-      project.name,
-      org.slug,
-      successEmoji,
-      autoConfirm,
-      pullEnv
-    );
+    if (!createIfNotFound) {
+      await linkFolderToProject(
+        client,
+        path,
+        {
+          projectId: project.id,
+          orgId: org.id,
+        },
+        project.name,
+        org.slug,
+        successEmoji,
+        autoConfirm,
+        pullEnv
+      );
+    }
     return { status: 'linked', org, project };
   }
 
   config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   // Ask before settings/create so the transcript is questions then results,
-  // and the connect prompt does not follow the `Created` row.
-  const gitConnectIntent = await resolveGitConnectIntent(
-    client,
-    path,
-    autoConfirm
-  );
+  // and the connect prompt does not follow the `Created` row. A project made
+  // for one `--project` deploy is never connected: every push would deploy it.
+  const gitConnectIntent =
+    singleFile || createIfNotFound
+      ? null
+      : await resolveGitConnectIntent(client, path, autoConfirm);
 
-  const rootServicesSetup = await getServicesSetupState(path);
+  const rootServicesSetup = singleFile
+    ? null
+    : await getServicesSetupState(path);
   const configFileName =
-    (await findSourceVercelConfigFile(path)) ?? 'vercel.json';
+    (singleFile ? undefined : await findSourceVercelConfigFile(path)) ??
+    'vercel.json';
 
   try {
     let settings: ProjectSettings = {};
     let pathWithRootDirectory = path;
     let rootInferredServicesChoice: InferredServicesChoice | null = null;
 
-    if (!rootServicesSetup.hasConfiguredServices) {
+    if (rootServicesSetup && !rootServicesSetup.hasConfiguredServices) {
       rootInferredServicesChoice = await promptForInferredServicesSetup({
         client,
         autoConfirm,
@@ -548,11 +589,10 @@ export default async function setupAndLink(
     // 1. Explicit services config at the repo root.
     // 2. Inferred services layout at the repo root -> prompt for deployment mode.
     // 3. Standard framework setup flow.
-    if (rootServicesSetup.hasConfiguredServices) {
-      displayConfiguredServicesSetup(
-        rootServicesSetup.detectServicesResult,
-        configFileName
-      );
+    if (singleFile) {
+      settings = { ...singleFileProjectSettings };
+    } else if (rootServicesSetup?.hasConfiguredServices) {
+      displayConfiguredServicesSetup(rootServicesSetup, configFileName);
       settings.framework = 'services';
     } else if (rootInferredServicesChoice?.type === 'services') {
       settings.framework = 'services';
@@ -616,7 +656,7 @@ export default async function setupAndLink(
 
       if (selectedRootServicesSetup?.hasConfiguredServices) {
         displayConfiguredServicesSetup(
-          selectedRootServicesSetup.detectServicesResult,
+          selectedRootServicesSetup,
           configFileName
         );
         settings.framework = 'services';
@@ -699,20 +739,27 @@ export default async function setupAndLink(
       v0,
     });
 
-    await linkFolderToProject(
-      client,
-      path,
-      {
-        projectId: project.id,
-        orgId: org.id,
-      },
-      project.name,
-      org.slug,
-      successEmoji,
-      autoConfirm,
-      false, // don't prompt to pull env for newly created projects
-      'Created'
-    );
+    if (createIfNotFound) {
+      output.print('\n');
+      printAlignedLabel('Created', `${org.slug}/${project.name}`, {
+        gutter: '✓',
+      });
+    } else {
+      await linkFolderToProject(
+        client,
+        path,
+        {
+          projectId: project.id,
+          orgId: org.id,
+        },
+        project.name,
+        org.slug,
+        successEmoji,
+        autoConfirm,
+        false, // don't prompt to pull env for newly created projects
+        'Created'
+      );
+    }
 
     await applyGitConnectIntent(
       client,

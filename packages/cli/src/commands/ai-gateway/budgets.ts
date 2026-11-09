@@ -18,9 +18,11 @@ import {
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
+import { getCommandName } from '../../util/pkg-name';
 import { getCommandAliases } from '..';
 import { AiGatewayBudgetsTelemetryClient } from '../../util/telemetry/commands/ai-gateway/budgets';
 import { printError } from '../../util/error';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 
 const COMMAND_CONFIG = {
   set: getCommandAliases(budgetsSetSubcommand),
@@ -45,7 +47,7 @@ export default async function budgets(client: Client) {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const subArgs = parsedArgs.args.slice(2);
@@ -58,13 +60,19 @@ export default async function budgets(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('ai-gateway budgets', subcommandOriginal);
-    output.print(help(budgetsSubcommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(budgetsSubcommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: budgetsSubcommand,
         columns: client.stderr.columns,
       })
@@ -76,7 +84,7 @@ export default async function budgets(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('ai-gateway budgets', subcommandOriginal);
         printHelp(budgetsSetSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandSet(subcommandOriginal);
       return set(client, args);
@@ -84,7 +92,7 @@ export default async function budgets(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('ai-gateway budgets', subcommandOriginal);
         printHelp(budgetsListSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return list(client, args);
@@ -92,7 +100,7 @@ export default async function budgets(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('ai-gateway budgets', subcommandOriginal);
         printHelp(budgetsInspectSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
       return inspect(client, args);
@@ -100,18 +108,38 @@ export default async function budgets(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('ai-gateway budgets', subcommandOriginal);
         printHelp(budgetsRemoveSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
+      if (subcommandOriginal === 'delete') {
+        warnDeprecatedSubcommand(
+          client,
+          'ai-gateway budgets delete',
+          'ai-gateway budgets remove'
+        );
+      }
       return remove(client, args);
     case 'defaults':
       // Delegate to the nested router so it can resolve `--help` for its own
       // subcommands (inspect/set/remove) instead of the group help here.
       telemetry.trackCliSubcommandDefaults(subcommandOriginal);
+      if (!needHelp) {
+        output.warn(
+          `The ${getCommandName('ai-gateway budgets defaults')} command group is deprecated. ` +
+            'Use `--default` with `budgets set`, `budgets inspect`, or `budgets remove` ' +
+            `(e.g. ${getCommandName('ai-gateway budgets set user --default --amount 50')}), or ` +
+            `${getCommandName('ai-gateway budgets ls --defaults')}.`
+        );
+      }
       return budgetsDefaults(client);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      output.print(help(budgetsSubcommand, { columns: client.stderr.columns }));
+      output.print(
+        help(budgetsSubcommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
+      );
       return 2;
   }
 }

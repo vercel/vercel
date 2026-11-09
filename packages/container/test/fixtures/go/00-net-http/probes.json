@@ -1,0 +1,62 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "framework:net-http version:go1.26.",
+      "responseHeaders": {
+        "content-type": "/text\\/html/"
+      }
+    },
+    {
+      "path": "/",
+      "mustContain": "randomness:RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "path": "/static/info.txt",
+      "status": 200,
+      "mustContain": "framework=net-http RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "path": "/api/file",
+      "status": 200,
+      "mustContain": "framework=net-http RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "path": "/robots.txt",
+      "status": 200,
+      "mustContain": "# public RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "path": "/api/data",
+      "status": 200,
+      "mustContain": "\"framework\":\"net-http\",\"version\":\"go1.26.",
+      "responseHeaders": {
+        "content-type": "/application\\/json/"
+      }
+    },
+    {
+      "path": "/api/items/42",
+      "status": 200,
+      "mustContain": "\"name\":\"Sample Item 42\""
+    },
+    {
+      "path": "/old",
+      "status": 200,
+      "mustContain": "\"path\":\"/new\""
+    },
+    {
+      "path": "/new",
+      "status": 200,
+      "mustContain": "\"route\":\"new\""
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 404,
+      "mustContain": "404 page not found"
+    },
+    {
+      "logMustContain": "Vercel Go buildpack"
+    }
+  ]
+}
