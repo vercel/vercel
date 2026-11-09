@@ -1056,6 +1056,12 @@ export interface BuildResultV2Typical {
    */
   deploymentId?: string;
   crons?: Cron[];
+  /**
+   * Static schedules the framework declares, keyed by name, in the Build
+   * Output API `config.json#schedules` shape. `vercel build` merges them with
+   * `vercel.json#schedules`; a name in both fails with `SCHEDULE_NAME_CONFLICT`.
+   */
+  schedules?: Schedules;
   /** Daemon descriptors, written to `daemons/<name>/.vc-config.json`. */
   daemons?: Record<string, DaemonOutput>;
 }

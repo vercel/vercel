@@ -13,6 +13,7 @@ import {
   glob,
   Files,
   BuildResultV2Typical as BuildResult,
+  type Schedules,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
@@ -25,6 +26,7 @@ import {
   createPseudoLayer,
   createLambdaFromPseudoLayers,
   getPageLambdaGroups,
+  getWorkflowSchedules,
   getDynamicRoutes,
   localizeDynamicRoutes,
   isDynamicRoute,
@@ -210,6 +212,8 @@ export async function serverBuild({
   isAppClientParamParsingEnabled: boolean;
   clientParamParsingOrigins: string[] | undefined;
 }): Promise<BuildResult> {
+  // Static schedules the Workflow SDK declared for the app's workflows.
+  let workflowSchedules: Schedules | undefined;
   if (isAppPPREnabled) {
     debug(
       'experimentalPPRRoutes',
@@ -1102,6 +1106,16 @@ export async function serverBuild({
       pageExtensions,
       inversedAppPathManifest,
       nodeVersion,
+    });
+
+    // The Workflow SDK's `experimental_schedule` declarations, from the config
+    // next to its generated flow route (an App Router route handler, or a
+    // Pages API route).
+    workflowSchedules = await getWorkflowSchedules({
+      entryPath: projectDir,
+      pages: [...appRouteHandlers, ...apiPages],
+      pageExtensions,
+      inversedAppPathManifest,
     });
 
     const appRouteHandlersLambdaGroups = await getPageLambdaGroups({
@@ -2015,6 +2029,7 @@ export async function serverBuild({
   );
 
   return {
+    ...(workflowSchedules ? { schedules: workflowSchedules } : {}),
     wildcard: wildcardConfig,
     images: getImagesConfig(imagesManifest),
     output: {
