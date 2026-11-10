@@ -225,6 +225,8 @@ export interface AutoProvisionFallback {
   kind: string;
   reason?: string;
   error_message?: string;
+  /** With `kind: 'metadata'`: required product metadata keys still missing after server defaults. */
+  missingMetadata?: string[];
   url: string;
   integration: AutoProvisionIntegration;
   product: AutoProvisionProduct;

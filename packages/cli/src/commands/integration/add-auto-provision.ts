@@ -7,10 +7,14 @@ import output from '../../output-manager';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import indent from '../../util/output/indent';
+import { remoteText } from '../../util/output/remote-text';
 import { autoProvisionResource } from '../../util/integration/auto-provision-resource';
 import { resolveAndFetchIntegration } from '../../util/integration/fetch-integration';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { acceptTermsViaBrowser } from '../../util/integration/accept-terms-via-browser';
+import { canPromptOnTerminal } from '../../util/can-prompt';
+import { isPromptCanceledError } from '../../util/input/prompt-cancellation';
+import { promptForMetadata } from '../../util/integration/prompt-for-metadata';
 import { promptForTermAcceptance } from '../../util/integration/prompt-for-terms';
 import { selectProduct } from '../../util/integration/select-product';
 import {
@@ -46,6 +50,7 @@ import {
   validateAndPrintRequiredMetadata,
 } from '../../util/integration/parse-metadata';
 import {
+  formatMetadataExample,
   isServerHandledRegion,
   getVisibleOptions,
   mergeMetadataSchemas,
@@ -356,10 +361,8 @@ export async function addAutoProvision(
     'marketplace_checkout_provisioning_started',
     baseProps
   );
-  output.spinner('Provisioning resource...');
-  let result: AutoProvisionResult;
-  try {
-    result = await autoProvisionResource(
+  const provision = () =>
+    autoProvisionResource(
       client,
       integration.slug,
       product.slug,
@@ -370,6 +373,10 @@ export async function addAutoProvision(
       browserInstallationId ?? options.installationId,
       installationMetadata
     );
+  output.spinner('Provisioning resource...');
+  let result: AutoProvisionResult;
+  try {
+    result = await provision();
   } catch (error) {
     output.stopSpinner();
     telemetry.trackMarketplaceEvent(
@@ -384,6 +391,60 @@ export async function addAutoProvision(
   }
   output.stopSpinner();
   output.debug(`Auto-provision result: ${JSON.stringify(result, null, 2)}`);
+
+  // The metadata step runs before anything is installed or provisioned, so
+  // the request can be sent again once the missing keys are filled in.
+  const promptKeys =
+    result.kind === 'metadata'
+      ? (result as AutoProvisionFallback).missingMetadata
+      : undefined;
+  if (
+    promptKeys?.length &&
+    promptKeys.every(key => Object.hasOwn(productSchemaProps, key)) &&
+    canPromptOnTerminal(client) &&
+    !options.asJson
+  ) {
+    output.log(
+      `${product.name} needs more information to finish provisioning.`
+    );
+    try {
+      Object.assign(
+        metadata,
+        await promptForMetadata(client, promptKeys, mergedParsingSchema)
+      );
+    } catch (error) {
+      if (!isPromptCanceledError(error)) {
+        throw error;
+      }
+      telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
+        ...baseProps,
+        reason: 'metadata_prompt_canceled',
+      });
+      output.log('Canceled. No resource was provisioned.');
+      return 130;
+    }
+    telemetry.trackMarketplaceEvent('marketplace_install_metadata_prompted', {
+      ...baseProps,
+      metadata_keys: promptKeys,
+    });
+    output.spinner('Provisioning resource...');
+    try {
+      result = await provision();
+    } catch (error) {
+      output.stopSpinner();
+      telemetry.trackMarketplaceEvent(
+        'marketplace_checkout_provisioning_failed',
+        {
+          ...baseProps,
+          error_message: errorToString(error),
+        }
+      );
+      output.error(errorToString(error));
+      return 1;
+    }
+    output.stopSpinner();
+    output.debug(`Auto-provision result: ${JSON.stringify(result, null, 2)}`);
+  }
 
   // Handle multiple installations
   if (
@@ -426,13 +487,6 @@ export async function addAutoProvision(
   // Handle non-provisioned responses — pass through kind/reason from server
   if (result.kind !== 'provisioned') {
     const fallback = result as AutoProvisionFallback;
-    telemetry.trackMarketplaceEvent('marketplace_install_flow_web_fallback', {
-      ...baseProps,
-      reason: fallback.reason ?? fallback.kind,
-      auto_provision_result_kind: fallback.kind,
-      auto_provision_result_reason: fallback.reason,
-      auto_provision_error_message: fallback.error_message,
-    });
     output.debug(`Fallback required - kind: ${fallback.kind}`);
     output.debug(`Fallback URL from API: ${fallback.url}`);
 
@@ -446,21 +500,33 @@ export async function addAutoProvision(
       return projectLink.exitCode;
     }
 
-    // Check for missing required metadata to give an actionable message
-    const missingRequired = (mergedParsingSchema.required ?? []).filter(key => {
-      if (key in metadata || key in installationMetadata) return false;
-      const prop = mergedParsingSchema.properties[key];
-      return prop && !isServerHandledRegion(prop);
-    });
+    // Check for missing required metadata to give an actionable message.
+    // Every other step comes after the server has applied metadata defaults
+    // and validated the metadata, so only the metadata step can mean this.
+    const missingRequired =
+      fallback.kind !== 'metadata'
+        ? []
+        : (fallback.missingMetadata ??
+          (mergedParsingSchema.required ?? []).filter(key => {
+            if (key in metadata || key in installationMetadata) return false;
+            const prop = mergedParsingSchema.properties[key];
+            return prop && !isServerHandledRegion(prop);
+          }));
 
     if (missingRequired.length > 0) {
+      telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
+        ...baseProps,
+        reason: 'metadata_missing',
+        metadata_keys: missingRequired,
+      });
       const examples = missingRequired.map(key => {
         const prop = mergedParsingSchema.properties[key];
         const options = prop ? getVisibleOptions(prop) : undefined;
-        const exampleVal = options?.[0] ?? '<value>';
-        return `--meta ${key}=${exampleVal}`;
+        return formatMetadataExample(key, options?.[0] ?? '<VALUE>');
       });
-      output.error(`Missing required metadata: ${missingRequired.join(', ')}.`);
+      output.error(
+        `Missing required metadata: ${missingRequired.map(remoteText).join(', ')}.`
+      );
       output.log(
         `  Provide ${examples.join(' ')} to provision directly from the CLI.`
       );
@@ -491,17 +557,29 @@ export async function addAutoProvision(
     if (options.environments?.length) {
       url.searchParams.set('environment', options.environments.join(','));
     }
-    const setupMessage = fallback.error_message
-      ? `Additional setup required: ${fallback.error_message}`
-      : 'Additional setup required.';
+    telemetry.trackMarketplaceEvent('marketplace_install_flow_web_fallback', {
+      ...baseProps,
+      reason: fallback.reason ?? fallback.kind,
+      auto_provision_result_kind: fallback.kind,
+      auto_provision_result_reason: fallback.reason,
+      auto_provision_error_message: fallback.error_message,
+    });
+    const paidPlanRequired = needsPaidPlan(fallback);
+    const remoteMessage = paidPlanRequired ? fallback.error_message : undefined;
+    const setupMessage = paidPlanRequired
+      ? `${product.name} needs a paid plan for this team.`
+      : fallback.error_message
+        ? `Additional setup required: ${fallback.error_message}`
+        : 'Additional setup required.';
 
     // Agents and CI can't use a browser, so hand them the URL instead.
     outputActionRequired(client, {
       status: 'action_required',
       reason: AGENT_REASON.INTEGRATION_SETUP_REQUIRED,
-      message: `${setupMessage} Finish setup for "${integration.name}" in the browser at verification_uri. This command does not wait for it in non-interactive mode.`,
+      message: `${setupMessage} ${paidPlanRequired ? 'Choose a paid plan' : 'Finish setup'} for "${integration.name}" in the browser at verification_uri. This command does not wait for it in non-interactive mode.`,
       verification_uri: url.href,
       userActionRequired: true,
+      ...(remoteMessage && { data: { remoteMessage } }),
       next: [
         {
           command: buildCommandWithGlobalFlags(
@@ -516,6 +594,11 @@ export async function addAutoProvision(
     });
 
     output.log(setupMessage);
+    if (remoteMessage) {
+      output.log(
+        indent(`${integration.name}: ${remoteText(remoteMessage)}`, 2)
+      );
+    }
     output.log('Opening browser to finish setup...');
     output.log(`Visit this URL if the browser does not open: ${url.href}`);
     open(url.href).catch((err: unknown) =>
@@ -788,4 +871,16 @@ export async function addAutoProvision(
   }
 
   return setupResult.exitCode;
+}
+
+/**
+ * The team has to choose a paid plan: auto-provision found no free plan, or
+ * the integration's own error says a paid plan is needed.
+ */
+function needsPaidPlan(fallback: AutoProvisionFallback): boolean {
+  return (
+    fallback.reason === 'no_eligible_plan' ||
+    (fallback.reason === 'error' &&
+      /\bpaid plan\b/i.test(fallback.error_message ?? ''))
+  );
 }

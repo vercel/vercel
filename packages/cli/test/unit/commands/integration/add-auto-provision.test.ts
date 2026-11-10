@@ -5,6 +5,7 @@ import integrationCommand from '../../../../src/commands/integration';
 import install from '../../../../src/commands/install';
 import pull from '../../../../src/commands/env/pull';
 import { connectResourceToProject } from '../../../../src/util/integration-resource/connect-resource-to-project';
+import { PromptCanceledError } from '../../../../src/util/input/prompt-cancellation';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import {
@@ -705,11 +706,15 @@ describe('integration add (auto-provision)', () => {
             value: expect.stringContaining('"integration_slug":"acme"'),
           }),
           expect.objectContaining({
-            key: 'output:marketplace_install_flow_web_fallback',
-            value: expect.stringContaining('"reason"'),
+            key: 'output:marketplace_install_flow_dropped',
+            value: expect.stringContaining('"reason":"metadata_missing"'),
           }),
         ])
       );
+      // No browser opens here, so it is not recorded as a web fallback
+      expect(
+        client.telemetryEventStore.readonlyEvents.map(event => event.key)
+      ).not.toContain('output:marketplace_install_flow_web_fallback');
     });
 
     it('should print the server reason and the setup URL', async () => {
@@ -809,35 +814,41 @@ describe('integration add (auto-provision)', () => {
       expect(parsed.searchParams.get('source')).toEqual('cli');
     });
 
-    it('should show error for missing required metadata on unknown fallback', async () => {
+    it('should not report missing metadata on unknown fallback', async () => {
       useAutoProvision({ responseKey: 'unknown' });
 
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
 
-      // Auto-generated name, server fills metadata defaults — no prompts
+      // The server already applied the region default and validated metadata
       await expect(client.stderr).toOutput(
-        'Error: Missing required metadata: region.'
+        'Additional setup required: An unexpected error occurred during provisioning'
       );
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
-      expect(openMock).not.toHaveBeenCalled();
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Missing required metadata'
+      );
+      expect(openMock).toHaveBeenCalledTimes(1);
     });
 
-    it('should show error for missing required metadata on install fallback', async () => {
+    it('should not report missing metadata on install fallback', async () => {
       useAutoProvision({ responseKey: 'install' });
 
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Error: Missing required metadata: region.'
+        'Opening browser to finish setup...'
       );
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
-      expect(openMock).not.toHaveBeenCalled();
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Missing required metadata'
+      );
+      expect(openMock).toHaveBeenCalledTimes(1);
     });
 
     it('should forward --metadata to browser URL on unknown fallback', async () => {
@@ -1125,6 +1136,206 @@ describe('integration add (auto-provision)', () => {
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
+    });
+  });
+
+  describe('missing metadata reported by the server', () => {
+    beforeEach(() => {
+      vi.stubEnv('CI', '');
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it('should prompt for the missing key and provision without a browser', async () => {
+      const { requestBodies } = useAutoProvision({
+        responseKey: 'missing_domain',
+      });
+
+      client.setArgv('integration', 'add', 'acme-domain');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Mail Product needs more information to finish provisioning.'
+      );
+      await expect(client.stderr).toOutput('Domain?');
+      client.stdin.write('example.com\n');
+
+      await expect(client.stderr).toOutput(
+        'Acme Mail Product successfully provisioned: acme-domain-gray-apple'
+      );
+      expect(await exitCodePromise).toEqual(0);
+      expect(openMock).not.toHaveBeenCalled();
+      expect(requestBodies).toHaveLength(2);
+      expect(requestBodies[0]).toMatchObject({ metadata: {} });
+      expect(requestBodies[1]).toMatchObject({
+        metadata: { domain: 'example.com' },
+      });
+
+      const events = client.telemetryEventStore.readonlyEvents;
+      expect(events).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_install_metadata_prompted',
+            value: expect.stringContaining('"metadata_keys":["domain"]'),
+          }),
+          expect.objectContaining({
+            key: 'output:marketplace_checkout_provisioning_completed',
+          }),
+        ])
+      );
+      expect(events.map(event => event.key)).not.toContain(
+        'output:marketplace_install_flow_web_fallback'
+      );
+    });
+
+    it('should name only the missing key without prompting in non-interactive mode', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+      const { requestBodies } = useAutoProvision({
+        responseKey: 'missing_domain',
+      });
+      client.nonInteractive = true;
+
+      client.setArgv('integration', 'add', 'acme-domain');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Error: Missing required metadata: domain.'
+      );
+      await expect(client.stderr).toOutput(
+        'Provide --meta domain=<VALUE> to provision directly from the CLI.'
+      );
+      expect(await exitCodePromise).toEqual(1);
+      expect(client.stderr.getFullOutput()).not.toContain('Domain?');
+      expect(openMock).not.toHaveBeenCalled();
+      expect(requestBodies).toHaveLength(1);
+
+      const events = client.telemetryEventStore.readonlyEvents;
+      expect(events).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_dropped',
+            value: expect.stringContaining(
+              '"reason":"metadata_missing","metadata_keys":["domain"]'
+            ),
+          }),
+        ])
+      );
+      expect(events.map(event => event.key)).not.toContain(
+        'output:marketplace_install_flow_web_fallback'
+      );
+    });
+
+    it('should exit 130 without provisioning when the prompt is canceled', async () => {
+      const { requestBodies } = useAutoProvision({
+        responseKey: 'missing_domain',
+      });
+      vi.spyOn(client.input, 'text').mockRejectedValueOnce(
+        new PromptCanceledError()
+      );
+
+      client.setArgv('integration', 'add', 'acme-domain');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Canceled. No resource was provisioned.'
+      );
+      expect(await exitCodePromise).toEqual(130);
+      expect(requestBodies).toHaveLength(1);
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_dropped',
+            value: expect.stringContaining(
+              '"reason":"metadata_prompt_canceled"'
+            ),
+          }),
+        ])
+      );
+    });
+
+    it('should not prompt with --format json', async () => {
+      const { requestBodies } = useAutoProvision({
+        responseKey: 'missing_domain',
+      });
+
+      client.setArgv('integration', 'add', 'acme-domain', '--format', 'json');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Error: Missing required metadata: domain.'
+      );
+      expect(await exitCodePromise).toEqual(1);
+      expect(client.stderr.getFullOutput()).not.toContain('Domain?');
+      expect(requestBodies).toHaveLength(1);
+    });
+  });
+
+  describe('paid plan required', () => {
+    it('should say a paid plan is needed before opening the browser', async () => {
+      useAutoProvision({ responseKey: 'paid_plan_required' });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product needs a paid plan for this team.'
+      );
+      await expect(client.stderr).toOutput(
+        'Acme Integration: You already have an Acme team, so this installation needs a paid plan. Pick a paid plan to continue.'
+      );
+      await expect(client.stderr).toOutput(
+        'Opening browser to finish setup...'
+      );
+      expect(await exitCodePromise).toEqual(1);
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Additional setup required'
+      );
+      expect(openMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('should say a paid plan is needed in the action_required payload', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+      useAutoProvision({ responseKey: 'paid_plan_required' });
+      client.nonInteractive = true;
+
+      client.setArgv('integration', 'add', 'acme');
+      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+
+      expect(openMock).not.toHaveBeenCalled();
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload).toMatchObject({
+        status: 'action_required',
+        reason: 'integration_setup_required',
+        message:
+          'Acme Product needs a paid plan for this team. Choose a paid plan for "Acme Integration" in the browser at verification_uri. This command does not wait for it in non-interactive mode.',
+        userActionRequired: true,
+        data: {
+          remoteMessage:
+            'You already have an Acme team, so this installation needs a paid plan. Pick a paid plan to continue.',
+        },
+      });
+    });
+
+    it('should say a paid plan is needed when no free plan is available', async () => {
+      useAutoProvision({ responseKey: 'no_eligible_plan' });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product needs a paid plan for this team.'
+      );
+      await expect(client.stderr).toOutput(
+        'Opening browser to finish setup...'
+      );
+      expect(await exitCodePromise).toEqual(1);
+      expect(openMock).toHaveBeenCalledTimes(1);
     });
   });
 

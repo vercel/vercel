@@ -311,6 +311,42 @@ const integrations: Record<string, Integration> = {
       },
     ],
   },
+  // Resend-like: a required field without a default and one with a default
+  'acme-domain': {
+    id: 'acme-domain',
+    name: 'Acme Mail',
+    slug: 'acme-domain',
+    products: [
+      {
+        id: 'acme-domain-product',
+        name: 'Acme Mail Product',
+        slug: 'acme-domain',
+        type: 'storage',
+        shortDescription: 'Product with a required domain',
+        metadataSchema: {
+          type: 'object',
+          properties: {
+            domain: {
+              type: 'string',
+              'ui:control': 'domain',
+              'ui:label': 'Domain',
+            },
+            region: {
+              type: 'string',
+              'ui:control': 'select',
+              'ui:label': 'Region',
+              default: 'us-east-1',
+              'ui:options': [
+                { value: 'us-east-1', label: 'North Virginia (us-east-1)' },
+                { value: 'eu-west-1', label: 'Ireland (eu-west-1)' },
+              ],
+            },
+          },
+          required: ['domain', 'region'],
+        },
+      },
+    ],
+  },
   // Sentry-like integration with both installation-level and product-level metadata
   'acme-install-meta': {
     id: 'acme-install-meta',
@@ -821,6 +857,29 @@ const autoProvisionResponses: Record<
     integration: autoProvisionIntegration,
     product: autoProvisionProduct,
   },
+  missing_domain: {
+    kind: 'metadata',
+    missingMetadata: ['domain'],
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme-domain?productSlug=acme-domain',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+  },
+  paid_plan_required: {
+    kind: 'unknown',
+    reason: 'error',
+    error_message:
+      'You already have an Acme team, so this installation needs a paid plan. Pick a paid plan to continue.',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+  },
+  no_eligible_plan: {
+    kind: 'unknown',
+    reason: 'no_eligible_plan',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+  },
   multiple_installations: {
     kind: 'unknown',
     reason: 'multiple_installations',
@@ -1203,6 +1262,13 @@ export function useAutoProvision(opts?: {
         req.body.installationId &&
         opts?.responseKey === 'multiple_installations'
       ) {
+        res.status(201);
+        res.json(autoProvisionResponses['provisioned']);
+        return;
+      }
+
+      // The server stops asking once the missing key is sent
+      if (opts?.responseKey === 'missing_domain' && req.body.metadata?.domain) {
         res.status(201);
         res.json(autoProvisionResponses['provisioned']);
         return;
